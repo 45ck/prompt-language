@@ -1,0 +1,14 @@
+claudeflow
+dedent
+depcruise
+flownode
+flowspec
+gitignored
+noslop
+repo
+resolvers
+sessionid
+subagent
+subagents
+tsconfig
+worktree

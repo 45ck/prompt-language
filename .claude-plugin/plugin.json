@@ -1,0 +1,7 @@
+{
+  "name": "flow",
+  "version": "0.1.0",
+  "description": "Control-flow enforcement for Claude Code. Loops, conditionals, retries, and completion gates so the agent cannot stop early or skip steps.",
+  "author": "45ck",
+  "license": "MIT"
+}

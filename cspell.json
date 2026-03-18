@@ -1,0 +1,28 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "dictionaries": ["en_US", "typescript", "node", "npm", "project-words"],
+  "dictionaryDefinitions": [
+    {
+      "name": "project-words",
+      "path": "./.cspell/project-words.txt",
+      "addWords": true
+    }
+  ],
+  "words": [
+    "claude",
+    "completiongate",
+    "depcruise",
+    "flownode",
+    "flowspec",
+    "frobnicate",
+    "gitignored",
+    "initialises",
+    "knip",
+    "noslop",
+    "stryker",
+    "tsconfig",
+    "worktree"
+  ],
+  "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
+}

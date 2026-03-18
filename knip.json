@@ -1,0 +1,7 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": ["src/index.ts", "src/presentation/hooks/*.ts"],
+  "project": ["src/**/*.ts"],
+  "ignore": ["dist/**", "coverage/**", "reports/**"],
+  "ignoreDependencies": ["@vitest/coverage-v8"]
+}

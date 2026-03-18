@@ -31,12 +31,28 @@ function extractFlowDsl(prompt: string): string {
   return idx >= 0 ? prompt.slice(idx) : prompt;
 }
 
+function getChildren(node: FlowNode): readonly FlowNode[] {
+  switch (node.kind) {
+    case 'while':
+    case 'until':
+    case 'retry':
+    case 'try':
+      return node.body;
+    case 'if':
+      return node.thenBranch;
+    case 'prompt':
+    case 'run':
+      return [];
+  }
+}
+
 function resolveCurrentNode(state: SessionState): FlowNode | undefined {
-  const nodes = state.flowSpec.nodes;
+  let candidates: readonly FlowNode[] = state.flowSpec.nodes;
   let current: FlowNode | undefined;
   for (const idx of state.currentNodePath) {
-    current = nodes[idx];
+    current = candidates[idx];
     if (!current) return undefined;
+    candidates = getChildren(current);
   }
   return current;
 }

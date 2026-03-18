@@ -1,6 +1,20 @@
 # DSL Reference
 
-The prompt-language DSL defines control-flow programs using six primitives plus try/catch. Programs are composed by nesting these primitives.
+The prompt-language DSL defines control-flow programs using six primitives plus try/catch. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
+
+## Program structure
+
+A flow program has three sections:
+
+```
+Goal: <description>
+
+flow:
+  <statements>
+
+done when:
+  <predicates>
+```
 
 ## Primitives
 
@@ -9,7 +23,7 @@ The prompt-language DSL defines control-flow programs using six primitives plus 
 Inject text as the agent's next instruction. The agent must act on this prompt before continuing.
 
 ```
-prompt("Fix the type errors in src/auth.ts")
+prompt: Fix the type errors in src/auth.ts
 ```
 
 The text can reference state variables. The agent sees the prompt as its next task.
@@ -19,9 +33,9 @@ The text can reference state variables. The agent sees the prompt as its next ta
 Execute a shell command. Capture exit code and output.
 
 ```
-run("npm test")
-run("npx eslint . --max-warnings=0")
-run("git diff --name-only")
+run: npm test
+run: npx eslint . --max-warnings=0
+run: git diff --name-only
 ```
 
 After every `run`, built-in resolvers automatically update state variables based on the exit code and command output. See the Resolvers section below.
@@ -31,17 +45,26 @@ After every `run`, built-in resolvers automatically update state variables based
 Loop while a condition is true. Requires a `max` iteration limit to prevent infinite loops.
 
 ```
-while (tests_fail, max=5) {
-  prompt("Fix the failing tests.")
-  run("npm test")
-}
+while tests_fail max 5
+  prompt: Fix the failing tests.
+  run: npm test
+end
+```
+
+Use `while not <condition>` to negate:
+
+```
+while not tests_pass max 5
+  prompt: Fix the failing tests.
+  run: npm test
+end
 ```
 
 Parameters:
 
 - condition: A resolver variable name. Evaluated as a boolean.
 - max: Maximum iterations (default: 5).
-- body: One or more DSL statements.
+- body: One or more DSL statements (indented).
 
 The loop evaluates the condition before each iteration. If the condition is false, the loop exits. If max iterations are reached, the flow fails.
 
@@ -50,17 +73,17 @@ The loop evaluates the condition before each iteration. If the condition is fals
 Loop until a condition becomes true. Inverse of `while`.
 
 ```
-until (tests_pass, max=5) {
-  prompt("Fix the failing tests.")
-  run("npm test")
-}
+until tests_pass max 5
+  prompt: Fix the failing tests.
+  run: npm test
+end
 ```
 
 Parameters:
 
 - condition: A resolver variable name. The loop exits when this is true.
 - max: Maximum iterations (default: 5).
-- body: One or more DSL statements.
+- body: One or more DSL statements (indented).
 
 The loop evaluates the condition after each iteration. If the condition is true, the loop exits. If max iterations are reached, the flow fails.
 
@@ -69,15 +92,15 @@ The loop evaluates the condition after each iteration. If the condition is true,
 Retry a block up to N times. The block is re-executed if the last command in it fails.
 
 ```
-retry(3) {
-  run("npm run build")
-}
+retry max 3
+  run: npm run build
+end
 ```
 
 Parameters:
 
-- attempts: Maximum number of attempts (default: 3).
-- body: One or more DSL statements.
+- max: Maximum number of attempts (default: 3).
+- body: One or more DSL statements (indented).
 
 The block runs once. If the last command fails, it retries up to the attempt limit. If all attempts fail, the flow fails.
 
@@ -86,12 +109,12 @@ The block runs once. If the last command fails, it retries up to the attempt lim
 Conditional branching. Execute one branch or the other based on a condition.
 
 ```
-if (lint_fail) {
-  prompt("Fix the lint errors shown above.")
-  run("npm run lint")
-} else {
-  prompt("Lint is clean. Proceed to tests.")
-}
+if lint_fail
+  prompt: Fix the lint errors shown above.
+  run: npm run lint
+else
+  prompt: Lint is clean. Proceed to tests.
+end
 ```
 
 Parameters:
@@ -105,33 +128,29 @@ Parameters:
 Execute a block. If the catch condition triggers, run the catch block.
 
 ```
-try {
-  run("npm run deploy")
-} catch (command_failed) {
-  prompt("Deploy failed. Investigate the error and retry manually.")
-}
+try
+  run: npm run deploy
+catch command_failed
+  prompt: Deploy failed. Investigate the error and retry manually.
+end
 ```
 
 Parameters:
 
 - body: One or more DSL statements.
-- catchCondition: A resolver variable name. If true after body execution, the catch block runs.
+- catchCondition: A resolver variable name. If true after body execution, the catch block runs. Defaults to `command_failed`.
 - catchBody: One or more DSL statements.
 
 ## Completion gates
 
-Gates are assertions that must hold before the flow is considered complete. The agent cannot stop until all gates pass.
+Gates are assertions that must hold before the flow is considered complete. The agent cannot stop until all gates pass. They are listed in the `done when:` section.
 
 ```
-gate(tests_pass)
-gate(lint_pass)
-gate(tests_pass, "npm test")
+done when:
+  tests_pass
+  lint_pass
+  tests_pass == true
 ```
-
-Parameters:
-
-- predicate: A resolver variable name that must be true.
-- command: (Optional) A verification command to run when evaluating the gate.
 
 Gates are evaluated after all nodes finish and again on Stop/TaskCompleted hooks. If any gate fails, the agent is forced back into the flow.
 
@@ -140,17 +159,22 @@ Gates are evaluated after all nodes finish and again on Stop/TaskCompleted hooks
 Primitives nest freely. A while loop can contain if statements, retries, and other loops.
 
 ```
-until (tests_pass, max=5) {
-  run("npm test")
-  if (tests_fail) {
-    prompt("Fix the test failures.")
-    retry(2) {
-      run("npm test")
-    }
-  }
-}
-gate(tests_pass)
-gate(lint_pass, "npm run lint")
+Goal: fix tests and lint
+
+flow:
+  until tests_pass max 5
+    run: npm test
+    if tests_fail
+      prompt: Fix the test failures.
+      retry max 2
+        run: npm test
+      end
+    end
+  end
+
+done when:
+  tests_pass
+  lint_pass
 ```
 
 ## Built-in resolvers
@@ -179,3 +203,18 @@ Resolver priority order: deterministic > parsed > inferred > human.
 | maxAttempts (retry)         | 3       |
 
 These can be overridden per-node using the `max` parameter.
+
+## Natural language
+
+You do not need to write DSL directly. The parser detects control-flow intent in plain English:
+
+| Input                | Compiled to     |
+| -------------------- | --------------- |
+| "keep going until X" | `until X max 5` |
+| "don't stop until X" | `until X max 5` |
+| "loop until X"       | `until X max 5` |
+| "retry 3 times"      | `retry max 3`   |
+
+## Comments
+
+Lines containing `#` have everything after `#` stripped before parsing.

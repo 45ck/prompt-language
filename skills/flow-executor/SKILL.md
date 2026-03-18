@@ -34,6 +34,10 @@ After each `run` step, these variables are automatically updated:
 - `command_succeeded` -- true if last exit code == 0
 - `tests_pass` -- true if test command succeeded
 - `tests_fail` -- true if test command failed
+- `lint_pass` -- true if lint command succeeded
+- `lint_fail` -- true if lint command failed
+- `file_exists` -- true if a checked file exists
+- `diff_nonempty` -- true if git diff has output
 
 ## Important
 

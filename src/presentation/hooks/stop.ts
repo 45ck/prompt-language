@@ -26,4 +26,7 @@ async function main(): Promise<void> {
   process.exitCode = 0;
 }
 
-void main();
+main().catch((error: unknown) => {
+  process.stderr.write(`[prompt-language] hook error: ${String(error)}\n`);
+  process.exitCode = 0;
+});

@@ -33,27 +33,32 @@ Keep running the tests and fixing failures until they all pass. Try up to 5 time
 prompt-language detects the control-flow structure and compiles it into an execution plan:
 
 ```
-retry(5) {
-  run("npm test")
-  if (tests_fail) {
-    prompt("Fix the failing tests based on the error output above.")
-  }
-}
-gate(tests_pass)
+Goal: fix failing tests
+
+flow:
+  retry max 5
+    run: npm test
+    if tests_fail
+      prompt: Fix the failing tests based on the error output above.
+    end
+  end
+
+done when:
+  tests_pass
 ```
 
 The agent then executes step by step, unable to stop until the gate passes or the retry limit is hit.
 
 ## DSL reference
 
-Six primitives plus try/catch compose into arbitrary control-flow programs.
+Six primitives plus try/catch compose into arbitrary control-flow programs. Blocks use indentation with explicit `end` keywords.
 
 ### prompt
 
 Inject text as the agent's next instruction.
 
 ```
-prompt("Refactor the auth module to use dependency injection.")
+prompt: Refactor the auth module to use dependency injection.
 ```
 
 ### run
@@ -61,7 +66,7 @@ prompt("Refactor the auth module to use dependency injection.")
 Execute a shell command and capture the result.
 
 ```
-run("npm test")
+run: npm test
 ```
 
 After every `run`, built-in resolvers update state variables automatically.
@@ -71,10 +76,10 @@ After every `run`, built-in resolvers update state variables automatically.
 Loop while a condition is true.
 
 ```
-while (tests_fail, max=5) {
-  prompt("Fix the failing tests.")
-  run("npm test")
-}
+while tests_fail max 5
+  prompt: Fix the failing tests.
+  run: npm test
+end
 ```
 
 ### until
@@ -82,10 +87,10 @@ while (tests_fail, max=5) {
 Loop until a condition becomes true.
 
 ```
-until (tests_pass, max=5) {
-  prompt("Fix the failing tests.")
-  run("npm test")
-}
+until tests_pass max 5
+  prompt: Fix the failing tests.
+  run: npm test
+end
 ```
 
 ### retry
@@ -93,9 +98,9 @@ until (tests_pass, max=5) {
 Retry a block up to N times on failure.
 
 ```
-retry(3) {
-  run("npm run build")
-}
+retry max 3
+  run: npm run build
+end
 ```
 
 ### if
@@ -103,12 +108,12 @@ retry(3) {
 Conditional branching.
 
 ```
-if (lint_fail) {
-  prompt("Fix the lint errors.")
-  run("npm run lint")
-} else {
-  prompt("Lint passed. Move on.")
-}
+if lint_fail
+  prompt: Fix the lint errors.
+  run: npm run lint
+else
+  prompt: Lint passed. Move on.
+end
 ```
 
 ### try/catch
@@ -116,38 +121,33 @@ if (lint_fail) {
 Execute a block and catch failures.
 
 ```
-try {
-  run("npm run deploy")
-} catch (command_failed) {
-  prompt("Deploy failed. Roll back and investigate.")
-}
+try
+  run: npm run deploy
+catch command_failed
+  prompt: Deploy failed. Roll back and investigate.
+end
 ```
 
-### gate
+### done when
 
-Completion gates block the agent from finishing until the predicate holds.
-
-```
-gate(tests_pass)
-gate(lint_pass)
-```
-
-Gates can also specify a verification command:
+Completion gates block the agent from finishing until the predicate holds. Listed after the `done when:` section.
 
 ```
-gate(tests_pass, "npm test")
+done when:
+  tests_pass
+  lint_pass
 ```
 
 ## Natural language detection
 
 You do not need to write DSL directly. prompt-language detects control-flow intent in plain English and compiles it. Examples:
 
-| Natural language                              | Detected structure                                   |
-| --------------------------------------------- | ---------------------------------------------------- |
-| "Keep fixing until tests pass"                | `until(tests_pass) { prompt(...); run("npm test") }` |
-| "Try up to 3 times to build"                  | `retry(3) { run("npm run build") }`                  |
-| "If lint fails, fix it"                       | `if(lint_fail) { prompt(...); run("npm run lint") }` |
-| "Run tests, fix failures, repeat until green" | `until(tests_pass) { run("npm test"); prompt(...) }` |
+| Natural language               | Compiled to               |
+| ------------------------------ | ------------------------- |
+| "Keep fixing until tests pass" | `until tests_pass max 5`  |
+| "Try up to 3 times to build"   | `retry max 3`             |
+| "Don't stop until lint passes" | `until lint_passes max 5` |
+| "Loop until tests pass"        | `until tests_pass max 5`  |
 
 ## Hooks
 

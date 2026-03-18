@@ -11,24 +11,29 @@ Run the tests. If they fail, fix the failures and run them again. Keep going unt
 ## DSL equivalent
 
 ```
-until (tests_pass, max=5) {
-  run("npm test")
-  if (tests_fail) {
-    prompt("Fix the failing tests based on the error output above.")
-  }
-}
-gate(tests_pass)
+Goal: fix failing tests
+
+flow:
+  until tests_pass max 5
+    run: npm test
+    if tests_fail
+      prompt: Fix the failing tests based on the error output above.
+    end
+  end
+
+done when:
+  tests_pass
 ```
 
 ## What happens
 
 1. **UserPromptSubmit** detects the control-flow intent and compiles the FlowSpec.
-2. The flow starts with `run("npm test")`.
+2. The flow starts with `run: npm test`.
 3. Built-in resolvers set `tests_pass` or `tests_fail` based on the exit code.
 4. If tests fail, the agent receives the prompt to fix them.
 5. On the next iteration, tests run again.
 6. This repeats until `tests_pass` is true or 5 iterations are reached.
-7. The `gate(tests_pass)` ensures the agent cannot stop unless tests actually pass.
+7. The `done when: tests_pass` gate ensures the agent cannot stop unless tests actually pass.
 8. If the agent tries to stop early, the **Stop** hook blocks it and re-injects the next step.
 
 ## Session state progression

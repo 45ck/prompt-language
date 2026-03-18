@@ -11,9 +11,29 @@ import { injectContext } from '../../application/inject-context.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { readStdin } from './read-stdin.js';
 
+function parseInput(raw: string): { prompt: string } | null {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed === 'object' && parsed !== null && 'prompt' in parsed) {
+      const obj = parsed as Record<string, unknown>;
+      if (typeof obj['prompt'] === 'string') {
+        return { prompt: obj['prompt'] };
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function main(): Promise<void> {
   const raw = await readStdin();
-  const input = JSON.parse(raw) as { prompt: string };
+  const input = parseInput(raw);
+
+  if (!input) {
+    process.stdout.write(raw);
+    return;
+  }
 
   const stateStore = new FileStateStore(process.cwd());
   const sessionId = randomUUID();
@@ -24,4 +44,7 @@ async function main(): Promise<void> {
   process.stdout.write(output);
 }
 
-void main();
+main().catch((error: unknown) => {
+  process.stderr.write(`[prompt-language] hook error: ${String(error)}\n`);
+  process.exitCode = 0;
+});

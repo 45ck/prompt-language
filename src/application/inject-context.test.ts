@@ -3,7 +3,7 @@ import { injectContext } from './inject-context.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { createSessionState } from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
-import { createPromptNode } from '../domain/flow-node.js';
+import { createPromptNode, createWhileNode, createRunNode } from '../domain/flow-node.js';
 
 function makeStore(): InMemoryStateStore {
   return new InMemoryStateStore();
@@ -51,6 +51,24 @@ describe('injectContext', () => {
 
     expect(result.prompt).toContain('count = 3');
     expect(result.prompt).toContain('passing = true');
+  });
+
+  it('resolves nested node via currentNodePath', async () => {
+    const store = makeStore();
+    const innerRun = createRunNode('r1', 'npm test');
+    const whileNode = createWhileNode('w1', 'tests_fail', [
+      createPromptNode('p1', 'Fix tests'),
+      innerRun,
+    ]);
+    const spec = createFlowSpec('Nested flow', [whileNode]);
+    let session = createSessionState('test-nested', spec);
+    session = { ...session, currentNodePath: [0, 1] };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Continue', sessionId: 'test-nested' }, store);
+
+    expect(result.prompt).toContain('Current step: run (r1)');
+    expect(result.prompt).toContain('Path: [0, 1]');
   });
 
   it('includes last step info in context block', async () => {

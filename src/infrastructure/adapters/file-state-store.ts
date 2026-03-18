@@ -64,6 +64,10 @@ export class FileStateStore implements StateStore {
       if (isNodeError(error) && error.code === 'ENOENT') {
         return null;
       }
+      // Corrupted or invalid JSON — treat as no state (fail-open)
+      if (error instanceof SyntaxError) {
+        return null;
+      }
       throw error;
     }
   }

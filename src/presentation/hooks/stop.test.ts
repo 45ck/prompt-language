@@ -80,6 +80,15 @@ describe('stop hook (integration)', () => {
     expect(result.stderr).toContain('Active task');
   });
 
+  it('exits 0 when state file contains corrupted JSON (fail-open)', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(join(stateDir, 'session-state.json'), '{{corrupted garbage');
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+  });
+
   it('exits 0 when flow is completed', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FileStateStore } from './file-state-store.js';
@@ -78,6 +78,26 @@ describe('FileStateStore', () => {
   it('clear is idempotent when file missing', async () => {
     const store = new FileStateStore(tempDir);
     await expect(store.clear('nonexistent')).resolves.toBeUndefined();
+  });
+
+  it('returns null from loadCurrent when state file contains invalid JSON', async () => {
+    const store = new FileStateStore(tempDir);
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(join(stateDir, 'session-state.json'), '{{garbage', 'utf-8');
+
+    const result = await store.loadCurrent();
+    expect(result).toBeNull();
+  });
+
+  it('returns null from load when state file contains invalid JSON', async () => {
+    const store = new FileStateStore(tempDir);
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(join(stateDir, 'session-state.json'), '{{garbage', 'utf-8');
+
+    const result = await store.load('any-id');
+    expect(result).toBeNull();
   });
 
   it('creates .prompt-language directory if missing', async () => {

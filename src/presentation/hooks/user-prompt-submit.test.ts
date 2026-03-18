@@ -33,6 +33,17 @@ describe('user-prompt-submit hook (integration)', () => {
     expect(result.prompt).toBe('Hello world');
   });
 
+  it('passes through prompt when state file contains corrupted JSON (fail-open)', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(join(stateDir, 'session-state.json'), '{{corrupted garbage');
+
+    const input = JSON.stringify({ prompt: 'Hello world' });
+    const output = runHook(input, tempDir);
+    const result = JSON.parse(output);
+    expect(result.prompt).toBe('Hello world');
+  });
+
   it('injects context when flow state file exists', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });

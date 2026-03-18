@@ -14,7 +14,7 @@ export class ShellCommandRunner implements CommandRunner {
         (error, stdout, stderr) => {
           if (error) {
             resolve({
-              exitCode: error.code != null ? Number(error.code) : 1,
+              exitCode: typeof error.code === 'number' ? error.code : 1,
               stdout: stdout ?? '',
               stderr: stderr ?? '',
             });

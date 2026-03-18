@@ -110,7 +110,7 @@ function normalizeNaturalLanguage(input: string, warnings: string[]): string {
 }
 
 function parseWhileLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
-  const match = /^while\s+(?:not\s+)?(\S+)(?:\s+max\s+(\d+))?/i.exec(line);
+  const match = /^while\s+(?:not\s+)?(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
   const condition = match?.[1] ?? 'true';
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
   if (!/max\s+\d+/i.exec(line)) {
@@ -124,7 +124,7 @@ function parseWhileLine(ctx: ParseContext, line: string, baseIndent: number): Fl
 }
 
 function parseUntilLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
-  const match = /^until\s+(\S+)(?:\s+max\s+(\d+))?/i.exec(line);
+  const match = /^until\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
   const condition = match?.[1] ?? 'true';
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
   if (!/max\s+\d+/i.exec(line)) {

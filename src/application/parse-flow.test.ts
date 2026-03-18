@@ -71,6 +71,19 @@ flow:
     expect((node.body[0] as PromptNode).text).toBe('fix it');
   });
 
+  it('captures multi-word conditions', () => {
+    const dsl = `Goal: g
+
+flow:
+  while response_code != 200 max 3
+    prompt: fix the request
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as WhileNode;
+    expect(node.condition).toBe('response_code != 200');
+    expect(node.maxIterations).toBe(3);
+  });
+
   it('defaults max to 5 when missing', () => {
     const dsl = `Goal: g
 
@@ -98,6 +111,19 @@ flow:
     expect(node.kind).toBe('until');
     expect(node.condition).toBe('tests_pass');
     expect(node.maxIterations).toBe(3);
+  });
+
+  it('captures multi-word conditions', () => {
+    const dsl = `Goal: g
+
+flow:
+  until tests_pass && lint_pass max 5
+    run: pnpm test
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as UntilNode;
+    expect(node.condition).toBe('tests_pass && lint_pass');
+    expect(node.maxIterations).toBe(5);
   });
 
   it('defaults max when missing', () => {

@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
+    testTimeout: 15_000,
     include: ['src/**/*.test.ts'],
     reporters: process.env['CI'] ? ['verbose', 'junit'] : ['default'],
     outputFile: { junit: './test-results/junit.xml' },

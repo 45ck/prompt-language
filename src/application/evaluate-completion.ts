@@ -25,7 +25,7 @@ async function runGates(state: SessionState, runner: CommandRunner): Promise<Ses
       const passed = result.exitCode === 0;
       updated = updateGateResult(updated, gate.predicate, passed);
     } else {
-      const current = state.gateResults[gate.predicate];
+      const current = updated.gateResults[gate.predicate];
       if (current === undefined) {
         updated = updateGateResult(updated, gate.predicate, false);
       }

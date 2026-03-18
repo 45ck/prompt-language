@@ -26,16 +26,12 @@ function hasFlowBlock(prompt: string): boolean {
   return FLOW_BLOCK_RE.test(prompt);
 }
 
-function extractFlowDsl(prompt: string): string {
-  const idx = prompt.indexOf('flow:');
-  return idx >= 0 ? prompt.slice(idx) : prompt;
-}
-
 function getChildren(node: FlowNode): readonly FlowNode[] {
   switch (node.kind) {
     case 'while':
     case 'until':
     case 'retry':
+      return node.body;
     case 'try':
       return node.body;
     case 'if':
@@ -43,6 +39,10 @@ function getChildren(node: FlowNode): readonly FlowNode[] {
     case 'prompt':
     case 'run':
       return [];
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
   }
 }
 
@@ -97,8 +97,7 @@ export async function injectContext(
   }
 
   if (hasFlowBlock(input.prompt)) {
-    const dsl = extractFlowDsl(input.prompt);
-    const spec = parseFlow(dsl);
+    const spec = parseFlow(input.prompt);
     const session = createSessionState(input.sessionId, spec);
     await stateStore.save(session);
     const ctx = buildContextBlock(session);

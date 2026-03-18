@@ -89,6 +89,24 @@ describe('evaluateCompletion', () => {
     expect(result.gateResults['manual_check']).toBe(false);
   });
 
+  it('propagates command gate result to subsequent commandless gate sharing predicate', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: 'OK', stderr: '' });
+
+    const spec = createFlowSpec(
+      'Shared predicate',
+      [],
+      [createCompletionGate('tests_pass', 'npm test'), createCompletionGate('tests_pass')],
+    );
+    const session = createSessionState('s-shared', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(result.gateResults['tests_pass']).toBe(true);
+  });
+
   it('runs the correct commands', async () => {
     const store = makeStore();
     const runner = makeRunner();

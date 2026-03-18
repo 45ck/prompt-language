@@ -34,7 +34,7 @@ describe('user-prompt-submit hook (integration)', () => {
   });
 
   it('injects context when flow state file exists', async () => {
-    const stateDir = join(tempDir, '.claude-flow');
+    const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     const state = {
       sessionId: 'test-session',
@@ -58,7 +58,7 @@ describe('user-prompt-submit hook (integration)', () => {
     const input = JSON.stringify({ prompt: 'Next step' });
     const output = runHook(input, tempDir);
     const result = JSON.parse(output);
-    expect(result.prompt).toContain('[claude-flow]');
+    expect(result.prompt).toContain('[prompt-language]');
     expect(result.prompt).toContain('Build feature');
     expect(result.prompt).toContain('Next step');
   });

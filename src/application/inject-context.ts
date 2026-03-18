@@ -44,7 +44,7 @@ function resolveCurrentNode(state: SessionState): FlowNode | undefined {
 function buildContextBlock(state: SessionState): string {
   const node = resolveCurrentNode(state);
   const lines: string[] = [
-    `[claude-flow] Active flow: ${state.flowSpec.goal}`,
+    `[prompt-language] Active flow: ${state.flowSpec.goal}`,
     `Status: ${state.status}`,
   ];
 

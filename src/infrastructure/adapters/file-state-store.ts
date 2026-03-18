@@ -1,5 +1,5 @@
 /**
- * FileStateStore — persists SessionState to .claude-flow/session-state.json.
+ * FileStateStore — persists SessionState to .prompt-language/session-state.json.
  */
 
 import { mkdir, readFile, writeFile, unlink, access } from 'node:fs/promises';
@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import type { StateStore } from '../../application/ports/state-store.js';
 import type { SessionState } from '../../domain/session-state.js';
 
-const DIR_NAME = '.claude-flow';
+const DIR_NAME = '.prompt-language';
 const FILE_NAME = 'session-state.json';
 
 export class FileStateStore implements StateStore {

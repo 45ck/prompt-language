@@ -8,7 +8,7 @@ argument-hint: ''
 
 Reset the current flow execution.
 
-1. Check if `.claude-flow/session-state.json` exists
+1. Check if `.prompt-language/session-state.json` exists
 2. If it exists:
    - Read current state and show summary of what will be abandoned
    - Delete the session state file

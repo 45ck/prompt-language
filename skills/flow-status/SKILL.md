@@ -10,7 +10,7 @@ allowed-tools: Read, Glob, Grep
 
 Display the current flow execution status.
 
-1. Read `.claude-flow/session-state.json`
+1. Read `.prompt-language/session-state.json`
 2. Show:
    - Flow goal
    - Current status (active/completed/failed/cancelled)

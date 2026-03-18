@@ -8,7 +8,7 @@ argument-hint: '[step]'
 
 You are the flow execution engine. When invoked:
 
-1. Read the current session state from `.claude-flow/session-state.json`
+1. Read the current session state from `.prompt-language/session-state.json`
 2. Identify the current node in the flow graph
 3. Execute the appropriate action for the node type:
    - **prompt**: Inject the prompt text as your next instruction
@@ -23,7 +23,7 @@ You are the flow execution engine. When invoked:
 
 ## State File Location
 
-`.claude-flow/session-state.json` in the project root.
+`.prompt-language/session-state.json` in the project root.
 
 ## Built-in Resolvers
 
@@ -39,4 +39,4 @@ After each `run` step, these variables are automatically updated:
 
 - Never skip steps. Execute them in order.
 - Do not stop until the flow is complete or max iterations reached.
-- Update `.claude-flow/session-state.json` after every step.
+- Update `.prompt-language/session-state.json` after every step.

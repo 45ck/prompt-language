@@ -6,4 +6,4 @@ reports/
 test-results/
 *.tsbuildinfo
 .stryker-tmp/
-.claude-flow/
+.prompt-language/

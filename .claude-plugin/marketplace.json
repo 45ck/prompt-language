@@ -1,9 +1,17 @@
 {
-  "name": "flow",
-  "displayName": "Claude Flow",
-  "description": "Control-flow enforcement plugin. Enforces loops, conditionals, retries, and completion gates.",
-  "repository": "https://github.com/45ck/claude-flow",
-  "homepage": "https://github.com/45ck/claude-flow",
-  "keywords": ["control-flow", "workflow", "enforcement", "hooks", "loops", "retries"],
-  "installInstructions": "npm install @45ck/claude-flow"
+  "name": "prompt-language",
+  "displayName": "Prompt Language",
+  "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates.",
+  "repository": "https://github.com/45ck/prompt-language",
+  "homepage": "https://github.com/45ck/prompt-language",
+  "keywords": [
+    "prompt-language",
+    "workflow",
+    "control-flow",
+    "enforcement",
+    "hooks",
+    "loops",
+    "retries"
+  ],
+  "installInstructions": "npm install @45ck/prompt-language"
 }

@@ -39,7 +39,7 @@ Dependency flow is strictly inward. Domain never imports from other layers.
 
 ## State file
 
-Runtime state lives in `.claude-flow/session-state.json`. Never hard-code paths; use the infrastructure adapter.
+Runtime state lives in `.prompt-language/session-state.json`. Never hard-code paths; use the infrastructure adapter.
 
 ## CI
 

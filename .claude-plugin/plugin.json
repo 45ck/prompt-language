@@ -1,7 +1,7 @@
 {
-  "name": "flow",
+  "name": "prompt-language",
   "version": "0.1.0",
-  "description": "Control-flow enforcement for Claude Code. Loops, conditionals, retries, and completion gates so the agent cannot stop early or skip steps.",
+  "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates.",
   "author": "45ck",
   "license": "MIT"
 }

@@ -1,6 +1,6 @@
 # DSL Reference
 
-The claude-flow DSL defines control-flow programs using six primitives plus try/catch. Programs are composed by nesting these primitives.
+The prompt-language DSL defines control-flow programs using six primitives plus try/catch. Programs are composed by nesting these primitives.
 
 ## Primitives
 

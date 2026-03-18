@@ -20,7 +20,7 @@ describe('injectContext', () => {
     const store = makeStore();
     const prompt = 'Goal: Test goal\nflow:\n  prompt: Do something\ndone when:\n  tests_pass';
     const result = await injectContext({ prompt, sessionId: 'test-2' }, store);
-    expect(result.prompt).toContain('[claude-flow]');
+    expect(result.prompt).toContain('[prompt-language]');
     expect(result.prompt).toContain(prompt);
     const saved = await store.loadCurrent();
     expect(saved).not.toBeNull();
@@ -35,7 +35,7 @@ describe('injectContext', () => {
 
     const result = await injectContext({ prompt: 'Continue working', sessionId: 'test-3' }, store);
 
-    expect(result.prompt).toContain('[claude-flow] Active flow: Build feature');
+    expect(result.prompt).toContain('[prompt-language] Active flow: Build feature');
     expect(result.prompt).toContain('Status: active');
     expect(result.prompt).toContain('Continue working');
   });

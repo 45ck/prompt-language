@@ -80,7 +80,7 @@ describe('FileStateStore', () => {
     await expect(store.clear('nonexistent')).resolves.toBeUndefined();
   });
 
-  it('creates .claude-flow directory if missing', async () => {
+  it('creates .prompt-language directory if missing', async () => {
     const store = new FileStateStore(tempDir);
     await store.save(createSessionState('s1', makeSpec()));
 

@@ -54,7 +54,7 @@ describe('task-completed hook (integration)', () => {
   });
 
   it('exits 0 when flow has no gates', async () => {
-    const stateDir = join(tempDir, '.claude-flow');
+    const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     const state = {
       sessionId: 'test-session',
@@ -80,7 +80,7 @@ describe('task-completed hook (integration)', () => {
   });
 
   it('exits 2 when gate command fails', async () => {
-    const stateDir = join(tempDir, '.claude-flow');
+    const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     const state = {
       sessionId: 'test-session',
@@ -107,7 +107,7 @@ describe('task-completed hook (integration)', () => {
   });
 
   it('exits 0 when gate command passes', async () => {
-    const stateDir = join(tempDir, '.claude-flow');
+    const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     const state = {
       sessionId: 'test-session',

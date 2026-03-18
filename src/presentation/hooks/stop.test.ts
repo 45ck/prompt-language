@@ -54,7 +54,7 @@ describe('stop hook (integration)', () => {
   });
 
   it('exits 2 when flow is active', async () => {
-    const stateDir = join(tempDir, '.claude-flow');
+    const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     const state = {
       sessionId: 'test-session',
@@ -81,7 +81,7 @@ describe('stop hook (integration)', () => {
   });
 
   it('exits 0 when flow is completed', async () => {
-    const stateDir = join(tempDir, '.claude-flow');
+    const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     const state = {
       sessionId: 'test-session',

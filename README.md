@@ -1,10 +1,10 @@
-# @45ck/claude-flow
+# @45ck/prompt-language
 
-Control-flow enforcement plugin for Claude Code. Enforces loops, conditionals, retries, and completion gates so the agent cannot stop early or skip steps.
+A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates so the agent cannot stop early or skip steps.
 
 ## What it does
 
-Claude Code stops when it thinks the task is done. Sometimes that is too early. claude-flow intercepts the agent's lifecycle through hooks and forces it to follow a structured control-flow program until all steps and gates pass.
+Claude Code stops when it thinks the task is done. Sometimes that is too early. prompt-language intercepts the agent's lifecycle through hooks and forces it to follow a structured control-flow program until all steps and gates pass.
 
 The plugin provides:
 
@@ -17,7 +17,7 @@ The plugin provides:
 ## Install
 
 ```
-npm install @45ck/claude-flow
+npm install @45ck/prompt-language
 ```
 
 Or install as a Claude Code plugin directly.
@@ -30,7 +30,7 @@ Tell Claude what to do using natural language with control-flow intent:
 Keep running the tests and fixing failures until they all pass. Try up to 5 times.
 ```
 
-claude-flow detects the control-flow structure and compiles it into an execution plan:
+prompt-language detects the control-flow structure and compiles it into an execution plan:
 
 ```
 retry(5) {
@@ -140,7 +140,7 @@ gate(tests_pass, "npm test")
 
 ## Natural language detection
 
-You do not need to write DSL directly. claude-flow detects control-flow intent in plain English and compiles it. Examples:
+You do not need to write DSL directly. prompt-language detects control-flow intent in plain English and compiles it. Examples:
 
 | Natural language                              | Detected structure                                   |
 | --------------------------------------------- | ---------------------------------------------------- |
@@ -159,7 +159,7 @@ Fires when the user submits a prompt. The hook:
 
 1. Parses the prompt for control-flow intent (DSL or natural language).
 2. If detected, compiles a FlowSpec and creates a SessionState.
-3. Writes `.claude-flow/session-state.json`.
+3. Writes `.prompt-language/session-state.json`.
 4. Injects the first step as the agent's instruction.
 
 ### Stop
@@ -198,7 +198,7 @@ Resolver priority: deterministic > parsed > inferred > human.
 
 ## State file
 
-All runtime state is stored in `.claude-flow/session-state.json` in the project root. This file is the single source of truth for flow execution. It contains:
+All runtime state is stored in `.prompt-language/session-state.json` in the project root. This file is the single source of truth for flow execution. It contains:
 
 - The compiled FlowSpec (goal, nodes, gates, defaults)
 - Current position in the node graph

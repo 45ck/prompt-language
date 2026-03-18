@@ -1,6 +1,6 @@
 # Hooks Architecture
 
-claude-flow enforces control-flow through three Claude Code hooks. Together they form a closed enforcement loop: the agent cannot start without a plan, cannot stop before the plan is finished, and cannot mark a task complete until all gates pass.
+prompt-language enforces control-flow through three Claude Code hooks. Together they form a closed enforcement loop: the agent cannot start without a plan, cannot stop before the plan is finished, and cannot mark a task complete until all gates pass.
 
 ## Hook registration
 
@@ -53,7 +53,7 @@ Fires when the user submits a prompt to Claude.
 2. Attempt to parse it as DSL. If parsing fails, run natural language detection.
 3. If control-flow intent is found, compile a FlowSpec.
 4. Create a SessionState from the FlowSpec.
-5. Write `.claude-flow/session-state.json`.
+5. Write `.prompt-language/session-state.json`.
 6. Return the first step as the agent's injected instruction.
 7. If no control-flow intent is detected, pass through (no-op).
 
@@ -79,7 +79,7 @@ Fires when Claude signals that it wants to stop working.
 
 ### Responsibilities
 
-1. Check if `.claude-flow/session-state.json` exists.
+1. Check if `.prompt-language/session-state.json` exists.
 2. If no active flow, allow the stop (no-op).
 3. If a flow is active:
    a. Check if all nodes have been executed.
@@ -108,7 +108,7 @@ Fires when a task is marked as done.
 
 ### Responsibilities
 
-1. Check if `.claude-flow/session-state.json` exists.
+1. Check if `.prompt-language/session-state.json` exists.
 2. If no active flow, allow completion (no-op).
 3. If a flow is active:
    a. Run all gate verification commands (if specified).
@@ -151,7 +151,7 @@ The agent cannot escape this loop until all nodes are executed and all gates pas
 
 ## State management
 
-All three hooks read and write `.claude-flow/session-state.json`. This file is the single source of truth. Hooks never hold state in memory across invocations -- they are stateless processes that operate on the state file.
+All three hooks read and write `.prompt-language/session-state.json`. This file is the single source of truth. Hooks never hold state in memory across invocations -- they are stateless processes that operate on the state file.
 
 ## Error handling
 

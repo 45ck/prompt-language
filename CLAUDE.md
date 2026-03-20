@@ -76,8 +76,42 @@ To validate plugin installation end-to-end:
 
 ```bash
 npm run build && node bin/cli.mjs install
-# In a separate test directory:
-printf 'Goal: fix app.js\n\nflow:\n  retry max 3\n    run: node app.js\n    if command_failed\n      prompt: Fix the error.\n    end\n  end\n\ndone when:\n  command_succeeded\n' | claude -p --dangerously-skip-permissions
+```
+
+Then in a **separate test directory** (not the prompt-language repo), run:
+
+```bash
+mkdir -p /tmp/pl-test && cd /tmp/pl-test
+claude -p --dangerously-skip-permissions "Goal: test let/var
+
+flow:
+  var greeting = \"hello world\"
+  let ver = run \"node -v\"
+  prompt: Say the greeting: \${greeting}. Node version is \${ver}."
+```
+
+What to verify in the output:
+- Flow context header (`[prompt-language] Flow: test let/var | Status: active`)
+- Variables auto-advanced with resolved annotations (`[= hello world]`, `[= v22.x.x]`)
+- `prompt:` node is `<-- current` (path advanced past let nodes)
+- Claude's response references the interpolated values
+
+To validate existing primitives (retry, if, done-when):
+
+```bash
+cd /tmp/pl-test
+claude -p --dangerously-skip-permissions "Goal: fix app.js
+
+flow:
+  retry max 3
+    run: node app.js
+    if command_failed
+      prompt: Fix the error.
+    end
+  end
+
+done when:
+  command_succeeded"
 ```
 
 ## State file

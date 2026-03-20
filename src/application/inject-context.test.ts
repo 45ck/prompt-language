@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { injectContext, looksLikeNaturalLanguage, buildMetaPrompt } from './inject-context.js';
+import {
+  injectContext,
+  looksLikeNaturalLanguage,
+  buildMetaPrompt,
+  isTrivialPrompt,
+} from './inject-context.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { createSessionState } from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
@@ -31,7 +36,7 @@ describe('injectContext', () => {
     const prompt = 'Goal: Test goal\nflow:\n  prompt: Do something\ndone when:\n  tests_pass';
     const result = await injectContext({ prompt, sessionId: 'test-2' }, store);
     expect(result.prompt).toContain('[prompt-language]');
-    expect(result.prompt).toContain(prompt);
+    expect(result.prompt).toContain('Do something');
     const saved = await store.loadCurrent();
     expect(saved).not.toBeNull();
     expect(saved?.sessionId).toBe('test-2');
@@ -46,8 +51,7 @@ describe('injectContext', () => {
     const result = await injectContext({ prompt: 'Continue working', sessionId: 'test-3' }, store);
 
     expect(result.prompt).toContain('[prompt-language] Flow: Build feature');
-    expect(result.prompt).toContain('Status: active');
-    expect(result.prompt).toContain('Continue working');
+    expect(result.prompt).toContain('Do work');
   });
 
   it('includes variable info in context block', async () => {
@@ -85,8 +89,8 @@ describe('injectContext', () => {
     const ifNode = createIfNode(
       'i1',
       'tests_fail',
-      [createPromptNode('p1', 'fix it')],
-      [createPromptNode('p2', 'skip it')],
+      [createRunNode('r1', 'fix it')],
+      [createRunNode('r2', 'skip it')],
     );
     const spec = createFlowSpec('If test', [ifNode]);
     let session = createSessionState('test-if', spec);
@@ -94,7 +98,7 @@ describe('injectContext', () => {
     await store.save(session);
 
     const result = await injectContext({ prompt: 'Go', sessionId: 'test-if' }, store);
-    expect(result.prompt).toContain('prompt: fix it  <-- current');
+    expect(result.prompt).toContain('run: fix it  <-- current');
   });
 
   it('marks child of IfNode elseBranch as current', async () => {
@@ -102,8 +106,8 @@ describe('injectContext', () => {
     const ifNode = createIfNode(
       'i1',
       'tests_fail',
-      [createPromptNode('p1', 'fix it')],
-      [createPromptNode('p2', 'skip it')],
+      [createRunNode('r1', 'fix it')],
+      [createRunNode('r2', 'skip it')],
     );
     const spec = createFlowSpec('If else test', [ifNode]);
     let session = createSessionState('test-if-else', spec);
@@ -111,7 +115,7 @@ describe('injectContext', () => {
     await store.save(session);
 
     const result = await injectContext({ prompt: 'Go', sessionId: 'test-if-else' }, store);
-    expect(result.prompt).toContain('prompt: skip it  <-- current');
+    expect(result.prompt).toContain('run: skip it  <-- current');
   });
 
   it('marks child of TryNode body as current', async () => {
@@ -131,7 +135,7 @@ describe('injectContext', () => {
   it('marks child of TryNode catchBody as current', async () => {
     const store = makeStore();
     const tryNode = createTryNode('t1', [createRunNode('r1', 'npm build')], 'command_failed', [
-      createPromptNode('p1', 'handle error'),
+      createRunNode('r2', 'handle error'),
     ]);
     const spec = createFlowSpec('Try catch test', [tryNode]);
     let session = createSessionState('test-try-catch', spec);
@@ -139,7 +143,7 @@ describe('injectContext', () => {
     await store.save(session);
 
     const result = await injectContext({ prompt: 'Go', sessionId: 'test-try-catch' }, store);
-    expect(result.prompt).toContain('prompt: handle error  <-- current');
+    expect(result.prompt).toContain('run: handle error  <-- current');
   });
 
   it('marks child of RetryNode as current', async () => {
@@ -156,14 +160,14 @@ describe('injectContext', () => {
 
   it('marks child of UntilNode as current', async () => {
     const store = makeStore();
-    const untilNode = createUntilNode('u1', 'done', [createPromptNode('p1', 'work')], 3);
+    const untilNode = createUntilNode('u1', 'done', [createRunNode('r1', 'work')], 3);
     const spec = createFlowSpec('Until test', [untilNode]);
     let session = createSessionState('test-until', spec);
     session = { ...session, currentNodePath: [0, 0] };
     await store.save(session);
 
     const result = await injectContext({ prompt: 'Go', sessionId: 'test-until' }, store);
-    expect(result.prompt).toContain('prompt: work  <-- current');
+    expect(result.prompt).toContain('run: work  <-- current');
   });
 
   it('gracefully handles out-of-bounds currentNodePath', async () => {
@@ -316,24 +320,24 @@ describe('injectContext — NL meta-prompt', () => {
 });
 
 describe('injectContext — variable interpolation', () => {
-  it('interpolates ${varName} in user prompt with active flow', async () => {
+  it('interpolates ${varName} in captured prompt text', async () => {
     const store = makeStore();
-    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'Refactor the ${name}')]);
     let session = createSessionState('s1', spec);
     session = { ...session, variables: { name: 'auth module' } };
     await store.save(session);
 
-    const result = await injectContext({ prompt: 'Refactor the ${name}', sessionId: 's1' }, store);
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
     expect(result.prompt).toContain('Refactor the auth module');
   });
 
-  it('leaves unknown ${varName} as-is', async () => {
+  it('leaves unknown ${varName} as-is in captured prompt', async () => {
     const store = makeStore();
-    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'Value is ${unknown}')]);
     const session = createSessionState('s1', spec);
     await store.save(session);
 
-    const result = await injectContext({ prompt: 'Value is ${unknown}', sessionId: 's1' }, store);
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
     expect(result.prompt).toContain('Value is ${unknown}');
   });
 
@@ -348,7 +352,7 @@ describe('injectContext — variable interpolation', () => {
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
 
     expect(result.prompt).toContain('[= hello]');
-    expect(result.prompt).toContain('prompt: work  <-- current');
+    expect(result.prompt).toContain('prompt: work');
   });
 
   it('auto-advances consecutive let nodes', async () => {
@@ -364,7 +368,7 @@ describe('injectContext — variable interpolation', () => {
 
     expect(result.prompt).toContain('[= 1]');
     expect(result.prompt).toContain('[= 2]');
-    expect(result.prompt).toContain('prompt: work  <-- current');
+    expect(result.prompt).toContain('prompt: work');
   });
 
   it('auto-advances prompt let node and stores text', async () => {
@@ -394,19 +398,846 @@ describe('injectContext — variable interpolation', () => {
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
 
     expect(result.prompt).toContain('[= hello world]');
-    expect(result.prompt).toContain('prompt: work  <-- current');
+    expect(result.prompt).toContain('prompt: work');
   });
 
-  it('interpolates variable in prompt after auto-advance', async () => {
+  it('interpolates variable in captured prompt after let auto-advance', async () => {
     const store = makeStore();
     const letNode = createLetNode('l1', 'greeting', { type: 'literal', value: 'hello' });
+    const promptNode = createPromptNode('p1', 'Say ${greeting}');
+    const spec = createFlowSpec('test', [letNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result.prompt).toContain('Say hello');
+  });
+
+  it('interpolates user prompt when no prompt node captures', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [
+      createWhileNode('w1', 'cond', [createRunNode('r1', 'cmd')]),
+    ]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, variables: { name: 'auth module' } };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Refactor ${name}', sessionId: 's1' }, store);
+    expect(result.prompt).toContain('Refactor auth module');
+  });
+});
+
+describe('injectContext — run node auto-advance', () => {
+  it('auto-executes run node and stores exit variables', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'ok\n', stderr: '' }),
+    };
+    const runNode = createRunNode('r1', 'echo ok');
+    const promptNode = createPromptNode('p1', 'next step');
+    const spec = createFlowSpec('test', [runNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(result.prompt).toContain('next step');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['last_exit_code']).toBe(0);
+    expect(saved?.variables['command_succeeded']).toBe(true);
+    expect(saved?.variables['command_failed']).toBe(false);
+  });
+
+  it('stores failure variables when command fails', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: 'error' }),
+    };
+    const runNode = createRunNode('r1', 'fail-cmd');
+    const promptNode = createPromptNode('p1', 'handle error');
+    const spec = createFlowSpec('test', [runNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['last_exit_code']).toBe(1);
+    expect(saved?.variables['command_failed']).toBe(true);
+    expect(saved?.variables['command_succeeded']).toBe(false);
+  });
+
+  it('does not advance run node without command runner', async () => {
+    const store = makeStore();
+    const runNode = createRunNode('r1', 'echo ok');
+    const promptNode = createPromptNode('p1', 'next step');
+    const spec = createFlowSpec('test', [runNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('run: echo ok  <-- current');
+  });
+
+  it('executes multiple consecutive run nodes in sequence', async () => {
+    const store = makeStore();
+    const commands: string[] = [];
+    const mockRunner: CommandRunner = {
+      run: async (cmd: string) => {
+        commands.push(cmd);
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+    const run1 = createRunNode('r1', 'step-one');
+    const run2 = createRunNode('r2', 'step-two');
+    const promptNode = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [run1, run2, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(commands).toEqual(['step-one', 'step-two']);
+    expect(result.prompt).toContain('done');
+  });
+
+  it('interpolates variables in run node command', async () => {
+    const store = makeStore();
+    const commands: string[] = [];
+    const mockRunner: CommandRunner = {
+      run: async (cmd: string) => {
+        commands.push(cmd);
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+    const letNode = createLetNode('l1', 'file', { type: 'literal', value: 'app.js' });
+    const runNode = createRunNode('r1', 'node ${file}');
+    const promptNode = createPromptNode('p1', 'check output');
+    const spec = createFlowSpec('test', [letNode, runNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(commands).toEqual(["node 'app.js'"]);
+  });
+});
+
+describe('injectContext — prompt node auto-advance', () => {
+  it('captures prompt text and advances past it', async () => {
+    const store = makeStore();
+    const prompt1 = createPromptNode('p1', 'First instruction');
+    const prompt2 = createPromptNode('p2', 'Second instruction');
+    const spec = createFlowSpec('test', [prompt1, prompt2]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('First instruction');
+    expect(result.prompt).toContain('Second instruction  <-- current');
+    const saved = await store.loadCurrent();
+    expect(saved?.currentNodePath).toEqual([1]);
+  });
+
+  it('advances state for next invocation', async () => {
+    const store = makeStore();
+    const prompt1 = createPromptNode('p1', 'Step one');
+    const prompt2 = createPromptNode('p2', 'Step two');
+    const spec = createFlowSpec('test', [prompt1, prompt2]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result1 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result1.prompt).toContain('Step one');
+
+    const result2 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result2.prompt).toContain('Step two');
+  });
+
+  it('control-flow node stops the advance loop', async () => {
+    const store = makeStore();
+    const whileNode = createWhileNode('w1', 'tests_fail', [createRunNode('r1', 'npm test')]);
+    const spec = createFlowSpec('test', [whileNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('while tests_fail');
+    expect(result.prompt).toContain('Go');
+  });
+
+  it('mixed let → run → prompt sequence advances correctly', async () => {
+    const store = makeStore();
+    const commands: string[] = [];
+    const mockRunner: CommandRunner = {
+      run: async (cmd: string) => {
+        commands.push(cmd);
+        return { exitCode: 0, stdout: 'v20\n', stderr: '' };
+      },
+    };
+    const letNode = createLetNode('l1', 'name', { type: 'literal', value: 'test-file' });
+    const runNode = createRunNode('r1', 'echo ${name}');
+    const promptNode = createPromptNode('p1', 'Check ${name} output');
+    const spec = createFlowSpec('test', [letNode, runNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(commands).toEqual(["echo 'test-file'"]);
+    expect(result.prompt).toContain('Check test-file output');
+    const saved = await store.loadCurrent();
+    expect(saved?.currentNodePath).toEqual([3]);
+    expect(saved?.variables['name']).toBe('test-file');
+    expect(saved?.variables['command_succeeded']).toBe(true);
+  });
+});
+
+describe('injectContext — prompt capture behavior', () => {
+  it('appends non-trivial user prompt alongside captured prompt node text', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'Captured instruction')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'User typed this', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Captured instruction');
+    expect(result.prompt).toContain('[User message: User typed this]');
+  });
+
+  it('does not append trivial user prompt to captured prompt node text', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'Captured instruction')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Captured instruction');
+    expect(result.prompt).not.toContain('[User message:');
+  });
+
+  it('captures prompt node nested inside if-thenBranch when path points to it', async () => {
+    const store = makeStore();
+    const ifNode = createIfNode('i1', 'tests_fail', [createPromptNode('p1', 'Fix the tests')]);
+    const spec = createFlowSpec('test', [ifNode]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, currentNodePath: [0, 0] };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result.prompt).toContain('Fix the tests');
+  });
+
+  it('captures leading prompt node during initial flow parse', async () => {
+    const store = makeStore();
+    const prompt = 'Goal: test\nflow:\n  prompt: First instruction\n  prompt: Second instruction';
+    const result = await injectContext({ prompt, sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('First instruction');
+    expect(result.prompt).not.toContain('Goal: test\nflow:');
+  });
+});
+
+describe('injectContext — let run edge cases', () => {
+  it('does not advance let run node without command runner', async () => {
+    const store = makeStore();
+    const letNode = createLetNode('l1', 'out', { type: 'run', command: 'echo hi' });
     const promptNode = createPromptNode('p1', 'work');
     const spec = createFlowSpec('test', [letNode, promptNode]);
     const session = createSessionState('s1', spec);
     await store.save(session);
 
-    const result = await injectContext({ prompt: 'Say ${greeting}', sessionId: 's1' }, store);
-    expect(result.prompt).toContain('Say hello');
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.currentNodePath).toEqual([0]);
+    expect(saved?.variables['out']).toBeUndefined();
+  });
+
+  it('interpolates variables in let run command', async () => {
+    const store = makeStore();
+    const commands: string[] = [];
+    const mockRunner: CommandRunner = {
+      run: async (cmd: string) => {
+        commands.push(cmd);
+        return { exitCode: 0, stdout: 'result\n', stderr: '' };
+      },
+    };
+    const let1 = createLetNode('l1', 'name', { type: 'literal', value: 'foo' });
+    const let2 = createLetNode('l2', 'out', { type: 'run', command: 'echo ${name}' });
+    const promptNode = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [let1, let2, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(commands).toEqual(["echo 'foo'"]);
+  });
+
+  it('let run sets exit variables (last_exit_code, command_failed, etc.)', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'output\n', stderr: '' }),
+    };
+    const letNode = createLetNode('l1', 'out', { type: 'run', command: 'echo hi' });
+    const promptNode = createPromptNode('p1', 'work');
+    const spec = createFlowSpec('test', [letNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['out']).toBe('output');
+    expect(saved?.variables['last_exit_code']).toBe(0);
+    expect(saved?.variables['command_failed']).toBe(false);
+    expect(saved?.variables['command_succeeded']).toBe(true);
+    expect(saved?.variables['last_stdout']).toBe('output');
+    expect(saved?.variables['last_stderr']).toBe('');
+  });
+});
+
+describe('injectContext — error handling and limits', () => {
+  it('propagates error when command runner throws during run node', async () => {
+    const store = makeStore();
+    const throwingRunner: CommandRunner = {
+      run: async () => {
+        throw new Error('connection failed');
+      },
+    };
+    const runNode = createRunNode('r1', 'echo ok');
+    const spec = createFlowSpec('test', [runNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await expect(
+      injectContext({ prompt: 'Go', sessionId: 's1' }, store, throwingRunner),
+    ).rejects.toThrow('connection failed');
+  });
+
+  it('warns when MAX_ADVANCES (100) limit is reached', async () => {
+    const store = makeStore();
+    const nodes = Array.from({ length: 101 }, (_, i) =>
+      createLetNode(`l${i}`, `v${i}`, { type: 'literal', value: String(i) }),
+    );
+    const spec = createFlowSpec('test', nodes);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.currentNodePath).toEqual([100]);
+    expect(saved?.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('MAX_ADVANCES')]),
+    );
+  });
+});
+
+describe('isTrivialPrompt', () => {
+  it('recognizes "go" as trivial', () => {
+    expect(isTrivialPrompt('go')).toBe(true);
+  });
+
+  it('recognizes "Continue" (case-insensitive) as trivial', () => {
+    expect(isTrivialPrompt('Continue')).toBe(true);
+  });
+
+  it('recognizes "ok!" with trailing punctuation as trivial', () => {
+    expect(isTrivialPrompt('ok!')).toBe(true);
+  });
+
+  it('recognizes "keep going" as trivial', () => {
+    expect(isTrivialPrompt('keep going')).toBe(true);
+  });
+
+  it('returns false for non-trivial prompt', () => {
+    expect(isTrivialPrompt('Fix the auth module')).toBe(false);
+  });
+
+  it('returns false for empty string', () => {
+    expect(isTrivialPrompt('')).toBe(false);
+  });
+});
+
+describe('injectContext — run node stdout/stderr capture', () => {
+  it('stores last_stdout and last_stderr after run node', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'hello output\n', stderr: 'some warning\n' }),
+    };
+    const runNode = createRunNode('r1', 'echo hello');
+    const promptNode = createPromptNode('p1', 'next');
+    const spec = createFlowSpec('test', [runNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['last_stdout']).toBe('hello output');
+    expect(saved?.variables['last_stderr']).toBe('some warning');
+  });
+
+  it('truncates long stdout at 2000 chars', async () => {
+    const store = makeStore();
+    const longOutput = 'x'.repeat(3000);
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: longOutput, stderr: '' }),
+    };
+    const runNode = createRunNode('r1', 'big-cmd');
+    const promptNode = createPromptNode('p1', 'next');
+    const spec = createFlowSpec('test', [runNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    const saved = await store.loadCurrent();
+    const stdout = saved?.variables['last_stdout'] as string;
+    expect(stdout.length).toBeLessThan(2100);
+    expect(stdout).toContain('... (truncated)');
+  });
+});
+
+describe('injectContext — while loop iteration', () => {
+  it('enters while body when condition is true via variable', async () => {
+    const store = makeStore();
+    const whileNode = createWhileNode(
+      'w1',
+      'command_failed',
+      [createPromptNode('p1', 'Fix it')],
+      3,
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, variables: { command_failed: true } };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Fix it');
+    const saved = await store.loadCurrent();
+    expect(saved?.nodeProgress['w1']?.iteration).toBe(1);
+  });
+
+  it('skips while body when condition is false', async () => {
+    const store = makeStore();
+    const whileNode = createWhileNode(
+      'w1',
+      'command_failed',
+      [createPromptNode('p1', 'Fix it')],
+      3,
+    );
+    const promptAfter = createPromptNode('p2', 'All done');
+    const spec = createFlowSpec('test', [whileNode, promptAfter]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, variables: { command_failed: false } };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('All done');
+  });
+
+  it('loops while body when condition stays true', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'command_failed',
+      [createRunNode('r1', 'npm test'), createPromptNode('p1', 'Fix it')],
+      3,
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, variables: { command_failed: true } };
+    await store.save(session);
+
+    // First invocation: enters while, runs npm test (fails), hits prompt
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+    expect(result.prompt).toContain('Fix it');
+
+    // Second invocation: body exhausted, re-evaluates condition (still true), loops
+    const result2 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+    expect(result2.prompt).toContain('Fix it');
+    const saved = await store.loadCurrent();
+    expect(saved?.nodeProgress['w1']?.iteration).toBe(2);
+  });
+
+  it('exits while loop when max iterations reached', async () => {
+    const store = makeStore();
+    const whileNode = createWhileNode(
+      'w1',
+      'command_failed',
+      [createPromptNode('p1', 'Fix it')],
+      2,
+    );
+    const promptAfter = createPromptNode('p2', 'Done looping');
+    const spec = createFlowSpec('test', [whileNode, promptAfter]);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      variables: { command_failed: true },
+      currentNodePath: [0, 1],
+      nodeProgress: { w1: { iteration: 2, maxIterations: 2, status: 'running' } },
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Done looping');
+  });
+});
+
+describe('injectContext — until loop iteration', () => {
+  it('enters until body when condition is false', async () => {
+    const store = makeStore();
+    const untilNode = createUntilNode(
+      'u1',
+      'command_succeeded',
+      [createPromptNode('p1', 'Try again')],
+      3,
+    );
+    const spec = createFlowSpec('test', [untilNode]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, variables: { command_succeeded: false } };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Try again');
+    const saved = await store.loadCurrent();
+    expect(saved?.nodeProgress['u1']?.iteration).toBe(1);
+  });
+
+  it('skips until body when condition is already true', async () => {
+    const store = makeStore();
+    const untilNode = createUntilNode(
+      'u1',
+      'command_succeeded',
+      [createPromptNode('p1', 'Try again')],
+      3,
+    );
+    const promptAfter = createPromptNode('p2', 'Already done');
+    const spec = createFlowSpec('test', [untilNode, promptAfter]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, variables: { command_succeeded: true } };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Already done');
+  });
+
+  it('exits until loop when condition becomes true', async () => {
+    const store = makeStore();
+    const untilNode = createUntilNode(
+      'u1',
+      'command_succeeded',
+      [createPromptNode('p1', 'Try again')],
+      5,
+    );
+    const promptAfter = createPromptNode('p2', 'Finished');
+    const spec = createFlowSpec('test', [untilNode, promptAfter]);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      variables: { command_succeeded: true },
+      currentNodePath: [0, 1],
+      nodeProgress: { u1: { iteration: 1, maxIterations: 5, status: 'running' } },
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Finished');
+  });
+});
+
+describe('injectContext — retry', () => {
+  it('enters retry body on first encounter', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: 'fail' }),
+    };
+    const retryNode = createRetryNode(
+      're1',
+      [createRunNode('r1', 'npm build'), createPromptNode('p1', 'Fix build')],
+      3,
+    );
+    const spec = createFlowSpec('test', [retryNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(result.prompt).toContain('Fix build');
+    const saved = await store.loadCurrent();
+    expect(saved?.nodeProgress['re1']?.iteration).toBe(1);
+  });
+
+  it('retries when command_failed is true after body', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
+    };
+    const retryNode = createRetryNode(
+      're1',
+      [createRunNode('r1', 'npm build'), createPromptNode('p1', 'Fix build')],
+      3,
+    );
+    const spec = createFlowSpec('test', [retryNode]);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      variables: { command_failed: true },
+      currentNodePath: [0, 2],
+      nodeProgress: { re1: { iteration: 1, maxIterations: 3, status: 'running' } },
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(result.prompt).toContain('Fix build');
+    const saved = await store.loadCurrent();
+    expect(saved?.nodeProgress['re1']?.iteration).toBe(2);
+  });
+
+  it('exits retry when command succeeds', async () => {
+    const store = makeStore();
+    const retryNode = createRetryNode('re1', [createPromptNode('p1', 'Fix')], 3);
+    const promptAfter = createPromptNode('p2', 'Build passed');
+    const spec = createFlowSpec('test', [retryNode, promptAfter]);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      variables: { command_failed: false },
+      currentNodePath: [0, 1],
+      nodeProgress: { re1: { iteration: 1, maxIterations: 3, status: 'running' } },
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Build passed');
+  });
+});
+
+describe('injectContext — if/else branching', () => {
+  it('enters thenBranch when condition is true', async () => {
+    const store = makeStore();
+    const ifNode = createIfNode(
+      'i1',
+      'command_failed',
+      [createPromptNode('p1', 'Fix the error')],
+      [createPromptNode('p2', 'All good')],
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, variables: { command_failed: true } };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Fix the error');
+  });
+
+  it('enters elseBranch when condition is false', async () => {
+    const store = makeStore();
+    const ifNode = createIfNode(
+      'i1',
+      'command_failed',
+      [createPromptNode('p1', 'Fix the error')],
+      [createPromptNode('p2', 'All good')],
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, variables: { command_failed: false } };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('All good');
+  });
+
+  it('skips if entirely when condition is false and no elseBranch', async () => {
+    const store = makeStore();
+    const ifNode = createIfNode('i1', 'command_failed', [createPromptNode('p1', 'Fix the error')]);
+    const promptAfter = createPromptNode('p2', 'Moving on');
+    const spec = createFlowSpec('test', [ifNode, promptAfter]);
+    let session = createSessionState('s1', spec);
+    session = { ...session, variables: { command_failed: false } };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Moving on');
+  });
+
+  it('advances past if after body exhaustion', async () => {
+    const store = makeStore();
+    const ifNode = createIfNode('i1', 'command_failed', [createPromptNode('p1', 'Fix the error')]);
+    const promptAfter = createPromptNode('p2', 'After if');
+    const spec = createFlowSpec('test', [ifNode, promptAfter]);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      variables: { command_failed: true },
+      currentNodePath: [0, 1],
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('After if');
+  });
+});
+
+describe('injectContext — try/catch', () => {
+  it('enters try body on first encounter', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'npm build'), createPromptNode('p1', 'Build ok')],
+      'command_failed',
+      [createPromptNode('p2', 'Build failed')],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(result.prompt).toContain('Build ok');
+  });
+
+  it('jumps to catch when run fails in try body', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: 'boom' }),
+    };
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'npm build'), createPromptNode('p1', 'Build ok')],
+      'command_failed',
+      [createPromptNode('p2', 'Caught failure')],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(result.prompt).toContain('Caught failure');
+  });
+
+  it('advances past try after catch body exhaustion', async () => {
+    const store = makeStore();
+    const tryNode = createTryNode('t1', [createRunNode('r1', 'npm build')], 'command_failed', [
+      createPromptNode('p2', 'Handle error'),
+    ]);
+    const promptAfter = createPromptNode('p3', 'After try');
+    const spec = createFlowSpec('test', [tryNode, promptAfter]);
+    let session = createSessionState('s1', spec);
+    // path [0, 2] = past the catch body (body.length=1, catch has 1 node at index 1, so 2 is past)
+    session = { ...session, currentNodePath: [0, 2] };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('After try');
+  });
+});
+
+describe('injectContext — flow auto-completion', () => {
+  it('marks flow completed when all nodes exhausted and no gates', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'Do work')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    // First call: captures prompt, advances to [1] (past all nodes)
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    // Second call: nodes exhausted, no gates → auto-complete
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('completed');
+  });
+
+  it('does not auto-complete when gates are present and not passing', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'Do work')],
+      [{ predicate: 'tests_pass' }],
+    );
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('active');
+  });
+
+  it('auto-completes when gates are all passing', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'Do work')],
+      [{ predicate: 'tests_pass' }],
+    );
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      gateResults: { tests_pass: true },
+      currentNodePath: [1],
+    };
+    await store.save(session);
+
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('completed');
+  });
+});
+
+describe('injectContext — while with builtin condition', () => {
+  it('evaluates builtin condition via command runner', async () => {
+    const store = makeStore();
+    let callCount = 0;
+    const mockRunner: CommandRunner = {
+      run: async (cmd: string) => {
+        callCount++;
+        if (cmd === 'npm test') {
+          return { exitCode: 1, stdout: '', stderr: 'tests failed' };
+        }
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+    const whileNode = createWhileNode('w1', 'tests_fail', [createPromptNode('p1', 'Fix tests')], 3);
+    const spec = createFlowSpec('test', [whileNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(result.prompt).toContain('Fix tests');
+    expect(callCount).toBe(1);
   });
 });
 

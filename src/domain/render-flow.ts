@@ -175,6 +175,8 @@ function renderTryNode(
   return lines;
 }
 
+// Both `let` and `var` are parsed as LetNode (they are aliases).
+// Rendering always uses `let` for consistency.
 function renderLetNode(
   node: LetNode,
   state: SessionState,

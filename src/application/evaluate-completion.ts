@@ -16,13 +16,43 @@ export interface EvaluateCompletionOutput {
   readonly gateResults: Readonly<Record<string, boolean>>;
 }
 
+const BUILTIN_GATE_COMMANDS: Readonly<Record<string, string>> = {
+  tests_pass: 'npm test',
+  tests_fail: 'npm test',
+  lint_pass: 'npm run lint',
+  lint_fail: 'npm run lint',
+  diff_nonempty: 'git diff --quiet',
+};
+
+const INVERTED_PREDICATES = new Set(['tests_fail', 'lint_fail', 'diff_nonempty']);
+
+const SAFE_PATH_RE = /^(?!.*\.\.)[\w./-]+$/;
+
+/** Map a built-in predicate to the shell command that evaluates it. */
+export function resolveBuiltinCommand(predicate: string): string | undefined {
+  if (predicate.startsWith('file_exists ')) {
+    const path = predicate.slice('file_exists '.length).trim();
+    if (!path || !SAFE_PATH_RE.test(path)) return undefined;
+    return `test -f '${path}'`;
+  }
+
+  return BUILTIN_GATE_COMMANDS[predicate];
+}
+
+/** Inverted predicates pass when the command FAILS (exitCode !== 0). */
+export function isInvertedPredicate(predicate: string): boolean {
+  return INVERTED_PREDICATES.has(predicate);
+}
+
 async function runGates(state: SessionState, runner: CommandRunner): Promise<SessionState> {
   let updated = state;
 
   for (const gate of state.flowSpec.completionGates) {
-    if (gate.command) {
-      const result = await runner.run(gate.command);
-      const passed = result.exitCode === 0;
+    const command = gate.command ?? resolveBuiltinCommand(gate.predicate);
+    if (command) {
+      const result = await runner.run(command);
+      const inverted = isInvertedPredicate(gate.predicate);
+      const passed = inverted ? result.exitCode !== 0 : result.exitCode === 0;
       updated = updateGateResult(updated, gate.predicate, passed);
     } else {
       const current = updated.gateResults[gate.predicate];

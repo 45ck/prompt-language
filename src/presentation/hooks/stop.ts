@@ -8,6 +8,7 @@
 
 import { evaluateStop } from '../../application/evaluate-stop.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
+import { formatError } from '../../domain/format-error.js';
 import { readStdin } from './read-stdin.js';
 
 async function main(): Promise<void> {
@@ -27,6 +28,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  process.stderr.write(`[prompt-language] hook error: ${String(error)}\n`);
+  process.stderr.write(`[prompt-language] hook error: ${formatError(error)}\n`);
   process.exitCode = 0;
 });

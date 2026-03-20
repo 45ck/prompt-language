@@ -2,7 +2,7 @@
 
 ## Quick reference
 
-Quality gate: `npm run ci` (run before claiming work complete).
+Quality gate: `npm run ci` then `npm run eval:smoke` (run **both** before claiming work complete).
 
 ## Tests
 
@@ -49,7 +49,7 @@ Seven node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, plus 
 - `let x = prompt "text"` — stores the prompt text as context
 - `let x = run "cmd"` — executes command, stores stdout
 
-Variables are interpolated via `${varName}` in prompt/run text. Unknown variables are left as-is. All let/var nodes auto-advance (no agent interaction).
+Variables are interpolated via `${varName}` in prompt/run text. Unknown variables are left as-is. `let`/`var`, `run` (with command runner), and `prompt` nodes auto-advance (no agent interaction).
 
 Key implementation files:
 
@@ -57,7 +57,8 @@ Key implementation files:
 - `src/domain/interpolate.ts` — pure `interpolate(template, variables)` function
 - `src/domain/render-flow.ts` — renders let nodes with `[= value]` annotation
 - `src/application/parse-flow.ts` — `parseLetLine()` handles let/var parsing
-- `src/application/inject-context.ts` — `autoAdvanceLetNodes()` + interpolation
+- `src/application/inject-context.ts` — `autoAdvanceNodes()` + interpolation
+- `src/application/evaluate-completion.ts` — gate evaluation with `resolveBuiltinCommand()` for builtin predicates
 
 ## Plugin installation
 
@@ -72,16 +73,49 @@ Key constraints discovered during testing:
 - The marketplace directory must be the parent of the plugin directory (not the plugin dir itself). Source paths in the catalog use `"./prompt-language"`.
 - DSL regexes (`FLOW_BLOCK_RE`, `extractFlowBlock`) must allow optional leading whitespace (`^\s*flow:`) since users may indent their input.
 
-To validate plugin installation end-to-end:
+## Smoke testing (mandatory — never skip)
+
+Unit tests and CI are necessary but **not sufficient**. Smoke tests are **required** before claiming any work complete. Do not ask the user whether to run them — just run them. Unit tests use mocks and in-memory stores; smoke tests prove the plugin actually works end-to-end through Claude's real agent loop.
+
+### Automated smoke tests
+
+```bash
+npm run eval:smoke        # full suite (5 tests, ~3 min)
+npm run eval:smoke:quick  # fast subset without gate test (~1 min)
+```
+
+The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 5 live `claude -p` tests in temp directories:
+
+- **A: Context file relay** — two prompts, second reads file created by first
+- **B: Context recall** — second prompt recalls a code from the first
+- **C: Variable interpolation** — let/var resolve and interpolate into prompt text
+- **D: Gate evaluation** — `done when: tests_pass` blocks until app.js is fixed
+- **E: Run auto-execution** — `run:` node auto-executes and creates a file
+
+### When to smoke test
+
+Always. Specifically:
+
+- After **any** change to `inject-context.ts`, `parse-flow.ts`, `evaluate-completion.ts`, or hook files
+- After **any** change to node advancement, state transitions, or gate evaluation
+- After **any** new DSL primitive or syntax change
+- Before **any** PR that touches application or presentation layers
+- After completing a feature or fix — run `npm run eval:smoke` before reporting done
+
+### Manual smoke tests
+
+For one-off validation or debugging, run individual tests from a temp directory:
 
 ```bash
 npm run build && node bin/cli.mjs install
+mkdir -p /tmp/pl-test && cd /tmp/pl-test
+rm -rf .prompt-language  # clean state between tests
 ```
 
-Then in a **separate test directory** (not the prompt-language repo), run:
+#### Variable + prompt advancement
 
 ```bash
-mkdir -p /tmp/pl-test && cd /tmp/pl-test
+cd /tmp/pl-test && rm -rf .prompt-language
 claude -p --dangerously-skip-permissions "Goal: test let/var
 
 flow:
@@ -90,17 +124,25 @@ flow:
   prompt: Say the greeting: \${greeting}. Node version is \${ver}."
 ```
 
-What to verify in the output:
-
-- Flow context header (`[prompt-language] Flow: test let/var | Status: active`)
-- Variables auto-advanced with resolved annotations (`[= hello world]`, `[= v22.x.x]`)
-- `prompt:` node is `<-- current` (path advanced past let nodes)
-- Claude's response references the interpolated values
-
-To validate existing primitives (retry, if, done-when):
+#### Gate evaluation (done when)
 
 ```bash
-cd /tmp/pl-test
+cd /tmp/pl-test && rm -rf .prompt-language
+echo 'process.exit(1)' > app.js
+claude -p --dangerously-skip-permissions "Goal: fix app
+
+flow:
+  prompt: Fix app.js so it exits 0
+  run: node app.js
+
+done when:
+  tests_pass"
+```
+
+#### Control flow (retry, if)
+
+```bash
+cd /tmp/pl-test && rm -rf .prompt-language
 claude -p --dangerously-skip-permissions "Goal: fix app.js
 
 flow:
@@ -112,8 +154,10 @@ flow:
   end
 
 done when:
-  command_succeeded"
+  tests_pass"
 ```
+
+Note: `command_succeeded`/`command_failed` work as runtime variables (auto-set after each `run:` node) but are **not yet implemented as gate predicates** for `done when:`. Use `tests_pass` or `file_exists <path>` for gates.
 
 ## State file
 

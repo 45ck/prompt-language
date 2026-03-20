@@ -43,6 +43,8 @@
     "eval:e2e": "npm run build && node scripts/eval/e2e-eval.mjs",
     "eval:e2e:full": "npm run build && node scripts/eval/e2e-eval.mjs --full",
     "eval:validate": "npm run build && node scripts/eval/plugin-validation-eval.mjs",
+    "eval:smoke": "npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs",
+    "eval:smoke:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs --quick",
     "audit:high": "node scripts/ci/audit-high.mjs",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run eval:e2e && npm run audit:high",
     "ci:nightly": "npm run ci && npm run mutation",

@@ -30,6 +30,7 @@
     "anthropic",
     "fssl",
     "interpolate",
+    "nonempty",
     "varname"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]

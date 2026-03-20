@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { interpolate } from './interpolate.js';
+import { interpolate, shellEscapeValue, shellInterpolate } from './interpolate.js';
 
 describe('interpolate', () => {
   it('replaces a single variable', () => {
@@ -44,5 +44,52 @@ describe('interpolate', () => {
 
   it('handles adjacent tokens', () => {
     expect(interpolate('${a}${b}', { a: 'hello', b: 'world' })).toBe('helloworld');
+  });
+});
+
+describe('shellEscapeValue', () => {
+  it('wraps a simple value in single quotes', () => {
+    expect(shellEscapeValue('hello')).toBe("'hello'");
+  });
+
+  it('escapes embedded single quotes', () => {
+    expect(shellEscapeValue("it's")).toBe("'it'\\''s'");
+  });
+
+  it('neutralizes semicolons and command chaining', () => {
+    expect(shellEscapeValue('a; echo INJECTED')).toBe("'a; echo INJECTED'");
+  });
+
+  it('neutralizes command substitution', () => {
+    expect(shellEscapeValue('$(whoami)')).toBe("'$(whoami)'");
+  });
+
+  it('neutralizes backtick substitution', () => {
+    expect(shellEscapeValue('`cat /etc/passwd`')).toBe("'`cat /etc/passwd`'");
+  });
+
+  it('handles empty string', () => {
+    expect(shellEscapeValue('')).toBe("''");
+  });
+});
+
+describe('shellInterpolate', () => {
+  it('shell-escapes substituted values', () => {
+    expect(shellInterpolate('echo ${x}', { x: 'hello' })).toBe("echo 'hello'");
+  });
+
+  it('prevents shell injection via variable values', () => {
+    const result = shellInterpolate('echo ${x}', { x: 'a; rm -rf /' });
+    expect(result).toBe("echo 'a; rm -rf /'");
+    // The dangerous chars are neutralized by single-quoting, not removed
+    expect(result).toMatch(/^echo '/);
+  });
+
+  it('leaves unknown variables as-is', () => {
+    expect(shellInterpolate('echo ${unknown}', {})).toBe('echo ${unknown}');
+  });
+
+  it('returns template unchanged when no tokens present', () => {
+    expect(shellInterpolate('echo hello', { x: 'val' })).toBe('echo hello');
   });
 });

@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { injectContext } from '../../application/inject-context.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-runner.js';
+import { formatError } from '../../domain/format-error.js';
 import { readStdin } from './read-stdin.js';
 
 function parseInput(raw: string): { prompt: string } | null {
@@ -58,7 +59,8 @@ async function main(): Promise<void> {
   process.stdout.write(output);
 }
 
+// TODO: sessionId is generated fresh each hook invocation; should persist across turns
 main().catch((error: unknown) => {
-  process.stderr.write(`[prompt-language] hook error: ${String(error)}\n`);
+  process.stderr.write(`[prompt-language] hook error: ${formatError(error)}\n`);
   process.exitCode = 0;
 });

@@ -16,6 +16,7 @@ Rules for AI agents and autonomous workflows operating on this repository.
 2. Make changes within the correct architectural layer.
 3. Run `npm run test` after changes.
 4. Run `npm run ci` before claiming complete.
+5. Run live smoke tests with `claude -p --dangerously-skip-permissions` for any change to hooks, parsing, advancement, or state transitions (see CLAUDE.md "Smoke testing" section).
 
 ## Quality contract
 
@@ -23,6 +24,7 @@ Rules for AI agents and autonomous workflows operating on this repository.
 - Tests are required for all new logic.
 - Coverage must not decrease.
 - Mutation testing should be run for critical domain logic.
+- **Live smoke tests are mandatory** for changes to application/presentation layers. Unit tests with mocks are not sufficient — the plugin must be built, installed, and validated through Claude's real agent loop using `claude -p --dangerously-skip-permissions` in a temp directory. See CLAUDE.md for smoke test commands.
 
 ## Architecture boundaries
 

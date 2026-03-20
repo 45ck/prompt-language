@@ -91,6 +91,7 @@ flow:
 ```
 
 What to verify in the output:
+
 - Flow context header (`[prompt-language] Flow: test let/var | Status: active`)
 - Variables auto-advanced with resolved annotations (`[= hello world]`, `[= v22.x.x]`)
 - `prompt:` node is `<-- current` (path advanced past let nodes)

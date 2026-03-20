@@ -5,7 +5,7 @@
  * The graph is static; all runtime state lives in SessionState.
  */
 
-export type FlowNodeKind = 'while' | 'until' | 'retry' | 'if' | 'prompt' | 'run' | 'try';
+export type FlowNodeKind = 'while' | 'until' | 'retry' | 'if' | 'prompt' | 'run' | 'try' | 'let';
 
 interface BaseNode {
   readonly kind: FlowNodeKind;
@@ -56,7 +56,26 @@ export interface TryNode extends BaseNode {
   readonly catchBody: readonly FlowNode[];
 }
 
-export type FlowNode = WhileNode | UntilNode | RetryNode | IfNode | PromptNode | RunNode | TryNode;
+export type LetSource =
+  | { readonly type: 'prompt'; readonly text: string }
+  | { readonly type: 'run'; readonly command: string }
+  | { readonly type: 'literal'; readonly value: string };
+
+export interface LetNode extends BaseNode {
+  readonly kind: 'let';
+  readonly variableName: string;
+  readonly source: LetSource;
+}
+
+export type FlowNode =
+  | WhileNode
+  | UntilNode
+  | RetryNode
+  | IfNode
+  | PromptNode
+  | RunNode
+  | TryNode
+  | LetNode;
 
 const DEFAULT_MAX_ITERATIONS = 5;
 const DEFAULT_MAX_ATTEMPTS = 3;
@@ -128,4 +147,8 @@ export function createTryNode(
   catchBody: readonly FlowNode[],
 ): TryNode {
   return { kind: 'try', id, body, catchCondition, catchBody };
+}
+
+export function createLetNode(id: string, variableName: string, source: LetSource): LetNode {
+  return { kind: 'let', id, variableName, source };
 }

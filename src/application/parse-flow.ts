@@ -6,6 +6,7 @@
 
 import type { FlowNode } from '../domain/flow-node.js';
 import type { CompletionGate, FlowSpec } from '../domain/flow-spec.js';
+import type { LetSource } from '../domain/flow-node.js';
 import {
   createWhileNode,
   createUntilNode,
@@ -14,6 +15,7 @@ import {
   createPromptNode,
   createRunNode,
   createTryNode,
+  createLetNode,
 } from '../domain/flow-node.js';
 import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
 
@@ -67,46 +69,12 @@ function parseGates(input: string): readonly CompletionGate[] {
 
 /** Extract the flow: block lines. */
 function extractFlowBlock(input: string): readonly string[] {
-  const doneIdx = input.search(/\ndone when:/im);
-  const flowMatch = /^flow:\s*\n/im.exec(input);
+  const doneIdx = input.search(/\n\s*done when:/im);
+  const flowMatch = /^\s*flow:\s*\n/im.exec(input);
   if (!flowMatch) return [];
   const start = flowMatch.index + flowMatch[0].length;
   const end = doneIdx >= 0 ? doneIdx : input.length;
   return input.slice(start, end).split('\n');
-}
-
-/** Detect natural language and convert to structured DSL. */
-function normalizeNaturalLanguage(input: string, warnings: string[]): string {
-  let result = input;
-  const patterns: { re: RegExp; repl: string; msg: string }[] = [
-    {
-      re: /keep going until (.+)/i,
-      repl: 'until $1 max 5',
-      msg: 'Converted "keep going until" to until loop',
-    },
-    {
-      re: /don'?t stop until (.+)/i,
-      repl: 'until $1 max 5',
-      msg: 'Converted "don\'t stop until" to until loop',
-    },
-    {
-      re: /loop until (.+)/i,
-      repl: 'until $1 max 5',
-      msg: 'Converted "loop until" to until loop',
-    },
-    {
-      re: /retry (\d+) times/i,
-      repl: 'retry max $1',
-      msg: 'Converted "retry N times" to retry block',
-    },
-  ];
-  for (const { re, repl, msg } of patterns) {
-    if (re.test(result)) {
-      result = result.replace(re, repl);
-      warnings.push(msg);
-    }
-  }
-  return result;
 }
 
 function parseWhileLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
@@ -177,6 +145,49 @@ function parseTryBlock(ctx: ParseContext, baseIndent: number): FlowNode {
   return createTryNode(nextId(ctx), body, catchCondition, catchBody);
 }
 
+function stripQuotes(s: string): string {
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    return s.slice(1, -1);
+  }
+  return s;
+}
+
+function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
+  // Strip "let " or "var " prefix
+  const afterKeyword = trimmed.slice(trimmed.indexOf(' ') + 1);
+  const eqIdx = afterKeyword.indexOf('=');
+  if (eqIdx < 0) {
+    ctx.warnings.push(`Invalid let/var syntax: "${trimmed}" — missing "="`);
+    return null;
+  }
+  const variableName = afterKeyword.slice(0, eqIdx).trim();
+  if (!variableName) {
+    ctx.warnings.push(`Invalid let/var syntax: "${trimmed}" — missing variable name`);
+    return null;
+  }
+  const rhs = afterKeyword.slice(eqIdx + 1).trim();
+  if (!rhs) {
+    ctx.warnings.push(`Invalid let/var syntax: "${trimmed}" — missing value`);
+    return null;
+  }
+
+  const rhsLower = rhs.toLowerCase();
+  let source: LetSource;
+
+  if (rhsLower.startsWith('prompt ')) {
+    const text = stripQuotes(rhs.slice(7).trim());
+    source = { type: 'prompt', text };
+  } else if (rhsLower.startsWith('run ')) {
+    const command = stripQuotes(rhs.slice(4).trim());
+    source = { type: 'run', command };
+  } else {
+    const value = stripQuotes(rhs);
+    source = { type: 'literal', value };
+  }
+
+  return createLetNode(nextId(ctx), variableName, source);
+}
+
 function consumeEnd(ctx: ParseContext): void {
   if (ctx.pos < ctx.lines.length) {
     const peekLine = ctx.lines[ctx.pos];
@@ -243,17 +254,18 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   if (lower.startsWith('run:')) {
     return createRunNode(nextId(ctx), trimmed.slice(4).trim());
   }
-  if (lower.startsWith('let ')) return null;
+  if (lower.startsWith('let ') || lower.startsWith('var ')) {
+    return parseLetLine(ctx, trimmed);
+  }
   ctx.warnings.push(`Unknown keyword "${trimmed}" — treating as prompt`);
   return createPromptNode(nextId(ctx), trimmed);
 }
 
 export function parseFlow(input: string): FlowSpec {
   const warnings: string[] = [];
-  const normalized = normalizeNaturalLanguage(input, warnings);
-  const goal = parseGoal(normalized);
-  const gates = parseGates(normalized);
-  const flowLines = extractFlowBlock(normalized);
+  const goal = parseGoal(input);
+  const gates = parseGates(input);
+  const flowLines = extractFlowBlock(input);
   const ctx: ParseContext = {
     lines: flowLines,
     pos: 0,

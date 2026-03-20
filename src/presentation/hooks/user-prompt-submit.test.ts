@@ -17,7 +17,7 @@ afterEach(async () => {
 function runHook(input: string, cwd: string): string {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', 'user-prompt-submit.ts');
-  return execSync(`npx tsx ${scriptPath}`, {
+  return execSync(`npx tsx "${scriptPath}"`, {
     input,
     encoding: 'utf-8',
     cwd,

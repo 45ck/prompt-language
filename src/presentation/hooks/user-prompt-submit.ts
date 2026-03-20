@@ -9,6 +9,7 @@
 import { randomUUID } from 'node:crypto';
 import { injectContext } from '../../application/inject-context.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
+import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-runner.js';
 import { readStdin } from './read-stdin.js';
 
 function parseInput(raw: string): { prompt: string } | null {
@@ -36,9 +37,22 @@ async function main(): Promise<void> {
   }
 
   const stateStore = new FileStateStore(process.cwd());
+  const commandRunner = new ShellCommandRunner();
   const sessionId = randomUUID();
 
-  const result = await injectContext({ prompt: input.prompt, sessionId }, stateStore);
+  const result = await injectContext(
+    { prompt: input.prompt, sessionId },
+    stateStore,
+    commandRunner,
+  );
+
+  if (result.prompt !== input.prompt) {
+    const state = await stateStore.loadCurrent();
+    if (state?.status === 'active') {
+      const { renderFlow } = await import('../../domain/render-flow.js');
+      process.stderr.write(`\n${renderFlow(state)}\n`);
+    }
+  }
 
   const output = JSON.stringify({ prompt: result.prompt });
   process.stdout.write(output);

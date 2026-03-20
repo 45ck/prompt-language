@@ -31,7 +31,7 @@ function runHook(input: string, cwd: string): HookResult {
     stdio: ['pipe', 'pipe', 'pipe'],
   };
   try {
-    const stdout = execSync(`npx tsx ${scriptPath}`, opts);
+    const stdout = execSync(`npx tsx "${scriptPath}"`, opts);
     return { exitCode: 0, stdout, stderr: '' };
   } catch (error: unknown) {
     const e = error as {

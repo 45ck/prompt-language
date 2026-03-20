@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateStop } from './evaluate-stop.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
-import { createSessionState, markCompleted } from '../domain/session-state.js';
+import {
+  createSessionState,
+  markCompleted,
+  markFailed,
+  markCancelled,
+} from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
 
 function makeStore(): InMemoryStateStore {
@@ -47,5 +52,25 @@ describe('evaluateStop', () => {
     const result = await evaluateStop(store);
     expect(result.blocked).toBe(true);
     expect(result.reason).toContain('[1.2]');
+  });
+
+  it('allows stop when flow is failed', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Broken task', []);
+    const session = markFailed(createSessionState('s4', spec));
+    await store.save(session);
+
+    const result = await evaluateStop(store);
+    expect(result.blocked).toBe(false);
+  });
+
+  it('allows stop when flow is cancelled', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Cancelled task', []);
+    const session = markCancelled(createSessionState('s5', spec));
+    await store.save(session);
+
+    const result = await evaluateStop(store);
+    expect(result.blocked).toBe(false);
   });
 });

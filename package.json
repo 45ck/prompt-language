@@ -4,6 +4,9 @@
   "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates so the agent cannot stop early or skip steps.",
   "license": "MIT",
   "type": "module",
+  "bin": {
+    "prompt-language": "./bin/cli.mjs"
+  },
   "engines": {
     "node": ">=22.0.0"
   },
@@ -14,6 +17,7 @@
     }
   },
   "files": [
+    "bin/**",
     "dist/**",
     "skills/**",
     "hooks/**",
@@ -34,8 +38,13 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "mutation": "stryker run",
+    "eval": "npm run build && node scripts/eval/roundtrip-eval.mjs",
+    "eval:roundtrip": "npm run build && node scripts/eval/roundtrip-eval.mjs",
+    "eval:e2e": "npm run build && node scripts/eval/e2e-eval.mjs",
+    "eval:e2e:full": "npm run build && node scripts/eval/e2e-eval.mjs --full",
+    "eval:validate": "npm run build && node scripts/eval/plugin-validation-eval.mjs",
     "audit:high": "node scripts/ci/audit-high.mjs",
-    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run audit:high",
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run eval:e2e && npm run audit:high",
     "ci:nightly": "npm run ci && npm run mutation",
     "prepare": "node scripts/prepare.mjs"
   },
@@ -51,6 +60,7 @@
     ]
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.80.0",
     "@eslint/js": "^9.0.0",
     "@stryker-mutator/core": "^9.4.0",
     "@stryker-mutator/typescript-checker": "^9.4.0",

@@ -123,6 +123,42 @@ Parameters:
 - then: One or more DSL statements executed if condition is true.
 - else: (Optional) One or more DSL statements executed if condition is false.
 
+### let/var
+
+Store a named variable for later use via `${varName}` interpolation. `let` and `var` are interchangeable. All `let`/`var` nodes auto-advance — no agent interaction required.
+
+Three source types:
+
+**Literal** — store a string value directly.
+
+```
+let greeting = "hello world"
+var name = auth module
+```
+
+**Prompt** — store prompt text as named context.
+
+```
+let context = prompt "Summarize the test failures"
+```
+
+**Run** — execute a command and store its stdout.
+
+```
+let output = run "npm test 2>&1 | tail -5"
+var version = run "node -v"
+```
+
+Stored variables are available via `${varName}` in `prompt:` and `run:` text:
+
+```
+let module = "auth"
+prompt: Refactor the ${module} for clarity.
+run: npm test -- ${module}
+```
+
+Unknown `${varName}` tokens are left as-is (no error).
+
 ### try/catch
 
 Execute a block. If the catch condition triggers, run the catch block.

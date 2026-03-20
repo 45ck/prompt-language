@@ -11,7 +11,9 @@
   ],
   "words": [
     "claude",
+    "claudecode",
     "commandless",
+    "dont",
     "completiongate",
     "depcruise",
     "flownode",
@@ -23,7 +25,12 @@
     "noslop",
     "stryker",
     "tsconfig",
-    "worktree"
+    "worktree",
+    "roundtrip",
+    "anthropic",
+    "fssl",
+    "interpolate",
+    "varname"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
 }

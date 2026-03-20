@@ -9,6 +9,7 @@ import type {
   PromptNode,
   RunNode,
   TryNode,
+  LetNode,
 } from '../domain/flow-node.js';
 
 function parse(dsl: string): FlowSpec {
@@ -256,60 +257,6 @@ done when:
   });
 });
 
-describe('parseFlow — natural language detection', () => {
-  it('converts "keep going until"', () => {
-    const dsl = `Goal: g
-
-flow:
-  keep going until tests_pass
-    prompt: try again
-  end`;
-    const spec = parse(dsl);
-    const node = spec.nodes[0] as UntilNode;
-    expect(node.kind).toBe('until');
-    expect(node.condition).toBe('tests_pass');
-    expect(spec.warnings).toContain('Converted "keep going until" to until loop');
-  });
-
-  it('converts "don\'t stop until"', () => {
-    const dsl = `Goal: g
-
-flow:
-  don't stop until tests_pass
-    prompt: keep trying
-  end`;
-    const spec = parse(dsl);
-    const node = spec.nodes[0] as UntilNode;
-    expect(node.kind).toBe('until');
-  });
-
-  it('converts "loop until"', () => {
-    const dsl = `Goal: g
-
-flow:
-  loop until done
-    prompt: work
-  end`;
-    const spec = parse(dsl);
-    const node = spec.nodes[0] as UntilNode;
-    expect(node.kind).toBe('until');
-    expect(spec.warnings).toContain('Converted "loop until" to until loop');
-  });
-
-  it('converts "retry N times"', () => {
-    const dsl = `Goal: g
-
-flow:
-  retry 3 times
-    run: pnpm build
-  end`;
-    const spec = parse(dsl);
-    const node = spec.nodes[0] as RetryNode;
-    expect(node.kind).toBe('retry');
-    expect(node.maxAttempts).toBe(3);
-  });
-});
-
 describe('parseFlow — soft normalization', () => {
   it('auto-closes missing end via dedent', () => {
     const dsl = `Goal: g
@@ -336,13 +283,135 @@ flow:
     expect(node.text).toBe('frobnicate the widget');
     expect(spec.warnings).toContain('Unknown keyword "frobnicate the widget" — treating as prompt');
   });
+});
 
-  it('skips let statements without error', () => {
-    const dsl = `Goal: g
+describe('parseFlow — let/var statements', () => {
+  it('parses let with quoted literal', () => {
+    const dsl = `Goal: g\n\nflow:\n  let greeting = "hello world"`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.kind).toBe('let');
+    expect(node.variableName).toBe('greeting');
+    expect(node.source).toEqual({ type: 'literal', value: 'hello world' });
+  });
 
-flow:
-  let x = 1
-  prompt: work`;
+  it('parses let with unquoted literal', () => {
+    const dsl = `Goal: g\n\nflow:\n  let x = hello`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.source).toEqual({ type: 'literal', value: 'hello' });
+  });
+
+  it('parses let with prompt source (quoted)', () => {
+    const dsl = `Goal: g\n\nflow:\n  let info = prompt "summarize this"`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.variableName).toBe('info');
+    expect(node.source).toEqual({ type: 'prompt', text: 'summarize this' });
+  });
+
+  it('parses let with prompt source (unquoted)', () => {
+    const dsl = `Goal: g\n\nflow:\n  let info = prompt summarize this`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.source).toEqual({ type: 'prompt', text: 'summarize this' });
+  });
+
+  it('parses let with run source (quoted)', () => {
+    const dsl = `Goal: g\n\nflow:\n  let output = run "echo hi"`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.variableName).toBe('output');
+    expect(node.source).toEqual({ type: 'run', command: 'echo hi' });
+  });
+
+  it('parses let with run source (unquoted)', () => {
+    const dsl = `Goal: g\n\nflow:\n  let output = run echo hi`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.source).toEqual({ type: 'run', command: 'echo hi' });
+  });
+
+  it('parses var as alias for let', () => {
+    const dsl = `Goal: g\n\nflow:\n  var greeting = "hello"`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.kind).toBe('let');
+    expect(node.variableName).toBe('greeting');
+    expect(node.source).toEqual({ type: 'literal', value: 'hello' });
+  });
+
+  it('warns on invalid syntax (missing =)', () => {
+    const dsl = `Goal: g\n\nflow:\n  let x\n  prompt: work`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+    expect(spec.warnings.some((w) => w.includes('missing "="'))).toBe(true);
+  });
+
+  it('warns on invalid syntax (missing value)', () => {
+    const dsl = `Goal: g\n\nflow:\n  let x =\n  prompt: work`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+    expect(spec.warnings.some((w) => w.includes('missing value'))).toBe(true);
+  });
+
+  it('parses let inside a while loop', () => {
+    const dsl = `Goal: g\n\nflow:\n  while not done max 3\n    let x = "val"\n    prompt: work\n  end`;
+    const spec = parse(dsl);
+    const whileNode = spec.nodes[0] as WhileNode;
+    expect(whileNode.body).toHaveLength(2);
+    expect(whileNode.body[0]!.kind).toBe('let');
+    expect(whileNode.body[1]!.kind).toBe('prompt');
+  });
+
+  it('parses mixed let and other nodes', () => {
+    const dsl = `Goal: g\n\nflow:\n  let a = "1"\n  prompt: do work\n  var b = run "echo 2"\n  run: npm test`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(4);
+    expect(spec.nodes[0]!.kind).toBe('let');
+    expect(spec.nodes[1]!.kind).toBe('prompt');
+    expect(spec.nodes[2]!.kind).toBe('let');
+    expect(spec.nodes[3]!.kind).toBe('run');
+  });
+});
+
+describe('parseFlow — robustness', () => {
+  it('handles CRLF line endings', () => {
+    const dsl =
+      'Goal: g\r\n\r\nflow:\r\n  prompt: hello\r\n  run: npm test\r\n\r\ndone when:\r\n  tests_pass';
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+    expect(spec.nodes[1]!.kind).toBe('run');
+    expect(spec.completionGates).toHaveLength(1);
+  });
+
+  it('handles trailing whitespace on lines', () => {
+    const dsl = 'Goal: g   \n\nflow:   \n  prompt: work   \n  run: test   ';
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(2);
+  });
+
+  it('strips markdown code fences wrapping a flow block', () => {
+    const dsl = '```\nGoal: g\n\nflow:\n  prompt: do it\n\ndone when:\n  done\n```';
+    const stripped = dsl.replace(/^```[\w-]*\n?/m, '').replace(/\n?```\s*$/m, '');
+    const spec = parse(stripped);
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.goal).toBe('g');
+    expect(spec.completionGates).toHaveLength(1);
+  });
+
+  it('handles empty lines within flow block', () => {
+    const dsl = 'Goal: g\n\nflow:\n  prompt: first\n\n  prompt: second';
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(2);
+  });
+
+  it('handles comments in flow block', () => {
+    const dsl = 'Goal: g\n\nflow:\n  # This is a comment\n  prompt: work';
     const spec = parse(dsl);
     expect(spec.nodes).toHaveLength(1);
     expect(spec.nodes[0]!.kind).toBe('prompt');

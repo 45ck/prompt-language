@@ -37,6 +37,49 @@ Dependency flow is strictly inward. Domain never imports from other layers.
 - Ports: `noun-port.ts` (e.g., `state-port.ts`)
 - Tests: `*.test.ts` colocated with source
 
+## DSL primitives
+
+Seven node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, plus `let`/`var` for variable storage.
+
+### let/var nodes
+
+`let` and `var` are aliases. Three source types:
+
+- `let x = "literal"` — stores a string value
+- `let x = prompt "text"` — stores the prompt text as context
+- `let x = run "cmd"` — executes command, stores stdout
+
+Variables are interpolated via `${varName}` in prompt/run text. Unknown variables are left as-is. All let/var nodes auto-advance (no agent interaction).
+
+Key implementation files:
+
+- `src/domain/flow-node.ts` — `LetNode`, `LetSource`, `createLetNode()`
+- `src/domain/interpolate.ts` — pure `interpolate(template, variables)` function
+- `src/domain/render-flow.ts` — renders let nodes with `[= value]` annotation
+- `src/application/parse-flow.ts` — `parseLetLine()` handles let/var parsing
+- `src/application/inject-context.ts` — `autoAdvanceLetNodes()` + interpolation
+
+## Plugin installation
+
+One-command install: `npx @45ck/prompt-language`
+
+The CLI (`bin/cli.mjs`) copies plugin files to `~/.claude/plugins/local/prompt-language/`, generates a marketplace catalog, registers it in `extraKnownMarketplaces`, and enables the plugin. No `--plugin-dir` flag needed after install.
+
+Key constraints discovered during testing:
+
+- `plugin.json` `author` field must be an object (`{"name":"..."}`) not a string.
+- `marketplace.json` must follow the catalog schema with `owner` (object) and `plugins` (array).
+- The marketplace directory must be the parent of the plugin directory (not the plugin dir itself). Source paths in the catalog use `"./prompt-language"`.
+- DSL regexes (`FLOW_BLOCK_RE`, `extractFlowBlock`) must allow optional leading whitespace (`^\s*flow:`) since users may indent their input.
+
+To validate plugin installation end-to-end:
+
+```bash
+npm run build && node bin/cli.mjs install
+# In a separate test directory:
+printf 'Goal: fix app.js\n\nflow:\n  retry max 3\n    run: node app.js\n    if command_failed\n      prompt: Fix the error.\n    end\n  end\n\ndone when:\n  command_succeeded\n' | claude -p --dangerously-skip-permissions
+```
+
 ## State file
 
 Runtime state lives in `.prompt-language/session-state.json`. Never hard-code paths; use the infrastructure adapter.
@@ -45,4 +88,4 @@ Runtime state lives in `.prompt-language/session-state.json`. Never hard-code pa
 
 Full pipeline: `npm run ci`
 
-This runs: typecheck, lint, format check, spell check, dependency cruiser, knip, build, test with coverage, and audit.
+This runs: typecheck, lint, format check, spell check, dependency cruiser, knip, build, test with coverage, e2e eval, and audit.

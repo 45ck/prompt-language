@@ -8,6 +8,8 @@ export type {
   PromptNode,
   RunNode,
   TryNode,
+  LetNode,
+  LetSource,
 } from './flow-node.js';
 export {
   createWhileNode,
@@ -17,6 +19,7 @@ export {
   createPromptNode,
   createRunNode,
   createTryNode,
+  createLetNode,
 } from './flow-node.js';
 
 export type { FlowSpec, CompletionGate, FlowDefaults } from './flow-spec.js';
@@ -49,3 +52,7 @@ export {
   createResolver,
   createResolvedVariable,
 } from './resolver.js';
+
+export { renderFlow } from './render-flow.js';
+
+export { interpolate } from './interpolate.js';

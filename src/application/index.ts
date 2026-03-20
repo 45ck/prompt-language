@@ -4,7 +4,7 @@ export type { CommandResult, CommandRunner } from './ports/command-runner.js';
 export { parseFlow } from './parse-flow.js';
 
 export type { InjectContextInput, InjectContextOutput } from './inject-context.js';
-export { injectContext } from './inject-context.js';
+export { injectContext, buildMetaPrompt, looksLikeNaturalLanguage } from './inject-context.js';
 
 export type { EvaluateStopOutput } from './evaluate-stop.js';
 export { evaluateStop } from './evaluate-stop.js';

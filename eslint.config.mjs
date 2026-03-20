@@ -142,6 +142,7 @@ export default tseslint.config(
   },
 
   // Scripts are production-critical, but allow more complexity and length than core code.
+  // Eval scripts import from dist/ which only exists after build, so disable import/no-unresolved.
   {
     files: ['scripts/**/*.mjs'],
     rules: {
@@ -151,6 +152,7 @@ export default tseslint.config(
       'max-lines': 'off',
       'max-params': 'off',
       'sonarjs/cognitive-complexity': 'off',
+      'import/no-unresolved': 'off',
     },
   },
 

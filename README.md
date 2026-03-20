@@ -16,11 +16,40 @@ The plugin provides:
 
 ## Install
 
-```
-npm install @45ck/prompt-language
+### One command (recommended)
+
+```bash
+npx @45ck/prompt-language
 ```
 
-Or install as a Claude Code plugin directly.
+This downloads the package, copies the plugin files to `~/.claude/plugins/local/prompt-language/`, and enables it in your Claude Code settings. Done.
+
+```bash
+# Check installation status
+npx @45ck/prompt-language status
+
+# Uninstall
+npx @45ck/prompt-language uninstall
+```
+
+### Claude Code plugin manager
+
+```bash
+claude plugin marketplace add 45ck/prompt-language
+claude plugin install prompt-language
+```
+
+### Install script (Unix/macOS)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/45ck/prompt-language/main/scripts/install.sh | bash
+```
+
+Or after cloning the repo:
+
+```bash
+./scripts/install.sh
+```
 
 ## Quick start
 
@@ -140,14 +169,20 @@ done when:
 
 ## Natural language detection
 
-You do not need to write DSL directly. prompt-language detects control-flow intent in plain English and compiles it. Examples:
+You do not need to write DSL directly. Type whatever you want — natural language, pseudo-code, rough ideas — and prompt-language will detect control-flow intent and ask the agent to convert it into valid DSL for you.
 
-| Natural language               | Compiled to               |
-| ------------------------------ | ------------------------- |
-| "Keep fixing until tests pass" | `until tests_pass max 5`  |
-| "Try up to 3 times to build"   | `retry max 3`             |
-| "Don't stop until lint passes" | `until lint_passes max 5` |
-| "Loop until tests pass"        | `until tests_pass max 5`  |
+When your prompt contains words like "until", "retry", "loop", "keep going", "don't stop", "on failure", etc., the plugin injects a meta-prompt with the full DSL reference. The agent reads your intent, writes the correct DSL, and on the next turn the plugin parses and executes it.
+
+Examples of what you can type:
+
+- "Keep fixing until all tests pass"
+- "Retry the build 3 times"
+- "Don't stop until lint passes"
+- "Run tests, if they fail fix the errors, loop until green"
+- "Try deploying, on failure roll back and try again"
+- Pseudo-code like "while tests broken: fix and rerun, max 5 attempts"
+
+The agent handles the translation — no regex, no exact phrasing required.
 
 ## Hooks
 

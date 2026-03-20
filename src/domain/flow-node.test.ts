@@ -7,6 +7,7 @@ import {
   createPromptNode,
   createRunNode,
   createTryNode,
+  createLetNode,
 } from './flow-node.js';
 
 describe('createWhileNode', () => {
@@ -113,6 +114,38 @@ describe('createTryNode', () => {
       body,
       catchCondition: 'command_failed',
       catchBody,
+    });
+  });
+});
+
+describe('createLetNode', () => {
+  it('creates a let node with literal source', () => {
+    const node = createLetNode('l1', 'greeting', { type: 'literal', value: 'hello' });
+    expect(node).toEqual({
+      kind: 'let',
+      id: 'l1',
+      variableName: 'greeting',
+      source: { type: 'literal', value: 'hello' },
+    });
+  });
+
+  it('creates a let node with prompt source', () => {
+    const node = createLetNode('l2', 'info', { type: 'prompt', text: 'summarize this' });
+    expect(node).toEqual({
+      kind: 'let',
+      id: 'l2',
+      variableName: 'info',
+      source: { type: 'prompt', text: 'summarize this' },
+    });
+  });
+
+  it('creates a let node with run source', () => {
+    const node = createLetNode('l3', 'output', { type: 'run', command: 'echo hi' });
+    expect(node).toEqual({
+      kind: 'let',
+      id: 'l3',
+      variableName: 'output',
+      source: { type: 'run', command: 'echo hi' },
     });
   });
 });

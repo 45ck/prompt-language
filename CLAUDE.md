@@ -51,13 +51,34 @@ Seven node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, plus 
 
 Variables are interpolated via `${varName}` in prompt/run text. Unknown variables are left as-is. `let`/`var`, `run` (with command runner), and `prompt` nodes auto-advance (no agent interaction).
 
+### Built-in variables (auto-set after `run:` and `let x = run`)
+
+- `last_exit_code` — numeric exit code
+- `command_failed` — boolean, true when exit code !== 0
+- `command_succeeded` — boolean, true when exit code === 0
+- `last_stdout` — stdout (truncated at 2000 chars)
+- `last_stderr` — stderr (truncated at 2000 chars)
+
+### Control-flow evaluation
+
+- `while`/`until`: conditions resolve via variable lookup first, then `resolveBuiltinCommand()` + command execution
+- `retry`: always enters body; re-loops when `command_failed === true` and iteration < max
+- `if/else`: evaluates condition, enters then-branch or else-branch (or skips)
+- `try/catch`: always enters body; on `run` failure, jumps to catch body if present
+
+### Security note
+
+`interpolate()` performs raw substitution — use `shellInterpolate()` for `run:` commands. It wraps substituted values in single-quotes to prevent shell injection.
+
 Key implementation files:
 
 - `src/domain/flow-node.ts` — `LetNode`, `LetSource`, `createLetNode()`
-- `src/domain/interpolate.ts` — pure `interpolate(template, variables)` function
-- `src/domain/render-flow.ts` — renders let nodes with `[= value]` annotation
+- `src/domain/interpolate.ts` — pure `interpolate(template, variables)` + `shellInterpolate()` for commands
+- `src/domain/evaluate-condition.ts` — pure condition evaluation against variable state
+- `src/domain/format-error.ts` — safe error-to-string with stack trace preservation
+- `src/domain/render-flow.ts` — renders let nodes with `[= value]` annotation (`var` renders as `let` — they are aliases)
 - `src/application/parse-flow.ts` — `parseLetLine()` handles let/var parsing
-- `src/application/inject-context.ts` — `autoAdvanceNodes()` + interpolation
+- `src/application/inject-context.ts` — `autoAdvanceNodes()` + control-flow + interpolation
 - `src/application/evaluate-completion.ts` — gate evaluation with `resolveBuiltinCommand()` for builtin predicates
 
 ## Plugin installation

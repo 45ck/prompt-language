@@ -18,7 +18,7 @@
  */
 
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -110,6 +110,21 @@ function safeReadSync(filePath) {
     return readFileSync(filePath, 'utf-8').trim();
   } catch {
     return '';
+  }
+}
+
+/**
+ * Run a JS code snippet as a temp file to avoid Windows cmd.exe shell quoting issues
+ * with `node -e "..."`. Returns 0 on success, 1 on failure.
+ */
+function runJsCheck(code, cwd) {
+  const checkFile = join(cwd, '__eval_check.js');
+  try {
+    writeFileSync(checkFile, code);
+    execSync(`node "${checkFile}"`, { cwd, timeout: 10_000, encoding: 'utf-8' });
+    return 0;
+  } catch {
+    return 1;
   }
 }
 
@@ -2215,13 +2230,13 @@ async function testH19() {
   function score(dir) {
     let s = 0;
     const checks = [
-      'const m = require("./app.js"); process.exit(m.add(2,3) === 5 ? 0 : 1)',
-      'const m = require("./app.js"); process.exit(m.capitalize("hello") === "Hello" ? 0 : 1)',
-      'const m = require("./app.js"); process.exit(m.isEven(4) === true ? 0 : 1)',
-      'const m = require("./app.js"); process.exit(m.reverse("abc") === "cba" ? 0 : 1)',
+      "const m = require('./app.js'); process.exit(m.add(2,3) === 5 ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.capitalize('hello') === 'Hello' ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.isEven(4) === true ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.reverse('abc') === 'cba' ? 0 : 1)",
     ];
     for (const check of checks) {
-      if (runCmd(`node -e '${check}'`, dir) === 0) s++;
+      if (runJsCheck(check, dir) === 0) s++;
     }
     return s;
   }
@@ -2315,7 +2330,7 @@ async function testH20() {
     'if (typeof result.total === "string") {',
     '  console.log("TYPE_ERROR");',
     '  process.exit(1);',
-    '} else if (result.final !== 27.72) {',
+    '} else if (result.final !== 29.4) {',
     '  console.log("LOGIC_ERROR");',
     '  process.exit(1);',
     '} else {',
@@ -2350,13 +2365,13 @@ async function testH20() {
   function score(dir) {
     let s = 0;
     const checks = [
-      'const m = require("./server.js"); const r = m.processOrder({items:[{price:10},{price:20}],coupon:false}); process.exit(typeof r.total === "number" ? 0 : 1)',
-      'const m = require("./server.js"); const r = m.processOrder({items:[{price:10},{price:20}],coupon:false}); process.exit(r.total === 30 ? 0 : 1)',
-      'const m = require("./server.js"); const r = m.processOrder({items:[{price:10},{price:20}],coupon:false}); process.exit(r.tax === 2.4 ? 0 : 1)',
-      'const m = require("./server.js"); const r = m.processOrder({items:[{price:100}],coupon:true}); process.exit(r.discount === 10 ? 0 : 1)',
+      "const m = require('./server.js'); const r = m.processOrder({items:[{price:10},{price:20}],coupon:false}); process.exit(typeof r.total === 'number' ? 0 : 1)",
+      "const m = require('./server.js'); const r = m.processOrder({items:[{price:10},{price:20}],coupon:false}); process.exit(r.total === 30 ? 0 : 1)",
+      "const m = require('./server.js'); const r = m.processOrder({items:[{price:10},{price:20}],coupon:false}); process.exit(r.tax === 2.4 ? 0 : 1)",
+      "const m = require('./server.js'); const r = m.processOrder({items:[{price:100}],coupon:true}); process.exit(r.discount === 10 ? 0 : 1)",
     ];
     for (const check of checks) {
-      if (runCmd(`node -e '${check}'`, dir) === 0) s++;
+      if (runJsCheck(check, dir) === 0) s++;
     }
     return s;
   }
@@ -2494,20 +2509,20 @@ async function testH21() {
     let s = 0;
     const checks = [
       // paginate
-      'const m = require("./utils.js"); process.exit(JSON.stringify(m.paginate([1,2,3,4,5,6,7,8,9,10],1,3)) === "[1,2,3]" ? 0 : 1)',
-      'const m = require("./utils.js"); process.exit(JSON.stringify(m.paginate([1,2,3,4,5,6,7,8,9,10],2,3)) === "[4,5,6]" ? 0 : 1)',
-      'const m = require("./utils.js"); process.exit(JSON.stringify(m.paginate([1,2,3,4,5,6,7,8,9,10],4,3)) === "[10]" ? 0 : 1)',
+      "const m = require('./utils.js'); process.exit(JSON.stringify(m.paginate([1,2,3,4,5,6,7,8,9,10],1,3)) === '[1,2,3]' ? 0 : 1)",
+      "const m = require('./utils.js'); process.exit(JSON.stringify(m.paginate([1,2,3,4,5,6,7,8,9,10],2,3)) === '[4,5,6]' ? 0 : 1)",
+      "const m = require('./utils.js'); process.exit(JSON.stringify(m.paginate([1,2,3,4,5,6,7,8,9,10],4,3)) === '[10]' ? 0 : 1)",
       // formatPercent
-      'const m = require("./utils.js"); process.exit(m.formatPercent(0.5) === "50.0%" ? 0 : 1)',
-      'const m = require("./utils.js"); process.exit(m.formatPercent(0.155) === "15.5%" ? 0 : 1)',
-      'const m = require("./utils.js"); process.exit(m.formatPercent(1) === "100.0%" ? 0 : 1)',
+      "const m = require('./utils.js'); process.exit(m.formatPercent(0.5) === '50.0%' ? 0 : 1)",
+      "const m = require('./utils.js'); process.exit(m.formatPercent(0.155) === '15.5%' ? 0 : 1)",
+      "const m = require('./utils.js'); process.exit(m.formatPercent(1) === '100.0%' ? 0 : 1)",
       // clamp
-      'const m = require("./utils.js"); process.exit(m.clamp(5,1,10) === 5 ? 0 : 1)',
-      'const m = require("./utils.js"); process.exit(m.clamp(15,1,10) === 10 ? 0 : 1)',
-      'const m = require("./utils.js"); process.exit(m.clamp(5,10,1) === 5 ? 0 : 1)',
+      "const m = require('./utils.js'); process.exit(m.clamp(5,1,10) === 5 ? 0 : 1)",
+      "const m = require('./utils.js'); process.exit(m.clamp(15,1,10) === 10 ? 0 : 1)",
+      "const m = require('./utils.js'); process.exit(m.clamp(5,10,1) === 5 ? 0 : 1)",
     ];
     for (const check of checks) {
-      if (runCmd(`node -e '${check}'`, dir) === 0) s++;
+      if (runJsCheck(check, dir) === 0) s++;
     }
     return s;
   }

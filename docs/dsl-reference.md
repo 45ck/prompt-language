@@ -192,11 +192,11 @@ Gates are evaluated after all nodes finish and again on Stop/TaskCompleted hooks
 
 ## Context management patterns
 
-Variables are the mechanism for carrying exact values across long workflows. Every `prompt:` step sees all current variables re-injected via `renderFlow()`, keeping values maximally salient regardless of how many steps have elapsed since capture.
+Variables carry exact values across workflow steps. Every `prompt:` step sees all current variables re-injected via `renderFlow()`, making each step self-contained. At tested distances (2-7 steps), vanilla Claude recalls values equally well; variables primarily improve readability and explicit context control.
 
 ### Baseline comparison
 
-Capture metrics before and after a change. The baseline is byte-exact at comparison time, even after many intervening steps:
+Capture metrics before and after a change:
 
 ```
 let baseline = run "node bench.js"

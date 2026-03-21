@@ -77,6 +77,10 @@ skills/
   flow-executor/    /flow:run skill
   flow-status/      /flow:status skill
   flow-reset/       /flow:reset skill
+  fix-and-test/     /fix-and-test skill — retry loop + tests_pass gate
+  tdd/              /tdd skill — red-green-refactor cycle
+  refactor/         /refactor skill — incremental refactoring with test verification
+  deploy-check/     /deploy-check skill — lint + test + build pipeline
 ```
 
 ## Testing strategy

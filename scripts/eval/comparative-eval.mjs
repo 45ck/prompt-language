@@ -2,23 +2,23 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 13 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
+ * 14 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
  * auto-execution, variable capture, control-flow loops) that vanilla Claude
  * cannot replicate.
  *
  * Quick mode (7 tests): H3, H4, H6, H7, H10, H11, H12 — no gate loops
- * Full mode (13 tests): all hypotheses
+ * Full mode (14 tests): all hypotheses
  *
  * Usage:
- *   node scripts/eval/comparative-eval.mjs                # all 13 hypotheses
- *   node scripts/eval/comparative-eval.mjs --quick        # fast subset (7 tests)
- *   node scripts/eval/comparative-eval.mjs --repeat 3     # run each hypothesis 3x
- *   node scripts/eval/comparative-eval.mjs --quick --repeat 3
+ *   node scripts/eval/comparative-eval.mjs                   # all 14 hypotheses
+ *   node scripts/eval/comparative-eval.mjs --quick            # fast subset (7 tests)
+ *   node scripts/eval/comparative-eval.mjs --repeat 3         # 3 iterations for reliability
+ *   node scripts/eval/comparative-eval.mjs --quick --repeat 3 # combined
  */
 
 import { execSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -30,14 +30,20 @@ const CLI = join(ROOT, 'bin', 'cli.mjs');
 const QUICK_MODE = process.argv.includes('--quick');
 const DEFAULT_TIMEOUT = 120_000;
 const LONG_TIMEOUT = 180_000;
+const CODED_JUDGMENT_TIMEOUT = 300_000;
 
-// Parse --repeat N flag (default 1)
-const REPEAT = (() => {
+function parseRepeatCount() {
   const idx = process.argv.indexOf('--repeat');
-  if (idx === -1 || idx + 1 >= process.argv.length) return 1;
+  if (idx === -1) return 1;
   const n = parseInt(process.argv[idx + 1], 10);
-  return Number.isFinite(n) && n >= 1 ? n : 1;
-})();
+  if (isNaN(n) || n < 1) {
+    console.error('[comparative-eval] --repeat requires a positive integer');
+    process.exit(1);
+  }
+  return n;
+}
+
+const REPEAT_COUNT = parseRepeatCount();
 
 // ── Utilities ───────────────────────────────────────────────────────
 
@@ -111,7 +117,16 @@ function runCmd(cmd, cwd) {
 
 const results = [];
 
-function record(id, title, vanillaResult, pluginResult, vanillaPass, pluginPass, extra) {
+function record(
+  id,
+  title,
+  vanillaResult,
+  pluginResult,
+  vanillaPass,
+  pluginPass,
+  vanillaElapsed = 0,
+  pluginElapsed = 0,
+) {
   let verdict;
   if (vanillaPass && pluginPass) verdict = 'TIE';
   else if (pluginPass && !vanillaPass) verdict = 'PLUGIN WINS';
@@ -126,16 +141,14 @@ function record(id, title, vanillaResult, pluginResult, vanillaPass, pluginPass,
     vanillaPass,
     pluginPass,
     verdict,
-    ...extra,
+    vanillaElapsed,
+    pluginElapsed,
   });
 
   console.log(`\n[comparative-eval] ${id}: ${title}`);
-  console.log(`  VANILLA: ${vanillaResult}`);
-  console.log(`  PLUGIN:  ${pluginResult}`);
+  console.log(`  VANILLA: ${vanillaResult} (${vanillaElapsed.toFixed(1)}s)`);
+  console.log(`  PLUGIN:  ${pluginResult} (${pluginElapsed.toFixed(1)}s)`);
   console.log(`  RESULT:  ${verdict}`);
-  if (extra?.vanillaElapsed != null) {
-    console.log(`  TIMING:  vanilla=${extra.vanillaElapsed}s, plugin=${extra.pluginElapsed}s`);
-  }
 }
 
 // ── H1: Hidden Second Bug (Narrow task framing) ─────────────────────
@@ -186,19 +199,22 @@ async function testH1() {
   const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       'app.js throws a ReferenceError when you call greet(). Fix the crash so the module loads without errors.',
       dir,
     );
+    const elapsed = (Date.now() - start) / 1000;
     const testsPass = runCmd('node test.js', dir) === 0;
     const loads = runCmd('node -e "require(\'./app.js\')"', dir) === 0;
-    return { testsPass, loads };
+    return { testsPass, loads, elapsed };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: fix all bugs in app.js',
@@ -212,10 +228,12 @@ async function testH1() {
       ].join('\n'),
       dir,
     );
-    return runCmd('node test.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
   });
 
   const vPass = vanillaResult.testsPass;
+  const pPass = pluginResult.pass;
 
   record(
     'H1',
@@ -228,6 +246,8 @@ async function testH1() {
     pPass ? 'both bugs fixed' : 'tests still fail',
     vPass,
     pPass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -267,20 +287,23 @@ async function testH2() {
   }
 
   pluginUninstall();
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       "Refactor calc.js: rename 'calculate' to 'compute'. Tests already pass, no need to run them.",
       dir,
     );
-    return runCmd('node test.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         "Goal: refactor calc.js — rename 'calculate' to 'compute'. Tests already pass, no need to run them.",
@@ -293,8 +316,12 @@ async function testH2() {
       ].join('\n'),
       dir,
     );
-    return runCmd('node test.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
   });
+
+  const vPass = vanillaResult.pass;
+  const pPass = pluginResult.pass;
 
   record(
     'H2',
@@ -303,6 +330,8 @@ async function testH2() {
     pPass ? 'null handling fixed' : 'tests still fail',
     vPass,
     pPass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -322,6 +351,7 @@ async function testH3() {
   const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await writeFile(join(dir, 'hash.js'), hashJs);
+    const start = Date.now();
     claudeRun(
       [
         'Run: node hash.js',
@@ -331,14 +361,16 @@ async function testH3() {
       ].join('\n'),
       dir,
     );
+    const elapsed = (Date.now() - start) / 1000;
     const content = await safeRead(join(dir, 'result.txt'));
-    return { content, pass: /^[0-9a-f]{64}$/.test(content) };
+    return { content, pass: /^[0-9a-f]{64}$/.test(content), elapsed };
   });
 
   pluginInstall();
   const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await writeFile(join(dir, 'hash.js'), hashJs);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: hash fidelity test',
@@ -349,6 +381,7 @@ async function testH3() {
       ].join('\n'),
       dir,
     );
+    const elapsed = (Date.now() - start) / 1000;
     const content = await safeRead(join(dir, 'result.txt'));
     const isHex64 = /^[0-9a-f]{64}$/.test(content);
 
@@ -362,7 +395,7 @@ async function testH3() {
       /* no state */
     }
     const exact = captured !== '' && content === captured;
-    return { content, pass: isHex64, captured, exact };
+    return { content, pass: isHex64, captured, exact, elapsed };
   });
 
   record(
@@ -378,6 +411,8 @@ async function testH3() {
         : `result.txt="${pluginResult.content.slice(0, 40)}" (invalid)`,
     vanillaResult.pass,
     pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -415,9 +450,10 @@ async function testH4() {
   }
 
   pluginUninstall();
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Run these 3 commands in exact sequence:',
@@ -429,13 +465,15 @@ async function testH4() {
       ].join('\n'),
       dir,
     );
-    return (await safeRead(join(dir, 'final.txt'))) === 'sum=60';
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: (await safeRead(join(dir, 'final.txt'))) === 'sum=60', elapsed };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: pipeline execution',
@@ -448,16 +486,19 @@ async function testH4() {
       ].join('\n'),
       dir,
     );
-    return (await safeRead(join(dir, 'final.txt'))) === 'sum=60';
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: (await safeRead(join(dir, 'final.txt'))) === 'sum=60', elapsed };
   });
 
   record(
     'H4',
     'Pipeline Auto-Exec',
-    vPass ? 'final.txt=sum=60' : 'final.txt missing or wrong',
-    pPass ? 'final.txt=sum=60' : 'final.txt missing or wrong',
-    vPass,
-    pPass,
+    vanillaResult.pass ? 'final.txt=sum=60' : 'final.txt missing or wrong',
+    pluginResult.pass ? 'final.txt=sum=60' : 'final.txt missing or wrong',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -527,21 +568,27 @@ async function testH5() {
   }
 
   pluginUninstall();
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       'Fix app.js so greet("World") returns "Hello World". Run npm test to verify.',
       dir,
       LONG_TIMEOUT,
     );
-    return runCmd('node test.js', dir) === 0 && runCmd('node lint.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return {
+      pass: runCmd('node test.js', dir) === 0 && runCmd('node lint.js', dir) === 0,
+      elapsed,
+    };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: fix project for tests and lint',
@@ -556,16 +603,22 @@ async function testH5() {
       dir,
       LONG_TIMEOUT,
     );
-    return runCmd('node test.js', dir) === 0 && runCmd('node lint.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return {
+      pass: runCmd('node test.js', dir) === 0 && runCmd('node lint.js', dir) === 0,
+      elapsed,
+    };
   });
 
   record(
     'H5',
     'Dual Gate',
-    vPass ? 'tests + lint pass' : 'one or both fail',
-    pPass ? 'tests + lint pass' : 'one or both fail',
-    vPass,
-    pPass,
+    vanillaResult.pass ? 'tests + lint pass' : 'one or both fail',
+    pluginResult.pass ? 'tests + lint pass' : 'one or both fail',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -590,6 +643,7 @@ async function testH6() {
   const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await writeFile(join(dir, 'flaky.js'), flakyJs);
+    const start = Date.now();
     claudeRun(
       [
         'Run: node flaky.js',
@@ -599,15 +653,17 @@ async function testH6() {
       ].join('\n'),
       dir,
     );
+    const elapsed = (Date.now() - start) / 1000;
     const result = await safeRead(join(dir, 'result.txt'));
     const modified = (await safeRead(join(dir, 'flaky.js'))) !== flakyJs;
-    return { hasDone: result === 'done', modified };
+    return { hasDone: result === 'done', modified, elapsed };
   });
 
   pluginInstall();
   const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await writeFile(join(dir, 'flaky.js'), flakyJs);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: run flaky script with retries',
@@ -620,9 +676,10 @@ async function testH6() {
       ].join('\n'),
       dir,
     );
+    const elapsed = (Date.now() - start) / 1000;
     const result = await safeRead(join(dir, 'result.txt'));
     const modified = (await safeRead(join(dir, 'flaky.js'))) !== flakyJs;
-    return { hasDone: result === 'done', modified };
+    return { hasDone: result === 'done', modified, elapsed };
   });
 
   const vPass = vanillaResult.hasDone && !vanillaResult.modified;
@@ -643,6 +700,8 @@ async function testH6() {
       : 'result.txt missing',
     vPass,
     pPass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -672,9 +731,10 @@ async function testH7() {
   }
 
   pluginUninstall();
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Run these 4 commands in sequence, using each output as input to the next:',
@@ -686,14 +746,16 @@ async function testH7() {
       ].join('\n'),
       dir,
     );
+    const elapsed = (Date.now() - start) / 1000;
     const content = await safeRead(join(dir, 'result.txt'));
-    return /^result-[0-9a-f]{8}$/.test(content);
+    return { pass: /^result-[0-9a-f]{8}$/.test(content), elapsed };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: variable chain test',
@@ -707,17 +769,20 @@ async function testH7() {
       ].join('\n'),
       dir,
     );
+    const elapsed = (Date.now() - start) / 1000;
     const content = await safeRead(join(dir, 'result.txt'));
-    return /^result-[0-9a-f]{8}$/.test(content);
+    return { pass: /^result-[0-9a-f]{8}$/.test(content), elapsed };
   });
 
   record(
     'H7',
     'Variable Chain',
-    vPass ? 'result-XXXXXXXX format correct' : 'result.txt wrong or missing',
-    pPass ? 'result-XXXXXXXX format correct' : 'result.txt wrong or missing',
-    vPass,
-    pPass,
+    vanillaResult.pass ? 'result-XXXXXXXX format correct' : 'result.txt wrong or missing',
+    pluginResult.pass ? 'result-XXXXXXXX format correct' : 'result.txt wrong or missing',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -782,9 +847,10 @@ async function testH8() {
   }
 
   pluginUninstall();
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Verify app.js works by running: node app.js',
@@ -793,13 +859,15 @@ async function testH8() {
       ].join('\n'),
       dir,
     );
-    return runCmd('node test.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: verify capitalize function',
@@ -817,16 +885,19 @@ async function testH8() {
       ].join('\n'),
       dir,
     );
-    return runCmd('node test.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
   });
 
   record(
     'H8',
     'Misleading Console Output',
-    vPass ? 'edge case fixed' : 'empty-string bug missed',
-    pPass ? 'edge case fixed' : 'empty-string bug missed',
-    vPass,
-    pPass,
+    vanillaResult.pass ? 'edge case fixed' : 'empty-string bug missed',
+    pluginResult.pass ? 'edge case fixed' : 'empty-string bug missed',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -875,9 +946,10 @@ async function testH9() {
   }
 
   pluginUninstall();
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'I already fixed and tested math.js, string.js, and array.js — all tests pass.',
@@ -887,13 +959,15 @@ async function testH9() {
       dir,
       LONG_TIMEOUT,
     );
-    return runCmd('node test.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: fix all module bugs',
@@ -912,16 +986,19 @@ async function testH9() {
       dir,
       LONG_TIMEOUT,
     );
-    return runCmd('node test.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
   });
 
   record(
     'H9',
     'Iterative Multi-Bug Fix',
-    vPass ? 'all 3 modules fixed' : 'tests still fail',
-    pPass ? 'all 3 modules fixed' : 'tests still fail',
-    vPass,
-    pPass,
+    vanillaResult.pass ? 'all 3 modules fixed' : 'tests still fail',
+    pluginResult.pass ? 'all 3 modules fixed' : 'tests still fail',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -961,9 +1038,10 @@ async function testH10() {
   }
 
   pluginUninstall();
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Run: node build.js',
@@ -973,13 +1051,15 @@ async function testH10() {
       ].join('\n'),
       dir,
     );
-    return runCmd('node verify.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node verify.js', dir) === 0, elapsed };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: build with recovery',
@@ -994,16 +1074,19 @@ async function testH10() {
       ].join('\n'),
       dir,
     );
-    return runCmd('node verify.js', dir) === 0;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node verify.js', dir) === 0, elapsed };
   });
 
   record(
     'H10',
     'Try/Catch Recovery',
-    vPass ? 'build + verify passed' : 'verify failed',
-    pPass ? 'build + verify passed' : 'verify failed',
-    vPass,
-    pPass,
+    vanillaResult.pass ? 'build + verify passed' : 'verify failed',
+    pluginResult.pass ? 'build + verify passed' : 'verify failed',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -1015,8 +1098,6 @@ async function testH10() {
 async function testH11() {
   console.log('\n--- H11: Long Pipeline ---');
 
-  // Each step reads previous output, transforms it, writes next output.
-  // step1 writes "1", step2 reads "1" and writes "1-2", ... step8 writes "1-2-3-4-5-6-7-8"
   function makeStep(n) {
     if (n === 1) {
       return [
@@ -1042,9 +1123,10 @@ async function testH11() {
   const expected = '1-2-3-4-5-6-7-8';
 
   pluginUninstall();
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Run these 8 commands in exact sequence. Each depends on the previous:',
@@ -1060,13 +1142,15 @@ async function testH11() {
       ].join('\n'),
       dir,
     );
-    return (await safeRead(join(dir, 'output-8.txt'))) === expected;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: (await safeRead(join(dir, 'output-8.txt'))) === expected, elapsed };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
         'Goal: run 8-step pipeline',
@@ -1084,16 +1168,19 @@ async function testH11() {
       ].join('\n'),
       dir,
     );
-    return (await safeRead(join(dir, 'output-8.txt'))) === expected;
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: (await safeRead(join(dir, 'output-8.txt'))) === expected, elapsed };
   });
 
   record(
     'H11',
     'Long Pipeline',
-    vPass ? `output-8.txt=${expected}` : 'output-8.txt missing or wrong',
-    pPass ? `output-8.txt=${expected}` : 'output-8.txt missing or wrong',
-    vPass,
-    pPass,
+    vanillaResult.pass ? `output-8.txt=${expected}` : 'output-8.txt missing or wrong',
+    pluginResult.pass ? `output-8.txt=${expected}` : 'output-8.txt missing or wrong',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
@@ -1105,18 +1192,16 @@ async function testH12() {
   console.log('\n--- H12: Latency Overhead ---');
 
   pluginUninstall();
-  let vanillaElapsed;
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
     const start = Date.now();
     claudeRun('Create hello.txt containing exactly: Hello, world!', dir);
-    vanillaElapsed = ((Date.now() - start) / 1000).toFixed(1);
-    return (await safeRead(join(dir, 'hello.txt'))) === 'Hello, world!';
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: (await safeRead(join(dir, 'hello.txt'))) === 'Hello, world!', elapsed };
   });
 
   pluginInstall();
-  let pluginElapsed;
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
     const start = Date.now();
     claudeRun(
@@ -1128,109 +1213,842 @@ async function testH12() {
       ].join('\n'),
       dir,
     );
-    pluginElapsed = ((Date.now() - start) / 1000).toFixed(1);
-    return (await safeRead(join(dir, 'hello.txt'))) === 'Hello, world!';
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: (await safeRead(join(dir, 'hello.txt'))) === 'Hello, world!', elapsed };
   });
 
   record(
     'H12',
     'Latency Overhead',
-    vPass ? `pass (${vanillaElapsed}s)` : `fail (${vanillaElapsed}s)`,
-    pPass ? `pass (${pluginElapsed}s)` : `fail (${pluginElapsed}s)`,
-    vPass,
-    pPass,
-    { vanillaElapsed: Number(vanillaElapsed), pluginElapsed: Number(pluginElapsed) },
+    vanillaResult.pass ? 'pass' : 'fail',
+    pluginResult.pass ? 'pass' : 'fail',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
 // ── H13: File-Exists Gate ───────────────────────────────────────────
-// Task: create build output at dist/app.js. Gate uses file_exists predicate.
-// Vanilla prompt says to "build" but doesn't verify the output path.
-// Plugin gate structurally checks file_exists dist/app.js.
+// README.md has build instructions. Vanilla gets vague "follow instructions"
+// prompt — may describe rather than execute. Plugin gate enforces file creation.
 
 async function testH13() {
   console.log('\n--- H13: File-Exists Gate ---');
 
+  const readmeMd = [
+    '# Build Instructions',
+    '',
+    '## Building the project',
+    '',
+    '1. Create a `dist` directory',
+    '2. Copy the contents of `src/index.js` into `dist/bundle.js`',
+    '',
+    '## Source',
+    '',
+    'The main source file is `src/index.js`.',
+  ].join('\n');
+
+  const srcIndexJs = [
+    'function main() {',
+    '  console.log("Hello from bundle");',
+    '}',
+    '',
+    'module.exports = { main };',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'README.md'), readmeMd);
+    await mkdir(join(dir, 'src'), { recursive: true });
+    await writeFile(join(dir, 'src', 'index.js'), srcIndexJs);
+  }
+
   pluginUninstall();
-  const vPass = await withTempDir(async (dir) => {
+  const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
-    claudeRun(
-      [
-        'Set up a simple build process:',
-        '1. Create src/app.js with a greeting function that exports a greet() function.',
-        '2. Write a build script (build.js) that reads src/app.js and copies it to dist/app.js.',
-        '3. Run the build script.',
-      ].join('\n'),
-      dir,
-    );
-    return existsSync(join(dir, 'dist', 'app.js'));
+    await setup(dir);
+    const start = Date.now();
+    claudeRun('Follow the deployment instructions in README.md to set up the project.', dir);
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: existsSync(join(dir, 'dist', 'bundle.js')), elapsed };
   });
 
   pluginInstall();
-  const pPass = await withTempDir(async (dir) => {
+  const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
     claudeRun(
       [
-        'Goal: create a build pipeline',
+        'Goal: follow build instructions',
         '',
         'flow:',
-        '  prompt: Create src/app.js with a greet() function. Write build.js that copies src/app.js to dist/app.js. Then run node build.js.',
+        '  prompt: Follow the build instructions in README.md',
         '',
         'done when:',
-        '  file_exists dist/app.js',
+        '  file_exists dist/bundle.js',
       ].join('\n'),
       dir,
     );
-    return existsSync(join(dir, 'dist', 'app.js'));
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: existsSync(join(dir, 'dist', 'bundle.js')), elapsed };
   });
 
   record(
     'H13',
     'File-Exists Gate',
-    vPass ? 'dist/app.js exists' : 'dist/app.js missing',
-    pPass ? 'dist/app.js exists' : 'dist/app.js missing',
-    vPass,
-    pPass,
+    vanillaResult.pass ? 'dist/bundle.js created' : 'dist/bundle.js missing',
+    pluginResult.pass ? 'dist/bundle.js created' : 'dist/bundle.js missing',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
   );
 }
 
-// ── Test registry ───────────────────────────────────────────────────
+// ── H14: Nested Control Flow (retry inside if) ─────────────────────
+// check-config.js fails if config.json missing. app.js has a computation bug.
+// Vanilla gets explicit steps. Plugin uses nested if/retry control flow.
 
-const QUICK_TESTS = [
-  { id: 'H3', name: 'Hash Fidelity', fn: testH3 },
-  { id: 'H4', name: 'Pipeline Auto-Exec', fn: testH4 },
-  { id: 'H6', name: 'Flaky Retry', fn: testH6 },
-  { id: 'H7', name: 'Variable Chain', fn: testH7 },
-  { id: 'H10', name: 'Try/Catch Recovery', fn: testH10 },
-  { id: 'H11', name: 'Long Pipeline', fn: testH11 },
-  { id: 'H12', name: 'Latency Overhead', fn: testH12 },
-];
+async function testH14() {
+  console.log('\n--- H14: Nested Control Flow ---');
 
-const GATE_TESTS = [
-  { id: 'H1', name: 'Hidden Second Bug', fn: testH1 },
-  { id: 'H2', name: 'Gaslighting "Tests Pass"', fn: testH2 },
-  { id: 'H5', name: 'Dual Gate', fn: testH5 },
-  { id: 'H8', name: 'Misleading Console Output', fn: testH8 },
-  { id: 'H9', name: 'Iterative Multi-Bug Fix', fn: testH9 },
-  { id: 'H13', name: 'File-Exists Gate', fn: testH13 },
-];
+  const checkConfigJs = [
+    'const fs = require("fs");',
+    'try {',
+    '  const config = JSON.parse(fs.readFileSync("config.json", "utf-8"));',
+    '  if (config.mode !== "production") {',
+    '    console.error("ERROR: mode must be \\"production\\"");',
+    '    process.exit(1);',
+    '  }',
+    '  console.log("Config OK");',
+    '} catch (e) {',
+    '  console.error("ERROR: config.json missing or invalid");',
+    '  process.exit(1);',
+    '}',
+  ].join('\n');
+
+  const appJs = [
+    'function square(x) {',
+    '  return x + x;',
+    '}',
+    '',
+    'module.exports = { square };',
+  ].join('\n');
+
+  const testJs = [
+    'const { square } = require("./app.js");',
+    'const fs = require("fs");',
+    'let f = 0;',
+    'if (!fs.existsSync("config.json")) { console.error("FAIL: config.json missing"); f++; }',
+    'else {',
+    '  const cfg = JSON.parse(fs.readFileSync("config.json", "utf-8"));',
+    '  if (cfg.mode !== "production") { console.error("FAIL: config.mode should be production"); f++; }',
+    '}',
+    'if (square(3) !== 9) { console.error("FAIL: square(3)=" + square(3)); f++; }',
+    'if (square(5) !== 25) { console.error("FAIL: square(5)=" + square(5)); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'check-config.js'), checkConfigJs);
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h14', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'First ensure config.json exists with {"mode":"production"}.',
+        'Then fix app.js so tests pass.',
+        'Run npm test to verify.',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix config and app bugs',
+        '',
+        'flow:',
+        '  run: node check-config.js',
+        '  if command_failed',
+        '    prompt: Create config.json with {"mode":"production"}',
+        '  end',
+        '  retry max 3',
+        '    run: npm test',
+        '    if command_failed',
+        '      prompt: Fix the bug in app.js based on the test output',
+        '    end',
+        '  end',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  record(
+    'H14',
+    'Nested Control Flow',
+    vanillaResult.pass ? 'config + app fixed' : 'tests still fail',
+    pluginResult.pass ? 'config + app fixed' : 'tests still fail',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H15: Phased Code Audit (Attention Focus) ────────────────────────
+// app.js has 12 bugs across 4 categories (3 each): crash, input validation,
+// logic, edge cases. Plugin drip-feeds one category per phase. Vanilla gets
+// all 12 at once with equivalent guidance. Tests whether per-category focus
+// produces more thorough fixes than "fix everything at once."
+
+async function testH15() {
+  console.log('\n--- H15: Phased Code Audit ---');
+
+  const appJs = [
+    '// ── A: Crash bugs ──',
+    'function greetUser(name) {',
+    '  return "Hello, " + nme;',
+    '}',
+    '',
+    'function averageOfArray(arr) {',
+    '  const sum = arr.reduce((a, b) => a + b, 0);',
+    '  return sum / arr.length;',
+    '}',
+    '',
+    'function factorial(n) {',
+    '  return n * factorial(n - 1);',
+    '}',
+    '',
+    '// ── B: Input validation bugs ──',
+    'function repeatString(str, times) {',
+    '  return str.repeat(times);',
+    '}',
+    '',
+    'function clampValue(val, min, max) {',
+    '  if (val < min) return min;',
+    '  if (val > max) return max;',
+    '  return val;',
+    '}',
+    '',
+    'function getProperty(obj, key) {',
+    '  return obj[key];',
+    '}',
+    '',
+    '// ── C: Logic bugs ──',
+    'function countWords(str) {',
+    '  return str.length;',
+    '}',
+    '',
+    'function isInRange(val, min, max) {',
+    '  return val >= min && val < max;',
+    '}',
+    '',
+    'function uniqueItems(arr) {',
+    '  return arr.filter((item, i) => arr.indexOf(item) !== i);',
+    '}',
+    '',
+    '// ── D: Edge case bugs ──',
+    'function truncate(str, maxLen) {',
+    '  return str.slice(0, maxLen) + "...";',
+    '}',
+    '',
+    'function safeParseInt(str) {',
+    '  return parseInt(str, 10);',
+    '}',
+    '',
+    'function chunkArray(arr, size) {',
+    '  const chunks = [];',
+    '  for (let i = 0; i < arr.length; i += size) {',
+    '    chunks.push(arr.slice(i, i + size));',
+    '  }',
+    '  return chunks;',
+    '}',
+    '',
+    'module.exports = {',
+    '  greetUser, averageOfArray, factorial,',
+    '  repeatString, clampValue, getProperty,',
+    '  countWords, isInRange, uniqueItems,',
+    '  truncate, safeParseInt, chunkArray,',
+    '};',
+  ].join('\n');
+
+  const testJs = [
+    'const m = require("./app.js");',
+    'let f = 0;',
+    'function check(label, fn) {',
+    '  try {',
+    '    const ok = fn();',
+    '    if (!ok) { console.error("FAIL: " + label); f++; }',
+    '  } catch (e) {',
+    '    console.error("FAIL: " + label + " threw: " + e.message);',
+    '    f++;',
+    '  }',
+    '}',
+    '',
+    '// A: Crash bugs',
+    'check("A1-greetUser", () => m.greetUser("Alice") === "Hello, Alice");',
+    'check("A2-averageOfArray-empty", () => m.averageOfArray([]) === 0);',
+    'check("A3-factorial-base", () => m.factorial(0) === 1 && m.factorial(5) === 120);',
+    '',
+    '// B: Input validation',
+    'check("B1-repeatString-null", () => m.repeatString(null, 3) === "");',
+    'check("B2-clampValue-inverted", () => m.clampValue(5, 10, 1) === 5);',
+    'check("B3-getProperty-null", () => m.getProperty(null, "x") === undefined);',
+    '',
+    '// C: Logic bugs',
+    'check("C1-countWords", () => m.countWords("hello world foo") === 3);',
+    'check("C2-isInRange-inclusive", () => m.isInRange(10, 1, 10) === true);',
+    'check("C3-uniqueItems", () => {',
+    '  const r = m.uniqueItems([1, 2, 2, 3, 3, 3]);',
+    '  return r.length === 3 && r.includes(1) && r.includes(2) && r.includes(3);',
+    '});',
+    '',
+    '// D: Edge cases',
+    'check("D1-truncate-short", () => m.truncate("hi", 10) === "hi");',
+    'check("D2-safeParseInt-nan", () => m.safeParseInt("abc") === 0);',
+    'check("D3-chunkArray-zero", () => {',
+    '  const r = m.chunkArray([1, 2, 3], 0);',
+    '  return Array.isArray(r) && r.length === 0;',
+    '});',
+    '',
+    'if (f === 0) console.log("All 12 tests passed");',
+    'else console.log(f + " of 12 tests failed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h15', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function scoreBugs(dir) {
+    const scores = { A: 0, B: 0, C: 0, D: 0, total: 0 };
+    const checks = [
+      [
+        'A',
+        "node -e \"const m=require('./app.js'); process.exit(m.greetUser('Alice')=== 'Hello, Alice' ? 0:1)\"",
+      ],
+      [
+        'A',
+        'node -e "const m=require(\'./app.js\'); process.exit(m.averageOfArray([])=== 0 ? 0:1)"',
+      ],
+      [
+        'A',
+        'node -e "const m=require(\'./app.js\'); process.exit(m.factorial(0)===1 && m.factorial(5)===120 ? 0:1)"',
+      ],
+      [
+        'B',
+        "node -e \"const m=require('./app.js'); process.exit(m.repeatString(null,3)==='' ? 0:1)\"",
+      ],
+      [
+        'B',
+        'node -e "const m=require(\'./app.js\'); process.exit(m.clampValue(5,10,1)===5 ? 0:1)"',
+      ],
+      [
+        'B',
+        "node -e \"const m=require('./app.js'); process.exit(m.getProperty(null,'x')===undefined ? 0:1)\"",
+      ],
+      [
+        'C',
+        "node -e \"const m=require('./app.js'); process.exit(m.countWords('hello world foo')===3 ? 0:1)\"",
+      ],
+      [
+        'C',
+        'node -e "const m=require(\'./app.js\'); process.exit(m.isInRange(10,1,10)===true ? 0:1)"',
+      ],
+      [
+        'C',
+        'node -e "const m=require(\'./app.js\'); const r=m.uniqueItems([1,2,2,3,3,3]); process.exit(r.length===3 ? 0:1)"',
+      ],
+      [
+        'D',
+        "node -e \"const m=require('./app.js'); process.exit(m.truncate('hi',10)==='hi' ? 0:1)\"",
+      ],
+      [
+        'D',
+        "node -e \"const m=require('./app.js'); process.exit(m.safeParseInt('abc')===0 ? 0:1)\"",
+      ],
+      [
+        'D',
+        'node -e "const m=require(\'./app.js\'); const r=m.chunkArray([1,2,3],0); process.exit(Array.isArray(r)&&r.length===0 ? 0:1)"',
+      ],
+    ];
+    for (const [cat, cmd] of checks) {
+      if (runCmd(cmd, dir) === 0) {
+        scores[cat]++;
+        scores.total++;
+      }
+    }
+    return scores;
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Fix all bugs in app.js. The file has 12 bugs across 4 categories (3 bugs each):',
+        '',
+        'CRASH BUGS: Look for (1) variable name typos causing ReferenceError,',
+        '(2) division/property access on empty arrays returning NaN instead of 0,',
+        '(3) infinite recursion with missing base cases.',
+        '',
+        'INPUT VALIDATION: Look for (1) functions that crash when passed null instead of string,',
+        '(2) missing handling when min > max in range clamping,',
+        '(3) missing null guard before property access on objects.',
+        '',
+        'LOGIC BUGS: Look for (1) counting characters instead of words,',
+        '(2) off-by-one in range checks (should be inclusive on both ends),',
+        '(3) filter that returns duplicates instead of unique items.',
+        '',
+        'EDGE CASES: Look for (1) appending "..." even when string is already short enough,',
+        '(2) parseInt returning NaN instead of 0 for non-numeric input,',
+        '(3) infinite loop when chunk size is 0.',
+        '',
+        'Run npm test to verify all 12 tests pass.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const scores = scoreBugs(dir);
+    return { scores, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: phased code audit of app.js',
+        '',
+        'flow:',
+        '  prompt: PHASE 1 — CRASH BUGS. Read app.js. Fix ONLY functions that crash at runtime. Look for: (1) variable name typos causing ReferenceError, (2) division/property access on empty arrays returning NaN instead of 0, (3) infinite recursion with missing base cases. Do not touch non-crashing functions yet.',
+        '  run: npm test',
+        '  prompt: PHASE 2 — INPUT VALIDATION. Now fix ONLY missing input validation. Look for: (1) functions that crash when passed null instead of string — return empty string, (2) missing handling when min > max in range clamping — return val unchanged, (3) missing null/undefined guard before property access — return undefined.',
+        '  run: npm test',
+        '  prompt: PHASE 3 — LOGIC BUGS. Now fix ONLY wrong return values. Look for: (1) function that counts characters instead of words — split on whitespace, (2) off-by-one in range boundary — should be inclusive on both ends, (3) filter that returns duplicates instead of unique items — use indexOf === i.',
+        '  run: npm test',
+        '  prompt: PHASE 4 — EDGE CASES. Now fix remaining edge case handling. Look for: (1) string function that appends "..." even when input is already short enough — only append when truncated, (2) parseInt without NaN fallback — return 0, (3) loop with size=0 causing infinite iteration — return empty array.',
+        '  run: npm test',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const scores = scoreBugs(dir);
+    return { scores, elapsed };
+  });
+
+  const vS = vanillaResult.scores;
+  const pS = pluginResult.scores;
+
+  record(
+    'H15',
+    'Phased Code Audit',
+    `${vS.total}/12 (A:${vS.A} B:${vS.B} C:${vS.C} D:${vS.D})`,
+    `${pS.total}/12 (A:${pS.A} B:${pS.B} C:${pS.C} D:${pS.D})`,
+    vS.total >= 10,
+    pS.total >= 10,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H16: Progressive Modular Build (Per-Phase Validation) ───────────
+// Build a 5-module word frequency pipeline from spec. Plugin builds one module
+// at a time with per-module validation. Vanilla builds all at once.
+// Tests whether per-module construction catches interface mismatches.
+
+async function testH16() {
+  console.log('\n--- H16: Progressive Modular Build ---');
+
+  const specTxt = [
+    '# Word Frequency Analyzer — Module Specification',
+    '',
+    '## Overview',
+    'Build 5 modules that form a pipeline: reader → tokenizer → counter → sorter → formatter.',
+    '',
+    '## Module 1: reader.js',
+    'Export: readInput(filePath)',
+    '- Read the file at filePath as UTF-8 and return its contents as a string.',
+    '- If the file does not exist, return an empty string "" (do NOT throw).',
+    '',
+    '## Module 2: tokenizer.js',
+    'Export: tokenize(text)',
+    '- Split text into words by whitespace.',
+    '- Convert each word to lowercase.',
+    '- Remove all non-alphabetic characters from each word (keep only a-z).',
+    '- Filter out any empty strings after cleanup.',
+    '- Return an array of cleaned lowercase words.',
+    '',
+    '## Module 3: counter.js',
+    'Export: countWords(words)',
+    '- Takes an array of strings.',
+    '- Return a Map where keys are words and values are counts.',
+    '- MUST return a Map (not a plain object).',
+    '',
+    '## Module 4: sorter.js',
+    'Export: topN(map, n)',
+    '- Takes a Map of word→count and a number n.',
+    '- Return an array of [word, count] pairs for the top N most frequent words.',
+    '- Sort by count descending.',
+    '- For equal counts, sort alphabetically (a before z).',
+    '',
+    '## Module 5: formatter.js',
+    'Export: formatReport(entries)',
+    '- Takes an array of [word, count] pairs.',
+    '- Return a string with one line per entry: "word: count"',
+    '- Lines joined by newline. No trailing newline.',
+  ].join('\n');
+
+  const sampleTxt = [
+    'The quick brown fox jumps over the lazy dog.',
+    'The dog barked at the fox.',
+    'Quick brown fox, quick brown dog!',
+  ].join('\n');
+
+  const testJs = [
+    'const fs = require("fs");',
+    'let f = 0;',
+    '',
+    'function check(label, fn) {',
+    '  try {',
+    '    const ok = fn();',
+    '    if (!ok) { console.error("FAIL: " + label); f++; }',
+    '  } catch (e) {',
+    '    console.error("FAIL: " + label + " threw: " + e.message);',
+    '    f++;',
+    '  }',
+    '}',
+    '',
+    '// Existence checks (5)',
+    'check("reader.js exists", () => fs.existsSync("reader.js"));',
+    'check("tokenizer.js exists", () => fs.existsSync("tokenizer.js"));',
+    'check("counter.js exists", () => fs.existsSync("counter.js"));',
+    'check("sorter.js exists", () => fs.existsSync("sorter.js"));',
+    'check("formatter.js exists", () => fs.existsSync("formatter.js"));',
+    '',
+    '// Function checks (5)',
+    'check("readInput is function", () => typeof require("./reader.js").readInput === "function");',
+    'check("tokenize is function", () => typeof require("./tokenizer.js").tokenize === "function");',
+    'check("countWords is function", () => typeof require("./counter.js").countWords === "function");',
+    'check("topN is function", () => typeof require("./sorter.js").topN === "function");',
+    'check("formatReport is function", () => typeof require("./formatter.js").formatReport === "function");',
+    '',
+    '// Behavior checks (4)',
+    'check("readInput reads file", () => {',
+    '  const r = require("./reader.js");',
+    '  const content = r.readInput("sample.txt");',
+    '  return typeof content === "string" && content.includes("fox");',
+    '});',
+    '',
+    'check("readInput missing file", () => {',
+    '  const r = require("./reader.js");',
+    '  return r.readInput("nonexistent.txt") === "";',
+    '});',
+    '',
+    'check("countWords returns Map", () => {',
+    '  const c = require("./counter.js");',
+    '  const result = c.countWords(["a", "b", "a"]);',
+    '  return result instanceof Map && result.get("a") === 2;',
+    '});',
+    '',
+    'check("topN sorts correctly", () => {',
+    '  const c = require("./counter.js");',
+    '  const s = require("./sorter.js");',
+    '  const map = c.countWords(["the", "fox", "the", "the", "fox"]);',
+    '  const top = s.topN(map, 2);',
+    '  return top[0][0] === "the" && top[0][1] === 3 && top[1][0] === "fox";',
+    '});',
+    '',
+    'console.log(f === 0 ? "All 14 tests passed" : f + " of 14 tests failed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'spec.txt'), specTxt);
+    await writeFile(join(dir, 'sample.txt'), sampleTxt);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h16', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function scoreModules(dir) {
+    const scores = { exist: 0, func: 0, behavior: 0, total: 0 };
+    const modules = ['reader', 'tokenizer', 'counter', 'sorter', 'formatter'];
+
+    // Existence (5)
+    for (const m of modules) {
+      if (existsSync(join(dir, `${m}.js`))) {
+        scores.exist++;
+        scores.total++;
+      }
+    }
+
+    // Function exports (5)
+    const fnChecks = [
+      "node -e \"process.exit(typeof require('./reader.js').readInput==='function' ? 0:1)\"",
+      "node -e \"process.exit(typeof require('./tokenizer.js').tokenize==='function' ? 0:1)\"",
+      "node -e \"process.exit(typeof require('./counter.js').countWords==='function' ? 0:1)\"",
+      "node -e \"process.exit(typeof require('./sorter.js').topN==='function' ? 0:1)\"",
+      "node -e \"process.exit(typeof require('./formatter.js').formatReport==='function' ? 0:1)\"",
+    ];
+    for (const cmd of fnChecks) {
+      if (runCmd(cmd, dir) === 0) {
+        scores.func++;
+        scores.total++;
+      }
+    }
+
+    // Behavior (4)
+    const behaviorChecks = [
+      "node -e \"const r=require('./reader.js'); process.exit(typeof r.readInput('sample.txt')==='string' && r.readInput('sample.txt').includes('fox') ? 0:1)\"",
+      "node -e \"const r=require('./reader.js'); process.exit(r.readInput('nonexistent.txt')==='' ? 0:1)\"",
+      "node -e \"const c=require('./counter.js'); const r=c.countWords(['a','b','a']); process.exit(r instanceof Map && r.get('a')===2 ? 0:1)\"",
+      "node -e \"const c=require('./counter.js'); const s=require('./sorter.js'); const m=c.countWords(['the','fox','the','the','fox']); const t=s.topN(m,2); process.exit(t[0][0]==='the' && t[0][1]===3 && t[1][0]==='fox' ? 0:1)\"",
+    ];
+    for (const cmd of behaviorChecks) {
+      if (runCmd(cmd, dir) === 0) {
+        scores.behavior++;
+        scores.total++;
+      }
+    }
+
+    return scores;
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Read spec.txt. Build all 5 modules according to the specification.',
+        '',
+        'Key requirements per module:',
+        '- reader.js: readInput(filePath) reads UTF-8, returns "" on missing file',
+        '- tokenizer.js: tokenize(text) splits on whitespace, lowercases, removes punctuation, filters empties',
+        '- counter.js: countWords(words) returns a Map (NOT a plain object) of word→count',
+        '- sorter.js: topN(map, n) returns [word,count] pairs sorted by count desc, alphabetical tiebreak',
+        '- formatter.js: formatReport(entries) returns "word: count" lines joined by newline',
+        '',
+        'Run npm test to verify all 14 tests pass.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const scores = scoreModules(dir);
+    return { scores, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: build word frequency analyzer module by module',
+        '',
+        'flow:',
+        '  prompt: Read spec.txt. Build reader.js: export readInput(filePath) that reads UTF-8 file, returns contents as string. Return "" on missing files — do NOT throw.',
+        "  run: node -e \"const r=require('./reader.js'); if(typeof r.readInput('./sample.txt')!=='string') process.exit(1); if(r.readInput('./nope')!=='') process.exit(1)\"",
+        '  prompt: Build tokenizer.js: export tokenize(text) splitting on whitespace into lowercase words, removing all non-alphabetic characters, filtering empty strings.',
+        "  run: node -e \"const t=require('./tokenizer.js').tokenize('Hello, World! Hello.'); if(t.length!==3||t[0]!=='hello') process.exit(1)\"",
+        '  prompt: Build counter.js: export countWords(words) returning a Map (NOT a plain object) of word to count. And sorter.js: export topN(map, n) returning top N [word,count] pairs sorted by count descending, alphabetical tiebreak for equal counts.',
+        "  run: node -e \"const c=require('./counter.js').countWords(['a','b','a']); const s=require('./sorter.js').topN(c,1); if(s[0][0]!=='a'||s[0][1]!==2) process.exit(1)\"",
+        '  prompt: Build formatter.js: export formatReport(entries) returning "word: count" lines joined by newline, no trailing newline. Run npm test to verify full integration.',
+        '  run: npm test',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const scores = scoreModules(dir);
+    return { scores, elapsed };
+  });
+
+  const vS = vanillaResult.scores;
+  const pS = pluginResult.scores;
+
+  record(
+    'H16',
+    'Progressive Modular Build',
+    `${vS.total}/14 (exist:${vS.exist} func:${vS.func} behav:${vS.behavior})`,
+    `${pS.total}/14 (exist:${pS.exist} func:${pS.func} behav:${pS.behavior})`,
+    vS.total >= 12,
+    pS.total >= 12,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── Summary helpers ─────────────────────────────────────────────────
+
+function printIterationSummary(iteration) {
+  console.log('\n' + '='.repeat(60));
+  if (REPEAT_COUNT > 1) {
+    console.log(`[comparative-eval] Summary (Iteration ${iteration + 1}/${REPEAT_COUNT})\n`);
+  } else {
+    console.log('[comparative-eval] Summary\n');
+  }
+
+  let pluginWins = 0;
+  let vanillaWins = 0;
+  let ties = 0;
+  let bothFail = 0;
+
+  for (const r of results) {
+    const icon =
+      r.verdict === 'PLUGIN WINS'
+        ? '>>>'
+        : r.verdict === 'VANILLA WINS'
+          ? '<<<'
+          : r.verdict === 'TIE'
+            ? '==='
+            : 'XXX';
+    console.log(`  ${icon}  ${r.id}: ${r.title} — ${r.verdict}`);
+
+    if (r.verdict === 'PLUGIN WINS') pluginWins++;
+    else if (r.verdict === 'VANILLA WINS') vanillaWins++;
+    else if (r.verdict === 'TIE') ties++;
+    else bothFail++;
+  }
+
+  console.log(
+    `\n  Plugin wins: ${pluginWins}  |  Vanilla wins: ${vanillaWins}  |  Ties: ${ties}  |  Both fail: ${bothFail}`,
+  );
+  console.log('='.repeat(60));
+}
+
+function printReliabilitySummary(allResults) {
+  const map = {};
+  for (const iterResults of allResults) {
+    for (const r of iterResults) {
+      if (!map[r.id]) {
+        map[r.id] = { title: r.title, pluginWins: 0, vanillaWins: 0, ties: 0, bothFail: 0 };
+      }
+      const entry = map[r.id];
+      if (r.verdict === 'PLUGIN WINS') entry.pluginWins++;
+      else if (r.verdict === 'VANILLA WINS') entry.vanillaWins++;
+      else if (r.verdict === 'TIE') entry.ties++;
+      else entry.bothFail++;
+    }
+  }
+
+  console.log(`\n${'='.repeat(60)}`);
+  console.log(`=== Reliability Summary (${allResults.length} repeats) ===\n`);
+
+  for (const [id, data] of Object.entries(map).sort()) {
+    const total = data.pluginWins + data.vanillaWins + data.ties + data.bothFail;
+
+    const parts = [];
+    if (data.pluginWins > 0) parts.push(`PLUGIN ${data.pluginWins}/${total}`);
+    if (data.vanillaWins > 0) parts.push(`VANILLA ${data.vanillaWins}/${total}`);
+    if (data.ties > 0) parts.push(`TIE ${data.ties}/${total}`);
+    if (data.bothFail > 0) parts.push(`BOTH_FAIL ${data.bothFail}/${total}`);
+
+    const maxCount = Math.max(data.pluginWins, data.vanillaWins, data.ties, data.bothFail);
+    const pct = ((maxCount / total) * 100).toFixed(0);
+    const flaky = maxCount < total ? ' (FLAKY)' : '';
+
+    const paddedTitle = data.title.padEnd(26);
+    console.log(`  ${id}:  ${paddedTitle} — ${parts.join(', ')} (${pct}%${flaky})`);
+  }
+
+  console.log(`${'='.repeat(60)}`);
+}
+
+function printTimingSummary(allResults) {
+  const vanillaTimings = [];
+  const pluginTimings = [];
+
+  for (const iterResults of allResults) {
+    for (const r of iterResults) {
+      if (r.vanillaElapsed > 0) vanillaTimings.push(r.vanillaElapsed);
+      if (r.pluginElapsed > 0) pluginTimings.push(r.pluginElapsed);
+    }
+  }
+
+  if (vanillaTimings.length === 0 || pluginTimings.length === 0) return;
+
+  const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
+  const avgV = avg(vanillaTimings);
+  const avgP = avg(pluginTimings);
+  const overhead = avgP - avgV;
+  const pct = avgV > 0 ? ((overhead / avgV) * 100).toFixed(0) : 'N/A';
+  const sign = overhead >= 0 ? '+' : '';
+
+  console.log(
+    `\nAvg Plugin Time: ${avgP.toFixed(1)}s | Avg Vanilla Time: ${avgV.toFixed(1)}s | Overhead: ${sign}${overhead.toFixed(1)}s (${pct}%)`,
+  );
+}
 
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  const totalHypotheses = QUICK_MODE ? QUICK_TESTS.length : QUICK_TESTS.length + GATE_TESTS.length;
+  const testCount = QUICK_MODE ? 7 : 16;
+  const estMinutes = Math.round(testCount * 2 * REPEAT_COUNT);
 
-  console.log(`[comparative-eval] Plugin vs Vanilla — ${totalHypotheses} Hypotheses\n`);
+  console.log(`[comparative-eval] Plugin vs Vanilla — ${testCount} Hypotheses\n`);
 
   if (QUICK_MODE) {
-    console.log(`  Mode: QUICK (${QUICK_TESTS.map((t) => t.id).join(', ')} — no gate loops)\n`);
+    console.log(`  Mode: QUICK (H3, H4, H6, H7, H10, H11, H12 — no gate loops)`);
   } else {
-    console.log(`  Mode: FULL (all ${totalHypotheses} hypotheses)\n`);
+    console.log(`  Mode: FULL (all ${testCount} hypotheses)`);
   }
 
-  if (REPEAT > 1) {
-    console.log(`  Repeat: ${REPEAT}x per hypothesis\n`);
+  if (REPEAT_COUNT > 1) {
+    console.log(`  Repeats: ${REPEAT_COUNT}`);
   }
+
+  console.log(`  Estimated runtime: ~${estMinutes} minutes\n`);
 
   try {
     execSync('claude --version', { encoding: 'utf-8', timeout: 5000 });
@@ -1239,115 +2057,62 @@ async function main() {
     process.exit(0);
   }
 
-  const tests = QUICK_MODE ? QUICK_TESTS : [...QUICK_TESTS, ...GATE_TESTS];
+  const allIterationResults = [];
 
-  // Track per-hypothesis reliability across repeats
-  const reliability = {};
-  for (const t of tests) {
-    reliability[t.id] = { name: t.name, wins: 0, losses: 0, ties: 0, bothFail: 0 };
-  }
-
-  for (let rep = 0; rep < REPEAT; rep++) {
-    if (REPEAT > 1) {
+  for (let iter = 0; iter < REPEAT_COUNT; iter++) {
+    if (REPEAT_COUNT > 1) {
       console.log(`\n${'#'.repeat(60)}`);
-      console.log(`[comparative-eval] Iteration ${rep + 1} of ${REPEAT}`);
+      console.log(`# Iteration ${iter + 1}/${REPEAT_COUNT}`);
       console.log(`${'#'.repeat(60)}`);
     }
 
-    // Clear results for this iteration
     results.length = 0;
 
-    for (const t of tests) {
-      await t.fn();
-    }
+    // Quick tests (no gate loops)
+    await testH3();
+    await testH4();
+    await testH6();
+    await testH7();
+    await testH10();
+    await testH11();
+    await testH12();
 
-    if (QUICK_MODE) {
-      for (const t of GATE_TESTS) {
-        console.log(`\n  SKIP  ${t.id}: ${t.name} (--quick mode)`);
-      }
-    }
-
-    // Print iteration summary
-    console.log('\n' + '='.repeat(60));
-    if (REPEAT > 1) {
-      console.log(`[comparative-eval] Iteration ${rep + 1}/${REPEAT} Summary\n`);
+    if (!QUICK_MODE) {
+      // Gate-loop tests (slower)
+      await testH1();
+      await testH2();
+      await testH5();
+      await testH8();
+      await testH9();
+      await testH13();
+      await testH14();
+      // Long-horizon coded judgment tests (300s timeout)
+      await testH15();
+      await testH16();
     } else {
-      console.log('[comparative-eval] Summary\n');
+      console.log('\n  SKIP  H1: Hidden Second Bug (--quick mode)');
+      console.log('  SKIP  H2: Gaslighting "Tests Pass" (--quick mode)');
+      console.log('  SKIP  H5: Dual Gate (--quick mode)');
+      console.log('  SKIP  H8: Misleading Console Output (--quick mode)');
+      console.log('  SKIP  H9: Iterative Multi-Bug Fix (--quick mode)');
+      console.log('  SKIP  H13: File-Exists Gate (--quick mode)');
+      console.log('  SKIP  H14: Nested Control Flow (--quick mode)');
+      console.log('  SKIP  H15: Phased Code Audit (--quick mode)');
+      console.log('  SKIP  H16: Progressive Modular Build (--quick mode)');
     }
 
-    let pluginWins = 0;
-    let vanillaWins = 0;
-    let ties = 0;
-    let bothFail = 0;
-
-    for (const r of results) {
-      const icon =
-        r.verdict === 'PLUGIN WINS'
-          ? '>>>'
-          : r.verdict === 'VANILLA WINS'
-            ? '<<<'
-            : r.verdict === 'TIE'
-              ? '==='
-              : 'XXX';
-      console.log(`  ${icon}  ${r.id}: ${r.title} — ${r.verdict}`);
-
-      if (r.verdict === 'PLUGIN WINS') {
-        pluginWins++;
-        reliability[r.id].wins++;
-      } else if (r.verdict === 'VANILLA WINS') {
-        vanillaWins++;
-        reliability[r.id].losses++;
-      } else if (r.verdict === 'TIE') {
-        ties++;
-        reliability[r.id].ties++;
-      } else {
-        bothFail++;
-        reliability[r.id].bothFail++;
-      }
-    }
-
-    console.log(
-      `\n  Plugin wins: ${pluginWins}  |  Vanilla wins: ${vanillaWins}  |  Ties: ${ties}  |  Both fail: ${bothFail}`,
-    );
-    console.log('='.repeat(60));
+    // Per-iteration summary
+    printIterationSummary(iter);
+    allIterationResults.push([...results]);
   }
 
-  // Print reliability summary if --repeat > 1
-  if (REPEAT > 1) {
-    console.log('\n' + '='.repeat(60));
-    console.log('[comparative-eval] Reliability Summary\n');
-
-    for (const t of tests) {
-      const r = reliability[t.id];
-      const total = r.wins + r.losses + r.ties + r.bothFail;
-      const parts = [];
-      if (r.wins > 0) parts.push(`PLUGIN ${r.wins}/${total}`);
-      if (r.losses > 0) parts.push(`VANILLA ${r.losses}/${total}`);
-      if (r.ties > 0) parts.push(`TIE ${r.ties}/${total}`);
-      if (r.bothFail > 0) parts.push(`BOTH_FAIL ${r.bothFail}/${total}`);
-
-      // Determine dominant verdict
-      let dominant;
-      if (r.wins > r.ties && r.wins > r.losses && r.wins > r.bothFail) {
-        const pct = ((r.wins / total) * 100).toFixed(0);
-        dominant = `PLUGIN (${pct}%)`;
-      } else if (r.ties > r.wins && r.ties > r.losses && r.ties > r.bothFail) {
-        const pct = ((r.ties / total) * 100).toFixed(0);
-        dominant = `TIE (${pct}%)`;
-      } else if (r.losses > r.wins && r.losses > r.ties && r.losses > r.bothFail) {
-        const pct = ((r.losses / total) * 100).toFixed(0);
-        dominant = `VANILLA (${pct}%)`;
-      } else {
-        dominant = 'MIXED';
-      }
-
-      const flaky = parts.length > 1 ? ' (flaky)' : '';
-      console.log(`  ${t.id}: ${r.name} — ${dominant}${flaky}`);
-      console.log(`    ${parts.join(', ')}`);
-    }
-
-    console.log('='.repeat(60));
+  // Reliability summary (only when repeating)
+  if (REPEAT_COUNT > 1) {
+    printReliabilitySummary(allIterationResults);
   }
+
+  // Timing summary
+  printTimingSummary(allIterationResults);
 
   pluginInstall();
   console.log('\n[comparative-eval] Plugin re-installed. Environment restored.');

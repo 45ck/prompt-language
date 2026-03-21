@@ -29,7 +29,7 @@ The agent loops fix-and-test automatically. The gate runs `npm test` before allo
 
 ## How it helps
 
-**Completion gates** are the core feature. `done when:` predicates run real commands and block the agent from stopping until they pass. In [41 A/B experiments](docs/eval-analysis.md), gates won 13/13 tested scenarios at 100% reliability. The agent can lie about test results, skip requirements, or stop early. Gates don't care. They run the command and check the exit code.
+**Completion gates** are the core feature. `done when:` predicates run real commands and block the agent from stopping until they pass. In [45 A/B experiments](docs/eval-analysis.md), gates won 13/13 tested scenarios at 100% reliability. The agent can lie about test results, skip requirements, or stop early. Gates don't care. They run the command and check the exit code.
 
 **Flow control** (`retry`, `while`, `until`, `if`, `try/catch`) structures multi-step tasks. Claude already follows explicit instructions well, so flow control is mainly useful for readability and enforcing execution order rather than correctness. Where it shines is pairing with gates: a `retry` loop that re-runs tests after each fix attempt, combined with a `tests_pass` gate, creates an autonomous fix-test cycle.
 
@@ -322,7 +322,7 @@ Full syntax, defaults, composition rules, built-in variables, and gate predicate
 
 ## Evaluation
 
-In 45 A/B hypotheses (41 tested, 4 pending): **15 plugin wins, 23 ties, 1 flaky** across 200+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
+In 45 A/B hypotheses (37 confirmed, 8 pending): **13 plugin wins, 21 ties, 1 flaky** across 200+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
 
 | Pattern                         | Mechanism                                  | Win rate |
 | ------------------------------- | ------------------------------------------ | -------- |

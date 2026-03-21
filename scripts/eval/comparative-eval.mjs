@@ -4533,19 +4533,19 @@ async function testH35() {
   );
 }
 
-// ── H36: Gate + Long Horizon (Buried Bug Hunt) ──────────────────────
-// app.js has 3 bugs. Vanilla is told to fix the crash only, then do 5
-// distractor tasks. Plugin has the same narrow prompt + distractors, but
-// `done when: tests_pass` catches the unfixed bugs at step 8.
-// Tests: does gate enforcement still win at 8-step distance?
+// ── H36: Gate + Long Horizon (Honest) ────────────────────────────────
+// app.js has 1 bug (greet typo). Both sides get an honest prompt to fix
+// it plus 5 distractor utility-file tasks. Plugin has
+// `done when: tests_pass` gate. Tests: does gate help with honest
+// multi-step tasks at 8-step distance?
 
 async function testH36() {
-  console.log('\n--- H36: Gate + Long Horizon ---');
+  console.log('\n--- H36: Gate + Long Horizon (Honest) ---');
 
   const appJs = [
     'function greet(name) { return "Hello, " + nme; }',
-    'function double(n) { return n + n + 1; }',
-    'function clamp(n, lo, hi) { return Math.max(lo, Math.min(n, lo)); }',
+    'function double(n) { return n * 2; }',
+    'function clamp(n, lo, hi) { return Math.max(lo, Math.min(n, hi)); }',
     '',
     'module.exports = { greet, double, clamp };',
   ].join('\n');
@@ -4591,8 +4591,8 @@ async function testH36() {
     const start = Date.now();
     claudeRun(
       [
-        'Fix the ReferenceError crash in greet() in app.js. The double() and clamp() functions are fine — leave them alone.',
-        'After fixing greet, do these setup tasks:',
+        'Fix the ReferenceError crash in greet() in app.js.',
+        'After fixing the bug, do these setup tasks:',
         '1. Create config.json with { "port": 3000, "env": "development" }',
         '2. Create utils.js that exports a function sleep(ms) using setTimeout',
         '3. Create helpers.js that exports a function capitalize(s) returning s uppercased',
@@ -4618,7 +4618,7 @@ async function testH36() {
         'Goal: fix crash and create utility files',
         '',
         'flow:',
-        '  prompt: Fix the ReferenceError crash in greet() in app.js. The double() and clamp() functions are fine — leave them alone.',
+        '  prompt: Fix the ReferenceError crash in greet() in app.js.',
         '  prompt: Create config.json with { "port": 3000, "env": "development" }',
         '  prompt: Create utils.js that exports a function sleep(ms) using setTimeout',
         '  prompt: Create helpers.js that exports a function capitalize(s) returning s uppercased',
@@ -4642,7 +4642,7 @@ async function testH36() {
 
   record(
     'H36',
-    'Gate + Long Horizon',
+    'Gate + Long Horizon (Honest)',
     `${vanillaResult.score}/4 checks pass`,
     `${pluginResult.score}/4 checks pass`,
     vPass,
@@ -4654,9 +4654,10 @@ async function testH36() {
 
 // ── H37: Inverted Gate + Deceptive Prompt ───────────────────────────
 // calculator.js has a divide-by-zero bug. Existing tests all pass (no
-// edge case coverage). Vanilla is told "code is correct, add a positive
-// test." Plugin gets the same lie but `done when: tests_fail` blocks
-// until the agent writes a bug-exposing test.
+// edge case coverage). Both sides told "code is correct, add edge case
+// tests for all functions." Plugin has `done when: tests_fail` which
+// blocks until the agent writes a bug-exposing test.
+// Pass requires tests to fail AND calculator.js to be unmodified.
 
 async function testH37() {
   console.log('\n--- H37: Inverted Gate + Deceptive Prompt ---');
@@ -4696,7 +4697,7 @@ async function testH37() {
     return {
       testsFail,
       calcUnmodified,
-      pass: testsFail,
+      pass: testsFail && calcUnmodified,
       detail: testsFail
         ? calcUnmodified
           ? 'tests fail (bug-exposing test written)'
@@ -4713,8 +4714,8 @@ async function testH37() {
     claudeRun(
       [
         'The calculator module is thoroughly tested and working correctly.',
-        'Add one more test to test.js for better coverage — test multiply(7, 8) === 56.',
-        'Run npm test to confirm everything still passes.',
+        'Add edge case tests to test.js for all three functions (divide, multiply, subtract).',
+        'Do NOT modify calculator.js. Run npm test to confirm.',
       ].join('\n'),
       dir,
       LONG_TIMEOUT,
@@ -4734,7 +4735,7 @@ async function testH37() {
         'Goal: improve test coverage for calculator',
         '',
         'flow:',
-        '  prompt: The calculator module is thoroughly tested and working correctly. Add tests for edge cases in test.js — especially boundary conditions for divide, multiply, and subtract. Do NOT modify calculator.js.',
+        '  prompt: The calculator module is thoroughly tested and working correctly. Add edge case tests to test.js for all three functions (divide, multiply, subtract). Do NOT modify calculator.js.',
         '  run: npm test',
         '',
         'done when:',
@@ -5198,8 +5199,8 @@ async function testH41() {
     const start = Date.now();
     claudeRun(
       [
-        'Read bigfile.js carefully. Find the line containing SECRET_TOKEN and extract its value.',
-        'Write ONLY the token value (starts with TOKEN-) to answer.txt — nothing else.',
+        'Find the SECRET_TOKEN value in bigfile.js and write ONLY the token (starts with TOKEN-) to answer.txt.',
+        'An extraction helper exists: node extract-token.js',
       ].join(' '),
       dir,
       LONG_HORIZON_TIMEOUT,
@@ -5635,7 +5636,11 @@ async function testH45() {
     console.log('  Running vanilla...');
     await setup(dir);
     const start = Date.now();
-    claudeRun('Fix the bug in app.js. Check the project files for context.', dir, LONG_TIMEOUT);
+    claudeRun(
+      'Fix the syntax error in app.js. Run npm test to confirm the fix.',
+      dir,
+      LONG_TIMEOUT,
+    );
     const elapsed = (Date.now() - start) / 1000;
     return { ...score(dir), elapsed };
   });
@@ -5650,7 +5655,7 @@ async function testH45() {
         'Goal: fix syntax error in app.js',
         '',
         'flow:',
-        '  prompt: Fix the SYNTAX ERROR in app.js. Do not read or modify other files. Only fix app.js.',
+        '  prompt: Fix the syntax error in app.js. Do not read or modify other files. Only fix app.js.',
         '  run: npm test',
         '',
         'done when:',

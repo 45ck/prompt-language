@@ -4,6 +4,97 @@
 
 The prompt-language plugin wins **7 out of 28** hypotheses against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (126 `claude -p` calls, H22-H28 pending first run). **Zero flakiness** — every hypothesis produced the same verdict in all 3 iterations. The plugin's value lies in **structural enforcement** -- gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. The plugin adds ~204% latency overhead (avg 92.4s vs 30.4s vanilla).
 
+## What the Plugin Actually Changes
+
+The hypothesis-by-hypothesis data below tells you which tests won. This section tells you what it means in practice.
+
+### Gates are the only thing that matters
+
+Every plugin win shares one trait: a `done when:` gate that mechanically verifies something the prompt didn't mention or actively lied about. Strip away the DSL syntax and control flow, and the plugin's value reduces to a single sentence: **it runs a command before letting Claude stop.**
+
+The numbers:
+
+- **7/21 plugin wins** — all from gates enforcing criteria the prompt omitted or contradicted
+- **11/21 ties** — all cases where the prompt was honest and complete
+- **0 vanilla wins** across 378 comparisons
+- **3/21 scoring bugs** (H19-H21) — awaiting re-run
+
+Four proven gate patterns, each 100% reliable across 3 iterations:
+
+| Pattern                | What happens                                      | Examples |
+| ---------------------- | ------------------------------------------------- | -------- |
+| Gaslighting resistance | Prompt lies ("tests pass"), gate runs them anyway | H2, H9   |
+| Narrow framing escape  | Prompt focuses on one bug, gate catches all       | H1, H8   |
+| Omitted concern        | Prompt says "tests", gate adds "lint"             | H5, H18  |
+| Diff enforcement       | Prompt says "review", gate forces changes         | H17      |
+
+The common thread: Claude trusts the prompt. Gates don't. When the prompt is wrong, gates catch it. When the prompt is right, gates add nothing.
+
+### Flow control doesn't help
+
+`while`, `retry`, `if`, `try` — all the control-flow nodes replicate behavior Claude already exhibits when given clear instructions. The data is unambiguous:
+
+- H6 (retry): TIE. Vanilla retries when told to.
+- H10 (try/catch): TIE. Both recover from errors.
+- H14 (nested if/retry): TIE. Both handle multi-step recovery.
+- H15 (4-phase drip-feed): TIE with 4x latency overhead.
+- H16 (per-module pipeline): TIE with 7.5x latency overhead.
+
+Sequential `prompt:` + `run:` pipelines are the worst offender. They force serial execution through the plugin's hook machinery, adding 2-7x latency while achieving identical correctness. Claude follows explicit multi-step instructions reliably without scaffolding.
+
+**Use control flow for organizational clarity if you want, but don't expect it to improve outcomes.**
+
+### The untested advantage: context management
+
+There's a capability the evals haven't measured yet. The plugin's variable system (`let x = prompt "text"` + `${x}` interpolation) lets you architect what information reaches each prompt step.
+
+**Vanilla Claude**: every turn sees the growing conversation history. Earlier turns can bias later steps. Irrelevant information competes for attention. You have no control over what context reaches which step.
+
+**Plugin with variable capture**: `let x = prompt "text"` stores specific text. `prompt: Do ${x}` injects only what you choose. Each prompt node sees `renderFlow()` (structured state) plus interpolated variables, not raw prior conversation.
+
+Example:
+
+```
+let security_rules = prompt "Only use parameterized queries. Never string-concat SQL."
+let code_review = prompt "Check for null handling, error paths, and input validation."
+prompt: Refactor auth.js following these rules: ${security_rules}
+prompt: Review the changes against: ${code_review}
+```
+
+The security refactoring step doesn't see the code review criteria (which could distract it into reviewing instead of refactoring). The review step doesn't see the security rules (which could bias it to only check SQL issues). Each step gets exactly the context it needs.
+
+This is not true lexical scoping — variables are session-wide and any step can read any variable. But the composition is intentional. You're deciding what information to inject into each prompt, rather than relying on Claude's attention across an ever-growing conversation window.
+
+**Status**: untested empirically. The variable capture evals (H3, H7) test simple value relay, not selective context injection. Whether this actually improves outcomes over vanilla Claude with the same instructions is an open hypothesis.
+
+### The cost: latency
+
+Every plugin invocation pays a tax for hook loading, state file I/O, and gate evaluation:
+
+| Scenario                | Vanilla | Plugin | Overhead |
+| ----------------------- | ------- | ------ | -------- |
+| Simplest task (H12)     | 10-12s  | 28-30s | 2.7x     |
+| Average across 21 tests | 30.4s   | 92.4s  | +204%    |
+| Phased audit (H15)      | 69.6s   | 281.0s | 4.0x     |
+| Modular build (H16)     | 35.9s   | 269.3s | 7.5x     |
+
+For gate-loop tests (H1, H2, H5, H8, H9, H17, H18), the extra time is productive — the plugin is running tests and iterating until they pass. For phased prompts and simple tasks, it's pure overhead.
+
+**Rule of thumb**: pay the latency cost when gates enforce correctness you can't get otherwise. Skip it when the prompt honestly describes the task and you can verify the result yourself.
+
+### Decision guide
+
+| Situation                                                                                                  | Use plugin? | Why                                              |
+| ---------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------ |
+| Task has verifiable completion criteria (tests, lint, file exists) that the prompt might not fully specify | Yes         | Gates catch what prompts miss                    |
+| You distrust the prompt (generated, copied, or deliberately adversarial)                                   | Yes         | Gaslighting resistance                           |
+| You need to force code changes, not just review                                                            | Yes         | `diff_nonempty` gate                             |
+| Multiple independent criteria must all pass                                                                | Yes         | Compound gates                                   |
+| You want to control what context reaches each prompt step                                                  | Maybe       | Variable capture (untested, theoretically sound) |
+| Task is simple and well-specified                                                                          | No          | Vanilla matches correctness, 2-3x faster         |
+| You're using phased prompts for organizational structure                                                   | No          | 4-7x slower, no correctness gain                 |
+| Speed matters and you'll verify the result manually                                                        | No          | Plugin adds overhead without benefit             |
+
 ## Taxonomy of Differentiators
 
 | Category                  | Mechanism                                      | Hypotheses     | Win Rate      | Pattern                                      |

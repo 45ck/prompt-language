@@ -31,7 +31,8 @@
     "fssl",
     "interpolate",
     "nonempty",
-    "varname"
+    "varname",
+    "evals"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
 }

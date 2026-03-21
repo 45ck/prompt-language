@@ -1,41 +1,39 @@
 # @45ck/prompt-language
 
-A programming language for Claude Code workflows.
-
-Write structured programs that manage agent context, orchestrate long-horizon tasks, and enforce completion — with loops, variables, conditionals, and gates.
+Stop telling Claude to run the tests.
 
 [![npm](https://img.shields.io/npm/v/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 [![license](https://img.shields.io/npm/l/@45ck/prompt-language)](LICENSE)
 [![node](https://img.shields.io/node/v/@45ck/prompt-language)](package.json)
 
-## What is this?
+## The problem
 
-Claude Code is powerful, but it sometimes declares victory too early — it trusts its own assessment of whether tests pass, skips edge cases when focused on one bug, and stops without verifying its work. prompt-language gives you structural control over what the agent does and mechanical verification that it actually finished.
+You ask Claude to fix a bug. It makes a change and says "Done!" You say "run the tests." They fail. You say "fix those." It fixes one. You say "run the tests again." Two more fail. You paste the output. It fixes them. You say "run the tests one more time." It finally passes. Five back-and-forth messages for something that should have been automatic.
 
-It's a small language you write inside your Claude Code prompts. It gives you programming constructs — loops, conditionals, variables, retries — to orchestrate what the agent does across a long task. Instead of hoping Claude follows a multi-step plan, you write the plan as executable code.
-
-Three pillars:
-
-- **Completion gates** — `done when:` predicates run actual commands (like `npm test`) and block the agent from stopping until they pass. The agent can't claim "done" without proof. This is the core differentiator.
-- **Structured execution** — Loops (`while`, `until`, `retry`), conditionals (`if/else`), and error handling (`try/catch`) let you write real programs that the agent follows step by step.
-- **Context management** — Variables (`let`/`var`) capture command output, store context, and feed it into later prompts. The agent sees exactly what you want, when you want it.
+prompt-language fixes this:
 
 ```
-Goal: diagnose and fix the auth module
+Goal: fix the bug
 
 flow:
-  let errors = run "npm test -- auth 2>&1 | tail -20"
-  prompt: Analyze these test failures and identify root causes: ${errors}
-  retry max 3
-    prompt: Fix the issues you identified.
-    run: npm test -- auth
+  retry max 5
+    prompt: Fix the failing tests.
+    run: npm test
   end
 
 done when:
   tests_pass
 ```
 
-This captures test output into a variable, feeds it to the agent as context, then loops fix-and-test until green. The gate verifies independently — without it, Claude might fix one test and stop, missing the rest.
+The agent loops fix-and-test automatically. The gate runs `npm test` before allowing the agent to stop. No more babysitting.
+
+## How it helps
+
+**Completion gates** are the core feature. `done when:` predicates run real commands and block the agent from stopping until they pass. In [39 A/B experiments](docs/eval-analysis.md), gates won 13/13 tested scenarios at 100% reliability. The agent can lie about test results, skip requirements, or stop early. Gates don't care. They run the command and check the exit code.
+
+**Flow control** (`retry`, `while`, `until`, `if`, `try/catch`) structures multi-step tasks. Claude already follows explicit instructions well, so flow control is mainly useful for readability and enforcing execution order rather than correctness. Where it shines is pairing with gates: a `retry` loop that re-runs tests after each fix attempt, combined with a `tests_pass` gate, creates an autonomous fix-test cycle.
+
+**Variables** (`let`/`var`) capture command output and carry it across steps. Useful for composing context, like capturing a benchmark result early and comparing it at the end. At tested distances (2-7 steps), variables don't improve correctness over vanilla Claude, but they make flows more readable and explicit about what context each step receives.
 
 ## Install
 
@@ -66,9 +64,7 @@ claude plugin install prompt-language
 
 ## Quick start
 
-### Write a flow
-
-Use the DSL directly in your Claude Code prompt:
+Add a flow block to any Claude Code prompt:
 
 ```
 Goal: fix failing tests
@@ -76,7 +72,7 @@ Goal: fix failing tests
 flow:
   retry max 5
     run: npm test
-    if tests_fail
+    if command_failed
       prompt: Fix the failing tests based on the error output above.
     end
   end
@@ -85,9 +81,23 @@ done when:
   tests_pass
 ```
 
-The agent executes step by step, unable to stop until the gate passes or the retry limit is reached.
+The agent executes step by step, retrying on failure, unable to stop until the gate passes or the retry limit is reached.
 
-### Or use natural language
+### Gates without a flow
+
+You don't need a flow to use gates. Just add `done when:` to any prompt:
+
+```
+Goal: fix the auth module and clean up the code
+
+done when:
+  tests_pass
+  lint_pass
+```
+
+Claude works however it wants, but it cannot stop until both `npm test` and `npm run lint` pass. This is the simplest way to prevent premature stopping.
+
+### Natural language
 
 You don't need to learn the DSL. Type your intent as a Claude Code prompt:
 
@@ -95,11 +105,86 @@ You don't need to learn the DSL. Type your intent as a Claude Code prompt:
 Keep running the tests and fixing failures until they all pass. Try up to 5 times.
 ```
 
-prompt-language detects control-flow intent and asks Claude to convert your instructions into a structured flow. When your prompt contains phrases like "retry", "loop", "keep going", "don't stop", or "on failure", the plugin injects a meta-prompt with the full DSL reference. The agent reads your intent and writes the DSL. This works well but is less precise than writing the DSL yourself.
+The plugin detects control-flow intent and asks Claude to convert your instructions into a structured flow. This works well but is less precise than writing the DSL yourself.
 
-### Context management
+## When to use it
 
-Variables carry context forward across steps. Each prompt sees exactly the information it needs:
+| Situation                                                                                                  | Use plugin? | Why                                        |
+| ---------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------ |
+| Task has verifiable completion criteria (tests, lint, file exists) that the prompt might not fully specify | Yes         | Gates catch what prompts miss              |
+| You distrust the prompt (generated, copied, or deliberately adversarial)                                   | Yes         | Gaslighting resistance                     |
+| You need to force code changes, not just review                                                            | Yes         | `diff_nonempty` gate                       |
+| Multiple independent criteria must all pass                                                                | Yes         | Compound gates                             |
+| You need the agent to produce a specific failure state                                                     | Yes         | Inverted gates (`tests_fail`, `lint_fail`) |
+| Task is simple and well-specified                                                                          | No          | Vanilla matches correctness, 2-3x faster   |
+| You want phased prompts for organizational structure only                                                  | No          | 4-7x slower, no correctness gain           |
+| Speed matters and you'll verify the result manually                                                        | No          | Plugin adds overhead without benefit       |
+
+**Rule of thumb**: use gates when the agent needs to verify something it would otherwise skip. Skip the plugin when you'll check the result yourself.
+
+## Use cases
+
+### Fix-test loop
+
+The most common pattern. Retry until tests pass:
+
+```
+Goal: fix the auth tests
+
+flow:
+  retry max 5
+    run: npm test -- auth
+    if command_failed
+      prompt: Fix the failing tests based on the error output above.
+    end
+  end
+
+done when:
+  tests_pass
+```
+
+### Quality gate
+
+Enforce multiple requirements the prompt doesn't mention:
+
+```
+Goal: fix the test failures
+
+done when:
+  tests_pass
+  lint_pass
+  file_exists dist/index.js
+```
+
+You said "fix the test failures." The gates also enforce lint and a successful build. Claude has no reason to lint on its own, but the gate makes it.
+
+### Conditional diagnostics
+
+Branch on error type, apply different fix strategies:
+
+```
+Goal: fix all quality issues
+
+flow:
+  run: npm test
+  if tests_fail
+    prompt: Fix the failing tests based on the error output.
+    run: npm test
+  end
+  run: npm run lint
+  if lint_fail
+    prompt: Fix the lint errors shown above.
+    run: npm run lint
+  end
+
+done when:
+  tests_pass
+  lint_pass
+```
+
+### Benchmark comparison
+
+Capture a baseline, fix the problem, measure improvement:
 
 ```
 Goal: investigate and fix performance regression
@@ -115,9 +200,50 @@ done when:
   tests_pass
 ```
 
-## How it works
+### Deploy with error recovery
 
-### The execution model
+Try/catch for graceful failure handling:
+
+```
+Goal: deploy to staging
+
+flow:
+  try
+    run: npm run build
+    run: npm run deploy:staging
+  catch command_failed
+    prompt: Deploy failed. Investigate the error and fix it.
+    run: npm run build
+    run: npm run deploy:staging
+  end
+
+done when:
+  tests_pass
+```
+
+### Multi-service error forensics
+
+Diagnose multiple services, fix each, then cite exact errors in a postmortem:
+
+```
+Goal: diagnose and fix all service errors
+
+flow:
+  let auth_err = run "node diagnose-auth.js"
+  prompt: Fix the auth service based on: ${auth_err}
+  let cache_err = run "node diagnose-cache.js"
+  prompt: Fix the cache service based on: ${cache_err}
+  let api_err = run "node diagnose-api.js"
+  prompt: Fix the API service based on: ${api_err}
+  prompt: Write postmortem.md citing exact errors — auth: ${auth_err}, cache: ${cache_err}, api: ${api_err}
+
+done when:
+  tests_pass
+```
+
+Each error is captured in a variable when it's first observed, then re-injected into the postmortem prompt at the end.
+
+## How it works
 
 1. You write a flow (DSL or natural language) in your prompt.
 2. The plugin parses it into a program (FlowSpec) and creates a SessionState.
@@ -126,8 +252,6 @@ done when:
 5. `prompt:` nodes inject instructions for the agent to act on.
 6. Loops and conditionals evaluate against runtime variable state.
 7. Gates run verification commands before allowing the agent to stop.
-
-### Lifecycle
 
 ```
     You submit a prompt with a flow
@@ -155,11 +279,9 @@ done when:
             Done
 ```
 
-### Steps and gates are independent
-
 Steps define execution order. Gates define the exit condition. You can use flow steps without gates (structured execution only) or gates without a complex flow (verification before stopping).
 
-## DSL quick reference
+## DSL reference
 
 | Primitive     | Purpose                              | Example                                |
 | ------------- | ------------------------------------ | -------------------------------------- |
@@ -173,161 +295,19 @@ Steps define execution order. Gates define the exit condition. You can use flow 
 | `try`/`catch` | Execute with error recovery          | `try ... catch command_failed ... end` |
 | `done when:`  | Completion gate (blocks stopping)    | `done when: tests_pass`                |
 
-Primitives nest freely. `let`/`var` has three source types: literal (`let x = "hello"`), prompt (`let x = prompt "text"`), and run (`let x = run "cmd"`). Variables are interpolated via `${varName}` in prompt and run text. Conditions (`while`, `until`, `if`) resolve against runtime variables or via built-in commands — see [Built-in variables and gates](#built-in-variables-and-gates). Unknown variables are left as-is.
-
-Full syntax, defaults, and composition rules: **[DSL Reference](docs/dsl-reference.md)**
-
-## Built-in variables and gates
-
-### Runtime variables
-
-Auto-set after every `run:` node:
-
-| Variable            | Type    | Description                                          |
-| ------------------- | ------- | ---------------------------------------------------- |
-| `last_exit_code`    | number  | Exit code of the last command                        |
-| `command_failed`    | boolean | `true` if exit code != 0                             |
-| `command_succeeded` | boolean | `true` if exit code == 0                             |
-| `last_stdout`       | string  | stdout of the last command (truncated at 2000 chars) |
-| `last_stderr`       | string  | stderr of the last command (truncated at 2000 chars) |
-
-Use these in `while`, `until`, `if`, and `try/catch` conditions.
-
-### Gate predicates
-
-Used in `done when:` blocks and flow conditions. Each predicate runs a real command and checks the result:
-
-| Predicate            | Runs               | Passes when                  |
-| -------------------- | ------------------ | ---------------------------- |
-| `tests_pass`         | `npm test`         | exit 0                       |
-| `tests_fail`         | `npm test`         | exit != 0                    |
-| `lint_pass`          | `npm run lint`     | exit 0                       |
-| `lint_fail`          | `npm run lint`     | exit != 0                    |
-| `file_exists <path>` | `test -f '<path>'` | file exists                  |
-| `diff_nonempty`      | `git diff --quiet` | exit != 0 (diff has changes) |
+Full syntax, defaults, composition rules, built-in variables, and gate predicates: **[DSL Reference](docs/dsl-reference.md)**
 
 ## Slash commands
 
-The plugin runs flows automatically via hooks. These slash commands provide manual control for debugging or interrupted sessions:
-
-| Command        | Description                                                                            |
-| -------------- | -------------------------------------------------------------------------------------- |
-| `/flow:run`    | Execute the current flow step, advance state, and inject context. Main execution loop. |
-| `/flow:status` | Show current flow execution progress. Read-only.                                       |
-| `/flow:reset`  | Abandon the current flow and delete session state.                                     |
-
-## Use cases
-
-### Multi-phase pipeline
-
-Research, plan, implement, then verify:
-
-```
-Goal: add user authentication
-
-flow:
-  let codebase = run "find src -name '*.ts' | head -20"
-  prompt: Review the codebase structure (${codebase}) and plan an auth module.
-  prompt: Implement the auth module following your plan.
-  prompt: Write tests for the auth module.
-  run: npm test
-
-done when:
-  tests_pass
-  lint_pass
-```
-
-### Conditional diagnostics
-
-Branch on error type, apply different fix strategies:
-
-```
-Goal: fix all quality issues
-
-flow:
-  run: npm test
-  if tests_fail
-    prompt: Fix the failing tests based on the error output.
-    run: npm test
-  end
-  run: npm run lint
-  if lint_fail
-    prompt: Fix the lint errors shown above.
-    run: npm run lint
-  end
-
-done when:
-  tests_pass
-  lint_pass
-```
-
-### Deploy with error recovery
-
-Try/catch for graceful failure handling:
-
-```
-Goal: deploy to staging
-
-flow:
-  try
-    run: npm run build
-    run: npm run deploy:staging
-  catch command_failed
-    prompt: Deploy failed. Investigate the error and fix it.
-    run: npm run build
-    run: npm run deploy:staging
-  end
-
-done when:
-  tests_pass
-```
-
-### Multi-service error forensics
-
-Diagnose multiple services, fix each, then write a postmortem citing exact errors:
-
-```
-Goal: diagnose and fix all service errors
-
-flow:
-  let auth_err = run "node diagnose-auth.js"
-  prompt: Fix the auth service based on: ${auth_err}
-  let cache_err = run "node diagnose-cache.js"
-  prompt: Fix the cache service based on: ${cache_err}
-  let api_err = run "node diagnose-api.js"
-  prompt: Fix the API service based on: ${api_err}
-  prompt: Write postmortem.md citing exact errors — auth: ${auth_err}, cache: ${cache_err}, api: ${api_err}
-
-done when:
-  tests_pass
-```
-
-Each error is captured in a variable when it's first observed, then re-injected into the postmortem prompt at the end. Without variables, the agent must recall exact error messages from many turns back — variables guarantee byte-exact fidelity regardless of distance.
-
-### Schema-driven code generation
-
-Generate consistent code across multiple files from a single source of truth:
-
-```
-Goal: generate API module from schema
-
-flow:
-  let schema = run "cat api-schema.json"
-  prompt: Generate src/types.ts with TypeScript interfaces for: ${schema}
-  prompt: Generate src/routes.ts with Express handlers matching: ${schema}
-  prompt: Generate src/validation.ts with request validators for: ${schema}
-  prompt: Generate src/tests.ts covering all endpoints from: ${schema}
-
-done when:
-  tests_pass
-  lint_pass
-```
-
-The schema is captured once and re-injected at every step. Each file generation step sees the exact original schema, not a paraphrased version from earlier in the conversation.
+| Command        | Description                                                       |
+| -------------- | ----------------------------------------------------------------- |
+| `/flow:run`    | Execute the current flow step, advance state, and inject context. |
+| `/flow:status` | Show current flow execution progress. Read-only.                  |
+| `/flow:reset`  | Abandon the current flow and delete session state.                |
 
 ## Evaluation
 
-In 35 A/B hypotheses (33 tested, 2 pending): **13 plugin wins, 19 ties, 1 flaky** across 190+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus — gates catch what self-discipline misses. When prompts are honest and explicit, vanilla Claude performs equally well.
+In 39 A/B hypotheses (33 tested, 6 pending): **13 plugin wins, 19 ties, 1 flaky** across 190+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
 
 | Pattern                         | Mechanism                                  | Win rate |
 | ------------------------------- | ------------------------------------------ | -------- |

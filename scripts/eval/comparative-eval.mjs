@@ -2,22 +2,23 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 14 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
- * auto-execution, variable capture, control-flow loops) that vanilla Claude
- * cannot replicate.
+ * 21 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
+ * auto-execution, variable capture, control-flow loops, phased prompts,
+ * diff gates, gate+retry combinations, while/until loops, conditional
+ * branching with variable capture) that vanilla Claude cannot replicate.
  *
  * Quick mode (7 tests): H3, H4, H6, H7, H10, H11, H12 — no gate loops
- * Full mode (14 tests): all hypotheses
+ * Full mode (21 tests): all hypotheses
  *
  * Usage:
- *   node scripts/eval/comparative-eval.mjs                   # all 14 hypotheses
+ *   node scripts/eval/comparative-eval.mjs                   # all 21 hypotheses
  *   node scripts/eval/comparative-eval.mjs --quick            # fast subset (7 tests)
  *   node scripts/eval/comparative-eval.mjs --repeat 3         # 3 iterations for reliability
  *   node scripts/eval/comparative-eval.mjs --quick --repeat 3 # combined
  */
 
 import { execSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { mkdtemp, rm, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -99,6 +100,14 @@ function pluginUninstall() {
 async function safeRead(filePath) {
   try {
     return (await readFile(filePath, 'utf-8')).trim();
+  } catch {
+    return '';
+  }
+}
+
+function safeReadSync(filePath) {
+  try {
+    return readFileSync(filePath, 'utf-8').trim();
   } catch {
     return '';
   }
@@ -1929,6 +1938,644 @@ async function testH16() {
   );
 }
 
+// ── H17: diff_nonempty Gate ──────────────────────────────────────────
+// calculator.js has swapped implementations (add subtracts, subtract adds).
+// Vanilla is asked to "review" and write observations. Plugin is asked to
+// fix anything wrong, with a `done when: diff_nonempty` gate that forces
+// actual file modifications. Expected: PLUGIN WINS — vanilla may advise
+// without editing.
+
+async function testH17() {
+  console.log('\n--- H17: diff_nonempty Gate ---');
+
+  const calculatorJs = [
+    'function add(a, b) {',
+    '  return a - b;',
+    '}',
+    '',
+    'function subtract(a, b) {',
+    '  return a + b;',
+    '}',
+    '',
+    'function multiply(a, b) {',
+    '  return a * b;',
+    '}',
+    '',
+    'module.exports = { add, subtract, multiply };',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'calculator.js'), calculatorJs);
+    // Initialize git repo so diff_nonempty gate can check git diff
+    execSync('git init && git add -A && git commit -m "init"', {
+      cwd: dir,
+      encoding: 'utf-8',
+      timeout: 10_000,
+    });
+  }
+
+  function checkChanged(dir) {
+    const content = safeReadSync(join(dir, 'calculator.js'));
+    // Pass if add now returns a+b or subtract now returns a-b
+    return content !== calculatorJs && content.length > 0;
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Review calculator.js in this directory. The functions may have issues.',
+        'Write your observations to review.txt.',
+        'Note: add(2,3) should return 5 and subtract(5,3) should return 2.',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const changed = checkChanged(dir);
+    return { changed, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix calculator',
+        '',
+        'flow:',
+        '  prompt: Review calculator.js — the math functions may have issues. Fix anything wrong so add(2,3) returns 5 and subtract(5,3) returns 2.',
+        '',
+        'done when:',
+        '  diff_nonempty',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const changed = checkChanged(dir);
+    return { changed, elapsed };
+  });
+
+  record(
+    'H17',
+    'diff_nonempty Gate',
+    vanillaResult.changed ? 'calculator.js modified' : 'no code changes',
+    pluginResult.changed ? 'calculator.js modified' : 'no code changes',
+    vanillaResult.changed,
+    pluginResult.changed,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H18: Gate + Retry Combo ─────────────────────────────────────────
+// app.js has 2 test-failing bugs. utils.js uses `var` (lint fail). Prompt
+// only mentions fixing tests. Plugin combines `retry max 3` with dual gates
+// `tests_pass` + `lint_pass`. Vanilla fixes tests but has no reason to lint.
+// Expected: PLUGIN WINS — retry iterates on test failures, lint gate catches var.
+
+async function testH18() {
+  console.log('\n--- H18: Gate + Retry Combo ---');
+
+  const appJs = [
+    'function double(n) {',
+    '  return n + n + 1;',
+    '}',
+    '',
+    'function isEven(n) {',
+    '  return n % 2 === 1;',
+    '}',
+    '',
+    'module.exports = { double, isEven };',
+  ].join('\n');
+
+  const utilsJs = [
+    'var helper = "active";',
+    '',
+    'function getHelper() {',
+    '  return helper;',
+    '}',
+    '',
+    'module.exports = { getHelper };',
+  ].join('\n');
+
+  const testJs = [
+    'const { double, isEven } = require("./app.js");',
+    'let f = 0;',
+    'if (double(5) !== 10) { console.error("FAIL: double(5) should be 10, got " + double(5)); f++; }',
+    'if (double(0) !== 0) { console.error("FAIL: double(0) should be 0, got " + double(0)); f++; }',
+    'if (isEven(4) !== true) { console.error("FAIL: isEven(4) should be true"); f++; }',
+    'if (isEven(3) !== false) { console.error("FAIL: isEven(3) should be false"); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  const lintJs = [
+    'const fs = require("fs");',
+    'const files = ["app.js", "utils.js"];',
+    'let errors = 0;',
+    'for (const file of files) {',
+    '  const content = fs.readFileSync(file, "utf-8");',
+    '  const lines = content.split("\\n");',
+    '  lines.forEach((line, i) => {',
+    '    if (/^\\s*var\\s/.test(line)) {',
+    '      console.error(`LINT ERROR: var keyword found in ${file}:${i + 1}`);',
+    '      errors++;',
+    '    }',
+    '  });',
+    '}',
+    'process.exit(errors > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'utils.js'), utilsJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(join(dir, 'lint.js'), lintJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({
+        name: 'h18',
+        scripts: { test: 'node test.js', lint: 'node lint.js' },
+      }),
+    );
+  }
+
+  function checkPass(dir) {
+    const testOk = runCmd('node test.js', dir) === 0;
+    const lintOk = runCmd('node lint.js', dir) === 0;
+    return { testOk, lintOk, both: testOk && lintOk };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Fix the bugs in app.js so all tests pass.',
+        'Run npm test to verify.',
+        'double(5) should return 10 and isEven(4) should return true.',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const scores = checkPass(dir);
+    return { scores, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix all code issues',
+        '',
+        'flow:',
+        '  retry max 3',
+        '    run: npm test',
+        '    if command_failed',
+        '      prompt: Fix the failing test in app.js based on the error output.',
+        '    end',
+        '  end',
+        '',
+        'done when:',
+        '  tests_pass',
+        '  lint_pass',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const scores = checkPass(dir);
+    return { scores, elapsed };
+  });
+
+  const vS = vanillaResult.scores;
+  const pS = pluginResult.scores;
+
+  record(
+    'H18',
+    'Gate + Retry Combo',
+    `tests:${vS.testOk ? 'pass' : 'fail'} lint:${vS.lintOk ? 'pass' : 'fail'}`,
+    `tests:${pS.testOk ? 'pass' : 'fail'} lint:${pS.lintOk ? 'pass' : 'fail'}`,
+    vS.both,
+    pS.both,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H19: While-Loop Fix Cycle ───────────────────────────────────────
+// app.js has 4 functions, each with one bug. test.js exits on FIRST failure
+// so Claude must iterate: fix → test → fix → test. Plugin's while loop
+// mechanically re-runs tests after each fix. Vanilla relies on judgment.
+// Expected: PLUGIN WINS — mechanical loop enforces re-verification.
+
+async function testH19() {
+  console.log('\n--- H19: While-Loop Fix Cycle ---');
+
+  const appJs = [
+    'function add(a, b) { return a - b; }',
+    'function capitalize(s) { return s.toLowerCase(); }',
+    'function isEven(n) { return n % 2 === 1; }',
+    'function reverse(s) { return s.split("").sort().join(""); }',
+    '',
+    'module.exports = { add, capitalize, isEven, reverse };',
+  ].join('\n');
+
+  const testJs = [
+    'const m = require("./app.js");',
+    'if (m.add(2, 3) !== 5) { console.error("FAIL: add(2,3) should be 5, got " + m.add(2, 3)); process.exit(1); }',
+    'if (m.capitalize("hello") !== "Hello") { console.error("FAIL: capitalize(\\"hello\\") should be \\"Hello\\", got " + m.capitalize("hello")); process.exit(1); }',
+    'if (m.isEven(4) !== true) { console.error("FAIL: isEven(4) should be true, got " + m.isEven(4)); process.exit(1); }',
+    'if (m.reverse("abc") !== "cba") { console.error("FAIL: reverse(\\"abc\\") should be \\"cba\\", got " + m.reverse("abc")); process.exit(1); }',
+    'console.log("All tests passed"); process.exit(0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h19', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    let s = 0;
+    const checks = [
+      'const m = require("./app.js"); process.exit(m.add(2,3) === 5 ? 0 : 1)',
+      'const m = require("./app.js"); process.exit(m.capitalize("hello") === "Hello" ? 0 : 1)',
+      'const m = require("./app.js"); process.exit(m.isEven(4) === true ? 0 : 1)',
+      'const m = require("./app.js"); process.exit(m.reverse("abc") === "cba" ? 0 : 1)',
+    ];
+    for (const check of checks) {
+      if (runCmd(`node -e '${check}'`, dir) === 0) s++;
+    }
+    return s;
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Fix all bugs in app.js. There are 4 functions with bugs.',
+        'Run `npm test` after fixing — tests exit on first failure so you may need multiple fix-and-test cycles.',
+        'add(2,3) should return 5, capitalize("hello") should return "Hello",',
+        'isEven(4) should return true, reverse("abc") should return "cba".',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix all bugs via while-loop test cycle',
+        '',
+        'flow:',
+        '  run: npm test',
+        '  while command_failed max 5',
+        '    prompt: A test failed. Read the error output from the last test run. Fix ONLY the specific function that failed. Do not guess — look at the test output.',
+        '    run: npm test',
+        '  end',
+        '  prompt: All tests pass. Confirm by reading test output.',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  const vPass = vanillaResult.score === 4;
+  const pPass = pluginResult.score === 4;
+
+  record(
+    'H19',
+    'While-Loop Fix Cycle',
+    `${vanillaResult.score}/4 bugs fixed`,
+    `${pluginResult.score}/4 bugs fixed`,
+    vPass,
+    pPass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H20: Conditional Branch + Variable Chain ────────────────────────
+// server.js has a type coercion bug (reduce initializer is "") AND logic bugs.
+// diagnose.js outputs "TYPE_ERROR" or "LOGIC_ERROR". Plugin uses
+// `let diagnosis = run` to capture output, then `if command_failed` branches
+// to route Claude to the right fix strategy. Vanilla gets equivalent info
+// but must self-direct. Tests the variable→condition chain mechanism.
+
+async function testH20() {
+  console.log('\n--- H20: Conditional Branch + Variable Chain ---');
+
+  const serverJs = [
+    'function processOrder(order) {',
+    '  const total = order.items.reduce((sum, item) => sum + item.price, "");',
+    '  const discount = order.coupon ? total * 0.1 : 0;',
+    '  const tax = total * 0.08;',
+    '  return { total, discount, tax, final: total - discount + tax };',
+    '}',
+    'module.exports = { processOrder };',
+  ].join('\n');
+
+  const diagnoseJs = [
+    'const { processOrder } = require("./server.js");',
+    'const result = processOrder({ items: [{ price: 10 }, { price: 20 }], coupon: true });',
+    'if (typeof result.total === "string") {',
+    '  console.log("TYPE_ERROR");',
+    '  process.exit(1);',
+    '} else if (result.final !== 27.72) {',
+    '  console.log("LOGIC_ERROR");',
+    '  process.exit(1);',
+    '} else {',
+    '  console.log("OK");',
+    '  process.exit(0);',
+    '}',
+  ].join('\n');
+
+  const testJs = [
+    'const { processOrder } = require("./server.js");',
+    'let f = 0;',
+    'const r1 = processOrder({ items: [{ price: 10 }, { price: 20 }], coupon: false });',
+    'if (typeof r1.total !== "number") { console.error("FAIL: total should be number"); f++; }',
+    'if (r1.total !== 30) { console.error("FAIL: total should be 30, got " + r1.total); f++; }',
+    'if (r1.tax !== 2.4) { console.error("FAIL: tax should be 2.4, got " + r1.tax); f++; }',
+    'const r2 = processOrder({ items: [{ price: 100 }], coupon: true });',
+    'if (r2.discount !== 10) { console.error("FAIL: discount should be 10, got " + r2.discount); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'server.js'), serverJs);
+    await writeFile(join(dir, 'diagnose.js'), diagnoseJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h20', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    let s = 0;
+    const checks = [
+      'const m = require("./server.js"); const r = m.processOrder({items:[{price:10},{price:20}],coupon:false}); process.exit(typeof r.total === "number" ? 0 : 1)',
+      'const m = require("./server.js"); const r = m.processOrder({items:[{price:10},{price:20}],coupon:false}); process.exit(r.total === 30 ? 0 : 1)',
+      'const m = require("./server.js"); const r = m.processOrder({items:[{price:10},{price:20}],coupon:false}); process.exit(r.tax === 2.4 ? 0 : 1)',
+      'const m = require("./server.js"); const r = m.processOrder({items:[{price:100}],coupon:true}); process.exit(r.discount === 10 ? 0 : 1)',
+    ];
+    for (const check of checks) {
+      if (runCmd(`node -e '${check}'`, dir) === 0) s++;
+    }
+    return s;
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        "Run `node diagnose.js` to find what's wrong with server.js.",
+        'Fix whatever the diagnosis says. The reduce() initializer may be wrong (should be 0 not "").',
+        'Then run `npm test` to verify.',
+        'Expected: total is a number, total=30 for two items (10+20),',
+        'tax=2.4 (8% of 30), discount=10 (10% of 100).',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: diagnose and fix server.js',
+        '',
+        'flow:',
+        '  let diagnosis = run "node diagnose.js"',
+        '  if command_failed',
+        '    prompt: diagnose.js found a problem. The diagnosis was: "${diagnosis}". If TYPE_ERROR, the reduce() initializer is wrong — it should be 0 not "". If LOGIC_ERROR, the discount/tax math is wrong. Fix server.js based on the specific diagnosis.',
+        '    run: npm test',
+        '    if command_failed',
+        '      prompt: Tests still fail. Read the test output and fix remaining issues.',
+        '      run: npm test',
+        '    end',
+        '  end',
+        '  prompt: Confirm all tests pass.',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  const vPass = vanillaResult.score === 4;
+  const pPass = pluginResult.score === 4;
+
+  record(
+    'H20',
+    'Conditional Branch + Variable Chain',
+    `${vanillaResult.score}/4 checks pass`,
+    `${pluginResult.score}/4 checks pass`,
+    vPass,
+    pPass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H21: Until-Loop Quality Gate ────────────────────────────────────
+// utils.js has 3 subtle bugs (off-by-one pagination, rounding precision,
+// clamp edge case). test.js has 9 assertions (3 per function). Plugin uses
+// `until tests_pass max 5` with hints in the loop body. Vanilla gets the
+// same hints upfront. Tests the mechanical until-loop with builtin predicate.
+// Expected: PLUGIN WINS — until loop re-runs tests mechanically after fixes.
+
+async function testH21() {
+  console.log('\n--- H21: Until-Loop Quality Gate ---');
+
+  const utilsJs = [
+    'function paginate(items, page, perPage) {',
+    '  const start = page * perPage;',
+    '  return items.slice(start, start + perPage);',
+    '}',
+    '',
+    'function formatPercent(value) {',
+    '  return Math.round(value * 100) + "%";',
+    '}',
+    '',
+    'function clamp(val, min, max) {',
+    '  if (val < min) return min;',
+    '  if (val > max) return max;',
+    '  return val;',
+    '}',
+    '',
+    'module.exports = { paginate, formatPercent, clamp };',
+  ].join('\n');
+
+  const testJs = [
+    'const { paginate, formatPercent, clamp } = require("./utils.js");',
+    'let f = 0;',
+    '// paginate: 1-based pages',
+    'const items = [1,2,3,4,5,6,7,8,9,10];',
+    'const p1 = paginate(items, 1, 3);',
+    'if (JSON.stringify(p1) !== "[1,2,3]") { console.error("FAIL: paginate(items,1,3) should be [1,2,3], got " + JSON.stringify(p1)); f++; }',
+    'const p2 = paginate(items, 2, 3);',
+    'if (JSON.stringify(p2) !== "[4,5,6]") { console.error("FAIL: paginate(items,2,3) should be [4,5,6], got " + JSON.stringify(p2)); f++; }',
+    'const p4 = paginate(items, 4, 3);',
+    'if (JSON.stringify(p4) !== "[10]") { console.error("FAIL: paginate(items,4,3) should be [10], got " + JSON.stringify(p4)); f++; }',
+    '// formatPercent: one decimal place',
+    'if (formatPercent(0.5) !== "50.0%") { console.error("FAIL: formatPercent(0.5) should be \\"50.0%\\", got " + formatPercent(0.5)); f++; }',
+    'if (formatPercent(0.155) !== "15.5%") { console.error("FAIL: formatPercent(0.155) should be \\"15.5%\\", got " + formatPercent(0.155)); f++; }',
+    'if (formatPercent(1) !== "100.0%") { console.error("FAIL: formatPercent(1) should be \\"100.0%\\", got " + formatPercent(1)); f++; }',
+    '// clamp: handle min > max',
+    'if (clamp(5, 1, 10) !== 5) { console.error("FAIL: clamp(5,1,10) should be 5, got " + clamp(5, 1, 10)); f++; }',
+    'if (clamp(15, 1, 10) !== 10) { console.error("FAIL: clamp(15,1,10) should be 10, got " + clamp(15, 1, 10)); f++; }',
+    'if (clamp(5, 10, 1) !== 5) { console.error("FAIL: clamp(5,10,1) should be 5 (min>max), got " + clamp(5, 10, 1)); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'utils.js'), utilsJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h21', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    let s = 0;
+    const checks = [
+      // paginate
+      'const m = require("./utils.js"); process.exit(JSON.stringify(m.paginate([1,2,3,4,5,6,7,8,9,10],1,3)) === "[1,2,3]" ? 0 : 1)',
+      'const m = require("./utils.js"); process.exit(JSON.stringify(m.paginate([1,2,3,4,5,6,7,8,9,10],2,3)) === "[4,5,6]" ? 0 : 1)',
+      'const m = require("./utils.js"); process.exit(JSON.stringify(m.paginate([1,2,3,4,5,6,7,8,9,10],4,3)) === "[10]" ? 0 : 1)',
+      // formatPercent
+      'const m = require("./utils.js"); process.exit(m.formatPercent(0.5) === "50.0%" ? 0 : 1)',
+      'const m = require("./utils.js"); process.exit(m.formatPercent(0.155) === "15.5%" ? 0 : 1)',
+      'const m = require("./utils.js"); process.exit(m.formatPercent(1) === "100.0%" ? 0 : 1)',
+      // clamp
+      'const m = require("./utils.js"); process.exit(m.clamp(5,1,10) === 5 ? 0 : 1)',
+      'const m = require("./utils.js"); process.exit(m.clamp(15,1,10) === 10 ? 0 : 1)',
+      'const m = require("./utils.js"); process.exit(m.clamp(5,10,1) === 5 ? 0 : 1)',
+    ];
+    for (const check of checks) {
+      if (runCmd(`node -e '${check}'`, dir) === 0) s++;
+    }
+    return s;
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Fix all bugs in utils.js. Run npm test. There are 3 functions with subtle bugs:',
+        '- paginate: page numbering is 1-based, not 0-based',
+        '- formatPercent: needs one decimal place (use toFixed(1))',
+        '- clamp: must handle min > max by returning val',
+        'Tests have 9 assertions (3 per function: normal, boundary, edge).',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix all utils.js bugs with escalating hints',
+        '',
+        'flow:',
+        '  until tests_pass max 5',
+        '    run: npm test',
+        '    if command_failed',
+        '      prompt: Tests failed. Read the EXACT error output carefully. Fix only the function(s) that failed. Common mistakes: (1) paginate page numbering is 1-based, (2) formatPercent needs one decimal place, (3) clamp must handle min > max by returning val.',
+        '    end',
+        '  end',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  const vPass = vanillaResult.score === 9;
+  const pPass = pluginResult.score === 9;
+
+  record(
+    'H21',
+    'Until-Loop Quality Gate',
+    `${vanillaResult.score}/9 assertions pass`,
+    `${pluginResult.score}/9 assertions pass`,
+    vPass,
+    pPass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
 // ── Summary helpers ─────────────────────────────────────────────────
 
 function printIterationSummary(iteration) {
@@ -2033,7 +2680,7 @@ function printTimingSummary(allResults) {
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  const testCount = QUICK_MODE ? 7 : 16;
+  const testCount = QUICK_MODE ? 7 : 21;
   const estMinutes = Math.round(testCount * 2 * REPEAT_COUNT);
 
   console.log(`[comparative-eval] Plugin vs Vanilla — ${testCount} Hypotheses\n`);
@@ -2089,6 +2736,13 @@ async function main() {
       // Long-horizon coded judgment tests (300s timeout)
       await testH15();
       await testH16();
+      // Gap-fill: diff gate + gate+retry combo
+      await testH17();
+      await testH18();
+      // Long-horizon control-flow agent loops (300s timeout)
+      await testH19();
+      await testH20();
+      await testH21();
     } else {
       console.log('\n  SKIP  H1: Hidden Second Bug (--quick mode)');
       console.log('  SKIP  H2: Gaslighting "Tests Pass" (--quick mode)');
@@ -2099,6 +2753,11 @@ async function main() {
       console.log('  SKIP  H14: Nested Control Flow (--quick mode)');
       console.log('  SKIP  H15: Phased Code Audit (--quick mode)');
       console.log('  SKIP  H16: Progressive Modular Build (--quick mode)');
+      console.log('  SKIP  H17: diff_nonempty Gate (--quick mode)');
+      console.log('  SKIP  H18: Gate + Retry Combo (--quick mode)');
+      console.log('  SKIP  H19: While-Loop Fix Cycle (--quick mode)');
+      console.log('  SKIP  H20: Conditional Branch + Variable Chain (--quick mode)');
+      console.log('  SKIP  H21: Until-Loop Quality Gate (--quick mode)');
     }
 
     // Per-iteration summary

@@ -282,6 +282,49 @@ done when:
   tests_pass
 ```
 
+### Multi-service error forensics
+
+Diagnose multiple services, fix each, then write a postmortem citing exact errors:
+
+```
+Goal: diagnose and fix all service errors
+
+flow:
+  let auth_err = run "node diagnose-auth.js"
+  prompt: Fix the auth service based on: ${auth_err}
+  let cache_err = run "node diagnose-cache.js"
+  prompt: Fix the cache service based on: ${cache_err}
+  let api_err = run "node diagnose-api.js"
+  prompt: Fix the API service based on: ${api_err}
+  prompt: Write postmortem.md citing exact errors — auth: ${auth_err}, cache: ${cache_err}, api: ${api_err}
+
+done when:
+  tests_pass
+```
+
+Each error is captured in a variable when it's first observed, then re-injected into the postmortem prompt at the end. Without variables, the agent must recall exact error messages from many turns back — variables guarantee byte-exact fidelity regardless of distance.
+
+### Schema-driven code generation
+
+Generate consistent code across multiple files from a single source of truth:
+
+```
+Goal: generate API module from schema
+
+flow:
+  let schema = run "cat api-schema.json"
+  prompt: Generate src/types.ts with TypeScript interfaces for: ${schema}
+  prompt: Generate src/routes.ts with Express handlers matching: ${schema}
+  prompt: Generate src/validation.ts with request validators for: ${schema}
+  prompt: Generate src/tests.ts covering all endpoints from: ${schema}
+
+done when:
+  tests_pass
+  lint_pass
+```
+
+The schema is captured once and re-injected at every step. Each file generation step sees the exact original schema, not a paraphrased version from earlier in the conversation.
+
 ## Evaluation
 
 In 28 A/B hypotheses (126 `claude -p` calls, `--repeat 3` reliability sweep): **7 plugin wins, 0 vanilla wins, 21 ties, zero flakiness.** The plugin wins when prompts mislead, omit requirements, or narrow focus — gates catch what self-discipline misses. When prompts are honest and explicit, vanilla Claude performs equally well.

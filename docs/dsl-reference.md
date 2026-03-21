@@ -190,6 +190,60 @@ done when:
 
 Gates are evaluated after all nodes finish and again on Stop/TaskCompleted hooks. If any gate fails, the agent is forced back into the flow.
 
+## Context management patterns
+
+Variables are the mechanism for carrying exact values across long workflows. Every `prompt:` step sees all current variables re-injected via `renderFlow()`, keeping values maximally salient regardless of how many steps have elapsed since capture.
+
+### Baseline comparison
+
+Capture metrics before and after a change. The baseline is byte-exact at comparison time, even after many intervening steps:
+
+```
+let baseline = run "node bench.js"
+prompt: Identify the top 3 performance bottlenecks.
+prompt: Refactor the first bottleneck.
+prompt: Refactor the second bottleneck.
+prompt: Refactor the third bottleneck.
+let current = run "node bench.js"
+prompt: Compare baseline (${baseline}) vs current (${current}). Write improvement summary.
+```
+
+### Multi-source aggregation
+
+Capture values from multiple commands and combine them at the end:
+
+```
+let v1 = run "node gen1.js"
+let v2 = run "node gen2.js"
+let v3 = run "node gen3.js"
+prompt: Write summary.json combining: ${v1}, ${v2}, ${v3}
+```
+
+### Error forensics
+
+Capture errors as they occur, fix them, then cite exact error messages in documentation:
+
+```
+let e1 = run "node diagnose-auth.js"
+prompt: Fix the auth service error.
+let e2 = run "node diagnose-cache.js"
+prompt: Fix the cache service error.
+prompt: Write postmortem.md citing exact errors. Auth: ${e1}. Cache: ${e2}.
+```
+
+### Selective context injection
+
+Different steps see different context. Each `prompt:` interpolates only the variables you reference:
+
+```
+let security_rules = prompt "Only use parameterized queries. Never string-concat SQL."
+prompt: Refactor auth.js following: ${security_rules}
+let review_criteria = prompt "Check null handling, error paths, input validation."
+prompt: Review the refactored code against: ${review_criteria}
+```
+
+The security refactoring step doesn't see the review criteria (which could distract it into reviewing). The review step doesn't see the security rules (which could bias it to only check SQL). Each step gets exactly the context it needs.
+
 ## Composition
 
 Primitives nest freely. A while loop can contain if statements, retries, and other loops.

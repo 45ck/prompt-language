@@ -2,19 +2,20 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 31 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
+ * 35 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
  * auto-execution, variable capture, control-flow loops, phased prompts,
  * diff gates, gate+retry combinations, while/until loops, conditional
  * branching with variable capture, gaslighting+loop combos, inverted gates,
  * triple gates, diagnostic routing, let-prompt capture, lint_fail gate,
- * custom gate commands, context management via selective variable injection)
+ * custom gate commands, context management via selective variable injection,
+ * long-horizon value preservation over many execution steps)
  * that vanilla Claude cannot replicate.
  *
  * Quick mode (7 tests): H3, H4, H6, H7, H10, H11, H12 — no gate loops
- * Full mode (28 tests): all hypotheses
+ * Full mode (35 tests): all hypotheses
  *
  * Usage:
- *   node scripts/eval/comparative-eval.mjs                   # all 31 hypotheses
+ *   node scripts/eval/comparative-eval.mjs                   # all 35 hypotheses
  *   node scripts/eval/comparative-eval.mjs --quick            # fast subset (7 tests)
  *   node scripts/eval/comparative-eval.mjs --repeat 3         # 3 iterations for reliability
  *   node scripts/eval/comparative-eval.mjs --quick --repeat 3 # combined
@@ -25,6 +26,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -3849,6 +3851,510 @@ async function testH31() {
   );
 }
 
+// ── H32: Token Relay at Distance ─────────────────────────────────────
+// A deterministic hex token is captured at step 1. Five bug-fix tasks
+// generate 10+ tool-use turns between capture and recall. The final step
+// must reproduce the exact token.
+// Plugin: ${token} is re-injected via renderVariables() at every step.
+// Vanilla: must recall from conversation history across 10+ tool turns.
+
+async function testH32() {
+  console.log('\n--- H32: Token Relay at Distance ---');
+
+  const genTokenJs = [
+    "const crypto = require('crypto');",
+    "console.log(crypto.createHash('sha256').update('session-token-v1').digest('hex').slice(0,24));",
+  ].join('\n');
+
+  const tasks = [
+    { file: 'task1.js', code: 'function add(a, b) { return a - b; }\nmodule.exports = { add };' },
+    {
+      file: 'task2.js',
+      code: 'function greet(name) { return "Hello, " + nme; }\nmodule.exports = { greet };',
+    },
+    {
+      file: 'task3.js',
+      code: 'function max(a, b) { return a < b ? a : b; }\nmodule.exports = { max };',
+    },
+    {
+      file: 'task4.js',
+      code: 'function isEven(n) { return n % 2 === 1; }\nmodule.exports = { isEven };',
+    },
+    {
+      file: 'task5.js',
+      code: 'function double(x) { return x * x; }\nmodule.exports = { double };',
+    },
+  ];
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'gen-token.js'), genTokenJs);
+    for (const t of tasks) {
+      await writeFile(join(dir, t.file), t.code);
+    }
+  }
+
+  const expectedToken = createHash('sha256').update('session-token-v1').digest('hex').slice(0, 24);
+
+  function score(dir) {
+    const receipt = safeReadSync(join(dir, 'receipt.txt'));
+    if (!receipt) return { pass: false, detail: 'receipt.txt missing' };
+    const firstLine = receipt.split('\n')[0].trim();
+    const exact = firstLine === expectedToken;
+    return {
+      pass: exact,
+      detail: exact
+        ? `exact match (${expectedToken.slice(0, 12)}...)`
+        : `mismatch: "${firstLine.slice(0, 24)}"`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'This is a multi-step task. Follow each step in order.',
+        '',
+        'Step 1: Run "node gen-token.js" and remember the EXACT output (a hex string). You will need it at the very end.',
+        '',
+        'Step 2: Read task1.js — the add function subtracts instead of adding. Fix it.',
+        'Step 3: Read task2.js — there is a typo in a variable name. Fix it.',
+        'Step 4: Read task3.js — max returns the minimum instead. Fix it.',
+        'Step 5: Read task4.js — isEven returns true for odd numbers. Fix it.',
+        'Step 6: Read task5.js — double squares instead of doubling. Fix it.',
+        '',
+        'Step 7: Create receipt.txt with exactly 2 lines:',
+        'Line 1: The EXACT hex string from Step 1 (gen-token.js output)',
+        'Line 2: "5 tasks completed"',
+        'Do NOT re-run gen-token.js. Use the value you already captured.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: capture token, fix bugs, write receipt',
+        '',
+        'flow:',
+        '  let token = run "node gen-token.js"',
+        '  prompt: Read task1.js — the add function subtracts instead of adding. Fix it.',
+        '  prompt: Read task2.js — there is a typo in a variable name. Fix it.',
+        '  prompt: Read task3.js — max returns the minimum instead. Fix it.',
+        '  prompt: Read task4.js — isEven returns true for odd numbers. Fix it.',
+        '  prompt: Read task5.js — double squares instead of doubling. Fix it.',
+        '  prompt: Create receipt.txt. Line 1 must be exactly: ${token}. Line 2: 5 tasks completed.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H32',
+    'Token Relay at Distance',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H33: Multi-Source Aggregate ──────────────────────────────────────
+// Five deterministic hex hashes are captured one at a time with analysis
+// work between each. The final step must aggregate all 5 exact values
+// into a single JSON file. Tests 5-value recall across 10+ tool turns.
+// Plugin: ${h1}..${h5} variables injected into the final prompt.
+// Vanilla: must recall 5 distinct hex strings from across the conversation.
+
+async function testH33() {
+  console.log('\n--- H33: Multi-Source Aggregate ---');
+
+  const seeds = ['alpha-2024', 'beta-2024', 'gamma-2024', 'delta-2024', 'epsilon-2024'];
+  const expectedHashes = seeds.map((s) =>
+    createHash('sha256').update(s).digest('hex').slice(0, 16),
+  );
+
+  async function setup(dir) {
+    for (let i = 0; i < seeds.length; i++) {
+      const genJs = [
+        "const crypto = require('crypto');",
+        `console.log(crypto.createHash('sha256').update('${seeds[i]}').digest('hex').slice(0, 16));`,
+      ].join('\n');
+      await writeFile(join(dir, `gen${i + 1}.js`), genJs);
+    }
+  }
+
+  function score(dir) {
+    const raw = safeReadSync(join(dir, 'summary.json'));
+    if (!raw) return { pass: false, detail: 'summary.json missing' };
+
+    let obj;
+    try {
+      obj = JSON.parse(raw);
+    } catch {
+      return { pass: false, detail: 'summary.json invalid JSON' };
+    }
+
+    const jsonStr = JSON.stringify(obj);
+    let matches = 0;
+    const missing = [];
+    for (let i = 0; i < expectedHashes.length; i++) {
+      if (jsonStr.includes(expectedHashes[i])) {
+        matches++;
+      } else {
+        missing.push(`${seeds[i].split('-')[0]}:${expectedHashes[i].slice(0, 8)}..`);
+      }
+    }
+
+    const pass = matches === 5;
+    return {
+      pass,
+      detail: pass ? '5/5 hashes exact' : `${matches}/5 (missing: ${missing.join(', ')})`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Run these 5 commands one at a time, remembering each output exactly:',
+        '',
+        '1. node gen1.js (label: "alpha")',
+        '   After running, create analysis1.txt describing the hex pattern.',
+        '',
+        '2. node gen2.js (label: "beta")',
+        '   After running, create analysis2.txt describing the hex pattern.',
+        '',
+        '3. node gen3.js (label: "gamma")',
+        '   After running, create analysis3.txt describing the hex pattern.',
+        '',
+        '4. node gen4.js (label: "delta")',
+        '   After running, create analysis4.txt describing the hex pattern.',
+        '',
+        '5. node gen5.js (label: "epsilon")',
+        '   After running, create analysis5.txt describing the hex pattern.',
+        '',
+        'After all 5 captures and analysis files, create summary.json:',
+        '{"values": {"alpha": "<gen1 output>", "beta": "<gen2 output>", "gamma": "<gen3 output>", "delta": "<gen4 output>", "epsilon": "<gen5 output>"}}',
+        '',
+        'Each value must be the EXACT hex string output from the corresponding gen script.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: capture 5 hex hashes and aggregate them',
+        '',
+        'flow:',
+        '  let h1 = run "node gen1.js"',
+        '  prompt: Create analysis1.txt describing the hex pattern you observe.',
+        '  let h2 = run "node gen2.js"',
+        '  prompt: Create analysis2.txt describing the hex pattern you observe.',
+        '  let h3 = run "node gen3.js"',
+        '  prompt: Create analysis3.txt describing the hex pattern you observe.',
+        '  let h4 = run "node gen4.js"',
+        '  prompt: Create analysis4.txt describing the hex pattern you observe.',
+        '  let h5 = run "node gen5.js"',
+        '  prompt: Create summary.json: {"values": {"alpha":"${h1}","beta":"${h2}","gamma":"${h3}","delta":"${h4}","epsilon":"${h5}"}}',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H33',
+    'Multi-Source Aggregate',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H34: Spec Anchoring Under Drift ──────────────────────────────────
+// A config script outputs 4 unusual, specific values (not common defaults).
+// After capturing, the source is deleted. Four incremental build steps must
+// each use exact values — not common defaults (port 3000, timeout 30000).
+// Plugin: ${spec} is re-injected at each build step.
+// Vanilla: must recall unusual values across 4 build steps from memory.
+
+async function testH34() {
+  console.log('\n--- H34: Spec Anchoring Under Drift ---');
+
+  const configValues = {
+    port: 7891,
+    timeout: 45723,
+    maxConn: 127,
+    apiKey: 'xK9mP3nQ7vR2wS5t',
+  };
+
+  const configJs = [
+    `console.log("PORT=${configValues.port}");`,
+    `console.log("TIMEOUT=${configValues.timeout}");`,
+    `console.log("MAX_CONNECTIONS=${configValues.maxConn}");`,
+    `console.log("API_KEY=${configValues.apiKey}");`,
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'config.js'), configJs);
+  }
+
+  function score(dir) {
+    const serverJs = safeReadSync(join(dir, 'server.js'));
+    if (!serverJs) return { pass: false, detail: 'server.js missing' };
+
+    let found = 0;
+    const missing = [];
+
+    if (serverJs.includes(String(configValues.port))) found++;
+    else missing.push(`port ${configValues.port}`);
+
+    if (serverJs.includes(String(configValues.timeout))) found++;
+    else missing.push(`timeout ${configValues.timeout}`);
+
+    if (serverJs.includes(String(configValues.maxConn))) found++;
+    else missing.push(`maxConn ${configValues.maxConn}`);
+
+    if (serverJs.includes(configValues.apiKey)) found++;
+    else missing.push(`apiKey`);
+
+    const pass = found === 4;
+    return {
+      pass,
+      detail: pass ? '4/4 config values exact' : `${found}/4 (missing: ${missing.join(', ')})`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'This is a multi-step server build. Follow each step in order.',
+        '',
+        'Step 1: Run "node config.js" to see your server configuration. Remember ALL values exactly. Then delete config.js: rm config.js',
+        '',
+        'Step 2: Create server.js with a basic HTTP server using the PORT from config.',
+        '',
+        'Step 3: Add request timeout handling to server.js using the TIMEOUT value from config.',
+        '',
+        'Step 4: Add connection pool limiting to server.js using MAX_CONNECTIONS from config.',
+        '',
+        'Step 5: Add API key validation middleware to server.js using the API_KEY from config.',
+        '',
+        'IMPORTANT: Use the EXACT values from config.js. The port is NOT 3000 or 8080. The timeout is NOT 30000 or 60000. Use what config.js actually printed.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: build server from config values',
+        '',
+        'flow:',
+        '  let spec = run "node config.js"',
+        '  run "rm config.js"',
+        '  prompt: Create server.js with a basic HTTP server. Use the PORT from: ${spec}',
+        '  prompt: Add request timeout handling to server.js. Use the TIMEOUT from: ${spec}',
+        '  prompt: Add connection pool limiting to server.js. Use MAX_CONNECTIONS from: ${spec}',
+        '  prompt: Add API key validation middleware to server.js. Use API_KEY from: ${spec}',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H34',
+    'Spec Anchoring Under Drift',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H35: Error Forensics ─────────────────────────────────────────────
+// Four diagnostic scripts each output a unique error code with specific
+// embedded values (port numbers, hex addresses, durations, tokens).
+// Between each capture, Claude writes a fix plan (distraction work).
+// The final postmortem must cite the EXACT error codes — not paraphrased.
+// Plugin: ${e1}..${e4} carry exact diagnostic output.
+// Vanilla: must recall 4 specific error strings across 8+ tool turns.
+
+async function testH35() {
+  console.log('\n--- H35: Error Forensics ---');
+
+  const diagnostics = [
+    {
+      file: 'diag1.js',
+      output: 'ERRNO_CONN_REFUSED_7891 | service=auth | ts=2024-01-15T08:42:31Z',
+      errorCode: 'ERRNO_CONN_REFUSED_7891',
+    },
+    {
+      file: 'diag2.js',
+      output: 'HEAP_OVERFLOW_AT_0x3f7a2b | service=cache | ts=2024-01-15T09:17:05Z',
+      errorCode: 'HEAP_OVERFLOW_AT_0x3f7a2b',
+    },
+    {
+      file: 'diag3.js',
+      output: 'SSL_HANDSHAKE_TIMEOUT_45723ms | service=gateway | ts=2024-01-15T10:03:22Z',
+      errorCode: 'SSL_HANDSHAKE_TIMEOUT_45723ms',
+    },
+    {
+      file: 'diag4.js',
+      output: 'AUTH_TOKEN_EXPIRED_xK9mP3nQ | service=api | ts=2024-01-15T11:45:18Z',
+      errorCode: 'AUTH_TOKEN_EXPIRED_xK9mP3nQ',
+    },
+  ];
+
+  async function setup(dir) {
+    for (const d of diagnostics) {
+      await writeFile(join(dir, d.file), `console.log("${d.output}");\n`);
+    }
+  }
+
+  function score(dir) {
+    const postmortem = safeReadSync(join(dir, 'postmortem.md'));
+    if (!postmortem) return { pass: false, detail: 'postmortem.md missing' };
+
+    let found = 0;
+    const missing = [];
+    for (const d of diagnostics) {
+      if (postmortem.includes(d.errorCode)) {
+        found++;
+      } else {
+        missing.push(d.errorCode);
+      }
+    }
+
+    const pass = found === 4;
+    return {
+      pass,
+      detail: pass ? '4/4 error codes cited' : `${found}/4 (missing: ${missing.join(', ')})`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Four services are producing errors. For each one, run the diagnostic, then write a fix plan.',
+        '',
+        '1. Run: node diag1.js — capture the error output',
+        '   Write fix-plan-1.md explaining what caused the auth service error and how to fix it.',
+        '',
+        '2. Run: node diag2.js — capture the error output',
+        '   Write fix-plan-2.md explaining what caused the cache service error and how to fix it.',
+        '',
+        '3. Run: node diag3.js — capture the error output',
+        '   Write fix-plan-3.md explaining what caused the gateway error and how to fix it.',
+        '',
+        '4. Run: node diag4.js — capture the error output',
+        '   Write fix-plan-4.md explaining what caused the API error and how to fix it.',
+        '',
+        'After all 4 diagnostics and fix plans, write postmortem.md with a section for each service.',
+        'Each section MUST include the EXACT error code identifier from the diagnostic output',
+        '(e.g. ERRNO_CONN_REFUSED_7891, not just "connection refused").',
+        'Use the precise error identifiers — do not paraphrase or abbreviate them.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: diagnose errors, write fix plans, create postmortem',
+        '',
+        'flow:',
+        '  let e1 = run "node diag1.js"',
+        '  prompt: Write fix-plan-1.md explaining the auth service error and how to fix it.',
+        '  let e2 = run "node diag2.js"',
+        '  prompt: Write fix-plan-2.md explaining the cache service error and how to fix it.',
+        '  let e3 = run "node diag3.js"',
+        '  prompt: Write fix-plan-3.md explaining the gateway error and how to fix it.',
+        '  let e4 = run "node diag4.js"',
+        '  prompt: Write fix-plan-4.md explaining the API error and how to fix it.',
+        '  prompt: Write postmortem.md. For each service, cite the EXACT error code. Auth: ${e1}. Cache: ${e2}. Gateway: ${e3}. API: ${e4}.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H35',
+    'Error Forensics',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
 // ── Summary helpers ─────────────────────────────────────────────────
 
 function printIterationSummary(iteration) {
@@ -3953,7 +4459,7 @@ function printTimingSummary(allResults) {
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  const testCount = QUICK_MODE ? 7 : 31;
+  const testCount = QUICK_MODE ? 7 : 35;
   const estMinutes = Math.round(testCount * 2 * REPEAT_COUNT);
 
   console.log(`[comparative-eval] Plugin vs Vanilla — ${testCount} Hypotheses\n`);
@@ -4029,6 +4535,11 @@ async function main() {
       await testH29();
       await testH30();
       await testH31();
+      // Long-horizon context management (value preservation over distance)
+      await testH32();
+      await testH33();
+      await testH34();
+      await testH35();
     } else {
       console.log('\n  SKIP  H1: Hidden Second Bug (--quick mode)');
       console.log('  SKIP  H2: Gaslighting "Tests Pass" (--quick mode)');
@@ -4054,6 +4565,10 @@ async function main() {
       console.log('  SKIP  H29: Conflicting Style Rules (--quick mode)');
       console.log('  SKIP  H30: Information Quarantine (--quick mode)');
       console.log('  SKIP  H31: Focused Review — Distractor Resistance (--quick mode)');
+      console.log('  SKIP  H32: Token Relay at Distance (--quick mode)');
+      console.log('  SKIP  H33: Multi-Source Aggregate (--quick mode)');
+      console.log('  SKIP  H34: Spec Anchoring Under Drift (--quick mode)');
+      console.log('  SKIP  H35: Error Forensics (--quick mode)');
     }
 
     // Per-iteration summary

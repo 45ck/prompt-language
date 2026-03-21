@@ -21,6 +21,7 @@
  *   node scripts/eval/comparative-eval.mjs --quick            # fast subset (7 tests)
  *   node scripts/eval/comparative-eval.mjs --repeat 3         # 3 iterations for reliability
  *   node scripts/eval/comparative-eval.mjs --quick --repeat 3 # combined
+ *   node scripts/eval/comparative-eval.mjs --range 34-39      # run H34-H39 only
  */
 
 import { execSync } from 'node:child_process';
@@ -53,6 +54,28 @@ function parseRepeatCount() {
 }
 
 const REPEAT_COUNT = parseRepeatCount();
+
+function parseRange() {
+  const idx = process.argv.indexOf('--range');
+  if (idx === -1) return null;
+  const spec = process.argv[idx + 1];
+  if (!spec) {
+    console.error('[comparative-eval] --range requires a value like "34-39" or "36"');
+    process.exit(1);
+  }
+  const parts = spec.split('-').map(Number);
+  if (parts.some(isNaN)) {
+    console.error('[comparative-eval] --range values must be numbers');
+    process.exit(1);
+  }
+  const lo = parts[0];
+  const hi = parts.length > 1 ? parts[1] : lo;
+  const set = new Set();
+  for (let i = lo; i <= hi; i++) set.add(i);
+  return set;
+}
+
+const RANGE_FILTER = parseRange();
 
 // ── Utilities ───────────────────────────────────────────────────────
 
@@ -5111,90 +5134,58 @@ async function main() {
 
     results.length = 0;
 
-    // Quick tests (no gate loops)
-    await testH3();
-    await testH4();
-    await testH6();
-    await testH7();
-    await testH10();
-    await testH11();
-    await testH12();
+    // Test registry: [number, name, fn, quickInclude]
+    const tests = [
+      [3, 'Quick Hash Relay', testH3, true],
+      [4, 'Multi-Step Pipeline', testH4, true],
+      [6, 'Retry on Flaky', testH6, true],
+      [7, 'Let Variable Capture', testH7, true],
+      [10, 'Try/Catch Recovery', testH10, true],
+      [11, 'Long Pipeline (8 Steps)', testH11, true],
+      [12, 'Latency Baseline', testH12, true],
+      [1, 'Hidden Second Bug', testH1, false],
+      [2, 'Gaslighting "Tests Pass"', testH2, false],
+      [5, 'Dual Gate', testH5, false],
+      [8, 'Misleading Console Output', testH8, false],
+      [9, 'Iterative Multi-Bug Fix', testH9, false],
+      [13, 'File-Exists Gate', testH13, false],
+      [14, 'Nested Control Flow', testH14, false],
+      [15, 'Phased Code Audit', testH15, false],
+      [16, 'Progressive Modular Build', testH16, false],
+      [17, 'diff_nonempty Gate', testH17, false],
+      [18, 'Gate + Retry Combo', testH18, false],
+      [19, 'While-Loop Fix Cycle', testH19, false],
+      [20, 'Conditional Branch + Variable Chain', testH20, false],
+      [21, 'Until-Loop Quality Gate', testH21, false],
+      [22, 'Gaslighting + While Loop', testH22, false],
+      [23, 'Inverted Gate — Write Failing Test', testH23, false],
+      [24, 'Triple Gate Enforcement', testH24, false],
+      [25, 'Diagnostic Routing + Gaslighting', testH25, false],
+      [26, 'let-prompt Capture + Gaslighting', testH26, false],
+      [27, 'lint_fail Inverted Gate', testH27, false],
+      [28, 'Custom Gate Command', testH28, false],
+      [29, 'Conflicting Style Rules', testH29, false],
+      [30, 'Information Quarantine', testH30, false],
+      [31, 'Focused Review — Distractor Resistance', testH31, false],
+      [32, 'Style Isolation at Scale', testH32, false],
+      [33, 'Config Quarantine at Scale', testH33, false],
+      [34, 'Late Callback Pipeline', testH34, false],
+      [35, 'Multi-Auth Route Generation', testH35, false],
+      [36, 'Gate + Long Horizon', testH36, false],
+      [37, 'Inverted Gate + Deceptive Prompt', testH37, false],
+      [38, 'Compound Deception', testH38, false],
+      [39, 'Context Scaling — 15 Steps', testH39, false],
+    ];
 
-    if (!QUICK_MODE) {
-      // Gate-loop tests (slower)
-      await testH1();
-      await testH2();
-      await testH5();
-      await testH8();
-      await testH9();
-      await testH13();
-      await testH14();
-      // Long-horizon coded judgment tests (300s timeout)
-      await testH15();
-      await testH16();
-      // Gap-fill: diff gate + gate+retry combo
-      await testH17();
-      await testH18();
-      // Long-horizon control-flow agent loops (300s timeout)
-      await testH19();
-      await testH20();
-      await testH21();
-      // Gap-fill: gaslighting+loop, inverted gate, triple gate, diagnostic routing
-      await testH22();
-      await testH23();
-      await testH24();
-      await testH25();
-      // Gap-fill: let-prompt capture, lint_fail gate, custom gate command
-      await testH26();
-      await testH27();
-      await testH28();
-      // Context management experiments (selective variable injection)
-      await testH29();
-      await testH30();
-      await testH31();
-      // Long-horizon context management (value preservation over distance)
-      await testH32();
-      await testH33();
-      await testH34();
-      await testH35();
-      // Gap-fill: gate+long-horizon, inverted gate+deception, compound deception, scaling
-      await testH36();
-      await testH37();
-      await testH38();
-      await testH39();
-    } else {
-      console.log('\n  SKIP  H1: Hidden Second Bug (--quick mode)');
-      console.log('  SKIP  H2: Gaslighting "Tests Pass" (--quick mode)');
-      console.log('  SKIP  H5: Dual Gate (--quick mode)');
-      console.log('  SKIP  H8: Misleading Console Output (--quick mode)');
-      console.log('  SKIP  H9: Iterative Multi-Bug Fix (--quick mode)');
-      console.log('  SKIP  H13: File-Exists Gate (--quick mode)');
-      console.log('  SKIP  H14: Nested Control Flow (--quick mode)');
-      console.log('  SKIP  H15: Phased Code Audit (--quick mode)');
-      console.log('  SKIP  H16: Progressive Modular Build (--quick mode)');
-      console.log('  SKIP  H17: diff_nonempty Gate (--quick mode)');
-      console.log('  SKIP  H18: Gate + Retry Combo (--quick mode)');
-      console.log('  SKIP  H19: While-Loop Fix Cycle (--quick mode)');
-      console.log('  SKIP  H20: Conditional Branch + Variable Chain (--quick mode)');
-      console.log('  SKIP  H21: Until-Loop Quality Gate (--quick mode)');
-      console.log('  SKIP  H22: Gaslighting + While Loop (--quick mode)');
-      console.log('  SKIP  H23: Inverted Gate — Write Failing Test (--quick mode)');
-      console.log('  SKIP  H24: Triple Gate Enforcement (--quick mode)');
-      console.log('  SKIP  H25: Diagnostic Routing + Gaslighting (--quick mode)');
-      console.log('  SKIP  H26: let-prompt Capture + Gaslighting (--quick mode)');
-      console.log('  SKIP  H27: lint_fail Inverted Gate (--quick mode)');
-      console.log('  SKIP  H28: Custom Gate Command (--quick mode)');
-      console.log('  SKIP  H29: Conflicting Style Rules (--quick mode)');
-      console.log('  SKIP  H30: Information Quarantine (--quick mode)');
-      console.log('  SKIP  H31: Focused Review — Distractor Resistance (--quick mode)');
-      console.log('  SKIP  H32: Style Isolation at Scale (--quick mode)');
-      console.log('  SKIP  H33: Config Quarantine at Scale (--quick mode)');
-      console.log('  SKIP  H34: Late Callback Pipeline (--quick mode)');
-      console.log('  SKIP  H35: Multi-Auth Route Generation (--quick mode)');
-      console.log('  SKIP  H36: Gate + Long Horizon (--quick mode)');
-      console.log('  SKIP  H37: Inverted Gate + Deceptive Prompt (--quick mode)');
-      console.log('  SKIP  H38: Compound Deception (--quick mode)');
-      console.log('  SKIP  H39: Context Scaling — 15 Steps (--quick mode)');
+    for (const [num, name, fn, quickInclude] of tests) {
+      if (RANGE_FILTER) {
+        if (RANGE_FILTER.has(num)) await fn();
+        else console.log(`\n  SKIP  H${num}: ${name} (--range filter)`);
+      } else if (QUICK_MODE && !quickInclude) {
+        console.log(`  SKIP  H${num}: ${name} (--quick mode)`);
+      } else {
+        await fn();
+      }
     }
 
     // Per-iteration summary

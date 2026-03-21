@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The prompt-language plugin wins **5 out of 18** hypotheses against vanilla Claude in controlled A/B testing (H15-H18 pending first run). The plugin's value lies in **structural enforcement** -- gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. The plugin adds ~186% latency overhead (avg 73.9s vs 25.9s vanilla).
+The prompt-language plugin wins **5 out of 21** hypotheses against vanilla Claude in controlled A/B testing (H15-H21 pending first run). The plugin's value lies in **structural enforcement** -- gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. The plugin adds ~186% latency overhead (avg 73.9s vs 25.9s vanilla).
 
 ## Taxonomy of Differentiators
 
@@ -21,6 +21,9 @@ The prompt-language plugin wins **5 out of 18** hypotheses against vanilla Claud
 | Progressive construction  | Per-module validation in pipeline               | H16            | pending          | Module-by-module vs build-all                 |
 | Diff enforcement          | `diff_nonempty` gate forces code changes        | H17            | pending          | Review-only vs forced modification            |
 | Gate + retry combination  | `retry` + dual gates (`tests_pass`+`lint_pass`) | H18            | pending          | Retry iterates; dual gate catches lint        |
+| While-loop iteration      | `while command_failed` mechanical re-test       | H19            | pending          | Serial fix-test-fix cycle                     |
+| Variable-driven branching | `let x = run` + `if command_failed` routing     | H20            | pending          | Diagnose → branch → fix                       |
+| Until-loop quality gate   | `until tests_pass max 5` with escalating hints  | H21            | pending          | Mechanical until-loop with builtin predicate  |
 
 ## Three Winning Patterns
 
@@ -87,6 +90,9 @@ The plugin's control flow adds **structural rigidity** that can interfere with C
 | H16 | Progressive Modular Build | Per-phase validation     | Module-by-module with per-module tests | pending    | 5-module pipeline                     |
 | H17 | diff_nonempty Gate        | Diff enforcement         | `diff_nonempty` gate predicate         | pending    | Review-only vs forced modification    |
 | H18 | Gate + Retry Combo        | Gate + control flow      | `retry` + `tests_pass` + `lint_pass`   | pending    | Retry iterates; dual gate catches var |
+| H19 | While-Loop Fix Cycle      | While-loop iteration     | `while command_failed` re-test cycle   | pending    | 4 serial bugs, exit-on-first tests    |
+| H20 | Conditional Branch + Var  | Variable-driven branch   | `let x = run` + `if` routing           | pending    | Diagnose type vs logic error          |
+| H21 | Until-Loop Quality Gate   | Until-loop               | `until tests_pass max 5` + hints       | pending    | Pagination, formatting, clamp bugs    |
 
 ## Run History
 
@@ -116,17 +122,17 @@ The plugin's control flow adds **structural rigidity** that can interfere with C
 
 ## Remaining Gaps
 
-Most high-priority gaps have been addressed by H15-H18. Remaining:
+All identified gaps are now covered by H15-H21. One remaining:
 
-1. **`while`/`until` loops**: Tested in unit tests but no comparative eval. Expected TIE
-2. **Multi-file variable interpolation**: `let x = run` -> use `${x}` across multiple prompts
+1. **Multi-file variable interpolation**: `let x = run` -> use `${x}` across multiple prompts
 
-| Priority | Capability               | Status                      |
-| -------- | ------------------------ | --------------------------- |
-| ~~High~~ | ~~`diff_nonempty` gate~~ | Covered by H17              |
-| ~~Med~~  | ~~Gate + retry combo~~   | Covered by H18              |
-| Low      | while/until loops        | Expected TIE — low priority |
-| Low      | Multi-file interpolation | Expected TIE — low priority |
+| Priority | Capability               | Status                              |
+| -------- | ------------------------ | ----------------------------------- |
+| ~~High~~ | ~~`diff_nonempty` gate~~ | Covered by H17                      |
+| ~~Med~~  | ~~Gate + retry combo~~   | Covered by H18                      |
+| ~~Low~~  | ~~while/until loops~~    | Covered by H19 (while), H21 (until) |
+| ~~Low~~  | ~~Variable + branching~~ | Covered by H20                      |
+| Low      | Multi-file interpolation | Expected TIE — low priority         |
 
 ## Latency Data
 

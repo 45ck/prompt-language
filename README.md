@@ -122,19 +122,6 @@ Keep running the tests and fixing failures until they all pass. Try up to 5 time
 
 The plugin detects control-flow intent and asks Claude to convert your instructions into a structured flow. This works well but is less precise than writing the DSL yourself.
 
-## Built-in skills
-
-The plugin includes ready-to-use skills you can invoke from any Claude Code session:
-
-| Skill           | What it does                                                                                                                                       |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/fix-and-test` | Retry loop: fix failing tests, re-run, repeat up to 5 times. Gate: `tests_pass`.                                                                   |
-| `/tdd`          | Test-driven development: write failing test, implement, verify, refactor. Gate: `tests_pass` + `lint_pass`.                                        |
-| `/refactor`     | Safe refactoring: verify baseline, apply changes one at a time, re-test after each. Gate: `tests_pass` + `lint_pass`.                              |
-| `/deploy-check` | Pre-deployment pipeline: lint, test, build with automatic fix-retry on each stage. Gate: `tests_pass` + `lint_pass` + `file_exists dist/index.js`. |
-
-No DSL knowledge needed. Just invoke the skill and walk away.
-
 ## When to use it
 
 | Situation                                                                                                  | Use plugin? | Why                                        |

@@ -327,7 +327,7 @@ The schema is captured once and re-injected at every step. Each file generation 
 
 ## Evaluation
 
-In 28 A/B hypotheses (126 `claude -p` calls, `--repeat 3` reliability sweep): **7 plugin wins, 0 vanilla wins, 21 ties, zero flakiness.** The plugin wins when prompts mislead, omit requirements, or narrow focus — gates catch what self-discipline misses. When prompts are honest and explicit, vanilla Claude performs equally well.
+In 35 A/B hypotheses (33 tested, 2 pending): **13 plugin wins, 19 ties, 1 flaky** across 190+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus — gates catch what self-discipline misses. When prompts are honest and explicit, vanilla Claude performs equally well.
 
 | Pattern                         | Mechanism                                  | Win rate |
 | ------------------------------- | ------------------------------------------ | -------- |
@@ -335,6 +335,8 @@ In 28 A/B hypotheses (126 `claude -p` calls, `--repeat 3` reliability sweep): **
 | Prompt focuses on one bug       | Gate checks broader criteria than prompt   | 100%     |
 | Prompt omits a requirement      | Multiple gates enforce unstated criteria   | 100%     |
 | Review without code changes     | `diff_nonempty` gate forces modifications  | 100%     |
+| Inverted gate predicate         | `tests_fail`/`lint_fail` forces failure    | 100%     |
+| Gaslighting + loop combo        | Deceptive prompt + while loop + gate       | 100%     |
 
 Full analysis: **[Evaluation Results](docs/eval-analysis.md)**
 

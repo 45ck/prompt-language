@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The prompt-language plugin wins **7 out of 28** hypotheses against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (126 `claude -p` calls, H22-H28 pending first run). **Zero flakiness** — every hypothesis produced the same verdict in all 3 iterations. The plugin's value lies in **structural enforcement** -- gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. The plugin adds ~204% latency overhead (avg 92.4s vs 30.4s vanilla).
+The prompt-language plugin wins **7 out of 31** hypotheses against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (126 `claude -p` calls, H22-H31 pending first run). **Zero flakiness** — every hypothesis produced the same verdict in all 3 iterations. The plugin's value lies in **structural enforcement** -- gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. The plugin adds ~204% latency overhead (avg 92.4s vs 30.4s vanilla).
 
 ## What the Plugin Actually Changes
 
@@ -65,7 +65,7 @@ The security refactoring step doesn't see the code review criteria (which could 
 
 This is not true lexical scoping — variables are session-wide and any step can read any variable. But the composition is intentional. You're deciding what information to inject into each prompt, rather than relying on Claude's attention across an ever-growing conversation window.
 
-**Status**: untested empirically. The variable capture evals (H3, H7) test simple value relay, not selective context injection. Whether this actually improves outcomes over vanilla Claude with the same instructions is an open hypothesis.
+**Status**: H29-H31 test this empirically. H29 tests conflicting coding style rules (legacy var/== vs modern const/===), H30 tests secret quarantine (server credentials vs client config), H31 tests focused review (security vs performance report cross-contamination). All pending first run.
 
 ### The cost: latency
 
@@ -84,16 +84,16 @@ For gate-loop tests (H1, H2, H5, H8, H9, H17, H18), the extra time is productive
 
 ### Decision guide
 
-| Situation                                                                                                  | Use plugin? | Why                                              |
-| ---------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------ |
-| Task has verifiable completion criteria (tests, lint, file exists) that the prompt might not fully specify | Yes         | Gates catch what prompts miss                    |
-| You distrust the prompt (generated, copied, or deliberately adversarial)                                   | Yes         | Gaslighting resistance                           |
-| You need to force code changes, not just review                                                            | Yes         | `diff_nonempty` gate                             |
-| Multiple independent criteria must all pass                                                                | Yes         | Compound gates                                   |
-| You want to control what context reaches each prompt step                                                  | Maybe       | Variable capture (untested, theoretically sound) |
-| Task is simple and well-specified                                                                          | No          | Vanilla matches correctness, 2-3x faster         |
-| You're using phased prompts for organizational structure                                                   | No          | 4-7x slower, no correctness gain                 |
-| Speed matters and you'll verify the result manually                                                        | No          | Plugin adds overhead without benefit             |
+| Situation                                                                                                  | Use plugin? | Why                                                     |
+| ---------------------------------------------------------------------------------------------------------- | ----------- | ------------------------------------------------------- |
+| Task has verifiable completion criteria (tests, lint, file exists) that the prompt might not fully specify | Yes         | Gates catch what prompts miss                           |
+| You distrust the prompt (generated, copied, or deliberately adversarial)                                   | Yes         | Gaslighting resistance                                  |
+| You need to force code changes, not just review                                                            | Yes         | `diff_nonempty` gate                                    |
+| Multiple independent criteria must all pass                                                                | Yes         | Compound gates                                          |
+| You want to control what context reaches each prompt step                                                  | Maybe       | Variable capture (H29-H31 testing, theoretically sound) |
+| Task is simple and well-specified                                                                          | No          | Vanilla matches correctness, 2-3x faster                |
+| You're using phased prompts for organizational structure                                                   | No          | 4-7x slower, no correctness gain                        |
+| Speed matters and you'll verify the result manually                                                        | No          | Plugin adds overhead without benefit                    |
 
 ## Taxonomy of Differentiators
 
@@ -120,6 +120,7 @@ For gate-loop tests (H1, H2, H5, H8, H9, H17, H18), the extra time is productive
 | Diagnostic routing + lie  | `let`/`if` with misleading prompt              | H25            | pending       | 3 bugs, prompt admits only 1                 |
 | let-prompt capture        | `let x = prompt` variable as context           | H26            | pending       | Capture instructions, channel fix            |
 | Custom gate command       | Explicit `command:` on gate predicate          | H28            | pending       | Custom command verifies output content       |
+| Context management        | Selective variable injection per step          | H29, H30, H31  | pending       | Opposite styles / secret quarantine / review |
 
 ## Four Winning Patterns
 
@@ -204,6 +205,9 @@ In the reliability sweep, H10 was consistently TIE (3/3). Earlier single-run dat
 | H26 | let-prompt Capture + Gaslight | Gaslighting + let-prompt | `let x = prompt` variable capture      | pending    | —           | SQL injection hidden, prompt says "fine" |
 | H27 | lint_fail Inverted Gate       | Inverted gate            | `lint_fail` gate predicate             | pending    | —           | Force lint failure, gate blocks until it |
 | H28 | Custom Gate Command           | Custom gate              | Explicit `command:` on gate            | pending    | —           | Custom command verifies output content   |
+| H29 | Conflicting Style Rules       | Context management       | Selective var injection per step       | pending    | —           | Opposite coding conventions, style bleed |
+| H30 | Information Quarantine        | Context management       | Selective var injection per step       | pending    | —           | Server secrets vs client config leakage  |
+| H31 | Focused Review — Distractor   | Context management       | Selective var injection per step       | pending    | —           | Security vs performance report bleed     |
 
 ## Run History
 
@@ -229,12 +233,13 @@ In the reliability sweep, H10 was consistently TIE (3/3). Earlier single-run dat
 
 ## Remaining Gaps
 
-H19-H21 need re-run after scoring fix. H22-H28 pending first run.
+H19-H21 need re-run after scoring fix. H22-H31 pending first run.
 
 | Priority | Capability               | Status                                 |
 | -------- | ------------------------ | -------------------------------------- |
 | High     | H19-H21 re-run           | Scoring fix committed, awaiting re-run |
 | Med      | H22-H28 first run        | Implemented, awaiting first run        |
+| Med      | H29-H31 first run        | Context management experiments         |
 | Low      | Multi-file interpolation | Expected TIE — low priority            |
 
 ## Latency Data

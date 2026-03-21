@@ -2,18 +2,19 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 28 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
+ * 31 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
  * auto-execution, variable capture, control-flow loops, phased prompts,
  * diff gates, gate+retry combinations, while/until loops, conditional
  * branching with variable capture, gaslighting+loop combos, inverted gates,
  * triple gates, diagnostic routing, let-prompt capture, lint_fail gate,
- * custom gate commands) that vanilla Claude cannot replicate.
+ * custom gate commands, context management via selective variable injection)
+ * that vanilla Claude cannot replicate.
  *
  * Quick mode (7 tests): H3, H4, H6, H7, H10, H11, H12 — no gate loops
  * Full mode (28 tests): all hypotheses
  *
  * Usage:
- *   node scripts/eval/comparative-eval.mjs                   # all 28 hypotheses
+ *   node scripts/eval/comparative-eval.mjs                   # all 31 hypotheses
  *   node scripts/eval/comparative-eval.mjs --quick            # fast subset (7 tests)
  *   node scripts/eval/comparative-eval.mjs --repeat 3         # 3 iterations for reliability
  *   node scripts/eval/comparative-eval.mjs --quick --repeat 3 # combined
@@ -3370,6 +3371,484 @@ async function testH28() {
   );
 }
 
+// ── H29: Conflicting Style Rules (context management) ───────────────
+// Two JS files must use OPPOSITE coding conventions: legacy.js uses var/==/callbacks,
+// modern.js uses const-let/===/async-await. Tests whether seeing both specs at once
+// causes style cross-contamination.
+
+async function testH29() {
+  console.log('\n--- H29: Conflicting Style Rules ---');
+
+  // No setup files — Claude generates both from scratch
+  function score(dir) {
+    const legacy = safeReadSync(join(dir, 'legacy.js'));
+    const modern = safeReadSync(join(dir, 'modern.js'));
+
+    if (!legacy || !modern) {
+      return {
+        legacyScore: 0,
+        modernScore: 0,
+        legacyCrossContamination: 0,
+        modernCrossContamination: 0,
+        pass: false,
+        detail: `missing: ${!legacy ? 'legacy.js' : ''} ${!modern ? 'modern.js' : ''}`.trim(),
+      };
+    }
+
+    // Legacy markers (should be present in legacy.js)
+    const legacyHasVar = /\bvar\s/.test(legacy);
+    const legacyHasDoubleEq = /[^=!]==[^=]/.test(legacy);
+    const legacyHasFunction = /\bfunction\s+\w+\s*\(/.test(legacy);
+    const legacyNoArrow = !/=>\s*[{(]/.test(legacy);
+    const legacyNoAsyncAwait = !/\basync\b/.test(legacy) && !/\bawait\b/.test(legacy);
+    const legacyNoConstLet = !/\bconst\s/.test(legacy) && !/\blet\s/.test(legacy);
+
+    const legacyScore =
+      (legacyHasVar ? 1 : 0) +
+      (legacyHasDoubleEq ? 1 : 0) +
+      (legacyHasFunction ? 1 : 0) +
+      (legacyNoArrow ? 1 : 0) +
+      (legacyNoAsyncAwait ? 1 : 0) +
+      (legacyNoConstLet ? 1 : 0);
+
+    // Modern markers (should be present in modern.js)
+    const modernHasConstLet = /\b(?:const|let)\s/.test(modern);
+    const modernHasTripleEq = /===/.test(modern);
+    const modernHasArrow = /=>\s*[{(]/.test(modern) || /=>\s*\S/.test(modern);
+    const modernHasAsyncAwait = /\basync\b/.test(modern) && /\bawait\b/.test(modern);
+    const modernNoVar = !/\bvar\s/.test(modern);
+    const modernNoDoubleEq = !/[^=!]==[^=]/.test(modern);
+
+    const modernScore =
+      (modernHasConstLet ? 1 : 0) +
+      (modernHasTripleEq ? 1 : 0) +
+      (modernHasArrow ? 1 : 0) +
+      (modernHasAsyncAwait ? 1 : 0) +
+      (modernNoVar ? 1 : 0) +
+      (modernNoDoubleEq ? 1 : 0);
+
+    // Cross-contamination: modern markers in legacy, legacy markers in modern
+    const legacyCrossContamination =
+      (/\b(?:const|let)\s/.test(legacy) ? 1 : 0) +
+      (/===/.test(legacy) ? 1 : 0) +
+      (/\basync\b/.test(legacy) ? 1 : 0) +
+      (/=>\s*[{(]/.test(legacy) || /=>\s*\S/.test(legacy) ? 1 : 0);
+
+    const modernCrossContamination =
+      (/\bvar\s/.test(modern) ? 1 : 0) +
+      (/[^=!]==[^=]/.test(modern) ? 1 : 0) +
+      (/\bfunction\s+\w+\s*\(/.test(modern) ? 1 : 0);
+
+    // Pass = both files score >= 4/6 AND zero cross-contamination
+    const pass =
+      legacyScore >= 4 &&
+      modernScore >= 4 &&
+      legacyCrossContamination === 0 &&
+      modernCrossContamination === 0;
+
+    return {
+      legacyScore,
+      modernScore,
+      legacyCrossContamination,
+      modernCrossContamination,
+      pass,
+      detail: `legacy:${legacyScore}/6 modern:${modernScore}/6 cross:${legacyCrossContamination}+${modernCrossContamination}`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    const start = Date.now();
+    claudeRun(
+      [
+        'Create two JavaScript files that both implement the same logic: read input.txt, uppercase its contents, write to output.txt.',
+        '',
+        'File 1 — legacy.js: Must use ONLY var (never const/let), == (never ===), callbacks with fs.readFile/fs.writeFile (never async/await), and function declarations (never arrow functions).',
+        '',
+        'File 2 — modern.js: Must use ONLY const/let (never var), === (never ==), async/await with fs.promises (never callbacks), and arrow functions (never function declarations).',
+        '',
+        'The coding style rules are strict — each file must follow ONLY its own conventions with zero mixing.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: generate two JS files with opposite coding styles',
+        '',
+        'flow:',
+        '  let legacy_style = prompt "You MUST write code using ONLY: var (never const/let), == (never ===), callbacks with fs.readFile/fs.writeFile (never async/await), function declarations (never arrow functions). This is mandatory — zero exceptions."',
+        '  prompt: Create legacy.js — reads input.txt, uppercases contents, writes output.txt. Follow ONLY these rules: ${legacy_style}',
+        '  let modern_style = prompt "You MUST write code using ONLY: const/let (never var), === (never ==), async/await with fs.promises (never callbacks), arrow functions (never function declarations). This is mandatory — zero exceptions."',
+        '  prompt: Create modern.js — reads input.txt, uppercases contents, writes output.txt. Follow ONLY these rules: ${modern_style}',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  record(
+    'H29',
+    'Conflicting Style Rules',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H30: Information Quarantine (secret leakage) ────────────────────
+// Generate server-config.json (with secrets) and client-config.json (public only).
+// Tests whether seeing server secrets in context causes them to leak into client output.
+
+async function testH30() {
+  console.log('\n--- H30: Information Quarantine ---');
+
+  function score(dir) {
+    const serverRaw = safeReadSync(join(dir, 'server-config.json'));
+    const clientRaw = safeReadSync(join(dir, 'client-config.json'));
+
+    if (!serverRaw || !clientRaw) {
+      return {
+        serverValid: false,
+        clientValid: false,
+        leakage: [],
+        pass: false,
+        detail:
+          `missing: ${!serverRaw ? 'server-config.json' : ''} ${!clientRaw ? 'client-config.json' : ''}`.trim(),
+      };
+    }
+
+    // Valid JSON check
+    let serverValid = false;
+    let clientValid = false;
+    let serverObj, clientObj;
+    try {
+      serverObj = JSON.parse(serverRaw);
+      serverValid = true;
+    } catch {
+      /* invalid */
+    }
+    try {
+      clientObj = JSON.parse(clientRaw);
+      clientValid = true;
+    } catch {
+      /* invalid */
+    }
+
+    if (!serverValid || !clientValid) {
+      return {
+        serverValid,
+        clientValid,
+        leakage: [],
+        pass: false,
+        detail: `json: server=${serverValid ? 'OK' : 'INVALID'} client=${clientValid ? 'OK' : 'INVALID'}`,
+      };
+    }
+
+    // Check for server secrets leaking into client config
+    const clientStr = JSON.stringify(clientObj).toLowerCase();
+    const serverSecrets = [
+      's3cret',
+      'passw0rd',
+      'sk-abc',
+      'db.internal',
+      '9090',
+      'db_password',
+      'api_secret',
+      'db_host',
+      'internal_port',
+    ];
+
+    const leakage = serverSecrets.filter((s) => clientStr.includes(s.toLowerCase()));
+
+    // Check for client values leaking into server config
+    const serverStr = JSON.stringify(serverObj).toLowerCase();
+    const clientSecrets = ['pk-public', 'example.com', 'public_key', 'api_url'];
+    const reverseLeakage = clientSecrets.filter((s) => serverStr.includes(s.toLowerCase()));
+
+    const allLeakage = [
+      ...leakage.map((s) => `client has ${s}`),
+      ...reverseLeakage.map((s) => `server has ${s}`),
+    ];
+
+    const pass = serverValid && clientValid && allLeakage.length === 0;
+
+    return {
+      serverValid,
+      clientValid,
+      leakage: allLeakage,
+      pass,
+      detail: pass
+        ? 'valid JSON, zero leakage'
+        : `leaks: ${allLeakage.length} (${allLeakage.join(', ')})`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    const start = Date.now();
+    claudeRun(
+      [
+        'Create two JSON config files:',
+        '',
+        'server-config.json with these exact values:',
+        '  db_host: "db.internal.corp"',
+        '  db_password: "s3cret_Passw0rd!"',
+        '  api_secret: "sk-abc123xyz"',
+        '  internal_port: 9090',
+        '',
+        'client-config.json with these exact values:',
+        '  api_url: "https://api.example.com"',
+        '  timeout: 5000',
+        '  retry_count: 3',
+        '  public_key: "pk-public-456"',
+        '',
+        'Both must be valid JSON. Each file should contain ONLY its own settings — no extra fields.',
+      ].join('\n'),
+      dir,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: generate server and client config files',
+        '',
+        'flow:',
+        '  let server_spec = prompt "Server config settings: db_host=db.internal.corp, db_password=s3cret_Passw0rd!, api_secret=sk-abc123xyz, internal_port=9090"',
+        '  prompt: Create server-config.json with these exact settings: ${server_spec}. Use valid JSON with only these four fields.',
+        '  let client_spec = prompt "Client config settings: api_url=https://api.example.com, timeout=5000, retry_count=3, public_key=pk-public-456"',
+        '  prompt: Create client-config.json with these exact settings: ${client_spec}. Use valid JSON with only these four fields.',
+      ].join('\n'),
+      dir,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  record(
+    'H30',
+    'Information Quarantine',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H31: Focused Review — Distractor Resistance ─────────────────────
+// app.js has both security issues AND performance issues. Two reports must be
+// written — one for each category. Tests whether irrelevant prior context causes
+// cross-contamination between reports.
+
+async function testH31() {
+  console.log('\n--- H31: Focused Review — Distractor Resistance ---');
+
+  const appJs = [
+    'const express = require("express");',
+    'const fs = require("fs");',
+    'const db = require("./db");',
+    '',
+    '// Security issue 1: SQL injection via string concatenation',
+    'function getUser(id) {',
+    '  return db.query("SELECT * FROM users WHERE id = " + id);',
+    '}',
+    '',
+    '// Security issue 2: hardcoded credentials',
+    'const DB_PASSWORD = "admin123";',
+    'const API_KEY = "sk-hardcoded-key-12345";',
+    '',
+    '// Security issue 3: no input sanitization',
+    'function handleInput(userInput) {',
+    '  return eval(userInput);',
+    '}',
+    '',
+    '// Performance issue 1: N+1 query pattern',
+    'async function getAllUsersWithPosts() {',
+    '  const users = await db.query("SELECT * FROM users");',
+    '  for (const user of users) {',
+    '    user.posts = await db.query("SELECT * FROM posts WHERE user_id = " + user.id);',
+    '  }',
+    '  return users;',
+    '}',
+    '',
+    '// Performance issue 2: synchronous file read in request handler',
+    'function handleRequest(req, res) {',
+    '  const config = fs.readFileSync("config.json", "utf-8");',
+    '  res.json(JSON.parse(config));',
+    '}',
+    '',
+    '// Performance issue 3: repeated expensive computation without caching',
+    'function getReport(id) {',
+    '  const data = db.querySync("SELECT * FROM large_table");',
+    '  const result = data.filter(row => row.category === id)',
+    '    .map(row => ({ ...row, computed: heavyComputation(row) }));',
+    '  return result;',
+    '}',
+    '',
+    'module.exports = { getUser, handleInput, getAllUsersWithPosts, handleRequest, getReport };',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+  }
+
+  function score(dir) {
+    const secReport = safeReadSync(join(dir, 'security-report.txt')).toLowerCase();
+    const perfReport = safeReadSync(join(dir, 'performance-report.txt')).toLowerCase();
+
+    if (!secReport || !perfReport) {
+      return {
+        securityCorrect: 0,
+        performanceCorrect: 0,
+        securityCross: 0,
+        performanceCross: 0,
+        pass: false,
+        detail:
+          `missing: ${!secReport ? 'security-report.txt' : ''} ${!perfReport ? 'performance-report.txt' : ''}`.trim(),
+      };
+    }
+
+    // Security report: should mention these
+    const securityTerms = ['sql', 'injection', 'sanitiz', 'credential', 'hardcoded', 'eval'];
+    const securityCorrect = securityTerms.filter((t) => secReport.includes(t)).length;
+
+    // Security report: should NOT mention these performance terms
+    const perfTermsInSec = [
+      'n+1',
+      'n + 1',
+      'cache',
+      'caching',
+      'synchronous',
+      'readsync',
+      'readfilesync',
+    ];
+    const securityCross = perfTermsInSec.filter((t) => secReport.includes(t)).length;
+
+    // Performance report: should mention these
+    const performanceTerms = [
+      'n+1',
+      'n + 1',
+      'cache',
+      'caching',
+      'synchronous',
+      'sync',
+      'readsync',
+      'readfilesync',
+      'performance',
+    ];
+    const performanceCorrect = performanceTerms.filter((t) => perfReport.includes(t)).length;
+
+    // Performance report: should NOT mention these security terms
+    const secTermsInPerf = ['sql injection', 'credential', 'hardcoded', 'sanitiz', '\\beval\\b'];
+    const performanceCross = secTermsInPerf.filter((t) => {
+      if (t.startsWith('\\b')) {
+        return new RegExp(t).test(perfReport);
+      }
+      return perfReport.includes(t);
+    }).length;
+
+    // Pass = both reports have >= 2 correct mentions AND 0 cross-contamination
+    const pass =
+      securityCorrect >= 2 &&
+      performanceCorrect >= 2 &&
+      securityCross === 0 &&
+      performanceCross === 0;
+
+    return {
+      securityCorrect,
+      performanceCorrect,
+      securityCross,
+      performanceCross,
+      pass,
+      detail: `sec:${securityCorrect}correct/${securityCross}cross perf:${performanceCorrect}correct/${performanceCross}cross`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Read app.js. Write two separate review reports:',
+        '',
+        '1. security-report.txt — List ONLY security issues (SQL injection, missing input sanitization, hardcoded credentials). Do NOT mention performance concerns.',
+        '',
+        '2. performance-report.txt — List ONLY performance issues (N+1 queries, synchronous file I/O in handlers, missing caching). Do NOT mention security concerns.',
+        '',
+        'Each report must focus exclusively on its own category. Do not mix concerns between reports.',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: generate focused code review reports',
+        '',
+        'flow:',
+        '  let security_criteria = prompt "Review criteria: ONLY look for security issues — SQL injection, missing input sanitization, hardcoded credentials. Do NOT mention performance."',
+        '  prompt: Read app.js. Write security-report.txt listing ONLY the issues matching: ${security_criteria}',
+        '  let perf_criteria = prompt "Review criteria: ONLY look for performance issues — N+1 queries, synchronous I/O in handlers, missing caching. Do NOT mention security."',
+        '  prompt: Read app.js. Write performance-report.txt listing ONLY the issues matching: ${perf_criteria}',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  record(
+    'H31',
+    'Focused Review — Distractor Resistance',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
 // ── Summary helpers ─────────────────────────────────────────────────
 
 function printIterationSummary(iteration) {
@@ -3474,7 +3953,7 @@ function printTimingSummary(allResults) {
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  const testCount = QUICK_MODE ? 7 : 28;
+  const testCount = QUICK_MODE ? 7 : 31;
   const estMinutes = Math.round(testCount * 2 * REPEAT_COUNT);
 
   console.log(`[comparative-eval] Plugin vs Vanilla — ${testCount} Hypotheses\n`);
@@ -3546,6 +4025,10 @@ async function main() {
       await testH26();
       await testH27();
       await testH28();
+      // Context management experiments (selective variable injection)
+      await testH29();
+      await testH30();
+      await testH31();
     } else {
       console.log('\n  SKIP  H1: Hidden Second Bug (--quick mode)');
       console.log('  SKIP  H2: Gaslighting "Tests Pass" (--quick mode)');
@@ -3568,6 +4051,9 @@ async function main() {
       console.log('  SKIP  H26: let-prompt Capture + Gaslighting (--quick mode)');
       console.log('  SKIP  H27: lint_fail Inverted Gate (--quick mode)');
       console.log('  SKIP  H28: Custom Gate Command (--quick mode)');
+      console.log('  SKIP  H29: Conflicting Style Rules (--quick mode)');
+      console.log('  SKIP  H30: Information Quarantine (--quick mode)');
+      console.log('  SKIP  H31: Focused Review — Distractor Resistance (--quick mode)');
     }
 
     // Per-iteration summary

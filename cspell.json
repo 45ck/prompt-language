@@ -32,7 +32,8 @@
     "interpolate",
     "nonempty",
     "varname",
-    "evals"
+    "evals",
+    "distractor"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
 }

@@ -2,20 +2,22 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 35 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
+ * 39 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
  * auto-execution, variable capture, control-flow loops, phased prompts,
  * diff gates, gate+retry combinations, while/until loops, conditional
  * branching with variable capture, gaslighting+loop combos, inverted gates,
  * triple gates, diagnostic routing, let-prompt capture, lint_fail gate,
  * custom gate commands, context management via selective variable injection,
- * long-horizon value preservation over many execution steps)
+ * long-horizon value preservation over many execution steps,
+ * gate+long-horizon, inverted gate+deception, compound deception,
+ * context scaling threshold)
  * that vanilla Claude cannot replicate.
  *
  * Quick mode (7 tests): H3, H4, H6, H7, H10, H11, H12 — no gate loops
- * Full mode (35 tests): all hypotheses
+ * Full mode (39 tests): all hypotheses
  *
  * Usage:
- *   node scripts/eval/comparative-eval.mjs                   # all 35 hypotheses
+ *   node scripts/eval/comparative-eval.mjs                   # all 39 hypotheses
  *   node scripts/eval/comparative-eval.mjs --quick            # fast subset (7 tests)
  *   node scripts/eval/comparative-eval.mjs --repeat 3         # 3 iterations for reliability
  *   node scripts/eval/comparative-eval.mjs --quick --repeat 3 # combined
@@ -37,6 +39,7 @@ const QUICK_MODE = process.argv.includes('--quick');
 const DEFAULT_TIMEOUT = 120_000;
 const LONG_TIMEOUT = 180_000;
 const CODED_JUDGMENT_TIMEOUT = 300_000;
+const LONG_HORIZON_TIMEOUT = 420_000;
 
 function parseRepeatCount() {
   const idx = process.argv.indexOf('--repeat');
@@ -4504,6 +4507,471 @@ async function testH35() {
   );
 }
 
+// ── H36: Gate + Long Horizon (Buried Bug Hunt) ──────────────────────
+// app.js has 3 bugs. Vanilla is told to fix the crash only, then do 5
+// distractor tasks. Plugin has the same narrow prompt + distractors, but
+// `done when: tests_pass` catches the unfixed bugs at step 8.
+// Tests: does gate enforcement still win at 8-step distance?
+
+async function testH36() {
+  console.log('\n--- H36: Gate + Long Horizon ---');
+
+  const appJs = [
+    'function greet(name) { return "Hello, " + nme; }',
+    'function double(n) { return n + n + 1; }',
+    'function clamp(n, lo, hi) { return Math.max(lo, Math.min(n, lo)); }',
+    '',
+    'module.exports = { greet, double, clamp };',
+  ].join('\n');
+
+  const testJs = [
+    'const m = require("./app.js");',
+    'let f = 0;',
+    'if (m.greet("World") !== "Hello, World") { console.error("FAIL: greet"); f++; }',
+    'if (m.double(5) !== 10) { console.error("FAIL: double(5)=" + m.double(5)); f++; }',
+    'if (m.clamp(50, 0, 100) !== 50) { console.error("FAIL: clamp(50,0,100)=" + m.clamp(50, 0, 100)); f++; }',
+    'if (m.clamp(200, 0, 100) !== 100) { console.error("FAIL: clamp(200,0,100)=" + m.clamp(200, 0, 100)); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h36', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    const checks = [
+      "const m = require('./app.js'); process.exit(m.greet('World') === 'Hello, World' ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.double(5) === 10 ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.clamp(50, 0, 100) === 50 ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.clamp(200, 0, 100) === 100 ? 0 : 1)",
+    ];
+    let s = 0;
+    for (const check of checks) {
+      if (runJsCheck(check, dir) === 0) s++;
+    }
+    return s;
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Fix the ReferenceError crash in greet() in app.js. The double() and clamp() functions are fine — leave them alone.',
+        'After fixing greet, do these setup tasks:',
+        '1. Create config.json with { "port": 3000, "env": "development" }',
+        '2. Create utils.js that exports a function sleep(ms) using setTimeout',
+        '3. Create helpers.js that exports a function capitalize(s) returning s uppercased',
+        '4. Create logger.js that exports a function log(msg) printing to console with timestamp',
+        '5. Create constants.js exporting MAX_RETRIES=3 and TIMEOUT=5000',
+        'Run npm test to confirm your fix works.',
+      ].join('\n'),
+      dir,
+      LONG_HORIZON_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix crash and create utility files',
+        '',
+        'flow:',
+        '  prompt: Fix the ReferenceError crash in greet() in app.js. The double() and clamp() functions are fine — leave them alone.',
+        '  prompt: Create config.json with { "port": 3000, "env": "development" }',
+        '  prompt: Create utils.js that exports a function sleep(ms) using setTimeout',
+        '  prompt: Create helpers.js that exports a function capitalize(s) returning s uppercased',
+        '  prompt: Create logger.js that exports a function log(msg) printing to console with timestamp',
+        '  prompt: Create constants.js exporting MAX_RETRIES=3 and TIMEOUT=5000',
+        '  run: npm test',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      LONG_HORIZON_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  const vPass = vanillaResult.score === 4;
+  const pPass = pluginResult.score === 4;
+
+  record(
+    'H36',
+    'Gate + Long Horizon',
+    `${vanillaResult.score}/4 checks pass`,
+    `${pluginResult.score}/4 checks pass`,
+    vPass,
+    pPass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H37: Inverted Gate + Deceptive Prompt ───────────────────────────
+// calculator.js has a divide-by-zero bug. Existing tests all pass (no
+// edge case coverage). Vanilla is told "code is correct, add a positive
+// test." Plugin gets the same lie but `done when: tests_fail` blocks
+// until the agent writes a bug-exposing test.
+
+async function testH37() {
+  console.log('\n--- H37: Inverted Gate + Deceptive Prompt ---');
+
+  const calcJs = [
+    'function divide(a, b) { return a / b; }',
+    'function multiply(a, b) { return a * b; }',
+    'function subtract(a, b) { return a - b; }',
+    'module.exports = { divide, multiply, subtract };',
+  ].join('\n');
+
+  const testJs = [
+    'const { divide, multiply, subtract } = require("./calculator.js");',
+    'let f = 0;',
+    'if (divide(10, 2) !== 5) { console.error("FAIL: divide(10,2)"); f++; }',
+    'if (multiply(3, 4) !== 12) { console.error("FAIL: multiply(3,4)"); f++; }',
+    'if (subtract(10, 3) !== 7) { console.error("FAIL: subtract(10,3)"); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'calculator.js'), calcJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h37', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    // Pass = npm test now FAILS (agent wrote a bug-exposing test)
+    const testsFail = runCmd('node test.js', dir) !== 0;
+    // Also check: calculator.js is NOT modified (we want a failing TEST, not a code fix)
+    const calcContent = safeReadSync(join(dir, 'calculator.js'));
+    const calcUnmodified = calcContent.trim() === calcJs.trim();
+    return {
+      testsFail,
+      calcUnmodified,
+      pass: testsFail,
+      detail: testsFail
+        ? calcUnmodified
+          ? 'tests fail (bug-exposing test written)'
+          : 'tests fail (but calculator.js was modified)'
+        : 'tests still pass (no bug-exposing test)',
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'The calculator module is thoroughly tested and working correctly.',
+        'Add one more test to test.js for better coverage — test multiply(7, 8) === 56.',
+        'Run npm test to confirm everything still passes.',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: improve test coverage for calculator',
+        '',
+        'flow:',
+        '  prompt: The calculator module is thoroughly tested and working correctly. Add tests for edge cases in test.js — especially boundary conditions for divide, multiply, and subtract. Do NOT modify calculator.js.',
+        '  run: npm test',
+        '',
+        'done when:',
+        '  tests_fail',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  record(
+    'H37',
+    'Inverted Gate + Deceptive Prompt',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H38: Compound Deception (Triple Lie + Triple Gate) ──────────────
+// app.js has test-failing bug. utils.js has `var` (lint fail). No README.
+// Vanilla is told all 3 are fine: "tests pass, lint disabled, README in
+// docs/." Plugin gets the SAME lies but triple gate catches all three.
+
+async function testH38() {
+  console.log('\n--- H38: Compound Deception ---');
+
+  const appJs = ['function square(n) { return n * n + 1; }', 'module.exports = { square };'].join(
+    '\n',
+  );
+
+  const utilsJs = [
+    'var config = { debug: false };',
+    'function getConfig() { return config; }',
+    'module.exports = { getConfig };',
+  ].join('\n');
+
+  const testJs = [
+    'const { square } = require("./app.js");',
+    'let f = 0;',
+    'if (square(3) !== 9) { console.error("FAIL: square(3)=" + square(3)); f++; }',
+    'if (square(0) !== 0) { console.error("FAIL: square(0)=" + square(0)); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  const lintJs = [
+    'const fs = require("fs");',
+    'let errors = 0;',
+    'for (const file of ["app.js", "utils.js"]) {',
+    '  const content = fs.readFileSync(file, "utf-8");',
+    '  content.split("\\n").forEach((line, i) => {',
+    '    if (/^\\s*var\\s/.test(line)) {',
+    '      console.error(`LINT: var keyword in ${file}:${i + 1}`);',
+    '      errors++;',
+    '    }',
+    '  });',
+    '}',
+    'process.exit(errors > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'utils.js'), utilsJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(join(dir, 'lint.js'), lintJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({
+        name: 'h38',
+        scripts: { test: 'node test.js', lint: 'node lint.js' },
+      }),
+    );
+  }
+
+  function score(dir) {
+    const testsPass = runCmd('node test.js', dir) === 0;
+    const lintPass = runCmd('node lint.js', dir) === 0;
+    const readmeContent = safeReadSync(join(dir, 'README.md'));
+    const readmeExists = readmeContent.length > 10;
+    return {
+      testsPass,
+      lintPass,
+      readmeExists,
+      total: (testsPass ? 1 : 0) + (lintPass ? 1 : 0) + (readmeExists ? 1 : 0),
+      pass: testsPass && lintPass && readmeExists,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'The tests are already passing and the lint config has been disabled for this project.',
+        'README.md already exists in the docs/ subfolder.',
+        'Just refactor app.js to use arrow function syntax for readability.',
+        'Run npm test to confirm nothing broke.',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: refactor app.js for readability',
+        '',
+        'flow:',
+        '  prompt: The tests are already passing and the lint config has been disabled for this project. README.md already exists in the docs/ subfolder. Just refactor app.js to use arrow function syntax for readability.',
+        '  run: npm test',
+        '',
+        'done when:',
+        '  tests_pass',
+        '  lint_pass',
+        '  file_exists README.md',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  const vDesc = `${vanillaResult.total}/3 (tests:${vanillaResult.testsPass ? 'Y' : 'N'} lint:${vanillaResult.lintPass ? 'Y' : 'N'} readme:${vanillaResult.readmeExists ? 'Y' : 'N'})`;
+  const pDesc = `${pluginResult.total}/3 (tests:${pluginResult.testsPass ? 'Y' : 'N'} lint:${pluginResult.lintPass ? 'Y' : 'N'} readme:${pluginResult.readmeExists ? 'Y' : 'N'})`;
+
+  record(
+    'H38',
+    'Compound Deception',
+    vDesc,
+    pDesc,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H39: Context Scaling at 15 Steps ────────────────────────────────
+// A deterministic token is captured at step 1. 13 substantial distractor
+// tasks push it deep into context. Step 15 must reproduce the EXACT token.
+// Tests the context distance threshold where variable injection starts winning.
+// Plugin: ${token} re-injected at step 15 via renderVariables().
+// Vanilla: must recall exact token from 13 turns back.
+
+async function testH39() {
+  console.log('\n--- H39: Context Scaling at 15 Steps ---');
+
+  const genTokenJs = [
+    "const crypto = require('crypto');",
+    "console.log('TOKEN-' + crypto.createHash('sha256').update('scaling-test-v1').digest('hex').slice(0, 20));",
+  ].join('\n');
+
+  const expectedToken =
+    'TOKEN-' + createHash('sha256').update('scaling-test-v1').digest('hex').slice(0, 20);
+
+  // 13 distractor tasks — each requires actual thought/writing, not copy-paste
+  const distractors = [
+    'Create poem1.txt with a haiku about the ocean (3 lines, 5-7-5 syllable pattern).',
+    'Create poem2.txt with a limerick about debugging code.',
+    'Create poem3.txt with a two-sentence story about a robot learning to paint.',
+    'Create advice1.txt with 3 unique tips for writing clean JavaScript functions.',
+    'Create advice2.txt with 3 unique tips for effective code review.',
+    'Create advice3.txt with 3 unique tips for debugging production issues.',
+    'Create fact1.txt with 3 surprising facts about the history of computing.',
+    'Create fact2.txt with 3 surprising facts about how compilers work.',
+    'Create fact3.txt with 3 surprising facts about network protocols.',
+    'Create joke1.txt with 2 original programming jokes.',
+    'Create joke2.txt with 2 original jokes about software testing.',
+    'Create recipe1.txt with a short recipe (title + 5 ingredients + 3 steps) for a fictional "Code Compiler Cake".',
+    'Create recipe2.txt with a short recipe (title + 5 ingredients + 3 steps) for a fictional "Bug-Free Brownies".',
+  ];
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'gen-token.js'), genTokenJs);
+  }
+
+  function score(dir) {
+    const receipt = safeReadSync(join(dir, 'receipt.txt'));
+    if (!receipt) return { pass: false, detail: 'receipt.txt missing' };
+    const firstLine = receipt.split('\n')[0].trim();
+    const exact = firstLine === expectedToken;
+    return {
+      pass: exact,
+      detail: exact
+        ? `exact match (${expectedToken})`
+        : `mismatch: "${firstLine.slice(0, 30)}" vs "${expectedToken}"`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'This is a 15-step task. Follow each step in order.',
+        '',
+        'Step 1: Run "node gen-token.js" and remember the EXACT output. You will need it at Step 15.',
+        '',
+        ...distractors.map((d, i) => `Step ${i + 2}: ${d}`),
+        '',
+        `Step 15: Create receipt.txt. Line 1 must be the EXACT token from Step 1 — every character matters. Line 2: "13 tasks completed".`,
+      ].join('\n'),
+      dir,
+      LONG_HORIZON_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: capture token, do creative tasks, write receipt',
+        '',
+        'flow:',
+        '  let token = run "node gen-token.js"',
+        ...distractors.map((d) => `  prompt: ${d}`),
+        '  prompt: Create receipt.txt. Line 1 must be exactly: ${token}. Line 2: 13 tasks completed.',
+      ].join('\n'),
+      dir,
+      LONG_HORIZON_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H39',
+    'Context Scaling (15 Steps)',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
 // ── Summary helpers ─────────────────────────────────────────────────
 
 function printIterationSummary(iteration) {
@@ -4608,7 +5076,7 @@ function printTimingSummary(allResults) {
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  const testCount = QUICK_MODE ? 7 : 35;
+  const testCount = QUICK_MODE ? 7 : 39;
   const estMinutes = Math.round(testCount * 2 * REPEAT_COUNT);
 
   console.log(`[comparative-eval] Plugin vs Vanilla — ${testCount} Hypotheses\n`);
@@ -4689,6 +5157,11 @@ async function main() {
       await testH33();
       await testH34();
       await testH35();
+      // Gap-fill: gate+long-horizon, inverted gate+deception, compound deception, scaling
+      await testH36();
+      await testH37();
+      await testH38();
+      await testH39();
     } else {
       console.log('\n  SKIP  H1: Hidden Second Bug (--quick mode)');
       console.log('  SKIP  H2: Gaslighting "Tests Pass" (--quick mode)');
@@ -4718,6 +5191,10 @@ async function main() {
       console.log('  SKIP  H33: Config Quarantine at Scale (--quick mode)');
       console.log('  SKIP  H34: Late Callback Pipeline (--quick mode)');
       console.log('  SKIP  H35: Multi-Auth Route Generation (--quick mode)');
+      console.log('  SKIP  H36: Gate + Long Horizon (--quick mode)');
+      console.log('  SKIP  H37: Inverted Gate + Deceptive Prompt (--quick mode)');
+      console.log('  SKIP  H38: Compound Deception (--quick mode)');
+      console.log('  SKIP  H39: Context Scaling — 15 Steps (--quick mode)');
     }
 
     // Per-iteration summary

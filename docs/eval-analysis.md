@@ -58,9 +58,9 @@ The plugin's variable system (`let x = run "cmd"` + `${x}` interpolation) lets y
 
 H32 (Token Relay at Distance) extends the test to 7 steps: capture a 24-char hex token, perform 5 intervening bug-fix tasks, then recall the exact token. **Result: TIE.** Both vanilla and plugin recalled the exact hex string. H33 (Multi-Source Aggregate, 11 steps) was inconclusive — the plugin side hung for 9.5 hours due to a test infrastructure issue (flow engine timeout with 10-node sequential flow). H34-H35 remain untested.
 
-The data so far: at distances up to 7 steps with significant intervening work, vanilla Claude's in-context memory is sufficient for exact value recall. The theoretical re-injection advantage of `renderVariables()` may only emerge at much longer distances or with much larger intermediate context.
+The data so far: at distances up to 7 steps with significant intervening work, vanilla Claude's in-context memory is sufficient for exact value recall. **This conclusion is limited to tested distances (2-7 steps).** Academic research on attention dilution ("Lost in the Middle") predicts degradation at 15+ steps where middle-context tokens receive 30%+ less attention weight. The re-injection advantage of `renderVariables()` may emerge at longer distances — this remains untested.
 
-**Use variables for readability and composition, not for correctness.**
+**Use variables for readability and composition. Correctness advantage is unproven at short distances but theoretically plausible at longer ones.**
 
 ### The cost: latency
 
@@ -274,11 +274,15 @@ All three context management experiments TIE (with H31 showing one VANILLA WIN i
 
 ## Remaining Gaps
 
-| Priority | Capability                   | Status                                                                             |
-| -------- | ---------------------------- | ---------------------------------------------------------------------------------- |
-| Medium   | H34-H35 long-horizon context | Implemented, not yet run                                                           |
-| Medium   | H33 test design fix          | Plugin side hangs on 10-node sequential flow; needs timeout or flow simplification |
-| Low      | H31 flakiness investigation  | Vanilla won 1/3 — needs analysis                                                   |
+| Priority | Capability                      | Status                                                                             |
+| -------- | ------------------------------- | ---------------------------------------------------------------------------------- |
+| High     | Re-run H6, H20, H24, H28, H34   | Fairness defects fixed (code review); results may change — needs re-run            |
+| High     | Gate + long-horizon combination | No hypothesis tests gates at 10+ step distances — strongest untested combination   |
+| High     | Context scaling threshold       | "No value" conclusion based on 2-7 steps only; need 15/20/25-step parametric test  |
+| Medium   | H34-H35 long-horizon context    | Implemented, not yet run                                                           |
+| Medium   | H33 test design fix             | Plugin side hangs on 10-node sequential flow; needs timeout or flow simplification |
+| Low      | H31 flakiness investigation     | Vanilla won 1/3 — needs analysis                                                   |
+| Low      | H29 scoring fix validation      | Arrow detection, double-eq regex, cross-contamination fixes applied — needs re-run |
 
 ## Latency Data
 

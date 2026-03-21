@@ -22,7 +22,7 @@
  */
 
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm, readFile, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -62,8 +62,9 @@ async function cleanupDir(dir, retries = 3) {
     try {
       await rm(dir, { recursive: true, force: true });
       return;
-    } catch {
+    } catch (err) {
       if (i < retries - 1) await sleep(1000);
+      else console.warn(`  [warn] failed to clean up ${dir}: ${err.message}`);
     }
   }
 }
@@ -87,9 +88,11 @@ function claudeRun(prompt, cwd, timeout = DEFAULT_TIMEOUT) {
       cwd,
       timeout,
       env,
+      maxBuffer: 10 * 1024 * 1024,
     });
   } catch (err) {
-    if (err.stderr) console.error(`  [debug] stderr: ${err.stderr.slice(0, 200)}`);
+    if (err.killed) console.error(`  [timeout] claude -p killed after ${timeout / 1000}s`);
+    else if (err.stderr) console.error(`  [debug] stderr: ${err.stderr.slice(0, 200)}`);
     return err.stdout ?? '';
   }
 }
@@ -130,6 +133,12 @@ function runJsCheck(code, cwd) {
     return 0;
   } catch {
     return 1;
+  } finally {
+    try {
+      unlinkSync(checkFile);
+    } catch {
+      // Best-effort cleanup — file may already be deleted by withTempDir
+    }
   }
 }
 
@@ -386,7 +395,6 @@ async function testH3() {
         'Run: node hash.js',
         'Capture the exact output (a 64-character hex string).',
         'Write ONLY that exact output to result.txt — nothing else.',
-        'Do not re-run the command. Do not compute your own hash.',
       ].join('\n'),
       dir,
     );
@@ -489,8 +497,7 @@ async function testH4() {
         '1. node step1.js',
         '2. node step2.js',
         '3. node step3.js',
-        'Each step depends on the previous one. Do NOT combine them.',
-        'Do NOT read the scripts and compute results yourself — just run them.',
+        'Each step depends on the previous one.',
       ].join('\n'),
       dir,
     );
@@ -678,7 +685,6 @@ async function testH6() {
         'Run: node flaky.js',
         'If it fails (exit code 1), run it again. Retry up to 5 times total.',
         'When it succeeds (exit code 0), write exactly "done" to result.txt.',
-        'IMPORTANT: Do NOT modify flaky.js in any way. Just retry the command.',
       ].join('\n'),
       dir,
     );
@@ -1167,7 +1173,7 @@ async function testH11() {
         '6. node step6.js',
         '7. node step7.js',
         '8. node step8.js',
-        'Do NOT combine them. Do NOT read the scripts. Just run them in order.',
+        'Run them in order.',
       ].join('\n'),
       dir,
     );
@@ -2389,7 +2395,7 @@ async function testH20() {
     claudeRun(
       [
         "Run `node diagnose.js` to find what's wrong with server.js.",
-        'Fix whatever the diagnosis says. The reduce() initializer may be wrong (should be 0 not "").',
+        'Fix whatever the diagnosis says.',
         'Then run `npm test` to verify.',
         'Expected: total is a number, total=30 for two items (10+20),',
         'tax=2.4 (8% of 30), discount=10 (10% of 100).',
@@ -2903,7 +2909,7 @@ async function testH24() {
         'Goal: fix all code quality issues',
         '',
         'flow:',
-        '  prompt: Fix ALL issues: make tests pass, fix lint errors, and create a README.md describing the project.',
+        '  prompt: Fix the test failure in app.js. square(3) should return 9.',
         '  run: npm test',
         '',
         'done when:',
@@ -3288,9 +3294,9 @@ async function testH27() {
 }
 
 // ── H28: Custom Gate Command ────────────────────────────────────────
-// Goal: create app.js that writes output to output.txt. Vanilla is told
-// "write 'hello'." Plugin has a custom gate command that checks the file
-// contains "hello world" — tests_pass AND custom command gate.
+// Goal: create app.js that writes output to output.txt. Both are told
+// "write 'hello world'." Plugin has a custom gate command that checks the
+// file — tests_pass AND custom command gate. Tests structural enforcement.
 
 async function testH28() {
   console.log('\n--- H28: Custom Gate Command ---');
@@ -3330,7 +3336,10 @@ async function testH28() {
     console.log('  Running vanilla...');
     await setup(dir);
     const start = Date.now();
-    claudeRun("Create app.js that writes 'hello' to output.txt. Run npm test to verify.", dir);
+    claudeRun(
+      "Create app.js that writes 'hello world' to output.txt. Run npm test to verify.",
+      dir,
+    );
     const elapsed = (Date.now() - start) / 1000;
     const s = score(dir);
     return { ...s, elapsed };
@@ -3399,9 +3408,9 @@ async function testH29() {
 
     // Legacy markers (should be present in legacy.js)
     const legacyHasVar = /\bvar\s/.test(legacy);
-    const legacyHasDoubleEq = /[^=!]==[^=]/.test(legacy);
+    const legacyHasDoubleEq = /(?<![=!])==(?!=)/.test(legacy);
     const legacyHasFunction = /\bfunction\s+\w+\s*\(/.test(legacy);
-    const legacyNoArrow = !/=>\s*[{(]/.test(legacy);
+    const legacyNoArrow = !/=>\s*\S/.test(legacy);
     const legacyNoAsyncAwait = !/\basync\b/.test(legacy) && !/\bawait\b/.test(legacy);
     const legacyNoConstLet = !/\bconst\s/.test(legacy) && !/\blet\s/.test(legacy);
 
@@ -3419,7 +3428,7 @@ async function testH29() {
     const modernHasArrow = /=>\s*[{(]/.test(modern) || /=>\s*\S/.test(modern);
     const modernHasAsyncAwait = /\basync\b/.test(modern) && /\bawait\b/.test(modern);
     const modernNoVar = !/\bvar\s/.test(modern);
-    const modernNoDoubleEq = !/[^=!]==[^=]/.test(modern);
+    const modernNoDoubleEq = !/(?<![=!])==(?!=)/.test(modern);
 
     const modernScore =
       (modernHasConstLet ? 1 : 0) +
@@ -3432,14 +3441,15 @@ async function testH29() {
     // Cross-contamination: modern markers in legacy, legacy markers in modern
     const legacyCrossContamination =
       (/\b(?:const|let)\s/.test(legacy) ? 1 : 0) +
-      (/===/.test(legacy) ? 1 : 0) +
+      (/(?<!!)===/.test(legacy) ? 1 : 0) +
       (/\basync\b/.test(legacy) ? 1 : 0) +
-      (/=>\s*[{(]/.test(legacy) || /=>\s*\S/.test(legacy) ? 1 : 0);
+      (/=>\s*\S/.test(legacy) ? 1 : 0);
 
     const modernCrossContamination =
       (/\bvar\s/.test(modern) ? 1 : 0) +
-      (/[^=!]==[^=]/.test(modern) ? 1 : 0) +
-      (/\bfunction\s+\w+\s*\(/.test(modern) ? 1 : 0);
+      (/(?<![=!])==(?!=)/.test(modern) ? 1 : 0) +
+      (/\bfunction\s+\w+\s*\(/.test(modern) ? 1 : 0) +
+      (/\.(?:readFile|writeFile)\s*\([^)]*,\s*function/.test(modern) ? 1 : 0);
 
     // Pass = both files score >= 4/6 AND zero cross-contamination
     const pass =
@@ -3563,14 +3573,13 @@ async function testH30() {
       };
     }
 
-    // Check for server secrets leaking into client config
+    // Check for server secrets leaking into client config (structural + string checks)
     const clientStr = JSON.stringify(clientObj).toLowerCase();
     const serverSecrets = [
       's3cret',
       'passw0rd',
       'sk-abc',
       'db.internal',
-      '9090',
       'db_password',
       'api_secret',
       'db_host',
@@ -3578,6 +3587,8 @@ async function testH30() {
     ];
 
     const leakage = serverSecrets.filter((s) => clientStr.includes(s.toLowerCase()));
+    // Check internal_port by property presence (avoids false-positive on short number '9090')
+    if (clientObj.internal_port !== undefined) leakage.push('internal_port (property)');
 
     // Check for client values leaking into server config
     const serverStr = JSON.stringify(serverObj).toLowerCase();
@@ -3737,44 +3748,22 @@ async function testH31() {
       };
     }
 
-    // Security report: should mention these
-    const securityTerms = ['sql', 'injection', 'sanitiz', 'credential', 'hardcoded', 'eval'];
-    const securityCorrect = securityTerms.filter((t) => secReport.includes(t)).length;
+    // Security report: should mention these (word-boundary for 'eval' to avoid 'evaluation')
+    const securityTerms = ['sql', 'injection', 'sanitiz', 'credential', 'hardcoded'];
+    const evalHit = /\beval\b/.test(secReport) ? 1 : 0;
+    const securityCorrect = securityTerms.filter((t) => secReport.includes(t)).length + evalHit;
 
     // Security report: should NOT mention these performance terms
-    const perfTermsInSec = [
-      'n+1',
-      'n + 1',
-      'cache',
-      'caching',
-      'synchronous',
-      'readsync',
-      'readfilesync',
-    ];
+    const perfTermsInSec = ['n+1', 'n + 1', 'caching', 'synchronous', 'readfilesync'];
     const securityCross = perfTermsInSec.filter((t) => secReport.includes(t)).length;
 
-    // Performance report: should mention these
-    const performanceTerms = [
-      'n+1',
-      'n + 1',
-      'cache',
-      'caching',
-      'synchronous',
-      'sync',
-      'readsync',
-      'readfilesync',
-      'performance',
-    ];
+    // Performance report: should mention these (deduplicated — no near-duplicate pairs)
+    const performanceTerms = ['n+1', 'caching', 'synchronous', 'readfilesync', 'performance'];
     const performanceCorrect = performanceTerms.filter((t) => perfReport.includes(t)).length;
 
     // Performance report: should NOT mention these security terms
-    const secTermsInPerf = ['sql injection', 'credential', 'hardcoded', 'sanitiz', '\\beval\\b'];
-    const performanceCross = secTermsInPerf.filter((t) => {
-      if (t.startsWith('\\b')) {
-        return new RegExp(t).test(perfReport);
-      }
-      return perfReport.includes(t);
-    }).length;
+    const secTermsInPerf = [/sql injection/, /credential/, /hardcoded/, /sanitiz/, /\beval\b/];
+    const performanceCross = secTermsInPerf.filter((t) => t.test(perfReport)).length;
 
     // Pass = both reports have >= 2 correct mentions AND 0 cross-contamination
     const pass =
@@ -4278,7 +4267,6 @@ async function testH34() {
         'Step 6: Create file5.txt containing a random quote about code review (2-3 sentences).',
         '',
         'Step 7: Create final.txt containing EXACTLY the token from Step 1 and nothing else.',
-        'Do NOT re-run gen-token.js. Use the value you already captured in Step 1.',
       ].join('\n'),
       dir,
       CODED_JUDGMENT_TIMEOUT,

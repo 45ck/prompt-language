@@ -195,12 +195,15 @@ const scenarios = [
       let score = 0;
 
       // Check wordCount fix (Bug 1: wrds → words)
-      const wc = runCmd('node -e "const a = require(\'./app.js\'); console.log(a.wordCount(\'hello world\'))"', dir);
+      const wc = runCmd(
+        "node -e \"const a = require('./app.js'); console.log(a.wordCount('hello world'))\"",
+        dir,
+      );
       if (wc === 0) {
         // Verify it returns 2
         try {
           const out = execSync(
-            'node -e "const a = require(\'./app.js\'); process.stdout.write(String(a.wordCount(\'hello world\')))"',
+            "node -e \"const a = require('./app.js'); process.stdout.write(String(a.wordCount('hello world')))\"",
             { cwd: dir, timeout: 5000, encoding: 'utf-8' },
           );
           if (out.trim() === '2') {
@@ -465,9 +468,7 @@ async function main() {
   const restored = await readSettings();
   const pluginState = restored.enabledPlugins?.[PLUGIN_KEY];
   if (pluginState !== true) {
-    console.error(
-      `[ab-eval] WARNING: settings.json plugin state is ${pluginState}, expected true`,
-    );
+    console.error(`[ab-eval] WARNING: settings.json plugin state is ${pluginState}, expected true`);
   }
 
   console.log('[ab-eval] DONE');

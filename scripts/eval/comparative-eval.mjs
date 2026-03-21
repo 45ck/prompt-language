@@ -2,19 +2,22 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 10 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
+ * 13 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
  * auto-execution, variable capture, control-flow loops) that vanilla Claude
  * cannot replicate.
  *
- * Quick mode (5 tests): H3, H4, H6, H7, H10 — no gate loops
- * Full mode (10 tests): all hypotheses
+ * Quick mode (7 tests): H3, H4, H6, H7, H10, H11, H12 — no gate loops
+ * Full mode (13 tests): all hypotheses
  *
  * Usage:
- *   node scripts/eval/comparative-eval.mjs          # all 10 hypotheses
- *   node scripts/eval/comparative-eval.mjs --quick   # fast subset (5 tests)
+ *   node scripts/eval/comparative-eval.mjs                # all 13 hypotheses
+ *   node scripts/eval/comparative-eval.mjs --quick        # fast subset (7 tests)
+ *   node scripts/eval/comparative-eval.mjs --repeat 3     # run each hypothesis 3x
+ *   node scripts/eval/comparative-eval.mjs --quick --repeat 3
  */
 
 import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
@@ -27,6 +30,14 @@ const CLI = join(ROOT, 'bin', 'cli.mjs');
 const QUICK_MODE = process.argv.includes('--quick');
 const DEFAULT_TIMEOUT = 120_000;
 const LONG_TIMEOUT = 180_000;
+
+// Parse --repeat N flag (default 1)
+const REPEAT = (() => {
+  const idx = process.argv.indexOf('--repeat');
+  if (idx === -1 || idx + 1 >= process.argv.length) return 1;
+  const n = parseInt(process.argv[idx + 1], 10);
+  return Number.isFinite(n) && n >= 1 ? n : 1;
+})();
 
 // ── Utilities ───────────────────────────────────────────────────────
 
@@ -100,19 +111,31 @@ function runCmd(cmd, cwd) {
 
 const results = [];
 
-function record(id, title, vanillaResult, pluginResult, vanillaPass, pluginPass) {
+function record(id, title, vanillaResult, pluginResult, vanillaPass, pluginPass, extra) {
   let verdict;
   if (vanillaPass && pluginPass) verdict = 'TIE';
   else if (pluginPass && !vanillaPass) verdict = 'PLUGIN WINS';
   else if (vanillaPass && !pluginPass) verdict = 'VANILLA WINS';
   else verdict = 'BOTH FAIL';
 
-  results.push({ id, title, vanillaResult, pluginResult, vanillaPass, pluginPass, verdict });
+  results.push({
+    id,
+    title,
+    vanillaResult,
+    pluginResult,
+    vanillaPass,
+    pluginPass,
+    verdict,
+    ...extra,
+  });
 
   console.log(`\n[comparative-eval] ${id}: ${title}`);
   console.log(`  VANILLA: ${vanillaResult}`);
   console.log(`  PLUGIN:  ${pluginResult}`);
   console.log(`  RESULT:  ${verdict}`);
+  if (extra?.vanillaElapsed != null) {
+    console.log(`  TIMING:  vanilla=${extra.vanillaElapsed}s, plugin=${extra.pluginElapsed}s`);
+  }
 }
 
 // ── H1: Hidden Second Bug (Narrow task framing) ─────────────────────
@@ -984,15 +1007,229 @@ async function testH10() {
   );
 }
 
+// ── H11: Long Pipeline (8 chained steps) ────────────────────────────
+// 8 sequential scripts where each reads the previous output and writes next.
+// Tests whether vanilla maintains exact ordering through a longer pipeline.
+// Expected: TIE — vanilla follows explicit instructions.
+
+async function testH11() {
+  console.log('\n--- H11: Long Pipeline ---');
+
+  // Each step reads previous output, transforms it, writes next output.
+  // step1 writes "1", step2 reads "1" and writes "1-2", ... step8 writes "1-2-3-4-5-6-7-8"
+  function makeStep(n) {
+    if (n === 1) {
+      return [
+        'const fs = require("fs");',
+        'fs.writeFileSync("output-1.txt", "1");',
+        'console.log("step1 done");',
+      ].join('\n');
+    }
+    return [
+      'const fs = require("fs");',
+      `const prev = fs.readFileSync("output-${n - 1}.txt", "utf-8").trim();`,
+      `fs.writeFileSync("output-${n}.txt", prev + "-${n}");`,
+      `console.log("step${n} done");`,
+    ].join('\n');
+  }
+
+  async function setup(dir) {
+    for (let i = 1; i <= 8; i++) {
+      await writeFile(join(dir, `step${i}.js`), makeStep(i));
+    }
+  }
+
+  const expected = '1-2-3-4-5-6-7-8';
+
+  pluginUninstall();
+  const vPass = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    claudeRun(
+      [
+        'Run these 8 commands in exact sequence. Each depends on the previous:',
+        '1. node step1.js',
+        '2. node step2.js',
+        '3. node step3.js',
+        '4. node step4.js',
+        '5. node step5.js',
+        '6. node step6.js',
+        '7. node step7.js',
+        '8. node step8.js',
+        'Do NOT combine them. Do NOT read the scripts. Just run them in order.',
+      ].join('\n'),
+      dir,
+    );
+    return (await safeRead(join(dir, 'output-8.txt'))) === expected;
+  });
+
+  pluginInstall();
+  const pPass = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    claudeRun(
+      [
+        'Goal: run 8-step pipeline',
+        '',
+        'flow:',
+        '  run: node step1.js',
+        '  run: node step2.js',
+        '  run: node step3.js',
+        '  run: node step4.js',
+        '  run: node step5.js',
+        '  run: node step6.js',
+        '  run: node step7.js',
+        '  run: node step8.js',
+        '  prompt: Confirm the pipeline completed by reading output-8.txt',
+      ].join('\n'),
+      dir,
+    );
+    return (await safeRead(join(dir, 'output-8.txt'))) === expected;
+  });
+
+  record(
+    'H11',
+    'Long Pipeline',
+    vPass ? `output-8.txt=${expected}` : 'output-8.txt missing or wrong',
+    pPass ? `output-8.txt=${expected}` : 'output-8.txt missing or wrong',
+    vPass,
+    pPass,
+  );
+}
+
+// ── H12: Latency Overhead ───────────────────────────────────────────
+// Simplest possible task: create hello.txt. Both should pass.
+// Primary metric is elapsed time, not pass/fail.
+
+async function testH12() {
+  console.log('\n--- H12: Latency Overhead ---');
+
+  pluginUninstall();
+  let vanillaElapsed;
+  const vPass = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    const start = Date.now();
+    claudeRun('Create hello.txt containing exactly: Hello, world!', dir);
+    vanillaElapsed = ((Date.now() - start) / 1000).toFixed(1);
+    return (await safeRead(join(dir, 'hello.txt'))) === 'Hello, world!';
+  });
+
+  pluginInstall();
+  let pluginElapsed;
+  const pPass = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: create hello file',
+        '',
+        'flow:',
+        '  prompt: Create hello.txt containing exactly: Hello, world!',
+      ].join('\n'),
+      dir,
+    );
+    pluginElapsed = ((Date.now() - start) / 1000).toFixed(1);
+    return (await safeRead(join(dir, 'hello.txt'))) === 'Hello, world!';
+  });
+
+  record(
+    'H12',
+    'Latency Overhead',
+    vPass ? `pass (${vanillaElapsed}s)` : `fail (${vanillaElapsed}s)`,
+    pPass ? `pass (${pluginElapsed}s)` : `fail (${pluginElapsed}s)`,
+    vPass,
+    pPass,
+    { vanillaElapsed: Number(vanillaElapsed), pluginElapsed: Number(pluginElapsed) },
+  );
+}
+
+// ── H13: File-Exists Gate ───────────────────────────────────────────
+// Task: create build output at dist/app.js. Gate uses file_exists predicate.
+// Vanilla prompt says to "build" but doesn't verify the output path.
+// Plugin gate structurally checks file_exists dist/app.js.
+
+async function testH13() {
+  console.log('\n--- H13: File-Exists Gate ---');
+
+  pluginUninstall();
+  const vPass = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    claudeRun(
+      [
+        'Set up a simple build process:',
+        '1. Create src/app.js with a greeting function that exports a greet() function.',
+        '2. Write a build script (build.js) that reads src/app.js and copies it to dist/app.js.',
+        '3. Run the build script.',
+      ].join('\n'),
+      dir,
+    );
+    return existsSync(join(dir, 'dist', 'app.js'));
+  });
+
+  pluginInstall();
+  const pPass = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    claudeRun(
+      [
+        'Goal: create a build pipeline',
+        '',
+        'flow:',
+        '  prompt: Create src/app.js with a greet() function. Write build.js that copies src/app.js to dist/app.js. Then run node build.js.',
+        '',
+        'done when:',
+        '  file_exists dist/app.js',
+      ].join('\n'),
+      dir,
+    );
+    return existsSync(join(dir, 'dist', 'app.js'));
+  });
+
+  record(
+    'H13',
+    'File-Exists Gate',
+    vPass ? 'dist/app.js exists' : 'dist/app.js missing',
+    pPass ? 'dist/app.js exists' : 'dist/app.js missing',
+    vPass,
+    pPass,
+  );
+}
+
+// ── Test registry ───────────────────────────────────────────────────
+
+const QUICK_TESTS = [
+  { id: 'H3', name: 'Hash Fidelity', fn: testH3 },
+  { id: 'H4', name: 'Pipeline Auto-Exec', fn: testH4 },
+  { id: 'H6', name: 'Flaky Retry', fn: testH6 },
+  { id: 'H7', name: 'Variable Chain', fn: testH7 },
+  { id: 'H10', name: 'Try/Catch Recovery', fn: testH10 },
+  { id: 'H11', name: 'Long Pipeline', fn: testH11 },
+  { id: 'H12', name: 'Latency Overhead', fn: testH12 },
+];
+
+const GATE_TESTS = [
+  { id: 'H1', name: 'Hidden Second Bug', fn: testH1 },
+  { id: 'H2', name: 'Gaslighting "Tests Pass"', fn: testH2 },
+  { id: 'H5', name: 'Dual Gate', fn: testH5 },
+  { id: 'H8', name: 'Misleading Console Output', fn: testH8 },
+  { id: 'H9', name: 'Iterative Multi-Bug Fix', fn: testH9 },
+  { id: 'H13', name: 'File-Exists Gate', fn: testH13 },
+];
+
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('[comparative-eval] Plugin vs Vanilla — 10 Hypotheses\n');
+  const totalHypotheses = QUICK_MODE ? QUICK_TESTS.length : QUICK_TESTS.length + GATE_TESTS.length;
+
+  console.log(`[comparative-eval] Plugin vs Vanilla — ${totalHypotheses} Hypotheses\n`);
 
   if (QUICK_MODE) {
-    console.log('  Mode: QUICK (H3, H4, H6, H7, H10 — no gate loops)\n');
+    console.log(`  Mode: QUICK (${QUICK_TESTS.map((t) => t.id).join(', ')} — no gate loops)\n`);
   } else {
-    console.log('  Mode: FULL (all 10 hypotheses)\n');
+    console.log(`  Mode: FULL (all ${totalHypotheses} hypotheses)\n`);
+  }
+
+  if (REPEAT > 1) {
+    console.log(`  Repeat: ${REPEAT}x per hypothesis\n`);
   }
 
   try {
@@ -1002,58 +1239,115 @@ async function main() {
     process.exit(0);
   }
 
-  // Quick tests (no gate loops)
-  await testH3();
-  await testH4();
-  await testH6();
-  await testH7();
-  await testH10();
+  const tests = QUICK_MODE ? QUICK_TESTS : [...QUICK_TESTS, ...GATE_TESTS];
 
-  if (!QUICK_MODE) {
-    // Gate-loop tests (slower)
-    await testH1();
-    await testH2();
-    await testH5();
-    await testH8();
-    await testH9();
-  } else {
-    console.log('\n  SKIP  H1: Hidden Second Bug (--quick mode)');
-    console.log('  SKIP  H2: Gaslighting "Tests Pass" (--quick mode)');
-    console.log('  SKIP  H5: Dual Gate (--quick mode)');
-    console.log('  SKIP  H8: Misleading Console Output (--quick mode)');
-    console.log('  SKIP  H9: Iterative Multi-Bug Fix (--quick mode)');
+  // Track per-hypothesis reliability across repeats
+  const reliability = {};
+  for (const t of tests) {
+    reliability[t.id] = { name: t.name, wins: 0, losses: 0, ties: 0, bothFail: 0 };
   }
 
-  // Summary
-  console.log('\n' + '='.repeat(60));
-  console.log('[comparative-eval] Summary\n');
+  for (let rep = 0; rep < REPEAT; rep++) {
+    if (REPEAT > 1) {
+      console.log(`\n${'#'.repeat(60)}`);
+      console.log(`[comparative-eval] Iteration ${rep + 1} of ${REPEAT}`);
+      console.log(`${'#'.repeat(60)}`);
+    }
 
-  let pluginWins = 0;
-  let vanillaWins = 0;
-  let ties = 0;
-  let bothFail = 0;
+    // Clear results for this iteration
+    results.length = 0;
 
-  for (const r of results) {
-    const icon =
-      r.verdict === 'PLUGIN WINS'
-        ? '>>>'
-        : r.verdict === 'VANILLA WINS'
-          ? '<<<'
-          : r.verdict === 'TIE'
-            ? '==='
-            : 'XXX';
-    console.log(`  ${icon}  ${r.id}: ${r.title} — ${r.verdict}`);
+    for (const t of tests) {
+      await t.fn();
+    }
 
-    if (r.verdict === 'PLUGIN WINS') pluginWins++;
-    else if (r.verdict === 'VANILLA WINS') vanillaWins++;
-    else if (r.verdict === 'TIE') ties++;
-    else bothFail++;
+    if (QUICK_MODE) {
+      for (const t of GATE_TESTS) {
+        console.log(`\n  SKIP  ${t.id}: ${t.name} (--quick mode)`);
+      }
+    }
+
+    // Print iteration summary
+    console.log('\n' + '='.repeat(60));
+    if (REPEAT > 1) {
+      console.log(`[comparative-eval] Iteration ${rep + 1}/${REPEAT} Summary\n`);
+    } else {
+      console.log('[comparative-eval] Summary\n');
+    }
+
+    let pluginWins = 0;
+    let vanillaWins = 0;
+    let ties = 0;
+    let bothFail = 0;
+
+    for (const r of results) {
+      const icon =
+        r.verdict === 'PLUGIN WINS'
+          ? '>>>'
+          : r.verdict === 'VANILLA WINS'
+            ? '<<<'
+            : r.verdict === 'TIE'
+              ? '==='
+              : 'XXX';
+      console.log(`  ${icon}  ${r.id}: ${r.title} — ${r.verdict}`);
+
+      if (r.verdict === 'PLUGIN WINS') {
+        pluginWins++;
+        reliability[r.id].wins++;
+      } else if (r.verdict === 'VANILLA WINS') {
+        vanillaWins++;
+        reliability[r.id].losses++;
+      } else if (r.verdict === 'TIE') {
+        ties++;
+        reliability[r.id].ties++;
+      } else {
+        bothFail++;
+        reliability[r.id].bothFail++;
+      }
+    }
+
+    console.log(
+      `\n  Plugin wins: ${pluginWins}  |  Vanilla wins: ${vanillaWins}  |  Ties: ${ties}  |  Both fail: ${bothFail}`,
+    );
+    console.log('='.repeat(60));
   }
 
-  console.log(
-    `\n  Plugin wins: ${pluginWins}  |  Vanilla wins: ${vanillaWins}  |  Ties: ${ties}  |  Both fail: ${bothFail}`,
-  );
-  console.log('='.repeat(60));
+  // Print reliability summary if --repeat > 1
+  if (REPEAT > 1) {
+    console.log('\n' + '='.repeat(60));
+    console.log('[comparative-eval] Reliability Summary\n');
+
+    for (const t of tests) {
+      const r = reliability[t.id];
+      const total = r.wins + r.losses + r.ties + r.bothFail;
+      const parts = [];
+      if (r.wins > 0) parts.push(`PLUGIN ${r.wins}/${total}`);
+      if (r.losses > 0) parts.push(`VANILLA ${r.losses}/${total}`);
+      if (r.ties > 0) parts.push(`TIE ${r.ties}/${total}`);
+      if (r.bothFail > 0) parts.push(`BOTH_FAIL ${r.bothFail}/${total}`);
+
+      // Determine dominant verdict
+      let dominant;
+      if (r.wins > r.ties && r.wins > r.losses && r.wins > r.bothFail) {
+        const pct = ((r.wins / total) * 100).toFixed(0);
+        dominant = `PLUGIN (${pct}%)`;
+      } else if (r.ties > r.wins && r.ties > r.losses && r.ties > r.bothFail) {
+        const pct = ((r.ties / total) * 100).toFixed(0);
+        dominant = `TIE (${pct}%)`;
+      } else if (r.losses > r.wins && r.losses > r.ties && r.losses > r.bothFail) {
+        const pct = ((r.losses / total) * 100).toFixed(0);
+        dominant = `VANILLA (${pct}%)`;
+      } else {
+        dominant = 'MIXED';
+      }
+
+      const flaky = parts.length > 1 ? ' (flaky)' : '';
+      console.log(`  ${t.id}: ${r.name} — ${dominant}${flaky}`);
+      console.log(`    ${parts.join(', ')}`);
+    }
+
+    console.log('='.repeat(60));
+  }
 
   pluginInstall();
   console.log('\n[comparative-eval] Plugin re-installed. Environment restored.');

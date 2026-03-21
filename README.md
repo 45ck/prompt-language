@@ -322,7 +322,7 @@ Full syntax, defaults, composition rules, built-in variables, and gate predicate
 
 ## Evaluation
 
-In 41 A/B hypotheses (33 tested, 8 pending): **13 plugin wins, 19 ties, 1 flaky** across 190+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
+In 45 A/B hypotheses (33 tested, 12 pending): **13 plugin wins, 19 ties, 1 flaky** across 190+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
 
 | Pattern                         | Mechanism                                  | Win rate |
 | ------------------------------- | ------------------------------------------ | -------- |

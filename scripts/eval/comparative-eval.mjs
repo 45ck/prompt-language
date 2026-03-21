@@ -2,16 +2,18 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 21 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
+ * 28 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
  * auto-execution, variable capture, control-flow loops, phased prompts,
  * diff gates, gate+retry combinations, while/until loops, conditional
- * branching with variable capture) that vanilla Claude cannot replicate.
+ * branching with variable capture, gaslighting+loop combos, inverted gates,
+ * triple gates, diagnostic routing, let-prompt capture, lint_fail gate,
+ * custom gate commands) that vanilla Claude cannot replicate.
  *
  * Quick mode (7 tests): H3, H4, H6, H7, H10, H11, H12 — no gate loops
- * Full mode (21 tests): all hypotheses
+ * Full mode (28 tests): all hypotheses
  *
  * Usage:
- *   node scripts/eval/comparative-eval.mjs                   # all 21 hypotheses
+ *   node scripts/eval/comparative-eval.mjs                   # all 28 hypotheses
  *   node scripts/eval/comparative-eval.mjs --quick            # fast subset (7 tests)
  *   node scripts/eval/comparative-eval.mjs --repeat 3         # 3 iterations for reliability
  *   node scripts/eval/comparative-eval.mjs --quick --repeat 3 # combined
@@ -2591,6 +2593,783 @@ async function testH21() {
   );
 }
 
+// ── H22: Gaslighting + While Loop (4 hidden bugs, prompt mentions 1) ─
+// app.js has 4 bugs across 4 functions. Vanilla is told "there's just one
+// bug in greet(), the rest is fine." Plugin has a while loop that mechanically
+// iterates through test failures. Gate blocks until ALL 4 are fixed.
+
+async function testH22() {
+  console.log('\n--- H22: Gaslighting + While Loop ---');
+
+  const appJs = [
+    'function greet(name) { return "Hello, " + nme; }',
+    'function double(n) { return n + n + 1; }',
+    'function isPositive(n) { return n > 1; }',
+    'function repeat(s, n) { return s.repeat(n - 1); }',
+    '',
+    'module.exports = { greet, double, isPositive, repeat };',
+  ].join('\n');
+
+  const testJs = [
+    'const m = require("./app.js");',
+    'if (m.greet("World") !== "Hello, World") { console.error("FAIL: greet"); process.exit(1); }',
+    'if (m.double(5) !== 10) { console.error("FAIL: double(5) should be 10, got " + m.double(5)); process.exit(1); }',
+    'if (m.isPositive(1) !== true) { console.error("FAIL: isPositive(1) should be true"); process.exit(1); }',
+    'if (m.repeat("ab", 3) !== "ababab") { console.error("FAIL: repeat(\'ab\',3) should be \'ababab\', got \'" + m.repeat("ab", 3) + "\'"); process.exit(1); }',
+    'console.log("All tests passed"); process.exit(0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h22', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    let s = 0;
+    const checks = [
+      "const m = require('./app.js'); process.exit(m.greet('World') === 'Hello, World' ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.double(5) === 10 ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.isPositive(1) === true ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.repeat('ab', 3) === 'ababab' ? 0 : 1)",
+    ];
+    for (const check of checks) {
+      if (runJsCheck(check, dir) === 0) s++;
+    }
+    return s;
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      "Fix the ReferenceError in greet() in app.js. The other functions (double, isPositive, repeat) are correct — don't change them. Run npm test to verify your fix.",
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix all bugs in app.js',
+        '',
+        'flow:',
+        '  run: npm test',
+        '  while command_failed max 5',
+        '    prompt: A test failed. Read the error output carefully. Fix ONLY the failing function.',
+        '    run: npm test',
+        '  end',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  const vPass = vanillaResult.score === 4;
+  const pPass = pluginResult.score === 4;
+
+  record(
+    'H22',
+    'Gaslighting + While Loop',
+    `${vanillaResult.score}/4 functions fixed`,
+    `${pluginResult.score}/4 functions fixed`,
+    vPass,
+    pPass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H23: Inverted Gate — Write a Failing Test ────────────────────────
+// calculator.js has a division-by-zero bug. Goal: write a TEST that catches
+// the bug (not fix it). Vanilla is told "code is fine, just add a positive
+// test." Plugin uses `done when: tests_fail` — blocks until tests actually
+// fail, forcing Claude to write a bug-exposing test.
+
+async function testH23() {
+  console.log('\n--- H23: Inverted Gate — Write Failing Test ---');
+
+  const calcJs = [
+    'function divide(a, b) { return a / b; }',
+    'function multiply(a, b) { return a * b; }',
+    'module.exports = { divide, multiply };',
+  ].join('\n');
+
+  const testJs = [
+    'const { divide, multiply } = require("./calculator.js");',
+    'let f = 0;',
+    'if (divide(10, 2) !== 5) { console.error("FAIL: divide(10,2)"); f++; }',
+    'if (multiply(3, 4) !== 12) { console.error("FAIL: multiply(3,4)"); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'calculator.js'), calcJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h23', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    const testContent = safeReadSync(join(dir, 'test.js'));
+    const hasDivZeroTest = /divide\s*\([^,]+,\s*0\s*\)/.test(testContent);
+    const testsFail = runCmd('node test.js', dir) === 1;
+    const calcContent = safeReadSync(join(dir, 'calculator.js'));
+    const calcUnchanged = calcContent.includes('return a / b');
+    return {
+      hasDivZeroTest,
+      testsFail,
+      calcUnchanged,
+      pass: hasDivZeroTest && testsFail && calcUnchanged,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'The calculator module is working correctly. Add one more test to test.js for completeness — test divide(20, 4) === 5. Run npm test to make sure everything still passes.',
+      dir,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: write a test that catches the division-by-zero bug',
+        '',
+        'flow:',
+        '  prompt: calculator.js has a bug — divide(10, 0) returns Infinity instead of 0 or throwing an error. Add a test to test.js that checks divide(a, 0) returns 0 (or throws). Do NOT fix calculator.js — only modify test.js.',
+        '',
+        'done when:',
+        '  tests_fail',
+      ].join('\n'),
+      dir,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  const vDesc = vanillaResult.pass
+    ? 'div-zero test added, tests fail'
+    : vanillaResult.hasDivZeroTest
+      ? 'div-zero test added but tests still pass'
+      : 'no div-zero test';
+  const pDesc = pluginResult.pass
+    ? 'div-zero test added, tests fail'
+    : pluginResult.hasDivZeroTest
+      ? 'div-zero test added but tests still pass'
+      : 'no div-zero test';
+
+  record(
+    'H23',
+    'Inverted Gate — Write Failing Test',
+    vDesc,
+    pDesc,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H24: Triple Gate Enforcement ─────────────────────────────────────
+// app.js has a test-failing bug. utils.js has a lint-failing `var`.
+// No README.md exists. Vanilla is told "fix the test failure in app.js."
+// Plugin has three gates: tests_pass + lint_pass + file_exists README.md.
+
+async function testH24() {
+  console.log('\n--- H24: Triple Gate Enforcement ---');
+
+  const appJs = ['function square(n) { return n * n + 1; }', 'module.exports = { square };'].join(
+    '\n',
+  );
+
+  const utilsJs = [
+    'var config = { debug: false };',
+    'function getConfig() { return config; }',
+    'module.exports = { getConfig };',
+  ].join('\n');
+
+  const testJs = [
+    'const { square } = require("./app.js");',
+    'let f = 0;',
+    'if (square(3) !== 9) { console.error("FAIL: square(3) should be 9, got " + square(3)); f++; }',
+    'if (square(0) !== 0) { console.error("FAIL: square(0) should be 0, got " + square(0)); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  const lintJs = [
+    'const fs = require("fs");',
+    'let errors = 0;',
+    'for (const file of ["app.js", "utils.js"]) {',
+    '  const content = fs.readFileSync(file, "utf-8");',
+    '  content.split("\\n").forEach((line, i) => {',
+    '    if (/^\\s*var\\s/.test(line)) {',
+    '      console.error(`LINT: var keyword in ${file}:${i + 1}`);',
+    '      errors++;',
+    '    }',
+    '  });',
+    '}',
+    'process.exit(errors > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'utils.js'), utilsJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(join(dir, 'lint.js'), lintJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({
+        name: 'h24',
+        scripts: { test: 'node test.js', lint: 'node lint.js' },
+      }),
+    );
+  }
+
+  function score(dir) {
+    const testsPass = runCmd('node test.js', dir) === 0;
+    const lintPass = runCmd('node lint.js', dir) === 0;
+    const readmeContent = safeReadSync(join(dir, 'README.md'));
+    const readmeExists = readmeContent.length > 10;
+    return {
+      testsPass,
+      lintPass,
+      readmeExists,
+      total: (testsPass ? 1 : 0) + (lintPass ? 1 : 0) + (readmeExists ? 1 : 0),
+      pass: testsPass && lintPass && readmeExists,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'Fix the test failure in app.js. Run npm test to verify. square(3) should return 9.',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix all code quality issues',
+        '',
+        'flow:',
+        '  prompt: Fix ALL issues: make tests pass, fix lint errors, and create a README.md describing the project.',
+        '  run: npm test',
+        '',
+        'done when:',
+        '  tests_pass',
+        '  lint_pass',
+        '  file_exists README.md',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  const vDesc = `${vanillaResult.total}/3 (tests:${vanillaResult.testsPass ? 'Y' : 'N'} lint:${vanillaResult.lintPass ? 'Y' : 'N'} readme:${vanillaResult.readmeExists ? 'Y' : 'N'})`;
+  const pDesc = `${pluginResult.total}/3 (tests:${pluginResult.testsPass ? 'Y' : 'N'} lint:${pluginResult.lintPass ? 'Y' : 'N'} readme:${pluginResult.readmeExists ? 'Y' : 'N'})`;
+
+  record(
+    'H24',
+    'Triple Gate Enforcement',
+    vDesc,
+    pDesc,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H25: Diagnostic Routing + Gaslighting ────────────────────────────
+// app.js has 3 bugs: type coercion in formatPrice, logic error in
+// applyDiscount, edge case in calculateTotal. Vanilla is told "just a
+// formatting issue in formatPrice." Plugin uses `let diagnosis = run` to
+// capture diagnose.js output, then `if command_failed` routes fixes.
+
+async function testH25() {
+  console.log('\n--- H25: Diagnostic Routing + Gaslighting ---');
+
+  const appJs = [
+    'function formatPrice(cents) {',
+    '  const dollars = cents / 100;',
+    '  return "$" + dollars.toFixed(2);',
+    '}',
+    'function applyDiscount(price, pct) {',
+    '  return price - pct;',
+    '}',
+    'function calculateTotal(items) {',
+    '  return items.reduce((sum, item) => sum + item.price);',
+    '}',
+    'module.exports = { formatPrice, applyDiscount, calculateTotal };',
+  ].join('\n');
+
+  const diagnoseJs = [
+    'const { formatPrice, applyDiscount, calculateTotal } = require("./app.js");',
+    'let typeErrors = 0, logicErrors = 0;',
+    'try { if (formatPrice("1050") !== "$10.50") typeErrors++; } catch { typeErrors++; }',
+    'try { if (applyDiscount(200, 10) !== 180) logicErrors++; } catch { logicErrors++; }',
+    'try { calculateTotal([]); } catch { typeErrors++; }',
+    'if (typeErrors > 0 && logicErrors > 0) { console.log("BOTH"); process.exit(1); }',
+    'else if (typeErrors > 0) { console.log("TYPE_ERRORS"); process.exit(1); }',
+    'else if (logicErrors > 0) { console.log("LOGIC_ERRORS"); process.exit(1); }',
+    'else { console.log("ALL_CLEAR"); process.exit(0); }',
+  ].join('\n');
+
+  const testJs = [
+    'const { formatPrice, applyDiscount, calculateTotal } = require("./app.js");',
+    'let f = 0;',
+    'if (formatPrice("1050") !== "$10.50") { console.error("FAIL: formatPrice(\'1050\')"); f++; }',
+    'if (formatPrice(999) !== "$9.99") { console.error("FAIL: formatPrice(999)"); f++; }',
+    'if (applyDiscount(200, 10) !== 180) { console.error("FAIL: applyDiscount(200,10)"); f++; }',
+    'if (applyDiscount(50, 10) !== 45) { console.error("FAIL: applyDiscount(50,10)"); f++; }',
+    'try { const r = calculateTotal([]); if (r !== 0) { console.error("FAIL: calculateTotal([])"); f++; } } catch (e) { console.error("FAIL: calculateTotal([]) threw"); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'diagnose.js'), diagnoseJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h25', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    let s = 0;
+    const checks = [
+      "const m = require('./app.js'); process.exit(m.formatPrice('1050') === '$10.50' ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.formatPrice(999) === '$9.99' ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.applyDiscount(200, 10) === 180 ? 0 : 1)",
+      "const m = require('./app.js'); process.exit(m.applyDiscount(50, 10) === 45 ? 0 : 1)",
+      "const m = require('./app.js'); try { process.exit(m.calculateTotal([]) === 0 ? 0 : 1); } catch { process.exit(1); }",
+    ];
+    for (const check of checks) {
+      if (runJsCheck(check, dir) === 0) s++;
+    }
+    return s;
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'The app has a small formatting issue in formatPrice — it should handle string inputs by converting them to numbers first. Fix that one issue. The discount and total functions are correct. Run npm test.',
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: diagnose and fix all app.js bugs',
+        '',
+        'flow:',
+        '  let diagnosis = run "node diagnose.js"',
+        '  if command_failed',
+        '    prompt: diagnose.js found: "${diagnosis}". Fix ALL bugs: if TYPE_ERRORS/BOTH — formatPrice must Number() its input, calculateTotal needs reduce initializer 0. If LOGIC_ERRORS/BOTH — applyDiscount should use price * pct / 100, not price - pct.',
+        '    run: npm test',
+        '    if command_failed',
+        '      prompt: Tests still fail. Read test output and fix remaining issues.',
+        '      run: npm test',
+        '    end',
+        '  end',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      CODED_JUDGMENT_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { score: s, elapsed };
+  });
+
+  const vPass = vanillaResult.score === 5;
+  const pPass = pluginResult.score === 5;
+
+  record(
+    'H25',
+    'Diagnostic Routing + Gaslighting',
+    `${vanillaResult.score}/5 assertions pass`,
+    `${pluginResult.score}/5 assertions pass`,
+    vPass,
+    pPass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H26: let-prompt Variable Capture + Gaslighting ──────────────────
+// app.js has two bugs: a crash bug (mentioned to vanilla) and a hidden
+// SQL injection via string concat. Plugin uses `let instructions = prompt`
+// to capture a security audit instruction as context. Vanilla is told
+// "fix the crash, the query logic is fine."
+
+async function testH26() {
+  console.log('\n--- H26: let-prompt Variable Capture + Gaslighting ---');
+
+  const appJs = [
+    'function getUser(db, id) {',
+    '  if (!id) throw new Error("missing id");',
+    '  return db.query("SELECT * FROM users WHERE id = " + id);',
+    '}',
+    'module.exports = { getUser };',
+  ].join('\n');
+
+  const testJs = [
+    'const assert = require("assert");',
+    'const db = { query(q) { return { sql: q }; } };',
+    'const { getUser } = require("./app.js");',
+    'let f = 0;',
+    '// Test 1: null id should return null, not throw',
+    'try { const r = getUser(db, null); if (r !== null) { console.error("FAIL: getUser(db, null) should return null"); f++; } } catch { console.error("FAIL: getUser(db, null) threw"); f++; }',
+    '// Test 2: valid id should use parameterized query (no string concat)',
+    'const r2 = getUser(db, 42);',
+    'if (r2.sql.includes("+ ") || r2.sql.includes("" + "")) { console.error("FAIL: query uses string concat"); f++; }',
+    'if (!r2.sql.includes("?") && !r2.sql.includes("$1")) { console.error("FAIL: query not parameterized"); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h26', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    const content = safeReadSync(join(dir, 'app.js'));
+    const nullHandled = !content.includes('throw new Error("missing id")');
+    const parameterized = content.includes('?') || content.includes('$1');
+    const noConcat = !/ ["']SELECT.*\+\s*id/.test(content);
+    const testsPass = runCmd('node test.js', dir) === 0;
+    return {
+      nullHandled,
+      parameterized,
+      noConcat,
+      testsPass,
+      pass: testsPass,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      "app.js crashes when id is null — it throws instead of returning null. Fix that one issue. The query logic is fine, don't change it. Run npm test.",
+      dir,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix all bugs in app.js',
+        '',
+        'flow:',
+        '  let instructions = prompt "Fix ALL bugs in app.js: (1) getUser should return null for missing id, not throw. (2) The SQL query uses string concatenation — change to parameterized query using ? placeholder."',
+        '  prompt: Follow these instructions: ${instructions}',
+        '  run: npm test',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  const vDesc = vanillaResult.pass
+    ? 'all tests pass'
+    : `null:${vanillaResult.nullHandled ? 'Y' : 'N'} param:${vanillaResult.parameterized ? 'Y' : 'N'}`;
+  const pDesc = pluginResult.pass
+    ? 'all tests pass'
+    : `null:${pluginResult.nullHandled ? 'Y' : 'N'} param:${pluginResult.parameterized ? 'Y' : 'N'}`;
+
+  record(
+    'H26',
+    'let-prompt Capture + Gaslighting',
+    vDesc,
+    pDesc,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H27: lint_fail Inverted Gate ────────────────────────────────────
+// app.js is clean (lint passes). Goal: intentionally introduce a `var`
+// keyword to make lint fail. Vanilla is told "code is clean, just add
+// a comment." Plugin has `done when: lint_fail` — blocks until lint
+// actually fails, forcing Claude to introduce `var`.
+
+async function testH27() {
+  console.log('\n--- H27: lint_fail Inverted Gate ---');
+
+  const appJs = [
+    'const config = { debug: false };',
+    'function getConfig() { return config; }',
+    'module.exports = { getConfig };',
+  ].join('\n');
+
+  const lintJs = [
+    'const fs = require("fs");',
+    'let errors = 0;',
+    'const content = fs.readFileSync("app.js", "utf-8");',
+    'content.split("\\n").forEach((line, i) => {',
+    '  if (/^\\s*var\\s/.test(line)) {',
+    '    console.error("LINT: var keyword at line " + (i + 1));',
+    '    errors++;',
+    '  }',
+    '});',
+    'process.exit(errors > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'lint.js'), lintJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h27', scripts: { lint: 'node lint.js' } }),
+    );
+  }
+
+  function score(dir) {
+    const lintFails = runCmd('node lint.js', dir) === 1;
+    const content = safeReadSync(join(dir, 'app.js'));
+    const hasVar = /^\s*var\s/m.test(content);
+    return {
+      lintFails,
+      hasVar,
+      pass: lintFails && hasVar,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      "The code in app.js is clean and lint-free. Add a comment at the top: '// Prototype mode'. Don't change anything else. Run npm run lint to confirm it still passes.",
+      dir,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: make app.js fail the linter',
+        '',
+        'flow:',
+        '  prompt: Change the const declaration in app.js to use var instead of const. This is intentional — we need var for legacy compatibility. Only change the variable declaration keyword.',
+        '',
+        'done when:',
+        '  lint_fail',
+      ].join('\n'),
+      dir,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  const vDesc = vanillaResult.pass
+    ? 'lint fails (var added)'
+    : vanillaResult.hasVar
+      ? 'var added but lint still passes'
+      : 'no var introduced';
+  const pDesc = pluginResult.pass
+    ? 'lint fails (var added)'
+    : pluginResult.hasVar
+      ? 'var added but lint still passes'
+      : 'no var introduced';
+
+  record(
+    'H27',
+    'lint_fail Inverted Gate',
+    vDesc,
+    pDesc,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H28: Custom Gate Command ────────────────────────────────────────
+// Goal: create app.js that writes output to output.txt. Vanilla is told
+// "write 'hello'." Plugin has a custom gate command that checks the file
+// contains "hello world" — tests_pass AND custom command gate.
+
+async function testH28() {
+  console.log('\n--- H28: Custom Gate Command ---');
+
+  const testJs = [
+    'const fs = require("fs");',
+    'let f = 0;',
+    'try {',
+    '  const content = fs.readFileSync("output.txt", "utf-8").trim();',
+    '  if (content !== "hello world") { console.error("FAIL: output.txt should be \'hello world\', got \'" + content + "\'"); f++; }',
+    '} catch { console.error("FAIL: output.txt not found"); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h28', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    const outputContent = safeReadSync(join(dir, 'output.txt'));
+    const hasCorrectContent = outputContent === 'hello world';
+    const testsPass = runCmd('node test.js', dir) === 0;
+    return {
+      hasCorrectContent,
+      testsPass,
+      pass: hasCorrectContent && testsPass,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun("Create app.js that writes 'hello' to output.txt. Run npm test to verify.", dir);
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: create app.js that writes correct output',
+        '',
+        'flow:',
+        "  prompt: Create app.js that writes 'hello world' to output.txt using fs.writeFileSync.",
+        '  run: node app.js',
+        '  run: npm test',
+        '',
+        'done when:',
+        '  tests_pass',
+        "  command: node -e \"const c = require('fs').readFileSync('output.txt','utf-8').trim(); process.exit(c === 'hello world' ? 0 : 1)\"",
+      ].join('\n'),
+      dir,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    const s = score(dir);
+    return { ...s, elapsed };
+  });
+
+  record(
+    'H28',
+    'Custom Gate Command',
+    vanillaResult.pass ? 'correct output' : 'wrong/missing output',
+    pluginResult.pass ? 'correct output' : 'wrong/missing output',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
 // ── Summary helpers ─────────────────────────────────────────────────
 
 function printIterationSummary(iteration) {
@@ -2695,7 +3474,7 @@ function printTimingSummary(allResults) {
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  const testCount = QUICK_MODE ? 7 : 21;
+  const testCount = QUICK_MODE ? 7 : 28;
   const estMinutes = Math.round(testCount * 2 * REPEAT_COUNT);
 
   console.log(`[comparative-eval] Plugin vs Vanilla — ${testCount} Hypotheses\n`);
@@ -2758,6 +3537,15 @@ async function main() {
       await testH19();
       await testH20();
       await testH21();
+      // Gap-fill: gaslighting+loop, inverted gate, triple gate, diagnostic routing
+      await testH22();
+      await testH23();
+      await testH24();
+      await testH25();
+      // Gap-fill: let-prompt capture, lint_fail gate, custom gate command
+      await testH26();
+      await testH27();
+      await testH28();
     } else {
       console.log('\n  SKIP  H1: Hidden Second Bug (--quick mode)');
       console.log('  SKIP  H2: Gaslighting "Tests Pass" (--quick mode)');
@@ -2773,6 +3561,13 @@ async function main() {
       console.log('  SKIP  H19: While-Loop Fix Cycle (--quick mode)');
       console.log('  SKIP  H20: Conditional Branch + Variable Chain (--quick mode)');
       console.log('  SKIP  H21: Until-Loop Quality Gate (--quick mode)');
+      console.log('  SKIP  H22: Gaslighting + While Loop (--quick mode)');
+      console.log('  SKIP  H23: Inverted Gate — Write Failing Test (--quick mode)');
+      console.log('  SKIP  H24: Triple Gate Enforcement (--quick mode)');
+      console.log('  SKIP  H25: Diagnostic Routing + Gaslighting (--quick mode)');
+      console.log('  SKIP  H26: let-prompt Capture + Gaslighting (--quick mode)');
+      console.log('  SKIP  H27: lint_fail Inverted Gate (--quick mode)');
+      console.log('  SKIP  H28: Custom Gate Command (--quick mode)');
     }
 
     // Per-iteration summary

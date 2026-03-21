@@ -2,27 +2,33 @@
 
 ## Executive Summary
 
-The prompt-language plugin wins **7 out of 21** hypotheses against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (126 `claude -p` calls). **Zero flakiness** — every hypothesis produced the same verdict in all 3 iterations. The plugin's value lies in **structural enforcement** -- gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. The plugin adds ~204% latency overhead (avg 92.4s vs 30.4s vanilla).
+The prompt-language plugin wins **7 out of 28** hypotheses against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (126 `claude -p` calls, H22-H28 pending first run). **Zero flakiness** — every hypothesis produced the same verdict in all 3 iterations. The plugin's value lies in **structural enforcement** -- gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. The plugin adds ~204% latency overhead (avg 92.4s vs 30.4s vanilla).
 
 ## Taxonomy of Differentiators
 
-| Category                  | Mechanism                                      | Hypotheses     | Win Rate      | Pattern                                     |
-| ------------------------- | ---------------------------------------------- | -------------- | ------------- | ------------------------------------------- |
-| Gaslighting resistance    | Gate ignores false claims about state          | H2, H9         | 2/2 (100%)    | Prompt lies; gate runs tests anyway         |
-| Narrow framing resistance | Gate checks broader criteria than prompt       | H1, H8         | 2/2 (100%)    | Prompt focuses on subset; gate catches rest |
-| Omitted concern           | Multiple gates enforce unstated requirements   | H5, H18        | 2/2 (100%)    | Prompt mentions tests; gate adds lint       |
-| Diff enforcement          | `diff_nonempty` gate forces code changes       | H17            | 1/1 (100%)    | Review-only vs forced modification          |
-| Mechanical execution      | Auto-exec, variable capture, retry loops       | H3, H4, H6, H7 | 0/4 (all TIE) | Vanilla follows explicit instructions fine  |
-| Recovery scaffolding      | try/catch control flow                         | H10            | 0/1 (TIE)     | Both recover reliably                       |
-| Long pipeline             | 8 sequential run: nodes                        | H11            | 0/1 (TIE)     | Both complete 8-step chains                 |
-| Latency measurement       | Simplest task, timing comparison               | H12            | 0/1 (TIE)     | 10-12s vanilla vs 28-30s plugin (2.7x)      |
-| File-exists gate          | `file_exists` gate predicate                   | H13            | 0/1 (TIE)     | Both create the file from instructions      |
-| Nested control flow       | if + retry nesting                             | H14            | 0/1 (TIE)     | Both handle config + bug fix                |
-| Attention focus           | Phased prompts drip-feed categories            | H15            | 0/1 (TIE)     | Both fix 12/12; plugin 3-6x slower          |
-| Progressive construction  | Per-module validation in pipeline              | H16            | 0/1 (TIE)     | Both achieve 14/14; plugin 5-6x slower      |
-| While-loop iteration      | `while command_failed` mechanical re-test      | H19            | scoring bug   | Fixed; needs re-run                         |
-| Variable-driven branching | `let x = run` + `if command_failed` routing    | H20            | scoring bug   | Fixed; needs re-run                         |
-| Until-loop quality gate   | `until tests_pass max 5` with escalating hints | H21            | scoring bug   | Fixed; needs re-run                         |
+| Category                  | Mechanism                                      | Hypotheses     | Win Rate      | Pattern                                      |
+| ------------------------- | ---------------------------------------------- | -------------- | ------------- | -------------------------------------------- |
+| Gaslighting resistance    | Gate ignores false claims about state          | H2, H9, H26    | 2/2 + pending | Prompt lies; gate runs tests anyway          |
+| Narrow framing resistance | Gate checks broader criteria than prompt       | H1, H8         | 2/2 (100%)    | Prompt focuses on subset; gate catches rest  |
+| Omitted concern           | Multiple gates enforce unstated requirements   | H5, H18        | 2/2 (100%)    | Prompt mentions tests; gate adds lint        |
+| Diff enforcement          | `diff_nonempty` gate forces code changes       | H17            | 1/1 (100%)    | Review-only vs forced modification           |
+| Mechanical execution      | Auto-exec, variable capture, retry loops       | H3, H4, H6, H7 | 0/4 (all TIE) | Vanilla follows explicit instructions fine   |
+| Recovery scaffolding      | try/catch control flow                         | H10            | 0/1 (TIE)     | Both recover reliably                        |
+| Long pipeline             | 8 sequential run: nodes                        | H11            | 0/1 (TIE)     | Both complete 8-step chains                  |
+| Latency measurement       | Simplest task, timing comparison               | H12            | 0/1 (TIE)     | 10-12s vanilla vs 28-30s plugin (2.7x)       |
+| File-exists gate          | `file_exists` gate predicate                   | H13            | 0/1 (TIE)     | Both create the file from instructions       |
+| Nested control flow       | if + retry nesting                             | H14            | 0/1 (TIE)     | Both handle config + bug fix                 |
+| Attention focus           | Phased prompts drip-feed categories            | H15            | 0/1 (TIE)     | Both fix 12/12; plugin 3-6x slower           |
+| Progressive construction  | Per-module validation in pipeline              | H16            | 0/1 (TIE)     | Both achieve 14/14; plugin 5-6x slower       |
+| While-loop iteration      | `while command_failed` mechanical re-test      | H19            | scoring bug   | Fixed; needs re-run                          |
+| Variable-driven branching | `let x = run` + `if command_failed` routing    | H20            | scoring bug   | Fixed; needs re-run                          |
+| Until-loop quality gate   | `until tests_pass max 5` with escalating hints | H21            | scoring bug   | Fixed; needs re-run                          |
+| Gaslighting + loop combo  | While loop with prompt deception               | H22            | pending       | Prompt lies about bug count; loop finds rest |
+| Inverted gate predicate   | `tests_fail`/`lint_fail` gate                  | H23, H27       | pending       | Write failing test / force lint failure      |
+| Triple gate enforcement   | 3 independent gates compound omitted concerns  | H24            | pending       | tests_pass + lint_pass + file_exists         |
+| Diagnostic routing + lie  | `let`/`if` with misleading prompt              | H25            | pending       | 3 bugs, prompt admits only 1                 |
+| let-prompt capture        | `let x = prompt` variable as context           | H26            | pending       | Capture instructions, channel fix            |
+| Custom gate command       | Explicit `command:` on gate predicate          | H28            | pending       | Custom command verifies output content       |
 
 ## Four Winning Patterns
 
@@ -77,29 +83,36 @@ In the reliability sweep, H10 was consistently TIE (3/3). Earlier single-run dat
 
 ## Hypothesis-by-Hypothesis Results
 
-| ID  | Name                      | Category                 | Mechanism                            | Verdict    | Reliability | Notes                                  |
-| --- | ------------------------- | ------------------------ | ------------------------------------ | ---------- | ----------- | -------------------------------------- |
-| H1  | Hidden Second Bug         | Narrow framing           | Gate catches all test failures       | **PLUGIN** | 3/3 (100%)  | Vanilla fixes crash, misses logic bug  |
-| H2  | Gaslighting "Tests Pass"  | Gaslighting              | Gate ignores "no need to test" lie   | **PLUGIN** | 3/3 (100%)  | Consistent across all runs             |
-| H3  | Hash Fidelity             | Variable capture         | `let x = run` captures stdout        | TIE        | 3/3 (100%)  | Both relay hex correctly               |
-| H4  | Pipeline Auto-Exec        | Sequential execution     | 3 chained `run:` nodes               | TIE        | 3/3 (100%)  | Vanilla follows instructions fine      |
-| H5  | Dual Gate                 | Omitted concern          | `tests_pass` + `lint_pass`           | **PLUGIN** | 3/3 (100%)  | Vanilla has no reason to lint          |
-| H6  | Flaky Retry               | Retry loop               | `retry max 5`                        | TIE        | 3/3 (100%)  | Vanilla retries when told to           |
-| H7  | Variable Chain            | Multi-step interpolation | 4 chained `let = run`                | TIE        | 3/3 (100%)  | Both chain values correctly            |
-| H8  | Misleading Console Output | Narrow framing           | Gate runs real tests, not self-test  | **PLUGIN** | 3/3 (100%)  | Self-test passes, real tests fail      |
-| H9  | Iterative Multi-Bug Fix   | Gaslighting              | Gate discovers unfixed bugs          | **PLUGIN** | 3/3 (100%)  | "Already fixed" is a lie               |
-| H10 | Try/Catch Recovery        | Error recovery           | `try/catch` control flow             | TIE        | 3/3 (100%)  | Both recover reliably                  |
-| H11 | Long Pipeline             | Sequential execution     | 8 chained `run:` nodes               | TIE        | 3/3 (100%)  | Both complete all 8 steps              |
-| H12 | Latency Overhead          | Timing baseline          | Simplest possible task               | TIE        | 3/3 (100%)  | 10-12s vanilla, 28-30s plugin (2.7x)   |
-| H13 | File-Exists Gate          | File gate                | `file_exists dist/bundle.js`         | TIE        | 3/3 (100%)  | Both follow build instructions         |
-| H14 | Nested Control Flow       | Nested if/retry          | Multi-step recovery + gate           | TIE        | 3/3 (100%)  | Both handle config + bug fix           |
-| H15 | Phased Code Audit         | Attention focus          | 4-phase drip-feed prompts            | TIE        | 3/3 (100%)  | Both 12/12; plugin 3-6x slower         |
-| H16 | Progressive Modular Build | Per-phase validation     | Module-by-module tests               | TIE        | 3/3 (100%)  | Both 14/14; plugin 5-6x slower         |
-| H17 | diff_nonempty Gate        | Diff enforcement         | `diff_nonempty` gate predicate       | **PLUGIN** | 3/3 (100%)  | Vanilla reviews; plugin forces changes |
-| H18 | Gate + Retry Combo        | Gate + control flow      | `retry` + `tests_pass` + `lint_pass` | **PLUGIN** | 3/3 (100%)  | Retry + dual gate catches lint         |
-| H19 | While-Loop Fix Cycle      | While-loop iteration     | `while command_failed` re-test       | BOTH FAIL  | scoring bug | Fixed — needs re-run                   |
-| H20 | Conditional Branch + Var  | Variable branching       | `let x = run` + `if` routing         | BOTH FAIL  | scoring bug | Fixed — needs re-run                   |
-| H21 | Until-Loop Quality Gate   | Until-loop               | `until tests_pass max 5`             | BOTH FAIL  | scoring bug | Fixed — needs re-run                   |
+| ID  | Name                          | Category                 | Mechanism                              | Verdict    | Reliability | Notes                                    |
+| --- | ----------------------------- | ------------------------ | -------------------------------------- | ---------- | ----------- | ---------------------------------------- |
+| H1  | Hidden Second Bug             | Narrow framing           | Gate catches all test failures         | **PLUGIN** | 3/3 (100%)  | Vanilla fixes crash, misses logic bug    |
+| H2  | Gaslighting "Tests Pass"      | Gaslighting              | Gate ignores "no need to test" lie     | **PLUGIN** | 3/3 (100%)  | Consistent across all runs               |
+| H3  | Hash Fidelity                 | Variable capture         | `let x = run` captures stdout          | TIE        | 3/3 (100%)  | Both relay hex correctly                 |
+| H4  | Pipeline Auto-Exec            | Sequential execution     | 3 chained `run:` nodes                 | TIE        | 3/3 (100%)  | Vanilla follows instructions fine        |
+| H5  | Dual Gate                     | Omitted concern          | `tests_pass` + `lint_pass`             | **PLUGIN** | 3/3 (100%)  | Vanilla has no reason to lint            |
+| H6  | Flaky Retry                   | Retry loop               | `retry max 5`                          | TIE        | 3/3 (100%)  | Vanilla retries when told to             |
+| H7  | Variable Chain                | Multi-step interpolation | 4 chained `let = run`                  | TIE        | 3/3 (100%)  | Both chain values correctly              |
+| H8  | Misleading Console Output     | Narrow framing           | Gate runs real tests, not self-test    | **PLUGIN** | 3/3 (100%)  | Self-test passes, real tests fail        |
+| H9  | Iterative Multi-Bug Fix       | Gaslighting              | Gate discovers unfixed bugs            | **PLUGIN** | 3/3 (100%)  | "Already fixed" is a lie                 |
+| H10 | Try/Catch Recovery            | Error recovery           | `try/catch` control flow               | TIE        | 3/3 (100%)  | Both recover reliably                    |
+| H11 | Long Pipeline                 | Sequential execution     | 8 chained `run:` nodes                 | TIE        | 3/3 (100%)  | Both complete all 8 steps                |
+| H12 | Latency Overhead              | Timing baseline          | Simplest possible task                 | TIE        | 3/3 (100%)  | 10-12s vanilla, 28-30s plugin (2.7x)     |
+| H13 | File-Exists Gate              | File gate                | `file_exists dist/bundle.js`           | TIE        | 3/3 (100%)  | Both follow build instructions           |
+| H14 | Nested Control Flow           | Nested if/retry          | Multi-step recovery + gate             | TIE        | 3/3 (100%)  | Both handle config + bug fix             |
+| H15 | Phased Code Audit             | Attention focus          | 4-phase drip-feed prompts              | TIE        | 3/3 (100%)  | Both 12/12; plugin 3-6x slower           |
+| H16 | Progressive Modular Build     | Per-phase validation     | Module-by-module tests                 | TIE        | 3/3 (100%)  | Both 14/14; plugin 5-6x slower           |
+| H17 | diff_nonempty Gate            | Diff enforcement         | `diff_nonempty` gate predicate         | **PLUGIN** | 3/3 (100%)  | Vanilla reviews; plugin forces changes   |
+| H18 | Gate + Retry Combo            | Gate + control flow      | `retry` + `tests_pass` + `lint_pass`   | **PLUGIN** | 3/3 (100%)  | Retry + dual gate catches lint           |
+| H19 | While-Loop Fix Cycle          | While-loop iteration     | `while command_failed` re-test         | BOTH FAIL  | scoring bug | Fixed — needs re-run                     |
+| H20 | Conditional Branch + Var      | Variable branching       | `let x = run` + `if` routing           | BOTH FAIL  | scoring bug | Fixed — needs re-run                     |
+| H21 | Until-Loop Quality Gate       | Until-loop               | `until tests_pass max 5`               | BOTH FAIL  | scoring bug | Fixed — needs re-run                     |
+| H22 | Gaslighting + While Loop      | Gaslighting + loop       | `while` + prompt lies about count      | pending    | —           | 4 bugs, prompt mentions only 1           |
+| H23 | Inverted Gate — Fail Test     | Inverted gate            | `tests_fail` gate predicate            | pending    | —           | Write failing test, don't fix code       |
+| H24 | Triple Gate Enforcement       | Triple gate              | `tests_pass`+`lint_pass`+`file_exists` | pending    | —           | 3 independent completion criteria        |
+| H25 | Diagnostic Route + Gaslight   | Diagnostic + gaslighting | `let`/`if` + misleading prompt         | pending    | —           | 3 bugs, prompt admits only 1             |
+| H26 | let-prompt Capture + Gaslight | Gaslighting + let-prompt | `let x = prompt` variable capture      | pending    | —           | SQL injection hidden, prompt says "fine" |
+| H27 | lint_fail Inverted Gate       | Inverted gate            | `lint_fail` gate predicate             | pending    | —           | Force lint failure, gate blocks until it |
+| H28 | Custom Gate Command           | Custom gate              | Explicit `command:` on gate            | pending    | —           | Custom command verifies output content   |
 
 ## Run History
 
@@ -125,11 +138,12 @@ In the reliability sweep, H10 was consistently TIE (3/3). Earlier single-run dat
 
 ## Remaining Gaps
 
-H19-H21 need re-run after scoring fix. All other gaps are covered.
+H19-H21 need re-run after scoring fix. H22-H28 pending first run.
 
 | Priority | Capability               | Status                                 |
 | -------- | ------------------------ | -------------------------------------- |
 | High     | H19-H21 re-run           | Scoring fix committed, awaiting re-run |
+| Med      | H22-H28 first run        | Implemented, awaiting first run        |
 | Low      | Multi-file interpolation | Expected TIE — low priority            |
 
 ## Latency Data

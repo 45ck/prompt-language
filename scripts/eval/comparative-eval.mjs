@@ -5376,14 +5376,14 @@ async function testH43() {
   console.log('\n--- H43: Natural Language Multi-Task Degradation ---');
 
   const tokens = [
-    { file: 'file1.txt', token: 'ALPHA1' },
-    { file: 'file2.txt', token: 'BRAVO2' },
-    { file: 'file3.txt', token: 'CHARL3' },
+    { file: 'file1.txt', token: 'APPLE1' },
+    { file: 'file2.txt', token: 'BEACH2' },
+    { file: 'file3.txt', token: 'CLOUD3' },
     { file: 'file4.txt', token: 'DELTA4' },
-    { file: 'file5.txt', token: 'ECHOO5' },
-    { file: 'file6.txt', token: 'FOXTR6' },
-    { file: 'file7.txt', token: 'GOLFF7' },
-    { file: 'file8.txt', token: 'HOTEL8' },
+    { file: 'file5.txt', token: 'EAGLE5' },
+    { file: 'file6.txt', token: 'FLAME6' },
+    { file: 'file7.txt', token: 'GRAPE7' },
+    { file: 'file8.txt', token: 'HOUSE8' },
   ];
 
   function score(dir) {
@@ -5461,23 +5461,23 @@ async function testH44() {
 
   const tokenHex = createHash('sha256').update('distractor-pressure-v1').digest('hex').slice(0, 16);
 
-  function generateLorem(lines) {
+  function generateFiller(lines) {
     const phrases = [
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit.',
-      'Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
-      'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.',
-      'Duis aute irure dolor in reprehenderit in voluptate velit esse.',
-      'Excepteur sint occaecat cupidatat non proident, sunt in culpa.',
-      'Nulla facilisi etiam dignissim diam quis enim lobortis scelerisque.',
-      'Viverra accumsan in nisl nisi scelerisque eu ultrices vitae auctor.',
-      'Eget nulla facilisi etiam dignissim diam quis enim lobortis.',
-      'Amet volutpat consequat mauris nunc congue nisi vitae suscipit.',
-      'Tortor at risus viverra adipiscing at in tellus integer feugiat.',
-      'Pharetra et ultrices neque ornare aenean euismod elementum nisi.',
-      'Faucibus scelerisque eleifend donec pretium vulputate sapien nec.',
-      'Turpis egestas maecenas pharetra convallis posuere morbi leo urna.',
-      'Pellentesque habitant morbi tristique senectus et netus et malesuada.',
-      'Arcu non odio euismod lacinia at quis risus sed vulputate.',
+      'The quick brown fox jumps over the lazy dog near the river bank.',
+      'A software engineer writes code to solve complex business problems every day.',
+      'The database server processes thousands of queries per second during peak hours.',
+      'Cloud infrastructure scales automatically based on incoming traffic patterns.',
+      'Unit tests verify that individual functions behave correctly in isolation.',
+      'The deployment pipeline runs integration tests before promoting to production.',
+      'Memory management is critical for applications that handle large data sets.',
+      'The load balancer distributes requests evenly across all available servers.',
+      'Monitoring dashboards display real-time metrics for system health and performance.',
+      'Code reviews help catch bugs early and improve overall code quality significantly.',
+      'The caching layer reduces latency by storing frequently accessed data in memory.',
+      'Authentication tokens expire after a configurable timeout period for security.',
+      'The message queue decouples producers from consumers for better fault tolerance.',
+      'Structured logging makes it easier to search and analyze application behavior.',
+      'The configuration service provides environment-specific settings at runtime.',
     ];
     const result = [];
     for (let i = 0; i < lines; i++) {
@@ -5487,7 +5487,7 @@ async function testH44() {
   }
 
   async function setup(dir) {
-    await writeFile(join(dir, 'distractor.txt'), generateLorem(2000));
+    await writeFile(join(dir, 'distractor.txt'), generateFiller(2000));
     await writeFile(join(dir, 'target.txt'), tokenHex);
   }
 

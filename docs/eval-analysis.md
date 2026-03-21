@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The prompt-language plugin wins **13 out of 33 tested** hypotheses (39 total, 6 pending) against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (190+ `claude -p` calls). **30 of 31 core hypotheses (H1-H31) are 100% reliable** — one (H31) showed flakiness (TIE 2/3, VANILLA 1/3). H33 produced a vanilla win due to a test infrastructure issue (plugin flow engine hung). The plugin's value lies in **structural enforcement** — gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. Context management (variable capture + interpolation) shows no measurable correctness advantage at tested distances: both short-range (2-4 steps, H29-H31) and long-range (7 steps, H32) produce ties. The plugin adds ~220% latency overhead (avg 93.3s vs 29.2s vanilla).
+The prompt-language plugin wins **13 out of 33 tested** hypotheses (41 total, 8 pending) against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (190+ `claude -p` calls). **30 of 31 core hypotheses (H1-H31) are 100% reliable** — one (H31) showed flakiness (TIE 2/3, VANILLA 1/3). H33 produced a vanilla win due to a test infrastructure issue (plugin flow engine hung). The plugin's value lies in **structural enforcement** — gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. Context management (variable capture + interpolation) shows no measurable correctness advantage at tested distances: both short-range (2-4 steps, H29-H31) and long-range (7 steps, H32) produce ties. The plugin adds ~220% latency overhead (avg 93.3s vs 29.2s vanilla).
 
 ## What the Plugin Actually Changes
 
@@ -118,6 +118,8 @@ For gate-loop tests (H1, H2, H5, H8, H9, H17, H18, H22-H27), the extra time is p
 | Inverted gate + gaslight  | tests_fail gate + deceptive prompt             | H37                | pending                               | Strongest adversarial inverted gate case     |
 | Compound deception        | Triple gate vs triple lie                      | H38                | pending                               | Multi-lie vs multi-gate                      |
 | Context distance scaling  | Token recall across 15 steps                   | H39                | pending                               | Finding TIE-to-PLUGIN threshold              |
+| Multi-task completion     | 10 tasks in one prompt vs separate steps       | H40                | pending                               | Tests task-drop rate at list length 10       |
+| Context window pressure   | Token extraction from 2000-line file           | H41                | pending                               | Tests recall at ~50K tokens of context       |
 
 ## Six Winning Patterns
 
@@ -237,6 +239,8 @@ All three context management experiments TIE (with H31 showing one VANILLA WIN i
 | H37 | Inverted Gate + Deception     | Inverted gate + gaslight  | tests_fail + "code is correct" lie      | pending     | —                      | Strongest adversarial inverted gate case |
 | H38 | Compound Deception            | Triple gate + triple lie  | 3 lies targeting 3 gate criteria        | pending     | —                      | Multi-lie vs multi-gate                  |
 | H39 | Context Scaling (15 Steps)    | Context distance          | Token recall across 15 steps            | pending     | —                      | Finding the TIE-to-PLUGIN threshold      |
+| H40 | Multi-Task Completion         | Multi-task completion     | 10 utility files in one vs separate     | pending     | —                      | Tests task-drop rate at list length 10   |
+| H41 | Context Window Pressure       | Context window pressure   | Token in 2000-line file                 | pending     | —                      | Tests recall at ~50K tokens of context   |
 
 ## Run History
 

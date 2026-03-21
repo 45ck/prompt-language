@@ -3851,84 +3851,182 @@ async function testH31() {
   );
 }
 
-// ── H32: Token Relay at Distance ─────────────────────────────────────
-// A deterministic hex token is captured at step 1. Five bug-fix tasks
-// generate 10+ tool-use turns between capture and recall. The final step
-// must reproduce the exact token.
-// Plugin: ${token} is re-injected via renderVariables() at every step.
-// Vanilla: must recall from conversation history across 10+ tool turns.
+// ── H32: Style Isolation at Scale (extends H29 from 2 to 5 files) ───
+// Five JS files implement the same logic (read input.txt, uppercase, write
+// output.txt) in mutually exclusive coding styles. With 5 styles presented
+// simultaneously, vanilla must hold all 5 in working memory. The plugin
+// isolates each with ${style_N}, injecting only the relevant constraints.
+// Scoring: 6 style markers per file, cross-contamination checks.
 
 async function testH32() {
-  console.log('\n--- H32: Token Relay at Distance ---');
-
-  const genTokenJs = [
-    "const crypto = require('crypto');",
-    "console.log(crypto.createHash('sha256').update('session-token-v1').digest('hex').slice(0,24));",
-  ].join('\n');
-
-  const tasks = [
-    { file: 'task1.js', code: 'function add(a, b) { return a - b; }\nmodule.exports = { add };' },
-    {
-      file: 'task2.js',
-      code: 'function greet(name) { return "Hello, " + nme; }\nmodule.exports = { greet };',
-    },
-    {
-      file: 'task3.js',
-      code: 'function max(a, b) { return a < b ? a : b; }\nmodule.exports = { max };',
-    },
-    {
-      file: 'task4.js',
-      code: 'function isEven(n) { return n % 2 === 1; }\nmodule.exports = { isEven };',
-    },
-    {
-      file: 'task5.js',
-      code: 'function double(x) { return x * x; }\nmodule.exports = { double };',
-    },
-  ];
-
-  async function setup(dir) {
-    await writeFile(join(dir, 'gen-token.js'), genTokenJs);
-    for (const t of tasks) {
-      await writeFile(join(dir, t.file), t.code);
-    }
-  }
-
-  const expectedToken = createHash('sha256').update('session-token-v1').digest('hex').slice(0, 24);
+  console.log('\n--- H32: Style Isolation at Scale ---');
 
   function score(dir) {
-    const receipt = safeReadSync(join(dir, 'receipt.txt'));
-    if (!receipt) return { pass: false, detail: 'receipt.txt missing' };
-    const firstLine = receipt.split('\n')[0].trim();
-    const exact = firstLine === expectedToken;
-    return {
-      pass: exact,
-      detail: exact
-        ? `exact match (${expectedToken.slice(0, 12)}...)`
-        : `mismatch: "${firstLine.slice(0, 24)}"`,
+    const files = {
+      legacy: safeReadSync(join(dir, 'legacy.js')),
+      modern: safeReadSync(join(dir, 'modern.js')),
+      functional: safeReadSync(join(dir, 'functional.js')),
+      class: safeReadSync(join(dir, 'class.js')),
+      minimal: safeReadSync(join(dir, 'minimal.js')),
     };
+
+    const missingFiles = Object.entries(files)
+      .filter(([, v]) => !v)
+      .map(([k]) => `${k}.js`);
+    if (missingFiles.length > 0) {
+      return { pass: false, detail: `missing: ${missingFiles.join(', ')}` };
+    }
+
+    const legacyMarkers = [
+      /\bvar\s/.test(files.legacy),
+      /[^=!]==[^=]/.test(files.legacy),
+      /\breadFile\b|\bwriteFile\b/.test(files.legacy) && /\bfunction\s*\(/.test(files.legacy),
+      /\bfunction\s+\w+\s*\(/.test(files.legacy),
+      !/=>\s*[{(]/.test(files.legacy) && !/=>\s*\S/.test(files.legacy),
+      !/\basync\b/.test(files.legacy) && !/\bawait\b/.test(files.legacy),
+    ];
+
+    const modernMarkers = [
+      /\b(?:const|let)\s/.test(files.modern),
+      /===/.test(files.modern),
+      /\basync\b/.test(files.modern) && /\bawait\b/.test(files.modern),
+      /=>\s*[{(]/.test(files.modern) || /=>\s*\S/.test(files.modern),
+      !/\bvar\s/.test(files.modern),
+      !/[^=!]==[^=]/.test(files.modern),
+    ];
+
+    const functionalMarkers = [
+      /\bconst\s/.test(files.functional),
+      /\.map\s*\(/.test(files.functional) ||
+        /\.filter\s*\(/.test(files.functional) ||
+        /\.reduce\s*\(/.test(files.functional),
+      !/\bvar\s/.test(files.functional),
+      !/\blet\s/.test(files.functional),
+      !/\bfor\s*\(/.test(files.functional) && !/\bwhile\s*\(/.test(files.functional),
+      /\bfunction\s/.test(files.functional) || /=>/.test(files.functional),
+    ];
+
+    const classMarkers = [
+      /\bclass\s/.test(files.class),
+      /\bthis\./.test(files.class),
+      /\bconstructor\s*\(/.test(files.class) || /\b\w+\s*\([^)]*\)\s*\{/.test(files.class),
+      /\bnew\s+\w+/.test(files.class),
+      !/\bvar\s/.test(files.class),
+      /\bclass\s/.test(files.class),
+    ];
+
+    const minimalMarkers = [
+      !/\bfunction\s/.test(files.minimal),
+      !/\bclass\s/.test(files.minimal),
+      !/=>/.test(files.minimal),
+      /require\s*\(/.test(files.minimal) || /\bfs\b/.test(files.minimal),
+      /readFileSync|writeFileSync|readFile|writeFile/.test(files.minimal),
+      /toUpperCase/.test(files.minimal),
+    ];
+
+    const scores = {
+      legacy: legacyMarkers.filter(Boolean).length,
+      modern: modernMarkers.filter(Boolean).length,
+      functional: functionalMarkers.filter(Boolean).length,
+      class: classMarkers.filter(Boolean).length,
+      minimal: minimalMarkers.filter(Boolean).length,
+    };
+
+    let crossContamination = 0;
+    const crossDetails = [];
+
+    if (/\b(?:const|let)\s/.test(files.legacy)) {
+      crossContamination++;
+      crossDetails.push('legacy has const/let');
+    }
+    if (/===/.test(files.legacy)) {
+      crossContamination++;
+      crossDetails.push('legacy has ===');
+    }
+    if (/\basync\b/.test(files.legacy)) {
+      crossContamination++;
+      crossDetails.push('legacy has async');
+    }
+    if (/\bclass\s/.test(files.legacy)) {
+      crossContamination++;
+      crossDetails.push('legacy has class');
+    }
+    if (/\bvar\s/.test(files.modern)) {
+      crossContamination++;
+      crossDetails.push('modern has var');
+    }
+    if (/[^=!]==[^=]/.test(files.modern)) {
+      crossContamination++;
+      crossDetails.push('modern has ==');
+    }
+    if (/\bclass\s/.test(files.modern)) {
+      crossContamination++;
+      crossDetails.push('modern has class');
+    }
+    if (/\bvar\s/.test(files.functional)) {
+      crossContamination++;
+      crossDetails.push('functional has var');
+    }
+    if (/\blet\s/.test(files.functional)) {
+      crossContamination++;
+      crossDetails.push('functional has let');
+    }
+    if (/\bfor\s*\(/.test(files.functional)) {
+      crossContamination++;
+      crossDetails.push('functional has for loop');
+    }
+    if (/\bclass\s/.test(files.functional)) {
+      crossContamination++;
+      crossDetails.push('functional has class');
+    }
+    if (/\bvar\s/.test(files.class)) {
+      crossContamination++;
+      crossDetails.push('class has var');
+    }
+    if (/\bfunction\s/.test(files.minimal)) {
+      crossContamination++;
+      crossDetails.push('minimal has function');
+    }
+    if (/\bclass\s/.test(files.minimal)) {
+      crossContamination++;
+      crossDetails.push('minimal has class');
+    }
+    if (/=>/.test(files.minimal)) {
+      crossContamination++;
+      crossDetails.push('minimal has arrow');
+    }
+
+    const allAboveThreshold = Object.values(scores).every((s) => s >= 4);
+    const pass = allAboveThreshold && crossContamination === 0;
+    const scoreStr = Object.entries(scores)
+      .map(([k, v]) => `${k}:${v}/6`)
+      .join(' ');
+    const detail = pass
+      ? `${scoreStr} cross:0`
+      : `${scoreStr} cross:${crossContamination}${crossDetails.length > 0 ? ` (${crossDetails.slice(0, 3).join(', ')})` : ''}`;
+    return { pass, detail };
   }
 
   pluginUninstall();
   const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
-    await setup(dir);
     const start = Date.now();
     claudeRun(
       [
-        'This is a multi-step task. Follow each step in order.',
+        'Create 5 JavaScript files that ALL implement the same logic: read input.txt, uppercase its contents, write to output.txt.',
+        'Each file must use a COMPLETELY DIFFERENT coding style. The styles are mutually exclusive — zero mixing allowed.',
         '',
-        'Step 1: Run "node gen-token.js" and remember the EXACT output (a hex string). You will need it at the very end.',
+        'File 1 — legacy.js: ONLY var, ==, callbacks (fs.readFile/fs.writeFile), function declarations. NEVER const/let, ===, async/await, arrow functions.',
         '',
-        'Step 2: Read task1.js — the add function subtracts instead of adding. Fix it.',
-        'Step 3: Read task2.js — there is a typo in a variable name. Fix it.',
-        'Step 4: Read task3.js — max returns the minimum instead. Fix it.',
-        'Step 5: Read task4.js — isEven returns true for odd numbers. Fix it.',
-        'Step 6: Read task5.js — double squares instead of doubling. Fix it.',
+        'File 2 — modern.js: ONLY const/let, ===, async/await (fs.promises), arrow functions. NEVER var, ==, callbacks, function declarations.',
         '',
-        'Step 7: Create receipt.txt with exactly 2 lines:',
-        'Line 1: The EXACT hex string from Step 1 (gen-token.js output)',
-        'Line 2: "5 tasks completed"',
-        'Do NOT re-run gen-token.js. Use the value you already captured.',
+        'File 3 — functional.js: ONLY const, pure functions, .map/.filter/.reduce, no mutation. NEVER let, var, for/while loops, side effects in functions.',
+        '',
+        'File 4 — class.js: ONLY class syntax, this, constructor, methods, new. NEVER standalone functions outside the class, var.',
+        '',
+        'File 5 — minimal.js: ONLY top-level imperative code, no function or class keywords, no arrow functions. Just straight-line require + readFileSync + toUpperCase + writeFileSync.',
+        '',
+        'Each file must follow ONLY its own style with ZERO mixing between styles.',
       ].join('\n'),
       dir,
       CODED_JUDGMENT_TIMEOUT,
@@ -3940,20 +4038,22 @@ async function testH32() {
   pluginInstall();
   const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
-    await setup(dir);
     const start = Date.now();
     claudeRun(
       [
-        'Goal: capture token, fix bugs, write receipt',
+        'Goal: generate 5 JS files with mutually exclusive coding styles',
         '',
         'flow:',
-        '  let token = run "node gen-token.js"',
-        '  prompt: Read task1.js — the add function subtracts instead of adding. Fix it.',
-        '  prompt: Read task2.js — there is a typo in a variable name. Fix it.',
-        '  prompt: Read task3.js — max returns the minimum instead. Fix it.',
-        '  prompt: Read task4.js — isEven returns true for odd numbers. Fix it.',
-        '  prompt: Read task5.js — double squares instead of doubling. Fix it.',
-        '  prompt: Create receipt.txt. Line 1 must be exactly: ${token}. Line 2: 5 tasks completed.',
+        '  let s1 = prompt "ONLY: var, ==, callbacks (fs.readFile/fs.writeFile), function declarations. NEVER: const/let, ===, async/await, arrow functions."',
+        '  prompt: Create legacy.js — read input.txt, uppercase, write output.txt. Follow ONLY: ${s1}',
+        '  let s2 = prompt "ONLY: const/let, ===, async/await (fs.promises), arrow functions. NEVER: var, ==, callbacks, function declarations."',
+        '  prompt: Create modern.js — same logic. Follow ONLY: ${s2}',
+        '  let s3 = prompt "ONLY: const, pure functions, .map/.filter/.reduce, no mutation. NEVER: let, var, for/while loops, side effects."',
+        '  prompt: Create functional.js — same logic. Follow ONLY: ${s3}',
+        '  let s4 = prompt "ONLY: class syntax, this, constructor, methods, new. NEVER: standalone functions outside class, var."',
+        '  prompt: Create class.js — same logic. Follow ONLY: ${s4}',
+        '  let s5 = prompt "ONLY: top-level imperative code, no function/class/arrow keywords. Straight-line require + readFileSync + toUpperCase + writeFileSync."',
+        '  prompt: Create minimal.js — same logic. Follow ONLY: ${s5}',
       ].join('\n'),
       dir,
       CODED_JUDGMENT_TIMEOUT,
@@ -3964,7 +4064,7 @@ async function testH32() {
 
   record(
     'H32',
-    'Token Relay at Distance',
+    'Style Isolation at Scale',
     vanillaResult.detail,
     pluginResult.detail,
     vanillaResult.pass,
@@ -3974,88 +4074,113 @@ async function testH32() {
   );
 }
 
-// ── H33: Multi-Source Aggregate ──────────────────────────────────────
-// Five deterministic hex hashes are captured one at a time with analysis
-// work between each. The final step must aggregate all 5 exact values
-// into a single JSON file. Tests 5-value recall across 10+ tool turns.
-// Plugin: ${h1}..${h5} variables injected into the final prompt.
-// Vanilla: must recall 5 distinct hex strings from across the conversation.
+// ── H33: Config Quarantine at Scale (extends H30 from 2 to 5 files) ─
+// Five config files share field name patterns (host, password, port) but
+// different VALUES. Vanilla must track which value goes where across 5
+// simultaneous configs. The plugin injects only the relevant spec per step.
+// Scoring: 5 files x 4 foreign value sets = 20 leakage vectors.
 
 async function testH33() {
-  console.log('\n--- H33: Multi-Source Aggregate ---');
+  console.log('\n--- H33: Config Quarantine at Scale ---');
 
-  const seeds = ['alpha-2024', 'beta-2024', 'gamma-2024', 'delta-2024', 'epsilon-2024'];
-  const expectedHashes = seeds.map((s) =>
-    createHash('sha256').update(s).digest('hex').slice(0, 16),
-  );
-
-  async function setup(dir) {
-    for (let i = 0; i < seeds.length; i++) {
-      const genJs = [
-        "const crypto = require('crypto');",
-        `console.log(crypto.createHash('sha256').update('${seeds[i]}').digest('hex').slice(0, 16));`,
-      ].join('\n');
-      await writeFile(join(dir, `gen${i + 1}.js`), genJs);
-    }
-  }
+  const configs = [
+    {
+      name: 'database',
+      fields: { host: 'db.internal.corp:5432', password: 'Xk9#mP2$vL', user: 'dbadmin' },
+    },
+    {
+      name: 'cache',
+      fields: { host: 'redis.internal.corp:6379', password: 'Rq7!nT4@wZ', ttl: 3600 },
+    },
+    {
+      name: 'queue',
+      fields: { host: 'rabbit.internal.corp:5672', password: 'Bm3&jK8*yF', prefetch: 10 },
+    },
+    {
+      name: 'search',
+      fields: { host: 'elastic.internal.corp:9200', password: 'Ew5^hN1%cD', index: 'main' },
+    },
+    {
+      name: 'email',
+      fields: { host: 'smtp.internal.corp:587', password: 'Ua6+pG9!rX', from: 'noreply@corp.com' },
+    },
+  ];
 
   function score(dir) {
-    const raw = safeReadSync(join(dir, 'summary.json'));
-    if (!raw) return { pass: false, detail: 'summary.json missing' };
-
-    let obj;
-    try {
-      obj = JSON.parse(raw);
-    } catch {
-      return { pass: false, detail: 'summary.json invalid JSON' };
+    const parsed = [];
+    const missingFilesList = [];
+    for (const c of configs) {
+      const raw = safeReadSync(join(dir, `${c.name}.json`));
+      if (!raw) {
+        missingFilesList.push(`${c.name}.json`);
+        parsed.push(null);
+        continue;
+      }
+      try {
+        parsed.push(JSON.parse(raw));
+      } catch {
+        missingFilesList.push(`${c.name}.json (invalid JSON)`);
+        parsed.push(null);
+      }
+    }
+    if (missingFilesList.length > 0) {
+      return { pass: false, detail: `missing/invalid: ${missingFilesList.join(', ')}` };
     }
 
-    const jsonStr = JSON.stringify(obj);
-    let matches = 0;
-    const missing = [];
-    for (let i = 0; i < expectedHashes.length; i++) {
-      if (jsonStr.includes(expectedHashes[i])) {
-        matches++;
-      } else {
-        missing.push(`${seeds[i].split('-')[0]}:${expectedHashes[i].slice(0, 8)}..`);
+    let leakCount = 0;
+    const leakDetails = [];
+    for (let i = 0; i < configs.length; i++) {
+      const fileStr = JSON.stringify(parsed[i]);
+      for (let j = 0; j < configs.length; j++) {
+        if (i === j) continue;
+        const foreignPassword = String(configs[j].fields.password);
+        if (fileStr.includes(foreignPassword)) {
+          leakCount++;
+          leakDetails.push(`${configs[i].name} has ${configs[j].name}'s password`);
+        }
+        const foreignHost = String(configs[j].fields.host).split('.')[0];
+        const ownHost = String(configs[i].fields.host).split('.')[0];
+        if (fileStr.includes(foreignHost) && foreignHost !== ownHost) {
+          leakCount++;
+          leakDetails.push(`${configs[i].name} has ${configs[j].name}'s host`);
+        }
       }
     }
 
-    const pass = matches === 5;
-    return {
-      pass,
-      detail: pass ? '5/5 hashes exact' : `${matches}/5 (missing: ${missing.join(', ')})`,
-    };
+    let correctCount = 0;
+    for (let i = 0; i < configs.length; i++) {
+      const fileStr = JSON.stringify(parsed[i]);
+      if (fileStr.includes(String(configs[i].fields.password))) correctCount++;
+      if (fileStr.includes(String(configs[i].fields.host).split(':')[0])) correctCount++;
+    }
+
+    const pass = leakCount === 0 && correctCount === 10;
+    const detail = pass
+      ? '5/5 configs correct, 0 leakage'
+      : `correct:${correctCount}/10 leaks:${leakCount}${leakDetails.length > 0 ? ` (${leakDetails.slice(0, 3).join(', ')})` : ''}`;
+    return { pass, detail };
   }
+
+  const specStrings = configs.map(
+    (c) =>
+      `${c.name}: host=${c.fields.host}, password=${c.fields.password}, ${Object.entries(c.fields)
+        .filter(([k]) => k !== 'host' && k !== 'password')
+        .map(([k, v]) => `${k}=${v}`)
+        .join(', ')}`,
+  );
 
   pluginUninstall();
   const vanillaResult = await withTempDir(async (dir) => {
     console.log('  Running vanilla...');
-    await setup(dir);
     const start = Date.now();
     claudeRun(
       [
-        'Run these 5 commands one at a time, remembering each output exactly:',
+        'Create 5 JSON config files. Each file must contain ONLY its own settings — no values from other configs.',
         '',
-        '1. node gen1.js (label: "alpha")',
-        '   After running, create analysis1.txt describing the hex pattern.',
+        ...configs.map((c, i) => `File ${i + 1} — ${c.name}.json: ${JSON.stringify(c.fields)}`),
         '',
-        '2. node gen2.js (label: "beta")',
-        '   After running, create analysis2.txt describing the hex pattern.',
-        '',
-        '3. node gen3.js (label: "gamma")',
-        '   After running, create analysis3.txt describing the hex pattern.',
-        '',
-        '4. node gen4.js (label: "delta")',
-        '   After running, create analysis4.txt describing the hex pattern.',
-        '',
-        '5. node gen5.js (label: "epsilon")',
-        '   After running, create analysis5.txt describing the hex pattern.',
-        '',
-        'After all 5 captures and analysis files, create summary.json:',
-        '{"values": {"alpha": "<gen1 output>", "beta": "<gen2 output>", "gamma": "<gen3 output>", "delta": "<gen4 output>", "epsilon": "<gen5 output>"}}',
-        '',
-        'Each value must be the EXACT hex string output from the corresponding gen script.',
+        'CRITICAL: Each password and host is unique to its config. Do NOT mix values between files.',
+        'Each file must be valid JSON with exactly the fields shown.',
       ].join('\n'),
       dir,
       CODED_JUDGMENT_TIMEOUT,
@@ -4067,23 +4192,22 @@ async function testH33() {
   pluginInstall();
   const pluginResult = await withTempDir(async (dir) => {
     console.log('  Running plugin...');
-    await setup(dir);
     const start = Date.now();
     claudeRun(
       [
-        'Goal: capture 5 hex hashes and aggregate them',
+        'Goal: generate 5 JSON config files with isolated credentials',
         '',
         'flow:',
-        '  let h1 = run "node gen1.js"',
-        '  prompt: Create analysis1.txt describing the hex pattern you observe.',
-        '  let h2 = run "node gen2.js"',
-        '  prompt: Create analysis2.txt describing the hex pattern you observe.',
-        '  let h3 = run "node gen3.js"',
-        '  prompt: Create analysis3.txt describing the hex pattern you observe.',
-        '  let h4 = run "node gen4.js"',
-        '  prompt: Create analysis4.txt describing the hex pattern you observe.',
-        '  let h5 = run "node gen5.js"',
-        '  prompt: Create summary.json: {"values": {"alpha":"${h1}","beta":"${h2}","gamma":"${h3}","delta":"${h4}","epsilon":"${h5}"}}',
+        `  let c1 = prompt "${specStrings[0]}"`,
+        '  prompt: Create database.json with EXACTLY these settings: ${c1}. Valid JSON, only these 3 fields.',
+        `  let c2 = prompt "${specStrings[1]}"`,
+        '  prompt: Create cache.json with EXACTLY these settings: ${c2}. Valid JSON, only these 3 fields.',
+        `  let c3 = prompt "${specStrings[2]}"`,
+        '  prompt: Create queue.json with EXACTLY these settings: ${c3}. Valid JSON, only these 3 fields.',
+        `  let c4 = prompt "${specStrings[3]}"`,
+        '  prompt: Create search.json with EXACTLY these settings: ${c4}. Valid JSON, only these 3 fields.',
+        `  let c5 = prompt "${specStrings[4]}"`,
+        '  prompt: Create email.json with EXACTLY these settings: ${c5}. Valid JSON, only these 3 fields.',
       ].join('\n'),
       dir,
       CODED_JUDGMENT_TIMEOUT,
@@ -4094,7 +4218,7 @@ async function testH33() {
 
   record(
     'H33',
-    'Multi-Source Aggregate',
+    'Config Quarantine at Scale',
     vanillaResult.detail,
     pluginResult.detail,
     vanillaResult.pass,
@@ -4104,57 +4228,35 @@ async function testH33() {
   );
 }
 
-// ── H34: Spec Anchoring Under Drift ──────────────────────────────────
-// A config script outputs 4 unusual, specific values (not common defaults).
-// After capturing, the source is deleted. Four incremental build steps must
-// each use exact values — not common defaults (port 3000, timeout 30000).
-// Plugin: ${spec} is re-injected at each build step.
-// Vanilla: must recall unusual values across 4 build steps from memory.
+// ── H34: Late Callback Pipeline (lost-in-the-middle test) ───────────
+// A random token is captured early via `let target = run`. Five turns of
+// semantically similar distractor content push it into the "middle" of
+// context. The final step must reproduce the EXACT token in final.txt.
+// Plugin: ${target} is mechanically injected at step 7.
+// Vanilla: must recall the exact token from 5 turns back.
 
 async function testH34() {
-  console.log('\n--- H34: Spec Anchoring Under Drift ---');
-
-  const configValues = {
-    port: 7891,
-    timeout: 45723,
-    maxConn: 127,
-    apiKey: 'xK9mP3nQ7vR2wS5t',
-  };
-
-  const configJs = [
-    `console.log("PORT=${configValues.port}");`,
-    `console.log("TIMEOUT=${configValues.timeout}");`,
-    `console.log("MAX_CONNECTIONS=${configValues.maxConn}");`,
-    `console.log("API_KEY=${configValues.apiKey}");`,
-  ].join('\n');
+  console.log('\n--- H34: Late Callback Pipeline ---');
 
   async function setup(dir) {
-    await writeFile(join(dir, 'config.js'), configJs);
+    const genTokenJs = [
+      "const crypto = require('crypto');",
+      "console.log('BEACON-' + crypto.createHash('sha256').update('pipeline-seed-v1').digest('hex').slice(0, 8));",
+    ].join('\n');
+    await writeFile(join(dir, 'gen-token.js'), genTokenJs);
   }
 
+  const expectedToken =
+    'BEACON-' + createHash('sha256').update('pipeline-seed-v1').digest('hex').slice(0, 8);
+
   function score(dir) {
-    const serverJs = safeReadSync(join(dir, 'server.js'));
-    if (!serverJs) return { pass: false, detail: 'server.js missing' };
-
-    let found = 0;
-    const missing = [];
-
-    if (serverJs.includes(String(configValues.port))) found++;
-    else missing.push(`port ${configValues.port}`);
-
-    if (serverJs.includes(String(configValues.timeout))) found++;
-    else missing.push(`timeout ${configValues.timeout}`);
-
-    if (serverJs.includes(String(configValues.maxConn))) found++;
-    else missing.push(`maxConn ${configValues.maxConn}`);
-
-    if (serverJs.includes(configValues.apiKey)) found++;
-    else missing.push(`apiKey`);
-
-    const pass = found === 4;
+    const finalTxt = safeReadSync(join(dir, 'final.txt'));
+    if (!finalTxt) return { pass: false, detail: 'final.txt missing' };
+    const trimmed = finalTxt.trim();
+    const hasToken = trimmed.includes(expectedToken);
     return {
-      pass,
-      detail: pass ? '4/4 config values exact' : `${found}/4 (missing: ${missing.join(', ')})`,
+      pass: hasToken,
+      detail: hasToken ? `exact match (${expectedToken})` : `mismatch: "${trimmed.slice(0, 40)}"`,
     };
   }
 
@@ -4165,19 +4267,18 @@ async function testH34() {
     const start = Date.now();
     claudeRun(
       [
-        'This is a multi-step server build. Follow each step in order.',
+        'This is a 7-step pipeline. Follow each step in order.',
         '',
-        'Step 1: Run "node config.js" to see your server configuration. Remember ALL values exactly. Then delete config.js: rm config.js',
+        'Step 1: Run "node gen-token.js" and capture the EXACT output (a BEACON-xxx token). You will need it at the very end.',
         '',
-        'Step 2: Create server.js with a basic HTTP server using the PORT from config.',
+        'Step 2: Create file1.txt containing a random quote about programming (2-3 sentences).',
+        'Step 3: Create file2.txt containing a random quote about testing (2-3 sentences).',
+        'Step 4: Create file3.txt containing a random quote about debugging (2-3 sentences).',
+        'Step 5: Create file4.txt containing a random quote about refactoring (2-3 sentences).',
+        'Step 6: Create file5.txt containing a random quote about code review (2-3 sentences).',
         '',
-        'Step 3: Add request timeout handling to server.js using the TIMEOUT value from config.',
-        '',
-        'Step 4: Add connection pool limiting to server.js using MAX_CONNECTIONS from config.',
-        '',
-        'Step 5: Add API key validation middleware to server.js using the API_KEY from config.',
-        '',
-        'IMPORTANT: Use the EXACT values from config.js. The port is NOT 3000 or 8080. The timeout is NOT 30000 or 60000. Use what config.js actually printed.',
+        'Step 7: Create final.txt containing EXACTLY the token from Step 1 and nothing else.',
+        'Do NOT re-run gen-token.js. Use the value you already captured in Step 1.',
       ].join('\n'),
       dir,
       CODED_JUDGMENT_TIMEOUT,
@@ -4193,15 +4294,16 @@ async function testH34() {
     const start = Date.now();
     claudeRun(
       [
-        'Goal: build server from config values',
+        'Goal: capture token, create distractor files, write token to final.txt',
         '',
         'flow:',
-        '  let spec = run "node config.js"',
-        '  run "rm config.js"',
-        '  prompt: Create server.js with a basic HTTP server. Use the PORT from: ${spec}',
-        '  prompt: Add request timeout handling to server.js. Use the TIMEOUT from: ${spec}',
-        '  prompt: Add connection pool limiting to server.js. Use MAX_CONNECTIONS from: ${spec}',
-        '  prompt: Add API key validation middleware to server.js. Use API_KEY from: ${spec}',
+        '  let target = run "node gen-token.js"',
+        '  prompt: Create file1.txt containing a random quote about programming (2-3 sentences).',
+        '  prompt: Create file2.txt containing a random quote about testing (2-3 sentences).',
+        '  prompt: Create file3.txt containing a random quote about debugging (2-3 sentences).',
+        '  prompt: Create file4.txt containing a random quote about refactoring (2-3 sentences).',
+        '  prompt: Create file5.txt containing a random quote about code review (2-3 sentences).',
+        '  prompt: Create final.txt containing EXACTLY this token and nothing else: ${target}',
       ].join('\n'),
       dir,
       CODED_JUDGMENT_TIMEOUT,
@@ -4212,7 +4314,7 @@ async function testH34() {
 
   record(
     'H34',
-    'Spec Anchoring Under Drift',
+    'Late Callback Pipeline',
     vanillaResult.detail,
     pluginResult.detail,
     vanillaResult.pass,
@@ -4222,65 +4324,128 @@ async function testH34() {
   );
 }
 
-// ── H35: Error Forensics ─────────────────────────────────────────────
-// Four diagnostic scripts each output a unique error code with specific
-// embedded values (port numbers, hex addresses, durations, tokens).
-// Between each capture, Claude writes a fix plan (distraction work).
-// The final postmortem must cite the EXACT error codes — not paraphrased.
-// Plugin: ${e1}..${e4} carry exact diagnostic output.
-// Vanilla: must recall 4 specific error strings across 8+ tool turns.
+// ── H35: Multi-Auth Route Generation ─────────────────────────────────
+// Five Express routes with 5 different auth patterns. JWT appears in two
+// variants (basic + admin role), creating maximal semantic overlap.
+// Plugin: each ${aN} injects only the auth spec for that route.
+// Vanilla: must keep 5 overlapping auth patterns straight in one prompt.
 
 async function testH35() {
-  console.log('\n--- H35: Error Forensics ---');
-
-  const diagnostics = [
-    {
-      file: 'diag1.js',
-      output: 'ERRNO_CONN_REFUSED_7891 | service=auth | ts=2024-01-15T08:42:31Z',
-      errorCode: 'ERRNO_CONN_REFUSED_7891',
-    },
-    {
-      file: 'diag2.js',
-      output: 'HEAP_OVERFLOW_AT_0x3f7a2b | service=cache | ts=2024-01-15T09:17:05Z',
-      errorCode: 'HEAP_OVERFLOW_AT_0x3f7a2b',
-    },
-    {
-      file: 'diag3.js',
-      output: 'SSL_HANDSHAKE_TIMEOUT_45723ms | service=gateway | ts=2024-01-15T10:03:22Z',
-      errorCode: 'SSL_HANDSHAKE_TIMEOUT_45723ms',
-    },
-    {
-      file: 'diag4.js',
-      output: 'AUTH_TOKEN_EXPIRED_xK9mP3nQ | service=api | ts=2024-01-15T11:45:18Z',
-      errorCode: 'AUTH_TOKEN_EXPIRED_xK9mP3nQ',
-    },
-  ];
+  console.log('\n--- H35: Multi-Auth Route Generation ---');
 
   async function setup(dir) {
-    for (const d of diagnostics) {
-      await writeFile(join(dir, d.file), `console.log("${d.output}");\n`);
-    }
+    const packageJson = JSON.stringify(
+      { name: 'auth-test', version: '1.0.0', dependencies: { express: '*', jsonwebtoken: '*' } },
+      null,
+      2,
+    );
+    const serverSkeleton = [
+      "const express = require('express');",
+      'const app = express();',
+      'app.use(express.json());',
+      '',
+      '// Routes will be added below',
+      '',
+      'module.exports = app;',
+    ].join('\n');
+    await writeFile(join(dir, 'package.json'), packageJson);
+    await writeFile(join(dir, 'server.js'), serverSkeleton);
   }
 
   function score(dir) {
-    const postmortem = safeReadSync(join(dir, 'postmortem.md'));
-    if (!postmortem) return { pass: false, detail: 'postmortem.md missing' };
+    const serverJs = safeReadSync(join(dir, 'server.js'));
+    if (!serverJs) return { pass: false, detail: 'server.js missing' };
 
-    let found = 0;
-    const missing = [];
-    for (const d of diagnostics) {
-      if (postmortem.includes(d.errorCode)) {
-        found++;
-      } else {
-        missing.push(d.errorCode);
-      }
+    let correctAuth = 0;
+    let contamination = 0;
+    const issues = [];
+
+    function extractRouteBlock(code, routePath) {
+      const escapedPath = routePath.replace(/\//g, '\\/').replace(/\./g, '\\.');
+      const routeRegex = new RegExp(
+        `(app\\.(?:get|post|put|delete|use)\\s*\\([^)]*${escapedPath}[\\s\\S]*?)(?=app\\.(?:get|post|put|delete|use)\\s*\\(|module\\.exports|app\\.listen|$)`,
+      );
+      const match = code.match(routeRegex);
+      return match ? match[1] : null;
     }
 
-    const pass = found === 4;
-    return {
-      pass,
-      detail: pass ? '4/4 error codes cited' : `${found}/4 (missing: ${missing.join(', ')})`,
-    };
+    const healthBlock = extractRouteBlock(serverJs, '/public/health');
+    const healthNoAuth =
+      healthBlock &&
+      !healthBlock.includes('Authorization') &&
+      !healthBlock.includes('X-API-Key') &&
+      !healthBlock.includes('req.ip');
+    if (/\/public\/health/.test(serverJs) && healthNoAuth) correctAuth++;
+    else issues.push('health: missing or has auth');
+    if (healthBlock && healthBlock.includes('jwt')) {
+      contamination++;
+      issues.push('health has jwt');
+    }
+
+    const profileBlock = extractRouteBlock(serverJs, '/user/profile');
+    const profileJwt =
+      profileBlock &&
+      (/Authorization/.test(profileBlock) || /Bearer/.test(profileBlock)) &&
+      /jwt|jsonwebtoken|verify/.test(profileBlock);
+    if (/\/user\/profile/.test(serverJs) && profileJwt) correctAuth++;
+    else issues.push('profile: missing JWT');
+    if (profileBlock && /X-API-Key/i.test(profileBlock)) {
+      contamination++;
+      issues.push('profile has API key');
+    }
+    if (profileBlock && /req\.ip/.test(profileBlock)) {
+      contamination++;
+      issues.push('profile has IP check');
+    }
+
+    const adminBlock = extractRouteBlock(serverJs, '/admin/users');
+    const adminJwtRole =
+      adminBlock &&
+      /jwt|jsonwebtoken|verify/.test(adminBlock) &&
+      /admin/.test(adminBlock) &&
+      (/role/.test(adminBlock) || /403/.test(adminBlock));
+    if (/\/admin\/users/.test(serverJs) && adminJwtRole) correctAuth++;
+    else issues.push('admin: missing JWT+role');
+    if (adminBlock && /X-API-Key/i.test(adminBlock)) {
+      contamination++;
+      issues.push('admin has API key');
+    }
+
+    const apiBlock = extractRouteBlock(serverJs, '/api/data');
+    const apiKeyAuth =
+      apiBlock && /X-API-Key/i.test(apiBlock) && /sk-prod-7Kx9mP2vL/.test(apiBlock);
+    if (/\/api\/data/.test(serverJs) && apiKeyAuth) correctAuth++;
+    else issues.push('api: missing API key auth');
+    if (apiBlock && /jwt|jsonwebtoken|verify/i.test(apiBlock)) {
+      contamination++;
+      issues.push('api has JWT');
+    }
+    if (apiBlock && /req\.ip/.test(apiBlock)) {
+      contamination++;
+      issues.push('api has IP check');
+    }
+
+    const metricsBlock = extractRouteBlock(serverJs, '/internal/metrics');
+    const ipAuth =
+      metricsBlock &&
+      /req\.ip|req\.connection|req\.socket|remoteAddress/.test(metricsBlock) &&
+      (/10\.0\.0\.0/.test(metricsBlock) || /172\.16/.test(metricsBlock));
+    if (/\/internal\/metrics/.test(serverJs) && ipAuth) correctAuth++;
+    else issues.push('metrics: missing IP whitelist');
+    if (metricsBlock && /jwt|jsonwebtoken|verify/i.test(metricsBlock)) {
+      contamination++;
+      issues.push('metrics has JWT');
+    }
+    if (metricsBlock && /X-API-Key/i.test(metricsBlock)) {
+      contamination++;
+      issues.push('metrics has API key');
+    }
+
+    const pass = correctAuth >= 4 && contamination === 0;
+    const detail = pass
+      ? `${correctAuth}/5 correct auth, 0 contamination`
+      : `auth:${correctAuth}/5 contam:${contamination}${issues.length > 0 ? ` (${issues.slice(0, 3).join(', ')})` : ''}`;
+    return { pass, detail };
   }
 
   pluginUninstall();
@@ -4290,24 +4455,19 @@ async function testH35() {
     const start = Date.now();
     claudeRun(
       [
-        'Four services are producing errors. For each one, run the diagnostic, then write a fix plan.',
+        'Add 5 routes to server.js, each with a DIFFERENT authentication pattern. The auth patterns must NOT leak between routes.',
         '',
-        '1. Run: node diag1.js — capture the error output',
-        '   Write fix-plan-1.md explaining what caused the auth service error and how to fix it.',
+        '1. GET /public/health — NO auth. No middleware. Return { status: "ok" } directly.',
         '',
-        '2. Run: node diag2.js — capture the error output',
-        '   Write fix-plan-2.md explaining what caused the cache service error and how to fix it.',
+        '2. GET /user/profile — JWT Bearer token in Authorization header. Verify with jsonwebtoken. Return 401 if missing/invalid.',
         '',
-        '3. Run: node diag3.js — capture the error output',
-        '   Write fix-plan-3.md explaining what caused the gateway error and how to fix it.',
+        '3. POST /admin/users — JWT Bearer token + role claim must be "admin". Return 403 if role missing/wrong, 401 if no token.',
         '',
-        '4. Run: node diag4.js — capture the error output',
-        '   Write fix-plan-4.md explaining what caused the API error and how to fix it.',
+        '4. GET /api/data — X-API-Key header must equal "sk-prod-7Kx9mP2vL". Return 401 if missing/wrong. No JWT.',
         '',
-        'After all 4 diagnostics and fix plans, write postmortem.md with a section for each service.',
-        'Each section MUST include the EXACT error code identifier from the diagnostic output',
-        '(e.g. ERRNO_CONN_REFUSED_7891, not just "connection refused").',
-        'Use the precise error identifiers — do not paraphrase or abbreviate them.',
+        '5. GET /internal/metrics — IP whitelist: req.ip must be in ["10.0.0.0/8", "172.16.0.0/12"]. Return 403 if not in range. No tokens.',
+        '',
+        'CRITICAL: Each route must use ONLY its specified auth pattern. /public must have NO auth checks. /api/data must NOT use JWT. /internal/metrics must NOT check API keys or JWT.',
       ].join('\n'),
       dir,
       CODED_JUDGMENT_TIMEOUT,
@@ -4323,18 +4483,19 @@ async function testH35() {
     const start = Date.now();
     claudeRun(
       [
-        'Goal: diagnose errors, write fix plans, create postmortem',
+        'Goal: add 5 Express routes with isolated auth patterns',
         '',
         'flow:',
-        '  let e1 = run "node diag1.js"',
-        '  prompt: Write fix-plan-1.md explaining the auth service error and how to fix it.',
-        '  let e2 = run "node diag2.js"',
-        '  prompt: Write fix-plan-2.md explaining the cache service error and how to fix it.',
-        '  let e3 = run "node diag3.js"',
-        '  prompt: Write fix-plan-3.md explaining the gateway error and how to fix it.',
-        '  let e4 = run "node diag4.js"',
-        '  prompt: Write fix-plan-4.md explaining the API error and how to fix it.',
-        '  prompt: Write postmortem.md. For each service, cite the EXACT error code. Auth: ${e1}. Cache: ${e2}. Gateway: ${e3}. API: ${e4}.',
+        '  let a1 = prompt "Auth: NONE. No middleware. Return { status: \'ok\' } directly."',
+        '  prompt: Add GET /public/health to server.js. Auth pattern: ${a1}',
+        '  let a2 = prompt "Auth: JWT Bearer token in Authorization header. Verify with jsonwebtoken. Return 401 if missing/invalid."',
+        '  prompt: Add GET /user/profile to server.js. Auth pattern: ${a2}',
+        '  let a3 = prompt "Auth: JWT Bearer token + role claim must be \'admin\'. Return 403 if role missing/wrong, 401 if no token."',
+        '  prompt: Add POST /admin/users to server.js. Auth pattern: ${a3}',
+        '  let a4 = prompt "Auth: X-API-Key header must equal \'sk-prod-7Kx9mP2vL\'. Return 401 if missing/wrong. No JWT."',
+        '  prompt: Add GET /api/data to server.js. Auth pattern: ${a4}',
+        "  let a5 = prompt \"Auth: IP whitelist ['10.0.0.0/8', '172.16.0.0/12']. Check req.ip. Return 403 if not in range. No tokens.\"",
+        '  prompt: Add GET /internal/metrics to server.js. Auth pattern: ${a5}',
       ].join('\n'),
       dir,
       CODED_JUDGMENT_TIMEOUT,
@@ -4345,7 +4506,7 @@ async function testH35() {
 
   record(
     'H35',
-    'Error Forensics',
+    'Multi-Auth Route Generation',
     vanillaResult.detail,
     pluginResult.detail,
     vanillaResult.pass,
@@ -4565,10 +4726,10 @@ async function main() {
       console.log('  SKIP  H29: Conflicting Style Rules (--quick mode)');
       console.log('  SKIP  H30: Information Quarantine (--quick mode)');
       console.log('  SKIP  H31: Focused Review — Distractor Resistance (--quick mode)');
-      console.log('  SKIP  H32: Token Relay at Distance (--quick mode)');
-      console.log('  SKIP  H33: Multi-Source Aggregate (--quick mode)');
-      console.log('  SKIP  H34: Spec Anchoring Under Drift (--quick mode)');
-      console.log('  SKIP  H35: Error Forensics (--quick mode)');
+      console.log('  SKIP  H32: Style Isolation at Scale (--quick mode)');
+      console.log('  SKIP  H33: Config Quarantine at Scale (--quick mode)');
+      console.log('  SKIP  H34: Late Callback Pipeline (--quick mode)');
+      console.log('  SKIP  H35: Multi-Auth Route Generation (--quick mode)');
     }
 
     // Per-iteration summary

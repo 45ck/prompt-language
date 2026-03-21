@@ -1,6 +1,6 @@
 # DSL Reference
 
-The prompt-language DSL defines control-flow programs using six primitives plus try/catch. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
+The prompt-language DSL defines control-flow programs using seven primitives plus try/catch. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
 
 ## Program structure
 
@@ -66,7 +66,7 @@ Parameters:
 - max: Maximum iterations (default: 5).
 - body: One or more DSL statements (indented).
 
-The loop evaluates the condition before each iteration. If the condition is false, the loop exits. If max iterations are reached, the flow fails.
+The loop evaluates the condition before each iteration. If the condition is false, the loop exits. If max iterations are reached, the loop exits and the flow continues with the next step.
 
 ### until
 
@@ -85,7 +85,7 @@ Parameters:
 - max: Maximum iterations (default: 5).
 - body: One or more DSL statements (indented).
 
-The loop evaluates the condition after each iteration. If the condition is true, the loop exits. If max iterations are reached, the flow fails.
+The loop evaluates the condition before entering the body and again after each iteration. If the condition is true, the loop exits. If the condition is already true at the start, the body is never entered. If max iterations are reached, the loop exits and the flow continues with the next step.
 
 ### retry
 
@@ -102,7 +102,7 @@ Parameters:
 - max: Maximum number of attempts (default: 3).
 - body: One or more DSL statements (indented).
 
-The block runs once. If the last command fails, it retries up to the attempt limit. If all attempts fail, the flow fails.
+The block runs once. If the last command fails, it retries up to the attempt limit. If all attempts are exhausted, the retry exits and the flow continues with the next step.
 
 ### if
 
@@ -215,21 +215,43 @@ done when:
 
 ## Built-in resolvers
 
-These variables are updated automatically after each `run` step:
+### Runtime variables
 
-| Variable            | Type    | Source        | Description                    |
-| ------------------- | ------- | ------------- | ------------------------------ |
-| `last_exit_code`    | number  | deterministic | Exit code of the last command  |
-| `command_failed`    | boolean | deterministic | True if last exit code != 0    |
-| `command_succeeded` | boolean | deterministic | True if last exit code == 0    |
-| `tests_pass`        | boolean | deterministic | True if test command succeeded |
-| `tests_fail`        | boolean | deterministic | True if test command failed    |
-| `lint_pass`         | boolean | deterministic | True if lint command succeeded |
-| `lint_fail`         | boolean | deterministic | True if lint command failed    |
-| `file_exists`       | boolean | deterministic | True if a checked file exists  |
-| `diff_nonempty`     | boolean | deterministic | True if git diff has output    |
+These variables are updated automatically after each `run` step and after `let x = run`:
 
-Resolver priority order: deterministic > parsed > inferred > human.
+| Variable            | Type    | Source        | Description                                 |
+| ------------------- | ------- | ------------- | ------------------------------------------- |
+| `last_exit_code`    | number  | deterministic | Exit code of the last command               |
+| `command_failed`    | boolean | deterministic | True if last exit code != 0                 |
+| `command_succeeded` | boolean | deterministic | True if last exit code == 0                 |
+| `last_stdout`       | string  | deterministic | stdout of the last command (max 2000 chars) |
+| `last_stderr`       | string  | deterministic | stderr of the last command (max 2000 chars) |
+
+### Gate predicates
+
+These are evaluated on demand when used as flow conditions (`while`, `until`, `if`) or completion gates (`done when:`). Each predicate maps to a shell command via `resolveBuiltinCommand()`:
+
+| Predicate            | Source | Runs               | Passes when                  |
+| -------------------- | ------ | ------------------ | ---------------------------- |
+| `tests_pass`         | parsed | `npm test`         | exit 0                       |
+| `tests_fail`         | parsed | `npm test`         | exit != 0                    |
+| `lint_pass`          | parsed | `npm run lint`     | exit 0                       |
+| `lint_fail`          | parsed | `npm run lint`     | exit != 0                    |
+| `file_exists <path>` | parsed | `test -f '<path>'` | file exists                  |
+| `diff_nonempty`      | parsed | `git diff --quiet` | exit != 0 (diff has changes) |
+
+### Resolver priority
+
+When a condition or gate predicate is evaluated, the runtime resolves it in this order:
+
+1. **Deterministic** — Direct variable lookup. If a variable with that name exists in session state (e.g., `command_failed` was set after a `run:` node), use its value immediately.
+2. **Parsed** — Built-in command resolution via `resolveBuiltinCommand()`. Predicates like `tests_pass` map to `npm test`, `lint_pass` maps to `npm run lint`, etc. The command is executed and the exit code determines the boolean result.
+3. **Inferred** — The agent interprets the condition from context (not currently implemented; reserved for future use).
+4. **Human** — The user is asked to evaluate the condition (not currently implemented; reserved for future use).
+
+**For flow conditions** (`while`, `until`, `if`): a runtime variable always takes precedence over running a command. For example, if `command_failed` was set after a `run:` node, an `if command_failed` condition uses the variable directly without executing anything.
+
+**For completion gates** (`done when:`): the predicate is always resolved by running the actual command, regardless of any existing variable with the same name. This ensures independent verification — the agent cannot satisfy a gate merely by setting a variable.
 
 ## Defaults
 
@@ -244,12 +266,14 @@ These can be overridden per-node using the `max` parameter.
 
 You do not need to write DSL directly. The parser detects control-flow intent in plain English:
 
-| Input                | Compiled to     |
+| Input                | Typical result  |
 | -------------------- | --------------- |
 | "keep going until X" | `until X max 5` |
 | "don't stop until X" | `until X max 5` |
 | "loop until X"       | `until X max 5` |
 | "retry 3 times"      | `retry max 3`   |
+
+Natural language is translated by the agent, not by a deterministic compiler. The plugin detects control-flow intent via keyword matching and provides the DSL reference as context for accurate translation. Results may vary.
 
 ## Comments
 

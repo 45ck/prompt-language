@@ -117,7 +117,7 @@ async function testContextRecall() {
       '',
       'flow:',
       '  prompt: The code is "alpha-bravo-99". Acknowledge it.',
-      '  prompt: What was the code from the previous step? Write ONLY the code to recall.txt',
+      '  prompt: Create a file called recall.txt containing exactly the code from the previous step, nothing else.',
     ].join('\n');
 
     claudeRun(prompt, dir);

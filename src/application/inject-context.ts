@@ -64,7 +64,7 @@ export function looksLikeNaturalLanguage(prompt: string): boolean {
 const DSL_REFERENCE = `\
 ## prompt-language DSL reference
 
-Seven primitives plus try/catch and let/var. Blocks use indentation + explicit \`end\`.
+Eight primitives plus try/catch and let/var. Blocks use indentation + explicit \`end\`.
 
 ### Structure
 \`\`\`
@@ -216,18 +216,18 @@ export async function injectContext(
       commandRunner,
       captureReader,
     );
-    const completed = maybeCompleteFlow(advanced);
-    if (completed !== existing) {
-      await stateStore.save(completed);
+    const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
+    if (toSave !== existing) {
+      await stateStore.save(toSave);
     }
-    const ctx = renderFlow(completed);
+    const ctx = renderFlow(toSave);
     if (capturedPrompt) {
       const output = isTrivialPrompt(input.prompt)
         ? `${ctx}\n\n${capturedPrompt}`
         : `${ctx}\n\n${capturedPrompt}\n\n[User message: ${input.prompt}]`;
       return { prompt: output };
     }
-    const interpolated = interpolate(input.prompt, completed.variables);
+    const interpolated = interpolate(input.prompt, toSave.variables);
     return { prompt: `${ctx}\n\n${interpolated}` };
   }
 
@@ -239,9 +239,9 @@ export async function injectContext(
       commandRunner,
       captureReader,
     );
-    const completed = maybeCompleteFlow(advanced);
-    await stateStore.save(completed);
-    const ctx = renderFlow(completed);
+    const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
+    await stateStore.save(toSave);
+    const ctx = renderFlow(toSave);
     if (capturedPrompt) {
       return { prompt: `${ctx}\n\n${capturedPrompt}` };
     }

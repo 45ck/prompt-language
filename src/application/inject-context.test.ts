@@ -1248,6 +1248,44 @@ describe('injectContext — flow auto-completion', () => {
     expect(saved?.status).toBe('active');
   });
 
+  it('does not mark flow completed while delivering the last captured prompt', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [
+      createPromptNode('p1', 'First step'),
+      createPromptNode('p2', 'Last step'),
+    ]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    // Call 1: captures p1, advances to [1]
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    let saved = await store.loadCurrent();
+    expect(saved?.status).toBe('active');
+
+    // Call 2: captures p2, advances to [2] — still active (prompt being delivered)
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    saved = await store.loadCurrent();
+    expect(saved?.status).toBe('active');
+    expect(result.prompt).toContain('Status: active');
+    expect(result.prompt).toContain('Last step');
+
+    // Call 3: no more nodes, no captured prompt → completes
+    await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    saved = await store.loadCurrent();
+    expect(saved?.status).toBe('completed');
+  });
+
+  it('does not mark flow completed during initial parse when delivering captured prompt', async () => {
+    const store = makeStore();
+    const result = await injectContext(
+      { prompt: 'Goal: test\nflow:\n  prompt: Only step', sessionId: 's1' },
+      store,
+    );
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('active');
+    expect(result.prompt).toContain('Status: active');
+  });
+
   it('auto-completes when gates are all passing', async () => {
     const store = makeStore();
     const spec = createFlowSpec(

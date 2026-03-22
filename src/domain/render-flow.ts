@@ -198,8 +198,17 @@ function renderLetNode(
       sourceText = `"${node.source.value}"`;
       break;
   }
+  const progress = state.nodeProgress[node.id];
+  const isAwaitingCapture = progress?.status === 'awaiting_capture';
   const resolved = state.variables[node.variableName];
-  const annotation = resolved !== undefined ? `  [= ${String(resolved)}]` : '';
+  let annotation: string;
+  if (isAwaitingCapture) {
+    annotation = '  [awaiting response...]';
+  } else if (resolved !== undefined) {
+    annotation = `  [= ${String(resolved)}]`;
+  } else {
+    annotation = '';
+  }
   return [`${prefix}${indent}let ${node.variableName} = ${sourceText}${annotation}${suffix}`];
 }
 

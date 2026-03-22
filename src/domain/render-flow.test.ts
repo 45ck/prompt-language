@@ -319,6 +319,28 @@ describe('renderFlow', () => {
     expect(output).toContain('let greeting = "hello"  [= hello]');
   });
 
+  it('shows [awaiting response...] during capture phase for let-prompt', () => {
+    const letNode = createLetNode('l1', 'tasks', { type: 'prompt', text: 'list bugs' });
+    const spec = createFlowSpec('test', [letNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+    const output = renderFlow(state);
+    expect(output).toContain('let tasks = prompt "list bugs"  [awaiting response...]');
+  });
+
+  it('shows [= value] after capture completes for let-prompt', () => {
+    const letNode = createLetNode('l1', 'tasks', { type: 'prompt', text: 'list bugs' });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { tasks: 'bug1\nbug2' }, currentNodePath: [1] };
+    const output = renderFlow(state);
+    expect(output).toContain('[= bug1\nbug2]');
+  });
+
   it('marks let node as current', () => {
     const letNode = createLetNode('l1', 'x', { type: 'literal', value: 'val' });
     const spec = createFlowSpec('test', [letNode]);

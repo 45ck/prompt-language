@@ -270,6 +270,43 @@ async function testForeachIteration() {
   });
 }
 
+// ── Test G: Let-prompt capture ─────────────────────────────────────────
+
+async function testLetPromptCapture() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test let-prompt capture',
+      '',
+      'flow:',
+      '  let items = prompt "List exactly three colors: red, green, blue. One per line, no bullets."',
+      '  foreach item in "${items}"',
+      '    run: echo ${item} >> colors.txt',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'colors.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    const lines = content
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+    assert(
+      'G: Let-prompt capture + foreach',
+      lines.length >= 2,
+      lines.length >= 2
+        ? `${lines.length} lines in colors.txt`
+        : `only ${lines.length} lines: "${content.slice(0, 80)}"`,
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -290,6 +327,7 @@ async function main() {
   await testRunAutoExecution();
   await testVariableInterpolation();
   await testForeachIteration();
+  await testLetPromptCapture();
 
   if (!QUICK_MODE) {
     await testGateEvaluation();

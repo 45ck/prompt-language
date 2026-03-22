@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { injectContext } from '../../application/inject-context.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-runner.js';
+import { FileCaptureReader } from '../../infrastructure/adapters/file-capture-reader.js';
 import { formatError } from '../../domain/format-error.js';
 import { readStdin } from './read-stdin.js';
 
@@ -39,12 +40,14 @@ async function main(): Promise<void> {
 
   const stateStore = new FileStateStore(process.cwd());
   const commandRunner = new ShellCommandRunner();
+  const captureReader = new FileCaptureReader(process.cwd());
   const sessionId = randomUUID();
 
   const result = await injectContext(
     { prompt: input.prompt, sessionId },
     stateStore,
     commandRunner,
+    captureReader,
   );
 
   if (result.prompt !== input.prompt) {

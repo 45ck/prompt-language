@@ -8,6 +8,7 @@
 import { createSessionState } from '../domain/session-state.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
+import type { CaptureReader } from './ports/capture-reader.js';
 import { parseFlow } from './parse-flow.js';
 import { renderFlow } from '../domain/render-flow.js';
 import { interpolate } from '../domain/interpolate.js';
@@ -86,7 +87,7 @@ done when:
 
 **let/var** — Store a named variable for later interpolation via \`\${varName}\`.
   let greeting = "hello world"        # literal string
-  let info = prompt "Summarize this"  # stores prompt text as context
+  let info = prompt "Summarize this"  # captures Claude's response
   var output = run "echo hi"          # executes command, stores stdout
 
 **while** — Loop while condition is true. Requires \`max N\`.
@@ -205,11 +206,16 @@ export async function injectContext(
   input: InjectContextInput,
   stateStore: StateStore,
   commandRunner?: CommandRunner,
+  captureReader?: CaptureReader,
 ): Promise<InjectContextOutput> {
   const existing = await stateStore.loadCurrent();
 
   if (existing?.status === 'active') {
-    const { state: advanced, capturedPrompt } = await autoAdvanceNodes(existing, commandRunner);
+    const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
+      existing,
+      commandRunner,
+      captureReader,
+    );
     const completed = maybeCompleteFlow(advanced);
     if (completed !== existing) {
       await stateStore.save(completed);
@@ -228,7 +234,11 @@ export async function injectContext(
   if (hasFlowBlock(input.prompt)) {
     const spec = parseFlow(input.prompt);
     const session = createSessionState(input.sessionId, spec);
-    const { state: advanced, capturedPrompt } = await autoAdvanceNodes(session, commandRunner);
+    const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
+      session,
+      commandRunner,
+      captureReader,
+    );
     const completed = maybeCompleteFlow(advanced);
     await stateStore.save(completed);
     const ctx = renderFlow(completed);

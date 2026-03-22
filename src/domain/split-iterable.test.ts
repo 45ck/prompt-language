@@ -85,6 +85,48 @@ describe('splitIterable', () => {
     });
   });
 
+  describe('markdown bullet list parsing', () => {
+    it('strips dash bullets', () => {
+      expect(splitIterable('- alpha\n- beta\n- gamma')).toEqual(['alpha', 'beta', 'gamma']);
+    });
+
+    it('strips asterisk bullets', () => {
+      expect(splitIterable('* one\n* two\n* three')).toEqual(['one', 'two', 'three']);
+    });
+
+    it('strips plus bullets', () => {
+      expect(splitIterable('+ foo\n+ bar')).toEqual(['foo', 'bar']);
+    });
+
+    it('handles leading/trailing whitespace on bullet lines', () => {
+      expect(splitIterable('  - alpha  \n  - beta  ')).toEqual(['alpha', 'beta']);
+    });
+
+    it('filters empty lines between bullets', () => {
+      expect(splitIterable('- a\n\n- b\n\n- c')).toEqual(['a', 'b', 'c']);
+    });
+  });
+
+  describe('numbered list parsing', () => {
+    it('strips period-style numbers (1. )', () => {
+      expect(splitIterable('1. first\n2. second\n3. third')).toEqual(['first', 'second', 'third']);
+    });
+
+    it('strips paren-style numbers (1) )', () => {
+      expect(splitIterable('1) alpha\n2) beta')).toEqual(['alpha', 'beta']);
+    });
+
+    it('handles large numbers', () => {
+      expect(splitIterable('10. ten\n11. eleven')).toEqual(['ten', 'eleven']);
+    });
+  });
+
+  describe('mixed non-list newlines', () => {
+    it('falls through to newline splitting when not all lines are list items', () => {
+      expect(splitIterable('- bullet\nnot a bullet')).toEqual(['- bullet', 'not a bullet']);
+    });
+  });
+
   describe('priority order', () => {
     it('prefers JSON over newline when input starts with [', () => {
       expect(splitIterable('["a\\nb", "c"]')).toEqual(['a\nb', 'c']);
@@ -92,6 +134,10 @@ describe('splitIterable', () => {
 
     it('prefers newline over whitespace when newlines present', () => {
       expect(splitIterable('a b\nc d')).toEqual(['a b', 'c d']);
+    });
+
+    it('prefers markdown bullets over plain newline splitting', () => {
+      expect(splitIterable('- item one\n- item two')).toEqual(['item one', 'item two']);
     });
   });
 });

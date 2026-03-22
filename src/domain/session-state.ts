@@ -12,7 +12,7 @@ export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
 export interface NodeProgress {
   readonly iteration: number;
   readonly maxIterations: number;
-  readonly status: 'pending' | 'running' | 'completed' | 'failed';
+  readonly status: 'pending' | 'running' | 'completed' | 'failed' | 'awaiting_capture';
 }
 
 export interface SessionState {

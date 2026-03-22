@@ -14,10 +14,16 @@ import {
 import type { SessionState } from '../domain/session-state.js';
 import type { FlowNode } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
+import type { CaptureReader } from './ports/capture-reader.js';
 import { interpolate, shellInterpolate } from '../domain/interpolate.js';
 import { evaluateCondition } from '../domain/evaluate-condition.js';
 import { resolveBuiltinCommand, isInvertedPredicate } from './evaluate-completion.js';
 import { splitIterable } from '../domain/split-iterable.js';
+import {
+  buildCapturePrompt,
+  buildCaptureRetryPrompt,
+  DEFAULT_MAX_CAPTURE_RETRIES,
+} from '../domain/capture-prompt.js';
 
 export function resolveCurrentNode(
   nodes: readonly FlowNode[],
@@ -241,6 +247,7 @@ export interface AutoAdvanceResult {
 export async function autoAdvanceNodes(
   state: SessionState,
   commandRunner?: CommandRunner,
+  captureReader?: CaptureReader,
 ): Promise<AutoAdvanceResult> {
   const MAX_ADVANCES = 100;
   let advances = 0;
@@ -265,9 +272,58 @@ export async function autoAdvanceNodes(
           case 'literal':
             value = node.source.value;
             break;
-          case 'prompt':
-            value = node.source.text;
+          case 'prompt': {
+            const progress = current.nodeProgress[node.id];
+            const isAwaiting = progress?.status === 'awaiting_capture';
+
+            if (!isAwaiting) {
+              // Phase 1: First encounter — emit capture prompt
+              if (captureReader) {
+                await captureReader.clear(node.variableName);
+              }
+              current = updateNodeProgress(current, node.id, {
+                iteration: 1,
+                maxIterations: DEFAULT_MAX_CAPTURE_RETRIES,
+                status: 'awaiting_capture',
+              });
+              const promptText = interpolate(node.source.text, current.variables);
+              const metaPrompt = buildCapturePrompt(promptText, node.variableName);
+              return { state: current, capturedPrompt: metaPrompt };
+            }
+
+            // Phase 2: Return visit — try to read captured file
+            if (captureReader) {
+              const captured = await captureReader.read(node.variableName);
+              if (captured) {
+                value = captured;
+                await captureReader.clear(node.variableName);
+                break;
+              }
+            }
+
+            // File missing/empty — retry or fail-open
+            const iteration = progress.iteration;
+            if (iteration < progress.maxIterations) {
+              current = updateNodeProgress(current, node.id, {
+                iteration: iteration + 1,
+                maxIterations: progress.maxIterations,
+                status: 'awaiting_capture',
+              });
+              const retryPrompt = buildCaptureRetryPrompt(node.variableName);
+              return { state: current, capturedPrompt: retryPrompt };
+            }
+
+            // Max retries exceeded — fail-open with empty string
+            value = '';
+            current = {
+              ...current,
+              warnings: [
+                ...current.warnings,
+                `Variable capture for '${node.variableName}' failed after ${progress.maxIterations} attempts; using empty string.`,
+              ],
+            };
             break;
+          }
           case 'run': {
             if (!commandRunner) return { state: current, capturedPrompt: null };
             const letCmd = shellInterpolate(node.source.command, current.variables);

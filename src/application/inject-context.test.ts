@@ -20,6 +20,7 @@ import {
   createForeachNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
+import type { CaptureReader } from './ports/capture-reader.js';
 
 function makeStore(): InMemoryStateStore {
   return new InMemoryStateStore();
@@ -368,7 +369,7 @@ describe('injectContext — variable interpolation', () => {
     expect(result.prompt).toContain('prompt: work');
   });
 
-  it('auto-advances prompt let node and stores text', async () => {
+  it('let-prompt emits capture meta-prompt on first visit', async () => {
     const store = makeStore();
     const letNode = createLetNode('l1', 'ctx', { type: 'prompt', text: 'summarize this' });
     const promptNode = createPromptNode('p1', 'do ${ctx}');
@@ -378,7 +379,9 @@ describe('injectContext — variable interpolation', () => {
 
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
 
-    expect(result.prompt).toContain('[= summarize this]');
+    expect(result.prompt).toContain('summarize this');
+    expect(result.prompt).toContain('.prompt-language/vars/ctx');
+    expect(result.prompt).toContain('[awaiting response...]');
   });
 
   it('auto-advances run let node with command runner', async () => {
@@ -1449,6 +1452,206 @@ flow:
   end`;
     const result = await injectContext({ prompt, sessionId: 's1' }, store);
     expect(result.prompt).toContain('Review src/a.ts');
+  });
+});
+
+describe('injectContext — let-prompt capture', () => {
+  function makeCaptureReader(files: Record<string, string> = {}): CaptureReader {
+    const store = new Map<string, string>(Object.entries(files));
+    return {
+      read: async (varName: string) => store.get(varName) ?? null,
+      clear: async (varName: string) => {
+        store.delete(varName);
+      },
+    };
+  }
+
+  it('emits capture meta-prompt on first visit (phase 1)', async () => {
+    const store = makeStore();
+    const captureReader = makeCaptureReader();
+    const letNode = createLetNode('l1', 'tasks', { type: 'prompt', text: 'List the bugs' });
+    const promptNode = createPromptNode('p1', 'Fix ${tasks}');
+    const spec = createFlowSpec('test', [letNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'Go', sessionId: 's1' },
+      store,
+      undefined,
+      captureReader,
+    );
+
+    expect(result.prompt).toContain('List the bugs');
+    expect(result.prompt).toContain('.prompt-language/vars/tasks');
+    expect(result.prompt).toContain('Write tool');
+    const saved = await store.loadCurrent();
+    expect(saved?.nodeProgress['l1']?.status).toBe('awaiting_capture');
+    expect(saved?.currentNodePath).toEqual([0]);
+  });
+
+  it('reads captured file on return visit (phase 2)', async () => {
+    const store = makeStore();
+    const captureReader = makeCaptureReader({ tasks: 'bug1\nbug2\nbug3' });
+    const letNode = createLetNode('l1', 'tasks', { type: 'prompt', text: 'List the bugs' });
+    const promptNode = createPromptNode('p1', 'Fix ${tasks}');
+    const spec = createFlowSpec('test', [letNode, promptNode]);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      currentNodePath: [0],
+      nodeProgress: {
+        l1: { iteration: 1, maxIterations: 3, status: 'awaiting_capture' },
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'Go', sessionId: 's1' },
+      store,
+      undefined,
+      captureReader,
+    );
+
+    expect(result.prompt).toContain('Fix bug1\nbug2\nbug3');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['tasks']).toBe('bug1\nbug2\nbug3');
+    expect(saved?.currentNodePath).toEqual([2]);
+  });
+
+  it('retries when capture file is missing', async () => {
+    const store = makeStore();
+    const captureReader = makeCaptureReader();
+    const letNode = createLetNode('l1', 'out', { type: 'prompt', text: 'Summarize' });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'work')]);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      currentNodePath: [0],
+      nodeProgress: {
+        l1: { iteration: 1, maxIterations: 3, status: 'awaiting_capture' },
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'Go', sessionId: 's1' },
+      store,
+      undefined,
+      captureReader,
+    );
+
+    expect(result.prompt).toContain('.prompt-language/vars/out');
+    expect(result.prompt).toContain('not found or was empty');
+    const saved = await store.loadCurrent();
+    expect(saved?.nodeProgress['l1']?.iteration).toBe(2);
+    expect(saved?.currentNodePath).toEqual([0]);
+  });
+
+  it('fails open with empty string after max retries', async () => {
+    const store = makeStore();
+    const captureReader = makeCaptureReader();
+    const letNode = createLetNode('l1', 'out', { type: 'prompt', text: 'Summarize' });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'work')]);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      currentNodePath: [0],
+      nodeProgress: {
+        l1: { iteration: 3, maxIterations: 3, status: 'awaiting_capture' },
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'Go', sessionId: 's1' },
+      store,
+      undefined,
+      captureReader,
+    );
+
+    expect(result.prompt).toContain('work');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['out']).toBe('');
+    expect(saved?.warnings).toEqual(expect.arrayContaining([expect.stringContaining('failed')]));
+  });
+
+  it('interpolates variables in let-prompt text', async () => {
+    const store = makeStore();
+    const captureReader = makeCaptureReader();
+    const let1 = createLetNode('l1', 'module', { type: 'literal', value: 'auth' });
+    const let2 = createLetNode('l2', 'tasks', {
+      type: 'prompt',
+      text: 'Inspect the ${module} module',
+    });
+    const spec = createFlowSpec('test', [let1, let2]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'Go', sessionId: 's1' },
+      store,
+      undefined,
+      captureReader,
+    );
+
+    expect(result.prompt).toContain('Inspect the auth module');
+  });
+
+  it('works without captureReader (fallback behavior)', async () => {
+    const store = makeStore();
+    const letNode = createLetNode('l1', 'out', { type: 'prompt', text: 'Summarize' });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'work')]);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      currentNodePath: [0],
+      nodeProgress: {
+        l1: { iteration: 3, maxIterations: 3, status: 'awaiting_capture' },
+      },
+    };
+    await store.save(session);
+
+    // No captureReader — phase 2 without reader should fail-open at max retries
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('work');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['out']).toBe('');
+  });
+
+  it('let-prompt + foreach integration: captures and iterates', async () => {
+    const store = makeStore();
+    const captureReader = makeCaptureReader({ colors: 'red\ngreen\nblue' });
+    const letNode = createLetNode('l1', 'colors', { type: 'prompt', text: 'List three colors' });
+    const foreachNode = createForeachNode('fe1', 'color', '${colors}', [
+      createPromptNode('p1', 'Paint ${color}'),
+    ]);
+    const spec = createFlowSpec('test', [letNode, foreachNode]);
+
+    // Simulate state after phase 1 (awaiting capture)
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      currentNodePath: [0],
+      nodeProgress: {
+        l1: { iteration: 1, maxIterations: 3, status: 'awaiting_capture' },
+      },
+    };
+    await store.save(session);
+
+    // Phase 2: read capture, advance let, enter foreach, capture first prompt
+    const result = await injectContext(
+      { prompt: 'Go', sessionId: 's1' },
+      store,
+      undefined,
+      captureReader,
+    );
+
+    expect(result.prompt).toContain('Paint red');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['colors']).toBe('red\ngreen\nblue');
+    expect(saved?.variables['color']).toBe('red');
   });
 });
 

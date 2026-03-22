@@ -47,7 +47,17 @@
     "pytest",
     "realend",
     "uppercased",
-    "efficien"
+    "efficien",
+    "bsearch",
+    "doesnt",
+    "funtion"
   ],
-  "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
+  "ignorePaths": [
+    "dist/**",
+    "coverage/**",
+    "reports/**",
+    "node_modules/**",
+    "package-lock.json",
+    "scripts/eval/comparative-eval-v3.mjs"
+  ]
 }

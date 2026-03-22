@@ -8,6 +8,13 @@
  *
  * Requires: `claude` CLI available, plugin installed.
  *
+ * Tests:
+ *   A: Context file relay       B: Context recall
+ *   C: Variable interpolation   D: Gate evaluation (slow)
+ *   E: Run auto-execution       F: Foreach iteration
+ *   G: Let-prompt capture       H: If/else branching
+ *   I: Try/catch handling       K: Variable chain (let-run + if + interpolation)
+ *
  * Usage:
  *   node scripts/eval/smoke-test.mjs          # all tests
  *   node scripts/eval/smoke-test.mjs --quick  # fast subset (no gate test)
@@ -307,6 +314,108 @@ async function testLetPromptCapture() {
   });
 }
 
+// ── Test H: If/else branching ──────────────────────────────────────────
+
+async function testIfElseBranching() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test if/else',
+      '',
+      'flow:',
+      '  run: node -e "process.exit(0)"',
+      '  if command_succeeded',
+      '    prompt: Create branch-result.txt containing exactly "took-then-branch", nothing else.',
+      '  else',
+      '    prompt: Create branch-result.txt containing exactly "took-else-branch", nothing else.',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'branch-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'H: If/else branching',
+      content.includes('took-then-branch'),
+      content.includes('took-then-branch')
+        ? 'then-branch taken correctly'
+        : `got: "${content.slice(0, 60)}"`,
+    );
+  });
+}
+
+// ── Test I: Try/catch error handling ──────────────────────────────────
+
+async function testTryCatch() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test try/catch',
+      '',
+      'flow:',
+      '  try',
+      '    run: node -e "process.exit(1)"',
+      '  catch command_failed',
+      '    prompt: Create catch-result.txt containing exactly "catch-triggered", nothing else.',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'catch-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'I: Try/catch error handling',
+      content.includes('catch-triggered'),
+      content.includes('catch-triggered')
+        ? 'catch body executed correctly'
+        : `got: "${content.slice(0, 60)}"`,
+    );
+  });
+}
+
+// ── Test K: Variable chain (let-run + if + interpolation) ────────────
+
+async function testVariableChain() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test variable chain',
+      '',
+      'flow:',
+      '  let val = run "echo chain-value-42"',
+      '  if command_succeeded',
+      '    prompt: Create chain-result.txt containing exactly "${val}", nothing else.',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'chain-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'K: Variable chain (let-run + if + interpolation)',
+      content.includes('chain-value-42'),
+      content.includes('chain-value-42')
+        ? 'variable interpolated in if-branch'
+        : `got: "${content.slice(0, 60)}"`,
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -321,13 +430,16 @@ async function main() {
   }
 
   // Plugin should already be built + installed by npm run eval:smoke.
-  // Run tests — A, B, E are fast; C is medium; D is slow (gate loop)
+  // Run tests — A, B, E, H, I, K are fast; C is medium; D is slow (gate loop)
   await testContextFileRelay();
   await testContextRecall();
   await testRunAutoExecution();
   await testVariableInterpolation();
   await testForeachIteration();
   await testLetPromptCapture();
+  await testIfElseBranching();
+  await testTryCatch();
+  await testVariableChain();
 
   if (!QUICK_MODE) {
     await testGateEvaluation();

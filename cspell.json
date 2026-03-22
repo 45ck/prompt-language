@@ -39,7 +39,10 @@
     "foobarbaz",
     "foreach",
     "frontmatter",
-    "inspectable"
+    "inspectable",
+    "colorize",
+    "colorized",
+    "uppercased"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
 }

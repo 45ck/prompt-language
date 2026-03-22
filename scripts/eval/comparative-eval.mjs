@@ -2,7 +2,7 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 45 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
+ * 53 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
  * auto-execution, variable capture, control-flow loops, phased prompts,
  * diff gates, gate+retry combinations, while/until loops, conditional
  * branching with variable capture, gaslighting+loop combos, inverted gates,
@@ -13,14 +13,18 @@
  * context scaling threshold, multi-task completion rate,
  * context window pressure, skill-delivered flow vs raw DSL,
  * multi-task degradation, distractor context pressure,
- * distractor resistance at scale)
+ * distractor resistance at scale, retry error history accumulation,
+ * multi-stage analysis pipeline, 25-step context scaling,
+ * foreach per-item capture, chained let-prompt meta-analysis,
+ * error classification routing, cross-file variable capture,
+ * 3-phase workflow with triple gates)
  * that vanilla Claude cannot replicate.
  *
  * Quick mode (7 tests): H3, H4, H6, H7, H10, H11, H12 — no gate loops
- * Full mode (45 tests): all hypotheses
+ * Full mode (53 tests): all hypotheses
  *
  * Usage:
- *   node scripts/eval/comparative-eval.mjs                   # all 45 hypotheses
+ *   node scripts/eval/comparative-eval.mjs                   # all 53 hypotheses
  *   node scripts/eval/comparative-eval.mjs --quick            # fast subset (7 tests)
  *   node scripts/eval/comparative-eval.mjs --repeat 3         # 3 iterations for reliability
  *   node scripts/eval/comparative-eval.mjs --quick --repeat 3 # combined
@@ -5702,6 +5706,1075 @@ async function testH45() {
   );
 }
 
+// ── H46: Foreach + Gate — Incomplete List Processing ─────────────────
+// 5 JS files each with a different bug. Test suite checks all 5.
+// Tests whether accumulated error history across retry iterations helps Claude
+// fix bugs faster. Plugin captures error output via let-run and re-injects;
+// vanilla relies on conversation recall.
+// Expected: Likely TIE — but showcases error history accumulation.
+
+async function testH46() {
+  console.log('\n--- H46: Retry with Error History Accumulation ---');
+
+  // calculator.js with 3 bugs: off-by-one in add, missing null check in divide, wrong op in multiply
+  const calculatorJs = [
+    'function add(a, b) {',
+    '  return a + b + 1;',
+    '}',
+    '',
+    'function multiply(a, b) {',
+    '  return a + b;',
+    '}',
+    '',
+    'function divide(a, b) {',
+    '  return a / b;',
+    '}',
+    '',
+    'module.exports = { add, multiply, divide };',
+  ].join('\n');
+
+  const testJs = [
+    'const { add, multiply, divide } = require("./calculator.js");',
+    'let f = 0;',
+    'if (add(2, 3) !== 5) { console.error("FAIL: add(2,3)=" + add(2,3) + " expected 5"); f++; }',
+    'if (add(0, 0) !== 0) { console.error("FAIL: add(0,0)=" + add(0,0) + " expected 0"); f++; }',
+    'if (multiply(3, 4) !== 12) { console.error("FAIL: multiply(3,4)=" + multiply(3,4) + " expected 12"); f++; }',
+    'if (multiply(5, 0) !== 0) { console.error("FAIL: multiply(5,0)=" + multiply(5,0) + " expected 0"); f++; }',
+    'try { divide(10, 0); console.error("FAIL: divide(10,0) should throw"); f++; } catch(e) { if (!e.message.includes("zero")) { console.error("FAIL: divide by zero should mention zero: " + e.message); f++; } }',
+    'if (divide(10, 2) !== 5) { console.error("FAIL: divide(10,2)=" + divide(10,2) + " expected 5"); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'calculator.js'), calculatorJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h46', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'Fix calculator.js so all tests pass. Run `node test.js` to check. If tests fail, read the error output, analyze what went wrong, and fix. Retry up to 3 times.',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: fix calculator with error history',
+        '',
+        'flow:',
+        '  retry max 3',
+        '    run: node test.js',
+        '    let errors = run "node test.js 2>&1"',
+        '    prompt: Previous errors captured in ${errors}. Analyze what failed and fix calculator.js.',
+        '  end',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  record(
+    'H46',
+    'Retry with Error History',
+    vanillaResult.pass ? 'all tests pass' : 'tests fail',
+    pluginResult.pass ? 'all tests pass' : 'tests fail',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H47: Multi-Stage Analysis Pipeline ───────────────────────────────
+// 4-stage pipeline: let codebase = run cat, let analysis = prompt review,
+// let plan = prompt plan, prompt execute. Tests explicit variable handoff.
+// Expected: Likely TIE — showcases multi-variable capture pipeline.
+
+async function testH47() {
+  console.log('\n--- H47: Multi-Stage Analysis Pipeline ---');
+
+  // 3 source files, each with 1 bug
+  const authJs = [
+    'function authenticate(user, pass) {',
+    '  if (user === "admin" && pass === "secret") {',
+    '    return { authenticated: true, role: "admin" };',
+    '  }',
+    '  return { authenticated: true, role: "guest" };',
+    '}',
+    'module.exports = { authenticate };',
+  ].join('\n');
+
+  const cacheJs = [
+    'const store = {};',
+    'function cacheSet(key, value, ttl) {',
+    '  store[key] = { value, expires: Date.now() + ttl };',
+    '}',
+    'function cacheGet(key) {',
+    '  const entry = store[key];',
+    '  if (!entry) return null;',
+    '  return entry.value;',
+    '}',
+    'module.exports = { cacheSet, cacheGet };',
+  ].join('\n');
+
+  const apiJs = [
+    'function parseQuery(qs) {',
+    '  if (!qs) return {};',
+    '  return qs.split("&").reduce((acc, pair) => {',
+    '    const [k, v] = pair.split("=");',
+    '    acc[k] = v;',
+    '    return acc;',
+    '  }, {});',
+    '}',
+    'function buildUrl(base, params) {',
+    '  const qs = Object.entries(params).map(([k,v]) => k + "=" + v).join("&");',
+    '  return base + "?" + qs;',
+    '}',
+    'module.exports = { parseQuery, buildUrl };',
+  ].join('\n');
+
+  const testJs = [
+    'const { authenticate } = require("./src/auth.js");',
+    'const { cacheSet, cacheGet } = require("./src/cache.js");',
+    'const { parseQuery, buildUrl } = require("./src/api.js");',
+    'let f = 0;',
+    '',
+    '// Auth tests',
+    'const good = authenticate("admin", "secret");',
+    'if (!good.authenticated || good.role !== "admin") { console.error("FAIL: valid login should be admin"); f++; }',
+    'const bad = authenticate("admin", "wrong");',
+    'if (bad.authenticated) { console.error("FAIL: bad password should not authenticate"); f++; }',
+    '',
+    '// Cache tests',
+    'cacheSet("k1", "v1", 60000);',
+    'if (cacheGet("k1") !== "v1") { console.error("FAIL: cache miss for k1"); f++; }',
+    'cacheSet("k2", "v2", -1);',
+    'if (cacheGet("k2") !== null) { console.error("FAIL: expired cache should return null"); f++; }',
+    '',
+    '// API tests',
+    'const q = parseQuery("a=1&b=2");',
+    'if (q.a !== "1" || q.b !== "2") { console.error("FAIL: parseQuery"); f++; }',
+    'const url = buildUrl("/api", { x: "1" });',
+    'if (url !== "/api?x=1") { console.error("FAIL: buildUrl=" + url); f++; }',
+    '',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await mkdir(join(dir, 'src'), { recursive: true });
+    await writeFile(join(dir, 'src', 'auth.js'), authJs);
+    await writeFile(join(dir, 'src', 'cache.js'), cacheJs);
+    await writeFile(join(dir, 'src', 'api.js'), apiJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h47', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'Read all files in src/. Analyze the codebase for bugs. Create a fix plan. Execute the plan. Run `node test.js` to verify. Fix all issues until tests pass.',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: multi-stage code fix',
+        '',
+        'flow:',
+        '  let codebase = run "cat src/*.js"',
+        '  let analysis = prompt "Review this codebase and list all bugs you find: ${codebase}"',
+        '  let plan = prompt "Based on this analysis: ${analysis} — create a numbered fix plan"',
+        '  prompt: Execute this fix plan: ${plan}. Fix each issue in order.',
+        '  run: node test.js',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  record(
+    'H47',
+    'Multi-Stage Pipeline',
+    vanillaResult.pass ? 'all tests pass' : 'tests fail',
+    pluginResult.pass ? 'all tests pass' : 'tests fail',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H48: Context Scaling at 25 Steps ─────────────────────────────────
+// Extends H39 (15 steps) to 25 steps with run-node distractors instead of
+// prompt-based creative tasks. Each distractor is a `run: echo` node that
+// auto-advances, pushing the token further from the recall point.
+// Expected: Unknown — frontier test for variable re-injection vs recall.
+
+async function testH48() {
+  console.log('\n--- H48: Context Scaling (25 Steps) ---');
+
+  const genTokenJs = [
+    "const crypto = require('crypto');",
+    "console.log('BEACON-' + crypto.createHash('sha256').update('h48-scaling-v2').digest('hex').slice(0, 20));",
+  ].join('\n');
+
+  const expectedToken =
+    'BEACON-' + createHash('sha256').update('h48-scaling-v2').digest('hex').slice(0, 20);
+
+  // 23 distractor run commands — each auto-advances, no agent interaction needed
+  const distractorRuns = Array.from({ length: 23 }, (_, i) => `echo step${i + 2} > /dev/null`);
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'gen-token.js'), genTokenJs);
+  }
+
+  function score(dir) {
+    const answer = safeReadSync(join(dir, 'answer.txt'));
+    if (!answer) return { pass: false, detail: 'answer.txt missing' };
+    const firstLine = answer.split('\n')[0].trim();
+    const exact = firstLine === expectedToken;
+    return {
+      pass: exact,
+      detail: exact
+        ? `exact match (${expectedToken})`
+        : `mismatch: "${firstLine.slice(0, 40)}" vs "${expectedToken}"`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'This is a 25-step task. Follow each step in order.',
+        '',
+        'Step 1: Run `node gen-token.js` and remember the EXACT output. You will need it at Step 25.',
+        '',
+        ...distractorRuns.map((cmd, i) => `Step ${i + 2}: Run \`${cmd}\``),
+        '',
+        'Step 25: Write the EXACT token from Step 1 to answer.txt, nothing else.',
+      ].join('\n'),
+      dir,
+      LONG_HORIZON_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: capture token, run 23 commands, write token to answer.txt',
+        '',
+        'flow:',
+        '  let token = run "node gen-token.js"',
+        ...distractorRuns.map((cmd) => `  run: ${cmd}`),
+        '  prompt: Write the exact value of ${token} to answer.txt, nothing else.',
+      ].join('\n'),
+      dir,
+      LONG_HORIZON_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H48',
+    'Context Scaling (25 Steps)',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H49: Foreach + Per-Item Capture with Summary ─────────────────────
+// foreach module with let review = run analyze.js per item, then prompt fix.
+// Tests whether per-item variable capture inside loop body improves fixes.
+// Expected: Likely TIE — showcases per-item variable capture.
+
+async function testH49() {
+  console.log('\n--- H49: Foreach + Per-Item Capture ---');
+
+  // Each module has a planted bug
+  const moduleCode = {
+    auth: [
+      'function checkToken(token) {',
+      '  if (token.length > 0) return true;',
+      '  return true;',
+      '}',
+      'module.exports = { checkToken };',
+    ].join('\n'),
+    cache: [
+      'const store = {};',
+      'function set(k, v) { store[k] = v; }',
+      'function get(k) { return store[k + "x"]; }',
+      'module.exports = { set, get };',
+    ].join('\n'),
+    api: [
+      'function statusCode(code) {',
+      '  if (code >= 200 && code < 300) return "success";',
+      '  if (code >= 400 && code < 500) return "success";',
+      '  return "error";',
+      '}',
+      'module.exports = { statusCode };',
+    ].join('\n'),
+    validator: [
+      'function isEmail(str) {',
+      '  return str.includes("@");',
+      '}',
+      'function isPositive(n) {',
+      '  return n > 1;',
+      '}',
+      'module.exports = { isEmail, isPositive };',
+    ].join('\n'),
+    logger: [
+      'const logs = [];',
+      'function log(msg) { logs.push(msg); }',
+      'function getLogs() { return []; }',
+      'module.exports = { log, getLogs };',
+    ].join('\n'),
+  };
+
+  // analyze.js outputs diagnostic info per module
+  const analyzeJs = [
+    'const mod = process.argv[2];',
+    'const fs = require("fs");',
+    'try {',
+    '  const code = fs.readFileSync(mod + ".js", "utf-8");',
+    '  const lines = code.split("\\n");',
+    '  console.log("Module: " + mod);',
+    '  console.log("Lines: " + lines.length);',
+    '  console.log("Exports: " + (code.match(/module\\.exports/g) || []).length);',
+    '  console.log("Functions: " + (code.match(/function\\s+\\w+/g) || []).join(", "));',
+    '  if (code.includes("return true")) console.log("WARNING: unconditional return true detected");',
+    '  if (code.includes("return []")) console.log("WARNING: always returns empty array");',
+    '  if (code.includes("+ \\"x\\"")) console.log("WARNING: suspicious string concatenation in key lookup");',
+    '} catch(e) { console.error("Cannot analyze " + mod + ": " + e.message); }',
+  ].join('\n');
+
+  const testJs = [
+    'let f = 0;',
+    '',
+    'const { checkToken } = require("./auth.js");',
+    'if (checkToken("valid") !== true) { console.error("FAIL: valid token"); f++; }',
+    'if (checkToken("") !== false) { console.error("FAIL: empty token should be false"); f++; }',
+    '',
+    'const { set, get } = require("./cache.js");',
+    'set("key1", "val1");',
+    'if (get("key1") !== "val1") { console.error("FAIL: cache get key1=" + get("key1")); f++; }',
+    '',
+    'const { statusCode } = require("./api.js");',
+    'if (statusCode(200) !== "success") { console.error("FAIL: 200 should be success"); f++; }',
+    'if (statusCode(404) !== "client_error") { console.error("FAIL: 404 should be client_error, got " + statusCode(404)); f++; }',
+    '',
+    'const { isEmail, isPositive } = require("./validator.js");',
+    'if (isEmail("a@b.com") !== true) { console.error("FAIL: valid email"); f++; }',
+    'if (isPositive(1) !== true) { console.error("FAIL: 1 is positive"); f++; }',
+    'if (isPositive(0) !== false) { console.error("FAIL: 0 is not positive"); f++; }',
+    '',
+    'const { log, getLogs } = require("./logger.js");',
+    'log("hello");',
+    'if (getLogs().length !== 1) { console.error("FAIL: getLogs should have 1 entry, got " + getLogs().length); f++; }',
+    '',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    for (const [name, code] of Object.entries(moduleCode)) {
+      await writeFile(join(dir, `${name}.js`), code);
+    }
+    await writeFile(join(dir, 'analyze.js'), analyzeJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h49', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    const testsPass = runCmd('node test.js', dir) === 0;
+    let fixed = 0;
+    for (const [name, original] of Object.entries(moduleCode)) {
+      const current = safeReadSync(join(dir, `${name}.js`));
+      if (current !== original) fixed++;
+    }
+    return { testsPass, fixed, pass: testsPass };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'For each module (auth, cache, api, validator, logger): run `node analyze.js <module>`, read the output, fix issues in `<module>.js`. Run tests when done.',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: per-item analysis pipeline',
+        '',
+        'flow:',
+        '  foreach module in "auth cache api validator logger"',
+        '    let review = run "node analyze.js ${module}"',
+        '    prompt: Module ${module} analysis: ${review}. Fix any issues found in ${module}.js.',
+        '  end',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H49',
+    'Foreach + Per-Item Capture',
+    `${vanillaResult.fixed}/5 fixed, tests:${vanillaResult.testsPass ? 'PASS' : 'FAIL'}`,
+    `${pluginResult.fixed}/5 fixed, tests:${pluginResult.testsPass ? 'PASS' : 'FAIL'}`,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H50: Chained Let-Prompt Meta-Analysis ────────────────────────────
+// 3-layer let-prompt capture: surface → deep → plan → execute.
+// Tests whether structured self-reflection via variable capture produces
+// deeper insights than vanilla's natural multi-pass behavior.
+// Expected: Likely TIE — showcases layered capture pipeline.
+
+async function testH50() {
+  console.log('\n--- H50: Chained Let-Prompt Meta-Analysis ---');
+
+  // app.js with 5 bugs at varying difficulty
+  const appJs = [
+    '// Obvious: wrong return',
+    'function abs(x) {',
+    '  return x;',
+    '}',
+    '',
+    '// Moderate: off-by-one',
+    'function range(start, end) {',
+    '  const result = [];',
+    '  for (let i = start; i < end; i++) {',
+    '    result.push(i);',
+    '  }',
+    '  return result;',
+    '}',
+    '',
+    '// Moderate: wrong comparison',
+    'function clamp(val, min, max) {',
+    '  if (val < min) return min;',
+    '  if (val < max) return max;',
+    '  return val;',
+    '}',
+    '',
+    '// Subtle: mutation bug',
+    'function unique(arr) {',
+    '  const seen = {};',
+    '  return arr.filter(x => {',
+    '    if (seen[x]) return false;',
+    '    return false;',
+    '  });',
+    '}',
+    '',
+    '// Subtle: boundary error',
+    'function truncate(str, len) {',
+    '  if (str.length > len) return str.slice(0, len);',
+    '  return str;',
+    '}',
+    '',
+    'module.exports = { abs, range, clamp, unique, truncate };',
+  ].join('\n');
+
+  const testJs = [
+    'const { abs, range, clamp, unique, truncate } = require("./app.js");',
+    'let f = 0;',
+    '',
+    'if (abs(-5) !== 5) { console.error("FAIL: abs(-5)=" + abs(-5) + " expected 5"); f++; }',
+    'if (abs(3) !== 3) { console.error("FAIL: abs(3)=" + abs(3)); f++; }',
+    '',
+    'const r = range(1, 4);',
+    'if (JSON.stringify(r) !== "[1,2,3,4]") { console.error("FAIL: range(1,4)=" + JSON.stringify(r) + " expected [1,2,3,4]"); f++; }',
+    '',
+    'if (clamp(5, 1, 10) !== 5) { console.error("FAIL: clamp(5,1,10)=" + clamp(5,1,10) + " expected 5"); f++; }',
+    'if (clamp(15, 1, 10) !== 10) { console.error("FAIL: clamp(15,1,10)=" + clamp(15,1,10) + " expected 10"); f++; }',
+    'if (clamp(-5, 1, 10) !== 1) { console.error("FAIL: clamp(-5,1,10)=" + clamp(-5,1,10)); f++; }',
+    '',
+    'const u = unique([1, 2, 2, 3, 3, 3]);',
+    'if (JSON.stringify(u) !== "[1,2,3]") { console.error("FAIL: unique=" + JSON.stringify(u) + " expected [1,2,3]"); f++; }',
+    '',
+    'if (truncate("hello world", 5) !== "he...") { console.error("FAIL: truncate(hello world,5)=" + truncate("hello world",5) + " expected he..."); f++; }',
+    'if (truncate("hi", 5) !== "hi") { console.error("FAIL: truncate(hi,5) should be hi"); f++; }',
+    '',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h50', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    return { pass: runCmd('node test.js', dir) === 0 };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'Review app.js in 3 passes: (1) surface-level obvious issues, (2) deeper analysis of what the surface pass missed, (3) combine both into a prioritized fix plan. Then execute the fixes. Verify with `node test.js`.',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: layered code review',
+        '',
+        'flow:',
+        '  let surface = prompt "Do a surface-level review of app.js — list obvious issues only"',
+        '  let deep = prompt "Now do a deeper review. Surface review found: ${surface}. What did it miss?"',
+        '  let plan = prompt "Combine surface and deep reviews: ${surface} and ${deep}. Prioritize fixes."',
+        '  prompt: Execute this fix plan: ${plan}',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H50',
+    'Chained Let-Prompt Meta-Analysis',
+    vanillaResult.pass ? 'all tests pass' : 'tests fail',
+    pluginResult.pass ? 'all tests pass' : 'tests fail',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H51: Debug Loop with Error Classification Routing ────────────────
+// retry max 4 with error capture → classify → route to fix strategy.
+// Tests whether variable-driven routing outperforms unstructured debugging.
+// Expected: Likely TIE — showcases error classification routing.
+
+async function testH51() {
+  console.log('\n--- H51: Error Classification Routing ---');
+
+  // app.js with 3 different error types: type_error, missing_import, logic_error
+  const appJs = [
+    '// Bug 1: type error — calling .toUpperCase() on a number',
+    'function formatName(name) {',
+    '  return name.toUpperCase();',
+    '}',
+    '',
+    '// Bug 2: missing import — uses path module without requiring it',
+    'function getExt(filename) {',
+    '  return path.extname(filename);',
+    '}',
+    '',
+    '// Bug 3: logic error — off-by-one',
+    'function sum(arr) {',
+    '  let total = 1;',
+    '  for (const n of arr) total += n;',
+    '  return total;',
+    '}',
+    '',
+    'module.exports = { formatName, getExt, sum };',
+  ].join('\n');
+
+  const testJs = [
+    'let f = 0;',
+    'try {',
+    '  const { formatName, getExt, sum } = require("./app.js");',
+    '',
+    '  if (formatName("hello") !== "HELLO") { console.error("FAIL: formatName(\\"hello\\")=" + formatName("hello")); f++; }',
+    '  if (formatName("World") !== "WORLD") { console.error("FAIL: formatName(\\"World\\")"); f++; }',
+    '',
+    '  if (getExt("file.js") !== ".js") { console.error("FAIL: getExt(\\"file.js\\")=" + getExt("file.js")); f++; }',
+    '  if (getExt("test.txt") !== ".txt") { console.error("FAIL: getExt(\\"test.txt\\")"); f++; }',
+    '',
+    '  if (sum([1, 2, 3]) !== 6) { console.error("FAIL: sum([1,2,3])=" + sum([1,2,3]) + " expected 6"); f++; }',
+    '  if (sum([]) !== 0) { console.error("FAIL: sum([])=" + sum([]) + " expected 0"); f++; }',
+    '} catch(e) {',
+    '  console.error("CRASH: " + e.message);',
+    '  f++;',
+    '}',
+    '',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h51', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'Fix app.js. Run `node test.js`. If tests fail, read the error, classify it (type error, logic error, or missing import), and apply the appropriate fix strategy. Retry up to 4 times.',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: classified debugging',
+        '',
+        'flow:',
+        '  retry max 4',
+        '    run: node test.js',
+        '    if command_failed',
+        '      let errors = run "node test.js 2>&1"',
+        '      let category = prompt "Classify this error into exactly one category (type_error, logic_error, missing_import): ${errors}"',
+        '      if category',
+        '        prompt: Apply ${category} fix strategy to the code. Error details: ${errors}',
+        '      end',
+        '    end',
+        '  end',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  record(
+    'H51',
+    'Error Classification Routing',
+    vanillaResult.pass ? 'all tests pass' : 'tests fail',
+    pluginResult.pass ? 'all tests pass' : 'tests fail',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H52: Multi-File Refactor with Cross-File Variable Capture ────────
+// Captures interface definitions from types.js and API signatures from api.js,
+// then injects them into prompts to update auth.js and cache.js.
+// Expected: Likely TIE — showcases cross-file variable capture.
+
+async function testH52() {
+  console.log('\n--- H52: Cross-File Variable Capture ---');
+
+  // types.js defines the interface
+  const typesJs = [
+    '/**',
+    ' * @typedef {Object} User',
+    ' * @property {string} id',
+    ' * @property {string} name',
+    ' * @property {string} email',
+    ' * @property {string} role - "admin" | "user" | "guest"',
+    ' */',
+    '',
+    '/**',
+    ' * @typedef {Object} AuthResult',
+    ' * @property {boolean} success',
+    ' * @property {User|null} user',
+    ' * @property {string} [error]',
+    ' */',
+    '',
+    'module.exports = {};',
+  ].join('\n');
+
+  // api.js defines API signatures
+  const apiJs = [
+    'function validateUser(user) {',
+    '  if (!user.id || !user.name || !user.email || !user.role) return false;',
+    '  if (!["admin", "user", "guest"].includes(user.role)) return false;',
+    '  return true;',
+    '}',
+    '',
+    'function formatUser(user) {',
+    '  return `${user.name} <${user.email}> [${user.role}]`;',
+    '}',
+    '',
+    'module.exports = { validateUser, formatUser };',
+  ].join('\n');
+
+  // auth.js with interface mismatches (returns wrong shape)
+  const authJs = [
+    'function login(name, pass) {',
+    '  if (name === "admin" && pass === "secret") {',
+    '    return { ok: true, username: name };',
+    '  }',
+    '  return { ok: false };',
+    '}',
+    'module.exports = { login };',
+  ].join('\n');
+
+  // cache.js with interface mismatches
+  const cacheJs = [
+    'const users = {};',
+    'function storeUser(username, data) {',
+    '  users[username] = data;',
+    '}',
+    'function getUser(username) {',
+    '  return users[username] || { notFound: true };',
+    '}',
+    'module.exports = { storeUser, getUser };',
+  ].join('\n');
+
+  // extract-interface.js outputs interface info
+  const extractJs = [
+    'const fs = require("fs");',
+    'const file = process.argv[2];',
+    'const content = fs.readFileSync(file, "utf-8");',
+    'console.log("=== Interface from " + file + " ===");',
+    'console.log(content);',
+  ].join('\n');
+
+  const testJs = [
+    'const { login } = require("./auth.js");',
+    'const { storeUser, getUser } = require("./cache.js");',
+    'const { validateUser } = require("./api.js");',
+    'let f = 0;',
+    '',
+    '// Auth must return AuthResult shape: { success, user, error? }',
+    'const good = login("admin", "secret");',
+    'if (!good.success) { console.error("FAIL: login success should be true"); f++; }',
+    'if (!good.user || !good.user.id) { console.error("FAIL: login should return user with id"); f++; }',
+    'if (!good.user || !good.user.role) { console.error("FAIL: login should return user with role"); f++; }',
+    '',
+    'const bad = login("admin", "wrong");',
+    'if (bad.success !== false) { console.error("FAIL: bad login should have success=false"); f++; }',
+    'if (bad.user !== null && bad.user !== undefined) { console.error("FAIL: bad login should have null user"); f++; }',
+    '',
+    '// Cache must store/retrieve User-shaped objects',
+    'const user = { id: "1", name: "Test", email: "test@test.com", role: "user" };',
+    'storeUser("test", user);',
+    'const cached = getUser("test");',
+    'if (!validateUser(cached)) { console.error("FAIL: cached user should be valid User shape"); f++; }',
+    '',
+    'const missing = getUser("nonexistent");',
+    'if (missing !== null && missing !== undefined) { console.error("FAIL: missing user should be null/undefined, got " + JSON.stringify(missing)); f++; }',
+    '',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'types.js'), typesJs);
+    await writeFile(join(dir, 'api.js'), apiJs);
+    await writeFile(join(dir, 'auth.js'), authJs);
+    await writeFile(join(dir, 'cache.js'), cacheJs);
+    await writeFile(join(dir, 'extract-interface.js'), extractJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h52', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'Read the interfaces from types.js and the API signatures from api.js. Then update auth.js to match the interface. Then update cache.js to match the same interface while maintaining API compatibility. Run `node test.js` to verify.',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: cross-file refactor',
+        '',
+        'flow:',
+        '  let interface_def = run "node extract-interface.js types.js"',
+        '  let api_sig = run "node extract-interface.js api.js"',
+        '  prompt: Update auth.js to match this interface: ${interface_def}. Current API signatures: ${api_sig}.',
+        '  prompt: Update cache.js to match this interface: ${interface_def}. Ensure compatibility with API: ${api_sig}.',
+        '  run: node test.js',
+        '',
+        'done when:',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { pass: runCmd('node test.js', dir) === 0, elapsed };
+  });
+
+  record(
+    'H52',
+    'Cross-File Variable Capture',
+    vanillaResult.pass ? 'all tests pass' : 'tests fail',
+    pluginResult.pass ? 'all tests pass' : 'tests fail',
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H53: 3-Phase Workflow with Phase Gates ───────────────────────────
+// Prompt lies "only a.js and b.js have bugs" but all 5 do.
+// foreach + gate catches the deception.
+// Expected: PLUGIN WIN — foreach forces checking all files; gate catches.
+
+async function testH53() {
+  console.log('\n--- H53: 3-Phase Workflow with Phase Gates ---');
+
+  // Verification script that checks file structure was created
+  const checkStructureJs = [
+    'const fs = require("fs");',
+    'const files = ["package.json", "src/index.js", "src/utils.js", "test/test.js"];',
+    'const missing = files.filter(f => !fs.existsSync(f));',
+    'if (missing.length) {',
+    '  console.error("Missing: " + missing.join(", "));',
+    '  process.exit(1);',
+    '} else {',
+    '  console.log("All structure files present");',
+    '}',
+  ].join('\n');
+
+  // Test file that checks string utility implementations
+  const testJs = [
+    'const { capitalize, reverse, truncate } = require("../src/utils.js");',
+    'let f = 0;',
+    '',
+    'if (capitalize("hello") !== "Hello") { console.error("FAIL: capitalize(\\"hello\\")=" + capitalize("hello")); f++; }',
+    'if (capitalize("") !== "") { console.error("FAIL: capitalize(\\"\\")"); f++; }',
+    'if (capitalize("WORLD") !== "WORLD") { console.error("FAIL: capitalize(\\"WORLD\\")"); f++; }',
+    '',
+    'if (reverse("hello") !== "olleh") { console.error("FAIL: reverse(\\"hello\\")=" + reverse("hello")); f++; }',
+    'if (reverse("") !== "") { console.error("FAIL: reverse(\\"\\")"); f++; }',
+    'if (reverse("a") !== "a") { console.error("FAIL: reverse(\\"a\\")"); f++; }',
+    '',
+    'if (truncate("hello world", 5) !== "he...") { console.error("FAIL: truncate(\\"hello world\\",5)=" + truncate("hello world", 5)); f++; }',
+    'if (truncate("hi", 5) !== "hi") { console.error("FAIL: truncate(\\"hi\\",5)"); f++; }',
+    'if (truncate("exact", 5) !== "exact") { console.error("FAIL: truncate(\\"exact\\",5)"); f++; }',
+    '',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  // Simple lint checker that verifies JSDoc on exported functions
+  const lintJs = [
+    'const fs = require("fs");',
+    'const content = fs.readFileSync("src/utils.js", "utf-8");',
+    'const fns = content.match(/function\\s+(\\w+)/g) || [];',
+    'let errors = 0;',
+    'for (const fn of fns) {',
+    '  const name = fn.replace("function ", "");',
+    '  // Check if there is a JSDoc comment before this function',
+    '  const idx = content.indexOf(fn);',
+    '  const before = content.slice(Math.max(0, idx - 100), idx);',
+    '  if (!before.includes("/**")) {',
+    '    console.error("LINT: missing JSDoc for " + name);',
+    '    errors++;',
+    '  }',
+    '}',
+    'if (errors === 0) console.log("Lint passed");',
+    'process.exit(errors > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, '__check_structure.js'), checkStructureJs);
+    // Pre-create test dir with test file so Claude knows the test expectations
+    await mkdir(join(dir, 'test'), { recursive: true });
+    await writeFile(join(dir, 'test', 'test.js'), testJs);
+    await writeFile(join(dir, 'lint.js'), lintJs);
+    // Note: NO package.json, src/index.js, src/utils.js — Claude must create them
+  }
+
+  function score(dir) {
+    const testsPass = runCmd('node test/test.js', dir) === 0;
+    const lintPass = runCmd('node lint.js', dir) === 0;
+    const readmeExists = existsSync(join(dir, 'README.md'));
+    return {
+      testsPass,
+      lintPass,
+      readmeExists,
+      pass: testsPass && lintPass && readmeExists,
+      detail: `tests:${testsPass ? 'Y' : 'N'} lint:${lintPass ? 'Y' : 'N'} readme:${readmeExists ? 'Y' : 'N'}`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'Build a string utility project in 3 phases: Phase 1: Create package.json, src/index.js, src/utils.js (test/test.js already exists). Phase 2: Implement capitalize, reverse, truncate in utils.js so test/test.js passes. Phase 3: Add JSDoc comments to all exported functions and create README.md. Ensure tests pass (node test/test.js), code lints (node lint.js), and README exists.',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: phased project setup',
+        '',
+        'flow:',
+        '  prompt: Phase 1 — Create project structure: package.json, src/index.js, src/utils.js. The test/test.js already exists.',
+        '  run: node __check_structure.js',
+        '  if command_failed',
+        '    prompt: Some files are missing. Create all required files.',
+        '  end',
+        '  prompt: Phase 2 — Implement a string utility library in src/utils.js with capitalize, reverse, truncate functions',
+        '  run: node test/test.js',
+        '  if command_failed',
+        '    let errors = run "node test/test.js 2>&1"',
+        '    prompt: Tests failed. Errors: ${errors}. Fix the implementation.',
+        '  end',
+        '  prompt: Phase 3 — Add JSDoc comments to all exported functions in src/utils.js and create README.md',
+        '',
+        'done when:',
+        '  tests_pass',
+        '  lint_pass',
+        '  file_exists README.md',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H53',
+    '3-Phase Workflow + Triple Gate',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
 // ── DESIGN: context scaling parametric test ─────────────────────────
 //
 // Tests whether the plugin's variable re-injection (via renderFlow/renderVariables)
@@ -5922,7 +6995,7 @@ function printTimingSummary(allResults) {
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  const testCount = QUICK_MODE ? 7 : 45;
+  const testCount = QUICK_MODE ? 7 : 53;
   const estMinutes = Math.round(testCount * 2 * REPEAT_COUNT);
 
   console.log(`[comparative-eval] Plugin vs Vanilla — ${testCount} Hypotheses\n`);
@@ -6005,6 +7078,15 @@ async function main() {
       [43, 'Multi-Task Degradation (8 Tokens)', testH43, false],
       [44, 'Context Pressure (Distractor)', testH44, false],
       [45, 'Distractor Resistance at Scale', testH45, false],
+      // H46-H53: multi-stage context management, variable pipelines, compound workflows
+      [46, 'Retry with Error History', testH46, false],
+      [47, 'Multi-Stage Pipeline', testH47, false],
+      [48, 'Context Scaling (25 Steps)', testH48, false],
+      [49, 'Foreach + Per-Item Capture', testH49, false],
+      [50, 'Chained Let-Prompt Meta-Analysis', testH50, false],
+      [51, 'Error Classification Routing', testH51, false],
+      [52, 'Cross-File Variable Capture', testH52, false],
+      [53, '3-Phase Workflow + Triple Gate', testH53, false],
     ];
 
     for (const [num, name, fn, quickInclude] of tests) {

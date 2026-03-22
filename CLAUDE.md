@@ -101,11 +101,11 @@ Unit tests and CI are necessary but **not sufficient**. Smoke tests are **requir
 ### Automated smoke tests
 
 ```bash
-npm run eval:smoke        # full suite (6 tests, ~3 min)
-npm run eval:smoke:quick  # fast subset without gate test (~1 min)
+npm run eval:smoke        # full suite (10 tests, ~4 min)
+npm run eval:smoke:quick  # fast subset without gate test (~2 min)
 ```
 
-The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 6 live `claude -p` tests in temp directories:
+The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 10 live `claude -p` tests in temp directories:
 
 - **A: Context file relay** — two prompts, second reads file created by first
 - **B: Context recall** — second prompt recalls a code from the first
@@ -113,6 +113,10 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **D: Gate evaluation** — `done when: tests_pass` blocks until app.js is fixed
 - **E: Run auto-execution** — `run:` node auto-executes and creates a file
 - **F: Foreach iteration** — `foreach item in "a b c"` creates per-item files
+- **G: Let-prompt capture** — `let x = prompt` captures Claude's response into a variable
+- **H: If/else branching** — `if command_succeeded` takes the correct branch
+- **I: Try/catch handling** — `try` body failure triggers `catch` body execution
+- **K: Variable chain** — `let x = run` + `if` + `${x}` interpolation pipeline
 
 ### When to smoke test
 

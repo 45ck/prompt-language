@@ -42,7 +42,11 @@
     "inspectable",
     "colorize",
     "colorized",
-    "uppercased"
+    "fallbackend",
+    "pytest",
+    "realend",
+    "uppercased",
+    "efficien"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
 }

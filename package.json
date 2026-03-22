@@ -50,6 +50,8 @@
     "eval:compare": "npm run build && node scripts/eval/comparative-eval.mjs",
     "eval:compare:quick": "npm run build && node scripts/eval/comparative-eval.mjs --quick",
     "eval:compare:repeat": "npm run build && node scripts/eval/comparative-eval.mjs --repeat 3",
+    "eval:compare:v2": "npm run build && node bin/cli.mjs install && node scripts/eval/comparative-eval-v2.mjs",
+    "eval:compare:v2:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/comparative-eval-v2.mjs --quick",
     "audit:high": "node scripts/ci/audit-high.mjs",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run eval:e2e && npm run audit:high",
     "ci:nightly": "npm run ci && npm run mutation",

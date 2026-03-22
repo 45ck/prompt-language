@@ -49,6 +49,15 @@ Nine node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, `forea
 - `let x = prompt "text"` — stores the prompt text as context
 - `let x = run "cmd"` — executes command, stores stdout
 
+List variables (stored as JSON array strings):
+
+- `let x = []` — initializes an empty list
+- `let x += "val"` — appends literal to list (auto-creates array if needed)
+- `let x += run "cmd"` — appends command stdout to list
+- `let x += prompt "text"` — appends captured response to list
+
+Auto-variable: `${x_length}` is set on every list modification. Lists integrate with `foreach` via `splitIterable()` which parses JSON arrays as highest priority.
+
 Variables are interpolated via `${varName}` in prompt/run text. Unknown variables are left as-is. `let`/`var`, `run` (with command runner), and `prompt` nodes auto-advance (no agent interaction).
 
 ### Built-in variables (auto-set after `run:` and `let x = run`)
@@ -73,6 +82,7 @@ Variables are interpolated via `${varName}` in prompt/run text. Unknown variable
 Key implementation files:
 
 - `src/domain/flow-node.ts` — `LetNode`, `LetSource`, `createLetNode()`
+- `src/domain/list-variable.ts` — pure `initEmptyList()`, `appendToList()`, `listLength()` for list variables
 - `src/domain/interpolate.ts` — pure `interpolate(template, variables)` + `shellInterpolate()` for commands
 - `src/domain/evaluate-condition.ts` — pure condition evaluation against variable state
 - `src/domain/format-error.ts` — safe error-to-string with stack trace preservation

@@ -186,6 +186,7 @@ function renderLetNode(
   prefix: string,
   suffix: string,
 ): string[] {
+  const operator = node.append ? '+=' : '=';
   let sourceText: string;
   switch (node.source.type) {
     case 'prompt':
@@ -196,6 +197,9 @@ function renderLetNode(
       break;
     case 'literal':
       sourceText = `"${node.source.value}"`;
+      break;
+    case 'empty_list':
+      sourceText = '[]';
       break;
   }
   const progress = state.nodeProgress[node.id];
@@ -209,7 +213,9 @@ function renderLetNode(
   } else {
     annotation = '';
   }
-  return [`${prefix}${indent}let ${node.variableName} = ${sourceText}${annotation}${suffix}`];
+  return [
+    `${prefix}${indent}let ${node.variableName} ${operator} ${sourceText}${annotation}${suffix}`,
+  ];
 }
 
 function renderForeachNode(

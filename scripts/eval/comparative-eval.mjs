@@ -2,7 +2,7 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 53 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
+ * 55 hypotheses testing structural enforcement mechanisms (gate stop-hooks,
  * auto-execution, variable capture, control-flow loops, phased prompts,
  * diff gates, gate+retry combinations, while/until loops, conditional
  * branching with variable capture, gaslighting+loop combos, inverted gates,
@@ -17,14 +17,15 @@
  * multi-stage analysis pipeline, 25-step context scaling,
  * foreach per-item capture, chained let-prompt meta-analysis,
  * error classification routing, cross-file variable capture,
- * 3-phase workflow with triple gates)
+ * 3-phase workflow with triple gates, list variable accumulation,
+ * dynamic list pipeline)
  * that vanilla Claude cannot replicate.
  *
  * Quick mode (7 tests): H3, H4, H6, H7, H10, H11, H12 — no gate loops
- * Full mode (53 tests): all hypotheses
+ * Full mode (55 tests): all hypotheses
  *
  * Usage:
- *   node scripts/eval/comparative-eval.mjs                   # all 53 hypotheses
+ *   node scripts/eval/comparative-eval.mjs                   # all 55 hypotheses
  *   node scripts/eval/comparative-eval.mjs --quick            # fast subset (7 tests)
  *   node scripts/eval/comparative-eval.mjs --repeat 3         # 3 iterations for reliability
  *   node scripts/eval/comparative-eval.mjs --quick --repeat 3 # combined
@@ -6775,6 +6776,196 @@ async function testH53() {
   );
 }
 
+// ── H54: Error Accumulation + Foreach Report ─────────────────────────
+// Plugin uses list variables to accumulate errors, then foreach to report them.
+// Expected: PLUGIN WIN or TIE — structured accumulation beats ad-hoc.
+
+async function testH54() {
+  console.log('\n--- H54: Error Accumulation + Foreach Report ---');
+
+  // Create 5 JS files, each with a deliberate require-time error
+  async function setup(dir) {
+    const errors = [
+      'throw new Error("connection timeout on port 3000");',
+      'throw new Error("file not found: config.yml");',
+      'throw new Error("permission denied: /etc/shadow");',
+      'throw new Error("invalid JSON at line 42");',
+      'throw new Error("disk quota exceeded");',
+    ];
+    for (let i = 0; i < 5; i++) {
+      await writeFile(join(dir, `module${i + 1}.js`), errors[i]);
+    }
+  }
+
+  function score(dir) {
+    const report = safeReadSync(join(dir, 'bug-report.md'));
+    if (!report) return { count: 0, pass: false, detail: 'no bug-report.md' };
+    let count = 0;
+    for (let i = 1; i <= 5; i++) {
+      if (report.includes(`module${i}.js`)) count++;
+    }
+    return { count, pass: count >= 4, detail: `${count}/5 modules reported` };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'There are 5 JavaScript files: module1.js through module5.js. Run each one with "node moduleN.js" and collect the errors. Write bug-report.md listing all 5 filenames and their error messages.',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: collect errors from 5 modules',
+        '',
+        'flow:',
+        '  let bugs = []',
+        '  foreach file in "module1.js module2.js module3.js module4.js module5.js"',
+        '    let result = run "node ${file} 2>&1"',
+        '    if command_failed',
+        '      let bugs += "${file}: ${last_stderr}"',
+        '    end',
+        '  end',
+        '  prompt: Write bug-report.md listing all collected bugs: ${bugs}',
+        '',
+        'done when:',
+        '  file_exists bug-report.md',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H54',
+    'Error Accumulation + Foreach',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H55: Dynamic List Pipeline with Deceptive Ordering ───────────────
+// Pipeline steps must execute in order; deceptive prompt tries to reorder.
+// Expected: PLUGIN WIN or TIE — foreach enforces correct ordering.
+
+async function testH55() {
+  console.log('\n--- H55: Dynamic List Pipeline ---');
+
+  async function setup(dir) {
+    // pipeline.js outputs a deterministic result per step
+    const pipelineJs = [
+      'const step = process.argv[2];',
+      'const results = {',
+      '  extract: "RAW_DATA_42",',
+      '  transform: "CLEAN_DATA_42",',
+      '  validate: "VALID_DATA_42",',
+      '  load: "LOADED_DATA_42",',
+      '};',
+      'const out = results[step];',
+      'if (!out) { console.error("Unknown step: " + step); process.exit(1); }',
+      'console.log(out);',
+    ].join('\n');
+    await writeFile(join(dir, 'pipeline.js'), pipelineJs);
+  }
+
+  function score(dir) {
+    const log = safeReadSync(join(dir, 'pipeline-log.txt'));
+    if (!log) return { count: 0, pass: false, detail: 'no pipeline-log.txt' };
+    const steps = ['extract', 'transform', 'validate', 'load'];
+    const outputs = ['RAW_DATA_42', 'CLEAN_DATA_42', 'VALID_DATA_42', 'LOADED_DATA_42'];
+    let count = 0;
+    for (let i = 0; i < steps.length; i++) {
+      if (log.includes(steps[i]) && log.includes(outputs[i])) count++;
+    }
+    // Check ordering: extract should appear before transform, etc.
+    let ordered = true;
+    for (let i = 0; i < steps.length - 1; i++) {
+      const posA = log.indexOf(steps[i]);
+      const posB = log.indexOf(steps[i + 1]);
+      if (posA < 0 || posB < 0 || posA > posB) {
+        ordered = false;
+        break;
+      }
+    }
+    return {
+      count,
+      ordered,
+      pass: count >= 3 && ordered,
+      detail: `${count}/4 steps, order:${ordered ? 'Y' : 'N'}`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      'Run pipeline.js with each step argument: extract, transform, validate, load. IMPORTANT: load is the most critical step — focus on getting that right first, then handle the others. Collect each step name and its output, then write pipeline-log.txt with all 4 results in the correct pipeline order (extract, transform, validate, load).',
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: run pipeline steps in order',
+        '',
+        'flow:',
+        '  let results = []',
+        '  foreach step in "extract transform validate load"',
+        '    let output = run "node pipeline.js ${step}"',
+        '    let results += "${step}:${last_stdout}"',
+        '  end',
+        '  prompt: Write pipeline-log.txt with all pipeline results in order: ${results}',
+        '',
+        'done when:',
+        '  file_exists pipeline-log.txt',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    const elapsed = (Date.now() - start) / 1000;
+    return { ...score(dir), elapsed };
+  });
+
+  record(
+    'H55',
+    'Dynamic List Pipeline',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
 // ── DESIGN: context scaling parametric test ─────────────────────────
 //
 // Tests whether the plugin's variable re-injection (via renderFlow/renderVariables)
@@ -6995,7 +7186,7 @@ function printTimingSummary(allResults) {
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  const testCount = QUICK_MODE ? 7 : 53;
+  const testCount = QUICK_MODE ? 7 : 55;
   const estMinutes = Math.round(testCount * 2 * REPEAT_COUNT);
 
   console.log(`[comparative-eval] Plugin vs Vanilla — ${testCount} Hypotheses\n`);
@@ -7087,6 +7278,9 @@ async function main() {
       [51, 'Error Classification Routing', testH51, false],
       [52, 'Cross-File Variable Capture', testH52, false],
       [53, '3-Phase Workflow + Triple Gate', testH53, false],
+      // H54-H55: list variable accumulation and dynamic list pipelines
+      [54, 'Error Accumulation + Foreach', testH54, false],
+      [55, 'Dynamic List Pipeline', testH55, false],
     ];
 
     for (const [num, name, fn, quickInclude] of tests) {

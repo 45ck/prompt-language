@@ -1693,6 +1693,117 @@ describe('injectContext — let-prompt capture', () => {
   });
 });
 
+describe('injectContext — list variable advancement', () => {
+  it('auto-advances let x = [] and sets x_length=0', async () => {
+    const store = makeStore();
+    const letNode = createLetNode('l1', 'items', { type: 'empty_list' });
+    const promptNode = createPromptNode('p1', 'work');
+    const spec = createFlowSpec('test', [letNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('prompt: work');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['items']).toBe('[]');
+    expect(saved?.variables['items_length']).toBe(0);
+  });
+
+  it('auto-advances let x += "val" and creates ["val"]', async () => {
+    const store = makeStore();
+    const initNode = createLetNode('l1', 'items', { type: 'empty_list' });
+    const appendNode = createLetNode('l2', 'items', { type: 'literal', value: 'apple' }, true);
+    const promptNode = createPromptNode('p1', 'work');
+    const spec = createFlowSpec('test', [initNode, appendNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('prompt: work');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['items']).toBe('["apple"]');
+    expect(saved?.variables['items_length']).toBe(1);
+  });
+
+  it('sequential appends produce correct array', async () => {
+    const store = makeStore();
+    const init = createLetNode('l1', 'items', { type: 'empty_list' });
+    const append1 = createLetNode('l2', 'items', { type: 'literal', value: 'a' }, true);
+    const append2 = createLetNode('l3', 'items', { type: 'literal', value: 'b' }, true);
+    const append3 = createLetNode('l4', 'items', { type: 'literal', value: 'c' }, true);
+    const promptNode = createPromptNode('p1', 'Summary: ${items}');
+    const spec = createFlowSpec('test', [init, append1, append2, append3, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('Summary: ["a","b","c"]');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['items']).toBe('["a","b","c"]');
+    expect(saved?.variables['items_length']).toBe(3);
+  });
+
+  it('foreach iterates over list variable', async () => {
+    const store = makeStore();
+    const init = createLetNode('l1', 'items', { type: 'empty_list' });
+    const append1 = createLetNode('l2', 'items', { type: 'literal', value: 'x' }, true);
+    const append2 = createLetNode('l3', 'items', { type: 'literal', value: 'y' }, true);
+    const foreachNode = createForeachNode('fe1', 'item', '${items}', [
+      createPromptNode('p1', 'Process ${item}'),
+    ]);
+    const spec = createFlowSpec('test', [init, append1, append2, foreachNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    // First foreach iteration captures prompt for first item
+    expect(result.prompt).toContain('Process x');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['item']).toBe('x');
+  });
+
+  it('let x += run "cmd" appends stdout', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'cherry\n', stderr: '' }),
+    };
+    const init = createLetNode('l1', 'fruits', { type: 'empty_list' });
+    const appendLit = createLetNode('l2', 'fruits', { type: 'literal', value: 'apple' }, true);
+    const appendRun = createLetNode('l3', 'fruits', { type: 'run', command: 'echo cherry' }, true);
+    const promptNode = createPromptNode('p1', 'Fruits: ${fruits}');
+    const spec = createFlowSpec('test', [init, appendLit, appendRun, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(result.prompt).toContain('Fruits: ["apple","cherry"]');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['fruits']).toBe('["apple","cherry"]');
+    expect(saved?.variables['fruits_length']).toBe(2);
+  });
+
+  it('append to undefined variable auto-creates array', async () => {
+    const store = makeStore();
+    const appendNode = createLetNode('l1', 'items', { type: 'literal', value: 'first' }, true);
+    const promptNode = createPromptNode('p1', 'work');
+    const spec = createFlowSpec('test', [appendNode, promptNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+
+    expect(result.prompt).toContain('prompt: work');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['items']).toBe('["first"]');
+    expect(saved?.variables['items_length']).toBe(1);
+  });
+});
+
 describe('looksLikeNaturalLanguage — foreach', () => {
   it('detects "foreach" keyword', () => {
     expect(looksLikeNaturalLanguage('foreach file in the list, lint it')).toBe(true);

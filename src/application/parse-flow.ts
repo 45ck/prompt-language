@@ -155,20 +155,35 @@ function stripQuotes(s: string): string {
 function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
   // Strip "let " or "var " prefix
   const afterKeyword = trimmed.slice(trimmed.indexOf(' ') + 1);
+
+  // Detect += (append) vs = (assign) — check += first
+  const appendIdx = afterKeyword.indexOf('+=');
   const eqIdx = afterKeyword.indexOf('=');
-  if (eqIdx < 0) {
+  const isAppend = appendIdx >= 0 && (eqIdx < 0 || appendIdx <= eqIdx);
+  const splitIdx = isAppend ? appendIdx : eqIdx;
+
+  if (splitIdx < 0) {
     ctx.warnings.push(`Invalid let/var syntax: "${trimmed}" — missing "="`);
     return null;
   }
-  const variableName = afterKeyword.slice(0, eqIdx).trim();
+  const variableName = afterKeyword.slice(0, splitIdx).trim();
   if (!variableName) {
     ctx.warnings.push(`Invalid let/var syntax: "${trimmed}" — missing variable name`);
     return null;
   }
-  const rhs = afterKeyword.slice(eqIdx + 1).trim();
+  const rhs = afterKeyword.slice(splitIdx + (isAppend ? 2 : 1)).trim();
   if (!rhs) {
     ctx.warnings.push(`Invalid let/var syntax: "${trimmed}" — missing value`);
     return null;
+  }
+
+  // Handle empty list initializer: []
+  if (rhs === '[]') {
+    if (isAppend) {
+      ctx.warnings.push(`Cannot append empty list: "${trimmed}" — use = [] to initialize`);
+      return null;
+    }
+    return createLetNode(nextId(ctx), variableName, { type: 'empty_list' }, false);
   }
 
   const rhsLower = rhs.toLowerCase();
@@ -185,7 +200,7 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
     source = { type: 'literal', value };
   }
 
-  return createLetNode(nextId(ctx), variableName, source);
+  return createLetNode(nextId(ctx), variableName, source, isAppend);
 }
 
 function parseForeachLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {

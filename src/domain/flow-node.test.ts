@@ -127,6 +127,7 @@ describe('createLetNode', () => {
       id: 'l1',
       variableName: 'greeting',
       source: { type: 'literal', value: 'hello' },
+      append: false,
     });
   });
 
@@ -137,6 +138,7 @@ describe('createLetNode', () => {
       id: 'l2',
       variableName: 'info',
       source: { type: 'prompt', text: 'summarize this' },
+      append: false,
     });
   });
 
@@ -147,6 +149,29 @@ describe('createLetNode', () => {
       id: 'l3',
       variableName: 'output',
       source: { type: 'run', command: 'echo hi' },
+      append: false,
+    });
+  });
+
+  it('creates a let node with append=true', () => {
+    const node = createLetNode('l4', 'items', { type: 'literal', value: 'x' }, true);
+    expect(node).toEqual({
+      kind: 'let',
+      id: 'l4',
+      variableName: 'items',
+      source: { type: 'literal', value: 'x' },
+      append: true,
+    });
+  });
+
+  it('creates a let node with empty_list source', () => {
+    const node = createLetNode('l5', 'items', { type: 'empty_list' });
+    expect(node).toEqual({
+      kind: 'let',
+      id: 'l5',
+      variableName: 'items',
+      source: { type: 'empty_list' },
+      append: false,
     });
   });
 });

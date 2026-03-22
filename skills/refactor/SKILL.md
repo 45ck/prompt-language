@@ -10,25 +10,18 @@ Refactor the target code incrementally, verifying tests pass after each change.
 
 ## What to do
 
-1. Run the test suite first to establish a green baseline. If tests are already failing, fix them before refactoring.
-2. Read the target file or module specified by the user.
-3. Identify refactoring opportunities (duplication, unclear naming, structural issues).
-4. Apply one refactoring at a time. After each change, run the tests.
-5. If tests fail after a change, fix the issue before moving to the next refactoring.
-6. Repeat until the code is clean or you've made 3 refactoring passes.
+1. Read the target file or module specified by the user.
+2. Run the test suite to establish a green baseline. If tests are failing, fix them first.
+3. Apply one refactoring at a time. After each change, run the tests.
+4. If tests fail after a change, fix the issue before moving to the next refactoring.
+5. Repeat until the code is clean or you've made 5 refactoring passes.
 
 ## Flow
 
 ```
 flow:
-  run: npm test
-  if command_failed
-    prompt: Tests are failing before refactoring. Fix them first.
-    run: npm test
-  end
-  prompt: Read the target code and identify refactoring opportunities. List them.
-  retry max 3
-    prompt: Apply the next refactoring. Make one focused change, then verify tests still pass.
+  retry max 5
+    prompt: Apply the next refactoring to the target code. Make one focused change. Keep tests green.
     run: npm test
   end
 

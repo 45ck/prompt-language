@@ -401,4 +401,37 @@ describe('renderFlow', () => {
     const output = renderFlow(state);
     expect(output).toContain('run: test  <-- current');
   });
+
+  it('renders let x = [] for empty_list source', () => {
+    const letNode = createLetNode('l1', 'items', { type: 'empty_list' });
+    const spec = createFlowSpec('test', [letNode]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('let items = []');
+  });
+
+  it('renders let x += "val" for append literal', () => {
+    const letNode = createLetNode('l1', 'errors', { type: 'literal', value: 'timeout' }, true);
+    const spec = createFlowSpec('test', [letNode]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('let errors += "timeout"');
+  });
+
+  it('renders let x += run "cmd" for append run', () => {
+    const letNode = createLetNode('l1', 'logs', { type: 'run', command: 'npm test' }, true);
+    const spec = createFlowSpec('test', [letNode]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('let logs += run "npm test"');
+  });
+
+  it('shows [= ["a","b"]] annotation for list variable', () => {
+    const letNode = createLetNode('l1', 'items', { type: 'empty_list' });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { items: '["a","b"]' } };
+    const output = renderFlow(state);
+    expect(output).toContain('[= ["a","b"]]');
+  });
 });

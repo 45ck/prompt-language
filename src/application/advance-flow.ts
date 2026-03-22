@@ -19,6 +19,7 @@ import { interpolate, shellInterpolate } from '../domain/interpolate.js';
 import { evaluateCondition } from '../domain/evaluate-condition.js';
 import { resolveBuiltinCommand, isInvertedPredicate } from './evaluate-completion.js';
 import { splitIterable } from '../domain/split-iterable.js';
+import { initEmptyList, appendToList, listLength } from '../domain/list-variable.js';
 import {
   buildCapturePrompt,
   buildCaptureRetryPrompt,
@@ -272,6 +273,9 @@ export async function autoAdvanceNodes(
           case 'literal':
             value = node.source.value;
             break;
+          case 'empty_list':
+            value = initEmptyList();
+            break;
           case 'prompt': {
             const progress = current.nodeProgress[node.id];
             const isAwaiting = progress?.status === 'awaiting_capture';
@@ -348,7 +352,15 @@ export async function autoAdvanceNodes(
             break;
           }
         }
+        // Append mode: merge into existing list
+        if (node.append) {
+          value = appendToList(current.variables[node.variableName], value);
+        }
         current = updateVariable(current, node.variableName, value);
+        // Set _length auto-variable for list operations
+        if (node.append || node.source.type === 'empty_list') {
+          current = updateVariable(current, `${node.variableName}_length`, listLength(value));
+        }
         if (tryCatchJump) {
           current = advanceNode(current, tryCatchJump);
         } else {

@@ -1,6 +1,6 @@
 ---
 name: fix-and-test
-description: Fix failing tests in a retry loop until they pass. Automatically re-runs tests after each fix attempt.
+description: The standard fix-test loop. Runs tests, fixes failures, re-runs, repeats until green. The Ralph Loop pattern.
 argument-hint: '[test command or pattern]'
 ---
 

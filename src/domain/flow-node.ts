@@ -68,12 +68,14 @@ export interface TryNode extends BaseNode {
 export type LetSource =
   | { readonly type: 'prompt'; readonly text: string }
   | { readonly type: 'run'; readonly command: string }
-  | { readonly type: 'literal'; readonly value: string };
+  | { readonly type: 'literal'; readonly value: string }
+  | { readonly type: 'empty_list' };
 
 export interface LetNode extends BaseNode {
   readonly kind: 'let';
   readonly variableName: string;
   readonly source: LetSource;
+  readonly append: boolean;
 }
 
 export interface ForeachNode extends BaseNode {
@@ -168,8 +170,13 @@ export function createTryNode(
   return { kind: 'try', id, body, catchCondition, catchBody };
 }
 
-export function createLetNode(id: string, variableName: string, source: LetSource): LetNode {
-  return { kind: 'let', id, variableName, source };
+export function createLetNode(
+  id: string,
+  variableName: string,
+  source: LetSource,
+  append = false,
+): LetNode {
+  return { kind: 'let', id, variableName, source, append };
 }
 
 export function createForeachNode(

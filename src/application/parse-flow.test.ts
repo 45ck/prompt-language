@@ -377,6 +377,71 @@ describe('parseFlow — let/var statements', () => {
     expect(spec.nodes[2]!.kind).toBe('let');
     expect(spec.nodes[3]!.kind).toBe('run');
   });
+
+  it('parses let x = [] as empty_list source', () => {
+    const dsl = `Goal: g\n\nflow:\n  let items = []`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.kind).toBe('let');
+    expect(node.variableName).toBe('items');
+    expect(node.source).toEqual({ type: 'empty_list' });
+    expect(node.append).toBe(false);
+  });
+
+  it('parses let x += "val" as append literal', () => {
+    const dsl = `Goal: g\n\nflow:\n  let errors += "timeout"`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.kind).toBe('let');
+    expect(node.variableName).toBe('errors');
+    expect(node.source).toEqual({ type: 'literal', value: 'timeout' });
+    expect(node.append).toBe(true);
+  });
+
+  it('parses let x += run "cmd" as append run', () => {
+    const dsl = `Goal: g\n\nflow:\n  let logs += run "npm test 2>&1"`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.variableName).toBe('logs');
+    expect(node.source).toEqual({ type: 'run', command: 'npm test 2>&1' });
+    expect(node.append).toBe(true);
+  });
+
+  it('parses var x += "val" as append (alias)', () => {
+    const dsl = `Goal: g\n\nflow:\n  var items += "apple"`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.kind).toBe('let');
+    expect(node.append).toBe(true);
+    expect(node.source).toEqual({ type: 'literal', value: 'apple' });
+  });
+
+  it('warns on let x += [] (cannot append empty list)', () => {
+    const dsl = `Goal: g\n\nflow:\n  let x += []\n  prompt: work`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+    expect(spec.warnings.some((w) => w.includes('Cannot append empty list'))).toBe(true);
+  });
+
+  it('parses let x += prompt "text" as append prompt', () => {
+    const dsl = `Goal: g\n\nflow:\n  let notes += prompt "analyze this"`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.variableName).toBe('notes');
+    expect(node.source).toEqual({ type: 'prompt', text: 'analyze this' });
+    expect(node.append).toBe(true);
+  });
+
+  it('regular let = has append false', () => {
+    const dsl = `Goal: g\n\nflow:\n  let x = "hello"`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.append).toBe(false);
+  });
 });
 
 describe('parseFlow — robustness', () => {

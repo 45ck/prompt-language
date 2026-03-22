@@ -388,6 +388,8 @@ Steps define execution order. Gates define the exit condition. You can use flow 
 
 **Context re-injection**: On every turn, the plugin loads saved state from `.prompt-language/session-state.json`, re-renders the full flow with all variables and execution progress, and prepends it to Claude's prompt. This means Claude sees a complete, up-to-date snapshot every turn — variables, loop counters, gate results — regardless of conversation length. No information is lost to context window limits.
 
+For a detailed walkthrough of the mechanics, see the **[Practical Guide](https://github.com/45ck/prompt-language/blob/main/docs/guide.md)**.
+
 ## DSL reference
 
 | Primitive     | Purpose                              | Example                                |

@@ -262,6 +262,92 @@ done when:
 
 Each error is captured in a variable when it's first observed, then re-injected into the postmortem prompt at the end.
 
+### Process a list of files
+
+Iterate over command output. Each item gets its own step:
+
+```
+Goal: lint all changed TypeScript files
+
+flow:
+  let files = run "git diff --name-only -- '*.ts'"
+  foreach file in ${files}
+    run: npx eslint ${file} --fix
+  end
+
+done when:
+  lint_pass
+```
+
+`foreach` splits the list automatically (JSON arrays, newline-delimited, or whitespace-delimited). Each iteration sets `${file}`, `${file_index}`, and `${file_length}`.
+
+## Context management
+
+### Why variables matter
+
+Claude Code conversations lose context as they grow. The context window fills, earlier turns get compressed, and details drop out. Variables solve this: they store exact values in persistent state and re-inject them into every subsequent turn, regardless of conversation length.
+
+### Three capture modes
+
+Literal — store a string directly:
+
+```
+let greeting = "hello world"
+```
+
+Command output — run a command, store stdout:
+
+```
+let baseline = run "node bench.js"
+```
+
+Prompt capture — ask Claude a question, store its answer:
+
+```
+let summary = prompt "Summarize the test failures above"
+```
+
+Each mode stores the result in `.prompt-language/session-state.json`. Later steps reference the variable with `${varName}` — the plugin interpolates the stored value before Claude sees the prompt.
+
+### Auto-variables
+
+Every `run:` node and `let x = run "..."` automatically sets five variables:
+
+| Variable            | Value                                  |
+| ------------------- | -------------------------------------- |
+| `last_exit_code`    | Numeric exit code                      |
+| `command_succeeded` | `true` when exit code is 0             |
+| `command_failed`    | `true` when exit code is non-zero      |
+| `last_stdout`       | Command stdout (truncated at 2k chars) |
+| `last_stderr`       | Command stderr (truncated at 2k chars) |
+
+These are available immediately in subsequent `if`, `while`, and `prompt` nodes.
+
+### Foreach
+
+Iterate over a collection. The list is split automatically — JSON arrays, newline-delimited output, or whitespace-separated tokens all work:
+
+```
+let files = run "git diff --name-only -- '*.ts'"
+foreach file in ${files}
+  prompt: Review ${file} for type safety issues.
+end
+```
+
+Each iteration sets `${file}` (current item), `${file_index}` (0-based), and `${file_length}` (total count).
+
+### How it compares to vanilla Claude Code
+
+| Aspect                | Vanilla Claude Code        | With plugin                           |
+| --------------------- | -------------------------- | ------------------------------------- |
+| Context at 2-15 steps | Perfect recall             | Perfect recall (no advantage)         |
+| Context at scale      | Degrades as window fills   | Deterministic re-injection every turn |
+| Variable explicitness | Implicit in conversation   | Named, inspectable, interpolated      |
+| Composability         | Copy-paste between prompts | `${var}` references across steps      |
+| Latency               | Baseline                   | 2-3x overhead                         |
+
+At short distances, vanilla Claude recalls everything. The advantage appears at scale and in readability: variables make data flow explicit, and re-injection guarantees nothing is lost to token limits.
+
 ## How it works
 
 1. You write a flow (DSL or natural language) in your prompt.
@@ -300,6 +386,8 @@ Each error is captured in a variable when it's first observed, then re-injected 
 
 Steps define execution order. Gates define the exit condition. You can use flow steps without gates (structured execution only) or gates without a complex flow (verification before stopping).
 
+**Context re-injection**: On every turn, the plugin loads saved state from `.prompt-language/session-state.json`, re-renders the full flow with all variables and execution progress, and prepends it to Claude's prompt. This means Claude sees a complete, up-to-date snapshot every turn — variables, loop counters, gate results — regardless of conversation length. No information is lost to context window limits.
+
 ## DSL reference
 
 | Primitive     | Purpose                              | Example                                |
@@ -312,6 +400,7 @@ Steps define execution order. Gates define the exit condition. You can use flow 
 | `retry`       | Retry block on failure               | `retry max 3`                          |
 | `if`/`else`   | Conditional branching                | `if lint_fail ... else ... end`        |
 | `try`/`catch` | Execute with error recovery          | `try ... catch command_failed ... end` |
+| `foreach`     | Iterate over a list                  | `foreach file in ${files} max 10`      |
 | `done when:`  | Completion gate (blocks stopping)    | `done when: tests_pass`                |
 
 Full syntax, defaults, composition rules, built-in variables, and gate predicates: **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)**
@@ -326,7 +415,7 @@ Full syntax, defaults, composition rules, built-in variables, and gate predicate
 
 ## Evaluation
 
-In 45 A/B hypotheses (39 tested, 6 pending): **15 plugin wins, 21 ties, 1 flaky, 2 both-fail** across 250+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
+In 45 A/B hypotheses: **15 plugin wins, 28 ties, 1 flaky, 2 both-fail** across 300+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
 
 | Pattern                         | Mechanism                                  | Win rate |
 | ------------------------------- | ------------------------------------------ | -------- |

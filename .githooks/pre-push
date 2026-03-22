@@ -1,0 +1,5 @@
+#!/bin/sh
+# noslop pre-push: slow gates (typecheck, tests)
+set -e
+
+npm run typecheck && npm run test

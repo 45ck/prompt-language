@@ -38,7 +38,8 @@
     "fagan",
     "foobarbaz",
     "foreach",
-    "frontmatter"
+    "frontmatter",
+    "inspectable"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
 }

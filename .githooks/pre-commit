@@ -1,0 +1,24 @@
+#!/bin/sh
+# noslop pre-commit: fast gates (format, lint, spell)
+set -e
+
+# Block commits that modify protected quality gate config or hook files.
+PROTECTED_CONFIGS="eslint.config.mjs vitest.config.ts .dependency-cruiser.cjs knip.json tsconfig.json tsconfig.build.json"
+while IFS= read -r staged_file; do
+  for cfg in $PROTECTED_CONFIGS; do
+    if [ "$staged_file" = "$cfg" ]; then
+      echo "noslop: $cfg is a protected quality gate config — changes cannot be committed." >&2
+      exit 1
+    fi
+  done
+  case "$staged_file" in
+    .githooks/*|.github/workflows/*|.claude/hooks/*|.claude/settings.json|AGENTS.md)
+      echo "noslop: $staged_file is protected gate infrastructure — changes cannot be committed." >&2
+      exit 1
+      ;;
+  esac
+done << STAGED
+$(git diff --cached --name-only 2>/dev/null)
+STAGED
+
+npm run format:check && npm run lint && npm run spell

@@ -88,10 +88,13 @@ async function phaseA() {
     const input = JSON.stringify({ prompt: 'Run tests until they pass, max 5' });
     const output = runHook(input, tempDir);
     const result = JSON.parse(output);
+    // H#40: NL-to-DSL now shows confirmation prompt instead of immediate DSL reference
     assert(
       'A1: NL input triggers meta-prompt',
-      result.prompt.includes('[prompt-language]') && result.prompt.includes('DSL reference'),
-      result.prompt.includes('DSL reference') ? 'meta-prompt injected' : 'missing DSL reference',
+      result.prompt.includes('[prompt-language]') && result.prompt.includes('control-flow intent'),
+      result.prompt.includes('control-flow intent')
+        ? 'confirmation prompt'
+        : 'missing NL detection',
     );
   } catch (err) {
     assert('A1: NL input triggers meta-prompt', false, err.message);

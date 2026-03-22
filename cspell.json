@@ -43,6 +43,7 @@
     "colorize",
     "colorized",
     "fallbackend",
+    "pyproject",
     "pytest",
     "realend",
     "uppercased",

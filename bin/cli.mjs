@@ -197,6 +197,66 @@ async function status() {
   }
 }
 
+// H#81: Generate a starter flow from project context
+async function init() {
+  const cwd = process.cwd();
+  const plDir = join(cwd, '.prompt-language');
+  const varsDir = join(plDir, 'vars');
+
+  await ensureDir(plDir);
+  await ensureDir(varsDir);
+
+  // Create .gitignore for state files
+  const gitignorePath = join(plDir, '.gitignore');
+  try {
+    await fs.access(gitignorePath);
+  } catch {
+    await fs.writeFile(gitignorePath, 'session-state.json\nsession-state.lock\nvars/\n', 'utf8');
+    console.log('  Created .prompt-language/.gitignore');
+  }
+
+  // Detect project type and generate starter flow
+  const pkg = await readJsonSafe(join(cwd, 'package.json'));
+  let flow = '';
+
+  if (pkg?.scripts) {
+    const hasTest = !!pkg.scripts.test;
+    const hasLint = !!pkg.scripts.lint;
+    const hasBuild = !!pkg.scripts.build;
+    const testCmd = hasTest ? 'npm test' : '';
+    const lintCmd = hasLint ? 'npm run lint' : '';
+
+    const steps = [];
+    steps.push('  prompt: Implement the requested changes.');
+    if (hasBuild) steps.push('  run: npm run build');
+    if (hasTest) steps.push(`  run: ${testCmd}`);
+    if (hasLint) steps.push(`  run: ${lintCmd}`);
+
+    const gates = [];
+    if (hasTest) gates.push('  tests_pass');
+    if (hasLint) gates.push('  lint_pass');
+
+    flow = `Goal: <describe your goal here>\n\nflow:\n${steps.join('\n')}\n`;
+    if (gates.length > 0) {
+      flow += `\ndone when:\n${gates.join('\n')}\n`;
+    }
+  } else {
+    flow = `Goal: <describe your goal here>\n\nflow:\n  prompt: Implement the requested changes.\n  run: echo "done"\n`;
+  }
+
+  const flowPath = join(cwd, 'example.flow');
+  try {
+    await fs.access(flowPath);
+    console.log('  example.flow already exists (skipping)');
+  } catch {
+    await fs.writeFile(flowPath, flow, 'utf8');
+    console.log('  Created example.flow');
+  }
+
+  console.log('\nprompt-language initialized. Edit example.flow and run:');
+  console.log('  claude -p "$(cat example.flow)"');
+}
+
 const command = process.argv[2] ?? 'install';
 
 switch (command) {
@@ -209,8 +269,11 @@ switch (command) {
   case 'status':
     await status();
     break;
+  case 'init':
+    await init();
+    break;
   default:
     console.error(`Unknown command: ${command}`);
-    console.error('Usage: npx @45ck/prompt-language [install|uninstall|status]');
+    console.error('Usage: npx @45ck/prompt-language [install|uninstall|status|init]');
     process.exit(1);
 }

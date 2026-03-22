@@ -3,6 +3,33 @@
   "version": "0.2.0",
   "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates so the agent cannot stop early or skip steps.",
   "license": "MIT",
+  "author": {
+    "name": "45ck",
+    "url": "https://github.com/45ck"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/45ck/prompt-language.git"
+  },
+  "homepage": "https://github.com/45ck/prompt-language#readme",
+  "bugs": {
+    "url": "https://github.com/45ck/prompt-language/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "plugin",
+    "workflow",
+    "dsl",
+    "agent",
+    "automation",
+    "completion-gates",
+    "control-flow",
+    "prompt-engineering",
+    "ai",
+    "llm",
+    "anthropic"
+  ],
   "type": "module",
   "bin": {
     "prompt-language": "./bin/cli.mjs"

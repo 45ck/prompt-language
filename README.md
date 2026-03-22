@@ -3,8 +3,11 @@
 Stop telling Claude to run the tests.
 
 [![npm](https://img.shields.io/npm/v/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
+[![CI](https://github.com/45ck/prompt-language/actions/workflows/quality.yml/badge.svg)](https://github.com/45ck/prompt-language/actions/workflows/quality.yml)
 [![license](https://img.shields.io/npm/l/@45ck/prompt-language)](LICENSE)
 [![node](https://img.shields.io/node/v/@45ck/prompt-language)](package.json)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+[![npm downloads](https://img.shields.io/npm/dm/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 
 ## The problem
 

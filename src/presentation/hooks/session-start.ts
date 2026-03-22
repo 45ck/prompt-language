@@ -7,11 +7,34 @@
  * additionalContext via stdout JSON (for Claude).
  */
 
+import { access } from 'node:fs/promises';
+import { join } from 'node:path';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { formatError } from '../../domain/format-error.js';
 import { readStdin } from './read-stdin.js';
+
+// H#100: Detect project type and suggest relevant flows
+async function suggestFlows(): Promise<string | null> {
+  const cwd = process.cwd();
+  const checks = [
+    { file: 'package.json', hint: '/fix-and-test, /tdd, /refactor' },
+    { file: 'Cargo.toml', hint: '/fix-and-test (cargo test)' },
+    { file: 'go.mod', hint: '/fix-and-test (go test)' },
+    { file: 'setup.py', hint: '/fix-and-test (pytest)' },
+    { file: 'pyproject.toml', hint: '/fix-and-test (pytest)' },
+  ];
+  for (const { file, hint } of checks) {
+    try {
+      await access(join(cwd, file));
+      return `[prompt-language] Available skills: ${hint}`;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
 
 async function main(): Promise<void> {
   // Consume stdin (required by hook protocol)
@@ -27,6 +50,14 @@ async function main(): Promise<void> {
     const output = JSON.stringify({
       additionalContext: `[prompt-language] Active flow detected:\n\n${rendered}`,
     });
+    process.stdout.write(output);
+    return;
+  }
+
+  // H#100: Suggest flows when no active flow
+  const suggestion = await suggestFlows();
+  if (suggestion) {
+    const output = JSON.stringify({ additionalContext: suggestion });
     process.stdout.write(output);
   }
 }

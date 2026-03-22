@@ -1,3 +1,10 @@
+# SUPERSEDED
+
+> This design was considered and rejected. The `prompt_capture` LetSource is not being implemented.
+> See CLAUDE.md for the current let/var specification.
+
+---
+
 # Design: Prompt Output Parsing
 
 ## Problem

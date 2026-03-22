@@ -9,6 +9,8 @@ import type { SessionState } from '../../domain/session-state.js';
 
 const DIR_NAME = '.prompt-language';
 const FILE_NAME = 'session-state.json';
+// H#79: Guard against enormous state files
+const MAX_STATE_FILE_SIZE = 100 * 1024; // 100 KB
 
 export class FileStateStore implements StateStore {
   private readonly dirPath: string;
@@ -30,6 +32,12 @@ export class FileStateStore implements StateStore {
   async save(state: SessionState): Promise<void> {
     await this.ensureDir();
     const json = JSON.stringify(state, null, 2);
+    if (json.length > MAX_STATE_FILE_SIZE) {
+      throw new Error(
+        `State file exceeds ${MAX_STATE_FILE_SIZE} bytes (${json.length} bytes). ` +
+          'Possible cause: large command output in variables.',
+      );
+    }
     await writeFile(this.filePath, json, 'utf-8');
   }
 

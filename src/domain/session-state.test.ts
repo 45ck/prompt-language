@@ -8,6 +8,8 @@ import {
   markCompleted,
   isFlowComplete,
   allGatesPassing,
+  pauseFlow,
+  resumeFlow,
 } from './session-state.js';
 import type { SessionState, NodeProgress } from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
@@ -32,6 +34,13 @@ describe('createSessionState', () => {
     expect(state.gateResults).toEqual({});
     expect(state.status).toBe('active');
     expect(state.warnings).toEqual(['warn1']);
+  });
+
+  // H#56: Version field
+  it('includes version field set to 1', () => {
+    const spec = createFlowSpec('goal', []);
+    const state = createSessionState('s1', spec);
+    expect(state.version).toBe(1);
   });
 });
 
@@ -127,6 +136,24 @@ describe('isFlowComplete', () => {
 
   it('returns true for cancelled', () => {
     expect(isFlowComplete({ ...makeState(), status: 'cancelled' })).toBe(true);
+  });
+});
+
+// H#60: Pause/resume
+describe('pauseFlow', () => {
+  it('sets status to paused', () => {
+    const state = makeState();
+    const paused = pauseFlow(state);
+    expect(paused.status).toBe('paused');
+    expect(state.status).toBe('active');
+  });
+});
+
+describe('resumeFlow', () => {
+  it('sets status back to active', () => {
+    const paused = pauseFlow(makeState());
+    const resumed = resumeFlow(paused);
+    expect(resumed.status).toBe('active');
   });
 });
 

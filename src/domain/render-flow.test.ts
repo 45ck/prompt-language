@@ -70,7 +70,8 @@ describe('renderFlow', () => {
     expect(runLine).toContain('<-- current');
   });
 
-  it('renders loop progress annotations', () => {
+  // H#32: Visual progress bar
+  it('renders loop progress annotations with visual bar', () => {
     const whileNode = createWhileNode('w1', 'not tests_pass', [createRunNode('r1', 'npm test')], 4);
     const spec = createFlowSpec('test', [whileNode]);
     let state = createSessionState('s1', spec);
@@ -81,7 +82,8 @@ describe('renderFlow', () => {
     });
     state = { ...state, currentNodePath: [0, 0] };
     const output = renderFlow(state);
-    expect(output).toContain('[2/4]');
+    // Math.round(2/4 * 5) = Math.round(2.5) = 3
+    expect(output).toContain('[###--] 2/4');
   });
 
   it('renders while node structure', () => {
@@ -307,7 +309,7 @@ describe('renderFlow', () => {
 
     expect(output).toContain('[prompt-language] Flow: fix the auth tests | Status: active');
     expect(output).toContain('while not tests_pass max 4');
-    expect(output).toContain('[2/4]');
+    expect(output).toContain('[###--] 2/4');
     expect(output).toContain('run: pnpm test -- auth  <-- current');
     expect(output).toContain('if failure_mode == "type-error"');
     expect(output).toContain('else');
@@ -435,7 +437,8 @@ describe('renderFlow', () => {
     });
     state = { ...state, currentNodePath: [0, 0], variables: { item: 'second' } };
     const output = renderFlow(state);
-    expect(output).toContain('[2/5]');
+    // Math.round(2/5 * 5) = Math.round(2) = 2
+    expect(output).toContain('[##---] 2/5');
     expect(output).toContain('[item=second]');
   });
 
@@ -491,5 +494,52 @@ describe('renderFlow', () => {
     state = { ...state, variables: { items: '["a","b"]' } };
     const output = renderFlow(state);
     expect(output).toContain('[= ["a","b"]]');
+  });
+
+  // H#33: Truncate long variable values
+  it('truncates variable values longer than 80 chars', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    const longVal = 'x'.repeat(100);
+    state = { ...state, variables: { big: longVal } };
+    const output = renderFlow(state);
+    expect(output).toContain('big = ' + 'x'.repeat(77) + '...');
+    expect(output).not.toContain('x'.repeat(100));
+  });
+
+  // H#36: Multi-line stderr in gate diagnostics
+  it('shows first 3 lines of stderr in gate failure diagnostic', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = updateGateResult(state, 'tests_pass', false);
+    state = updateGateDiagnostic(state, 'tests_pass', {
+      passed: false,
+      command: 'npm test',
+      exitCode: 1,
+      stderr: 'line1 error\nline2 detail\nline3 context\nline4 ignored',
+    });
+    const output = renderFlow(state);
+    expect(output).toContain('line1 error | line2 detail | line3 context');
+    expect(output).not.toContain('line4 ignored');
+  });
+
+  // H#51: Render warnings
+  it('renders warnings section when warnings exist', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')], [], ['Missing end']);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('Warnings:');
+    expect(output).toContain('[!] Missing end');
+  });
+
+  it('omits warnings section when no warnings', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).not.toContain('Warnings:');
   });
 });

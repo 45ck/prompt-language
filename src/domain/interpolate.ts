@@ -14,12 +14,27 @@ export function interpolate(
   template: string,
   variables: Readonly<Record<string, string | number | boolean>>,
 ): string {
-  return template.replace(/\$\{(\w+)\}/g, (match, name: string) => {
-    if (name in variables) {
-      return String(variables[name]);
-    }
-    return match;
-  });
+  // H#10: Support ${var:-default} syntax for default values.
+  // Two-branch alternation: first matches ${var:-default} (including empty default),
+  // second matches plain ${var}. Avoids backtracking issues with optional groups.
+  return template.replace(
+    /\$\{(\w+):-((?:[^}\\]|\\.)*)\}|\$\{(\w+)\}/g,
+    (
+      match,
+      nameWithDefault: string | undefined,
+      defaultVal: string | undefined,
+      plainName: string | undefined,
+    ) => {
+      const name = nameWithDefault ?? plainName!;
+      if (name in variables) {
+        return String(variables[name]);
+      }
+      if (nameWithDefault !== undefined) {
+        return defaultVal!;
+      }
+      return match;
+    },
+  );
 }
 
 /** Escape a value for safe inclusion in a shell command string. */
@@ -32,10 +47,23 @@ export function shellInterpolate(
   template: string,
   variables: Readonly<Record<string, string | number | boolean>>,
 ): string {
-  return template.replace(/\$\{(\w+)\}/g, (match, name: string) => {
-    if (name in variables) {
-      return shellEscapeValue(String(variables[name]));
-    }
-    return match;
-  });
+  // H#10: Support ${var:-default} syntax for default values (shell-escaped)
+  return template.replace(
+    /\$\{(\w+):-((?:[^}\\]|\\.)*)\}|\$\{(\w+)\}/g,
+    (
+      match,
+      nameWithDefault: string | undefined,
+      defaultVal: string | undefined,
+      plainName: string | undefined,
+    ) => {
+      const name = nameWithDefault ?? plainName!;
+      if (name in variables) {
+        return shellEscapeValue(String(variables[name]));
+      }
+      if (nameWithDefault !== undefined) {
+        return shellEscapeValue(defaultVal!);
+      }
+      return match;
+    },
+  );
 }

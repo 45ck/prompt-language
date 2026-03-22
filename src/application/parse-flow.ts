@@ -33,6 +33,11 @@ function nextId(ctx: ParseContext): string {
   return `n${ctx.nodeCounter}`;
 }
 
+// H#28: Prepend line numbers to parser warnings
+function warn(ctx: ParseContext, message: string): void {
+  ctx.warnings.push(`line ${ctx.pos}: ${message}`);
+}
+
 function currentIndent(line: string): number {
   const match = /^(\s*)/.exec(line);
   return match?.[1] ? match[1].length : 0;
@@ -82,7 +87,7 @@ function parseWhileLine(ctx: ParseContext, line: string, baseIndent: number): Fl
   const condition = match?.[1] ?? 'true';
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
   if (!/max\s+\d+/i.exec(line)) {
-    ctx.warnings.push('Missing "max N" on while — defaulting to 5');
+    warn(ctx, 'Missing "max N" on while — defaulting to 5');
     max = DEFAULT_MAX_ITERATIONS;
   }
   const negated = /^while\s+not\s+/i.test(line);
@@ -96,7 +101,7 @@ function parseUntilLine(ctx: ParseContext, line: string, baseIndent: number): Fl
   const condition = match?.[1] ?? 'true';
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
   if (!/max\s+\d+/i.exec(line)) {
-    ctx.warnings.push('Missing "max N" on until — defaulting to 5');
+    warn(ctx, 'Missing "max N" on until — defaulting to 5');
     max = DEFAULT_MAX_ITERATIONS;
   }
   const body = parseBlock(ctx, baseIndent);
@@ -163,24 +168,24 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
   const splitIdx = isAppend ? appendIdx : eqIdx;
 
   if (splitIdx < 0) {
-    ctx.warnings.push(`Invalid let/var syntax: "${trimmed}" — missing "="`);
+    warn(ctx, `Invalid let/var syntax: "${trimmed}" — missing "="`);
     return null;
   }
   const variableName = afterKeyword.slice(0, splitIdx).trim();
   if (!variableName) {
-    ctx.warnings.push(`Invalid let/var syntax: "${trimmed}" — missing variable name`);
+    warn(ctx, `Invalid let/var syntax: "${trimmed}" — missing variable name`);
     return null;
   }
   const rhs = afterKeyword.slice(splitIdx + (isAppend ? 2 : 1)).trim();
   if (!rhs) {
-    ctx.warnings.push(`Invalid let/var syntax: "${trimmed}" — missing value`);
+    warn(ctx, `Invalid let/var syntax: "${trimmed}" — missing value`);
     return null;
   }
 
   // Handle empty list initializer: []
   if (rhs === '[]') {
     if (isAppend) {
-      ctx.warnings.push(`Cannot append empty list: "${trimmed}" — use = [] to initialize`);
+      warn(ctx, `Cannot append empty list: "${trimmed}" — use = [] to initialize`);
       return null;
     }
     return createLetNode(nextId(ctx), variableName, { type: 'empty_list' }, false);
@@ -206,7 +211,7 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
 function parseForeachLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
   const match = /^foreach\s+(\w+)\s+in\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
   if (!match?.[1] || !match[2]) {
-    ctx.warnings.push(`Invalid foreach syntax: "${line}"`);
+    warn(ctx, `Invalid foreach syntax: "${line}"`);
     return createPromptNode(nextId(ctx), line);
   }
   const variableName = match[1];
@@ -226,7 +231,7 @@ function consumeEnd(ctx: ParseContext): void {
       return;
     }
   }
-  ctx.warnings.push('Missing "end" — auto-closed block');
+  warn(ctx, 'Missing "end" — auto-closed block');
 }
 
 function parseBlock(
@@ -289,7 +294,7 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   if (lower.startsWith('let ') || lower.startsWith('var ')) {
     return parseLetLine(ctx, trimmed);
   }
-  ctx.warnings.push(`Unknown keyword "${trimmed}" — treating as prompt`);
+  warn(ctx, `Unknown keyword "${trimmed}" — treating as prompt`);
   return createPromptNode(nextId(ctx), trimmed);
 }
 

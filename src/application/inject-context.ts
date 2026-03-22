@@ -6,6 +6,7 @@
  */
 
 import { createSessionState } from '../domain/session-state.js';
+import type { SessionState } from '../domain/session-state.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -54,11 +55,19 @@ const NL_INTENT_WORDS = [
   '\\bif\\b.{1,20}\\berror',
 ];
 
-const NL_INTENT_RE = new RegExp(NL_INTENT_WORDS.join('|'), 'i');
+const NL_INTENT_PATTERNS = NL_INTENT_WORDS.map((w) => new RegExp(w, 'i'));
 
+// H#39: Require 2+ intent matches to reduce false positives
 export function looksLikeNaturalLanguage(prompt: string): boolean {
   if (FLOW_BLOCK_RE.test(prompt)) return false;
-  return NL_INTENT_RE.test(prompt);
+  let matches = 0;
+  for (const re of NL_INTENT_PATTERNS) {
+    if (re.test(prompt)) {
+      matches += 1;
+      if (matches >= 2) return true;
+    }
+  }
+  return false;
 }
 
 const DSL_REFERENCE = `\
@@ -178,19 +187,30 @@ function hasFlowBlock(prompt: string): boolean {
   return FLOW_BLOCK_RE.test(prompt);
 }
 
+// H#41: Expanded trivial prompts set
 const TRIVIAL_PROMPTS = new Set([
   'go',
   'continue',
   'ok',
+  'okay',
   'yes',
   'y',
+  'yep',
+  'yeah',
+  'yup',
+  'sure',
+  'k',
   'next',
   'proceed',
   'keep going',
+  'go ahead',
+  'sounds good',
+  'lets go',
   'do it',
   'run it',
   'start',
   'begin',
+  'right',
 ]);
 
 export function isTrivialPrompt(prompt: string): boolean {
@@ -209,6 +229,17 @@ export async function injectContext(
   captureReader?: CaptureReader,
 ): Promise<InjectContextOutput> {
   const existing = await stateStore.loadCurrent();
+
+  // H#49: Abort flow escape hatch
+  if (existing?.status === 'active') {
+    const lower = input.prompt.trim().toLowerCase();
+    const ABORT_PHRASES = ['abort flow', 'cancel flow', 'stop flow', 'reset flow'];
+    if (ABORT_PHRASES.some((phrase) => lower.includes(phrase))) {
+      const cancelled: SessionState = { ...existing, status: 'cancelled' };
+      await stateStore.save(cancelled);
+      return { prompt: '[prompt-language] Flow cancelled by user.' };
+    }
+  }
 
   if (existing?.status === 'active') {
     const { state: advanced, capturedPrompt } = await autoAdvanceNodes(

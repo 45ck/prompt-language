@@ -96,7 +96,7 @@ flow:
     const spec = parse(dsl);
     const node = spec.nodes[0] as WhileNode;
     expect(node.maxIterations).toBe(5);
-    expect(spec.warnings).toContain('Missing "max N" on while — defaulting to 5');
+    expect(spec.warnings.some((w) => w.includes('Missing "max N" on while'))).toBe(true);
   });
 });
 
@@ -138,7 +138,7 @@ flow:
     const spec = parse(dsl);
     const node = spec.nodes[0] as UntilNode;
     expect(node.maxIterations).toBe(5);
-    expect(spec.warnings).toContain('Missing "max N" on until — defaulting to 5');
+    expect(spec.warnings.some((w) => w.includes('Missing "max N" on until'))).toBe(true);
   });
 });
 
@@ -282,7 +282,9 @@ flow:
     const node = spec.nodes[0]! as PromptNode;
     expect(node.kind).toBe('prompt');
     expect(node.text).toBe('frobnicate the widget');
-    expect(spec.warnings).toContain('Unknown keyword "frobnicate the widget" — treating as prompt');
+    expect(spec.warnings.some((w) => w.includes('Unknown keyword "frobnicate the widget"'))).toBe(
+      true,
+    );
   });
 });
 

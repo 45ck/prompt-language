@@ -7,7 +7,8 @@
 
 import type { FlowSpec } from './flow-spec.js';
 
-export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
+// H#60: Add 'paused' status for flow pause/resume
+export type FlowStatus = 'active' | 'paused' | 'completed' | 'failed' | 'cancelled';
 
 export interface NodeProgress {
   readonly iteration: number;
@@ -23,6 +24,8 @@ export interface GateEvalResult {
 }
 
 export interface SessionState {
+  // H#56: Version field for format migration
+  readonly version: number;
   readonly sessionId: string;
   readonly flowSpec: FlowSpec;
   readonly currentNodePath: readonly number[];
@@ -36,6 +39,7 @@ export interface SessionState {
 
 export function createSessionState(sessionId: string, flowSpec: FlowSpec): SessionState {
   return {
+    version: 1,
     sessionId,
     flowSpec,
     currentNodePath: [0],
@@ -46,6 +50,15 @@ export function createSessionState(sessionId: string, flowSpec: FlowSpec): Sessi
     status: 'active',
     warnings: [...flowSpec.warnings],
   };
+}
+
+// H#60: Pause/resume transitions
+export function pauseFlow(state: SessionState): SessionState {
+  return { ...state, status: 'paused' };
+}
+
+export function resumeFlow(state: SessionState): SessionState {
+  return { ...state, status: 'active' };
 }
 
 export function advanceNode(state: SessionState, newPath: readonly number[]): SessionState {

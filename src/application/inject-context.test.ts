@@ -6,6 +6,7 @@ import {
   isTrivialPrompt,
 } from './inject-context.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
+import { parseFlow } from './parse-flow.js';
 import { createSessionState } from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
 import {
@@ -763,6 +764,64 @@ describe('isTrivialPrompt', () => {
 
   it('returns false for empty string', () => {
     expect(isTrivialPrompt('')).toBe(false);
+  });
+
+  // H#41: Expanded trivial prompts
+  it('recognizes "okay" as trivial', () => {
+    expect(isTrivialPrompt('okay')).toBe(true);
+  });
+
+  it('recognizes "yep" as trivial', () => {
+    expect(isTrivialPrompt('yep')).toBe(true);
+  });
+
+  it('recognizes "sure" as trivial', () => {
+    expect(isTrivialPrompt('sure')).toBe(true);
+  });
+
+  it('recognizes "go ahead" as trivial', () => {
+    expect(isTrivialPrompt('go ahead')).toBe(true);
+  });
+
+  it('recognizes "sounds good" as trivial', () => {
+    expect(isTrivialPrompt('sounds good')).toBe(true);
+  });
+});
+
+// H#49: Abort flow detection
+describe('injectContext — abort flow', () => {
+  it('cancels active flow on "abort flow" phrase', async () => {
+    const store = makeStore();
+    const spec = parseFlow('Goal: test\n\nflow:\n  prompt: do work');
+    const session = createSessionState('abort-1', spec);
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'abort flow please', sessionId: 'abort-1' },
+      store,
+    );
+    expect(result.prompt).toContain('cancelled');
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('cancelled');
+  });
+
+  it('cancels active flow on "cancel flow"', async () => {
+    const store = makeStore();
+    const spec = parseFlow('Goal: test\n\nflow:\n  prompt: do work');
+    const session = createSessionState('abort-2', spec);
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'please cancel flow now', sessionId: 'abort-2' },
+      store,
+    );
+    expect(result.prompt).toContain('cancelled');
+  });
+
+  it('does not cancel when no active flow', async () => {
+    const store = makeStore();
+    const result = await injectContext({ prompt: 'abort flow', sessionId: 'abort-3' }, store);
+    expect(result.prompt).toBe('abort flow');
   });
 });
 
@@ -1804,12 +1863,23 @@ describe('injectContext — list variable advancement', () => {
   });
 });
 
+// H#39: Single-keyword prompts no longer trigger (2+ matches required)
 describe('looksLikeNaturalLanguage — foreach', () => {
-  it('detects "foreach" keyword', () => {
-    expect(looksLikeNaturalLanguage('foreach file in the list, lint it')).toBe(true);
+  it('detects "foreach" with compound intent', () => {
+    expect(looksLikeNaturalLanguage('foreach file in the list, retry if it fails')).toBe(true);
   });
 
-  it('detects "for each" phrase', () => {
-    expect(looksLikeNaturalLanguage('for each file, run the linter')).toBe(true);
+  it('detects "for each" with compound intent', () => {
+    expect(looksLikeNaturalLanguage('for each file, run the linter and loop until passing')).toBe(
+      true,
+    );
+  });
+
+  it('rejects single "foreach" keyword (H#39: 2+ matches needed)', () => {
+    expect(looksLikeNaturalLanguage('foreach file in the list, lint it')).toBe(false);
+  });
+
+  it('rejects single "for each" keyword (H#39: 2+ matches needed)', () => {
+    expect(looksLikeNaturalLanguage('for each file, run the linter')).toBe(false);
   });
 });

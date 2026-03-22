@@ -24,10 +24,16 @@ function isAncestorPath(ancestor: readonly number[], descendant: readonly number
   return true;
 }
 
+// H#32: Visual progress bar for loop nodes
 function progressAnnotation(state: SessionState, nodeId: string): string {
   const progress = state.nodeProgress[nodeId];
   if (!progress) return '';
-  return ` [${progress.iteration}/${progress.maxIterations}]`;
+  const done = progress.iteration;
+  const total = progress.maxIterations;
+  const barWidth = 5;
+  const filled = Math.min(barWidth, Math.round((done / total) * barWidth));
+  const bar = '#'.repeat(filled) + '-'.repeat(barWidth - filled);
+  return ` [${bar}] ${done}/${total}`;
 }
 
 function renderNode(
@@ -265,6 +271,7 @@ function renderGates(state: SessionState): string[] {
   return lines;
 }
 
+// H#36: Show first 3 lines of stderr for more actionable gate diagnostics
 function formatGateDiagnostic(diag: {
   readonly command?: string;
   readonly exitCode?: number;
@@ -274,19 +281,36 @@ function formatGateDiagnostic(diag: {
   if (diag.exitCode !== undefined) parts.push(`exit ${diag.exitCode}`);
   if (diag.command) parts.push(`"${diag.command}"`);
   if (diag.stderr) {
-    const firstLine = diag.stderr.split('\n')[0]!.slice(0, 80);
-    parts.push(firstLine);
+    const lines = diag.stderr.split('\n').filter((l) => l.trim());
+    const snippet = lines
+      .slice(0, 3)
+      .map((l) => l.slice(0, 80))
+      .join(' | ');
+    parts.push(snippet);
   }
   return parts.join(': ');
 }
 
+// H#33: Truncate variable values >80 chars for readability
 function renderVariables(state: SessionState): string[] {
   const entries = Object.entries(state.variables);
   if (entries.length === 0) return [];
 
   const lines: string[] = ['', 'Variables:'];
   for (const [key, value] of entries) {
-    lines.push(`  ${key} = ${String(value)}`);
+    const str = String(value);
+    const display = str.length > 80 ? str.slice(0, 77) + '...' : str;
+    lines.push(`  ${key} = ${display}`);
+  }
+  return lines;
+}
+
+// H#51: Surface parser/advancement warnings in flow output
+function renderWarnings(state: SessionState): string[] {
+  if (state.warnings.length === 0) return [];
+  const lines: string[] = ['', 'Warnings:'];
+  for (const w of state.warnings) {
+    lines.push(`  [!] ${w}`);
   }
   return lines;
 }
@@ -304,6 +328,7 @@ export function renderFlow(state: SessionState): string {
 
   lines.push(...renderGates(state));
   lines.push(...renderVariables(state));
+  lines.push(...renderWarnings(state));
 
   return lines.join('\n');
 }

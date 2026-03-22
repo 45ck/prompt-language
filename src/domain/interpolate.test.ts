@@ -45,6 +45,23 @@ describe('interpolate', () => {
   it('handles adjacent tokens', () => {
     expect(interpolate('${a}${b}', { a: 'hello', b: 'world' })).toBe('helloworld');
   });
+
+  // H#10: Default value syntax
+  it('uses default when variable is missing', () => {
+    expect(interpolate('val=${x:-fallback}end', {})).toBe('val=fallbackend');
+  });
+
+  it('uses variable value when present, ignoring default', () => {
+    expect(interpolate('val=${x:-fallback}end', { x: 'real' })).toBe('val=realend');
+  });
+
+  it('uses empty default when syntax is ${var:-}', () => {
+    expect(interpolate('val=${x:-}end', {})).toBe('val=end');
+  });
+
+  it('handles mixed default and plain tokens', () => {
+    expect(interpolate('${a:-one} ${b}', {})).toBe('one ${b}');
+  });
 });
 
 describe('shellEscapeValue', () => {
@@ -91,5 +108,10 @@ describe('shellInterpolate', () => {
 
   it('returns template unchanged when no tokens present', () => {
     expect(shellInterpolate('echo hello', { x: 'val' })).toBe('echo hello');
+  });
+
+  // H#10: Default value in shell context
+  it('shell-escapes default value', () => {
+    expect(shellInterpolate('echo ${x:-hello}', {})).toBe("echo 'hello'");
   });
 });

@@ -335,6 +335,28 @@ describe('resolveBuiltinCommand', () => {
   it('returns undefined for command_succeeded (not yet implemented)', () => {
     expect(resolveBuiltinCommand('command_succeeded')).toBeUndefined();
   });
+
+  // H#93: Multi-language gate predicates
+  it('maps pytest_pass to pytest', () => {
+    expect(resolveBuiltinCommand('pytest_pass')).toBe('pytest');
+  });
+
+  it('maps go_test_pass to go test ./...', () => {
+    expect(resolveBuiltinCommand('go_test_pass')).toBe('go test ./...');
+  });
+
+  it('maps cargo_test_pass to cargo test', () => {
+    expect(resolveBuiltinCommand('cargo_test_pass')).toBe('cargo test');
+  });
+
+  // H#4: "not" prefix resolution
+  it('resolves "not tests_pass" to npm test', () => {
+    expect(resolveBuiltinCommand('not tests_pass')).toBe('npm test');
+  });
+
+  it('resolves "not file_exists app.js" to test -f command', () => {
+    expect(resolveBuiltinCommand('not file_exists app.js')).toBe("test -f 'app.js'");
+  });
 });
 
 describe('isInvertedPredicate', () => {
@@ -356,6 +378,28 @@ describe('isInvertedPredicate', () => {
 
   it('returns false for unknown predicates', () => {
     expect(isInvertedPredicate('custom_check')).toBe(false);
+  });
+
+  // H#93: Multi-language inverted predicates
+  it('returns true for pytest_fail', () => {
+    expect(isInvertedPredicate('pytest_fail')).toBe(true);
+  });
+
+  it('returns true for go_test_fail', () => {
+    expect(isInvertedPredicate('go_test_fail')).toBe(true);
+  });
+
+  it('returns true for cargo_test_fail', () => {
+    expect(isInvertedPredicate('cargo_test_fail')).toBe(true);
+  });
+
+  // H#4: "not" prefix flips inversion
+  it('returns true for "not tests_pass" (non-inverted → inverted)', () => {
+    expect(isInvertedPredicate('not tests_pass')).toBe(true);
+  });
+
+  it('returns false for "not tests_fail" (inverted → non-inverted)', () => {
+    expect(isInvertedPredicate('not tests_fail')).toBe(false);
   });
 });
 
@@ -401,5 +445,34 @@ describe('evaluateCompletion — edge cases', () => {
     await store.save(session);
 
     await expect(evaluateCompletion(store, throwingRunner)).rejects.toThrow('network error');
+  });
+
+  // H#5: Variable-based gate predicates
+  it('uses boolean variable as gate predicate', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('my_check')]);
+    const session = createSessionState('s1', spec);
+    const withVar = { ...session, variables: { ...session.variables, my_check: true } };
+    await store.save(withVar);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(result.gateResults['my_check']).toBe(true);
+  });
+
+  it('blocks when boolean variable gate is false', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('my_check')]);
+    const session = createSessionState('s1', spec);
+    const withVar = { ...session, variables: { ...session.variables, my_check: false } };
+    await store.save(withVar);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+    expect(result.gateResults['my_check']).toBe(false);
   });
 });

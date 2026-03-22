@@ -1,6 +1,6 @@
 # DSL Reference
 
-The prompt-language DSL defines control-flow programs using eight primitives plus try/catch. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
+The prompt-language DSL defines control-flow programs using nine primitives: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try/catch`, `foreach`, and `let/var`. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
 
 ## Program structure
 
@@ -37,6 +37,15 @@ run: npm test
 run: npx eslint . --max-warnings=0
 run: git diff --name-only
 ```
+
+Optional timeout (in seconds) to kill long-running commands:
+
+```
+run: npm test timeout 60
+run: node build.js timeout 120
+```
+
+If the command exceeds the timeout, it is killed and treated as a failure (non-zero exit code).
 
 After every `run`, built-in resolvers automatically update state variables based on the exit code and command output. See the Resolvers section below.
 
@@ -226,7 +235,7 @@ Gates are evaluated after all nodes finish and again on Stop/TaskCompleted hooks
 
 ## Context management patterns
 
-Variables carry exact values across workflow steps. Every `prompt:` step sees all current variables re-injected via `renderFlow()`, making each step self-contained. At tested distances (2-7 steps), vanilla Claude recalls values equally well; variables primarily improve readability and explicit context control.
+Variables carry exact values across workflow steps. Every `prompt:` step sees all current variables re-injected via `renderFlow()`, making each step self-contained. At tested distances (2-15 steps), vanilla Claude recalls values equally well; variables primarily improve readability and explicit context control.
 
 ### Baseline comparison
 

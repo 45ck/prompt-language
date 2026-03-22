@@ -130,7 +130,7 @@ Built-in gate predicates and their commands:
 
 2. **Pair loops with gates** — A `retry max 5` structures execution, but only a gate enforces that the final result actually passes. Use both together.
 
-3. **Variables shine at distance** — At 2-5 steps, Claude remembers everything from conversation context. Use variables when flows span 10+ steps, or when you need exact values (exit codes, version strings) that can't afford approximation.
+3. **Variables shine at distance** — At 2-15 steps, Claude remembers everything from conversation context. Use variables when flows span many steps, or when you need exact values (exit codes, version strings) that can't afford approximation.
 
 4. **Prefer `retry` for fix-test cycles** — `retry` auto-enters its body and re-loops on `command_failed`. `while`/`until` require getting the condition direction right. For the common pattern of "run tests, fix failures, repeat," `retry` is simpler.
 
@@ -151,7 +151,7 @@ For worked examples, see [Fix Tests](https://github.com/45ck/prompt-language/blo
 - **Simple, well-specified tasks** — When the prompt is clear and complete, vanilla Claude matches correctness at 2-3x less latency.
 - **No verifiable exit condition** — If there's no command that can check whether the task is done, there's no gate to add, and the plugin adds overhead without enforcement value.
 
-In controlled evaluation (45 hypotheses, 300+ test runs), the plugin won 15, tied 28, and 2 were both-fail (neither side succeeded). Wins cluster around gate enforcement; ties cluster around tasks where the prompt is already explicit. See [Eval Analysis](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) for the full breakdown.
+In controlled evaluation (45 hypotheses, 300+ test runs at `--repeat 3` reliability), the plugin won 15, tied 28, and 2 were both-fail (neither side succeeded). Wins cluster around gate enforcement; ties cluster around tasks where the prompt is already explicit. See [Eval Analysis](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) for the full breakdown.
 
 ## Debugging
 

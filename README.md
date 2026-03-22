@@ -32,11 +32,11 @@ The agent loops fix-and-test automatically. The gate runs `npm test` before allo
 
 ## How it helps
 
-**Completion gates** are the core feature. `done when:` predicates run real commands and block the agent from stopping until they pass. In [45 A/B experiments](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md), gates won 15/15 tested scenarios at 100% reliability. The agent can lie about test results, skip requirements, or stop early. Gates don't care. They run the command and check the exit code.
+**Completion gates** are the core feature. `done when:` predicates run real commands and block the agent from stopping until they pass. In [45 A/B experiments](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) (300+ `claude -p` calls, each repeated 3 times), the plugin won all 15 gate scenarios at 100% reliability. The agent can lie about test results, skip requirements, or stop early. Gates don't care. They run the command and check the exit code.
 
 **Flow control** (`retry`, `while`, `until`, `if`, `try/catch`) structures multi-step tasks. Claude already follows explicit instructions well, so flow control is mainly useful for readability and enforcing execution order rather than correctness. Where it shines is pairing with gates: a `retry` loop that re-runs tests after each fix attempt, combined with a `tests_pass` gate, creates an autonomous fix-test cycle.
 
-**Variables** (`let`/`var`) capture command output and carry it across steps. Useful for composing context, like capturing a benchmark result early and comparing it at the end. At tested distances (2-7 steps), variables don't improve correctness over vanilla Claude, but they make flows more readable and explicit about what context each step receives.
+**Variables** (`let`/`var`) capture command output and carry it across steps. Useful for composing context, like capturing a benchmark result early and comparing it at the end. At tested distances (2-15 steps), variables don't improve correctness over vanilla Claude, but they make flows more readable and explicit about what context each step receives.
 
 ## Install
 
@@ -68,6 +68,8 @@ cd prompt-language
 npm install && npm run build
 node bin/cli.mjs install
 ```
+
+**New to the plugin?** Start with the **[Getting Started tutorial](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)** — see it work in 2 minutes.
 
 ## Quick start
 
@@ -118,6 +120,36 @@ done when:
 ```
 
 Claude works however it wants, but it cannot stop until both `npm test` and `npm run lint` pass. This is the simplest way to prevent premature stopping.
+
+### Gates for any language
+
+The built-in `tests_pass` gate runs `npm test`, but gates work with any command that returns an exit code. Use `gate name: command` syntax for non-Node projects:
+
+```
+Goal: fix the failing tests
+
+done when:
+  gate pytest: python -m pytest -x
+  gate typecheck: mypy src/
+```
+
+```
+Goal: fix the build
+
+done when:
+  gate gotest: go test ./...
+  gate govet: go vet ./...
+```
+
+```
+Goal: validate the config
+
+done when:
+  gate validate: bash scripts/validate.sh
+  file_exists output/result.json
+```
+
+Any command that exits 0 passes. Any command that exits non-zero fails. This means the plugin works with Python, Go, Rust, Java, shell scripts, or any tool with a CLI.
 
 ### Natural language
 
@@ -420,7 +452,7 @@ Full syntax, defaults, composition rules, built-in variables, and gate predicate
 
 ## Evaluation
 
-In 45 A/B hypotheses: **15 plugin wins, 28 ties, 1 flaky, 2 both-fail** across 300+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
+In 45 A/B hypotheses (300+ `claude -p` calls, each repeated 3 times): **15 plugin wins, 28 ties, 1 flaky, 2 both-fail**. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well. An additional 198 hypotheses covering language transfer, failure modes, task types, and economics are implemented and awaiting execution.
 
 | Pattern                         | Mechanism                                  | Win rate |
 | ------------------------------- | ------------------------------------------ | -------- |

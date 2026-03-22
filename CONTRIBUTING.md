@@ -150,8 +150,8 @@ npm run test:coverage  # with coverage report
 Unit tests use mocks and in-memory stores. Smoke tests prove the plugin works end-to-end through Claude's real agent loop. They are **mandatory** before any PR.
 
 ```bash
-npm run eval:smoke        # full suite (5 tests, ~3 min)
-npm run eval:smoke:quick  # fast subset without gate test (~1 min)
+npm run eval:smoke        # full suite (12 tests, ~4 min)
+npm run eval:smoke:quick  # fast subset without gate/loop tests (~2 min)
 ```
 
 See [manual smoke test instructions](docs/manual-smoke-test.md) for one-off validation.

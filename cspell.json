@@ -50,7 +50,11 @@
     "efficien",
     "bsearch",
     "doesnt",
-    "funtion"
+    "funtion",
+    "gotest",
+    "govet",
+    "mycheck",
+    "mypy"
   ],
   "ignorePaths": [
     "dist/**",

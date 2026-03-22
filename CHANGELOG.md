@@ -19,7 +19,7 @@ All notable changes to this project will be documented in this file.
 - **Foreach iteration**: `foreach item in collection` with automatic splitting (JSON arrays, newlines, whitespace).
 - **Gate diagnostics**: `GateEvalResult` stores command/exitCode/stderr per gate; `renderFlow()` shows inline diagnostics.
 - **Colorized flow output**: Hooks render flow with ANSI colors to stderr.
-- **100 A/B comparative evaluation hypotheses** across 15 categories.
+- **198 A/B comparative evaluation hypotheses** across 27 categories (v2: H56-H155, v3: H156-H255).
 - **12 automated smoke tests** covering variables, gates, foreach, if/else, try/catch, let-prompt.
 
 ### Changed

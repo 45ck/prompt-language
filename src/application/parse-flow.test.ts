@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFlow } from './parse-flow.js';
+import { parseFlow, parseGates } from './parse-flow.js';
 import type { FlowSpec } from '../domain/flow-spec.js';
 import type {
   WhileNode,
@@ -46,8 +46,8 @@ describe('parseFlow — prompt and run nodes', () => {
     expect(node.command).toBe('pnpm test');
   });
 
-  it('parses run node with timeout', () => {
-    const spec = parse('Goal: g\n\nflow:\n  run: npm test timeout 60');
+  it('parses run node with bracket timeout', () => {
+    const spec = parse('Goal: g\n\nflow:\n  run: npm test [timeout 60]');
     expect(spec.nodes).toHaveLength(1);
     const node = spec.nodes[0] as RunNode;
     expect(node.kind).toBe('run');
@@ -58,6 +58,13 @@ describe('parseFlow — prompt and run nodes', () => {
   it('parses run node without timeout (no timeoutMs property)', () => {
     const spec = parse('Goal: g\n\nflow:\n  run: echo hello');
     const node = spec.nodes[0] as RunNode;
+    expect(node.timeoutMs).toBeUndefined();
+  });
+
+  it('does not mismatch "timeout" as command argument (D2)', () => {
+    const spec = parse('Goal: g\n\nflow:\n  run: echo timeout 5');
+    const node = spec.nodes[0] as RunNode;
+    expect(node.command).toBe('echo timeout 5');
     expect(node.timeoutMs).toBeUndefined();
   });
 
@@ -730,5 +737,39 @@ done when:
     expect(spec.completionGates[0]!.command).toBeUndefined();
     expect(spec.completionGates[1]!.predicate).toBe('deploy_ok');
     expect(spec.completionGates[1]!.command).toBe('./deploy-check.sh');
+  });
+});
+
+describe('parseGates — standalone (D3, D10)', () => {
+  it('returns empty for no done-when section', () => {
+    expect(parseGates('Just fix the tests')).toEqual([]);
+  });
+
+  it('parses single predicate', () => {
+    const gates = parseGates('text\n\ndone when:\n  tests_pass');
+    expect(gates).toHaveLength(1);
+    expect(gates[0]!.predicate).toBe('tests_pass');
+  });
+
+  it('returns empty when done-when has no newline after colon', () => {
+    expect(parseGates('done when: tests_pass')).toEqual([]);
+  });
+
+  it('stops at first blank line after gates (D3)', () => {
+    const gates = parseGates('Fix tests.\n\ndone when:\n  tests_pass\n\nAlso update README.');
+    expect(gates).toHaveLength(1);
+    expect(gates[0]!.predicate).toBe('tests_pass');
+  });
+
+  it('parses multiple gates before blank line', () => {
+    const gates = parseGates('Fix.\n\ndone when:\n  tests_pass\n  lint_pass\n\nExtra text.');
+    expect(gates).toHaveLength(2);
+  });
+
+  it('parses custom gate', () => {
+    const gates = parseGates('Fix.\n\ndone when:\n  gate build_ok: npm run build');
+    expect(gates).toHaveLength(1);
+    expect(gates[0]!.predicate).toBe('build_ok');
+    expect(gates[0]!.command).toBe('npm run build');
   });
 });

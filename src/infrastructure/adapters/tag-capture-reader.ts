@@ -15,6 +15,7 @@ const MAX_CAPTURE_LENGTH = 2000;
  * Returns the trimmed content between the tags, or null if not found/empty.
  */
 export function extractCaptureTag(text: string, varName: string): string | null {
+  if (!/^\w+$/.test(varName)) return null; // D7: reject unsafe variable names
   const openTag = `<${CAPTURE_TAG} name="${varName}">`;
   const closeTag = `</${CAPTURE_TAG}>`;
 
@@ -27,6 +28,9 @@ export function extractCaptureTag(text: string, varName: string): string | null 
 
   const content = text.slice(contentStart, endIdx).trim();
   if (!content) return null;
+
+  // D7: reject content containing nested capture tags (malformed/unclosed upstream tag)
+  if (content.includes(`<${CAPTURE_TAG}`)) return null;
 
   if (content.length > MAX_CAPTURE_LENGTH) {
     return content.slice(0, MAX_CAPTURE_LENGTH);

@@ -71,4 +71,14 @@ That's the answer.`;
     const text = `<${CAPTURE_TAG} name="x">first</${CAPTURE_TAG}> then <${CAPTURE_TAG} name="x">second</${CAPTURE_TAG}>`;
     expect(extractCaptureTag(text, 'x')).toBe('first');
   });
+
+  it('returns null for unsafe variable names (D7)', () => {
+    const text = `<${CAPTURE_TAG} name="../../etc/passwd">evil</${CAPTURE_TAG}>`;
+    expect(extractCaptureTag(text, '../../etc/passwd')).toBeNull();
+  });
+
+  it('returns null when content contains nested capture tags (D7)', () => {
+    const text = `<${CAPTURE_TAG} name="a">val-a <${CAPTURE_TAG} name="b">val-b</${CAPTURE_TAG}>`;
+    expect(extractCaptureTag(text, 'a')).toBeNull();
+  });
 });

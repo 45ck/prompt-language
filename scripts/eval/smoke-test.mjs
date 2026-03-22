@@ -528,12 +528,13 @@ async function testGateOnlyMode() {
 
 async function testCaptureReliability() {
   await withTempDir(async (dir) => {
+    // D8: use unique sentinel to avoid false positives from Claude guessing
     const prompt = [
       'Goal: test capture reliability',
       '',
       'flow:',
-      '  let answer = prompt "What is 2+2? Reply with just the number."',
-      '  prompt: Write the answer "${answer}" to capture-result.txt, nothing else.',
+      '  let answer = prompt "Reply with exactly this text and nothing else: pl-capture-7x9q"',
+      '  prompt: Write the answer "${answer}" to capture-result.txt. Write only the variable value, nothing else.',
     ].join('\n');
 
     claudeRun(prompt, dir);
@@ -547,8 +548,8 @@ async function testCaptureReliability() {
 
     assert(
       'N: Capture reliability (tag-based)',
-      content.includes('4'),
-      content.includes('4')
+      content.includes('pl-capture-7x9q'),
+      content.includes('pl-capture-7x9q')
         ? 'variable captured and interpolated'
         : `got: "${content.slice(0, 60)}"`,
     );

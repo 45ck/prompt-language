@@ -62,7 +62,11 @@ export function parseGates(input: string): readonly CompletionGate[] {
   const gates: CompletionGate[] = [];
   for (const line of block.split('\n')) {
     const trimmed = line.trim();
-    if (!trimmed) continue;
+    // D3: stop at first blank line to avoid consuming trailing prose
+    if (!trimmed) {
+      if (gates.length > 0) break;
+      continue;
+    }
 
     // H#26: Custom gate definition — "gate name: command"
     const gateMatch = /^gate\s+(\w+)\s*:\s*(.+)$/i.exec(trimmed);
@@ -309,10 +313,13 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   }
   if (lower.startsWith('run:')) {
     const runText = trimmed.slice(4).trim();
-    const timeoutMatch = /^(.+?)\s+timeout\s+(\d+)$/i.exec(runText);
+    // D2: bracket syntax [timeout N] is unambiguous — can't conflict with command text
+    const timeoutMatch = /^(.+?)\s+\[timeout\s+(\d+)\]$/i.exec(runText);
     if (timeoutMatch?.[1] && timeoutMatch[2]) {
       const timeoutSec = parseInt(timeoutMatch[2], 10);
-      return createRunNode(nextId(ctx), timeoutMatch[1].trim(), timeoutSec * 1000);
+      if (timeoutSec > 0) {
+        return createRunNode(nextId(ctx), timeoutMatch[1].trim(), timeoutSec * 1000);
+      }
     }
     return createRunNode(nextId(ctx), runText);
   }

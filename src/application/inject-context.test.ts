@@ -1902,6 +1902,14 @@ describe('hasGatesOnly', () => {
   it('handles case-insensitive done when', () => {
     expect(hasGatesOnly('Fix it.\n\nDone When:\n  tests_pass')).toBe(true);
   });
+
+  it('returns false for prose containing "done when:" mid-sentence (D5)', () => {
+    expect(hasGatesOnly('The task is done when: all tests pass')).toBe(false);
+  });
+
+  it('returns true when done when: starts its own line with indentation', () => {
+    expect(hasGatesOnly('Fix it.\n\n  done when:\n    tests_pass')).toBe(true);
+  });
 });
 
 describe('injectContext — gate-only mode', () => {
@@ -1944,6 +1952,16 @@ describe('injectContext — gate-only mode', () => {
 
     const saved = await store.loadCurrent();
     expect(saved?.flowSpec.completionGates).toHaveLength(2);
+  });
+
+  it('parses custom gates in gate-only mode (D9)', async () => {
+    const store = makeStore();
+    const prompt = 'Build the project.\n\ndone when:\n  gate build_ok: npm run build';
+    await injectContext({ prompt, sessionId: 'gate-custom' }, store);
+    const saved = await store.loadCurrent();
+    expect(saved?.flowSpec.completionGates).toHaveLength(1);
+    expect(saved?.flowSpec.completionGates[0]!.predicate).toBe('build_ok');
+    expect(saved?.flowSpec.completionGates[0]!.command).toBe('npm run build');
   });
 
   it('active flow takes precedence over gate-only detection', async () => {

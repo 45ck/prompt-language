@@ -191,7 +191,7 @@ function hasFlowBlock(prompt: string): boolean {
   return FLOW_BLOCK_RE.test(prompt);
 }
 
-const DONE_WHEN_RE = /done\s+when:/im;
+const DONE_WHEN_RE = /^\s*done\s+when:/im;
 
 export function hasGatesOnly(prompt: string): boolean {
   return DONE_WHEN_RE.test(prompt) && !hasFlowBlock(prompt);

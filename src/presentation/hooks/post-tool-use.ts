@@ -20,6 +20,7 @@ import { CAPTURE_TAG } from '../../domain/capture-prompt.js';
 import { readStdin } from './read-stdin.js';
 
 const VARS_DIR = '.prompt-language/vars';
+const SAFE_VAR_NAME = /^\w+$/;
 
 /** Scan text for capture tags and write extracted values to var files. */
 async function scanAndSaveCapturedVars(text: string, basePath: string): Promise<void> {
@@ -32,6 +33,7 @@ async function scanAndSaveCapturedVars(text: string, basePath: string): Promise<
   let match: RegExpExecArray | null;
   while ((match = tagPattern.exec(text)) !== null) {
     const varName = match[1]!;
+    if (!SAFE_VAR_NAME.test(varName)) continue; // D1: reject path-traversal names
     const value = match[2]!.trim();
     if (value) {
       matches.push({ varName, value });
@@ -66,7 +68,13 @@ async function main(): Promise<void> {
         if (parsed && typeof parsed === 'object' && 'tool_output' in parsed) {
           const output = (parsed as { tool_output: string }).tool_output;
           if (typeof output === 'string') {
-            await scanAndSaveCapturedVars(output, process.cwd());
+            try {
+              await scanAndSaveCapturedVars(output, process.cwd());
+            } catch (captureErr: unknown) {
+              process.stderr.write(
+                `[prompt-language] capture write error: ${formatError(captureErr)}\n`,
+              );
+            }
           }
         }
       } catch {

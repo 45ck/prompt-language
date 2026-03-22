@@ -368,7 +368,7 @@ async function advanceRunNode(
   const command = shellInterpolate(node.command, current.variables);
   const result = await commandRunner.run(
     command,
-    node.timeoutMs ? { timeoutMs: node.timeoutMs } : undefined,
+    node.timeoutMs != null ? { timeoutMs: node.timeoutMs } : undefined,
   );
   let state = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
 

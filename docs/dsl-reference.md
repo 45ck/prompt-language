@@ -1,6 +1,6 @@
 # DSL Reference
 
-The prompt-language DSL defines control-flow programs using seven primitives plus try/catch. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
+The prompt-language DSL defines control-flow programs using eight primitives plus try/catch. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
 
 ## Program structure
 
@@ -158,6 +158,40 @@ run: npm test -- ${module}
 ```
 
 Unknown `${varName}` tokens are left as-is (no error).
+
+### foreach
+
+Iterate over a collection of items. The list is split automatically from a variable or literal: JSON arrays, newline-delimited strings, or whitespace-delimited strings.
+
+```
+let files = run "find src -name '*.ts'"
+foreach file in ${files}
+  run: npx tsc --noEmit ${file}
+end
+```
+
+With a literal list:
+
+```
+foreach env in "dev staging prod"
+  run: deploy --target ${env}
+end
+```
+
+Parameters:
+
+- variableName: The loop variable name, set to the current item on each iteration.
+- listExpression: A `${varName}` reference or quoted literal. Parsed as: (1) JSON array, (2) newline-delimited, or (3) whitespace-delimited.
+- max: Maximum iterations (default: 50).
+- body: One or more DSL statements (indented).
+
+Auto-set variables per iteration:
+
+- `${variableName}` — the current item value
+- `${variableName_index}` — zero-based iteration index
+- `${variableName_length}` — total number of items
+
+If the list is empty, the body is skipped entirely.
 
 ### try/catch
 

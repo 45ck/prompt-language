@@ -237,6 +237,39 @@ async function testRunAutoExecution() {
   });
 }
 
+// ── Test F: Foreach iteration ─────────────────────────────────────────
+
+async function testForeachIteration() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test foreach',
+      '',
+      'flow:',
+      '  foreach item in "alpha beta gamma"',
+      '    prompt: Write the word "${item}" to ${item}.txt',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let found = 0;
+    for (const name of ['alpha', 'beta', 'gamma']) {
+      try {
+        const content = (await readFile(join(dir, `${name}.txt`), 'utf-8')).trim();
+        if (content.includes(name)) found++;
+      } catch {
+        /* file not created */
+      }
+    }
+
+    assert(
+      'F: Foreach iteration',
+      found >= 2,
+      found >= 2 ? `${found}/3 files created` : `only ${found}/3 files found`,
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -256,6 +289,7 @@ async function main() {
   await testContextRecall();
   await testRunAutoExecution();
   await testVariableInterpolation();
+  await testForeachIteration();
 
   if (!QUICK_MODE) {
     await testGateEvaluation();

@@ -17,6 +17,7 @@ You are the flow execution engine. When invoked:
    - **retry**: Check attempt count and retry or fail
    - **if**: Evaluate the condition and take the appropriate branch
    - **try/catch**: Execute body, catch failures based on condition
+   - **foreach**: Iterate over a list, setting the loop variable per item
 4. Update the session state with results
 5. Advance to the next node
 6. Report current progress

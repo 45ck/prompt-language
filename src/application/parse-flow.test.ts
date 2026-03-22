@@ -10,6 +10,7 @@ import type {
   RunNode,
   TryNode,
   LetNode,
+  ForeachNode,
 } from '../domain/flow-node.js';
 
 function parse(dsl: string): FlowSpec {
@@ -455,5 +456,94 @@ done when:
 
     expect(spec.completionGates).toHaveLength(1);
     expect(spec.completionGates[0]!.predicate).toBe('tests_pass == true');
+  });
+});
+
+describe('parseFlow — foreach', () => {
+  it('parses a basic foreach with variable expression', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach file in \${files}
+    run: lint \${file}
+  end`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as ForeachNode;
+    expect(node.kind).toBe('foreach');
+    expect(node.variableName).toBe('file');
+    expect(node.listExpression).toBe('${files}');
+    expect(node.maxIterations).toBe(50);
+    expect(node.body).toHaveLength(1);
+    expect(node.body[0]!.kind).toBe('run');
+  });
+
+  it('parses foreach with max override', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach item in \${list} max 10
+    prompt: process \${item}
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as ForeachNode;
+    expect(node.kind).toBe('foreach');
+    expect(node.variableName).toBe('item');
+    expect(node.listExpression).toBe('${list}');
+    expect(node.maxIterations).toBe(10);
+  });
+
+  it('parses foreach with quoted literal list', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach env in "dev staging prod"
+    run: deploy --target \${env}
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as ForeachNode;
+    expect(node.kind).toBe('foreach');
+    expect(node.variableName).toBe('env');
+    expect(node.listExpression).toBe('dev staging prod');
+  });
+
+  it('parses foreach with multiple body nodes', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach f in \${files}
+    prompt: Review \${f}
+    run: npx tsc --noEmit \${f}
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as ForeachNode;
+    expect(node.body).toHaveLength(2);
+    expect(node.body[0]!.kind).toBe('prompt');
+    expect(node.body[1]!.kind).toBe('run');
+  });
+
+  it('warns on invalid foreach syntax (missing in clause)', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach item
+    prompt: fallback
+  end`;
+    const spec = parse(dsl);
+    expect(spec.warnings.some((w) => w.includes('Invalid foreach syntax'))).toBe(true);
+  });
+
+  it('parses foreach before other nodes', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach x in "a b"
+    prompt: handle \${x}
+  end
+  prompt: done`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.nodes[0]!.kind).toBe('foreach');
+    expect(spec.nodes[1]!.kind).toBe('prompt');
   });
 });

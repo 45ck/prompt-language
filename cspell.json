@@ -36,6 +36,7 @@
     "distractor",
     "fagan",
     "foobarbaz",
+    "foreach",
     "frontmatter"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]

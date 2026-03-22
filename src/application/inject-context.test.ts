@@ -17,6 +17,7 @@ import {
   createRetryNode,
   createUntilNode,
   createLetNode,
+  createForeachNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 
@@ -1312,5 +1313,151 @@ describe('buildMetaPrompt', () => {
   it('instructs Claude to respond with only DSL', () => {
     const result = buildMetaPrompt('loop this');
     expect(result).toContain('Respond with ONLY a valid prompt-language program');
+  });
+
+  it('includes foreach in DSL reference', () => {
+    const result = buildMetaPrompt('foreach file in list');
+    expect(result).toContain('foreach');
+  });
+});
+
+describe('injectContext — foreach iteration', () => {
+  it('iterates over whitespace-delimited list', async () => {
+    const store = makeStore();
+    const letNode = createLetNode('l1', 'items', { type: 'literal', value: 'a b c' });
+    const foreachNode = createForeachNode('fe1', 'item', '${items}', [
+      createPromptNode('p1', 'process ${item}'),
+    ]);
+    const spec = createFlowSpec('test', [letNode, foreachNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    // First call: auto-advances let, enters foreach, sets item=a, captures prompt
+    const result1 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result1.prompt).toContain('process a');
+
+    const saved1 = await store.loadCurrent();
+    expect(saved1?.variables['item']).toBe('a');
+    expect(saved1?.variables['item_index']).toBe(0);
+    expect(saved1?.variables['item_length']).toBe(3);
+  });
+
+  it('advances through foreach iterations', async () => {
+    const store = makeStore();
+    const letNode = createLetNode('l1', 'items', { type: 'literal', value: 'x y' });
+    const foreachNode = createForeachNode('fe1', 'item', '${items}', [
+      createPromptNode('p1', 'process ${item}'),
+    ]);
+    const promptAfter = createPromptNode('p2', 'All done');
+    const spec = createFlowSpec('test', [letNode, foreachNode, promptAfter]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    // First: let auto-advances, foreach enters with item=x
+    const result1 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result1.prompt).toContain('process x');
+
+    // Second: body exhausted, item=y, re-enter body
+    const result2 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result2.prompt).toContain('process y');
+
+    // Third: body exhausted, no more items, advance past foreach
+    const result3 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result3.prompt).toContain('All done');
+  });
+
+  it('skips foreach with empty list', async () => {
+    const store = makeStore();
+    const letNode = createLetNode('l1', 'items', { type: 'literal', value: '' });
+    const foreachNode = createForeachNode('fe1', 'item', '${items}', [
+      createPromptNode('p1', 'should not appear'),
+    ]);
+    const promptAfter = createPromptNode('p2', 'Skipped');
+    const spec = createFlowSpec('test', [letNode, foreachNode, promptAfter]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result.prompt).toContain('Skipped');
+  });
+
+  it('caps iterations at maxIterations', async () => {
+    const store = makeStore();
+    const letNode = createLetNode('l1', 'items', { type: 'literal', value: 'a b c d e' });
+    const foreachNode = createForeachNode(
+      'fe1',
+      'item',
+      '${items}',
+      [createPromptNode('p1', 'process ${item}')],
+      2,
+    );
+    const promptAfter = createPromptNode('p2', 'Done');
+    const spec = createFlowSpec('test', [letNode, foreachNode, promptAfter]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    // First: item=a
+    const result1 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result1.prompt).toContain('process a');
+
+    // Second: item=b
+    const result2 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result2.prompt).toContain('process b');
+
+    // Third: max reached, advance past
+    const result3 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
+    expect(result3.prompt).toContain('Done');
+  });
+
+  it('sets loop variable per iteration for run nodes', async () => {
+    const store = makeStore();
+    const commands: string[] = [];
+    const mockRunner: CommandRunner = {
+      run: async (cmd: string) => {
+        commands.push(cmd);
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+    const letNode = createLetNode('l1', 'files', { type: 'literal', value: 'a.ts b.ts' });
+    const foreachNode = createForeachNode('fe1', 'f', '${files}', [
+      createRunNode('r1', 'lint ${f}'),
+      createPromptNode('p1', 'check ${f}'),
+    ]);
+    const spec = createFlowSpec('test', [letNode, foreachNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    // First: let auto-advances, foreach enters with f=a.ts, run executes, prompt captures
+    const result1 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+    expect(result1.prompt).toContain('check a.ts');
+    expect(commands).toContain("lint 'a.ts'");
+
+    // Second: body exhausted, f=b.ts, re-enter
+    const result2 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+    expect(result2.prompt).toContain('check b.ts');
+    expect(commands).toContain("lint 'b.ts'");
+  });
+
+  it('parses and executes foreach from DSL text', async () => {
+    const store = makeStore();
+    const prompt = `Goal: lint files
+
+flow:
+  let files = "src/a.ts src/b.ts"
+  foreach file in \${files}
+    prompt: Review \${file}
+  end`;
+    const result = await injectContext({ prompt, sessionId: 's1' }, store);
+    expect(result.prompt).toContain('Review src/a.ts');
+  });
+});
+
+describe('looksLikeNaturalLanguage — foreach', () => {
+  it('detects "foreach" keyword', () => {
+    expect(looksLikeNaturalLanguage('foreach file in the list, lint it')).toBe(true);
+  });
+
+  it('detects "for each" phrase', () => {
+    expect(looksLikeNaturalLanguage('for each file, run the linter')).toBe(true);
   });
 });

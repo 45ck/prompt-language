@@ -97,6 +97,7 @@ export type FlowNode =
 
 export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;
+export const DEFAULT_MAX_FOREACH = 50;
 
 export function createWhileNode(
   id: string,
@@ -169,4 +170,21 @@ export function createTryNode(
 
 export function createLetNode(id: string, variableName: string, source: LetSource): LetNode {
   return { kind: 'let', id, variableName, source };
+}
+
+export function createForeachNode(
+  id: string,
+  variableName: string,
+  listExpression: string,
+  body: readonly FlowNode[],
+  maxIterations?: number,
+): ForeachNode {
+  return {
+    kind: 'foreach',
+    id,
+    variableName,
+    listExpression,
+    maxIterations: maxIterations ?? DEFAULT_MAX_FOREACH,
+    body,
+  };
 }

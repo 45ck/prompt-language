@@ -9,7 +9,16 @@ import type {
   RunOptions,
 } from '../../application/ports/command-runner.js';
 
-const DEFAULT_TIMEOUT_MS = 30_000;
+function getDefaultTimeoutMs(): number {
+  const envVal = process.env['PROMPT_LANGUAGE_CMD_TIMEOUT_MS'];
+  if (envVal) {
+    const parsed = parseInt(envVal, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  return 30_000;
+}
+
+const DEFAULT_TIMEOUT_MS = getDefaultTimeoutMs();
 
 export class ShellCommandRunner implements CommandRunner {
   async run(command: string, options?: RunOptions): Promise<CommandResult> {

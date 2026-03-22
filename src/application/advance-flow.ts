@@ -17,6 +17,7 @@ import type { CommandRunner } from './ports/command-runner.js';
 import { interpolate, shellInterpolate } from '../domain/interpolate.js';
 import { evaluateCondition } from '../domain/evaluate-condition.js';
 import { resolveBuiltinCommand, isInvertedPredicate } from './evaluate-completion.js';
+import { splitIterable } from '../domain/split-iterable.js';
 
 export function resolveCurrentNode(
   nodes: readonly FlowNode[],
@@ -32,6 +33,7 @@ export function resolveCurrentNode(
     case 'while':
     case 'until':
     case 'retry':
+    case 'foreach':
       return resolveCurrentNode(node.body, rest);
     case 'if':
       return resolveCurrentNode([...node.thenBranch, ...node.elseBranch], rest);
@@ -186,6 +188,33 @@ async function handleBodyExhaustion(
         current = updateNodeProgress(current, parentNode.id, {
           iteration,
           maxIterations: parentNode.maxAttempts,
+          status: 'completed',
+        });
+        current = advanceNode(current, advancePath(parentPath));
+      }
+      return current;
+    }
+
+    case 'foreach': {
+      const rawList = interpolate(parentNode.listExpression, current.variables);
+      const items = splitIterable(rawList).slice(0, parentNode.maxIterations);
+      const progress = current.nodeProgress[parentNode.id];
+      const iteration = progress?.iteration ?? 1;
+
+      if (iteration < items.length) {
+        const nextItem = items[iteration]!;
+        current = updateVariable(current, parentNode.variableName, nextItem);
+        current = updateVariable(current, `${parentNode.variableName}_index`, iteration);
+        current = updateNodeProgress(current, parentNode.id, {
+          iteration: iteration + 1,
+          maxIterations: items.length,
+          status: 'running',
+        });
+        current = advanceNode(current, [...parentPath, 0]);
+      } else {
+        current = updateNodeProgress(current, parentNode.id, {
+          iteration,
+          maxIterations: items.length,
           status: 'completed',
         });
         current = advanceNode(current, advancePath(parentPath));
@@ -368,6 +397,31 @@ export async function autoAdvanceNodes(
         break;
       }
       case 'try': {
+        current = advanceNode(current, [...current.currentNodePath, 0]);
+        advances += 1;
+        break;
+      }
+      case 'foreach': {
+        const rawList = interpolate(node.listExpression, current.variables);
+        const items = splitIterable(rawList);
+
+        if (items.length === 0) {
+          current = advanceNode(current, advancePath(current.currentNodePath));
+          advances += 1;
+          break;
+        }
+
+        const cappedItems = items.slice(0, node.maxIterations);
+        const firstItem = cappedItems[0]!;
+
+        current = updateVariable(current, node.variableName, firstItem);
+        current = updateVariable(current, `${node.variableName}_index`, 0);
+        current = updateVariable(current, `${node.variableName}_length`, cappedItems.length);
+        current = updateNodeProgress(current, node.id, {
+          iteration: 1,
+          maxIterations: cappedItems.length,
+          status: 'running',
+        });
         current = advanceNode(current, [...current.currentNodePath, 0]);
         advances += 1;
         break;

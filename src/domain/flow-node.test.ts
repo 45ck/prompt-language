@@ -8,6 +8,7 @@ import {
   createRunNode,
   createTryNode,
   createLetNode,
+  createForeachNode,
 } from './flow-node.js';
 
 describe('createWhileNode', () => {
@@ -147,5 +148,31 @@ describe('createLetNode', () => {
       variableName: 'output',
       source: { type: 'run', command: 'echo hi' },
     });
+  });
+});
+
+describe('createForeachNode', () => {
+  it('creates a foreach node with explicit max', () => {
+    const body = [createPromptNode('p1', 'process item')];
+    const node = createForeachNode('fe1', 'item', '${files}', body, 10);
+    expect(node).toEqual({
+      kind: 'foreach',
+      id: 'fe1',
+      variableName: 'item',
+      listExpression: '${files}',
+      maxIterations: 10,
+      body,
+    });
+  });
+
+  it('defaults maxIterations to 50', () => {
+    const node = createForeachNode('fe2', 'x', '${list}', []);
+    expect(node.maxIterations).toBe(50);
+  });
+
+  it('preserves body nodes', () => {
+    const child = createRunNode('r1', 'lint ${file}');
+    const node = createForeachNode('fe3', 'file', '${files}', [child]);
+    expect(node.body).toEqual([child]);
   });
 });

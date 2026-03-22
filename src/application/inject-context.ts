@@ -37,6 +37,9 @@ const NL_INTENT_WORDS = [
   '\\bfallback\\b',
   // Quantified intent (require number context)
   '\\b\\d+\\s+times\\b',
+  // Iteration intent
+  '\\bforeach\\b',
+  '\\bfor each\\b',
   // Compound patterns (bounded distance prevents cross-sentence matching)
   '\\brun\\b.{1,20}\\buntil\\b',
   '\\bfix\\b.{1,20}\\buntil\\b',
@@ -60,7 +63,7 @@ export function looksLikeNaturalLanguage(prompt: string): boolean {
 const DSL_REFERENCE = `\
 ## prompt-language DSL reference
 
-Six primitives plus try/catch and let/var. Blocks use indentation + explicit \`end\`.
+Seven primitives plus try/catch and let/var. Blocks use indentation + explicit \`end\`.
 
 ### Structure
 \`\`\`
@@ -116,6 +119,12 @@ done when:
     run: npm run deploy
   catch command_failed
     prompt: Deploy failed. Roll back.
+  end
+
+**foreach** — Iterate over a list of items.
+  let files = run "find src -name '*.ts'"
+  foreach file in \${files}
+    run: npx tsc --noEmit \${file}
   end
 
 ### Variable interpolation

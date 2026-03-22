@@ -5,7 +5,7 @@
  * the current execution position, loop progress, gate results, and variables.
  */
 
-import type { FlowNode, IfNode, LetNode, TryNode } from './flow-node.js';
+import type { FlowNode, ForeachNode, IfNode, LetNode, TryNode } from './flow-node.js';
 import type { SessionState } from './session-state.js';
 
 function arraysEqual(a: readonly number[], b: readonly number[]): boolean {
@@ -87,6 +87,8 @@ function renderNode(
       return renderTryNode(node, state, path, indentLevel, prefix, suffix);
     case 'let':
       return renderLetNode(node, state, indent, prefix, suffix);
+    case 'foreach':
+      return renderForeachNode(node, state, path, indentLevel, prefix, suffix);
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -199,6 +201,30 @@ function renderLetNode(
   const resolved = state.variables[node.variableName];
   const annotation = resolved !== undefined ? `  [= ${String(resolved)}]` : '';
   return [`${prefix}${indent}let ${node.variableName} = ${sourceText}${annotation}${suffix}`];
+}
+
+function renderForeachNode(
+  node: ForeachNode,
+  state: SessionState,
+  path: readonly number[],
+  indentLevel: number,
+  prefix: string,
+  suffix: string,
+): string[] {
+  const indent = '  '.repeat(indentLevel);
+  const progress = progressAnnotation(state, node.id);
+  const currentVal = state.variables[node.variableName];
+  const valAnnotation = currentVal !== undefined ? `  [${node.variableName}=${currentVal}]` : '';
+  const header = `foreach ${node.variableName} in ${node.listExpression}`;
+  const lines: string[] = [`${prefix}${indent}${header}${progress}${valAnnotation}${suffix}`];
+
+  for (let i = 0; i < node.body.length; i++) {
+    const child = node.body[i]!;
+    lines.push(...renderNode(child, state, [...path, i], indentLevel + 1));
+  }
+
+  lines.push(`  ${indent}end`);
+  return lines;
 }
 
 function renderGates(state: SessionState): string[] {

@@ -39,7 +39,7 @@ Dependency flow is strictly inward. Domain never imports from other layers.
 
 ## DSL primitives
 
-Seven node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, plus `let`/`var` for variable storage.
+Nine node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, `foreach`, plus `let`/`var` for variable storage.
 
 ### let/var nodes
 
@@ -101,17 +101,18 @@ Unit tests and CI are necessary but **not sufficient**. Smoke tests are **requir
 ### Automated smoke tests
 
 ```bash
-npm run eval:smoke        # full suite (5 tests, ~3 min)
+npm run eval:smoke        # full suite (6 tests, ~3 min)
 npm run eval:smoke:quick  # fast subset without gate test (~1 min)
 ```
 
-The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 5 live `claude -p` tests in temp directories:
+The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 6 live `claude -p` tests in temp directories:
 
 - **A: Context file relay** — two prompts, second reads file created by first
 - **B: Context recall** — second prompt recalls a code from the first
 - **C: Variable interpolation** — let/var resolve and interpolate into prompt text
 - **D: Gate evaluation** — `done when: tests_pass` blocks until app.js is fixed
 - **E: Run auto-execution** — `run:` node auto-executes and creates a file
+- **F: Foreach iteration** — `foreach item in "a b c"` creates per-item files
 
 ### When to smoke test
 

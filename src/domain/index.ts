@@ -10,6 +10,7 @@ export type {
   TryNode,
   LetNode,
   LetSource,
+  ForeachNode,
 } from './flow-node.js';
 export {
   createWhileNode,
@@ -20,6 +21,7 @@ export {
   createRunNode,
   createTryNode,
   createLetNode,
+  createForeachNode,
 } from './flow-node.js';
 
 export type { FlowSpec, CompletionGate, FlowDefaults } from './flow-spec.js';
@@ -53,3 +55,5 @@ export {
 export { renderFlow } from './render-flow.js';
 
 export { interpolate } from './interpolate.js';
+
+export { splitIterable } from './split-iterable.js';

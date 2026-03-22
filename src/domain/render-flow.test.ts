@@ -11,6 +11,7 @@ import {
   createIfNode,
   createTryNode,
   createLetNode,
+  createForeachNode,
 } from './flow-node.js';
 
 describe('renderFlow', () => {
@@ -327,5 +328,55 @@ describe('renderFlow', () => {
     expect(output).toContain('> ');
     expect(output).toContain('<-- current');
     expect(output).toContain('let x = "val"');
+  });
+
+  it('renders a foreach node structure', () => {
+    const foreachNode = createForeachNode('fe1', 'file', '${files}', [
+      createRunNode('r1', 'lint ${file}'),
+    ]);
+    const spec = createFlowSpec('test', [foreachNode]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('foreach file in ${files}');
+    expect(output).toContain('run: lint ${file}');
+    expect(output).toContain('end');
+  });
+
+  it('renders foreach with progress annotation', () => {
+    const foreachNode = createForeachNode('fe1', 'item', '${list}', [
+      createPromptNode('p1', 'process ${item}'),
+    ]);
+    const spec = createFlowSpec('test', [foreachNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'fe1', {
+      iteration: 2,
+      maxIterations: 5,
+      status: 'running',
+    });
+    state = { ...state, currentNodePath: [0, 0], variables: { item: 'second' } };
+    const output = renderFlow(state);
+    expect(output).toContain('[2/5]');
+    expect(output).toContain('[item=second]');
+  });
+
+  it('renders foreach without variable annotation when not set', () => {
+    const foreachNode = createForeachNode('fe1', 'x', '${list}', [createPromptNode('p1', 'work')]);
+    const spec = createFlowSpec('test', [foreachNode]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('foreach x in ${list}');
+    expect(output).not.toContain('[x=');
+  });
+
+  it('marks current node inside foreach body', () => {
+    const foreachNode = createForeachNode('fe1', 'f', '${files}', [
+      createPromptNode('p1', 'review'),
+      createRunNode('r1', 'test'),
+    ]);
+    const spec = createFlowSpec('test', [foreachNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 1] };
+    const output = renderFlow(state);
+    expect(output).toContain('run: test  <-- current');
   });
 });

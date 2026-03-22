@@ -16,6 +16,7 @@ import {
   createRunNode,
   createTryNode,
   createLetNode,
+  createForeachNode,
   DEFAULT_MAX_ITERATIONS,
 } from '../domain/flow-node.js';
 import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
@@ -187,6 +188,20 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
   return createLetNode(nextId(ctx), variableName, source);
 }
 
+function parseForeachLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
+  const match = /^foreach\s+(\w+)\s+in\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
+  if (!match?.[1] || !match[2]) {
+    ctx.warnings.push(`Invalid foreach syntax: "${line}"`);
+    return createPromptNode(nextId(ctx), line);
+  }
+  const variableName = match[1];
+  const listExpression = stripQuotes(match[2].trim());
+  const max = match[3] ? parseInt(match[3], 10) : undefined;
+  const body = parseBlock(ctx, baseIndent);
+  consumeEnd(ctx);
+  return createForeachNode(nextId(ctx), variableName, listExpression, body, max);
+}
+
 function consumeEnd(ctx: ParseContext): void {
   if (ctx.pos < ctx.lines.length) {
     const peekLine = ctx.lines[ctx.pos];
@@ -252,6 +267,9 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   }
   if (lower.startsWith('run:')) {
     return createRunNode(nextId(ctx), trimmed.slice(4).trim());
+  }
+  if (lower.startsWith('foreach ')) {
+    return parseForeachLine(ctx, trimmed, indent);
   }
   if (lower.startsWith('let ') || lower.startsWith('var ')) {
     return parseLetLine(ctx, trimmed);

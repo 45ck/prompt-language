@@ -14,6 +14,26 @@
 #     bypass patterns, and enforcement removal.
 set -e
 
+# --- Cache staged file list (D6: avoid running git diff --cached --name-only 3 times) ---
+STAGED_FILES=$(git diff --cached --name-only 2>/dev/null)
+
+# --- Quality command regex (D1: match both npm run and direct tool invocations) ---
+QUALITY_CMD_RE='npm run (ci|test|lint|format:check|spell|typecheck)|npx (vitest|eslint|prettier|cspell)|vitest run|eslint \.|prettier \.'
+
+# Check for net removal of quality commands in a diff.
+# Returns 0 (true = blocked) if more quality commands are removed than added.
+check_quality_cmd_removal() {
+  _diff="$1"
+  _file="$2"
+  _removed=$(echo "$_diff" | grep -cE "^\-.*($QUALITY_CMD_RE)" 2>/dev/null || true)
+  _added=$(echo "$_diff" | grep -cE "^\+.*($QUALITY_CMD_RE)" 2>/dev/null || true)
+  if [ "${_removed:-0}" -gt "${_added:-0}" ]; then
+    echo "noslop: $_file has net removal of quality gate commands — blocked." >&2
+    return 0
+  fi
+  return 1
+}
+
 # --- Tier 1: Blanket-block quality gate configs ---
 PROTECTED_CONFIGS="eslint.config.mjs vitest.config.ts .dependency-cruiser.cjs knip.json tsconfig.json tsconfig.build.json"
 while IFS= read -r staged_file; do
@@ -24,7 +44,7 @@ while IFS= read -r staged_file; do
     fi
   done
 done << STAGED_T1
-$(git diff --cached --name-only 2>/dev/null)
+$STAGED_FILES
 STAGED_T1
 
 # --- Tier 2a: Enforcement files — check enforcement preservation ---
@@ -35,9 +55,8 @@ while IFS= read -r staged_file; do
     .githooks/*|.claude/hooks/*|AGENTS.md)
       DIFF=$(git diff --cached -- "$staged_file")
 
-      # Block removal of quality commands
-      if echo "$DIFF" | grep -qE '^\-.*npm run (ci|test|lint|format:check|spell|typecheck)'; then
-        echo "noslop: $staged_file removes a quality gate command — blocked." >&2
+      # Block net removal of quality commands (rewrites are fine)
+      if check_quality_cmd_removal "$DIFF" "$staged_file"; then
         exit 1
       fi
 
@@ -48,10 +67,18 @@ while IFS= read -r staged_file; do
         echo "noslop: $staged_file has net removal of enforcement (exit 1) — blocked." >&2
         exit 1
       fi
+
+      # Block net removal of set -e (D5: removing set -e silently disables fail-on-error)
+      REMOVED_SETE=$(echo "$DIFF" | grep -cE '^\-[[:space:]]*set -e' 2>/dev/null || true)
+      ADDED_SETE=$(echo "$DIFF" | grep -cE '^\+[[:space:]]*set -e' 2>/dev/null || true)
+      if [ "${REMOVED_SETE:-0}" -gt "${ADDED_SETE:-0}" ]; then
+        echo "noslop: $staged_file has net removal of set -e (fail-on-error) — blocked." >&2
+        exit 1
+      fi
       ;;
   esac
 done << STAGED_T2A
-$(git diff --cached --name-only 2>/dev/null)
+$STAGED_FILES
 STAGED_T2A
 
 # --- Tier 2b: CI workflows and settings — full content check ---
@@ -60,16 +87,15 @@ while IFS= read -r staged_file; do
     .github/workflows/*|.claude/settings.json)
       DIFF=$(git diff --cached -- "$staged_file")
 
-      # Block removal of quality commands
-      if echo "$DIFF" | grep -qE '^\-.*npm run (ci|test|lint|format:check|spell|typecheck)'; then
-        echo "noslop: $staged_file removes a quality gate command — blocked." >&2
+      # Block net removal of quality commands
+      if check_quality_cmd_removal "$DIFF" "$staged_file"; then
         echo "  If intentional, submit via PR with the 'noslop-approved' label." >&2
         exit 1
       fi
 
-      # Block addition of bypass/weakening patterns
+      # Block addition of bypass/weakening patterns (D2: --no-verify restored)
       BYPASS_LINES=$(echo "$DIFF" \
-        | grep -iE '^\+.*(continue-on-error:[[:space:]]*true|\[skip ci\]|SKIP_CI|skip-checks)' \
+        | grep -iE '^\+.*(continue-on-error:[[:space:]]*true|\[skip ci\]|SKIP_CI|skip-checks|--no-verify)' \
         | grep -ivE '(deny|block|"Bash)' || true)
       if [ -n "$BYPASS_LINES" ]; then
         echo "noslop: $staged_file adds a quality bypass pattern — blocked." >&2
@@ -87,7 +113,7 @@ while IFS= read -r staged_file; do
       ;;
   esac
 done << STAGED_T2B
-$(git diff --cached --name-only 2>/dev/null)
+$STAGED_FILES
 STAGED_T2B
 
 npm run format:check && npm run lint && npm run spell

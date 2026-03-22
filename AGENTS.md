@@ -25,13 +25,40 @@ npm run typecheck && npm run test
 
 ## Content-aware protection
 
-Infrastructure files (`.githooks/*`, `.github/workflows/*`, `.claude/hooks/*`, `.claude/settings.json`, `AGENTS.md`) use content-aware checking. The pre-commit hook inspects the diff and blocks:
+The pre-commit hook uses two-tier content-aware checking on infrastructure files:
 
-- **Removal of quality commands** (`npm run ci`, `npm run test`, `npm run lint`, etc.)
-- **Addition of bypass patterns** (`continue-on-error: true`, `--no-verify`, `[skip ci]`)
-- **Net removal of enforcement** (removing `exit 1` without replacement)
+### Tier 1: Blanket-blocked configs
 
-Additive changes (new jobs, new schedules, new checks) pass through.
+Quality gate config files (`eslint.config.mjs`, `vitest.config.ts`, `.dependency-cruiser.cjs`, `knip.json`, `tsconfig.json`, `tsconfig.build.json`) cannot be committed at all.
+
+### Tier 2a: Enforcement files (`.githooks/*`, `.claude/hooks/*`, `AGENTS.md`)
+
+These files ARE the enforcement mechanism, so they naturally reference bypass keywords. The hook only checks:
+
+- **Removal of quality commands** (`npm run ci`, `npm run test`, `npx vitest`, `npx eslint`, etc.)
+- **Net removal of `exit 1`** (removing more `exit 1` lines than are added)
+- **Net removal of `set -e`** (removing fail-on-error without replacement)
+
+### Tier 2b: CI and config files (`.github/workflows/*`, `.claude/settings.json`)
+
+Full content check:
+
+- **Removal of quality commands** (same as Tier 2a)
+- **Addition of bypass patterns** (`continue-on-error: true`, `--no-verify`, `[skip ci]`, `SKIP_CI`, `skip-checks`)
+- **Net removal of `exit 1`** (same as Tier 2a)
+
+Lines containing `deny`, `block`, or `"Bash` are excluded from bypass detection to avoid false positives on enforcement logic.
+
+Additive changes (new jobs, new schedules, new checks) pass through in all tiers.
+
+### Commit-msg hook
+
+The commit-msg hook checks the **subject line only**:
+
+- Blocks `[skip ci]`, `skip-checks`, and `--no-verify` in the subject
+- Enforces Conventional Commits format (`type(scope): description`)
+
+The message body is not checked — it may legitimately discuss these patterns.
 
 ## Core principles
 

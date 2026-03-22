@@ -1,6 +1,6 @@
 {
   "name": "prompt-language",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates.",
   "author": {
     "name": "45ck"

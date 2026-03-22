@@ -1,8 +1,17 @@
 #!/bin/sh
-# noslop pre-commit: fast gates (format, lint, spell)
+# noslop pre-commit: content-aware quality gate protection
+#
+# Two-tier protection:
+#   1. Blanket-block: quality gate config files (eslint, vitest, etc.)
+#   2. Content-aware: infrastructure files — block weakening, allow strengthening
+#
+# Tier 2 splits by file role:
+#   - Hook scripts (.githooks/*, .claude/hooks/*): check enforcement preservation
+#   - CI/docs (.github/workflows/*, .claude/settings.json, AGENTS.md): check for
+#     removal of quality commands and addition of bypass patterns
 set -e
 
-# Block commits that modify protected quality gate config or hook files.
+# --- Tier 1: Blanket-block quality gate configs ---
 PROTECTED_CONFIGS="eslint.config.mjs vitest.config.ts .dependency-cruiser.cjs knip.json tsconfig.json tsconfig.build.json"
 while IFS= read -r staged_file; do
   for cfg in $PROTECTED_CONFIGS; do
@@ -11,14 +20,74 @@ while IFS= read -r staged_file; do
       exit 1
     fi
   done
+done << STAGED_T1
+$(git diff --cached --name-only 2>/dev/null)
+STAGED_T1
+
+# --- Tier 2a: Hook scripts — check enforcement preservation ---
+# Hook scripts ARE the enforcement mechanism, so they naturally contain bypass
+# keywords in their detection patterns. Only check that enforcement is preserved.
+while IFS= read -r staged_file; do
   case "$staged_file" in
-    .githooks/*|.github/workflows/*|.claude/hooks/*|.claude/settings.json|AGENTS.md)
-      echo "noslop: $staged_file is protected gate infrastructure — changes cannot be committed." >&2
-      exit 1
+    .githooks/*|.claude/hooks/*)
+      DIFF=$(git diff --cached -- "$staged_file")
+
+      # Block removal of quality commands from hooks
+      if echo "$DIFF" | grep -qE '^\-.*npm run (ci|test|lint|format:check|spell|typecheck)'; then
+        echo "noslop: $staged_file removes a quality gate command — blocked." >&2
+        exit 1
+      fi
+
+      # Block net removal of enforcement (exit 1 removed without replacement)
+      REMOVED_EXIT=$(echo "$DIFF" | grep -cE '^\-[[:space:]]*exit 1' 2>/dev/null || true)
+      ADDED_EXIT=$(echo "$DIFF" | grep -cE '^\+[[:space:]]*exit 1' 2>/dev/null || true)
+      if [ "${REMOVED_EXIT:-0}" -gt "${ADDED_EXIT:-0}" ]; then
+        echo "noslop: $staged_file has net removal of enforcement (exit 1) — blocked." >&2
+        exit 1
+      fi
       ;;
   esac
-done << STAGED
+done << STAGED_T2A
 $(git diff --cached --name-only 2>/dev/null)
-STAGED
+STAGED_T2A
+
+# --- Tier 2b: CI workflows, settings, governance docs — full content check ---
+# Protective context: lines that PROHIBIT or DENY bypass patterns are not bypasses.
+PROTECTIVE_CONTEXT='(deny|block|blocked|"Bash|[Nn]ever|[Dd]o not|[Dd]on.t|[Cc]annot|[Mm]ust not|not allowed|is not|are not)'
+
+while IFS= read -r staged_file; do
+  case "$staged_file" in
+    .github/workflows/*|.claude/settings.json|AGENTS.md)
+      DIFF=$(git diff --cached -- "$staged_file")
+
+      # Block removal of quality commands
+      if echo "$DIFF" | grep -qE '^\-.*npm run (ci|test|lint|format:check|spell|typecheck)'; then
+        echo "noslop: $staged_file removes a quality gate command — blocked." >&2
+        echo "  If intentional, submit via PR with the 'noslop-approved' label." >&2
+        exit 1
+      fi
+
+      # Block addition of bypass/weakening patterns, excluding protective context
+      BYPASS_LINES=$(echo "$DIFF" \
+        | grep -iE '^\+.*(continue-on-error:[[:space:]]*true|--no-verify|\[skip ci\]|SKIP_CI|skip-checks)' \
+        | grep -ivE "$PROTECTIVE_CONTEXT" || true)
+      if [ -n "$BYPASS_LINES" ]; then
+        echo "noslop: $staged_file adds a quality bypass pattern — blocked." >&2
+        echo "  Matched: $(echo "$BYPASS_LINES" | head -1)" >&2
+        exit 1
+      fi
+
+      # Block net removal of enforcement (exit 1 removed without replacement)
+      REMOVED_EXIT=$(echo "$DIFF" | grep -cE '^\-[[:space:]]*exit 1' 2>/dev/null || true)
+      ADDED_EXIT=$(echo "$DIFF" | grep -cE '^\+[[:space:]]*exit 1' 2>/dev/null || true)
+      if [ "${REMOVED_EXIT:-0}" -gt "${ADDED_EXIT:-0}" ]; then
+        echo "noslop: $staged_file has net removal of enforcement (exit 1) — blocked." >&2
+        exit 1
+      fi
+      ;;
+  esac
+done << STAGED_T2B
+$(git diff --cached --name-only 2>/dev/null)
+STAGED_T2B
 
 npm run format:check && npm run lint && npm run spell

@@ -29,7 +29,7 @@ The agent loops fix-and-test automatically. The gate runs `npm test` before allo
 
 ## How it helps
 
-**Completion gates** are the core feature. `done when:` predicates run real commands and block the agent from stopping until they pass. In [45 A/B experiments](docs/eval-analysis.md), gates won 15/15 tested scenarios at 100% reliability. The agent can lie about test results, skip requirements, or stop early. Gates don't care. They run the command and check the exit code.
+**Completion gates** are the core feature. `done when:` predicates run real commands and block the agent from stopping until they pass. In [45 A/B experiments](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md), gates won 15/15 tested scenarios at 100% reliability. The agent can lie about test results, skip requirements, or stop early. Gates don't care. They run the command and check the exit code.
 
 **Flow control** (`retry`, `while`, `until`, `if`, `try/catch`) structures multi-step tasks. Claude already follows explicit instructions well, so flow control is mainly useful for readability and enforcing execution order rather than correctness. Where it shines is pairing with gates: a `retry` loop that re-runs tests after each fix attempt, combined with a `tests_pass` gate, creates an autonomous fix-test cycle.
 
@@ -314,7 +314,7 @@ Steps define execution order. Gates define the exit condition. You can use flow 
 | `try`/`catch` | Execute with error recovery          | `try ... catch command_failed ... end` |
 | `done when:`  | Completion gate (blocks stopping)    | `done when: tests_pass`                |
 
-Full syntax, defaults, composition rules, built-in variables, and gate predicates: **[DSL Reference](docs/dsl-reference.md)**
+Full syntax, defaults, composition rules, built-in variables, and gate predicates: **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)**
 
 ## Slash commands
 
@@ -337,11 +337,11 @@ In 45 A/B hypotheses (39 tested, 6 pending): **15 plugin wins, 21 ties, 1 flaky,
 | Inverted gate predicate         | `tests_fail`/`lint_fail` forces failure    | 100%     |
 | Gaslighting + loop combo        | Deceptive prompt + while loop + gate       | 100%     |
 
-Full analysis: **[Evaluation Results](docs/eval-analysis.md)**
+Full analysis: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)**
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/45ck/prompt-language/blob/main/CONTRIBUTING.md).
 
 ## License
 

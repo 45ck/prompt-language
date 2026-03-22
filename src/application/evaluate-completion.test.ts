@@ -213,6 +213,24 @@ describe('evaluateCompletion', () => {
     expect(result.gateResults['file_exists app.js']).toBe(true);
   });
 
+  it('resolves file_exists with spaces in path', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult("test -f 'dist/my file.js'", { exitCode: 0, stdout: '', stderr: '' });
+
+    const spec = createFlowSpec(
+      'File gate',
+      [],
+      [createCompletionGate('file_exists dist/my file.js')],
+    );
+    const session = createSessionState('s-file-space', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(result.gateResults['file_exists dist/my file.js']).toBe(true);
+  });
+
   it('blocks when resolved builtin gate command fails', async () => {
     const store = makeStore();
     const runner = makeRunner();
@@ -288,6 +306,15 @@ describe('resolveBuiltinCommand', () => {
     expect(resolveBuiltinCommand('file_exists ../../etc/passwd')).toBeUndefined();
     expect(resolveBuiltinCommand('file_exists ../secret')).toBeUndefined();
     expect(resolveBuiltinCommand('file_exists foo/../bar')).toBeUndefined();
+  });
+
+  it('allows file_exists with spaces in path', () => {
+    expect(resolveBuiltinCommand('file_exists dist/my file.js')).toBe("test -f 'dist/my file.js'");
+  });
+
+  it('rejects absolute paths in file_exists', () => {
+    expect(resolveBuiltinCommand('file_exists /etc/passwd')).toBeUndefined();
+    expect(resolveBuiltinCommand('file_exists /tmp/foo')).toBeUndefined();
   });
 
   it('rejects backslash in file_exists path', () => {

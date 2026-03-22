@@ -332,3 +332,8 @@ Natural language is translated by the agent, not by a deterministic compiler. Th
 ## Comments
 
 Lines containing `#` have everything after `#` stripped before parsing.
+
+## Design documents
+
+- [Output parsing](design/output-parsing.md) -- Prompt output capture and JSON extraction (superseded)
+- [Foreach construct](design-foreach.md) -- Iteration over collections

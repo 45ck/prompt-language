@@ -5029,7 +5029,7 @@ async function testH40() {
       file: 'isPrime.js',
       desc: 'isPrime(n) — returns true if n is prime, false otherwise',
       check:
-        "const fn = require('./isPrime.js'); process.exit(fn(7) === true && fn(4) === false ? 0 : 1)",
+        "const fn = require('./isPrime.js'); process.exit(fn(7) === true && fn(4) === false && fn(9) === false && fn(1) === false ? 0 : 1)",
     },
     {
       file: 'flatten.js',
@@ -5533,7 +5533,7 @@ async function testH44() {
         'Goal: analyze distractor, recall exact token',
         '',
         'flow:',
-        '  let token = run "cat target.txt"',
+        `  let token = run "node -e \\"process.stdout.write(require('fs').readFileSync('target.txt','utf8'))\\""`,
         '  prompt: Read distractor.txt and write summary.txt analyzing its themes (at least 3 sentences).',
         '  prompt: Create recall.txt containing EXACTLY this value, nothing else: ${token}',
       ].join('\n'),

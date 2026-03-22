@@ -195,11 +195,7 @@ describe('injectContext', () => {
   it('renders flow visualization with gate status', async () => {
     const store = makeStore();
     const spec = createFlowSpec('Test', [createPromptNode('p1', 'work')]);
-    let session = createSessionState('test-5', spec);
-    session = {
-      ...session,
-      lastStep: { kind: 'run', command: 'npm test', summary: 'Tests passed' },
-    };
+    const session = createSessionState('test-5', spec);
     await store.save(session);
 
     const result = await injectContext({ prompt: 'What next?', sessionId: 'test-5' }, store);
@@ -1158,6 +1154,60 @@ describe('injectContext — try/catch', () => {
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
 
     expect(result.prompt).toContain('After try');
+  });
+
+  it('jumps to catch when let-run fails inside try body', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: 'cmd failed' }),
+    };
+    const tryNode = createTryNode(
+      't1',
+      [createLetNode('l1', 'result', { type: 'run', command: 'exit 1' })],
+      'command_failed',
+      [createPromptNode('p2', 'Handle let-run error')],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    expect(result.prompt).toContain('Handle let-run error');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['command_failed']).toBe(true);
+    expect(saved?.variables['command_succeeded']).toBe(false);
+    expect(saved?.variables['result']).toBe('');
+  });
+
+  it('skips subsequent try-body nodes and captures output when let-run fails', async () => {
+    const store = makeStore();
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: 'partial output', stderr: 'error details' }),
+    };
+    const tryNode = createTryNode(
+      't1',
+      [
+        createLetNode('l1', 'result', { type: 'run', command: 'failing-cmd' }),
+        createPromptNode('p1', 'This should be skipped'),
+      ],
+      'command_failed',
+      [createPromptNode('p2', 'Caught the failure')],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
+
+    // The captured instruction should be from the catch body, not the skipped try-body prompt
+    expect(result.prompt).toContain('Caught the failure');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['result']).toBe('partial output');
+    expect(saved?.variables['command_failed']).toBe(true);
+    expect(saved?.variables['command_succeeded']).toBe(false);
+    // Path advanced past catch body prompt (body=2 nodes, catch=1 node at index 2, so 3 = past)
+    expect(saved?.currentNodePath).toEqual([0, 3]);
   });
 });
 

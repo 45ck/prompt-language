@@ -60,7 +60,6 @@ describe('user-prompt-submit hook (integration)', () => {
       nodeProgress: {},
       variables: {},
       gateResults: {},
-      lastStep: null,
       status: 'active',
       warnings: [],
     };

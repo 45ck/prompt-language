@@ -1,6 +1,6 @@
 {
   "name": "@45ck/prompt-language",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates so the agent cannot stop early or skip steps.",
   "license": "MIT",
   "type": "module",
@@ -53,7 +53,8 @@
     "audit:high": "node scripts/ci/audit-high.mjs",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run eval:e2e && npm run audit:high",
     "ci:nightly": "npm run ci && npm run mutation",
-    "prepare": "node scripts/prepare.mjs"
+    "prepare": "node scripts/prepare.mjs",
+    "prepublishOnly": "npm run ci"
   },
   "lint-staged": {
     "*.{ts,tsx,js,mjs,cjs}": [

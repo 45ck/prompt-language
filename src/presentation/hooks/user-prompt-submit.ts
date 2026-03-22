@@ -59,7 +59,6 @@ async function main(): Promise<void> {
   process.stdout.write(output);
 }
 
-// TODO: sessionId is generated fresh each hook invocation; should persist across turns
 main().catch((error: unknown) => {
   process.stderr.write(`[prompt-language] hook error: ${formatError(error)}\n`);
   process.exitCode = 0;

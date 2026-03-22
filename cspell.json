@@ -34,7 +34,8 @@
     "varname",
     "evals",
     "distractor",
-    "fagan"
+    "fagan",
+    "foobarbaz"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
 }

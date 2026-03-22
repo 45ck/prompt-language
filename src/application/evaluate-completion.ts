@@ -26,7 +26,7 @@ const BUILTIN_GATE_COMMANDS: Readonly<Record<string, string>> = {
 
 const INVERTED_PREDICATES = new Set(['tests_fail', 'lint_fail', 'diff_nonempty']);
 
-const SAFE_PATH_RE = /^(?!.*\.\.)[\w./-]+$/;
+const SAFE_PATH_RE = /^(?!\/)(?!.*\.\.)[\w ./-]+$/;
 
 /** Map a built-in predicate to the shell command that evaluates it. */
 export function resolveBuiltinCommand(predicate: string): string | undefined {

@@ -13,5 +13,5 @@
     "loops",
     "retries"
   ],
-  "installInstructions": "npm install @45ck/prompt-language"
+  "installInstructions": "npx @45ck/prompt-language"
 }

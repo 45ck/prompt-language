@@ -5,6 +5,7 @@
  */
 
 import type { FlowNode } from './flow-node.js';
+import { DEFAULT_MAX_ITERATIONS, DEFAULT_MAX_ATTEMPTS } from './flow-node.js';
 
 export interface CompletionGate {
   readonly predicate: string;
@@ -25,8 +26,8 @@ export interface FlowSpec {
 }
 
 const DEFAULT_FLOW_DEFAULTS: FlowDefaults = {
-  maxIterations: 5,
-  maxAttempts: 3,
+  maxIterations: DEFAULT_MAX_ITERATIONS,
+  maxAttempts: DEFAULT_MAX_ATTEMPTS,
 };
 
 export function createFlowSpec(

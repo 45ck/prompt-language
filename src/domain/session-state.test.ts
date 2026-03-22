@@ -4,15 +4,12 @@ import {
   advanceNode,
   updateVariable,
   updateNodeProgress,
-  setLastStep,
   updateGateResult,
   markCompleted,
-  markFailed,
-  markCancelled,
   isFlowComplete,
   allGatesPassing,
 } from './session-state.js';
-import type { SessionState, NodeProgress, LastStep } from './session-state.js';
+import type { SessionState, NodeProgress } from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
 
 function makeState(overrides?: Partial<{ gates: boolean }>): SessionState {
@@ -33,7 +30,6 @@ describe('createSessionState', () => {
     expect(state.nodeProgress).toEqual({});
     expect(state.variables).toEqual({});
     expect(state.gateResults).toEqual({});
-    expect(state.lastStep).toBeNull();
     expect(state.status).toBe('active');
     expect(state.warnings).toEqual(['warn1']);
   });
@@ -94,27 +90,6 @@ describe('updateNodeProgress', () => {
   });
 });
 
-describe('setLastStep', () => {
-  it('sets the last step', () => {
-    const state = makeState();
-    const step: LastStep = {
-      kind: 'run',
-      command: 'pnpm test',
-      summary: 'ran tests',
-      exitCode: 0,
-    };
-    const next = setLastStep(state, step);
-    expect(next.lastStep).toEqual(step);
-  });
-
-  it('handles step without optional fields', () => {
-    const state = makeState();
-    const step: LastStep = { kind: 'prompt', summary: 'asked user' };
-    const next = setLastStep(state, step);
-    expect(next.lastStep).toEqual(step);
-  });
-});
-
 describe('updateGateResult', () => {
   it('sets a gate result', () => {
     const state = makeState({ gates: true });
@@ -137,20 +112,6 @@ describe('markCompleted', () => {
   });
 });
 
-describe('markFailed', () => {
-  it('sets status to failed', () => {
-    const next = markFailed(makeState());
-    expect(next.status).toBe('failed');
-  });
-});
-
-describe('markCancelled', () => {
-  it('sets status to cancelled', () => {
-    const next = markCancelled(makeState());
-    expect(next.status).toBe('cancelled');
-  });
-});
-
 describe('isFlowComplete', () => {
   it('returns false for active', () => {
     expect(isFlowComplete(makeState())).toBe(false);
@@ -161,11 +122,11 @@ describe('isFlowComplete', () => {
   });
 
   it('returns true for failed', () => {
-    expect(isFlowComplete(markFailed(makeState()))).toBe(true);
+    expect(isFlowComplete({ ...makeState(), status: 'failed' })).toBe(true);
   });
 
   it('returns true for cancelled', () => {
-    expect(isFlowComplete(markCancelled(makeState()))).toBe(true);
+    expect(isFlowComplete({ ...makeState(), status: 'cancelled' })).toBe(true);
   });
 });
 

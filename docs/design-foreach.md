@@ -1,5 +1,7 @@
 # Design: Foreach Construct & Prompt Output Parsing
 
+> Canonical design document. See implementation in flow-node.ts, parse-flow.ts, inject-context.ts.
+
 ## 1. Prompt Output Parsing — `let x = prompt return JSON`
 
 ### Problem

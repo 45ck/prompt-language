@@ -25,19 +25,28 @@ You are the flow execution engine. When invoked:
 
 `.prompt-language/session-state.json` in the project root.
 
-## Built-in Resolvers
+## Runtime Variables
 
-After each `run` step, these variables are automatically updated:
+After each `run` step, these variables are automatically set:
 
-- `last_exit_code` -- exit code of the last command
+- `last_exit_code` -- numeric exit code of the last command
 - `command_failed` -- true if last exit code != 0
 - `command_succeeded` -- true if last exit code == 0
-- `tests_pass` -- true if test command succeeded
-- `tests_fail` -- true if test command failed
-- `lint_pass` -- true if lint command succeeded
-- `lint_fail` -- true if lint command failed
-- `file_exists` -- true if a checked file exists
-- `diff_nonempty` -- true if git diff has output
+- `last_stdout` -- stdout of the last command (truncated at 2000 chars)
+- `last_stderr` -- stderr of the last command (truncated at 2000 chars)
+
+These can be used in `if`/`while`/`until` conditions and `${interpolation}`.
+
+## Gate Predicates
+
+These are evaluated on-demand for `done when:` gates and flow conditions. They run real commands:
+
+- `tests_pass` / `tests_fail` -- runs `npm test`
+- `lint_pass` / `lint_fail` -- runs `npm run lint`
+- `file_exists <path>` -- runs `test -f '<path>'`
+- `diff_nonempty` -- runs `git diff --quiet`
+
+Inverted predicates (`tests_fail`, `lint_fail`, `diff_nonempty`) pass when the command fails.
 
 ## Important
 

@@ -25,17 +25,14 @@ export {
 export type { FlowSpec, CompletionGate, FlowDefaults } from './flow-spec.js';
 export { createFlowSpec, createCompletionGate } from './flow-spec.js';
 
-export type { SessionState, NodeProgress, LastStep, FlowStatus } from './session-state.js';
+export type { SessionState, NodeProgress, FlowStatus } from './session-state.js';
 export {
   createSessionState,
   advanceNode,
   updateVariable,
   updateNodeProgress,
-  setLastStep,
   updateGateResult,
   markCompleted,
-  markFailed,
-  markCancelled,
   isFlowComplete,
   allGatesPassing,
 } from './session-state.js';

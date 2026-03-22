@@ -16,6 +16,7 @@ import {
   createRunNode,
   createTryNode,
   createLetNode,
+  DEFAULT_MAX_ITERATIONS,
 } from '../domain/flow-node.js';
 import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
 
@@ -25,8 +26,6 @@ interface ParseContext {
   warnings: string[];
   nodeCounter: number;
 }
-
-const DEFAULT_MAX = 5;
 
 function nextId(ctx: ParseContext): string {
   ctx.nodeCounter += 1;
@@ -83,7 +82,7 @@ function parseWhileLine(ctx: ParseContext, line: string, baseIndent: number): Fl
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
   if (!/max\s+\d+/i.exec(line)) {
     ctx.warnings.push('Missing "max N" on while — defaulting to 5');
-    max = DEFAULT_MAX;
+    max = DEFAULT_MAX_ITERATIONS;
   }
   const negated = /^while\s+not\s+/i.test(line);
   const cond = negated ? `not ${condition}` : condition;
@@ -97,7 +96,7 @@ function parseUntilLine(ctx: ParseContext, line: string, baseIndent: number): Fl
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
   if (!/max\s+\d+/i.exec(line)) {
     ctx.warnings.push('Missing "max N" on until — defaulting to 5');
-    max = DEFAULT_MAX;
+    max = DEFAULT_MAX_ITERATIONS;
   }
   const body = parseBlock(ctx, baseIndent);
   return createUntilNode(nextId(ctx), condition, body, max);

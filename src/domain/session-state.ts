@@ -9,14 +9,6 @@ import type { FlowSpec } from './flow-spec.js';
 
 export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
 
-export interface LastStep {
-  readonly kind: string;
-  readonly command?: string;
-  readonly summary: string;
-  readonly exitCode?: number;
-  readonly artifactPath?: string;
-}
-
 export interface NodeProgress {
   readonly iteration: number;
   readonly maxIterations: number;
@@ -30,7 +22,6 @@ export interface SessionState {
   readonly nodeProgress: Readonly<Record<string, NodeProgress>>;
   readonly variables: Readonly<Record<string, string | number | boolean>>;
   readonly gateResults: Readonly<Record<string, boolean>>;
-  readonly lastStep: LastStep | null;
   readonly status: FlowStatus;
   readonly warnings: readonly string[];
 }
@@ -43,7 +34,6 @@ export function createSessionState(sessionId: string, flowSpec: FlowSpec): Sessi
     nodeProgress: {},
     variables: {},
     gateResults: {},
-    lastStep: null,
     status: 'active',
     warnings: [...flowSpec.warnings],
   };
@@ -75,10 +65,6 @@ export function updateNodeProgress(
   };
 }
 
-export function setLastStep(state: SessionState, lastStep: LastStep): SessionState {
-  return { ...state, lastStep };
-}
-
 export function updateGateResult(
   state: SessionState,
   gatePredicate: string,
@@ -92,14 +78,6 @@ export function updateGateResult(
 
 export function markCompleted(state: SessionState): SessionState {
   return { ...state, status: 'completed' };
-}
-
-export function markFailed(state: SessionState): SessionState {
-  return { ...state, status: 'failed' };
-}
-
-export function markCancelled(state: SessionState): SessionState {
-  return { ...state, status: 'cancelled' };
 }
 
 export function isFlowComplete(state: SessionState): boolean {

@@ -77,8 +77,8 @@ export type FlowNode =
   | TryNode
   | LetNode;
 
-const DEFAULT_MAX_ITERATIONS = 5;
-const DEFAULT_MAX_ATTEMPTS = 3;
+export const DEFAULT_MAX_ITERATIONS = 5;
+export const DEFAULT_MAX_ATTEMPTS = 3;
 
 export function createWhileNode(
   id: string,

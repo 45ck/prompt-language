@@ -13,18 +13,10 @@ Manual verification of the NL→DSL meta-prompt pipeline in Claude Code.
 2. **Install the plugin in Claude Code**:
 
    ```sh
-   claude plugin add /path/to/prompt-language
+   node bin/cli.mjs install
    ```
 
-3. **Verify hooks are registered**:
-
-   ```sh
-   claude hooks list
-   ```
-
-   Confirm `UserPromptSubmit` hook points to `user-prompt-submit.ts`.
-
-4. **Clean state** (remove any leftover session):
+3. **Clean state** (remove any leftover session):
 
    ```sh
    rm -rf .prompt-language/

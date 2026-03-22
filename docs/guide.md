@@ -95,9 +95,11 @@ For `run:` nodes, `shellInterpolate()` wraps substituted values in single-quotes
 - **Phase 1**: The plugin emits a meta-prompt telling Claude to answer the question AND write its response to `.prompt-language/vars/{varName}`. Claude answers naturally while also writing the file.
 - **Phase 2**: On the next turn, the plugin reads the file, stores the value in `state.variables`, and advances past the node.
 
-During phase 1, the rendered flow shows `[awaiting response...]` on the let node. If the file isn't found on phase 2, the plugin retries up to 3 times, then fails open with an empty string (the flow continues rather than getting stuck).
+During phase 1, the rendered flow shows `[awaiting response...]` on the let node.
 
 This mechanism lets flows capture Claude's reasoning as a variable for use in later steps — for example, storing an analysis result to interpolate into a follow-up prompt.
+
+> **Warning: fail-open behavior.** If Claude doesn't write the capture file, the plugin retries up to 3 times, then sets the variable to `""` (empty string) and continues. If `${x}` is later interpolated into a `run:` command, the command will receive an empty argument. Use `${x:-fallback}` default values or add an `if` check before using captured values in critical commands.
 
 ## How gates prevent lying
 
@@ -165,6 +167,7 @@ When a flow isn't behaving as expected:
 ## Further reading
 
 - [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md) — Full syntax, defaults, composition rules, built-in variables, and gate predicates
+- [Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md) — Debugging stuck flows, known issues, common fixes
 - [Hooks Architecture](https://github.com/45ck/prompt-language/blob/main/docs/hooks-architecture.md) — Implementation details of the three-hook enforcement loop
 - [Eval Analysis](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) — 45-hypothesis comparative evaluation against vanilla Claude
 - [Examples](https://github.com/45ck/prompt-language/blob/main/docs/examples/) — Worked flow examples for common patterns

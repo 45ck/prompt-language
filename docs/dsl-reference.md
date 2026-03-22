@@ -108,10 +108,12 @@ end
 
 Parameters:
 
-- max: Maximum number of attempts (default: 3).
+- max: Total number of attempts (default: 3). `retry max 3` means 3 total attempts: 1 initial + 2 retries.
 - body: One or more DSL statements (indented).
 
-The block runs once. If the last command fails, it retries up to the attempt limit. If all attempts are exhausted, the retry exits and the flow continues with the next step.
+The block always runs once. If the last command fails, it re-enters the body. This repeats until the command succeeds or the attempt limit is reached. If all attempts are exhausted, the retry exits and the flow continues with the next step.
+
+Example: `retry max 1` runs the body exactly once with no retries.
 
 ### if
 
@@ -167,6 +169,15 @@ run: npm test -- ${module}
 ```
 
 Unknown `${varName}` tokens are left as-is (no error).
+
+**Default values**: Use `${varName:-default}` to provide a fallback when a variable is unset:
+
+```
+prompt: Running on ${env:-development}.
+run: node deploy.js --target ${env:-local}
+```
+
+If `env` is not set, the default value is used. If `env` is set, the default is ignored.
 
 ### foreach
 
@@ -334,6 +345,12 @@ These are evaluated on demand when used as flow conditions (`while`, `until`, `i
 | `tests_fail`         | parsed | `npm test`         | exit != 0                    |
 | `lint_pass`          | parsed | `npm run lint`     | exit 0                       |
 | `lint_fail`          | parsed | `npm run lint`     | exit != 0                    |
+| `pytest_pass`        | parsed | `pytest`           | exit 0                       |
+| `pytest_fail`        | parsed | `pytest`           | exit != 0                    |
+| `go_test_pass`       | parsed | `go test ./...`    | exit 0                       |
+| `go_test_fail`       | parsed | `go test ./...`    | exit != 0                    |
+| `cargo_test_pass`    | parsed | `cargo test`       | exit 0                       |
+| `cargo_test_fail`    | parsed | `cargo test`       | exit != 0                    |
 | `file_exists <path>` | parsed | `test -f '<path>'` | file exists                  |
 | `diff_nonempty`      | parsed | `git diff --quiet` | exit != 0 (diff has changes) |
 
@@ -343,8 +360,6 @@ When a condition or gate predicate is evaluated, the runtime resolves it in this
 
 1. **Deterministic** — Direct variable lookup. If a variable with that name exists in session state (e.g., `command_failed` was set after a `run:` node), use its value immediately.
 2. **Parsed** — Built-in command resolution via `resolveBuiltinCommand()`. Predicates like `tests_pass` map to `npm test`, `lint_pass` maps to `npm run lint`, etc. The command is executed and the exit code determines the boolean result.
-3. **Inferred** — The agent interprets the condition from context (not currently implemented; reserved for future use).
-4. **Human** — The user is asked to evaluate the condition (not currently implemented; reserved for future use).
 
 **For flow conditions** (`while`, `until`, `if`): a runtime variable always takes precedence over running a command. For example, if `command_failed` was set after a `run:` node, an `if command_failed` condition uses the variable directly without executing anything.
 
@@ -375,8 +390,3 @@ Natural language is translated by the agent, not by a deterministic compiler. Th
 ## Comments
 
 Lines containing `#` have everything after `#` stripped before parsing.
-
-## Design documents
-
-- [Output parsing](design/output-parsing.md) -- Prompt output capture and JSON extraction (superseded)
-- [Foreach construct](design-foreach.md) -- Iteration over collections

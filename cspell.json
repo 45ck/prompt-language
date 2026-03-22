@@ -34,6 +34,7 @@
     "varname",
     "evals",
     "distractor",
+    "distractors",
     "fagan",
     "foobarbaz",
     "foreach",

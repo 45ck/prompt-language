@@ -670,3 +670,45 @@ describe('autoAdvanceNodes — try/finally', () => {
     expect((node as import('../domain/flow-node.js').RunNode).command).toBe('cleanup');
   });
 });
+
+// ── timeout propagation ─────────────────────────────────────────────
+
+describe('autoAdvanceNodes — timeout propagation', () => {
+  it('passes timeoutMs to commandRunner.run() for run nodes', async () => {
+    const receivedOptions: { timeoutMs?: number }[] = [];
+    const mockRunner: CommandRunner = {
+      run: async (_cmd: string, options?: { timeoutMs?: number }) => {
+        receivedOptions.push(options ?? {});
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+    const runNode = createRunNode('r1', 'npm test', 30000);
+    const promptNode = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [runNode, promptNode]);
+    const session = createSessionState('s1', spec);
+
+    await autoAdvanceNodes(session, mockRunner);
+
+    expect(receivedOptions).toHaveLength(1);
+    expect(receivedOptions[0]!.timeoutMs).toBe(30000);
+  });
+
+  it('does not pass timeoutMs when run node has no timeout', async () => {
+    const receivedOptions: { timeoutMs?: number }[] = [];
+    const mockRunner: CommandRunner = {
+      run: async (_cmd: string, options?: { timeoutMs?: number }) => {
+        receivedOptions.push(options ?? {});
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+    const runNode = createRunNode('r1', 'echo hi');
+    const promptNode = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [runNode, promptNode]);
+    const session = createSessionState('s1', spec);
+
+    await autoAdvanceNodes(session, mockRunner);
+
+    expect(receivedOptions).toHaveLength(1);
+    expect(receivedOptions[0]!.timeoutMs).toBeUndefined();
+  });
+});

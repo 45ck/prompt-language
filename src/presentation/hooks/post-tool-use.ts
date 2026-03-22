@@ -5,17 +5,52 @@
  * After Bash/Write/Edit tool calls, reads session state and writes
  * colorized flow visualization to stderr as a persistent visual reminder
  * of the active flow step.
+ *
+ * Also scans tool output for capture tags and writes extracted values
+ * to the capture vars directory for tag-based variable capture.
  */
 
+import { writeFile, mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { formatError } from '../../domain/format-error.js';
+import { CAPTURE_TAG } from '../../domain/capture-prompt.js';
 import { readStdin } from './read-stdin.js';
+
+const VARS_DIR = '.prompt-language/vars';
+
+/** Scan text for capture tags and write extracted values to var files. */
+async function scanAndSaveCapturedVars(text: string, basePath: string): Promise<void> {
+  const tagPattern = new RegExp(
+    `<${CAPTURE_TAG} name="([^"]+)">([\\s\\S]*?)</${CAPTURE_TAG}>`,
+    'g',
+  );
+
+  const matches: { varName: string; value: string }[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = tagPattern.exec(text)) !== null) {
+    const varName = match[1]!;
+    const value = match[2]!.trim();
+    if (value) {
+      matches.push({ varName, value });
+    }
+  }
+
+  if (matches.length === 0) return;
+
+  const varsDir = join(basePath, VARS_DIR);
+  await mkdir(varsDir, { recursive: true });
+
+  for (const { varName, value } of matches) {
+    await writeFile(join(varsDir, varName), value, 'utf-8');
+  }
+}
 
 async function main(): Promise<void> {
   // Consume stdin (required by hook protocol)
-  await readStdin();
+  const stdinData = await readStdin();
 
   const stateStore = new FileStateStore(process.cwd());
   const state = await stateStore.loadCurrent();
@@ -23,6 +58,21 @@ async function main(): Promise<void> {
   if (state?.status === 'active') {
     const rendered = renderFlow(state);
     process.stderr.write(`\n${colorizeFlow(rendered)}\n`);
+
+    // Scan tool output for capture tags
+    if (stdinData) {
+      try {
+        const parsed: unknown = JSON.parse(stdinData);
+        if (parsed && typeof parsed === 'object' && 'tool_output' in parsed) {
+          const output = (parsed as { tool_output: string }).tool_output;
+          if (typeof output === 'string') {
+            await scanAndSaveCapturedVars(output, process.cwd());
+          }
+        }
+      } catch {
+        // stdin might not be JSON or might not have tool_output — that's fine
+      }
+    }
   }
 
   process.exitCode = 0;

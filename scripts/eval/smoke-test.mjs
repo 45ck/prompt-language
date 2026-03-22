@@ -14,6 +14,7 @@
  *   E: Run auto-execution       F: Foreach iteration
  *   G: Let-prompt capture       H: If/else branching
  *   I: Try/catch handling       K: Variable chain (let-run + if + interpolation)
+ *   N: Capture reliability      (tag-based capture)
  *
  * Usage:
  *   node scripts/eval/smoke-test.mjs          # all tests
@@ -491,6 +492,69 @@ async function testRetryOnFailure() {
   });
 }
 
+// ── Test M: Gate-only mode (no flow block) ────────────────────────────
+
+async function testGateOnlyMode() {
+  await withTempDir(async (dir) => {
+    // Create a broken app.js and package.json so `npm test` runs `node app.js`
+    await writeFile(join(dir, 'app.js'), 'process.exit(1)\n');
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'gate-only-test', scripts: { test: 'node app.js' } }),
+    );
+
+    // No flow: block — just a prompt with done when:
+    const prompt = 'Fix app.js so it exits 0 instead of 1.\n\ndone when:\n  tests_pass';
+
+    claudeRun(prompt, dir);
+
+    let exitCode = 1;
+    try {
+      execSync(`node "${join(dir, 'app.js')}"`, { timeout: 5000 });
+      exitCode = 0;
+    } catch {
+      /* still fails */
+    }
+
+    assert(
+      'M: Gate-only mode (no flow block)',
+      exitCode === 0,
+      exitCode === 0 ? 'app.js fixed via gate-only mode' : 'app.js still exits non-zero',
+    );
+  });
+}
+
+// ── Test N: Capture reliability (tag-based) ───────────────────────────
+
+async function testCaptureReliability() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test capture reliability',
+      '',
+      'flow:',
+      '  let answer = prompt "What is 2+2? Reply with just the number."',
+      '  prompt: Write the answer "${answer}" to capture-result.txt, nothing else.',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'capture-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'N: Capture reliability (tag-based)',
+      content.includes('4'),
+      content.includes('4')
+        ? 'variable captured and interpolated'
+        : `got: "${content.slice(0, 60)}"`,
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -515,15 +579,18 @@ async function main() {
   await testIfElseBranching();
   await testTryCatch();
   await testVariableChain();
+  await testCaptureReliability();
 
   if (!QUICK_MODE) {
     await testGateEvaluation();
     await testWhileLoop();
     await testRetryOnFailure();
+    await testGateOnlyMode();
   } else {
     console.log('  SKIP  D: Gate evaluation (--quick mode)');
     console.log('  SKIP  J: While loop (--quick mode)');
     console.log('  SKIP  L: Retry on failure (--quick mode)');
+    console.log('  SKIP  M: Gate-only mode (--quick mode)');
   }
 
   console.log(`\n[smoke-test] Summary: ${passed}/${passed + failed} passed`);

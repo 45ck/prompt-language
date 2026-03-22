@@ -366,7 +366,10 @@ async function advanceRunNode(
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!commandRunner) return { state: current, capturedPrompt: null };
   const command = shellInterpolate(node.command, current.variables);
-  const result = await commandRunner.run(command);
+  const result = await commandRunner.run(
+    command,
+    node.timeoutMs ? { timeoutMs: node.timeoutMs } : undefined,
+  );
   let state = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
 
   if (result.exitCode !== 0) {

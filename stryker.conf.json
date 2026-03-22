@@ -1,18 +1,13 @@
 {
   "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker/master/packages/core/schema/stryker-schema.json",
-  "mutate": [
-    "src/**/*.ts",
-    "!src/**/*.test.ts",
-    "!src/**/index.ts",
-    "!src/infrastructure/adapters/in-memory-*.ts"
-  ],
+  "mutate": ["src/domain/**/*.ts", "!src/**/*.test.ts", "!src/**/index.ts"],
   "testRunner": "vitest",
   "checkers": ["typescript"],
   "tsconfigFile": "tsconfig.json",
   "thresholds": {
-    "high": 85,
-    "low": 70,
-    "break": 70
+    "high": 90,
+    "low": 80,
+    "break": 80
   },
   "reporters": ["progress", "clear-text", "html"],
   "htmlReporter": {

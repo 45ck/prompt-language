@@ -42,10 +42,30 @@ Gates are the entire reason to use a flow. Always write `done when:` first.
 
 Available predicates:
 
+**JavaScript/TypeScript:**
+
 - `tests_pass` — `npm test` exits 0
 - `lint_pass` — `npm run lint` exits 0
 - `tests_fail` — passes when tests exit non-zero (for "break this" tasks)
 - `lint_fail` — passes when lint exits non-zero
+
+**Python:**
+
+- `pytest_pass` — `pytest` exits 0
+- `pytest_fail` — passes when pytest exits non-zero
+
+**Go:**
+
+- `go_test_pass` — `go test ./...` exits 0
+- `go_test_fail` — passes when go test exits non-zero
+
+**Rust:**
+
+- `cargo_test_pass` — `cargo test` exits 0
+- `cargo_test_fail` — passes when cargo test exits non-zero
+
+**General:**
+
 - `diff_nonempty` — passes when `git diff` has output
 - `file_exists <path>` — passes when the file exists
 

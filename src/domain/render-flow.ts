@@ -52,8 +52,10 @@ function renderNode(
   switch (node.kind) {
     case 'prompt':
       return [`${prefix}${indent}prompt: ${node.text}${suffix}`];
-    case 'run':
-      return [`${prefix}${indent}run: ${node.command}${suffix}`];
+    case 'run': {
+      const timeoutTag = node.timeoutMs ? ` [timeout ${node.timeoutMs / 1000}s]` : '';
+      return [`${prefix}${indent}run: ${node.command}${timeoutTag}${suffix}`];
+    }
     case 'while':
       return renderLoopNode(
         `while ${node.condition} max ${node.maxIterations}`,

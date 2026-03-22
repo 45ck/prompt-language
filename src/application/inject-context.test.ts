@@ -4,6 +4,7 @@ import {
   looksLikeNaturalLanguage,
   buildMetaPrompt,
   isTrivialPrompt,
+  hasGatesOnly,
 } from './inject-context.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { parseFlow } from './parse-flow.js';
@@ -1638,7 +1639,7 @@ describe('injectContext — let-prompt capture', () => {
     );
 
     expect(result.prompt).toContain('.prompt-language/vars/out');
-    expect(result.prompt).toContain('not found or was empty');
+    expect(result.prompt).toContain('not detected');
     const saved = await store.loadCurrent();
     expect(saved?.nodeProgress['l1']?.iteration).toBe(2);
     expect(saved?.currentNodePath).toEqual([0]);
@@ -1880,5 +1881,82 @@ describe('looksLikeNaturalLanguage — foreach', () => {
 
   it('rejects single "for each" keyword (H#39: 2+ matches needed)', () => {
     expect(looksLikeNaturalLanguage('for each file, run the linter')).toBe(false);
+  });
+});
+
+describe('hasGatesOnly', () => {
+  it('returns true for done-when without flow block', () => {
+    expect(hasGatesOnly('Fix the tests.\n\ndone when:\n  tests_pass')).toBe(true);
+  });
+
+  it('returns false when flow block is present', () => {
+    expect(hasGatesOnly('Goal: g\n\nflow:\n  prompt: work\n\ndone when:\n  tests_pass')).toBe(
+      false,
+    );
+  });
+
+  it('returns false when no done-when section', () => {
+    expect(hasGatesOnly('Just fix the tests please.')).toBe(false);
+  });
+
+  it('handles case-insensitive done when', () => {
+    expect(hasGatesOnly('Fix it.\n\nDone When:\n  tests_pass')).toBe(true);
+  });
+});
+
+describe('injectContext — gate-only mode', () => {
+  it('creates session with gates but no flow nodes', async () => {
+    const store = makeStore();
+    const prompt = 'Fix the failing tests.\n\ndone when:\n  tests_pass';
+    const result = await injectContext({ prompt, sessionId: 'gate-1' }, store);
+
+    expect(result.prompt).toBe(prompt);
+    const saved = await store.loadCurrent();
+    expect(saved).not.toBeNull();
+    expect(saved?.flowSpec.nodes).toEqual([]);
+    expect(saved?.flowSpec.completionGates).toHaveLength(1);
+    expect(saved?.flowSpec.completionGates[0]!.predicate).toBe('tests_pass');
+    expect(saved?.status).toBe('active');
+  });
+
+  it('preserves goal in gate-only mode', async () => {
+    const store = makeStore();
+    const prompt = 'Goal: fix auth\n\nFix the auth tests.\n\ndone when:\n  tests_pass';
+    const result = await injectContext({ prompt, sessionId: 'gate-2' }, store);
+
+    expect(result.prompt).toBe(prompt);
+    const saved = await store.loadCurrent();
+    expect(saved?.flowSpec.goal).toBe('fix auth');
+  });
+
+  it('passes through prompt unmodified', async () => {
+    const store = makeStore();
+    const prompt = 'Do the work.\n\ndone when:\n  tests_pass\n  lint_pass';
+    const result = await injectContext({ prompt, sessionId: 'gate-3' }, store);
+
+    expect(result.prompt).toBe(prompt);
+  });
+
+  it('parses multiple gates in gate-only mode', async () => {
+    const store = makeStore();
+    const prompt = 'Fix it.\n\ndone when:\n  tests_pass\n  lint_pass';
+    await injectContext({ prompt, sessionId: 'gate-4' }, store);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.flowSpec.completionGates).toHaveLength(2);
+  });
+
+  it('active flow takes precedence over gate-only detection', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Existing', [createPromptNode('p1', 'work')]);
+    const session = createSessionState('gate-5', spec);
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'Continue.\n\ndone when:\n  tests_pass', sessionId: 'gate-5' },
+      store,
+    );
+
+    expect(result.prompt).toContain('[prompt-language] Flow: Existing');
   });
 });

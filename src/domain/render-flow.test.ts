@@ -542,4 +542,19 @@ describe('renderFlow', () => {
     const output = renderFlow(state);
     expect(output).not.toContain('Warnings:');
   });
+
+  it('renders timeout annotation on run node', () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'npm test', 60000)]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('run: npm test [timeout 60s]');
+  });
+
+  it('does not render timeout annotation when no timeout', () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'npm test')]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('run: npm test');
+    expect(output).not.toContain('timeout');
+  });
 });

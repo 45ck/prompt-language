@@ -124,7 +124,14 @@ async function install() {
   console.log('  Registered marketplace in settings.json');
   console.log('  Enabled in settings.json');
 
-  console.log(`\nprompt-language v${version} installed successfully.`);
+  console.log(`\nprompt-language v${version} installed successfully.\n`);
+  console.log('Try it now:');
+  console.log('  claude -p "Fix the failing tests. done when: tests_pass"\n');
+  console.log('Or use a built-in skill:');
+  console.log('  /fix-and-test\n');
+  console.log('Learn more:');
+  console.log('  npx @45ck/prompt-language init    (scaffold a starter flow)');
+  console.log('  https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md');
 }
 
 async function uninstall() {
@@ -257,6 +264,39 @@ async function init() {
   console.log('  claude -p "$(cat example.flow)"');
 }
 
+function demo() {
+  const example = `\
+# prompt-language: verified task completion for Claude Code
+#
+# The core idea: "done when:" gates run real commands.
+# Claude cannot stop until they pass.
+
+Goal: Fix the failing tests
+
+flow:
+  retry max 5
+    run: npm test
+    if command_failed
+      prompt: Tests failed. Read the error output, fix the code, and try again.
+    end
+  end
+
+done when:
+  tests_pass
+  lint_pass
+
+# Gate predicates by language:
+#   JS/TS:  tests_pass, lint_pass
+#   Python: pytest_pass
+#   Go:     go_test_pass
+#   Rust:   cargo_test_pass
+#
+# Install: npx @45ck/prompt-language
+# Docs:    https://github.com/45ck/prompt-language`;
+
+  console.log(example);
+}
+
 const command = process.argv[2] ?? 'install';
 
 switch (command) {
@@ -272,8 +312,11 @@ switch (command) {
   case 'init':
     await init();
     break;
+  case 'demo':
+    demo();
+    break;
   default:
     console.error(`Unknown command: ${command}`);
-    console.error('Usage: npx @45ck/prompt-language [install|uninstall|status|init]');
+    console.error('Usage: npx @45ck/prompt-language [install|uninstall|status|init|demo]');
     process.exit(1);
 }

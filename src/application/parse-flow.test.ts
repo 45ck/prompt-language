@@ -46,6 +46,21 @@ describe('parseFlow — prompt and run nodes', () => {
     expect(node.command).toBe('pnpm test');
   });
 
+  it('parses run node with timeout', () => {
+    const spec = parse('Goal: g\n\nflow:\n  run: npm test timeout 60');
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as RunNode;
+    expect(node.kind).toBe('run');
+    expect(node.command).toBe('npm test');
+    expect(node.timeoutMs).toBe(60000);
+  });
+
+  it('parses run node without timeout (no timeoutMs property)', () => {
+    const spec = parse('Goal: g\n\nflow:\n  run: echo hello');
+    const node = spec.nodes[0] as RunNode;
+    expect(node.timeoutMs).toBeUndefined();
+  });
+
   it('parses multiple sequential nodes', () => {
     const spec = parse('Goal: g\n\nflow:\n  prompt: first\n  run: cmd\n  prompt: second');
     expect(spec.nodes).toHaveLength(3);

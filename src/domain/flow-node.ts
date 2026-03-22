@@ -57,6 +57,7 @@ export interface PromptNode extends BaseNode {
 export interface RunNode extends BaseNode {
   readonly kind: 'run';
   readonly command: string;
+  readonly timeoutMs?: number;
 }
 
 export interface TryNode extends BaseNode {
@@ -165,8 +166,8 @@ export function createPromptNode(id: string, text: string): PromptNode {
   return { kind: 'prompt', id, text };
 }
 
-export function createRunNode(id: string, command: string): RunNode {
-  return { kind: 'run', id, command };
+export function createRunNode(id: string, command: string, timeoutMs?: number): RunNode {
+  return timeoutMs ? { kind: 'run', id, command, timeoutMs } : { kind: 'run', id, command };
 }
 
 export function createTryNode(

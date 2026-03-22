@@ -6,11 +6,12 @@
  */
 
 import { createSessionState } from '../domain/session-state.js';
+import { createFlowSpec } from '../domain/flow-spec.js';
 import type { SessionState } from '../domain/session-state.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
-import { parseFlow } from './parse-flow.js';
+import { parseFlow, parseGates } from './parse-flow.js';
 import { renderFlow } from '../domain/render-flow.js';
 import { interpolate } from '../domain/interpolate.js';
 import { autoAdvanceNodes, maybeCompleteFlow } from './advance-flow.js';
@@ -86,6 +87,19 @@ done when:
   <gate predicates>
 \`\`\`
 
+### done when (completion gates)
+Gates are the core value — the agent cannot stop until these hold.
+  done when:
+    tests_pass
+    lint_pass
+
+### Gate predicates (for \`done when:\`)
+**JavaScript/TypeScript:** tests_pass, tests_fail, lint_pass, lint_fail
+**Python:** pytest_pass, pytest_fail
+**Go:** go_test_pass, go_test_fail
+**Rust:** cargo_test_pass, cargo_test_fail
+**General:** file_exists <path>, diff_nonempty
+
 ### Primitives
 
 **prompt** — Inject text as the agent's next instruction.
@@ -142,19 +156,9 @@ Use \`\${varName}\` in prompt and run text to substitute stored values.
   let name = "auth module"
   prompt: Refactor the \${name} for clarity.
 
-### done when
-Completion gates — the agent cannot stop until these hold.
-  done when:
-    tests_pass
-    lint_pass
-
 ### Variables (auto-set after each \`run:\` and \`let x = run\`)
 last_exit_code, command_failed, command_succeeded,
-last_stdout, last_stderr
-
-### Gate predicates (for \`done when:\`)
-tests_pass, tests_fail, lint_pass, lint_fail,
-file_exists <path>, diff_nonempty`;
+last_stdout, last_stderr`;
 
 export function buildMetaPrompt(userPrompt: string): string {
   return `\
@@ -185,6 +189,12 @@ export interface InjectContextOutput {
 
 function hasFlowBlock(prompt: string): boolean {
   return FLOW_BLOCK_RE.test(prompt);
+}
+
+const DONE_WHEN_RE = /done\s+when:/im;
+
+export function hasGatesOnly(prompt: string): boolean {
+  return DONE_WHEN_RE.test(prompt) && !hasFlowBlock(prompt);
 }
 
 // H#41: Expanded trivial prompts set
@@ -277,6 +287,18 @@ export async function injectContext(
       return { prompt: `${ctx}\n\n${capturedPrompt}` };
     }
     return { prompt: `${ctx}\n\n${input.prompt}` };
+  }
+
+  // Gate-only mode: done when: without flow: — parse gates, save state, pass prompt through
+  if (hasGatesOnly(input.prompt)) {
+    const gates = parseGates(input.prompt);
+    if (gates.length > 0) {
+      const goal = /^Goal:\s*(.+)/im.exec(input.prompt)?.[1]?.trim() ?? '';
+      const spec = createFlowSpec(goal, [], gates);
+      const session = createSessionState(input.sessionId, spec);
+      await stateStore.save(session);
+      return { prompt: input.prompt };
+    }
   }
 
   // H#40: NL-to-DSL confirmation step — ask user to confirm before generating

@@ -102,6 +102,16 @@ describe('createRunNode', () => {
     const node = createRunNode('r1', 'pnpm test');
     expect(node).toEqual({ kind: 'run', id: 'r1', command: 'pnpm test' });
   });
+
+  it('creates a run node with timeout', () => {
+    const node = createRunNode('r2', 'npm test', 60000);
+    expect(node).toEqual({ kind: 'run', id: 'r2', command: 'npm test', timeoutMs: 60000 });
+  });
+
+  it('omits timeoutMs when not provided', () => {
+    const node = createRunNode('r3', 'echo hi');
+    expect(node).not.toHaveProperty('timeoutMs');
+  });
 });
 
 describe('createTryNode', () => {

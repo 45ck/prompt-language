@@ -55,7 +55,7 @@ function parseGoal(input: string): string {
 }
 
 /** Parse the "done when:" section into completion gates. */
-function parseGates(input: string): readonly CompletionGate[] {
+export function parseGates(input: string): readonly CompletionGate[] {
   const match = /done when:\s*\n([\s\S]*)$/im.exec(input);
   if (!match?.[1]) return [];
   const block = match[1];
@@ -308,7 +308,13 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
     return createPromptNode(nextId(ctx), trimmed.slice(7).trim());
   }
   if (lower.startsWith('run:')) {
-    return createRunNode(nextId(ctx), trimmed.slice(4).trim());
+    const runText = trimmed.slice(4).trim();
+    const timeoutMatch = /^(.+?)\s+timeout\s+(\d+)$/i.exec(runText);
+    if (timeoutMatch?.[1] && timeoutMatch[2]) {
+      const timeoutSec = parseInt(timeoutMatch[2], 10);
+      return createRunNode(nextId(ctx), timeoutMatch[1].trim(), timeoutSec * 1000);
+    }
+    return createRunNode(nextId(ctx), runText);
   }
   if (lower.startsWith('foreach ')) {
     return parseForeachLine(ctx, trimmed, indent);

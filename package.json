@@ -65,6 +65,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "mutation": "stryker run",
+    "mutation:domain": "stryker run --mutate 'src/domain/**/*.ts,!src/**/*.test.ts,!src/**/index.ts'",
     "eval": "npm run build && node scripts/eval/roundtrip-eval.mjs",
     "eval:roundtrip": "npm run build && node scripts/eval/roundtrip-eval.mjs",
     "eval:e2e": "npm run build && node scripts/eval/e2e-eval.mjs",

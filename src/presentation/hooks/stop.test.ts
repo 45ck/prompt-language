@@ -69,7 +69,7 @@ describe('stop hook (integration)', () => {
       nodeProgress: {},
       variables: {},
       gateResults: {},
-
+      gateDiagnostics: {},
       status: 'active',
       warnings: [],
     };
@@ -105,7 +105,7 @@ describe('stop hook (integration)', () => {
       nodeProgress: {},
       variables: {},
       gateResults: {},
-
+      gateDiagnostics: {},
       status: 'completed',
       warnings: [],
     };

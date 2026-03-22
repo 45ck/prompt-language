@@ -416,6 +416,81 @@ async function testVariableChain() {
   });
 }
 
+// ── Test J: While loop ────────────────────────────────────────────────
+
+async function testWhileLoop() {
+  await withTempDir(async (dir) => {
+    // Create a broken app.js and package.json so `npm test` runs `node app.js`
+    await writeFile(join(dir, 'app.js'), 'process.exit(1)\n');
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'while-test', scripts: { test: 'node app.js' } }),
+    );
+
+    const prompt = [
+      'Goal: fix app using while loop',
+      '',
+      'flow:',
+      '  while tests_fail max 3',
+      '    prompt: Fix app.js so it exits 0 instead of 1',
+      '    run: node app.js',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let exitCode = 1;
+    try {
+      execSync(`node "${join(dir, 'app.js')}"`, { timeout: 5000 });
+      exitCode = 0;
+    } catch {
+      /* still fails */
+    }
+
+    assert(
+      'J: While loop (tests_fail)',
+      exitCode === 0,
+      exitCode === 0 ? 'app.js fixed via while loop' : 'app.js still exits non-zero',
+    );
+  });
+}
+
+// ── Test L: Retry on failure ──────────────────────────────────────────
+
+async function testRetryOnFailure() {
+  await withTempDir(async (dir) => {
+    await writeFile(join(dir, 'app.js'), 'process.exit(1)\n');
+
+    const prompt = [
+      'Goal: fix app using retry',
+      '',
+      'flow:',
+      '  retry max 3',
+      '    run: node app.js',
+      '    if command_failed',
+      '      prompt: Fix app.js so it exits 0 instead of 1',
+      '    end',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let exitCode = 1;
+    try {
+      execSync(`node "${join(dir, 'app.js')}"`, { timeout: 5000 });
+      exitCode = 0;
+    } catch {
+      /* still fails */
+    }
+
+    assert(
+      'L: Retry on failure',
+      exitCode === 0,
+      exitCode === 0 ? 'app.js fixed via retry' : 'app.js still exits non-zero',
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -443,8 +518,12 @@ async function main() {
 
   if (!QUICK_MODE) {
     await testGateEvaluation();
+    await testWhileLoop();
+    await testRetryOnFailure();
   } else {
     console.log('  SKIP  D: Gate evaluation (--quick mode)');
+    console.log('  SKIP  J: While loop (--quick mode)');
+    console.log('  SKIP  L: Retry on failure (--quick mode)');
   }
 
   console.log(`\n[smoke-test] Summary: ${passed}/${passed + failed} passed`);

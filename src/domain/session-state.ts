@@ -15,6 +15,13 @@ export interface NodeProgress {
   readonly status: 'pending' | 'running' | 'completed' | 'failed' | 'awaiting_capture';
 }
 
+export interface GateEvalResult {
+  readonly passed: boolean;
+  readonly command?: string;
+  readonly exitCode?: number;
+  readonly stderr?: string;
+}
+
 export interface SessionState {
   readonly sessionId: string;
   readonly flowSpec: FlowSpec;
@@ -22,6 +29,7 @@ export interface SessionState {
   readonly nodeProgress: Readonly<Record<string, NodeProgress>>;
   readonly variables: Readonly<Record<string, string | number | boolean>>;
   readonly gateResults: Readonly<Record<string, boolean>>;
+  readonly gateDiagnostics: Readonly<Record<string, GateEvalResult>>;
   readonly status: FlowStatus;
   readonly warnings: readonly string[];
 }
@@ -34,6 +42,7 @@ export function createSessionState(sessionId: string, flowSpec: FlowSpec): Sessi
     nodeProgress: {},
     variables: {},
     gateResults: {},
+    gateDiagnostics: {},
     status: 'active',
     warnings: [...flowSpec.warnings],
   };
@@ -73,6 +82,17 @@ export function updateGateResult(
   return {
     ...state,
     gateResults: { ...state.gateResults, [gatePredicate]: result },
+  };
+}
+
+export function updateGateDiagnostic(
+  state: SessionState,
+  gatePredicate: string,
+  diagnostic: GateEvalResult,
+): SessionState {
+  return {
+    ...state,
+    gateDiagnostics: { ...state.gateDiagnostics, [gatePredicate]: diagnostic },
   };
 }
 

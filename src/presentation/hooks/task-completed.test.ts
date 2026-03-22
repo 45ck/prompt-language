@@ -69,7 +69,7 @@ describe('task-completed hook (integration)', () => {
       nodeProgress: {},
       variables: {},
       gateResults: {},
-
+      gateDiagnostics: {},
       status: 'active',
       warnings: [],
     };
@@ -95,7 +95,7 @@ describe('task-completed hook (integration)', () => {
       nodeProgress: {},
       variables: {},
       gateResults: {},
-
+      gateDiagnostics: {},
       status: 'active',
       warnings: [],
     };
@@ -122,7 +122,7 @@ describe('task-completed hook (integration)', () => {
       nodeProgress: {},
       variables: {},
       gateResults: {},
-
+      gateDiagnostics: {},
       status: 'active',
       warnings: [],
     };

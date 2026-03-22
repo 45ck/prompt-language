@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { renderFlow } from './render-flow.js';
-import { createSessionState, updateNodeProgress, updateGateResult } from './session-state.js';
+import {
+  createSessionState,
+  updateNodeProgress,
+  updateGateResult,
+  updateGateDiagnostic,
+} from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
 import {
   createPromptNode,
@@ -168,6 +173,59 @@ describe('renderFlow', () => {
     const output = renderFlow(state);
     expect(output).toContain('tests_pass  [pass]');
     expect(output).toContain('lint_pass  [fail]');
+  });
+
+  it('renders gate failure with diagnostics', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = updateGateResult(state, 'tests_pass', false);
+    state = updateGateDiagnostic(state, 'tests_pass', {
+      passed: false,
+      command: 'npm test',
+      exitCode: 1,
+      stderr: '3 tests failed',
+    });
+    const output = renderFlow(state);
+    expect(output).toContain('tests_pass  [fail — exit 1: "npm test": 3 tests failed]');
+  });
+
+  it('renders gate failure without stderr', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('lint_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = updateGateResult(state, 'lint_pass', false);
+    state = updateGateDiagnostic(state, 'lint_pass', {
+      passed: false,
+      command: 'npm run lint',
+      exitCode: 2,
+    });
+    const output = renderFlow(state);
+    expect(output).toContain('lint_pass  [fail — exit 2: "npm run lint"]');
+  });
+
+  it('renders gate pass without diagnostics detail', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = updateGateResult(state, 'tests_pass', true);
+    state = updateGateDiagnostic(state, 'tests_pass', {
+      passed: true,
+      command: 'npm test',
+      exitCode: 0,
+    });
+    const output = renderFlow(state);
+    expect(output).toContain('tests_pass  [pass]');
+    expect(output).not.toContain('exit 0');
   });
 
   it('renders variables section', () => {

@@ -249,10 +249,35 @@ function renderGates(state: SessionState): string[] {
   const lines: string[] = ['', 'done when:'];
   for (const gate of gates) {
     const result = state.gateResults[gate.predicate];
-    const marker = result === true ? '[pass]' : result === false ? '[fail]' : '[pending]';
-    lines.push(`  ${gate.predicate}  ${marker}`);
+    const diag = state.gateDiagnostics?.[gate.predicate];
+
+    if (result === true) {
+      lines.push(`  ${gate.predicate}  [pass]`);
+    } else if (result === false && diag?.command) {
+      const detail = formatGateDiagnostic(diag);
+      lines.push(`  ${gate.predicate}  [fail — ${detail}]`);
+    } else if (result === false) {
+      lines.push(`  ${gate.predicate}  [fail]`);
+    } else {
+      lines.push(`  ${gate.predicate}  [pending]`);
+    }
   }
   return lines;
+}
+
+function formatGateDiagnostic(diag: {
+  readonly command?: string;
+  readonly exitCode?: number;
+  readonly stderr?: string;
+}): string {
+  const parts: string[] = [];
+  if (diag.exitCode !== undefined) parts.push(`exit ${diag.exitCode}`);
+  if (diag.command) parts.push(`"${diag.command}"`);
+  if (diag.stderr) {
+    const firstLine = diag.stderr.split('\n')[0]!.slice(0, 80);
+    parts.push(firstLine);
+  }
+  return parts.join(': ');
 }
 
 function renderVariables(state: SessionState): string[] {

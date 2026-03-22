@@ -52,6 +52,7 @@ function makeState(status: string, goal: string) {
     nodeProgress: {},
     variables: {},
     gateResults: {},
+    gateDiagnostics: {},
     status,
     warnings: [],
   };

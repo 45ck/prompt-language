@@ -5,7 +5,12 @@
  * Blocks completion if any gate fails.
  */
 
-import { updateGateResult, markCompleted, allGatesPassing } from '../domain/session-state.js';
+import {
+  updateGateResult,
+  updateGateDiagnostic,
+  markCompleted,
+  allGatesPassing,
+} from '../domain/session-state.js';
 import type { SessionState } from '../domain/session-state.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
@@ -54,10 +59,18 @@ async function runGates(state: SessionState, runner: CommandRunner): Promise<Ses
       const inverted = isInvertedPredicate(gate.predicate);
       const passed = inverted ? result.exitCode !== 0 : result.exitCode === 0;
       updated = updateGateResult(updated, gate.predicate, passed);
+      const stderrSnippet = result.stderr.trimEnd().slice(0, 200);
+      updated = updateGateDiagnostic(updated, gate.predicate, {
+        passed,
+        command,
+        exitCode: result.exitCode,
+        ...(stderrSnippet ? { stderr: stderrSnippet } : {}),
+      });
     } else {
       const current = updated.gateResults[gate.predicate];
       if (current === undefined) {
         updated = updateGateResult(updated, gate.predicate, false);
+        updated = updateGateDiagnostic(updated, gate.predicate, { passed: false });
       }
     }
   }

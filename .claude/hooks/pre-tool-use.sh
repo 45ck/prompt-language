@@ -2,10 +2,13 @@
 # noslop Claude Code hook: block quality-bypass attempts
 INPUT=$(cat)
 
-if command -v jq >/dev/null 2>&1; then
-  COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
-else
-  echo '{"decision":"block","reason":"noslop: jq is not installed. Install jq then retry."}'
+# Extract command from JSON input (jq-free)
+COMMAND=$(echo "$INPUT" | grep -o '"command"[[:space:]]*:[[:space:]]*"[^"]*"' \
+  | sed 's/^"command"[[:space:]]*:[[:space:]]*"//;s/"$//')
+
+# If extraction fails (non-Bash tool), allow through
+if [ -z "$COMMAND" ]; then
+  echo '{"decision":"allow"}'
   exit 0
 fi
 

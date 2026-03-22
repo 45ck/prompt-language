@@ -27,9 +27,21 @@ npm run typecheck && npm run test
 
 The pre-commit hook uses two-tier content-aware checking on infrastructure files:
 
-### Tier 1: Blanket-blocked configs
+### Tier 1: Content-aware config protection
 
-Quality gate config files (`eslint.config.mjs`, `vitest.config.ts`, `.dependency-cruiser.cjs`, `knip.json`, `tsconfig.json`, `tsconfig.build.json`) cannot be committed at all.
+Quality gate configs are checked for weakening patterns. Strengthening changes pass through.
+
+| Config                    | Blocked (weakening)                                                    | Allowed (strengthening)   |
+| ------------------------- | ---------------------------------------------------------------------- | ------------------------- |
+| `eslint.config.mjs`       | Adding `'off'` rules, `eslint-disable`, net removal of `'error'` rules | New rules, tighter limits |
+| `vitest.config.ts`        | Lowering coverage thresholds, removing thresholds                      | Raising thresholds        |
+| `tsconfig*.json`          | Adding `strict: false`, net removal of strict flags                    | New strict flags          |
+| `.dependency-cruiser.cjs` | Net removal of `name:` rules, severity downgrade to warn/info/off      | New forbidden rules       |
+| `knip.json`               | Expanding `ignore`/`ignoreDependencies`, `ignoreExportsUsedInFile`     | New entry points          |
+
+### Escape hatch
+
+If a change is intentionally weakening (e.g., removing an obsolete rule), submit it via PR with the `noslop-approved` label. The pre-commit hook blocks it locally; the guardrails workflow enforces the label requirement on GitHub.
 
 ### Tier 2a: Enforcement files (`.githooks/*`, `.claude/hooks/*`, `AGENTS.md`)
 

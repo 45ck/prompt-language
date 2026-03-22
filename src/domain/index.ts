@@ -11,6 +11,7 @@ export type {
   LetNode,
   LetSource,
   ForeachNode,
+  BreakNode,
 } from './flow-node.js';
 export {
   createWhileNode,
@@ -22,6 +23,7 @@ export {
   createTryNode,
   createLetNode,
   createForeachNode,
+  createBreakNode,
 } from './flow-node.js';
 
 export type { FlowSpec, CompletionGate, FlowDefaults } from './flow-spec.js';
@@ -57,3 +59,8 @@ export { renderFlow } from './render-flow.js';
 export { interpolate } from './interpolate.js';
 
 export { splitIterable } from './split-iterable.js';
+
+export { flowComplexityScore } from './flow-complexity.js';
+
+export type { LintWarning } from './lint-flow.js';
+export { lintFlow } from './lint-flow.js';

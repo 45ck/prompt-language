@@ -17,6 +17,7 @@ import {
   createTryNode,
   createLetNode,
   createForeachNode,
+  createBreakNode,
   DEFAULT_MAX_ITERATIONS,
 } from '../domain/flow-node.js';
 import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
@@ -62,6 +63,14 @@ function parseGates(input: string): readonly CompletionGate[] {
   for (const line of block.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
+
+    // H#26: Custom gate definition — "gate name: command"
+    const gateMatch = /^gate\s+(\w+)\s*:\s*(.+)$/i.exec(trimmed);
+    if (gateMatch?.[1] && gateMatch[2]) {
+      gates.push(createCompletionGate(gateMatch[1], gateMatch[2].trim()));
+      continue;
+    }
+
     const eqMatch = /^(\S+)\s*==\s*(.+)$/.exec(trimmed);
     if (eqMatch?.[1] && eqMatch[2]) {
       gates.push(createCompletionGate(`${eqMatch[1]} == ${eqMatch[2]}`));
@@ -133,9 +142,11 @@ function parseIfLine(ctx: ParseContext, line: string, baseIndent: number): FlowN
 }
 
 function parseTryBlock(ctx: ParseContext, baseIndent: number): FlowNode {
-  const body = parseBlock(ctx, baseIndent, ['catch', 'end']);
+  const body = parseBlock(ctx, baseIndent, ['catch', 'finally', 'end']);
   let catchCondition = 'command_failed';
   let catchBody: FlowNode[] = [];
+  let finallyBody: FlowNode[] = [];
+
   if (ctx.pos < ctx.lines.length) {
     const peekLine = ctx.lines[ctx.pos];
     const peek = peekLine ? peekLine.trim() : '';
@@ -143,11 +154,22 @@ function parseTryBlock(ctx: ParseContext, baseIndent: number): FlowNode {
     if (catchMatch) {
       catchCondition = catchMatch[1]?.trim() ?? 'command_failed';
       ctx.pos += 1;
-      catchBody = parseBlock(ctx, baseIndent, ['end']);
+      catchBody = parseBlock(ctx, baseIndent, ['finally', 'end']);
     }
   }
+
+  // H#20: Parse optional finally block
+  if (ctx.pos < ctx.lines.length) {
+    const peekLine = ctx.lines[ctx.pos];
+    const peek = peekLine ? peekLine.trim().toLowerCase() : '';
+    if (peek === 'finally') {
+      ctx.pos += 1;
+      finallyBody = parseBlock(ctx, baseIndent, ['end']);
+    }
+  }
+
   consumeEnd(ctx);
-  return createTryNode(nextId(ctx), body, catchCondition, catchBody);
+  return createTryNode(nextId(ctx), body, catchCondition, catchBody, finallyBody);
 }
 
 function stripQuotes(s: string): string {
@@ -293,6 +315,9 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   }
   if (lower.startsWith('let ') || lower.startsWith('var ')) {
     return parseLetLine(ctx, trimmed);
+  }
+  if (lower === 'break') {
+    return createBreakNode(nextId(ctx));
   }
   warn(ctx, `Unknown keyword "${trimmed}" — treating as prompt`);
   return createPromptNode(nextId(ctx), trimmed);

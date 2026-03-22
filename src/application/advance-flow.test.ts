@@ -19,6 +19,7 @@ import {
   createTryNode,
   createLetNode,
   createForeachNode,
+  createBreakNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 
@@ -546,5 +547,126 @@ describe('autoAdvanceNodes — safety limits', () => {
       expect.arrayContaining([expect.stringContaining('MAX_ADVANCES')]),
     );
     expect(result.currentNodePath).toEqual([100]);
+  });
+});
+
+// ── H#15: Break node advancement ─────────────────────────────────────
+
+describe('autoAdvanceNodes — break', () => {
+  it('break exits foreach loop early — only first item processed', async () => {
+    const fe = createForeachNode(
+      'f1',
+      'x',
+      'a b c',
+      [createLetNode('l1', 'marker', { type: 'literal', value: 'hit' }), createBreakNode('b1')],
+      50,
+    );
+    const spec = createFlowSpec('test', [
+      fe,
+      createLetNode('l2', 'after', { type: 'literal', value: 'yes' }),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state);
+    // Break should exit loop after first item, then advance to the let after loop
+    expect(result.variables['marker']).toBe('hit');
+    expect(result.variables['after']).toBe('yes');
+    // Only first item processed — x stays as 'a'
+    expect(result.variables['x']).toBe('a');
+  });
+
+  it('break exits while loop early', async () => {
+    const wh = createWhileNode('w1', 'flag', [createBreakNode('b1')], 5);
+    const spec = createFlowSpec('test', [
+      wh,
+      createLetNode('l1', 'after', { type: 'literal', value: 'done' }),
+    ]);
+    const state = createSessionState('s1', spec);
+    const withFlag = { ...state, variables: { ...state.variables, flag: true } };
+
+    const { state: result } = await autoAdvanceNodes(withFlag);
+    expect(result.variables['after']).toBe('done');
+  });
+
+  it('break outside loop just advances past break', async () => {
+    const spec = createFlowSpec('test', [
+      createBreakNode('b1'),
+      createLetNode('l1', 'after', { type: 'literal', value: 'yes' }),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['after']).toBe('yes');
+  });
+});
+
+// ── H#20: Try/finally advancement ────────────────────────────────────
+
+describe('autoAdvanceNodes — try/finally', () => {
+  it('finally body executes after catch body', async () => {
+    const commands: string[] = [];
+    const runner: CommandRunner = {
+      run: async (cmd: string) => {
+        commands.push(cmd);
+        if (cmd.includes('fail')) {
+          return { exitCode: 1, stdout: '', stderr: 'err' };
+        }
+        return { exitCode: 0, stdout: 'cleaned', stderr: '' };
+      },
+    };
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'fail')],
+      'command_failed',
+      [createRunNode('r2', 'recover')],
+      [createRunNode('r3', 'cleanup')],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    // All three run nodes should have executed: fail, recover, cleanup
+    expect(commands).toContain('fail');
+    expect(commands).toContain('recover');
+    expect(commands).toContain('cleanup');
+    expect(result.variables['last_stdout']).toBe('cleaned');
+  });
+
+  it('finally body executes after normal body completion (no failure)', async () => {
+    const commands: string[] = [];
+    const runner: CommandRunner = {
+      run: async (cmd: string) => {
+        commands.push(cmd);
+        return { exitCode: 0, stdout: cmd, stderr: '' };
+      },
+    };
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'body-cmd')],
+      'command_failed',
+      [],
+      [createRunNode('r3', 'finally-cmd')],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    expect(commands).toContain('body-cmd');
+    expect(commands).toContain('finally-cmd');
+    expect(result.variables['last_stdout']).toBe('finally-cmd');
+  });
+
+  it('resolveCurrentNode includes finallyBody', () => {
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'body')],
+      'command_failed',
+      [createRunNode('r2', 'catch')],
+      [createRunNode('r3', 'cleanup')],
+    );
+    // finallyBody[0] is at index: body.length + catchBody.length = 1 + 1 = 2
+    const node = resolveCurrentNode([tryNode], [0, 2]);
+    expect(node?.kind).toBe('run');
+    expect((node as import('../domain/flow-node.js').RunNode).command).toBe('cleanup');
   });
 });

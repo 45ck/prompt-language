@@ -23,7 +23,12 @@ function countNodes(nodes: readonly FlowNode[]): number {
         count += countNodes(node.thenBranch) + countNodes(node.elseBranch);
         break;
       case 'try':
-        count += countNodes(node.body) + countNodes(node.catchBody);
+        count += countNodes(node.body) + countNodes(node.catchBody) + countNodes(node.finallyBody);
+        break;
+      case 'break':
+      case 'prompt':
+      case 'run':
+      case 'let':
         break;
     }
   }
@@ -48,7 +53,17 @@ function maxDepth(nodes: readonly FlowNode[], depth: number): number {
         );
         break;
       case 'try':
-        max = Math.max(max, maxDepth(node.body, depth + 1), maxDepth(node.catchBody, depth + 1));
+        max = Math.max(
+          max,
+          maxDepth(node.body, depth + 1),
+          maxDepth(node.catchBody, depth + 1),
+          maxDepth(node.finallyBody, depth + 1),
+        );
+        break;
+      case 'break':
+      case 'prompt':
+      case 'run':
+      case 'let':
         break;
     }
   }
@@ -72,7 +87,15 @@ function countControlFlow(nodes: readonly FlowNode[]): number {
         count += countControlFlow(node.thenBranch) + countControlFlow(node.elseBranch);
         break;
       case 'try':
-        count += countControlFlow(node.body) + countControlFlow(node.catchBody);
+        count +=
+          countControlFlow(node.body) +
+          countControlFlow(node.catchBody) +
+          countControlFlow(node.finallyBody);
+        break;
+      case 'break':
+      case 'prompt':
+      case 'run':
+      case 'let':
         break;
     }
   }

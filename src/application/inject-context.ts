@@ -279,8 +279,15 @@ export async function injectContext(
     return { prompt: `${ctx}\n\n${input.prompt}` };
   }
 
+  // H#40: NL-to-DSL confirmation step — ask user to confirm before generating
   if (looksLikeNaturalLanguage(input.prompt)) {
-    return { prompt: buildMetaPrompt(input.prompt) };
+    return {
+      prompt:
+        '[prompt-language] I detected control-flow intent in your message. ' +
+        'If you want me to create a structured flow from this, reply "yes" or include a `flow:` block. ' +
+        "Otherwise, I'll treat it as a regular prompt.\n\n" +
+        `Original message: ${input.prompt}`,
+    };
   }
 
   return { prompt: input.prompt };

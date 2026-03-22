@@ -115,6 +115,7 @@ describe('createTryNode', () => {
       body,
       catchCondition: 'command_failed',
       catchBody,
+      finallyBody: [],
     });
   });
 });

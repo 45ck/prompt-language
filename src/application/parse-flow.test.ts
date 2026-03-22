@@ -614,3 +614,106 @@ flow:
     expect(spec.nodes[1]!.kind).toBe('prompt');
   });
 });
+
+// H#15: Break node parsing
+describe('parseFlow — break', () => {
+  it('parses break inside loop', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach x in "a b c"
+    break
+  end`;
+    const spec = parse(dsl);
+    const fe = spec.nodes[0] as ForeachNode;
+    expect(fe.body).toHaveLength(1);
+    expect(fe.body[0]!.kind).toBe('break');
+  });
+});
+
+// H#20: Finally clause parsing
+describe('parseFlow — try/catch/finally', () => {
+  it('parses try/catch/finally block', () => {
+    const dsl = `Goal: g
+
+flow:
+  try
+    run: deploy
+  catch command_failed
+    prompt: rollback
+  finally
+    run: cleanup
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as TryNode;
+    expect(node.kind).toBe('try');
+    expect(node.body).toHaveLength(1);
+    expect(node.catchBody).toHaveLength(1);
+    expect(node.finallyBody).toHaveLength(1);
+    expect((node.finallyBody[0] as RunNode).command).toBe('cleanup');
+  });
+
+  it('parses try/finally without catch', () => {
+    const dsl = `Goal: g
+
+flow:
+  try
+    run: deploy
+  finally
+    run: cleanup
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as TryNode;
+    expect(node.body).toHaveLength(1);
+    expect(node.catchBody).toHaveLength(0);
+    expect(node.finallyBody).toHaveLength(1);
+  });
+
+  it('parses try/catch without finally', () => {
+    const dsl = `Goal: g
+
+flow:
+  try
+    run: deploy
+  catch
+    prompt: fix
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as TryNode;
+    expect(node.finallyBody).toHaveLength(0);
+  });
+});
+
+// H#26: Custom gate definitions
+describe('parseFlow — custom gates', () => {
+  it('parses gate with custom command', () => {
+    const dsl = `Goal: g
+
+flow:
+  prompt: work
+
+done when:
+  gate build_passes: npm run build`;
+    const spec = parse(dsl);
+    expect(spec.completionGates).toHaveLength(1);
+    expect(spec.completionGates[0]!.predicate).toBe('build_passes');
+    expect(spec.completionGates[0]!.command).toBe('npm run build');
+  });
+
+  it('mixes custom and builtin gates', () => {
+    const dsl = `Goal: g
+
+flow:
+  prompt: work
+
+done when:
+  tests_pass
+  gate deploy_ok: ./deploy-check.sh`;
+    const spec = parse(dsl);
+    expect(spec.completionGates).toHaveLength(2);
+    expect(spec.completionGates[0]!.predicate).toBe('tests_pass');
+    expect(spec.completionGates[0]!.command).toBeUndefined();
+    expect(spec.completionGates[1]!.predicate).toBe('deploy_ok');
+    expect(spec.completionGates[1]!.command).toBe('./deploy-check.sh');
+  });
+});

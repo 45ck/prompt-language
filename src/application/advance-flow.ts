@@ -12,7 +12,7 @@ import {
   allGatesPassing,
 } from '../domain/session-state.js';
 import type { SessionState } from '../domain/session-state.js';
-import type { FlowNode, LetNode, RunNode } from '../domain/flow-node.js';
+import type { FlowNode, LetNode, RunNode, BreakNode } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import { interpolate, shellInterpolate } from '../domain/interpolate.js';
@@ -45,7 +45,7 @@ export function resolveCurrentNode(
     case 'if':
       return resolveCurrentNode([...node.thenBranch, ...node.elseBranch], rest);
     case 'try':
-      return resolveCurrentNode([...node.body, ...node.catchBody], rest);
+      return resolveCurrentNode([...node.body, ...node.catchBody, ...node.finallyBody], rest);
     default:
       return null;
   }
@@ -456,7 +456,28 @@ async function advanceSingleNode(
       return { state: advanceNode(current, [...current.currentNodePath, 0]), advanced: true };
     case 'foreach':
       return advanceForeachEntry(node, current);
+    case 'break':
+      return advanceBreakNode(node, current);
   }
+}
+
+// H#15: Break exits the nearest enclosing loop (while/until/retry/foreach).
+const LOOP_KINDS = new Set(['while', 'until', 'retry', 'foreach']);
+
+function advanceBreakNode(
+  _node: BreakNode,
+  current: SessionState,
+): { state: SessionState; advanced: true } {
+  const path = current.currentNodePath;
+  for (let depth = path.length - 1; depth >= 1; depth--) {
+    const ancestorPath = path.slice(0, depth);
+    const ancestor = resolveCurrentNode(current.flowSpec.nodes, ancestorPath);
+    if (ancestor && LOOP_KINDS.has(ancestor.kind)) {
+      return { state: advanceNode(current, advancePath(ancestorPath)), advanced: true };
+    }
+  }
+  // No loop ancestor — just advance past break (warning situation, but don't crash)
+  return { state: advanceNode(current, advancePath(path)), advanced: true };
 }
 
 /** Advance a while or until node on first encounter. */

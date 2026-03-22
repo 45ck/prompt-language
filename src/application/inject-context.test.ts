@@ -269,7 +269,8 @@ describe('looksLikeNaturalLanguage', () => {
 });
 
 describe('injectContext — NL meta-prompt', () => {
-  it('injects meta-prompt with DSL reference for NL-looking prompt', async () => {
+  // H#40: NL confirmation prompt instead of immediate DSL generation
+  it('injects confirmation prompt for NL-looking prompt', async () => {
     const store = makeStore();
     const result = await injectContext(
       { prompt: 'keep fixing until tests pass', sessionId: 'nl-1' },
@@ -277,10 +278,8 @@ describe('injectContext — NL meta-prompt', () => {
     );
 
     expect(result.prompt).toContain('[prompt-language]');
-    expect(result.prompt).toContain('DSL reference');
+    expect(result.prompt).toContain('control-flow intent');
     expect(result.prompt).toContain('keep fixing until tests pass');
-    expect(result.prompt).toContain('flow:');
-    expect(result.prompt).toContain('done when:');
   });
 
   it('parses as DSL when prompt has flow: block even with NL keywords', async () => {

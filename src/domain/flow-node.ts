@@ -14,7 +14,8 @@ export type FlowNodeKind =
   | 'run'
   | 'try'
   | 'let'
-  | 'foreach';
+  | 'foreach'
+  | 'break';
 
 interface BaseNode {
   readonly kind: FlowNodeKind;
@@ -63,6 +64,7 @@ export interface TryNode extends BaseNode {
   readonly body: readonly FlowNode[];
   readonly catchCondition: string;
   readonly catchBody: readonly FlowNode[];
+  readonly finallyBody: readonly FlowNode[];
 }
 
 export type LetSource =
@@ -86,6 +88,11 @@ export interface ForeachNode extends BaseNode {
   readonly body: readonly FlowNode[];
 }
 
+// H#15: Break node exits nearest enclosing loop
+export interface BreakNode extends BaseNode {
+  readonly kind: 'break';
+}
+
 export type FlowNode =
   | WhileNode
   | UntilNode
@@ -95,7 +102,8 @@ export type FlowNode =
   | RunNode
   | TryNode
   | LetNode
-  | ForeachNode;
+  | ForeachNode
+  | BreakNode;
 
 export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;
@@ -166,8 +174,9 @@ export function createTryNode(
   body: readonly FlowNode[],
   catchCondition: string,
   catchBody: readonly FlowNode[],
+  finallyBody: readonly FlowNode[] = [],
 ): TryNode {
-  return { kind: 'try', id, body, catchCondition, catchBody };
+  return { kind: 'try', id, body, catchCondition, catchBody, finallyBody };
 }
 
 export function createLetNode(
@@ -177,6 +186,10 @@ export function createLetNode(
   append = false,
 ): LetNode {
   return { kind: 'let', id, variableName, source, append };
+}
+
+export function createBreakNode(id: string): BreakNode {
+  return { kind: 'break', id };
 }
 
 export function createForeachNode(

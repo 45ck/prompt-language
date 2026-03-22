@@ -95,6 +95,8 @@ function renderNode(
       return renderLetNode(node, state, indent, prefix, suffix);
     case 'foreach':
       return renderForeachNode(node, state, path, indentLevel, prefix, suffix);
+    case 'break':
+      return [`${prefix}${indent}break${suffix}`];
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -176,6 +178,16 @@ function renderTryNode(
     for (let i = 0; i < node.catchBody.length; i++) {
       const child = node.catchBody[i]!;
       lines.push(...renderNode(child, state, [...path, offset + i], indentLevel + 1));
+    }
+  }
+
+  // H#20: Render finally block
+  if (node.finallyBody.length > 0) {
+    lines.push(`  ${indent}finally`);
+    const finallyOffset = node.body.length + node.catchBody.length;
+    for (let i = 0; i < node.finallyBody.length; i++) {
+      const child = node.finallyBody[i]!;
+      lines.push(...renderNode(child, state, [...path, finallyOffset + i], indentLevel + 1));
     }
   }
 

@@ -41,7 +41,12 @@
       "Write(vitest.config.ts)",
       "Write(.dependency-cruiser.cjs)",
       "Write(tsconfig.json)",
-      "Write(tsconfig.build.json)"
+      "Write(tsconfig.build.json)",
+      "Bash(*--force*)",
+      "Edit(.githooks/**)",
+      "Write(.githooks/**)",
+      "Edit(AGENTS.md)",
+      "Write(AGENTS.md)"
     ]
   }
 }

@@ -1,0 +1,1 @@
+Fix the condition bug in app.js so all tests pass. Run: node test.js

@@ -1,0 +1,1 @@
+Fix app.js to handle null and missing properties gracefully. All tests must pass. Run: node test.js

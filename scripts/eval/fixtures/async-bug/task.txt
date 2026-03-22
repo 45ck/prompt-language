@@ -1,0 +1,1 @@
+Fix the async bugs in app.js — some functions are missing await. All tests must pass. Run: node test.js

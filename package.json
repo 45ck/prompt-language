@@ -82,6 +82,8 @@
     "eval:compare:v2:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/comparative-eval-v2.mjs --quick",
     "eval:compare:v3": "npm run build && node bin/cli.mjs install && node scripts/eval/comparative-eval-v3.mjs",
     "eval:compare:v3:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/comparative-eval-v3.mjs --quick",
+    "eval:verify": "npm run build && node bin/cli.mjs install && node scripts/eval/verification-eval.mjs",
+    "eval:verify:repeat": "npm run build && node bin/cli.mjs install && node scripts/eval/verification-eval.mjs --repeat 3",
     "audit:high": "node scripts/ci/audit-high.mjs",
     "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run eval:e2e && npm run audit:high",
     "ci:nightly": "npm run ci && npm run mutation",

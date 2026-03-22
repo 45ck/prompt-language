@@ -1,0 +1,1 @@
+Fix app.js so all tests pass. The classify function is missing a return for some types. Run: node test.js

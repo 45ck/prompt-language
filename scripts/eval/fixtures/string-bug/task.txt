@@ -1,0 +1,1 @@
+Fix the capitalize function in app.js so all tests pass. Run: node test.js

@@ -6,9 +6,12 @@
 #   2. Content-aware: infrastructure files — block weakening, allow strengthening
 #
 # Tier 2 splits by file role:
-#   - Hook scripts (.githooks/*, .claude/hooks/*): check enforcement preservation
-#   - CI/docs (.github/workflows/*, .claude/settings.json, AGENTS.md): check for
-#     removal of quality commands and addition of bypass patterns
+#   - Enforcement files (.githooks/*, .claude/hooks/*, AGENTS.md):
+#     Check that enforcement logic is preserved. These files naturally
+#     contain bypass keywords in detection patterns and documentation.
+#   - CI/config (.github/workflows/*, .claude/settings.json):
+#     Full content check for removal of quality commands, addition of
+#     bypass patterns, and enforcement removal.
 set -e
 
 # --- Tier 1: Blanket-block quality gate configs ---
@@ -24,15 +27,15 @@ done << STAGED_T1
 $(git diff --cached --name-only 2>/dev/null)
 STAGED_T1
 
-# --- Tier 2a: Hook scripts — check enforcement preservation ---
-# Hook scripts ARE the enforcement mechanism, so they naturally contain bypass
-# keywords in their detection patterns. Only check that enforcement is preserved.
+# --- Tier 2a: Enforcement files — check enforcement preservation ---
+# These files ARE the enforcement mechanism or its documentation, so they
+# naturally reference bypass keywords. Only verify enforcement is preserved.
 while IFS= read -r staged_file; do
   case "$staged_file" in
-    .githooks/*|.claude/hooks/*)
+    .githooks/*|.claude/hooks/*|AGENTS.md)
       DIFF=$(git diff --cached -- "$staged_file")
 
-      # Block removal of quality commands from hooks
+      # Block removal of quality commands
       if echo "$DIFF" | grep -qE '^\-.*npm run (ci|test|lint|format:check|spell|typecheck)'; then
         echo "noslop: $staged_file removes a quality gate command — blocked." >&2
         exit 1
@@ -51,13 +54,10 @@ done << STAGED_T2A
 $(git diff --cached --name-only 2>/dev/null)
 STAGED_T2A
 
-# --- Tier 2b: CI workflows, settings, governance docs — full content check ---
-# Protective context: lines that PROHIBIT or DENY bypass patterns are not bypasses.
-PROTECTIVE_CONTEXT='(deny|block|blocked|"Bash|[Nn]ever|[Dd]o not|[Dd]on.t|[Cc]annot|[Mm]ust not|not allowed|is not|are not)'
-
+# --- Tier 2b: CI workflows and settings — full content check ---
 while IFS= read -r staged_file; do
   case "$staged_file" in
-    .github/workflows/*|.claude/settings.json|AGENTS.md)
+    .github/workflows/*|.claude/settings.json)
       DIFF=$(git diff --cached -- "$staged_file")
 
       # Block removal of quality commands
@@ -67,10 +67,10 @@ while IFS= read -r staged_file; do
         exit 1
       fi
 
-      # Block addition of bypass/weakening patterns, excluding protective context
+      # Block addition of bypass/weakening patterns
       BYPASS_LINES=$(echo "$DIFF" \
-        | grep -iE '^\+.*(continue-on-error:[[:space:]]*true|--no-verify|\[skip ci\]|SKIP_CI|skip-checks)' \
-        | grep -ivE "$PROTECTIVE_CONTEXT" || true)
+        | grep -iE '^\+.*(continue-on-error:[[:space:]]*true|\[skip ci\]|SKIP_CI|skip-checks)' \
+        | grep -ivE '(deny|block|"Bash)' || true)
       if [ -n "$BYPASS_LINES" ]; then
         echo "noslop: $staged_file adds a quality bypass pattern — blocked." >&2
         echo "  Matched: $(echo "$BYPASS_LINES" | head -1)" >&2

@@ -1,0 +1,1 @@
+Fix the flatten function in app.js so it properly flattens nested arrays. All tests must pass. Run: node test.js

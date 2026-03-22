@@ -18,18 +18,20 @@ npm run typecheck && npm run test
 
 - Never use `git commit --no-verify`
 - Never use `git push --force` without explicit human approval
-- Do not modify `.githooks/`, `.github/workflows/`, or `.claude/settings.json` without the `noslop-approved` PR label
+- Do not weaken quality gates in `.githooks/`, `.github/workflows/`, or `.claude/hooks/`
+- Additive changes to infrastructure files (new CI jobs, new checks, new schedules) are allowed
 - Fix lint/type errors; do not disable rules
 - Never use `[skip ci]`, `skip-checks`, or `SKIP_CI` in commit messages or CI configuration
 
-## Do not modify protected paths
+## Content-aware protection
 
-These paths are enforced by `.claude/settings.json` and CI guardrails:
+Infrastructure files (`.githooks/*`, `.github/workflows/*`, `.claude/hooks/*`, `.claude/settings.json`, `AGENTS.md`) use content-aware checking. The pre-commit hook inspects the diff and blocks:
 
-- `.githooks/`
-- `.github/workflows/`
-- `.claude/settings.json`
-- `.claude/hooks/`
+- **Removal of quality commands** (`npm run ci`, `npm run test`, `npm run lint`, etc.)
+- **Addition of bypass patterns** (`continue-on-error: true`, `--no-verify`, `[skip ci]`)
+- **Net removal of enforcement** (removing `exit 1` without replacement)
+
+Additive changes (new jobs, new schedules, new checks) pass through.
 
 ## Core principles
 

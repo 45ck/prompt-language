@@ -55,11 +55,15 @@ npx @45ck/prompt-language status
 npx @45ck/prompt-language uninstall
 ```
 
-### Claude Code plugin manager
+### Manual install
+
+If you prefer not to use npx, clone the repo and run the installer directly:
 
 ```bash
-claude plugin marketplace add 45ck/prompt-language
-claude plugin install prompt-language
+git clone https://github.com/45ck/prompt-language.git
+cd prompt-language
+npm install && npm run build
+node bin/cli.mjs install
 ```
 
 ## Quick start
@@ -322,7 +326,7 @@ Full syntax, defaults, composition rules, built-in variables, and gate predicate
 
 ## Evaluation
 
-In 45 A/B hypotheses (39 confirmed, 6 pending): **15 plugin wins, 21 ties, 1 flaky** across 250+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
+In 45 A/B hypotheses (39 tested, 6 pending): **15 plugin wins, 21 ties, 1 flaky, 2 both-fail** across 250+ `claude -p` calls with `--repeat 3` reliability. The plugin wins when prompts mislead, omit requirements, or narrow focus. When prompts are honest and explicit, vanilla Claude performs equally well.
 
 | Pattern                         | Mechanism                                  | Win rate |
 | ------------------------------- | ------------------------------------------ | -------- |

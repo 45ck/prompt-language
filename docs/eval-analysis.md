@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The prompt-language plugin wins **15 out of 39 confirmed** hypotheses (45 total, 6 pending) against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (250+ `claude -p` calls). **All 39 confirmed hypotheses are 100% reliable** except H31 (TIE 2/3, VANILLA 1/3). H34-H39 confirm the pattern with full `--repeat 3` data: gates win at long horizons (H36: 4/4 vs 1/4, H37: wrote bug-exposing test), context management ties even at 15 steps (H39), and both sides fail on overly complex tasks (H35, H38). The plugin's value lies in **structural enforcement** — gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. Context management (variable capture + interpolation) shows no measurable correctness advantage at any tested distance (2-15 steps). The plugin adds ~196-316% latency overhead.
+The prompt-language plugin wins **15 out of 39 tested** hypotheses (45 total, 6 pending) against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (250+ `claude -p` calls). **All 39 tested hypotheses are 100% reliable** except H31 (TIE 2/3, VANILLA 1/3). H34-H39 confirm the pattern with full `--repeat 3` data: gates win at long horizons (H36: 4/4 vs 1/4, H37: wrote bug-exposing test), context management ties even at 15 steps (H39), and both sides fail on overly complex tasks (H35, H38). The plugin's value lies in **structural enforcement** — gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. Context management (variable capture + interpolation) shows no measurable correctness advantage at any tested distance (2-15 steps). The plugin adds ~196-316% latency overhead.
 
 ## What the Plugin Actually Changes
 
@@ -287,8 +287,8 @@ All three context management experiments TIE (with H31 showing one VANILLA WIN i
 - H32-H35 redesigned from token-relay/aggregate to style-isolation/config-quarantine/callback/multi-auth
 - **H32-H34 TIE**: Style isolation, config quarantine, and late callback pipeline all tied
 - **H35 BOTH FAIL**: Multi-auth route generation — both sides showed auth cross-contamination
-- **H36 PLUGIN (1/1)**: Gate + long-horizon — but result invalidated by Fagan rework (gaslighting removed)
-- **H37 PLUGIN (1/1)**: Inverted gate + deception — result invalidated by Fagan rework (prompts equalized)
+- **H36 PLUGIN (1/1)**: Gate + long-horizon — redesigned to remove gaslighting, confirmed at 3/3 in Run 8
+- **H37 PLUGIN (1/1)**: Inverted gate + deception — redesigned with equalized prompts, confirmed at 3/3 in Run 8
 - **H38 BOTH FAIL**: Compound deception — too complex for either side (plugin 2/3, vanilla 1/3 criteria)
 - **H39 TIE**: Context scaling at 15 steps — both tracked token perfectly
 - Key finding: context management shows no advantage even at 15-step distances
@@ -379,7 +379,7 @@ H39: Context Scaling (15 Steps)— TIE 3/3 (100%)
 H40-H45: not yet run
 ```
 
-**38/39 confirmed hypotheses are 100% reliable. 1 flaky (H31). H32-H33 tested at 1/1. H34-H39 confirmed at 3/3. H40-H45 pending (6 hypotheses).**
+**38/39 tested hypotheses are 100% reliable. 1 flaky (H31). H32-H33 tested at 1/1. H34-H39 tested at 3/3. H40-H45 pending (6 hypotheses).**
 
 ## When to Use the Plugin
 

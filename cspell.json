@@ -35,7 +35,8 @@
     "evals",
     "distractor",
     "fagan",
-    "foobarbaz"
+    "foobarbaz",
+    "frontmatter"
   ],
   "ignorePaths": ["dist/**", "coverage/**", "reports/**", "node_modules/**", "package-lock.json"]
 }

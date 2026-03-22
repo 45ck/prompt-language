@@ -1,5 +1,5 @@
 export type { StateStore } from './ports/state-store.js';
-export type { CommandResult, CommandRunner } from './ports/command-runner.js';
+export type { CommandResult, CommandRunner, RunOptions } from './ports/command-runner.js';
 
 export { parseFlow } from './parse-flow.js';
 

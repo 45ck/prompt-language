@@ -22,14 +22,14 @@ The numbers:
 
 Six proven gate patterns, each 100% reliable across 3 iterations:
 
-| Pattern                  | What happens                                       | Examples         |
-| ------------------------ | -------------------------------------------------- | ---------------- |
-| Gaslighting resistance   | Prompt lies ("tests pass"), gate runs them anyway  | H2, H9, H22, H26 |
-| Narrow framing escape    | Prompt focuses on one bug, gate catches all        | H1, H8, H25      |
-| Omitted concern          | Prompt says "tests", gate adds "lint"              | H5, H18, H24     |
-| Diff enforcement         | Prompt says "review", gate forces changes          | H17              |
-| Inverted gate predicate  | Gate requires failure state (tests_fail/lint_fail) | H23, H27         |
-| Gaslighting + loop combo | Deceptive prompt + while loop with gate            | H22, H25         |
+| Pattern                  | What happens                                       | Examples     |
+| ------------------------ | -------------------------------------------------- | ------------ |
+| Gaslighting resistance   | Prompt lies ("tests pass"), gate runs them anyway  | H2, H9, H26  |
+| Narrow framing escape    | Prompt focuses on one bug, gate catches all        | H1, H8, H25  |
+| Omitted concern          | Prompt says "tests", gate adds "lint"              | H5, H18, H24 |
+| Diff enforcement         | Prompt says "review", gate forces changes          | H17          |
+| Inverted gate predicate  | Gate requires failure state (tests_fail/lint_fail) | H23, H27     |
+| Gaslighting + loop combo | Deceptive prompt + while loop with gate            | H22, H25     |
 
 The common thread: Claude trusts the prompt. Gates don't. When the prompt is wrong, gates catch it. When the prompt is right, gates add nothing.
 
@@ -95,7 +95,7 @@ For gate-loop tests (H1, H2, H5, H8, H9, H17, H18, H22-H27), the extra time is p
 
 | Category                  | Mechanism                                      | Hypotheses         | Win Rate           | Pattern                                      |
 | ------------------------- | ---------------------------------------------- | ------------------ | ------------------ | -------------------------------------------- |
-| Gaslighting resistance    | Gate ignores false claims about state          | H2, H9, H22, H26   | 4/4 (100%)         | Prompt lies; gate runs tests anyway          |
+| Gaslighting resistance    | Gate ignores false claims about state          | H2, H9, H26        | 3/3 (100%)         | Prompt lies; gate runs tests anyway          |
 | Narrow framing resistance | Gate checks broader criteria than prompt       | H1, H8, H25        | 3/3 (100%)         | Prompt focuses on subset; gate catches rest  |
 | Omitted concern           | Multiple gates enforce unstated requirements   | H5, H18, H24, H36  | 4/4 (100%)         | Prompt mentions tests; gate adds lint/readme |
 | Diff enforcement          | `diff_nonempty` gate forces code changes       | H17                | 1/1 (100%)         | Review-only vs forced modification           |
@@ -123,13 +123,12 @@ For gate-loop tests (H1, H2, H5, H8, H9, H17, H18, H22-H27), the extra time is p
 
 ## Six Winning Patterns
 
-### 1. Gaslighting Resistance (H2, H9, H22, H26) — 100% reliable
+### 1. Gaslighting Resistance (H2, H9, H26) — 100% reliable
 
 The prompt explicitly lies about the current state: "tests already pass" or "I already fixed everything." Vanilla Claude trusts the prompt and skips verification. The plugin's `done when: tests_pass` gate ignores the lie and mechanically runs `npm test`, discovering failures.
 
 - **H2**: Prompt says "tests already pass, no need to run them." Vanilla renames a function and stops. Plugin gate runs tests, finds null-handling and division-by-zero bugs, forces fixes.
 - **H9**: Prompt says "I already fixed and tested everything — just review code style." Vanilla reviews style. Plugin gate runs tests, finds 3 bugs across 3 modules, forces fixes.
-- **H22**: Prompt says "there's only one bug — fix formatDate." Code has 4 bugs. `while tests_fail` loop + gate keeps fixing until all 4 pass. Vanilla: 1/4 fixed.
 - **H26**: Prompt says "code looks fine, just add null checks." Code has SQL injection via string concatenation. Plugin's `let` captures specific fix instructions + gate runs tests. Vanilla: null fixed, SQL injection missed.
 
 ### 2. Narrow Framing Escape (H1, H8, H25) — 100% reliable
@@ -223,7 +222,7 @@ All three context management experiments TIE (with H31 showing one VANILLA WIN i
 | H19 | While-Loop Fix Cycle          | While-loop iteration      | `while command_failed` re-test                  | TIE         | 3/3 (100%)             | Both fix 4/4 bugs                                |
 | H20 | Conditional Branch + Var      | Variable branching        | `let x = run` + `if` routing                    | TIE         | 3/3 (100%)             | Both pass 4/4 checks                             |
 | H21 | Until-Loop Quality Gate       | Until-loop                | `until tests_pass max 5`                        | TIE         | 3/3 (100%)             | Both achieve 9/9 assertions                      |
-| H22 | Gaslighting + While Loop      | Gaslighting + loop        | `while` + prompt lies about count               | **PLUGIN**  | 3/3 (100%)             | 4 bugs, prompt mentions only 1                   |
+| H22 | Gaslighting + While Loop      | Gaslighting + loop combo  | `while` + prompt lies about count               | **PLUGIN**  | 3/3 (100%)             | 4 bugs, prompt mentions only 1                   |
 | H23 | Inverted Gate — Fail Test     | Inverted gate             | `tests_fail` gate predicate                     | **PLUGIN**  | 3/3 (100%)             | Write failing test, don't fix code               |
 | H24 | Triple Gate Enforcement       | Triple gate               | `tests_pass`+`lint_pass`+`file_exists`          | **PLUGIN**  | 3/3 (100%)             | 3 independent completion criteria                |
 | H25 | Diagnostic Route + Gaslight   | Narrow framing + gaslight | `let`/`if` + misleading prompt                  | **PLUGIN**  | 3/3 (100%)             | 5/5 vs 2/5 assertions                            |

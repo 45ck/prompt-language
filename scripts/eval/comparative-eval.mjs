@@ -3709,6 +3709,28 @@ async function testH30() {
 // written — one for each category. Tests whether irrelevant prior context causes
 // cross-contamination between reports.
 
+// H31 FLAKINESS ANALYSIS (VANILLA 1/3, TIE 2/3):
+// Root cause: cross-contamination scoring is sensitive to incidental word use.
+// The test asks Claude to write two separate reports (security vs performance).
+// Scoring checks that each report does NOT mention the other category's terms.
+// However, Claude occasionally uses words like "performance" in security context
+// ("this has performance implications") or mentions "synchronous" when discussing
+// eval safety. These incidental mentions trigger cross-contamination penalties.
+//
+// Why flaky (non-deterministic):
+// 1. LLM output varies - Claude may or may not use cross-category words
+// 2. Both sides face the same challenge; neither has a structural advantage
+// 3. The plugin's variable injection (${security_criteria}, ${perf_criteria})
+//    doesn't prevent Claude from mentioning cross-category terms
+// 4. The scoring threshold (>= 2 correct AND 0 cross-contamination) is strict -
+//    a single incidental word triggers failure
+//
+// Potential fixes (not yet applied):
+// - Allow 1 cross-contamination term instead of requiring 0
+// - Use phrase matching instead of single-word matching (e.g., "sql injection"
+//   as a phrase rather than just "sql")
+// - Accept that this test measures something both sides do equally well/poorly
+//   and reclassify as a stable TIE with a note about scoring sensitivity
 async function testH31() {
   console.log('\n--- H31: Focused Review — Distractor Resistance ---');
 
@@ -5622,12 +5644,12 @@ async function testH45() {
     // No auth.js or dashboard files created
     const noDistractorArtifacts =
       !existsSync(join(dir, 'auth.js')) && !existsSync(join(dir, 'dashboard.js'));
-    const focused = distractorsUntouched && noDistractorArtifacts;
     return {
       appFixed,
-      focused,
-      pass: appFixed && focused,
-      detail: `fix:${appFixed ? 'Y' : 'N'} focused:${focused ? 'Y' : 'N'}`,
+      distractorsUntouched,
+      noDistractorArtifacts,
+      pass: appFixed && distractorsUntouched && noDistractorArtifacts,
+      detail: `fix:${appFixed ? 'Y' : 'N'} distractors:${distractorsUntouched ? 'Y' : 'N'} artifacts:${noDistractorArtifacts ? 'Y' : 'N'}`,
     };
   }
 
@@ -5679,6 +5701,122 @@ async function testH45() {
     pluginResult.elapsed,
   );
 }
+
+// ── DESIGN: context scaling parametric test ─────────────────────────
+//
+// Tests whether the plugin's variable re-injection (via renderFlow/renderVariables)
+// provides a correctness advantage at long context distances (20/25/30 steps).
+//
+// Hypothesis: at short distances (2-15 steps), vanilla Claude recalls values
+// perfectly from conversation history. At longer distances, the "Lost in the
+// Middle" effect may degrade recall. The plugin re-injects variable values on
+// every hook invocation, so it should remain accurate regardless of distance.
+//
+// async function testContextScaling() {
+//   const STEP_COUNTS = [20, 25, 30];
+//
+//   for (const N of STEP_COUNTS) {
+//     console.log(`\n--- Context Scaling: ${N} Steps ---`);
+//
+//     // Generate a unique 8-char hex token per run to prevent guessing
+//     const token = randomBytes(4).toString('hex');
+//     const varName = 'beacon_value';
+//
+//     // Build N sequential steps:
+//     // Step 1: capture the token via `let`
+//     // Steps 2 through N-1: distractor work (create files, do math, etc.)
+//     // Step N: use ${beacon_value} in a prompt that writes it to output.txt
+//     function buildDistractionSteps(count) {
+//       const steps = [];
+//       for (let i = 0; i < count; i++) {
+//         // Each distractor creates a unique file with unrelated content
+//         // to push the original token further out of immediate context
+//         steps.push(
+//           `  prompt: Create file step${i + 2}.txt containing the result of ${i + 2} * ${i + 7}. Only write the number.`
+//         );
+//       }
+//       return steps;
+//     }
+//
+//     const distractorCount = N - 2; // steps between capture and recall
+//
+//     // --- Plugin side ---
+//     // Uses let variable: token is re-injected via renderFlow on every turn
+//     //
+//     // pluginInstall();
+//     // const pluginResult = await withTempDir(async (dir) => {
+//     //   const flow = [
+//     //     `Goal: track a beacon value across ${N} steps`,
+//     //     '',
+//     //     'flow:',
+//     //     `  let ${varName} = "${token}"`,
+//     //     ...buildDistractionSteps(distractorCount),
+//     //     `  prompt: Write the exact value of \${${varName}} to output.txt. Only the value, nothing else.`,
+//     //   ].join('\n');
+//     //
+//     //   const start = Date.now();
+//     //   claudeRun(flow, dir, LONG_TIMEOUT);
+//     //   const elapsed = (Date.now() - start) / 1000;
+//     //
+//     //   const output = safeReadSync(join(dir, 'output.txt')).trim();
+//     //   const match = output === token;
+//     //   return { match, output, elapsed };
+//     // });
+//
+//     // --- Vanilla side ---
+//     // Token is mentioned once at the start; no re-injection mechanism
+//     //
+//     // pluginUninstall();
+//     // const vanillaResult = await withTempDir(async (dir) => {
+//     //   const instructions = [
+//     //     `Important: remember this beacon value exactly: ${token}`,
+//     //     `You will need it at the end.`,
+//     //     '',
+//     //     ...Array.from({ length: distractorCount }, (_, i) =>
+//     //       `Step ${i + 2}: Create file step${i + 2}.txt containing the result of ${i + 2} * ${i + 7}. Only write the number.`
+//     //     ),
+//     //     '',
+//     //     `Final step: Write the exact beacon value from the beginning to output.txt. Only the value, nothing else.`,
+//     //   ].join('\n');
+//     //
+//     //   const start = Date.now();
+//     //   claudeRun(instructions, dir, LONG_TIMEOUT);
+//     //   const elapsed = (Date.now() - start) / 1000;
+//     //
+//     //   const output = safeReadSync(join(dir, 'output.txt')).trim();
+//     //   const match = output === token;
+//     //   return { match, output, elapsed };
+//     // });
+//
+//     // --- Scoring ---
+//     // Pass = output.txt contains exactly the original token
+//     // The key metric is at what N the vanilla side starts failing while
+//     // the plugin side (with re-injection) still succeeds.
+//     //
+//     // record(
+//     //   `CS-${N}`,
+//     //   `Context Scaling — ${N} Steps`,
+//     //   `match:${vanillaResult.match ? 'Y' : 'N'} got:${vanillaResult.output.slice(0, 20)}`,
+//     //   `match:${pluginResult.match ? 'Y' : 'N'} got:${pluginResult.output.slice(0, 20)}`,
+//     //   vanillaResult.match,
+//     //   pluginResult.match,
+//     //   vanillaResult.elapsed,
+//     //   pluginResult.elapsed,
+//     // );
+//   }
+// }
+//
+// Design notes:
+// - Each distractor step creates a file, forcing real tool use (not just text)
+// - The unique hex token prevents the model from "guessing" common values
+// - The variable name 'beacon_value' is distinctive to avoid collision
+// - At 20-30 steps, each run will take 3-10 minutes per side (60+ min total)
+// - Consider running with --range filter: --range CS-20,CS-25,CS-30
+// - Expected outcome: if the plugin wins at N=25+ but ties at N=20,
+//   that establishes the "context distance threshold" for variable re-injection
+// - If both sides still tie at N=30, the threshold may be even higher,
+//   or vanilla's in-context recall may be robust enough that re-injection
+//   never provides a measurable advantage
 
 // ── Summary helpers ─────────────────────────────────────────────────
 

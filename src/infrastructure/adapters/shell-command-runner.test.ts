@@ -21,4 +21,11 @@ describe('ShellCommandRunner', () => {
     expect(result.exitCode).toBe(2);
     expect(result.stderr).toContain('err');
   });
+
+  it('uses custom timeout from options', async () => {
+    const runner = new ShellCommandRunner();
+    const result = await runner.run('node -e "setTimeout(() => {}, 5000)"', { timeoutMs: 100 });
+    // Command should be killed due to timeout, resulting in non-zero exit
+    expect(result.exitCode).not.toBe(0);
+  });
 });

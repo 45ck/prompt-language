@@ -5,7 +5,16 @@
  * The graph is static; all runtime state lives in SessionState.
  */
 
-export type FlowNodeKind = 'while' | 'until' | 'retry' | 'if' | 'prompt' | 'run' | 'try' | 'let';
+export type FlowNodeKind =
+  | 'while'
+  | 'until'
+  | 'retry'
+  | 'if'
+  | 'prompt'
+  | 'run'
+  | 'try'
+  | 'let'
+  | 'foreach';
 
 interface BaseNode {
   readonly kind: FlowNodeKind;
@@ -67,6 +76,14 @@ export interface LetNode extends BaseNode {
   readonly source: LetSource;
 }
 
+export interface ForeachNode extends BaseNode {
+  readonly kind: 'foreach';
+  readonly variableName: string;
+  readonly listExpression: string;
+  readonly maxIterations: number;
+  readonly body: readonly FlowNode[];
+}
+
 export type FlowNode =
   | WhileNode
   | UntilNode
@@ -75,7 +92,8 @@ export type FlowNode =
   | PromptNode
   | RunNode
   | TryNode
-  | LetNode;
+  | LetNode
+  | ForeachNode;
 
 export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;

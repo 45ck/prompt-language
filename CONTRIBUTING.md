@@ -83,6 +83,56 @@ skills/
   deploy-check/     /deploy-check skill — lint + test + build pipeline
 ```
 
+## Creating skills
+
+Skills are slash commands that provide Claude with a structured flow and instructions. Each skill lives in its own directory under `skills/`.
+
+### Directory structure
+
+```
+skills/
+  my-skill/
+    SKILL.md      # Required — defines the skill
+```
+
+### SKILL.md format
+
+Each `SKILL.md` has YAML frontmatter followed by a markdown body:
+
+```yaml
+---
+name: my-skill
+description: One-line description of what the skill does.
+argument-hint: '<required arg description>'
+---
+```
+
+All three frontmatter fields are required:
+
+- **`name`** — Skill name, matches the directory name. Invoked as `/<name>`.
+- **`description`** — Short description shown in skill listings.
+- **`argument-hint`** — Hint for the argument the user passes (use `''` if none).
+
+### Body content
+
+The markdown body contains instructions Claude follows when the skill is invoked. A typical skill includes:
+
+1. **What to do** — Step-by-step instructions for Claude.
+2. **Flow block** — A `flow:` block with prompts, run commands, and control flow (retry, if, etc.).
+3. **Done-when gates** — A `done when:` block with completion predicates like `tests_pass`, `lint_pass`, or `file_exists <path>`.
+4. **Rules** — Constraints on Claude's behavior during execution.
+
+See `skills/fix-and-test/SKILL.md` and `skills/tdd/SKILL.md` for examples.
+
+### Testing skills
+
+After creating or modifying a skill, test it manually:
+
+```bash
+npm run build && node bin/cli.mjs install
+claude -p --dangerously-skip-permissions "Goal: <test scenario>" --skill <skill-name>
+```
+
 ## Testing strategy
 
 ### Unit tests

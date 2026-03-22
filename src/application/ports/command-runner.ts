@@ -4,6 +4,10 @@ export interface CommandResult {
   readonly stderr: string;
 }
 
+export interface RunOptions {
+  readonly timeoutMs?: number;
+}
+
 export interface CommandRunner {
-  run(command: string): Promise<CommandResult>;
+  run(command: string, options?: RunOptions): Promise<CommandResult>;
 }

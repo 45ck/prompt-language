@@ -2,7 +2,11 @@
  * InMemoryCommandRunner — pre-programmed test double for CommandRunner.
  */
 
-import type { CommandRunner, CommandResult } from '../../application/ports/command-runner.js';
+import type {
+  CommandRunner,
+  CommandResult,
+  RunOptions,
+} from '../../application/ports/command-runner.js';
 
 const DEFAULT_RESULT: CommandResult = {
   exitCode: 0,
@@ -19,7 +23,7 @@ export class InMemoryCommandRunner implements CommandRunner {
     this.results.set(command, result);
   }
 
-  async run(command: string): Promise<CommandResult> {
+  async run(command: string, _options?: RunOptions): Promise<CommandResult> {
     this.history.push(command);
     return this.results.get(command) ?? DEFAULT_RESULT;
   }

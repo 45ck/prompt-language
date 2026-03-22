@@ -3,14 +3,21 @@
  */
 
 import { exec } from 'node:child_process';
-import type { CommandRunner, CommandResult } from '../../application/ports/command-runner.js';
+import type {
+  CommandRunner,
+  CommandResult,
+  RunOptions,
+} from '../../application/ports/command-runner.js';
+
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 export class ShellCommandRunner implements CommandRunner {
-  async run(command: string): Promise<CommandResult> {
+  async run(command: string, options?: RunOptions): Promise<CommandResult> {
+    const timeout = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     return new Promise((resolve) => {
       exec(
         command,
-        { encoding: 'utf-8', timeout: 30_000, maxBuffer: 4 * 1024 * 1024 },
+        { encoding: 'utf-8', timeout, maxBuffer: 4 * 1024 * 1024 },
         (error, stdout, stderr) => {
           if (error) {
             resolve({

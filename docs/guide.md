@@ -87,6 +87,7 @@ For `run:` nodes, `shellInterpolate()` wraps substituted values in single-quotes
 > 1. **Flat scoping** — A variable set inside a loop body is visible after the loop ends. There is no block scoping.
 > 2. **Auto-variables are overwritten** after every `run:` — if you need a value later, save it: `let saved = "${last_exit_code}"`.
 > 3. **Unknown `${vars}` pass through silently** — typos in variable names won't produce errors. Double-check your names.
+> 4. **Spawn isolation** — Variables in `spawn` children are isolated. At spawn time, parent variables are copied as `let` literals (a snapshot). After `await`, child variables are imported with a `{spawn-name}.` prefix (e.g., `${fix-auth.last_exit_code}`). The import includes all child variables, not just user-defined ones.
 
 ## Prompt capture
 
@@ -202,6 +203,7 @@ Key fields:
 - **variables** — All stored values, including built-ins (`last_exit_code`, `command_failed`, `last_stdout`, `last_stderr`) and user-defined ones. All values are strings.
 - **nodeProgress** — Iteration counts for loops and retry nodes. Keys are node IDs; values hold the current and max iteration counts.
 - **gateResults** — Pass/fail status for each gate predicate as evaluated on the last `TaskCompleted` hook invocation.
+- **spawnedChildren** — Record of spawned child processes. Each entry contains `name`, `status` (running/completed/failed), `pid`, `stateDir`, and optionally `variables` (imported after completion).
 
 ## Compatibility
 

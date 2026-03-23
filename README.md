@@ -207,18 +207,19 @@ Full methodology, hypothesis-by-hypothesis results, and latency data: **[Evaluat
 
 ## DSL reference
 
-| Primitive     | Purpose                              | Example                                |
-| ------------- | ------------------------------------ | -------------------------------------- |
-| `prompt:`     | Inject an instruction for the agent  | `prompt: Fix the auth module.`         |
-| `run:`        | Execute a command, capture result    | `run: npm test`                        |
-| `let`/`var`   | Store a value for `${interpolation}` | `let ver = run "node -v"`              |
-| `while`       | Loop while condition is true         | `while tests_fail max 5`               |
-| `until`       | Loop until condition becomes true    | `until tests_pass max 5`               |
-| `retry`       | Retry block on failure               | `retry max 3`                          |
-| `if`/`else`   | Conditional branching                | `if lint_fail ... else ... end`        |
-| `try`/`catch` | Execute with error recovery          | `try ... catch command_failed ... end` |
-| `foreach`     | Iterate over a list                  | `foreach file in ${files} max 10`      |
-| `done when:`  | Completion gate (blocks stopping)    | `done when: tests_pass`                |
+| Primitive       | Purpose                              | Example                                |
+| --------------- | ------------------------------------ | -------------------------------------- |
+| `prompt:`       | Inject an instruction for the agent  | `prompt: Fix the auth module.`         |
+| `run:`          | Execute a command, capture result    | `run: npm test`                        |
+| `let`/`var`     | Store a value for `${interpolation}` | `let ver = run "node -v"`              |
+| `while`         | Loop while condition is true         | `while tests_fail max 5`               |
+| `until`         | Loop until condition becomes true    | `until tests_pass max 5`               |
+| `retry`         | Retry block on failure               | `retry max 3`                          |
+| `if`/`else`     | Conditional branching                | `if lint_fail ... else ... end`        |
+| `try`/`catch`   | Execute with error recovery          | `try ... catch command_failed ... end` |
+| `foreach`       | Iterate over a list                  | `foreach file in ${files} max 10`      |
+| `spawn`/`await` | Launch parallel sub-tasks            | `spawn "name" ... end` / `await all`   |
+| `done when:`    | Completion gate (blocks stopping)    | `done when: tests_pass`                |
 
 Full syntax, built-in variables, and gate predicates: **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)**
 

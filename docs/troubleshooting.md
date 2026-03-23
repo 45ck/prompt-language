@@ -125,6 +125,35 @@ To clear all flow state and start fresh:
 
 Both approaches delete the session state file. The next prompt with `flow:` or `done when:` creates a new session.
 
+## Spawned process issues
+
+**Symptom**: `await` hangs indefinitely or the flow never completes after spawning children.
+
+**How spawn works**: Each `spawn` block launches a separate `claude -p` process with its own state directory (`.prompt-language-{name}/`). The parent flow polls the child's state file to detect completion. `await` blocks until the child's status is `completed` or `failed`.
+
+**Common causes**:
+
+- The child process crashed or was killed before writing its final state. The parent sees the child as perpetually "running."
+- The child's flow is stuck (e.g., a gate that never passes, a loop that never exits). The parent will wait indefinitely.
+- Too many spawned children exhausted system resources.
+- Name collision: spawning two children with the same name orphans the first child process.
+
+**Diagnosis**: Check for child state directories:
+
+```bash
+ls -la .prompt-language-*/session-state.json
+```
+
+If a child's state file doesn't exist, the child never started or crashed early. If the state shows `"status": "active"`, the child is still running or stuck.
+
+**Fix**:
+
+- Kill orphan child processes: `ps aux | grep 'claude -p'`
+- Clean up child state directories: `rm -rf .prompt-language-*/`
+- Use `/flow:reset` to clear the parent flow and start over.
+
+**Prevention**: Keep spawn count low (2-4 children). Ensure child flows have bounded loops (`max N`) to prevent infinite execution.
+
 ## Checking plugin status
 
 ```bash

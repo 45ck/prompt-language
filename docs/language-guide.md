@@ -225,6 +225,7 @@ Both require a `max` iteration limit (default: 5). If the limit is reached, the 
 | `until`   | You want to loop until a condition becomes true.                |
 | `while`   | You want to loop while a condition remains true.                |
 | `foreach` | You have a list of items to process.                            |
+| `spawn`   | You have independent tasks that can run in parallel.            |
 
 ### foreach
 
@@ -325,6 +326,50 @@ while tests_fail max 10
   end
 end
 ```
+
+### spawn / await (parallel execution)
+
+Launch independent sub-tasks to run in parallel. Each spawn creates a separate Claude process with its own state.
+
+```
+spawn "fix-tests"
+  run: npm test
+  if command_failed
+    prompt: Fix the failing tests.
+  end
+end
+
+spawn "fix-lint"
+  run: npm run lint
+  if command_failed
+    prompt: Fix the lint errors.
+  end
+end
+
+await all
+prompt: Both tasks done. Tests: ${fix-tests.command_failed}. Lint: ${fix-lint.command_failed}.
+```
+
+`spawn` advances immediately — the parent doesn't wait. `await all` blocks until every child finishes. Use `await "name"` to wait for a specific child.
+
+After await, child variables are available with a name prefix: `${fix-tests.last_exit_code}`, `${fix-lint.last_stdout}`.
+
+**When to use spawn vs. foreach:**
+
+| Use case                                        | Primitive                     |
+| ----------------------------------------------- | ----------------------------- |
+| Same operation on each item in a list           | `foreach`                     |
+| Different independent operations in parallel    | `spawn`                       |
+| Sequential operations that depend on each other | Neither — just list the steps |
+
+Key constraints:
+
+- Children share the filesystem but not session state.
+- No sibling-to-sibling variable access.
+- No automatic error propagation — check `${child.command_failed}` explicitly.
+- No nested spawn support.
+
+> **Warning**: Each spawn creates a separate `claude -p` process. Spawning many children consumes significant resources. Keep spawn count low (2-4 children). For batch operations on a list, use `foreach` instead.
 
 ## Composition
 
@@ -494,6 +539,8 @@ Be honest about tradeoffs. From 45 controlled A/B experiments (300+ test runs):
 | `foreach`   | `foreach x in <list> [max N] ... end`           | max 50                 |
 | `try`       | `try ... catch <cond> ... end`                  | catch `command_failed` |
 | `break`     | `break`                                         | —                      |
+| `spawn`     | `spawn "name" ... end`                          | —                      |
+| `await`     | `await all` / `await "name"`                    | —                      |
 
 ### Condition syntax
 
@@ -518,6 +565,6 @@ Be honest about tradeoffs. From 45 controlled A/B experiments (300+ test runs):
 - **[Getting Started](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)** — hands-on tutorial with a working example
 - **[How It Works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md)** — enforcement model, variable lifecycle, gate trust mechanics
 - **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)** — complete syntax specification
-- **[Showcase](https://github.com/45ck/prompt-language/blob/main/docs/showcase.md)** — 137+ worked examples
+- **[Showcase](https://github.com/45ck/prompt-language/blob/main/docs/showcase.md)** — 140+ worked examples
 - **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)** — full A/B testing methodology and results
 - **[Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md)** — debugging stuck flows, state file inspection, known issues

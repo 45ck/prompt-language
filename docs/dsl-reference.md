@@ -1,6 +1,6 @@
 # DSL Reference
 
-The prompt-language DSL defines control-flow programs using nine primitives: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try/catch`, `foreach`, and `let/var`. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
+The prompt-language DSL defines control-flow programs using eleven primitives: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try/catch`, `foreach`, `let/var`, `spawn`, and `await`. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
 
 ## Program structure
 
@@ -230,6 +230,64 @@ Parameters:
 - body: One or more DSL statements.
 - catchCondition: A resolver variable name. If true after body execution, the catch block runs. Defaults to `command_failed`.
 - catchBody: One or more DSL statements.
+
+### spawn
+
+Launch a named sub-task as a separate Claude process. The body runs in an independent child process with its own isolated state. The parent flow advances immediately without waiting for the child to finish.
+
+```
+spawn "fix-auth"
+  prompt: Fix the authentication bug
+  run: npm test -- auth
+end
+
+spawn "add-cache"
+  prompt: Add caching to the API layer
+end
+```
+
+Parameters:
+
+- name: A quoted string identifying the child. Must be unique within the flow.
+- body: One or more DSL statements. These run in the child process, not the parent.
+
+**Execution model:** Each `spawn` launches a separate `claude -p` process. This is process-level parallelism, not thread-level concurrency. Each child gets:
+
+- Its own state directory: `.prompt-language-{name}/`
+- Its own session state file: `.prompt-language-{name}/session-state.json`
+- A copy of all parent variables at spawn time as `let` declarations
+
+The parent does not enter the spawn body. It records the child's PID and state directory, then immediately advances past the `spawn` block.
+
+**Variable scoping:**
+
+- **Parent to child (at spawn time):** All parent variables are copied into the child as `let` literals. The child receives a snapshot — subsequent parent changes are not visible to the child.
+- **Child to parent (at await time):** After `await`, child variables are imported with a `{child-name}.` prefix. For example, the child's `last_exit_code` becomes `${fix-auth.last_exit_code}`.
+- **No sibling visibility:** Two spawned children cannot see each other's variables.
+
+### await
+
+Block the parent flow until one or more spawned children complete.
+
+```
+await all           # wait for every spawned child
+await "fix-auth"    # wait for a specific child by name
+```
+
+Parameters:
+
+- target: Either `all` (wait for every spawned child) or a quoted child name.
+
+After await completes, child variables are imported with a name prefix: `${child-name.varName}`. All child variables are imported — including built-in auto-variables (`{name}.last_exit_code`, `{name}.command_failed`, etc.).
+
+**Error semantics:** A failed child does NOT throw or trigger try/catch in the parent. The parent receives the child's final variables (including `command_failed: true`). To detect child failure, check the imported variables after await.
+
+**Limitations:**
+
+- No nested spawn support. Children run as `claude -p` without the plugin's process spawner.
+- Name collisions: spawning two children with the same name overwrites the first entry.
+- No cancellation mechanism for running children.
+- Child state directories (`.prompt-language-{name}/`) are not automatically cleaned up.
 
 ## Completion gates
 

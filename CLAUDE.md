@@ -39,7 +39,7 @@ Dependency flow is strictly inward. Domain never imports from other layers.
 
 ## DSL primitives
 
-Nine node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, `foreach`, plus `let`/`var` for variable storage.
+Eleven node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, `foreach`, `spawn`, `await`, plus `let`/`var` for variable storage.
 
 ### let/var nodes
 
@@ -75,6 +75,14 @@ Variables are interpolated via `${varName}` in prompt/run text. Unknown variable
 - `if/else`: evaluates condition, enters then-branch or else-branch (or skips)
 - `try/catch`: always enters body; on `run` failure, jumps to catch body if present
 
+### spawn/await nodes
+
+- `spawn "name"`: Launches a child `claude -p` process with its own state directory (`.prompt-language-{name}/`). Parent variables are copied to child as `let` declarations. Parent immediately advances past the spawn block.
+- `await "name"` or `await all`: Polls child state directories. Blocks until target children complete/fail. Imports child variables with name prefix (`childName.varName`).
+- `advanceSpawnNode()` and `advanceAwaitNode()` in `advance-flow.ts`
+- Render: `renderSpawnNode()` in `render-flow.ts` shows `[running]`/`[completed]`/`[failed]` status tags
+- State: `spawnedChildren` record in `SessionState` tracks name, status, pid, stateDir, and imported variables
+
 ### Security note
 
 `interpolate()` performs raw substitution — use `shellInterpolate()` for `run:` commands. It wraps substituted values in single-quotes to prevent shell injection.
@@ -90,6 +98,8 @@ Key implementation files:
 - `src/application/parse-flow.ts` — `parseLetLine()` handles let/var parsing
 - `src/application/inject-context.ts` — `autoAdvanceNodes()` + control-flow + interpolation
 - `src/application/evaluate-completion.ts` — gate evaluation with `resolveBuiltinCommand()` for builtin predicates
+- `src/application/ports/process-spawner.ts` — ProcessSpawner port: `spawn(input)`, `poll(stateDir)`
+- `src/infrastructure/adapters/claude-process-spawner.ts` — Spawns child `claude -p` processes, polls state files
 
 ## Plugin installation
 

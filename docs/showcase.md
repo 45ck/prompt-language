@@ -16,6 +16,7 @@
 - [10. Real-World CI/CD](#10-real-world-ci-cd)
 - [11. Code Quality Enforcement](#11-code-quality-enforcement)
 - [12. Creative and Unexpected Uses](#12-creative-and-unexpected-uses)
+- [13. Parallel Execution](#13-parallel-execution)
 
 ---
 
@@ -4151,3 +4152,130 @@ done when:
 **Common mistakes.** The biggest trap in creative uses is over-specifying the flow. An onboarding checklist (12.1) with 30 steps is brittle -- if any step fails for an environment-specific reason, the entire flow stalls. Keep creative flows short (5-10 steps) and use gates for the critical checkpoints rather than trying to micro-manage every action. Another mistake: using `foreach` to iterate over items that require different handling. If each blog post needs unique migration logic, `foreach` with a generic prompt produces generic results. Use explicit steps for items that need distinct treatment.
 
 **Surprising insights.** The chaos engineering example (12.10) reveals something non-obvious: prompt-language is good at generating and then verifying adversarial test code. The agent writes a test designed to break the system, runs it, and then fixes the system to survive it. The flow enforces that "fix" means "the chaos test actually passes now," not "I added a TODO comment." This adversarial pattern -- generate the attack, then survive it -- is uniquely well-suited to the DSL's verify-or-keep-going loop. It turns prompt-language into a tool for improving system resilience, which is far from its original design intent of enforcing code quality.
+
+---
+
+## 13. Parallel Execution
+
+`spawn`/`await` enables parallel execution of independent tasks. Each spawned child runs as its own Claude session with an isolated state directory. The parent copies its variables into each child at spawn time; after `await`, child variables are imported with a `{name}.` prefix. Children share the filesystem but not session state.
+
+---
+
+### 13.1 Parallel Lint + Test
+
+Run linting and testing concurrently. Both can proceed independently and fix their own issues. After both finish, verify results.
+
+```prompt-language
+Goal: fix all quality issues in parallel
+
+flow:
+  spawn "tests"
+    retry max 3
+      run: npm test
+      if command_failed
+        prompt: Fix the failing tests based on the error output.
+      end
+    end
+  end
+
+  spawn "lint"
+    run: npm run lint
+    if command_failed
+      prompt: Fix the lint errors shown above.
+      run: npm run lint
+    end
+  end
+
+  await all
+  prompt: Tests exited ${tests.last_exit_code}, lint exited ${lint.last_exit_code}. Summarize what was fixed.
+
+done when:
+  tests_pass
+  lint_pass
+```
+
+**Why this works:** The two spawn blocks launch immediately. While one child fixes test failures, the other fixes lint errors -- they don't wait for each other. `await all` synchronizes before the summary prompt. The gates still enforce final verification independently.
+
+---
+
+### 13.2 Multi-Service Deployment
+
+Deploy multiple services concurrently, then verify all are healthy:
+
+```prompt-language
+Goal: deploy all services to staging
+
+flow:
+  let commit = run "git rev-parse --short HEAD"
+
+  spawn "api"
+    run: cd services/api && npm run build && npm run deploy:staging
+    if command_failed
+      prompt: Fix the API deployment error.
+      run: cd services/api && npm run deploy:staging
+    end
+  end
+
+  spawn "worker"
+    run: cd services/worker && npm run build && npm run deploy:staging
+    if command_failed
+      prompt: Fix the worker deployment error.
+      run: cd services/worker && npm run deploy:staging
+    end
+  end
+
+  spawn "frontend"
+    run: cd services/frontend && npm run build && npm run deploy:staging
+    if command_failed
+      prompt: Fix the frontend deployment error.
+      run: cd services/frontend && npm run deploy:staging
+    end
+  end
+
+  await all
+  prompt: All services deployed at commit ${commit}. API: ${api.last_exit_code}. Worker: ${worker.last_exit_code}. Frontend: ${frontend.last_exit_code}. Write a deployment summary.
+
+done when:
+  gate api_health: curl -sf http://staging-api/health
+  gate worker_health: curl -sf http://staging-worker/health
+  gate frontend_health: curl -sf http://staging-frontend/health
+```
+
+**Why this works:** Each service deploys independently in its own Claude session. Parent variables (like `commit`) are copied to all children. Custom gates verify health after everything converges.
+
+---
+
+### 13.3 Spawn with Try/Catch -- Resilient Parallel Tasks
+
+Use try/catch inside spawn bodies for error resilience:
+
+```prompt-language
+Goal: run database migrations and seed data
+
+flow:
+  spawn "migrate"
+    try
+      run: npx prisma migrate deploy
+    catch command_failed
+      prompt: Migration failed. Check the error and fix the migration file.
+      run: npx prisma migrate deploy
+    end
+  end
+
+  spawn "seed"
+    try
+      run: npx prisma db seed
+    catch command_failed
+      prompt: Seeding failed. Fix the seed script.
+      run: npx prisma db seed
+    end
+  end
+
+  await all
+  prompt: Migration status: ${migrate.last_exit_code}. Seed status: ${seed.last_exit_code}.
+
+done when:
+  gate db_ready: npx prisma migrate status
+```
+
+**Why this works:** Each child independently handles its own errors via try/catch. The parent doesn't need to know about individual failures during execution -- it only cares about the final state after await.

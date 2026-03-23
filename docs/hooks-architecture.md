@@ -153,6 +153,10 @@ The agent cannot escape this loop until all nodes are executed and all gates pas
 
 All three hooks read and write `.prompt-language/session-state.json`. This file is the single source of truth. Hooks never hold state in memory across invocations -- they are stateless processes that operate on the state file.
 
+## Spawned child state
+
+Each `spawn` node launches an independent child `claude -p` process with its own state directory (`.prompt-language-{name}/`) and `session-state.json`. The parent's hooks poll these child state files during `await` advancement. Child processes run their own hook loop independently — they are full Claude sessions, not sub-routines of the parent. The `ProcessSpawner` port (`src/application/ports/process-spawner.ts`) abstracts child process creation and polling.
+
 ## Error handling
 
 - If the state file is corrupted or unreadable, hooks log a warning and allow the operation (fail-open for safety).

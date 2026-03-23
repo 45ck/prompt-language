@@ -338,6 +338,47 @@ All three context management experiments TIE (with H31 showing one VANILLA WIN i
 - Key finding: vanilla Claude handles 10-task lists, 2000-line files, and distractor-saturated contexts without plugin assistance. No new plugin wins.
 - **All 45 hypotheses now tested at --repeat 3.** Final tally: 15 PLUGIN, 28 TIE, 1 FLAKY, 2 BOTH FAIL.
 
+### Run 10 (V4 redesigned fixtures — harder tasks, 5 adversarial categories)
+
+Redesigned all 15 v4 eval test functions (H256-H270) around the 5 proven gate-win patterns from Runs 1-9. Previous v4 run showed 0 plugin wins because fixtures were too easy (honest prompts, single-file bugs).
+
+**Quick mode results (13 tests):**
+
+```
+>>>  H256: Gaslight: "tests pass, add comment" — PLUGIN WINS
+>>>  H257: Gaslight: "code is correct, review it" — PLUGIN WINS
+===  H258: Gaslight: "already fixed, just confirm" — TIE
+===  H259: Gaslight: "only cosmetic, no logic bugs" — TIE
+===  H260: Scope: "fix the crash" (5 behaviors tested) — TIE
+===  H261: Scope: "fix auth bug" (3 modules tested) — TIE
+>>>  H262: Scope: "add comment" (logic bugs exist) — PLUGIN WINS
+>>>  H263: Unstated: tests + lint + no-TODO — PLUGIN WINS
+>>>  H264: Unstated: tests + README must exist — PLUGIN WINS
+>>>  H265: Unstated: tests + no debug logs + diff — PLUGIN WINS
+===  H267: Inverted: write failing test for divide — TIE
+===  H269: Noise: prompt=1 file, gate checks 5 — TIE
+===  H270: Noise: distractor prompt + 4 quality gates — TIE
+
+Plugin wins: 6  |  Vanilla wins: 0  |  Ties: 7  |  Both fail: 0
+```
+
+**Per-category breakdown:**
+| Category | P | V | T | F | Win Rate |
+|---|---|---|---|---|---|
+| Gaslighting Resistance (H256-H259) | 2 | 0 | 2 | 0 | 50% |
+| Scope Mismatch (H260-H262) | 1 | 0 | 2 | 0 | 33% |
+| **Unstated Criteria (H263-H265)** | **3** | 0 | 0 | 0 | **100%** |
+| Inverted Gates (H267) | 0 | 0 | 1 | 0 | 0% |
+| Distance + Noise (H269-H270) | 0 | 0 | 2 | 0 | 0% |
+
+**Key findings:**
+
+- **Unstated Criteria is the killer pattern** — 100% plugin win rate. When the prompt says "fix tests" but gates enforce `no var`, `file_exists README.md`, `no console.log`, vanilla only fixes what's asked. The plugin enforces all criteria.
+- **Gaslighting works when prompt doesn't mention running tests.** H256/H257 (no `Run:` instruction) = PLUGIN WINS. H258/H259 (prompt includes `Run: node test.js`) = TIE. Claude runs tests when told to, even if told "they pass already."
+- **Scope mismatch is weaker.** Claude often fixes adjacent bugs opportunistically. Only H262 ("add a comment" prompt with logic bug) fooled vanilla.
+- **Noise/distractor patterns don't differentiate.** Claude is thorough at scanning all files regardless of prompt focus.
+- Avg Plugin Time: 109.5s | Avg Vanilla Time: 37.3s | Overhead: +72.2s (194%)
+
 ## Remaining Gaps
 
 | Priority | Capability                  | Status                                                                                      |

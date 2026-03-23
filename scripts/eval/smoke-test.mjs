@@ -702,44 +702,43 @@ async function testCustomGate() {
   });
 }
 
-// ── Test S: Nested foreach ─────────────────────────────────────────────
+// ── Test S: Nested foreach (prompt inside nested loop) ─────────────────
 
 async function testNestedForeach() {
   await withTempDir(async (dir) => {
     const prompt = [
-      'Goal: test nested foreach',
+      'Goal: test nested foreach with prompts',
       '',
       'flow:',
       '  foreach color in "red blue"',
       '    foreach size in "small large"',
-      '      run: echo ${color}-${size} >> combos.txt',
+      '      prompt: Create a file called ${color}-${size}.txt containing exactly "${color}-${size}", nothing else.',
       '    end',
       '  end',
     ].join('\n');
 
     claudeRun(prompt, dir);
 
-    let content = '';
-    try {
-      content = (await readFile(join(dir, 'combos.txt'), 'utf-8')).trim();
-    } catch {
-      /* file not created */
-    }
-
     const expected = ['red-small', 'red-large', 'blue-small', 'blue-large'];
-    const found = expected.filter((combo) => content.includes(combo));
+    let found = 0;
+    for (const combo of expected) {
+      try {
+        const content = (await readFile(join(dir, `${combo}.txt`), 'utf-8')).trim();
+        if (content.includes(combo)) found++;
+      } catch {
+        /* file not created */
+      }
+    }
 
     assert(
       'S: Nested foreach',
-      found.length >= 3,
-      found.length >= 3
-        ? `${found.length}/4 combos found`
-        : `only ${found.length}/4: "${content.slice(0, 80)}"`,
+      found >= 3,
+      found >= 3 ? `${found}/4 combo files created` : `only ${found}/4 combo files found`,
     );
   });
 }
 
-// ── Test T: List accumulation in foreach ───────────────────────────────
+// ── Test T: List accumulation in foreach (prompt uses result) ──────────
 
 async function testListAccumulation() {
   await withTempDir(async (dir) => {
@@ -753,7 +752,7 @@ async function testListAccumulation() {
       '    let results += run "echo processed-${item}"',
       '  end',
       '  run: echo ${results_length} > count.txt',
-      '  run: echo ${results} > accumulated.txt',
+      '  prompt: Write the accumulated results "${results}" to accumulated.txt. Write only the raw value, nothing else.',
     ].join('\n');
 
     claudeRun(prompt, dir);
@@ -923,7 +922,7 @@ async function testTryFinally() {
   });
 }
 
-// ── Test X: Break inside if inside foreach ────────────────────────────
+// ── Test X: Break inside if inside foreach (prompt before break) ──────
 
 async function testBreakInsideIfForeach() {
   await withTempDir(async (dir) => {
@@ -934,7 +933,7 @@ async function testBreakInsideIfForeach() {
       '  foreach item in "one two three four"',
       '    run: echo ${item} >> visited.txt',
       '    if ${item} == "two"',
-      '      run: echo stopped-at-two > break-marker.txt',
+      '      prompt: Create break-marker.txt containing exactly "stopped-at-two", nothing else.',
       '      break',
       '    end',
       '  end',
@@ -943,15 +942,14 @@ async function testBreakInsideIfForeach() {
     claudeRun(prompt, dir);
 
     let visitedContent = '';
-    let markerExists = false;
+    let markerContent = '';
     try {
       visitedContent = (await readFile(join(dir, 'visited.txt'), 'utf-8')).trim();
     } catch {
       /* file not created */
     }
     try {
-      await readFile(join(dir, 'break-marker.txt'), 'utf-8');
-      markerExists = true;
+      markerContent = (await readFile(join(dir, 'break-marker.txt'), 'utf-8')).trim();
     } catch {
       /* file not created */
     }
@@ -959,18 +957,19 @@ async function testBreakInsideIfForeach() {
     const hasOne = visitedContent.includes('one');
     const hasTwo = visitedContent.includes('two');
     const noThree = !visitedContent.includes('three');
+    const markerCorrect = markerContent.includes('stopped-at-two');
 
     assert(
       'X: Break inside if inside foreach',
-      hasOne && hasTwo && noThree && markerExists,
-      hasOne && hasTwo && noThree && markerExists
-        ? 'break stopped at two, marker created'
-        : `visited="${visitedContent.slice(0, 80)}", marker=${markerExists}`,
+      hasOne && hasTwo && noThree && markerCorrect,
+      hasOne && hasTwo && noThree && markerCorrect
+        ? 'break stopped at two, marker created by prompt'
+        : `visited="${visitedContent.slice(0, 80)}", marker="${markerContent.slice(0, 40)}"`,
     );
   });
 }
 
-// ── Test Y: Until with variable condition ─────────────────────────────
+// ── Test Y: Until with variable condition (prompt writes result) ──────
 
 async function testUntilVariable() {
   await withTempDir(async (dir) => {
@@ -983,7 +982,7 @@ async function testUntilVariable() {
       '    let counter = run "node -e \\"console.log(Number(${counter}) + 1)\\""',
       '    run: echo iter-${counter} >> until-log.txt',
       '  end',
-      '  run: echo final-${counter} > until-final.txt',
+      '  prompt: Write "counter-reached-${counter}" to until-final.txt. Write only that text, nothing else.',
     ].join('\n');
 
     claudeRun(prompt, dir);
@@ -997,9 +996,9 @@ async function testUntilVariable() {
 
     assert(
       'Y: Until with variable condition',
-      finalContent.includes('final-3'),
-      finalContent.includes('final-3')
-        ? 'counter reached 3'
+      finalContent.includes('counter-reached-3'),
+      finalContent.includes('counter-reached-3')
+        ? 'counter reached 3, prompt wrote result'
         : `got: "${finalContent.slice(0, 60)}"`,
     );
   });

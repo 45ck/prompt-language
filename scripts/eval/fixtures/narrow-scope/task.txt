@@ -1,0 +1,1 @@
+Users are reporting a crash when calling parseDate with invalid input. Fix the crash in the parseDate function in app.js.

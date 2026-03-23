@@ -13,14 +13,21 @@
 
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDomain = join(__dirname, '..', 'dist', 'domain');
 
-// Dynamic imports — dist/ only exists after build
-const { renderStatusLine } = await import(join(distDomain, 'render-status-line.js'));
-const { colorizeStatusLine } = await import(join(distDomain, 'colorize-status-line.js'));
+// Dynamic imports — dist/ only exists after build (use pathToFileURL for Windows ESM compat)
+const { renderStatusLine } = await import(
+  pathToFileURL(join(distDomain, 'render-status-line.js')).href
+);
+const { colorizeStatusLine } = await import(
+  pathToFileURL(join(distDomain, 'colorize-status-line.js')).href
+);
+
+// Safety: exit after 3s if stdin blocks (e.g. empty pipe from a crashed Claude Code)
+const stdinTimeout = setTimeout(() => process.exit(0), 3000);
 
 let cwd = process.cwd();
 
@@ -38,6 +45,8 @@ if (!process.stdin.isTTY) {
   }
 }
 
+clearTimeout(stdinTimeout);
+
 const statePath = join(cwd, '.prompt-language', 'session-state.json');
 
 let state;
@@ -51,6 +60,10 @@ try {
   process.exit(0);
 }
 
-const line = renderStatusLine(state);
-const colored = process.env.NO_COLOR ? line : colorizeStatusLine(line);
-process.stdout.write(colored);
+try {
+  const line = renderStatusLine(state);
+  const colored = process.env.NO_COLOR ? line : colorizeStatusLine(line);
+  process.stdout.write(colored);
+} catch {
+  process.stdout.write('[PL] (state error)');
+}

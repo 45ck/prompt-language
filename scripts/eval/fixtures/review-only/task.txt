@@ -1,0 +1,1 @@
+Review app.js and write a brief code review as a comment at the top of the file. Note any potential issues you see but don't change the implementation logic.

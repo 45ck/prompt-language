@@ -14,14 +14,14 @@
 
 import { readFileSync, existsSync, watch as fsWatch } from 'node:fs';
 import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDomain = join(__dirname, '..', 'dist', 'domain');
 
-// Dynamic imports — dist/ only exists after build
-const { renderFlow } = await import(join(distDomain, 'render-flow.js'));
-const { colorizeFlow } = await import(join(distDomain, 'colorize-flow.js'));
+// Dynamic imports — dist/ only exists after build (use pathToFileURL for Windows ESM compat)
+const { renderFlow } = await import(pathToFileURL(join(distDomain, 'render-flow.js')).href);
+const { colorizeFlow } = await import(pathToFileURL(join(distDomain, 'colorize-flow.js')).href);
 
 const cwd = process.cwd();
 const plDir = join(cwd, '.prompt-language');
@@ -51,10 +51,15 @@ function render() {
     return;
   }
 
-  const rendered = renderFlow(state);
-  const colored = process.env.NO_COLOR ? rendered : colorizeFlow(rendered);
+  let output;
+  try {
+    const rendered = renderFlow(state);
+    output = process.env.NO_COLOR ? rendered : colorizeFlow(rendered);
+  } catch {
+    output = ' (state error — waiting for next update)';
+  }
   console.log('');
-  console.log(colored);
+  console.log(output);
 
   const now = new Date().toLocaleTimeString();
   console.log(`\n Last updated: ${now}`);
@@ -74,6 +79,8 @@ function scheduleRender() {
 function startWatching() {
   try {
     fsWatch(plDir, { recursive: true }, scheduleRender);
+    // Periodic fallback: fs.watch can silently drop events on some platforms
+    setInterval(render, 5000);
   } catch {
     // fs.watch unavailable — fall back to polling
     setInterval(render, 1000);

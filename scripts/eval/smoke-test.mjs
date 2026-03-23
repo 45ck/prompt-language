@@ -739,7 +739,7 @@ async function testNestedForeach() {
   });
 }
 
-// ── Test T: List accumulation in foreach (prompt uses result) ──────────
+// ── Test T: List accumulation in foreach ───────────────────────────────
 
 async function testListAccumulation() {
   await withTempDir(async (dir) => {
@@ -753,7 +753,7 @@ async function testListAccumulation() {
       '    let results += run "echo processed-${item}"',
       '  end',
       '  run: echo ${results_length} > count.txt',
-      '  prompt: Write the accumulated results "${results}" to accumulated.txt. Write only the raw value, nothing else.',
+      '  run: echo ${results} > accumulated.txt',
     ].join('\n');
 
     claudeRun(prompt, dir);
@@ -926,7 +926,7 @@ async function testTryFinally() {
   });
 }
 
-// ── Test X: Break inside if inside foreach (prompt before break) ──────
+// ── Test X: Break inside if inside foreach ─────────────────────────────
 
 async function testBreakInsideIfForeach() {
   await withTempDir(async (dir) => {
@@ -937,7 +937,7 @@ async function testBreakInsideIfForeach() {
       '  foreach item in "one two three four"',
       '    run: echo ${item} >> visited.txt',
       '    if ${item} == "two"',
-      '      prompt: Create break-marker.txt containing exactly "stopped-at-two", nothing else.',
+      '      run: echo stopped-at-two > break-marker.txt',
       '      break',
       '    end',
       '  end',
@@ -967,13 +967,13 @@ async function testBreakInsideIfForeach() {
       'X: Break inside if inside foreach',
       hasOne && hasTwo && noThree && markerCorrect,
       hasOne && hasTwo && noThree && markerCorrect
-        ? 'break stopped at two, marker created by prompt'
+        ? 'break stopped at two, marker created'
         : `visited="${visitedContent.slice(0, 80)}", marker="${markerContent.slice(0, 40)}"`,
     );
   });
 }
 
-// ── Test Y: Until with variable condition (prompt writes result) ──────
+// ── Test Y: Until with variable condition ──────────────────────────────
 
 async function testUntilVariable() {
   await withTempDir(async (dir) => {
@@ -986,7 +986,7 @@ async function testUntilVariable() {
       '    let counter = run "node -e \\"console.log(Number(${counter}) + 1)\\""',
       '    run: echo iter-${counter} >> until-log.txt',
       '  end',
-      '  prompt: Write "counter-reached-${counter}" to until-final.txt. Write only that text, nothing else.',
+      '  run: echo counter-reached-${counter} > until-final.txt',
     ].join('\n');
 
     claudeRun(prompt, dir);
@@ -1002,7 +1002,7 @@ async function testUntilVariable() {
       'Y: Until with variable condition',
       finalContent.includes('counter-reached-3'),
       finalContent.includes('counter-reached-3')
-        ? 'counter reached 3, prompt wrote result'
+        ? 'counter reached 3, result written'
         : `got: "${finalContent.slice(0, 60)}"`,
     );
   });

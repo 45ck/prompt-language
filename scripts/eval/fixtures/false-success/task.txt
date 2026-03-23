@@ -1,0 +1,1 @@
+The EventEmitter in app.js was just refactored. Verify it still works by reading through the code and confirming the refactoring looks correct. Add a comment at the top confirming your review.

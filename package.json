@@ -1,6 +1,6 @@
 {
   "name": "@45ck/prompt-language",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates so the agent cannot stop early or skip steps.",
   "license": "MIT",
   "author": {

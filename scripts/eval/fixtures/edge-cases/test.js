@@ -1,6 +1,12 @@
 const { countOccurrences, padCenter, wrap, slugify } = require('./app');
 const assert = require('node:assert');
 
+// Kill hanging tests after 5 seconds
+setTimeout(() => {
+  console.error('TIMEOUT: test hung (likely infinite loop)');
+  process.exit(1);
+}, 5000).unref();
+
 // countOccurrences — basic
 assert.strictEqual(countOccurrences('hello world', 'o'), 2);
 assert.strictEqual(countOccurrences('aaa', 'a'), 3);

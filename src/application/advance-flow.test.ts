@@ -8,7 +8,11 @@ import {
   maybeCompleteFlow,
   MAX_AWAIT_POLLS,
 } from './advance-flow.js';
-import { createSessionState, updateNodeProgress, updateSpawnedChild } from '../domain/session-state.js';
+import {
+  createSessionState,
+  updateNodeProgress,
+  updateSpawnedChild,
+} from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
 import {
   createPromptNode,
@@ -1351,9 +1355,7 @@ describe('autoAdvanceNodes — renderNodeToDsl via spawn', () => {
   });
 
   it('renders let = []', async () => {
-    const text = await captureSpawnFlowText([
-      createLetNode('l1', 'x', { type: 'empty_list' }),
-    ]);
+    const text = await captureSpawnFlowText([createLetNode('l1', 'x', { type: 'empty_list' })]);
     expect(text).toContain('let x = []');
   });
 
@@ -1482,9 +1484,12 @@ describe('autoAdvanceNodes — renderNodeToDsl via spawn', () => {
 describe('autoAdvanceNodes — if node branching', () => {
   it('enters then-branch when condition is true', async () => {
     const spec = createFlowSpec('test', [
-      createIfNode('i1', 'flag', [createPromptNode('p1', 'then-branch')], [
-        createPromptNode('p2', 'else-branch'),
-      ]),
+      createIfNode(
+        'i1',
+        'flag',
+        [createPromptNode('p1', 'then-branch')],
+        [createPromptNode('p2', 'else-branch')],
+      ),
     ]);
     let state = createSessionState('s1', spec);
     state = { ...state, variables: { flag: true } };
@@ -1495,9 +1500,12 @@ describe('autoAdvanceNodes — if node branching', () => {
 
   it('enters else-branch when condition is false', async () => {
     const spec = createFlowSpec('test', [
-      createIfNode('i1', 'flag', [createPromptNode('p1', 'then-branch')], [
-        createPromptNode('p2', 'else-branch'),
-      ]),
+      createIfNode(
+        'i1',
+        'flag',
+        [createPromptNode('p1', 'then-branch')],
+        [createPromptNode('p2', 'else-branch')],
+      ),
     ]);
     let state = createSessionState('s1', spec);
     state = { ...state, variables: { flag: false } };

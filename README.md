@@ -54,6 +54,18 @@ node bin/cli.mjs install
 
 </details>
 
+## CLI commands
+
+| Command                                | What it does                             |
+| -------------------------------------- | ---------------------------------------- |
+| `npx @45ck/prompt-language`            | Install the plugin (default)             |
+| `npx @45ck/prompt-language status`     | Check installation status                |
+| `npx @45ck/prompt-language uninstall`  | Remove the plugin                        |
+| `npx @45ck/prompt-language init`       | Scaffold a starter flow for your project |
+| `npx @45ck/prompt-language demo`       | Print an annotated example flow          |
+| `npx @45ck/prompt-language statusline` | Configure Claude Code status line        |
+| `npx @45ck/prompt-language watch`      | Launch live TUI flow monitor             |
+
 ## Slash commands
 
 Zero DSL to learn. Type a slash command and walk away:
@@ -218,10 +230,27 @@ Full methodology, hypothesis-by-hypothesis results, and latency data: **[Evaluat
 | `if`/`else`     | Conditional branching                | `if lint_fail ... else ... end`        |
 | `try`/`catch`   | Execute with error recovery          | `try ... catch command_failed ... end` |
 | `foreach`       | Iterate over a list                  | `foreach file in ${files} max 10`      |
+| `break`         | Exit nearest enclosing loop          | `break`                                |
 | `spawn`/`await` | Launch parallel sub-tasks            | `spawn "name" ... end` / `await all`   |
 | `done when:`    | Completion gate (blocks stopping)    | `done when: tests_pass`                |
 
 Full syntax, built-in variables, and gate predicates: **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)**
+
+## Monitoring
+
+### Status line
+
+The plugin configures Claude Code's status line to show flow progress — current node, loop iteration, and gate status — in the footer during execution. This is set up automatically on install.
+
+### Watch mode
+
+For a live TUI view of flow execution:
+
+```bash
+npx @45ck/prompt-language watch
+```
+
+Shows the full flow state updating in real time — useful for watching long-running flows.
 
 ## Learn more
 
@@ -230,6 +259,9 @@ Full syntax, built-in variables, and gate predicates: **[DSL Reference](https://
 - **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)** — complete syntax specification
 - **[Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md)** — debugging stuck flows, known issues
 - **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)** — A/B testing methodology and results
+- **[CLI Reference](https://github.com/45ck/prompt-language/blob/main/docs/cli-reference.md)** — all CLI commands and slash commands
+- **[Use Cases](https://github.com/45ck/prompt-language/blob/main/docs/use-cases.md)** — when the plugin wins, anti-patterns, quick recipes
+- **[Documentation Index](https://github.com/45ck/prompt-language/blob/main/docs/index.md)** — full documentation hub
 
 ## Contributing
 

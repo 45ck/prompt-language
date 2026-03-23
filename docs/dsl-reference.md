@@ -1,6 +1,6 @@
 # DSL Reference
 
-The prompt-language DSL defines control-flow programs using eleven primitives: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try/catch`, `foreach`, `let/var`, `spawn`, and `await`. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
+The prompt-language DSL defines control-flow programs using twelve primitives: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try/catch`, `foreach`, `let/var`, `break`, `spawn`, and `await`. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
 
 ## Program structure
 
@@ -230,6 +230,28 @@ Parameters:
 - body: One or more DSL statements.
 - catchCondition: A resolver variable name. If true after body execution, the catch block runs. Defaults to `command_failed`.
 - catchBody: One or more DSL statements.
+
+### break
+
+Exit the nearest enclosing loop (`while`, `until`, `retry`, `foreach`). Execution advances past the loop's `end`.
+
+```
+break
+```
+
+Example:
+
+```
+while tests_fail max 10
+  prompt: Fix the next failing test.
+  run: npm test
+  if command_succeeded
+    break
+  end
+end
+```
+
+`break` outside a loop is a lint warning (detected by `lintFlow()`). It has no effect when there is no enclosing loop to exit.
 
 ### spawn
 

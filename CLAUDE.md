@@ -121,11 +121,11 @@ Unit tests and CI are necessary but **not sufficient**. Smoke tests are **requir
 ### Automated smoke tests
 
 ```bash
-npm run eval:smoke        # full suite (10 tests, ~4 min)
-npm run eval:smoke:quick  # fast subset without gate test (~2 min)
+npm run eval:smoke        # full suite (26 tests, ~8 min)
+npm run eval:smoke:quick  # fast subset without gate/loop tests (~2 min)
 ```
 
-The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 10 live `claude -p` tests in temp directories:
+The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 26 live `claude -p` tests in temp directories:
 
 - **A: Context file relay** — two prompts, second reads file created by first
 - **B: Context recall** — second prompt recalls a code from the first
@@ -136,7 +136,23 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **G: Let-prompt capture** — `let x = prompt` captures Claude's response into a variable
 - **H: If/else branching** — `if command_succeeded` takes the correct branch
 - **I: Try/catch handling** — `try` body failure triggers `catch` body execution
+- **J: While loop** — `while tests_fail max 3` iterates until condition clears
 - **K: Variable chain** — `let x = run` + `if` + `${x}` interpolation pipeline
+- **L: Retry on failure** — `retry max 3` re-runs body on command failure
+- **M: Gate-only mode** — `done when: file_exists` without a flow block
+- **N: Capture reliability** — `let x = prompt` captures non-empty response
+- **O: Until loop** — `until tests_pass max 3` iterates until condition is true
+- **P: Break exits loop** — `break` inside `while` exits the loop
+- **Q: List append** — `let x = []` + `let x += "val"` builds a list
+- **R: Custom gate** — `gate check: node verify.js` runs custom command
+- **S: Nested foreach** — `foreach` inside `foreach` processes nested lists
+- **T: List accumulation** — `let x += run` inside `foreach` builds list from command output
+- **U: And/or conditions** — `if a and b`, `if a or b` compound conditions
+- **V: Numeric comparison** — `if ${count} > 0` numeric condition evaluation
+- **W: Try/finally** — `try` with `finally` block always executes cleanup
+- **X: Break in nested** — `break` inside nested `if` within loop
+- **Y: Until variable** — `until` with variable-based condition
+- **Z: Multi-var interpolation** — multiple `${var}` references in single prompt
 
 ### When to smoke test
 

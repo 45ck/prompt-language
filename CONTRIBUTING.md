@@ -48,21 +48,22 @@ This project follows domain-driven design with four layers. Dependency flow is s
 ```
 src/
   domain/           Pure types and logic. Zero external dependencies.
-    flow-node.ts      Node types (while, until, retry, if, prompt, run, try, let)
+    flow-node.ts      Node types (prompt, run, while, until, retry, if, try, foreach, spawn, await, break, let)
     flow-spec.ts      FlowSpec, CompletionGate, FlowDefaults
     session-state.ts  SessionState, runtime transitions
-    resolver.ts       Resolver types, built-in resolver names
     interpolate.ts    Variable interpolation and shell-safe substitution
     evaluate-condition.ts  Condition evaluation against variable state
+    list-variable.ts  Pure list variable operations (init, append, length)
     format-error.ts   Safe error-to-string with stack trace preservation
     render-flow.ts    Flow visualization with execution markers
 
   application/      Use cases and port interfaces.
     parse-flow.ts     DSL parser (FlowSpec from text)
     inject-context.ts Node advancement, control-flow evaluation, context injection
+    advance-flow.ts   Node advancement, control-flow, extracted per-node helpers
     evaluate-completion.ts  Gate evaluation with built-in command resolution
     evaluate-stop.ts  Stop hook use case — blocks stop when flow is active
-    ports/            Abstract interfaces for I/O
+    ports/            Abstract interfaces for I/O (state-store, command-runner, process-spawner, capture-reader)
 
   infrastructure/   Adapters implementing ports.
     adapters/         File I/O, command execution, condition evaluation
@@ -150,7 +151,7 @@ npm run test:coverage  # with coverage report
 Unit tests use mocks and in-memory stores. Smoke tests prove the plugin works end-to-end through Claude's real agent loop. They are **mandatory** before any PR.
 
 ```bash
-npm run eval:smoke        # full suite (12 tests, ~4 min)
+npm run eval:smoke        # full suite (26 tests, ~8 min)
 npm run eval:smoke:quick  # fast subset without gate/loop tests (~2 min)
 ```
 

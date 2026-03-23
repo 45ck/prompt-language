@@ -1,4 +1,4 @@
-# How prompt-language works
+# How prompt-language works (internals)
 
 This guide explains the mechanics behind the prompt-language plugin — what Claude actually sees on each turn, how variables persist, why gates can't be fooled, and how to write effective flows. For installation, see the [README](https://github.com/45ck/prompt-language/blob/main/README.md). For syntax details, see the [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md).
 

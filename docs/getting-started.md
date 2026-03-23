@@ -13,6 +13,14 @@ See the plugin work in 2 minutes. You'll create a buggy file, add a gate, and wa
 npx @45ck/prompt-language
 ```
 
+Verify the install:
+
+```bash
+npx @45ck/prompt-language status
+```
+
+You should see `Installed: yes`, `Registered: yes`, `Marketplace: yes`, `Enabled: yes`.
+
 ## Step 2: Create a broken project
 
 Make a directory with a buggy calculator and a test that catches the bug:
@@ -120,6 +128,46 @@ The `retry` loop runs the tests, and if they fail, asks Claude to fix the errors
 4. When Claude tried to stop, the Stop hook checked whether all gates passed. If not, it blocked the stop and injected the next step.
 5. Once all tests passed, the gate let Claude stop.
 
+## Slash commands
+
+The plugin includes ready-made workflows as slash commands. No DSL to write:
+
+| Command         | What it does                                                                     |
+| --------------- | -------------------------------------------------------------------------------- |
+| `/fix-and-test` | Retry loop: fix failing tests, re-run, repeat. Gate: `tests_pass`                |
+| `/tdd`          | Red-green-refactor cycle. Gate: `tests_pass` + `lint_pass`                       |
+| `/refactor`     | Incremental refactoring with test verification. Gate: `tests_pass` + `lint_pass` |
+| `/deploy-check` | Lint, test, build pipeline. Gate: `tests_pass` + `lint_pass` + `file_exists`     |
+
+## Project scaffolding
+
+Set up a new project with the `init` command:
+
+```bash
+npx @45ck/prompt-language init
+```
+
+This creates:
+
+- `.prompt-language/` directory with `.gitignore` for state files
+- `example.flow` tailored to your project (detects `package.json` scripts)
+
+Run the generated flow:
+
+```bash
+claude -p "$(cat example.flow)"
+```
+
+## Live monitoring
+
+Watch your flow execute in real time:
+
+```bash
+npx @45ck/prompt-language watch
+```
+
+The status line (configured automatically on install) also shows flow progress in Claude Code's footer.
+
 ## What to try next
 
 **Gates without a flow** — the simplest and most valuable pattern:
@@ -156,3 +204,5 @@ flow:
 - [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md) — full syntax for all primitives
 - [Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md) — debugging stuck flows, known issues
 - [Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) — 45-hypothesis A/B comparison against vanilla Claude
+- [CLI Reference](https://github.com/45ck/prompt-language/blob/main/docs/cli-reference.md) — all CLI commands
+- [Use Cases](https://github.com/45ck/prompt-language/blob/main/docs/use-cases.md) — when to use the plugin, anti-patterns

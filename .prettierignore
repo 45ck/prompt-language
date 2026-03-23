@@ -4,3 +4,5 @@ reports
 .tsbuildinfo
 node_modules
 .beads
+tmp-cov.mjs
+scripts/eval/comparative-eval-v4.mjs

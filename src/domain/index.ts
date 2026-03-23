@@ -59,3 +59,7 @@ export { flowComplexityScore } from './flow-complexity.js';
 
 export type { LintWarning } from './lint-flow.js';
 export { lintFlow } from './lint-flow.js';
+
+export { renderStatusLine } from './render-status-line.js';
+
+export { colorizeStatusLine } from './colorize-status-line.js';

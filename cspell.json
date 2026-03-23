@@ -58,7 +58,8 @@
     "clippy",
     "staticcheck",
     "spawner",
-    "spawnedchildren"
+    "spawnedchildren",
+    "statusline"
   ],
   "ignorePaths": [
     "dist/**",

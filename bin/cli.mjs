@@ -16,7 +16,7 @@ const PLUGINS_DIR = join(MARKETPLACE_DIR, 'prompt-language');
 const INSTALLED_PLUGINS_PATH = join(CLAUDE_DIR, 'plugins', 'installed_plugins.json');
 const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json');
 
-const DIRS_TO_COPY = ['dist', 'hooks', 'skills', '.claude-plugin'];
+const DIRS_TO_COPY = ['dist', 'hooks', 'skills', '.claude-plugin', 'bin'];
 
 async function readPluginVersion() {
   const raw = await fs.readFile(join(ROOT, '.claude-plugin', 'plugin.json'), 'utf8');
@@ -124,6 +124,9 @@ async function install() {
   console.log('  Registered marketplace in settings.json');
   console.log('  Enabled in settings.json');
 
+  // Auto-configure status line if not already set
+  await configureStatusLine(settings, true);
+
   console.log(`\nprompt-language v${version} installed successfully.\n`);
   console.log('Try it now:');
   console.log('  claude -p "Fix the failing tests. done when: tests_pass"\n');
@@ -167,6 +170,12 @@ async function uninstall() {
     delete settings.extraKnownMarketplaces[MARKETPLACE_NAME];
     changed = true;
   }
+  // Remove status line config if it points to our script
+  if (settings?.statusLine?.command?.includes('prompt-language')) {
+    delete settings.statusLine;
+    changed = true;
+    console.log('  Removed status line config');
+  }
   if (changed) {
     await writeJson(SETTINGS_PATH, settings);
     console.log('  Removed from settings.json');
@@ -202,6 +211,23 @@ async function status() {
   if (!installed || !registered || !enabled || !marketplace) {
     console.log('\nRun "npx @45ck/prompt-language" to install.');
   }
+}
+
+async function configureStatusLine(settings, autoMode = false) {
+  const statuslineScript = join(PLUGINS_DIR, 'bin', 'statusline.mjs').replace(/\\/g, '/');
+  const command = `node "${statuslineScript}"`;
+
+  if (settings?.statusLine) {
+    if (autoMode) {
+      console.log('  Status line already configured (skipping auto-config)');
+      return;
+    }
+  }
+
+  settings = settings ?? {};
+  settings.statusLine = { type: 'command', command };
+  await writeJson(SETTINGS_PATH, settings);
+  console.log('  Configured status line');
 }
 
 // H#81: Generate a starter flow from project context
@@ -315,8 +341,21 @@ switch (command) {
   case 'demo':
     demo();
     break;
+  case 'statusline': {
+    const settings = (await readJsonSafe(SETTINGS_PATH)) ?? {};
+    await configureStatusLine(settings);
+    break;
+  }
+  case 'watch': {
+    const watchScript = join(__dirname, 'watch.mjs');
+    const { execSync } = await import('node:child_process');
+    execSync(`node "${watchScript}"`, { stdio: 'inherit' });
+    break;
+  }
   default:
     console.error(`Unknown command: ${command}`);
-    console.error('Usage: npx @45ck/prompt-language [install|uninstall|status|init|demo]');
+    console.error(
+      'Usage: npx @45ck/prompt-language [install|uninstall|status|init|demo|statusline|watch]',
+    );
     process.exit(1);
 }

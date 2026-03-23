@@ -1,7 +1,11 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "prompt-language",
   "displayName": "Prompt Language",
   "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates.",
+  "owner": {
+    "name": "45ck"
+  },
   "repository": "https://github.com/45ck/prompt-language",
   "homepage": "https://github.com/45ck/prompt-language",
   "keywords": [
@@ -13,5 +17,17 @@
     "loops",
     "retries"
   ],
-  "installInstructions": "npx @45ck/prompt-language"
+  "installInstructions": "npx @45ck/prompt-language",
+  "plugins": [
+    {
+      "name": "prompt-language",
+      "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates.",
+      "version": "0.2.0",
+      "author": {
+        "name": "45ck"
+      },
+      "source": ".",
+      "category": "development"
+    }
+  ]
 }

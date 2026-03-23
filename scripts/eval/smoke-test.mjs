@@ -13,14 +13,15 @@
  *   C: Variable interpolation   D: Gate evaluation (slow)
  *   E: Run auto-execution       F: Foreach iteration
  *   G: Let-prompt capture       H: If/else branching
- *   I: Try/catch handling       K: Variable chain (let-run + if + interpolation)
- *   N: Capture reliability      O: Until loop (slow)
- *   P: Break exits loop         Q: List append
- *   R: Custom gate (slow)       S: Nested foreach (slow)
- *   T: List accumulation (slow) U: And/or conditions
- *   V: Numeric comparison       W: Try/finally
- *   X: Break in nested (slow)   Y: Until variable (slow)
- *   Z: Multi-var interpolation
+ *   I: Try/catch handling       J: While loop (slow)
+ *   K: Variable chain            L: Retry on failure (slow)
+ *   M: Gate-only mode            N: Capture reliability
+ *   O: Until loop (slow)         P: Break exits loop
+ *   Q: List append               R: Custom gate (slow)
+ *   S: Nested foreach (slow)     T: List accumulation (slow)
+ *   U: And/or conditions         V: Numeric comparison
+ *   W: Try/finally               X: Break in nested (slow)
+ *   Y: Until variable (slow)     Z: Multi-var interpolation
  *
  * Usage:
  *   node scripts/eval/smoke-test.mjs          # all tests

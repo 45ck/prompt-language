@@ -263,4 +263,103 @@ describe('renderStatusLine', () => {
     const pipes = line.split(' | ');
     expect(pipes).toHaveLength(2);
   });
+
+  it('completed with no gates has only two parts (no extra pipe)', () => {
+    const line = renderStatusLine(
+      state('Goal', [createPromptNode('p1', 'Do')], [], { status: 'completed' }),
+    );
+    const pipes = line.split(' | ');
+    expect(pipes).toHaveLength(2);
+    expect(pipes[0]).toBe('[PL] Goal');
+    expect(pipes[1]).toBe('Status: completed');
+  });
+
+  it('loop ancestor without nodeProgress entry does not crash', () => {
+    // Retry is an ancestor but has no entry in nodeProgress
+    const line = renderStatusLine(
+      state('Goal', [createRetryNode('retry1', [createRunNode('r1', 'npm test')])], [], {
+        currentNodePath: [0, 0],
+        nodeProgress: {},
+      }),
+    );
+    // No loop progress shown, just the node summary
+    expect(line).toContain('run: npm test');
+    expect(line).not.toContain('retry');
+  });
+
+  it('spawn node in collectAncestors path', () => {
+    // Path goes through spawn → body[0] which is a run node
+    const line = renderStatusLine(
+      state('Goal', [createSpawnNode('s1', 'worker', [createRunNode('r1', 'echo hi')])], [], {
+        currentNodePath: [0, 0],
+      }),
+    );
+    expect(line).toContain('run: echo hi');
+  });
+
+  it('shows retry summary when current node is a retry', () => {
+    const line = renderStatusLine(
+      state('Goal', [createRetryNode('retry1', [createRunNode('r1', 'npm test')])], [], {
+        currentNodePath: [0],
+      }),
+    );
+    expect(line).toContain('retry');
+  });
+
+  it('shows until summary when current node is an until', () => {
+    const line = renderStatusLine(
+      state('Goal', [createUntilNode('u1', 'tests_pass', [createPromptNode('p1', 'Fix')])], [], {
+        currentNodePath: [0],
+      }),
+    );
+    expect(line).toContain('until tests_pass');
+  });
+
+  it('shows while summary when current node is a while', () => {
+    const line = renderStatusLine(
+      state('Goal', [createWhileNode('w1', 'not done', [createPromptNode('p1', 'Fix')])], [], {
+        currentNodePath: [0],
+      }),
+    );
+    expect(line).toContain('while not done');
+  });
+
+  it('shows foreach summary when current node is a foreach', () => {
+    const line = renderStatusLine(
+      state(
+        'Goal',
+        [createForeachNode('f1', 'item', 'a b c', [createPromptNode('p1', 'Do')])],
+        [],
+        { currentNodePath: [0] },
+      ),
+    );
+    expect(line).toContain('foreach item');
+  });
+
+  it('returns advancing when path descends into a leaf node', () => {
+    // Path [0, 0] tries to go deeper into a prompt node (a leaf), triggering resolveNode default
+    const line = renderStatusLine(
+      state('Goal', [createPromptNode('p1', 'Do it')], [], {
+        currentNodePath: [0, 0],
+      }),
+    );
+    expect(line).toContain('advancing');
+  });
+
+  it('resolves node inside try catch body', () => {
+    // try body has 1 node, catch body has 1 node → catch is at index 1
+    const line = renderStatusLine(
+      state(
+        'Goal',
+        [
+          createTryNode('t1', [createRunNode('r1', 'npm test')], 'error', [
+            createPromptNode('p1', 'Fix error'),
+          ]),
+        ],
+        [],
+        { currentNodePath: [0, 1] },
+      ),
+    );
+    expect(line).toContain('prompt: Fix error');
+  });
 });

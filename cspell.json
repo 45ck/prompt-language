@@ -59,7 +59,8 @@
     "staticcheck",
     "spawner",
     "spawnedchildren",
-    "statusline"
+    "statusline",
+    "notanumber"
   ],
   "ignorePaths": [
     "dist/**",

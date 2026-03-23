@@ -26,7 +26,12 @@ export class ShellCommandRunner implements CommandRunner {
     return new Promise((resolve) => {
       exec(
         command,
-        { encoding: 'utf-8', timeout, maxBuffer: 4 * 1024 * 1024 },
+        {
+          encoding: 'utf-8',
+          timeout,
+          maxBuffer: 4 * 1024 * 1024,
+          ...(process.platform === 'win32' && { shell: 'bash' }),
+        },
         (error, stdout, stderr) => {
           if (error) {
             resolve({

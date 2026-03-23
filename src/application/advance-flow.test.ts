@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   resolveCurrentNode,
   advancePath,
@@ -8,7 +8,7 @@ import {
   maybeCompleteFlow,
   MAX_AWAIT_POLLS,
 } from './advance-flow.js';
-import { createSessionState } from '../domain/session-state.js';
+import { createSessionState, updateNodeProgress, updateSpawnedChild } from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
 import {
   createPromptNode,
@@ -25,8 +25,8 @@ import {
   createAwaitNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
+import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner, SpawnInput } from './ports/process-spawner.js';
-import { updateSpawnedChild } from '../domain/session-state.js';
 
 // ── resolveCurrentNode ───────────────────────────────────────────────
 
@@ -1080,5 +1080,627 @@ describe('autoAdvanceNodes — spawn failure (D7)', () => {
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.stringContaining('could not start child process')]),
     );
+  });
+});
+
+// ── truncateOutput (>2000 chars) ────────────────────────────────────
+
+describe('autoAdvanceNodes — truncateOutput', () => {
+  it('truncates stdout longer than 2000 chars', async () => {
+    const longOutput = 'x'.repeat(2500);
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: longOutput, stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createRunNode('r1', 'cmd'),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    const stdout = result.variables['last_stdout'] as string;
+    expect(stdout.length).toBeLessThan(longOutput.length);
+    expect(stdout).toContain('... (truncated)');
+  });
+
+  it('truncates stderr longer than 2000 chars', async () => {
+    const longErr = 'e'.repeat(2500);
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: longErr }),
+    };
+    const spec = createFlowSpec('test', [
+      createRunNode('r1', 'cmd'),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    const stderr = result.variables['last_stderr'] as string;
+    expect(stderr.length).toBeLessThan(longErr.length);
+    expect(stderr).toContain('... (truncated)');
+  });
+});
+
+// ── let x = run (with and without commandRunner) ────────────────────
+
+describe('autoAdvanceNodes — let run', () => {
+  it('stays at path when commandRunner is not provided for let=run', async () => {
+    const letRun = createLetNode('l1', 'result', { type: 'run', command: 'echo hello' });
+    const spec = createFlowSpec('test', [letRun]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBeNull();
+    expect(result.currentNodePath).toEqual([0]);
+  });
+
+  it('executes command and stores stdout for let=run', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'hello world\n', stderr: '' }),
+    };
+    const letRun = createLetNode('l1', 'output', { type: 'run', command: 'echo hello world' });
+    const spec = createFlowSpec('test', [letRun, createPromptNode('p1', 'done')]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
+    expect(result.variables['output']).toBe('hello world');
+    expect(result.variables['command_succeeded']).toBe(true);
+    expect(capturedPrompt).toBe('done');
+  });
+
+  it('jumps to catch when let=run fails inside try', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: 'fail' }),
+    };
+    const letRun = createLetNode('l1', 'x', { type: 'run', command: 'bad-cmd' });
+    const tryNode = createTryNode('t1', [letRun], 'command_failed', [
+      createPromptNode('p1', 'caught'),
+    ]);
+    const spec = createFlowSpec('test', [tryNode]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
+    expect(capturedPrompt).toBe('caught');
+    expect(result.variables['command_failed']).toBe(true);
+  });
+});
+
+// ── let x += (append) ──────────────────────────────────────────────
+
+describe('autoAdvanceNodes — let append', () => {
+  it('let x += "val" appends to list and sets x_length', async () => {
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'items', { type: 'empty_list' }),
+      createLetNode('l2', 'items', { type: 'literal', value: 'alpha' }, true),
+      createLetNode('l3', 'items', { type: 'literal', value: 'beta' }, true),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['items_length']).toBe(2);
+    const items = JSON.parse(result.variables['items'] as string);
+    expect(items).toEqual(['alpha', 'beta']);
+  });
+
+  it('let x = [] sets x_length to 0', async () => {
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'arr', { type: 'empty_list' }),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['arr']).toBe('[]');
+    expect(result.variables['arr_length']).toBe(0);
+  });
+});
+
+// ── let x = prompt (two-phase capture) ──────────────────────────────
+
+describe('autoAdvanceNodes — let prompt capture', () => {
+  it('emits capture meta-prompt on first visit', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const letPrompt = createLetNode('l1', 'answer', { type: 'prompt', text: 'What color?' });
+    const spec = createFlowSpec('test', [letPrompt]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('What color?');
+    expect(capturedPrompt).toContain('prompt-language-capture');
+    expect(result.nodeProgress['l1']?.status).toBe('awaiting_capture');
+    expect(captureReader.clear).toHaveBeenCalledWith('answer');
+  });
+
+  it('reads captured value on second visit', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('blue'),
+      clear: vi.fn(),
+    };
+    const letPrompt = createLetNode('l1', 'answer', { type: 'prompt', text: 'What color?' });
+    const spec = createFlowSpec('test', [letPrompt, createPromptNode('p1', 'Got: ${answer}')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(result.variables['answer']).toBe('blue');
+    expect(capturedPrompt).toBe('Got: blue');
+    expect(captureReader.clear).toHaveBeenCalledWith('answer');
+  });
+
+  it('retries capture when read returns null (not at max)', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const letPrompt = createLetNode('l1', 'answer', { type: 'prompt', text: 'Question' });
+    const spec = createFlowSpec('test', [letPrompt]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('was not detected');
+    expect(result.nodeProgress['l1']?.iteration).toBe(2);
+  });
+
+  it('uses empty string after max capture retries exhausted', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const letPrompt = createLetNode('l1', 'answer', { type: 'prompt', text: 'Question' });
+    const spec = createFlowSpec('test', [letPrompt, createPromptNode('p1', 'next')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 3,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(result.variables['answer']).toBe('');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('failed after 3 attempts')]),
+    );
+    expect(capturedPrompt).toBe('next');
+  });
+
+  it('let prompt without captureReader emits prompt then stalls on retry', async () => {
+    const letPrompt = createLetNode('l1', 'answer', { type: 'prompt', text: 'Ask' });
+    const spec = createFlowSpec('test', [letPrompt]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toContain('Ask');
+  });
+});
+
+// ── run node without commandRunner ──────────────────────────────────
+
+describe('autoAdvanceNodes — run without commandRunner', () => {
+  it('stays at path when no commandRunner provided for run node', async () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'echo hi')]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBeNull();
+    expect(result.currentNodePath).toEqual([0]);
+  });
+});
+
+// ── renderNodeToDsl coverage via spawn body ─────────────────────────
+
+describe('autoAdvanceNodes — renderNodeToDsl via spawn', () => {
+  const captureSpawnFlowText = async (body: import('../domain/flow-node.js').FlowNode[]) => {
+    const spawnedInputs: SpawnInput[] = [];
+    const mockSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 42 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+    const spawn = createSpawnNode('sp1', 'task', body);
+    const spec = createFlowSpec('test', [spawn]);
+    const state = createSessionState('s1', spec);
+    await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    return spawnedInputs[0]!.flowText;
+  };
+
+  it('renders let = prompt', async () => {
+    const text = await captureSpawnFlowText([
+      createLetNode('l1', 'x', { type: 'prompt', text: 'ask something' }),
+    ]);
+    expect(text).toContain('let x = prompt "ask something"');
+  });
+
+  it('renders let = run', async () => {
+    const text = await captureSpawnFlowText([
+      createLetNode('l1', 'x', { type: 'run', command: 'echo hi' }),
+    ]);
+    expect(text).toContain('let x = run "echo hi"');
+  });
+
+  it('renders let = []', async () => {
+    const text = await captureSpawnFlowText([
+      createLetNode('l1', 'x', { type: 'empty_list' }),
+    ]);
+    expect(text).toContain('let x = []');
+  });
+
+  it('renders let += (append)', async () => {
+    const text = await captureSpawnFlowText([
+      createLetNode('l1', 'x', { type: 'literal', value: 'val' }, true),
+    ]);
+    expect(text).toContain('let x += "val"');
+  });
+
+  it('renders break node', async () => {
+    const text = await captureSpawnFlowText([createBreakNode('b1')]);
+    expect(text).toContain('break');
+  });
+
+  it('renders while node', async () => {
+    const text = await captureSpawnFlowText([
+      createWhileNode('w1', 'flag', [createPromptNode('p1', 'work')], 3),
+    ]);
+    expect(text).toContain('while flag max 3');
+    expect(text).toContain('prompt: work');
+    expect(text).toContain('end');
+  });
+
+  it('renders until node', async () => {
+    const text = await captureSpawnFlowText([
+      createUntilNode('u1', 'done', [createPromptNode('p1', 'try')], 5),
+    ]);
+    expect(text).toContain('until done max 5');
+    expect(text).toContain('prompt: try');
+    expect(text).toContain('end');
+  });
+
+  it('renders retry node', async () => {
+    const text = await captureSpawnFlowText([
+      createRetryNode('re1', [createRunNode('r1', 'build')], 3),
+    ]);
+    expect(text).toContain('retry max 3');
+    expect(text).toContain('run: build');
+    expect(text).toContain('end');
+  });
+
+  it('renders if/else node', async () => {
+    const text = await captureSpawnFlowText([
+      createIfNode(
+        'i1',
+        'command_failed',
+        [createPromptNode('p1', 'fix')],
+        [createPromptNode('p2', 'ok')],
+      ),
+    ]);
+    expect(text).toContain('if command_failed');
+    expect(text).toContain('prompt: fix');
+    expect(text).toContain('else');
+    expect(text).toContain('prompt: ok');
+    expect(text).toContain('end');
+  });
+
+  it('renders if without else', async () => {
+    const text = await captureSpawnFlowText([
+      createIfNode('i1', 'flag', [createPromptNode('p1', 'yes')]),
+    ]);
+    expect(text).toContain('if flag');
+    expect(text).not.toContain('else');
+  });
+
+  it('renders try/catch/finally node', async () => {
+    const text = await captureSpawnFlowText([
+      createTryNode(
+        't1',
+        [createRunNode('r1', 'build')],
+        'command_failed',
+        [createPromptNode('p1', 'handle')],
+        [createRunNode('r2', 'cleanup')],
+      ),
+    ]);
+    expect(text).toContain('try');
+    expect(text).toContain('run: build');
+    expect(text).toContain('catch command_failed');
+    expect(text).toContain('prompt: handle');
+    expect(text).toContain('finally');
+    expect(text).toContain('run: cleanup');
+    expect(text).toContain('end');
+  });
+
+  it('renders try without catch or finally', async () => {
+    const text = await captureSpawnFlowText([
+      createTryNode('t1', [createRunNode('r1', 'cmd')], 'command_failed', []),
+    ]);
+    expect(text).toContain('try');
+    expect(text).not.toContain('catch');
+    expect(text).not.toContain('finally');
+  });
+
+  it('renders foreach node', async () => {
+    const text = await captureSpawnFlowText([
+      createForeachNode('fe1', 'item', 'a b c', [createPromptNode('p1', '${item}')]),
+    ]);
+    expect(text).toContain('foreach item in a b c');
+    expect(text).toContain('prompt: ${item}');
+    expect(text).toContain('end');
+  });
+
+  it('renders nested spawn node', async () => {
+    const text = await captureSpawnFlowText([
+      createSpawnNode('sp2', 'inner-task', [createRunNode('r1', 'test')]),
+    ]);
+    expect(text).toContain('spawn "inner-task"');
+    expect(text).toContain('run: test');
+    expect(text).toContain('end');
+  });
+
+  it('renders await all', async () => {
+    const text = await captureSpawnFlowText([createAwaitNode('aw1', 'all')]);
+    expect(text).toContain('await all');
+  });
+
+  it('renders await named', async () => {
+    const text = await captureSpawnFlowText([createAwaitNode('aw1', 'subtask')]);
+    expect(text).toContain('await "subtask"');
+  });
+});
+
+// ── if node branching edge cases ────────────────────────────────────
+
+describe('autoAdvanceNodes — if node branching', () => {
+  it('enters then-branch when condition is true', async () => {
+    const spec = createFlowSpec('test', [
+      createIfNode('i1', 'flag', [createPromptNode('p1', 'then-branch')], [
+        createPromptNode('p2', 'else-branch'),
+      ]),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { flag: true } };
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('then-branch');
+  });
+
+  it('enters else-branch when condition is false', async () => {
+    const spec = createFlowSpec('test', [
+      createIfNode('i1', 'flag', [createPromptNode('p1', 'then-branch')], [
+        createPromptNode('p2', 'else-branch'),
+      ]),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { flag: false } };
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('else-branch');
+  });
+
+  it('skips past if when condition is false and no else-branch', async () => {
+    const spec = createFlowSpec('test', [
+      createIfNode('i1', 'flag', [createPromptNode('p1', 'then-branch')]),
+      createPromptNode('p2', 'after-if'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { flag: false } };
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('after-if');
+  });
+
+  it('returns null capturedPrompt when if condition is unresolvable', async () => {
+    const spec = createFlowSpec('test', [
+      createIfNode('i1', 'unknown_var', [createPromptNode('p1', 'work')]),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBeNull();
+  });
+});
+
+// ── while/until condition loop entry edge cases ─────────────────────
+
+describe('autoAdvanceNodes — condition loop entry edge cases', () => {
+  it('while skips body when condition is false', async () => {
+    const spec = createFlowSpec('test', [
+      createWhileNode('w1', 'flag', [createPromptNode('p1', 'inner')], 3),
+      createPromptNode('p2', 'after-while'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { flag: false } };
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('after-while');
+  });
+
+  it('until skips body when condition is already true', async () => {
+    const spec = createFlowSpec('test', [
+      createUntilNode('u1', 'done', [createPromptNode('p1', 'inner')], 3),
+      createPromptNode('p2', 'after-until'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { done: true } };
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('after-until');
+  });
+});
+
+// ── retry first entry ───────────────────────────────────────────────
+
+describe('autoAdvanceNodes — retry first entry', () => {
+  it('enters retry body on first encounter and sets iteration 1', async () => {
+    const spec = createFlowSpec('test', [
+      createRetryNode('re1', [createPromptNode('p1', 'attempt')], 3),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('attempt');
+    expect(result.nodeProgress['re1']?.iteration).toBe(1);
+    expect(result.nodeProgress['re1']?.status).toBe('running');
+  });
+});
+
+// ── try first entry ─────────────────────────────────────────────────
+
+describe('autoAdvanceNodes — try first entry', () => {
+  it('enters try body on first encounter', async () => {
+    const spec = createFlowSpec('test', [
+      createTryNode('t1', [createPromptNode('p1', 'try-body')], 'command_failed', [
+        createPromptNode('p2', 'catch-body'),
+      ]),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('try-body');
+  });
+});
+
+// ── await all with empty spawnedChildren ────────────────────────────
+
+describe('autoAdvanceNodes — await edge cases', () => {
+  it('await all with no spawned children advances immediately', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'all');
+    const prompt = createPromptNode('p1', 'after');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(capturedPrompt).toBe('after');
+  });
+
+  it('await skips already-completed children without polling', async () => {
+    const pollFn = vi.fn();
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        pollFn();
+        return { status: 'running' };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'all');
+    const prompt = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'child-a', {
+      name: 'child-a',
+      status: 'completed',
+      pid: 1,
+      stateDir: '.prompt-language-child-a',
+    });
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(capturedPrompt).toBe('done');
+    expect(pollFn).not.toHaveBeenCalled();
+  });
+
+  it('await skips already-failed children without polling', async () => {
+    const pollFn = vi.fn();
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        pollFn();
+        return { status: 'running' };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'task-a');
+    const prompt = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'task-a', {
+      name: 'task-a',
+      status: 'failed',
+      pid: 1,
+      stateDir: '.prompt-language-task-a',
+    });
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(capturedPrompt).toBe('done');
+    expect(pollFn).not.toHaveBeenCalled();
+  });
+});
+
+// ── body exhaustion inside spawn ────────────────────────────────────
+
+describe('autoAdvanceNodes — spawn body exhaustion', () => {
+  it('advances past spawn when body exhausted (via handleBodyExhaustion)', async () => {
+    const spec = createFlowSpec('test', [
+      createSpawnNode('sp1', 'task', [createPromptNode('p1', 'inner')]),
+      createPromptNode('p2', 'after'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 1] };
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('after');
+  });
+});
+
+// ── let += run (append from command) ────────────────────────────────
+
+describe('autoAdvanceNodes — let append run', () => {
+  it('appends command output to list variable', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'new-item\n', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'items', { type: 'empty_list' }),
+      createLetNode('l2', 'items', { type: 'run', command: 'echo new-item' }, true),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    expect(result.variables['items_length']).toBe(1);
+    const items = JSON.parse(result.variables['items'] as string);
+    expect(items).toEqual(['new-item']);
   });
 });

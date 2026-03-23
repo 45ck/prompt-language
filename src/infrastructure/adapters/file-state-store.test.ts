@@ -1,10 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { mkdtemp, rm, writeFile, mkdir, open } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FileStateStore } from './file-state-store.js';
 import { createSessionState } from '../../domain/session-state.js';
 import { createFlowSpec } from '../../domain/flow-spec.js';
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...actual,
+    open: vi.fn().mockImplementation(actual.open),
+  };
+});
+
+// Re-import the mocked open for use in tests
+const { open: mockedOpen } = await import('node:fs/promises');
 
 let tempDir: string;
 
@@ -107,5 +118,72 @@ describe('FileStateStore', () => {
     // Verify by loading
     const loaded = await store.loadCurrent();
     expect(loaded).not.toBeNull();
+  });
+
+  it('throws when state file exceeds max size', async () => {
+    const store = new FileStateStore(tempDir);
+    const session = createSessionState('s1', makeSpec());
+    // Create a state with a huge variable to exceed 100KB
+    const bigState = {
+      ...session,
+      variables: { big: 'x'.repeat(200_000) },
+    };
+    await expect(store.save(bigState as typeof session)).rejects.toThrow(/exceeds 102400 bytes/);
+  });
+
+  it('acquires lock after stale lock is force-removed', async () => {
+    const store = new FileStateStore(tempDir);
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+
+    // Pre-create a stale lock file that persists through all retries
+    const lockPath = join(stateDir, 'session-state.lock');
+    const handle = await open(lockPath, 'wx');
+    await handle.close();
+
+    const session = createSessionState('s1', makeSpec());
+    // save() will exhaust 20 retries, force-remove the stale lock, then succeed
+    await store.save(session);
+
+    const loaded = await store.loadCurrent();
+    expect(loaded?.sessionId).toBe('s1');
+  }, 5000); // Lock retry: 20 * 50ms = 1s plus overhead
+
+  it('acquireLock rethrows non-EEXIST errors from open', async () => {
+    const store = new FileStateStore(tempDir);
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+
+    // Make open() throw EACCES (not EEXIST) for the lock file
+    const eacces = Object.assign(new Error('EACCES: permission denied'), { code: 'EACCES' });
+    vi.mocked(mockedOpen).mockRejectedValueOnce(eacces);
+
+    const session = createSessionState('s1', makeSpec());
+    await expect(store.save(session)).rejects.toThrow('EACCES');
+  });
+
+  it('readState rethrows non-ENOENT, non-SyntaxError errors', async () => {
+    const store = new FileStateStore(tempDir);
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+
+    // Make state file a directory so reading it causes EISDIR
+    const statePath = join(stateDir, 'session-state.json');
+    await mkdir(statePath, { recursive: true });
+
+    await expect(store.loadCurrent()).rejects.toThrow();
+  });
+
+  it('clear rethrows non-ENOENT errors', async () => {
+    const store = new FileStateStore(tempDir);
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+
+    // Make state file a non-empty directory so unlink fails with EPERM/EISDIR
+    const statePath = join(stateDir, 'session-state.json');
+    await mkdir(statePath, { recursive: true });
+    await writeFile(join(statePath, 'dummy'), 'x', 'utf-8');
+
+    await expect(store.clear('s1')).rejects.toThrow();
   });
 });

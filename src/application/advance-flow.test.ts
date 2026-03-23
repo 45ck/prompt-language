@@ -6,6 +6,7 @@ import {
   evaluateFlowCondition,
   autoAdvanceNodes,
   maybeCompleteFlow,
+  MAX_AWAIT_POLLS,
 } from './advance-flow.js';
 import { createSessionState } from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
@@ -943,5 +944,141 @@ describe('autoAdvanceNodes — await', () => {
     // Should not advance past await
     expect(capturedPrompt).toBeNull();
     expect(result.currentNodePath).toEqual([0]);
+  });
+
+  it('D6: warns when named await target does not match any spawned child', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'nonexistent');
+    const prompt = createPromptNode('p1', 'after');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+    );
+    expect(capturedPrompt).toBe('after');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('does not match any spawned child')]),
+    );
+  });
+
+  it('D2: times out after MAX_AWAIT_POLLS and marks children failed', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'all');
+    const prompt = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'task-a', {
+      name: 'task-a',
+      status: 'running',
+      pid: 1,
+      stateDir: '.prompt-language-task-a',
+    });
+    // Simulate being at poll count = MAX_AWAIT_POLLS - 1 (next poll triggers timeout)
+    state = {
+      ...state,
+      nodeProgress: {
+        ...state.nodeProgress,
+        aw1: { iteration: MAX_AWAIT_POLLS - 1, maxIterations: MAX_AWAIT_POLLS, status: 'running' },
+      },
+    };
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+    );
+    expect(capturedPrompt).toBe('done');
+    expect(result.spawnedChildren['task-a']?.status).toBe('failed');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('Await timeout')]),
+    );
+  });
+});
+
+// ── D4: renderNodeToDsl escaping ────────────────────────────────────
+
+describe('autoAdvanceNodes — spawn body escaping (D4)', () => {
+  it('escapes backslashes, quotes, and newlines in let literal values', async () => {
+    const spawnedInputs: SpawnInput[] = [];
+    const mockSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 42 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const letNode = createLetNode('l1', 'msg', {
+      type: 'literal',
+      value: 'line1\nline2 "quoted" back\\slash',
+    });
+    const spawn = createSpawnNode('sp1', 'task', [letNode]);
+    const spec = createFlowSpec('test', [spawn]);
+    const state = createSessionState('s1', spec);
+
+    await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(spawnedInputs).toHaveLength(1);
+    const flowText = spawnedInputs[0]!.flowText;
+    // Should contain escaped versions
+    expect(flowText).toContain('\\n');
+    expect(flowText).toContain('\\"');
+    expect(flowText).toContain('\\\\');
+    // Should NOT contain raw newlines inside the let value
+    expect(flowText).not.toMatch(/let msg = ".*\n.*"/);
+  });
+});
+
+// ── D7: pid=0 spawn failure detection ───────────────────────────────
+
+describe('autoAdvanceNodes — spawn failure (D7)', () => {
+  it('marks child as failed and warns when spawn returns pid=0', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 0 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const spawn = createSpawnNode('sp1', 'broken', [createPromptNode('p1', 'inner')]);
+    const prompt = createPromptNode('p2', 'after');
+    const spec = createFlowSpec('test', [spawn, prompt]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+    );
+    expect(capturedPrompt).toBe('after');
+    expect(result.spawnedChildren['broken']?.status).toBe('failed');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('could not start child process')]),
+    );
   });
 });

@@ -74,7 +74,7 @@ export function looksLikeNaturalLanguage(prompt: string): boolean {
 const DSL_REFERENCE = `\
 ## prompt-language DSL reference
 
-Eight primitives plus try/catch and let/var. Blocks use indentation + explicit \`end\`.
+Twelve primitives (prompt, run, let/var, while, until, retry, if/else, try/catch, foreach, break, spawn/await). Blocks use indentation + explicit \`end\`.
 
 ### Structure
 \`\`\`

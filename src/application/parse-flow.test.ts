@@ -820,8 +820,17 @@ flow:
     expect((spec.nodes[2] as AwaitNode).target).toBe('all');
   });
 
-  it('warns on invalid spawn syntax', () => {
-    const spec = parse('Goal: t\n\nflow:\n  spawn without-quotes\n  end');
+  it('parses spawn with bare-word name (D5)', () => {
+    const spec = parse('Goal: t\n\nflow:\n  spawn fix-auth\n    prompt: Fix it\n  end');
+    expect(spec.warnings).toHaveLength(0);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.kind).toBe('spawn');
+    expect(node.name).toBe('fix-auth');
+    expect(node.body).toHaveLength(1);
+  });
+
+  it('warns on spawn with no name at all', () => {
+    const spec = parse('Goal: t\n\nflow:\n  spawn\n  end');
     expect(spec.warnings.length).toBeGreaterThan(0);
   });
 });

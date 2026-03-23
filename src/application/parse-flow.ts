@@ -252,11 +252,12 @@ function parseForeachLine(ctx: ParseContext, line: string, baseIndent: number): 
 
 function parseSpawnBlock(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
   const match = /^spawn\s+"([^"]+)"/i.exec(line) ?? /^spawn\s+'([^']+)'/i.exec(line);
-  if (!match?.[1]) {
+  // D5: Accept bare-word spawn names (consistent with await)
+  const name = match?.[1] ?? line.replace(/^spawn\s+/i, '').trim();
+  if (!name) {
     warn(ctx, `Invalid spawn syntax: "${line}" — expected spawn "name"`);
     return createPromptNode(nextId(ctx), line);
   }
-  const name = match[1];
   const body = parseBlock(ctx, baseIndent);
   consumeEnd(ctx);
   return createSpawnNode(nextId(ctx), name, body);

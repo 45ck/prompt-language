@@ -418,6 +418,22 @@ async function advanceSpawnNode(
     stateDir,
   });
 
+  // D7: Detect failed spawn (pid=0 or undefined) and mark child as failed
+  if (!pid) {
+    let state = updateSpawnedChild(current, node.name, {
+      name: node.name,
+      status: 'failed',
+      pid: 0,
+      stateDir,
+    });
+    state = {
+      ...state,
+      warnings: [...state.warnings, `Spawn "${node.name}" failed: could not start child process.`],
+    };
+    state = advanceNode(state, advancePath(state.currentNodePath));
+    return { state, advanced: true };
+  }
+
   let state = updateSpawnedChild(current, node.name, {
     name: node.name,
     status: 'running',
@@ -451,7 +467,7 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
       let src: string;
       switch (node.source.type) {
         case 'literal':
-          src = `"${node.source.value}"`;
+          src = `"${node.source.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
           break;
         case 'prompt':
           src = `prompt "${node.source.text}"`;
@@ -527,6 +543,7 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
 }
 
 const POLL_WAIT_MS = 2000;
+export const MAX_AWAIT_POLLS = 150; // ~5 min at 2s intervals
 
 /** Advance an await node: poll children and block until target(s) complete. */
 async function advanceAwaitNode(
@@ -542,6 +559,18 @@ async function advanceAwaitNode(
     node.target === 'all'
       ? Object.values(current.spawnedChildren)
       : [current.spawnedChildren[node.target]].filter(Boolean);
+
+  // D6: Warn when named await target doesn't match any spawned child
+  if (node.target !== 'all' && children.length === 0) {
+    const state = {
+      ...current,
+      warnings: [
+        ...current.warnings,
+        `Await target "${node.target}" does not match any spawned child — advancing past await.`,
+      ],
+    };
+    return { state: advanceNode(state, advancePath(state.currentNodePath)), advanced: true };
+  }
 
   let state = current;
   let allDone = true;
@@ -575,7 +604,37 @@ async function advanceAwaitNode(
   }
 
   if (!allDone) {
-    // Children still running — wait and don't advance (stale-state detection will break the loop)
+    // D2: Track poll count via nodeProgress — timeout after MAX_AWAIT_POLLS
+    const progress = state.nodeProgress[node.id];
+    const pollCount = (progress?.iteration ?? 0) + 1;
+
+    if (pollCount >= MAX_AWAIT_POLLS) {
+      for (const child of children) {
+        if (child?.status === 'running') {
+          state = updateSpawnedChild(state, child.name, {
+            name: child.name,
+            pid: child.pid,
+            stateDir: child.stateDir,
+            status: 'failed',
+          });
+        }
+      }
+      state = {
+        ...state,
+        warnings: [
+          ...state.warnings,
+          `Await timeout after ${MAX_AWAIT_POLLS} polls; marked remaining children as failed.`,
+        ],
+      };
+      return { state: advanceNode(state, advancePath(state.currentNodePath)), advanced: true };
+    }
+
+    state = updateNodeProgress(state, node.id, {
+      iteration: pollCount,
+      maxIterations: MAX_AWAIT_POLLS,
+      status: 'running',
+    });
+
     await new Promise((resolve) => setTimeout(resolve, POLL_WAIT_MS));
     return { state, capturedPrompt: null };
   }

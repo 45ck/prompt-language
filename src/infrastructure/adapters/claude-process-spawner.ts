@@ -63,7 +63,10 @@ export class ClaudeProcessSpawner implements ProcessSpawner {
 
   private buildChildPrompt(input: SpawnInput): string {
     const varLines = Object.entries(input.variables)
-      .map(([k, v]) => `  let ${k} = "${String(v).replace(/"/g, '\\"')}"`)
+      .map(
+        ([k, v]) =>
+          `  let ${k} = "${String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`,
+      )
       .join('\n');
 
     const varBlock = varLines ? `\n${varLines}\n` : '';

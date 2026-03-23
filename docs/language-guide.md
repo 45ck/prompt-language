@@ -225,7 +225,6 @@ Both require a `max` iteration limit (default: 5). If the limit is reached, the 
 | `until`   | You want to loop until a condition becomes true.                |
 | `while`   | You want to loop while a condition remains true.                |
 | `foreach` | You have a list of items to process.                            |
-| `spawn`   | You have independent tasks that can run in parallel.            |
 
 ### foreach
 

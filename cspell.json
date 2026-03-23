@@ -60,7 +60,10 @@
     "spawner",
     "spawnedchildren",
     "statusline",
-    "notanumber"
+    "notanumber",
+    "agentic",
+    "checkpointing",
+    "healthcheck"
   ],
   "ignorePaths": [
     "dist/**",

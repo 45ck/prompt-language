@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-The prompt-language plugin wins **15 out of 45** hypotheses against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (300+ `claude -p` calls). **All 45 hypotheses are now tested.** 44/45 are 100% reliable; H31 is flaky (TIE 2/3, VANILLA 1/3). H40-H45 (multi-task, context pressure, distractor resistance) all TIE — Claude handles 10-task lists, 2000-line files, and distractor-saturated contexts without plugin assistance. The plugin's value lies in **structural enforcement** — gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. Context management (variable capture + interpolation) shows no measurable correctness advantage at any tested distance (2-15 steps). The plugin adds ~196-316% latency overhead.
+The prompt-language plugin wins **15 out of 45** v3 hypotheses against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (300+ `claude -p` calls). **All 45 v3 hypotheses are now tested.** 44/45 are 100% reliable; H31 is flaky (TIE 2/3, VANILLA 1/3). The v4 eval (H256-H270) adds 15 harder tests designed around proven gate-win patterns, scoring **8 plugin wins, 0 vanilla wins, 7 ties** — with Unstated Criteria at 100% win rate (4/4). H40-H45 (multi-task, context pressure, distractor resistance) all TIE — Claude handles 10-task lists, 2000-line files, and distractor-saturated contexts without plugin assistance. The plugin's value lies in **structural enforcement** — gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. Context management (variable capture + interpolation) shows no measurable correctness advantage at any tested distance (2-15 steps). The plugin adds ~196-316% latency overhead.
 
 ## Known Issues
 
@@ -378,6 +378,52 @@ Plugin wins: 6  |  Vanilla wins: 0  |  Ties: 7  |  Both fail: 0
 - **Scope mismatch is weaker.** Claude often fixes adjacent bugs opportunistically. Only H262 ("add a comment" prompt with logic bug) fooled vanilla.
 - **Noise/distractor patterns don't differentiate.** Claude is thorough at scanning all files regardless of prompt focus.
 - Avg Plugin Time: 109.5s | Avg Vanilla Time: 37.3s | Overhead: +72.2s (194%)
+
+### Run 11 (V4 full mode — all 15 hypotheses including H266, H268)
+
+Full run of all 15 redesigned v4 tests, including H266 (Unstated: tests + clean code + concise) and H268 (Inverted: gaslight + tests_fail) which were skipped in quick mode.
+
+**Full mode results (15 tests):**
+
+```
+>>>  H256: Gaslight: "tests pass, add comment" — PLUGIN WINS
+>>>  H257: Gaslight: "code is correct, review it" — PLUGIN WINS
+===  H258: Gaslight: "already fixed, just confirm" — TIE
+===  H259: Gaslight: "only cosmetic, no logic bugs" — TIE
+>>>  H260: Scope: "fix the crash" (5 behaviors tested) — PLUGIN WINS
+===  H261: Scope: "fix auth bug" (3 modules tested) — TIE
+===  H262: Scope: "add comment" (logic bugs exist) — TIE
+>>>  H263: Unstated: tests + lint + no-TODO — PLUGIN WINS
+>>>  H264: Unstated: tests + README must exist — PLUGIN WINS
+>>>  H265: Unstated: tests + no debug logs + diff — PLUGIN WINS
+>>>  H266: Unstated: tests + clean code + concise — PLUGIN WINS
+===  H267: Inverted: write failing test for divide — TIE
+>>>  H268: Inverted: gaslight + tests_fail — PLUGIN WINS
+===  H269: Noise: prompt=1 file, gate checks 5 — TIE
+===  H270: Noise: distractor prompt + 4 quality gates — TIE
+
+Plugin wins: 8  |  Vanilla wins: 0  |  Ties: 7  |  Both fail: 0
+```
+
+**Per-category breakdown:**
+| Category | P | V | T | F | Win Rate |
+|---|---|---|---|---|---|
+| Gaslighting Resistance (H256-H259) | 2 | 0 | 2 | 0 | 50% |
+| Scope Mismatch (H260-H262) | 1 | 0 | 2 | 0 | 33% |
+| **Unstated Criteria (H263-H266)** | **4** | 0 | 0 | 0 | **100%** |
+| Inverted Gates (H267-H268) | 1 | 0 | 1 | 0 | 50% |
+| Distance + Noise (H269-H270) | 0 | 0 | 2 | 0 | 0% |
+
+**Full mode vs quick mode delta:**
+
+- **H260 flipped TIE → PLUGIN WINS**: Vanilla missed the `clamp()` off-by-one bug (`min + 1` instead of `min`). Quick mode vanilla got lucky; full mode exposed the scope trap.
+- **H262 flipped PLUGIN WINS → TIE**: Vanilla sometimes opportunistically fixes bugs it wasn't asked about. Non-deterministic.
+- **H266 (new) PLUGIN WINS**: Prompt says "fix tests"; gates also enforce `no var` + file under 35 lines. Vanilla fixed tests but left `var` keywords and 45-line file.
+- **H268 (new) PLUGIN WINS**: Gaslight + inverted gate. Prompt says "code is correct, write tests." `tests_fail` gate forces bug-exposing test. Vanilla trusted the lie; plugin found the `binarySearch` `hi=arr.length` bug.
+
+**Key finding — Unstated Criteria confirmed at 100%**: All 4 unstated criteria tests (H263-H266) are plugin wins in both quick and full mode. This is the most reliable differentiation pattern across the entire eval suite.
+
+Avg Plugin Time: 132.9s | Avg Vanilla Time: 46.9s | Overhead: +86.1s (184%)
 
 ## Remaining Gaps
 

@@ -443,3 +443,45 @@ H45: Distractor Resistance    — TIE 3/3 (100%)
 - **H31 is flaky**: The only hypothesis that produces different verdicts across iterations (VANILLA 1/3, TIE 2/3)
 - **No consistent VANILLA WINS**: Even H31's vanilla win was not reproducible (67% not 100%)
 - **H33 test infrastructure issue**: See [Known Issues](#sequential-auto-advancing-node-hang) for details and workaround.
+
+## Verification Benchmark
+
+### Overview
+
+A/B benchmark testing whether `done when: tests_pass` gates improve bug-fix task completion across 13 fixture projects with deliberate defects. Each fixture contains an `app.js` with one or more bugs and a `test.js` that fails until all bugs are fixed.
+
+- **Mode A (vanilla)**: Claude fixes bugs with a plain-text prompt only
+- **Mode B (gated)**: Same prompt + `done when: tests_pass` gate
+- **Verification**: After each run, the benchmark independently runs `node test.js` to confirm correctness
+- **Repetitions**: 3 (`--repeat 3`), totaling 78 `claude -p` calls
+
+### Results
+
+| Fixture         | Vanilla         | Gated            | Winner   |
+| --------------- | --------------- | ---------------- | -------- |
+| array-bug       | 3/3             | 3/3              | TIE      |
+| async-bug       | 3/3             | 3/3              | TIE      |
+| broken-math     | 3/3             | 3/3              | TIE      |
+| edge-cases      | 2/3             | 3/3              | **GATE** |
+| logic-error     | 3/3             | 3/3              | TIE      |
+| missing-return  | 3/3             | 3/3              | TIE      |
+| multi-bug       | 3/3             | 3/3              | TIE      |
+| null-check      | 3/3             | 3/3              | TIE      |
+| off-by-one      | 3/3             | 3/3              | TIE      |
+| refactor-bug    | 3/3             | 3/3              | TIE      |
+| string-bug      | 3/3             | 3/3              | TIE      |
+| swapped-args    | 3/3             | 3/3              | TIE      |
+| wrong-condition | 3/3             | 3/3              | TIE      |
+| **TOTAL**       | **38/39 (97%)** | **39/39 (100%)** |          |
+
+**Gate wins: 1 | Vanilla wins: 0 | Ties: 12**
+
+### Analysis
+
+The verification benchmark confirms the pattern established by the hypothesis eval: when the prompt honestly describes the task ("fix all bugs, run tests"), vanilla Claude performs nearly identically to gated mode. The gate's value emerges at the margin — catching the one case where vanilla missed an edge case.
+
+**edge-cases (GATE winner)**: The fixture contains string utility functions with subtle bugs including an empty-string infinite loop in `countOccurrences`, off-by-one in `wrap`, and leading/trailing dash stripping in `slugify`. Vanilla Claude fixed the bugs in 2/3 runs but missed one in rep 3. The gate's mechanical `node test.js` verification caught the incomplete fix and forced iteration.
+
+**Why 12/13 TIE**: These fixtures use honest, complete prompts — "fix all bugs so tests pass" with an explicit `Run: node test.js` instruction. The prior eval showed gates only differentiate when the prompt omits, lies about, or narrows the completion criteria. With honest, test-focused prompts, vanilla Claude reliably runs the tests itself and iterates until they pass.
+
+**Verdict**: Gates add a ~3% reliability improvement on honest bug-fix tasks (38/39 → 39/39). The improvement is small because vanilla Claude already runs tests when explicitly told to. The gate's value is as a safety net, not a primary driver — consistent with the hypothesis eval finding that gates matter most when prompts are deceptive or incomplete.

@@ -572,3 +572,66 @@ The verification benchmark confirms the pattern established by the hypothesis ev
 **Why 12/13 TIE**: These fixtures use honest, complete prompts — "fix all bugs so tests pass" with an explicit `Run: node test.js` instruction. The prior eval showed gates only differentiate when the prompt omits, lies about, or narrows the completion criteria. With honest, test-focused prompts, vanilla Claude reliably runs the tests itself and iterates until they pass.
 
 **Verdict**: Gates add a ~3% reliability improvement on honest bug-fix tasks (38/39 → 39/39). The improvement is small because vanilla Claude already runs tests when explicitly told to. The gate's value is as a safety net, not a primary driver — consistent with the hypothesis eval finding that gates matter most when prompts are deceptive or incomplete.
+
+## Phase 3 Verification Benchmark (Domain B: Reliability)
+
+### Overview
+
+Expanded A/B benchmark with 8 new fixtures targeting Phase 3 Domain B (Reliability & Fault Tolerance) hypotheses. Tests retry-context feedback (H296), single-guard patterns (H297), graceful degradation (H300), idempotent fixes (H305), error-chain cascading (H306), stderr-driven retries (H309), capture pipelines (H312), and corrupted-output recovery (H316). All 21 fixtures (13 original + 8 new) run together for cross-fixture consistency.
+
+- **Fixtures**: 21 (13 original + 8 new Phase 3)
+- **Modes**: A (vanilla) vs B (gated with `done when: tests_pass`)
+- **Repetitions**: 3 (`--repeat 3`), totaling 126 `claude -p` calls
+- **Total runtime**: ~90 minutes
+
+### Results
+
+| Fixture          | Vanilla          | Gated           | Winner      |
+| ---------------- | ---------------- | --------------- | ----------- |
+| array-bug        | 3/3              | 3/3             | TIE         |
+| async-bug        | 3/3              | 3/3             | TIE         |
+| broken-math      | 3/3              | 3/3             | TIE         |
+| capture-pipeline | 3/3              | 3/3             | TIE         |
+| corrupt-recovery | 3/3              | 3/3             | TIE         |
+| edge-cases       | 3/3              | 1/3             | **VANILLA** |
+| error-chain      | 3/3              | 3/3             | TIE         |
+| graceful-degrade | 3/3              | 3/3             | TIE         |
+| idempotent-fix   | 3/3              | 3/3             | TIE         |
+| logic-error      | 3/3              | 3/3             | TIE         |
+| missing-return   | 3/3              | 3/3             | TIE         |
+| multi-bug        | 3/3              | 3/3             | TIE         |
+| null-check       | 3/3              | 3/3             | TIE         |
+| off-by-one       | 3/3              | 3/3             | TIE         |
+| refactor-bug     | 3/3              | 3/3             | TIE         |
+| retry-context    | 3/3              | 3/3             | TIE         |
+| single-guard     | 3/3              | 3/3             | TIE         |
+| stderr-retry     | 3/3              | 3/3             | TIE         |
+| string-bug       | 3/3              | 3/3             | TIE         |
+| swapped-args     | 3/3              | 3/3             | TIE         |
+| wrong-condition  | 3/3              | 3/3             | TIE         |
+| **TOTAL**        | **63/63 (100%)** | **61/63 (97%)** |             |
+
+**Gate wins: 0 | Vanilla wins: 1 (edge-cases) | Ties: 20**
+
+### New Phase 3 Fixtures (all TIE)
+
+| Fixture          | Hypothesis | Bug Type                                                           | Difficulty |
+| ---------------- | ---------- | ------------------------------------------------------------------ | ---------- |
+| retry-context    | H296       | `parseConfig` type coercion (String() on all values)               | MED        |
+| single-guard     | H297       | `validateEmail` regex missing dot in local part                    | LOW        |
+| graceful-degrade | H300       | RLE compress/decompress with sorted-index corruption               | MED        |
+| idempotent-fix   | H305       | `formatCurrency` using toFixed(1) instead of toFixed(2)            | LOW        |
+| error-chain      | H306       | TaskRunner: reversed order, missing names, swallowed errors        | MED        |
+| stderr-retry     | H309       | `mergeObjects` swapped recursion args in deep merge                | MED        |
+| capture-pipeline | H312       | `extractFields` skips nested object recursion                      | MED        |
+| corrupt-recovery | H316       | `toJSON` double-escapes, skips last key, broken circular detection | MED        |
+
+### Analysis
+
+**All 8 new fixtures tied** — both vanilla and gated modes achieved 100% pass rates. This confirms the established pattern: on honest bug-fix tasks with explicit test instructions, vanilla Claude is already highly reliable.
+
+**edge-cases flakiness confirmed**: This fixture is now demonstrably non-deterministic. In the W4 benchmark (prior run), it scored vanilla 2/3, gated 3/3 (GATE win). In this run, it flipped to vanilla 3/3, gated 1/3 (VANILLA win). Across both runs combined (6 trials each), vanilla is 5/6 and gated is 4/6 — statistically indistinguishable. The fixture tests subtle string-utility bugs (empty-string infinite loop, off-by-one, slug dash stripping) that sit right at the boundary of Claude's single-pass reliability.
+
+**Phase 3 reliability hypotheses**: The benchmark validates that retry-context, error-chain, capture-pipeline, and similar reliability patterns are solvable by vanilla Claude at 100% on these difficulty levels. To differentiate, Phase 3 fixtures would need harder bugs (multi-file, cross-module, or deceptive prompts) rather than single-file honest-prompt tasks.
+
+**Verdict**: Gates provide no measurable advantage on honest single-file bug fixes regardless of bug complexity (type coercion, deep-merge, RLE corruption, cascading errors). The 97% gated rate vs 100% vanilla is driven entirely by the pre-existing flaky edge-cases fixture. The Phase 3 reliability hypotheses are better tested with deceptive or incomplete prompts where prior work has proven gate differentiation.

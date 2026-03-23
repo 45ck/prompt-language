@@ -8,13 +8,22 @@ import {
   advanceNode,
   updateVariable,
   updateNodeProgress,
+  updateSpawnedChild,
   markCompleted,
   allGatesPassing,
 } from '../domain/session-state.js';
 import type { SessionState } from '../domain/session-state.js';
-import type { FlowNode, LetNode, RunNode, BreakNode } from '../domain/flow-node.js';
+import type {
+  FlowNode,
+  LetNode,
+  RunNode,
+  BreakNode,
+  SpawnNode,
+  AwaitNode,
+} from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
+import type { ProcessSpawner } from './ports/process-spawner.js';
 import { interpolate, shellInterpolate } from '../domain/interpolate.js';
 import { evaluateCondition } from '../domain/evaluate-condition.js';
 import { resolveBuiltinCommand, isInvertedPredicate } from './evaluate-completion.js';
@@ -41,6 +50,7 @@ export function resolveCurrentNode(
     case 'until':
     case 'retry':
     case 'foreach':
+    case 'spawn':
       return resolveCurrentNode(node.body, rest);
     case 'if':
       return resolveCurrentNode([...node.thenBranch, ...node.elseBranch], rest);
@@ -240,6 +250,7 @@ async function handleBodyExhaustion(
 
     case 'if':
     case 'try':
+    case 'spawn':
       return advanceNode(state, advancePath(parentPath));
 
     default:
@@ -383,16 +394,207 @@ async function advanceRunNode(
   return { state, advanced: true };
 }
 
+/** Advance a spawn node: launch child process, record in spawnedChildren, skip body. */
+async function advanceSpawnNode(
+  node: SpawnNode,
+  current: SessionState,
+  processSpawner?: ProcessSpawner,
+): Promise<{ state: SessionState; advanced: true }> {
+  if (!processSpawner) {
+    // No spawner available — skip spawn and advance past it
+    return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+  }
+
+  const stateDir = `.prompt-language-${node.name}`;
+  const flowText = renderSpawnBody(node);
+  const goal = `Sub-task: ${node.name}`;
+  const parentVars: Record<string, string | number | boolean> = { ...current.variables };
+
+  const { pid } = await processSpawner.spawn({
+    name: node.name,
+    goal,
+    flowText: flowText,
+    variables: parentVars,
+    stateDir,
+  });
+
+  let state = updateSpawnedChild(current, node.name, {
+    name: node.name,
+    status: 'running',
+    pid,
+    stateDir,
+  });
+
+  // Skip past the spawn block (don't enter body — child runs it)
+  state = advanceNode(state, advancePath(state.currentNodePath));
+  return { state, advanced: true };
+}
+
+/** Render spawn body nodes back to DSL text for the child process. */
+function renderSpawnBody(node: SpawnNode): string {
+  const lines: string[] = [];
+  for (const child of node.body) {
+    lines.push(...renderNodeToDsl(child, 1));
+  }
+  return lines.join('\n');
+}
+
+function renderNodeToDsl(node: FlowNode, indent: number): string[] {
+  const pad = '  '.repeat(indent);
+  switch (node.kind) {
+    case 'prompt':
+      return [`${pad}prompt: ${node.text}`];
+    case 'run':
+      return [`${pad}run: ${node.command}`];
+    case 'let': {
+      const op = node.append ? '+=' : '=';
+      let src: string;
+      switch (node.source.type) {
+        case 'literal':
+          src = `"${node.source.value}"`;
+          break;
+        case 'prompt':
+          src = `prompt "${node.source.text}"`;
+          break;
+        case 'run':
+          src = `run "${node.source.command}"`;
+          break;
+        case 'empty_list':
+          src = '[]';
+          break;
+      }
+      return [`${pad}let ${node.variableName} ${op} ${src}`];
+    }
+    case 'break':
+      return [`${pad}break`];
+    case 'while':
+      return [
+        `${pad}while ${node.condition} max ${node.maxIterations}`,
+        ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        `${pad}end`,
+      ];
+    case 'until':
+      return [
+        `${pad}until ${node.condition} max ${node.maxIterations}`,
+        ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        `${pad}end`,
+      ];
+    case 'retry':
+      return [
+        `${pad}retry max ${node.maxAttempts}`,
+        ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        `${pad}end`,
+      ];
+    case 'if':
+      return [
+        `${pad}if ${node.condition}`,
+        ...node.thenBranch.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        ...(node.elseBranch.length > 0
+          ? [`${pad}else`, ...node.elseBranch.flatMap((c) => renderNodeToDsl(c, indent + 1))]
+          : []),
+        `${pad}end`,
+      ];
+    case 'try':
+      return [
+        `${pad}try`,
+        ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        ...(node.catchBody.length > 0
+          ? [
+              `${pad}catch ${node.catchCondition}`,
+              ...node.catchBody.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+            ]
+          : []),
+        ...(node.finallyBody.length > 0
+          ? [`${pad}finally`, ...node.finallyBody.flatMap((c) => renderNodeToDsl(c, indent + 1))]
+          : []),
+        `${pad}end`,
+      ];
+    case 'foreach':
+      return [
+        `${pad}foreach ${node.variableName} in ${node.listExpression}`,
+        ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        `${pad}end`,
+      ];
+    case 'spawn':
+      return [
+        `${pad}spawn "${node.name}"`,
+        ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        `${pad}end`,
+      ];
+    case 'await':
+      return [`${pad}await ${node.target === 'all' ? 'all' : `"${node.target}"`}`];
+  }
+}
+
+const POLL_WAIT_MS = 2000;
+
+/** Advance an await node: poll children and block until target(s) complete. */
+async function advanceAwaitNode(
+  node: AwaitNode,
+  current: SessionState,
+  processSpawner?: ProcessSpawner,
+): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
+  if (!processSpawner) {
+    return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+  }
+
+  const children =
+    node.target === 'all'
+      ? Object.values(current.spawnedChildren)
+      : [current.spawnedChildren[node.target]].filter(Boolean);
+
+  let state = current;
+  let allDone = true;
+
+  for (const child of children) {
+    if (child?.status !== 'running') continue;
+
+    const status = await processSpawner.poll(child.stateDir);
+    if (status.status === 'running') {
+      allDone = false;
+      continue;
+    }
+
+    // Import child variables with name-prefix
+    const updatedChild: import('../domain/session-state.js').SpawnedChild = {
+      name: child.name,
+      pid: child.pid,
+      stateDir: child.stateDir,
+      status: status.status,
+      variables: status.variables ?? undefined,
+    };
+    let updated = updateSpawnedChild(state, child.name, updatedChild);
+
+    if (status.variables) {
+      for (const [k, v] of Object.entries(status.variables)) {
+        updated = updateVariable(updated, `${child.name}.${k}`, v);
+      }
+    }
+
+    state = updated;
+  }
+
+  if (!allDone) {
+    // Children still running — wait and don't advance (stale-state detection will break the loop)
+    await new Promise((resolve) => setTimeout(resolve, POLL_WAIT_MS));
+    return { state, capturedPrompt: null };
+  }
+
+  return { state: advanceNode(state, advancePath(state.currentNodePath)), advanced: true };
+}
+
 export async function autoAdvanceNodes(
   state: SessionState,
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
+  processSpawner?: ProcessSpawner,
 ): Promise<AutoAdvanceResult> {
   const MAX_ADVANCES = 100;
   let advances = 0;
   let current = state;
 
   while (advances < MAX_ADVANCES) {
+    const prevPath = current.currentNodePath;
     const node = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
 
     if (!node) {
@@ -403,10 +605,24 @@ export async function autoAdvanceNodes(
       continue;
     }
 
-    const result = await advanceSingleNode(node, current, commandRunner, captureReader);
+    const result = await advanceSingleNode(
+      node,
+      current,
+      commandRunner,
+      captureReader,
+      processSpawner,
+    );
     if ('capturedPrompt' in result) return result;
     current = result.state;
     advances += 1;
+
+    // Stale-state detection: if path didn't change, node failed to advance — bail out
+    if (
+      current.currentNodePath.length === prevPath.length &&
+      current.currentNodePath.every((v, i) => v === prevPath[i])
+    ) {
+      break;
+    }
   }
 
   if (advances >= MAX_ADVANCES) {
@@ -428,6 +644,7 @@ async function advanceSingleNode(
   current: SessionState,
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
+  processSpawner?: ProcessSpawner,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   switch (node.kind) {
     case 'let':
@@ -461,6 +678,10 @@ async function advanceSingleNode(
       return advanceForeachEntry(node, current);
     case 'break':
       return advanceBreakNode(node, current);
+    case 'spawn':
+      return advanceSpawnNode(node, current, processSpawner);
+    case 'await':
+      return advanceAwaitNode(node, current, processSpawner);
   }
 }
 

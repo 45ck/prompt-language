@@ -15,7 +15,9 @@ export type FlowNodeKind =
   | 'try'
   | 'let'
   | 'foreach'
-  | 'break';
+  | 'break'
+  | 'spawn'
+  | 'await';
 
 interface BaseNode {
   readonly kind: FlowNodeKind;
@@ -94,6 +96,19 @@ export interface BreakNode extends BaseNode {
   readonly kind: 'break';
 }
 
+export interface SpawnNode extends BaseNode {
+  readonly kind: 'spawn';
+  readonly name: string;
+  readonly body: readonly FlowNode[];
+}
+
+export type AwaitTarget = string | 'all';
+
+export interface AwaitNode extends BaseNode {
+  readonly kind: 'await';
+  readonly target: AwaitTarget;
+}
+
 export type FlowNode =
   | WhileNode
   | UntilNode
@@ -104,7 +119,9 @@ export type FlowNode =
   | TryNode
   | LetNode
   | ForeachNode
-  | BreakNode;
+  | BreakNode
+  | SpawnNode
+  | AwaitNode;
 
 export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;
@@ -208,4 +225,12 @@ export function createForeachNode(
     maxIterations: maxIterations ?? DEFAULT_MAX_FOREACH,
     body,
   };
+}
+
+export function createSpawnNode(id: string, name: string, body: readonly FlowNode[]): SpawnNode {
+  return { kind: 'spawn', id, name, body };
+}
+
+export function createAwaitNode(id: string, target: AwaitTarget): AwaitNode {
+  return { kind: 'await', id, target };
 }

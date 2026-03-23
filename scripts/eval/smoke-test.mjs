@@ -14,7 +14,13 @@
  *   E: Run auto-execution       F: Foreach iteration
  *   G: Let-prompt capture       H: If/else branching
  *   I: Try/catch handling       K: Variable chain (let-run + if + interpolation)
- *   N: Capture reliability      (tag-based capture)
+ *   N: Capture reliability      O: Until loop (slow)
+ *   P: Break exits loop         Q: List append
+ *   R: Custom gate (slow)       S: Nested foreach (slow)
+ *   T: List accumulation (slow) U: And/or conditions
+ *   V: Numeric comparison       W: Try/finally
+ *   X: Break in nested (slow)   Y: Until variable (slow)
+ *   Z: Multi-var interpolation
  *
  * Usage:
  *   node scripts/eval/smoke-test.mjs          # all tests
@@ -556,6 +562,482 @@ async function testCaptureReliability() {
   });
 }
 
+// ── Test O: Until loop ────────────────────────────────────────────────
+
+async function testUntilLoop() {
+  await withTempDir(async (dir) => {
+    await writeFile(join(dir, 'app.js'), 'process.exit(1)\n');
+
+    const prompt = [
+      'Goal: fix app using until loop',
+      '',
+      'flow:',
+      '  until command_succeeded max 3',
+      '    prompt: Fix app.js so it exits 0 instead of 1',
+      '    run: node app.js',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let exitCode = 1;
+    try {
+      execSync(`node "${join(dir, 'app.js')}"`, { timeout: 5000 });
+      exitCode = 0;
+    } catch {
+      /* still fails */
+    }
+
+    assert(
+      'O: Until loop (command_succeeded)',
+      exitCode === 0,
+      exitCode === 0 ? 'app.js fixed via until loop' : 'app.js still exits non-zero',
+    );
+  });
+}
+
+// ── Test P: Break exits loop early ───────────────────────────────────
+
+async function testBreakNode() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test break',
+      '',
+      'flow:',
+      '  foreach item in "first second third"',
+      '    run: echo ${item} >> items.txt',
+      '    if ${item} == "first"',
+      '      break',
+      '    end',
+      '  end',
+      '  prompt: Confirm items.txt exists and contains only "first".',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'items.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    // Break should exit after first item — only "first" written
+    assert(
+      'P: Break exits loop early',
+      content.includes('first') && !content.includes('second'),
+      content.includes('first') && !content.includes('second')
+        ? 'break exited after first item'
+        : `got: "${content.slice(0, 80)}"`,
+    );
+  });
+}
+
+// ── Test Q: List append ──────────────────────────────────────────────
+
+async function testListAppend() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test list append',
+      '',
+      'flow:',
+      '  let items = []',
+      '  let items += "apple"',
+      '  let items += "banana"',
+      '  let items += "cherry"',
+      '  prompt: Write the value of "${items}" to list-result.txt. Write only the raw variable value.',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'list-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'Q: List append',
+      content.includes('apple') && content.includes('banana') && content.includes('cherry'),
+      content.includes('apple')
+        ? 'list items accumulated correctly'
+        : `got: "${content.slice(0, 80)}"`,
+    );
+  });
+}
+
+// ── Test R: Custom gate ──────────────────────────────────────────────
+
+async function testCustomGate() {
+  await withTempDir(async (dir) => {
+    await writeFile(join(dir, 'app.js'), 'process.exit(1)\n');
+
+    const prompt = [
+      'Goal: fix app with custom gate',
+      '',
+      'flow:',
+      '  prompt: Fix app.js so it exits 0 instead of 1',
+      '  run: node app.js',
+      '',
+      'done when:',
+      '  gate app_works: node app.js',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let exitCode = 1;
+    try {
+      execSync(`node "${join(dir, 'app.js')}"`, { timeout: 5000 });
+      exitCode = 0;
+    } catch {
+      /* still fails */
+    }
+
+    assert(
+      'R: Custom gate',
+      exitCode === 0,
+      exitCode === 0 ? 'app.js fixed via custom gate' : 'app.js still exits non-zero',
+    );
+  });
+}
+
+// ── Test S: Nested foreach ─────────────────────────────────────────────
+
+async function testNestedForeach() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test nested foreach',
+      '',
+      'flow:',
+      '  foreach color in "red blue"',
+      '    foreach size in "small large"',
+      '      run: echo ${color}-${size} >> combos.txt',
+      '    end',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'combos.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    const expected = ['red-small', 'red-large', 'blue-small', 'blue-large'];
+    const found = expected.filter((combo) => content.includes(combo));
+
+    assert(
+      'S: Nested foreach',
+      found.length >= 3,
+      found.length >= 3
+        ? `${found.length}/4 combos found`
+        : `only ${found.length}/4: "${content.slice(0, 80)}"`,
+    );
+  });
+}
+
+// ── Test T: List accumulation in foreach ───────────────────────────────
+
+async function testListAccumulation() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test list accumulation in foreach',
+      '',
+      'flow:',
+      '  let fruits = "apple banana cherry"',
+      '  let results = []',
+      '  foreach item in "${fruits}"',
+      '    let results += run "echo processed-${item}"',
+      '  end',
+      '  run: echo ${results_length} > count.txt',
+      '  run: echo ${results} > accumulated.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let countContent = '';
+    let accContent = '';
+    try {
+      countContent = (await readFile(join(dir, 'count.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      accContent = (await readFile(join(dir, 'accumulated.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    const hasCount = countContent.includes('3');
+    const hasItems =
+      accContent.includes('processed-apple') &&
+      accContent.includes('processed-banana') &&
+      accContent.includes('processed-cherry');
+
+    assert(
+      'T: List accumulation in foreach',
+      hasCount && hasItems,
+      hasCount && hasItems
+        ? 'count=3, all items accumulated'
+        : `count="${countContent}", acc="${accContent.slice(0, 80)}"`,
+    );
+  });
+}
+
+// ── Test U: And/or conditions ─────────────────────────────────────────
+
+async function testAndOrConditions() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test and/or conditions',
+      '',
+      'flow:',
+      '  let a = "yes"',
+      '  let b = "yes"',
+      '  run: node -e "process.exit(0)"',
+      '  if command_succeeded and ${a} == "yes"',
+      '    run: echo and-pass > and-result.txt',
+      '  else',
+      '    run: echo and-fail > and-result.txt',
+      '  end',
+      '  if ${a} == "no" or ${b} == "yes"',
+      '    run: echo or-pass > or-result.txt',
+      '  else',
+      '    run: echo or-fail > or-result.txt',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let andContent = '';
+    let orContent = '';
+    try {
+      andContent = (await readFile(join(dir, 'and-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      orContent = (await readFile(join(dir, 'or-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'U: And/or conditions',
+      andContent.includes('and-pass') && orContent.includes('or-pass'),
+      andContent.includes('and-pass') && orContent.includes('or-pass')
+        ? 'both and/or branches correct'
+        : `and="${andContent}", or="${orContent}"`,
+    );
+  });
+}
+
+// ── Test V: Numeric comparison ────────────────────────────────────────
+
+async function testNumericComparison() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test numeric comparison',
+      '',
+      'flow:',
+      '  let count = run "echo 3"',
+      '  if ${count} < 5',
+      '    run: echo less-than-pass > cmp-result.txt',
+      '  else',
+      '    run: echo less-than-fail > cmp-result.txt',
+      '  end',
+      '  if ${count} >= 3',
+      '    run: echo gte-pass > gte-result.txt',
+      '  else',
+      '    run: echo gte-fail > gte-result.txt',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let cmpContent = '';
+    let gteContent = '';
+    try {
+      cmpContent = (await readFile(join(dir, 'cmp-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      gteContent = (await readFile(join(dir, 'gte-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'V: Numeric comparison',
+      cmpContent.includes('less-than-pass') && gteContent.includes('gte-pass'),
+      cmpContent.includes('less-than-pass') && gteContent.includes('gte-pass')
+        ? 'both comparisons correct'
+        : `cmp="${cmpContent}", gte="${gteContent}"`,
+    );
+  });
+}
+
+// ── Test W: Try/finally ───────────────────────────────────────────────
+
+async function testTryFinally() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test try/finally',
+      '',
+      'flow:',
+      '  try',
+      '    run: node -e "process.exit(1)"',
+      '  catch command_failed',
+      '    run: echo catch-ran > catch-result.txt',
+      '  finally',
+      '    run: echo finally-ran > finally-result.txt',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let catchContent = '';
+    let finallyContent = '';
+    try {
+      catchContent = (await readFile(join(dir, 'catch-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      finallyContent = (await readFile(join(dir, 'finally-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'W: Try/finally',
+      catchContent.includes('catch-ran') && finallyContent.includes('finally-ran'),
+      catchContent.includes('catch-ran') && finallyContent.includes('finally-ran')
+        ? 'catch and finally both executed'
+        : `catch="${catchContent}", finally="${finallyContent}"`,
+    );
+  });
+}
+
+// ── Test X: Break inside if inside foreach ────────────────────────────
+
+async function testBreakInsideIfForeach() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test break inside if inside foreach',
+      '',
+      'flow:',
+      '  foreach item in "one two three four"',
+      '    run: echo ${item} >> visited.txt',
+      '    if ${item} == "two"',
+      '      run: echo stopped-at-two > break-marker.txt',
+      '      break',
+      '    end',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let visitedContent = '';
+    let markerExists = false;
+    try {
+      visitedContent = (await readFile(join(dir, 'visited.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      await readFile(join(dir, 'break-marker.txt'), 'utf-8');
+      markerExists = true;
+    } catch {
+      /* file not created */
+    }
+
+    const hasOne = visitedContent.includes('one');
+    const hasTwo = visitedContent.includes('two');
+    const noThree = !visitedContent.includes('three');
+
+    assert(
+      'X: Break inside if inside foreach',
+      hasOne && hasTwo && noThree && markerExists,
+      hasOne && hasTwo && noThree && markerExists
+        ? 'break stopped at two, marker created'
+        : `visited="${visitedContent.slice(0, 80)}", marker=${markerExists}`,
+    );
+  });
+}
+
+// ── Test Y: Until with variable condition ─────────────────────────────
+
+async function testUntilVariable() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test until with variable condition',
+      '',
+      'flow:',
+      '  let counter = "0"',
+      '  until ${counter} == "3" max 5',
+      '    let counter = run "node -e \\"console.log(Number(${counter}) + 1)\\""',
+      '    run: echo iter-${counter} >> until-log.txt',
+      '  end',
+      '  run: echo final-${counter} > until-final.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let finalContent = '';
+    try {
+      finalContent = (await readFile(join(dir, 'until-final.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'Y: Until with variable condition',
+      finalContent.includes('final-3'),
+      finalContent.includes('final-3')
+        ? 'counter reached 3'
+        : `got: "${finalContent.slice(0, 60)}"`,
+    );
+  });
+}
+
+// ── Test Z: Multi-variable interpolation in run ───────────────────────
+
+async function testMultiVarInterpolation() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test multi-variable interpolation',
+      '',
+      'flow:',
+      '  let host = "localhost"',
+      '  let port = run "echo 8080"',
+      '  let proto = "https"',
+      '  run: echo ${proto}-${host}-${port} > multi-var.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'multi-var.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'Z: Multi-variable interpolation in run',
+      content.includes('https-localhost-8080'),
+      content.includes('https-localhost-8080')
+        ? 'all 3 variables interpolated'
+        : `got: "${content.slice(0, 60)}"`,
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -581,17 +1063,37 @@ async function main() {
   await testTryCatch();
   await testVariableChain();
   await testCaptureReliability();
+  await testAndOrConditions();
+  await testNumericComparison();
+  await testTryFinally();
+  await testMultiVarInterpolation();
 
   if (!QUICK_MODE) {
     await testGateEvaluation();
     await testWhileLoop();
     await testRetryOnFailure();
     await testGateOnlyMode();
+    await testUntilLoop();
+    await testBreakNode();
+    await testListAppend();
+    await testCustomGate();
+    await testNestedForeach();
+    await testListAccumulation();
+    await testBreakInsideIfForeach();
+    await testUntilVariable();
   } else {
     console.log('  SKIP  D: Gate evaluation (--quick mode)');
     console.log('  SKIP  J: While loop (--quick mode)');
     console.log('  SKIP  L: Retry on failure (--quick mode)');
     console.log('  SKIP  M: Gate-only mode (--quick mode)');
+    console.log('  SKIP  O: Until loop (--quick mode)');
+    console.log('  SKIP  P: Break node (--quick mode)');
+    await testListAppend();
+    console.log('  SKIP  R: Custom gate (--quick mode)');
+    console.log('  SKIP  S: Nested foreach (--quick mode)');
+    console.log('  SKIP  T: List accumulation (--quick mode)');
+    console.log('  SKIP  X: Break in nested (--quick mode)');
+    console.log('  SKIP  Y: Until variable (--quick mode)');
   }
 
   console.log(`\n[smoke-test] Summary: ${passed}/${passed + failed} passed`);

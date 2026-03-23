@@ -11,6 +11,7 @@ import { injectContext } from '../../application/inject-context.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-runner.js';
 import { FileCaptureReader } from '../../infrastructure/adapters/file-capture-reader.js';
+import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
 import { formatError } from '../../domain/format-error.js';
 import { readStdin } from './read-stdin.js';
 
@@ -41,6 +42,7 @@ async function main(): Promise<void> {
   const stateStore = new FileStateStore(process.cwd());
   const commandRunner = new ShellCommandRunner();
   const captureReader = new FileCaptureReader(process.cwd());
+  const processSpawner = new ClaudeProcessSpawner(process.cwd());
   const sessionId = randomUUID();
 
   const result = await injectContext(
@@ -48,6 +50,7 @@ async function main(): Promise<void> {
     stateStore,
     commandRunner,
     captureReader,
+    processSpawner,
   );
 
   if (result.prompt !== input.prompt) {

@@ -17,7 +17,10 @@ import {
   createTryNode,
   createLetNode,
   createForeachNode,
+  createSpawnNode,
+  createAwaitNode,
 } from './flow-node.js';
+import { updateSpawnedChild } from './session-state.js';
 
 describe('renderFlow', () => {
   it('renders header with goal and status', () => {
@@ -556,5 +559,47 @@ describe('renderFlow', () => {
     const output = renderFlow(state);
     expect(output).toContain('run: npm test');
     expect(output).not.toContain('timeout');
+  });
+
+  it('renders a spawn block with body', () => {
+    const spawn = createSpawnNode('sp1', 'fix-auth', [
+      createPromptNode('p1', 'Fix auth'),
+      createRunNode('r1', 'npm test'),
+    ]);
+    const spec = createFlowSpec('test', [spawn]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('spawn "fix-auth"');
+    expect(output).toContain('prompt: Fix auth');
+    expect(output).toContain('run: npm test');
+    expect(output).toContain('end');
+  });
+
+  it('renders spawn with child status annotation', () => {
+    const spawn = createSpawnNode('sp1', 'fix-auth', [createPromptNode('p1', 'Fix')]);
+    const spec = createFlowSpec('test', [spawn, createPromptNode('p2', 'next')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [1] };
+    state = updateSpawnedChild(state, 'fix-auth', {
+      name: 'fix-auth',
+      status: 'completed',
+      stateDir: '.prompt-language-fix-auth',
+    });
+    const output = renderFlow(state);
+    expect(output).toContain('spawn "fix-auth"  [completed]');
+  });
+
+  it('renders await all', () => {
+    const spec = createFlowSpec('test', [createAwaitNode('aw1', 'all')]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('await all');
+  });
+
+  it('renders await with specific target', () => {
+    const spec = createFlowSpec('test', [createAwaitNode('aw1', 'fix-auth')]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('await "fix-auth"');
   });
 });

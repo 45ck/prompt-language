@@ -5,12 +5,12 @@
  * If a flow is already active, inject step context into the prompt.
  */
 
-import { createSessionState } from '../domain/session-state.js';
+import { createSessionState, markCancelled } from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
-import type { SessionState } from '../domain/session-state.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
+import type { ProcessSpawner } from './ports/process-spawner.js';
 import { parseFlow, parseGates } from './parse-flow.js';
 import { renderFlow } from '../domain/render-flow.js';
 import { interpolate } from '../domain/interpolate.js';
@@ -151,10 +151,24 @@ Gates are the core value — the agent cannot stop until these hold.
     run: npx tsc --noEmit \${file}
   end
 
+**spawn/await** — Launch parallel sub-agents.
+  spawn "fix-auth"
+    prompt: Fix the auth bug
+    run: npm test -- --grep auth
+  end
+
+  spawn "add-cache"
+    prompt: Add caching
+  end
+
+  await all
+
 ### Variable interpolation
 Use \`\${varName}\` in prompt and run text to substitute stored values.
   let name = "auth module"
   prompt: Refactor the \${name} for clarity.
+
+After \`await\`, child variables are available as \`\${child-name.varName}\`.
 
 ### Variables (auto-set after each \`run:\` and \`let x = run\`)
 last_exit_code, command_failed, command_succeeded,
@@ -237,6 +251,7 @@ export async function injectContext(
   stateStore: StateStore,
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
+  processSpawner?: ProcessSpawner,
 ): Promise<InjectContextOutput> {
   const existing = await stateStore.loadCurrent();
 
@@ -245,8 +260,7 @@ export async function injectContext(
     const lower = input.prompt.trim().toLowerCase();
     const ABORT_PHRASES = ['abort flow', 'cancel flow', 'stop flow', 'reset flow'];
     if (ABORT_PHRASES.some((phrase) => lower.includes(phrase))) {
-      const cancelled: SessionState = { ...existing, status: 'cancelled' };
-      await stateStore.save(cancelled);
+      await stateStore.save(markCancelled(existing));
       return { prompt: '[prompt-language] Flow cancelled by user.' };
     }
   }
@@ -256,6 +270,7 @@ export async function injectContext(
       existing,
       commandRunner,
       captureReader,
+      processSpawner,
     );
     const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
     if (toSave !== existing) {
@@ -279,6 +294,7 @@ export async function injectContext(
       session,
       commandRunner,
       captureReader,
+      processSpawner,
     );
     const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
     await stateStore.save(toSave);

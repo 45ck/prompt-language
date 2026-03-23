@@ -61,6 +61,13 @@ function lintNodes(nodes: readonly FlowNode[], insideLoop: boolean, warnings: Li
           warnings.push({ nodeId: node.id, message: 'Break outside of loop' });
         }
         break;
+      case 'spawn':
+        if (node.body.length === 0) {
+          warnings.push({ nodeId: node.id, message: 'Empty spawn body' });
+        }
+        lintNodes(node.body, false, warnings);
+        break;
+      case 'await':
       case 'prompt':
       case 'run':
       case 'let':

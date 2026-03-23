@@ -5,7 +5,7 @@
  * the current execution position, loop progress, gate results, and variables.
  */
 
-import type { FlowNode, ForeachNode, IfNode, LetNode, TryNode } from './flow-node.js';
+import type { FlowNode, ForeachNode, IfNode, LetNode, SpawnNode, TryNode } from './flow-node.js';
 import type { SessionState } from './session-state.js';
 
 function arraysEqual(a: readonly number[], b: readonly number[]): boolean {
@@ -99,6 +99,12 @@ function renderNode(
       return renderForeachNode(node, state, path, indentLevel, prefix, suffix);
     case 'break':
       return [`${prefix}${indent}break${suffix}`];
+    case 'spawn':
+      return renderSpawnNode(node, state, path, indentLevel, prefix, suffix);
+    case 'await':
+      return [
+        `${prefix}${indent}await ${node.target === 'all' ? 'all' : `"${node.target}"`}${suffix}`,
+      ];
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -256,6 +262,28 @@ function renderForeachNode(
   for (let i = 0; i < node.body.length; i++) {
     const child = node.body[i]!;
     lines.push(...renderNode(child, state, [...path, i], indentLevel + 1));
+  }
+
+  lines.push(`  ${indent}end`);
+  return lines;
+}
+
+function renderSpawnNode(
+  node: SpawnNode,
+  state: SessionState,
+  path: readonly number[],
+  indentLevel: number,
+  prefix: string,
+  suffix: string,
+): string[] {
+  const indent = '  '.repeat(indentLevel);
+  const child = state.spawnedChildren[node.name];
+  const statusTag = child ? `  [${child.status}]` : '';
+  const lines: string[] = [`${prefix}${indent}spawn "${node.name}"${statusTag}${suffix}`];
+
+  for (let i = 0; i < node.body.length; i++) {
+    const bodyNode = node.body[i]!;
+    lines.push(...renderNode(bodyNode, state, [...path, i], indentLevel + 1));
   }
 
   lines.push(`  ${indent}end`);

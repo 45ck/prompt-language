@@ -7,8 +7,17 @@
 
 import type { FlowSpec } from './flow-spec.js';
 
-// H#60: Add 'paused' status for flow pause/resume
-export type FlowStatus = 'active' | 'paused' | 'completed' | 'failed' | 'cancelled';
+export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
+
+export type SpawnedChildStatus = 'running' | 'completed' | 'failed';
+
+export interface SpawnedChild {
+  readonly name: string;
+  readonly status: SpawnedChildStatus;
+  readonly pid?: number | undefined;
+  readonly stateDir: string;
+  readonly variables?: Readonly<Record<string, string>> | undefined;
+}
 
 export interface NodeProgress {
   readonly iteration: number;
@@ -35,6 +44,7 @@ export interface SessionState {
   readonly gateDiagnostics: Readonly<Record<string, GateEvalResult>>;
   readonly status: FlowStatus;
   readonly warnings: readonly string[];
+  readonly spawnedChildren: Readonly<Record<string, SpawnedChild>>;
 }
 
 export function createSessionState(sessionId: string, flowSpec: FlowSpec): SessionState {
@@ -49,16 +59,8 @@ export function createSessionState(sessionId: string, flowSpec: FlowSpec): Sessi
     gateDiagnostics: {},
     status: 'active',
     warnings: [...flowSpec.warnings],
+    spawnedChildren: {},
   };
-}
-
-// H#60: Pause/resume transitions
-export function pauseFlow(state: SessionState): SessionState {
-  return { ...state, status: 'paused' };
-}
-
-export function resumeFlow(state: SessionState): SessionState {
-  return { ...state, status: 'active' };
 }
 
 export function advanceNode(state: SessionState, newPath: readonly number[]): SessionState {
@@ -109,8 +111,27 @@ export function updateGateDiagnostic(
   };
 }
 
+export function updateSpawnedChild(
+  state: SessionState,
+  name: string,
+  child: SpawnedChild,
+): SessionState {
+  return {
+    ...state,
+    spawnedChildren: { ...state.spawnedChildren, [name]: child },
+  };
+}
+
 export function markCompleted(state: SessionState): SessionState {
   return { ...state, status: 'completed' };
+}
+
+export function markFailed(state: SessionState): SessionState {
+  return { ...state, status: 'failed' };
+}
+
+export function markCancelled(state: SessionState): SessionState {
+  return { ...state, status: 'cancelled' };
 }
 
 export function isFlowComplete(state: SessionState): boolean {

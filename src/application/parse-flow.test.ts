@@ -11,6 +11,8 @@ import type {
   TryNode,
   LetNode,
   ForeachNode,
+  SpawnNode,
+  AwaitNode,
 } from '../domain/flow-node.js';
 
 function parse(dsl: string): FlowSpec {
@@ -771,5 +773,79 @@ describe('parseGates — standalone (D3, D10)', () => {
     expect(gates).toHaveLength(1);
     expect(gates[0]!.predicate).toBe('build_ok');
     expect(gates[0]!.command).toBe('npm run build');
+  });
+});
+
+describe('parseFlow — spawn blocks', () => {
+  it('parses a spawn block with double-quoted name', () => {
+    const spec = parse(
+      'Goal: test\n\nflow:\n  spawn "fix-auth"\n    prompt: Fix the auth bug\n    run: npm test\n  end',
+    );
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.kind).toBe('spawn');
+    expect(node.name).toBe('fix-auth');
+    expect(node.body).toHaveLength(2);
+    expect((node.body[0] as PromptNode).kind).toBe('prompt');
+    expect((node.body[1] as RunNode).kind).toBe('run');
+  });
+
+  it('parses a spawn block with single-quoted name', () => {
+    const spec = parse("Goal: t\n\nflow:\n  spawn 'cache'\n    prompt: Add cache\n  end");
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.kind).toBe('spawn');
+    expect(node.name).toBe('cache');
+  });
+
+  it('parses multiple spawn blocks followed by await', () => {
+    const dsl = `Goal: parallel work
+
+flow:
+  spawn "task-a"
+    prompt: Do task A
+  end
+
+  spawn "task-b"
+    prompt: Do task B
+  end
+
+  await all`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(3);
+    expect((spec.nodes[0] as SpawnNode).kind).toBe('spawn');
+    expect((spec.nodes[0] as SpawnNode).name).toBe('task-a');
+    expect((spec.nodes[1] as SpawnNode).kind).toBe('spawn');
+    expect((spec.nodes[1] as SpawnNode).name).toBe('task-b');
+    expect((spec.nodes[2] as AwaitNode).kind).toBe('await');
+    expect((spec.nodes[2] as AwaitNode).target).toBe('all');
+  });
+
+  it('warns on invalid spawn syntax', () => {
+    const spec = parse('Goal: t\n\nflow:\n  spawn without-quotes\n  end');
+    expect(spec.warnings.length).toBeGreaterThan(0);
+  });
+});
+
+describe('parseFlow — await nodes', () => {
+  it('parses await all', () => {
+    const spec = parse('Goal: t\n\nflow:\n  await all');
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as AwaitNode;
+    expect(node.kind).toBe('await');
+    expect(node.target).toBe('all');
+  });
+
+  it('parses await with quoted target name', () => {
+    const spec = parse('Goal: t\n\nflow:\n  await "fix-auth"');
+    const node = spec.nodes[0] as AwaitNode;
+    expect(node.kind).toBe('await');
+    expect(node.target).toBe('fix-auth');
+  });
+
+  it('parses await with bare word target', () => {
+    const spec = parse('Goal: t\n\nflow:\n  await fix-auth');
+    const node = spec.nodes[0] as AwaitNode;
+    expect(node.kind).toBe('await');
+    expect(node.target).toBe('fix-auth');
   });
 });

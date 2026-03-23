@@ -12,6 +12,9 @@ export type {
   LetSource,
   ForeachNode,
   BreakNode,
+  SpawnNode,
+  AwaitNode,
+  AwaitTarget,
 } from './flow-node.js';
 export {
   createWhileNode,
@@ -24,35 +27,27 @@ export {
   createLetNode,
   createForeachNode,
   createBreakNode,
+  createSpawnNode,
+  createAwaitNode,
 } from './flow-node.js';
 
 export type { FlowSpec, CompletionGate, FlowDefaults } from './flow-spec.js';
 export { createFlowSpec, createCompletionGate } from './flow-spec.js';
 
-export type { SessionState, NodeProgress, FlowStatus } from './session-state.js';
+export type { SessionState, NodeProgress, FlowStatus, SpawnedChild } from './session-state.js';
 export {
   createSessionState,
   advanceNode,
   updateVariable,
   updateNodeProgress,
   updateGateResult,
+  updateSpawnedChild,
   markCompleted,
+  markFailed,
+  markCancelled,
   isFlowComplete,
   allGatesPassing,
 } from './session-state.js';
-
-export type {
-  Resolver,
-  ResolverSource,
-  ResolvedVariable,
-  BuiltinResolverName,
-} from './resolver.js';
-export {
-  BUILTIN_RESOLVERS,
-  isBuiltinResolver,
-  createResolver,
-  createResolvedVariable,
-} from './resolver.js';
 
 export { renderFlow } from './render-flow.js';
 

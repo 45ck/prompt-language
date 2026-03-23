@@ -20,8 +20,12 @@ import {
   createLetNode,
   createForeachNode,
   createBreakNode,
+  createSpawnNode,
+  createAwaitNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
+import type { ProcessSpawner, SpawnInput } from './ports/process-spawner.js';
+import { updateSpawnedChild } from '../domain/session-state.js';
 
 // ── resolveCurrentNode ───────────────────────────────────────────────
 
@@ -532,6 +536,75 @@ describe('maybeCompleteFlow', () => {
   });
 });
 
+// ── autoAdvanceNodes — sequential let regression (P0) ────────────────
+
+describe('autoAdvanceNodes — sequential auto-advance', () => {
+  it('terminates normally with 12+ sequential let nodes', async () => {
+    const nodes = Array.from({ length: 15 }, (_, i) =>
+      createLetNode(`l${i}`, `v${i}`, { type: 'literal', value: `val-${i}` }),
+    );
+    const spec = createFlowSpec('test', nodes);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+
+    // All 15 variables should be set
+    for (let i = 0; i < 15; i++) {
+      expect(result.variables[`v${i}`]).toBe(`val-${i}`);
+    }
+    // Path should be past all nodes
+    expect(result.currentNodePath).toEqual([15]);
+    // No MAX_ADVANCES warning
+    expect(result.warnings).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('MAX_ADVANCES')]),
+    );
+    // No captured prompt (all auto-advancing)
+    expect(capturedPrompt).toBeNull();
+  });
+
+  it('processes mixed let + run nodes sequentially', async () => {
+    const commands: string[] = [];
+    const runner: CommandRunner = {
+      run: async (cmd: string) => {
+        commands.push(cmd);
+        return { exitCode: 0, stdout: `out-${cmd}`, stderr: '' };
+      },
+    };
+    const nodes = [
+      createLetNode('l1', 'a', { type: 'literal', value: 'hello' }),
+      createLetNode('l2', 'b', { type: 'literal', value: 'world' }),
+      createRunNode('r1', 'cmd1'),
+      createLetNode('l3', 'c', { type: 'literal', value: 'foo' }),
+      createRunNode('r2', 'cmd2'),
+      createLetNode('l4', 'd', { type: 'literal', value: 'bar' }),
+      createPromptNode('p1', 'Done: ${a} ${b} ${c} ${d}'),
+    ];
+    const spec = createFlowSpec('test', nodes);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
+    expect(result.variables['a']).toBe('hello');
+    expect(result.variables['b']).toBe('world');
+    expect(result.variables['c']).toBe('foo');
+    expect(result.variables['d']).toBe('bar');
+    expect(commands).toEqual(['cmd1', 'cmd2']);
+    expect(capturedPrompt).toBe('Done: hello world foo bar');
+  });
+
+  it('detects stale state and breaks out', async () => {
+    // A while node with unresolvable condition returns without advancing.
+    // The stale-state check should break the loop immediately.
+    const whileNode = createWhileNode('w1', 'unknown_condition', [createPromptNode('p1', 'inner')]);
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBeNull();
+    // Path should still be at [0] — stale state detected
+    expect(result.currentNodePath).toEqual([0]);
+  });
+});
+
 // ── autoAdvanceNodes — MAX_ADVANCES safety ───────────────────────────
 
 describe('autoAdvanceNodes — safety limits', () => {
@@ -710,5 +783,165 @@ describe('autoAdvanceNodes — timeout propagation', () => {
 
     expect(receivedOptions).toHaveLength(1);
     expect(receivedOptions[0]!.timeoutMs).toBeUndefined();
+  });
+});
+
+// ── spawn/await nodes ──────────────────────────────────────────────
+
+describe('resolveCurrentNode — spawn', () => {
+  it('resolves child inside spawn body', () => {
+    const spawn = createSpawnNode('sp1', 'task', [
+      createPromptNode('p1', 'inner'),
+      createRunNode('r1', 'test'),
+    ]);
+    const result = resolveCurrentNode([spawn], [0, 1]);
+    expect(result?.kind).toBe('run');
+  });
+});
+
+describe('autoAdvanceNodes — spawn', () => {
+  it('skips spawn node when no processSpawner is provided', async () => {
+    const spawn = createSpawnNode('sp1', 'task', [createPromptNode('p1', 'inner')]);
+    const prompt = createPromptNode('p2', 'after spawn');
+    const spec = createFlowSpec('test', [spawn, prompt]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('after spawn');
+  });
+
+  it('records spawned child and advances past spawn when spawner provided', async () => {
+    const spawnedInputs: SpawnInput[] = [];
+    const mockSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 42 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const spawn = createSpawnNode('sp1', 'fix-auth', [createRunNode('r1', 'npm test')]);
+    const prompt = createPromptNode('p2', 'after spawn');
+    const spec = createFlowSpec('test', [spawn, prompt]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+    );
+    expect(capturedPrompt).toBe('after spawn');
+    expect(result.spawnedChildren['fix-auth']).toBeDefined();
+    expect(result.spawnedChildren['fix-auth']?.status).toBe('running');
+    expect(result.spawnedChildren['fix-auth']?.pid).toBe(42);
+    expect(spawnedInputs).toHaveLength(1);
+    expect(spawnedInputs[0]!.name).toBe('fix-auth');
+  });
+});
+
+describe('autoAdvanceNodes — await', () => {
+  it('skips await when no processSpawner is provided', async () => {
+    const awaitNode = createAwaitNode('aw1', 'all');
+    const prompt = createPromptNode('p1', 'after await');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('after await');
+  });
+
+  it('advances past await when all children completed', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return { status: 'completed', variables: { result: 'ok' } };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'all');
+    const prompt = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'fix-auth', {
+      name: 'fix-auth',
+      status: 'running',
+      pid: 1,
+      stateDir: '.prompt-language-fix-auth',
+    });
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+    );
+    expect(capturedPrompt).toBe('done');
+    expect(result.spawnedChildren['fix-auth']?.status).toBe('completed');
+    expect(result.variables['fix-auth.result']).toBe('ok');
+  });
+
+  it('imports child variables with name prefix after await', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return {
+          status: 'completed',
+          variables: { last_exit_code: '0', last_stdout: 'hello' },
+        };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'task-a');
+    const prompt = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'task-a', {
+      name: 'task-a',
+      status: 'running',
+      pid: 10,
+      stateDir: '.prompt-language-task-a',
+    });
+
+    const { state: result } = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(result.variables['task-a.last_exit_code']).toBe('0');
+    expect(result.variables['task-a.last_stdout']).toBe('hello');
+  });
+
+  it('does not advance when children are still running', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'all');
+    const spec = createFlowSpec('test', [awaitNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'task-a', {
+      name: 'task-a',
+      status: 'running',
+      pid: 1,
+      stateDir: '.prompt-language-task-a',
+    });
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+    );
+    // Should not advance past await
+    expect(capturedPrompt).toBeNull();
+    expect(result.currentNodePath).toEqual([0]);
   });
 });

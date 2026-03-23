@@ -1,0 +1,73 @@
+/**
+ * ClaudeProcessSpawner — spawns child `claude -p` processes for spawn nodes.
+ *
+ * Each child gets an isolated state directory (.prompt-language-{name}/)
+ * and runs as a separate Claude session with its own flow definition.
+ */
+
+import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import type {
+  ProcessSpawner,
+  SpawnInput,
+  SpawnResult,
+  ChildStatus,
+} from '../../application/ports/process-spawner.js';
+
+export class ClaudeProcessSpawner implements ProcessSpawner {
+  private readonly cwd: string;
+
+  constructor(cwd?: string) {
+    this.cwd = cwd ?? process.cwd();
+  }
+
+  async spawn(input: SpawnInput): Promise<SpawnResult> {
+    const prompt = this.buildChildPrompt(input);
+
+    const child = spawn('claude', ['-p', '--dangerously-skip-permissions', prompt], {
+      cwd: this.cwd,
+      stdio: 'ignore',
+      detached: true,
+      env: {
+        ...process.env,
+        PROMPT_LANGUAGE_STATE_DIR: input.stateDir,
+      },
+    });
+
+    child.unref();
+
+    const pid = child.pid ?? 0;
+    return { pid };
+  }
+
+  async poll(stateDir: string): Promise<ChildStatus> {
+    const statePath = join(stateDir, 'session-state.json');
+    try {
+      const raw = await readFile(statePath, 'utf-8');
+      const state = JSON.parse(raw) as { status?: string; variables?: Record<string, string> };
+      const vars = state.variables ?? undefined;
+
+      if (state.status === 'completed') {
+        return { status: 'completed', variables: vars };
+      }
+      if (state.status === 'failed' || state.status === 'cancelled') {
+        return { status: 'failed', variables: vars };
+      }
+      return { status: 'running' };
+    } catch {
+      // State file doesn't exist yet or is unreadable — child still starting
+      return { status: 'running' };
+    }
+  }
+
+  private buildChildPrompt(input: SpawnInput): string {
+    const varLines = Object.entries(input.variables)
+      .map(([k, v]) => `  let ${k} = "${String(v).replace(/"/g, '\\"')}"`)
+      .join('\n');
+
+    const varBlock = varLines ? `\n${varLines}\n` : '';
+
+    return `Goal: ${input.goal}\n\nflow:${varBlock}\n${input.flowText}`;
+  }
+}

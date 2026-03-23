@@ -18,6 +18,8 @@ import {
   createLetNode,
   createForeachNode,
   createBreakNode,
+  createSpawnNode,
+  createAwaitNode,
   DEFAULT_MAX_ITERATIONS,
 } from '../domain/flow-node.js';
 import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
@@ -248,6 +250,36 @@ function parseForeachLine(ctx: ParseContext, line: string, baseIndent: number): 
   return createForeachNode(nextId(ctx), variableName, listExpression, body, max);
 }
 
+function parseSpawnBlock(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
+  const match = /^spawn\s+"([^"]+)"/i.exec(line) ?? /^spawn\s+'([^']+)'/i.exec(line);
+  if (!match?.[1]) {
+    warn(ctx, `Invalid spawn syntax: "${line}" — expected spawn "name"`);
+    return createPromptNode(nextId(ctx), line);
+  }
+  const name = match[1];
+  const body = parseBlock(ctx, baseIndent);
+  consumeEnd(ctx);
+  return createSpawnNode(nextId(ctx), name, body);
+}
+
+function parseAwaitLine(ctx: ParseContext, line: string): FlowNode {
+  const match = /^await\s+(.+)/i.exec(line);
+  if (!match?.[1]) {
+    warn(ctx, `Invalid await syntax: "${line}" — expected await all or await "name"`);
+    return createPromptNode(nextId(ctx), line);
+  }
+  const target = match[1].trim().toLowerCase();
+  if (target === 'all') {
+    return createAwaitNode(nextId(ctx), 'all');
+  }
+  const nameMatch = /^"([^"]+)"$/.exec(match[1].trim()) ?? /^'([^']+)'$/.exec(match[1].trim());
+  if (nameMatch?.[1]) {
+    return createAwaitNode(nextId(ctx), nameMatch[1]);
+  }
+  // Bare word target
+  return createAwaitNode(nextId(ctx), match[1].trim());
+}
+
 function consumeEnd(ctx: ParseContext): void {
   if (ctx.pos < ctx.lines.length) {
     const peekLine = ctx.lines[ctx.pos];
@@ -331,6 +363,12 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   }
   if (lower === 'break') {
     return createBreakNode(nextId(ctx));
+  }
+  if (lower.startsWith('spawn ')) {
+    return parseSpawnBlock(ctx, trimmed, indent);
+  }
+  if (lower.startsWith('await ') || lower === 'await') {
+    return parseAwaitLine(ctx, trimmed);
   }
   warn(ctx, `Unknown keyword "${trimmed}" — treating as prompt`);
   return createPromptNode(nextId(ctx), trimmed);

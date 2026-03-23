@@ -1,0 +1,1 @@
+Fix all bugs in app.js so every test passes. There are multiple bugs across different functions. Run: node test.js

@@ -9,6 +9,8 @@ import {
   createTryNode,
   createLetNode,
   createForeachNode,
+  createSpawnNode,
+  createAwaitNode,
 } from './flow-node.js';
 
 describe('createWhileNode', () => {
@@ -210,5 +212,44 @@ describe('createForeachNode', () => {
     const child = createRunNode('r1', 'lint ${file}');
     const node = createForeachNode('fe3', 'file', '${files}', [child]);
     expect(node.body).toEqual([child]);
+  });
+});
+
+describe('createSpawnNode', () => {
+  it('creates a spawn node with name and body', () => {
+    const body = [createPromptNode('p1', 'fix bug'), createRunNode('r1', 'npm test')];
+    const node = createSpawnNode('sp1', 'fix-auth', body);
+    expect(node).toEqual({
+      kind: 'spawn',
+      id: 'sp1',
+      name: 'fix-auth',
+      body,
+    });
+  });
+
+  it('creates a spawn node with empty body', () => {
+    const node = createSpawnNode('sp2', 'empty', []);
+    expect(node.kind).toBe('spawn');
+    expect(node.body).toEqual([]);
+  });
+});
+
+describe('createAwaitNode', () => {
+  it('creates an await all node', () => {
+    const node = createAwaitNode('aw1', 'all');
+    expect(node).toEqual({
+      kind: 'await',
+      id: 'aw1',
+      target: 'all',
+    });
+  });
+
+  it('creates an await node targeting a specific child', () => {
+    const node = createAwaitNode('aw2', 'fix-auth');
+    expect(node).toEqual({
+      kind: 'await',
+      id: 'aw2',
+      target: 'fix-auth',
+    });
   });
 });

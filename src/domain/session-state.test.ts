@@ -5,13 +5,14 @@ import {
   updateVariable,
   updateNodeProgress,
   updateGateResult,
+  updateSpawnedChild,
   markCompleted,
+  markFailed,
+  markCancelled,
   isFlowComplete,
   allGatesPassing,
-  pauseFlow,
-  resumeFlow,
 } from './session-state.js';
-import type { SessionState, NodeProgress } from './session-state.js';
+import type { SessionState, NodeProgress, SpawnedChild } from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
 
 function makeState(overrides?: Partial<{ gates: boolean }>): SessionState {
@@ -131,29 +132,29 @@ describe('isFlowComplete', () => {
   });
 
   it('returns true for failed', () => {
-    expect(isFlowComplete({ ...makeState(), status: 'failed' })).toBe(true);
+    expect(isFlowComplete(markFailed(makeState()))).toBe(true);
   });
 
   it('returns true for cancelled', () => {
-    expect(isFlowComplete({ ...makeState(), status: 'cancelled' })).toBe(true);
+    expect(isFlowComplete(markCancelled(makeState()))).toBe(true);
   });
 });
 
-// H#60: Pause/resume
-describe('pauseFlow', () => {
-  it('sets status to paused', () => {
+describe('markFailed', () => {
+  it('sets status to failed', () => {
     const state = makeState();
-    const paused = pauseFlow(state);
-    expect(paused.status).toBe('paused');
+    const failed = markFailed(state);
+    expect(failed.status).toBe('failed');
     expect(state.status).toBe('active');
   });
 });
 
-describe('resumeFlow', () => {
-  it('sets status back to active', () => {
-    const paused = pauseFlow(makeState());
-    const resumed = resumeFlow(paused);
-    expect(resumed.status).toBe('active');
+describe('markCancelled', () => {
+  it('sets status to cancelled', () => {
+    const state = makeState();
+    const cancelled = markCancelled(state);
+    expect(cancelled.status).toBe('cancelled');
+    expect(state.status).toBe('active');
   });
 });
 
@@ -184,5 +185,64 @@ describe('allGatesPassing', () => {
     state = updateGateResult(state, 'tests_pass', true);
     state = updateGateResult(state, 'lint_pass', false);
     expect(allGatesPassing(state)).toBe(false);
+  });
+});
+
+describe('spawnedChildren', () => {
+  it('initialises with empty spawnedChildren', () => {
+    const state = makeState();
+    expect(state.spawnedChildren).toEqual({});
+  });
+
+  it('adds a spawned child immutably', () => {
+    const state = makeState();
+    const child: SpawnedChild = {
+      name: 'fix-auth',
+      status: 'running',
+      pid: 1234,
+      stateDir: '.prompt-language-fix-auth',
+    };
+    const next = updateSpawnedChild(state, 'fix-auth', child);
+    expect(next.spawnedChildren['fix-auth']).toEqual(child);
+    expect(state.spawnedChildren).toEqual({});
+  });
+
+  it('updates an existing spawned child', () => {
+    let state = makeState();
+    const running: SpawnedChild = {
+      name: 'task-a',
+      status: 'running',
+      pid: 100,
+      stateDir: '.prompt-language-task-a',
+    };
+    state = updateSpawnedChild(state, 'task-a', running);
+
+    const completed: SpawnedChild = {
+      ...running,
+      status: 'completed',
+      variables: { last_exit_code: '0' },
+    };
+    state = updateSpawnedChild(state, 'task-a', completed);
+    expect(state.spawnedChildren['task-a']?.status).toBe('completed');
+    expect(state.spawnedChildren['task-a']?.variables).toEqual({ last_exit_code: '0' });
+  });
+
+  it('preserves other children when updating one', () => {
+    let state = makeState();
+    const childA: SpawnedChild = {
+      name: 'a',
+      status: 'running',
+      stateDir: '.prompt-language-a',
+    };
+    const childB: SpawnedChild = {
+      name: 'b',
+      status: 'running',
+      stateDir: '.prompt-language-b',
+    };
+    state = updateSpawnedChild(state, 'a', childA);
+    state = updateSpawnedChild(state, 'b', childB);
+    state = updateSpawnedChild(state, 'a', { ...childA, status: 'completed' });
+    expect(state.spawnedChildren['a']?.status).toBe('completed');
+    expect(state.spawnedChildren['b']?.status).toBe('running');
   });
 });

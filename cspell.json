@@ -56,7 +56,9 @@
     "mycheck",
     "mypy",
     "clippy",
-    "staticcheck"
+    "staticcheck",
+    "spawner",
+    "spawnedchildren"
   ],
   "ignorePaths": [
     "dist/**",

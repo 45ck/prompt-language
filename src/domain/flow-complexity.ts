@@ -25,6 +25,10 @@ function countNodes(nodes: readonly FlowNode[]): number {
       case 'try':
         count += countNodes(node.body) + countNodes(node.catchBody) + countNodes(node.finallyBody);
         break;
+      case 'spawn':
+        count += countNodes(node.body);
+        break;
+      case 'await':
       case 'break':
       case 'prompt':
       case 'run':
@@ -60,6 +64,10 @@ function maxDepth(nodes: readonly FlowNode[], depth: number): number {
           maxDepth(node.finallyBody, depth + 1),
         );
         break;
+      case 'spawn':
+        max = Math.max(max, maxDepth(node.body, depth + 1));
+        break;
+      case 'await':
       case 'break':
       case 'prompt':
       case 'run':
@@ -70,7 +78,7 @@ function maxDepth(nodes: readonly FlowNode[], depth: number): number {
   return max;
 }
 
-const CONTROL_FLOW_KINDS = new Set(['while', 'until', 'retry', 'if', 'try', 'foreach']);
+const CONTROL_FLOW_KINDS = new Set(['while', 'until', 'retry', 'if', 'try', 'foreach', 'spawn']);
 
 function countControlFlow(nodes: readonly FlowNode[]): number {
   let count = 0;
@@ -92,6 +100,10 @@ function countControlFlow(nodes: readonly FlowNode[]): number {
           countControlFlow(node.catchBody) +
           countControlFlow(node.finallyBody);
         break;
+      case 'spawn':
+        count += countControlFlow(node.body);
+        break;
+      case 'await':
       case 'break':
       case 'prompt':
       case 'run':

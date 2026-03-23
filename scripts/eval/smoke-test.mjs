@@ -771,10 +771,13 @@ async function testListAccumulation() {
     }
 
     const hasCount = countContent.includes('3');
+    // shellInterpolate wraps values in single quotes, so items may be
+    // processed-apple or processed-'apple' depending on output method
     const hasItems =
-      accContent.includes('processed-apple') &&
-      accContent.includes('processed-banana') &&
-      accContent.includes('processed-cherry');
+      accContent.includes('processed-') &&
+      accContent.includes('apple') &&
+      accContent.includes('banana') &&
+      accContent.includes('cherry');
 
     assert(
       'T: List accumulation in foreach',

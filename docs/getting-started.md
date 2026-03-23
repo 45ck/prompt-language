@@ -152,7 +152,7 @@ flow:
 
 ## Further reading
 
-- [Practical Guide](https://github.com/45ck/prompt-language/blob/main/docs/guide.md) — how the plugin works, variable lifecycle, gate mechanics
+- [How prompt-language works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md) — how the plugin works, variable lifecycle, gate mechanics
 - [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md) — full syntax for all primitives
 - [Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md) — debugging stuck flows, known issues
 - [Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) — 45-hypothesis A/B comparison against vanilla Claude

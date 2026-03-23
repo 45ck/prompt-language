@@ -54,7 +54,9 @@
     "gotest",
     "govet",
     "mycheck",
-    "mypy"
+    "mypy",
+    "clippy",
+    "staticcheck"
   ],
   "ignorePaths": [
     "dist/**",

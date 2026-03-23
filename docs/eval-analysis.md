@@ -4,6 +4,18 @@
 
 The prompt-language plugin wins **15 out of 45** hypotheses against vanilla Claude in controlled A/B testing with `--repeat 3` reliability sweep (300+ `claude -p` calls). **All 45 hypotheses are now tested.** 44/45 are 100% reliable; H31 is flaky (TIE 2/3, VANILLA 1/3). H40-H45 (multi-task, context pressure, distractor resistance) all TIE — Claude handles 10-task lists, 2000-line files, and distractor-saturated contexts without plugin assistance. The plugin's value lies in **structural enforcement** — gate predicates that mechanically verify completion criteria regardless of what the prompt says. When the prompt is honest and explicit, vanilla Claude performs equally well. When the prompt misleads, omits, or narrows focus, the plugin's gates catch what Claude's self-discipline misses. Context management (variable capture + interpolation) shows no measurable correctness advantage at any tested distance (2-15 steps). The plugin adds ~196-316% latency overhead.
 
+## Known Issues
+
+### Sequential auto-advancing node hang
+
+**Severity**: High — can cause indefinite hangs.
+
+Flows with 10+ sequential auto-advancing nodes (e.g., 5 `let` + 5 `prompt` nodes in a row) may hang indefinitely. This was observed during H33 testing where the plugin side hung for 9.5 hours.
+
+**Workaround**: Keep sequential chains of auto-advancing nodes (`let`, `var`) under 8 nodes. Break long sequences with `run:` or `prompt:` nodes that require agent interaction.
+
+**Status**: Under investigation. See [Troubleshooting](troubleshooting.md#long-sequential-flows-hanging) for details.
+
 ## What the Plugin Actually Changes
 
 The hypothesis-by-hypothesis data below tells you which tests won. This section tells you what it means in practice.
@@ -430,4 +442,4 @@ H45: Distractor Resistance    — TIE 3/3 (100%)
 - **Context management doesn't improve correctness at short range**: H29-H31 all TIE (H31 flaky)
 - **H31 is flaky**: The only hypothesis that produces different verdicts across iterations (VANILLA 1/3, TIE 2/3)
 - **No consistent VANILLA WINS**: Even H31's vanilla win was not reproducible (67% not 100%)
-- **H33 test infrastructure issue**: Plugin side hung for 9.5h on a 10-node sequential flow (5 `let` + 5 `prompt`). Needs investigation — likely flow engine timeout or state advancement stall with many sequential auto-advancing nodes
+- **H33 test infrastructure issue**: See [Known Issues](#sequential-auto-advancing-node-hang) for details and workaround.

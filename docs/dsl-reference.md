@@ -385,7 +385,7 @@ You do not need to write DSL directly. The parser detects control-flow intent in
 | "loop until X"       | `until X max 5` |
 | "retry 3 times"      | `retry max 3`   |
 
-Natural language is translated by the agent, not by a deterministic compiler. The plugin detects control-flow intent via keyword matching and provides the DSL reference as context for accurate translation. Results may vary.
+Natural language is translated by the agent, not by a deterministic compiler. The plugin detects control-flow intent via keyword matching and provides the DSL reference as context for accurate translation. This detection is best-effort: ambiguous phrasing, unusual sentence structures, or edge-case inputs may produce incorrect or no DSL. When precision matters — especially for gates, loop bounds, or variable names — write explicit DSL instead of relying on natural language translation.
 
 ## Comments
 

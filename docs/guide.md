@@ -123,10 +123,18 @@ Built-in gate predicates and their commands:
 | `tests_fail`         | `npm test`         | Exit code non-zero               |
 | `lint_pass`          | `npm run lint`     | Exit code 0                      |
 | `lint_fail`          | `npm run lint`     | Exit code non-zero               |
+| `pytest_pass`        | `pytest`           | Exit code 0                      |
+| `pytest_fail`        | `pytest`           | Exit code non-zero               |
+| `go_test_pass`       | `go test ./...`    | Exit code 0                      |
+| `go_test_fail`       | `go test ./...`    | Exit code non-zero               |
+| `cargo_test_pass`    | `cargo test`       | Exit code 0                      |
+| `cargo_test_fail`    | `cargo test`       | Exit code non-zero               |
 | `diff_nonempty`      | `git diff --quiet` | Exit code non-zero (diff exists) |
 | `file_exists <path>` | `test -f '<path>'` | Exit code 0                      |
 
 ## Writing effective flows
+
+> **Flows add latency without correctness benefit for well-specified tasks.** In 45 controlled A/B tests, flow control (while, retry, if, try/catch) won 0 times against vanilla Claude. Gates won 15. Add `done when:` to any prompt without a flow first. Only add a flow when you need iterative loop behavior that would require multiple manual follow-up messages.
 
 1. **Start with gates, not flows** — Just adding `done when: tests_pass` to any prompt prevents premature stopping. You don't need a full flow to get value from the plugin.
 
@@ -163,6 +171,45 @@ When a flow isn't behaving as expected:
 2. **Check rendered view** — Use the `/flow:status` slash command to see exactly what Claude sees on each turn.
 3. **Reset** — Use `/flow:reset` to clear all state and start over. Useful when a flow gets stuck in an unexpected state.
 4. **Check capture files** — For `let x = prompt` issues, look in `.prompt-language/vars/` to see if Claude wrote the file and what it contains.
+
+### State file schema
+
+A minimal example of what `session-state.json` looks like:
+
+```json
+{
+  "status": "active",
+  "flowSpec": { "goal": "fix the auth tests", "...": "..." },
+  "currentPath": [0, 1],
+  "variables": {
+    "last_exit_code": "1",
+    "command_failed": "true",
+    "last_stdout": "FAIL src/auth.test.ts ..."
+  },
+  "nodeProgress": {
+    "retry-0": { "iteration": 2, "maxIterations": 5 }
+  },
+  "gateResults": {
+    "tests_pass": false
+  }
+}
+```
+
+Key fields:
+
+- **status** — `active`, `completed`, or `failed`. Hooks skip processing when status is not `active`.
+- **currentPath** — Array of indices into the flow tree. `[0, 1]` means the second child of the first top-level node. This is what "where the flow is" means at a low level.
+- **variables** — All stored values, including built-ins (`last_exit_code`, `command_failed`, `last_stdout`, `last_stderr`) and user-defined ones. All values are strings.
+- **nodeProgress** — Iteration counts for loops and retry nodes. Keys are node IDs; values hold the current and max iteration counts.
+- **gateResults** — Pass/fail status for each gate predicate as evaluated on the last `TaskCompleted` hook invocation.
+
+## Compatibility
+
+The plugin hooks into Claude Code's plugin API, which is not versioned. Breaking changes are possible on Claude Code updates. If gates or flows stop working after a Claude Code update, reinstall the plugin:
+
+```bash
+npx @45ck/prompt-language
+```
 
 ## Further reading
 

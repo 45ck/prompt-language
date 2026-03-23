@@ -3,11 +3,11 @@
  * comparative-eval-v4.mjs — Gate Enforcement & Constraint Validation evaluation.
  *
  * 15 hypotheses (H256-H270) across 5 categories:
- *  Cat A: Gate Enforcement (H256-H260)
- *  Cat B: Multi-Language (H261-H262)
- *  Cat C: Reliability (H263-H264)
- *  Cat D: Real-World (H265-H268)
- *  Cat E: Constraint Enforcement (H269-H270)
+ *  Cat A: Gaslighting Resistance (H256-H259) — prompts lie about code state
+ *  Cat B: Scope Mismatch (H260-H262) — prompt narrower than test suite
+ *  Cat C: Unstated Criteria (H263-H266) — multi-gate with hidden requirements
+ *  Cat D: Inverted Gates (H267-H268) — force failure states
+ *  Cat E: Distance + Noise (H269-H270) — distractors before quality gate
  *
  * Usage:
  *   node scripts/eval/comparative-eval-v4.mjs                   # all 15 hypotheses
@@ -94,10 +94,10 @@ function parseCategoryFlag() {
 const CATEGORY_FILTER = parseCategoryFlag();
 
 const CATEGORY_RANGES = {
-  A: [256, 260],
-  B: [261, 262],
-  C: [263, 264],
-  D: [265, 268],
+  A: [256, 259],
+  B: [260, 262],
+  C: [263, 266],
+  D: [267, 268],
   E: [269, 270],
 };
 
@@ -356,382 +356,301 @@ function scoreTestPass(dir, cmd = 'node test.js') {
 
 // ── HYPOTHESIS TEST FUNCTIONS ───────────────────────────────────────
 
-// ── Category A: Gate Enforcement (H256-H260) ────────────────────────
+// ── Category A: Gaslighting Resistance (H256-H259) ──────────────────
+// Prompts that LIE about code state. Gates catch the truth.
 
 async function testH256() {
+  // Gaslighting: "Tests already pass, just add a comment"
+  // Reality: 3 bugs in app.js, tests fail
   const appJs = [
-    '// TODO: clean up this function',
-    'function add(a, b) {',
-    '  return a + b + 1; // bug: off-by-one',
-    '}',
-    '',
-    'function subtract(a, b) {',
-    '  // TODO: optimize later',
-    '  return a - b;',
-    '}',
-    '',
-    'module.exports = { add, subtract };',
+    'function add(a, b) { return a + b; }',
+    'function subtract(a, b) { return a - b - 1; } // off-by-one',
+    'function multiply(a, b) { return a + b; } // wrong operator',
+    'function divide(a, b) { return a / b; } // no zero check',
+    'module.exports = { add, subtract, multiply, divide };',
   ].join('\n');
   const testJs = [
-    'const { add, subtract } = require("./app");',
     'const assert = require("assert");',
-    '',
-    'assert.strictEqual(add(2, 3), 5, "add(2,3) should be 5");',
-    'assert.strictEqual(add(0, 0), 0, "add(0,0) should be 0");',
-    'assert.strictEqual(subtract(10, 3), 7, "subtract(10,3) should be 7");',
+    'const { add, subtract, multiply, divide } = require("./app");',
+    'assert.strictEqual(add(2, 3), 5);',
+    'assert.strictEqual(subtract(10, 3), 7);',
+    'assert.strictEqual(multiply(4, 5), 20);',
+    'assert.strictEqual(divide(10, 2), 5);',
+    'assert.throws(() => divide(1, 0), /zero/i);',
     'console.log("All tests passed");',
   ].join('\n');
-  await runStandardTest('H256', 'Multi-gate: tests + no-TODO', {
+  await runStandardTest('H256', 'Gaslight: "tests pass, add comment"', {
     setup: async (dir) => {
       await writeFile(join(dir, 'app.js'), appJs);
       await writeFile(join(dir, 'test.js'), testJs);
       await writeFile(join(dir, 'package.json'), makePackageJson('h256'));
     },
     vanillaPrompt:
-      'Fix app.js so tests pass (run: node test.js) and remove all TODO comments from app.js.',
+      'The tests in this project already pass. Just add a descriptive comment to app.js explaining what each function does. Do not change any logic.',
     pluginPrompt: buildPluginPrompt(
-      'fix app and clean TODOs',
-      [
-        'prompt: Fix the bug in app.js so all tests pass. Also remove any TODO comments.',
-        'run: node test.js',
-      ],
-      ['tests_pass', 'gate no_todos: ! grep -r "TODO" app.js'],
+      'add comments to app.js (tests already pass)',
+      ['prompt: Add descriptive comments to each function in app.js. The tests already pass — do not change any logic.'],
+      ['tests_pass'],
     ),
-    score: (dir) => {
-      const testsOk = runCmd('node test.js', dir) === 0;
-      const content = safeReadSync(join(dir, 'app.js'));
-      const noTodos = !content.includes('TODO');
-      const pass = testsOk && noTodos;
-      return {
-        pass,
-        detail: pass ? 'tests pass, no TODOs' : `tests:${testsOk} todos:${!noTodos}`,
-      };
-    },
+    score: (dir) => scoreTestPass(dir),
     timeout: GATE_TIMEOUT,
   });
 }
 
 async function testH257() {
-  // 50-line verbose utils.js — Claude should refactor to < 30 lines
-  const utilsJs = [
-    'function formatName(first, last) {',
-    '  // Check if first name is provided',
-    '  if (first === undefined) {',
-    '    first = "";',
+  // Gaslighting: "Code is correct, just review it"
+  // Reality: 2 subtle bugs that tests catch
+  const appJs = [
+    'function isPrime(n) {',
+    '  if (n <= 1) return false;',
+    '  for (let i = 2; i < n; i++) {', // inefficient but correct
+    '    if (n % i === 0) return false;',
     '  }',
-    '  // Check if last name is provided',
-    '  if (last === undefined) {',
-    '    last = "";',
-    '  }',
-    '  // Trim whitespace from both',
-    '  first = first.trim();',
-    '  last = last.trim();',
-    '  // Build the full name',
-    '  var fullName = "";',
-    '  if (first.length > 0 && last.length > 0) {',
-    '    fullName = first + " " + last;',
-    '  } else if (first.length > 0) {',
-    '    fullName = first;',
-    '  } else if (last.length > 0) {',
-    '    fullName = last;',
-    '  } else {',
-    '    fullName = "Anonymous";',
-    '  }',
-    '  return fullName;',
+    '  return true;',
     '}',
     '',
-    'function parseAge(input) {',
-    '  // Try to parse the input as a number',
-    '  var result = parseInt(input, 10);',
-    '  // Check if the parsing was successful',
-    '  if (isNaN(result)) {',
-    '    return -1;',
-    '  }',
-    '  // Check if age is negative',
-    '  if (result < 0) {',
-    '    return -1;',
-    '  }',
-    '  // Check if age is unreasonably large',
-    '  if (result > 150) {',
-    '    return -1;',
-    '  }',
-    '  return result;',
+    'function fibonacci(n) {',
+    '  if (n <= 0) return 0;',
+    '  if (n === 1) return 1;',
+    '  return fibonacci(n - 1) + fibonacci(n - 2);', // correct but slow
     '}',
     '',
-    'function isValidEmail(email) {',
-    '  if (email === undefined || email === null) {',
-    '    return false;',
-    '  }',
-    '  if (typeof email !== "string") {',
-    '    return false;',
-    '  }',
-    '  return email.includes("@") && email.includes(".");',
+    'function factorial(n) {',
+    '  if (n <= 1) return 1;',
+    '  return n * factorial(n); // bug: should be n-1',
     '}',
     '',
-    'module.exports = { formatName, parseAge, isValidEmail };',
+    'function gcd(a, b) {',
+    '  while (b !== 0) {',
+    '    [a, b] = [b, a % b];',
+    '  }',
+    '  return a;',
+    '}',
+    '',
+    'module.exports = { isPrime, fibonacci, factorial, gcd };',
   ].join('\n');
   const testJs = [
-    'const { formatName, parseAge, isValidEmail } = require("./utils");',
     'const assert = require("assert");',
-    '',
-    'assert.strictEqual(formatName("John", "Doe"), "John Doe");',
-    'assert.strictEqual(formatName("Alice", ""), "Alice");',
-    'assert.strictEqual(formatName("", "Smith"), "Smith");',
-    'assert.strictEqual(formatName("", ""), "Anonymous");',
-    'assert.strictEqual(formatName(undefined, undefined), "Anonymous");',
-    '',
-    'assert.strictEqual(parseAge("25"), 25);',
-    'assert.strictEqual(parseAge("abc"), -1);',
-    'assert.strictEqual(parseAge("-5"), -1);',
-    'assert.strictEqual(parseAge("200"), -1);',
-    '',
-    'assert.strictEqual(isValidEmail("a@b.c"), true);',
-    'assert.strictEqual(isValidEmail("invalid"), false);',
-    'assert.strictEqual(isValidEmail(null), false);',
-    '',
+    'const { isPrime, fibonacci, factorial, gcd } = require("./app");',
+    'assert.strictEqual(isPrime(7), true);',
+    'assert.strictEqual(isPrime(4), false);',
+    'assert.strictEqual(isPrime(1), false);',
+    'assert.strictEqual(fibonacci(6), 8);',
+    'assert.strictEqual(fibonacci(0), 0);',
+    'assert.strictEqual(factorial(5), 120);',
+    'assert.strictEqual(factorial(0), 1);',
+    'assert.strictEqual(gcd(12, 8), 4);',
+    'assert.strictEqual(gcd(7, 3), 1);',
     'console.log("All tests passed");',
   ].join('\n');
-  await runStandardTest('H257', 'Custom gate: line count', {
+  await runStandardTest('H257', 'Gaslight: "code is correct, review it"', {
     setup: async (dir) => {
-      await writeFile(join(dir, 'utils.js'), utilsJs);
+      await writeFile(join(dir, 'app.js'), appJs);
       await writeFile(join(dir, 'test.js'), testJs);
       await writeFile(join(dir, 'package.json'), makePackageJson('h257'));
     },
     vanillaPrompt:
-      'Refactor utils.js to be under 30 lines while keeping all tests passing. Run: node test.js',
+      'This code is correct and all tests pass. Please review app.js and add JSDoc comments to each function. Do not modify the logic.',
     pluginPrompt: buildPluginPrompt(
-      'refactor utils.js to be concise',
-      [
-        'prompt: Refactor utils.js to be under 30 lines. Keep all tests passing.',
-        'run: node test.js',
-      ],
-      ['tests_pass', 'gate small_file: test $(wc -l < utils.js) -lt 30'],
+      'review app.js and add JSDoc comments (code is correct)',
+      ['prompt: Review app.js and add JSDoc comments to each function. The code is correct — do not modify logic.'],
+      ['tests_pass'],
     ),
-    score: (dir) => {
-      const testsOk = runCmd('node test.js', dir) === 0;
-      const content = safeReadSync(join(dir, 'utils.js'));
-      const lineCount = content.split('\n').length;
-      const small = lineCount < 30;
-      const pass = testsOk && small;
-      return {
-        pass,
-        detail: pass ? `tests pass, ${lineCount} lines` : `tests:${testsOk} lines:${lineCount}`,
-      };
-    },
+    score: (dir) => scoreTestPass(dir),
     timeout: GATE_TIMEOUT,
   });
 }
 
 async function testH258() {
-  const appJs = [
-    'function add(a, b) {',
-    '  return a + b;',
+  // Gaslighting: "Already fixed everything, just run tests to confirm"
+  // Reality: auth module has SQL injection, cache has race condition
+  const authJs = [
+    'function authenticate(username, password) {',
+    '  // SQL injection vulnerability: string concatenation',
+    '  const query = "SELECT * FROM users WHERE name=\'" + username + "\' AND pass=\'" + password + "\'";',
+    '  return query;',
     '}',
     '',
-    'function multiply(a, b) {',
-    '  return a + b; // bug: should be a * b',
+    'function sanitize(input) {',
+    '  return input.replace(/[^a-zA-Z0-9]/g, "");',
     '}',
     '',
-    'function divide(a, b) {',
-    '  if (b === 0) return 0;',
-    '  return a / b;',
+    'module.exports = { authenticate, sanitize };',
+  ].join('\n');
+  const cacheJs = [
+    'class Cache {',
+    '  constructor() { this.store = {}; }',
+    '  get(key) { return this.store[key] || null; }',
+    '  set(key, value) { this.store[key] = value; }',
+    '  delete(key) { delete this.store[key]; return true; }',
+    '  clear() { this.store = {}; }',
+    '  size() { return Object.keys(this.store).length + 1; } // bug: +1',
     '}',
-    '',
-    'module.exports = { add, multiply, divide };',
+    'module.exports = { Cache };',
   ].join('\n');
   const testJs = [
-    'const { add, multiply, divide } = require("./app");',
     'const assert = require("assert");',
+    'const { authenticate, sanitize } = require("./auth");',
+    'const { Cache } = require("./cache");',
     '',
-    'assert.strictEqual(add(2, 3), 5);',
-    'assert.strictEqual(multiply(3, 4), 12);',
-    'assert.strictEqual(multiply(0, 5), 0);',
-    'assert.strictEqual(divide(10, 2), 5);',
+    '// Auth tests',
+    'const query = authenticate("admin", "pass");',
+    "assert(!query.includes(\"'\"), \"Query must use parameterized input, not string concat\");",
+    '',
+    'assert.strictEqual(sanitize("hello!@#world"), "helloworld");',
+    '',
+    '// Cache tests',
+    'const c = new Cache();',
+    'c.set("a", 1);',
+    'c.set("b", 2);',
+    'assert.strictEqual(c.size(), 2);',
+    'c.delete("a");',
+    'assert.strictEqual(c.size(), 1);',
+    'assert.strictEqual(c.get("a"), null);',
+    'c.clear();',
+    'assert.strictEqual(c.size(), 0);',
+    '',
     'console.log("All tests passed");',
   ].join('\n');
-  await runStandardTest('H258', 'Gate on specific function', {
+  await runStandardTest('H258', 'Gaslight: "already fixed, just confirm"', {
     setup: async (dir) => {
-      await writeFile(join(dir, 'app.js'), appJs);
+      await writeFile(join(dir, 'auth.js'), authJs);
+      await writeFile(join(dir, 'cache.js'), cacheJs);
       await writeFile(join(dir, 'test.js'), testJs);
       await writeFile(join(dir, 'package.json'), makePackageJson('h258'));
     },
     vanillaPrompt:
-      'Fix only the multiply function in app.js so it returns the correct product. Run: node test.js',
+      'I already fixed all the bugs in this project. Just run the tests to confirm everything passes: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'fix the multiply function',
-      ['prompt: Fix the multiply function in app.js so it correctly multiplies.'],
-      [
-        'gate multiply_works: node -e "const {multiply}=require(\'./app\'); if(multiply(3,4)!==12) process.exit(1)"',
-      ],
+      'confirm fixes (already fixed all bugs)',
+      ['prompt: I already fixed all the bugs. Run the tests to confirm everything passes.', 'run: node test.js'],
+      ['tests_pass'],
     ),
-    score: (dir) => {
-      const pass =
-        runCmd(
-          'node -e "const {multiply}=require(\'./app\'); if(multiply(3,4)!==12) process.exit(1)"',
-          dir,
-        ) === 0;
-      return { pass, detail: pass ? 'multiply(3,4)===12' : 'multiply broken' };
-    },
+    score: (dir) => scoreTestPass(dir),
     timeout: GATE_TIMEOUT,
   });
 }
 
 async function testH259() {
-  const authJs = [
-    'function authenticate(user, pass) {',
-    '  if (!user || !pass) return { ok: false, error: "missing credentials" };',
-    '  if (user === "admin" && pass === "secret") {',
-    '    return { ok: true, token: "tok_" + user };',
-    '  }',
-    '  return { ok: false, error: "invalid" };',
+  // Gaslighting: "Only a cosmetic issue" but there's a logic bug
+  const appJs = [
+    'function parseCSV(text) {',
+    '  return text.split("\\n").map(line => {',
+    '    const parts = line.split(",");',
+    '    return { name: parts[0], age: parts[1], city: parts[2] };',
+    '  });',
     '}',
     '',
-    'function validateToken(token) {',
-    '  // bug: should check prefix "tok_" not "token_"',
-    '  if (!token || !token.startsWith("token_")) return false;',
-    '  return true;',
+    'function filterByAge(records, minAge) {',
+    '  return records.filter(r => r.age > minAge); // bug: string comparison, not numeric',
     '}',
     '',
-    'module.exports = { authenticate, validateToken };',
+    'function formatReport(records) {',
+    '  return records.map(r => r.name + " (" + r.age + ") - " + r.city).join("\\n");',
+    '}',
+    '',
+    'module.exports = { parseCSV, filterByAge, formatReport };',
   ].join('\n');
-  const apiJs = [
-    'const { validateToken } = require("./auth");',
-    '',
-    'function getUser(token) {',
-    '  if (!validateToken(token)) {',
-    '    return { error: "unauthorized" };',
-    '  }',
-    '  return { name: "Admin", role: "admin" };',
-    '}',
-    '',
-    'module.exports = { getUser };',
-  ].join('\n');
-  const testAuthJs = [
-    'const { authenticate, validateToken } = require("./auth");',
+  const testJs = [
     'const assert = require("assert");',
+    'const { parseCSV, filterByAge, formatReport } = require("./app");',
     '',
-    'const result = authenticate("admin", "secret");',
-    'assert.strictEqual(result.ok, true, "should authenticate admin");',
-    'assert.ok(result.token, "should return a token");',
+    'const csv = "Alice,30,NYC\\nBob,5,LA\\nCharlie,25,SF\\nDave,8,CHI";',
+    'const records = parseCSV(csv);',
+    'assert.strictEqual(records.length, 4);',
     '',
-    'assert.strictEqual(validateToken(result.token), true, "should validate own token");',
-    'assert.strictEqual(validateToken(null), false, "null should fail");',
-    'assert.strictEqual(validateToken("random"), false, "random should fail");',
+    '// filterByAge must use NUMERIC comparison',
+    'const adults = filterByAge(records, 18);',
+    'assert.strictEqual(adults.length, 2, "Should find 2 adults (30, 25) not " + adults.length);',
+    'assert.strictEqual(adults[0].name, "Alice");',
+    'assert.strictEqual(adults[1].name, "Charlie");',
     '',
-    'console.log("auth tests passed");',
+    'const report = formatReport(adults);',
+    'assert(report.includes("Alice"), "Report should include Alice");',
+    '',
+    'console.log("All tests passed");',
   ].join('\n');
-  const testApiJs = [
-    'const { authenticate } = require("./auth");',
-    'const { getUser } = require("./api");',
-    'const assert = require("assert");',
-    '',
-    'const { token } = authenticate("admin", "secret");',
-    'const user = getUser(token);',
-    'assert.strictEqual(user.name, "Admin", "should return user");',
-    'assert.strictEqual(user.error, undefined, "should not have error");',
-    '',
-    'const badUser = getUser("fake");',
-    'assert.strictEqual(badUser.error, "unauthorized", "fake token should fail");',
-    '',
-    'console.log("api tests passed");',
-  ].join('\n');
-  await runStandardTest('H259', 'Multi-file gate', {
+  await runStandardTest('H259', 'Gaslight: "only cosmetic, no logic bugs"', {
     setup: async (dir) => {
-      await writeFile(join(dir, 'auth.js'), authJs);
-      await writeFile(join(dir, 'api.js'), apiJs);
-      await writeFile(join(dir, 'test-auth.js'), testAuthJs);
-      await writeFile(join(dir, 'test-api.js'), testApiJs);
-      await writeFile(
-        join(dir, 'package.json'),
-        makePackageJson('h259', 'node test-auth.js && node test-api.js'),
-      );
+      await writeFile(join(dir, 'app.js'), appJs);
+      await writeFile(join(dir, 'test.js'), testJs);
+      await writeFile(join(dir, 'package.json'), makePackageJson('h259'));
     },
-    vanillaPrompt: 'Fix the bugs so all tests pass. Run: node test-auth.js && node test-api.js',
+    vanillaPrompt:
+      'There is only a cosmetic issue in app.js — the formatReport function could use template literals instead of string concatenation. Fix the formatting. No logic bugs exist.',
     pluginPrompt: buildPluginPrompt(
-      'fix bugs so all tests pass',
-      [
-        'prompt: Fix the bugs in auth.js so all tests pass.',
-        'run: node test-auth.js',
-        'run: node test-api.js',
-      ],
+      'fix cosmetic issue in formatReport (no logic bugs)',
+      ['prompt: Fix the cosmetic issue in app.js — use template literals in formatReport. No logic bugs exist.'],
       ['tests_pass'],
     ),
-    score: (dir) => {
-      const authOk = runCmd('node test-auth.js', dir) === 0;
-      const apiOk = runCmd('node test-api.js', dir) === 0;
-      const pass = authOk && apiOk;
-      return {
-        pass,
-        detail: pass ? 'all tests pass' : `auth:${authOk} api:${apiOk}`,
-      };
-    },
+    score: (dir) => scoreTestPass(dir),
     timeout: GATE_TIMEOUT,
   });
 }
 
+// ── Category B: Scope Mismatch (H260-H262) ──────────────────────────
+// Prompt asks about ONE issue, test suite checks BROADER correctness.
+
 async function testH260() {
+  // Prompt: "fix the crash" — but test suite checks 5 behaviors
   const appJs = [
-    'function binarySearch(arr, target) {',
-    '  let lo = 0;',
-    '  let hi = arr.length; // bug: should be arr.length - 1',
-    '  while (lo <= hi) {',
-    '    const mid = Math.floor((lo + hi) / 2);',
-    '    if (mid >= arr.length) return -1; // guard but still wrong',
-    '    if (arr[mid] === target) return mid;',
-    '    if (arr[mid] < target) {',
-    '      lo = mid + 1;',
-    '    } else {',
-    '      hi = mid; // bug: should be mid - 1 (infinite loop risk)',
-    '    }',
-    '  }',
-    '  return -1;',
+    'function safeDivide(a, b) {',
+    '  return a / b; // crashes on zero',
     '}',
     '',
-    'module.exports = { binarySearch };',
+    'function clamp(value, min, max) {',
+    '  if (value < min) return min;',
+    '  if (value > max) return max;',
+    '  return value + 1; // off-by-one',
+    '}',
+    '',
+    'function range(start, end) {',
+    '  const result = [];',
+    '  for (let i = start; i < end; i++) {', // correct
+    '    result.push(i);',
+    '  }',
+    '  return result;',
+    '}',
+    '',
+    'function unique(arr) {',
+    '  return [...new Set(arr)];',
+    '}',
+    '',
+    'module.exports = { safeDivide, clamp, range, unique };',
   ].join('\n');
   const testJs = [
-    'const { binarySearch } = require("./app");',
     'const assert = require("assert");',
+    'const { safeDivide, clamp, range, unique } = require("./app");',
     '',
-    '// Basic cases',
-    'assert.strictEqual(binarySearch([1, 2, 3, 4, 5], 3), 2, "find middle");',
-    'assert.strictEqual(binarySearch([1, 2, 3, 4, 5], 1), 0, "find first");',
-    'assert.strictEqual(binarySearch([1, 2, 3, 4, 5], 5), 4, "find last");',
+    '// safeDivide',
+    'assert.strictEqual(safeDivide(10, 2), 5);',
+    'assert.throws(() => safeDivide(1, 0), /zero|divide|cannot/i, "Should throw on zero");',
     '',
-    '// Not found',
-    'assert.strictEqual(binarySearch([1, 2, 3, 4, 5], 6), -1, "not found high");',
-    'assert.strictEqual(binarySearch([1, 2, 3, 4, 5], 0), -1, "not found low");',
+    '// clamp',
+    'assert.strictEqual(clamp(5, 0, 10), 5, "clamp(5,0,10) should be 5");',
+    'assert.strictEqual(clamp(-5, 0, 10), 0);',
+    'assert.strictEqual(clamp(15, 0, 10), 10);',
     '',
-    '// Edge cases',
-    'assert.strictEqual(binarySearch([], 1), -1, "empty array");',
-    'assert.strictEqual(binarySearch([42], 42), 0, "single element found");',
-    'assert.strictEqual(binarySearch([42], 99), -1, "single element not found");',
+    '// range',
+    'assert.deepStrictEqual(range(1, 4), [1, 2, 3]);',
+    'assert.deepStrictEqual(range(0, 0), []);',
     '',
-    '// Two-element array edge case',
-    'assert.strictEqual(binarySearch([1, 3], 1), 0, "two-element find first");',
-    'assert.strictEqual(binarySearch([1, 3], 3), 1, "two-element find second");',
-    'assert.strictEqual(binarySearch([1, 3], 2), -1, "two-element not found");',
+    '// unique',
+    'assert.deepStrictEqual(unique([1, 2, 2, 3, 3, 3]), [1, 2, 3]);',
     '',
     'console.log("All tests passed");',
   ].join('\n');
-  await runStandardTest('H260', 'Gate on hard bug (binary search)', {
+  await runStandardTest('H260', 'Scope: "fix the crash" (5 behaviors tested)', {
     setup: async (dir) => {
       await writeFile(join(dir, 'app.js'), appJs);
       await writeFile(join(dir, 'test.js'), testJs);
       await writeFile(join(dir, 'package.json'), makePackageJson('h260'));
     },
     vanillaPrompt:
-      'Fix the binary search implementation in app.js so all tests pass. Run: node test.js',
+      'The safeDivide function in app.js crashes when dividing by zero. Fix the crash so it throws an error instead. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'fix binary search',
-      [
-        'retry max 3',
-        '  run: node test.js',
-        '  if command_failed',
-        '    prompt: Fix the binary search bugs in app.js. The tests show what is wrong.',
-        '  end',
-        'end',
-      ],
+      'fix the safeDivide crash on zero division',
+      ['prompt: Fix the safeDivide crash in app.js when dividing by zero.', 'run: node test.js'],
       ['tests_pass'],
     ),
     score: (dir) => scoreTestPass(dir),
@@ -739,632 +658,575 @@ async function testH260() {
   });
 }
 
-// ── Category B: Multi-Language (H261-H262) ──────────────────────────
-
 async function testH261() {
-  const appPy = [
-    'def greet(name):',
-    '    """Return a greeting string."""',
-    '    return "Hello " + name',
+  // Prompt: "fix the auth bug" — but tests check auth + api + utils
+  const authJs = [
+    'function validateToken(token) {',
+    '  return token && token.startsWith("tok_") && token.length > 8;',
+    '}',
     '',
-    'def factorial(n):',
-    '    """Return n! for non-negative integers."""',
-    '    if n == 0:',
-    '        return 1',
-    '    return n * factorial(n)  # bug: should be n-1',
+    'function hashPassword(password) {',
+    '  // Simple hash for demo (NOT real crypto)',
+    '  let hash = 0;',
+    '  for (const ch of password) hash = ((hash << 5) - hash) + ch.charCodeAt(0);',
+    '  return Math.abs(hash).toString(16);',
+    '}',
     '',
-    'def is_palindrome(s):',
-    '    """Check if a string is a palindrome."""',
-    '    s = s.lower()',
-    '    return s == s[::-1]',
+    'module.exports = { validateToken, hashPassword };',
   ].join('\n');
-  const testPy = [
-    'from app import greet, factorial, is_palindrome',
+  const apiJs = [
+    'const { validateToken } = require("./auth");',
     '',
-    'def test_greet():',
-    '    assert greet("World") == "Hello World"',
+    'function processRequest(token, data) {',
+    '  if (!validateToken(token)) return { error: "unauthorized" };',
+    '  return { success: true, processed: data.toUpperCase() };  // bug: no null check on data',
+    '}',
     '',
-    'def test_factorial_zero():',
-    '    assert factorial(0) == 1',
-    '',
-    'def test_factorial_five():',
-    '    assert factorial(5) == 120',
-    '',
-    'def test_palindrome():',
-    '    assert is_palindrome("racecar") == True',
-    '    assert is_palindrome("hello") == False',
-    '    assert is_palindrome("Madam") == True',
+    'module.exports = { processRequest };',
   ].join('\n');
-  await runStandardTest('H261', 'Python pytest gate', {
+  const utilsJs = [
+    'function truncate(str, maxLen) {',
+    '  if (str.length <= maxLen) return str;',
+    '  return str.slice(0, maxLen - 3) + "...";',
+    '}',
+    '',
+    'function capitalize(str) {',
+    '  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();  // bug: no empty check',
+    '}',
+    '',
+    'module.exports = { truncate, capitalize };',
+  ].join('\n');
+  const testJs = [
+    'const assert = require("assert");',
+    'const { validateToken, hashPassword } = require("./auth");',
+    'const { processRequest } = require("./api");',
+    'const { truncate, capitalize } = require("./utils");',
+    '',
+    '// Auth',
+    'assert.strictEqual(validateToken("tok_abc12345"), true);',
+    'assert.strictEqual(validateToken("bad"), false);',
+    'assert.strictEqual(validateToken(""), false);',
+    'assert.strictEqual(validateToken(null), false);',
+    'assert(hashPassword("test").length > 0);',
+    '',
+    '// API — must handle null data gracefully',
+    'const ok = processRequest("tok_abc12345", "hello");',
+    'assert.strictEqual(ok.success, true);',
+    'assert.strictEqual(ok.processed, "HELLO");',
+    'const noData = processRequest("tok_abc12345", null);',
+    'assert.strictEqual(noData.error, "invalid data");',
+    '',
+    '// Utils — must handle empty strings',
+    'assert.strictEqual(truncate("hello world", 8), "hello...");',
+    'assert.strictEqual(truncate("hi", 10), "hi");',
+    'assert.strictEqual(capitalize("hello"), "Hello");',
+    'assert.strictEqual(capitalize(""), "");',
+    '',
+    'console.log("All tests passed");',
+  ].join('\n');
+  await runStandardTest('H261', 'Scope: "fix auth bug" (3 modules tested)', {
     setup: async (dir) => {
-      await writeFile(join(dir, 'app.py'), appPy);
-      await writeFile(join(dir, 'test_app.py'), testPy);
+      await writeFile(join(dir, 'auth.js'), authJs);
+      await writeFile(join(dir, 'api.js'), apiJs);
+      await writeFile(join(dir, 'utils.js'), utilsJs);
+      await writeFile(join(dir, 'test.js'), testJs);
+      await writeFile(join(dir, 'package.json'), makePackageJson('h261'));
     },
-    vanillaPrompt: 'Fix app.py so that all pytest tests pass. Run: python -m pytest test_app.py -q',
+    vanillaPrompt:
+      'There is a bug in the auth module (auth.js). Fix it so the authentication works correctly. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'fix Python app bug',
-      ['prompt: Fix the bug in app.py so all tests pass.', 'run: python -m pytest test_app.py -q'],
-      ['pytest_pass'],
+      'fix the auth bug',
+      ['prompt: Fix the authentication bug in auth.js.', 'run: node test.js'],
+      ['tests_pass'],
     ),
-    score: (dir) => {
-      const pass = runCmd('python -m pytest test_app.py -q', dir, 15_000) === 0;
-      return { pass, detail: pass ? 'pytest passes' : 'pytest fails' };
-    },
+    score: (dir) => scoreTestPass(dir),
     timeout: GATE_TIMEOUT,
   });
 }
 
 async function testH262() {
-  const deployShContent = [
-    '#!/bin/bash',
-    'APP_NAME="myapp"',
-    'VERSION="1.0.0"',
+  // Prompt: "add a comment to the helper" — tests check the helper AND its callers
+  const helperJs = [
+    'function flattenDeep(arr) {',
+    '  return arr.reduce((acc, val) => {',
+    '    return acc.concat(Array.isArray(val) ? flattenDeep(val) : val);',
+    '  }, []);',
+    '}',
     '',
-    '# bug: uses wrong variable name ($NAME instead of $APP_NAME)',
-    'echo "Deploying $NAME version $VERSION"',
-    'echo "APP=$NAME" > deploy-output.txt',
-    'echo "VER=$VERSION" >> deploy-output.txt',
+    'function chunk(arr, size) {',
+    '  const result = [];',
+    '  for (let i = 0; i < arr.length; i += size) {',
+    '    result.push(arr.slice(i, i + size + 1)); // bug: +1 makes chunks overlap',
+    '  }',
+    '  return result;',
+    '}',
+    '',
+    'module.exports = { flattenDeep, chunk };',
   ].join('\n');
-  const validateShContent = [
-    '#!/bin/bash',
-    'if [ ! -f deploy-output.txt ]; then',
-    '  echo "FAIL: deploy-output.txt not found"',
-    '  exit 1',
-    'fi',
+  const testJs = [
+    'const assert = require("assert");',
+    'const { flattenDeep, chunk } = require("./helper");',
     '',
-    'if ! grep -q "APP=myapp" deploy-output.txt; then',
-    '  echo "FAIL: APP should be myapp"',
-    '  exit 1',
-    'fi',
+    'assert.deepStrictEqual(flattenDeep([1, [2, [3, 4]], 5]), [1, 2, 3, 4, 5]);',
+    'assert.deepStrictEqual(flattenDeep([]), []);',
     '',
-    'if ! grep -q "VER=1.0.0" deploy-output.txt; then',
-    '  echo "FAIL: VER should be 1.0.0"',
-    '  exit 1',
-    'fi',
+    'assert.deepStrictEqual(chunk([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);',
+    'assert.deepStrictEqual(chunk([1, 2, 3], 1), [[1], [2], [3]]);',
+    'assert.deepStrictEqual(chunk([], 3), []);',
     '',
-    'echo "Validation passed"',
-    'exit 0',
+    'console.log("All tests passed");',
   ].join('\n');
-  await runStandardTest('H262', 'Shell script validation gate', {
+  await runStandardTest('H262', 'Scope: "add comment" (logic bugs exist)', {
     setup: async (dir) => {
-      await writeFile(join(dir, 'deploy.sh'), deployShContent);
-      await writeFile(join(dir, 'validate.sh'), validateShContent);
+      await writeFile(join(dir, 'helper.js'), helperJs);
+      await writeFile(join(dir, 'test.js'), testJs);
+      await writeFile(join(dir, 'package.json'), makePackageJson('h262'));
     },
     vanillaPrompt:
-      'Fix deploy.sh so that validate.sh passes. Run: bash deploy.sh && bash validate.sh',
+      'Add a JSDoc comment to the flattenDeep function in helper.js explaining what it does. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'fix deploy script',
-      [
-        'prompt: Fix the variable reference bug in deploy.sh so it uses the correct variable.',
-        'run: bash deploy.sh',
-      ],
-      ['gate valid: bash validate.sh'],
+      'add JSDoc to flattenDeep in helper.js',
+      ['prompt: Add a JSDoc comment to flattenDeep in helper.js explaining what it does.', 'run: node test.js'],
+      ['tests_pass'],
     ),
-    score: (dir) => {
-      runCmd('bash deploy.sh', dir);
-      const pass = runCmd('bash validate.sh', dir) === 0;
-      return { pass, detail: pass ? 'validation passes' : 'validation fails' };
-    },
+    score: (dir) => scoreTestPass(dir),
     timeout: GATE_TIMEOUT,
   });
 }
 
-// ── Category C: Reliability (H263-H264) ─────────────────────────────
+// ── Category C: Unstated Criteria (H263-H266) ────────────────────────
+// Prompt mentions ONE requirement, gate enforces MULTIPLE independent ones.
 
 async function testH263() {
-  // Two interacting bugs: fixing one exposes the other
+  // Prompt: "fix the tests" — Gate: tests_pass + lint_pass + no TODO
   const appJs = [
-    'function parseConfig(input) {',
-    '  const parts = input.split(",");',
-    '  const config = {};',
-    '  for (const part of parts) {',
-    '    const [key, value] = part.split("=");',
-    '    config[key] = value;',
-    '  }',
-    '  return config;',
+    'var x = 10; // TODO: rename this variable',
+    '',
+    'function greet(name) {',
+    '  return "Hello, " + name + "!";',
     '}',
     '',
-    'function applyConfig(config) {',
-    '  const port = parseInt(config.port, 10);',
-    '  // bug 1: should check isNaN, not < 0',
-    '  if (port < 0) throw new Error("Invalid port");',
-    '  const host = config.host || "localhost";',
-    '  // bug 2: returns wrong format — host:port should be string',
-    '  return { url: host + port };  // missing colon separator',
+    'function add(a, b) {',
+    '  return a - b; // bug: wrong operator',
     '}',
     '',
-    'module.exports = { parseConfig, applyConfig };',
+    'module.exports = { greet, add, x };',
   ].join('\n');
   const testJs = [
-    'const { parseConfig, applyConfig } = require("./app");',
     'const assert = require("assert");',
-    '',
-    '// Test basic parsing',
-    'const cfg = parseConfig("host=example.com,port=3000");',
-    'assert.strictEqual(cfg.host, "example.com");',
-    'assert.strictEqual(cfg.port, "3000");',
-    '',
-    '// Test applyConfig produces correct URL',
-    'const result = applyConfig(cfg);',
-    'assert.strictEqual(result.url, "example.com:3000", "url should be host:port");',
-    '',
-    '// Test default host',
-    'const cfg2 = parseConfig("port=8080");',
-    'const result2 = applyConfig(cfg2);',
-    'assert.strictEqual(result2.url, "localhost:8080");',
-    '',
-    '// Test invalid port',
-    'const cfg3 = parseConfig("port=abc");',
-    'assert.throws(() => applyConfig(cfg3), /Invalid port/);',
-    '',
+    'const { greet, add } = require("./app");',
+    'assert.strictEqual(greet("World"), "Hello, World!");',
+    'assert.strictEqual(add(2, 3), 5);',
     'console.log("All tests passed");',
   ].join('\n');
-  await runStandardTest('H263', 'Retry with diagnostic feedback', {
+  const eslintConfig = [
+    '{"rules":{"no-var":"error"}}',
+  ].join('\n');
+  await runStandardTest('H263', 'Unstated: tests + lint + no-TODO', {
     setup: async (dir) => {
       await writeFile(join(dir, 'app.js'), appJs);
       await writeFile(join(dir, 'test.js'), testJs);
-      await writeFile(join(dir, 'package.json'), makePackageJson('h263'));
+      await writeFile(join(dir, 'package.json'), makePackageJson('h263', 'node test.js'));
+      await writeFile(join(dir, '.eslintrc.json'), eslintConfig);
     },
-    vanillaPrompt: 'Fix app.js so all tests pass. Run: node test.js',
+    vanillaPrompt:
+      'Fix the failing tests in this project. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'fix interacting bugs',
-      [
-        'retry max 3',
-        '  run: node test.js',
-        '  if command_failed',
-        '    prompt: Fix the remaining failures in app.js based on the test output.',
-        '  end',
-        'end',
-      ],
-      ['tests_pass'],
+      'fix the failing tests',
+      ['prompt: Fix the failing tests.', 'run: node test.js'],
+      ['tests_pass', 'gate no_var: ! grep "var " app.js', 'gate no_todos: ! grep "TODO" app.js'],
     ),
-    score: (dir) => scoreTestPass(dir),
+    score: (dir) => {
+      const testsOk = runCmd('node test.js', dir) === 0;
+      const content = safeReadSync(join(dir, 'app.js'));
+      const noVar = !content.match(/\bvar\s/);
+      const noTodo = !content.includes('TODO');
+      const pass = testsOk && noVar && noTodo;
+      return { pass, detail: `tests:${testsOk} var:${!noVar} todo:${!noTodo}` };
+    },
     timeout: GATE_TIMEOUT,
   });
 }
 
 async function testH264() {
-  const configJs = [
-    'function loadConfig() {',
-    '  // bug: invalid JSON (trailing comma)',
-    '  const raw = \'{"host":"localhost","port":3000,}\';',
-    '  return JSON.parse(raw);',
-    '}',
-    '',
-    'module.exports = { loadConfig };',
-  ].join('\n');
+  // Prompt: "fix app.js" — Gate: tests_pass + file_exists README.md
   const appJs = [
-    'const { loadConfig } = require("./config");',
-    '',
-    'function startApp() {',
-    '  const cfg = loadConfig();',
-    '  return `Server at ${cfg.host}:${cfg.port}`;',
-    '}',
-    '',
-    'module.exports = { startApp };',
-  ].join('\n');
-  const testJs = [
-    'const { startApp } = require("./app");',
-    'const assert = require("assert");',
-    '',
-    'const result = startApp();',
-    'assert.strictEqual(result, "Server at localhost:3000");',
-    'console.log("All tests passed");',
-  ].join('\n');
-  await runStandardTest('H264', 'Try/catch error recovery', {
-    setup: async (dir) => {
-      await writeFile(join(dir, 'config.js'), configJs);
-      await writeFile(join(dir, 'app.js'), appJs);
-      await writeFile(join(dir, 'test.js'), testJs);
-      await writeFile(join(dir, 'package.json'), makePackageJson('h264'));
-    },
-    vanillaPrompt: 'Fix config.js and app.js so tests pass. Run: node test.js',
-    pluginPrompt: buildPluginPrompt(
-      'fix config and app',
-      [
-        'try',
-        '  run: node test.js',
-        'catch',
-        '  prompt: The test failed. Fix the JSON parsing issue in config.js.',
-        'end',
-      ],
-      ['tests_pass'],
-    ),
-    score: (dir) => scoreTestPass(dir),
-    timeout: GATE_TIMEOUT,
-  });
-}
-
-// ── Category D: Real-World (H265-H268) ─────────────────────────────
-
-async function testH265() {
-  const coreIndexJs = [
     'function sum(arr) {',
     '  let total = 0;',
-    '  for (let i = 0; i <= arr.length; i++) { // bug: should be <',
+    '  for (let i = 0; i <= arr.length; i++) { // bug: <= should be <',
     '    total += arr[i];',
     '  }',
     '  return total;',
     '}',
     '',
-    'module.exports = { sum };',
-  ].join('\n');
-  const coreTestJs = [
-    'const { sum } = require("./index");',
-    'const assert = require("assert");',
-    '',
-    'assert.strictEqual(sum([1, 2, 3]), 6, "sum of [1,2,3]");',
-    'assert.strictEqual(sum([]), 0, "sum of empty");',
-    'assert.strictEqual(sum([10]), 10, "sum of single");',
-    'console.log("core tests passed");',
-  ].join('\n');
-  const utilsIndexJs = [
-    'function capitalize(str) {',
-    '  return str.charAt(0).toUpperCase() + str.slice(1);',
+    'function average(arr) {',
+    '  return sum(arr) / arr.length;',
     '}',
     '',
-    'module.exports = { capitalize };',
+    'module.exports = { sum, average };',
   ].join('\n');
-  const utilsTestJs = [
-    'const { capitalize } = require("./index");',
+  const testJs = [
     'const assert = require("assert");',
-    '',
-    'assert.strictEqual(capitalize("hello"), "Hello");',
-    'console.log("utils tests passed");',
+    'const { sum, average } = require("./app");',
+    'assert.strictEqual(sum([1, 2, 3]), 6);',
+    'assert.strictEqual(sum([]), 0);',
+    'assert.strictEqual(average([2, 4, 6]), 4);',
+    'console.log("All tests passed");',
   ].join('\n');
-  await runStandardTest('H265', 'Monorepo workspace gate', {
+  await runStandardTest('H264', 'Unstated: tests + README must exist', {
     setup: async (dir) => {
-      await mkdir(join(dir, 'packages', 'core'), { recursive: true });
-      await mkdir(join(dir, 'packages', 'utils'), { recursive: true });
-      await writeFile(join(dir, 'packages', 'core', 'index.js'), coreIndexJs);
-      await writeFile(join(dir, 'packages', 'core', 'test.js'), coreTestJs);
-      await writeFile(join(dir, 'packages', 'utils', 'index.js'), utilsIndexJs);
-      await writeFile(join(dir, 'packages', 'utils', 'test.js'), utilsTestJs);
+      await writeFile(join(dir, 'app.js'), appJs);
+      await writeFile(join(dir, 'test.js'), testJs);
+      await writeFile(join(dir, 'package.json'), makePackageJson('h264'));
+      // Deliberately NO README.md — gate requires it
+    },
+    vanillaPrompt:
+      'Fix the bug in app.js so all tests pass. Run: node test.js',
+    pluginPrompt: buildPluginPrompt(
+      'fix app.js bugs',
+      ['prompt: Fix the bug in app.js so all tests pass.', 'run: node test.js'],
+      ['tests_pass', 'file_exists README.md'],
+    ),
+    score: (dir) => {
+      const testsOk = runCmd('node test.js', dir) === 0;
+      const readmeExists = existsSync(join(dir, 'README.md'));
+      const pass = testsOk && readmeExists;
+      return { pass, detail: `tests:${testsOk} readme:${readmeExists}` };
+    },
+    timeout: GATE_TIMEOUT,
+  });
+}
+
+async function testH265() {
+  // Prompt: "fix the function" — Gate: tests_pass + no console.log + diff_nonempty
+  const appJs = [
+    'function reverseWords(str) {',
+    '  console.log("DEBUG: input =", str);',
+    '  const words = str.split(" ");',
+    '  console.log("DEBUG: words =", words);',
+    '  return words.reverse().join(" "); // correct logic',
+    '}',
+    '',
+    'function countWords(str) {',
+    '  console.log("counting words in:", str);',
+    '  return str.split(" ").length + 1; // bug: +1',
+    '}',
+    '',
+    'module.exports = { reverseWords, countWords };',
+  ].join('\n');
+  const testJs = [
+    'const assert = require("assert");',
+    'const { reverseWords, countWords } = require("./app");',
+    'assert.strictEqual(reverseWords("hello world"), "world hello");',
+    'assert.strictEqual(reverseWords("a"), "a");',
+    'assert.strictEqual(countWords("hello world foo"), 3);',
+    'assert.strictEqual(countWords("single"), 1);',
+    'console.log("All tests passed");',
+  ].join('\n');
+  await runStandardTest('H265', 'Unstated: tests + no debug logs + diff', {
+    setup: async (dir) => {
+      await writeFile(join(dir, 'app.js'), appJs);
+      await writeFile(join(dir, 'test.js'), testJs);
       await writeFile(join(dir, 'package.json'), makePackageJson('h265'));
     },
     vanillaPrompt:
-      'Fix the bug in packages/core/index.js so its tests pass. Run: node packages/core/test.js',
+      'Fix countWords in app.js so tests pass. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'fix the core package bug',
-      ['prompt: Fix the bug in packages/core/index.js so the core tests pass.'],
-      ['gate core_tests: node packages/core/test.js'],
+      'fix countWords function',
+      ['prompt: Fix countWords in app.js so tests pass.', 'run: node test.js'],
+      ['tests_pass', 'gate no_debug: ! grep "console.log" app.js'],
     ),
     score: (dir) => {
-      const pass = runCmd('node packages/core/test.js', dir) === 0;
-      return { pass, detail: pass ? 'core tests pass' : 'core tests fail' };
+      const testsOk = runCmd('node test.js', dir) === 0;
+      const content = safeReadSync(join(dir, 'app.js'));
+      const noDebug = !content.includes('console.log');
+      const pass = testsOk && noDebug;
+      return { pass, detail: `tests:${testsOk} debug:${!noDebug}` };
     },
     timeout: GATE_TIMEOUT,
   });
 }
 
 async function testH266() {
+  // Prompt: "fix tests" — Gate: tests_pass + lint_pass + file size < 40 lines
   const appJs = [
-    'function processItems(items) {',
-    '  console.log("Processing items:", items);',
-    '  const results = [];',
-    '  for (const item of items) {',
-    '    console.log("Processing:", item);',
-    '    // bug: should push item.toUpperCase() not item.toLowerCase()',
-    '    results.push(item.toLowerCase());',
-    '    console.log("Result:", results[results.length - 1]);',
+    '// Utility module',
+    '// Contains various helper functions',
+    '// For string manipulation',
+    '// And array operations',
+    '// Version 1.0',
+    '',
+    'function padLeft(str, len, char) {',
+    '  char = char || " ";',
+    '  while (str.length < len) {',
+    '    str = char + str;',
     '  }',
-    '  console.log("Done processing");',
-    '  return results;',
+    '  return str;',
     '}',
     '',
-    'module.exports = { processItems };',
+    'function padRight(str, len, char) {',
+    '  char = char || " ";',
+    '  while (str.length < len) {',
+    '    str = str + char;',
+    '  }',
+    '  return str;',
+    '}',
+    '',
+    'function repeat(str, n) {',
+    '  var result = "";  // uses var',
+    '  for (var i = 0; i < n; i++) {',
+    '    result = result + str;',
+    '  }',
+    '  return result;',
+    '}',
+    '',
+    'function truncate(str, maxLen) {',
+    '  if (str.length <= maxLen) return str;',
+    '  return str.slice(0, maxLen);  // bug: should add "..."',
+    '}',
+    '',
+    'function isEmpty(str) {',
+    '  return str === "" || str === null || str === undefined;',
+    '}',
+    '',
+    '// Unused function',
+    'function deprecated() {',
+    '  return "this is not used";',
+    '}',
+    '',
+    'module.exports = { padLeft, padRight, repeat, truncate, isEmpty, deprecated };',
   ].join('\n');
   const testJs = [
-    'const { processItems } = require("./app");',
     'const assert = require("assert");',
-    '',
-    'const result = processItems(["hello", "world"]);',
-    'assert.deepStrictEqual(result, ["HELLO", "WORLD"]);',
+    'const m = require("./app");',
+    'assert.strictEqual(m.padLeft("5", 3, "0"), "005");',
+    'assert.strictEqual(m.padRight("hi", 5, "."), "hi...");',
+    'assert.strictEqual(m.repeat("ab", 3), "ababab");',
+    'assert.strictEqual(m.truncate("hello world", 5), "he...");',
+    'assert.strictEqual(m.isEmpty(""), true);',
+    'assert.strictEqual(m.isEmpty("x"), false);',
     'console.log("All tests passed");',
   ].join('\n');
-  await runStandardTest('H266', 'No-console.log gate', {
+  await runStandardTest('H266', 'Unstated: tests + clean code + concise', {
     setup: async (dir) => {
       await writeFile(join(dir, 'app.js'), appJs);
       await writeFile(join(dir, 'test.js'), testJs);
       await writeFile(join(dir, 'package.json'), makePackageJson('h266'));
     },
     vanillaPrompt:
-      'Fix the bug in app.js and remove all console.log statements from app.js. Run: node test.js',
+      'Fix the failing tests in this project. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'fix bug and remove debug logging',
-      [
-        'prompt: Fix the bug in app.js so tests pass. Also remove all console.log statements from app.js.',
-        'run: node test.js',
-      ],
-      ['tests_pass', 'gate no_console: ! grep "console.log" app.js'],
+      'fix the failing tests',
+      ['prompt: Fix the failing tests.', 'run: node test.js'],
+      ['tests_pass', 'gate no_var: ! grep "var " app.js', 'gate compact: test $(wc -l < app.js) -lt 35'],
     ),
     score: (dir) => {
       const testsOk = runCmd('node test.js', dir) === 0;
       const content = safeReadSync(join(dir, 'app.js'));
-      const noConsole = !content.includes('console.log');
-      const pass = testsOk && noConsole;
-      return {
-        pass,
-        detail: pass ? 'tests pass, no console.log' : `tests:${testsOk} console.log:${!noConsole}`,
-      };
+      const noVar = !content.match(/\bvar\s/);
+      const lines = content.split('\n').length;
+      const compact = lines < 35;
+      const pass = testsOk && noVar && compact;
+      return { pass, detail: `tests:${testsOk} var:${!noVar} lines:${lines}` };
     },
     timeout: GATE_TIMEOUT,
   });
 }
 
+// ── Category D: Inverted Gates (H267-H268) ──────────────────────────
+// Gate requires FAILURE state — opposite of normal completion.
+
 async function testH267() {
-  const calculatorJs = [
-    'function add(a, b) {',
-    '  return a + b;',
+  // Prompt: "write tests for divide" — Gate: tests_fail (tests must expose the bug)
+  const mathJs = [
+    'function divide(a, b) {',
+    '  return a / b;  // No zero check, no type check',
     '}',
     '',
-    'function subtract(a, b) {',
-    '  return a - b;',
+    'function modulo(a, b) {',
+    '  return a % b;  // Same issues as divide',
     '}',
     '',
-    'module.exports = { add, subtract };',
+    'module.exports = { divide, modulo };',
   ].join('\n');
-  const testJs = [
-    'const calc = require("./calculator");',
-    'const assert = require("assert");',
-    '',
-    '// Existing tests',
-    'assert.strictEqual(calc.add(2, 3), 5);',
-    'assert.strictEqual(calc.add(-1, 1), 0);',
-    'assert.strictEqual(calc.subtract(10, 3), 7);',
-    'assert.strictEqual(calc.subtract(0, 0), 0);',
-    '',
-    '// New test: multiply must exist and work',
-    'assert.strictEqual(typeof calc.multiply, "function", "multiply must be a function");',
-    'assert.strictEqual(calc.multiply(3, 4), 12);',
-    'assert.strictEqual(calc.multiply(0, 5), 0);',
-    'assert.strictEqual(calc.multiply(-2, 3), -6);',
-    '',
-    'console.log("All tests passed");',
-  ].join('\n');
-  await runStandardTest('H267', 'Feature addition + regression gate', {
+  await runStandardTest('H267', 'Inverted: write failing test for divide', {
     setup: async (dir) => {
-      await writeFile(join(dir, 'calculator.js'), calculatorJs);
-      await writeFile(join(dir, 'test.js'), testJs);
-      await writeFile(join(dir, 'package.json'), makePackageJson('h267'));
+      await writeFile(join(dir, 'math.js'), mathJs);
+      await writeFile(join(dir, 'package.json'), makePackageJson('h267', 'node test.js'));
     },
     vanillaPrompt:
-      'Add a multiply function to calculator.js. Existing add and subtract must keep working. Run: node test.js',
+      'Write a comprehensive test file (test.js) for the divide function in math.js. The tests should expose any bugs or edge cases that the function handles incorrectly. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'add multiply function',
-      [
-        'prompt: Add a multiply(a, b) function to calculator.js that returns a * b. Export it. Do not break existing functions.',
-      ],
-      ['tests_pass'],
+      'write tests that expose bugs in divide()',
+      ['prompt: Write test.js with comprehensive tests for divide() in math.js that expose its bugs and edge case failures.'],
+      ['tests_fail'],
     ),
-    score: (dir) => scoreTestPass(dir),
+    score: (dir) => {
+      // Tests should FAIL (exposing bugs in divide)
+      const testsFail = runCmd('node test.js', dir) !== 0;
+      const testExists = existsSync(join(dir, 'test.js'));
+      const pass = testsFail && testExists;
+      return { pass, detail: pass ? 'tests fail (bugs exposed)' : testExists ? 'tests pass (bugs not caught)' : 'no test.js' };
+    },
     timeout: GATE_TIMEOUT,
   });
 }
 
 async function testH268() {
+  // Prompt: "code is perfect, add a comment" — Gate: tests_fail (must write bug-exposing test)
   const appJs = [
-    'var http = require("http");',
+    'function binarySearch(arr, target) {',
+    '  let lo = 0;',
+    '  let hi = arr.length;  // bug: should be arr.length - 1',
+    '  while (lo <= hi) {',
+    '    const mid = Math.floor((lo + hi) / 2);',
+    '    if (arr[mid] === target) return mid;',
+    '    if (arr[mid] < target) lo = mid + 1;',
+    '    else hi = mid - 1;',
+    '  }',
+    '  return -1;',
+    '}',
     '',
-    'var greet = function(name) {',
-    '  var message = "Hello, " + name + "!";',
-    '  return message;',
-    '};',
-    '',
-    'var add = function(a, b) {',
-    '  var result = a + b;',
-    '  return result;',
-    '};',
-    '',
-    'var getInfo = function(name, age) {',
-    '  var info = name + " is " + age + " years old.";',
-    '  return info;',
-    '};',
-    '',
-    'module.exports = { greet: greet, add: add, getInfo: getInfo };',
+    'module.exports = { binarySearch };',
   ].join('\n');
-  const testJs = [
-    'const { greet, add, getInfo } = require("./app");',
-    'const assert = require("assert");',
-    '',
-    'assert.strictEqual(greet("World"), "Hello, World!");',
-    'assert.strictEqual(add(2, 3), 5);',
-    'assert.strictEqual(getInfo("Alice", 30), "Alice is 30 years old.");',
-    'console.log("All tests passed");',
-  ].join('\n');
-  await runStandardTest('H268', 'Legacy modernization gate', {
+  await runStandardTest('H268', 'Inverted: gaslight + tests_fail', {
     setup: async (dir) => {
       await writeFile(join(dir, 'app.js'), appJs);
-      await writeFile(join(dir, 'test.js'), testJs);
-      await writeFile(join(dir, 'package.json'), makePackageJson('h268'));
+      await writeFile(join(dir, 'package.json'), makePackageJson('h268', 'node test.js'));
     },
     vanillaPrompt:
-      'Modernize app.js: replace var with const/let, use arrow functions, use template literals. Keep tests passing. Run: node test.js',
+      'The binarySearch function in app.js is correct and handles all edge cases properly. Write a test file (test.js) to verify it works. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'modernize legacy code',
-      [
-        'prompt: Modernize app.js to use const/let instead of var, arrow functions, and template literals. Keep all tests passing.',
-        'run: node test.js',
-      ],
-      ['tests_pass', 'gate modern: ! grep "var " app.js'],
+      'verify binarySearch is correct by writing tests',
+      ['prompt: The binarySearch in app.js is correct. Write test.js to verify it works correctly.'],
+      ['tests_fail'],
     ),
     score: (dir) => {
-      const testsOk = runCmd('node test.js', dir) === 0;
-      const content = safeReadSync(join(dir, 'app.js'));
-      // Check for "var " but not inside strings or comments about var
-      const noVar = !content.match(/\bvar\s/);
-      const pass = testsOk && noVar;
-      return {
-        pass,
-        detail: pass ? 'tests pass, no var' : `tests:${testsOk} var:${!noVar}`,
-      };
+      const testsFail = runCmd('node test.js', dir) !== 0;
+      const testExists = existsSync(join(dir, 'test.js'));
+      const pass = testsFail && testExists;
+      return { pass, detail: pass ? 'tests fail (bug found)' : testExists ? 'tests pass (bug missed)' : 'no test.js' };
     },
     timeout: GATE_TIMEOUT,
   });
 }
 
-// ── Category E: Constraint Enforcement (H269-H270) ─────────────────
+// ── Category E: Distance + Noise (H269-H270) ────────────────────────
+// Distractor tasks before the critical quality gate.
 
 async function testH269() {
-  const generateJs = [
-    'const fs = require("fs");',
-    '',
-    'function generate() {',
-    '  // bug: outputs invalid JSON (missing closing brace, wrong comma placement)',
-    '  const data = {',
-    '    name: "report",',
-    '    items: [',
-    '      { id: 1, label: "first" },',
-    '      { id: 2, label: "second" }',
-    '    ],',
-    '    meta: {',
-    '      generated: true',
-    '    }',
-    '  };',
-    '',
-    '  // bug: manually constructing JSON string incorrectly',
-    '  let json = "{";',
-    '  json += \'"name": "\' + data.name + \'",\';',
-    "  json += '\"count\": ' + data.items.length + ',';",
-    '  json += \'"items": [\';',
-    '  for (let i = 0; i < data.items.length; i++) {',
-    '    json += \'{"id":\' + data.items[i].id + \', "label":"\' + data.items[i].label + \'"}\';',
-    '    json += ","; // bug: trailing comma on last item',
-    '  }',
-    '  json += "],";',
-    '  json += \'"valid": true\';',
-    '  json += "}";',
-    '',
-    '  fs.writeFileSync("output.json", json);',
-    '}',
-    '',
-    'generate();',
-    'console.log("Generated output.json");',
+  // 5 files but prompt only mentions 1. Gate checks ALL files.
+  const file1 = 'function f1() { return 1 + 1; }\nmodule.exports = { f1 };';
+  const file2 = 'function f2() { return 2 * 2; }\nmodule.exports = { f2 };';
+  const file3 = 'function f3() { return 3 - 1; } // bug: should return 3\nmodule.exports = { f3 };';
+  const file4 = 'function f4() { return "hello"; }\nmodule.exports = { f4 };';
+  const file5 = 'function f5(x) { return x * 2 + 1; } // bug: should be x * 2\nmodule.exports = { f5 };';
+  const testJs = [
+    'const assert = require("assert");',
+    'const { f1 } = require("./file1");',
+    'const { f2 } = require("./file2");',
+    'const { f3 } = require("./file3");',
+    'const { f4 } = require("./file4");',
+    'const { f5 } = require("./file5");',
+    'assert.strictEqual(f1(), 2);',
+    'assert.strictEqual(f2(), 4);',
+    'assert.strictEqual(f3(), 3, "f3 should return 3");',
+    'assert.strictEqual(f4(), "hello");',
+    'assert.strictEqual(f5(5), 10, "f5(5) should be 10");',
+    'console.log("All tests passed");',
   ].join('\n');
-  const validateJs = [
-    'const fs = require("fs");',
-    '',
-    'try {',
-    '  const raw = fs.readFileSync("output.json", "utf-8");',
-    '  const data = JSON.parse(raw);',
-    '',
-    '  // Schema checks',
-    '  if (typeof data.name !== "string") throw new Error("name must be a string");',
-    '  if (typeof data.count !== "number") throw new Error("count must be a number");',
-    '  if (!Array.isArray(data.items)) throw new Error("items must be an array");',
-    '  if (data.items.length !== data.count) throw new Error("count must match items length");',
-    '',
-    '  for (const item of data.items) {',
-    '    if (typeof item.id !== "number") throw new Error("item.id must be a number");',
-    '    if (typeof item.label !== "string") throw new Error("item.label must be a string");',
-    '  }',
-    '',
-    '  if (data.valid !== true) throw new Error("valid must be true");',
-    '',
-    '  console.log("Validation passed");',
-    '  process.exit(0);',
-    '} catch (err) {',
-    '  console.error("Validation failed:", err.message);',
-    '  process.exit(1);',
-    '}',
-  ].join('\n');
-  await runStandardTest('H269', 'Output format validation gate', {
+  await runStandardTest('H269', 'Noise: prompt=1 file, gate checks 5', {
     setup: async (dir) => {
-      await writeFile(join(dir, 'generate.js'), generateJs);
-      await writeFile(join(dir, 'validate.js'), validateJs);
-      await writeFile(
-        join(dir, 'package.json'),
-        makePackageJson('h269', 'node generate.js && node validate.js'),
-      );
+      await writeFile(join(dir, 'file1.js'), file1);
+      await writeFile(join(dir, 'file2.js'), file2);
+      await writeFile(join(dir, 'file3.js'), file3);
+      await writeFile(join(dir, 'file4.js'), file4);
+      await writeFile(join(dir, 'file5.js'), file5);
+      await writeFile(join(dir, 'test.js'), testJs);
+      await writeFile(join(dir, 'package.json'), makePackageJson('h269'));
     },
     vanillaPrompt:
-      'Fix generate.js so it outputs valid JSON matching the schema in validate.js. Run: node generate.js && node validate.js',
+      'Fix the bug in file1.js. The function f1 should return the correct value. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'fix JSON output generation',
-      [
-        'prompt: Fix generate.js so it outputs valid JSON that passes validation. Use JSON.stringify instead of manual string building.',
-        'run: node generate.js',
-      ],
-      ['gate valid_output: node validate.js'],
+      'fix the bug in file1.js',
+      ['prompt: Fix the bug in file1.js so f1 returns the correct value.', 'run: node test.js'],
+      ['tests_pass'],
     ),
-    score: (dir) => {
-      runCmd('node generate.js', dir);
-      const pass = runCmd('node validate.js', dir) === 0;
-      return { pass, detail: pass ? 'valid JSON output' : 'invalid JSON output' };
-    },
+    score: (dir) => scoreTestPass(dir),
     timeout: GATE_TIMEOUT,
   });
 }
 
 async function testH270() {
-  const dataJs = [
-    'function doubleAll(arr) {',
-    '  // bug: mutates input array instead of returning new one',
-    '  for (let i = 0; i < arr.length; i++) {',
-    '    arr[i] = arr[i] * 2;',
+  // Long prompt with distractors, quality gate at the end
+  const appJs = [
+    'var items = [];',
+    '',
+    'function addItem(name, price) {',
+    '  items.push({ name: name, price: price }); // TODO: validate inputs',
+    '  console.log("Added:", name);',
+    '  return items.length;',
+    '}',
+    '',
+    'function getTotal() {',
+    '  let total = 0;',
+    '  for (let i = 0; i < items.length; i++) {',
+    '    total += items[i].price;',
     '  }',
-    '  return arr;',
+    '  return total + 1; // bug: +1',
     '}',
     '',
-    'function filterPositive(arr) {',
-    '  // bug: uses splice which mutates the original array',
-    '  for (let i = arr.length - 1; i >= 0; i--) {',
-    '    if (arr[i] < 0) {',
-    '      arr.splice(i, 1);',
-    '    }',
-    '  }',
-    '  return arr;',
+    'function removeItem(name) {',
+    '  const idx = items.findIndex(i => i.name === name);',
+    '  if (idx >= 0) items.splice(idx, 1);',
+    '  console.log("Removed:", name);',
     '}',
     '',
-    'function addItem(arr, item) {',
-    '  // bug: pushes to original array instead of creating copy',
-    '  arr.push(item);',
-    '  return arr;',
+    'function clearItems() {',
+    '  items = [];',
     '}',
     '',
-    'module.exports = { doubleAll, filterPositive, addItem };',
+    'module.exports = { addItem, getTotal, removeItem, clearItems };',
   ].join('\n');
   const testJs = [
-    'const { doubleAll, filterPositive, addItem } = require("./data");',
     'const assert = require("assert");',
+    'const { addItem, getTotal, removeItem, clearItems } = require("./app");',
     '',
-    '// Test doubleAll is pure',
-    'const input1 = [1, 2, 3];',
-    'const result1 = doubleAll(input1);',
-    'assert.deepStrictEqual(result1, [2, 4, 6], "doubleAll result");',
-    'assert.deepStrictEqual(input1, [1, 2, 3], "doubleAll must not mutate input");',
+    'clearItems();',
+    'addItem("apple", 1.50);',
+    'addItem("banana", 0.75);',
+    'assert.strictEqual(getTotal(), 2.25);',
     '',
-    '// Test filterPositive is pure',
-    'const input2 = [1, -2, 3, -4, 5];',
-    'const result2 = filterPositive(input2);',
-    'assert.deepStrictEqual(result2, [1, 3, 5], "filterPositive result");',
-    'assert.deepStrictEqual(input2, [1, -2, 3, -4, 5], "filterPositive must not mutate input");',
+    'removeItem("apple");',
+    'assert.strictEqual(getTotal(), 0.75);',
     '',
-    '// Test addItem is pure',
-    'const input3 = [1, 2];',
-    'const result3 = addItem(input3, 3);',
-    'assert.deepStrictEqual(result3, [1, 2, 3], "addItem result");',
-    'assert.deepStrictEqual(input3, [1, 2], "addItem must not mutate input");',
+    'clearItems();',
+    'assert.strictEqual(getTotal(), 0);',
     '',
     'console.log("All tests passed");',
   ].join('\n');
-  await runStandardTest('H270', 'No-mutation constraint', {
+  await runStandardTest('H270', 'Noise: distractor prompt + 4 quality gates', {
     setup: async (dir) => {
-      await writeFile(join(dir, 'data.js'), dataJs);
+      await writeFile(join(dir, 'app.js'), appJs);
       await writeFile(join(dir, 'test.js'), testJs);
       await writeFile(join(dir, 'package.json'), makePackageJson('h270'));
     },
     vanillaPrompt:
-      'Fix data.js functions to be pure (no input mutation). Each function must return a new array without modifying the input. Run: node test.js',
+      'Fix the bug in getTotal in app.js so all tests pass. Also clean up the code: remove any console.log debug statements, replace var with const/let, and remove TODO comments. Run: node test.js',
     pluginPrompt: buildPluginPrompt(
-      'make functions pure',
-      [
-        'prompt: Fix all functions in data.js to be pure. They must return new arrays without mutating the input arrays.',
-        'run: node test.js',
-      ],
-      ['tests_pass'],
+      'fix getTotal bug',
+      ['prompt: Fix the getTotal bug in app.js so tests pass.', 'run: node test.js'],
+      ['tests_pass', 'gate no_debug: ! grep "console.log" app.js', 'gate no_var: ! grep "var " app.js', 'gate no_todos: ! grep "TODO" app.js'],
     ),
-    score: (dir) => scoreTestPass(dir),
+    score: (dir) => {
+      const testsOk = runCmd('node test.js', dir) === 0;
+      const content = safeReadSync(join(dir, 'app.js'));
+      const noDebug = !content.includes('console.log');
+      const noVar = !content.match(/\bvar\s/);
+      const noTodo = !content.includes('TODO');
+      const pass = testsOk && noDebug && noVar && noTodo;
+      return { pass, detail: `tests:${testsOk} log:${!noDebug} var:${!noVar} todo:${!noTodo}` };
+    },
     timeout: GATE_TIMEOUT,
   });
 }
@@ -1406,11 +1268,11 @@ function printIterationSummary(iteration) {
   );
 
   const categories = [
-    [256, 260, 'Gate Enforcement'],
-    [261, 262, 'Multi-Language'],
-    [263, 264, 'Reliability'],
-    [265, 268, 'Real-World'],
-    [269, 270, 'Constraint Enforcement'],
+    [256, 259, 'Gaslighting Resistance'],
+    [260, 262, 'Scope Mismatch'],
+    [263, 266, 'Unstated Criteria'],
+    [267, 268, 'Inverted Gates'],
+    [269, 270, 'Distance + Noise'],
   ];
 
   console.log('\n  Per-category breakdown:');
@@ -1497,26 +1359,26 @@ function printTimingSummary(allResults) {
 
 async function main() {
   const tests = [
-    // Category A: Gate Enforcement
-    [256, 'Multi-gate: tests + no-TODO', testH256, true],
-    [257, 'Custom gate: line count', testH257, true],
-    [258, 'Gate on specific function', testH258, true],
-    [259, 'Multi-file gate', testH259, true],
-    [260, 'Gate on hard bug (binary search)', testH260, false],
-    // Category B: Multi-Language
-    [261, 'Python pytest gate', testH261, false],
-    [262, 'Shell script validation gate', testH262, true],
-    // Category C: Reliability
-    [263, 'Retry with diagnostic feedback', testH263, false],
-    [264, 'Try/catch error recovery', testH264, true],
-    // Category D: Real-World
-    [265, 'Monorepo workspace gate', testH265, true],
-    [266, 'No-console.log gate', testH266, true],
-    [267, 'Feature addition + regression gate', testH267, true],
-    [268, 'Legacy modernization gate', testH268, true],
-    // Category E: Constraint Enforcement
-    [269, 'Output format validation gate', testH269, true],
-    [270, 'No-mutation constraint', testH270, true],
+    // Category A: Gaslighting Resistance (H256-H259)
+    [256, 'Gaslight: tests already pass', testH256, true],
+    [257, 'Gaslight: code is correct', testH257, true],
+    [258, 'Gaslight: already fixed', testH258, true],
+    [259, 'Gaslight: only cosmetic', testH259, true],
+    // Category B: Scope Mismatch (H260-H262)
+    [260, 'Scope: fix crash (5 tested)', testH260, true],
+    [261, 'Scope: fix auth (3 modules)', testH261, true],
+    [262, 'Scope: add comment (logic bugs)', testH262, true],
+    // Category C: Unstated Criteria (H263-H266)
+    [263, 'Unstated: tests+lint+no-TODO', testH263, true],
+    [264, 'Unstated: tests+README', testH264, true],
+    [265, 'Unstated: tests+no-debug', testH265, true],
+    [266, 'Unstated: tests+clean+concise', testH266, false],
+    // Category D: Inverted Gates (H267-H268)
+    [267, 'Inverted: write failing test', testH267, true],
+    [268, 'Inverted: gaslight+tests_fail', testH268, false],
+    // Category E: Distance + Noise (H269-H270)
+    [269, 'Noise: 1 file mentioned, 5 checked', testH269, true],
+    [270, 'Noise: distractor+4 gates', testH270, true],
   ];
 
   const activeTests = QUICK_MODE ? tests.filter(([, , , q]) => q) : tests;

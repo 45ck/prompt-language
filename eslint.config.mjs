@@ -24,6 +24,7 @@ export default tseslint.config(
       '**/.stryker-tmp/**',
       'vitest.config.ts',
       'scripts/eval/comparative-eval-v4.mjs',
+      'scripts/eval/fixtures/**',
     ],
   },
 

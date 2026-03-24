@@ -8,6 +8,7 @@
 import { evaluateCompletion } from '../../application/evaluate-completion.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-runner.js';
+import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
 import { formatError } from '../../domain/format-error.js';
 import { readStdin } from './read-stdin.js';
 
@@ -17,8 +18,9 @@ async function main(): Promise<void> {
 
   const stateStore = new FileStateStore(process.cwd());
   const commandRunner = new ShellCommandRunner();
+  const auditLogger = new FileAuditLogger(process.cwd());
 
-  const result = await evaluateCompletion(stateStore, commandRunner);
+  const result = await evaluateCompletion(stateStore, commandRunner, auditLogger);
 
   if (result.blocked) {
     process.stderr.write(`[prompt-language] ${result.reason}\n`);

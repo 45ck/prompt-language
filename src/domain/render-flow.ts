@@ -243,7 +243,10 @@ function renderLetNode(
   const isAwaitingCapture = progress?.status === 'awaiting_capture';
   const resolved = state.variables[node.variableName];
   let annotation: string;
-  if (isAwaitingCapture) {
+  if (isAwaitingCapture && progress.captureFailureReason) {
+    const retry = `${progress.iteration}/${progress.maxIterations}`;
+    annotation = `  [capture failed: ${progress.captureFailureReason} — retry ${retry}]`;
+  } else if (isAwaitingCapture) {
     annotation = '  [awaiting response...]';
   } else if (resolved !== undefined) {
     annotation = `  [= ${String(resolved)}]`;
@@ -413,8 +416,12 @@ function renderWarnings(state: SessionState): string[] {
 }
 
 export function renderFlow(state: SessionState): string {
+  const statusSuffix =
+    state.status === 'failed' && state.failureReason
+      ? ` | [FLOW FAILED: ${state.failureReason}]`
+      : '';
   const lines: string[] = [
-    `[prompt-language] Flow: ${state.flowSpec.goal} | Status: ${state.status}`,
+    `[prompt-language] Flow: ${state.flowSpec.goal} | Status: ${state.status}${statusSuffix}`,
     '',
   ];
 
@@ -428,4 +435,156 @@ export function renderFlow(state: SessionState): string {
   lines.push(...renderWarnings(state));
 
   return lines.join('\n');
+}
+
+// H-REL-011: Compact single-line summary for compaction resilience
+function countAllNodes(nodes: readonly FlowNode[]): number {
+  let count = 0;
+  for (const node of nodes) {
+    count += 1;
+    switch (node.kind) {
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'foreach':
+      case 'spawn':
+        count += countAllNodes(node.body);
+        break;
+      case 'if':
+        count += countAllNodes(node.thenBranch) + countAllNodes(node.elseBranch);
+        break;
+      case 'try':
+        count +=
+          countAllNodes(node.body) +
+          countAllNodes(node.catchBody) +
+          countAllNodes(node.finallyBody);
+        break;
+      case 'prompt':
+      case 'run':
+      case 'let':
+      case 'break':
+      case 'continue':
+      case 'await':
+        break;
+    }
+  }
+  return count;
+}
+
+function flattenNodes(nodes: readonly FlowNode[]): FlowNode[] {
+  const result: FlowNode[] = [];
+  for (const node of nodes) {
+    result.push(node);
+    switch (node.kind) {
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'foreach':
+      case 'spawn':
+        result.push(...flattenNodes(node.body));
+        break;
+      case 'if':
+        result.push(...flattenNodes(node.thenBranch), ...flattenNodes(node.elseBranch));
+        break;
+      case 'try':
+        result.push(
+          ...flattenNodes(node.body),
+          ...flattenNodes(node.catchBody),
+          ...flattenNodes(node.finallyBody),
+        );
+        break;
+      case 'prompt':
+      case 'run':
+      case 'let':
+      case 'break':
+      case 'continue':
+      case 'await':
+        break;
+    }
+  }
+  return result;
+}
+
+function resolveNodeByPath(nodes: readonly FlowNode[], path: readonly number[]): FlowNode | null {
+  if (path.length === 0) return null;
+  const idx = path[0]!;
+  const node = nodes[idx];
+  if (!node) return null;
+  if (path.length === 1) return node;
+  const rest = path.slice(1);
+  switch (node.kind) {
+    case 'while':
+    case 'until':
+    case 'retry':
+    case 'foreach':
+    case 'spawn':
+      return resolveNodeByPath(node.body, rest);
+    case 'if':
+      return resolveNodeByPath([...node.thenBranch, ...node.elseBranch], rest);
+    case 'try':
+      return resolveNodeByPath([...node.body, ...node.catchBody, ...node.finallyBody], rest);
+    default:
+      return null;
+  }
+}
+
+function describeNode(node: FlowNode): string {
+  switch (node.kind) {
+    case 'prompt':
+      return `prompt: ${node.text}`;
+    case 'run':
+      return `run: ${node.command}`;
+    case 'let':
+      return `let ${node.variableName}`;
+    case 'while':
+      return `while ${node.condition}`;
+    case 'until':
+      return `until ${node.condition}`;
+    case 'retry':
+      return `retry max ${node.maxAttempts}`;
+    case 'if':
+      return `if ${node.condition}`;
+    case 'try':
+      return 'try';
+    case 'foreach':
+      return `foreach ${node.variableName}`;
+    case 'break':
+      return 'break';
+    case 'continue':
+      return 'continue';
+    case 'spawn':
+      return `spawn "${node.name}"`;
+    case 'await':
+      return `await ${node.target}`;
+  }
+}
+
+function findStepIndex(nodes: readonly FlowNode[], path: readonly number[]): number {
+  const flat = flattenNodes(nodes);
+  const target = resolveNodeByPath(nodes, path);
+  if (!target) return 0;
+  const idx = flat.indexOf(target);
+  return idx >= 0 ? idx + 1 : 0;
+}
+
+export function renderFlowSummary(state: SessionState): string {
+  const totalNodes = countAllNodes(state.flowSpec.nodes);
+  const stepNum = findStepIndex(state.flowSpec.nodes, state.currentNodePath);
+  const currentNode = resolveNodeByPath(state.flowSpec.nodes, state.currentNodePath);
+  const nodeDesc = currentNode ? describeNode(currentNode) : 'done';
+
+  const varCount = Object.keys(state.variables).length;
+  const gates = state.flowSpec.completionGates;
+  const gatesPassed = gates.filter((g) => state.gateResults[g.predicate] === true).length;
+
+  const truncatedDesc = nodeDesc.length > 40 ? nodeDesc.slice(0, 37) + '...' : nodeDesc;
+
+  let summary = `[prompt-language: step ${stepNum}/${totalNodes} "${truncatedDesc}"`;
+  summary += `, vars: ${varCount}`;
+  if (gates.length > 0) {
+    summary += `, gates: ${gatesPassed}/${gates.length} passed`;
+  }
+  summary += ']';
+
+  return summary;
 }

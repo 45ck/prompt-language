@@ -58,6 +58,27 @@ describe('injectContext', () => {
     expect(result.prompt).toContain('Do work');
   });
 
+  // H-REL-011: Flow heartbeat summary appended at end of context
+  it('appends flow heartbeat summary at end of injected context', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Build feature', [
+      createPromptNode('p1', 'Do work'),
+      createRunNode('r1', 'npm test'),
+    ]);
+    const session = createSessionState('test-summary', spec);
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'Continue working', sessionId: 'test-summary' },
+      store,
+    );
+
+    expect(result.prompt).toContain('[prompt-language:');
+    // Summary should be at the very end of the output
+    const lastLine = result.prompt.trim().split('\n').pop()!;
+    expect(lastLine).toMatch(/^\[prompt-language:/);
+  });
+
   it('includes variable info in context block', async () => {
     const store = makeStore();
     const spec = createFlowSpec('Test', []);
@@ -705,7 +726,8 @@ describe('injectContext — let run edge cases', () => {
 });
 
 describe('injectContext — error handling and limits', () => {
-  it('propagates error when command runner throws during run node', async () => {
+  // H-REL-009: Error boundary catches runtime errors and transitions to failed
+  it('catches error from command runner and transitions flow to failed', async () => {
     const store = makeStore();
     const throwingRunner: CommandRunner = {
       run: async () => {
@@ -717,9 +739,46 @@ describe('injectContext — error handling and limits', () => {
     const session = createSessionState('s1', spec);
     await store.save(session);
 
-    await expect(
-      injectContext({ prompt: 'Go', sessionId: 's1' }, store, throwingRunner),
-    ).rejects.toThrow('connection failed');
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, throwingRunner);
+    expect(result.prompt).toContain('[prompt-language] Flow failed:');
+    expect(result.prompt).toContain('connection failed');
+    expect(result.prompt).toContain('Go');
+
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('failed');
+    expect(saved?.failureReason).toContain('connection failed');
+  });
+
+  it('catches TypeError during active flow and includes error type', async () => {
+    const store = makeStore();
+    const throwingRunner: CommandRunner = {
+      run: async () => {
+        throw new TypeError('Cannot read properties of null');
+      },
+    };
+    const runNode = createRunNode('r1', 'echo ok');
+    const spec = createFlowSpec('test', [runNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, throwingRunner);
+    expect(result.prompt).toContain('[prompt-language] Flow failed:');
+    expect(result.prompt).toContain('TypeError');
+    expect(result.prompt).toContain('Cannot read properties of null');
+  });
+
+  it('catches error during new flow parsing and returns failure message', async () => {
+    const store = makeStore();
+    // A flow block that will cause autoAdvanceNodes to throw when runner throws
+    const throwingRunner: CommandRunner = {
+      run: async () => {
+        throw new ReferenceError('runner is not defined');
+      },
+    };
+    const prompt = 'Goal: Test\n\nflow:\n  run: failing command';
+    const result = await injectContext({ prompt, sessionId: 's1' }, store, throwingRunner);
+    expect(result.prompt).toContain('[prompt-language] Flow failed:');
+    expect(result.prompt).toContain('runner is not defined');
   });
 
   it('warns when MAX_ADVANCES (100) limit is reached', async () => {
@@ -2170,5 +2229,53 @@ describe('injectContext — NL-to-DSL round-trip', () => {
     await injectContext({ prompt: 'abort flow', sessionId: 'rt-8' }, store);
 
     expect(await store.loadPendingPrompt()).toBeNull();
+  });
+});
+
+describe('injectContext — H-DX-003 dry-run mode', () => {
+  it('returns dry-run output with rendered flow and complexity without persisting state', async () => {
+    const store = makeStore();
+    const prompt = 'dry-run\nGoal: test\nflow:\n  prompt: Do something\ndone when:\n  tests_pass';
+    const result = await injectContext({ prompt, sessionId: 'dr-1' }, store);
+
+    expect(result.prompt).toContain('[prompt-language dry-run]');
+    expect(result.prompt).toContain('Complexity:');
+    expect(result.prompt).toContain('prompt: Do something');
+    // Should NOT persist state
+    const saved = await store.loadCurrent();
+    expect(saved).toBeNull();
+  });
+
+  it('detects --dry-run flag', async () => {
+    const store = makeStore();
+    const prompt = '--dry-run\nGoal: test\nflow:\n  prompt: Work\ndone when:\n  tests_pass';
+    const result = await injectContext({ prompt, sessionId: 'dr-2' }, store);
+
+    expect(result.prompt).toContain('[prompt-language dry-run]');
+    expect(await store.loadCurrent()).toBeNull();
+  });
+
+  it('strips dry-run from the forwarded prompt text', async () => {
+    const store = makeStore();
+    const prompt = 'dry-run\nGoal: test\nflow:\n  prompt: Work';
+    const result = await injectContext({ prompt, sessionId: 'dr-3' }, store);
+
+    expect(result.prompt).toContain('[prompt-language dry-run]');
+    // The cleaned prompt should not contain the dry-run keyword as a standalone word
+    const lines = result.prompt.split('\n');
+    const afterComplexity = lines.slice(lines.findIndex((l) => l.startsWith('Complexity:')) + 1);
+    const cleanedPart = afterComplexity.join('\n').trim();
+    expect(cleanedPart).not.toMatch(/(?:^|\s)(?:--|)dry-?run\b/i);
+  });
+
+  it('shows lint warnings in dry-run output', async () => {
+    const store = makeStore();
+    // Empty while body triggers lint warning
+    const prompt = 'dry-run\nflow:\n  while tests_fail max 3\n  end';
+    const result = await injectContext({ prompt, sessionId: 'dr-4' }, store);
+
+    expect(result.prompt).toContain('[prompt-language dry-run]');
+    expect(result.prompt).toContain('Warnings:');
+    expect(result.prompt).toContain('Empty while body');
   });
 });

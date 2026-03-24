@@ -3,6 +3,7 @@
  */
 
 import { mkdir, readFile, writeFile, rename, unlink, access, open } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import type { StateStore } from '../../application/ports/state-store.js';
 import type { SessionState } from '../../domain/session-state.js';
@@ -53,10 +54,13 @@ export class FileStateStore implements StateStore {
           'Possible cause: large command output in variables.',
       );
     }
+    // H-SEC-002: Append integrity checksum
+    const checksum = computeChecksum(json);
+    const jsonWithChecksum = JSON.stringify({ ...JSON.parse(json), _checksum: checksum }, null, 2);
     // H#58: File locking to prevent concurrent writes
     // H-REL-001: Write to temp file then atomic rename
     await this.withLock(async () => {
-      await writeFile(this.tempFilePath, json, 'utf-8');
+      await writeFile(this.tempFilePath, jsonWithChecksum, 'utf-8');
       await this.renameWithRetry(this.tempFilePath, this.filePath);
     });
   }
@@ -113,7 +117,25 @@ export class FileStateStore implements StateStore {
   private async readState(): Promise<SessionState | null> {
     try {
       const raw = await readFile(this.filePath, 'utf-8');
-      return JSON.parse(raw) as SessionState;
+      const parsed = JSON.parse(raw) as SessionState & { _checksum?: string };
+
+      // H-SEC-002: Verify state file integrity
+      const storedChecksum = parsed._checksum;
+      if (storedChecksum !== undefined) {
+        // Strip _checksum, serialize without it, and verify
+        const { _checksum: _, ...stateWithout } = parsed;
+        const expectedChecksum = computeChecksum(JSON.stringify(stateWithout, null, 2));
+        if (storedChecksum !== expectedChecksum) {
+          process.stderr.write(
+            '[prompt-language] WARNING: state file checksum mismatch, clearing gate results\n',
+          );
+          return { ...stateWithout, gateResults: {}, gateDiagnostics: {} } as SessionState;
+        }
+        return stateWithout as SessionState;
+      }
+
+      // No checksum (pre-migration file) — load normally
+      return parsed as SessionState;
     } catch (error: unknown) {
       if (isNodeError(error) && error.code === 'ENOENT') {
         return null;
@@ -198,4 +220,9 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// H-SEC-002: Compute SHA-256 checksum of state JSON content
+function computeChecksum(json: string): string {
+  return createHash('sha256').update(json).digest('hex');
 }

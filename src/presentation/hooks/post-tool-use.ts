@@ -21,8 +21,12 @@ import { extractAllCaptureTags } from '../../infrastructure/adapters/tag-capture
 import { readStdin } from './read-stdin.js';
 
 /** Scan text for capture tags and write extracted values to var files. */
-async function scanAndSaveCapturedVars(text: string, basePath: string): Promise<void> {
-  const matches = extractAllCaptureTags(text);
+async function scanAndSaveCapturedVars(
+  text: string,
+  basePath: string,
+  nonce?: string,
+): Promise<void> {
+  const matches = extractAllCaptureTags(text, nonce);
   if (matches.length === 0) return;
 
   const varsDir = join(basePath, CAPTURE_VARS_DIR);
@@ -52,7 +56,7 @@ async function main(): Promise<void> {
           const output = (parsed as { tool_output: string }).tool_output;
           if (typeof output === 'string') {
             try {
-              await scanAndSaveCapturedVars(output, process.cwd());
+              await scanAndSaveCapturedVars(output, process.cwd(), state.captureNonce);
             } catch (captureErr: unknown) {
               process.stderr.write(
                 `[prompt-language] capture write error: ${formatError(captureErr)}\n`,

@@ -12,6 +12,7 @@ import { FileStateStore } from '../../infrastructure/adapters/file-state-store.j
 import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-runner.js';
 import { FileCaptureReader } from '../../infrastructure/adapters/file-capture-reader.js';
 import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
+import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
 import { formatError } from '../../domain/format-error.js';
 import { readStdin } from './read-stdin.js';
 
@@ -43,6 +44,7 @@ async function main(): Promise<void> {
   const commandRunner = new ShellCommandRunner();
   const captureReader = new FileCaptureReader(process.cwd());
   const processSpawner = new ClaudeProcessSpawner(process.cwd());
+  const auditLogger = new FileAuditLogger(process.cwd());
   const sessionId = randomUUID();
 
   const stateBefore = await stateStore.loadCurrent();
@@ -53,6 +55,7 @@ async function main(): Promise<void> {
     commandRunner,
     captureReader,
     processSpawner,
+    auditLogger,
   );
 
   if (result.prompt !== input.prompt) {

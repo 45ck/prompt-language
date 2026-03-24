@@ -71,6 +71,20 @@ export function parseGates(input: string): readonly CompletionGate[] {
       continue;
     }
 
+    // H-INT-010: any(gate1, gate2, ...) composite gate
+    const anyMatch = /^any\s*\((.+)\)\s*$/i.exec(trimmed);
+    if (anyMatch?.[1]) {
+      const subPredicates = anyMatch[1]
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (subPredicates.length > 0) {
+        const subGates = subPredicates.map((p) => createCompletionGate(p));
+        gates.push({ predicate: `any(${subPredicates.join(', ')})`, any: subGates });
+        continue;
+      }
+    }
+
     // H#26: Custom gate definition — "gate name: command"
     const gateMatch = /^gate\s+(\w+)\s*:\s*(.+)$/i.exec(trimmed);
     if (gateMatch?.[1] && gateMatch[2]) {
@@ -301,6 +315,16 @@ function parseForeachLine(ctx: ParseContext, line: string, baseIndent: number): 
 }
 
 function parseSpawnBlock(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
+  // H-INT-005: Parse optional `in "path"` for cross-directory spawn
+  const cwdMatch =
+    /^spawn\s+"([^"]+)"\s+in\s+"([^"]+)"/i.exec(line) ??
+    /^spawn\s+'([^']+)'\s+in\s+'([^']+)'/i.exec(line);
+  if (cwdMatch?.[1] && cwdMatch[2]) {
+    const body = parseBlock(ctx, baseIndent);
+    consumeEnd(ctx);
+    return createSpawnNode(nextId(ctx), cwdMatch[1], body, cwdMatch[2]);
+  }
+
   const match = /^spawn\s+"([^"]+)"/i.exec(line) ?? /^spawn\s+'([^']+)'/i.exec(line);
   // D5: Accept bare-word spawn names (consistent with await)
   const name = match?.[1] ?? line.replace(/^spawn\s+/i, '').trim();

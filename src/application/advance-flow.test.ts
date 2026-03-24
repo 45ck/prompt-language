@@ -1126,6 +1126,53 @@ describe('autoAdvanceNodes — truncateOutput', () => {
   });
 });
 
+// ── H-LANG-001: let arithmetic ──────────────────────────────────────
+
+describe('autoAdvanceNodes — let arithmetic', () => {
+  it('evaluates arithmetic in literal and stores result as string', async () => {
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'count', { type: 'literal', value: '3 + 5' }),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['count']).toBe('8');
+  });
+
+  it('evaluates arithmetic after variable interpolation', async () => {
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'a', { type: 'literal', value: '3' }),
+      createLetNode('l2', 'b', { type: 'literal', value: '5' }),
+      createLetNode('l3', 'x', { type: 'literal', value: '${a} + ${b}' }),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['x']).toBe('8');
+  });
+
+  it('stores plain text as-is when not arithmetic', async () => {
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'msg', { type: 'literal', value: 'hello world' }),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['msg']).toBe('hello world');
+  });
+
+  it('interpolates variables in literal even without arithmetic', async () => {
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'name', { type: 'literal', value: 'world' }),
+      createLetNode('l2', 'greeting', { type: 'literal', value: 'hello ${name}' }),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['greeting']).toBe('hello world');
+  });
+});
+
 // ── let x = run (with and without commandRunner) ────────────────────
 
 describe('autoAdvanceNodes — let run', () => {
@@ -1737,8 +1784,8 @@ describe('autoAdvanceNodes — continue', () => {
 
     // Process all items — continue should skip l2 each time
     const r1 = await autoAdvanceNodes(state);
-    // First iteration: marker=a, continue triggers next item
-    expect(r1.state.variables['marker']).toBe('${x}');
+    // marker is set to interpolated ${x} on each iteration; last value is 'c'
+    expect(r1.state.variables['marker']).toBe('c');
     // 'never' should not be set since continue skips it
     expect(r1.state.variables['never']).toBeUndefined();
   });

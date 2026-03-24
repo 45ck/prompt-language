@@ -85,4 +85,27 @@ describe('FileCaptureReader', () => {
       await expect(access(varsDir)).resolves.toBeUndefined();
     });
   });
+
+  describe('read rethrows non-ENOENT errors', () => {
+    it('throws when var file path is a directory', async () => {
+      const varsDir = join(baseDir, '.prompt-language', 'vars');
+      // Create a directory where the var file would be
+      const varPath = join(varsDir, 'myvar');
+      await mkdir(varPath, { recursive: true });
+
+      await expect(reader.read('myvar')).rejects.toThrow();
+    });
+  });
+
+  describe('clear rethrows non-ENOENT errors', () => {
+    it('throws when var file path is a non-empty directory', async () => {
+      const varsDir = join(baseDir, '.prompt-language', 'vars');
+      // Create a non-empty directory where the var file would be
+      const varPath = join(varsDir, 'myvar');
+      await mkdir(varPath, { recursive: true });
+      await writeFile(join(varPath, 'dummy'), 'x', 'utf-8');
+
+      await expect(reader.clear('myvar')).rejects.toThrow();
+    });
+  });
 });

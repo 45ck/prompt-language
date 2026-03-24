@@ -106,6 +106,7 @@ export interface SpawnNode extends BaseNode {
   readonly kind: 'spawn';
   readonly name: string;
   readonly body: readonly FlowNode[];
+  readonly cwd?: string | undefined;
 }
 
 export type AwaitTarget = string | 'all';
@@ -238,8 +239,13 @@ export function createForeachNode(
   };
 }
 
-export function createSpawnNode(id: string, name: string, body: readonly FlowNode[]): SpawnNode {
-  return { kind: 'spawn', id, name, body };
+export function createSpawnNode(
+  id: string,
+  name: string,
+  body: readonly FlowNode[],
+  cwd?: string,
+): SpawnNode {
+  return cwd != null ? { kind: 'spawn', id, name, body, cwd } : { kind: 'spawn', id, name, body };
 }
 
 export function createAwaitNode(id: string, target: AwaitTarget): AwaitNode {

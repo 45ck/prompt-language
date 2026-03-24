@@ -11,6 +11,7 @@ import {
   createTryNode,
   createForeachNode,
   createBreakNode,
+  createContinueNode,
   createSpawnNode,
   createLetNode,
 } from './flow-node.js';
@@ -578,5 +579,140 @@ describe('H-DX-010: infinite loop lint warnings', () => {
     expect(warnings).not.toContainEqual(
       expect.objectContaining({ message: expect.stringContaining('condition may never change') }),
     );
+  });
+
+  it('no warning when body has run node inside spawn (spawn body branch)', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createWhileNode(
+          'w1',
+          'tests_fail',
+          [createSpawnNode('s1', 'worker', [createRunNode('r1', 'npm test')])],
+          5,
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('condition may never change') }),
+    );
+  });
+
+  it('no warning when until body has run inside spawn', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createUntilNode(
+          'u1',
+          'command_succeeded',
+          [createSpawnNode('s1', 'task', [createRunNode('r1', 'echo ok')])],
+          5,
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('condition may never change') }),
+    );
+  });
+
+  it('warns when spawn body has no run node (still no run in loop)', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createWhileNode(
+          'w1',
+          'tests_fail',
+          [createSpawnNode('s1', 'worker', [createPromptNode('p1', 'just a prompt')])],
+          5,
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'w1',
+      message: '"tests_fail" loop body has no run: node — condition may never change',
+    });
+  });
+
+  it('no warning when body has let-run inside nested foreach', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createWhileNode(
+          'w1',
+          'tests_fail',
+          [
+            createForeachNode(
+              'f1',
+              'item',
+              'a b',
+              [createLetNode('l1', 'out', { type: 'run', command: 'echo hi' })],
+              10,
+            ),
+          ],
+          5,
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('condition may never change') }),
+    );
+  });
+});
+
+describe('continue node lint warnings', () => {
+  it('warns on continue outside of loop', () => {
+    const spec = createFlowSpec('test', [createContinueNode('c1')], []);
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({ nodeId: 'c1', message: 'Continue outside of loop' });
+  });
+
+  it('no warning for continue inside while loop', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createWhileNode('w1', 'true', [createContinueNode('c1')], 5)],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: 'Continue outside of loop' }),
+    );
+  });
+
+  it('no warning for continue inside foreach loop', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createForeachNode('f1', 'item', 'a b c', [createContinueNode('c1')], 10)],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: 'Continue outside of loop' }),
+    );
+  });
+
+  it('warns on continue inside spawn (spawn resets insideLoop)', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createForeachNode(
+          'f1',
+          'item',
+          'a b c',
+          [createSpawnNode('s1', 'task', [createContinueNode('c1')])],
+          10,
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({ nodeId: 'c1', message: 'Continue outside of loop' });
   });
 });

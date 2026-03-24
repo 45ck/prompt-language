@@ -5,6 +5,7 @@
  * All condition evaluation reads from this state.
  */
 
+import { randomBytes } from 'node:crypto';
 import type { FlowSpec } from './flow-spec.js';
 
 export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
@@ -23,6 +24,7 @@ export interface NodeProgress {
   readonly iteration: number;
   readonly maxIterations: number;
   readonly status: 'pending' | 'running' | 'completed' | 'failed' | 'awaiting_capture';
+  readonly captureFailureReason?: string | undefined;
 }
 
 export interface GateEvalResult {
@@ -46,6 +48,13 @@ export interface SessionState {
   readonly status: FlowStatus;
   readonly warnings: readonly string[];
   readonly spawnedChildren: Readonly<Record<string, SpawnedChild>>;
+  readonly failureReason?: string | undefined;
+  // H-SEC-004: Per-session nonce for capture tag anti-spoofing
+  readonly captureNonce: string;
+}
+
+export function generateCaptureNonce(): string {
+  return randomBytes(4).toString('hex');
 }
 
 export function createSessionState(sessionId: string, flowSpec: FlowSpec): SessionState {
@@ -61,6 +70,7 @@ export function createSessionState(sessionId: string, flowSpec: FlowSpec): Sessi
     status: 'active',
     warnings: [...flowSpec.warnings],
     spawnedChildren: {},
+    captureNonce: generateCaptureNonce(),
   };
 }
 
@@ -132,8 +142,8 @@ export function markCompleted(state: SessionState): SessionState {
   return { ...state, status: 'completed' };
 }
 
-export function markFailed(state: SessionState): SessionState {
-  return { ...state, status: 'failed' };
+export function markFailed(state: SessionState, reason?: string): SessionState {
+  return { ...state, status: 'failed', ...(reason !== undefined && { failureReason: reason }) };
 }
 
 export function markCancelled(state: SessionState): SessionState {

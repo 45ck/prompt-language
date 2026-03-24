@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { extractCaptureTag, extractAllCaptureTags } from './tag-capture-reader.js';
-import { CAPTURE_TAG } from '../../domain/capture-prompt.js';
+import { CAPTURE_TAG, captureTagName } from '../../domain/capture-prompt.js';
 
 describe('extractCaptureTag', () => {
   it('extracts value from valid capture tag', () => {
@@ -113,5 +113,42 @@ describe('extractAllCaptureTags', () => {
     const text = `<${CAPTURE_TAG} name="../bad">evil</${CAPTURE_TAG}> <${CAPTURE_TAG} name="good">safe</${CAPTURE_TAG}>`;
     const result = extractAllCaptureTags(text);
     expect(result).toEqual([{ varName: 'good', value: 'safe' }]);
+  });
+});
+
+describe('extractCaptureTag with nonce (H-SEC-004)', () => {
+  const nonce = 'abcd1234';
+  const tag = captureTagName(nonce);
+
+  it('extracts value when nonce matches', () => {
+    const text = `<${tag} name="x">hello</${tag}>`;
+    expect(extractCaptureTag(text, 'x', nonce)).toBe('hello');
+  });
+
+  it('rejects tag without nonce when nonce is required', () => {
+    const text = `<${CAPTURE_TAG} name="x">hello</${CAPTURE_TAG}>`;
+    expect(extractCaptureTag(text, 'x', nonce)).toBeNull();
+  });
+
+  it('rejects tag with wrong nonce', () => {
+    const wrongTag = captureTagName('deadbeef');
+    const text = `<${wrongTag} name="x">hello</${wrongTag}>`;
+    expect(extractCaptureTag(text, 'x', nonce)).toBeNull();
+  });
+});
+
+describe('extractAllCaptureTags with nonce (H-SEC-004)', () => {
+  const nonce = 'abcd1234';
+  const tag = captureTagName(nonce);
+
+  it('extracts only tags matching the nonce', () => {
+    const text = `<${tag} name="a">alpha</${tag}> <${CAPTURE_TAG} name="b">beta</${CAPTURE_TAG}>`;
+    const result = extractAllCaptureTags(text, nonce);
+    expect(result).toEqual([{ varName: 'a', value: 'alpha' }]);
+  });
+
+  it('returns empty array when no tags match the nonce', () => {
+    const text = `<${CAPTURE_TAG} name="x">val</${CAPTURE_TAG}>`;
+    expect(extractAllCaptureTags(text, nonce)).toEqual([]);
   });
 });

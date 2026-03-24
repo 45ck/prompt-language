@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { renderFlow } from './render-flow.js';
+import { renderFlow, renderFlowSummary } from './render-flow.js';
 import {
   createSessionState,
   updateNodeProgress,
   updateGateResult,
   updateGateDiagnostic,
+  markFailed,
 } from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
 import {
@@ -19,6 +20,7 @@ import {
   createForeachNode,
   createSpawnNode,
   createAwaitNode,
+  createBreakNode,
 } from './flow-node.js';
 import { updateSpawnedChild } from './session-state.js';
 
@@ -753,5 +755,369 @@ describe('renderFlow', () => {
     state = { ...state, variables: { config: '{"key":"val"}' } };
     const output = renderFlow(state);
     expect(output).toContain('config = {"key":"val"}');
+  });
+
+  // H-REL-009: Flow failure reason in render output
+  it('shows [FLOW FAILED: reason] when status is failed with failureReason', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = markFailed(state, 'TypeError: Cannot read properties of null');
+    const output = renderFlow(state);
+    expect(output).toContain('[FLOW FAILED: TypeError: Cannot read properties of null]');
+    expect(output).toContain('Status: failed');
+  });
+
+  it('does not show [FLOW FAILED] when failed without reason', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = markFailed(state);
+    const output = renderFlow(state);
+    expect(output).toContain('Status: failed');
+    expect(output).not.toContain('[FLOW FAILED');
+  });
+});
+
+// H-REL-011: Flow heartbeat summary
+describe('renderFlowSummary', () => {
+  it('produces compact single-line summary with step info', () => {
+    const spec = createFlowSpec('test', [
+      createPromptNode('p1', 'first step'),
+      createRunNode('r1', 'npm test'),
+      createPromptNode('p2', 'third step'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [1] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('[prompt-language:');
+    expect(summary).toContain('step 2/3');
+    expect(summary).toContain('"run: npm test"');
+    expect(summary).toContain('vars: 0');
+    expect(summary).toMatch(/^\[.*\]$/);
+  });
+
+  it('includes gate pass count when gates exist', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = updateGateResult(state, 'tests_pass', true);
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('gates: 1/2 passed');
+  });
+
+  it('omits gate info when no gates', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    const state = createSessionState('s1', spec);
+    const summary = renderFlowSummary(state);
+    expect(summary).not.toContain('gates');
+  });
+
+  it('includes variable count', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { a: '1', b: '2', c: '3' } };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('vars: 3');
+  });
+
+  it('truncates long node descriptions', () => {
+    const longText = 'a'.repeat(60);
+    const spec = createFlowSpec('test', [createPromptNode('p1', longText)]);
+    const state = createSessionState('s1', spec);
+    const summary = renderFlowSummary(state);
+    expect(summary.length).toBeLessThanOrEqual(200);
+    expect(summary).toContain('...');
+  });
+
+  it('shows "done" when path resolves to no node', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [99] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"done"');
+  });
+
+  it('counts nodes in nested structures', () => {
+    const whileNode = createWhileNode('w1', 'not done', [
+      createPromptNode('p1', 'fix'),
+      createRunNode('r1', 'npm test'),
+    ]);
+    const spec = createFlowSpec('test', [whileNode, createPromptNode('p2', 'finish')]);
+    const state = createSessionState('s1', spec);
+    const summary = renderFlowSummary(state);
+    // 1 while + 2 body + 1 prompt = 4 total nodes
+    expect(summary).toContain('/4');
+  });
+});
+
+describe('renderFlow — H-DX-005 capture failure diagnostics', () => {
+  it('shows capture failure reason when retrying', () => {
+    const letNode = createLetNode('l1', 'answer', { type: 'prompt', text: 'What is 2+2?' });
+    const spec = createFlowSpec('test', [letNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 2,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+      captureFailureReason: 'capture file empty or not found',
+    });
+    state = { ...state, currentNodePath: [0] };
+    const output = renderFlow(state);
+    expect(output).toContain('[capture failed: capture file empty or not found — retry 2/3]');
+  });
+
+  it('shows awaiting response when no failure reason', () => {
+    const letNode = createLetNode('l1', 'answer', { type: 'prompt', text: 'What is 2+2?' });
+    const spec = createFlowSpec('test', [letNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+    state = { ...state, currentNodePath: [0] };
+    const output = renderFlow(state);
+    expect(output).toContain('[awaiting response...]');
+    expect(output).not.toContain('[capture failed');
+  });
+});
+
+// Coverage: formatGateDiagnostic stdout fallback (H-DX-004)
+describe('renderFlow — formatGateDiagnostic stdout fallback', () => {
+  it('shows stdout when stderr is empty', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = updateGateResult(state, 'tests_pass', false);
+    state = updateGateDiagnostic(state, 'tests_pass', {
+      passed: false,
+      command: 'npm test',
+      exitCode: 1,
+      stderr: '',
+      stdout: 'FAIL src/app.test.js',
+    });
+    const output = renderFlow(state);
+    expect(output).toContain('FAIL src/app.test.js');
+    expect(output).toContain('[fail');
+  });
+
+  it('prefers stderr over stdout when both present', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('lint_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = updateGateResult(state, 'lint_pass', false);
+    state = updateGateDiagnostic(state, 'lint_pass', {
+      passed: false,
+      command: 'npm run lint',
+      exitCode: 2,
+      stderr: 'lint error found',
+      stdout: 'stdout noise',
+    });
+    const output = renderFlow(state);
+    expect(output).toContain('lint error found');
+    expect(output).not.toContain('stdout noise');
+  });
+
+  it('shows nothing extra when both stderr and stdout are empty', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = updateGateResult(state, 'tests_pass', false);
+    state = updateGateDiagnostic(state, 'tests_pass', {
+      passed: false,
+      command: 'npm test',
+      exitCode: 1,
+      stderr: '',
+      stdout: '',
+    });
+    const output = renderFlow(state);
+    expect(output).toContain('tests_pass  [fail — exit 1: "npm test"]');
+  });
+});
+
+// Coverage: renderFlowSummary helpers (countAllNodes, resolveNodeByPath, describeNode, findStepIndex)
+describe('renderFlowSummary — helper coverage', () => {
+  it('counts empty node list as 0', () => {
+    const spec = createFlowSpec('empty', []);
+    const state = createSessionState('s1', spec);
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('step 0/0');
+  });
+
+  it('counts if/else branches recursively', () => {
+    const ifNode = createIfNode(
+      'i1',
+      'cond',
+      [createPromptNode('p1', 'then'), createRunNode('r1', 'cmd')],
+      [createPromptNode('p2', 'else')],
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    const state = createSessionState('s1', spec);
+    const summary = renderFlowSummary(state);
+    // 1 if + 2 then + 1 else = 4
+    expect(summary).toContain('/4');
+  });
+
+  it('counts try/catch/finally recursively', () => {
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'deploy')],
+      'error',
+      [createPromptNode('p1', 'rollback')],
+      [createRunNode('r2', 'cleanup')],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    const state = createSessionState('s1', spec);
+    const summary = renderFlowSummary(state);
+    // 1 try + 1 body + 1 catch + 1 finally = 4
+    expect(summary).toContain('/4');
+  });
+
+  it('counts spawn node body recursively', () => {
+    const spawnNode = createSpawnNode('sp1', 'child', [
+      createPromptNode('p1', 'task'),
+      createRunNode('r1', 'test'),
+    ]);
+    const spec = createFlowSpec('test', [spawnNode]);
+    const state = createSessionState('s1', spec);
+    const summary = renderFlowSummary(state);
+    // 1 spawn + 2 body = 3
+    expect(summary).toContain('/3');
+  });
+
+  it('resolves nested path inside while body', () => {
+    const whileNode = createWhileNode('w1', 'not done', [
+      createPromptNode('p1', 'first'),
+      createRunNode('r1', 'npm test'),
+    ]);
+    const spec = createFlowSpec('test', [whileNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 1] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"run: npm test"');
+  });
+
+  it('resolves path through if then/else concatenation', () => {
+    const ifNode = createIfNode(
+      'i1',
+      'cond',
+      [createPromptNode('p1', 'then-step')],
+      [createRunNode('r1', 'else-cmd')],
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    let state = createSessionState('s1', spec);
+    // else branch: offset = thenBranch.length = 1, so [0, 1] = first else child
+    state = { ...state, currentNodePath: [0, 1] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"run: else-cmd"');
+  });
+
+  it('resolves path through try body/catch/finally concatenation', () => {
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'deploy')],
+      'error',
+      [createPromptNode('p1', 'rollback')],
+      [createRunNode('r2', 'cleanup')],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    let state = createSessionState('s1', spec);
+    // catch body: offset = body.length = 1, so [0, 1] = first catch child
+    state = { ...state, currentNodePath: [0, 1] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"prompt: rollback"');
+  });
+
+  it('describes let node as "let varName"', () => {
+    const letNode = createLetNode('l1', 'greeting', { type: 'literal', value: 'hi' });
+    const spec = createFlowSpec('test', [letNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"let greeting"');
+  });
+
+  it('describes foreach node as "foreach varName"', () => {
+    const foreachNode = createForeachNode('fe1', 'item', '${list}', [
+      createPromptNode('p1', 'work'),
+    ]);
+    const spec = createFlowSpec('test', [foreachNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"foreach item"');
+  });
+
+  it('describes break node', () => {
+    const whileNode = createWhileNode('w1', 'true', [createBreakNode('b1')]);
+    const spec = createFlowSpec('test', [whileNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 0] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"break"');
+  });
+
+  it('describes spawn node with name', () => {
+    const spawnNode = createSpawnNode('sp1', 'worker', [createPromptNode('p1', 'task')]);
+    const spec = createFlowSpec('test', [spawnNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('spawn "worker"');
+  });
+
+  it('describes await node', () => {
+    const spec = createFlowSpec('test', [createAwaitNode('aw1', 'all')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"await all"');
+  });
+
+  it('shows empty path as done', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"done"');
+  });
+
+  it('shows all gates passed', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = updateGateResult(state, 'tests_pass', true);
+    state = updateGateResult(state, 'lint_pass', true);
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('gates: 2/2 passed');
+  });
+
+  it('shows step number using flattened index', () => {
+    const ifNode = createIfNode(
+      'i1',
+      'cond',
+      [createPromptNode('p1', 'then')],
+      [createPromptNode('p2', 'else')],
+    );
+    const spec = createFlowSpec('test', [ifNode, createRunNode('r1', 'final')]);
+    let state = createSessionState('s1', spec);
+    // r1 is after ifNode in top level, flatten order: if, then-prompt, else-prompt, run
+    state = { ...state, currentNodePath: [1] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('step 4/4');
   });
 });

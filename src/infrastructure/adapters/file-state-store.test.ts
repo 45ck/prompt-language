@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtemp, rm, readFile, writeFile, mkdir, open, access } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FileStateStore } from './file-state-store.js';
@@ -11,11 +12,14 @@ vi.mock('node:fs/promises', async (importOriginal) => {
   return {
     ...actual,
     open: vi.fn().mockImplementation(actual.open),
+    rename: vi.fn().mockImplementation(actual.rename),
   };
 });
 
-// Re-import the mocked open for use in tests
-const { open: mockedOpen } = await import('node:fs/promises');
+// Re-import the mocked functions for use in tests
+const mockedFsPromises = await import('node:fs/promises');
+const mockedOpen = mockedFsPromises.open;
+const mockedRename = mockedFsPromises.rename;
 
 let tempDir: string;
 
@@ -365,6 +369,152 @@ describe('FileStateStore', () => {
 
       expect(await store.exists()).toBe(false);
       expect(await store.loadPendingPrompt()).toBeNull();
+    });
+  });
+
+  describe('H-SEC-002: state file integrity checksum', () => {
+    it('saved file includes _checksum field', async () => {
+      const store = new FileStateStore(tempDir);
+      await store.save(createSessionState('s1', makeSpec()));
+
+      const statePath = join(tempDir, '.prompt-language', 'session-state.json');
+      const raw = await readFile(statePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      expect(parsed._checksum).toBeDefined();
+      expect(typeof parsed._checksum).toBe('string');
+      expect(parsed._checksum.length).toBe(64); // SHA-256 hex
+    });
+
+    it('loads state normally when checksum is valid', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      await store.save(session);
+
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.sessionId).toBe('s1');
+      // _checksum should be stripped from loaded state
+      expect((loaded as unknown as Record<string, unknown>)['_checksum']).toBeUndefined();
+    });
+
+    it('clears gate results when checksum is tampered', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      await store.save(session);
+
+      // Tamper with the file
+      const statePath = join(tempDir, '.prompt-language', 'session-state.json');
+      const raw = await readFile(statePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      parsed.gateResults = { tests_pass: true };
+      parsed.gateDiagnostics = { tests_pass: { passed: true } };
+      // Keep old checksum (now invalid)
+      await writeFile(statePath, JSON.stringify(parsed, null, 2), 'utf-8');
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.gateResults).toEqual({});
+      expect(loaded?.gateDiagnostics).toEqual({});
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[prompt-language] WARNING: state file checksum mismatch, clearing gate results\n',
+      );
+      stderrSpy.mockRestore();
+    });
+
+    it('loads state normally without checksum (migration)', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      // Write a state file without _checksum (pre-migration)
+      const session = createSessionState('s1', makeSpec());
+      const json = JSON.stringify(session, null, 2);
+      await writeFile(join(stateDir, 'session-state.json'), json, 'utf-8');
+
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.sessionId).toBe('s1');
+    });
+
+    it('checksum round-trips correctly', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      await store.save(session);
+
+      // Read raw file and verify checksum manually
+      const statePath = join(tempDir, '.prompt-language', 'session-state.json');
+      const raw = await readFile(statePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      const { _checksum, ...stateWithout } = parsed;
+      const expectedChecksum = createHash('sha256')
+        .update(JSON.stringify(stateWithout, null, 2))
+        .digest('hex');
+      expect(_checksum).toBe(expectedChecksum);
+    });
+  });
+
+  describe('H-REL-001: renameWithRetry', () => {
+    afterEach(() => {
+      vi.mocked(mockedRename).mockRestore();
+    });
+
+    it('retries on EBUSY and succeeds on second attempt', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      const ebusyError = Object.assign(new Error('EBUSY: resource busy'), { code: 'EBUSY' });
+
+      // First rename call throws EBUSY, subsequent calls use real implementation
+      let callCount = 0;
+      vi.mocked(mockedRename).mockImplementation(async (...args: Parameters<typeof rename>) => {
+        callCount++;
+        if (callCount === 1) throw ebusyError;
+        return rename(...args);
+      });
+
+      const session = createSessionState('s1', makeSpec());
+      await store.save(session);
+
+      const loaded = await store.loadCurrent();
+      expect(loaded?.sessionId).toBe('s1');
+      expect(callCount).toBe(2);
+    });
+
+    it('throws EBUSY after exhausting all retries', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      const ebusyError = Object.assign(new Error('EBUSY: resource busy'), { code: 'EBUSY' });
+
+      // All rename attempts throw EBUSY
+      vi.mocked(mockedRename).mockRejectedValue(ebusyError);
+
+      const session = createSessionState('s1', makeSpec());
+      await expect(store.save(session)).rejects.toThrow('EBUSY');
+    });
+
+    it('immediately throws non-EBUSY rename errors without retrying', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      const eaccesError = Object.assign(new Error('EACCES: permission denied'), {
+        code: 'EACCES',
+      });
+
+      let callCount = 0;
+      vi.mocked(mockedRename).mockImplementation(async () => {
+        callCount++;
+        throw eaccesError;
+      });
+
+      const session = createSessionState('s1', makeSpec());
+      await expect(store.save(session)).rejects.toThrow('EACCES');
+      // Should only have been called once (no retries for non-EBUSY)
+      expect(callCount).toBe(1);
     });
   });
 });

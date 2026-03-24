@@ -5,16 +5,20 @@
  * If a flow is already active, inject step context into the prompt.
  */
 
-import { createSessionState, markCancelled } from '../domain/session-state.js';
+import { createSessionState, markCancelled, markFailed } from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
+import type { AuditLogger } from './ports/audit-logger.js';
 import { parseFlow, parseGates, detectBareFlow } from './parse-flow.js';
-import { renderFlow } from '../domain/render-flow.js';
+import { renderFlow, renderFlowSummary } from '../domain/render-flow.js';
 import { interpolate } from '../domain/interpolate.js';
 import { autoAdvanceNodes, maybeCompleteFlow } from './advance-flow.js';
+import { formatError } from '../domain/format-error.js';
+import { lintFlow } from '../domain/lint-flow.js';
+import { flowComplexityScore } from '../domain/flow-complexity.js';
 
 const FLOW_BLOCK_RE = /^\s*flow:\s*$/m;
 
@@ -237,6 +241,19 @@ const TRIVIAL_PROMPTS = new Set([
   'right',
 ]);
 
+const DRY_RUN_RE = /\b-{0,2}dry[-\s]?run\b/i;
+
+export function isDryRun(prompt: string): boolean {
+  return DRY_RUN_RE.test(prompt);
+}
+
+function removeDryRun(prompt: string): string {
+  return prompt
+    .replace(DRY_RUN_RE, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 export function isTrivialPrompt(prompt: string): boolean {
   return TRIVIAL_PROMPTS.has(
     prompt
@@ -252,6 +269,7 @@ export async function injectContext(
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
   processSpawner?: ProcessSpawner,
+  auditLogger?: AuditLogger,
 ): Promise<InjectContextOutput> {
   const existing = await stateStore.loadCurrent();
 
@@ -289,43 +307,78 @@ export async function injectContext(
   }
 
   if (existing?.status === 'active') {
-    const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
-      existing,
-      commandRunner,
-      captureReader,
-      processSpawner,
-    );
-    const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
-    if (toSave !== existing) {
-      await stateStore.save(toSave);
+    try {
+      const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
+        existing,
+        commandRunner,
+        captureReader,
+        processSpawner,
+        auditLogger,
+      );
+      const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
+      if (toSave !== existing) {
+        await stateStore.save(toSave);
+      }
+      const ctx = renderFlow(toSave);
+      const summary = renderFlowSummary(toSave);
+      if (capturedPrompt) {
+        const output = isTrivialPrompt(input.prompt)
+          ? `${ctx}\n\n${capturedPrompt}\n\n${summary}`
+          : `${ctx}\n\n${capturedPrompt}\n\n[User message: ${input.prompt}]\n\n${summary}`;
+        return { prompt: output };
+      }
+      const interpolated = interpolate(input.prompt, toSave.variables);
+      return { prompt: `${ctx}\n\n${interpolated}\n\n${summary}` };
+    } catch (err: unknown) {
+      const reason = formatError(err);
+      const failed = markFailed(existing, reason);
+      await stateStore.save(failed);
+      return { prompt: `[prompt-language] Flow failed: ${reason}\n\n${input.prompt}` };
     }
-    const ctx = renderFlow(toSave);
-    if (capturedPrompt) {
-      const output = isTrivialPrompt(input.prompt)
-        ? `${ctx}\n\n${capturedPrompt}`
-        : `${ctx}\n\n${capturedPrompt}\n\n[User message: ${input.prompt}]`;
-      return { prompt: output };
+  }
+
+  // H-DX-003: Dry-run / parse-only mode — parse, lint, score without persisting state
+  if (hasFlowBlock(input.prompt) && isDryRun(input.prompt)) {
+    const spec = parseFlow(input.prompt);
+    const session = createSessionState(input.sessionId, spec);
+    const rendered = renderFlow(session);
+    const complexity = flowComplexityScore(spec);
+    const warnings = lintFlow(spec);
+    const lines = [`[prompt-language dry-run]`, rendered, '', `Complexity: ${complexity}/5`];
+    if (warnings.length > 0) {
+      lines.push('Warnings:');
+      for (const w of warnings) {
+        lines.push(`  - ${w.message}`);
+      }
     }
-    const interpolated = interpolate(input.prompt, toSave.variables);
-    return { prompt: `${ctx}\n\n${interpolated}` };
+    const cleanedPrompt = removeDryRun(input.prompt);
+    lines.push('', cleanedPrompt);
+    return { prompt: lines.join('\n') };
   }
 
   if (hasFlowBlock(input.prompt)) {
-    const spec = parseFlow(input.prompt);
-    const session = createSessionState(input.sessionId, spec);
-    const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
-      session,
-      commandRunner,
-      captureReader,
-      processSpawner,
-    );
-    const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
-    await stateStore.save(toSave);
-    const ctx = renderFlow(toSave);
-    if (capturedPrompt) {
-      return { prompt: `${ctx}\n\n${capturedPrompt}` };
+    try {
+      const spec = parseFlow(input.prompt);
+      const session = createSessionState(input.sessionId, spec);
+      const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
+        session,
+        commandRunner,
+        captureReader,
+        processSpawner,
+        auditLogger,
+      );
+      const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
+      await stateStore.save(toSave);
+      const ctx = renderFlow(toSave);
+      const summary = renderFlowSummary(toSave);
+      if (capturedPrompt) {
+        return { prompt: `${ctx}\n\n${capturedPrompt}\n\n${summary}` };
+      }
+      return { prompt: `${ctx}\n\n${input.prompt}\n\n${summary}` };
+    } catch (err: unknown) {
+      const reason = formatError(err);
+      return { prompt: `[prompt-language] Flow failed: ${reason}\n\n${input.prompt}` };
     }
-    return { prompt: `${ctx}\n\n${input.prompt}` };
   }
 
   // Gate-only mode: done when: without flow: — parse gates, save state, pass prompt through

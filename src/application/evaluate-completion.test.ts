@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   evaluateCompletion,
   resolveBuiltinCommand,
@@ -641,5 +641,148 @@ describe('resolveBuiltinCommand — H-INT-002 auto-detection', () => {
     const cmd = resolveBuiltinCommand('tests_fail');
     expect(cmd).toBeDefined();
     expect(cmd).toBe('npm test');
+  });
+});
+
+describe('GATE_TIMEOUT_MS env var', () => {
+  const originalEnv = process.env['PROMPT_LANGUAGE_GATE_TIMEOUT_MS'];
+
+  afterEach(() => {
+    if (originalEnv === undefined) {
+      delete process.env['PROMPT_LANGUAGE_GATE_TIMEOUT_MS'];
+    } else {
+      process.env['PROMPT_LANGUAGE_GATE_TIMEOUT_MS'] = originalEnv;
+    }
+    vi.resetModules();
+  });
+
+  it('defaults to 60000 when env var is not set', async () => {
+    delete process.env['PROMPT_LANGUAGE_GATE_TIMEOUT_MS'];
+    vi.resetModules();
+
+    let capturedTimeout: number | undefined;
+    const capturingRunner: CommandRunner = {
+      run: async (_cmd, options) => {
+        capturedTimeout = options?.timeoutMs;
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+
+    const mod = await import('./evaluate-completion.js');
+    const { InMemoryStateStore } =
+      await import('../infrastructure/adapters/in-memory-state-store.js');
+    const { createSessionState } = await import('../domain/session-state.js');
+    const { createFlowSpec, createCompletionGate } = await import('../domain/flow-spec.js');
+
+    const store = new InMemoryStateStore();
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    await store.save(createSessionState('s-timeout', spec));
+
+    await mod.evaluateCompletion(store, capturingRunner);
+    expect(capturedTimeout).toBe(60_000);
+  });
+
+  it('uses valid env var value (e.g., "30000")', async () => {
+    process.env['PROMPT_LANGUAGE_GATE_TIMEOUT_MS'] = '30000';
+    vi.resetModules();
+
+    let capturedTimeout: number | undefined;
+    const capturingRunner: CommandRunner = {
+      run: async (_cmd, options) => {
+        capturedTimeout = options?.timeoutMs;
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+
+    const mod = await import('./evaluate-completion.js');
+    const { InMemoryStateStore } =
+      await import('../infrastructure/adapters/in-memory-state-store.js');
+    const { createSessionState } = await import('../domain/session-state.js');
+    const { createFlowSpec, createCompletionGate } = await import('../domain/flow-spec.js');
+
+    const store = new InMemoryStateStore();
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    await store.save(createSessionState('s-timeout', spec));
+
+    await mod.evaluateCompletion(store, capturingRunner);
+    expect(capturedTimeout).toBe(30_000);
+  });
+
+  it('falls back to 60000 for invalid env var (e.g., "notanumber")', async () => {
+    process.env['PROMPT_LANGUAGE_GATE_TIMEOUT_MS'] = 'notanumber';
+    vi.resetModules();
+
+    let capturedTimeout: number | undefined;
+    const capturingRunner: CommandRunner = {
+      run: async (_cmd, options) => {
+        capturedTimeout = options?.timeoutMs;
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+
+    const mod = await import('./evaluate-completion.js');
+    const { InMemoryStateStore } =
+      await import('../infrastructure/adapters/in-memory-state-store.js');
+    const { createSessionState } = await import('../domain/session-state.js');
+    const { createFlowSpec, createCompletionGate } = await import('../domain/flow-spec.js');
+
+    const store = new InMemoryStateStore();
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    await store.save(createSessionState('s-timeout', spec));
+
+    await mod.evaluateCompletion(store, capturingRunner);
+    expect(capturedTimeout).toBe(60_000);
+  });
+
+  it('falls back to 60000 for zero env var ("0")', async () => {
+    process.env['PROMPT_LANGUAGE_GATE_TIMEOUT_MS'] = '0';
+    vi.resetModules();
+
+    let capturedTimeout: number | undefined;
+    const capturingRunner: CommandRunner = {
+      run: async (_cmd, options) => {
+        capturedTimeout = options?.timeoutMs;
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+
+    const mod = await import('./evaluate-completion.js');
+    const { InMemoryStateStore } =
+      await import('../infrastructure/adapters/in-memory-state-store.js');
+    const { createSessionState } = await import('../domain/session-state.js');
+    const { createFlowSpec, createCompletionGate } = await import('../domain/flow-spec.js');
+
+    const store = new InMemoryStateStore();
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    await store.save(createSessionState('s-timeout', spec));
+
+    await mod.evaluateCompletion(store, capturingRunner);
+    expect(capturedTimeout).toBe(60_000);
+  });
+
+  it('falls back to 60000 for negative env var ("-100")', async () => {
+    process.env['PROMPT_LANGUAGE_GATE_TIMEOUT_MS'] = '-100';
+    vi.resetModules();
+
+    let capturedTimeout: number | undefined;
+    const capturingRunner: CommandRunner = {
+      run: async (_cmd, options) => {
+        capturedTimeout = options?.timeoutMs;
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+
+    const mod = await import('./evaluate-completion.js');
+    const { InMemoryStateStore } =
+      await import('../infrastructure/adapters/in-memory-state-store.js');
+    const { createSessionState } = await import('../domain/session-state.js');
+    const { createFlowSpec, createCompletionGate } = await import('../domain/flow-spec.js');
+
+    const store = new InMemoryStateStore();
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    await store.save(createSessionState('s-timeout', spec));
+
+    await mod.evaluateCompletion(store, capturingRunner);
+    expect(capturedTimeout).toBe(60_000);
   });
 });

@@ -25,6 +25,7 @@ import type {
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
+import type { AuditLogger } from './ports/audit-logger.js';
 import { interpolate, shellInterpolate } from '../domain/interpolate.js';
 import { evaluateCondition } from '../domain/evaluate-condition.js';
 import { resolveBuiltinCommand, isInvertedPredicate } from './evaluate-completion.js';
@@ -35,6 +36,7 @@ import {
   buildCaptureRetryPrompt,
   DEFAULT_MAX_CAPTURE_RETRIES,
 } from '../domain/capture-prompt.js';
+import { evaluateArithmetic } from '../domain/arithmetic.js';
 
 export function resolveCurrentNode(
   nodes: readonly FlowNode[],
@@ -277,9 +279,12 @@ async function advanceLetNode(
   let tryCatchJump: readonly number[] | null = null;
 
   switch (node.source.type) {
-    case 'literal':
-      value = node.source.value;
+    case 'literal': {
+      const interpolated = interpolate(node.source.value, current.variables);
+      const arithResult = evaluateArithmetic(interpolated);
+      value = arithResult !== null ? String(arithResult) : interpolated;
       break;
+    }
     case 'empty_list':
       value = initEmptyList();
       break;
@@ -339,15 +344,22 @@ async function advanceLetPrompt(
       node.source.type === 'prompt' ? node.source.text : '',
       current.variables,
     );
-    return { state: updated, capturedPrompt: buildCapturePrompt(promptText, node.variableName) };
+    return {
+      state: updated,
+      capturedPrompt: buildCapturePrompt(promptText, node.variableName, current.captureNonce),
+    };
   }
 
+  let failureReason: string;
   if (captureReader) {
     const captured = await captureReader.read(node.variableName);
     if (captured) {
       await captureReader.clear(node.variableName);
       return { state: current, value: captured };
     }
+    failureReason = 'capture file empty or not found';
+  } else {
+    failureReason = 'no capture reader available';
   }
 
   const iteration = progress.iteration;
@@ -356,8 +368,12 @@ async function advanceLetPrompt(
       iteration: iteration + 1,
       maxIterations: progress.maxIterations,
       status: 'awaiting_capture',
+      captureFailureReason: failureReason,
     });
-    return { state: updated, capturedPrompt: buildCaptureRetryPrompt(node.variableName) };
+    return {
+      state: updated,
+      capturedPrompt: buildCaptureRetryPrompt(node.variableName, current.captureNonce),
+    };
   }
 
   return {
@@ -377,6 +393,7 @@ async function advanceRunNode(
   node: RunNode,
   current: SessionState,
   commandRunner?: CommandRunner,
+  auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!commandRunner) return { state: current, capturedPrompt: null };
   const command = shellInterpolate(node.command, current.variables);
@@ -384,6 +401,19 @@ async function advanceRunNode(
     command,
     node.timeoutMs != null ? { timeoutMs: node.timeoutMs } : undefined,
   );
+
+  // H-SEC-006: Log command execution to audit trail
+  if (auditLogger) {
+    auditLogger.log({
+      timestamp: new Date().toISOString(),
+      event: 'run_command',
+      command,
+      exitCode: result.exitCode,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    });
+  }
+
   let state = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
 
   if (result.exitCode !== 0) {
@@ -419,6 +449,7 @@ async function advanceSpawnNode(
     flowText: flowText,
     variables: parentVars,
     stateDir,
+    ...(node.cwd != null ? { cwd: node.cwd } : {}),
   });
 
   // D7: Detect failed spawn (pid=0 or undefined) and mark child as failed
@@ -536,12 +567,16 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
-    case 'spawn':
+    case 'spawn': {
+      const spawnHeader = node.cwd
+        ? `${pad}spawn "${node.name}" in "${node.cwd}"`
+        : `${pad}spawn "${node.name}"`;
       return [
-        `${pad}spawn "${node.name}"`,
+        spawnHeader,
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
+    }
     case 'await':
       return [`${pad}await ${node.target === 'all' ? 'all' : `"${node.target}"`}`];
   }
@@ -652,6 +687,7 @@ export async function autoAdvanceNodes(
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
   processSpawner?: ProcessSpawner,
+  auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult> {
   const MAX_ADVANCES = 100;
   let advances = 0;
@@ -675,6 +711,7 @@ export async function autoAdvanceNodes(
       commandRunner,
       captureReader,
       processSpawner,
+      auditLogger,
     );
     if ('capturedPrompt' in result) return result;
     current = result.state;
@@ -709,12 +746,13 @@ async function advanceSingleNode(
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
   processSpawner?: ProcessSpawner,
+  auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   switch (node.kind) {
     case 'let':
       return advanceLetNode(node, current, commandRunner, captureReader);
     case 'run':
-      return advanceRunNode(node, current, commandRunner);
+      return advanceRunNode(node, current, commandRunner, auditLogger);
     case 'prompt': {
       const capturedPrompt = interpolate(node.text, current.variables);
       return { state: advanceNode(current, advancePath(current.currentNodePath)), capturedPrompt };

@@ -76,7 +76,9 @@
     "elif",
     "nonmepty",
     "errmsg",
-    "bigvar"
+    "bigvar",
+    "jsonl",
+    "auditlogger"
   ],
   "ignorePaths": [
     "dist/**",

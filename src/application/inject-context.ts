@@ -13,7 +13,7 @@ import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { AuditLogger } from './ports/audit-logger.js';
 import { parseFlow, parseGates, detectBareFlow } from './parse-flow.js';
-import { renderFlow, renderFlowSummary } from '../domain/render-flow.js';
+import { renderFlow, renderFlowSummary, renderCompletionSummary } from '../domain/render-flow.js';
 import { interpolate } from '../domain/interpolate.js';
 import { autoAdvanceNodes, maybeCompleteFlow } from './advance-flow.js';
 import { formatError } from '../domain/format-error.js';
@@ -307,6 +307,8 @@ export async function injectContext(
   }
 
   if (existing?.status === 'active') {
+    // H-REL-003: Checkpoint/Resume — detect resumed session
+    const isResumed = existing.sessionId !== input.sessionId;
     try {
       const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
         existing,
@@ -319,16 +321,23 @@ export async function injectContext(
       if (toSave !== existing) {
         await stateStore.save(toSave);
       }
+      // H-DX-009: Emit completion summary when flow just completed
+      if (toSave.status === 'completed' && existing.status === 'active') {
+        const completionMsg = renderCompletionSummary(toSave);
+        const ctx = renderFlow(toSave);
+        return { prompt: `${ctx}\n\n[${completionMsg}]\n\n${input.prompt}` };
+      }
       const ctx = renderFlow(toSave);
       const summary = renderFlowSummary(toSave);
+      const resumeTag = isResumed ? `[resumed from ${summary}]\n` : '';
       if (capturedPrompt) {
         const output = isTrivialPrompt(input.prompt)
-          ? `${ctx}\n\n${capturedPrompt}\n\n${summary}`
-          : `${ctx}\n\n${capturedPrompt}\n\n[User message: ${input.prompt}]\n\n${summary}`;
+          ? `${ctx}\n\n${resumeTag}${capturedPrompt}\n\n${summary}`
+          : `${ctx}\n\n${resumeTag}${capturedPrompt}\n\n[User message: ${input.prompt}]\n\n${summary}`;
         return { prompt: output };
       }
       const interpolated = interpolate(input.prompt, toSave.variables);
-      return { prompt: `${ctx}\n\n${interpolated}\n\n${summary}` };
+      return { prompt: `${ctx}\n\n${resumeTag}${interpolated}\n\n${summary}` };
     } catch (err: unknown) {
       const reason = formatError(err);
       const failed = markFailed(existing, reason);

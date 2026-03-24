@@ -12,6 +12,10 @@ export interface CompletionGate {
   readonly command?: string | undefined;
   /** H-INT-010: When set, this gate passes if ANY sub-gate passes. */
   readonly any?: readonly CompletionGate[] | undefined;
+  /** H-LANG-010: When set, this gate passes if ALL sub-gates pass (explicit AND). */
+  readonly all?: readonly CompletionGate[] | undefined;
+  /** H-LANG-010: When set, this gate passes if at least N sub-gates pass. */
+  readonly nOf?: { readonly n: number; readonly gates: readonly CompletionGate[] } | undefined;
 }
 
 export interface FlowDefaults {
@@ -25,6 +29,8 @@ export interface FlowSpec {
   readonly completionGates: readonly CompletionGate[];
   readonly defaults: FlowDefaults;
   readonly warnings: readonly string[];
+  /** H-LANG-009: Environment variables to inject into command execution. */
+  readonly env?: Readonly<Record<string, string>> | undefined;
 }
 
 const DEFAULT_FLOW_DEFAULTS: FlowDefaults = {
@@ -38,6 +44,7 @@ export function createFlowSpec(
   completionGates: readonly CompletionGate[] = [],
   warnings: readonly string[] = [],
   defaults?: Partial<FlowDefaults>,
+  env?: Readonly<Record<string, string>>,
 ): FlowSpec {
   return {
     goal,
@@ -45,6 +52,7 @@ export function createFlowSpec(
     completionGates,
     defaults: { ...DEFAULT_FLOW_DEFAULTS, ...defaults },
     warnings,
+    ...(env != null ? { env } : {}),
   };
 }
 

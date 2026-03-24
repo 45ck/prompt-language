@@ -795,7 +795,7 @@ describe('injectContext — error handling and limits', () => {
     const saved = await store.loadCurrent();
     expect(saved?.currentNodePath).toEqual([100]);
     expect(saved?.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining('MAX_ADVANCES')]),
+      expect.arrayContaining([expect.stringContaining('Flow paused')]),
     );
   });
 });
@@ -2277,5 +2277,39 @@ describe('injectContext — H-DX-003 dry-run mode', () => {
     expect(result.prompt).toContain('[prompt-language dry-run]');
     expect(result.prompt).toContain('Warnings:');
     expect(result.prompt).toContain('Empty while body');
+  });
+});
+
+// ── H-REL-003: Checkpoint/Resume ──────────────────────────────────────
+
+describe('injectContext — checkpoint/resume', () => {
+  it('adds resumed tag when sessionId differs from stored state', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Resume test', [
+      createPromptNode('p1', 'Step 1'),
+      createPromptNode('p2', 'Step 2'),
+    ]);
+    let session = createSessionState('old-session', spec);
+    session = { ...session, currentNodePath: [1] }; // at step 2
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'continue', sessionId: 'new-session' }, store);
+    expect(result.prompt).toContain('resumed from');
+    expect(result.prompt).toContain('Step 2');
+  });
+
+  it('does not add resumed tag when sessionId matches', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Same session', [
+      createPromptNode('p1', 'Step 1'),
+      createPromptNode('p2', 'Step 2'),
+    ]);
+    let session = createSessionState('same-id', spec);
+    session = { ...session, currentNodePath: [1] };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'continue', sessionId: 'same-id' }, store);
+    expect(result.prompt).not.toContain('resumed from');
+    expect(result.prompt).toContain('Step 2');
   });
 });

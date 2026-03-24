@@ -11,6 +11,8 @@ import type {
   TryNode,
   LetNode,
   ForeachNode,
+  BreakNode,
+  ContinueNode,
   SpawnNode,
   AwaitNode,
 } from '../domain/flow-node.js';
@@ -191,6 +193,32 @@ flow:
     const spec = parse(dsl);
     const node = spec.nodes[0] as RetryNode;
     expect(node.maxAttempts).toBe(3);
+  });
+
+  it('parses retry with backoff', () => {
+    const dsl = `Goal: g
+
+flow:
+  retry max 5 backoff 2s
+    run: pnpm build
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as RetryNode;
+    expect(node.kind).toBe('retry');
+    expect(node.maxAttempts).toBe(5);
+    expect(node.backoffMs).toBe(2000);
+  });
+
+  it('retry without backoff has no backoffMs', () => {
+    const dsl = `Goal: g
+
+flow:
+  retry max 3
+    run: pnpm build
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as RetryNode;
+    expect(node.backoffMs).toBeUndefined();
   });
 });
 
@@ -1190,6 +1218,51 @@ flow:
   });
 });
 
+// ── H-SEC-005: Spawn variable allowlist ─────────────────────────────────
+
+describe('parseFlow — spawn with vars (H-SEC-005)', () => {
+  it('parses spawn "name" with vars x, y', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker" with vars greeting, count
+    prompt: Do work
+  end`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.kind).toBe('spawn');
+    expect(node.name).toBe('worker');
+    expect(node.vars).toEqual(['greeting', 'count']);
+  });
+
+  it('parses spawn without vars (no vars property)', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker"
+    prompt: Do work
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.vars).toBeUndefined();
+  });
+
+  it('parses spawn with cwd and vars', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker" in "/tmp" with vars x
+    prompt: Do work
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.name).toBe('worker');
+    expect(node.cwd).toBe('/tmp');
+    expect(node.vars).toEqual(['x']);
+  });
+});
+
 // ── H-INT-010: any() gate composition ─────────────────────────────────
 
 describe('parseGates — any() composition (H-INT-010)', () => {
@@ -1226,5 +1299,277 @@ done when:
   any(tests_pass, pytest_pass, go_test_pass)`;
     const gates = parseGates(input);
     expect(gates[0]!.any).toHaveLength(3);
+  });
+});
+
+// ── H-LANG-005: Pipe transform parsing ─────────────────────────────
+
+describe('parseFlow — pipe transforms (H-LANG-005)', () => {
+  it('parses let x = run "cmd" | trim', () => {
+    const spec = parse('Goal: g\n\nflow:\n  let x = run "echo hello" | trim');
+    const node = spec.nodes[0] as LetNode;
+    expect(node.kind).toBe('let');
+    expect(node.source).toEqual({ type: 'run', command: 'echo hello' });
+    expect(node.transform).toBe('trim');
+  });
+
+  it('parses let x = run "cmd" | upper', () => {
+    const spec = parse('Goal: g\n\nflow:\n  let x = run "echo hello" | upper');
+    const node = spec.nodes[0] as LetNode;
+    expect(node.source).toEqual({ type: 'run', command: 'echo hello' });
+    expect(node.transform).toBe('upper');
+  });
+
+  it('parses let x = prompt "q" | lower', () => {
+    const spec = parse('Goal: g\n\nflow:\n  let x = prompt "question" | lower');
+    const node = spec.nodes[0] as LetNode;
+    expect(node.source).toEqual({ type: 'prompt', text: 'question' });
+    expect(node.transform).toBe('lower');
+  });
+
+  it('parses let x = run "cmd" | first', () => {
+    const spec = parse('Goal: g\n\nflow:\n  let x = run "cmd" | first');
+    const node = spec.nodes[0] as LetNode;
+    expect(node.transform).toBe('first');
+  });
+
+  it('parses let x = run "cmd" | last', () => {
+    const spec = parse('Goal: g\n\nflow:\n  let x = run "cmd" | last');
+    const node = spec.nodes[0] as LetNode;
+    expect(node.transform).toBe('last');
+  });
+
+  it('does not apply transform to literal values', () => {
+    const spec = parse('Goal: g\n\nflow:\n  let x = "hello | trim"');
+    const node = spec.nodes[0] as LetNode;
+    expect(node.source).toEqual({ type: 'literal', value: 'hello | trim' });
+    expect(node.transform).toBeUndefined();
+  });
+
+  it('does not treat unknown word after pipe as transform', () => {
+    const spec = parse('Goal: g\n\nflow:\n  let x = run "echo" | unknown');
+    const node = spec.nodes[0] as LetNode;
+    // Unknown transform word — pipe stays as part of run command
+    expect(node.source.type).toBe('run');
+    expect(node.transform).toBeUndefined();
+  });
+
+  it('no transform when pipe is absent', () => {
+    const spec = parse('Goal: g\n\nflow:\n  let x = run "echo hello"');
+    const node = spec.nodes[0] as LetNode;
+    expect(node.transform).toBeUndefined();
+  });
+});
+
+// ── H-LANG-007: foreach with run command ─────────────────────────────
+
+describe('parseFlow — foreach with run command (H-LANG-007)', () => {
+  it('parses foreach item in run "cmd"', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach file in run "ls -1"
+    prompt: process \${file}
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as ForeachNode;
+    expect(node.kind).toBe('foreach');
+    expect(node.variableName).toBe('file');
+    expect(node.listCommand).toBe('ls -1');
+    expect(node.listExpression).toBe('');
+  });
+
+  it('parses foreach with run and max', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach f in run "find . -name *.ts" max 10
+    prompt: check \${f}
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as ForeachNode;
+    expect(node.listCommand).toBe('find . -name *.ts');
+    expect(node.maxIterations).toBe(10);
+  });
+
+  it('regular foreach does not set listCommand', () => {
+    const spec = parse('Goal: g\n\nflow:\n  foreach x in "a b c"\n    prompt: hi\n  end');
+    const node = spec.nodes[0] as ForeachNode;
+    expect(node.listCommand).toBeUndefined();
+    expect(node.listExpression).toBe('a b c');
+  });
+});
+
+describe('parseFlow — include directive (H-INT-001)', () => {
+  const mockReader = (files: Record<string, string>) => (path: string) => {
+    // Normalize path separators for cross-platform tests
+    const normalized = path.replace(/\\/g, '/');
+    for (const [key, value] of Object.entries(files)) {
+      if (normalized.endsWith(key)) return value;
+    }
+    throw new Error(`File not found: ${path}`);
+  };
+
+  it('inlines nodes from included file', () => {
+    const spec = parseFlow('Goal: test\n\nflow:\n  include "steps.flow"\n  prompt: after', {
+      basePath: '/project',
+      fileReader: mockReader({ 'steps.flow': 'prompt: from include\nrun: echo hi' }),
+    });
+    expect(spec.nodes).toHaveLength(3);
+    expect((spec.nodes[0] as PromptNode).text).toBe('from include');
+    expect((spec.nodes[1] as RunNode).command).toBe('echo hi');
+    expect((spec.nodes[2] as PromptNode).text).toBe('after');
+  });
+
+  it('warns on circular include', () => {
+    const spec = parseFlow('Goal: test\n\nflow:\n  include "a.flow"', {
+      basePath: '/project',
+      fileReader: mockReader({ 'a.flow': 'include "a.flow"' }),
+    });
+    expect(spec.warnings.some((w) => w.includes('Circular include'))).toBe(true);
+  });
+
+  it('warns on missing include file', () => {
+    const spec = parseFlow('Goal: test\n\nflow:\n  include "missing.flow"', {
+      basePath: '/project',
+      fileReader: () => {
+        throw new Error('ENOENT');
+      },
+    });
+    expect(spec.warnings.some((w) => w.includes('Could not read'))).toBe(true);
+  });
+
+  it('rejects absolute paths', () => {
+    const spec = parseFlow('Goal: test\n\nflow:\n  include "/etc/passwd"', {
+      basePath: '/project',
+      fileReader: mockReader({}),
+    });
+    expect(spec.warnings.some((w) => w.includes('Invalid include path'))).toBe(true);
+  });
+
+  it('rejects path traversal', () => {
+    const spec = parseFlow('Goal: test\n\nflow:\n  include "../secret.flow"', {
+      basePath: '/project',
+      fileReader: mockReader({}),
+    });
+    expect(spec.warnings.some((w) => w.includes('Invalid include path'))).toBe(true);
+  });
+});
+
+// ── H-LANG-011: Labeled loops ─────────────────────────────────────────
+
+describe('parseFlow — labeled loops', () => {
+  it('parses labeled while loop', () => {
+    const spec = parse('Goal: test\n\nflow:\n  outer: while true max 3\n    prompt: do\n  end');
+    const node = spec.nodes[0] as WhileNode;
+    expect(node.kind).toBe('while');
+    expect(node.label).toBe('outer');
+    expect(node.condition).toBe('true');
+    expect(node.maxIterations).toBe(3);
+  });
+
+  it('parses labeled until loop', () => {
+    const spec = parse('Goal: test\n\nflow:\n  myloop: until done max 5\n    prompt: work\n  end');
+    const node = spec.nodes[0] as UntilNode;
+    expect(node.kind).toBe('until');
+    expect(node.label).toBe('myloop');
+    expect(node.condition).toBe('done');
+  });
+
+  it('parses labeled retry', () => {
+    const spec = parse('Goal: test\n\nflow:\n  attempt: retry max 3\n    run: build\n  end');
+    const node = spec.nodes[0] as RetryNode;
+    expect(node.kind).toBe('retry');
+    expect(node.label).toBe('attempt');
+  });
+
+  it('parses labeled foreach', () => {
+    const spec = parse(
+      'Goal: test\n\nflow:\n  items: foreach x in "a b c"\n    prompt: do ${x}\n  end',
+    );
+    const node = spec.nodes[0] as ForeachNode;
+    expect(node.kind).toBe('foreach');
+    expect(node.label).toBe('items');
+    expect(node.variableName).toBe('x');
+  });
+
+  it('parses break with label', () => {
+    const spec = parse('Goal: test\n\nflow:\n  outer: while true max 5\n    break outer\n  end');
+    const whileNode = spec.nodes[0] as WhileNode;
+    const breakNode = whileNode.body[0] as BreakNode;
+    expect(breakNode.kind).toBe('break');
+    expect(breakNode.label).toBe('outer');
+  });
+
+  it('parses continue with label', () => {
+    const spec = parse('Goal: test\n\nflow:\n  outer: while true max 5\n    continue outer\n  end');
+    const whileNode = spec.nodes[0] as WhileNode;
+    const contNode = whileNode.body[0] as ContinueNode;
+    expect(contNode.kind).toBe('continue');
+    expect(contNode.label).toBe('outer');
+  });
+});
+
+// ── H-LANG-008: Loop timeout ──────────────────────────────────────────
+
+describe('parseFlow — loop timeout', () => {
+  it('parses while with timeout', () => {
+    const spec = parse(
+      'Goal: test\n\nflow:\n  while true max 10 timeout 30\n    prompt: work\n  end',
+    );
+    const node = spec.nodes[0] as WhileNode;
+    expect(node.kind).toBe('while');
+    expect(node.timeoutSeconds).toBe(30);
+    expect(node.maxIterations).toBe(10);
+  });
+
+  it('parses until with timeout', () => {
+    const spec = parse(
+      'Goal: test\n\nflow:\n  until done max 5 timeout 60\n    prompt: work\n  end',
+    );
+    const node = spec.nodes[0] as UntilNode;
+    expect(node.timeoutSeconds).toBe(60);
+  });
+
+  it('parses retry with timeout', () => {
+    const spec = parse('Goal: test\n\nflow:\n  retry max 3 timeout 120\n    run: build\n  end');
+    const node = spec.nodes[0] as RetryNode;
+    expect(node.timeoutSeconds).toBe(120);
+  });
+});
+
+// ── H-LANG-009: env: section ──────────────────────────────────────────
+
+describe('parseFlow — env section', () => {
+  it('parses env section with key=value pairs', () => {
+    const spec = parse(
+      'Goal: test\n\nenv:\n  NODE_ENV=test\n  DEBUG=true\n\nflow:\n  prompt: hello',
+    );
+    expect(spec.env).toEqual({ NODE_ENV: 'test', DEBUG: 'true' });
+  });
+
+  it('env is undefined when no env section', () => {
+    const spec = parse('Goal: test\n\nflow:\n  prompt: hello');
+    expect(spec.env).toBeUndefined();
+  });
+});
+
+// ── H-LANG-010: Gate all() and N_of() ─────────────────────────────────
+
+describe('parseGates — composite gates', () => {
+  it('parses all() gate', () => {
+    const gates = parseGates('done when:\n  all(tests_pass, lint_pass)');
+    expect(gates).toHaveLength(1);
+    expect(gates[0]!.all).toHaveLength(2);
+    expect(gates[0]!.all![0]!.predicate).toBe('tests_pass');
+    expect(gates[0]!.all![1]!.predicate).toBe('lint_pass');
+  });
+
+  it('parses N_of() gate', () => {
+    const gates = parseGates('done when:\n  2_of(tests_pass, lint_pass, build_pass)');
+    expect(gates).toHaveLength(1);
+    expect(gates[0]!.nOf).toBeDefined();
+    expect(gates[0]!.nOf!.n).toBe(2);
+    expect(gates[0]!.nOf!.gates).toHaveLength(3);
   });
 });

@@ -62,6 +62,51 @@ describe('interpolate', () => {
   it('handles mixed default and plain tokens', () => {
     expect(interpolate('${a:-one} ${b}', {})).toBe('one ${b}');
   });
+
+  // H-LANG-004: Array indexing
+  describe('array indexing', () => {
+    it('accesses first element with ${var[0]}', () => {
+      expect(interpolate('${items[0]}', { items: '["a","b","c"]' })).toBe('a');
+    });
+
+    it('accesses last element with negative index ${var[-1]}', () => {
+      expect(interpolate('${items[-1]}', { items: '["a","b","c"]' })).toBe('c');
+    });
+
+    it('returns empty string for out-of-bounds index', () => {
+      expect(interpolate('${items[5]}', { items: '["a","b"]' })).toBe('');
+    });
+
+    it('returns empty string for negative out-of-bounds index', () => {
+      expect(interpolate('${items[-5]}', { items: '["a","b"]' })).toBe('');
+    });
+
+    it('leaves as-is when variable is not an array', () => {
+      expect(interpolate('${items[0]}', { items: 'not-json' })).toBe('${items[0]}');
+    });
+
+    it('leaves as-is when variable is not set', () => {
+      expect(interpolate('${items[0]}', {})).toBe('${items[0]}');
+    });
+
+    it('accesses middle element', () => {
+      expect(interpolate('${items[1]}', { items: '["x","y","z"]' })).toBe('y');
+    });
+
+    it('works alongside plain variables', () => {
+      expect(
+        interpolate('first=${items[0]} name=${name}', { items: '["a","b"]', name: 'test' }),
+      ).toBe('first=a name=test');
+    });
+
+    it('handles numeric array values', () => {
+      expect(interpolate('${nums[0]}', { nums: '[1,2,3]' })).toBe('1');
+    });
+
+    it('leaves as-is when value is a JSON object (not array)', () => {
+      expect(interpolate('${obj[0]}', { obj: '{"key":"val"}' })).toBe('${obj[0]}');
+    });
+  });
 });
 
 describe('shellEscapeValue', () => {
@@ -113,5 +158,16 @@ describe('shellInterpolate', () => {
   // H#10: Default value in shell context
   it('shell-escapes default value', () => {
     expect(shellInterpolate('echo ${x:-hello}', {})).toBe("echo 'hello'");
+  });
+
+  // H-LANG-004: Array indexing in shell context
+  it('shell-escapes array element access', () => {
+    expect(shellInterpolate('echo ${items[0]}', { items: '["hello","world"]' })).toBe(
+      "echo 'hello'",
+    );
+  });
+
+  it('leaves array access as-is when variable not set', () => {
+    expect(shellInterpolate('echo ${items[0]}', {})).toBe('echo ${items[0]}');
   });
 });

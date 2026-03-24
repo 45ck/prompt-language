@@ -23,6 +23,8 @@ const DEFAULT_TIMEOUT_MS = getDefaultTimeoutMs();
 export class ShellCommandRunner implements CommandRunner {
   async run(command: string, options?: RunOptions): Promise<CommandResult> {
     const timeout = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    // H-LANG-009: Merge env from options with process.env
+    const envOverride = options?.env ? { env: { ...process.env, ...options.env } } : {};
     return new Promise((resolve) => {
       exec(
         command,
@@ -31,6 +33,7 @@ export class ShellCommandRunner implements CommandRunner {
           timeout,
           maxBuffer: 4 * 1024 * 1024,
           ...(process.platform === 'win32' && { shell: 'bash' }),
+          ...envOverride,
         },
         (error, stdout, stderr) => {
           if (error) {

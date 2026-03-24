@@ -117,4 +117,27 @@ describe('session-start hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
   });
+
+  it('warns when state version is newer than expected (H-INT-009)', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = { ...makeState('active', 'Versioned flow'), version: 99 };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain('WARNING');
+    expect(result.stderr).toContain('newer than this plugin');
+  });
+
+  it('no version warning when version matches (H-INT-009)', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = { ...makeState('active', 'Normal flow'), version: 1 };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).not.toContain('WARNING');
+  });
 });

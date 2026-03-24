@@ -116,11 +116,24 @@ export function evaluateCondition(
     return inner === null ? null : !inner;
   }
 
+  // H-LANG-012: "contains" operator — left string includes right string
+  const containsIdx = trimmed.search(/\s+contains\s+/i);
+  if (containsIdx >= 0) {
+    const containsMatch = /\s+contains\s+/i.exec(trimmed.slice(containsIdx));
+    const left = resolveOperand(trimmed.slice(0, containsIdx), variables);
+    const right = resolveOperand(trimmed.slice(containsIdx + containsMatch![0].length), variables);
+    return String(left).includes(String(right));
+  }
+
   // H#3: Comparison operators
   const compMatch = COMPARISON_RE.exec(trimmed);
   if (compMatch?.[1] && compMatch[2] && compMatch[3]) {
     return evaluateComparison(compMatch[1], compMatch[2], compMatch[3], variables);
   }
+
+  // Literal boolean values
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
 
   // Simple variable lookup
   if (!(trimmed in variables)) return null;

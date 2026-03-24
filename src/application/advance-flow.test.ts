@@ -562,7 +562,7 @@ describe('autoAdvanceNodes — sequential auto-advance', () => {
     expect(result.currentNodePath).toEqual([15]);
     // No MAX_ADVANCES warning
     expect(result.warnings).not.toEqual(
-      expect.arrayContaining([expect.stringContaining('MAX_ADVANCES')]),
+      expect.arrayContaining([expect.stringContaining('Flow paused')]),
     );
     // No captured prompt (all auto-advancing)
     expect(capturedPrompt).toBeNull();
@@ -623,7 +623,7 @@ describe('autoAdvanceNodes — safety limits', () => {
 
     const { state: result } = await autoAdvanceNodes(state);
     expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining('MAX_ADVANCES')]),
+      expect.arrayContaining([expect.stringContaining('Flow paused')]),
     );
     expect(result.currentNodePath).toEqual([100]);
   });
@@ -1970,7 +1970,7 @@ describe('autoAdvanceNodes — stale-state detection', () => {
     expect(capturedPrompt).toBe('All done');
     // No stale-state or MAX_ADVANCES warnings
     expect(result.warnings).not.toEqual(
-      expect.arrayContaining([expect.stringContaining('MAX_ADVANCES')]),
+      expect.arrayContaining([expect.stringContaining('Flow paused')]),
     );
   });
 });
@@ -2114,5 +2114,438 @@ describe('autoAdvanceNodes — spawn body exhaustion edge case', () => {
     const { state: result } = await autoAdvanceNodes(state);
     // Should have advanced past spawn and executed the let after it
     expect(result.variables['after']).toBe('yes');
+  });
+});
+
+// ── H-LANG-005: Pipe transforms ──────────────────────────────────────
+
+describe('autoAdvanceNodes — pipe transforms', () => {
+  it('applies trim transform to let=run output', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '  hello world  \n', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'result', { type: 'run', command: 'echo hello' }, false, 'trim'),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    expect(result.variables['result']).toBe('hello world');
+  });
+
+  it('applies upper transform to let=run output', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'hello\n', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'result', { type: 'run', command: 'echo' }, false, 'upper'),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    expect(result.variables['result']).toBe('HELLO');
+  });
+
+  it('applies lower transform to literal', async () => {
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'result', { type: 'literal', value: 'HELLO' }, false, 'lower'),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['result']).toBe('hello');
+  });
+
+  it('applies first transform to multi-line output', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'line1\nline2\nline3\n', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'result', { type: 'run', command: 'cmd' }, false, 'first'),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    expect(result.variables['result']).toBe('line1');
+  });
+
+  it('applies last transform to multi-line output', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'line1\nline2\nline3\n', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'result', { type: 'run', command: 'cmd' }, false, 'last'),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    expect(result.variables['result']).toBe('line3');
+  });
+
+  it('no transform when not specified', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '  spaced  \n', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'result', { type: 'run', command: 'cmd' }),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    // trimEnd is always applied to run output, but leading spaces remain
+    expect(result.variables['result']).toBe('  spaced');
+  });
+});
+
+// ── H-LANG-007: foreach with run command ──────────────────────────────
+
+describe('autoAdvanceNodes — foreach with listCommand', () => {
+  it('executes command and iterates over output items', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'alpha\nbeta\ngamma\n', stderr: '' }),
+    };
+    const foreachNode = createForeachNode(
+      'fe1',
+      'item',
+      '',
+      [createPromptNode('p1', 'process ${item}')],
+      50,
+      undefined,
+      'ls -1',
+    );
+    const spec = createFlowSpec('test', [foreachNode, createPromptNode('p2', 'Done')]);
+    const state = createSessionState('s1', spec);
+
+    const r1 = await autoAdvanceNodes(state, runner);
+    expect(r1.capturedPrompt).toBe('process alpha');
+
+    const r2 = await autoAdvanceNodes(r1.state, runner);
+    expect(r2.capturedPrompt).toBe('process beta');
+
+    const r3 = await autoAdvanceNodes(r2.state, runner);
+    expect(r3.capturedPrompt).toBe('process gamma');
+
+    const r4 = await autoAdvanceNodes(r3.state, runner);
+    expect(r4.capturedPrompt).toBe('Done');
+  });
+
+  it('stays at path when no commandRunner provided for foreach run', async () => {
+    const foreachNode = createForeachNode(
+      'fe1',
+      'item',
+      '',
+      [createPromptNode('p1', '${item}')],
+      50,
+      undefined,
+      'ls -1',
+    );
+    const spec = createFlowSpec('test', [foreachNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBeNull();
+  });
+
+  it('skips foreach when command output is empty', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const foreachNode = createForeachNode(
+      'fe1',
+      'item',
+      '',
+      [createPromptNode('p1', '${item}')],
+      50,
+      undefined,
+      'echo',
+    );
+    const spec = createFlowSpec('test', [foreachNode, createPromptNode('p2', 'Skipped')]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner);
+    expect(capturedPrompt).toBe('Skipped');
+  });
+});
+
+// ── H-REL-004: Retry exponential backoff ──────────────────────────────
+
+describe('autoAdvanceNodes — retry backoff', () => {
+  it('sets _retry_backoff_seconds on re-loop when backoff configured', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
+    };
+    const retryNode = createRetryNode(
+      're1',
+      [createRunNode('r1', 'build')],
+      3,
+      undefined,
+      undefined,
+      2000,
+    );
+    const spec = createFlowSpec('test', [retryNode]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: { command_failed: true },
+      currentNodePath: [0, 1], // past body end
+      nodeProgress: { re1: { iteration: 1, maxIterations: 3, status: 'running' } },
+    };
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    // autoAdvanceNodes runs all iterations: final backoff = 2000 * 2^(2-1) = 4000ms,
+    // but last re-loop sets iteration 3 which hits max, so last set value is iteration 2: 2000*2^1/1000=4
+    // Wait — iteration starts at 1, run fails, exhaust sets backoff at iter 1 (=2s), re-enter at iter 2,
+    // run fails, exhaust sets backoff at iter 2 (=4s), re-enter at iter 3 but 3 >= max 3 so exits.
+    // Last backoff set was at iter 2: 2000*2^(2-1)/1000 = 4, but iter 3 tries to re-loop,
+    // shouldReLoop=true but iteration(3) >= max(3), exits without setting backoff again.
+    // Actually: iter 1 → backoff=2s, handleLoopReentry increments to 2 and re-enters
+    // iter 2 → run, fail, exhaust → backoff=2000*2^(2-1)/1000=4, re-enter at iter 3
+    // iter 3 → run, fail, exhaust → backoff=2000*2^(3-1)/1000=8, but handleLoopReentry says 3 >= 3 → exit
+    // The last _retry_backoff_seconds = 8
+    expect(result.variables['_retry_backoff_seconds']).toBe(8);
+  });
+
+  it('doubles backoff on subsequent iterations', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
+    };
+    const retryNode = createRetryNode(
+      're1',
+      [createRunNode('r1', 'build')],
+      5,
+      undefined,
+      undefined,
+      1000,
+    );
+    const spec = createFlowSpec('test', [retryNode]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: { command_failed: true },
+      currentNodePath: [0, 1],
+      nodeProgress: { re1: { iteration: 3, maxIterations: 5, status: 'running' } },
+    };
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    // autoAdvanceNodes runs remaining iterations from 3 to 5 (max):
+    // iter 3 → backoff=1000*2^(3-1)/1000=4, re-enter iter 4
+    // iter 4 → backoff=1000*2^(4-1)/1000=8, re-enter iter 5
+    // iter 5 → backoff=1000*2^(5-1)/1000=16, but 5 >= max 5 → exit
+    // Last _retry_backoff_seconds = 16
+    expect(result.variables['_retry_backoff_seconds']).toBe(16);
+  });
+
+  it('caps backoff at 60s', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
+    };
+    const retryNode = createRetryNode(
+      're1',
+      [createRunNode('r1', 'build')],
+      20,
+      undefined,
+      undefined,
+      10000,
+    );
+    const spec = createFlowSpec('test', [retryNode]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: { command_failed: true },
+      currentNodePath: [0, 1],
+      nodeProgress: { re1: { iteration: 10, maxIterations: 20, status: 'running' } },
+    };
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    // 10000 * 2^9 = 5120000ms but capped at 60000ms = 60s
+    expect(result.variables['_retry_backoff_seconds']).toBe(60);
+  });
+
+  it('does not set backoff variable when retry has no backoff', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
+    };
+    const retryNode = createRetryNode('re1', [createRunNode('r1', 'build')], 3);
+    const spec = createFlowSpec('test', [retryNode]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: { command_failed: true },
+      currentNodePath: [0, 1],
+      nodeProgress: { re1: { iteration: 1, maxIterations: 3, status: 'running' } },
+    };
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    expect(result.variables['_retry_backoff_seconds']).toBeUndefined();
+  });
+});
+
+// ── H-REL-007: Graceful MAX_ADVANCES with prompt ──────────────────────
+
+describe('autoAdvanceNodes — MAX_ADVANCES with prompt', () => {
+  it('emits current prompt node when MAX_ADVANCES reached', async () => {
+    // 100 let nodes followed by a prompt — the prompt should be emitted
+    const nodes = [
+      ...Array.from({ length: 100 }, (_, i) =>
+        createLetNode(`l${i}`, `v${i}`, { type: 'literal', value: String(i) }),
+      ),
+      createPromptNode('p1', 'Continue here'),
+    ];
+    const spec = createFlowSpec('test', nodes);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('Continue here');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('Flow paused')]),
+    );
+  });
+});
+
+// ── H-REL-010: Per-variable size guard ────────────────────────────────
+
+describe('autoAdvanceNodes — variable size guard', () => {
+  it('truncates let=run output exceeding MAX_OUTPUT_LENGTH', async () => {
+    const longOutput = 'x'.repeat(3000);
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: longOutput + '\n', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'data', { type: 'run', command: 'cat bigfile' }),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    const data = result.variables['data'] as string;
+    expect(data.length).toBeLessThan(longOutput.length);
+    expect(data).toContain('[truncated]');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("Variable 'data' truncated")]),
+    );
+  });
+
+  it('does not truncate let=run output within limit', async () => {
+    const normalOutput = 'x'.repeat(100);
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: normalOutput + '\n', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'data', { type: 'run', command: 'echo hi' }),
+      createPromptNode('p1', 'done'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    expect(result.variables['data']).toBe(normalOutput);
+    expect(result.warnings).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('truncated')]),
+    );
+  });
+});
+
+// ── H-LANG-011: Labeled break/continue ──────────────────────────────────
+
+describe('autoAdvanceNodes — labeled break', () => {
+  it('break with label exits the labeled outer loop', async () => {
+    // outer: while loop_flag max 5
+    //   while loop_flag max 5
+    //     break outer
+    //   end
+    // end
+    // prompt: done
+    const innerWhile = createWhileNode('w2', 'loop_flag', [createBreakNode('b1', 'outer')], 5);
+    const outerWhile = createWhileNode('w1', 'loop_flag', [innerWhile], 5, 'outer');
+    const spec = createFlowSpec('test', [outerWhile, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { loop_flag: true } };
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('done');
+    // Should have advanced past the outer while
+    expect(result.currentNodePath).toEqual([2]);
+  });
+
+  it('break without label exits nearest loop even when outer is labeled', async () => {
+    const innerWhile = createWhileNode('w2', 'loop_flag', [createBreakNode('b1')], 5);
+    const outerWhile = createWhileNode('w1', 'loop_flag', [innerWhile], 5, 'outer');
+    const spec = createFlowSpec('test', [outerWhile, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { loop_flag: true } };
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    // Inner break exits inner loop; outer loop re-evaluates and repeats.
+    // Eventually hits max iterations on outer loop.
+    expect(capturedPrompt).toBe('done');
+  });
+});
+
+describe('autoAdvanceNodes — labeled continue', () => {
+  it('continue with label re-enters the labeled outer loop', async () => {
+    // outer: foreach item in "a b"
+    //   foreach sub in "x y"
+    //     continue outer
+    //   end
+    // end
+    // prompt: done
+    const innerForeach = createForeachNode(
+      'f2',
+      'sub',
+      'x y',
+      [createContinueNode('c1', 'outer')],
+      50,
+    );
+    const outerForeach = createForeachNode('f1', 'item', 'a b', [innerForeach], 50, 'outer');
+    const spec = createFlowSpec('test', [outerForeach, createPromptNode('p1', 'done')]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('done');
+  });
+});
+
+// ── H-LANG-008: Wall-clock loop timeout ──────────────────────────────────
+
+describe('autoAdvanceNodes — loop timeout', () => {
+  it('exits while loop when timeout exceeded', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'loop_flag',
+      [createRunNode('r1', 'echo hi')],
+      100,
+      undefined,
+      0, // 0 second timeout — will immediately expire
+    );
+    const spec = createFlowSpec('test', [whileNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+
+    // Simulate that the loop has been running: set loopStartedAt to the past
+    state = {
+      ...state,
+      variables: { loop_flag: true },
+      currentNodePath: [0, 1], // past body end
+      nodeProgress: {
+        w1: {
+          iteration: 1,
+          maxIterations: 100,
+          status: 'running',
+          startedAt: Date.now() - 5000,
+          loopStartedAt: Date.now() - 5000,
+        },
+      },
+    };
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
+    expect(capturedPrompt).toBe('done');
+    expect(result.warnings).toEqual(expect.arrayContaining([expect.stringContaining('timed out')]));
   });
 });

@@ -4,6 +4,8 @@
  * Soft parser: produces warnings instead of errors for recoverable issues.
  */
 
+import { readFileSync } from 'node:fs';
+import { resolve, dirname, isAbsolute } from 'node:path';
 import type { FlowNode } from '../domain/flow-node.js';
 import type { CompletionGate, FlowSpec } from '../domain/flow-spec.js';
 import type { LetSource } from '../domain/flow-node.js';
@@ -85,6 +87,38 @@ export function parseGates(input: string): readonly CompletionGate[] {
       }
     }
 
+    // H-LANG-010: all(gate1, gate2, ...) composite gate (explicit AND)
+    const allMatch = /^all\s*\((.+)\)\s*$/i.exec(trimmed);
+    if (allMatch?.[1]) {
+      const subPredicates = allMatch[1]
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (subPredicates.length > 0) {
+        const subGates = subPredicates.map((p) => createCompletionGate(p));
+        gates.push({ predicate: `all(${subPredicates.join(', ')})`, all: subGates });
+        continue;
+      }
+    }
+
+    // H-LANG-010: N_of(n, gate1, gate2, ...) composite gate
+    const nOfMatch = /^(\d+)_of\s*\((.+)\)\s*$/i.exec(trimmed);
+    if (nOfMatch?.[1] && nOfMatch[2]) {
+      const n = parseInt(nOfMatch[1], 10);
+      const subPredicates = nOfMatch[2]
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (n > 0 && subPredicates.length > 0) {
+        const subGates = subPredicates.map((p) => createCompletionGate(p));
+        gates.push({
+          predicate: `${n}_of(${subPredicates.join(', ')})`,
+          nOf: { n, gates: subGates },
+        });
+        continue;
+      }
+    }
+
     // H#26: Custom gate definition — "gate name: command"
     const gateMatch = /^gate\s+(\w+)\s*:\s*(.+)$/i.exec(trimmed);
     if (gateMatch?.[1] && gateMatch[2]) {
@@ -147,37 +181,70 @@ function extractFlowBlock(input: string): readonly string[] {
   return result;
 }
 
-function parseWhileLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
-  const match = /^while\s+(?:not\s+)?(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
+// H-LANG-008: Extract optional "timeout N" from loop line
+function parseTimeout(line: string): number | undefined {
+  const match = /\btimeout\s+(\d+)\b/i.exec(line);
+  return match?.[1] ? parseInt(match[1], 10) : undefined;
+}
+
+// H-LANG-008: Strip "timeout N" from line for further parsing
+function stripTimeout(line: string): string {
+  return line.replace(/\s+timeout\s+\d+/i, '');
+}
+
+function parseWhileLine(
+  ctx: ParseContext,
+  line: string,
+  baseIndent: number,
+  label?: string,
+): FlowNode {
+  const timeout = parseTimeout(line);
+  const stripped = stripTimeout(line);
+  const match = /^while\s+(?:not\s+)?(.+?)(?:\s+max\s+(\d+))?$/i.exec(stripped);
   const condition = match?.[1] ?? 'true';
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
-  if (!/max\s+\d+/i.exec(line)) {
-    warn(ctx, 'Missing "max N" on while — defaulting to 5');
+  if (!/max\s+\d+/i.exec(stripped)) {
+    warn(ctx, `Missing "max N" on while — defaulting to 5. Try: while ${condition} max 5`);
     max = DEFAULT_MAX_ITERATIONS;
   }
-  const negated = /^while\s+not\s+/i.test(line);
+  const negated = /^while\s+not\s+/i.test(stripped);
   const cond = negated ? `not ${condition}` : condition;
   const body = parseBlock(ctx, baseIndent);
-  return createWhileNode(nextId(ctx), cond, body, max);
+  return createWhileNode(nextId(ctx), cond, body, max, label, timeout);
 }
 
-function parseUntilLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
-  const match = /^until\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
+function parseUntilLine(
+  ctx: ParseContext,
+  line: string,
+  baseIndent: number,
+  label?: string,
+): FlowNode {
+  const timeout = parseTimeout(line);
+  const stripped = stripTimeout(line);
+  const match = /^until\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(stripped);
   const condition = match?.[1] ?? 'true';
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
-  if (!/max\s+\d+/i.exec(line)) {
-    warn(ctx, 'Missing "max N" on until — defaulting to 5');
+  if (!/max\s+\d+/i.exec(stripped)) {
+    warn(ctx, `Missing "max N" on until — defaulting to 5. Try: until ${condition} max 5`);
     max = DEFAULT_MAX_ITERATIONS;
   }
   const body = parseBlock(ctx, baseIndent);
-  return createUntilNode(nextId(ctx), condition, body, max);
+  return createUntilNode(nextId(ctx), condition, body, max, label, timeout);
 }
 
-function parseRetryLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
-  const match = /^retry(?:\s+max\s+(\d+))?/i.exec(line);
+function parseRetryLine(
+  ctx: ParseContext,
+  line: string,
+  baseIndent: number,
+  label?: string,
+): FlowNode {
+  const timeout = parseTimeout(line);
+  const stripped = stripTimeout(line);
+  const match = /^retry(?:\s+max\s+(\d+))?(?:\s+backoff\s+(\d+)s)?/i.exec(stripped);
   const max = match?.[1] ? parseInt(match[1], 10) : undefined;
+  const backoffMs = match?.[2] ? parseInt(match[2], 10) * 1000 : undefined;
   const body = parseBlock(ctx, baseIndent);
-  return createRetryNode(nextId(ctx), body, max);
+  return createRetryNode(nextId(ctx), body, max, label, timeout, backoffMs);
 }
 
 function parseIfLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
@@ -260,17 +327,23 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
   const splitIdx = isAppend ? appendIdx : eqIdx;
 
   if (splitIdx < 0) {
-    warn(ctx, `Invalid let/var syntax: "${trimmed}" — missing "="`);
+    warn(ctx, `Invalid let/var syntax: "${trimmed}" — missing "=". Try: let name = "value"`);
     return null;
   }
   const variableName = afterKeyword.slice(0, splitIdx).trim();
   if (!variableName) {
-    warn(ctx, `Invalid let/var syntax: "${trimmed}" — missing variable name`);
+    warn(
+      ctx,
+      `Invalid let/var syntax: "${trimmed}" — missing variable name. Try: let name = "value"`,
+    );
     return null;
   }
   const rhs = afterKeyword.slice(splitIdx + (isAppend ? 2 : 1)).trim();
   if (!rhs) {
-    warn(ctx, `Invalid let/var syntax: "${trimmed}" — missing value`);
+    warn(
+      ctx,
+      `Invalid let/var syntax: "${trimmed}" — missing value after "=". Try: let ${variableName} = "value"`,
+    );
     return null;
   }
 
@@ -283,58 +356,107 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
     return createLetNode(nextId(ctx), variableName, { type: 'empty_list' }, false);
   }
 
-  const rhsLower = rhs.toLowerCase();
+  // H-LANG-005: Detect pipe transform suffix on prompt/run sources
+  let transform: string | undefined;
+  let effectiveRhs = rhs;
+  const rhsLower = effectiveRhs.toLowerCase();
+
+  if (rhsLower.startsWith('prompt ') || rhsLower.startsWith('run ')) {
+    const pipeIdx = effectiveRhs.lastIndexOf(' | ');
+    if (pipeIdx >= 0) {
+      const candidate = effectiveRhs.slice(pipeIdx + 3).trim();
+      if (/^(trim|upper|lower|first|last)$/i.test(candidate)) {
+        transform = candidate.toLowerCase();
+        effectiveRhs = effectiveRhs.slice(0, pipeIdx).trimEnd();
+      }
+    }
+  }
+
+  const effectiveLower = effectiveRhs.toLowerCase();
   let source: LetSource;
 
-  if (rhsLower.startsWith('prompt ')) {
-    const text = stripQuotes(rhs.slice(7).trim());
+  if (effectiveLower.startsWith('prompt ')) {
+    const text = stripQuotes(effectiveRhs.slice(7).trim());
     source = { type: 'prompt', text };
-  } else if (rhsLower.startsWith('run ')) {
-    const command = stripQuotes(rhs.slice(4).trim());
+  } else if (effectiveLower.startsWith('run ')) {
+    const command = stripQuotes(effectiveRhs.slice(4).trim());
     source = { type: 'run', command };
   } else {
-    const value = stripQuotes(rhs);
+    const value = stripQuotes(effectiveRhs);
     source = { type: 'literal', value };
   }
 
-  return createLetNode(nextId(ctx), variableName, source, isAppend);
+  return createLetNode(nextId(ctx), variableName, source, isAppend, transform);
 }
 
-function parseForeachLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
+function parseForeachLine(
+  ctx: ParseContext,
+  line: string,
+  baseIndent: number,
+  label?: string,
+): FlowNode {
   const match = /^foreach\s+(\w+)\s+in\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
   if (!match?.[1] || !match[2]) {
-    warn(ctx, `Invalid foreach syntax: "${line}"`);
+    warn(ctx, `Invalid foreach syntax: "${line}". Try: foreach item in \${list}`);
     return createPromptNode(nextId(ctx), line);
   }
   const variableName = match[1];
-  const listExpression = stripQuotes(match[2].trim());
+  const rawExpr = match[2].trim();
   const max = match[3] ? parseInt(match[3], 10) : undefined;
   const body = parseBlock(ctx, baseIndent);
   consumeEnd(ctx);
-  return createForeachNode(nextId(ctx), variableName, listExpression, body, max);
+
+  // H-LANG-007: Detect `run "cmd"` as dynamic list source
+  const runMatch = /^run\s+(.+)$/i.exec(rawExpr);
+  if (runMatch?.[1]) {
+    const command = stripQuotes(runMatch[1].trim());
+    return createForeachNode(nextId(ctx), variableName, '', body, max, label, command);
+  }
+
+  const listExpression = stripQuotes(rawExpr);
+  return createForeachNode(nextId(ctx), variableName, listExpression, body, max, label);
+}
+
+/** H-SEC-005: Extract `with vars x, y` from spawn line and return variable list. */
+function extractSpawnVars(line: string): readonly string[] | undefined {
+  const varsMatch = /\bwith\s+vars\s+(.+)$/i.exec(line);
+  if (!varsMatch?.[1]) return undefined;
+  return varsMatch[1]
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** H-SEC-005: Strip `with vars ...` suffix from spawn line for name/cwd parsing. */
+function stripVarsSuffix(line: string): string {
+  return line.replace(/\s+with\s+vars\s+.+$/i, '');
 }
 
 function parseSpawnBlock(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
+  // H-SEC-005: Extract optional vars allowlist before parsing name/cwd
+  const vars = extractSpawnVars(line);
+  const cleanLine = stripVarsSuffix(line);
+
   // H-INT-005: Parse optional `in "path"` for cross-directory spawn
   const cwdMatch =
-    /^spawn\s+"([^"]+)"\s+in\s+"([^"]+)"/i.exec(line) ??
-    /^spawn\s+'([^']+)'\s+in\s+'([^']+)'/i.exec(line);
+    /^spawn\s+"([^"]+)"\s+in\s+"([^"]+)"/i.exec(cleanLine) ??
+    /^spawn\s+'([^']+)'\s+in\s+'([^']+)'/i.exec(cleanLine);
   if (cwdMatch?.[1] && cwdMatch[2]) {
     const body = parseBlock(ctx, baseIndent);
     consumeEnd(ctx);
-    return createSpawnNode(nextId(ctx), cwdMatch[1], body, cwdMatch[2]);
+    return createSpawnNode(nextId(ctx), cwdMatch[1], body, cwdMatch[2], vars);
   }
 
-  const match = /^spawn\s+"([^"]+)"/i.exec(line) ?? /^spawn\s+'([^']+)'/i.exec(line);
+  const match = /^spawn\s+"([^"]+)"/i.exec(cleanLine) ?? /^spawn\s+'([^']+)'/i.exec(cleanLine);
   // D5: Accept bare-word spawn names (consistent with await)
-  const name = match?.[1] ?? line.replace(/^spawn\s+/i, '').trim();
+  const name = match?.[1] ?? cleanLine.replace(/^spawn\s+/i, '').trim();
   if (!name) {
     warn(ctx, `Invalid spawn syntax: "${line}" — expected spawn "name"`);
     return createPromptNode(nextId(ctx), line);
   }
   const body = parseBlock(ctx, baseIndent);
   consumeEnd(ctx);
-  return createSpawnNode(nextId(ctx), name, body);
+  return createSpawnNode(nextId(ctx), name, body, undefined, vars);
 }
 
 function parseAwaitLine(ctx: ParseContext, line: string): FlowNode {
@@ -364,7 +486,10 @@ function consumeEnd(ctx: ParseContext): void {
       return;
     }
   }
-  warn(ctx, 'Missing "end" — auto-closed block');
+  warn(
+    ctx,
+    'Missing "end" — auto-closed block. Add "end" at the same indent level as the opening keyword',
+  );
 }
 
 function parseBlock(
@@ -400,6 +525,19 @@ function parseBlock(
 
 function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode | null {
   const lower = trimmed.toLowerCase();
+
+  // H-LANG-011: Detect labeled loop — "label: while/until/retry/foreach ..."
+  const labelMatch = /^(\w+):\s+(while|until|retry|foreach)\b/i.exec(trimmed);
+  if (labelMatch?.[1] && labelMatch[2]) {
+    const label = labelMatch[1];
+    const rest = trimmed.slice(trimmed.indexOf(labelMatch[2]));
+    const keyword = labelMatch[2].toLowerCase();
+    if (keyword === 'while') return parseWhileLine(ctx, rest, indent, label);
+    if (keyword === 'until') return parseUntilLine(ctx, rest, indent, label);
+    if (keyword === 'retry') return parseRetryLine(ctx, rest, indent, label);
+    if (keyword === 'foreach') return parseForeachLine(ctx, rest, indent, label);
+  }
+
   if (lower.startsWith('while ')) {
     return parseWhileLine(ctx, trimmed, indent);
   }
@@ -436,11 +574,14 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   if (lower.startsWith('let ') || lower.startsWith('var ')) {
     return parseLetLine(ctx, trimmed);
   }
-  if (lower === 'break') {
-    return createBreakNode(nextId(ctx));
+  // H-LANG-011: break/continue with optional label
+  if (lower === 'break' || lower.startsWith('break ')) {
+    const labelArg = lower === 'break' ? undefined : trimmed.slice(6).trim() || undefined;
+    return createBreakNode(nextId(ctx), labelArg);
   }
-  if (lower === 'continue') {
-    return createContinueNode(nextId(ctx));
+  if (lower === 'continue' || lower.startsWith('continue ')) {
+    const labelArg = lower === 'continue' ? undefined : trimmed.slice(9).trim() || undefined;
+    return createContinueNode(nextId(ctx), labelArg);
   }
   if (lower.startsWith('spawn ')) {
     return parseSpawnBlock(ctx, trimmed, indent);
@@ -448,15 +589,105 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   if (lower.startsWith('await ') || lower === 'await') {
     return parseAwaitLine(ctx, trimmed);
   }
-  warn(ctx, `Unknown keyword "${trimmed}" — treating as prompt`);
+  warn(
+    ctx,
+    `Unknown keyword "${trimmed}" — treating as prompt. Valid keywords: prompt, run, let, while, until, retry, if, try, foreach, break, continue, spawn, await`,
+  );
   return createPromptNode(nextId(ctx), trimmed);
 }
 
-export function parseFlow(input: string): FlowSpec {
+/** H-LANG-009: Parse the "env:" section into key-value pairs. */
+export function parseEnv(input: string): Readonly<Record<string, string>> | undefined {
+  const match = /^env:\s*\n([\s\S]*?)(?=\n\s*(?:flow:|done when:))/im.exec(input);
+  if (!match?.[1]) return undefined;
+  const env: Record<string, string> = {};
+  for (const line of match[1].split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx < 0) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    if (key) env[key] = stripQuotes(value);
+  }
+  return Object.keys(env).length > 0 ? env : undefined;
+}
+
+/** H-INT-001: Safe path check — must be relative, no "..", no absolute paths. */
+const SAFE_INCLUDE_RE = /^(?!.*\.\.)[\w ./-]+\.(?:flow|prompt|txt)$/;
+
+const INCLUDE_RE = /^include\s+(?:"([^"]+)"|'([^']+)')$/i;
+
+/**
+ * H-INT-001: Resolve `include "path"` directives by inlining file content.
+ * Tracks included files to detect circular includes. Restricts to relative paths.
+ */
+function resolveIncludes(
+  lines: readonly string[],
+  warnings: string[],
+  basePath: string,
+  seen?: Set<string>,
+  fileReader?: (path: string) => string,
+): string[] {
+  const visited = seen ?? new Set<string>();
+  const reader = fileReader ?? ((p: string) => readFileSync(p, 'utf-8'));
+  const result: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const match = INCLUDE_RE.exec(trimmed);
+    if (!match) {
+      result.push(line);
+      continue;
+    }
+
+    const includePath = (match[1] ?? match[2])!;
+    if (isAbsolute(includePath) || !SAFE_INCLUDE_RE.test(includePath)) {
+      warnings.push(
+        `Invalid include path "${includePath}" — must be a relative path with .flow/.prompt/.txt extension`,
+      );
+      continue;
+    }
+
+    const fullPath = resolve(basePath, includePath);
+    if (visited.has(fullPath)) {
+      warnings.push(`Circular include detected: "${includePath}" — skipping`);
+      continue;
+    }
+
+    visited.add(fullPath);
+    try {
+      const content = reader(fullPath);
+      const indent = /^(\s*)/.exec(line)?.[1] ?? '';
+      const includedLines = content.split('\n').map((l) => (l.trim() ? `${indent}${l}` : l));
+      const resolved = resolveIncludes(
+        includedLines,
+        warnings,
+        dirname(fullPath),
+        visited,
+        fileReader,
+      );
+      result.push(...resolved);
+    } catch {
+      warnings.push(`Could not read include file "${includePath}"`);
+    }
+  }
+
+  return result;
+}
+
+export function parseFlow(
+  input: string,
+  options?: { basePath?: string; fileReader?: (path: string) => string },
+): FlowSpec {
   const warnings: string[] = [];
   const goal = parseGoal(input);
   const gates = parseGates(input);
-  const flowLines = extractFlowBlock(input);
+  const env = parseEnv(input);
+  const rawLines = extractFlowBlock(input);
+  // H-INT-001: Resolve include directives
+  const basePath = options?.basePath ?? process.cwd();
+  const flowLines = resolveIncludes(rawLines, warnings, basePath, undefined, options?.fileReader);
   const ctx: ParseContext = {
     lines: flowLines,
     pos: 0,
@@ -464,5 +695,5 @@ export function parseFlow(input: string): FlowSpec {
     nodeCounter: 0,
   };
   const nodes = parseBlock(ctx, -1);
-  return createFlowSpec(goal, nodes, gates, warnings);
+  return createFlowSpec(goal, nodes, gates, warnings, undefined, env);
 }

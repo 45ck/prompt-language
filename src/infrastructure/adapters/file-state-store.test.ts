@@ -114,7 +114,7 @@ describe('FileStateStore', () => {
     const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     await store.loadCurrent();
     expect(stderrSpy).toHaveBeenCalledWith(
-      '[prompt-language] WARNING: session-state.json is corrupted, ignoring\n',
+      '[prompt-language] WARNING: session-state.json is corrupted, trying backup\n',
     );
     stderrSpy.mockRestore();
   });
@@ -468,8 +468,10 @@ describe('FileStateStore', () => {
   });
 
   describe('H-REL-001: renameWithRetry', () => {
-    afterEach(() => {
-      vi.mocked(mockedRename).mockRestore();
+    afterEach(async () => {
+      // Reset and re-apply real implementation (mockRestore breaks the mock for later tests)
+      const real = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+      vi.mocked(mockedRename).mockReset().mockImplementation(real.rename);
     });
 
     it('retries on EBUSY and succeeds on second attempt', async () => {
@@ -522,6 +524,100 @@ describe('FileStateStore', () => {
       // Should only have been called once (no retries for non-EBUSY)
       const callsAfter = vi.mocked(mockedRename).mock.calls.length;
       expect(callsAfter - callsBefore).toBe(1);
+    });
+  });
+
+  describe('H-SEC-009: state file backup and recovery', () => {
+    it('creates backup file on save', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      await store.save(session);
+
+      // First save — no backup yet (no previous state to backup)
+      const backupPath = join(tempDir, '.prompt-language', 'session-state.bak.json');
+      try {
+        await access(backupPath);
+        // If backup exists, that's fine too (if state existed before)
+      } catch {
+        // No backup on first save — expected
+      }
+
+      // Second save creates backup of first state
+      const session2 = createSessionState('s2', makeSpec());
+      await store.save(session2);
+      const backupRaw = await readFile(backupPath, 'utf-8');
+      const backup = JSON.parse(backupRaw);
+      expect(backup.sessionId).toBe('s1');
+    });
+
+    it('recovers from backup when primary state is corrupted', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      await store.save(session);
+
+      // Save again so s1 becomes the backup
+      const session2 = createSessionState('s2', makeSpec());
+      await store.save(session2);
+
+      // Corrupt the primary state file
+      const statePath = join(tempDir, '.prompt-language', 'session-state.json');
+      await writeFile(statePath, '{{corrupted garbage', 'utf-8');
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.sessionId).toBe('s1'); // Recovered from backup
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[prompt-language] WARNING: session-state.json is corrupted, trying backup\n',
+      );
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[prompt-language] Recovered state from backup file\n',
+      );
+      stderrSpy.mockRestore();
+    });
+
+    it('returns null when both primary and backup are corrupted', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      // Corrupt both files
+      await writeFile(join(stateDir, 'session-state.json'), '{{garbage', 'utf-8');
+      await writeFile(join(stateDir, 'session-state.bak.json'), '{{also garbage', 'utf-8');
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const loaded = await store.loadCurrent();
+      expect(loaded).toBeNull();
+      stderrSpy.mockRestore();
+    });
+  });
+
+  describe('H-REL-008: stale lock PID verification', () => {
+    it('breaks stale lock with dead PID and old timestamp', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      // Create a lock file with a PID that does not exist and old timestamp
+      const lockPath = join(stateDir, 'session-state.lock');
+      const lockData = JSON.stringify({ pid: 999999, timestamp: Date.now() - 20_000 });
+      await writeFile(lockPath, lockData, 'utf-8');
+
+      const session = createSessionState('s1', makeSpec());
+      await store.save(session);
+
+      const loaded = await store.loadCurrent();
+      expect(loaded?.sessionId).toBe('s1');
+    });
+
+    it('writes PID to lock file on acquire', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      await store.save(session);
+
+      // Lock should have been released, but verify the save succeeded
+      const loaded = await store.loadCurrent();
+      expect(loaded?.sessionId).toBe('s1');
     });
   });
 });

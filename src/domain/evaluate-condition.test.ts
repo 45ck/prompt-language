@@ -145,6 +145,46 @@ describe('evaluateCondition', () => {
     });
   });
 
+  // H-LANG-012: "contains" operator
+  describe('contains operator', () => {
+    it('returns true when left string includes right string', () => {
+      expect(
+        evaluateCondition('last_stdout contains "error"', { last_stdout: 'fatal error occurred' }),
+      ).toBe(true);
+    });
+
+    it('returns false when left string does not include right string', () => {
+      expect(evaluateCondition('last_stdout contains "error"', { last_stdout: 'all good' })).toBe(
+        false,
+      );
+    });
+
+    it('works with ${var} references', () => {
+      expect(evaluateCondition('${output} contains "pass"', { output: 'tests pass' })).toBe(true);
+    });
+
+    it('works with variable name on left', () => {
+      expect(evaluateCondition('msg contains "hello"', { msg: 'say hello world' })).toBe(true);
+    });
+
+    it('is case-sensitive', () => {
+      expect(evaluateCondition('msg contains "Hello"', { msg: 'hello world' })).toBe(false);
+    });
+
+    it('works with "not" prefix', () => {
+      expect(evaluateCondition('not msg contains "error"', { msg: 'all good' })).toBe(true);
+    });
+
+    it('handles empty search string', () => {
+      expect(evaluateCondition('msg contains ""', { msg: 'anything' })).toBe(true);
+    });
+
+    it('handles unresolved variable (falls through to string comparison)', () => {
+      // When variable is not set, resolveOperand returns the literal token
+      expect(evaluateCondition('unknown contains "x"', {})).toBe(false);
+    });
+  });
+
   // Edge cases: variable names containing operator substrings
   describe('variable names containing "and"/"or"', () => {
     it('variable name containing "and" is not split', () => {

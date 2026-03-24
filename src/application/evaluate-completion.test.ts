@@ -904,3 +904,103 @@ describe('evaluateCompletion — audit logger (H-SEC-006)', () => {
     expect(result.blocked).toBe(false);
   });
 });
+
+// ── H-LANG-010: Gate all() and N_of() ─────────────────────────────────
+
+describe('evaluateCompletion — all() composite gate', () => {
+  it('passes when all sub-gates pass', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: '', stderr: '' });
+    runner.setResult('npm run lint', { exitCode: 0, stdout: '', stderr: '' });
+
+    const gate = {
+      predicate: 'all_checks',
+      all: [
+        { predicate: 'tests_pass', command: 'npm test' },
+        { predicate: 'lint_pass', command: 'npm run lint' },
+      ],
+    };
+    const spec = createFlowSpec('test', [], [gate]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+  });
+
+  it('fails when any sub-gate fails', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: '', stderr: '' });
+    runner.setResult('npm run lint', { exitCode: 1, stdout: '', stderr: 'lint error' });
+
+    const gate = {
+      predicate: 'all_checks',
+      all: [
+        { predicate: 'tests_pass', command: 'npm test' },
+        { predicate: 'lint_pass', command: 'npm run lint' },
+      ],
+    };
+    const spec = createFlowSpec('test', [], [gate]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+  });
+});
+
+describe('evaluateCompletion — N_of() composite gate', () => {
+  it('passes when at least N sub-gates pass', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: '', stderr: '' });
+    runner.setResult('npm run lint', { exitCode: 1, stdout: '', stderr: '' });
+    runner.setResult('npm run build', { exitCode: 0, stdout: '', stderr: '' });
+
+    const gate = {
+      predicate: '2_of_checks',
+      nOf: {
+        n: 2,
+        gates: [
+          { predicate: 'tests_pass', command: 'npm test' },
+          { predicate: 'lint_pass', command: 'npm run lint' },
+          { predicate: 'build_pass', command: 'npm run build' },
+        ],
+      },
+    };
+    const spec = createFlowSpec('test', [], [gate]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+  });
+
+  it('fails when fewer than N sub-gates pass', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: '', stderr: '' });
+    runner.setResult('npm run lint', { exitCode: 1, stdout: '', stderr: '' });
+    runner.setResult('npm run build', { exitCode: 1, stdout: '', stderr: '' });
+
+    const gate = {
+      predicate: '2_of_checks',
+      nOf: {
+        n: 2,
+        gates: [
+          { predicate: 'tests_pass', command: 'npm test' },
+          { predicate: 'lint_pass', command: 'npm run lint' },
+          { predicate: 'build_pass', command: 'npm run build' },
+        ],
+      },
+    };
+    const spec = createFlowSpec('test', [], [gate]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+  });
+});

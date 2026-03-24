@@ -12,6 +12,7 @@ import {
   updateGateDiagnostic,
   addWarning,
   markCompleted,
+  markFailed,
   allGatesPassing,
 } from '../domain/session-state.js';
 import type { SessionState } from '../domain/session-state.js';
@@ -104,6 +105,11 @@ const GATE_TIMEOUT_MS = (() => {
 // H-SEC-003: Stderr truncation limit (increased from 200 to 2000)
 const STDERR_LIMIT = 2000;
 
+// H-SEC-010: Gate rate limiting thresholds
+const GATE_BACKOFF_THRESHOLD = 20;
+const GATE_HARD_STOP_THRESHOLD = 50;
+const GATE_BACKOFF_MS = 5000;
+
 function truncateOutput(text: string, limit: number): string {
   const trimmed = text.trimEnd();
   if (trimmed.length <= limit) return trimmed;
@@ -116,10 +122,12 @@ async function evaluateSingleGate(
   state: SessionState,
   runner: CommandRunner,
   timeoutMs: number,
+  envOpt?: Readonly<Record<string, string>> | { env?: Readonly<Record<string, string>> },
 ): Promise<{ passed: boolean; command?: string; result?: CommandResult }> {
   const command = gate.command ?? resolveBuiltinCommand(gate.predicate);
   if (command) {
-    const result = await runner.run(command, { timeoutMs });
+    const envPart = envOpt && 'env' in envOpt ? envOpt : {};
+    const result = await runner.run(command, { timeoutMs, ...envPart });
     const inverted = isInvertedPredicate(gate.predicate);
     const passed = inverted ? result.exitCode !== 0 : result.exitCode === 0;
     return { passed, command, result };
@@ -142,18 +150,37 @@ async function runGates(
   auditLogger?: AuditLogger,
 ): Promise<SessionState> {
   const timeoutMs = GATE_TIMEOUT_MS;
+  // H-LANG-009: Pass env from flowSpec to gate commands
+  const envOpt = state.flowSpec.env != null ? { env: state.flowSpec.env } : {};
   const gatePromises = state.flowSpec.completionGates.map(async (gate) => {
     // H-INT-010: Handle any() composite gates
     if (gate.any && gate.any.length > 0) {
       const subResults = await Promise.all(
-        gate.any.map((sub) => evaluateSingleGate(sub, state, runner, timeoutMs)),
+        gate.any.map((sub) => evaluateSingleGate(sub, state, runner, timeoutMs, envOpt)),
       );
       const anyPassed = subResults.some((r) => r.passed);
       return { gate, anyPassed, subResults };
     }
+    // H-LANG-010: Handle all() composite gates (explicit AND)
+    if (gate.all && gate.all.length > 0) {
+      const subResults = await Promise.all(
+        gate.all.map((sub) => evaluateSingleGate(sub, state, runner, timeoutMs, envOpt)),
+      );
+      const allPassed = subResults.every((r) => r.passed);
+      return { gate, allPassed, subResults };
+    }
+    // H-LANG-010: Handle N_of() composite gates
+    if (gate.nOf && gate.nOf.gates.length > 0) {
+      const subResults = await Promise.all(
+        gate.nOf.gates.map((sub) => evaluateSingleGate(sub, state, runner, timeoutMs, envOpt)),
+      );
+      const passCount = subResults.filter((r) => r.passed).length;
+      const nOfPassed = passCount >= gate.nOf.n;
+      return { gate, nOfPassed, subResults };
+    }
     const command = gate.command ?? resolveBuiltinCommand(gate.predicate);
     if (!command) return { gate, result: null, command: null };
-    const result = await runner.run(command, { timeoutMs });
+    const result = await runner.run(command, { timeoutMs, ...envOpt });
     return { gate, result, command };
   });
   const gateResults = await Promise.all(gatePromises);
@@ -166,6 +193,18 @@ async function runGates(
     if ('anyPassed' in entry) {
       updated = updateGateResult(updated, gate.predicate, entry.anyPassed);
       updated = updateGateDiagnostic(updated, gate.predicate, { passed: entry.anyPassed });
+      continue;
+    }
+    // H-LANG-010: Process all() composite gate result
+    if ('allPassed' in entry) {
+      updated = updateGateResult(updated, gate.predicate, entry.allPassed);
+      updated = updateGateDiagnostic(updated, gate.predicate, { passed: entry.allPassed });
+      continue;
+    }
+    // H-LANG-010: Process N_of() composite gate result
+    if ('nOfPassed' in entry) {
+      updated = updateGateResult(updated, gate.predicate, entry.nOfPassed);
+      updated = updateGateDiagnostic(updated, gate.predicate, { passed: entry.nOfPassed });
       continue;
     }
 
@@ -251,10 +290,31 @@ export async function evaluateCompletion(
     return { blocked: false, reason: '', gateResults: {} };
   }
 
+  // H-SEC-010: Hard stop after too many consecutive gate failures
+  const failureCount = state.gateFailureCount ?? 0;
+  if (failureCount >= GATE_HARD_STOP_THRESHOLD) {
+    const failed = markFailed(
+      state,
+      `Gate evaluation stopped after ${GATE_HARD_STOP_THRESHOLD} consecutive failures.`,
+    );
+    await stateStore.save(failed);
+    return {
+      blocked: true,
+      reason: `Gate evaluation hard-stopped after ${GATE_HARD_STOP_THRESHOLD} consecutive failures. Flow marked as failed.`,
+      gateResults: state.gateResults,
+    };
+  }
+
+  // H-SEC-010: Apply backoff delay after threshold
+  if (failureCount >= GATE_BACKOFF_THRESHOLD) {
+    await new Promise((resolve) => setTimeout(resolve, GATE_BACKOFF_MS));
+  }
+
   const evaluated = await runGates(state, commandRunner, auditLogger);
 
   if (allGatesPassing(evaluated)) {
-    const done = markCompleted(evaluated);
+    // Reset failure count on success
+    const done = markCompleted({ ...evaluated, gateFailureCount: 0 });
     await stateStore.save(done);
     return {
       blocked: false,
@@ -263,10 +323,12 @@ export async function evaluateCompletion(
     };
   }
 
-  await stateStore.save(evaluated);
+  // H-SEC-010: Increment consecutive failure count
+  const updatedWithCount = { ...evaluated, gateFailureCount: failureCount + 1 };
+  await stateStore.save(updatedWithCount);
   return {
     blocked: true,
-    reason: buildFailureReason(evaluated),
-    gateResults: evaluated.gateResults,
+    reason: buildFailureReason(updatedWithCount),
+    gateResults: updatedWithCount.gateResults,
   };
 }

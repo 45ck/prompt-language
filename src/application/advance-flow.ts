@@ -9,6 +9,7 @@ import {
   updateVariable,
   updateNodeProgress,
   updateSpawnedChild,
+  addWarning,
   markCompleted,
   allGatesPassing,
 } from '../domain/session-state.js';
@@ -21,6 +22,10 @@ import type {
   ContinueNode,
   SpawnNode,
   AwaitNode,
+  WhileNode,
+  UntilNode,
+  RetryNode,
+  ForeachNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -35,8 +40,10 @@ import {
   buildCapturePrompt,
   buildCaptureRetryPrompt,
   DEFAULT_MAX_CAPTURE_RETRIES,
+  extractCaptureTag,
 } from '../domain/capture-prompt.js';
 import { evaluateArithmetic } from '../domain/arithmetic.js';
+import { applyTransform } from '../domain/transforms.js';
 
 export function resolveCurrentNode(
   nodes: readonly FlowNode[],
@@ -140,6 +147,7 @@ export function findTryCatchJump(
 /**
  * Shared loop re-entry logic for while/until/retry exhaustion.
  * If shouldReLoop is true and iteration < max, re-enters the body; otherwise exits the loop.
+ * H-LANG-008: Also checks wall-clock timeout if configured on the parent node.
  */
 function handleLoopReentry(
   state: SessionState,
@@ -147,16 +155,39 @@ function handleLoopReentry(
   nodeId: string,
   shouldReLoop: boolean,
   maxIter: number,
+  timeoutSeconds?: number,
 ): SessionState {
   const progress = state.nodeProgress[nodeId];
   const iteration = progress?.iteration ?? 1;
   let current = state;
+
+  // H-LANG-008: Check wall-clock timeout
+  if (shouldReLoop && timeoutSeconds != null) {
+    const loopStart = progress?.loopStartedAt ?? progress?.startedAt;
+    if (loopStart != null) {
+      const elapsed = (Date.now() - loopStart) / 1000;
+      if (elapsed >= timeoutSeconds) {
+        current = addWarning(current, `Loop '${nodeId}' timed out after ${timeoutSeconds}s.`);
+        current = updateNodeProgress(current, nodeId, {
+          iteration,
+          maxIterations: maxIter,
+          status: 'completed',
+          startedAt: progress?.startedAt,
+          completedAt: Date.now(),
+          loopStartedAt: progress?.loopStartedAt,
+        });
+        return advanceNode(current, advancePath(parentPath));
+      }
+    }
+  }
 
   if (shouldReLoop && iteration < maxIter) {
     current = updateNodeProgress(current, nodeId, {
       iteration: iteration + 1,
       maxIterations: maxIter,
       status: 'running',
+      startedAt: progress?.startedAt,
+      loopStartedAt: progress?.loopStartedAt,
     });
     return advanceNode(current, [...parentPath, 0]);
   }
@@ -165,6 +196,9 @@ function handleLoopReentry(
     iteration,
     maxIterations: maxIter,
     status: 'completed',
+    startedAt: progress?.startedAt,
+    completedAt: Date.now(),
+    loopStartedAt: progress?.loopStartedAt,
   });
   return advanceNode(current, advancePath(parentPath));
 }
@@ -197,6 +231,7 @@ async function handleBodyExhaustion(
         parentNode.id,
         condResult === true,
         parentNode.maxIterations,
+        parentNode.timeoutSeconds,
       );
     }
 
@@ -212,22 +247,40 @@ async function handleBodyExhaustion(
         parentNode.id,
         condResult === false,
         parentNode.maxIterations,
+        parentNode.timeoutSeconds,
       );
     }
 
     case 'retry': {
       const commandFailed = state.variables['command_failed'];
+      // H-REL-004: Set _retry_backoff_seconds when backoff is configured
+      let retryState = state;
+      if (parentNode.backoffMs != null && commandFailed === true) {
+        const progress = state.nodeProgress[parentNode.id];
+        const iteration = progress?.iteration ?? 1;
+        const MAX_BACKOFF_MS = 60_000;
+        const delayMs = Math.min(parentNode.backoffMs * Math.pow(2, iteration - 1), MAX_BACKOFF_MS);
+        retryState = updateVariable(
+          retryState,
+          '_retry_backoff_seconds',
+          Math.round(delayMs / 1000),
+        );
+      }
       return handleLoopReentry(
-        state,
+        retryState,
         parentPath,
         parentNode.id,
         commandFailed === true,
         parentNode.maxAttempts,
+        parentNode.timeoutSeconds,
       );
     }
 
     case 'foreach': {
-      const rawList = interpolate(parentNode.listExpression, state.variables);
+      // H-LANG-007: For command-based foreach, read from stored variable
+      const rawList = parentNode.listCommand
+        ? String(state.variables[`_foreach_${parentNode.id}_list`] ?? '')
+        : interpolate(parentNode.listExpression, state.variables);
       const items = splitIterable(rawList).slice(0, parentNode.maxIterations);
       const progress = state.nodeProgress[parentNode.id];
       const iteration = progress?.iteration ?? 1;
@@ -241,6 +294,7 @@ async function handleBodyExhaustion(
           iteration: iteration + 1,
           maxIterations: items.length,
           status: 'running',
+          startedAt: progress?.startedAt,
         });
         return advanceNode(current, [...parentPath, 0]);
       }
@@ -249,6 +303,8 @@ async function handleBodyExhaustion(
         iteration,
         maxIterations: items.length,
         status: 'completed',
+        startedAt: progress?.startedAt,
+        completedAt: Date.now(),
       });
       return advanceNode(current, advancePath(parentPath));
     }
@@ -298,14 +354,32 @@ async function advanceLetNode(
     case 'run': {
       if (!commandRunner) return { state: current, capturedPrompt: null };
       const letCmd = shellInterpolate(node.source.command, current.variables);
-      const result = await commandRunner.run(letCmd);
+      // H-LANG-009: Pass env from flowSpec to command runner
+      const letRunOpts = current.flowSpec.env != null ? { env: current.flowSpec.env } : undefined;
+      const result = await commandRunner.run(letCmd, letRunOpts);
       value = result.stdout.trimEnd();
+      // H-REL-010: Truncate captured variable to MAX_OUTPUT_LENGTH
+      if (value.length > MAX_OUTPUT_LENGTH) {
+        value = value.slice(0, MAX_OUTPUT_LENGTH) + '\n[truncated]';
+        current = {
+          ...current,
+          warnings: [
+            ...current.warnings,
+            `Variable '${node.variableName}' truncated to ${MAX_OUTPUT_LENGTH} chars.`,
+          ],
+        };
+      }
       current = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
       if (result.exitCode !== 0) {
         tryCatchJump = findTryCatchJump(current.flowSpec.nodes, current.currentNodePath);
       }
       break;
     }
+  }
+
+  // H-LANG-005: Apply pipe transform before append/store
+  if (node.transform) {
+    value = applyTransform(value, node.transform);
   }
 
   if (node.append) {
@@ -354,8 +428,10 @@ async function advanceLetPrompt(
   if (captureReader) {
     const captured = await captureReader.read(node.variableName);
     if (captured) {
+      // H-REL-005: Try tag extraction first — strips wrapper tags for cleaner value
+      const tagValue = extractCaptureTag(captured, node.variableName, current.captureNonce);
       await captureReader.clear(node.variableName);
-      return { state: current, value: captured };
+      return { state: current, value: tagValue ?? captured };
     }
     failureReason = 'capture file empty or not found';
   } else {
@@ -397,9 +473,14 @@ async function advanceRunNode(
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!commandRunner) return { state: current, capturedPrompt: null };
   const command = shellInterpolate(node.command, current.variables);
+  // H-LANG-009: Pass env from flowSpec to command runner
+  const runOptions: import('./ports/command-runner.js').RunOptions = {
+    ...(node.timeoutMs != null ? { timeoutMs: node.timeoutMs } : {}),
+    ...(current.flowSpec.env != null ? { env: current.flowSpec.env } : {}),
+  };
   const result = await commandRunner.run(
     command,
-    node.timeoutMs != null ? { timeoutMs: node.timeoutMs } : undefined,
+    Object.keys(runOptions).length > 0 ? runOptions : undefined,
   );
 
   // H-SEC-006: Log command execution to audit trail
@@ -427,6 +508,32 @@ async function advanceRunNode(
   return { state, advanced: true };
 }
 
+/** H-SEC-005: Default patterns to exclude from spawn when no allowlist is set. */
+const SENSITIVE_VAR_SUFFIXES = ['_key', '_token', '_secret', '_password'];
+
+/** H-SEC-005: Filter variables for spawn child based on allowlist or default deny. */
+function filterSpawnVariables(
+  variables: Readonly<Record<string, string | number | boolean>>,
+  allowlist?: readonly string[],
+): Record<string, string | number | boolean> {
+  if (allowlist) {
+    const allowed = new Set(allowlist);
+    const result: Record<string, string | number | boolean> = {};
+    for (const [key, value] of Object.entries(variables)) {
+      if (allowed.has(key)) result[key] = value;
+    }
+    return result;
+  }
+  // Default: exclude variables matching sensitive patterns
+  const result: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(variables)) {
+    const lower = key.toLowerCase();
+    if (SENSITIVE_VAR_SUFFIXES.some((suffix) => lower.endsWith(suffix))) continue;
+    result[key] = value;
+  }
+  return result;
+}
+
 /** Advance a spawn node: launch child process, record in spawnedChildren, skip body. */
 async function advanceSpawnNode(
   node: SpawnNode,
@@ -441,7 +548,11 @@ async function advanceSpawnNode(
   const stateDir = `.prompt-language-${node.name}`;
   const flowText = renderSpawnBody(node);
   const goal = `Sub-task: ${node.name}`;
-  const parentVars: Record<string, string | number | boolean> = { ...current.variables };
+  // H-SEC-005: Filter variables based on allowlist
+  const parentVars: Record<string, string | number | boolean> = filterSpawnVariables(
+    current.variables,
+    node.vars,
+  );
 
   const { pid } = await processSpawner.spawn({
     name: node.name,
@@ -531,12 +642,14 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
-    case 'retry':
+    case 'retry': {
+      const backoffTag = node.backoffMs != null ? ` backoff ${node.backoffMs / 1000}s` : '';
       return [
-        `${pad}retry max ${node.maxAttempts}`,
+        `${pad}retry max ${node.maxAttempts}${backoffTag}`,
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
+    }
     case 'if':
       return [
         `${pad}if ${node.condition}`,
@@ -561,12 +674,14 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
           : []),
         `${pad}end`,
       ];
-    case 'foreach':
+    case 'foreach': {
+      const listPart = node.listCommand ? `run "${node.listCommand}"` : node.listExpression;
       return [
-        `${pad}foreach ${node.variableName} in ${node.listExpression}`,
+        `${pad}foreach ${node.variableName} in ${listPart}`,
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
+    }
     case 'spawn': {
       const spawnHeader = node.cwd
         ? `${pad}spawn "${node.name}" in "${node.cwd}"`
@@ -582,8 +697,15 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
   }
 }
 
-const POLL_WAIT_MS = 2000;
-export const MAX_AWAIT_POLLS = 150; // ~5 min at 2s intervals
+export const MAX_AWAIT_POLLS = 150; // ~5 min with adaptive polling
+
+// H-PERF-009: Adaptive await polling — starts fast, slows down over time
+function computePollInterval(pollCount: number): number {
+  if (pollCount <= 5) return 1000;
+  if (pollCount <= 15) return 2000;
+  if (pollCount <= 35) return 5000;
+  return Math.min(10000, 15000);
+}
 
 /** Advance an await node: poll children and block until target(s) complete. */
 async function advanceAwaitNode(
@@ -673,9 +795,10 @@ async function advanceAwaitNode(
       iteration: pollCount,
       maxIterations: MAX_AWAIT_POLLS,
       status: 'running',
+      startedAt: state.nodeProgress[node.id]?.startedAt ?? Date.now(),
     });
 
-    await new Promise((resolve) => setTimeout(resolve, POLL_WAIT_MS));
+    await new Promise((resolve) => setTimeout(resolve, computePollInterval(pollCount)));
     return { state, capturedPrompt: null };
   }
 
@@ -729,11 +852,19 @@ export async function autoAdvanceNodes(
   if (advances >= MAX_ADVANCES) {
     current = {
       ...current,
-      warnings: [
-        ...current.warnings,
-        'MAX_ADVANCES (100) reached; auto-advance stopped to prevent infinite loop.',
-      ],
+      warnings: [...current.warnings, 'Flow paused — will continue on next interaction.'],
     };
+    // H-REL-007: Try to complete the flow even after MAX_ADVANCES
+    current = maybeCompleteFlow(current);
+    // If current node is a prompt, include it so the agent can act on it
+    const currentNode = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
+    if (currentNode?.kind === 'prompt') {
+      const capturedPrompt = interpolate(currentNode.text, current.variables);
+      return {
+        state: advanceNode(current, advancePath(current.currentNodePath)),
+        capturedPrompt,
+      };
+    }
   }
 
   return { state: current, capturedPrompt: null };
@@ -760,24 +891,28 @@ async function advanceSingleNode(
     case 'while':
     case 'until':
       return advanceConditionLoop(node, current, commandRunner);
-    case 'retry':
+    case 'retry': {
+      const now = Date.now();
       return {
         state: advanceNode(
           updateNodeProgress(current, node.id, {
             iteration: 1,
             maxIterations: node.maxAttempts,
             status: 'running',
+            startedAt: now,
+            loopStartedAt: now,
           }),
           [...current.currentNodePath, 0],
         ),
         advanced: true,
       };
+    }
     case 'if':
       return advanceIfNode(node, current, commandRunner);
     case 'try':
       return { state: advanceNode(current, [...current.currentNodePath, 0]), advanced: true };
     case 'foreach':
-      return advanceForeachEntry(node, current);
+      return advanceForeachEntry(node, current, commandRunner);
     case 'break':
       return advanceBreakNode(node, current);
     case 'continue':
@@ -793,7 +928,7 @@ async function advanceSingleNode(
 const LOOP_KINDS = new Set(['while', 'until', 'retry', 'foreach']);
 
 function advanceBreakNode(
-  _node: BreakNode,
+  node: BreakNode,
   current: SessionState,
 ): { state: SessionState; advanced: true } {
   const path = current.currentNodePath;
@@ -801,6 +936,11 @@ function advanceBreakNode(
     const ancestorPath = path.slice(0, depth);
     const ancestor = resolveCurrentNode(current.flowSpec.nodes, ancestorPath);
     if (ancestor && LOOP_KINDS.has(ancestor.kind)) {
+      // H-LANG-011: If break has a label, only match loop with that label
+      if (node.label) {
+        const loopLabel = (ancestor as WhileNode | UntilNode | RetryNode | ForeachNode).label;
+        if (loopLabel !== node.label) continue;
+      }
       return { state: advanceNode(current, advancePath(ancestorPath)), advanced: true };
     }
   }
@@ -812,7 +952,7 @@ function advanceBreakNode(
 // Sets path past the loop body so handleBodyExhaustion in autoAdvanceNodes
 // decides whether to re-loop or exit.
 function advanceContinueNode(
-  _node: ContinueNode,
+  node: ContinueNode,
   current: SessionState,
 ): { state: SessionState; advanced: true } {
   const path = current.currentNodePath;
@@ -820,6 +960,12 @@ function advanceContinueNode(
     const ancestorPath = path.slice(0, depth);
     const ancestor = resolveCurrentNode(current.flowSpec.nodes, ancestorPath);
     if (!ancestor || !LOOP_KINDS.has(ancestor.kind)) continue;
+
+    // H-LANG-011: If continue has a label, only match loop with that label
+    if (node.label) {
+      const loopLabel = (ancestor as WhileNode | UntilNode | RetryNode | ForeachNode).label;
+      if (loopLabel !== node.label) continue;
+    }
 
     // Move path past the loop body end. The autoAdvanceNodes loop's
     // body-exhaustion path will handle re-entry or exit.
@@ -848,10 +994,13 @@ async function advanceConditionLoop(
   const enterBody = node.kind === 'while' ? condResult : !condResult;
 
   if (enterBody) {
+    const now = Date.now();
     let s = updateNodeProgress(current, node.id, {
       iteration: 1,
       maxIterations: node.maxIterations,
       status: 'running',
+      startedAt: now,
+      loopStartedAt: now,
     });
     s = advanceNode(s, [...current.currentNodePath, 0]);
     return { state: s, advanced: true };
@@ -887,18 +1036,34 @@ async function advanceIfNode(
 }
 
 /** Advance a foreach node on first encounter: set loop variable and enter body. */
-function advanceForeachEntry(
+async function advanceForeachEntry(
   node: FlowNode & { readonly kind: 'foreach' },
   current: SessionState,
-): { state: SessionState; advanced: true } {
-  const rawList = interpolate(node.listExpression, current.variables);
-  const items = splitIterable(rawList);
+  commandRunner?: CommandRunner,
+): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
+  let items: string[];
+
+  // H-LANG-007: Dynamic list from command execution
+  if (node.listCommand) {
+    if (!commandRunner) return { state: current, capturedPrompt: null };
+    const cmd = shellInterpolate(node.listCommand, current.variables);
+    const result = await commandRunner.run(cmd);
+    current = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
+    const output = result.stdout.trimEnd();
+    items = splitIterable(output);
+    // Store output so body-exhaustion can re-derive items without re-running cmd
+    current = updateVariable(current, `_foreach_${node.id}_list`, output);
+  } else {
+    const rawList = interpolate(node.listExpression, current.variables);
+    items = splitIterable(rawList);
+  }
 
   if (items.length === 0) {
     return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
   }
 
   const cappedItems = items.slice(0, node.maxIterations);
+  const now = Date.now();
   let s = updateVariable(current, node.variableName, cappedItems[0]!);
   s = updateVariable(s, `${node.variableName}_index`, 0);
   s = updateVariable(s, `${node.variableName}_length`, cappedItems.length);
@@ -906,6 +1071,8 @@ function advanceForeachEntry(
     iteration: 1,
     maxIterations: cappedItems.length,
     status: 'running',
+    startedAt: now,
+    loopStartedAt: now,
   });
   return { state: advanceNode(s, [...current.currentNodePath, 0]), advanced: true };
 }

@@ -39,6 +39,9 @@ async function suggestFlows(): Promise<string | null> {
   return null;
 }
 
+// H-INT-009: Expected state version — increment when SessionState format changes
+const CURRENT_STATE_VERSION = 1;
+
 async function main(): Promise<void> {
   // Consume stdin (required by hook protocol)
   await readStdin();
@@ -47,11 +50,23 @@ async function main(): Promise<void> {
   const state = await stateStore.loadCurrent();
 
   if (state?.status === 'active') {
+    // H-INT-009: Check state file version compatibility
+    const stateVersion = state.version ?? 0;
+    let versionWarning = '';
+    if (stateVersion > CURRENT_STATE_VERSION) {
+      versionWarning = `\n[prompt-language] WARNING: State file version ${stateVersion} is newer than this plugin (expects v${CURRENT_STATE_VERSION}). Consider updating the plugin.\n`;
+    } else if (stateVersion < CURRENT_STATE_VERSION) {
+      versionWarning = `\n[prompt-language] WARNING: State file version ${stateVersion} is older than expected (v${CURRENT_STATE_VERSION}). State may need migration.\n`;
+    }
+    if (versionWarning) {
+      process.stderr.write(versionWarning);
+    }
+
     const rendered = renderFlow(state);
     process.stderr.write(`\n${colorizeFlow(rendered)}\n`);
 
     const output = JSON.stringify({
-      additionalContext: `[prompt-language] Active flow detected:\n\n${rendered}`,
+      additionalContext: `[prompt-language] Active flow detected:\n\n${rendered}${versionWarning ? `\n${versionWarning}` : ''}`,
     });
     process.stdout.write(output);
     return;

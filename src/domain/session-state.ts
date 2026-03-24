@@ -25,6 +25,11 @@ export interface NodeProgress {
   readonly maxIterations: number;
   readonly status: 'pending' | 'running' | 'completed' | 'failed' | 'awaiting_capture';
   readonly captureFailureReason?: string | undefined;
+  // H-DX-002: Node execution timing
+  readonly startedAt?: number | undefined;
+  readonly completedAt?: number | undefined;
+  // H-LANG-008: Wall-clock loop timeout tracking
+  readonly loopStartedAt?: number | undefined;
 }
 
 export interface GateEvalResult {
@@ -51,6 +56,8 @@ export interface SessionState {
   readonly failureReason?: string | undefined;
   // H-SEC-004: Per-session nonce for capture tag anti-spoofing
   readonly captureNonce: string;
+  // H-SEC-010: Consecutive gate failure count for rate limiting
+  readonly gateFailureCount?: number | undefined;
 }
 
 export function generateCaptureNonce(): string {

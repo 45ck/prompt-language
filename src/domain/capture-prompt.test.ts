@@ -7,6 +7,7 @@ import {
   CAPTURE_TAG_BASE,
   captureTagName,
   DEFAULT_MAX_CAPTURE_RETRIES,
+  extractCaptureTag,
 } from './capture-prompt.js';
 
 describe('captureFilePath', () => {
@@ -121,5 +122,44 @@ describe('buildCaptureRetryPrompt with nonce', () => {
 describe('DEFAULT_MAX_CAPTURE_RETRIES', () => {
   it('equals 3', () => {
     expect(DEFAULT_MAX_CAPTURE_RETRIES).toBe(3);
+  });
+});
+
+describe('extractCaptureTag', () => {
+  it('extracts value from nonce-tagged text', () => {
+    const text =
+      'Some text <prompt-language-capture-abc123 name="tasks">my value</prompt-language-capture-abc123> more text';
+    expect(extractCaptureTag(text, 'tasks', 'abc123')).toBe('my value');
+  });
+
+  it('extracts value from base-tagged text without nonce', () => {
+    const text = '<prompt-language-capture name="result">hello world</prompt-language-capture>';
+    expect(extractCaptureTag(text, 'result')).toBe('hello world');
+  });
+
+  it('returns null when tag is not found', () => {
+    expect(extractCaptureTag('no tags here', 'tasks', 'abc')).toBeNull();
+  });
+
+  it('returns null when variable name does not match', () => {
+    const text = '<prompt-language-capture-abc name="other">value</prompt-language-capture-abc>';
+    expect(extractCaptureTag(text, 'tasks', 'abc')).toBeNull();
+  });
+
+  it('returns null for empty tag content', () => {
+    const text = '<prompt-language-capture-abc name="tasks">   </prompt-language-capture-abc>';
+    expect(extractCaptureTag(text, 'tasks', 'abc')).toBeNull();
+  });
+
+  it('trims whitespace from extracted value', () => {
+    const text =
+      '<prompt-language-capture-abc name="tasks">  trimmed  </prompt-language-capture-abc>';
+    expect(extractCaptureTag(text, 'tasks', 'abc')).toBe('trimmed');
+  });
+
+  it('handles multiline content', () => {
+    const text =
+      '<prompt-language-capture-abc name="list">line1\nline2\nline3</prompt-language-capture-abc>';
+    expect(extractCaptureTag(text, 'list', 'abc')).toBe('line1\nline2\nline3');
   });
 });

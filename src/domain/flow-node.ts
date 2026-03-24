@@ -30,6 +30,8 @@ export interface WhileNode extends BaseNode {
   readonly condition: string;
   readonly maxIterations: number;
   readonly body: readonly FlowNode[];
+  readonly label?: string | undefined;
+  readonly timeoutSeconds?: number | undefined;
 }
 
 export interface UntilNode extends BaseNode {
@@ -37,12 +39,17 @@ export interface UntilNode extends BaseNode {
   readonly condition: string;
   readonly maxIterations: number;
   readonly body: readonly FlowNode[];
+  readonly label?: string | undefined;
+  readonly timeoutSeconds?: number | undefined;
 }
 
 export interface RetryNode extends BaseNode {
   readonly kind: 'retry';
   readonly maxAttempts: number;
+  readonly backoffMs?: number;
   readonly body: readonly FlowNode[];
+  readonly label?: string | undefined;
+  readonly timeoutSeconds?: number | undefined;
 }
 
 export interface IfNode extends BaseNode {
@@ -82,24 +89,31 @@ export interface LetNode extends BaseNode {
   readonly variableName: string;
   readonly source: LetSource;
   readonly append: boolean;
+  readonly transform?: string;
 }
 
 export interface ForeachNode extends BaseNode {
   readonly kind: 'foreach';
   readonly variableName: string;
   readonly listExpression: string;
+  readonly listCommand?: string;
   readonly maxIterations: number;
   readonly body: readonly FlowNode[];
+  readonly label?: string | undefined;
 }
 
 // H#15: Break node exits nearest enclosing loop
+// H-LANG-011: Optional label targets a specific labeled loop
 export interface BreakNode extends BaseNode {
   readonly kind: 'break';
+  readonly label?: string | undefined;
 }
 
 // H-LANG-002: Continue node re-enters nearest enclosing loop at next iteration
+// H-LANG-011: Optional label targets a specific labeled loop
 export interface ContinueNode extends BaseNode {
   readonly kind: 'continue';
+  readonly label?: string | undefined;
 }
 
 export interface SpawnNode extends BaseNode {
@@ -107,6 +121,8 @@ export interface SpawnNode extends BaseNode {
   readonly name: string;
   readonly body: readonly FlowNode[];
   readonly cwd?: string | undefined;
+  /** H-SEC-005: Optional allowlist of variable names to pass to child. */
+  readonly vars?: readonly string[] | undefined;
 }
 
 export type AwaitTarget = string | 'all';
@@ -140,6 +156,8 @@ export function createWhileNode(
   condition: string,
   body: readonly FlowNode[],
   maxIterations?: number,
+  label?: string,
+  timeoutSeconds?: number,
 ): WhileNode {
   return {
     kind: 'while',
@@ -147,6 +165,8 @@ export function createWhileNode(
     condition,
     maxIterations: maxIterations ?? DEFAULT_MAX_ITERATIONS,
     body,
+    ...(label != null ? { label } : {}),
+    ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
   };
 }
 
@@ -155,6 +175,8 @@ export function createUntilNode(
   condition: string,
   body: readonly FlowNode[],
   maxIterations?: number,
+  label?: string,
+  timeoutSeconds?: number,
 ): UntilNode {
   return {
     kind: 'until',
@@ -162,6 +184,8 @@ export function createUntilNode(
     condition,
     maxIterations: maxIterations ?? DEFAULT_MAX_ITERATIONS,
     body,
+    ...(label != null ? { label } : {}),
+    ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
   };
 }
 
@@ -169,12 +193,18 @@ export function createRetryNode(
   id: string,
   body: readonly FlowNode[],
   maxAttempts?: number,
+  label?: string,
+  timeoutSeconds?: number,
+  backoffMs?: number,
 ): RetryNode {
   return {
     kind: 'retry',
     id,
     maxAttempts: maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
     body,
+    ...(backoffMs != null ? { backoffMs } : {}),
+    ...(label != null ? { label } : {}),
+    ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
   };
 }
 
@@ -210,16 +240,19 @@ export function createLetNode(
   variableName: string,
   source: LetSource,
   append = false,
+  transform?: string,
 ): LetNode {
-  return { kind: 'let', id, variableName, source, append };
+  return transform != null
+    ? { kind: 'let', id, variableName, source, append, transform }
+    : { kind: 'let', id, variableName, source, append };
 }
 
-export function createBreakNode(id: string): BreakNode {
-  return { kind: 'break', id };
+export function createBreakNode(id: string, label?: string): BreakNode {
+  return label != null ? { kind: 'break', id, label } : { kind: 'break', id };
 }
 
-export function createContinueNode(id: string): ContinueNode {
-  return { kind: 'continue', id };
+export function createContinueNode(id: string, label?: string): ContinueNode {
+  return label != null ? { kind: 'continue', id, label } : { kind: 'continue', id };
 }
 
 export function createForeachNode(
@@ -228,6 +261,8 @@ export function createForeachNode(
   listExpression: string,
   body: readonly FlowNode[],
   maxIterations?: number,
+  label?: string,
+  listCommand?: string,
 ): ForeachNode {
   return {
     kind: 'foreach',
@@ -236,6 +271,8 @@ export function createForeachNode(
     listExpression,
     maxIterations: maxIterations ?? DEFAULT_MAX_FOREACH,
     body,
+    ...(label != null ? { label } : {}),
+    ...(listCommand != null ? { listCommand } : {}),
   };
 }
 
@@ -244,8 +281,16 @@ export function createSpawnNode(
   name: string,
   body: readonly FlowNode[],
   cwd?: string,
+  vars?: readonly string[],
 ): SpawnNode {
-  return cwd != null ? { kind: 'spawn', id, name, body, cwd } : { kind: 'spawn', id, name, body };
+  return {
+    kind: 'spawn',
+    id,
+    name,
+    body,
+    ...(cwd != null ? { cwd } : {}),
+    ...(vars != null ? { vars } : {}),
+  };
 }
 
 export function createAwaitNode(id: string, target: AwaitTarget): AwaitNode {

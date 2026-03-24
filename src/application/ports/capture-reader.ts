@@ -11,4 +11,7 @@ export interface CaptureReader {
 
   /** Clear (delete) the capture file for a variable. */
   clear(varName: string): Promise<void>;
+
+  /** H-REL-005: Extract captured value from inline tags in text. Returns null if not found. */
+  readFromText?(text: string, varName: string, nonce?: string): string | null;
 }

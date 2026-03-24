@@ -79,7 +79,9 @@
     "bigvar",
     "jsonl",
     "auditlogger",
-    "myvar"
+    "myvar",
+    "inlines",
+    "myloop"
   ],
   "ignorePaths": [
     "dist/**",

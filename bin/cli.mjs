@@ -336,6 +336,55 @@ done when:
   console.log(example);
 }
 
+// H-INT-003: CI/CD mode — run a flow headlessly via `claude -p`
+async function ci() {
+  const { execSync } = await import('node:child_process');
+
+  // Accept flow from --file <path> or remaining positional args
+  const args = process.argv.slice(3);
+  let flowText = '';
+
+  const fileIdx = args.indexOf('--file');
+  if (fileIdx >= 0 && args[fileIdx + 1]) {
+    flowText = await fs.readFile(args[fileIdx + 1], 'utf8');
+  } else if (args.length > 0 && !args[0].startsWith('-')) {
+    // Treat remaining args as the flow file path
+    flowText = await fs.readFile(args[0], 'utf8');
+  } else {
+    // Try reading from stdin (piped input)
+    const chunks = [];
+    if (!process.stdin.isTTY) {
+      for await (const chunk of process.stdin) {
+        chunks.push(chunk);
+      }
+      flowText = Buffer.concat(chunks).toString('utf8');
+    }
+  }
+
+  if (!flowText.trim()) {
+    console.error('Error: No flow provided. Usage:');
+    console.error('  npx @45ck/prompt-language ci --file my.flow');
+    console.error('  npx @45ck/prompt-language ci my.flow');
+    console.error('  cat my.flow | npx @45ck/prompt-language ci');
+    process.exit(1);
+  }
+
+  console.log('[prompt-language CI] Running flow headlessly...');
+  try {
+    // Use claude -p with --dangerously-skip-permissions for non-interactive execution
+    const escaped = flowText.replace(/'/g, "'\\''");
+    execSync(`claude -p --dangerously-skip-permissions '${escaped}'`, {
+      stdio: 'inherit',
+      timeout: 600_000, // 10 min max
+    });
+    console.log('[prompt-language CI] Flow completed.');
+    process.exit(0);
+  } catch (error) {
+    console.error(`[prompt-language CI] Flow failed with exit code ${error.status ?? 1}`);
+    process.exit(error.status ?? 1);
+  }
+}
+
 const command = process.argv[2] ?? 'install';
 
 switch (command) {
@@ -353,6 +402,9 @@ switch (command) {
     break;
   case 'demo':
     demo();
+    break;
+  case 'ci':
+    await ci();
     break;
   case 'statusline': {
     const settings = (await readJsonSafe(SETTINGS_PATH)) ?? {};
@@ -375,6 +427,7 @@ Commands:
   status       Show installation status
   init         Scaffold a starter flow in the current directory
   demo         Print an example flow to stdout
+  ci           Run a flow headlessly (CI/CD mode)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild
 
@@ -391,7 +444,7 @@ Options:
   default:
     console.error(`Unknown command: ${command}`);
     console.error(
-      'Usage: npx @45ck/prompt-language [install|uninstall|status|init|demo|statusline|watch]',
+      'Usage: npx @45ck/prompt-language [install|uninstall|status|init|demo|ci|statusline|watch]',
     );
     process.exit(1);
 }

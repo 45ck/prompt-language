@@ -340,6 +340,76 @@ function lintNodes(nodes: readonly FlowNode[], insideLoop: boolean, warnings: Li
   }
 }
 
+/** Gate predicates whose side effects depend on command execution. */
+const GATE_SIDE_EFFECT_PREDICATES = new Set([
+  'tests_pass',
+  'tests_fail',
+  'lint_pass',
+  'lint_fail',
+  'command_succeeded',
+  'command_failed',
+  'pytest_pass',
+  'pytest_fail',
+  'go_test_pass',
+  'go_test_fail',
+  'cargo_test_pass',
+  'cargo_test_fail',
+]);
+
+/**
+ * H-SEC-007: Check if all run nodes at the top level are inside conditional blocks.
+ * Returns true if there are run nodes and every one is inside an if/else branch
+ * (meaning the agent could skip execution entirely by choosing the other branch).
+ */
+function allRunsInsideConditional(nodes: readonly FlowNode[]): boolean {
+  let hasRun = false;
+  let hasUnconditionalRun = false;
+
+  function walk(list: readonly FlowNode[], insideConditional: boolean): void {
+    for (const node of list) {
+      switch (node.kind) {
+        case 'run':
+          hasRun = true;
+          if (!insideConditional) hasUnconditionalRun = true;
+          break;
+        case 'let':
+          if (node.source.type === 'run') {
+            hasRun = true;
+            if (!insideConditional) hasUnconditionalRun = true;
+          }
+          break;
+        case 'if':
+          walk(node.thenBranch, true);
+          walk(node.elseBranch, true);
+          break;
+        case 'while':
+        case 'until':
+          walk(node.body, insideConditional);
+          break;
+        case 'retry':
+          walk(node.body, insideConditional);
+          break;
+        case 'foreach':
+          walk(node.body, insideConditional);
+          break;
+        case 'try':
+          walk(node.body, insideConditional);
+          walk(node.catchBody, insideConditional);
+          walk(node.finallyBody, insideConditional);
+          break;
+        case 'spawn':
+          walk(node.body, insideConditional);
+          break;
+        default:
+          break;
+      }
+    }
+  }
+
+  walk(nodes, false);
+  return hasRun && !hasUnconditionalRun;
+}
+
 export function lintFlow(spec: FlowSpec): readonly LintWarning[] {
   const warnings: LintWarning[] = [];
 
@@ -356,6 +426,21 @@ export function lintFlow(spec: FlowSpec): readonly LintWarning[] {
   // H-DX-001: Check for unresolved variable references
   const definedVars = collectDefinedVariables(spec.nodes);
   lintUnresolvedVars(spec.nodes, definedVars, warnings);
+
+  // H-SEC-007: Gaslighting detection — warn when all run nodes are conditional
+  // but gates depend on their side effects
+  if (spec.completionGates.length > 0 && allRunsInsideConditional(spec.nodes)) {
+    const sideEffectGates = spec.completionGates.filter((g) =>
+      GATE_SIDE_EFFECT_PREDICATES.has(g.predicate),
+    );
+    if (sideEffectGates.length > 0) {
+      const predicates = sideEffectGates.map((g) => g.predicate).join(', ');
+      warnings.push({
+        nodeId: '',
+        message: `All run nodes are inside conditional blocks but gates reference "${predicates}" — agent could skip execution entirely`,
+      });
+    }
+  }
 
   return warnings;
 }

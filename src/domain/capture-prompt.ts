@@ -44,3 +44,20 @@ and also save it to \`${captureFilePath(varName)}\` using the Write tool.]`;
 }
 
 export const DEFAULT_MAX_CAPTURE_RETRIES = 3;
+
+/**
+ * H-REL-005: Extract captured value from inline tags in text.
+ * Looks for `<prompt-language-capture-NONCE name="varName">value</prompt-language-capture-NONCE>`
+ * Returns the captured value or null if not found.
+ */
+export function extractCaptureTag(text: string, varName: string, nonce?: string): string | null {
+  const tag = nonce ? captureTagName(nonce) : CAPTURE_TAG_BASE;
+  // Escape special regex chars in tag name (hyphens are fine in character class but not in raw)
+  const escaped = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`<${escaped}\\s+name="${varName}"\\s*>([\\s\\S]*?)</${escaped}>`);
+  const match = re.exec(text);
+  if (!match?.[1]) return null;
+  const value = match[1].trim();
+  if (!value) return null;
+  return value.length > MAX_CAPTURE_LENGTH ? value.slice(0, MAX_CAPTURE_LENGTH) : value;
+}

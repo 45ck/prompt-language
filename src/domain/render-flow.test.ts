@@ -1,11 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { renderFlow, renderFlowSummary } from './render-flow.js';
+import {
+  renderFlow,
+  renderFlowSummary,
+  renderCompletionSummary,
+  renderFlowCompact,
+  renderStateHash,
+} from './render-flow.js';
 import {
   createSessionState,
   updateNodeProgress,
   updateGateResult,
   updateGateDiagnostic,
   markFailed,
+  markCompleted,
 } from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
 import {
@@ -1119,5 +1126,184 @@ describe('renderFlowSummary — helper coverage', () => {
     state = { ...state, currentNodePath: [1] };
     const summary = renderFlowSummary(state);
     expect(summary).toContain('step 4/4');
+  });
+});
+
+// H-DX-002: Timing annotation on completed loop nodes
+describe('renderFlow — timing annotation', () => {
+  it('shows elapsed time on completed loop node when > 0.5s', () => {
+    const whileNode = createWhileNode('w1', 'cond', [createRunNode('r1', 'npm test')], 3);
+    const spec = createFlowSpec('test', [whileNode, createPromptNode('p2', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'w1', {
+      iteration: 2,
+      maxIterations: 3,
+      status: 'completed',
+      startedAt: Date.now() - 4200,
+      completedAt: Date.now(),
+    });
+    state = { ...state, currentNodePath: [1] };
+    const output = renderFlow(state);
+    expect(output).toContain('[4.2s]');
+  });
+
+  it('omits timing annotation when elapsed <= 0.5s', () => {
+    const whileNode = createWhileNode('w1', 'cond', [createRunNode('r1', 'npm test')], 3);
+    const spec = createFlowSpec('test', [whileNode, createPromptNode('p2', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'w1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'completed',
+      startedAt: Date.now() - 200,
+      completedAt: Date.now(),
+    });
+    state = { ...state, currentNodePath: [1] };
+    const output = renderFlow(state);
+    expect(output).not.toMatch(/\[\d+\.\d+s\]/);
+  });
+
+  it('omits timing when no startedAt or completedAt', () => {
+    const whileNode = createWhileNode('w1', 'cond', [createRunNode('r1', 'npm test')], 3);
+    const spec = createFlowSpec('test', [whileNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'w1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'running',
+    });
+    state = { ...state, currentNodePath: [0, 0] };
+    const output = renderFlow(state);
+    expect(output).not.toMatch(/\[\d+\.\d+s\]/);
+  });
+});
+
+// H-DX-009: Flow completion summary
+describe('renderCompletionSummary', () => {
+  it('produces summary with node count and var count', () => {
+    const spec = createFlowSpec('test', [
+      createPromptNode('p1', 'a'),
+      createRunNode('r1', 'npm test'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { myVar: 'hello', last_exit_code: 0 } };
+    state = markCompleted(state);
+    const summary = renderCompletionSummary(state);
+    expect(summary).toContain('Flow completed');
+    expect(summary).toContain('2 nodes');
+    expect(summary).toContain('vars: 1 set');
+  });
+
+  it('includes iteration info for loops', () => {
+    const spec = createFlowSpec('test', [
+      createWhileNode('w1', 'cond', [createRunNode('r1', 'cmd')], 5),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'w1', {
+      iteration: 3,
+      maxIterations: 5,
+      status: 'completed',
+    });
+    state = markCompleted(state);
+    const summary = renderCompletionSummary(state);
+    expect(summary).toContain('3/5 iterations');
+  });
+
+  it('includes gate info when gates present', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = { ...state, gateResults: { tests_pass: true, lint_pass: true } };
+    state = markCompleted(state);
+    const summary = renderCompletionSummary(state);
+    expect(summary).toContain('gates: 2/2');
+  });
+
+  it('omits iteration info when no loops', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = markCompleted(state);
+    const summary = renderCompletionSummary(state);
+    expect(summary).not.toContain('iterations');
+  });
+});
+
+// H-PERF-005: Compact context format
+describe('renderFlowCompact', () => {
+  it('produces abbreviated output with short markers', () => {
+    const spec = createFlowSpec('test goal', [
+      createPromptNode('p1', 'first'),
+      createRunNode('r1', 'npm test'),
+    ]);
+    const state = createSessionState('s1', spec);
+    const compact = renderFlowCompact(state);
+    expect(compact).toContain('[pl] test goal | active');
+    expect(compact).toContain('P:');
+    expect(compact).toContain('R: npm test');
+  });
+
+  it('marks current node with >', () => {
+    const spec = createFlowSpec('test', [
+      createPromptNode('p1', 'first'),
+      createRunNode('r1', 'npm test'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [1] };
+    const compact = renderFlowCompact(state);
+    const lines = compact.split('\n');
+    expect(lines.find((l) => l.includes('R: npm test'))?.startsWith('>')).toBe(true);
+  });
+
+  it('shows gate status with +/-/? markers', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = { ...state, gateResults: { tests_pass: true, lint_pass: false } };
+    const compact = renderFlowCompact(state);
+    expect(compact).toContain('+tests_pass');
+    expect(compact).toContain('-lint_pass');
+  });
+
+  it('shows let variable values abbreviated', () => {
+    const letNode = createLetNode('l1', 'greeting', { type: 'literal', value: 'hello' });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { greeting: 'hello' }, currentNodePath: [1] };
+    const compact = renderFlowCompact(state);
+    expect(compact).toContain('L greeting =');
+    expect(compact).toContain('[hello]');
+  });
+});
+
+// H-PERF-001: Render state hash
+describe('renderStateHash', () => {
+  it('returns same hash for same state', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    const state = createSessionState('s1', spec);
+    expect(renderStateHash(state)).toBe(renderStateHash(state));
+  });
+
+  it('returns different hash when path changes', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'a'), createPromptNode('p2', 'b')]);
+    const state1 = createSessionState('s1', spec);
+    const state2 = { ...state1, currentNodePath: [1] };
+    expect(renderStateHash(state1)).not.toBe(renderStateHash(state2));
+  });
+
+  it('returns different hash when gate results change', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass')],
+    );
+    const state1 = createSessionState('s1', spec);
+    const state2 = { ...state1, gateResults: { tests_pass: true } };
+    expect(renderStateHash(state1)).not.toBe(renderStateHash(state2));
   });
 });

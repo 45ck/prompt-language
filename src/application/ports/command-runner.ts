@@ -6,6 +6,8 @@ export interface CommandResult {
 
 export interface RunOptions {
   readonly timeoutMs?: number;
+  /** H-LANG-009: Environment variables to inject into command execution. */
+  readonly env?: Readonly<Record<string, string>>;
 }
 
 export interface CommandRunner {

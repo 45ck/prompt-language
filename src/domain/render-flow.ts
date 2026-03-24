@@ -5,8 +5,20 @@
  * the current execution position, loop progress, gate results, and variables.
  */
 
+import { createHash } from 'node:crypto';
 import type { FlowNode, ForeachNode, IfNode, LetNode, SpawnNode, TryNode } from './flow-node.js';
 import type { SessionState } from './session-state.js';
+
+// H-PERF-001: Compute a hash of render-relevant state to detect unchanged renders
+export function renderStateHash(state: SessionState): string {
+  const data = JSON.stringify({
+    p: state.currentNodePath,
+    n: state.nodeProgress,
+    g: state.gateResults,
+    s: state.status,
+  });
+  return createHash('md5').update(data).digest('hex');
+}
 
 function arraysEqual(a: readonly number[], b: readonly number[]): boolean {
   if (a.length !== b.length) return false;
@@ -34,6 +46,15 @@ function progressAnnotation(state: SessionState, nodeId: string): string {
   const filled = Math.min(barWidth, Math.round((done / total) * barWidth));
   const bar = '#'.repeat(filled) + '-'.repeat(barWidth - filled);
   return ` [${bar}] ${done}/${total}`;
+}
+
+// H-DX-002: Show elapsed time for completed nodes (>0.5s)
+function timingAnnotation(state: SessionState, nodeId: string): string {
+  const progress = state.nodeProgress[nodeId];
+  if (!progress?.startedAt || !progress.completedAt) return '';
+  const elapsed = (progress.completedAt - progress.startedAt) / 1000;
+  if (elapsed <= 0.5) return '';
+  return ` [${elapsed.toFixed(1)}s]`;
 }
 
 function isCompletedNode(path: readonly number[], currentPath: readonly number[]): boolean {
@@ -65,9 +86,11 @@ function renderNode(
       const timeoutTag = node.timeoutMs ? ` [timeout ${node.timeoutMs / 1000}s]` : '';
       return [`${prefix}${indent}run: ${node.command}${timeoutTag}${suffix}`];
     }
-    case 'while':
+    case 'while': {
+      const whileLabel = node.label ? `${node.label}: ` : '';
+      const whileTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds}` : '';
       return renderLoopNode(
-        `while ${node.condition} max ${node.maxIterations}`,
+        `${whileLabel}while ${node.condition} max ${node.maxIterations}${whileTimeout}`,
         node.body,
         state,
         path,
@@ -76,9 +99,12 @@ function renderNode(
         suffix,
         node.id,
       );
-    case 'until':
+    }
+    case 'until': {
+      const untilLabel = node.label ? `${node.label}: ` : '';
+      const untilTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds}` : '';
       return renderLoopNode(
-        `until ${node.condition} max ${node.maxIterations}`,
+        `${untilLabel}until ${node.condition} max ${node.maxIterations}${untilTimeout}`,
         node.body,
         state,
         path,
@@ -87,9 +113,12 @@ function renderNode(
         suffix,
         node.id,
       );
-    case 'retry':
+    }
+    case 'retry': {
+      const retryLabel = node.label ? `${node.label}: ` : '';
+      const retryTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds}` : '';
       return renderLoopNode(
-        `retry max ${node.maxAttempts}`,
+        `${retryLabel}retry max ${node.maxAttempts}${retryTimeout}`,
         node.body,
         state,
         path,
@@ -98,18 +127,24 @@ function renderNode(
         suffix,
         node.id,
       );
+    }
     case 'if':
       return renderIfNode(node, state, path, indentLevel, prefix, suffix);
     case 'try':
       return renderTryNode(node, state, path, indentLevel, prefix, suffix);
     case 'let':
       return renderLetNode(node, state, indent, prefix, suffix);
-    case 'foreach':
+    case 'foreach': {
       return renderForeachNode(node, state, path, indentLevel, prefix, suffix);
-    case 'break':
-      return [`${prefix}${indent}break${suffix}`];
-    case 'continue':
-      return [`${prefix}${indent}continue${suffix}`];
+    }
+    case 'break': {
+      const breakLabel = node.label ? ` ${node.label}` : '';
+      return [`${prefix}${indent}break${breakLabel}${suffix}`];
+    }
+    case 'continue': {
+      const continueLabel = node.label ? ` ${node.label}` : '';
+      return [`${prefix}${indent}continue${continueLabel}${suffix}`];
+    }
     case 'spawn':
       return renderSpawnNode(node, state, path, indentLevel, prefix, suffix);
     case 'await':
@@ -135,7 +170,8 @@ function renderLoopNode(
 ): string[] {
   const indent = '  '.repeat(indentLevel);
   const progress = progressAnnotation(state, nodeId);
-  const lines: string[] = [`${prefix}${indent}${header}${progress}${suffix}`];
+  const timing = timingAnnotation(state, nodeId);
+  const lines: string[] = [`${prefix}${indent}${header}${progress}${timing}${suffix}`];
 
   for (let i = 0; i < body.length; i++) {
     const child = body[i]!;
@@ -268,10 +304,14 @@ function renderForeachNode(
 ): string[] {
   const indent = '  '.repeat(indentLevel);
   const progress = progressAnnotation(state, node.id);
+  const timing = timingAnnotation(state, node.id);
   const currentVal = state.variables[node.variableName];
   const valAnnotation = currentVal !== undefined ? `  [${node.variableName}=${currentVal}]` : '';
-  const header = `foreach ${node.variableName} in ${node.listExpression}`;
-  const lines: string[] = [`${prefix}${indent}${header}${progress}${valAnnotation}${suffix}`];
+  const foreachLabel = node.label ? `${node.label}: ` : '';
+  const header = `${foreachLabel}foreach ${node.variableName} in ${node.listExpression}`;
+  const lines: string[] = [
+    `${prefix}${indent}${header}${progress}${timing}${valAnnotation}${suffix}`,
+  ];
 
   for (let i = 0; i < node.body.length; i++) {
     const child = node.body[i]!;
@@ -437,6 +477,117 @@ export function renderFlow(state: SessionState): string {
   return lines.join('\n');
 }
 
+// H-PERF-005: Compact context format for prompt injection (less tokens)
+function compactNode(
+  node: FlowNode,
+  state: SessionState,
+  path: readonly number[],
+  depth: number,
+): string[] {
+  const currentPath = state.currentNodePath;
+  const isCurrent = arraysEqual(path, currentPath);
+  const isAnc = isAncestorPath(path, currentPath);
+  const completed = !isCurrent && !isAnc && isCompletedNode(path, currentPath);
+  const mark = isCurrent ? '>' : isAnc ? '|' : completed ? '~' : ' ';
+  const pad = ' '.repeat(depth);
+
+  switch (node.kind) {
+    case 'prompt':
+      return [`${mark}${pad}P: ${node.text.slice(0, 60)}`];
+    case 'run':
+      return [`${mark}${pad}R: ${node.command}`];
+    case 'let': {
+      const op = node.append ? '+=' : '=';
+      const val = state.variables[node.variableName];
+      const annotation = val !== undefined ? ` [${String(val).slice(0, 30)}]` : '';
+      return [`${mark}${pad}L ${node.variableName} ${op}${annotation}`];
+    }
+    case 'while':
+    case 'until': {
+      const prog = state.nodeProgress[node.id];
+      const iter = prog ? `${prog.iteration}/${prog.maxIterations}` : '';
+      const lines = [`${mark}${pad}${node.kind} ${node.condition} ${iter}`];
+      for (let i = 0; i < node.body.length; i++) {
+        lines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
+      }
+      return lines;
+    }
+    case 'retry': {
+      const prog = state.nodeProgress[node.id];
+      const iter = prog ? `${prog.iteration}/${prog.maxIterations}` : '';
+      const lines = [`${mark}${pad}retry ${iter}`];
+      for (let i = 0; i < node.body.length; i++) {
+        lines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
+      }
+      return lines;
+    }
+    case 'if': {
+      const lines = [`${mark}${pad}if ${node.condition}`];
+      for (let i = 0; i < node.thenBranch.length; i++) {
+        lines.push(...compactNode(node.thenBranch[i]!, state, [...path, i], depth + 1));
+      }
+      if (node.elseBranch.length > 0) {
+        lines.push(`${mark}${pad}else`);
+        const off = node.thenBranch.length;
+        for (let i = 0; i < node.elseBranch.length; i++) {
+          lines.push(...compactNode(node.elseBranch[i]!, state, [...path, off + i], depth + 1));
+        }
+      }
+      return lines;
+    }
+    case 'try': {
+      const lines = [`${mark}${pad}try`];
+      for (let i = 0; i < node.body.length; i++) {
+        lines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
+      }
+      if (node.catchBody.length > 0) {
+        const off = node.body.length;
+        lines.push(`${mark}${pad}catch`);
+        for (let i = 0; i < node.catchBody.length; i++) {
+          lines.push(...compactNode(node.catchBody[i]!, state, [...path, off + i], depth + 1));
+        }
+      }
+      return lines;
+    }
+    case 'foreach': {
+      const prog = state.nodeProgress[node.id];
+      const iter = prog ? `${prog.iteration}/${prog.maxIterations}` : '';
+      const lines = [`${mark}${pad}each ${node.variableName} ${iter}`];
+      for (let i = 0; i < node.body.length; i++) {
+        lines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
+      }
+      return lines;
+    }
+    case 'break':
+      return [`${mark}${pad}break`];
+    case 'continue':
+      return [`${mark}${pad}continue`];
+    case 'spawn': {
+      const child = state.spawnedChildren[node.name];
+      const tag = child ? `[${child.status}]` : '';
+      return [`${mark}${pad}spawn "${node.name}" ${tag}`];
+    }
+    case 'await':
+      return [`${mark}${pad}await ${node.target}`];
+  }
+}
+
+export function renderFlowCompact(state: SessionState): string {
+  const lines: string[] = [`[pl] ${state.flowSpec.goal} | ${state.status}`];
+  for (let i = 0; i < state.flowSpec.nodes.length; i++) {
+    lines.push(...compactNode(state.flowSpec.nodes[i]!, state, [i], 0));
+  }
+  const gates = state.flowSpec.completionGates;
+  if (gates.length > 0) {
+    const labels = gates.map((g) => {
+      const r = state.gateResults[g.predicate];
+      return r === true ? `+${g.predicate}` : r === false ? `-${g.predicate}` : `?${g.predicate}`;
+    });
+    lines.push(`gates: ${labels.join(' ')}`);
+  }
+  return lines.join('\n');
+}
+
 // H-REL-011: Compact single-line summary for compaction resilience
 function countAllNodes(nodes: readonly FlowNode[]): number {
   let count = 0;
@@ -587,4 +738,40 @@ export function renderFlowSummary(state: SessionState): string {
   summary += ']';
 
   return summary;
+}
+
+// H-DX-009: Final summary emitted when flow transitions to completed
+export function renderCompletionSummary(state: SessionState): string {
+  const totalNodes = countAllNodes(state.flowSpec.nodes);
+
+  // Count total iterations across loop nodes
+  let totalIterations = 0;
+  let totalMaxIterations = 0;
+  for (const progress of Object.values(state.nodeProgress)) {
+    if (progress.maxIterations > 1) {
+      totalIterations += progress.iteration;
+      totalMaxIterations += progress.maxIterations;
+    }
+  }
+
+  // Count user-defined variables (exclude hidden/auto)
+  const varEntries = Object.entries(state.variables);
+  const visibleVars = varEntries.filter(
+    ([key, value]) => !isHiddenVariable(key, value, state.variables),
+  );
+
+  const parts: string[] = [`Flow ${state.status}`];
+  parts.push(`${totalNodes} nodes`);
+  if (totalMaxIterations > 0) {
+    parts.push(`${totalIterations}/${totalMaxIterations} iterations`);
+  }
+  parts.push(`vars: ${visibleVars.length} set`);
+
+  const gates = state.flowSpec.completionGates;
+  if (gates.length > 0) {
+    const passed = gates.filter((g) => state.gateResults[g.predicate] === true).length;
+    parts.push(`gates: ${passed}/${gates.length}`);
+  }
+
+  return parts.join(' | ');
 }

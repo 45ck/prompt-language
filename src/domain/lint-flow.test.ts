@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { lintFlow, levenshtein } from './lint-flow.js';
-import { createFlowSpec } from './flow-spec.js';
+import { createFlowSpec, createCompletionGate } from './flow-spec.js';
 import {
   createPromptNode,
   createRunNode,
@@ -714,5 +714,87 @@ describe('continue node lint warnings', () => {
     );
     const warnings = lintFlow(spec);
     expect(warnings).toContainEqual({ nodeId: 'c1', message: 'Continue outside of loop' });
+  });
+});
+
+describe('H-SEC-007: gaslighting lint rule', () => {
+  it('warns when all run nodes are inside if blocks and gates reference tests_pass', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createIfNode('i1', 'command_failed', [createRunNode('r1', 'npm test')], []),
+        createPromptNode('p1', 'fix it'),
+      ],
+      [createCompletionGate('tests_pass')],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('agent could skip execution entirely'),
+      }),
+    );
+  });
+
+  it('no warning when run node is unconditional', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createRunNode('r1', 'npm test'), createPromptNode('p1', 'fix it')],
+      [createCompletionGate('tests_pass')],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('agent could skip execution entirely'),
+      }),
+    );
+  });
+
+  it('no warning when gates do not reference side-effect predicates', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createIfNode('i1', 'cond', [createRunNode('r1', 'npm test')], [])],
+      [createCompletionGate('file_exists report.txt')],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('agent could skip execution entirely'),
+      }),
+    );
+  });
+
+  it('no warning when there are no run nodes at all', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'just prompts')],
+      [createCompletionGate('tests_pass')],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('agent could skip execution entirely'),
+      }),
+    );
+  });
+
+  it('warns with let-run inside conditional', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createIfNode(
+          'i1',
+          'cond',
+          [createLetNode('l1', 'out', { type: 'run', command: 'npm test' })],
+          [],
+        ),
+      ],
+      [createCompletionGate('command_succeeded')],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('agent could skip execution entirely'),
+      }),
+    );
   });
 });

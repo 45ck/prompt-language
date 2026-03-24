@@ -883,6 +883,13 @@ describe('parseFlow — await nodes', () => {
     expect(node.kind).toBe('await');
     expect(node.target).toBe('fix-auth');
   });
+
+  it('warns on bare await with no target', () => {
+    const spec = parse('Goal: t\n\nflow:\n  await');
+    expect(spec.warnings.some((w) => w.includes('Invalid await syntax'))).toBe(true);
+    // Falls back to a prompt node
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+  });
 });
 
 describe('detectBareFlow', () => {
@@ -1133,5 +1140,91 @@ flow:
   end`;
     const spec = parse(dsl);
     expect(spec.warnings).toHaveLength(0);
+  });
+});
+
+// ── H-INT-005: Cross-directory spawn ─────────────────────────────────
+
+describe('parseFlow — spawn with cwd (H-INT-005)', () => {
+  it('parses spawn "name" in "path" syntax', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker" in "/tmp/workdir"
+    prompt: Do work
+  end`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.kind).toBe('spawn');
+    expect(node.name).toBe('worker');
+    expect(node.cwd).toBe('/tmp/workdir');
+    expect(node.body).toHaveLength(1);
+  });
+
+  it('parses spawn without in clause (no cwd)', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker"
+    prompt: Do work
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.kind).toBe('spawn');
+    expect(node.name).toBe('worker');
+    expect(node.cwd).toBeUndefined();
+  });
+
+  it('parses spawn with single-quoted in path', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn 'worker' in './subdir'
+    run: npm test
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.name).toBe('worker');
+    expect(node.cwd).toBe('./subdir');
+  });
+});
+
+// ── H-INT-010: any() gate composition ─────────────────────────────────
+
+describe('parseGates — any() composition (H-INT-010)', () => {
+  it('parses any(gate1, gate2) into composite gate', () => {
+    const input = `Goal: test
+
+done when:
+  any(tests_pass, lint_pass)`;
+    const gates = parseGates(input);
+    expect(gates).toHaveLength(1);
+    expect(gates[0]!.predicate).toBe('any(tests_pass, lint_pass)');
+    expect(gates[0]!.any).toHaveLength(2);
+    expect(gates[0]!.any![0]!.predicate).toBe('tests_pass');
+    expect(gates[0]!.any![1]!.predicate).toBe('lint_pass');
+  });
+
+  it('parses any() alongside regular gates', () => {
+    const input = `Goal: test
+
+done when:
+  any(tests_pass, pytest_pass)
+  lint_pass`;
+    const gates = parseGates(input);
+    expect(gates).toHaveLength(2);
+    expect(gates[0]!.any).toBeDefined();
+    expect(gates[1]!.predicate).toBe('lint_pass');
+    expect(gates[1]!.any).toBeUndefined();
+  });
+
+  it('parses any() with three sub-gates', () => {
+    const input = `Goal: test
+
+done when:
+  any(tests_pass, pytest_pass, go_test_pass)`;
+    const gates = parseGates(input);
+    expect(gates[0]!.any).toHaveLength(3);
   });
 });

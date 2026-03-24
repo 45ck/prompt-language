@@ -127,6 +127,26 @@ describe('colorizeFlow — variable colors', () => {
     const output = colorizeFlow(input);
     expect(output).toContain(`${CYAN}1${RESET}`);
   });
+
+  it('returns var line unchanged when it has no equals sign', () => {
+    const input = '[prompt-language] Flow: t | Status: active\n\nVariables:\n  (no variables)';
+    const output = colorizeFlow(input);
+    expect(output).toContain('  (no variables)');
+    // Should NOT contain cyan since the regex for "key = value" does not match
+    expect(output).not.toContain(`${CYAN}(no variables)${RESET}`);
+  });
+});
+
+describe('colorizeFlow — gate fallback markers', () => {
+  it('returns gate line unchanged when no status marker present', () => {
+    // Gate line with no pass/fail/pending marker at all
+    const input =
+      '[prompt-language] Flow: t | Status: active\n\ndone when:\n  tests_pass  (evaluating)';
+    const output = colorizeFlow(input);
+    // Should not have any color codes on the gate line itself (no marker to colorize)
+    const gateLineOut = output.split('\n').find((l) => l.includes('tests_pass'));
+    expect(gateLineOut).toBe('  tests_pass  (evaluating)');
+  });
 });
 
 describe('colorizeFlow — warning colors', () => {

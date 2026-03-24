@@ -624,6 +624,19 @@ flow:
     expect(spec.warnings.some((w) => w.includes('Invalid foreach syntax'))).toBe(true);
   });
 
+  it('warns on foreach with no variable or list expression', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach
+    prompt: fallback
+  end`;
+    const spec = parse(dsl);
+    expect(spec.warnings.some((w) => w.includes('Invalid foreach syntax'))).toBe(true);
+    // Invalid foreach falls back to a prompt node
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+  });
+
   it('parses foreach before other nodes', () => {
     const dsl = `Goal: g
 
@@ -773,6 +786,19 @@ describe('parseGates — standalone (D3, D10)', () => {
     expect(gates).toHaveLength(1);
     expect(gates[0]!.predicate).toBe('build_ok');
     expect(gates[0]!.command).toBe('npm run build');
+  });
+
+  it('skips leading blank lines before first gate (D3)', () => {
+    const gates = parseGates('Fix.\n\ndone when:\n\n  tests_pass');
+    expect(gates).toHaveLength(1);
+    expect(gates[0]!.predicate).toBe('tests_pass');
+  });
+
+  it('skips multiple leading blank lines before first gate', () => {
+    const gates = parseGates('Fix.\n\ndone when:\n\n\n  tests_pass\n  lint_pass');
+    expect(gates).toHaveLength(2);
+    expect(gates[0]!.predicate).toBe('tests_pass');
+    expect(gates[1]!.predicate).toBe('lint_pass');
   });
 });
 

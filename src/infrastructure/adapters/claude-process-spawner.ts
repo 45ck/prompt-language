@@ -25,8 +25,11 @@ export class ClaudeProcessSpawner implements ProcessSpawner {
   async spawn(input: SpawnInput): Promise<SpawnResult> {
     const prompt = this.buildChildPrompt(input);
 
+    // H-INT-005: Use spawn-level cwd if specified, otherwise fall back to instance cwd
+    const childCwd = input.cwd ?? this.cwd;
+
     const child = spawn('claude', ['-p', '--dangerously-skip-permissions', prompt], {
-      cwd: this.cwd,
+      cwd: childCwd,
       stdio: 'ignore',
       detached: true,
       env: {

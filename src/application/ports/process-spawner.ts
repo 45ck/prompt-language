@@ -11,6 +11,7 @@ export interface SpawnInput {
   readonly flowText: string;
   readonly variables: Readonly<Record<string, string | number | boolean>>;
   readonly stateDir: string;
+  readonly cwd?: string | undefined;
 }
 
 export interface SpawnResult {

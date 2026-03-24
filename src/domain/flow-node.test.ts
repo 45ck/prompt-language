@@ -232,6 +232,23 @@ describe('createSpawnNode', () => {
     expect(node.kind).toBe('spawn');
     expect(node.body).toEqual([]);
   });
+
+  it('creates a spawn node with cwd', () => {
+    const body = [createPromptNode('p1', 'work')];
+    const node = createSpawnNode('sp3', 'worker', body, '/tmp/work');
+    expect(node).toEqual({
+      kind: 'spawn',
+      id: 'sp3',
+      name: 'worker',
+      body,
+      cwd: '/tmp/work',
+    });
+  });
+
+  it('omits cwd when not provided', () => {
+    const node = createSpawnNode('sp4', 'no-cwd', []);
+    expect(node).not.toHaveProperty('cwd');
+  });
 });
 
 describe('createAwaitNode', () => {

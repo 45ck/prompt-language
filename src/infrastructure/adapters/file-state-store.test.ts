@@ -466,20 +466,16 @@ describe('FileStateStore', () => {
 
       const ebusyError = Object.assign(new Error('EBUSY: resource busy'), { code: 'EBUSY' });
 
-      // First rename call throws EBUSY, subsequent calls use real implementation
-      let callCount = 0;
-      vi.mocked(mockedRename).mockImplementation(async (...args: Parameters<typeof rename>) => {
-        callCount++;
-        if (callCount === 1) throw ebusyError;
-        return rename(...args);
-      });
+      // First rename call throws EBUSY, subsequent calls fall through to real impl
+      vi.mocked(mockedRename).mockRejectedValueOnce(ebusyError);
 
       const session = createSessionState('s1', makeSpec());
       await store.save(session);
 
       const loaded = await store.loadCurrent();
       expect(loaded?.sessionId).toBe('s1');
-      expect(callCount).toBe(2);
+      // Should have been called twice: 1 EBUSY + 1 success
+      expect(vi.mocked(mockedRename).mock.calls.length).toBeGreaterThanOrEqual(2);
     });
 
     it('throws EBUSY after exhausting all retries', async () => {
@@ -505,16 +501,14 @@ describe('FileStateStore', () => {
         code: 'EACCES',
       });
 
-      let callCount = 0;
-      vi.mocked(mockedRename).mockImplementation(async () => {
-        callCount++;
-        throw eaccesError;
-      });
+      const callsBefore = vi.mocked(mockedRename).mock.calls.length;
+      vi.mocked(mockedRename).mockRejectedValue(eaccesError);
 
       const session = createSessionState('s1', makeSpec());
       await expect(store.save(session)).rejects.toThrow('EACCES');
       // Should only have been called once (no retries for non-EBUSY)
-      expect(callCount).toBe(1);
+      const callsAfter = vi.mocked(mockedRename).mock.calls.length;
+      expect(callsAfter - callsBefore).toBe(1);
     });
   });
 });

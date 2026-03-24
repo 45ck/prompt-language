@@ -5,14 +5,17 @@ import {
   updateVariable,
   updateNodeProgress,
   updateGateResult,
+  updateGateDiagnostic,
   updateSpawnedChild,
+  addWarning,
   markCompleted,
   markFailed,
   markCancelled,
   isFlowComplete,
   allGatesPassing,
+  generateCaptureNonce,
 } from './session-state.js';
-import type { SessionState, NodeProgress, SpawnedChild } from './session-state.js';
+import type { SessionState, NodeProgress, SpawnedChild, GateEvalResult } from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
 
 function makeState(overrides?: Partial<{ gates: boolean }>): SessionState {
@@ -42,6 +45,28 @@ describe('createSessionState', () => {
     const spec = createFlowSpec('goal', []);
     const state = createSessionState('s1', spec);
     expect(state.version).toBe(1);
+  });
+
+  // H-SEC-004: Capture nonce
+  it('generates a captureNonce as 8-char hex string', () => {
+    const spec = createFlowSpec('goal', []);
+    const state = createSessionState('s1', spec);
+    expect(state.captureNonce).toMatch(/^[0-9a-f]{8}$/);
+  });
+
+  it('generates unique nonces across sessions', () => {
+    const spec = createFlowSpec('goal', []);
+    const nonces = new Set(
+      Array.from({ length: 10 }, () => createSessionState('s', spec).captureNonce),
+    );
+    expect(nonces.size).toBeGreaterThan(1);
+  });
+});
+
+describe('generateCaptureNonce', () => {
+  it('returns an 8-char hex string', () => {
+    const nonce = generateCaptureNonce();
+    expect(nonce).toMatch(/^[0-9a-f]{8}$/);
   });
 });
 
@@ -147,6 +172,19 @@ describe('markFailed', () => {
     expect(failed.status).toBe('failed');
     expect(state.status).toBe('active');
   });
+
+  it('stores failureReason when provided', () => {
+    const state = makeState();
+    const failed = markFailed(state, 'TypeError: Cannot read properties of null');
+    expect(failed.status).toBe('failed');
+    expect(failed.failureReason).toBe('TypeError: Cannot read properties of null');
+  });
+
+  it('does not set failureReason when not provided', () => {
+    const state = makeState();
+    const failed = markFailed(state);
+    expect(failed.failureReason).toBeUndefined();
+  });
 });
 
 describe('markCancelled', () => {
@@ -244,5 +282,71 @@ describe('spawnedChildren', () => {
     state = updateSpawnedChild(state, 'a', { ...childA, status: 'completed' });
     expect(state.spawnedChildren['a']?.status).toBe('completed');
     expect(state.spawnedChildren['b']?.status).toBe('running');
+  });
+});
+
+describe('addWarning', () => {
+  it('adds a new warning to the state', () => {
+    const state = makeState();
+    const next = addWarning(state, 'something is off');
+    expect(next.warnings).toContain('something is off');
+  });
+
+  it('returns the same state object when warning is a duplicate', () => {
+    let state = makeState();
+    state = addWarning(state, 'duplicate warning');
+    const again = addWarning(state, 'duplicate warning');
+    expect(again).toBe(state); // identity check — same reference
+  });
+
+  it('does not mutate the original state', () => {
+    const state = makeState();
+    const originalWarnings = [...state.warnings];
+    addWarning(state, 'new warning');
+    expect(state.warnings).toEqual(originalWarnings);
+  });
+
+  it('preserves existing warnings when adding a new one', () => {
+    const spec = createFlowSpec('goal', [], [], ['existing']);
+    const state = createSessionState('s1', spec);
+    const next = addWarning(state, 'another');
+    expect(next.warnings).toEqual(['existing', 'another']);
+  });
+});
+
+describe('updateGateDiagnostic', () => {
+  it('stores a diagnostic for a gate predicate', () => {
+    const state = makeState({ gates: true });
+    const diag: GateEvalResult = {
+      passed: true,
+      command: 'npm test',
+      exitCode: 0,
+      stdout: 'OK',
+    };
+    const next = updateGateDiagnostic(state, 'tests_pass', diag);
+    expect(next.gateDiagnostics['tests_pass']).toEqual(diag);
+  });
+
+  it('does not mutate the original state', () => {
+    const state = makeState({ gates: true });
+    const diag: GateEvalResult = { passed: false, command: 'npm test', exitCode: 1 };
+    updateGateDiagnostic(state, 'tests_pass', diag);
+    expect(state.gateDiagnostics).toEqual({});
+  });
+
+  it('overwrites an existing diagnostic for the same predicate', () => {
+    let state = makeState({ gates: true });
+    state = updateGateDiagnostic(state, 'tests_pass', {
+      passed: false,
+      command: 'npm test',
+      exitCode: 1,
+    });
+    state = updateGateDiagnostic(state, 'tests_pass', {
+      passed: true,
+      command: 'npm test',
+      exitCode: 0,
+    });
+    expect(state.gateDiagnostics['tests_pass']?.passed).toBe(true);
+    expect(state.gateDiagnostics['tests_pass']?.exitCode).toBe(0);
   });
 });

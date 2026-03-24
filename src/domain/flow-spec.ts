@@ -10,6 +10,8 @@ import { DEFAULT_MAX_ITERATIONS, DEFAULT_MAX_ATTEMPTS } from './flow-node.js';
 export interface CompletionGate {
   readonly predicate: string;
   readonly command?: string | undefined;
+  /** H-INT-010: When set, this gate passes if ANY sub-gate passes. */
+  readonly any?: readonly CompletionGate[] | undefined;
 }
 
 export interface FlowDefaults {

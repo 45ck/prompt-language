@@ -72,6 +72,7 @@
     "eval:e2e:full": "npm run build && node scripts/eval/e2e-eval.mjs --full",
     "eval:validate": "npm run build && node scripts/eval/plugin-validation-eval.mjs",
     "eval:smoke": "npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs",
+    "eval:smoke:ci": "node scripts/eval/smoke-ci.mjs",
     "eval:smoke:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs --quick",
     "eval:ab": "npm run build && node bin/cli.mjs install && node scripts/eval/ab-eval.mjs",
     "eval:ab:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/ab-eval.mjs --quick",

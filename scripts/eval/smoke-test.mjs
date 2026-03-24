@@ -29,15 +29,23 @@
  */
 
 import { execSync } from 'node:child_process';
-import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { mkdtemp, rm, readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises';
+import { tmpdir, platform } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const RESULTS_DIR = join(__dirname, 'results');
 
 const QUICK_MODE = process.argv.includes('--quick');
 const TIMEOUT = 120_000;
 
 let passed = 0;
 let failed = 0;
+
+/** Structured results collected during the run. */
+const results = [];
+let currentTest = { name: '', label: '', startTime: 0 };
 
 function assert(label, condition, detail = '') {
   if (condition) {
@@ -46,6 +54,74 @@ function assert(label, condition, detail = '') {
   } else {
     failed++;
     console.log(`  FAIL  ${label}${detail ? ` — ${detail}` : ''}`);
+  }
+
+  // Extract test letter from label (e.g. "A: Context file relay" → "A")
+  const testName = label.match(/^([A-Z]):/)?.[1] ?? label;
+  const testLabel = label.replace(/^[A-Z]:\s*/, '');
+  const duration = Date.now() - currentTest.startTime;
+
+  results.push({
+    name: testName,
+    label: testLabel,
+    passed: condition,
+    duration_ms: duration,
+    error: condition ? null : detail || null,
+  });
+}
+
+/** Wrap a test function to track timing. */
+async function timed(name, label, fn) {
+  currentTest = { name, label, startTime: Date.now() };
+  await fn();
+}
+
+/** Write structured results to a JSON file. */
+async function writeResults(totalStart) {
+  await mkdir(RESULTS_DIR, { recursive: true });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `smoke-${timestamp}.json`;
+  const filepath = join(RESULTS_DIR, filename);
+
+  let nodeVersion = '';
+  try {
+    nodeVersion = execSync('node -v', { encoding: 'utf-8' }).trim();
+  } catch {
+    nodeVersion = process.version;
+  }
+
+  const report = {
+    timestamp: new Date().toISOString(),
+    os: platform(),
+    nodeVersion,
+    quickMode: QUICK_MODE,
+    duration_ms: Date.now() - totalStart,
+    passed,
+    failed,
+    tests: results,
+  };
+
+  await writeFile(filepath, JSON.stringify(report, null, 2));
+  console.log(`\n[smoke-test] Results written to ${filepath}`);
+}
+
+/** Keep only the most recent 50 result files. */
+async function cleanupOldResults() {
+  try {
+    const files = (await readdir(RESULTS_DIR))
+      .filter((f) => f.startsWith('smoke-') && f.endsWith('.json'))
+      .sort();
+
+    if (files.length > 50) {
+      const toDelete = files.slice(0, files.length - 50);
+      for (const f of toDelete) {
+        await unlink(join(RESULTS_DIR, f));
+      }
+      console.log(`[smoke-test] Cleaned up ${toDelete.length} old result file(s).`);
+    }
+  } catch {
+    /* results dir may not exist yet */
   }
 }
 
@@ -1044,6 +1120,7 @@ async function testMultiVarInterpolation() {
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
+  const totalStart = Date.now();
   console.log('[smoke-test] Starting live CLI smoke tests...\n');
 
   // Check claude CLI is available
@@ -1056,34 +1133,34 @@ async function main() {
 
   // Plugin should already be built + installed by npm run eval:smoke.
   // Run tests — A, B, E, H, I, K are fast; C is medium; D is slow (gate loop)
-  await testContextFileRelay();
-  await testContextRecall();
-  await testRunAutoExecution();
-  await testVariableInterpolation();
-  await testForeachIteration();
-  await testLetPromptCapture();
-  await testIfElseBranching();
-  await testTryCatch();
-  await testVariableChain();
-  await testCaptureReliability();
-  await testAndOrConditions();
-  await testNumericComparison();
-  await testTryFinally();
-  await testMultiVarInterpolation();
+  await timed('A', 'Context file relay', testContextFileRelay);
+  await timed('B', 'Context recall', testContextRecall);
+  await timed('E', 'Run auto-execution', testRunAutoExecution);
+  await timed('C', 'Variable interpolation', testVariableInterpolation);
+  await timed('F', 'Foreach iteration', testForeachIteration);
+  await timed('G', 'Let-prompt capture', testLetPromptCapture);
+  await timed('H', 'If/else branching', testIfElseBranching);
+  await timed('I', 'Try/catch handling', testTryCatch);
+  await timed('K', 'Variable chain', testVariableChain);
+  await timed('N', 'Capture reliability', testCaptureReliability);
+  await timed('U', 'And/or conditions', testAndOrConditions);
+  await timed('V', 'Numeric comparison', testNumericComparison);
+  await timed('W', 'Try/finally', testTryFinally);
+  await timed('Z', 'Multi-var interpolation', testMultiVarInterpolation);
 
   if (!QUICK_MODE) {
-    await testGateEvaluation();
-    await testWhileLoop();
-    await testRetryOnFailure();
-    await testGateOnlyMode();
-    await testUntilLoop();
-    await testBreakNode();
-    await testListAppend();
-    await testCustomGate();
-    await testNestedForeach();
-    await testListAccumulation();
-    await testBreakInsideIfForeach();
-    await testUntilVariable();
+    await timed('D', 'Gate evaluation', testGateEvaluation);
+    await timed('J', 'While loop', testWhileLoop);
+    await timed('L', 'Retry on failure', testRetryOnFailure);
+    await timed('M', 'Gate-only mode', testGateOnlyMode);
+    await timed('O', 'Until loop', testUntilLoop);
+    await timed('P', 'Break exits loop', testBreakNode);
+    await timed('Q', 'List append', testListAppend);
+    await timed('R', 'Custom gate', testCustomGate);
+    await timed('S', 'Nested foreach', testNestedForeach);
+    await timed('T', 'List accumulation', testListAccumulation);
+    await timed('X', 'Break in nested', testBreakInsideIfForeach);
+    await timed('Y', 'Until variable', testUntilVariable);
   } else {
     console.log('  SKIP  D: Gate evaluation (--quick mode)');
     console.log('  SKIP  J: While loop (--quick mode)');
@@ -1091,7 +1168,7 @@ async function main() {
     console.log('  SKIP  M: Gate-only mode (--quick mode)');
     console.log('  SKIP  O: Until loop (--quick mode)');
     console.log('  SKIP  P: Break node (--quick mode)');
-    await testListAppend();
+    await timed('Q', 'List append', testListAppend);
     console.log('  SKIP  R: Custom gate (--quick mode)');
     console.log('  SKIP  S: Nested foreach (--quick mode)');
     console.log('  SKIP  T: List accumulation (--quick mode)');
@@ -1100,6 +1177,10 @@ async function main() {
   }
 
   console.log(`\n[smoke-test] Summary: ${passed}/${passed + failed} passed`);
+
+  // Write structured results and clean up old files
+  await writeResults(totalStart);
+  await cleanupOldResults();
 
   if (failed > 0) {
     console.error('[smoke-test] FAIL — some tests did not pass.');

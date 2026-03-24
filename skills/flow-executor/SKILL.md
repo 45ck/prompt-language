@@ -1,6 +1,8 @@
 ---
 name: flow-executor
-description: Execute the current flow step, advance state, and inject execution context into Claude.
+description: "This skill should be used when the user asks to 'execute my flow', 'run the next step', 'advance the flow', 'step through flow', or wants to manually trigger flow step execution."
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+model: inherit
 argument-hint: '[step]'
 ---
 

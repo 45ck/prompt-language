@@ -7,12 +7,12 @@
 
 const MAX_CAPTURE_LENGTH = 2000;
 
-const VARS_DIR = '.prompt-language/vars';
+export const CAPTURE_VARS_DIR = '.prompt-language/vars';
 
 export const CAPTURE_TAG = 'prompt-language-capture';
 
 export function captureFilePath(varName: string): string {
-  return `${VARS_DIR}/${varName}`;
+  return `${CAPTURE_VARS_DIR}/${varName}`;
 }
 
 export function buildCapturePrompt(promptText: string, varName: string): string {

@@ -16,33 +16,16 @@ import { FileStateStore } from '../../infrastructure/adapters/file-state-store.j
 import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { formatError } from '../../domain/format-error.js';
-import { CAPTURE_TAG } from '../../domain/capture-prompt.js';
+import { CAPTURE_VARS_DIR } from '../../domain/capture-prompt.js';
+import { extractAllCaptureTags } from '../../infrastructure/adapters/tag-capture-reader.js';
 import { readStdin } from './read-stdin.js';
-
-const VARS_DIR = '.prompt-language/vars';
-const SAFE_VAR_NAME = /^\w+$/;
 
 /** Scan text for capture tags and write extracted values to var files. */
 async function scanAndSaveCapturedVars(text: string, basePath: string): Promise<void> {
-  const tagPattern = new RegExp(
-    `<${CAPTURE_TAG} name="([^"]+)">([\\s\\S]*?)</${CAPTURE_TAG}>`,
-    'g',
-  );
-
-  const matches: { varName: string; value: string }[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = tagPattern.exec(text)) !== null) {
-    const varName = match[1]!;
-    if (!SAFE_VAR_NAME.test(varName)) continue; // D1: reject path-traversal names
-    const value = match[2]!.trim();
-    if (value) {
-      matches.push({ varName, value });
-    }
-  }
-
+  const matches = extractAllCaptureTags(text);
   if (matches.length === 0) return;
 
-  const varsDir = join(basePath, VARS_DIR);
+  const varsDir = join(basePath, CAPTURE_VARS_DIR);
   await mkdir(varsDir, { recursive: true });
 
   for (const { varName, value } of matches) {

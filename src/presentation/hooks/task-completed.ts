@@ -21,7 +21,7 @@ async function main(): Promise<void> {
   const result = await evaluateCompletion(stateStore, commandRunner);
 
   if (result.blocked) {
-    process.stderr.write(result.reason);
+    process.stderr.write(`[prompt-language] ${result.reason}\n`);
     process.exitCode = 2;
     return;
   }

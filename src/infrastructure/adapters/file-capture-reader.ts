@@ -5,20 +5,22 @@
 import { readFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { CaptureReader } from '../../application/ports/capture-reader.js';
+import { captureFilePath, CAPTURE_VARS_DIR } from '../../domain/capture-prompt.js';
 
-const VARS_DIR = '.prompt-language/vars';
 const MAX_CAPTURE_LENGTH = 2000;
+const SAFE_VAR_NAME = /^\w+$/;
 
 export class FileCaptureReader implements CaptureReader {
-  private readonly varsDir: string;
+  private readonly basePath: string;
 
   constructor(basePath: string) {
-    this.varsDir = join(basePath, VARS_DIR);
+    this.basePath = basePath;
   }
 
   async read(varName: string): Promise<string | null> {
+    if (!SAFE_VAR_NAME.test(varName)) return null;
     try {
-      const filePath = join(this.varsDir, varName);
+      const filePath = join(this.basePath, captureFilePath(varName));
       const content = await readFile(filePath, 'utf-8');
       const trimmed = content.trim();
       if (!trimmed) return null;
@@ -35,8 +37,9 @@ export class FileCaptureReader implements CaptureReader {
   }
 
   async clear(varName: string): Promise<void> {
+    if (!SAFE_VAR_NAME.test(varName)) return;
     try {
-      const filePath = join(this.varsDir, varName);
+      const filePath = join(this.basePath, captureFilePath(varName));
       await unlink(filePath);
     } catch (error: unknown) {
       if (isNodeError(error) && error.code === 'ENOENT') {
@@ -47,7 +50,7 @@ export class FileCaptureReader implements CaptureReader {
   }
 
   async ensureDir(): Promise<void> {
-    await mkdir(this.varsDir, { recursive: true });
+    await mkdir(join(this.basePath, CAPTURE_VARS_DIR), { recursive: true });
   }
 }
 

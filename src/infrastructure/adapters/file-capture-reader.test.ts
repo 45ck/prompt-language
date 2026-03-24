@@ -45,6 +45,18 @@ describe('FileCaptureReader', () => {
       expect(result).not.toBeNull();
       expect(result!.length).toBe(2000);
     });
+
+    it('returns null for path-traversal variable name', async () => {
+      expect(await reader.read('../../etc/passwd')).toBeNull();
+    });
+
+    it('returns null for variable name with slashes', async () => {
+      expect(await reader.read('../hack')).toBeNull();
+    });
+
+    it('returns null for variable name with dots', async () => {
+      expect(await reader.read('foo.bar')).toBeNull();
+    });
   });
 
   describe('clear', () => {
@@ -59,6 +71,10 @@ describe('FileCaptureReader', () => {
 
     it('does not throw when file does not exist', async () => {
       await expect(reader.clear('nonexistent')).resolves.toBeUndefined();
+    });
+
+    it('is a no-op for path-traversal variable name', async () => {
+      await expect(reader.clear('../hack')).resolves.toBeUndefined();
     });
   });
 

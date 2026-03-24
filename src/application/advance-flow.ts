@@ -18,6 +18,7 @@ import type {
   LetNode,
   RunNode,
   BreakNode,
+  ContinueNode,
   SpawnNode,
   AwaitNode,
 } from '../domain/flow-node.js';
@@ -98,16 +99,18 @@ export async function evaluateFlowCondition(
   variables: Readonly<Record<string, string | number | boolean>>,
   commandRunner?: CommandRunner,
 ): Promise<boolean | null> {
-  const pureResult = evaluateCondition(condition, variables);
+  // H-LANG-006: Interpolate ${var} and ${var:-default} before condition evaluation
+  const interpolatedCondition = interpolate(condition, variables);
+  const pureResult = evaluateCondition(interpolatedCondition, variables);
   if (pureResult !== null) return pureResult;
 
   if (!commandRunner) return null;
 
-  const command = resolveBuiltinCommand(condition);
+  const command = resolveBuiltinCommand(interpolatedCondition);
   if (!command) return null;
 
   const result = await commandRunner.run(command);
-  const inverted = isInvertedPredicate(condition);
+  const inverted = isInvertedPredicate(interpolatedCondition);
   return inverted ? result.exitCode !== 0 : result.exitCode === 0;
 }
 
@@ -483,6 +486,8 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
     }
     case 'break':
       return [`${pad}break`];
+    case 'continue':
+      return [`${pad}continue`];
     case 'while':
       return [
         `${pad}while ${node.condition} max ${node.maxIterations}`,
@@ -737,6 +742,8 @@ async function advanceSingleNode(
       return advanceForeachEntry(node, current);
     case 'break':
       return advanceBreakNode(node, current);
+    case 'continue':
+      return advanceContinueNode(node, current);
     case 'spawn':
       return advanceSpawnNode(node, current, processSpawner);
     case 'await':
@@ -760,6 +767,31 @@ function advanceBreakNode(
     }
   }
   // No loop ancestor — just advance past break (warning situation, but don't crash)
+  return { state: advanceNode(current, advancePath(path)), advanced: true };
+}
+
+// H-LANG-002: Continue re-enters the nearest enclosing loop at the next iteration.
+// Sets path past the loop body so handleBodyExhaustion in autoAdvanceNodes
+// decides whether to re-loop or exit.
+function advanceContinueNode(
+  _node: ContinueNode,
+  current: SessionState,
+): { state: SessionState; advanced: true } {
+  const path = current.currentNodePath;
+  for (let depth = path.length - 1; depth >= 1; depth--) {
+    const ancestorPath = path.slice(0, depth);
+    const ancestor = resolveCurrentNode(current.flowSpec.nodes, ancestorPath);
+    if (!ancestor || !LOOP_KINDS.has(ancestor.kind)) continue;
+
+    // Move path past the loop body end. The autoAdvanceNodes loop's
+    // body-exhaustion path will handle re-entry or exit.
+    const loopBody = (ancestor as FlowNode & { body: readonly FlowNode[] }).body;
+    return {
+      state: advanceNode(current, [...ancestorPath, loopBody.length]),
+      advanced: true,
+    };
+  }
+  // No loop ancestor — just advance past continue
   return { state: advanceNode(current, advancePath(path)), advanced: true };
 }
 

@@ -1,6 +1,8 @@
 ---
 name: write-flow
-description: Write a prompt-language flow for a task. Decides whether a flow is needed at all — most tasks don't need one. The DSL's value is gate enforcement for autonomous work.
+description: "This skill should be used when the user asks to 'write a flow', 'create a flow', 'design a flow', 'make a flow for', 'I need a flow', or wants to create a prompt-language flow for a task. Decides whether a flow is needed at all — most tasks don't need one."
+allowed-tools: Read, Grep, Glob
+model: inherit
 argument-hint: '<task description>'
 ---
 

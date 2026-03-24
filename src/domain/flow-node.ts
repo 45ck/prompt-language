@@ -16,6 +16,7 @@ export type FlowNodeKind =
   | 'let'
   | 'foreach'
   | 'break'
+  | 'continue'
   | 'spawn'
   | 'await';
 
@@ -96,6 +97,11 @@ export interface BreakNode extends BaseNode {
   readonly kind: 'break';
 }
 
+// H-LANG-002: Continue node re-enters nearest enclosing loop at next iteration
+export interface ContinueNode extends BaseNode {
+  readonly kind: 'continue';
+}
+
 export interface SpawnNode extends BaseNode {
   readonly kind: 'spawn';
   readonly name: string;
@@ -120,6 +126,7 @@ export type FlowNode =
   | LetNode
   | ForeachNode
   | BreakNode
+  | ContinueNode
   | SpawnNode
   | AwaitNode;
 
@@ -208,6 +215,10 @@ export function createLetNode(
 
 export function createBreakNode(id: string): BreakNode {
   return { kind: 'break', id };
+}
+
+export function createContinueNode(id: string): ContinueNode {
+  return { kind: 'continue', id };
 }
 
 export function createForeachNode(

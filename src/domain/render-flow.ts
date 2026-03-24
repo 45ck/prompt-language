@@ -108,6 +108,8 @@ function renderNode(
       return renderForeachNode(node, state, path, indentLevel, prefix, suffix);
     case 'break':
       return [`${prefix}${indent}break${suffix}`];
+    case 'continue':
+      return [`${prefix}${indent}continue${suffix}`];
     case 'spawn':
       return renderSpawnNode(node, state, path, indentLevel, prefix, suffix);
     case 'await':
@@ -323,10 +325,12 @@ function renderGates(state: SessionState): string[] {
 }
 
 // H#36: Show first 3 lines of stderr for more actionable gate diagnostics
+// H-DX-004: Fall back to stdout (first 200 chars) when stderr is empty
 function formatGateDiagnostic(diag: {
   readonly command?: string;
   readonly exitCode?: number;
   readonly stderr?: string;
+  readonly stdout?: string;
 }): string {
   const parts: string[] = [];
   if (diag.exitCode !== undefined) parts.push(`exit ${diag.exitCode}`);
@@ -338,8 +342,46 @@ function formatGateDiagnostic(diag: {
       .map((l) => l.slice(0, 80))
       .join(' | ');
     parts.push(snippet);
+  } else if (diag.stdout) {
+    // H-DX-004: Show first 200 chars of stdout when stderr is empty
+    parts.push(diag.stdout.slice(0, 200));
   }
   return parts.join(': ');
+}
+
+// H-PERF-002: Internal/auto-set variables to exclude from display
+const HIDDEN_VARIABLES = new Set(['last_exit_code', 'last_stdout', 'last_stderr']);
+const AUTO_SUFFIX_RE = /_(index|length)$/;
+
+function isHiddenVariable(
+  key: string,
+  _value: string | number | boolean,
+  variables: Readonly<Record<string, string | number | boolean>>,
+): boolean {
+  if (HIDDEN_VARIABLES.has(key)) return true;
+  if (AUTO_SUFFIX_RE.test(key)) return true;
+  // Show command_failed / command_succeeded only when command_failed is 'true'
+  if (key === 'command_failed' || key === 'command_succeeded') {
+    return String(variables['command_failed']) !== 'true';
+  }
+  return false;
+}
+
+// H-DX-008: Format JSON array values as list summaries
+function formatListValue(str: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(str);
+    if (!Array.isArray(parsed)) return null;
+    const len = parsed.length;
+    const preview = parsed
+      .slice(0, 3)
+      .map((item) => `"${String(item)}"`)
+      .join(', ');
+    const ellipsis = len > 3 ? ', ...' : '';
+    return `[${len} items: ${preview}${ellipsis}]`;
+  } catch {
+    return null;
+  }
 }
 
 // H#33: Truncate variable values >80 chars for readability
@@ -347,10 +389,14 @@ function renderVariables(state: SessionState): string[] {
   const entries = Object.entries(state.variables);
   if (entries.length === 0) return [];
 
+  const filtered = entries.filter(([key, value]) => !isHiddenVariable(key, value, state.variables));
+  if (filtered.length === 0) return [];
+
   const lines: string[] = ['', 'Variables:'];
-  for (const [key, value] of entries) {
+  for (const [key, value] of filtered) {
     const str = String(value);
-    const display = str.length > 80 ? str.slice(0, 77) + '...' : str;
+    const listDisplay = typeof value === 'string' ? formatListValue(str) : null;
+    const display = listDisplay ?? (str.length > 80 ? str.slice(0, 77) + '...' : str);
     lines.push(`  ${key} = ${display}`);
   }
   return lines;

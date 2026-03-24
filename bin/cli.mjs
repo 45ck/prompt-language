@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { promises as fs } from 'node:fs';
+import { promises as fs, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -59,6 +59,11 @@ async function install() {
   const now = new Date().toISOString();
   console.log(`Installing prompt-language v${version}...`);
 
+  if (!existsSync(join(ROOT, 'dist'))) {
+    console.error('Error: dist/ directory not found. Run "npm run build" first.');
+    process.exit(1);
+  }
+
   await ensureDir(PLUGINS_DIR);
   for (const dir of DIRS_TO_COPY) {
     const src = join(ROOT, dir);
@@ -66,8 +71,16 @@ async function install() {
       await fs.access(src);
       await copyDir(src, join(PLUGINS_DIR, dir));
       console.log(`  Copied ${dir}/`);
-    } catch {
-      console.warn(`  Skipping ${dir}/ (not found)`);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        console.warn(`  Skipping ${dir}/ (not found)`);
+      } else if (error.code === 'EACCES' || error.code === 'EPERM') {
+        console.error(`  Permission denied copying ${dir}/`);
+      } else if (error.code === 'ENOSPC') {
+        console.error(`  Disk full - cannot copy ${dir}/`);
+      } else {
+        console.error(`  Error copying ${dir}/: ${error.message}`);
+      }
     }
   }
 
@@ -350,6 +363,29 @@ switch (command) {
     const watchScript = join(__dirname, 'watch.mjs');
     const { execSync } = await import('node:child_process');
     execSync(`node "${watchScript}"`, { stdio: 'inherit' });
+    break;
+  }
+  case '--help':
+  case '-h':
+    console.log(`Usage: npx @45ck/prompt-language [command]
+
+Commands:
+  install      Install the prompt-language plugin (default)
+  uninstall    Remove the plugin and clean up settings
+  status       Show installation status
+  init         Scaffold a starter flow in the current directory
+  demo         Print an example flow to stdout
+  statusline   Configure the Claude Code status line
+  watch        Watch for file changes and rebuild
+
+Options:
+  --help, -h       Show this help message
+  --version, -V    Show version number`);
+    break;
+  case '--version':
+  case '-V': {
+    const ver = await readPluginVersion().catch(() => 'unknown');
+    console.log(ver);
     break;
   }
   default:

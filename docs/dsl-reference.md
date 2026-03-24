@@ -38,11 +38,11 @@ run: npx eslint . --max-warnings=0
 run: git diff --name-only
 ```
 
-Optional timeout (in seconds) to kill long-running commands:
+Optional timeout (in seconds) to kill long-running commands. Use bracket syntax:
 
 ```
-run: npm test timeout 60
-run: node build.js timeout 120
+run: npm test [timeout 60]
+run: node build.js [timeout 120]
 ```
 
 If the command exceeds the timeout, it is killed and treated as a failure (non-zero exit code).
@@ -213,9 +213,9 @@ Auto-set variables per iteration:
 
 If the list is empty, the body is skipped entirely.
 
-### try/catch
+### try/catch/finally
 
-Execute a block. If the catch condition triggers, run the catch block.
+Execute a block. If the catch condition triggers, run the catch block. An optional `finally` block always executes regardless of success or failure.
 
 ```
 try
@@ -225,11 +225,24 @@ catch command_failed
 end
 ```
 
+With a `finally` block for cleanup that always runs:
+
+```
+try
+  run: npm run deploy
+catch command_failed
+  prompt: Deploy failed. Roll back.
+finally
+  run: cleanup.sh
+end
+```
+
 Parameters:
 
 - body: One or more DSL statements.
 - catchCondition: A resolver variable name. If true after body execution, the catch block runs. Defaults to `command_failed`.
 - catchBody: One or more DSL statements.
+- finallyBody: (Optional) One or more DSL statements. Always executes after the body (and catch, if triggered), whether or not an error occurred.
 
 ### break
 

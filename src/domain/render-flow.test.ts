@@ -233,14 +233,14 @@ describe('renderFlow', () => {
     expect(output).not.toContain('exit 0');
   });
 
-  it('renders variables section', () => {
+  it('renders variables section with user-defined variables', () => {
     const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
     let state = createSessionState('s1', spec);
-    state = { ...state, variables: { tests_pass: false, last_exit_code: 1 } };
+    state = { ...state, variables: { tests_pass: false, user_var: 'hello' } };
     const output = renderFlow(state);
     expect(output).toContain('Variables:');
     expect(output).toContain('tests_pass = false');
-    expect(output).toContain('last_exit_code = 1');
+    expect(output).toContain('user_var = hello');
   });
 
   it('omits variables section when empty', () => {
@@ -643,5 +643,115 @@ describe('renderFlow', () => {
     expect(output).toContain('> prompt: current  <-- current');
     expect(output).toContain('  prompt: future');
     expect(output).not.toContain('~ prompt: future');
+  });
+
+  // H-PERF-002: Selective variable rendering
+  it('hides internal auto-set variables from Variables section', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: {
+        last_exit_code: 0,
+        last_stdout: 'output',
+        last_stderr: '',
+        user_var: 'visible',
+      },
+    };
+    const output = renderFlow(state);
+    expect(output).toContain('user_var = visible');
+    expect(output).not.toContain('last_exit_code');
+    expect(output).not.toContain('last_stdout');
+    expect(output).not.toContain('last_stderr');
+  });
+
+  it('hides auto-generated _index and _length variables', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: { item_index: 2, items_length: 5, item: 'current' },
+    };
+    const output = renderFlow(state);
+    expect(output).toContain('item = current');
+    expect(output).not.toContain('item_index');
+    expect(output).not.toContain('items_length');
+  });
+
+  it('hides command_failed and command_succeeded when command_failed is not true', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: { command_failed: 'false', command_succeeded: 'true', user_var: 'hi' },
+    };
+    const output = renderFlow(state);
+    expect(output).toContain('user_var = hi');
+    expect(output).not.toContain('command_failed');
+    expect(output).not.toContain('command_succeeded');
+  });
+
+  it('shows command_failed and command_succeeded when command_failed is true', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: { command_failed: 'true', command_succeeded: 'false' },
+    };
+    const output = renderFlow(state);
+    expect(output).toContain('command_failed = true');
+    expect(output).toContain('command_succeeded = false');
+  });
+
+  it('omits Variables section when all variables are hidden', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: { last_exit_code: 0, last_stdout: '', last_stderr: '' },
+    };
+    const output = renderFlow(state);
+    expect(output).not.toContain('Variables:');
+  });
+
+  // H-DX-008: List variable display
+  it('renders JSON array variables as list summaries (<=3 items)', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { myList: '["a","b","c"]' } };
+    const output = renderFlow(state);
+    expect(output).toContain('myList = [3 items: "a", "b", "c"]');
+  });
+
+  it('renders JSON array variables as list summaries (>3 items)', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { data: '["a","b","c","d","e"]' } };
+    const output = renderFlow(state);
+    expect(output).toContain('data = [5 items: "a", "b", "c", ...]');
+  });
+
+  it('renders empty JSON array with count', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { items: '[]' } };
+    const output = renderFlow(state);
+    expect(output).toContain('items = [0 items: ]');
+  });
+
+  it('renders non-JSON string values as-is', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { name: 'hello world' } };
+    const output = renderFlow(state);
+    expect(output).toContain('name = hello world');
+  });
+
+  it('renders JSON object values as-is (not arrays)', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { config: '{"key":"val"}' } };
+    const output = renderFlow(state);
+    expect(output).toContain('config = {"key":"val"}');
   });
 });

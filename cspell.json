@@ -70,7 +70,13 @@
     "plugh",
     "fafi",
     "dvdr",
-    "résumé"
+    "résumé",
+    "greting",
+    "levenshtein",
+    "elif",
+    "nonmepty",
+    "errmsg",
+    "bigvar"
   ],
   "ignorePaths": [
     "dist/**",

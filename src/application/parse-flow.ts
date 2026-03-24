@@ -18,6 +18,7 @@ import {
   createLetNode,
   createForeachNode,
   createBreakNode,
+  createContinueNode,
   createSpawnNode,
   createAwaitNode,
   DEFAULT_MAX_ITERATIONS,
@@ -168,17 +169,31 @@ function parseRetryLine(ctx: ParseContext, line: string, baseIndent: number): Fl
 function parseIfLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
   const match = /^if\s+(.+)/i.exec(line);
   const condition = match?.[1] ? match[1].trim() : 'true';
-  const thenBranch = parseBlock(ctx, baseIndent, ['else', 'end']);
+  const thenBranch = parseBlock(ctx, baseIndent, ['else', 'elif', 'end']);
   let elseBranch: FlowNode[] = [];
+  let nestedElseIf = false;
   if (ctx.pos < ctx.lines.length) {
     const peekLine = ctx.lines[ctx.pos];
-    const peek = peekLine ? peekLine.trim().toLowerCase() : '';
-    if (peek === 'else') {
+    const peek = peekLine ? peekLine.trim() : '';
+    const lower = peek.toLowerCase();
+    // H-LANG-003: Handle "else if ..." and "elif ..." as nested IfNode in else branch
+    const elseIfMatch = /^else\s+if\s+(.+)/i.exec(peek);
+    const elifMatch = /^elif\s+(.+)/i.exec(peek);
+    if (elseIfMatch?.[1] || elifMatch?.[1]) {
+      ctx.pos += 1;
+      const nestedCondition = (elseIfMatch?.[1] ?? elifMatch?.[1])!.trim();
+      const nestedIf = parseIfLine(ctx, `if ${nestedCondition}`, baseIndent);
+      elseBranch = [nestedIf];
+      nestedElseIf = true;
+    } else if (lower === 'else') {
       ctx.pos += 1;
       elseBranch = parseBlock(ctx, baseIndent, ['end']);
     }
   }
-  consumeEnd(ctx);
+  // The innermost else-if / elif already consumed the shared "end"
+  if (!nestedElseIf) {
+    consumeEnd(ctx);
+  }
   return createIfNode(nextId(ctx), condition, thenBranch, elseBranch);
 }
 
@@ -399,6 +414,9 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   }
   if (lower === 'break') {
     return createBreakNode(nextId(ctx));
+  }
+  if (lower === 'continue') {
+    return createContinueNode(nextId(ctx));
   }
   if (lower.startsWith('spawn ')) {
     return parseSpawnBlock(ctx, trimmed, indent);

@@ -181,7 +181,7 @@ A minimal example of what `session-state.json` looks like:
 {
   "status": "active",
   "flowSpec": { "goal": "fix the auth tests", "...": "..." },
-  "currentPath": [0, 1],
+  "currentNodePath": [0, 1],
   "variables": {
     "last_exit_code": "1",
     "command_failed": "true",
@@ -198,9 +198,9 @@ A minimal example of what `session-state.json` looks like:
 
 Key fields:
 
-- **status** — `active`, `completed`, or `failed`. Hooks skip processing when status is not `active`.
-- **currentPath** — Array of indices into the flow tree. `[0, 1]` means the second child of the first top-level node. This is what "where the flow is" means at a low level.
-- **variables** — All stored values, including built-ins (`last_exit_code`, `command_failed`, `last_stdout`, `last_stderr`) and user-defined ones. All values are strings.
+- **status** — `active`, `completed`, `failed`, or `cancelled`. Hooks skip processing when status is not `active`.
+- **currentNodePath** — Array of indices into the flow tree. `[0, 1]` means the second child of the first top-level node. This is what "where the flow is" means at a low level.
+- **variables** — All stored values, including built-ins (`last_exit_code`, `command_failed`, `last_stdout`, `last_stderr`) and user-defined ones. Values are strings, booleans, or numbers (e.g., `"hello"`, `true`, `1`).
 - **nodeProgress** — Iteration counts for loops and retry nodes. Keys are node IDs; values hold the current and max iteration counts.
 - **gateResults** — Pass/fail status for each gate predicate as evaluated on the last `TaskCompleted` hook invocation.
 - **spawnedChildren** — Record of spawned child processes. Each entry contains `name`, `status` (running/completed/failed), `pid`, `stateDir`, and optionally `variables` (imported after completion).

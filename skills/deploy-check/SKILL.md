@@ -1,6 +1,9 @@
 ---
 name: deploy-check
-description: Pre-deployment verification. Runs lint, tests, and build in a single retry loop until all pass.
+description: "This skill should be used when the user asks to 'check if ready to deploy', 'pre-deploy check', 'verify before deploying', 'deployment readiness', 'is it ready to ship', or wants pre-deployment verification."
+disable-model-invocation: true
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+model: inherit
 argument-hint: ''
 ---
 

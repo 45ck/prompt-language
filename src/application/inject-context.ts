@@ -277,6 +277,17 @@ export async function injectContext(
     // User sent a non-trivial prompt or has an active flow — fall through
   }
 
+  // H-PERF-012: Skip full render for terminal flow states
+  if (existing?.status === 'completed') {
+    return { prompt: `[prompt-language] Flow completed successfully.\n\n${input.prompt}` };
+  }
+  if (existing?.status === 'failed') {
+    return { prompt: `[prompt-language] Flow failed.\n\n${input.prompt}` };
+  }
+  if (existing?.status === 'cancelled') {
+    return { prompt: `[prompt-language] Flow cancelled.\n\n${input.prompt}` };
+  }
+
   if (existing?.status === 'active') {
     const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
       existing,

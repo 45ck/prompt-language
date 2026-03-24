@@ -1,6 +1,9 @@
 ---
 name: refactor
-description: Safe refactoring with test verification after each change. Tests must stay green throughout.
+description: "This skill should be used when the user asks to 'refactor this', 'clean up this code', 'make this cleaner', 'safe refactor', 'restructure this', or wants to refactor code with continuous test verification."
+disable-model-invocation: true
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+model: inherit
 argument-hint: '<file or module to refactor>'
 ---
 

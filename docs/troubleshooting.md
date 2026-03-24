@@ -12,7 +12,7 @@ Common issues and how to resolve them.
 cat .prompt-language/session-state.json | head -50
 ```
 
-Look for `currentPath` (which node is active), `status` (should be `"active"`), and `nodeProgress` (iteration counts for loops).
+Look for `currentNodePath` (which node is active), `status` (should be `"active"`), and `nodeProgress` (iteration counts for loops).
 
 **Common causes**:
 
@@ -153,6 +153,21 @@ If a child's state file doesn't exist, the child never started or crashed early.
 - Use `/flow:reset` to clear the parent flow and start over.
 
 **Prevention**: Keep spawn count low (2-4 children). Ensure child flows have bounded loops (`max N`) to prevent infinite execution.
+
+## Aborting a flow mid-execution
+
+If a flow is stuck or you want to stop it without completing all gates, you can cancel it using escape hatch phrases. Type any of these as your next message:
+
+- `abort flow`
+- `cancel flow`
+- `stop flow`
+- `reset flow`
+
+The plugin detects these phrases in your prompt and immediately sets the flow status to `cancelled`, clearing all state. Claude will confirm the cancellation and stop enforcing the flow.
+
+Alternatively, use the `/flow:reset` slash command to clear all flow state and start fresh.
+
+**Note**: Escape hatch phrases are matched case-insensitively and can appear anywhere in the prompt (e.g., "please abort flow now" works). They only take effect when a flow is actively running (`status: "active"`).
 
 ## Checking plugin status
 

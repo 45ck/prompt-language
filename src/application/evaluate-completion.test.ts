@@ -3,6 +3,7 @@ import {
   evaluateCompletion,
   resolveBuiltinCommand,
   isInvertedPredicate,
+  detectTestCommand,
 } from './evaluate-completion.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { InMemoryCommandRunner } from '../infrastructure/adapters/in-memory-command-runner.js';
@@ -474,5 +475,171 @@ describe('evaluateCompletion — edge cases', () => {
     const result = await evaluateCompletion(store, runner);
     expect(result.blocked).toBe(true);
     expect(result.gateResults['my_check']).toBe(false);
+  });
+
+  // H-SEC-003: Stderr truncation increased to 2000 chars with [truncated] marker
+  it('stores stderr up to 2000 chars without truncation marker', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    const longStderr = 'x'.repeat(2000);
+    runner.setResult('npm test', { exitCode: 1, stdout: '', stderr: longStderr });
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await evaluateCompletion(store, runner);
+    const saved = await store.loadCurrent();
+    const diag = saved?.gateDiagnostics['tests_pass'];
+    expect(diag?.stderr).toBe(longStderr);
+    expect(diag?.stderr).not.toContain('[truncated]');
+  });
+
+  it('truncates stderr over 2000 chars and adds [truncated] marker', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    const longStderr = 'x'.repeat(3000);
+    runner.setResult('npm test', { exitCode: 1, stdout: '', stderr: longStderr });
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await evaluateCompletion(store, runner);
+    const saved = await store.loadCurrent();
+    const diag = saved?.gateDiagnostics['tests_pass'];
+    expect(diag?.stderr).toContain('[truncated]');
+    expect(diag?.stderr!.length).toBeLessThan(3000);
+  });
+
+  // H-DX-004: Gate stdout in diagnostics
+  it('captures stdout in gate diagnostics', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: 'All tests passed', stderr: '' });
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await evaluateCompletion(store, runner);
+    const saved = await store.loadCurrent();
+    const diag = saved?.gateDiagnostics['tests_pass'];
+    expect(diag?.stdout).toBe('All tests passed');
+  });
+
+  it('omits stdout from diagnostics when empty', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: '', stderr: '' });
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await evaluateCompletion(store, runner);
+    const saved = await store.loadCurrent();
+    const diag = saved?.gateDiagnostics['tests_pass'];
+    expect(diag?.stdout).toBeUndefined();
+  });
+
+  // H-REL-002: Gate command timeout
+  it('passes timeoutMs option to command runner', async () => {
+    const store = makeStore();
+    let capturedOptions: { timeoutMs?: number } | undefined;
+    const capturingRunner: CommandRunner = {
+      run: async (_cmd, options) => {
+        capturedOptions = options;
+        return { exitCode: 0, stdout: '', stderr: '' };
+      },
+    };
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await evaluateCompletion(store, capturingRunner);
+    expect(capturedOptions).toBeDefined();
+    expect(capturedOptions!.timeoutMs).toBeGreaterThan(0);
+  });
+});
+
+// H-INT-002: Environment-aware gate auto-detection
+describe('detectTestCommand', () => {
+  it('defaults to npm test when no project markers exist', () => {
+    // In the test environment (which has package.json), this should return npm test
+    // since go.mod, pyproject.toml, setup.py, and Cargo.toml don't exist
+    expect(detectTestCommand()).toBe('npm test');
+  });
+});
+
+describe('evaluateCompletion — unknown gate predicate warning', () => {
+  it('adds warning with suggestion for typo predicate test_pass', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('test_pass')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await evaluateCompletion(store, runner);
+    const saved = await store.loadCurrent();
+    expect(saved?.warnings).toContainEqual(expect.stringContaining("did you mean 'tests_pass'"));
+  });
+
+  it('does not add warning for completely unrelated predicate', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('deploy_production')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await evaluateCompletion(store, runner);
+    const saved = await store.loadCurrent();
+    expect(saved?.warnings.filter((w) => w.includes('did you mean'))).toHaveLength(0);
+  });
+
+  it('does not add warning for known predicates', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: '', stderr: '' });
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await evaluateCompletion(store, runner);
+    const saved = await store.loadCurrent();
+    expect(saved?.warnings.filter((w) => w.includes('did you mean'))).toHaveLength(0);
+  });
+
+  it('does not add warning for boolean variable gates', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('my_check')]);
+    const session = createSessionState('s1', spec);
+    const withVar = { ...session, variables: { ...session.variables, my_check: true } };
+    await store.save(withVar);
+
+    await evaluateCompletion(store, runner);
+    const saved = await store.loadCurrent();
+    expect(saved?.warnings.filter((w) => w.includes('did you mean'))).toHaveLength(0);
+  });
+});
+
+describe('resolveBuiltinCommand — H-INT-002 auto-detection', () => {
+  it('maps tests_pass to a test command (auto-detected)', () => {
+    const cmd = resolveBuiltinCommand('tests_pass');
+    expect(cmd).toBeDefined();
+    // In our environment it should resolve to npm test (package.json exists)
+    expect(cmd).toBe('npm test');
+  });
+
+  it('maps tests_fail to the same auto-detected command', () => {
+    const cmd = resolveBuiltinCommand('tests_fail');
+    expect(cmd).toBeDefined();
+    expect(cmd).toBe('npm test');
   });
 });

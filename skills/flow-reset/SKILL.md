@@ -1,6 +1,9 @@
 ---
 name: flow-reset
-description: Abandon or reset the current flow execution.
+description: "This skill should be used when the user asks to 'reset my flow', 'abandon the flow', 'start over', 'clear flow state', or wants to cancel/abort the current flow execution."
+disable-model-invocation: true
+allowed-tools: Bash, Read
+model: haiku
 argument-hint: ''
 ---
 

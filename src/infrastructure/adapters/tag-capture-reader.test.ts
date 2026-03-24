@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractCaptureTag } from './tag-capture-reader.js';
+import { extractCaptureTag, extractAllCaptureTags } from './tag-capture-reader.js';
 import { CAPTURE_TAG } from '../../domain/capture-prompt.js';
 
 describe('extractCaptureTag', () => {
@@ -80,5 +80,38 @@ That's the answer.`;
   it('returns null when content contains nested capture tags (D7)', () => {
     const text = `<${CAPTURE_TAG} name="a">val-a <${CAPTURE_TAG} name="b">val-b</${CAPTURE_TAG}>`;
     expect(extractCaptureTag(text, 'a')).toBeNull();
+  });
+});
+
+describe('extractAllCaptureTags', () => {
+  it('extracts multiple variables from text', () => {
+    const text = `<${CAPTURE_TAG} name="a">alpha</${CAPTURE_TAG}> and <${CAPTURE_TAG} name="b">beta</${CAPTURE_TAG}>`;
+    const result = extractAllCaptureTags(text);
+    expect(result).toEqual([
+      { varName: 'a', value: 'alpha' },
+      { varName: 'b', value: 'beta' },
+    ]);
+  });
+
+  it('returns empty array when no tags found', () => {
+    expect(extractAllCaptureTags('no tags here')).toEqual([]);
+  });
+
+  it('deduplicates variable names (first wins)', () => {
+    const text = `<${CAPTURE_TAG} name="x">first</${CAPTURE_TAG}> <${CAPTURE_TAG} name="x">second</${CAPTURE_TAG}>`;
+    const result = extractAllCaptureTags(text);
+    expect(result).toEqual([{ varName: 'x', value: 'first' }]);
+  });
+
+  it('skips tags with empty content', () => {
+    const text = `<${CAPTURE_TAG} name="empty"></${CAPTURE_TAG}> <${CAPTURE_TAG} name="ok">value</${CAPTURE_TAG}>`;
+    const result = extractAllCaptureTags(text);
+    expect(result).toEqual([{ varName: 'ok', value: 'value' }]);
+  });
+
+  it('skips tags with unsafe variable names', () => {
+    const text = `<${CAPTURE_TAG} name="../bad">evil</${CAPTURE_TAG}> <${CAPTURE_TAG} name="good">safe</${CAPTURE_TAG}>`;
+    const result = extractAllCaptureTags(text);
+    expect(result).toEqual([{ varName: 'good', value: 'safe' }]);
   });
 });

@@ -45,6 +45,8 @@ async function main(): Promise<void> {
   const processSpawner = new ClaudeProcessSpawner(process.cwd());
   const sessionId = randomUUID();
 
+  const stateBefore = await stateStore.loadCurrent();
+
   const result = await injectContext(
     { prompt: input.prompt, sessionId },
     stateStore,
@@ -59,6 +61,16 @@ async function main(): Promise<void> {
       const { renderFlow } = await import('../../domain/render-flow.js');
       const { colorizeFlow } = await import('../../domain/colorize-flow.js');
       process.stderr.write(`\n${colorizeFlow(renderFlow(state))}\n`);
+    }
+
+    // Completion banner: detect active → completed/failed transition
+    if (state && stateBefore?.status === 'active' && state.status !== 'active') {
+      const goal = state.flowSpec.goal || 'unnamed flow';
+      if (state.status === 'completed') {
+        process.stderr.write(`\x1b[32;1m[PL] Flow completed: ${goal} | All gates passed\x1b[0m\n`);
+      } else if (state.status === 'failed') {
+        process.stderr.write(`\x1b[31;1m[PL] Flow failed: ${goal}\x1b[0m\n`);
+      }
     }
   }
 

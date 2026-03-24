@@ -30,6 +30,7 @@ export interface GateEvalResult {
   readonly command?: string;
   readonly exitCode?: number;
   readonly stderr?: string;
+  readonly stdout?: string;
 }
 
 export interface SessionState {
@@ -120,6 +121,11 @@ export function updateSpawnedChild(
     ...state,
     spawnedChildren: { ...state.spawnedChildren, [name]: child },
   };
+}
+
+export function addWarning(state: SessionState, warning: string): SessionState {
+  if (state.warnings.includes(warning)) return state;
+  return { ...state, warnings: [...state.warnings, warning] };
 }
 
 export function markCompleted(state: SessionState): SessionState {

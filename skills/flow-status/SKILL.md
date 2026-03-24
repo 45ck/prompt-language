@@ -1,9 +1,10 @@
 ---
 name: flow-status
-description: Show current flow execution progress (read-only).
+description: "This skill should be used when the user asks to 'show flow status', 'where am I in the flow', 'flow progress', 'what step am I on', or wants to see current flow execution progress."
 disable-model-invocation: true
-argument-hint: ''
 allowed-tools: Read, Glob, Grep
+model: haiku
+argument-hint: ''
 ---
 
 # Flow Status

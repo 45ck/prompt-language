@@ -1,6 +1,9 @@
 ---
 name: tdd
-description: Test-driven development. Write a failing test, implement until green, refactor. Single retry loop with test gate.
+description: "This skill should be used when the user asks to 'do TDD', 'test-driven development', 'red green refactor', 'write a failing test first', or wants to implement a feature using test-driven development."
+disable-model-invocation: true
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+model: inherit
 argument-hint: '<feature or requirement>'
 ---
 

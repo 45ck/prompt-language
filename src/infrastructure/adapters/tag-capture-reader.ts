@@ -10,12 +10,14 @@ import { CAPTURE_TAG } from '../../domain/capture-prompt.js';
 
 const MAX_CAPTURE_LENGTH = 2000;
 
+const SAFE_VAR_NAME = /^\w+$/;
+
 /**
  * Extract a captured variable value from text containing capture tags.
  * Returns the trimmed content between the tags, or null if not found/empty.
  */
 export function extractCaptureTag(text: string, varName: string): string | null {
-  if (!/^\w+$/.test(varName)) return null; // D7: reject unsafe variable names
+  if (!SAFE_VAR_NAME.test(varName)) return null; // D7: reject unsafe variable names
   const openTag = `<${CAPTURE_TAG} name="${varName}">`;
   const closeTag = `</${CAPTURE_TAG}>`;
 
@@ -37,4 +39,28 @@ export function extractCaptureTag(text: string, varName: string): string | null 
   }
 
   return content;
+}
+
+/**
+ * Extract all captured variable name/value pairs from text containing capture tags.
+ * Uses extractCaptureTag for each match, inheriting its D7 security checks.
+ */
+export function extractAllCaptureTags(text: string): { varName: string; value: string }[] {
+  const namePattern = new RegExp(`<${CAPTURE_TAG} name="([^"]+)">`, 'g');
+  const seen = new Set<string>();
+  const results: { varName: string; value: string }[] = [];
+
+  let match: RegExpExecArray | null;
+  while ((match = namePattern.exec(text)) !== null) {
+    const varName = match[1]!;
+    if (seen.has(varName)) continue;
+    seen.add(varName);
+
+    const value = extractCaptureTag(text, varName);
+    if (value !== null) {
+      results.push({ varName, value });
+    }
+  }
+
+  return results;
 }

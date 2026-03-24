@@ -959,3 +959,153 @@ describe('parseFlow — bare flow (no flow: keyword)', () => {
     expect(spec.nodes).toHaveLength(0);
   });
 });
+
+// H-LANG-002: Continue node parsing
+describe('parseFlow — continue', () => {
+  it('parses continue inside loop', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach x in "a b c"
+    continue
+  end`;
+    const spec = parse(dsl);
+    const fe = spec.nodes[0] as ForeachNode;
+    expect(fe.body).toHaveLength(1);
+    expect(fe.body[0]!.kind).toBe('continue');
+  });
+
+  it('parses continue inside while loop', () => {
+    const dsl = `Goal: g
+
+flow:
+  while flag max 3
+    continue
+  end`;
+    const spec = parse(dsl);
+    const wh = spec.nodes[0] as WhileNode;
+    expect(wh.body).toHaveLength(1);
+    expect(wh.body[0]!.kind).toBe('continue');
+  });
+
+  it('parses continue as standalone (outside loop)', () => {
+    const dsl = `Goal: g
+
+flow:
+  continue`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.nodes[0]!.kind).toBe('continue');
+  });
+});
+
+// H-LANG-003: else if / elif parsing
+describe('parseFlow — else if / elif', () => {
+  it('parses if/else if/else/end as nested IfNode', () => {
+    const dsl = `Goal: g
+
+flow:
+  if condA
+    prompt: A
+  else if condB
+    prompt: B
+  else
+    prompt: C
+  end`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const outerIf = spec.nodes[0] as IfNode;
+    expect(outerIf.kind).toBe('if');
+    expect(outerIf.condition).toBe('condA');
+    expect(outerIf.thenBranch).toHaveLength(1);
+    expect((outerIf.thenBranch[0] as PromptNode).text).toBe('A');
+
+    // else branch contains a nested IfNode
+    expect(outerIf.elseBranch).toHaveLength(1);
+    const innerIf = outerIf.elseBranch[0] as IfNode;
+    expect(innerIf.kind).toBe('if');
+    expect(innerIf.condition).toBe('condB');
+    expect(innerIf.thenBranch).toHaveLength(1);
+    expect((innerIf.thenBranch[0] as PromptNode).text).toBe('B');
+    expect(innerIf.elseBranch).toHaveLength(1);
+    expect((innerIf.elseBranch[0] as PromptNode).text).toBe('C');
+  });
+
+  it('parses elif as alias for else if', () => {
+    const dsl = `Goal: g
+
+flow:
+  if condA
+    prompt: A
+  elif condB
+    prompt: B
+  else
+    prompt: C
+  end`;
+    const spec = parse(dsl);
+    const outerIf = spec.nodes[0] as IfNode;
+    expect(outerIf.condition).toBe('condA');
+    expect(outerIf.elseBranch).toHaveLength(1);
+    const innerIf = outerIf.elseBranch[0] as IfNode;
+    expect(innerIf.kind).toBe('if');
+    expect(innerIf.condition).toBe('condB');
+    expect(innerIf.elseBranch).toHaveLength(1);
+    expect((innerIf.elseBranch[0] as PromptNode).text).toBe('C');
+  });
+
+  it('parses chained else if without final else', () => {
+    const dsl = `Goal: g
+
+flow:
+  if condA
+    prompt: A
+  else if condB
+    prompt: B
+  end`;
+    const spec = parse(dsl);
+    const outerIf = spec.nodes[0] as IfNode;
+    expect(outerIf.elseBranch).toHaveLength(1);
+    const innerIf = outerIf.elseBranch[0] as IfNode;
+    expect(innerIf.condition).toBe('condB');
+    expect(innerIf.elseBranch).toEqual([]);
+  });
+
+  it('parses triple chained else if', () => {
+    const dsl = `Goal: g
+
+flow:
+  if condA
+    prompt: A
+  else if condB
+    prompt: B
+  else if condC
+    prompt: C
+  else
+    prompt: D
+  end`;
+    const spec = parse(dsl);
+    const outerIf = spec.nodes[0] as IfNode;
+    expect(outerIf.condition).toBe('condA');
+
+    const midIf = outerIf.elseBranch[0] as IfNode;
+    expect(midIf.condition).toBe('condB');
+
+    const innerIf = midIf.elseBranch[0] as IfNode;
+    expect(innerIf.condition).toBe('condC');
+    expect(innerIf.elseBranch).toHaveLength(1);
+    expect((innerIf.elseBranch[0] as PromptNode).text).toBe('D');
+  });
+
+  it('does not produce warnings for well-formed else if', () => {
+    const dsl = `Goal: g
+
+flow:
+  if condA
+    prompt: A
+  else if condB
+    prompt: B
+  end`;
+    const spec = parse(dsl);
+    expect(spec.warnings).toHaveLength(0);
+  });
+});

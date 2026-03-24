@@ -77,7 +77,34 @@ describe('stop hook (integration)', () => {
 
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(2);
+    expect(result.stderr).toContain('[prompt-language]');
     expect(result.stderr).toContain('Active task');
+  });
+
+  it('exits 0 when stop_hook_active is true (prevents infinite loop)', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      sessionId: 'test-session',
+      flowSpec: {
+        goal: 'Active task',
+        nodes: [],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+      currentNodePath: [0],
+      nodeProgress: {},
+      variables: {},
+      gateResults: {},
+      gateDiagnostics: {},
+      status: 'active',
+      warnings: [],
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook(JSON.stringify({ stop_hook_active: true }), tempDir);
+    expect(result.exitCode).toBe(0);
   });
 
   it('exits 0 when state file contains corrupted JSON (fail-open)', async () => {

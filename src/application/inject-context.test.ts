@@ -825,6 +825,48 @@ describe('injectContext — abort flow', () => {
   });
 });
 
+// H-PERF-012: Skip context for completed/failed/cancelled flows
+describe('injectContext — terminal flow states', () => {
+  it('returns short summary for completed flow instead of full render', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Build app', [createPromptNode('p1', 'work')]);
+    let session = createSessionState('done-1', spec);
+    session = { ...session, status: 'completed' };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'What next?', sessionId: 'done-1' }, store);
+    expect(result.prompt).toContain('[prompt-language] Flow completed successfully.');
+    expect(result.prompt).toContain('What next?');
+    expect(result.prompt).not.toContain('prompt: work');
+  });
+
+  it('returns short summary for failed flow', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Deploy', [createRunNode('r1', 'deploy')]);
+    let session = createSessionState('fail-1', spec);
+    session = { ...session, status: 'failed' };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Help', sessionId: 'fail-1' }, store);
+    expect(result.prompt).toContain('[prompt-language] Flow failed.');
+    expect(result.prompt).toContain('Help');
+    expect(result.prompt).not.toContain('run: deploy');
+  });
+
+  it('returns short summary for cancelled flow', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Test', [createPromptNode('p1', 'stuff')]);
+    let session = createSessionState('cancel-1', spec);
+    session = { ...session, status: 'cancelled' };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Ok', sessionId: 'cancel-1' }, store);
+    expect(result.prompt).toContain('[prompt-language] Flow cancelled.');
+    expect(result.prompt).toContain('Ok');
+    expect(result.prompt).not.toContain('prompt: stuff');
+  });
+});
+
 describe('injectContext — run node stdout/stderr capture', () => {
   it('stores last_stdout and last_stderr after run node', async () => {
     const store = makeStore();

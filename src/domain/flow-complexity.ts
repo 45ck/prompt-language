@@ -30,6 +30,7 @@ function countNodes(nodes: readonly FlowNode[]): number {
         break;
       case 'await':
       case 'break':
+      case 'continue':
       case 'prompt':
       case 'run':
       case 'let':
@@ -69,6 +70,7 @@ function maxDepth(nodes: readonly FlowNode[], depth: number): number {
         break;
       case 'await':
       case 'break':
+      case 'continue':
       case 'prompt':
       case 'run':
       case 'let':
@@ -105,6 +107,7 @@ function countControlFlow(nodes: readonly FlowNode[]): number {
         break;
       case 'await':
       case 'break':
+      case 'continue':
       case 'prompt':
       case 'run':
       case 'let':

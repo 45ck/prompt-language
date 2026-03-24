@@ -5,13 +5,17 @@
  * Blocks completion if any gate fails.
  */
 
+import { existsSync } from 'node:fs';
+
 import {
   updateGateResult,
   updateGateDiagnostic,
+  addWarning,
   markCompleted,
   allGatesPassing,
 } from '../domain/session-state.js';
 import type { SessionState } from '../domain/session-state.js';
+import { findSimilarPredicate } from '../domain/fuzzy-match.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
 
@@ -47,8 +51,17 @@ const INVERTED_PREDICATES = new Set([
 
 const SAFE_PATH_RE = /^(?!\/)(?!.*\.\.)[\w ./-]+$/;
 
+// H-INT-002: Detect project type from filesystem markers and map tests_pass accordingly
+export function detectTestCommand(): string {
+  if (existsSync('go.mod')) return 'go test ./...';
+  if (existsSync('pyproject.toml') || existsSync('setup.py')) return 'python -m pytest';
+  if (existsSync('Cargo.toml')) return 'cargo test';
+  return 'npm test';
+}
+
 /** Map a built-in predicate to the shell command that evaluates it. */
 // H#4: Support "not" prefix — recursively strip and resolve
+// H-INT-002: Environment-aware auto-detection for tests_pass/tests_fail
 export function resolveBuiltinCommand(predicate: string): string | undefined {
   if (predicate.startsWith('not ')) {
     return resolveBuiltinCommand(predicate.slice(4).trim());
@@ -57,6 +70,11 @@ export function resolveBuiltinCommand(predicate: string): string | undefined {
     const path = predicate.slice('file_exists '.length).trim();
     if (!path || !SAFE_PATH_RE.test(path)) return undefined;
     return `test -f '${path}'`;
+  }
+
+  // H-INT-002: For generic tests_pass/tests_fail, auto-detect the test runner
+  if (predicate === 'tests_pass' || predicate === 'tests_fail') {
+    return detectTestCommand();
   }
 
   return BUILTIN_GATE_COMMANDS[predicate];
@@ -71,13 +89,34 @@ export function isInvertedPredicate(predicate: string): boolean {
   return INVERTED_PREDICATES.has(predicate);
 }
 
+// H-REL-002: Gate command timeout (default 60s, env override)
+const GATE_TIMEOUT_MS = (() => {
+  const envVal = process.env['PROMPT_LANGUAGE_GATE_TIMEOUT_MS'];
+  if (envVal) {
+    const parsed = parseInt(envVal, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+  }
+  return 60_000;
+})();
+
+// H-SEC-003: Stderr truncation limit (increased from 200 to 2000)
+const STDERR_LIMIT = 2000;
+
+function truncateOutput(text: string, limit: number): string {
+  const trimmed = text.trimEnd();
+  if (trimmed.length <= limit) return trimmed;
+  return trimmed.slice(0, limit) + ' [truncated]';
+}
+
 // H#64: Parallel gate evaluation via Promise.all()
 // H#5: Variable-based gate lookup for boolean variables
+// H-REL-002: Gate command timeout
 async function runGates(state: SessionState, runner: CommandRunner): Promise<SessionState> {
+  const timeoutMs = GATE_TIMEOUT_MS;
   const gatePromises = state.flowSpec.completionGates.map(async (gate) => {
     const command = gate.command ?? resolveBuiltinCommand(gate.predicate);
     if (!command) return { gate, result: null, command: null };
-    const result = await runner.run(command);
+    const result = await runner.run(command, { timeoutMs });
     return { gate, result, command };
   });
   const gateResults = await Promise.all(gatePromises);
@@ -88,12 +127,16 @@ async function runGates(state: SessionState, runner: CommandRunner): Promise<Ses
       const inverted = isInvertedPredicate(gate.predicate);
       const passed = inverted ? result.exitCode !== 0 : result.exitCode === 0;
       updated = updateGateResult(updated, gate.predicate, passed);
-      const stderrSnippet = result.stderr.trimEnd().slice(0, 200);
+      // H-SEC-003: Increased truncation limit with [truncated] marker
+      const stderrSnippet = truncateOutput(result.stderr, STDERR_LIMIT);
+      // H-DX-004: Capture stdout alongside stderr
+      const stdoutSnippet = truncateOutput(result.stdout, STDERR_LIMIT);
       updated = updateGateDiagnostic(updated, gate.predicate, {
         passed,
         command,
         exitCode: result.exitCode,
         ...(stderrSnippet ? { stderr: stderrSnippet } : {}),
+        ...(stdoutSnippet ? { stdout: stdoutSnippet } : {}),
       });
     } else {
       // H#5: Check variables as gate predicates (boolean)
@@ -106,6 +149,14 @@ async function runGates(state: SessionState, runner: CommandRunner): Promise<Ses
         if (current === undefined) {
           updated = updateGateResult(updated, gate.predicate, false);
           updated = updateGateDiagnostic(updated, gate.predicate, { passed: false });
+          // Unknown predicate — suggest a similar known predicate if possible
+          const similar = findSimilarPredicate(gate.predicate);
+          if (similar) {
+            updated = addWarning(
+              updated,
+              `Unknown gate predicate '${gate.predicate}' \u2014 did you mean '${similar}'?`,
+            );
+          }
         }
       }
     }

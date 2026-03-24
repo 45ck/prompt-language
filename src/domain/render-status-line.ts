@@ -97,6 +97,8 @@ function summarizeNode(node: FlowNode): string {
       return `foreach ${node.variableName}`;
     case 'break':
       return 'break';
+    case 'continue':
+      return 'continue';
     case 'spawn':
       return `spawn "${node.name}"`;
     case 'await':

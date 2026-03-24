@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { lintFlow } from './lint-flow.js';
+import { lintFlow, levenshtein } from './lint-flow.js';
 import { createFlowSpec } from './flow-spec.js';
 import {
   createPromptNode,
@@ -12,6 +12,7 @@ import {
   createForeachNode,
   createBreakNode,
   createSpawnNode,
+  createLetNode,
 } from './flow-node.js';
 
 describe('lintFlow', () => {
@@ -162,5 +163,420 @@ describe('lintFlow', () => {
     const warnings = lintFlow(spec);
     // spawn resets insideLoop to false, so break inside spawn body should warn
     expect(warnings).toContainEqual({ nodeId: 'b1', message: 'Break outside of loop' });
+  });
+});
+
+describe('levenshtein', () => {
+  it('returns 0 for identical strings', () => {
+    expect(levenshtein('abc', 'abc')).toBe(0);
+  });
+
+  it('returns length for empty vs non-empty', () => {
+    expect(levenshtein('', 'abc')).toBe(3);
+    expect(levenshtein('abc', '')).toBe(3);
+  });
+
+  it('computes single edit distance', () => {
+    expect(levenshtein('cat', 'bat')).toBe(1);
+    expect(levenshtein('cat', 'cats')).toBe(1);
+    expect(levenshtein('cats', 'cat')).toBe(1);
+  });
+
+  it('computes multi-edit distance', () => {
+    expect(levenshtein('kitten', 'sitting')).toBe(3);
+  });
+});
+
+describe('H-DX-001: unresolved variable warnings', () => {
+  it('no warning when variable is defined by let', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'name', { type: 'literal', value: 'Alice' }),
+        createPromptNode('p1', 'Hello ${name}'),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
+
+  it('warns on undefined variable in prompt text', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'Hello ${unknown}')], []);
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'p1',
+      message: 'Reference to undefined variable "${unknown}"',
+    });
+  });
+
+  it('warns on undefined variable in run command', () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'echo ${missing}')], []);
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'r1',
+      message: 'Reference to undefined variable "${missing}"',
+    });
+  });
+
+  it('warns on undefined variable in foreach expression', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createForeachNode('f1', 'item', '${data}', [createPromptNode('p1', 'hi')], 10)],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'f1',
+      message: 'Reference to undefined variable "${data}"',
+    });
+  });
+
+  it('warns on undefined variable in let literal source', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createLetNode('l1', 'msg', { type: 'literal', value: 'Hi ${person}' })],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'l1',
+      message: 'Reference to undefined variable "${person}"',
+    });
+  });
+
+  it('warns on undefined variable in let run source', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createLetNode('l1', 'out', { type: 'run', command: 'echo ${val}' })],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'l1',
+      message: 'Reference to undefined variable "${val}"',
+    });
+  });
+
+  it('warns on undefined variable in let prompt source', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createLetNode('l1', 'out', { type: 'prompt', text: 'Tell me about ${topic}' })],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'l1',
+      message: 'Reference to undefined variable "${topic}"',
+    });
+  });
+
+  it('does not warn on built-in auto-variables', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createRunNode('r1', 'npm test'),
+        createPromptNode(
+          'p1',
+          'Exit: ${last_exit_code}, Failed: ${command_failed}, OK: ${command_succeeded}, Out: ${last_stdout}, Err: ${last_stderr}',
+        ),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
+
+  it('does not warn on _index and _length auto-variables', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createForeachNode(
+          'f1',
+          'item',
+          'a b c',
+          [createPromptNode('p1', '${item_index} of ${item_length}: ${item}')],
+          10,
+        ),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
+
+  it('does not warn on foreach iteration variable', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createForeachNode('f1', 'file', 'a b c', [createPromptNode('p1', 'Process ${file}')], 10)],
+      [],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
+
+  it('suggests close match with "did you mean?"', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'greeting', { type: 'literal', value: 'hello' }),
+        createPromptNode('p1', 'Say ${greting}'),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'p1',
+      message: 'Reference to undefined variable "${greting}" — did you mean "${greeting}"?',
+    });
+  });
+
+  it('does not suggest when no close match exists', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'x', { type: 'literal', value: 'val' }),
+        createPromptNode('p1', 'Say ${completely_different}'),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'p1',
+      message: 'Reference to undefined variable "${completely_different}"',
+    });
+  });
+
+  it('finds variables defined in nested scopes', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createIfNode('i1', 'cond', [
+          createLetNode('l1', 'inner', { type: 'literal', value: 'val' }),
+        ]),
+        createPromptNode('p1', 'Use ${inner}'),
+      ],
+      [],
+    );
+    // inner is collected from nested scope — no warning
+    expect(lintFlow(spec)).toEqual([]);
+  });
+
+  it('finds variables defined inside try/catch/finally', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createTryNode(
+          't1',
+          [createLetNode('l1', 'result', { type: 'run', command: 'cmd' })],
+          'command_failed',
+          [createLetNode('l2', 'fallback', { type: 'literal', value: 'err' })],
+        ),
+        createPromptNode('p1', '${result} or ${fallback}'),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
+
+  it('no warning for ${var:-default} syntax with undefined var', () => {
+    // ${var:-default} should still warn if var is not defined — user is referencing it
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'Hello ${name:-World}')], []);
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'p1',
+      message: 'Reference to undefined variable "${name}"',
+    });
+  });
+
+  it('handles multiple variable refs in single node', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'first', { type: 'literal', value: 'A' }),
+        createPromptNode('p1', '${first} and ${second}'),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'p1',
+      message: 'Reference to undefined variable "${second}"',
+    });
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('${first}') }),
+    );
+  });
+
+  it('checks variables inside spawn body', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createSpawnNode('s1', 'task', [createPromptNode('p1', '${undefined_var}')])],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'p1',
+      message: 'Reference to undefined variable "${undefined_var}"',
+    });
+  });
+
+  it('collects variables from let inside while body', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createWhileNode(
+          'w1',
+          'true',
+          [createLetNode('l1', 'counter', { type: 'literal', value: '0' })],
+          5,
+        ),
+        createPromptNode('p1', 'Count: ${counter}'),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
+});
+
+describe('H-DX-010: infinite loop lint warnings', () => {
+  it('warns when while with tests_fail has no run node', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createWhileNode('w1', 'tests_fail', [createPromptNode('p1', 'fix it')], 5)],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'w1',
+      message: '"tests_fail" loop body has no run: node — condition may never change',
+    });
+  });
+
+  it('warns when until with tests_pass has no run node', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createUntilNode('u1', 'tests_pass', [createPromptNode('p1', 'fix it')], 5)],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'u1',
+      message: '"tests_pass" loop body has no run: node — condition may never change',
+    });
+  });
+
+  it('warns when while with command_failed has no run node', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createWhileNode('w1', 'command_failed', [createPromptNode('p1', 'fix')], 5)],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'w1',
+      message: '"command_failed" loop body has no run: node — condition may never change',
+    });
+  });
+
+  it('no warning when while with tests_fail has run node in body', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createWhileNode(
+          'w1',
+          'tests_fail',
+          [createPromptNode('p1', 'fix it'), createRunNode('r1', 'npm test')],
+          5,
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('condition may never change') }),
+    );
+  });
+
+  it('no warning when while with tests_fail has run node nested in if', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createWhileNode(
+          'w1',
+          'tests_fail',
+          [createIfNode('i1', 'cond', [createRunNode('r1', 'npm test')], [])],
+          5,
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('condition may never change') }),
+    );
+  });
+
+  it('no warning when condition does not reference state-changing predicate', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createWhileNode('w1', 'some_custom_flag', [createPromptNode('p1', 'do it')], 5)],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('condition may never change') }),
+    );
+  });
+
+  it('warns on compound condition with state-changing predicate', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createWhileNode('w1', 'tests_fail and lint_fail', [createPromptNode('p1', 'fix')], 5)],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'w1',
+      message: '"tests_fail and lint_fail" loop body has no run: node — condition may never change',
+    });
+  });
+
+  it('no warning when body has let with run source (counts as run)', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createWhileNode(
+          'w1',
+          'command_failed',
+          [createLetNode('l1', 'out', { type: 'run', command: 'npm test' })],
+          5,
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('condition may never change') }),
+    );
+  });
+
+  it('no warning when body has run node nested in try', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createUntilNode(
+          'u1',
+          'command_succeeded',
+          [
+            createTryNode('t1', [createRunNode('r1', 'npm test')], 'command_failed', [
+              createPromptNode('p1', 'fix'),
+            ]),
+          ],
+          5,
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('condition may never change') }),
+    );
   });
 });

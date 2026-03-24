@@ -624,11 +624,11 @@ flow:
     expect(spec.warnings.some((w) => w.includes('Invalid foreach syntax'))).toBe(true);
   });
 
-  it('warns on foreach with no variable or list expression', () => {
+  it('warns on foreach with variable but missing list expression', () => {
     const dsl = `Goal: g
 
 flow:
-  foreach
+  foreach item in
     prompt: fallback
   end`;
     const spec = parse(dsl);

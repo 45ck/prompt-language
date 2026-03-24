@@ -252,6 +252,19 @@ describe('FileStateStore', () => {
     });
   });
 
+  describe('loadPendingPrompt returns null when prompt key is missing', () => {
+    it('returns null when JSON has no prompt field', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+      // Write valid JSON without the prompt field
+      await writeFile(join(stateDir, 'pending-nl-prompt.json'), '{"timestamp":123}', 'utf-8');
+
+      const result = await store.loadPendingPrompt();
+      expect(result).toBeNull();
+    });
+  });
+
   describe('clearPendingPrompt idempotency', () => {
     it('does not throw when file does not exist', async () => {
       const store = new FileStateStore(tempDir);

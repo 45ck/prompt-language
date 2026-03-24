@@ -38,7 +38,7 @@ export function evaluateArithmetic(expr: string): number | null {
   // Parse subsequent operator + number pairs
   while (remaining.length > 0) {
     const opMatch = OPERATOR_RE.exec(remaining);
-    if (!opMatch || opMatch.index !== 0) return null;
+    if (opMatch?.index !== 0) return null;
 
     const op = opMatch[1]!;
     remaining = remaining.slice(opMatch[0].length);

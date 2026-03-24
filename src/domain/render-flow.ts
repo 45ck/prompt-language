@@ -5,9 +5,18 @@
  * the current execution position, loop progress, gate results, and variables.
  */
 
-import { createHash } from 'node:crypto';
 import type { FlowNode, ForeachNode, IfNode, LetNode, SpawnNode, TryNode } from './flow-node.js';
 import type { SessionState } from './session-state.js';
+
+// D04-fix: Simple FNV-1a string hash — replaces node:crypto to keep domain zero-dep
+function fnv1aHash(str: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    hash ^= str.charCodeAt(i);
+    hash = (hash * 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, '0');
+}
 
 // H-PERF-001: Compute a hash of render-relevant state to detect unchanged renders
 export function renderStateHash(state: SessionState): string {
@@ -17,7 +26,7 @@ export function renderStateHash(state: SessionState): string {
     g: state.gateResults,
     s: state.status,
   });
-  return createHash('md5').update(data).digest('hex');
+  return fnv1aHash(data);
 }
 
 function arraysEqual(a: readonly number[], b: readonly number[]): boolean {

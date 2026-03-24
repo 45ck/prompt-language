@@ -70,11 +70,11 @@ export class FileStateStore implements StateStore {
     // H-SEC-002: Append integrity checksum
     const checksum = computeChecksum(json);
     const jsonWithChecksum = JSON.stringify({ ...JSON.parse(json), _checksum: checksum }, null, 2);
-    // H-SEC-009: Backup current state before overwriting
-    await this.backupCurrentState();
     // H#58: File locking to prevent concurrent writes
     // H-REL-001: Write to temp file then atomic rename
+    // D02-fix: Backup moved inside lock to prevent TOCTOU race
     await this.withLock(async () => {
+      await this.backupCurrentState();
       await writeFile(this.tempFilePath, jsonWithChecksum, 'utf-8');
       await this.renameWithRetry(this.tempFilePath, this.filePath);
     });
@@ -137,14 +137,12 @@ export class FileStateStore implements StateStore {
       if (isNodeError(error) && error.code === 'ENOENT') {
         return null;
       }
-      // Corrupted or invalid JSON — H-SEC-009: try backup before giving up
-      if (error instanceof SyntaxError) {
-        process.stderr.write(
-          '[prompt-language] WARNING: session-state.json is corrupted, trying backup\n',
-        );
-        return this.readBackupState();
-      }
-      throw error;
+      // D03-fix: Catch all parse/corruption errors, not just SyntaxError
+      // Any error reading an existing file indicates corruption — try backup
+      process.stderr.write(
+        '[prompt-language] WARNING: session-state.json is corrupted, trying backup\n',
+      );
+      return this.readBackupState();
     }
   }
 

@@ -2523,7 +2523,7 @@ describe('autoAdvanceNodes — loop timeout', () => {
       [createRunNode('r1', 'echo hi')],
       100,
       undefined,
-      0, // 0 second timeout — will immediately expire
+      0.001, // near-zero timeout — will immediately expire (0 means no timeout)
     );
     const spec = createFlowSpec('test', [whileNode, createPromptNode('p1', 'done')]);
     let state = createSessionState('s1', spec);

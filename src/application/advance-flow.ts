@@ -161,8 +161,8 @@ function handleLoopReentry(
   const iteration = progress?.iteration ?? 1;
   let current = state;
 
-  // H-LANG-008: Check wall-clock timeout
-  if (shouldReLoop && timeoutSeconds != null) {
+  // H-LANG-008: Check wall-clock timeout (D05-fix: 0 means no timeout)
+  if (shouldReLoop && timeoutSeconds != null && timeoutSeconds > 0) {
     const loopStart = progress?.loopStartedAt ?? progress?.startedAt;
     if (loopStart != null) {
       const elapsed = (Date.now() - loopStart) / 1000;
@@ -361,13 +361,11 @@ async function advanceLetNode(
       // H-REL-010: Truncate captured variable to MAX_OUTPUT_LENGTH
       if (value.length > MAX_OUTPUT_LENGTH) {
         value = value.slice(0, MAX_OUTPUT_LENGTH) + '\n[truncated]';
-        current = {
-          ...current,
-          warnings: [
-            ...current.warnings,
-            `Variable '${node.variableName}' truncated to ${MAX_OUTPUT_LENGTH} chars.`,
-          ],
-        };
+        // D10-fix: Use addWarning() domain function instead of direct spread
+        current = addWarning(
+          current,
+          `Variable '${node.variableName}' truncated to ${MAX_OUTPUT_LENGTH} chars.`,
+        );
       }
       current = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
       if (result.exitCode !== 0) {
@@ -704,7 +702,7 @@ function computePollInterval(pollCount: number): number {
   if (pollCount <= 5) return 1000;
   if (pollCount <= 15) return 2000;
   if (pollCount <= 35) return 5000;
-  return Math.min(10000, 15000);
+  return 10000;
 }
 
 /** Advance an await node: poll children and block until target(s) complete. */

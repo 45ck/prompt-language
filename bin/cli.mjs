@@ -338,8 +338,6 @@ done when:
 
 // H-INT-003: CI/CD mode — run a flow headlessly via `claude -p`
 async function ci() {
-  const { execSync } = await import('node:child_process');
-
   // Accept flow from --file <path> or remaining positional args
   const args = process.argv.slice(3);
   let flowText = '';
@@ -371,9 +369,9 @@ async function ci() {
 
   console.log('[prompt-language CI] Running flow headlessly...');
   try {
-    // Use claude -p with --dangerously-skip-permissions for non-interactive execution
-    const escaped = flowText.replace(/'/g, "'\\''");
-    execSync(`claude -p --dangerously-skip-permissions '${escaped}'`, {
+    const { execFileSync } = await import('node:child_process');
+    // D01-fix: Use execFileSync with array args to prevent shell injection
+    execFileSync('claude', ['-p', '--dangerously-skip-permissions', flowText], {
       stdio: 'inherit',
       timeout: 600_000, // 10 min max
     });

@@ -15,7 +15,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
-import { renderFlow, renderStateHash } from '../../domain/render-flow.js';
+import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { formatError } from '../../domain/format-error.js';
 import { CAPTURE_VARS_DIR } from '../../domain/capture-prompt.js';
@@ -42,9 +42,6 @@ async function scanAndSaveCapturedVars(
 
 // H-PERF-006: Read-only tools that don't need flow re-rendering
 const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch']);
-
-// H-PERF-001: Track last rendered hash to skip unchanged renders
-let lastRenderHash: string | undefined;
 
 // H-INT-012: Tools that trigger fast gate pre-check
 const WRITE_TOOLS = new Set(['Write', 'Edit']);
@@ -111,14 +108,10 @@ async function main(): Promise<void> {
 
   if (state?.status === 'active') {
     // H-PERF-006: Skip render for read-only tools
-    // H-PERF-001: Skip render if state hash unchanged since last render
+    // D09-fix: Removed dead lastRenderHash (each hook is a fresh process)
     if (!toolName || !READ_ONLY_TOOLS.has(toolName)) {
-      const hash = renderStateHash(state);
-      if (hash !== lastRenderHash) {
-        lastRenderHash = hash;
-        const rendered = renderFlow(state);
-        process.stderr.write(`\n${colorizeFlow(rendered)}\n`);
-      }
+      const rendered = renderFlow(state);
+      process.stderr.write(`\n${colorizeFlow(rendered)}\n`);
     }
 
     // Scan tool output for capture tags

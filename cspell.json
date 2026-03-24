@@ -81,7 +81,8 @@
     "auditlogger",
     "myvar",
     "inlines",
-    "myloop"
+    "myloop",
+    "toctou"
   ],
   "ignorePaths": [
     "dist/**",

@@ -180,7 +180,7 @@ describe('FileStateStore', () => {
     await expect(store.save(session)).rejects.toThrow('EACCES');
   });
 
-  it('readState rethrows non-ENOENT, non-SyntaxError errors', async () => {
+  it('readState falls back to backup on non-ENOENT errors (D03)', async () => {
     const store = new FileStateStore(tempDir);
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
@@ -189,7 +189,9 @@ describe('FileStateStore', () => {
     const statePath = join(stateDir, 'session-state.json');
     await mkdir(statePath, { recursive: true });
 
-    await expect(store.loadCurrent()).rejects.toThrow();
+    // D03: All read errors now fall back to backup instead of rethrowing
+    const result = await store.loadCurrent();
+    expect(result).toBeNull(); // No backup exists, returns null
   });
 
   it('clear rethrows non-ENOENT errors', async () => {

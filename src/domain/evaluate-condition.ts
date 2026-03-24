@@ -131,17 +131,18 @@ export function evaluateCondition(
     return evaluateComparison(compMatch[1], compMatch[2], compMatch[3], variables);
   }
 
-  // Literal boolean values
+  // Simple variable lookup (D06-fix: check variables BEFORE literal booleans)
+  if (trimmed in variables) {
+    const value = variables[trimmed];
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'number') return value !== 0;
+    if (typeof value === 'string') return value.length > 0;
+    return null;
+  }
+
+  // Literal boolean values (after variable lookup so vars named 'true'/'false' work)
   if (trimmed === 'true') return true;
   if (trimmed === 'false') return false;
-
-  // Simple variable lookup
-  if (!(trimmed in variables)) return null;
-
-  const value = variables[trimmed];
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value !== 0;
-  if (typeof value === 'string') return value.length > 0;
 
   return null;
 }

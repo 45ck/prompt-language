@@ -73,6 +73,7 @@
     "package-lock.json",
     "scripts/eval/comparative-eval-v3.mjs",
     "scripts/eval/comparative-eval-v4.mjs",
-    "docs/showcase.md"
+    "docs/showcase.md",
+    "docs/research/**"
   ]
 }

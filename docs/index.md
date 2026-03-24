@@ -37,3 +37,11 @@
 | Doc                               | Contents                                           |
 | --------------------------------- | -------------------------------------------------- |
 | [Eval Analysis](eval-analysis.md) | 45-hypothesis A/B comparison, methodology, results |
+
+## Research
+
+| Doc                                                                   | Contents                                                     |
+| --------------------------------------------------------------------- | ------------------------------------------------------------ |
+| [Research Index](research/README.md)                                  | Index of all research reports with abstracts and source list |
+| [Architecture Position](research/00-architecture-position.md)         | How prompt-language differs from LangChain, DSPy, CrewAI     |
+| [Enhancement Opportunities](research/07-enhancement-opportunities.md) | Wishlist with evidence tiers, proposed syntax, priorities    |

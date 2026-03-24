@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { mkdtemp, rm, writeFile, mkdir, open } from 'node:fs/promises';
+import { mkdtemp, rm, readFile, writeFile, mkdir, open, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FileStateStore } from './file-state-store.js';
-import { createSessionState } from '../../domain/session-state.js';
+import { createSessionState, type SessionState } from '../../domain/session-state.js';
 import { createFlowSpec } from '../../domain/flow-spec.js';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
@@ -101,6 +101,20 @@ describe('FileStateStore', () => {
     expect(result).toBeNull();
   });
 
+  it('writes warning to stderr when state file is corrupted', async () => {
+    const store = new FileStateStore(tempDir);
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(join(stateDir, 'session-state.json'), '{{garbage', 'utf-8');
+
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    await store.loadCurrent();
+    expect(stderrSpy).toHaveBeenCalledWith(
+      '[prompt-language] WARNING: session-state.json is corrupted, ignoring\n',
+    );
+    stderrSpy.mockRestore();
+  });
+
   it('returns null from load when state file contains invalid JSON', async () => {
     const store = new FileStateStore(tempDir);
     const stateDir = join(tempDir, '.prompt-language');
@@ -185,5 +199,172 @@ describe('FileStateStore', () => {
     await writeFile(join(statePath, 'dummy'), 'x', 'utf-8');
 
     await expect(store.clear('s1')).rejects.toThrow();
+  });
+
+  it('produces valid JSON state file after atomic save', async () => {
+    const store = new FileStateStore(tempDir);
+    const session = createSessionState('s1', makeSpec());
+    await store.save(session);
+
+    const statePath = join(tempDir, '.prompt-language', 'session-state.json');
+    const raw = await readFile(statePath, 'utf-8');
+    const parsed = JSON.parse(raw);
+    expect(parsed.sessionId).toBe('s1');
+  });
+
+  it('cleans up temp file after atomic save', async () => {
+    const store = new FileStateStore(tempDir);
+    const session = createSessionState('s1', makeSpec());
+    await store.save(session);
+
+    const tempPath = join(tempDir, '.prompt-language', 'session-state.tmp.json');
+    await expect(access(tempPath)).rejects.toThrow();
+  });
+
+  describe('pending prompt full cycle', () => {
+    it('save → load → clear → load returns null', async () => {
+      const store = new FileStateStore(tempDir);
+      await store.savePendingPrompt('Hello world');
+
+      const loaded = await store.loadPendingPrompt();
+      expect(loaded).toBe('Hello world');
+
+      await store.clearPendingPrompt();
+
+      const afterClear = await store.loadPendingPrompt();
+      expect(afterClear).toBeNull();
+    });
+  });
+
+  describe('loadPendingPrompt returns null on bad JSON', () => {
+    it('returns null when pending-nl-prompt.json contains garbage', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+      await writeFile(join(stateDir, 'pending-nl-prompt.json'), '{{not valid json', 'utf-8');
+
+      const result = await store.loadPendingPrompt();
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('clearPendingPrompt idempotency', () => {
+    it('does not throw when file does not exist', async () => {
+      const store = new FileStateStore(tempDir);
+      await expect(store.clearPendingPrompt()).resolves.toBeUndefined();
+    });
+  });
+
+  describe('clearPendingPrompt rethrows non-ENOENT errors', () => {
+    it('throws when pending prompt path is a directory', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      // Make pending-nl-prompt.json a non-empty directory so unlink fails with EPERM/EISDIR
+      const promptPath = join(stateDir, 'pending-nl-prompt.json');
+      await mkdir(promptPath, { recursive: true });
+      await writeFile(join(promptPath, 'dummy'), 'x', 'utf-8');
+
+      await expect(store.clearPendingPrompt()).rejects.toThrow();
+    });
+  });
+
+  describe('save at boundary size', () => {
+    it('succeeds when JSON is just under 100KB', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      // Measure baseline JSON size and fill remaining space
+      const baseJson = JSON.stringify(session, null, 2);
+      const padding = 100 * 1024 - baseJson.length - 100; // leave small margin for key overhead
+      const stateWithPadding = {
+        ...session,
+        variables: { pad: 'x'.repeat(Math.max(0, padding)) },
+      };
+      const finalJson = JSON.stringify(stateWithPadding, null, 2);
+      // Verify it's under the limit
+      expect(finalJson.length).toBeLessThanOrEqual(100 * 1024);
+
+      await expect(store.save(stateWithPadding as typeof session)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('save preserves variables through round-trip', () => {
+    it('loaded state has same variables as saved state', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      const withVars = {
+        ...session,
+        variables: { greeting: 'hello', count: 42, flag: true },
+      };
+
+      await store.save(withVars as typeof session);
+      const loaded = await store.loadCurrent();
+
+      expect(loaded).not.toBeNull();
+      expect(loaded!.variables).toEqual({ greeting: 'hello', count: 42, flag: true });
+    });
+  });
+
+  describe('save overwrites previous state', () => {
+    it('loadCurrent returns the last saved state', async () => {
+      const store = new FileStateStore(tempDir);
+      const s1 = createSessionState('s1', makeSpec());
+      const s2 = createSessionState('s2', makeSpec());
+
+      await store.save(s1);
+      await store.save(s2);
+
+      const loaded = await store.loadCurrent();
+      expect(loaded?.sessionId).toBe('s2');
+    });
+  });
+
+  describe('concurrent saves (serial execution)', () => {
+    it('final state is the last saved', async () => {
+      const store = new FileStateStore(tempDir);
+      const s1 = {
+        ...createSessionState('s1', makeSpec()),
+        variables: { value: 'first' },
+      };
+      const s2 = {
+        ...createSessionState('s1', makeSpec()),
+        variables: { value: 'second' },
+      };
+
+      await store.save(s1 as SessionState);
+      await store.save(s2 as SessionState);
+
+      const loaded = await store.load('s1');
+      expect(loaded).not.toBeNull();
+      expect(loaded!.variables).toEqual({ value: 'second' });
+    });
+  });
+
+  describe('load returns null when sessionId does not match', () => {
+    it('save s1, load with s2 returns null', async () => {
+      const store = new FileStateStore(tempDir);
+      await store.save(createSessionState('s1', makeSpec()));
+
+      const result = await store.load('s2');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('exists returns false after clear with pending prompt', () => {
+    it('save → clear → exists is false, pending prompt also cleared', async () => {
+      const store = new FileStateStore(tempDir);
+      await store.save(createSessionState('s1', makeSpec()));
+      await store.savePendingPrompt('test prompt');
+
+      expect(await store.exists()).toBe(true);
+      expect(await store.loadPendingPrompt()).toBe('test prompt');
+
+      await store.clear('s1');
+      await store.clearPendingPrompt();
+
+      expect(await store.exists()).toBe(false);
+      expect(await store.loadPendingPrompt()).toBeNull();
+    });
   });
 });

@@ -1,11 +1,13 @@
 {
+  "description": "prompt-language flow engine hooks for context injection, gate enforcement, and flow visualization",
   "hooks": {
     "UserPromptSubmit": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/presentation/hooks/user-prompt-submit.js"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/presentation/hooks/user-prompt-submit.js",
+            "timeout": 60
           }
         ]
       }
@@ -15,7 +17,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/presentation/hooks/stop.js"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/presentation/hooks/stop.js",
+            "timeout": 5
           }
         ]
       }
@@ -25,7 +28,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/presentation/hooks/task-completed.js"
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/presentation/hooks/task-completed.js",
+            "timeout": 60
           }
         ]
       }
@@ -37,6 +41,18 @@
           {
             "type": "command",
             "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/presentation/hooks/post-tool-use.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/presentation/hooks/pre-compact.js",
             "timeout": 5
           }
         ]

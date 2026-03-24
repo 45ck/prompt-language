@@ -144,4 +144,78 @@ describe('evaluateCondition', () => {
       expect(evaluateCondition("status == 'active'", { status: 'active' })).toBe(true);
     });
   });
+
+  // Edge cases: variable names containing operator substrings
+  describe('variable names containing "and"/"or"', () => {
+    it('variable name containing "and" is not split', () => {
+      expect(evaluateCondition('android', { android: true })).toBe(true);
+    });
+
+    it('variable name containing "or" is not split', () => {
+      expect(evaluateCondition('condor', { condor: false })).toBe(false);
+    });
+  });
+
+  // Edge cases: not with comparison
+  describe('"not" with comparison', () => {
+    it('negates a comparison result (count > 5 with count=3)', () => {
+      expect(evaluateCondition('not count > 5', { count: 3 })).toBe(true);
+    });
+
+    it('negates a true comparison (count > 5 with count=10)', () => {
+      expect(evaluateCondition('not count > 5', { count: 10 })).toBe(false);
+    });
+  });
+
+  // Edge cases: chained and/or with three operands
+  describe('chained and/or with three operands', () => {
+    it('a and b and c — all true', () => {
+      expect(evaluateCondition('a and b and c', { a: true, b: true, c: true })).toBe(true);
+    });
+
+    it('a and b and c — one false', () => {
+      expect(evaluateCondition('a and b and c', { a: true, b: false, c: true })).toBe(false);
+    });
+
+    it('a or b or c — last true', () => {
+      expect(evaluateCondition('a or b or c', { a: false, b: false, c: true })).toBe(true);
+    });
+
+    it('a or b or c — all false', () => {
+      expect(evaluateCondition('a or b or c', { a: false, b: false, c: false })).toBe(false);
+    });
+  });
+
+  // Edge cases: unresolved ${var} references
+  describe('unresolved ${var} references in comparison', () => {
+    it('${x} == ${y} with both unresolved compares literal strings', () => {
+      // Both variables missing: resolveOperand returns "${x}" and "${y}" as strings
+      // "${x}" == "${y}" → different strings → false
+      expect(evaluateCondition('${x} == ${y}', {})).toBe(false);
+    });
+
+    it('${x} == ${x} with unresolved compares identical literal strings', () => {
+      // Both resolve to "${x}" as strings → equal → true
+      expect(evaluateCondition('${x} == ${x}', {})).toBe(true);
+    });
+  });
+
+  // Edge cases: boundary values for <= and >=
+  describe('boundary values for <= and >=', () => {
+    it('<= with equal values returns true', () => {
+      expect(evaluateCondition('count <= 5', { count: 5 })).toBe(true);
+    });
+
+    it('>= with lesser value returns false', () => {
+      expect(evaluateCondition('count >= 10', { count: 5 })).toBe(false);
+    });
+
+    it('>= with equal values returns true', () => {
+      expect(evaluateCondition('count >= 5', { count: 5 })).toBe(true);
+    });
+
+    it('<= with greater value returns false', () => {
+      expect(evaluateCondition('count <= 3', { count: 5 })).toBe(false);
+    });
+  });
 });

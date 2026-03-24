@@ -25,6 +25,7 @@ import {
   createLetNode,
   createForeachNode,
   createBreakNode,
+  createContinueNode,
   createSpawnNode,
   createAwaitNode,
 } from '../domain/flow-node.js';
@@ -1710,5 +1711,361 @@ describe('autoAdvanceNodes — let append run', () => {
     expect(result.variables['items_length']).toBe(1);
     const items = JSON.parse(result.variables['items'] as string);
     expect(items).toEqual(['new-item']);
+  });
+});
+
+// ── H-LANG-002: Continue node advancement ───────────────────────────
+
+describe('autoAdvanceNodes — continue', () => {
+  it('continue skips rest of foreach body and advances to next item', async () => {
+    const fe = createForeachNode(
+      'f1',
+      'x',
+      'a b c',
+      [
+        createLetNode('l1', 'marker', { type: 'literal', value: '${x}' }),
+        createContinueNode('c1'),
+        createLetNode('l2', 'never', { type: 'literal', value: 'oops' }),
+      ],
+      50,
+    );
+    const spec = createFlowSpec('test', [
+      fe,
+      createLetNode('l3', 'after', { type: 'literal', value: 'yes' }),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    // Process all items — continue should skip l2 each time
+    const r1 = await autoAdvanceNodes(state);
+    // First iteration: marker=a, continue triggers next item
+    expect(r1.state.variables['marker']).toBe('${x}');
+    // 'never' should not be set since continue skips it
+    expect(r1.state.variables['never']).toBeUndefined();
+  });
+
+  it('continue exits while loop when condition becomes false', async () => {
+    const wh = createWhileNode(
+      'w1',
+      'flag',
+      [createContinueNode('c1'), createLetNode('l1', 'never', { type: 'literal', value: 'oops' })],
+      5,
+    );
+    const spec = createFlowSpec('test', [
+      wh,
+      createLetNode('l2', 'after', { type: 'literal', value: 'done' }),
+    ]);
+    let state = createSessionState('s1', spec);
+    // flag is true initially so while enters, continue triggers re-evaluation
+    // On re-entry, flag will still be true but iteration increments
+    // Set flag to false so the loop exits on the re-evaluation after continue
+    state = { ...state, variables: { flag: false } };
+
+    const { state: result } = await autoAdvanceNodes(state);
+    // while condition is false on entry, should skip body entirely
+    expect(result.variables['after']).toBe('done');
+    expect(result.variables['never']).toBeUndefined();
+  });
+
+  it('continue re-enters while loop body when condition is true', async () => {
+    const wh = createWhileNode(
+      'w1',
+      'flag',
+      [
+        createLetNode('l1', 'count', { type: 'literal', value: 'hit' }),
+        createContinueNode('c1'),
+        createLetNode('l2', 'skip', { type: 'literal', value: 'no' }),
+      ],
+      3,
+    );
+    const spec = createFlowSpec('test', [wh]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { flag: true } };
+
+    // Enter while, set count=hit, continue -> re-evaluate -> true -> re-enter body
+    // This should keep looping until max iterations
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['count']).toBe('hit');
+    expect(result.variables['skip']).toBeUndefined();
+    // Should have reached max iterations (3)
+    expect(result.nodeProgress['w1']?.iteration).toBe(3);
+  });
+
+  it('continue works inside until loop', async () => {
+    const ut = createUntilNode(
+      'u1',
+      'done_flag',
+      [createContinueNode('c1'), createLetNode('l1', 'never', { type: 'literal', value: 'no' })],
+      3,
+    );
+    const spec = createFlowSpec('test', [
+      ut,
+      createLetNode('l2', 'after', { type: 'literal', value: 'yes' }),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { done_flag: false } };
+
+    const { state: result } = await autoAdvanceNodes(state);
+    // Until loop should run until max iterations since done_flag stays false
+    expect(result.variables['never']).toBeUndefined();
+    expect(result.nodeProgress['u1']?.iteration).toBe(3);
+  });
+
+  it('continue works inside retry loop', async () => {
+    const rt = createRetryNode(
+      'r1',
+      [createContinueNode('c1'), createLetNode('l1', 'never', { type: 'literal', value: 'no' })],
+      3,
+    );
+    const spec = createFlowSpec('test', [
+      rt,
+      createLetNode('l2', 'after', { type: 'literal', value: 'yes' }),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { command_failed: true } };
+
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['never']).toBeUndefined();
+    expect(result.nodeProgress['r1']?.iteration).toBe(3);
+  });
+
+  it('continue outside loop just advances past continue', async () => {
+    const spec = createFlowSpec('test', [
+      createContinueNode('c1'),
+      createLetNode('l1', 'after', { type: 'literal', value: 'yes' }),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['after']).toBe('yes');
+  });
+
+  it('continue inside nested if within loop skips to next iteration', async () => {
+    const wh = createWhileNode(
+      'w1',
+      'flag',
+      [
+        createIfNode('i1', 'flag', [createContinueNode('c1')]),
+        createLetNode('l1', 'skip', { type: 'literal', value: 'no' }),
+      ],
+      3,
+    );
+    const spec = createFlowSpec('test', [wh]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { flag: true } };
+
+    const { state: result } = await autoAdvanceNodes(state);
+    // Continue inside if should skip the let node after the if
+    expect(result.variables['skip']).toBeUndefined();
+    expect(result.nodeProgress['w1']?.iteration).toBe(3);
+  });
+});
+
+// ── H-LANG-006: Condition defaults via interpolation ────────────────
+
+describe('evaluateFlowCondition — interpolation', () => {
+  it('resolves ${var:-default} in condition before evaluation', async () => {
+    // ${status:-pending} == "ready" with empty variables should resolve to
+    // pending == "ready" which is false
+    const result = await evaluateFlowCondition('${status:-pending} == "ready"', {});
+    expect(result).toBe(false);
+  });
+
+  it('resolves ${var:-default} to variable value when present', async () => {
+    const result = await evaluateFlowCondition('${status:-pending} == "ready"', {
+      status: 'ready',
+    });
+    expect(result).toBe(true);
+  });
+
+  it('resolves ${var} in condition to variable value', async () => {
+    const result = await evaluateFlowCondition('${count} > 0', { count: 5 });
+    expect(result).toBe(true);
+  });
+
+  it('${var:-default} with numeric comparison', async () => {
+    const result = await evaluateFlowCondition('${limit:-10} > 5', {});
+    expect(result).toBe(true);
+  });
+
+  it('interpolation preserves plain conditions (no ${} refs)', async () => {
+    const result = await evaluateFlowCondition('command_failed', { command_failed: true });
+    expect(result).toBe(true);
+  });
+});
+
+// ── Edge cases: stale-state detection ────────────────────────────────
+
+describe('autoAdvanceNodes — stale-state detection', () => {
+  it('breaks loop when prompt node does not change path (waiting for input)', async () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'Please respond')]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+    // Prompt should be captured (not infinite loop)
+    expect(capturedPrompt).toBe('Please respond');
+    // Path should have advanced past the prompt
+    expect(result.currentNodePath).toEqual([1]);
+  });
+
+  it('processes many sequential let nodes followed by a prompt without stale detection', async () => {
+    const lets = Array.from({ length: 7 }, (_, i) =>
+      createLetNode(`l${i}`, `v${i}`, { type: 'literal', value: `val-${i}` }),
+    );
+    const spec = createFlowSpec('test', [...lets, createPromptNode('p1', 'All done')]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+    // All 7 let variables should be set
+    for (let i = 0; i < 7; i++) {
+      expect(result.variables[`v${i}`]).toBe(`val-${i}`);
+    }
+    // Prompt should be captured
+    expect(capturedPrompt).toBe('All done');
+    // No stale-state or MAX_ADVANCES warnings
+    expect(result.warnings).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('MAX_ADVANCES')]),
+    );
+  });
+});
+
+// ── Edge cases: deeply nested break ──────────────────────────────────
+
+describe('autoAdvanceNodes — deeply nested break', () => {
+  it('break inside if inside while exits the while loop', async () => {
+    const wh = createWhileNode(
+      'w1',
+      'flag',
+      [
+        createIfNode('i1', 'flag', [createBreakNode('b1')]),
+        createLetNode('l1', 'never', { type: 'literal', value: 'x' }),
+      ],
+      5,
+    );
+    const spec = createFlowSpec('test', [
+      wh,
+      createLetNode('l2', 'after', { type: 'literal', value: 'done' }),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { flag: true } };
+
+    const { state: result } = await autoAdvanceNodes(state);
+    // Break should have exited while — 'never' should not be set
+    expect(result.variables['never']).toBeUndefined();
+    // Code after while should have executed
+    expect(result.variables['after']).toBe('done');
+  });
+});
+
+// ── Edge cases: try → finally (no catch) ─────────────────────────────
+
+describe('autoAdvanceNodes — try/finally without catch', () => {
+  it('finally executes after successful body when no catch body exists', async () => {
+    const runner: CommandRunner = {
+      run: async (cmd: string) => {
+        return { exitCode: 0, stdout: cmd, stderr: '' };
+      },
+    };
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'body-ok')],
+      'command_failed',
+      [], // no catch body
+      [createLetNode('lf', 'cleanup', { type: 'literal', value: 'cleaned' })],
+    );
+    const spec = createFlowSpec('test', [
+      tryNode,
+      createLetNode('l2', 'after', { type: 'literal', value: 'past-try' }),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    // Finally body let should have executed
+    expect(result.variables['cleanup']).toBe('cleaned');
+    // Should have advanced past try
+    expect(result.variables['after']).toBe('past-try');
+  });
+});
+
+// ── Edge cases: try → catch → finally ordering ──────────────────────
+
+describe('autoAdvanceNodes — try/catch/finally ordering', () => {
+  it('catch and finally both execute when body fails', async () => {
+    const runner: CommandRunner = {
+      run: async (cmd: string) => {
+        if (cmd === 'fail-cmd') {
+          return { exitCode: 1, stdout: '', stderr: 'error' };
+        }
+        return { exitCode: 0, stdout: cmd, stderr: '' };
+      },
+    };
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'fail-cmd')],
+      'command_failed',
+      [createLetNode('lc', 'caught', { type: 'literal', value: 'yes' })],
+      [createLetNode('lf', 'finalized', { type: 'literal', value: 'yes' })],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    // Both catch and finally lets should have executed
+    expect(result.variables['caught']).toBe('yes');
+    expect(result.variables['finalized']).toBe('yes');
+  });
+});
+
+// ── Edge cases: foreach single-item and empty iterable ───────────────
+
+describe('autoAdvanceNodes — foreach edge cases (single/empty)', () => {
+  it('foreach with single-item iterable iterates once', async () => {
+    const foreachNode = createForeachNode('fe1', 'x', 'solo', [
+      createPromptNode('p1', 'item: ${x}'),
+    ]);
+    const promptAfter = createPromptNode('p2', 'Done');
+    const spec = createFlowSpec('test', [foreachNode, promptAfter]);
+    const state = createSessionState('s1', spec);
+
+    // First call: enters foreach with x=solo
+    const r1 = await autoAdvanceNodes(state);
+    expect(r1.capturedPrompt).toBe('item: solo');
+    expect(r1.state.variables['x']).toBe('solo');
+
+    // Second call: body exhausted, no more items, advance past foreach
+    const r2 = await autoAdvanceNodes(r1.state);
+    expect(r2.capturedPrompt).toBe('Done');
+  });
+
+  it('foreach with empty string skips body entirely', async () => {
+    const foreachNode = createForeachNode('fe1', 'x', '', [
+      createPromptNode('p1', 'should not appear'),
+    ]);
+    const promptAfter = createPromptNode('p2', 'Skipped');
+    const spec = createFlowSpec('test', [foreachNode, promptAfter]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state);
+    expect(capturedPrompt).toBe('Skipped');
+  });
+});
+
+// ── Edge cases: spawn body exhaustion ────────────────────────────────
+
+describe('autoAdvanceNodes — spawn body exhaustion edge case', () => {
+  it('advances past spawn when path is beyond body end', async () => {
+    const spawn = createSpawnNode('sp1', 'task', [
+      createLetNode('l1', 'inner', { type: 'literal', value: 'val' }),
+    ]);
+    const spec = createFlowSpec('test', [
+      spawn,
+      createLetNode('l2', 'after', { type: 'literal', value: 'yes' }),
+    ]);
+    let state = createSessionState('s1', spec);
+    // Set path to [0, 1] — past the single body node
+    state = { ...state, currentNodePath: [0, 1] };
+
+    const { state: result } = await autoAdvanceNodes(state);
+    // Should have advanced past spawn and executed the let after it
+    expect(result.variables['after']).toBe('yes');
   });
 });

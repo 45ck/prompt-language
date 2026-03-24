@@ -133,9 +133,9 @@ function gatesSummary(state: SessionState): string {
   return gates
     .map((g) => {
       const result = state.gateResults[g.predicate];
-      if (result === true) return `${g.predicate}:PASS`;
-      if (result === false) return `${g.predicate}:FAIL`;
-      return `${g.predicate}:PENDING`;
+      if (result === true) return `${g.predicate}:✓`;
+      if (result === false) return `${g.predicate}:✗`;
+      return `${g.predicate}:○`;
     })
     .join(' ');
 }
@@ -162,7 +162,7 @@ export function renderStatusLine(state: SessionState): string {
   const nodeSummary = currentNode ? summarizeNode(currentNode) : 'advancing\u2026';
 
   const parts = [`${PREFIX}${goal}`];
-  const middle = loop ? `${loop} > ${nodeSummary}` : nodeSummary;
+  const middle = loop ? `${loop} ▶ ${nodeSummary}` : nodeSummary;
   parts.push(middle);
   if (gates) parts.push(gates);
 

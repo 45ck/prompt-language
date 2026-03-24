@@ -57,7 +57,8 @@ async function main(): Promise<void> {
     const state = await stateStore.loadCurrent();
     if (state?.status === 'active') {
       const { renderFlow } = await import('../../domain/render-flow.js');
-      process.stderr.write(`\n${renderFlow(state)}\n`);
+      const { colorizeFlow } = await import('../../domain/colorize-flow.js');
+      process.stderr.write(`\n${colorizeFlow(renderFlow(state))}\n`);
     }
   }
 

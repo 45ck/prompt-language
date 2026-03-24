@@ -53,7 +53,7 @@ describe('renderFlow', () => {
     state = { ...state, currentNodePath: [1] };
     const output = renderFlow(state);
     expect(output).toContain('> run: npm test  <-- current');
-    expect(output).not.toContain('> prompt: first');
+    expect(output).toContain('~ prompt: first');
   });
 
   it('marks ancestor nodes with > prefix but no <-- current suffix', () => {
@@ -601,5 +601,47 @@ describe('renderFlow', () => {
     const state = createSessionState('s1', spec);
     const output = renderFlow(state);
     expect(output).toContain('await "fix-auth"');
+  });
+
+  it('marks completed nodes with ~ prefix', () => {
+    const spec = createFlowSpec('test', [
+      createPromptNode('p1', 'step one'),
+      createRunNode('r1', 'npm test'),
+      createPromptNode('p2', 'step three'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [2] };
+    const output = renderFlow(state);
+    expect(output).toContain('~ prompt: step one');
+    expect(output).toContain('~ run: npm test');
+    expect(output).toContain('> prompt: step three  <-- current');
+  });
+
+  it('marks completed nodes inside loop body', () => {
+    const whileNode = createWhileNode('w1', 'not done', [
+      createPromptNode('p1', 'step one'),
+      createRunNode('r1', 'npm test'),
+      createPromptNode('p2', 'step two'),
+    ]);
+    const spec = createFlowSpec('test', [whileNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 2] };
+    const output = renderFlow(state);
+    expect(output).toContain('~   prompt: step one');
+    expect(output).toContain('~   run: npm test');
+    expect(output).toContain('>   prompt: step two  <-- current');
+  });
+
+  it('does not mark future nodes as completed', () => {
+    const spec = createFlowSpec('test', [
+      createPromptNode('p1', 'current'),
+      createPromptNode('p2', 'future'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0] };
+    const output = renderFlow(state);
+    expect(output).toContain('> prompt: current  <-- current');
+    expect(output).toContain('  prompt: future');
+    expect(output).not.toContain('~ prompt: future');
   });
 });

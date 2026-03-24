@@ -15,25 +15,25 @@ describe('colorizeStatusLine', () => {
     expect(result).toContain(`${CYAN}${BOLD}[PL]${RESET}`);
   });
 
-  it('colorizes :PASS in green', () => {
-    const result = colorizeStatusLine('[PL] Goal | tests_pass:PASS');
-    expect(result).toContain(`:${GREEN}PASS${RESET}`);
+  it('colorizes :✓ in green', () => {
+    const result = colorizeStatusLine('[PL] Goal | tests_pass:✓');
+    expect(result).toContain(`:${GREEN}✓${RESET}`);
   });
 
-  it('colorizes :FAIL in red', () => {
-    const result = colorizeStatusLine('[PL] Goal | tests_pass:FAIL');
-    expect(result).toContain(`:${RED}FAIL${RESET}`);
+  it('colorizes :✗ in red', () => {
+    const result = colorizeStatusLine('[PL] Goal | tests_pass:✗');
+    expect(result).toContain(`:${RED}✗${RESET}`);
   });
 
-  it('colorizes :PENDING in yellow', () => {
-    const result = colorizeStatusLine('[PL] Goal | tests_pass:PENDING');
-    expect(result).toContain(`:${YELLOW}PENDING${RESET}`);
+  it('colorizes :○ in yellow', () => {
+    const result = colorizeStatusLine('[PL] Goal | tests_pass:○');
+    expect(result).toContain(`:${YELLOW}○${RESET}`);
   });
 
   it('colorizes multiple gates', () => {
-    const result = colorizeStatusLine('[PL] Goal | tests_pass:FAIL lint_pass:PASS');
-    expect(result).toContain(`:${RED}FAIL${RESET}`);
-    expect(result).toContain(`:${GREEN}PASS${RESET}`);
+    const result = colorizeStatusLine('[PL] Goal | tests_pass:✗ lint_pass:✓');
+    expect(result).toContain(`:${RED}✗${RESET}`);
+    expect(result).toContain(`:${GREEN}✓${RESET}`);
   });
 
   it('colorizes Status: completed in green', () => {
@@ -57,9 +57,9 @@ describe('colorizeStatusLine', () => {
   });
 
   it('handles completed status with gates', () => {
-    const result = colorizeStatusLine('[PL] Goal | Status: completed | tests_pass:PASS');
+    const result = colorizeStatusLine('[PL] Goal | Status: completed | tests_pass:✓');
     expect(result).toContain(`${CYAN}${BOLD}[PL]${RESET}`);
     expect(result).toContain(`${GREEN}Status: completed${RESET}`);
-    expect(result).toContain(`:${GREEN}PASS${RESET}`);
+    expect(result).toContain(`:${GREEN}✓${RESET}`);
   });
 });

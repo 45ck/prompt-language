@@ -75,7 +75,7 @@ describe('session-start hook (integration)', () => {
 
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
-    expect(result.stderr).toContain('[prompt-language]');
+    expect(result.stderr).toContain('[PL]');
     expect(result.stderr).toContain('Resume task');
     // Should contain ANSI codes (colorized)
     expect(result.stderr).toContain('\x1b[');
@@ -106,7 +106,7 @@ describe('session-start hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe('');
-    expect(result.stderr).not.toContain('[prompt-language]');
+    expect(result.stderr).not.toContain('[PL]');
   });
 
   it('exits 0 on corrupted state (fail-open)', async () => {

@@ -18,10 +18,10 @@ export function colorizeStatusLine(line: string): string {
   // [PL] tag: cyan + bold
   result = result.replace('[PL]', `${CYAN}${BOLD}[PL]${RESET}`);
 
-  // Gate results
-  result = result.replace(/:PASS/g, `:${GREEN}PASS${RESET}`);
-  result = result.replace(/:FAIL/g, `:${RED}FAIL${RESET}`);
-  result = result.replace(/:PENDING/g, `:${YELLOW}PENDING${RESET}`);
+  // Gate results (Unicode symbols)
+  result = result.replace(/:✓/g, `:${GREEN}✓${RESET}`);
+  result = result.replace(/:✗/g, `:${RED}✗${RESET}`);
+  result = result.replace(/:○/g, `:${YELLOW}○${RESET}`);
 
   // Terminal status
   result = result.replace('Status: completed', `${GREEN}Status: completed${RESET}`);

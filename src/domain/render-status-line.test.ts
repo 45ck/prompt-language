@@ -145,15 +145,15 @@ describe('renderStatusLine', () => {
         },
       ),
     );
-    expect(line).toContain('tests_pass:FAIL');
-    expect(line).toContain('lint_pass:PASS');
+    expect(line).toContain('tests_pass:✗');
+    expect(line).toContain('lint_pass:✓');
   });
 
   it('shows PENDING for unevaluated gates', () => {
     const line = renderStatusLine(
       state('Goal', [createPromptNode('p1', 'Fix')], [createCompletionGate('tests_pass')]),
     );
-    expect(line).toContain('tests_pass:PENDING');
+    expect(line).toContain('tests_pass:○');
   });
 
   it('includes gates in completed status', () => {
@@ -164,7 +164,7 @@ describe('renderStatusLine', () => {
       }),
     );
     expect(line).toContain('Status: completed');
-    expect(line).toContain('tests_pass:PASS');
+    expect(line).toContain('tests_pass:✓');
   });
 
   it('truncates long goals to ~30 chars', () => {

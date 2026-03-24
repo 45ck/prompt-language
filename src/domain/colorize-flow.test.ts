@@ -3,82 +3,222 @@ import { colorizeFlow } from './colorize-flow.js';
 
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
+const DIM = '\x1b[2m';
 const GREEN = '\x1b[32m';
+const GREEN_BOLD = '\x1b[32;1m';
 const YELLOW = '\x1b[33m';
 const RED = '\x1b[31m';
+const CYAN = '\x1b[36m';
+const CYAN_BOLD = '\x1b[36;1m';
 
-describe('colorizeFlow', () => {
-  it('applies bold to header line', () => {
+describe('colorizeFlow — header', () => {
+  it('shortens [prompt-language] to [PL] with cyan bold', () => {
     const input = '[prompt-language] Flow: test | Status: active';
     const output = colorizeFlow(input);
-    expect(output).toBe(`${BOLD}${input}${RESET}`);
+    expect(output).toContain(`${CYAN_BOLD}[PL]${RESET}`);
+    expect(output).not.toContain('[prompt-language]');
   });
 
-  it('applies green to current node line', () => {
+  it('applies bold to rest of header line', () => {
+    const input = '[prompt-language] Flow: test | Status: active';
+    const output = colorizeFlow(input);
+    expect(output).toContain(`${BOLD} Flow: test | Status: active${RESET}`);
+  });
+});
+
+describe('colorizeFlow — symbol replacements', () => {
+  it('replaces # and - in progress bar with Unicode blocks', () => {
+    const input = '> while not done max 4 [###--] 2/4';
+    const output = colorizeFlow(input);
+    expect(output).toContain('[███░░]');
+    expect(output).not.toContain('[###--]');
+  });
+
+  it('replaces <-- current with ◄ current', () => {
     const input = '> run: npm test  <-- current';
     const output = colorizeFlow(input);
-    expect(output).toBe(`${GREEN}${input}${RESET}`);
+    expect(output).toContain('◄ current');
+    expect(output).not.toContain('<-- current');
+  });
+
+  it('replaces [pass] with ✓ pass', () => {
+    const input = '  tests_pass  [pass]';
+    const output = colorizeFlow(input);
+    expect(output).toContain('✓ pass');
+  });
+
+  it('replaces [fail] with ✗ fail', () => {
+    const input = '  lint_pass  [fail]';
+    const output = colorizeFlow(input);
+    expect(output).toContain('✗ fail');
+  });
+
+  it('replaces [fail — ...] with ✗ fail — ...', () => {
+    const input = '  tests_pass  [fail — exit 1: "npm test"]';
+    const output = colorizeFlow(input);
+    expect(output).toContain('✗ fail —');
+  });
+
+  it('replaces [pending] with ○ pending', () => {
+    const input = '  tests_pass  [pending]';
+    const output = colorizeFlow(input);
+    expect(output).toContain('○ pending');
+  });
+});
+
+describe('colorizeFlow — flow line colors', () => {
+  it('applies green bold to current node line', () => {
+    const input = '> run: npm test  <-- current';
+    const output = colorizeFlow(input);
+    expect(output).toContain(GREEN_BOLD);
   });
 
   it('applies yellow to ancestor scope lines', () => {
-    const input = '> while not tests_pass max 4 [2/4]';
+    const input = '> while not tests_pass max 4';
     const output = colorizeFlow(input);
-    expect(output).toBe(`${YELLOW}${input}${RESET}`);
+    expect(output).toContain(YELLOW);
   });
 
-  it('applies green to [pass] gate marker', () => {
-    const input = '  tests_pass  [pass]';
+  it('applies dim to completed nodes', () => {
+    const input = '~ prompt: already done';
     const output = colorizeFlow(input);
-    expect(output).toContain(`${GREEN}[pass]${RESET}`);
-    expect(output).toContain('tests_pass');
+    expect(output).toContain(DIM);
   });
 
-  it('applies red to [fail] gate marker', () => {
-    const input = '  lint_pass  [fail]';
+  it('leaves future nodes uncolored', () => {
+    const input = '  prompt: not yet';
     const output = colorizeFlow(input);
-    expect(output).toContain(`${RED}[fail]${RESET}`);
-    expect(output).toContain('lint_pass');
+    expect(output).toBe(input);
   });
 
-  it('applies yellow to [pending] gate marker', () => {
-    const input = '  tests_pass  [pending]';
+  it('prioritizes current marker over ancestor prefix', () => {
+    const input = '> prompt: do work  <-- current';
     const output = colorizeFlow(input);
-    expect(output).toContain(`${YELLOW}[pending]${RESET}`);
+    expect(output).toContain(GREEN_BOLD);
+    // Should not have yellow wrapping the whole line
+    expect(output.startsWith(YELLOW)).toBe(false);
+  });
+});
+
+describe('colorizeFlow — gate colors', () => {
+  it('applies green to ✓ pass', () => {
+    const input = '[prompt-language] Flow: t | Status: active\n\ndone when:\n  tests_pass  [pass]';
+    const output = colorizeFlow(input);
+    expect(output).toContain(`${GREEN}✓ pass${RESET}`);
   });
 
-  it('leaves plain lines unmodified', () => {
-    const input = '  prompt: do work';
-    expect(colorizeFlow(input)).toBe(input);
+  it('applies red to ✗ fail', () => {
+    const input = '[prompt-language] Flow: t | Status: active\n\ndone when:\n  lint_pass  [fail]';
+    const output = colorizeFlow(input);
+    expect(output).toContain(`${RED}✗ fail${RESET}`);
   });
 
-  it('processes multiline input', () => {
+  it('applies yellow to ○ pending', () => {
+    const input =
+      '[prompt-language] Flow: t | Status: active\n\ndone when:\n  tests_pass  [pending]';
+    const output = colorizeFlow(input);
+    expect(output).toContain(`${YELLOW}○ pending${RESET}`);
+  });
+});
+
+describe('colorizeFlow — variable colors', () => {
+  it('applies cyan to variable values', () => {
+    const input = '[prompt-language] Flow: t | Status: active\n\nVariables:\n  last_exit_code = 1';
+    const output = colorizeFlow(input);
+    expect(output).toContain(`${CYAN}1${RESET}`);
+  });
+});
+
+describe('colorizeFlow — warning colors', () => {
+  it('applies yellow to warning lines', () => {
+    const input = '[prompt-language] Flow: t | Status: active\n\nWarnings:\n  [!] Missing end';
+    const output = colorizeFlow(input);
+    expect(output).toContain(`${YELLOW}  [!] Missing end${RESET}`);
+  });
+});
+
+describe('colorizeFlow — tree connectors', () => {
+  it('adds tree connectors to nested flow lines', () => {
     const input = [
       '[prompt-language] Flow: test | Status: active',
       '',
       '> while not done max 3',
+      '>   prompt: first',
       '>   run: npm test  <-- current',
+      '  end',
+    ].join('\n');
+
+    const output = colorizeFlow(input);
+    // Nested lines should have tree characters
+    expect(output).toContain('├');
+    expect(output).toContain('└');
+  });
+
+  it('uses └─ for last child at each level', () => {
+    const input = [
+      '[prompt-language] Flow: test | Status: active',
+      '',
+      '> while not done max 3',
+      '>   prompt: only child',
+      '  end',
+    ].join('\n');
+
+    const output = colorizeFlow(input);
+    // 'prompt' is not the last sibling (end follows at same level)
+    // 'end' is the last sibling
+    expect(output).toContain('└');
+  });
+
+  it('does not add tree connectors to top-level nodes', () => {
+    const input = [
+      '[prompt-language] Flow: test | Status: active',
+      '',
+      '> prompt: do work  <-- current',
+    ].join('\n');
+
+    const output = colorizeFlow(input);
+    expect(output).not.toContain('├');
+    expect(output).not.toContain('└');
+    expect(output).not.toContain('│');
+  });
+});
+
+describe('colorizeFlow — full multiline', () => {
+  it('processes complete flow output', () => {
+    const input = [
+      '[prompt-language] Flow: fix tests | Status: active',
+      '',
+      '> while not tests_pass max 4 [###--] 2/4',
+      '>   prompt: inspect failures',
+      '>   run: npm test  <-- current',
+      '>   if command_failed',
+      '>     prompt: fix errors',
+      '>   end',
       '  end',
       '',
       'done when:',
-      '  tests_pass  [pending]',
+      '  tests_pass  [fail — exit 1: "npm test": 3 tests failed]',
+      '',
+      'Variables:',
+      '  last_exit_code = 1',
     ].join('\n');
 
     const output = colorizeFlow(input);
     const lines = output.split('\n');
 
-    expect(lines[0]!.startsWith(BOLD)).toBe(true);
-    expect(lines[2]!.startsWith(YELLOW)).toBe(true);
-    expect(lines[3]!.startsWith(GREEN)).toBe(true);
-    expect(lines[4]).toBe('  end');
-    expect(lines[7]).toContain(`${YELLOW}[pending]${RESET}`);
-  });
+    // Header: [PL] with cyan bold
+    expect(lines[0]).toContain(`${CYAN_BOLD}[PL]${RESET}`);
 
-  it('prioritizes current marker over ancestor prefix', () => {
-    // A line that is both an ancestor ("> ") and current ("<-- current")
-    // should get green (current takes priority)
-    const input = '> prompt: do work  <-- current';
-    const output = colorizeFlow(input);
-    expect(output.startsWith(GREEN)).toBe(true);
-    expect(output.startsWith(YELLOW)).toBe(false);
+    // Progress bar: Unicode blocks
+    expect(output).toContain('███░░');
+
+    // Current marker: ◄
+    expect(output).toContain('◄ current');
+
+    // Gate: ✗ fail with red
+    expect(output).toContain(`${RED}✗ fail`);
+
+    // Variables: cyan values
+    expect(output).toContain(`${CYAN}1${RESET}`);
   });
 });

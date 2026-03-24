@@ -87,14 +87,49 @@ export function parseGates(input: string): readonly CompletionGate[] {
   return gates;
 }
 
+// Conservative bare-flow detection: only unambiguous DSL patterns
+const BARE_FLOW_PATTERNS = [
+  /^prompt:\s/i,
+  /^run:\s/i,
+  /^foreach\s+\w+\s+in\s/i,
+  /^let\s+\w+\s*[+]?=/i,
+  /^var\s+\w+\s*[+]?=/i,
+  /^retry\s+max\s+\d+/i,
+  /^while\s+.+\s+max\s+\d+/i,
+  /^until\s+.+\s+max\s+\d+/i,
+];
+
+export function detectBareFlow(input: string): boolean {
+  if (/^\s*flow:\s*$/m.test(input)) return false;
+  for (const line of input.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || /^Goal:/i.test(trimmed)) continue;
+    if (BARE_FLOW_PATTERNS.some((re) => re.test(trimmed))) return true;
+  }
+  return false;
+}
+
 /** Extract the flow: block lines. */
 function extractFlowBlock(input: string): readonly string[] {
   const doneIdx = input.search(/\n\s*done when:/im);
   const flowMatch = /^\s*flow:\s*\n/im.exec(input);
-  if (!flowMatch) return [];
-  const start = flowMatch.index + flowMatch[0].length;
-  const end = doneIdx >= 0 ? doneIdx : input.length;
-  return input.slice(start, end).split('\n');
+  if (flowMatch) {
+    const start = flowMatch.index + flowMatch[0].length;
+    const end = doneIdx >= 0 ? doneIdx : input.length;
+    return input.slice(start, end).split('\n');
+  }
+
+  // Bare flow detection fallback
+  if (!detectBareFlow(input)) return [];
+  const lines = input.split('\n');
+  const result: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || /^Goal:/i.test(trimmed)) continue;
+    if (/^\s*done\s+when:/i.test(line)) break;
+    result.push(`  ${trimmed}`);
+  }
+  return result;
 }
 
 function parseWhileLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {

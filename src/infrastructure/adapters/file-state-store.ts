@@ -10,6 +10,7 @@ import type { SessionState } from '../../domain/session-state.js';
 const DIR_NAME = '.prompt-language';
 const FILE_NAME = 'session-state.json';
 const LOCK_NAME = 'session-state.lock';
+const PENDING_PROMPT_NAME = 'pending-nl-prompt.json';
 // H#79: Guard against enormous state files
 const MAX_STATE_FILE_SIZE = 100 * 1024; // 100 KB
 // H#58: Lock timeout and retry config
@@ -20,11 +21,13 @@ export class FileStateStore implements StateStore {
   private readonly dirPath: string;
   private readonly filePath: string;
   private readonly lockPath: string;
+  private readonly pendingPromptPath: string;
 
   constructor(basePath: string) {
     this.dirPath = join(basePath, DIR_NAME);
     this.filePath = join(this.dirPath, FILE_NAME);
     this.lockPath = join(this.dirPath, LOCK_NAME);
+    this.pendingPromptPath = join(this.dirPath, PENDING_PROMPT_NAME);
   }
 
   async load(sessionId: string): Promise<SessionState | null> {
@@ -71,6 +74,32 @@ export class FileStateStore implements StateStore {
 
   async loadCurrent(): Promise<SessionState | null> {
     return this.readState();
+  }
+
+  async savePendingPrompt(prompt: string): Promise<void> {
+    await this.ensureDir();
+    const json = JSON.stringify({ prompt, timestamp: Date.now() });
+    await writeFile(this.pendingPromptPath, json, 'utf-8');
+  }
+
+  async loadPendingPrompt(): Promise<string | null> {
+    try {
+      const raw = await readFile(this.pendingPromptPath, 'utf-8');
+      const parsed = JSON.parse(raw) as { prompt: string };
+      return parsed.prompt ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  async clearPendingPrompt(): Promise<void> {
+    try {
+      await unlink(this.pendingPromptPath);
+    } catch (error: unknown) {
+      if (!isNodeError(error) || error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
   }
 
   private async readState(): Promise<SessionState | null> {

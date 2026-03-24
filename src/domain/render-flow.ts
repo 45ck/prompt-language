@@ -36,6 +36,14 @@ function progressAnnotation(state: SessionState, nodeId: string): string {
   return ` [${bar}] ${done}/${total}`;
 }
 
+function isCompletedNode(path: readonly number[], currentPath: readonly number[]): boolean {
+  if (path.length === 0 || currentPath.length < path.length) return false;
+  for (let i = 0; i < path.length - 1; i++) {
+    if (path[i] !== currentPath[i]) return false;
+  }
+  return path[path.length - 1]! < currentPath[path.length - 1]!;
+}
+
 function renderNode(
   node: FlowNode,
   state: SessionState,
@@ -46,7 +54,8 @@ function renderNode(
   const currentPath = state.currentNodePath;
   const isCurrent = arraysEqual(path, currentPath);
   const isAncestor = isAncestorPath(path, currentPath);
-  const prefix = isCurrent || isAncestor ? '> ' : '  ';
+  const completed = !isCurrent && !isAncestor && isCompletedNode(path, currentPath);
+  const prefix = isCurrent || isAncestor ? '> ' : completed ? '~ ' : '  ';
   const suffix = isCurrent ? '  <-- current' : '';
 
   switch (node.kind) {

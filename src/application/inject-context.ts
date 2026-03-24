@@ -11,7 +11,7 @@ import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
-import { parseFlow, parseGates } from './parse-flow.js';
+import { parseFlow, parseGates, detectBareFlow } from './parse-flow.js';
 import { renderFlow } from '../domain/render-flow.js';
 import { interpolate } from '../domain/interpolate.js';
 import { autoAdvanceNodes, maybeCompleteFlow } from './advance-flow.js';
@@ -202,7 +202,7 @@ export interface InjectContextOutput {
 }
 
 function hasFlowBlock(prompt: string): boolean {
-  return FLOW_BLOCK_RE.test(prompt);
+  return FLOW_BLOCK_RE.test(prompt) || detectBareFlow(prompt);
 }
 
 const DONE_WHEN_RE = /^\s*done\s+when:/im;
@@ -261,8 +261,20 @@ export async function injectContext(
     const ABORT_PHRASES = ['abort flow', 'cancel flow', 'stop flow', 'reset flow'];
     if (ABORT_PHRASES.some((phrase) => lower.includes(phrase))) {
       await stateStore.save(markCancelled(existing));
+      await stateStore.clearPendingPrompt();
       return { prompt: '[prompt-language] Flow cancelled by user.' };
     }
+  }
+
+  // NL-to-DSL round-trip: if user previously saw a confirmation and now confirms.
+  // Active flows take precedence — clear pending and let the flow handle the prompt.
+  const pendingPrompt = await stateStore.loadPendingPrompt();
+  if (pendingPrompt) {
+    await stateStore.clearPendingPrompt();
+    if (existing?.status !== 'active' && isTrivialPrompt(input.prompt)) {
+      return { prompt: buildMetaPrompt(pendingPrompt) };
+    }
+    // User sent a non-trivial prompt or has an active flow — fall through
   }
 
   if (existing?.status === 'active') {
@@ -317,8 +329,9 @@ export async function injectContext(
     }
   }
 
-  // H#40: NL-to-DSL confirmation step — ask user to confirm before generating
+  // H#40: NL-to-DSL confirmation step — save prompt and ask user to confirm
   if (looksLikeNaturalLanguage(input.prompt)) {
+    await stateStore.savePendingPrompt(input.prompt);
     return {
       prompt:
         '[prompt-language] I detected control-flow intent in your message. ' +

@@ -8,6 +8,7 @@ import type { SessionState } from '../../domain/session-state.js';
 export class InMemoryStateStore implements StateStore {
   private readonly store = new Map<string, SessionState>();
   private lastSaved: SessionState | null = null;
+  private pendingPrompt: string | null = null;
 
   async load(sessionId: string): Promise<SessionState | null> {
     return this.store.get(sessionId) ?? null;
@@ -31,6 +32,18 @@ export class InMemoryStateStore implements StateStore {
 
   async loadCurrent(): Promise<SessionState | null> {
     return this.lastSaved;
+  }
+
+  async savePendingPrompt(prompt: string): Promise<void> {
+    this.pendingPrompt = prompt;
+  }
+
+  async loadPendingPrompt(): Promise<string | null> {
+    return this.pendingPrompt;
+  }
+
+  async clearPendingPrompt(): Promise<void> {
+    this.pendingPrompt = null;
   }
 
   /** Test helper: return the internal map size. */

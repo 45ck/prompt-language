@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFlow, parseGates } from './parse-flow.js';
+import { parseFlow, parseGates, detectBareFlow } from './parse-flow.js';
 import type { FlowSpec } from '../domain/flow-spec.js';
 import type {
   WhileNode,
@@ -856,5 +856,106 @@ describe('parseFlow — await nodes', () => {
     const node = spec.nodes[0] as AwaitNode;
     expect(node.kind).toBe('await');
     expect(node.target).toBe('fix-auth');
+  });
+});
+
+describe('detectBareFlow', () => {
+  it('detects bare prompt: line', () => {
+    expect(detectBareFlow('Goal: test\n\nprompt: Do something')).toBe(true);
+  });
+
+  it('detects bare run: line', () => {
+    expect(detectBareFlow('Goal: test\n\nrun: npm test')).toBe(true);
+  });
+
+  it('detects bare let x = "val"', () => {
+    expect(detectBareFlow('let x = "hello"')).toBe(true);
+  });
+
+  it('detects bare var x = "val"', () => {
+    expect(detectBareFlow('var x = "hello"')).toBe(true);
+  });
+
+  it('detects bare foreach', () => {
+    expect(detectBareFlow('foreach item in "a b c"\n  prompt: do ${item}\nend')).toBe(true);
+  });
+
+  it('detects bare retry max N', () => {
+    expect(detectBareFlow('retry max 3\n  run: npm test\nend')).toBe(true);
+  });
+
+  it('detects bare while with max', () => {
+    expect(detectBareFlow('while not tests_pass max 5\n  prompt: fix\nend')).toBe(true);
+  });
+
+  it('detects bare until with max', () => {
+    expect(detectBareFlow('until tests_pass max 3\n  run: npm test\nend')).toBe(true);
+  });
+
+  it('returns false when flow: keyword already exists', () => {
+    expect(detectBareFlow('Goal: test\n\nflow:\n  prompt: hi')).toBe(false);
+  });
+
+  it('returns false for plain text', () => {
+    expect(detectBareFlow('Fix the failing tests please')).toBe(false);
+  });
+
+  it('returns false for "if" alone (ambiguous)', () => {
+    expect(detectBareFlow('if tests_fail')).toBe(false);
+  });
+
+  it('returns false for "try" alone (ambiguous)', () => {
+    expect(detectBareFlow('try something new')).toBe(false);
+  });
+
+  it('returns false for "break" (ambiguous)', () => {
+    expect(detectBareFlow('break')).toBe(false);
+  });
+
+  it('skips Goal: lines', () => {
+    expect(detectBareFlow('Goal: test\nSome text here')).toBe(false);
+  });
+
+  it('detects bare let +=', () => {
+    expect(detectBareFlow('let items += "val"')).toBe(true);
+  });
+
+  it('detects bare var +=', () => {
+    expect(detectBareFlow('var items += "val"')).toBe(true);
+  });
+});
+
+describe('parseFlow — bare flow (no flow: keyword)', () => {
+  it('parses bare prompt: as flow', () => {
+    const spec = parse('Goal: test\n\nprompt: Do something');
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+    expect((spec.nodes[0] as PromptNode).text).toBe('Do something');
+  });
+
+  it('parses bare run: as flow', () => {
+    const spec = parse('Goal: run test\n\nrun: npm test');
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.nodes[0]!.kind).toBe('run');
+    expect((spec.nodes[0] as RunNode).command).toBe('npm test');
+  });
+
+  it('parses bare let + prompt sequence', () => {
+    const spec = parse('Goal: test\n\nlet x = "hello"\nprompt: Say ${x}');
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.nodes[0]!.kind).toBe('let');
+    expect(spec.nodes[1]!.kind).toBe('prompt');
+  });
+
+  it('parses bare flow with done when', () => {
+    const spec = parse('Goal: test\n\nprompt: Fix it\nrun: npm test\n\ndone when:\n  tests_pass');
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.completionGates).toHaveLength(1);
+    expect(spec.completionGates[0]!.predicate).toBe('tests_pass');
+  });
+
+  it('does not parse plain text as bare flow', () => {
+    const spec = parse('Fix the failing tests please');
+    expect(spec.nodes).toHaveLength(0);
   });
 });

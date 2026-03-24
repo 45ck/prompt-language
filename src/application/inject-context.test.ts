@@ -1978,3 +1978,155 @@ describe('injectContext — gate-only mode', () => {
     expect(result.prompt).toContain('[prompt-language] Flow: Existing');
   });
 });
+
+describe('injectContext — bare flow (no flow: keyword)', () => {
+  it('activates flow from bare prompt: line', async () => {
+    const store = makeStore();
+    const prompt = 'Goal: test\n\nprompt: Do something';
+    const result = await injectContext({ prompt, sessionId: 'bare-1' }, store);
+    expect(result.prompt).toContain('[prompt-language]');
+    expect(result.prompt).toContain('Do something');
+    const saved = await store.loadCurrent();
+    expect(saved).not.toBeNull();
+  });
+
+  it('activates flow from bare run: line', async () => {
+    const store = makeStore();
+    const prompt = 'Goal: run test\n\nrun: npm test';
+    const result = await injectContext({ prompt, sessionId: 'bare-2' }, store);
+    expect(result.prompt).toContain('[prompt-language]');
+  });
+
+  it('activates flow from bare let statement', async () => {
+    const store = makeStore();
+    const prompt = 'Goal: test\n\nlet x = "hello"\nprompt: Say ${x}';
+    const result = await injectContext({ prompt, sessionId: 'bare-3' }, store);
+    expect(result.prompt).toContain('[prompt-language]');
+    expect(result.prompt).toContain('Say hello');
+  });
+
+  it('does not activate bare flow for plain text', async () => {
+    const store = makeStore();
+    const result = await injectContext(
+      { prompt: 'Fix the failing tests', sessionId: 'bare-4' },
+      store,
+    );
+    expect(result.prompt).toBe('Fix the failing tests');
+  });
+
+  it('does not activate bare flow when flow: keyword present', async () => {
+    const store = makeStore();
+    const prompt = 'Goal: test\n\nflow:\n  prompt: hi';
+    const result = await injectContext({ prompt, sessionId: 'bare-5' }, store);
+    // Should be handled by the normal flow: block path, not bare detection
+    expect(result.prompt).toContain('[prompt-language]');
+  });
+});
+
+describe('injectContext — NL-to-DSL round-trip', () => {
+  it('saves pending prompt when NL intent detected', async () => {
+    const store = makeStore();
+    const nlPrompt = 'keep fixing until tests pass';
+    await injectContext({ prompt: nlPrompt, sessionId: 'rt-1' }, store);
+
+    const pending = await store.loadPendingPrompt();
+    expect(pending).toBe(nlPrompt);
+  });
+
+  it('returns meta-prompt with DSL reference when user confirms with "yes"', async () => {
+    const store = makeStore();
+    const originalPrompt = 'keep fixing until tests pass';
+
+    // Step 1: NL detection — saves pending prompt, returns confirmation
+    const result1 = await injectContext({ prompt: originalPrompt, sessionId: 'rt-2' }, store);
+    expect(result1.prompt).toContain('control-flow intent');
+
+    // Step 2: User confirms — pending prompt loaded, meta-prompt returned
+    const result2 = await injectContext({ prompt: 'yes', sessionId: 'rt-2' }, store);
+    expect(result2.prompt).toContain('prompt-language DSL reference');
+    expect(result2.prompt).toContain(originalPrompt);
+    expect(result2.prompt).toContain('Respond with ONLY a valid prompt-language program');
+  });
+
+  it('clears pending prompt after confirmation', async () => {
+    const store = makeStore();
+    await store.savePendingPrompt('loop until done');
+
+    await injectContext({ prompt: 'yes', sessionId: 'rt-3' }, store);
+
+    const pending = await store.loadPendingPrompt();
+    expect(pending).toBeNull();
+  });
+
+  it('clears pending prompt and passes through when user sends non-trivial reply', async () => {
+    const store = makeStore();
+    const originalPrompt = 'retry the build 3 times on failure';
+
+    // Step 1: NL detection
+    await injectContext({ prompt: originalPrompt, sessionId: 'rt-4' }, store);
+    expect(await store.loadPendingPrompt()).toBe(originalPrompt);
+
+    // Step 2: User sends a different instruction (not confirming)
+    const result = await injectContext(
+      { prompt: 'Actually, just fix the auth module', sessionId: 'rt-4' },
+      store,
+    );
+    expect(result.prompt).toBe('Actually, just fix the auth module');
+    expect(await store.loadPendingPrompt()).toBeNull();
+  });
+
+  it('does not trigger meta-prompt when no pending prompt exists and user says "yes"', async () => {
+    const store = makeStore();
+    const result = await injectContext({ prompt: 'yes', sessionId: 'rt-5' }, store);
+    expect(result.prompt).toBe('yes');
+  });
+
+  it('active flow takes precedence over pending prompt confirmation', async () => {
+    const store = makeStore();
+    await store.savePendingPrompt('retry the build until it passes');
+    const spec = createFlowSpec('Active flow', [createPromptNode('p1', 'do work')]);
+    const session = createSessionState('rt-6', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'yes', sessionId: 'rt-6' }, store);
+
+    expect(await store.loadPendingPrompt()).toBeNull();
+    expect(result.prompt).toContain('[prompt-language] Flow: Active flow');
+  });
+
+  it('accepts all trivial confirmations: "go", "ok", "sure", "yep"', async () => {
+    for (const confirm of ['go', 'ok', 'sure', 'yep', 'Go ahead', 'sounds good']) {
+      const store = makeStore();
+      await store.savePendingPrompt('loop until tests pass and retry on failure');
+
+      const result = await injectContext(
+        { prompt: confirm, sessionId: 'rt-confirm-' + confirm },
+        store,
+      );
+      expect(result.prompt).toContain('prompt-language DSL reference');
+      expect(result.prompt).toContain('loop until tests pass and retry on failure');
+    }
+  });
+
+  it('meta-prompt includes foreach and spawn/await in DSL reference', async () => {
+    const store = makeStore();
+    await store.savePendingPrompt('for each file lint it and retry on failure');
+
+    const result = await injectContext({ prompt: 'yes', sessionId: 'rt-7' }, store);
+    expect(result.prompt).toContain('foreach');
+    expect(result.prompt).toContain('spawn');
+    expect(result.prompt).toContain('await');
+  });
+
+  it('abort flow clears pending prompt', async () => {
+    const store = makeStore();
+    await store.savePendingPrompt('retry until done');
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    const session = createSessionState('rt-8', spec);
+    await store.save(session);
+
+    await injectContext({ prompt: 'abort flow', sessionId: 'rt-8' }, store);
+
+    expect(await store.loadPendingPrompt()).toBeNull();
+  });
+});

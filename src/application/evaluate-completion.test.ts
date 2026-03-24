@@ -786,3 +786,109 @@ describe('GATE_TIMEOUT_MS env var', () => {
     expect(capturedTimeout).toBe(60_000);
   });
 });
+
+// ── H-INT-010: any() gate composition evaluation ─────────────────────
+
+describe('evaluateCompletion — any() gate composition (H-INT-010)', () => {
+  it('passes when any sub-gate passes', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 1, stdout: '', stderr: 'FAIL' });
+    runner.setResult('npm run lint', { exitCode: 0, stdout: '', stderr: '' });
+
+    const spec = createFlowSpec('test', [], [
+      { predicate: 'any(tests_pass, lint_pass)', any: [
+        createCompletionGate('tests_pass'),
+        createCompletionGate('lint_pass'),
+      ] },
+    ]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(result.gateResults['any(tests_pass, lint_pass)']).toBe(true);
+  });
+
+  it('fails when no sub-gate passes', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 1, stdout: '', stderr: 'FAIL' });
+    runner.setResult('npm run lint', { exitCode: 1, stdout: '', stderr: 'FAIL' });
+
+    const spec = createFlowSpec('test', [], [
+      { predicate: 'any(tests_pass, lint_pass)', any: [
+        createCompletionGate('tests_pass'),
+        createCompletionGate('lint_pass'),
+      ] },
+    ]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+    expect(result.gateResults['any(tests_pass, lint_pass)']).toBe(false);
+  });
+
+  it('any() gate works alongside regular gates (all must pass)', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: '', stderr: '' });
+    runner.setResult('npm run lint', { exitCode: 1, stdout: '', stderr: 'FAIL' });
+
+    const spec = createFlowSpec('test', [], [
+      { predicate: 'any(tests_pass, lint_pass)', any: [
+        createCompletionGate('tests_pass'),
+        createCompletionGate('lint_pass'),
+      ] },
+      createCompletionGate('lint_pass'),
+    ]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    // any() passes (tests_pass succeeds), but standalone lint_pass fails
+    expect(result.gateResults['any(tests_pass, lint_pass)']).toBe(true);
+    expect(result.gateResults['lint_pass']).toBe(false);
+    expect(result.blocked).toBe(true);
+  });
+});
+
+// ── H-SEC-006: Audit logger integration ──────────────────────────────
+
+describe('evaluateCompletion — audit logger (H-SEC-006)', () => {
+  it('logs gate evaluations to audit logger', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: 'OK', stderr: '' });
+
+    const logged: import('./ports/audit-logger.js').AuditEntry[] = [];
+    const auditLogger: import('./ports/audit-logger.js').AuditLogger = {
+      log: (entry) => logged.push(entry),
+    };
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    await evaluateCompletion(store, runner, auditLogger);
+    expect(logged).toHaveLength(1);
+    expect(logged[0]!.event).toBe('gate_evaluation');
+    expect(logged[0]!.command).toBe('npm test');
+    expect(logged[0]!.exitCode).toBe(0);
+    expect(logged[0]!.timestamp).toBeDefined();
+  });
+
+  it('does not fail when no audit logger is provided', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+    runner.setResult('npm test', { exitCode: 0, stdout: '', stderr: '' });
+
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+  });
+});

@@ -78,7 +78,8 @@
     "errmsg",
     "bigvar",
     "jsonl",
-    "auditlogger"
+    "auditlogger",
+    "myvar"
   ],
   "ignorePaths": [
     "dist/**",

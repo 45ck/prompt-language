@@ -189,6 +189,20 @@ describe('colorizeFlow — tree connectors', () => {
     expect(output).toContain('└');
   });
 
+  it('uses └─ for the last nested node when no sibling follows', () => {
+    const input = [
+      '[prompt-language] Flow: test | Status: active',
+      '',
+      '> if condition',
+      '>   prompt: last nested node',
+      '  end',
+    ].join('\n');
+
+    const output = colorizeFlow(input);
+    // The nested prompt should use └ (last child connector) since no sibling follows
+    expect(output).toContain('└');
+  });
+
   it('does not add tree connectors to top-level nodes', () => {
     const input = [
       '[prompt-language] Flow: test | Status: active',

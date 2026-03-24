@@ -796,12 +796,16 @@ describe('evaluateCompletion — any() gate composition (H-INT-010)', () => {
     runner.setResult('npm test', { exitCode: 1, stdout: '', stderr: 'FAIL' });
     runner.setResult('npm run lint', { exitCode: 0, stdout: '', stderr: '' });
 
-    const spec = createFlowSpec('test', [], [
-      { predicate: 'any(tests_pass, lint_pass)', any: [
-        createCompletionGate('tests_pass'),
-        createCompletionGate('lint_pass'),
-      ] },
-    ]);
+    const spec = createFlowSpec(
+      'test',
+      [],
+      [
+        {
+          predicate: 'any(tests_pass, lint_pass)',
+          any: [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+        },
+      ],
+    );
     const session = createSessionState('s1', spec);
     await store.save(session);
 
@@ -816,12 +820,16 @@ describe('evaluateCompletion — any() gate composition (H-INT-010)', () => {
     runner.setResult('npm test', { exitCode: 1, stdout: '', stderr: 'FAIL' });
     runner.setResult('npm run lint', { exitCode: 1, stdout: '', stderr: 'FAIL' });
 
-    const spec = createFlowSpec('test', [], [
-      { predicate: 'any(tests_pass, lint_pass)', any: [
-        createCompletionGate('tests_pass'),
-        createCompletionGate('lint_pass'),
-      ] },
-    ]);
+    const spec = createFlowSpec(
+      'test',
+      [],
+      [
+        {
+          predicate: 'any(tests_pass, lint_pass)',
+          any: [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+        },
+      ],
+    );
     const session = createSessionState('s1', spec);
     await store.save(session);
 
@@ -836,13 +844,17 @@ describe('evaluateCompletion — any() gate composition (H-INT-010)', () => {
     runner.setResult('npm test', { exitCode: 0, stdout: '', stderr: '' });
     runner.setResult('npm run lint', { exitCode: 1, stdout: '', stderr: 'FAIL' });
 
-    const spec = createFlowSpec('test', [], [
-      { predicate: 'any(tests_pass, lint_pass)', any: [
-        createCompletionGate('tests_pass'),
+    const spec = createFlowSpec(
+      'test',
+      [],
+      [
+        {
+          predicate: 'any(tests_pass, lint_pass)',
+          any: [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+        },
         createCompletionGate('lint_pass'),
-      ] },
-      createCompletionGate('lint_pass'),
-    ]);
+      ],
+    );
     const session = createSessionState('s1', spec);
     await store.save(session);
 

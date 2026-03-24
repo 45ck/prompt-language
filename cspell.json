@@ -63,7 +63,9 @@
     "notanumber",
     "agentic",
     "checkpointing",
-    "healthcheck"
+    "healthcheck",
+    "oneline",
+    "Reflexion"
   ],
   "ignorePaths": [
     "dist/**",

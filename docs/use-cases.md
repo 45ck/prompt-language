@@ -142,6 +142,24 @@ done when:
 
 Flows don't make Claude more correct. They structure execution. If Claude gets the task wrong with a flow, it'll get it wrong without one. Write a better prompt.
 
+## Advanced patterns
+
+Many "advanced" orchestration patterns are already expressible with existing primitives. No new syntax needed — the 12 node kinds compose well.
+
+| Pattern                | How                                        | Example                                                |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------------ |
+| Human approval         | `let x = prompt "..."` as checkpoint       | [Approval Checkpoint](examples/approval-checkpoint.md) |
+| Retry with backoff     | `run: sleep N` + variable doubling         | [Retry with Backoff](examples/retry-with-backoff.md)   |
+| Self-reflection        | Explicit analysis prompt before retry      | [Self-Reflection](examples/self-reflection.md)         |
+| Parallel execution     | `spawn`/`await` per work stream            | [Parallel Tasks](examples/parallel-tasks.md)           |
+| Variable transforms    | `let x = run "... \| filter"`              | [Variable Pipeline](examples/variable-pipeline.md)     |
+| Cross-session memory   | `let x = run "cat file"` at flow start     | [Memory and Context](examples/memory-and-context.md)   |
+| Tool gating            | Prompt instructions or `PreToolUse` hook   | —                                                      |
+| Conditional completion | `if` + `break` + variable tracking in loop | —                                                      |
+| Flow composition       | Copy-paste recipes or Claude Code skills   | —                                                      |
+
+For the full analysis of why these patterns don't need new DSL syntax, see [Report 08: Feature Completeness](research/08-feature-completeness.md).
+
 ## Further reading
 
 - [Getting Started](getting-started.md) — hands-on tutorial

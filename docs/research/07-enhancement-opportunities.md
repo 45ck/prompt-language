@@ -443,23 +443,27 @@ done when:
 
 ## Priority Matrix
 
-| #   | Enhancement                | Evidence    | Effort | Value  | Priority |
-| --- | -------------------------- | ----------- | ------ | ------ | -------- |
-| E1  | Approval nodes             | Strong      | M      | High   | **P1**   |
-| E2  | Retry backoff              | Strong      | S      | Medium | **P1**   |
-| E3  | Flow budget/timeout        | Strong      | M      | High   | **P1**   |
-| E4  | Compact rendering          | Strong      | M      | High   | **P1**   |
-| E6  | Self-reflection on failure | Strong      | S      | High   | **P1**   |
-| E5  | Persistent memory          | Strong      | L      | High   | **P2**   |
-| E7  | Tool gating                | Moderate    | M      | High   | **P2**   |
-| E10 | Variable transforms        | Moderate    | S      | Medium | **P2**   |
-| E8  | Parallel foreach           | Moderate    | L      | Medium | **P3**   |
-| E9  | Conditional gates          | Moderate    | M      | Medium | **P3**   |
-| E11 | Flow composition           | Moderate    | M      | Medium | **P3**   |
-| E12 | Typed captures             | Speculative | L      | Medium | **P4**   |
-| E13 | Watchdog nodes             | Speculative | L      | Medium | **P4**   |
-| E14 | Cost budget                | Speculative | L      | Low    | **P4**   |
-| E15 | Event triggers             | Speculative | L      | Low    | **P4**   |
+| #   | Enhancement                | Evidence    | Effort | Value  | Priority | Status                                                                                                  |
+| --- | -------------------------- | ----------- | ------ | ------ | -------- | ------------------------------------------------------------------------------------------------------- |
+| E1  | Approval nodes             | Strong      | M      | High   | **P1**   | Already achievable — `let x = prompt` as checkpoint ([Report 08](08-feature-completeness.md))           |
+| E2  | Retry backoff              | Strong      | S      | Medium | **P1**   | Already achievable — `run: sleep N` + variable doubling ([Report 08](08-feature-completeness.md))       |
+| E3  | Flow budget/timeout        | Strong      | M      | High   | **P1**   | Host handles — Claude Code `--max-turns`, loop `max N` ([Report 08](08-feature-completeness.md))        |
+| E4  | Compact rendering          | Strong      | M      | High   | **P1**   | Host handles — Claude Code context compaction ([Report 08](08-feature-completeness.md))                 |
+| E6  | Self-reflection on failure | Strong      | S      | High   | **P1**   | Already achievable — reflection prompt in `retry`/`if` ([Report 08](08-feature-completeness.md))        |
+| E5  | Persistent memory          | Strong      | L      | High   | **P2**   | Integration pattern — `let x = run "cat file"` ([Report 08](08-feature-completeness.md))                |
+| E7  | Tool gating                | Moderate    | M      | High   | **P2**   | Already achievable — prompt instructions or `PreToolUse` hook ([Report 08](08-feature-completeness.md)) |
+| E10 | Variable transforms        | Moderate    | S      | Medium | **P2**   | Already achievable — `let x = run "... \| filter"` ([Report 08](08-feature-completeness.md))            |
+| E8  | Parallel foreach           | Moderate    | L      | Medium | **P3**   | Already achievable — `spawn`/`await` per item ([Report 08](08-feature-completeness.md))                 |
+| E9  | Conditional gates          | Moderate    | M      | Medium | **P3**   | Already achievable — `if` + `break` + variable tracking ([Report 08](08-feature-completeness.md))       |
+| E11 | Flow composition           | Moderate    | M      | Medium | **P3**   | Already achievable — copy-paste recipes or Claude Code skills ([Report 08](08-feature-completeness.md)) |
+| E12 | Typed captures             | Speculative | L      | Medium | **P4**   | Already achievable — format instructions in prompt text ([Report 08](08-feature-completeness.md))       |
+| E13 | Watchdog nodes             | Speculative | L      | Medium | **P4**   | Genuine gap (niche) — could be host-level hook ([Report 08](08-feature-completeness.md))                |
+| E14 | Cost budget                | Speculative | L      | Low    | **P4**   | Host handles — Claude Code session limits ([Report 08](08-feature-completeness.md))                     |
+| E15 | Event triggers             | Speculative | L      | Low    | **P4**   | Integration pattern — external `claude -p` invocation ([Report 08](08-feature-completeness.md))         |
+
+## Follow-up
+
+[Report 08: Feature Completeness Assessment](08-feature-completeness.md) re-evaluates all 15 enhancements against existing DSL primitives. Key finding: 10/15 are already achievable with existing node kinds, 2 are handled by the host agent, 2 are integration patterns, and only 1 is a genuine structural gap.
 
 ## Sources
 

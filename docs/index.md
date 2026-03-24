@@ -26,11 +26,17 @@
 
 ## Examples
 
-| Example                                  | Pattern                                    |
-| ---------------------------------------- | ------------------------------------------ |
-| [Fix Tests](examples/fix-tests.md)       | Retry loop with test gate                  |
-| [Lint and Fix](examples/lint-and-fix.md) | Compound gates (tests + lint)              |
-| [Showcase](showcase.md)                  | 140+ worked examples across all primitives |
+| Example                                                | Pattern                                     |
+| ------------------------------------------------------ | ------------------------------------------- |
+| [Fix Tests](examples/fix-tests.md)                     | Retry loop with test gate                   |
+| [Lint and Fix](examples/lint-and-fix.md)               | Compound gates (tests + lint)               |
+| [Self-Reflection](examples/self-reflection.md)         | Analyze failure before retrying             |
+| [Retry with Backoff](examples/retry-with-backoff.md)   | Exponential delay between retry attempts    |
+| [Approval Checkpoint](examples/approval-checkpoint.md) | Human review gate before destructive action |
+| [Parallel Tasks](examples/parallel-tasks.md)           | Spawn/await for concurrent work streams     |
+| [Variable Pipeline](examples/variable-pipeline.md)     | Shell pipes for transforms and filtering    |
+| [Memory and Context](examples/memory-and-context.md)   | Load persistent files into flow variables   |
+| [Showcase](showcase.md)                                | 140+ worked examples across all primitives  |
 
 ## Evaluation
 
@@ -40,8 +46,9 @@
 
 ## Research
 
-| Doc                                                                   | Contents                                                     |
-| --------------------------------------------------------------------- | ------------------------------------------------------------ |
-| [Research Index](research/README.md)                                  | Index of all research reports with abstracts and source list |
-| [Architecture Position](research/00-architecture-position.md)         | How prompt-language differs from LangChain, DSPy, CrewAI     |
-| [Enhancement Opportunities](research/07-enhancement-opportunities.md) | Wishlist with evidence tiers, proposed syntax, priorities    |
+| Doc                                                                   | Contents                                                                   |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [Research Index](research/README.md)                                  | Index of all research reports with abstracts and source list               |
+| [Architecture Position](research/00-architecture-position.md)         | How prompt-language differs from LangChain, DSPy, CrewAI                   |
+| [Enhancement Opportunities](research/07-enhancement-opportunities.md) | Wishlist with evidence tiers, proposed syntax, priorities                  |
+| [Feature Completeness](research/08-feature-completeness.md)           | Assessment: 10/15 enhancements already achievable with existing primitives |

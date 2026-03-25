@@ -83,7 +83,8 @@
     "inlines",
     "myloop",
     "toctou",
-    "cheatsheet"
+    "cheatsheet",
+    "desugars"
   ],
   "ignorePaths": [
     "dist/**",

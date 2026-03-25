@@ -22,8 +22,9 @@ const FILE_NAME = 'session-state.json';
 const TEMP_FILE_NAME = 'session-state.tmp.json';
 const LOCK_NAME = 'session-state.lock';
 const PENDING_PROMPT_NAME = 'pending-nl-prompt.json';
-// H-SEC-009: Backup file name
+// H-SEC-009: Backup file names (two-generation rotation)
 const BACKUP_FILE_NAME = 'session-state.bak.json';
+const BACKUP2_FILE_NAME = 'session-state.bak2.json';
 // H#79: Guard against enormous state files
 const MAX_STATE_FILE_SIZE = 100 * 1024; // 100 KB
 // H#58: Lock timeout and retry config
@@ -40,6 +41,7 @@ export class FileStateStore implements StateStore {
   private readonly lockPath: string;
   private readonly pendingPromptPath: string;
   private readonly backupPath: string;
+  private readonly backupPath2: string;
 
   constructor(basePath: string) {
     this.dirPath = join(basePath, DIR_NAME);
@@ -48,6 +50,7 @@ export class FileStateStore implements StateStore {
     this.lockPath = join(this.dirPath, LOCK_NAME);
     this.pendingPromptPath = join(this.dirPath, PENDING_PROMPT_NAME);
     this.backupPath = join(this.dirPath, BACKUP_FILE_NAME);
+    this.backupPath2 = join(this.dirPath, BACKUP2_FILE_NAME);
   }
 
   async load(sessionId: string): Promise<SessionState | null> {
@@ -159,27 +162,49 @@ export class FileStateStore implements StateStore {
         process.stderr.write(
           '[prompt-language] WARNING: state file checksum mismatch, clearing gate results\n',
         );
-        return { ...stateWithout, gateResults: {}, gateDiagnostics: {} } as SessionState;
+        const sanitized = { ...stateWithout, gateResults: {}, gateDiagnostics: {} };
+        if (!isStateStructureValid(sanitized)) {
+          throw new Error('State file has invalid structure after checksum mismatch');
+        }
+        return sanitized as SessionState;
       }
       return stateWithout as SessionState;
     }
 
+    // Legacy file without checksum — validate structure before returning
+    if (!isStateStructureValid(parsed)) {
+      throw new Error('State file has invalid structure (no checksum, missing required fields)');
+    }
     return parsed as SessionState;
   }
 
-  // H-SEC-009: Read backup state file on primary corruption
+  // H-SEC-009: Read backup state file on primary corruption (two-generation fallback)
   private async readBackupState(): Promise<SessionState | null> {
     try {
       const raw = await readFile(this.backupPath, 'utf-8');
       process.stderr.write('[prompt-language] Recovered state from backup file\n');
       return this.parseStateJson(raw);
     } catch {
-      return null;
+      // bak.json failed — try second-generation backup
+      try {
+        const raw = await readFile(this.backupPath2, 'utf-8');
+        process.stderr.write('[prompt-language] Recovered state from second-generation backup\n');
+        return this.parseStateJson(raw);
+      } catch {
+        return null;
+      }
     }
   }
 
-  // H-SEC-009: Copy current state to .bak before overwriting
+  // H-SEC-009: Two-generation backup rotation before overwriting
   private async backupCurrentState(): Promise<void> {
+    // Rotate: bak → bak2 first
+    try {
+      await copyFile(this.backupPath, this.backupPath2);
+    } catch {
+      // No existing bak to rotate — that's fine
+    }
+    // Then: main → bak
     try {
       await copyFile(this.filePath, this.backupPath);
     } catch {
@@ -279,6 +304,21 @@ export class FileStateStore implements StateStore {
       }
     }
   }
+}
+
+/** Validate that parsed JSON has the minimum required SessionState structure. */
+function isStateStructureValid(state: unknown): state is SessionState {
+  if (typeof state !== 'object' || state === null) return false;
+  const s = state as Record<string, unknown>;
+  return (
+    typeof s['sessionId'] === 'string' &&
+    typeof s['status'] === 'string' &&
+    Array.isArray(s['currentNodePath']) &&
+    typeof s['variables'] === 'object' &&
+    s['variables'] !== null &&
+    typeof s['flowSpec'] === 'object' &&
+    s['flowSpec'] !== null
+  );
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

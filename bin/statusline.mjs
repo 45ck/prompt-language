@@ -60,10 +60,18 @@ try {
   process.exit(0);
 }
 
+// Stale state from a previous session — treat as no active flow
+if (state.status !== 'active') {
+  const fallback = '[PL] No active flow';
+  process.stdout.write(process.env.NO_COLOR ? fallback : colorizeStatusLine(fallback));
+  process.exit(0);
+}
+
 try {
   const line = renderStatusLine(state);
   const colored = process.env.NO_COLOR ? line : colorizeStatusLine(line);
   process.stdout.write(colored);
 } catch {
-  process.stdout.write('[PL] (state error)');
+  const fallback = '[PL] No active flow';
+  process.stdout.write(process.env.NO_COLOR ? fallback : colorizeStatusLine(fallback));
 }

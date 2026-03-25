@@ -10,8 +10,15 @@
  * prevent shell injection.
  */
 
+/** Maximum payload size (bytes) for JSON.parse in array index resolution. */
+export const MAX_ARRAY_INDEX_PAYLOAD = 100_000;
+
+/** Maximum number of elements allowed in a parsed array. */
+const MAX_ARRAY_INDEX_ELEMENTS = 10_000;
+
 /** Resolve an array index access on a JSON-array variable value. */
 function resolveArrayIndex(value: string, indexStr: string): string | null {
+  if (value.length > MAX_ARRAY_INDEX_PAYLOAD) return null;
   let arr: unknown;
   try {
     arr = JSON.parse(value);
@@ -19,6 +26,7 @@ function resolveArrayIndex(value: string, indexStr: string): string | null {
     return null;
   }
   if (!Array.isArray(arr)) return null;
+  if (arr.length > MAX_ARRAY_INDEX_ELEMENTS) return null;
   let idx = parseInt(indexStr, 10);
   if (isNaN(idx)) return null;
   if (idx < 0) idx = arr.length + idx;

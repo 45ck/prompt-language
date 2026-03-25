@@ -51,12 +51,20 @@ function render() {
     return;
   }
 
+  // Stale state from a previous session — treat as waiting
+  if (state.status !== 'active') {
+    console.log(`\n Flow ${state.status}. Waiting for new flow...`);
+    console.log(` Watching: ${plDir}`);
+    console.log('\n Press Ctrl+C to exit.');
+    return;
+  }
+
   let output;
   try {
     const rendered = renderFlow(state);
     output = process.env.NO_COLOR ? rendered : colorizeFlow(rendered);
   } catch {
-    output = ' (state error — waiting for next update)';
+    output = ' No active flow — waiting for next update';
   }
   console.log('');
   console.log(output);

@@ -14,6 +14,7 @@ import { FileCaptureReader } from '../../infrastructure/adapters/file-capture-re
 import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
 import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
 import { formatError } from '../../domain/format-error.js';
+import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 
 function parseInput(raw: string): { prompt: string } | null {
@@ -47,7 +48,13 @@ async function main(): Promise<void> {
   const auditLogger = new FileAuditLogger(process.cwd());
   const sessionId = randomUUID();
 
-  const stateBefore = await stateStore.loadCurrent();
+  let stateBefore: SessionState | null = null;
+  try {
+    stateBefore = await stateStore.loadCurrent();
+  } catch {
+    process.stderr.write('[prompt-language] WARNING: Corrupt state detected, resetting\n');
+    await stateStore.clear('');
+  }
 
   const result = await injectContext(
     { prompt: input.prompt, sessionId },

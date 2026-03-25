@@ -49,6 +49,12 @@ async function main(): Promise<void> {
   const stateStore = new FileStateStore(process.cwd());
   const state = await stateStore.loadCurrent();
 
+  // Self-heal: clean up stale state from a previous session
+  if (state && (state.status === 'completed' || state.status === 'failed')) {
+    await stateStore.clear(state.sessionId ?? '');
+    process.stderr.write(`[prompt-language] Cleaned up finished flow (${state.status})\n`);
+  }
+
   if (state?.status === 'active') {
     // H-INT-009: Check state file version compatibility
     const stateVersion = state.version ?? 0;

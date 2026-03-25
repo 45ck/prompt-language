@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { interpolate, shellEscapeValue, shellInterpolate } from './interpolate.js';
+import {
+  interpolate,
+  shellEscapeValue,
+  shellInterpolate,
+  MAX_ARRAY_INDEX_PAYLOAD,
+} from './interpolate.js';
 
 describe('interpolate', () => {
   it('replaces a single variable', () => {
@@ -105,6 +110,20 @@ describe('interpolate', () => {
 
     it('leaves as-is when value is a JSON object (not array)', () => {
       expect(interpolate('${obj[0]}', { obj: '{"key":"val"}' })).toBe('${obj[0]}');
+    });
+
+    it('returns null for payload exceeding MAX_ARRAY_INDEX_PAYLOAD', () => {
+      const huge = '["' + 'x'.repeat(MAX_ARRAY_INDEX_PAYLOAD + 1) + '"]';
+      expect(interpolate('${items[0]}', { items: huge })).toBe('${items[0]}');
+    });
+
+    it('returns null for array with more than 10000 elements', () => {
+      const bigArray = JSON.stringify(Array.from({ length: 20_000 }, (_, i) => i));
+      expect(interpolate('${items[0]}', { items: bigArray })).toBe('${items[0]}');
+    });
+
+    it('still works for normal small arrays', () => {
+      expect(interpolate('${items[1]}', { items: '["a","b","c"]' })).toBe('b');
     });
   });
 });

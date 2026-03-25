@@ -592,6 +592,177 @@ describe('FileStateStore', () => {
       expect(loaded).toBeNull();
       stderrSpy.mockRestore();
     });
+
+    it('recovers from bak2.json when both primary and bak.json are corrupted', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      // Save three times: s1 → bak2, s2 → bak, s3 → main
+      const session1 = createSessionState('s1', makeSpec());
+      await store.save(session1);
+      const session2 = createSessionState('s2', makeSpec());
+      await store.save(session2);
+      const session3 = createSessionState('s3', makeSpec());
+      await store.save(session3);
+
+      // Verify bak2 has s1
+      const bak2Path = join(stateDir, 'session-state.bak2.json');
+      const bak2Raw = await readFile(bak2Path, 'utf-8');
+      const bak2Parsed = JSON.parse(bak2Raw);
+      expect(bak2Parsed.sessionId).toBe('s1');
+
+      // Corrupt both primary and bak
+      await writeFile(join(stateDir, 'session-state.json'), '{{garbage', 'utf-8');
+      await writeFile(join(stateDir, 'session-state.bak.json'), '{{also garbage', 'utf-8');
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.sessionId).toBe('s1'); // Recovered from bak2
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[prompt-language] Recovered state from second-generation backup\n',
+      );
+      stderrSpy.mockRestore();
+    });
+
+    it('returns null when primary, bak, and bak2 are all corrupted', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      await writeFile(join(stateDir, 'session-state.json'), '{{garbage', 'utf-8');
+      await writeFile(join(stateDir, 'session-state.bak.json'), '{{also garbage', 'utf-8');
+      await writeFile(join(stateDir, 'session-state.bak2.json'), '{{still garbage', 'utf-8');
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const loaded = await store.loadCurrent();
+      expect(loaded).toBeNull();
+      stderrSpy.mockRestore();
+    });
+
+    it('rotates bak to bak2 on each save', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+
+      await store.save(createSessionState('s1', makeSpec()));
+      await store.save(createSessionState('s2', makeSpec()));
+      await store.save(createSessionState('s3', makeSpec()));
+
+      const bakRaw = await readFile(join(stateDir, 'session-state.bak.json'), 'utf-8');
+      const bak2Raw = await readFile(join(stateDir, 'session-state.bak2.json'), 'utf-8');
+      expect(JSON.parse(bakRaw).sessionId).toBe('s2');
+      expect(JSON.parse(bak2Raw).sessionId).toBe('s1');
+    });
+  });
+
+  describe('structural validation on corrupted state', () => {
+    it('triggers backup recovery when state has missing currentNodePath', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      // Write a valid backup
+      const goodSession = createSessionState('backup-ok', makeSpec());
+      const goodJson = JSON.stringify(goodSession, null, 2);
+      const goodChecksum = createHash('sha256').update(goodJson).digest('hex');
+      await writeFile(
+        join(stateDir, 'session-state.bak.json'),
+        JSON.stringify({ ...goodSession, _checksum: goodChecksum }, null, 2),
+        'utf-8',
+      );
+
+      // Write a state file missing currentNodePath (no checksum = legacy path)
+      const badState = {
+        sessionId: 'corrupt',
+        status: 'active',
+        variables: {},
+        flowSpec: { goal: 'test', nodes: [], completionGates: [], defaults: {}, warnings: [] },
+        // missing currentNodePath
+      };
+      await writeFile(
+        join(stateDir, 'session-state.json'),
+        JSON.stringify(badState, null, 2),
+        'utf-8',
+      );
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.sessionId).toBe('backup-ok');
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[prompt-language] WARNING: session-state.json is corrupted, trying backup\n',
+      );
+      stderrSpy.mockRestore();
+    });
+
+    it('checksum mismatch with valid structure returns sanitized state', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      // Write a complete state with a wrong checksum
+      const session = createSessionState('s1', makeSpec());
+      const tampered = {
+        ...session,
+        gateResults: { tests_pass: true },
+        gateDiagnostics: { tests_pass: { passed: true } },
+        _checksum: 'deadbeef'.repeat(8), // 64-char invalid checksum
+      };
+      await writeFile(
+        join(stateDir, 'session-state.json'),
+        JSON.stringify(tampered, null, 2),
+        'utf-8',
+      );
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.sessionId).toBe('s1');
+      expect(loaded?.gateResults).toEqual({}); // Cleared due to checksum mismatch
+      expect(loaded?.gateDiagnostics).toEqual({});
+      stderrSpy.mockRestore();
+    });
+
+    it('checksum mismatch with invalid structure triggers backup recovery', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      // Write a valid backup
+      const goodSession = createSessionState('backup-ok', makeSpec());
+      const goodJson = JSON.stringify(goodSession, null, 2);
+      const goodChecksum = createHash('sha256').update(goodJson).digest('hex');
+      await writeFile(
+        join(stateDir, 'session-state.bak.json'),
+        JSON.stringify({ ...goodSession, _checksum: goodChecksum }, null, 2),
+        'utf-8',
+      );
+
+      // Write a structurally invalid state with wrong checksum
+      const badState = {
+        sessionId: 'bad',
+        // missing status, currentNodePath, variables, flowSpec
+        _checksum: 'deadbeef'.repeat(8),
+      };
+      await writeFile(
+        join(stateDir, 'session-state.json'),
+        JSON.stringify(badState, null, 2),
+        'utf-8',
+      );
+
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.sessionId).toBe('backup-ok');
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[prompt-language] WARNING: state file checksum mismatch, clearing gate results\n',
+      );
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[prompt-language] WARNING: session-state.json is corrupted, trying backup\n',
+      );
+      stderrSpy.mockRestore();
+    });
   });
 
   describe('H-REL-008: stale lock PID verification', () => {

@@ -26,6 +26,7 @@ import {
   DEFAULT_MAX_ITERATIONS,
 } from '../domain/flow-node.js';
 import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
+import { ASK_CONDITION_PREFIX } from '../domain/judge-prompt.js';
 
 interface ParseContext {
   lines: readonly string[];
@@ -200,6 +201,35 @@ function parseWhileLine(
 ): FlowNode {
   const timeout = parseTimeout(line);
   const stripped = stripTimeout(line);
+
+  // AI-evaluated condition: while ask "question" [grounded-by "cmd"] [max N]
+  const askMatch =
+    /^while\s+ask\s+["']([^"']+)["'](?:\s+grounded-by\s+["']([^"']+)["'])?(?:\s+max\s+(\d+))?$/i.exec(
+      stripped,
+    );
+  if (askMatch) {
+    const question = askMatch[1]!;
+    const groundedBy = askMatch[2];
+    let askMax = askMatch[3] ? parseInt(askMatch[3], 10) : undefined;
+    if (askMax === undefined) {
+      warn(
+        ctx,
+        `Missing "max N" on while ask — defaulting to 5. Try: while ask "${question}" max 5`,
+      );
+      askMax = DEFAULT_MAX_ITERATIONS;
+    }
+    const askBody = parseBlock(ctx, baseIndent);
+    return createWhileNode(
+      nextId(ctx),
+      `${ASK_CONDITION_PREFIX}"${question}"`,
+      askBody,
+      askMax,
+      label,
+      timeout,
+      groundedBy,
+    );
+  }
+
   const match = /^while\s+(?:not\s+)?(.+?)(?:\s+max\s+(\d+))?$/i.exec(stripped);
   const condition = match?.[1] ?? 'true';
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
@@ -221,6 +251,35 @@ function parseUntilLine(
 ): FlowNode {
   const timeout = parseTimeout(line);
   const stripped = stripTimeout(line);
+
+  // AI-evaluated condition: until ask "question" [grounded-by "cmd"] [max N]
+  const askMatch =
+    /^until\s+ask\s+["']([^"']+)["'](?:\s+grounded-by\s+["']([^"']+)["'])?(?:\s+max\s+(\d+))?$/i.exec(
+      stripped,
+    );
+  if (askMatch) {
+    const question = askMatch[1]!;
+    const groundedBy = askMatch[2];
+    let askMax = askMatch[3] ? parseInt(askMatch[3], 10) : undefined;
+    if (askMax === undefined) {
+      warn(
+        ctx,
+        `Missing "max N" on until ask — defaulting to 5. Try: until ask "${question}" max 5`,
+      );
+      askMax = DEFAULT_MAX_ITERATIONS;
+    }
+    const askBody = parseBlock(ctx, baseIndent);
+    return createUntilNode(
+      nextId(ctx),
+      `${ASK_CONDITION_PREFIX}"${question}"`,
+      askBody,
+      askMax,
+      label,
+      timeout,
+      groundedBy,
+    );
+  }
+
   const match = /^until\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(stripped);
   const condition = match?.[1] ?? 'true';
   let max = match?.[2] ? parseInt(match[2], 10) : undefined;
@@ -248,8 +307,19 @@ function parseRetryLine(
 }
 
 function parseIfLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
-  const match = /^if\s+(.+)/i.exec(line);
-  const condition = match?.[1] ? match[1].trim() : 'true';
+  // AI-evaluated condition: if ask "question" [grounded-by "cmd"]
+  const askMatch = /^if\s+ask\s+["']([^"']+)["'](?:\s+grounded-by\s+["']([^"']+)["'])?$/i.exec(
+    line.trim(),
+  );
+  let condition: string;
+  let groundedBy: string | undefined;
+  if (askMatch) {
+    condition = `${ASK_CONDITION_PREFIX}"${askMatch[1]!}"`;
+    groundedBy = askMatch[2];
+  } else {
+    const match = /^if\s+(.+)/i.exec(line);
+    condition = match?.[1] ? match[1].trim() : 'true';
+  }
   const thenBranch = parseBlock(ctx, baseIndent, ['else', 'elif', 'end']);
   let elseBranch: FlowNode[] = [];
   let nestedElseIf = false;
@@ -275,7 +345,7 @@ function parseIfLine(ctx: ParseContext, line: string, baseIndent: number): FlowN
   if (!nestedElseIf) {
     consumeEnd(ctx);
   }
-  return createIfNode(nextId(ctx), condition, thenBranch, elseBranch);
+  return createIfNode(nextId(ctx), condition, thenBranch, elseBranch, groundedBy);
 }
 
 function parseTryBlock(ctx: ParseContext, baseIndent: number): FlowNode {

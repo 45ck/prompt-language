@@ -32,6 +32,8 @@ export interface WhileNode extends BaseNode {
   readonly body: readonly FlowNode[];
   readonly label?: string | undefined;
   readonly timeoutSeconds?: number | undefined;
+  /** Shell command whose stdout is included as evidence for AI condition evaluation. */
+  readonly groundedBy?: string | undefined;
 }
 
 export interface UntilNode extends BaseNode {
@@ -41,6 +43,8 @@ export interface UntilNode extends BaseNode {
   readonly body: readonly FlowNode[];
   readonly label?: string | undefined;
   readonly timeoutSeconds?: number | undefined;
+  /** Shell command whose stdout is included as evidence for AI condition evaluation. */
+  readonly groundedBy?: string | undefined;
 }
 
 export interface RetryNode extends BaseNode {
@@ -57,6 +61,8 @@ export interface IfNode extends BaseNode {
   readonly condition: string;
   readonly thenBranch: readonly FlowNode[];
   readonly elseBranch: readonly FlowNode[];
+  /** Shell command whose stdout is included as evidence for AI condition evaluation. */
+  readonly groundedBy?: string | undefined;
 }
 
 export interface PromptNode extends BaseNode {
@@ -158,6 +164,7 @@ export function createWhileNode(
   maxIterations?: number,
   label?: string,
   timeoutSeconds?: number,
+  groundedBy?: string,
 ): WhileNode {
   return {
     kind: 'while',
@@ -167,6 +174,7 @@ export function createWhileNode(
     body,
     ...(label != null ? { label } : {}),
     ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
+    ...(groundedBy != null ? { groundedBy } : {}),
   };
 }
 
@@ -177,6 +185,7 @@ export function createUntilNode(
   maxIterations?: number,
   label?: string,
   timeoutSeconds?: number,
+  groundedBy?: string,
 ): UntilNode {
   return {
     kind: 'until',
@@ -186,6 +195,7 @@ export function createUntilNode(
     body,
     ...(label != null ? { label } : {}),
     ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
+    ...(groundedBy != null ? { groundedBy } : {}),
   };
 }
 
@@ -213,8 +223,16 @@ export function createIfNode(
   condition: string,
   thenBranch: readonly FlowNode[],
   elseBranch: readonly FlowNode[] = [],
+  groundedBy?: string,
 ): IfNode {
-  return { kind: 'if', id, condition, thenBranch, elseBranch };
+  return {
+    kind: 'if',
+    id,
+    condition,
+    thenBranch,
+    elseBranch,
+    ...(groundedBy != null ? { groundedBy } : {}),
+  };
 }
 
 export function createPromptNode(id: string, text: string): PromptNode {

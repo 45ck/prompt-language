@@ -44,6 +44,13 @@ import {
 } from '../domain/capture-prompt.js';
 import { evaluateArithmetic } from '../domain/arithmetic.js';
 import { applyTransform } from '../domain/transforms.js';
+import {
+  isAskCondition,
+  extractAskQuestion,
+  judgeVarName,
+  buildJudgePrompt,
+  buildJudgeRetryPrompt,
+} from '../domain/judge-prompt.js';
 
 export function resolveCurrentNode(
   nodes: readonly FlowNode[],
@@ -220,6 +227,11 @@ async function handleBodyExhaustion(
 
   switch (parentNode.kind) {
     case 'while': {
+      if (isAskCondition(parentNode.condition)) {
+        // For ask conditions: reset path to while node so advanceConditionLoop
+        // handles Phase 1 judgment on re-entry (captureReader available there).
+        return advanceNode(state, parentPath);
+      }
       const condResult = await evaluateFlowCondition(
         parentNode.condition,
         state.variables,
@@ -236,6 +248,11 @@ async function handleBodyExhaustion(
     }
 
     case 'until': {
+      if (isAskCondition(parentNode.condition)) {
+        // For ask conditions: reset path to until node so advanceConditionLoop
+        // handles Phase 1 judgment on re-entry.
+        return advanceNode(state, parentPath);
+      }
       const condResult = await evaluateFlowCondition(
         parentNode.condition,
         state.variables,
@@ -897,7 +914,7 @@ async function advanceSingleNode(
     }
     case 'while':
     case 'until':
-      return advanceConditionLoop(node, current, commandRunner);
+      return advanceConditionLoop(node, current, commandRunner, captureReader);
     case 'retry': {
       const now = Date.now();
       return {
@@ -915,7 +932,7 @@ async function advanceSingleNode(
       };
     }
     case 'if':
-      return advanceIfNode(node, current, commandRunner);
+      return advanceIfNode(node, current, commandRunner, captureReader);
     case 'try':
       return { state: advanceNode(current, [...current.currentNodePath, 0]), advanced: true };
     case 'foreach':
@@ -992,10 +1009,147 @@ async function advanceConditionLoop(
     readonly kind: 'while' | 'until';
     readonly condition: string;
     readonly maxIterations: number;
+    readonly groundedBy?: string | undefined;
   },
   current: SessionState,
   commandRunner?: CommandRunner,
+  captureReader?: CaptureReader,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
+  // AI-evaluated condition: two-phase capture (emit judge prompt, then read verdict)
+  if (isAskCondition(node.condition)) {
+    const varName = judgeVarName(node.id);
+    const progress = current.nodeProgress[node.id];
+    const isAwaiting = progress?.status === 'awaiting_capture';
+
+    if (!isAwaiting) {
+      // Phase 1: emit judge prompt and wait for Claude's verdict
+      if (captureReader) await captureReader.clear(varName);
+      let groundingOutput: string | undefined;
+      if (node.groundedBy && commandRunner) {
+        try {
+          const groundingResult = await commandRunner.run(node.groundedBy);
+          if (groundingResult.stdout) groundingOutput = groundingResult.stdout.slice(0, 1000);
+        } catch {
+          // Grounding failure is non-fatal — proceed without evidence
+        }
+      }
+      const question = extractAskQuestion(node.condition);
+      const now = Date.now();
+      const updated = updateNodeProgress(current, node.id, {
+        iteration: progress?.iteration ?? 0,
+        maxIterations: node.maxIterations,
+        status: 'awaiting_capture',
+        startedAt: progress?.startedAt ?? now,
+        loopStartedAt: progress?.loopStartedAt ?? now,
+      });
+      return {
+        kind: 'prompt',
+        state: updated,
+        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+      };
+    }
+
+    // Phase 2: read verdict from capture file
+    if (captureReader) {
+      const captured = await captureReader.read(varName);
+      if (captured) {
+        const rawVerdict = captured.trim().toLowerCase();
+        const verdict = rawVerdict === 'true' || rawVerdict.startsWith('true');
+        await captureReader.clear(varName);
+
+        const iteration = progress?.iteration ?? 0;
+        const enterBody = node.kind === 'while' ? verdict : !verdict;
+
+        // Check wall-clock timeout (same logic as handleLoopReentry)
+        if (enterBody && node.timeoutSeconds !== undefined && node.timeoutSeconds > 0) {
+          const loopStart = progress?.loopStartedAt ?? progress?.startedAt;
+          if (loopStart != null) {
+            const elapsed = (Date.now() - loopStart) / 1000;
+            if (elapsed >= node.timeoutSeconds) {
+              const warnState = addWarning(
+                current,
+                `Loop '${node.id}' timed out after ${node.timeoutSeconds}s.`,
+              );
+              const completedProgress = updateNodeProgress(warnState, node.id, {
+                iteration,
+                maxIterations: node.maxIterations,
+                status: 'completed',
+                startedAt: progress?.startedAt,
+                completedAt: Date.now(),
+                loopStartedAt: progress?.loopStartedAt,
+              });
+              return {
+                state: advanceNode(completedProgress, advancePath(current.currentNodePath)),
+                advanced: true,
+              };
+            }
+          }
+        }
+
+        // Check max iterations
+        if (enterBody && iteration >= node.maxIterations) {
+          const warnState = addWarning(
+            current,
+            `Loop '${node.id}' reached max iterations (${node.maxIterations}).`,
+          );
+          const completedProgress = updateNodeProgress(warnState, node.id, {
+            iteration,
+            maxIterations: node.maxIterations,
+            status: 'completed',
+            startedAt: progress?.startedAt,
+            completedAt: Date.now(),
+            loopStartedAt: progress?.loopStartedAt,
+          });
+          return {
+            state: advanceNode(completedProgress, advancePath(current.currentNodePath)),
+            advanced: true,
+          };
+        }
+
+        if (enterBody) {
+          const now = Date.now();
+          let s = updateNodeProgress(current, node.id, {
+            iteration: iteration + 1,
+            maxIterations: node.maxIterations,
+            status: 'running',
+            startedAt: progress?.startedAt ?? now,
+            loopStartedAt: progress?.loopStartedAt ?? now,
+          });
+          s = advanceNode(s, [...current.currentNodePath, 0]);
+          return { state: s, advanced: true };
+        }
+
+        // Verdict says exit — advance past this loop
+        const exitState = updateNodeProgress(current, node.id, {
+          iteration,
+          maxIterations: node.maxIterations,
+          status: 'completed',
+          startedAt: progress?.startedAt,
+          completedAt: Date.now(),
+          loopStartedAt: progress?.loopStartedAt,
+        });
+        return {
+          state: advanceNode(exitState, advancePath(current.currentNodePath)),
+          advanced: true,
+        };
+      }
+    }
+
+    // No verdict captured yet — retry the judge prompt
+    const retryUpdated = updateNodeProgress(current, node.id, {
+      iteration: progress?.iteration ?? 0,
+      maxIterations: node.maxIterations,
+      status: 'awaiting_capture',
+      startedAt: progress?.startedAt,
+      loopStartedAt: progress?.loopStartedAt,
+    });
+    return {
+      kind: 'prompt',
+      state: retryUpdated,
+      capturedPrompt: buildJudgeRetryPrompt(node.id, current.captureNonce),
+    };
+  }
+
   const condResult = await evaluateFlowCondition(node.condition, current.variables, commandRunner);
   if (condResult === null) return { kind: 'pause', state: current, capturedPrompt: null };
   const enterBody = node.kind === 'while' ? condResult : !condResult;
@@ -1023,10 +1177,76 @@ async function advanceIfNode(
     readonly condition: string;
     readonly thenBranch: readonly FlowNode[];
     readonly elseBranch: readonly FlowNode[];
+    readonly groundedBy?: string | undefined;
   },
   current: SessionState,
   commandRunner?: CommandRunner,
+  captureReader?: CaptureReader,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
+  // AI-evaluated condition: two-phase capture
+  if (isAskCondition(node.condition)) {
+    const varName = judgeVarName(node.id);
+    const progress = current.nodeProgress[node.id];
+    const isAwaiting = progress?.status === 'awaiting_capture';
+
+    if (!isAwaiting) {
+      // Phase 1: emit judge prompt
+      if (captureReader) await captureReader.clear(varName);
+      let groundingOutput: string | undefined;
+      if (node.groundedBy && commandRunner) {
+        try {
+          const groundingResult = await commandRunner.run(node.groundedBy);
+          if (groundingResult.stdout) groundingOutput = groundingResult.stdout.slice(0, 1000);
+        } catch {
+          // Grounding failure is non-fatal
+        }
+      }
+      const question = extractAskQuestion(node.condition);
+      const now = Date.now();
+      const updated = updateNodeProgress(current, node.id, {
+        iteration: 1,
+        maxIterations: 1,
+        status: 'awaiting_capture',
+        startedAt: now,
+      });
+      return {
+        kind: 'prompt',
+        state: updated,
+        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+      };
+    }
+
+    // Phase 2: read verdict and branch
+    if (captureReader) {
+      const captured = await captureReader.read(varName);
+      if (captured) {
+        const rawVerdict = captured.trim().toLowerCase();
+        const verdict = rawVerdict === 'true' || rawVerdict.startsWith('true');
+        await captureReader.clear(varName);
+        if (verdict) {
+          return { state: advanceNode(current, [...current.currentNodePath, 0]), advanced: true };
+        }
+        if (node.elseBranch.length > 0) {
+          return {
+            state: advanceNode(current, [...current.currentNodePath, node.thenBranch.length]),
+            advanced: true,
+          };
+        }
+        return {
+          state: advanceNode(current, advancePath(current.currentNodePath)),
+          advanced: true,
+        };
+      }
+    }
+
+    // No verdict captured yet — retry the judge prompt
+    return {
+      kind: 'prompt',
+      state: current,
+      capturedPrompt: buildJudgeRetryPrompt(node.id, current.captureNonce),
+    };
+  }
+
   const condResult = await evaluateFlowCondition(node.condition, current.variables, commandRunner);
   if (condResult === null) return { kind: 'pause', state: current, capturedPrompt: null };
 

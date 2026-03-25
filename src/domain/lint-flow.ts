@@ -9,6 +9,7 @@
 
 import type { FlowNode } from './flow-node.js';
 import type { FlowSpec } from './flow-spec.js';
+import { isAskCondition } from './judge-prompt.js';
 
 export interface LintWarning {
   readonly nodeId: string;
@@ -273,8 +274,18 @@ function lintNodes(nodes: readonly FlowNode[], insideLoop: boolean, warnings: Li
         if (node.body.length === 0) {
           warnings.push({ nodeId: node.id, message: `Empty ${node.kind} body` });
         }
+        if (isAskCondition(node.condition) && !node.groundedBy) {
+          warnings.push({
+            nodeId: node.id,
+            message: `ask condition without grounded-by — AI evaluation has no evidence. Consider: ${node.kind} ask "..." grounded-by "cmd"`,
+          });
+        }
         // H-DX-010: warn if condition references state-changing predicate but body has no run node
-        if (referencesStateChangingPredicate(node.condition) && !containsRunNode(node.body)) {
+        if (
+          !isAskCondition(node.condition) &&
+          referencesStateChangingPredicate(node.condition) &&
+          !containsRunNode(node.body)
+        ) {
           warnings.push({
             nodeId: node.id,
             message: `"${node.condition}" loop body has no run: node — condition may never change`,

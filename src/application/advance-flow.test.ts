@@ -2710,3 +2710,408 @@ describe('handleLoopReentry — zero timeout', () => {
     );
   });
 });
+
+// ── ask condition — while/until AI-evaluated conditions ─────────────
+
+describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
+  it('Phase 1: emits judge prompt on first encounter', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"is the code clean?"',
+      [createPromptNode('p1', 'fix it')],
+      3,
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('is the code clean?');
+    expect(capturedPrompt).toContain('prompt-language-capture');
+    expect(capturedPrompt).toContain('__judge_w1__');
+    expect(result.nodeProgress['w1']?.status).toBe('awaiting_capture');
+    expect(captureReader.clear).toHaveBeenCalledWith('__judge_w1__');
+  });
+
+  it('Phase 1: includes grounding command output in judge prompt', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'grounding evidence here', stderr: '' }),
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"is it passing?"',
+      [createPromptNode('p1', 'fix')],
+      3,
+      undefined,
+      undefined,
+      'npm test',
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(capturedPrompt).toContain('grounding evidence here');
+  });
+
+  it('Phase 2: verdict=true enters while body', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('true'),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"still needed?"',
+      [createPromptNode('p1', 'inner work')],
+      3,
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'w1', {
+      iteration: 0,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+      loopStartedAt: Date.now(),
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toBe('inner work');
+    expect(result.nodeProgress['w1']?.iteration).toBe(1);
+    expect(result.nodeProgress['w1']?.status).toBe('running');
+  });
+
+  it('Phase 2: verdict=false exits while loop', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('false'),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode('w1', 'ask:"continue?"', [createPromptNode('p1', 'body')], 3);
+    const spec = createFlowSpec('test', [whileNode, createPromptNode('p2', 'after-while')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'w1', {
+      iteration: 0,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+      loopStartedAt: Date.now(),
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toBe('after-while');
+    expect(result.nodeProgress['w1']?.status).toBe('completed');
+  });
+
+  it('Phase 2: no verdict captured → retries judge prompt', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode('w1', 'ask:"ready?"', [createPromptNode('p1', 'body')], 3);
+    const spec = createFlowSpec('test', [whileNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'w1', {
+      iteration: 0,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+      loopStartedAt: Date.now(),
+    });
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(capturedPrompt).toContain('was not detected');
+    expect(capturedPrompt).toContain('__judge_w1__');
+  });
+
+  it('Phase 2: max iterations reached → exits loop with warning', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('true'),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"still running?"',
+      [createPromptNode('p1', 'body')],
+      3,
+    );
+    const spec = createFlowSpec('test', [whileNode, createPromptNode('p2', 'after')]);
+    let state = createSessionState('s1', spec);
+    // iteration equals maxIterations → max exceeded
+    state = updateNodeProgress(state, 'w1', {
+      iteration: 3,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+      loopStartedAt: Date.now(),
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toBe('after');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('max iterations')]),
+    );
+  });
+});
+
+describe('autoAdvanceNodes — until ask condition (AI-evaluated)', () => {
+  it('Phase 2: verdict=false enters until body', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('false'),
+      clear: vi.fn(),
+    };
+    const untilNode = createUntilNode(
+      'u1',
+      'ask:"is it done?"',
+      [createPromptNode('p1', 'make progress')],
+      3,
+    );
+    const spec = createFlowSpec('test', [untilNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'u1', {
+      iteration: 0,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+      loopStartedAt: Date.now(),
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toBe('make progress');
+    expect(result.nodeProgress['u1']?.iteration).toBe(1);
+  });
+
+  it('Phase 2: verdict=true exits until loop', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('true'),
+      clear: vi.fn(),
+    };
+    const untilNode = createUntilNode(
+      'u1',
+      'ask:"is it done?"',
+      [createPromptNode('p1', 'body')],
+      3,
+    );
+    const spec = createFlowSpec('test', [untilNode, createPromptNode('p2', 'after-until')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'u1', {
+      iteration: 0,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+      loopStartedAt: Date.now(),
+    });
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(capturedPrompt).toBe('after-until');
+  });
+});
+
+// ── ask condition — if AI-evaluated conditions ───────────────────────
+
+describe('autoAdvanceNodes — if ask condition (AI-evaluated)', () => {
+  it('Phase 1: emits judge prompt on first encounter', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode('i1', 'ask:"is the code clean?"', [
+      createPromptNode('p1', 'then-branch'),
+    ]);
+    const spec = createFlowSpec('test', [ifNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('is the code clean?');
+    expect(capturedPrompt).toContain('__judge_i1__');
+    expect(result.nodeProgress['i1']?.status).toBe('awaiting_capture');
+    expect(captureReader.clear).toHaveBeenCalledWith('__judge_i1__');
+  });
+
+  it('Phase 2: verdict=true enters then-branch', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('true'),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode(
+      'i1',
+      'ask:"is it good?"',
+      [createPromptNode('p1', 'then-action')],
+      [createPromptNode('p2', 'else-action')],
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'i1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+    });
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(capturedPrompt).toBe('then-action');
+  });
+
+  it('Phase 2: verdict=false enters else-branch', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('false'),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode(
+      'i1',
+      'ask:"all good?"',
+      [createPromptNode('p1', 'then-action')],
+      [createPromptNode('p2', 'else-action')],
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'i1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+    });
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(capturedPrompt).toBe('else-action');
+  });
+
+  it('Phase 2: verdict=false skips past if when no else-branch', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('false'),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode('i1', 'ask:"apply fix?"', [
+      createPromptNode('p1', 'fix something'),
+    ]);
+    const spec = createFlowSpec('test', [ifNode, createPromptNode('p2', 'after')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'i1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+    });
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(capturedPrompt).toBe('after');
+  });
+
+  it('Phase 2: no verdict captured → retries judge prompt', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode('i1', 'ask:"ready?"', [createPromptNode('p1', 'then')]);
+    const spec = createFlowSpec('test', [ifNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'i1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'awaiting_capture',
+      startedAt: Date.now(),
+    });
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(capturedPrompt).toContain('was not detected');
+    expect(capturedPrompt).toContain('__judge_i1__');
+  });
+});
+
+// ── ask condition body exhaustion re-entry ───────────────────────────
+
+describe('handleBodyExhaustion — ask condition re-entry', () => {
+  it('while ask: body exhaustion resets to while node, Phase 1 re-emits judge prompt', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode('w1', 'ask:"continue?"', [createPromptNode('p1', 'body')], 3);
+    const spec = createFlowSpec('test', [whileNode, createPromptNode('p2', 'after')]);
+    const base = createSessionState('s1', spec);
+    // Simulate: body exhausted — path past last body item, status running (not awaiting)
+    const state = {
+      ...base,
+      currentNodePath: [0, 1] as readonly number[],
+      nodeProgress: {
+        w1: {
+          iteration: 1,
+          maxIterations: 3,
+          status: 'running' as const,
+          startedAt: Date.now(),
+          loopStartedAt: Date.now(),
+        },
+      },
+    };
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('continue?');
+    expect(capturedPrompt).toContain('__judge_w1__');
+    expect(result.nodeProgress['w1']?.status).toBe('awaiting_capture');
+  });
+
+  it('until ask: body exhaustion resets to until node, Phase 1 re-emits judge prompt', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const untilNode = createUntilNode('u1', 'ask:"done?"', [createPromptNode('p1', 'body')], 3);
+    const spec = createFlowSpec('test', [untilNode, createPromptNode('p2', 'after')]);
+    const base = createSessionState('s1', spec);
+    const state = {
+      ...base,
+      currentNodePath: [0, 1] as readonly number[],
+      nodeProgress: {
+        u1: {
+          iteration: 1,
+          maxIterations: 3,
+          status: 'running' as const,
+          startedAt: Date.now(),
+          loopStartedAt: Date.now(),
+        },
+      },
+    };
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('done?');
+    expect(capturedPrompt).toContain('__judge_u1__');
+    expect(result.nodeProgress['u1']?.status).toBe('awaiting_capture');
+  });
+});

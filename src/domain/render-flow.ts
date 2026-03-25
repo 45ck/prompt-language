@@ -7,6 +7,7 @@
 
 import type { FlowNode, ForeachNode, IfNode, LetNode, SpawnNode, TryNode } from './flow-node.js';
 import type { SessionState } from './session-state.js';
+import { isAskCondition, extractAskQuestion } from './judge-prompt.js';
 
 // D04-fix: Simple FNV-1a string hash — replaces node:crypto to keep domain zero-dep
 function fnv1aHash(str: string): string {
@@ -98,8 +99,11 @@ function renderNode(
     case 'while': {
       const whileLabel = node.label ? `${node.label}: ` : '';
       const whileTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds}` : '';
+      const whileCond = isAskCondition(node.condition)
+        ? `ask: "${extractAskQuestion(node.condition)}"`
+        : node.condition;
       return renderLoopNode(
-        `${whileLabel}while ${node.condition} max ${node.maxIterations}${whileTimeout}`,
+        `${whileLabel}while ${whileCond} max ${node.maxIterations}${whileTimeout}`,
         node.body,
         state,
         path,
@@ -112,8 +116,11 @@ function renderNode(
     case 'until': {
       const untilLabel = node.label ? `${node.label}: ` : '';
       const untilTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds}` : '';
+      const untilCond = isAskCondition(node.condition)
+        ? `ask: "${extractAskQuestion(node.condition)}"`
+        : node.condition;
       return renderLoopNode(
-        `${untilLabel}until ${node.condition} max ${node.maxIterations}${untilTimeout}`,
+        `${untilLabel}until ${untilCond} max ${node.maxIterations}${untilTimeout}`,
         node.body,
         state,
         path,
@@ -200,7 +207,10 @@ function renderIfNode(
   suffix: string,
 ): string[] {
   const indent = '  '.repeat(indentLevel);
-  const lines: string[] = [`${prefix}${indent}if ${node.condition}${suffix}`];
+  const ifCond = isAskCondition(node.condition)
+    ? `ask: "${extractAskQuestion(node.condition)}"`
+    : node.condition;
+  const lines: string[] = [`${prefix}${indent}if ${ifCond}${suffix}`];
 
   for (let i = 0; i < node.thenBranch.length; i++) {
     const child = node.thenBranch[i]!;
@@ -515,7 +525,10 @@ function compactNode(
     case 'until': {
       const prog = state.nodeProgress[node.id];
       const iter = prog ? `${prog.iteration}/${prog.maxIterations}` : '';
-      const lines = [`${mark}${pad}${node.kind} ${node.condition} ${iter}`];
+      const compactCond = isAskCondition(node.condition)
+        ? `ask: "${extractAskQuestion(node.condition)}"`
+        : node.condition;
+      const lines = [`${mark}${pad}${node.kind} ${compactCond} ${iter}`];
       for (let i = 0; i < node.body.length; i++) {
         lines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
       }
@@ -531,7 +544,10 @@ function compactNode(
       return lines;
     }
     case 'if': {
-      const lines = [`${mark}${pad}if ${node.condition}`];
+      const compactIfCond = isAskCondition(node.condition)
+        ? `ask: "${extractAskQuestion(node.condition)}"`
+        : node.condition;
+      const lines = [`${mark}${pad}if ${compactIfCond}`];
       for (let i = 0; i < node.thenBranch.length; i++) {
         lines.push(...compactNode(node.thenBranch[i]!, state, [...path, i], depth + 1));
       }
@@ -696,10 +712,18 @@ function describeNode(node: FlowNode): string {
       return `run: ${node.command}`;
     case 'let':
       return `let ${node.variableName}`;
-    case 'while':
-      return `while ${node.condition}`;
-    case 'until':
-      return `until ${node.condition}`;
+    case 'while': {
+      const wCond = isAskCondition(node.condition)
+        ? `ask: "${extractAskQuestion(node.condition)}"`
+        : node.condition;
+      return `while ${wCond}`;
+    }
+    case 'until': {
+      const uCond = isAskCondition(node.condition)
+        ? `ask: "${extractAskQuestion(node.condition)}"`
+        : node.condition;
+      return `until ${uCond}`;
+    }
     case 'retry':
       return `retry max ${node.maxAttempts}`;
     case 'if':

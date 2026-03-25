@@ -82,7 +82,8 @@
     "myvar",
     "inlines",
     "myloop",
-    "toctou"
+    "toctou",
+    "cheatsheet"
   ],
   "ignorePaths": [
     "dist/**",

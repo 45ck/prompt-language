@@ -442,13 +442,11 @@ Options:
   case '--version':
   case '-V': {
     const ver = await readPluginVersion().catch(() => 'unknown');
-    console.log(ver);
+    console.log(`prompt-language v${ver}`);
     break;
   }
   default:
     console.error(`Unknown command: ${command}`);
-    console.error(
-      'Usage: npx @45ck/prompt-language [install|uninstall|status|init|demo|ci|statusline|watch]',
-    );
+    console.error('Run "npx @45ck/prompt-language --help" for usage information.');
     process.exit(1);
 }

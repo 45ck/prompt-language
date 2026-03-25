@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-03-26
+
+### Added
+
+- **`ask` keyword** — AI-evaluated conditions for `if`/`while`/`until` (`while ask "question?" max 5`, optional `grounded-by "cmd"` for deterministic grounding).
+- **`continue` node** — skips to the next loop iteration (mirrors `break`).
+- **`else if` / `elif`** — multi-branch conditional sugar; parser desugars to nested `if/else`.
+- **`${var:-default}`** — default-value syntax in conditions; interpolated before evaluation.
+- **Inline arithmetic** — `let count = ${count} + 1`; pure `evaluateArithmetic()` handles integer expressions.
+- **Dry-run mode** — `--dry-run` flag parses, lints, and renders a flow without executing.
+- **Gate composition** — `any(gate1, gate2)` in `done when:` passes when at least one gate passes.
+- **Cross-directory spawn** — `spawn "name" in "path"` launches child flows in a different directory.
+- **Environment-aware gates** — auto-detect `go.mod` → `go_test_pass`, `Cargo.toml` → `cargo_test_pass`, `pyproject.toml` → `pytest_pass`.
+- **Capture tag nonce** — per-session UUID4 nonce prevents capture-injection attacks.
+- **State file SHA-256 checksum** — integrity verification on every load; two-generation backups.
+- **Atomic state writes** — write-tmp-then-rename pattern prevents partial-write corruption.
+- **Gate command timeout** — 60 s default, configurable via environment variable.
+- **Command audit trail** — append-only `.prompt-language/audit.jsonl` logs every command execution.
+- **Flow heartbeat summary** — compact status injected on pre-compact for compaction resilience.
+- **Error boundary** — uncaught runtime errors transition the flow to `failed` status with reason.
+- **Unresolved variable lint** — warns on `${var}` references with no matching variable; "did you mean?" suggestions via Levenshtein distance.
+- **Infinite loop lint** — warns when a `while`/`until` body contains no `run` node.
+- **List variable display** — renders as `[3 items: "a", "b", "c"]`; selective rendering hides internal auto-vars.
+- **Skip context for completed/failed flows** — saves 200–1000 tokens per turn.
+- **Gate stdout diagnostics** — gate results include stdout; stderr truncation increased to 2000 chars.
+- **Capture failure diagnostics** — explains why capture failed when the nonce tag is absent.
+- **Flow completion banner** — stop hook renders `[PL] Flow completed/failed: …` to stderr.
+- **Gate status in stop hook** — block reason includes per-gate pass/fail/pending count.
+- **`/flow-validate` skill** — runs `lintFlow` + `flowComplexityScore` on the active flow.
+- **`--help` / `--version` CLI flags** — `npx @45ck/prompt-language --version` prints the installed version.
+- **26 automated smoke tests** — full end-to-end coverage including ask, arithmetic, continue, and multi-var interpolation.
+
+### Fixed
+
+- **Unresolved variable injection** (MAJOR defect) — variables without a value are no longer passed to the shell; lint warns instead.
+- **State resilience** — structural validation on load; stale `.prompt-language/` directories are cleaned up automatically.
+- **Advisory file locking** — prevents `EBUSY` on concurrent hook invocations.
+- Dead code removed: `resolver.ts`, `pauseFlow`/`resumeFlow` (never wired to any hook).
+
+### Docs
+
+- `docs/dsl-cheatsheet.md` — single-page quick reference for all DSL primitives.
+- `docs/examples/foreach-files.md` — foreach recipe for iterating over file lists.
+- `docs/guide.md` — abort/cancel escape hatch section; `ask` keyword walkthrough.
+- `docs/dsl-reference.md` — `ask` keyword reference with `grounded-by` examples.
+
 ## [0.2.0] - 2026-03-22
 
 ### Added

@@ -146,10 +146,10 @@ run: npm test
 run: npx eslint . --max-warnings=0
 ```
 
-Optional timeout in seconds:
+Optional timeout in seconds (use bracket syntax):
 
 ```
-run: npm test timeout 60
+run: npm test [timeout 60]
 ```
 
 After every `run`, five built-in variables are set automatically:
@@ -197,6 +197,18 @@ if ${count} > 0 and not command_failed
 end
 ```
 
+**Multi-branch** — use `else if` or `elif` for chained conditions:
+
+```
+if tests_fail
+  prompt: Fix the tests.
+else if lint_fail
+  prompt: Fix the lint errors.
+else
+  prompt: All checks passed.
+end
+```
+
 ### while / until
 
 Loop with a condition. `while` loops while true, `until` loops until true:
@@ -216,6 +228,26 @@ end
 ```
 
 Both require a `max` iteration limit (default: 5). If the limit is reached, the flow continues past the loop.
+
+**AI-evaluated conditions (`ask`)** — let Claude evaluate a subjective question instead of a command predicate:
+
+```
+while ask "does the code still have performance issues?" max 5
+  prompt: Optimize the hottest code path.
+  run: node bench.js
+end
+```
+
+Add `grounded-by "command"` to base the verdict on real output:
+
+```
+while ask "are there still failing tests?" grounded-by "npm test" max 5
+  prompt: Fix the failing tests.
+  run: npm test
+end
+```
+
+`ask` conditions work with `while`, `until`, and `if`. They take one extra turn to evaluate — Claude receives the judge prompt, answers true/false, and the plugin captures the verdict the same way as `let x = prompt`.
 
 **Choosing between loop primitives:**
 
@@ -299,6 +331,16 @@ run: npm test -- ${module}
 prompt: Deploying to ${env:-development}.
 ```
 
+**Arithmetic** — inline integer math with `+`, `-`, `*`, `/`:
+
+```
+let count = "0"
+let count = ${count} + 1
+let doubled = ${count} * 2
+```
+
+Operators evaluate left-to-right. If any operand is non-numeric, the expression is left as-is.
+
 **List variables** — initialize, append, iterate:
 
 ```
@@ -325,6 +367,22 @@ while tests_fail max 10
   end
 end
 ```
+
+### continue
+
+Skip to the next loop iteration. Any remaining statements in the current iteration are skipped:
+
+```
+foreach file in ${files}
+  run: npx tsc --noEmit ${file}
+  if command_succeeded
+    continue
+  end
+  prompt: Fix the type errors in ${file}.
+end
+```
+
+`continue` works inside `while`, `until`, `retry`, and `foreach`.
 
 ### spawn / await (parallel execution)
 

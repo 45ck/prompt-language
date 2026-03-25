@@ -5,7 +5,7 @@
 | Guide                                 | What you'll learn                                                 |
 | ------------------------------------- | ----------------------------------------------------------------- |
 | [Getting Started](getting-started.md) | Install, run your first gate, see it work in 2 minutes            |
-| [Language Guide](language-guide.md)   | All 12 primitives, patterns, when to use (and not use) the plugin |
+| [Language Guide](language-guide.md)   | All 13 primitives, patterns, when to use (and not use) the plugin |
 
 ## Reference
 

@@ -79,7 +79,14 @@ Zero DSL to learn. Type a slash command and walk away:
 
 ## Gates
 
-Gates are the core idea. `done when:` predicates run real commands and block the agent from stopping until they pass. The agent can claim it's done, skip requirements, or ignore failures. Gates don't care — they run the command and check the exit code.
+**Gates** are verification checks that run when Claude tries to stop. Each gate is defined by a **predicate** — a named condition that maps to a real shell command. If any gate fails (command exits non-zero), the plugin blocks the stop and forces Claude to keep working. Gates can't be bypassed: they always run the actual command, regardless of what Claude says.
+
+`done when:` is the enforcement section — add it to any prompt to make gates mandatory. `flow:` is optional — it structures iterative steps. You can use `done when:` alone (no `flow:` needed) for simple enforcement:
+
+```
+done when:
+  tests_pass
+```
 
 ### Built-in gates
 
@@ -100,7 +107,7 @@ Gates are the core idea. `done when:` predicates run real commands and block the
 
 ### Custom gates
 
-For any command not covered by a built-in, use `gate name: command`:
+For any command not covered by a built-in, define your own in the `done when:` section with `gate name: command`:
 
 ```
 done when:

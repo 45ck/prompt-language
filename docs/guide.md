@@ -4,7 +4,7 @@ This guide explains the mechanics behind the prompt-language plugin — what Cla
 
 ## The closed loop
 
-Three Claude Code hooks form an enforcement loop:
+**Hooks** are entry points where the plugin intercepts Claude Code's lifecycle. Think of them as checkpoints: the plugin can inspect the current state, inject context into Claude's prompt, or block an action entirely. prompt-language uses three hooks to form an enforcement loop:
 
 - **UserPromptSubmit** — Parses DSL from the prompt, creates session state, injects the first step into Claude's context.
 - **Stop** — Intercepts when Claude tries to stop. If steps remain or gates haven't passed, it blocks the stop and injects the next step.
@@ -114,7 +114,7 @@ There is a critical design difference between flow conditions and completion gat
 
 Flow conditions check `state.variables` first. If `command_failed` is already set from the last `run:` node, an `if command_failed` doesn't re-run anything — it just reads the variable.
 
-Gates always execute the real command. Even if `tests_pass` exists as a variable set to `"true"`, the `done when: tests_pass` gate runs `npm test` itself. This is why gates catch gaslighting: the agent can set variables however it wants, but the gate independently verifies by running the actual command.
+Gates always execute the real command. Even if `tests_pass` exists as a variable set to `"true"`, the `done when: tests_pass` gate runs `npm test` itself. This is why gates are trustworthy: the agent can set variables however it wants, but the gate independently verifies by running the actual command. There is no way to satisfy a gate by setting a variable — it always runs the real check.
 
 Built-in gate predicates and their commands:
 

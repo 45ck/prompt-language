@@ -169,6 +169,63 @@ Alternatively, use the `/flow:reset` slash command to clear all flow state and s
 
 **Note**: Escape hatch phrases are matched case-insensitively and can appear anywhere in the prompt (e.g., "please abort flow now" works). They only take effect when a flow is actively running (`status: "active"`).
 
+## Inspecting the audit trail
+
+Every command executed by the plugin is logged to `.prompt-language/audit.jsonl` — an append-only JSONL file:
+
+```bash
+cat .prompt-language/audit.jsonl
+```
+
+Each line is a JSON object:
+
+```json
+{
+  "ts": "2026-03-25T21:00:00.000Z",
+  "cmd": "npm test",
+  "exitCode": 1,
+  "stderr": "FAIL src/auth.test.ts"
+}
+```
+
+Use the audit log to verify what commands ran, in what order, and what they returned. Especially useful when debugging gates that fail unexpectedly.
+
+## Capture file diagnostics
+
+When `let x = prompt` fails to capture Claude's response, the plugin logs a diagnostic explaining why. Look for a message like:
+
+```
+[PL] Capture failed: expected tag __capture_<nonce>__ not found in response
+```
+
+This means Claude answered but didn't include the required capture tag. The plugin will retry up to 3 times. If all retries fail, the variable is set to `""` and the flow continues.
+
+**Fix**: Ensure Claude isn't being asked to do too many things in the same turn as a capture. If the capture prompt is buried in a long response, try shortening it or splitting it from other `prompt:` nodes.
+
+## Inspecting session state
+
+The full flow state is stored in `.prompt-language/session-state.json`. Key fields:
+
+```json
+{
+  "status": "active",
+  "currentNodePath": [0, 2, 1],
+  "variables": {
+    "last_exit_code": 1,
+    "command_failed": true,
+    "last_stdout": "FAIL src/auth.test.ts..."
+  },
+  "nodeProgress": {
+    "node-abc123": { "iterations": 2 }
+  }
+}
+```
+
+- `status` — `"active"`, `"completed"`, `"failed"`, or `"cancelled"`
+- `currentNodePath` — array of indices pointing to the active node in the flow tree
+- `variables` — all stored variables (flat namespace)
+- `nodeProgress` — iteration counters for `while`/`until`/`retry`/`foreach` nodes
+
 ## Checking plugin status
 
 ```bash

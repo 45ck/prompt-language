@@ -2,6 +2,42 @@
 
 The `npx @45ck/prompt-language` CLI manages plugin installation and provides development utilities.
 
+## Flags
+
+### --help
+
+Print usage and available commands.
+
+```bash
+npx @45ck/prompt-language --help
+```
+
+### --version
+
+Print the installed plugin version.
+
+```bash
+npx @45ck/prompt-language --version
+# prompt-language v0.3.0
+```
+
+### --dry-run
+
+Parse, lint, and render a flow without executing it. Useful for validating syntax before a live run.
+
+```bash
+claude -p --dry-run "Goal: test
+
+flow:
+  prompt: Hello
+  run: npm test
+
+done when:
+  tests_pass"
+```
+
+Outputs the rendered flow with lint warnings but takes no actions and starts no gates.
+
 ## Commands
 
 ### install (default)
@@ -32,7 +68,7 @@ npx @45ck/prompt-language status
 Example output:
 
 ```
-prompt-language v0.2.0
+prompt-language v0.3.0
   Installed:    yes (~/.claude/plugins/local/prompt-language)
   Registered:   yes
   Marketplace:  yes
@@ -104,11 +140,12 @@ Shows a continuously-updating view of the flow state, including the current node
 
 These are available inside Claude Code sessions when the plugin is installed:
 
-| Command         | Description                                                                      |
-| --------------- | -------------------------------------------------------------------------------- |
-| `/fix-and-test` | Retry loop: fix failing tests, re-run, repeat up to 5 times. Gate: `tests_pass`  |
-| `/tdd`          | Red-green-refactor cycle. Gate: `tests_pass` + `lint_pass`                       |
-| `/refactor`     | Incremental refactoring with test verification. Gate: `tests_pass` + `lint_pass` |
-| `/deploy-check` | Lint, test, build pipeline. Gate: `tests_pass` + `lint_pass` + `file_exists`     |
-| `/flow:status`  | Show current flow state                                                          |
-| `/flow:reset`   | Reset flow and clear state                                                       |
+| Command          | Description                                                                      |
+| ---------------- | -------------------------------------------------------------------------------- |
+| `/fix-and-test`  | Retry loop: fix failing tests, re-run, repeat up to 5 times. Gate: `tests_pass`  |
+| `/tdd`           | Red-green-refactor cycle. Gate: `tests_pass` + `lint_pass`                       |
+| `/refactor`      | Incremental refactoring with test verification. Gate: `tests_pass` + `lint_pass` |
+| `/deploy-check`  | Lint, test, build pipeline. Gate: `tests_pass` + `lint_pass` + `file_exists`     |
+| `/flow:status`   | Show current flow state, active node, and gate results                           |
+| `/flow:reset`    | Reset flow and clear all session state                                           |
+| `/flow-validate` | Validate flow syntax: run `lintFlow` and show complexity score without executing |

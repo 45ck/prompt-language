@@ -198,11 +198,26 @@ flow:
   prompt: Compare ${baseline} vs ${result}.
 ```
 
-## Further reading
+## Next steps
 
-- [How prompt-language works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md) — how the plugin works, variable lifecycle, gate mechanics
-- [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md) — full syntax for all primitives
-- [Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md) — debugging stuck flows, known issues
-- [Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) — 45-hypothesis A/B comparison against vanilla Claude
-- [CLI Reference](https://github.com/45ck/prompt-language/blob/main/docs/cli-reference.md) — all CLI commands
-- [Use Cases](https://github.com/45ck/prompt-language/blob/main/docs/use-cases.md) — when to use the plugin, anti-patterns
+**I want to understand how it works:**
+
+- [How prompt-language works](guide.md) — hook lifecycle, variable state, gate trust model
+
+**I need syntax reference:**
+
+- [DSL Reference](dsl-reference.md) — all 13 primitives, parameters, built-in variables and gates
+- [DSL Cheatsheet](dsl-cheatsheet.md) — one-page quick reference
+
+**I'm stuck or confused:**
+
+- [Troubleshooting](troubleshooting.md) — stuck flows, failed gates, state file inspection
+- [Use Cases](use-cases.md) — anti-patterns, when (not) to use the plugin
+
+**I want all the CLI options:**
+
+- [CLI Reference](cli-reference.md) — install, status, init, watch, dry-run, slash commands
+
+**I want proof it works:**
+
+- [Evaluation Results](eval-analysis.md) — 45 controlled A/B tests, latency data, methodology

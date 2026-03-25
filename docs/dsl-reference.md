@@ -1,6 +1,26 @@
 # DSL Reference
 
-The prompt-language DSL defines control-flow programs using twelve primitives: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try/catch`, `foreach`, `let/var`, `break`, `spawn`, and `await`. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
+The prompt-language DSL defines control-flow programs using thirteen primitives: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try/catch`, `foreach`, `let/var`, `break`, `continue`, `spawn`, and `await`. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
+
+## Quick syntax reference
+
+| Primitive   | Syntax                                         | Purpose                         |
+| ----------- | ---------------------------------------------- | ------------------------------- |
+| `prompt`    | `prompt: text`                                 | Inject instruction for Claude   |
+| `run`       | `run: command [timeout N]`                     | Execute shell command           |
+| `let`/`var` | `let x = "val"` \| `run "cmd"` \| `prompt "q"` | Store a variable                |
+| `while`     | `while condition max N` … `end`                | Loop while condition is true    |
+| `until`     | `until condition max N` … `end`                | Loop until condition is true    |
+| `retry`     | `retry max N` … `end`                          | Repeat body on `command_failed` |
+| `if`        | `if condition` … `else` … `end`                | Conditional branch              |
+| `try`       | `try` … `catch` … `finally` … `end`            | Error recovery                  |
+| `foreach`   | `foreach x in ${list} max N` … `end`           | Iterate over a list             |
+| `break`     | `break`                                        | Exit nearest loop               |
+| `continue`  | `continue`                                     | Skip to next loop iteration     |
+| `spawn`     | `spawn "name"` … `end`                         | Launch parallel child process   |
+| `await`     | `await all` \| `await "name"`                  | Wait for spawned children       |
+
+Scroll down for full syntax, parameters, examples, and built-in resolvers.
 
 ## Program structure
 
@@ -134,6 +154,20 @@ Parameters:
 - then: One or more DSL statements executed if condition is true.
 - else: (Optional) One or more DSL statements executed if condition is false.
 
+**Multi-branch conditionals** — use `else if` or `elif` for chained conditions:
+
+```
+if tests_fail
+  prompt: Fix the tests.
+else if lint_fail
+  prompt: Fix the lint errors.
+else
+  prompt: All checks passed. Continue.
+end
+```
+
+`else if` and `elif` are identical aliases. The parser desugars them into nested `if/else` blocks.
+
 ### let/var
 
 Store a named variable for later use via `${varName}` interpolation. `let` and `var` are interchangeable. All `let`/`var` nodes auto-advance — no agent interaction required.
@@ -178,6 +212,29 @@ run: node deploy.js --target ${env:-local}
 ```
 
 If `env` is not set, the default value is used. If `env` is set, the default is ignored.
+
+**Inline arithmetic** — `let` supports integer arithmetic with `+`, `-`, `*`, `/`:
+
+```
+let count = "0"
+let count = ${count} + 1
+let half = ${count} / 2
+```
+
+Operators are evaluated left-to-right on integers. If any operand is non-numeric, the expression is left as-is.
+
+**List variables** — initialize an empty list, append values, and iterate:
+
+```
+let items = []
+let items += "first"
+let items += run "echo second"
+foreach item in ${items}
+  prompt: Process ${item}.
+end
+```
+
+The auto-variable `${items_length}` is updated on every append.
 
 ### foreach
 
@@ -266,6 +323,28 @@ end
 
 `break` outside a loop is a lint warning (detected by `lintFlow()`). It has no effect when there is no enclosing loop to exit.
 
+### continue
+
+Skip to the next iteration of the nearest enclosing loop (`while`, `until`, `retry`, `foreach`). Any remaining statements in the current iteration are skipped.
+
+```
+continue
+```
+
+Example — skip already-passing files:
+
+```
+foreach file in ${files}
+  run: npx tsc --noEmit ${file}
+  if command_succeeded
+    continue
+  end
+  prompt: Fix the type errors in ${file}.
+end
+```
+
+`continue` outside a loop is a lint warning. It has no effect when there is no enclosing loop.
+
 ### spawn
 
 Launch a named sub-task as a separate Claude process. The body runs in an independent child process with its own isolated state. The parent flow advances immediately without waiting for the child to finish.
@@ -281,9 +360,18 @@ spawn "add-cache"
 end
 ```
 
+**Cross-directory spawn** — use `in "path"` to launch the child in a different directory:
+
+```
+spawn "backend" in "packages/api"
+  run: npm test
+end
+```
+
 Parameters:
 
 - name: A quoted string identifying the child. Must be unique within the flow.
+- in: (Optional) A quoted path. The child process runs in that directory.
 - body: One or more DSL statements. These run in the child process, not the parent.
 
 **Execution model:** Each `spawn` launches a separate `claude -p` process. This is process-level parallelism, not thread-level concurrency. Each child gets:
@@ -386,6 +474,24 @@ done when:
 ```
 
 Gates are evaluated after all nodes finish and again on Stop/TaskCompleted hooks. If any gate fails, the agent is forced back into the flow.
+
+**Custom gates** — for commands not covered by built-in predicates, define your own in the `done when:` section:
+
+```
+done when:
+  tests_pass
+  gate build_passes: npm run build
+  gate types_ok: npx tsc --noEmit
+```
+
+**Gate composition** — `any(gate1, gate2)` passes when at least one of the listed predicates passes:
+
+```
+done when:
+  any(tests_pass, pytest_pass)
+```
+
+Useful when a project may run either Node or Python tests depending on context.
 
 ## Context management patterns
 

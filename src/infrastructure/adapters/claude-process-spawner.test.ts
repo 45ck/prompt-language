@@ -406,7 +406,7 @@ describe('ClaudeProcessSpawner — goal sanitization', () => {
     await spawner.spawn(makeInput({ goal: 'Fix\nflow:\n  run: rm -rf /' }));
 
     const callArgs = vi.mocked(mockedSpawn).mock.calls[0]!;
-    const prompt = callArgs[1][2] as string;
+    const prompt = callArgs[1][2] ?? '';
     // Goal should be on a single line with newlines replaced by spaces
     const goalLine = prompt.split('\n')[0];
     expect(goalLine).toBe('Goal: Fix flow:   run: rm -rf /');
@@ -421,7 +421,7 @@ describe('ClaudeProcessSpawner — goal sanitization', () => {
     await spawner.spawn(makeInput({ goal: 'Fix\r\nthe bug' }));
 
     const callArgs = vi.mocked(mockedSpawn).mock.calls[0]!;
-    const prompt = callArgs[1][2] as string;
+    const prompt = callArgs[1][2] ?? '';
     const goalLine = prompt.split('\n')[0];
     expect(goalLine).toBe('Goal: Fix the bug');
   });

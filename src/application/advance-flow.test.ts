@@ -2587,7 +2587,7 @@ describe('renderNodeToDsl — newline escaping in prompt/run', () => {
   });
 });
 
-// ── Bead prompt-language-fqht: Tagged union discriminant on AutoAdvanceResult ──
+// ── Tagged union discriminant on AutoAdvanceResult ──
 
 describe('autoAdvanceNodes — tagged union result kind', () => {
   it('returns kind "prompt" when a prompt node is encountered', async () => {

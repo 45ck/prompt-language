@@ -202,7 +202,7 @@ Ask conditions count toward `maxIterations` the same way regular conditions do. 
 
 5. **Capture baselines early** — `let baseline = run "node bench.js"` stores the exact output as a variable, immune to context compression. Useful for before/after comparisons in optimization tasks.
 
-For worked examples, see [Fix Tests](https://github.com/45ck/prompt-language/blob/main/docs/examples/fix-tests.md) and [Lint and Fix](https://github.com/45ck/prompt-language/blob/main/docs/examples/lint-and-fix.md).
+For worked examples, see [Fix Tests](https://github.com/45ck/prompt-language/blob/main/docs/examples/fix-tests.md), [Lint and Fix](https://github.com/45ck/prompt-language/blob/main/docs/examples/lint-and-fix.md), and the full [Examples](https://github.com/45ck/prompt-language/blob/main/docs/examples/) directory.
 
 ## When it wins and when it doesn't
 
@@ -227,6 +227,24 @@ When a flow isn't behaving as expected:
 2. **Check rendered view** — Use the `/flow:status` slash command to see exactly what Claude sees on each turn.
 3. **Reset** — Use `/flow:reset` to clear all state and start over. Useful when a flow gets stuck in an unexpected state.
 4. **Check capture files** — For `let x = prompt` issues, look in `.prompt-language/vars/` to see if Claude wrote the file and what it contains.
+
+### Cancelling a flow
+
+If a flow is stuck in a loop, going in the wrong direction, or you simply want to stop it, you can cancel it mid-execution by saying any of these phrases in a normal message:
+
+- **abort flow**
+- **cancel flow**
+- **stop flow**
+- **reset flow**
+
+These work as natural language -- just include the phrase anywhere in your message (e.g., "this isn't working, abort flow"). The plugin detects the phrase, sets the flow status to `cancelled`, and clears any pending prompts. You will see `[prompt-language] Flow cancelled by user.` as confirmation.
+
+The `/flow:reset` slash command also cancels the active flow and clears all state. The difference:
+
+- **Cancel phrases** -- Cancel the flow and preserve the final state in `session-state.json` (status becomes `cancelled`). Useful when you want to inspect what happened before starting over.
+- **`/flow:reset`** -- Deletes all state files entirely, giving you a clean slate. Use this when you want to re-run the same flow from scratch or start a completely different flow.
+
+Cancel phrases only work when a flow is active (status is `active`). If the flow has already completed, failed, or been cancelled, the phrases have no effect.
 
 ### State file schema
 

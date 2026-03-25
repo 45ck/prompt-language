@@ -1552,6 +1552,17 @@ describe('parseFlow — env section', () => {
     const spec = parse('Goal: test\n\nflow:\n  prompt: hello');
     expect(spec.env).toBeUndefined();
   });
+
+  // Bead 8kt5: parseEnv works when env: is the last section
+  it('parses env section when it is the last section in input', () => {
+    const spec = parse('Goal: test\n\nenv:\n  NODE_ENV=production\n  PORT=3000');
+    expect(spec.env).toEqual({ NODE_ENV: 'production', PORT: '3000' });
+  });
+
+  it('parses env section before done when:', () => {
+    const spec = parse('Goal: test\n\nenv:\n  NODE_ENV=test\n\ndone when:\n  tests_pass');
+    expect(spec.env).toEqual({ NODE_ENV: 'test' });
+  });
 });
 
 // ── H-LANG-010: Gate all() and N_of() ─────────────────────────────────

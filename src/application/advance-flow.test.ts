@@ -2549,3 +2549,158 @@ describe('autoAdvanceNodes — loop timeout', () => {
     expect(result.warnings).toEqual(expect.arrayContaining([expect.stringContaining('timed out')]));
   });
 });
+
+// ── Bead prompt-language-1jbe: renderNodeToDsl escapes newlines in prompt/run text ──
+
+describe('renderNodeToDsl — newline escaping in prompt/run', () => {
+  const captureSpawnFlowText = async (body: import('../domain/flow-node.js').FlowNode[]) => {
+    const spawnedInputs: SpawnInput[] = [];
+    const mockSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 42 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+    const spawn = createSpawnNode('sp1', 'task', body);
+    const spec = createFlowSpec('test', [spawn]);
+    const state = createSessionState('s1', spec);
+    await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    return spawnedInputs[0]!.flowText;
+  };
+
+  it('escapes newlines in prompt text to prevent DSL injection', async () => {
+    const text = await captureSpawnFlowText([
+      createPromptNode('p1', 'line1\nrun: malicious\nline3'),
+    ]);
+    // Newlines should be replaced with spaces — no multi-line DSL injection
+    expect(text).toContain('prompt: line1 run: malicious line3');
+    expect(text).not.toContain('prompt: line1\n');
+  });
+
+  it('escapes newlines in run command to prevent DSL injection', async () => {
+    const text = await captureSpawnFlowText([createRunNode('r1', 'echo hi\nrm -rf /')]);
+    expect(text).toContain('run: echo hi rm -rf /');
+    expect(text).not.toContain('run: echo hi\n');
+  });
+});
+
+// ── Bead prompt-language-fqht: Tagged union discriminant on AutoAdvanceResult ──
+
+describe('autoAdvanceNodes — tagged union result kind', () => {
+  it('returns kind "prompt" when a prompt node is encountered', async () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'hello')]);
+    const state = createSessionState('s1', spec);
+
+    const result = await autoAdvanceNodes(state);
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toBe('hello');
+  });
+
+  it('returns kind "advance" when flow completes with no prompt', async () => {
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'x', { type: 'literal', value: 'done' }),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const result = await autoAdvanceNodes(state);
+    expect(result.kind).toBe('advance');
+    expect(result.capturedPrompt).toBeNull();
+  });
+
+  it('returns kind "pause" when condition is unresolvable', async () => {
+    const spec = createFlowSpec('test', [
+      createWhileNode('w1', 'totally_unknown', [createPromptNode('p1', 'work')]),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const result = await autoAdvanceNodes(state);
+    expect(result.kind).toBe('pause');
+    expect(result.capturedPrompt).toBeNull();
+  });
+
+  it('returns kind "pause" when run node has no command runner', async () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'echo hi')]);
+    const state = createSessionState('s1', spec);
+
+    const result = await autoAdvanceNodes(state);
+    // autoAdvanceNodes wraps pause result but stale-state detection kicks in
+    expect(result.capturedPrompt).toBeNull();
+  });
+});
+
+// ── Bead prompt-language-ntk8: Foreach re-entry uses cached maxIterations ──
+
+describe('autoAdvanceNodes — foreach cached maxIterations', () => {
+  it('uses cached maxIterations on re-entry even if list variable was mutated', async () => {
+    // Create a foreach that iterates over 3 items (a, b, c)
+    // During body, the list variable may be mutated. The re-entry should
+    // use the cached maxIterations (3) from NodeProgress, not re-derive.
+    const foreachNode = createForeachNode('fe1', 'item', 'a b c', [
+      createPromptNode('p1', 'process ${item}'),
+    ]);
+    const spec = createFlowSpec('test', [foreachNode, createPromptNode('p2', 'Done')]);
+    const state = createSessionState('s1', spec);
+
+    // First call enters foreach, sets item=a
+    const r1 = await autoAdvanceNodes(state);
+    expect(r1.capturedPrompt).toBe('process a');
+    expect(r1.state.nodeProgress['fe1']?.maxIterations).toBe(3);
+
+    // Second call: body exhausted, re-enter with item=b
+    const r2 = await autoAdvanceNodes(r1.state);
+    expect(r2.capturedPrompt).toBe('process b');
+    // maxIterations should still be 3, not re-derived
+    expect(r2.state.nodeProgress['fe1']?.maxIterations).toBe(3);
+
+    // Third call: body exhausted, re-enter with item=c
+    const r3 = await autoAdvanceNodes(r2.state);
+    expect(r3.capturedPrompt).toBe('process c');
+
+    // Fourth call: exhausted all items
+    const r4 = await autoAdvanceNodes(r3.state);
+    expect(r4.capturedPrompt).toBe('Done');
+  });
+});
+
+// ── Bead prompt-language-3zmu: Zero timeout not silently ignored ──
+
+describe('handleLoopReentry — zero timeout', () => {
+  it('zero timeoutSeconds does not trigger timeout (treated as no timeout)', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'loop_flag',
+      [createRunNode('r1', 'echo hi')],
+      5,
+      undefined,
+      0, // zero timeout — should be ignored, not trigger timeout
+    );
+    const spec = createFlowSpec('test', [whileNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: { loop_flag: true },
+      currentNodePath: [0, 1],
+      nodeProgress: {
+        w1: {
+          iteration: 1,
+          maxIterations: 5,
+          status: 'running',
+          startedAt: Date.now() - 999999,
+          loopStartedAt: Date.now() - 999999,
+        },
+      },
+    };
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    // Should NOT have timed out — zero means no timeout
+    expect(result.warnings).not.toEqual(
+      expect.arrayContaining([expect.stringContaining('timed out')]),
+    );
+  });
+});

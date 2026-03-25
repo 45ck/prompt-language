@@ -161,8 +161,8 @@ function handleLoopReentry(
   const iteration = progress?.iteration ?? 1;
   let current = state;
 
-  // H-LANG-008: Check wall-clock timeout (D05-fix: 0 means no timeout)
-  if (shouldReLoop && timeoutSeconds != null && timeoutSeconds > 0) {
+  // H-LANG-008: Check wall-clock timeout
+  if (shouldReLoop && timeoutSeconds !== undefined && timeoutSeconds > 0) {
     const loopStart = progress?.loopStartedAt ?? progress?.startedAt;
     if (loopStart != null) {
       const elapsed = (Date.now() - loopStart) / 1000;
@@ -284,15 +284,17 @@ async function handleBodyExhaustion(
       const items = splitIterable(rawList).slice(0, parentNode.maxIterations);
       const progress = state.nodeProgress[parentNode.id];
       const iteration = progress?.iteration ?? 1;
+      // Use cached maxIterations from entry to avoid mutation drift
+      const itemCount = progress?.maxIterations ?? items.length;
       let current = state;
 
-      if (iteration < items.length) {
-        const nextItem = items[iteration]!;
+      if (iteration < itemCount) {
+        const nextItem = items[iteration] ?? '';
         current = updateVariable(current, parentNode.variableName, nextItem);
         current = updateVariable(current, `${parentNode.variableName}_index`, iteration);
         current = updateNodeProgress(current, parentNode.id, {
           iteration: iteration + 1,
-          maxIterations: items.length,
+          maxIterations: itemCount,
           status: 'running',
           startedAt: progress?.startedAt,
         });
@@ -301,7 +303,7 @@ async function handleBodyExhaustion(
 
       current = updateNodeProgress(current, parentNode.id, {
         iteration,
-        maxIterations: items.length,
+        maxIterations: itemCount,
         status: 'completed',
         startedAt: progress?.startedAt,
         completedAt: Date.now(),
@@ -319,10 +321,10 @@ async function handleBodyExhaustion(
   }
 }
 
-export interface AutoAdvanceResult {
-  readonly state: SessionState;
-  readonly capturedPrompt: string | null;
-}
+export type AutoAdvanceResult =
+  | { readonly kind: 'prompt'; readonly state: SessionState; readonly capturedPrompt: string }
+  | { readonly kind: 'advance'; readonly state: SessionState; readonly capturedPrompt: null }
+  | { readonly kind: 'pause'; readonly state: SessionState; readonly capturedPrompt: null };
 
 /** Advance a let node, handling all source types (literal, empty_list, prompt, run). */
 async function advanceLetNode(
@@ -352,7 +354,7 @@ async function advanceLetNode(
       break;
     }
     case 'run': {
-      if (!commandRunner) return { state: current, capturedPrompt: null };
+      if (!commandRunner) return { kind: 'pause', state: current, capturedPrompt: null };
       const letCmd = shellInterpolate(node.source.command, current.variables);
       // H-LANG-009: Pass env from flowSpec to command runner
       const letRunOpts = current.flowSpec.env != null ? { env: current.flowSpec.env } : undefined;
@@ -417,6 +419,7 @@ async function advanceLetPrompt(
       current.variables,
     );
     return {
+      kind: 'prompt' as const,
       state: updated,
       capturedPrompt: buildCapturePrompt(promptText, node.variableName, current.captureNonce),
     };
@@ -445,6 +448,7 @@ async function advanceLetPrompt(
       captureFailureReason: failureReason,
     });
     return {
+      kind: 'prompt' as const,
       state: updated,
       capturedPrompt: buildCaptureRetryPrompt(node.variableName, current.captureNonce),
     };
@@ -469,7 +473,7 @@ async function advanceRunNode(
   commandRunner?: CommandRunner,
   auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
-  if (!commandRunner) return { state: current, capturedPrompt: null };
+  if (!commandRunner) return { kind: 'pause', state: current, capturedPrompt: null };
   const command = shellInterpolate(node.command, current.variables);
   // H-LANG-009: Pass env from flowSpec to command runner
   const runOptions: import('./ports/command-runner.js').RunOptions = {
@@ -602,9 +606,9 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
   const pad = '  '.repeat(indent);
   switch (node.kind) {
     case 'prompt':
-      return [`${pad}prompt: ${node.text}`];
+      return [`${pad}prompt: ${node.text.replace(/\n/g, ' ')}`];
     case 'run':
-      return [`${pad}run: ${node.command}`];
+      return [`${pad}run: ${node.command.replace(/\n/g, ' ')}`];
     case 'let': {
       const op = node.append ? '+=' : '=';
       let src: string;
@@ -797,7 +801,7 @@ async function advanceAwaitNode(
     });
 
     await new Promise((resolve) => setTimeout(resolve, computePollInterval(pollCount)));
-    return { state, capturedPrompt: null };
+    return { kind: 'pause', state, capturedPrompt: null };
   }
 
   return { state: advanceNode(state, advancePath(state.currentNodePath)), advanced: true };
@@ -859,13 +863,14 @@ export async function autoAdvanceNodes(
     if (currentNode?.kind === 'prompt') {
       const capturedPrompt = interpolate(currentNode.text, current.variables);
       return {
+        kind: 'prompt',
         state: advanceNode(current, advancePath(current.currentNodePath)),
         capturedPrompt,
       };
     }
   }
 
-  return { state: current, capturedPrompt: null };
+  return { kind: 'advance', state: current, capturedPrompt: null };
 }
 
 /** Advance a single node by kind. Returns either an early-exit result or updated state. */
@@ -884,7 +889,11 @@ async function advanceSingleNode(
       return advanceRunNode(node, current, commandRunner, auditLogger);
     case 'prompt': {
       const capturedPrompt = interpolate(node.text, current.variables);
-      return { state: advanceNode(current, advancePath(current.currentNodePath)), capturedPrompt };
+      return {
+        kind: 'prompt',
+        state: advanceNode(current, advancePath(current.currentNodePath)),
+        capturedPrompt,
+      };
     }
     case 'while':
     case 'until':
@@ -988,7 +997,7 @@ async function advanceConditionLoop(
   commandRunner?: CommandRunner,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   const condResult = await evaluateFlowCondition(node.condition, current.variables, commandRunner);
-  if (condResult === null) return { state: current, capturedPrompt: null };
+  if (condResult === null) return { kind: 'pause', state: current, capturedPrompt: null };
   const enterBody = node.kind === 'while' ? condResult : !condResult;
 
   if (enterBody) {
@@ -1019,7 +1028,7 @@ async function advanceIfNode(
   commandRunner?: CommandRunner,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   const condResult = await evaluateFlowCondition(node.condition, current.variables, commandRunner);
-  if (condResult === null) return { state: current, capturedPrompt: null };
+  if (condResult === null) return { kind: 'pause', state: current, capturedPrompt: null };
 
   if (condResult) {
     return { state: advanceNode(current, [...current.currentNodePath, 0]), advanced: true };
@@ -1043,7 +1052,7 @@ async function advanceForeachEntry(
 
   // H-LANG-007: Dynamic list from command execution
   if (node.listCommand) {
-    if (!commandRunner) return { state: current, capturedPrompt: null };
+    if (!commandRunner) return { kind: 'pause', state: current, capturedPrompt: null };
     const cmd = shellInterpolate(node.listCommand, current.variables);
     const result = await commandRunner.run(cmd);
     current = setExitVariables(current, result.exitCode, result.stdout, result.stderr);

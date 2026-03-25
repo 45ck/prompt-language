@@ -781,6 +781,36 @@ describe('injectContext — error handling and limits', () => {
     expect(result.prompt).toContain('runner is not defined');
   });
 
+  it('returns failure message even when stateStore.save throws in error boundary', async () => {
+    const store = makeStore();
+    const throwingRunner: CommandRunner = {
+      run: async () => {
+        throw new Error('runner exploded');
+      },
+    };
+    const runNode = createRunNode('r1', 'echo ok');
+    const spec = createFlowSpec('test', [runNode]);
+    const session = createSessionState('s1', spec);
+    await store.save(session);
+
+    // Make save() throw on the second call (error boundary save)
+    let saveCount = 0;
+    const originalSave = store.save.bind(store);
+    store.save = async (state) => {
+      saveCount++;
+      if (saveCount > 1) {
+        throw new Error('disk full - cannot save');
+      }
+      return originalSave(state);
+    };
+
+    // Should NOT throw — the nested try/catch in the error boundary catches the save failure
+    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, throwingRunner);
+    expect(result.prompt).toContain('[prompt-language] Flow failed:');
+    expect(result.prompt).toContain('runner exploded');
+    expect(result.prompt).toContain('Go');
+  });
+
   it('warns when MAX_ADVANCES (100) limit is reached', async () => {
     const store = makeStore();
     const nodes = Array.from({ length: 101 }, (_, i) =>

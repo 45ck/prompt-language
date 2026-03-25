@@ -367,6 +367,12 @@ async function ci() {
     process.exit(1);
   }
 
+  // Guard against null bytes that could truncate arguments in child processes
+  if (flowText.includes('\0')) {
+    console.error('Error: Flow text contains null bytes.');
+    process.exit(1);
+  }
+
   console.log('[prompt-language CI] Running flow headlessly...');
   try {
     const { execFileSync } = await import('node:child_process');

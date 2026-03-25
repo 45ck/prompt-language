@@ -766,14 +766,14 @@ describe('FileStateStore', () => {
   });
 
   describe('H-REL-008: stale lock PID verification', () => {
-    it('breaks stale lock with dead PID and old timestamp', async () => {
+    it('breaks stale lock with dead PID and old timestamp (>30s)', async () => {
       const store = new FileStateStore(tempDir);
       const stateDir = join(tempDir, '.prompt-language');
       await mkdir(stateDir, { recursive: true });
 
-      // Create a lock file with a PID that does not exist and old timestamp
+      // Create a lock file with a PID that does not exist and timestamp older than 30s threshold
       const lockPath = join(stateDir, 'session-state.lock');
-      const lockData = JSON.stringify({ pid: 999999, timestamp: Date.now() - 20_000 });
+      const lockData = JSON.stringify({ pid: 999999, timestamp: Date.now() - 35_000 });
       await writeFile(lockPath, lockData, 'utf-8');
 
       const session = createSessionState('s1', makeSpec());
@@ -791,6 +791,111 @@ describe('FileStateStore', () => {
       // Lock should have been released, but verify the save succeeded
       const loaded = await store.loadCurrent();
       expect(loaded?.sessionId).toBe('s1');
+    });
+
+    it('treats lock as not stale when timestamp is within 30s threshold on Windows', async () => {
+      // On Windows, only timestamp is checked (PID check skipped)
+      // A lock younger than 30s with a dead PID should NOT be stale on Windows
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      const lockPath = join(stateDir, 'session-state.lock');
+      // Lock is 5 seconds old — well within 30s threshold
+      const lockData = JSON.stringify({ pid: 999999, timestamp: Date.now() - 5_000 });
+      await writeFile(lockPath, lockData, 'utf-8');
+
+      if (process.platform === 'win32') {
+        // On Windows: lock is young, PID check is skipped → lock is NOT stale
+        // save() will exhaust retries waiting, then force-remove
+        const session = createSessionState('s1', makeSpec());
+        await store.save(session);
+        const loaded = await store.loadCurrent();
+        expect(loaded?.sessionId).toBe('s1');
+      } else {
+        // On non-Windows: PID 999999 is dead, so lock IS stale despite young timestamp
+        const session = createSessionState('s1', makeSpec());
+        await store.save(session);
+        const loaded = await store.loadCurrent();
+        expect(loaded?.sessionId).toBe('s1');
+      }
+    }, 5000);
+  });
+
+  describe('checksum single-serialize (no re-parse)', () => {
+    it('checksum matches when loaded without re-parse round-trip', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      await store.save(session);
+
+      // Read raw file and verify checksum matches state without _checksum
+      const statePath = join(tempDir, '.prompt-language', 'session-state.json');
+      const raw = await readFile(statePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      const { _checksum, ...stateWithout } = parsed;
+      const expectedChecksum = createHash('sha256')
+        .update(JSON.stringify(stateWithout, null, 2))
+        .digest('hex');
+      expect(_checksum).toBe(expectedChecksum);
+
+      // Also verify load succeeds (no checksum mismatch)
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.sessionId).toBe('s1');
+    });
+
+    it('checksum round-trips with complex variables', async () => {
+      const store = new FileStateStore(tempDir);
+      const session = createSessionState('s1', makeSpec());
+      const withVars = {
+        ...session,
+        variables: {
+          greeting: 'hello "world"',
+          nested: '{"key": "value"}',
+          special: 'line1\nline2\ttab',
+        },
+      };
+      await store.save(withVars as typeof session);
+
+      // Verify load does not report checksum mismatch
+      const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.variables).toEqual(withVars.variables);
+      // No checksum mismatch warning should have been emitted
+      const checksumCalls = stderrSpy.mock.calls.filter(
+        (call) => typeof call[0] === 'string' && call[0].includes('checksum mismatch'),
+      );
+      expect(checksumCalls).toHaveLength(0);
+      stderrSpy.mockRestore();
+    });
+  });
+
+  describe('lock handle cleanup on writeFile failure', () => {
+    it('closes file handle even when writeFile throws', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+
+      // Make open succeed but the subsequent writeFile throw
+      const real = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+      let handleClosed = false;
+      const fakeHandle = {
+        writeFile: vi.fn().mockRejectedValue(new Error('disk full')),
+        close: vi.fn().mockImplementation(async () => {
+          handleClosed = true;
+        }),
+      };
+      vi.mocked(mockedOpen).mockResolvedValueOnce(fakeHandle as never);
+
+      const session = createSessionState('s1', makeSpec());
+      // save() calls acquireLock → open succeeds → writeFile throws → close should still be called
+      await expect(store.save(session)).rejects.toThrow('disk full');
+      expect(handleClosed).toBe(true);
+      expect(fakeHandle.close).toHaveBeenCalled();
+
+      // Restore real open
+      vi.mocked(mockedOpen).mockReset().mockImplementation(real.open);
     });
   });
 });

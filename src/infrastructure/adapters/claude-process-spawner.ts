@@ -22,7 +22,18 @@ export class ClaudeProcessSpawner implements ProcessSpawner {
     this.cwd = cwd ?? process.cwd();
   }
 
+  /** Validate spawn name: alphanumeric, hyphens, and underscores only. */
+  static isValidSpawnName(name: string): boolean {
+    return /^[\w-]+$/.test(name);
+  }
+
   async spawn(input: SpawnInput): Promise<SpawnResult> {
+    if (!ClaudeProcessSpawner.isValidSpawnName(input.name)) {
+      throw new Error(
+        `Invalid spawn name "${input.name}" — only alphanumeric characters, hyphens, and underscores are allowed`,
+      );
+    }
+
     const prompt = this.buildChildPrompt(input);
 
     // H-INT-005: Use spawn-level cwd if specified, otherwise fall back to instance cwd
@@ -65,6 +76,9 @@ export class ClaudeProcessSpawner implements ProcessSpawner {
   }
 
   private buildChildPrompt(input: SpawnInput): string {
+    // Sanitize goal: collapse newlines to spaces to prevent prompt injection
+    const sanitizedGoal = input.goal.replace(/[\r\n]+/g, ' ').trim();
+
     const varLines = Object.entries(input.variables)
       .map(
         ([k, v]) =>
@@ -74,6 +88,6 @@ export class ClaudeProcessSpawner implements ProcessSpawner {
 
     const varBlock = varLines ? `\n${varLines}\n` : '';
 
-    return `Goal: ${input.goal}\n\nflow:${varBlock}\n${input.flowText}`;
+    return `Goal: ${sanitizedGoal}\n\nflow:${varBlock}\n${input.flowText}`;
   }
 }

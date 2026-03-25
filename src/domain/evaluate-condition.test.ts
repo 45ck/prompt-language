@@ -226,6 +226,36 @@ describe('evaluateCondition', () => {
     });
   });
 
+  // Bead 95j6: Left-to-right operator precedence (no implicit precedence)
+  // Left-to-right means: "a and b or c" → "(a and b) or c"
+  // "a or b and c" → "(a or b) and c"
+  // The rightmost operator is the main split point (left-associative).
+  describe('mixed and/or — left-to-right precedence', () => {
+    it('a or b and c → (a or b) and c — a=true makes (a or b)=true, c=false → false', () => {
+      expect(evaluateCondition('a or b and c', { a: true, b: false, c: false })).toBe(false);
+    });
+
+    it('a and b or c → (a and b) or c — a=false,b=true → false, c=true → true', () => {
+      expect(evaluateCondition('a and b or c', { a: false, b: true, c: true })).toBe(true);
+    });
+
+    it('a and b or c — a=true,b=false → false, c=false → false', () => {
+      expect(evaluateCondition('a and b or c', { a: true, b: false, c: false })).toBe(false);
+    });
+
+    it('a or b and c → (a or b) and c — a=false,b=true → true, c=true → true', () => {
+      expect(evaluateCondition('a or b and c', { a: false, b: true, c: true })).toBe(true);
+    });
+
+    it('a or b and c → (a or b) and c — a=false,b=true → true, c=false → false', () => {
+      expect(evaluateCondition('a or b and c', { a: false, b: true, c: false })).toBe(false);
+    });
+
+    it('a or b and c → (a or b) and c — a=true,b=false → true, c=true → true', () => {
+      expect(evaluateCondition('a or b and c', { a: true, b: false, c: true })).toBe(true);
+    });
+  });
+
   // Edge cases: unresolved ${var} references
   describe('unresolved ${var} references in comparison', () => {
     it('${x} == ${y} with both unresolved compares literal strings', () => {

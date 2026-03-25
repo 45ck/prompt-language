@@ -322,6 +322,12 @@ describe('resolveBuiltinCommand', () => {
     expect(resolveBuiltinCommand('file_exists foo\\bar')).toBeUndefined();
   });
 
+  // Bead 91zd: Reject Windows absolute paths explicitly
+  it('rejects Windows drive-letter absolute paths in file_exists', () => {
+    expect(resolveBuiltinCommand('file_exists C:\\Windows\\System32\\config')).toBeUndefined();
+    expect(resolveBuiltinCommand('file_exists D:\\secret\\file.txt')).toBeUndefined();
+  });
+
   it('allows safe paths with dots, slashes, and hyphens', () => {
     expect(resolveBuiltinCommand('file_exists src/foo-bar/baz.ts')).toBe(
       "test -f 'src/foo-bar/baz.ts'",

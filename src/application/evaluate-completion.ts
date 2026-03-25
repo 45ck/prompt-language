@@ -54,6 +54,14 @@ const INVERTED_PREDICATES = new Set([
 
 const SAFE_PATH_RE = /^(?!\/)(?!.*\.\.)[\w ./-]+$/;
 
+/** Reject absolute paths including Windows drive letters (C:\...) and UNC paths (\\...). */
+function isAbsoluteOrUnsafePath(p: string): boolean {
+  if (p.startsWith('/')) return true;
+  if (p.includes('\\')) return true;
+  if (/^[A-Za-z]:/.test(p)) return true;
+  return false;
+}
+
 // H-INT-002: Detect project type from filesystem markers and map tests_pass accordingly
 export function detectTestCommand(): string {
   if (existsSync('go.mod')) return 'go test ./...';
@@ -71,7 +79,7 @@ export function resolveBuiltinCommand(predicate: string): string | undefined {
   }
   if (predicate.startsWith('file_exists ')) {
     const path = predicate.slice('file_exists '.length).trim();
-    if (!path || !SAFE_PATH_RE.test(path)) return undefined;
+    if (!path || !SAFE_PATH_RE.test(path) || isAbsoluteOrUnsafePath(path)) return undefined;
     return `test -f '${path}'`;
   }
 
@@ -122,12 +130,11 @@ async function evaluateSingleGate(
   state: SessionState,
   runner: CommandRunner,
   timeoutMs: number,
-  envOpt?: Readonly<Record<string, string>> | { env?: Readonly<Record<string, string>> },
+  envOpt?: { env?: Readonly<Record<string, string>> },
 ): Promise<{ passed: boolean; command?: string; result?: CommandResult }> {
   const command = gate.command ?? resolveBuiltinCommand(gate.predicate);
   if (command) {
-    const envPart = envOpt && 'env' in envOpt ? envOpt : {};
-    const result = await runner.run(command, { timeoutMs, ...envPart });
+    const result = await runner.run(command, { timeoutMs, ...envOpt });
     const inverted = isInvertedPredicate(gate.predicate);
     const passed = inverted ? result.exitCode !== 0 : result.exitCode === 0;
     return { passed, command, result };

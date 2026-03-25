@@ -5,7 +5,6 @@
  * All condition evaluation reads from this state.
  */
 
-import { randomBytes } from 'node:crypto';
 import type { FlowSpec } from './flow-spec.js';
 
 export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
@@ -60,11 +59,23 @@ export interface SessionState {
   readonly gateFailureCount?: number | undefined;
 }
 
+/** Generate a 128-bit hex nonce using pure JS (no node:crypto — domain layer). */
 export function generateCaptureNonce(): string {
-  return randomBytes(4).toString('hex');
+  // 4 segments of 8 hex chars = 32 hex chars = 128 bits
+  let nonce = '';
+  for (let i = 0; i < 4; i++) {
+    nonce += Math.floor(Math.random() * 0x100000000)
+      .toString(16)
+      .padStart(8, '0');
+  }
+  return nonce;
 }
 
-export function createSessionState(sessionId: string, flowSpec: FlowSpec): SessionState {
+export function createSessionState(
+  sessionId: string,
+  flowSpec: FlowSpec,
+  captureNonce?: string,
+): SessionState {
   return {
     version: 1,
     sessionId,
@@ -77,7 +88,7 @@ export function createSessionState(sessionId: string, flowSpec: FlowSpec): Sessi
     status: 'active',
     warnings: [...flowSpec.warnings],
     spawnedChildren: {},
-    captureNonce: generateCaptureNonce(),
+    captureNonce: captureNonce ?? generateCaptureNonce(),
   };
 }
 

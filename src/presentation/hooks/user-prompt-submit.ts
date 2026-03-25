@@ -16,6 +16,7 @@ import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger
 import { formatError } from '../../domain/format-error.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
+import { debug } from './debug.js';
 
 function parseInput(raw: string): { prompt: string } | null {
   try {
@@ -36,7 +37,10 @@ async function main(): Promise<void> {
   const raw = await readStdin();
   const input = parseInput(raw);
 
+  debug('UserPromptSubmit hook invoked');
+
   if (!input) {
+    debug('UserPromptSubmit: no valid prompt input, passing through');
     process.stdout.write(raw);
     return;
   }
@@ -51,8 +55,10 @@ async function main(): Promise<void> {
   let stateBefore: SessionState | null = null;
   try {
     stateBefore = await stateStore.loadCurrent();
+    debug(`UserPromptSubmit: state before=${stateBefore?.status ?? 'none'}`);
   } catch {
     process.stderr.write('[prompt-language] WARNING: Corrupt state detected, resetting\n');
+    debug('UserPromptSubmit: corrupt state detected, resetting');
     await stateStore.clear('');
   }
 
@@ -65,8 +71,13 @@ async function main(): Promise<void> {
     auditLogger,
   );
 
+  debug(`UserPromptSubmit: prompt modified=${result.prompt !== input.prompt}`);
+
   if (result.prompt !== input.prompt) {
     const state = await stateStore.loadCurrent();
+    debug(
+      `UserPromptSubmit: state after=${state?.status ?? 'none'}, vars=${Object.keys(state?.variables ?? {}).length}`,
+    );
     if (state?.status === 'active') {
       const { renderFlow } = await import('../../domain/render-flow.js');
       const { colorizeFlow } = await import('../../domain/colorize-flow.js');
@@ -77,8 +88,10 @@ async function main(): Promise<void> {
     if (state && stateBefore?.status === 'active' && state.status !== 'active') {
       const goal = state.flowSpec.goal || 'unnamed flow';
       if (state.status === 'completed') {
+        debug(`UserPromptSubmit: flow completed — ${goal}`);
         process.stderr.write(`\x1b[32;1m[PL] Flow completed: ${goal} | All gates passed\x1b[0m\n`);
       } else if (state.status === 'failed') {
+        debug(`UserPromptSubmit: flow failed — ${goal}`);
         process.stderr.write(`\x1b[31;1m[PL] Flow failed: ${goal}\x1b[0m\n`);
       }
     }

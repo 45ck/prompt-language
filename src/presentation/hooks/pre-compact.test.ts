@@ -104,4 +104,38 @@ describe('pre-compact hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
   });
+
+  it('includes capture re-injection when awaiting_capture', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Capture test'),
+      captureNonce: 'abc12345',
+      nodeProgress: {
+        l1: { iteration: 1, maxIterations: 3, status: 'awaiting_capture' },
+      },
+      flowSpec: {
+        goal: 'Capture test',
+        nodes: [
+          {
+            kind: 'let',
+            id: 'l1',
+            variableName: 'answer',
+            append: false,
+            source: { type: 'prompt', text: 'What color?' },
+          },
+        ],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain('Variable capture');
+    expect(parsed.additionalContext).toContain('answer');
+  });
 });

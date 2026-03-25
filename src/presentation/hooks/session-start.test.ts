@@ -140,4 +140,39 @@ describe('session-start hook (integration)', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stderr).not.toContain('WARNING');
   });
+
+  it('re-emits capture prompt when awaiting_capture on resume', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Capture resume'),
+      captureNonce: 'abc12345',
+      nodeProgress: {
+        l1: { iteration: 1, maxIterations: 3, status: 'awaiting_capture' },
+      },
+      flowSpec: {
+        goal: 'Capture resume',
+        nodes: [
+          {
+            kind: 'let',
+            id: 'l1',
+            variableName: 'answer',
+            append: false,
+            source: { type: 'prompt', text: 'What color?' },
+          },
+        ],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain('Variable capture');
+    expect(parsed.additionalContext).toContain('answer');
+    expect(parsed.additionalContext).toContain('prompt-language-capture-abc12345');
+  });
 });

@@ -47,11 +47,11 @@ describe('createSessionState', () => {
     expect(state.version).toBe(1);
   });
 
-  // H-SEC-004: Capture nonce
-  it('generates a captureNonce as 8-char hex string', () => {
+  // H-SEC-004: Capture nonce (128-bit = 32 hex chars)
+  it('generates a captureNonce as 32-char hex string', () => {
     const spec = createFlowSpec('goal', []);
     const state = createSessionState('s1', spec);
-    expect(state.captureNonce).toMatch(/^[0-9a-f]{8}$/);
+    expect(state.captureNonce).toMatch(/^[0-9a-f]{32}$/);
   });
 
   it('generates unique nonces across sessions', () => {
@@ -61,12 +61,18 @@ describe('createSessionState', () => {
     );
     expect(nonces.size).toBeGreaterThan(1);
   });
+
+  it('accepts explicit captureNonce parameter', () => {
+    const spec = createFlowSpec('goal', []);
+    const state = createSessionState('s1', spec, 'custom-nonce-value');
+    expect(state.captureNonce).toBe('custom-nonce-value');
+  });
 });
 
 describe('generateCaptureNonce', () => {
-  it('returns an 8-char hex string', () => {
+  it('returns a 32-char hex string (128-bit)', () => {
     const nonce = generateCaptureNonce();
-    expect(nonce).toMatch(/^[0-9a-f]{8}$/);
+    expect(nonce).toMatch(/^[0-9a-f]{32}$/);
   });
 });
 

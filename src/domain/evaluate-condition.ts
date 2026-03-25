@@ -71,6 +71,29 @@ function evaluateComparison(
 }
 
 /**
+ * Find the rightmost " and " or " or " operator (as standalone tokens,
+ * not substrings of identifiers). Returns null if none found.
+ *
+ * Splitting at the rightmost operator gives left-to-right associativity:
+ * "a and b or c" splits at "or" → left="a and b", right="c"
+ * which produces ((a and b) or c) — true left-to-right evaluation.
+ */
+function findRightmostOperator(
+  condition: string,
+): { operator: 'and' | 'or'; index: number; length: number } | null {
+  const re = /\s+(and|or)\s+/gi;
+  let match: RegExpExecArray | null;
+  let best: { operator: 'and' | 'or'; index: number; length: number } | null = null;
+
+  while ((match = re.exec(condition)) !== null) {
+    const op = match[1]!.toLowerCase() as 'and' | 'or';
+    // Always take the last (rightmost) match
+    best = { operator: op, index: match.index, length: match[0].length };
+  }
+  return best;
+}
+
+/**
  * Evaluate a condition string against the current variable state.
  *
  * - Boolean variables: returns the boolean value directly.
@@ -88,26 +111,22 @@ export function evaluateCondition(
 ): boolean | null {
   const trimmed = condition.trim();
 
-  // H#1: Split on " and " (case-insensitive)
-  const andIdx = trimmed.search(/\s+and\s+/i);
-  if (andIdx >= 0) {
-    const andMatch = /\s+and\s+/i.exec(trimmed.slice(andIdx));
-    const left = evaluateCondition(trimmed.slice(0, andIdx), variables);
-    const right = evaluateCondition(trimmed.slice(andIdx + andMatch![0].length), variables);
-    if (left === false || right === false) return false;
-    if (left === null || right === null) return null;
-    return left && right;
-  }
-
-  // H#1: Split on " or " (case-insensitive)
-  const orIdx = trimmed.search(/\s+or\s+/i);
-  if (orIdx >= 0) {
-    const orMatch = /\s+or\s+/i.exec(trimmed.slice(orIdx));
-    const left = evaluateCondition(trimmed.slice(0, orIdx), variables);
-    const right = evaluateCondition(trimmed.slice(orIdx + orMatch![0].length), variables);
-    if (left === true || right === true) return true;
-    if (left === null || right === null) return null;
-    return left || right;
+  // H#1: Split on rightmost " and " or " or " (left-to-right associativity, no precedence)
+  const operatorMatch = findRightmostOperator(trimmed);
+  if (operatorMatch) {
+    const { operator, index, length } = operatorMatch;
+    const left = evaluateCondition(trimmed.slice(0, index), variables);
+    const right = evaluateCondition(trimmed.slice(index + length), variables);
+    if (operator === 'and') {
+      if (left === false || right === false) return false;
+      if (left === null || right === null) return null;
+      return left && right;
+    } else {
+      // operator === 'or'
+      if (left === true || right === true) return true;
+      if (left === null || right === null) return null;
+      return left || right;
+    }
   }
 
   // "not" prefix

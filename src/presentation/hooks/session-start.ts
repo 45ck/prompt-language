@@ -12,8 +12,12 @@ import { join } from 'node:path';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
+import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
 import { formatError } from '../../domain/format-error.js';
+import type { FlowNode } from '../../domain/flow-node.js';
+import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
+import { debug } from './debug.js';
 
 // H#100: Detect project type and suggest relevant flows
 async function suggestFlows(): Promise<string | null> {
@@ -39,6 +43,53 @@ async function suggestFlows(): Promise<string | null> {
   return null;
 }
 
+/**
+ * Find a let-prompt node that is currently awaiting capture.
+ * Returns the variable name if found, null otherwise.
+ */
+function findAwaitingCapture(state: SessionState): string | null {
+  for (const [nodeId, progress] of Object.entries(state.nodeProgress)) {
+    if (progress.status === 'awaiting_capture') {
+      const node = findNodeById(state.flowSpec.nodes, nodeId);
+      if (node?.kind === 'let') return node.variableName;
+    }
+  }
+  return null;
+}
+
+function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    switch (node.kind) {
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'foreach':
+      case 'spawn': {
+        const found = findNodeById(node.body, id);
+        if (found) return found;
+        break;
+      }
+      case 'if': {
+        const found = findNodeById(node.thenBranch, id) ?? findNodeById(node.elseBranch, id);
+        if (found) return found;
+        break;
+      }
+      case 'try': {
+        const found =
+          findNodeById(node.body, id) ??
+          findNodeById(node.catchBody, id) ??
+          findNodeById(node.finallyBody, id);
+        if (found) return found;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return null;
+}
+
 // H-INT-009: Expected state version — increment when SessionState format changes
 const CURRENT_STATE_VERSION = 1;
 
@@ -46,12 +97,17 @@ async function main(): Promise<void> {
   // Consume stdin (required by hook protocol)
   await readStdin();
 
+  debug('SessionStart hook invoked');
+
   const stateStore = new FileStateStore(process.cwd());
   const state = await stateStore.loadCurrent();
+
+  debug(`SessionStart: state status=${state?.status ?? 'none'}`);
 
   // Self-heal: clean up stale state from a previous session
   if (state && (state.status === 'completed' || state.status === 'failed')) {
     await stateStore.clear(state.sessionId ?? '');
+    debug(`SessionStart: cleaned up finished flow (${state.status})`);
     process.stderr.write(`[prompt-language] Cleaned up finished flow (${state.status})\n`);
   }
 
@@ -71,8 +127,19 @@ async function main(): Promise<void> {
     const rendered = renderFlow(state);
     process.stderr.write(`\n${colorizeFlow(rendered)}\n`);
 
+    // Compaction-aware: re-emit capture prompt if a variable is awaiting capture
+    const awaitingVar = findAwaitingCapture(state);
+    let captureContext = '';
+    if (awaitingVar) {
+      debug(`SessionStart: re-emitting capture for var "${awaitingVar}"`);
+      captureContext = '\n\n' + buildCaptureRetryPrompt(awaitingVar, state.captureNonce);
+    }
+
     const output = JSON.stringify({
-      additionalContext: `[prompt-language] Active flow detected:\n\n${rendered}${versionWarning ? `\n${versionWarning}` : ''}`,
+      additionalContext:
+        `[prompt-language] Active flow detected:\n\n${rendered}` +
+        (versionWarning ? `\n${versionWarning}` : '') +
+        captureContext,
     });
     process.stdout.write(output);
     return;

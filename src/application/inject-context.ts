@@ -341,7 +341,11 @@ export async function injectContext(
     } catch (err: unknown) {
       const reason = formatError(err);
       const failed = markFailed(existing, reason);
-      await stateStore.save(failed);
+      try {
+        await stateStore.save(failed);
+      } catch {
+        // Save failed — avoid crash loop; proceed with failure message regardless
+      }
       return { prompt: `[prompt-language] Flow failed: ${reason}\n\n${input.prompt}` };
     }
   }

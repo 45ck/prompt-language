@@ -598,7 +598,10 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
 
 /** H-LANG-009: Parse the "env:" section into key-value pairs. */
 export function parseEnv(input: string): Readonly<Record<string, string>> | undefined {
-  const match = /^env:\s*\n([\s\S]*?)(?=\n\s*(?:flow:|done when:))/im.exec(input);
+  // Try matching env: followed by flow: or done when: section
+  const match =
+    /^env:\s*\n([\s\S]*?)(?=\n\s*(?:flow:|done when:))/im.exec(input) ??
+    /^env:\s*\n([\s\S]+)/im.exec(input);
   if (!match?.[1]) return undefined;
   const env: Record<string, string> = {};
   for (const line of match[1].split('\n')) {

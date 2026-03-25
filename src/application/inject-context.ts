@@ -310,14 +310,14 @@ export async function injectContext(
     // H-REL-003: Checkpoint/Resume — detect resumed session
     const isResumed = existing.sessionId !== input.sessionId;
     try {
-      const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
+      const result = await autoAdvanceNodes(
         existing,
         commandRunner,
         captureReader,
         processSpawner,
         auditLogger,
       );
-      const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
+      const toSave = result.kind === 'prompt' ? result.state : maybeCompleteFlow(result.state);
       if (toSave !== existing) {
         await stateStore.save(toSave);
       }
@@ -330,10 +330,10 @@ export async function injectContext(
       const ctx = renderFlow(toSave);
       const summary = renderFlowSummary(toSave);
       const resumeTag = isResumed ? `[resumed from ${summary}]\n` : '';
-      if (capturedPrompt) {
+      if (result.kind === 'prompt') {
         const output = isTrivialPrompt(input.prompt)
-          ? `${ctx}\n\n${resumeTag}${capturedPrompt}\n\n${summary}`
-          : `${ctx}\n\n${resumeTag}${capturedPrompt}\n\n[User message: ${input.prompt}]\n\n${summary}`;
+          ? `${ctx}\n\n${resumeTag}${result.capturedPrompt}\n\n${summary}`
+          : `${ctx}\n\n${resumeTag}${result.capturedPrompt}\n\n[User message: ${input.prompt}]\n\n${summary}`;
         return { prompt: output };
       }
       const interpolated = interpolate(input.prompt, toSave.variables);
@@ -373,19 +373,19 @@ export async function injectContext(
     try {
       const spec = parseFlow(input.prompt);
       const session = createSessionState(input.sessionId, spec);
-      const { state: advanced, capturedPrompt } = await autoAdvanceNodes(
+      const result = await autoAdvanceNodes(
         session,
         commandRunner,
         captureReader,
         processSpawner,
         auditLogger,
       );
-      const toSave = capturedPrompt ? advanced : maybeCompleteFlow(advanced);
+      const toSave = result.kind === 'prompt' ? result.state : maybeCompleteFlow(result.state);
       await stateStore.save(toSave);
       const ctx = renderFlow(toSave);
       const summary = renderFlowSummary(toSave);
-      if (capturedPrompt) {
-        return { prompt: `${ctx}\n\n${capturedPrompt}\n\n${summary}` };
+      if (result.kind === 'prompt') {
+        return { prompt: `${ctx}\n\n${result.capturedPrompt}\n\n${summary}` };
       }
       return { prompt: `${ctx}\n\n${input.prompt}\n\n${summary}` };
     } catch (err: unknown) {

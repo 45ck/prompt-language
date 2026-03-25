@@ -11,6 +11,7 @@ import {
   createForeachNode,
   createSpawnNode,
   createAwaitNode,
+  findNodeById,
 } from './flow-node.js';
 
 describe('createWhileNode', () => {
@@ -268,5 +269,77 @@ describe('createAwaitNode', () => {
       id: 'aw2',
       target: 'fix-auth',
     });
+  });
+});
+
+describe('findNodeById', () => {
+  it('finds a top-level node', () => {
+    const p1 = createPromptNode('p1', 'hello');
+    const r1 = createRunNode('r1', 'echo');
+    expect(findNodeById([p1, r1], 'r1')).toBe(r1);
+  });
+
+  it('returns null when id not found', () => {
+    const p1 = createPromptNode('p1', 'hello');
+    expect(findNodeById([p1], 'missing')).toBeNull();
+  });
+
+  it('finds node nested in while body', () => {
+    const inner = createRunNode('r1', 'test');
+    const w = createWhileNode('w1', 'cond', [inner]);
+    expect(findNodeById([w], 'r1')).toBe(inner);
+  });
+
+  it('finds node nested in if thenBranch', () => {
+    const inner = createPromptNode('p1', 'yes');
+    const ifNode = createIfNode('i1', 'flag', [inner]);
+    expect(findNodeById([ifNode], 'p1')).toBe(inner);
+  });
+
+  it('finds node nested in if elseBranch', () => {
+    const inner = createPromptNode('p2', 'no');
+    const ifNode = createIfNode('i1', 'flag', [], [inner]);
+    expect(findNodeById([ifNode], 'p2')).toBe(inner);
+  });
+
+  it('finds node nested in try body', () => {
+    const inner = createRunNode('r1', 'deploy');
+    const tryNode = createTryNode('t1', [inner], 'command_failed', []);
+    expect(findNodeById([tryNode], 'r1')).toBe(inner);
+  });
+
+  it('finds node nested in try catchBody', () => {
+    const inner = createPromptNode('p1', 'fix it');
+    const tryNode = createTryNode('t1', [], 'command_failed', [inner]);
+    expect(findNodeById([tryNode], 'p1')).toBe(inner);
+  });
+
+  it('finds node nested in try finallyBody', () => {
+    const inner = createRunNode('r1', 'cleanup');
+    const tryNode = createTryNode('t1', [], 'command_failed', [], [inner]);
+    expect(findNodeById([tryNode], 'r1')).toBe(inner);
+  });
+
+  it('finds node nested in foreach body', () => {
+    const inner = createPromptNode('p1', 'process');
+    const fe = createForeachNode('fe1', 'item', 'a b c', [inner]);
+    expect(findNodeById([fe], 'p1')).toBe(inner);
+  });
+
+  it('finds node nested in spawn body', () => {
+    const inner = createRunNode('r1', 'test');
+    const sp = createSpawnNode('sp1', 'worker', [inner]);
+    expect(findNodeById([sp], 'r1')).toBe(inner);
+  });
+
+  it('finds deeply nested node (try > foreach > let)', () => {
+    const letNode = createLetNode('l1', 'x', { type: 'literal', value: 'v' });
+    const fe = createForeachNode('fe1', 'item', 'a b', [letNode]);
+    const tryNode = createTryNode('t1', [fe], 'command_failed', []);
+    expect(findNodeById([tryNode], 'l1')).toBe(letNode);
+  });
+
+  it('returns empty array produces null', () => {
+    expect(findNodeById([], 'any')).toBeNull();
   });
 });

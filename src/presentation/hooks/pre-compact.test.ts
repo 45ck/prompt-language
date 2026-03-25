@@ -40,6 +40,7 @@ function runHook(input: string, cwd: string): HookResult {
 
 function makeState(status: string, goal: string) {
   return {
+    version: 1,
     sessionId: 'test-session',
     flowSpec: {
       goal,
@@ -55,6 +56,8 @@ function makeState(status: string, goal: string) {
     gateDiagnostics: {},
     status,
     warnings: [],
+    spawnedChildren: {},
+    captureNonce: 'test-nonce-00000000',
   };
 }
 
@@ -103,6 +106,49 @@ describe('pre-compact hook (integration)', () => {
 
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
+  });
+
+  it('finds awaiting_capture let node nested inside try block', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Nested capture test'),
+      captureNonce: 'nested12345',
+      nodeProgress: {
+        l2: { iteration: 1, maxIterations: 3, status: 'awaiting_capture' },
+      },
+      flowSpec: {
+        goal: 'Nested capture test',
+        nodes: [
+          {
+            kind: 'try',
+            id: 't1',
+            body: [
+              {
+                kind: 'let',
+                id: 'l2',
+                variableName: 'deepVar',
+                append: false,
+                source: { type: 'prompt', text: 'Nested question?' },
+              },
+            ],
+            catchCondition: 'command_failed',
+            catchBody: [],
+            finallyBody: [],
+          },
+        ],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain('Variable capture');
+    expect(parsed.additionalContext).toContain('deepVar');
   });
 
   it('includes capture re-injection when awaiting_capture', async () => {

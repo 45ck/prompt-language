@@ -14,7 +14,7 @@ import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
 import { formatError } from '../../domain/format-error.js';
-import type { FlowNode } from '../../domain/flow-node.js';
+import { findNodeById } from '../../domain/flow-node.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
@@ -52,39 +52,6 @@ function findAwaitingCapture(state: SessionState): string | null {
     if (progress.status === 'awaiting_capture') {
       const node = findNodeById(state.flowSpec.nodes, nodeId);
       if (node?.kind === 'let') return node.variableName;
-    }
-  }
-  return null;
-}
-
-function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode | null {
-  for (const node of nodes) {
-    if (node.id === id) return node;
-    switch (node.kind) {
-      case 'while':
-      case 'until':
-      case 'retry':
-      case 'foreach':
-      case 'spawn': {
-        const found = findNodeById(node.body, id);
-        if (found) return found;
-        break;
-      }
-      case 'if': {
-        const found = findNodeById(node.thenBranch, id) ?? findNodeById(node.elseBranch, id);
-        if (found) return found;
-        break;
-      }
-      case 'try': {
-        const found =
-          findNodeById(node.body, id) ??
-          findNodeById(node.catchBody, id) ??
-          findNodeById(node.finallyBody, id);
-        if (found) return found;
-        break;
-      }
-      default:
-        break;
     }
   }
   return null;

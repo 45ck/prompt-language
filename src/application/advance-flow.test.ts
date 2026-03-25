@@ -2649,10 +2649,16 @@ describe('autoAdvanceNodes — foreach cached maxIterations', () => {
     expect(r1.capturedPrompt).toBe('process a');
     expect(r1.state.nodeProgress['fe1']?.maxIterations).toBe(3);
 
-    // Second call: body exhausted, re-enter with item=b
-    const r2 = await autoAdvanceNodes(r1.state);
+    // Mutate the list variable between iterations to test cached maxIterations
+    const mutatedState1 = {
+      ...r1.state,
+      variables: { ...r1.state.variables, list: '["x","y","z","w","v"]' },
+    } as typeof r1.state;
+
+    // Second call: body exhausted, re-enter with item=b (cached maxIterations=3 unchanged)
+    const r2 = await autoAdvanceNodes(mutatedState1);
     expect(r2.capturedPrompt).toBe('process b');
-    // maxIterations should still be 3, not re-derived
+    // maxIterations should still be 3 (cached), not re-derived from mutated list
     expect(r2.state.nodeProgress['fe1']?.maxIterations).toBe(3);
 
     // Third call: body exhausted, re-enter with item=c

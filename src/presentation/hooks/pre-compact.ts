@@ -18,6 +18,7 @@ import { FileStateStore } from '../../infrastructure/adapters/file-state-store.j
 import { renderFlowCompact, renderFlowSummary } from '../../domain/render-flow.js';
 import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
 import { formatError } from '../../domain/format-error.js';
+import { findNodeById } from '../../domain/flow-node.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
@@ -26,47 +27,13 @@ import { debug } from './debug.js';
 function findAwaitingCapture(state: SessionState): { varName: string; nodeId: string } | null {
   for (const [nodeId, progress] of Object.entries(state.nodeProgress)) {
     if (progress.status === 'awaiting_capture') {
-      // Extract variable name from the flow node
-      for (const node of flatLeafNodes(state.flowSpec.nodes)) {
-        if (node.id === nodeId && node.kind === 'let') {
-          return { varName: node.variableName, nodeId };
-        }
+      const node = findNodeById(state.flowSpec.nodes, nodeId);
+      if (node?.kind === 'let') {
+        return { varName: node.variableName, nodeId };
       }
     }
   }
   return null;
-}
-
-/** Yield all leaf-level nodes from a flow tree. */
-function flatLeafNodes(
-  nodes: readonly import('../../domain/flow-node.js').FlowNode[],
-): import('../../domain/flow-node.js').FlowNode[] {
-  const result: import('../../domain/flow-node.js').FlowNode[] = [];
-  for (const node of nodes) {
-    result.push(node);
-    switch (node.kind) {
-      case 'while':
-      case 'until':
-      case 'retry':
-      case 'foreach':
-      case 'spawn':
-        result.push(...flatLeafNodes(node.body));
-        break;
-      case 'if':
-        result.push(...flatLeafNodes(node.thenBranch), ...flatLeafNodes(node.elseBranch));
-        break;
-      case 'try':
-        result.push(
-          ...flatLeafNodes(node.body),
-          ...flatLeafNodes(node.catchBody),
-          ...flatLeafNodes(node.finallyBody),
-        );
-        break;
-      default:
-        break;
-    }
-  }
-  return result;
 }
 
 async function main(): Promise<void> {

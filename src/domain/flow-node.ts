@@ -296,3 +296,37 @@ export function createSpawnNode(
 export function createAwaitNode(id: string, target: AwaitTarget): AwaitNode {
   return { kind: 'await', id, target };
 }
+
+/** Recursively search a flow tree for a node by its id. Early-exit on match. */
+export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode | null {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    switch (node.kind) {
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'foreach':
+      case 'spawn': {
+        const found = findNodeById(node.body, id);
+        if (found) return found;
+        break;
+      }
+      case 'if': {
+        const found = findNodeById(node.thenBranch, id) ?? findNodeById(node.elseBranch, id);
+        if (found) return found;
+        break;
+      }
+      case 'try': {
+        const found =
+          findNodeById(node.body, id) ??
+          findNodeById(node.catchBody, id) ??
+          findNodeById(node.finallyBody, id);
+        if (found) return found;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+  return null;
+}

@@ -40,6 +40,7 @@ function runHook(input: string, cwd: string): HookResult {
 
 function makeState(status: string, goal: string) {
   return {
+    version: 1,
     sessionId: 'test-session',
     flowSpec: {
       goal,
@@ -55,6 +56,8 @@ function makeState(status: string, goal: string) {
     gateDiagnostics: {},
     status,
     warnings: [],
+    spawnedChildren: {},
+    captureNonce: 'test-nonce-00000000',
   };
 }
 
@@ -139,6 +142,49 @@ describe('session-start hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).not.toContain('WARNING');
+  });
+
+  it('finds awaiting_capture let node nested inside foreach block', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Nested capture test'),
+      captureNonce: 'nested67890',
+      nodeProgress: {
+        l3: { iteration: 1, maxIterations: 3, status: 'awaiting_capture' },
+      },
+      flowSpec: {
+        goal: 'Nested capture test',
+        nodes: [
+          {
+            kind: 'foreach',
+            id: 'fe1',
+            variableName: 'item',
+            listExpression: 'a b c',
+            maxIterations: 50,
+            body: [
+              {
+                kind: 'let',
+                id: 'l3',
+                variableName: 'nestedAnswer',
+                append: false,
+                source: { type: 'prompt', text: 'What about ${item}?' },
+              },
+            ],
+          },
+        ],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain('Variable capture');
+    expect(parsed.additionalContext).toContain('nestedAnswer');
   });
 
   it('re-emits capture prompt when awaiting_capture on resume', async () => {

@@ -256,6 +256,58 @@ describe('evaluateCondition', () => {
     });
   });
 
+  // 3+ operator chains — verify left-to-right associativity
+  describe('3+ operator chains', () => {
+    // "a and b or c and d" → splits at rightmost "or":
+    // left = "a and b", right = "c and d"
+    // So: (a and b) or (c and d)
+    it('a and b or c and d — first group true, second false → true', () => {
+      expect(evaluateCondition('a and b or c and d', { a: true, b: true, c: false, d: true })).toBe(
+        true,
+      );
+    });
+
+    it('a and b or c and d — first group false, second true → true', () => {
+      expect(evaluateCondition('a and b or c and d', { a: false, b: true, c: true, d: true })).toBe(
+        true,
+      );
+    });
+
+    it('a and b or c and d — both groups false → false', () => {
+      expect(
+        evaluateCondition('a and b or c and d', { a: true, b: false, c: true, d: false }),
+      ).toBe(false);
+    });
+
+    // "a or b and c or d" → splits at rightmost "or":
+    // left = "a or b and c", right = "d"
+    // "a or b and c" splits at rightmost operator " and ": left="a or b", right="c"
+    // So: ((a or b) and c) or d
+    it('a or b and c or d — d=true → true (d alone suffices)', () => {
+      expect(
+        evaluateCondition('a or b and c or d', { a: false, b: false, c: false, d: true }),
+      ).toBe(true);
+    });
+
+    it('a or b and c or d — a=true,c=true,d=false → true ((a or b) and c = true)', () => {
+      expect(evaluateCondition('a or b and c or d', { a: true, b: false, c: true, d: false })).toBe(
+        true,
+      );
+    });
+
+    it('a or b and c or d — a=true,c=false,d=false → false ((a or b) and false = false)', () => {
+      expect(
+        evaluateCondition('a or b and c or d', { a: true, b: false, c: false, d: false }),
+      ).toBe(false);
+    });
+
+    it('a or b and c or d — all false → false', () => {
+      expect(
+        evaluateCondition('a or b and c or d', { a: false, b: false, c: false, d: false }),
+      ).toBe(false);
+    });
+  });
+
   // Edge cases: unresolved ${var} references
   describe('unresolved ${var} references in comparison', () => {
     it('${x} == ${y} with both unresolved compares literal strings', () => {

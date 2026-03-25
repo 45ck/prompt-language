@@ -3115,3 +3115,83 @@ describe('handleBodyExhaustion — ask condition re-entry', () => {
     expect(result.nodeProgress['u1']?.status).toBe('awaiting_capture');
   });
 });
+
+// ── ask condition edge cases ─────────────────────────────────────────
+
+describe('autoAdvanceNodes — ask condition edge cases', () => {
+  it('captureReader undefined: Phase 1 emits judge prompt, Phase 2 retries without crashing', async () => {
+    // Phase 1: no captureReader — should still emit judge prompt
+    const whileNode = createWhileNode('w1', 'ask:"ready?"', [createPromptNode('p1', 'body')], 3);
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const phase1 = await autoAdvanceNodes(state, undefined, undefined);
+    expect(phase1.capturedPrompt).toContain('ready?');
+    expect(phase1.capturedPrompt).toContain('__judge_w1__');
+    expect(phase1.state.nodeProgress['w1']?.status).toBe('awaiting_capture');
+
+    // Phase 2: still no captureReader — should fall through to retry path
+    const phase2 = await autoAdvanceNodes(phase1.state, undefined, undefined);
+    expect(phase2.capturedPrompt).toContain('was not detected');
+    expect(phase2.capturedPrompt).toContain('__judge_w1__');
+  });
+
+  it('grounding command with empty stdout: judge prompt has no grounding section', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"is it clean?"',
+      [createPromptNode('p1', 'fix')],
+      3,
+      undefined,
+      undefined,
+      'npm test',
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(capturedPrompt).toContain('is it clean?');
+    // Empty stdout means no grounding section in the judge prompt
+    expect(capturedPrompt).not.toContain('grounding command');
+    expect(capturedPrompt).not.toContain('Output from grounding');
+  });
+
+  it('ask condition iteration count preserved across body re-entry', async () => {
+    // Simulate: body exhausted after iteration 2, re-entry should preserve count
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('true'),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode('w1', 'ask:"continue?"', [createPromptNode('p1', 'body')], 5);
+    const spec = createFlowSpec('test', [whileNode]);
+    const base = createSessionState('s1', spec);
+    // Simulate body exhaustion at iteration 2: path past body end, status awaiting_capture
+    // (handleBodyExhaustion resets to while node, then advanceConditionLoop handles Phase 1/2)
+    // We set status to awaiting_capture as if Phase 1 already ran after re-entry
+    const state = {
+      ...base,
+      currentNodePath: [0] as readonly number[],
+      nodeProgress: {
+        w1: {
+          iteration: 2,
+          maxIterations: 5,
+          status: 'awaiting_capture' as const,
+          startedAt: Date.now(),
+          loopStartedAt: Date.now(),
+        },
+      },
+    };
+
+    const { state: result } = await autoAdvanceNodes(state, undefined, captureReader);
+    // Iteration should increment from 2 to 3
+    expect(result.nodeProgress['w1']?.iteration).toBe(3);
+    expect(result.nodeProgress['w1']?.status).toBe('running');
+  });
+});

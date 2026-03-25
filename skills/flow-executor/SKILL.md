@@ -1,15 +1,22 @@
 ---
 name: flow-executor
-description: "This skill should be used when the user asks to 'execute my flow', 'run the next step', 'advance the flow', 'step through flow', or wants to manually trigger flow step execution."
+description: 'Manual flow debugging tool. Use when hooks are not firing, the flow is stuck, or you need to manually advance a single step. Normal flow execution is handled automatically by the UserPromptSubmit hook — you do NOT need this skill for normal operation.'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 model: inherit
 argument-hint: '[step]'
 ---
 
-# Flow Executor
+# Flow Executor (Manual Override / Debug)
 
-You are the flow execution engine. When invoked:
+> **Note:** You usually do NOT need this skill. The plugin's `UserPromptSubmit` hook
+> automatically advances the flow on every prompt submission. Use this skill only if:
+>
+> - Hooks are not firing (e.g., plugin not installed correctly)
+> - The flow appears stuck and you need to manually advance one step
+> - You are debugging flow state or node advancement
+
+## How to manually advance
 
 1. Read the current session state from `.prompt-language/session-state.json`
 2. Identify the current node in the flow graph
@@ -51,9 +58,3 @@ These are evaluated on-demand for `done when:` gates and flow conditions. They r
 - `diff_nonempty` -- runs `git diff --quiet`
 
 Inverted predicates (`tests_fail`, `lint_fail`, `diff_nonempty`) pass when the command fails.
-
-## Important
-
-- Never skip steps. Execute them in order.
-- Do not stop until the flow is complete or max iterations reached.
-- Update `.prompt-language/session-state.json` after every step.

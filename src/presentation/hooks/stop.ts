@@ -7,6 +7,7 @@
  */
 
 import { evaluateStop } from '../../application/evaluate-stop.js';
+import { renderCompletionSummary } from '../../domain/render-flow.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { formatError } from '../../domain/format-error.js';
 import { readStdin } from './read-stdin.js';
@@ -39,6 +40,13 @@ async function main(): Promise<void> {
     process.stderr.write(`[prompt-language] ${result.reason}\n`);
     process.exitCode = 2;
     return;
+  }
+
+  // Flow completion banner: show summary when flow is done
+  if (result.state) {
+    const summary = renderCompletionSummary(result.state);
+    const color = result.state.status === 'completed' ? '\x1b[32;1m' : '\x1b[31;1m';
+    process.stderr.write(`${color}[PL] ${summary}\x1b[0m\n`);
   }
 
   process.exitCode = 0;

@@ -324,6 +324,56 @@ After await completes, child variables are imported with a name prefix: `${child
 - No cancellation mechanism for running children.
 - Child state directories (`.prompt-language-{name}/`) are not automatically cleaned up.
 
+### ask conditions (AI-evaluated)
+
+Use the `ask` prefix on `while`, `until`, or `if` conditions to let Claude evaluate whether a condition is true or false. This is useful when the loop or branch exit depends on subjective judgment rather than a deterministic variable or command exit code.
+
+```
+while ask "does the code still have performance issues?" max 5
+  prompt: Optimize the hottest code path.
+  run: node bench.js
+end
+```
+
+```
+until ask "is the refactoring complete?" max 3
+  prompt: Continue refactoring the module.
+end
+```
+
+```
+if ask "is this a security vulnerability?"
+  prompt: Fix the vulnerability.
+else
+  prompt: No security issue found. Continue.
+end
+```
+
+**How it works:** The plugin emits a meta-prompt asking Claude to evaluate the question and answer "true" or "false". The verdict is captured via the standard capture-file mechanism (same as `let x = prompt`). This takes two turns: one to ask, one to read the verdict.
+
+- For `while ask`: the body is entered when the verdict is `true` (same as regular `while`).
+- For `until ask`: the body is entered when the verdict is `false` (same as regular `until`).
+- For `if ask`: the then-branch is taken when the verdict is `true`.
+
+**grounded-by:** Optionally provide a shell command whose stdout is included as evidence for the AI evaluation. This grounds the judgment in concrete output rather than relying solely on conversation context.
+
+```
+while ask "are there still failing tests?" grounded-by "npm test" max 5
+  prompt: Fix the failing tests.
+  run: npm test
+end
+```
+
+The grounding command's stdout (up to 1000 chars) is included in the judge prompt so Claude can base its answer on real output.
+
+**Parameters:**
+
+- `ask "question"`: The question for Claude to evaluate. Required.
+- `grounded-by "command"`: (Optional) Shell command whose stdout provides evidence.
+- `max N`: Maximum iterations (for while/until). Ask conditions count toward `maxIterations` the same way regular conditions do.
+
+**Note:** If the verdict capture fails (e.g., Claude doesn't write the capture file), the plugin retries the judge prompt. Ask conditions are slower than variable-based conditions because they require an extra turn for verdict capture.
+
 ## Completion gates
 
 Gates are assertions that must hold before the flow is considered complete. The agent cannot stop until all gates pass. They are listed in the `done when:` section.

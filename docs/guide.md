@@ -133,6 +133,61 @@ Built-in gate predicates and their commands:
 | `diff_nonempty`      | `git diff --quiet` | Exit code non-zero (diff exists) |
 | `file_exists <path>` | `test -f '<path>'` | Exit code 0                      |
 
+## AI-evaluated conditions (`ask`)
+
+Regular `while`/`until`/`if` conditions use variable lookup or built-in command predicates (`tests_fail`, `command_failed`, etc.). The `ask` keyword adds a third option: let Claude evaluate a subjective question.
+
+### Syntax
+
+```
+while ask "does the code still have performance issues?" max 5
+  prompt: Optimize the hottest code path.
+  run: node bench.js
+end
+```
+
+```
+if ask "is this a security vulnerability?"
+  prompt: Fix the vulnerability.
+end
+```
+
+### When to use
+
+Use `ask` when the loop or branch exit depends on judgment that can't be reduced to a command exit code. Examples:
+
+- "Is the code clean enough?" -- no single command answers this
+- "Are there still performance issues?" -- requires interpretation of benchmark output
+- "Is the refactoring complete?" -- subjective assessment
+
+For anything with a clear pass/fail command (`tests_pass`, `lint_pass`, `command_failed`), prefer the deterministic condition -- it's faster and more reliable.
+
+### How it works
+
+Ask conditions use the same two-phase capture mechanism as `let x = prompt`:
+
+1. **Phase 1**: The plugin emits a meta-prompt asking Claude to answer "true" or "false". Claude writes its verdict to a capture file.
+2. **Phase 2**: On the next turn, the plugin reads the verdict and decides whether to enter the body (for loops) or which branch to take (for `if`).
+
+This means ask conditions add one extra turn of latency compared to variable-based conditions. The verdict is not stored as a user-visible variable -- it's consumed internally by the condition evaluator.
+
+### Grounding with evidence
+
+The `grounded-by` clause runs a shell command and includes its output in the judge prompt. This gives Claude concrete evidence rather than relying solely on conversation context.
+
+```
+until ask "are all tests passing?" grounded-by "npm test" max 5
+  prompt: Fix the failing tests.
+  run: npm test
+end
+```
+
+The grounding command's stdout (up to 1000 chars) is embedded in the judge prompt. If the grounding command fails or returns empty output, the judgment proceeds without evidence.
+
+### Iteration counting
+
+Ask conditions count toward `maxIterations` the same way regular conditions do. If a `while ask "..." max 3` loop enters its body 3 times, the loop exits on the next evaluation regardless of the verdict.
+
 ## Writing effective flows
 
 > **Flows add latency without correctness benefit for well-specified tasks.** In 45 controlled A/B tests, flow control (while, retry, if, try/catch) won 0 times against vanilla Claude. Gates won 15. Add `done when:` to any prompt without a flow first. Only add a flow when you need iterative loop behavior that would require multiple manual follow-up messages.

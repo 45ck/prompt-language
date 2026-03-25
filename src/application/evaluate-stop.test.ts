@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { evaluateStop } from './evaluate-stop.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
-import { createSessionState, markCompleted } from '../domain/session-state.js';
-import { createFlowSpec } from '../domain/flow-spec.js';
+import { createSessionState, markCompleted, updateGateResult } from '../domain/session-state.js';
+import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
 
 function makeStore(): InMemoryStateStore {
   return new InMemoryStateStore();
@@ -13,6 +13,7 @@ describe('evaluateStop', () => {
     const store = makeStore();
     const result = await evaluateStop(store);
     expect(result.blocked).toBe(false);
+    expect(result.state).toBeUndefined();
   });
 
   it('blocks stop when flow is active', async () => {
@@ -35,6 +36,8 @@ describe('evaluateStop', () => {
 
     const result = await evaluateStop(store);
     expect(result.blocked).toBe(false);
+    expect(result.state).toBeDefined();
+    expect(result.state?.status).toBe('completed');
   });
 
   it('includes step path in block reason', async () => {
@@ -57,6 +60,8 @@ describe('evaluateStop', () => {
 
     const result = await evaluateStop(store);
     expect(result.blocked).toBe(false);
+    expect(result.state).toBeDefined();
+    expect(result.state?.status).toBe('failed');
   });
 
   it('allows stop when flow is cancelled', async () => {
@@ -67,5 +72,45 @@ describe('evaluateStop', () => {
 
     const result = await evaluateStop(store);
     expect(result.blocked).toBe(false);
+  });
+
+  it('includes gate status in block reason when gates exist', async () => {
+    const store = makeStore();
+    const gates = [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')];
+    const spec = createFlowSpec('Fix tests', [], gates);
+    let session = createSessionState('s6', spec);
+    session = updateGateResult(session, 'tests_pass', true);
+    session = updateGateResult(session, 'lint_pass', false);
+    await store.save(session);
+
+    const result = await evaluateStop(store);
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toContain('1/2 passing');
+    expect(result.reason).toContain('tests_pass [pass]');
+    expect(result.reason).toContain('lint_pass [fail]');
+  });
+
+  it('shows pending gates in block reason', async () => {
+    const store = makeStore();
+    const gates = [createCompletionGate('tests_pass')];
+    const spec = createFlowSpec('Fix tests', [], gates);
+    const session = createSessionState('s7', spec);
+    await store.save(session);
+
+    const result = await evaluateStop(store);
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toContain('0/1 passing');
+    expect(result.reason).toContain('tests_pass [pending]');
+  });
+
+  it('omits gate status when no gates configured', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Simple task', []);
+    const session = createSessionState('s8', spec);
+    await store.save(session);
+
+    const result = await evaluateStop(store);
+    expect(result.blocked).toBe(true);
+    expect(result.reason).not.toContain('Gates:');
   });
 });

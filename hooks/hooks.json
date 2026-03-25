@@ -25,6 +25,7 @@
     ],
     "TaskCompleted": [
       {
+        "_comment": "TaskCompleted fires when Claude finishes the current task. Used for gate evaluation — exits 2 to block completion if any done-when gate fails.",
         "hooks": [
           {
             "type": "command",

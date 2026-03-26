@@ -9,8 +9,8 @@ import { evaluateCompletion } from '../../application/evaluate-completion.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-runner.js';
 import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
-import { formatError } from '../../domain/format-error.js';
 import { readStdin } from './read-stdin.js';
+import { withHookErrorRecovery } from './hook-error-handler.js';
 
 async function main(): Promise<void> {
   // Consume stdin (required by hook protocol)
@@ -31,7 +31,6 @@ async function main(): Promise<void> {
   process.exitCode = 0;
 }
 
-main().catch((error: unknown) => {
-  process.stderr.write(`[prompt-language] hook error: ${formatError(error)}\n`);
+withHookErrorRecovery('TaskCompleted', process.cwd(), main).catch(() => {
   process.exitCode = 0;
 });

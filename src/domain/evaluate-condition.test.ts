@@ -226,13 +226,12 @@ describe('evaluateCondition', () => {
     });
   });
 
-  // Bead 95j6: Left-to-right operator precedence (no implicit precedence)
-  // Left-to-right means: "a and b or c" → "(a and b) or c"
-  // "a or b and c" → "(a or b) and c"
-  // The rightmost operator is the main split point (left-associative).
-  describe('mixed and/or — left-to-right precedence', () => {
-    it('a or b and c → (a or b) and c — a=true makes (a or b)=true, c=false → false', () => {
-      expect(evaluateCondition('a or b and c', { a: true, b: false, c: false })).toBe(false);
+  // Standard precedence: "and" binds tighter than "or"
+  // "a or b and c" → a or (b and c)   [standard — "and" groups first]
+  // "a and b or c" → (a and b) or c   [same under both standard and left-to-right]
+  describe('mixed and/or — standard precedence (and before or)', () => {
+    it('a or b and c → a or (b and c) — a=true, short-circuit: true', () => {
+      expect(evaluateCondition('a or b and c', { a: true, b: false, c: false })).toBe(true);
     });
 
     it('a and b or c → (a and b) or c — a=false,b=true → false, c=true → true', () => {
@@ -243,24 +242,22 @@ describe('evaluateCondition', () => {
       expect(evaluateCondition('a and b or c', { a: true, b: false, c: false })).toBe(false);
     });
 
-    it('a or b and c → (a or b) and c — a=false,b=true → true, c=true → true', () => {
+    it('a or b and c → a or (b and c) — a=false, b=true, c=true → true', () => {
       expect(evaluateCondition('a or b and c', { a: false, b: true, c: true })).toBe(true);
     });
 
-    it('a or b and c → (a or b) and c — a=false,b=true → true, c=false → false', () => {
+    it('a or b and c → a or (b and c) — a=false, b=true, c=false → false', () => {
       expect(evaluateCondition('a or b and c', { a: false, b: true, c: false })).toBe(false);
     });
 
-    it('a or b and c → (a or b) and c — a=true,b=false → true, c=true → true', () => {
+    it('a or b and c → a or (b and c) — a=true, b=false, c=true → true', () => {
       expect(evaluateCondition('a or b and c', { a: true, b: false, c: true })).toBe(true);
     });
   });
 
-  // 3+ operator chains — verify left-to-right associativity
+  // 3+ operator chains — standard precedence
   describe('3+ operator chains', () => {
-    // "a and b or c and d" → splits at rightmost "or":
-    // left = "a and b", right = "c and d"
-    // So: (a and b) or (c and d)
+    // "a and b or c and d" → (a and b) or (c and d)  [same under standard and left-to-right]
     it('a and b or c and d — first group true, second false → true', () => {
       expect(evaluateCondition('a and b or c and d', { a: true, b: true, c: false, d: true })).toBe(
         true,
@@ -279,25 +276,22 @@ describe('evaluateCondition', () => {
       ).toBe(false);
     });
 
-    // "a or b and c or d" → splits at rightmost "or":
-    // left = "a or b and c", right = "d"
-    // "a or b and c" splits at rightmost operator " and ": left="a or b", right="c"
-    // So: ((a or b) and c) or d
-    it('a or b and c or d — d=true → true (d alone suffices)', () => {
+    // "a or b and c or d" → standard: (a or (b and c)) or d
+    it('a or b and c or d — d=true → true', () => {
       expect(
         evaluateCondition('a or b and c or d', { a: false, b: false, c: false, d: true }),
       ).toBe(true);
     });
 
-    it('a or b and c or d — a=true,c=true,d=false → true ((a or b) and c = true)', () => {
+    it('a or b and c or d — a=true,d=false → true (a short-circuits)', () => {
       expect(evaluateCondition('a or b and c or d', { a: true, b: false, c: true, d: false })).toBe(
         true,
       );
     });
 
-    it('a or b and c or d — a=true,c=false,d=false → false ((a or b) and false = false)', () => {
+    it('a or b and c or d — a=false, b=true, c=false, d=false → false ((b and c) is false)', () => {
       expect(
-        evaluateCondition('a or b and c or d', { a: true, b: false, c: false, d: false }),
+        evaluateCondition('a or b and c or d', { a: false, b: true, c: false, d: false }),
       ).toBe(false);
     });
 
@@ -305,6 +299,47 @@ describe('evaluateCondition', () => {
       expect(
         evaluateCondition('a or b and c or d', { a: false, b: false, c: false, d: false }),
       ).toBe(false);
+    });
+  });
+
+  // Parenthesized conditions (fh58)
+  describe('parenthesized conditions', () => {
+    it('(a or b) and c — parens override precedence', () => {
+      // Without parens: a or b and c = a or (b and c)
+      // With parens: (a or b) and c
+      expect(evaluateCondition('(a or b) and c', { a: true, b: false, c: false })).toBe(false);
+      expect(evaluateCondition('(a or b) and c', { a: true, b: false, c: true })).toBe(true);
+      expect(evaluateCondition('(a or b) and c', { a: false, b: false, c: true })).toBe(false);
+    });
+
+    it('a and (b or c) — parens on right side', () => {
+      expect(evaluateCondition('a and (b or c)', { a: true, b: false, c: true })).toBe(true);
+      expect(evaluateCondition('a and (b or c)', { a: true, b: false, c: false })).toBe(false);
+      expect(evaluateCondition('a and (b or c)', { a: false, b: true, c: true })).toBe(false);
+    });
+
+    it('(a and b) or (c and d) — parens on both sides', () => {
+      expect(
+        evaluateCondition('(a and b) or (c and d)', { a: true, b: true, c: false, d: true }),
+      ).toBe(true);
+      expect(
+        evaluateCondition('(a and b) or (c and d)', { a: false, b: true, c: false, d: true }),
+      ).toBe(false);
+    });
+
+    it('fully parenthesized expression — strips outer parens', () => {
+      expect(evaluateCondition('(a)', { a: true })).toBe(true);
+      expect(evaluateCondition('(a)', { a: false })).toBe(false);
+    });
+
+    it('nested parens work', () => {
+      expect(evaluateCondition('((a or b) and c)', { a: true, b: false, c: true })).toBe(true);
+      expect(evaluateCondition('((a or b) and c)', { a: false, b: false, c: true })).toBe(false);
+    });
+
+    it('not (expr) — negates parenthesized expression', () => {
+      expect(evaluateCondition('not (a or b)', { a: false, b: false })).toBe(true);
+      expect(evaluateCondition('not (a or b)', { a: true, b: false })).toBe(false);
     });
   });
 

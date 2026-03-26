@@ -13,10 +13,10 @@ import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-
 import { FileCaptureReader } from '../../infrastructure/adapters/file-capture-reader.js';
 import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
 import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
-import { formatError } from '../../domain/format-error.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
+import { logHookError } from './hook-error-handler.js';
 
 function parseInput(raw: string): { prompt: string } | null {
   try {
@@ -101,7 +101,7 @@ async function main(): Promise<void> {
   process.stdout.write(output);
 }
 
-main().catch((error: unknown) => {
-  process.stderr.write(`[prompt-language] hook error: ${formatError(error)}\n`);
+main().catch(async (error: unknown) => {
+  await logHookError('UserPromptSubmit', process.cwd(), error);
   process.exitCode = 0;
 });

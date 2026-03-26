@@ -5,7 +5,9 @@
  * by looking up variables. Returns null when the condition cannot be
  * resolved from variables alone (needs command execution).
  *
- * H#1: Supports "and"/"or" logical operators (left-to-right, no precedence).
+ * H#1: Supports "and"/"or" logical operators with standard precedence
+ *      ("and" binds tighter than "or"). Left-to-right associativity within
+ *      each precedence level. Parentheses override precedence: (a or b) and c.
  * H#3: Supports comparison operators ==, !=, >, <, >=, <=.
  * H#6: Supports ${var} references and quoted strings in comparisons.
  */
@@ -71,26 +73,52 @@ function evaluateComparison(
 }
 
 /**
- * Find the rightmost " and " or " or " operator (as standalone tokens,
- * not substrings of identifiers). Returns null if none found.
+ * Find the rightmost "and" or "or" operator at paren-depth 0.
  *
- * Splitting at the rightmost operator gives left-to-right associativity:
- * "a and b or c" splits at "or" → left="a and b", right="c"
- * which produces ((a and b) or c) — true left-to-right evaluation.
+ * Implements standard precedence: "or" has lower precedence than "and",
+ * so we prefer splitting on "or" first. Left-to-right associativity within
+ * each level is achieved by taking the rightmost match.
+ *
+ * Examples:
+ *   "a or b and c"  → splits at "or"  → a or (b and c)   [standard precedence]
+ *   "a and b or c"  → splits at "or"  → (a and b) or c   [standard precedence]
+ *   "(a or b) and c"→ splits at "and" → (a or b) and c   [parens override]
+ *   "a and b and c" → splits at last "and" → (a and b) and c [left-to-right]
  */
-function findRightmostOperator(
+function findRightmostOperatorOutsideParens(
   condition: string,
 ): { operator: 'and' | 'or'; index: number; length: number } | null {
+  // Build depth array: depth[i] = number of unclosed '(' before character i
+  const depths: number[] = new Array(condition.length).fill(0);
+  let d = 0;
+  for (let i = 0; i < condition.length; i++) {
+    depths[i] = d;
+    if (condition[i] === '(') d++;
+    else if (condition[i] === ')') d--;
+  }
+
+  // Find rightmost 'or' and rightmost 'and' at depth 0
+  let orMatch: { index: number; length: number } | null = null;
+  let andMatch: { index: number; length: number } | null = null;
+
   const re = /\s+(and|or)\s+/gi;
   let match: RegExpExecArray | null;
-  let best: { operator: 'and' | 'or'; index: number; length: number } | null = null;
-
   while ((match = re.exec(condition)) !== null) {
-    const op = match[1]!.toLowerCase() as 'and' | 'or';
-    // Always take the last (rightmost) match
-    best = { operator: op, index: match.index, length: match[0].length };
+    if ((depths[match.index] ?? 0) === 0) {
+      const op = match[1]!.toLowerCase() as 'and' | 'or';
+      // Always overwrite — gives rightmost match (left-to-right associativity)
+      if (op === 'or') {
+        orMatch = { index: match.index, length: match[0].length };
+      } else {
+        andMatch = { index: match.index, length: match[0].length };
+      }
+    }
   }
-  return best;
+
+  // 'or' has lower precedence → split on 'or' first when present
+  if (orMatch) return { operator: 'or', ...orMatch };
+  if (andMatch) return { operator: 'and', ...andMatch };
+  return null;
 }
 
 /**
@@ -111,8 +139,25 @@ export function evaluateCondition(
 ): boolean | null {
   const trimmed = condition.trim();
 
-  // H#1: Split on rightmost " and " or " or " (left-to-right associativity, no precedence)
-  const operatorMatch = findRightmostOperator(trimmed);
+  // Strip outer parentheses: (expr) → recurse on expr
+  if (trimmed.startsWith('(')) {
+    let depth = 0;
+    for (let i = 0; i < trimmed.length; i++) {
+      if (trimmed[i] === '(') depth++;
+      else if (trimmed[i] === ')') {
+        depth--;
+        if (depth === 0) {
+          if (i === trimmed.length - 1) {
+            return evaluateCondition(trimmed.slice(1, -1), variables);
+          }
+          break; // '(' at start but matching ')' is not at end — not fully wrapped
+        }
+      }
+    }
+  }
+
+  // H#1: Split on 'or'/'and' at paren-depth 0 with standard precedence
+  const operatorMatch = findRightmostOperatorOutsideParens(trimmed);
   if (operatorMatch) {
     const { operator, index, length } = operatorMatch;
     const left = evaluateCondition(trimmed.slice(0, index), variables);

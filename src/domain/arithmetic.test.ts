@@ -32,9 +32,19 @@ describe('evaluateArithmetic', () => {
     expect(evaluateArithmetic('10 - 2 - 3')).toBe(5);
   });
 
-  it('evaluates mixed operators left to right (no precedence)', () => {
-    // 2 + 3 * 4 => (2+3)*4 = 20 (left-to-right, NOT 2+(3*4)=14)
-    expect(evaluateArithmetic('2 + 3 * 4')).toBe(20);
+  it('evaluates mixed operators with standard precedence (* before +)', () => {
+    // 2 + 3 * 4 => 2 + (3*4) = 2 + 12 = 14
+    expect(evaluateArithmetic('2 + 3 * 4')).toBe(14);
+  });
+
+  it('evaluates mixed operators with standard precedence (/ before -)', () => {
+    // 10 - 6 / 2 => 10 - (6/2) = 10 - 3 = 7
+    expect(evaluateArithmetic('10 - 6 / 2')).toBe(7);
+  });
+
+  it('evaluates left-to-right within same precedence level', () => {
+    // 2 * 3 * 4 => (2*3)*4 = 24
+    expect(evaluateArithmetic('2 * 3 * 4')).toBe(24);
   });
 
   // Negative numbers

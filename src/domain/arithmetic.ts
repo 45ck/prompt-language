@@ -2,7 +2,8 @@
  * evaluateArithmetic — Pure arithmetic expression evaluator.
  *
  * Evaluates simple integer arithmetic expressions with +, -, *, /, %.
- * Uses left-to-right evaluation (no operator precedence).
+ * Uses standard operator precedence: *, /, % before +, -.
+ * Left-to-right associativity within the same precedence level.
  * Returns null for non-arithmetic input or division by zero.
  */
 
@@ -64,31 +65,43 @@ export function evaluateArithmetic(expr: string): number | null {
   // Need at least one number
   if (tokens.length === 0) return null;
 
-  // Evaluate left-to-right
-  let result = parseInt(tokens[0]!, 10);
+  // Evaluate with standard precedence: first pass handles *, /, % then second pass handles +, -
+  const nums = tokens.map((t) => parseInt(t, 10));
 
-  for (let i = 0; i < ops.length; i++) {
-    const operand = parseInt(tokens[i + 1]!, 10);
-    switch (ops[i]) {
-      case '+':
-        result = result + operand;
-        break;
-      case '-':
-        result = result - operand;
-        break;
-      case '*':
-        result = result * operand;
-        break;
-      case '/':
-        if (operand === 0) return null;
-        result = Math.trunc(result / operand);
-        break;
-      case '%':
-        if (operand === 0) return null;
-        result = result % operand;
-        break;
-      default:
-        return null;
+  // Pass 1: reduce *, /, % left-to-right
+  let i = 0;
+  while (i < ops.length) {
+    const op = ops[i]!;
+    if (op === '*' || op === '/' || op === '%') {
+      const left = nums[i]!;
+      const right = nums[i + 1]!;
+      let result: number;
+      if (op === '*') {
+        result = left * right;
+      } else if (op === '/') {
+        if (right === 0) return null;
+        result = Math.trunc(left / right);
+      } else {
+        if (right === 0) return null;
+        result = left % right;
+      }
+      nums.splice(i, 2, result);
+      ops.splice(i, 1);
+    } else {
+      i++;
+    }
+  }
+
+  // Pass 2: reduce +, - left-to-right
+  let result = nums[0]!;
+  for (let j = 0; j < ops.length; j++) {
+    const operand = nums[j + 1]!;
+    if (ops[j] === '+') {
+      result = result + operand;
+    } else if (ops[j] === '-') {
+      result = result - operand;
+    } else {
+      return null;
     }
   }
 

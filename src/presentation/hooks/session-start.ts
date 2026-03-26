@@ -13,8 +13,8 @@ import { FileStateStore } from '../../infrastructure/adapters/file-state-store.j
 import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
-import { formatError } from '../../domain/format-error.js';
 import { findNodeById } from '../../domain/flow-node.js';
+import { withHookErrorRecovery } from './hook-error-handler.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
@@ -120,7 +120,6 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  process.stderr.write(`[prompt-language] hook error: ${formatError(error)}\n`);
+withHookErrorRecovery('SessionStart', process.cwd(), main).catch(() => {
   process.exitCode = 0;
 });

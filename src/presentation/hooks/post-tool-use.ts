@@ -19,6 +19,7 @@ import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { formatError } from '../../domain/format-error.js';
 import { CAPTURE_VARS_DIR } from '../../domain/capture-prompt.js';
+import { withHookErrorRecovery } from './hook-error-handler.js';
 import { extractAllCaptureTags } from '../../infrastructure/adapters/tag-capture-reader.js';
 import { readStdin } from './read-stdin.js';
 import type { SessionState } from '../../domain/session-state.js';
@@ -136,7 +137,6 @@ async function main(): Promise<void> {
   process.exitCode = 0;
 }
 
-main().catch((error: unknown) => {
-  process.stderr.write(`[prompt-language] hook error: ${formatError(error)}\n`);
+withHookErrorRecovery('PostToolUse', process.cwd(), main).catch(() => {
   process.exitCode = 0;
 });

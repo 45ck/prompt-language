@@ -8,3 +8,5 @@ test-results/
 .stryker-tmp/
 .prompt-language/
 scripts/eval/results/
+.dolt/
+.beads-credential-key

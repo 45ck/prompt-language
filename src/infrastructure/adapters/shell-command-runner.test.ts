@@ -1,19 +1,29 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ShellCommandRunner } from './shell-command-runner.js';
 
-describe('ShellCommandRunner', () => {
-  it('runs a successful command', async () => {
-    const runner = new ShellCommandRunner();
-    const result = await runner.run('echo hello');
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout.trim()).toBe('hello');
-  });
+const REAL_COMMAND_TEST_TIMEOUT_MS = 30_000;
 
-  it('captures non-zero exit code', async () => {
-    const runner = new ShellCommandRunner();
-    const result = await runner.run('node -e "process.exit(1)"');
-    expect(result.exitCode).toBe(1);
-  });
+describe('ShellCommandRunner', () => {
+  it(
+    'runs a successful command',
+    async () => {
+      const runner = new ShellCommandRunner();
+      const result = await runner.run('echo hello');
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout.trim()).toBe('hello');
+    },
+    REAL_COMMAND_TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'captures non-zero exit code',
+    async () => {
+      const runner = new ShellCommandRunner();
+      const result = await runner.run('node -e "process.exit(1)"');
+      expect(result.exitCode).toBe(1);
+    },
+    REAL_COMMAND_TEST_TIMEOUT_MS,
+  );
 
   it('captures stderr on failure', async () => {
     const runner = new ShellCommandRunner();

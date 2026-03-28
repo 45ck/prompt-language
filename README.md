@@ -2,7 +2,7 @@
 
 A programmable runtime for Claude Code.
 
-It wraps Claude in a terminal-side state machine with persistent state, explicit context, control flow, parallel work, and real verification commands, so Claude keeps working until the checks you define actually pass.
+It wraps Claude in a terminal-side state machine so you can define state, context, control flow, parallel work, and completion checks around the agent instead of supervising every turn by hand.
 
 [![npm](https://img.shields.io/npm/v/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 [![CI](https://github.com/45ck/prompt-language/actions/workflows/quality.yml/badge.svg)](https://github.com/45ck/prompt-language/actions/workflows/quality.yml)
@@ -11,21 +11,39 @@ It wraps Claude in a terminal-side state machine with persistent state, explicit
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![npm downloads](https://img.shields.io/npm/dm/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 
+## What it is
+
+Without prompt-language, the engineer is the runtime: keep track of the task, restate the right context, decide what happens next, rerun checks, and reject premature "done." prompt-language moves that supervision loop into the terminal.
+
+Claude still does the reasoning, editing, and tool use. prompt-language provides the runtime around it.
+
+## What you get
+
+| Capability            | What it gives you                              | Example                                |
+| --------------------- | ---------------------------------------------- | -------------------------------------- |
+| Persistent state      | Remember where the task is across turns        | resumable loops and long-running flows |
+| Deterministic context | Capture exact values and reuse them later      | `let baseline = run "node bench.js"`   |
+| Control flow          | Encode retries, branching, batching, and loops | `retry`, `if`, `while`, `foreach`      |
+| Parallel work         | Fan out independent tasks and join them back   | `spawn "frontend"` + `await all`       |
+| Verification          | Block completion until real checks pass        | `done when: tests_pass lint_pass`      |
+
 ## Why engineers use it
 
-Claude is already a capable agent. The missing piece is the runtime engineers usually provide by hand: remember the task state, restate the right context, decide what happens next, rerun checks, and refuse to accept a premature "done." prompt-language moves that supervision loop into the terminal.
-
-- Persist task state across turns instead of relying on chat history
-- Re-inject exact context and variables instead of hoping Claude remembers
-- Encode retries, branching, foreach loops, and parallel work explicitly
-- Run real tests, lint, build, and custom verification commands before completion
-- Let longer tasks run with less babysitting
+- Less babysitting during long autonomous runs
+- Exact context instead of "Claude probably remembers"
+- Repeatable workflows instead of ad hoc follow-up prompts
+- Parallel work when tasks are independent
+- Real verification before completion, not model self-report
 
 ## The problem
 
 You ask Claude to fix a bug. It makes a change and says "Done!" You say "run the tests." They fail. You say "fix those." It fixes one. You say "run the tests again." Two more fail. Five back-and-forth messages for something that should have been automatic.
 
-Append two lines to any prompt and Claude literally cannot stop until the tests pass:
+With prompt-language, you can make the runtime own that loop instead of doing it yourself.
+
+## Quick examples
+
+### 1. Enforce real completion
 
 ```
 Goal: fix the auth module and clean up the code
@@ -35,7 +53,47 @@ done when:
   lint_pass
 ```
 
-Start with `done when:` and let the runtime enforce verification. Add `flow:` only when you want explicit control flow around Claude. Claude still works however it wants, but it cannot stop until both `npm test` and `npm run lint` exit 0.
+The runtime blocks completion until those checks actually pass.
+
+### 2. Carry exact context through the task
+
+```
+Goal: fix all changed TypeScript files without breaking behavior
+
+flow:
+  let files = run "git diff --name-only -- '*.ts'"
+  foreach file in ${files}
+    prompt: Fix issues in ${file} without changing behavior.
+  end
+
+done when:
+  tests_pass
+  lint_pass
+```
+
+`let` captures state once. `foreach` turns it into an explicit workflow instead of hoping Claude tracks the list correctly in conversation.
+
+### 3. Fan out independent work in parallel
+
+```
+Goal: fix frontend and backend regressions
+
+flow:
+  spawn "frontend"
+    prompt: Fix the React component and its failing tests.
+  end
+
+  spawn "backend"
+    prompt: Fix the API handler and its failing tests.
+  end
+
+  await all
+
+done when:
+  tests_pass
+```
+
+Use `spawn`/`await` when the work can be split cleanly.
 
 ## Install
 
@@ -70,15 +128,15 @@ node bin/cli.mjs install
 | -------------------------------------- | ---------------------------------------- |
 | `npx @45ck/prompt-language`            | Install the runtime (default)            |
 | `npx @45ck/prompt-language status`     | Check installation status                |
-| `npx @45ck/prompt-language uninstall`  | Remove the plugin                        |
+| `npx @45ck/prompt-language uninstall`  | Remove the runtime                       |
 | `npx @45ck/prompt-language init`       | Scaffold a starter flow for your project |
 | `npx @45ck/prompt-language demo`       | Print an annotated example flow          |
 | `npx @45ck/prompt-language statusline` | Configure Claude Code status line        |
 | `npx @45ck/prompt-language watch`      | Launch live TUI flow monitor             |
 
-## Slash commands
+## Packaged workflows
 
-Zero DSL to learn. Type a slash command and walk away:
+prompt-language also ships a few ready-made slash commands built on top of the runtime. They are shortcuts and examples, not the core feature.
 
 | Command         | What it does                                                                                       |
 | --------------- | -------------------------------------------------------------------------------------------------- |
@@ -87,45 +145,46 @@ Zero DSL to learn. Type a slash command and walk away:
 | `/refactor`     | Incremental refactoring with test verification after each change. Gate: tests_pass + lint_pass     |
 | `/deploy-check` | Lint, test, build pipeline. Fix failures at each stage. Gate: tests_pass + lint_pass + file_exists |
 
-## Gates
+## Verification
 
-**Gates** are verification checks that run when Claude tries to stop. Each gate is defined by a **predicate** — a named condition that maps to a real shell command. If any gate fails (command exits non-zero), the plugin blocks the stop and forces Claude to keep working. Gates can't be bypassed: they always run the actual command, regardless of what Claude says.
+Verification is one capability, not the whole product, but it is the trust anchor. `done when:` runs real checks when Claude tries to finish. If a check fails, the runtime blocks completion and sends Claude back to work.
 
-`done when:` is the enforcement section — add it to any prompt to make gates mandatory. `flow:` is optional — it structures iterative steps. You can use `done when:` alone (no `flow:` needed) for simple enforcement:
+Start with `done when:` whenever the task has a real exit condition:
 
 ```
 done when:
   tests_pass
 ```
 
-### Built-in gates
+Common predicates:
 
-| Predicate          | Runs               | Passes when      |
-| ------------------ | ------------------ | ---------------- |
-| `tests_pass`       | `npm test`         | exit 0           |
-| `tests_fail`       | `npm test`         | exit non-zero    |
-| `lint_pass`        | `npm run lint`     | exit 0           |
-| `lint_fail`        | `npm run lint`     | exit non-zero    |
-| `pytest_pass`      | `pytest`           | exit 0           |
-| `pytest_fail`      | `pytest`           | exit non-zero    |
-| `go_test_pass`     | `go test ./...`    | exit 0           |
-| `go_test_fail`     | `go test ./...`    | exit non-zero    |
-| `cargo_test_pass`  | `cargo test`       | exit 0           |
-| `cargo_test_fail`  | `cargo test`       | exit non-zero    |
-| `diff_nonempty`    | `git diff --quiet` | diff has changes |
-| `file_exists path` | `test -f 'path'`   | file exists      |
+- `tests_pass`
+- `lint_pass`
+- `diff_nonempty`
+- `file_exists dist/index.js`
+- `gate typecheck: npx tsc --noEmit`
 
-### Custom gates
+For the full predicate list and syntax, see the **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)**.
 
-For any command not covered by a built-in, define your own in the `done when:` section with `gate name: command`:
+## Runtime primitives
+
+The language is small, but it covers the main runtime concerns:
+
+| Category            | Primitives                                 | Purpose                                |
+| ------------------- | ------------------------------------------ | -------------------------------------- |
+| Actions             | `prompt`, `run`, `try/catch`               | Tell Claude what to do or run commands |
+| State and context   | `let`, `var`                               | Capture values and reuse them later    |
+| Control flow        | `if`, `while`, `until`, `retry`, `foreach` | Sequence work explicitly               |
+| Parallelism         | `spawn`, `await`                           | Run independent sub-tasks concurrently |
+| Completion criteria | `done when:`                               | Enforce real exit conditions           |
+
+Example of a custom verification command:
 
 ```
 done when:
   gate typecheck: mypy src/
   gate e2e: npx playwright test
 ```
-
-Any command that exits 0 passes. Any command that exits non-zero fails.
 
 ## Examples
 
@@ -220,44 +279,27 @@ done when:
 
 ## When to use this
 
-Tested in 300+ controlled A/B runs across 45 hypotheses. Gates win 15/45 — all from enforcement. Flow control wins 0. Expect 2-3x latency overhead.
+Use prompt-language when you want a runtime around Claude, not just a better prompt.
 
-| Situation                                                          | Use plugin? | Why                                             |
-| ------------------------------------------------------------------ | ----------- | ----------------------------------------------- |
-| Task has verifiable completion criteria (tests, lint, file exists) | **Yes**     | Gates catch what prompts miss                   |
-| You distrust the prompt (generated, copied, adversarial)           | **Yes**     | Gaslighting resistance — gates ignore lies      |
-| You need to force code changes, not just review                    | **Yes**     | `diff_nonempty` gate                            |
-| Multiple independent criteria must all pass                        | **Yes**     | Compound gates                                  |
-| Task is simple and well-specified                                  | **No**      | Vanilla Claude matches correctness, 2-3x faster |
-| No verifiable exit condition exists                                | **No**      | No gate to add, overhead without benefit        |
-| Speed matters and you'll verify manually                           | **No**      | Plugin adds latency without benefit             |
+Verification is where the repo has the clearest measured wins. State, variables, control flow, and parallelism are about programmability, repeatability, and reducing manual supervision.
+
+| Situation                                                          | Use it?       | Why                                                 |
+| ------------------------------------------------------------------ | ------------- | --------------------------------------------------- |
+| Task has verifiable completion criteria (tests, lint, file exists) | **Yes**       | Verification catches what prompts miss              |
+| Task needs explicit state or reusable captured context             | **Yes**       | Variables and re-injection keep the runtime honest  |
+| Task benefits from batching or branching                           | **Yes**       | `foreach`, `retry`, and `if` make the flow explicit |
+| Task can be split into independent work streams                    | **Yes**       | `spawn` / `await` lets you fan out safely           |
+| Task is simple and well-specified                                  | **Maybe not** | Vanilla Claude may be faster                        |
+| No verifiable exit condition exists and no runtime structure helps | **Maybe not** | Added machinery may not buy you much                |
+| Speed matters and you'll supervise manually                        | **Maybe not** | The runtime adds overhead                           |
 
 Full methodology, hypothesis-by-hypothesis results, and latency data: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)**
-
-## DSL reference
-
-| Primitive       | Purpose                              | Example                                |
-| --------------- | ------------------------------------ | -------------------------------------- |
-| `prompt:`       | Inject an instruction for the agent  | `prompt: Fix the auth module.`         |
-| `run:`          | Execute a command, capture result    | `run: npm test`                        |
-| `let`/`var`     | Store a value for `${interpolation}` | `let ver = run "node -v"`              |
-| `while`         | Loop while condition is true         | `while tests_fail max 5`               |
-| `until`         | Loop until condition becomes true    | `until tests_pass max 5`               |
-| `retry`         | Retry block on failure               | `retry max 3`                          |
-| `if`/`else`     | Conditional branching                | `if lint_fail ... else ... end`        |
-| `try`/`catch`   | Execute with error recovery          | `try ... catch command_failed ... end` |
-| `foreach`       | Iterate over a list                  | `foreach file in ${files} max 10`      |
-| `break`         | Exit nearest enclosing loop          | `break`                                |
-| `spawn`/`await` | Launch parallel sub-tasks            | `spawn "name" ... end` / `await all`   |
-| `done when:`    | Completion gate (blocks stopping)    | `done when: tests_pass`                |
-
-Full syntax, built-in variables, and gate predicates: **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)**
 
 ## Monitoring
 
 ### Status line
 
-The plugin configures Claude Code's status line to show flow progress — current node, loop iteration, and gate status — in the footer during execution. This is set up automatically on install.
+The runtime configures Claude Code's status line to show flow progress — current node, loop iteration, and gate status — in the footer during execution. This is set up automatically on install.
 
 ### Watch mode
 

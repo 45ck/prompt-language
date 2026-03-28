@@ -199,6 +199,8 @@ Supported gate forms also include direct equality checks such as `tests_pass == 
 
 ## Complete feature surface
 
+Everything in this section is part of the shipped runtime. For tracked but unavailable features, see the [Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/roadmap.md).
+
 The README should not make this look smaller than it is. The runtime surface includes:
 
 ### Program structure
@@ -455,6 +457,7 @@ Shows the full flow state updating in real time — useful for watching long-run
 ## Learn more
 
 - **[Getting Started](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)** — see it work in 2 minutes
+- **[Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/roadmap.md)** — tracked but not yet shipped features from `.beads`
 - **[Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md)** — per-feature reference pages for `ask`, `if`, `spawn`, `await`, `let/var`, `done when:`, and more
 - **[How prompt-language works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md)** — how it works, variable lifecycle, gate trust model
 - **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)** — complete syntax specification

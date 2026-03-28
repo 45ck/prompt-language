@@ -2,6 +2,8 @@
 
 This section documents prompt-language as a language and runtime, not as a tutorial. Use it when you need exact syntax, semantics, defaults, and edge cases for a specific feature.
 
+If a keyword or command is not documented here, treat it as not shipped yet. Tracked future work lives on the [Roadmap](../roadmap.md).
+
 ## Program structure
 
 | Page                                          | Covers                                              |

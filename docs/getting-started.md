@@ -206,6 +206,7 @@ flow:
 
 **I need syntax reference:**
 
+- [Language Reference](reference/index.md) — per-feature docs for `ask`, `if`, `spawn`, `await`, `let/var`, gates, and runtime behavior
 - [DSL Reference](dsl-reference.md) — all 13 primitives, parameters, built-in variables and gates
 - [DSL Cheatsheet](dsl-cheatsheet.md) — one-page quick reference
 

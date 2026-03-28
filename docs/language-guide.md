@@ -621,6 +621,7 @@ Be honest about tradeoffs. From 45 controlled A/B experiments (300+ test runs):
 
 - **[Getting Started](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)** — hands-on tutorial with a working example
 - **[How It Works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md)** — enforcement model, variable lifecycle, gate trust mechanics
+- **[Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md)** — per-feature reference pages for every keyword and runtime section
 - **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)** — complete syntax specification
 - **[Showcase](https://github.com/45ck/prompt-language/blob/main/docs/showcase.md)** — 140+ worked examples
 - **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)** — full A/B testing methodology and results

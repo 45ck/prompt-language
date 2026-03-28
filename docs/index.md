@@ -11,11 +11,12 @@ prompt-language is a programmable runtime for Claude Code. It wraps Claude in a 
 
 ## Reference
 
-| Doc                                         | Contents                                                   |
-| ------------------------------------------- | ---------------------------------------------------------- |
-| [DSL Reference](dsl-reference.md)           | Full syntax, defaults, built-in variables, gate predicates |
-| [CLI Reference](cli-reference.md)           | All CLI commands: install, status, init, demo, watch       |
-| [Hooks Architecture](hooks-architecture.md) | Three-hook enforcement loop, state file schema             |
+| Doc                                         | Contents                                                            |
+| ------------------------------------------- | ------------------------------------------------------------------- |
+| [Language Reference](reference/index.md)    | Concept- and keyword-based reference pages for the full language    |
+| [DSL Reference](dsl-reference.md)           | One-page full syntax, defaults, built-in variables, gate predicates |
+| [CLI Reference](cli-reference.md)           | All CLI commands: install, status, init, demo, watch                |
+| [Hooks Architecture](hooks-architecture.md) | Three-hook enforcement loop, state file schema                      |
 
 ## Guides
 

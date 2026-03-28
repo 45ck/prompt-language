@@ -184,4 +184,5 @@ The gate name is just a label for display — the command is what matters. Any c
 ## Further reading
 
 - [README](https://github.com/45ck/prompt-language/blob/main/README.md) — overview, install, and all built-in gate predicates
+- [Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md) — per-feature docs for variables, control flow, spawn/await, and gates
 - [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md) — full syntax for gates, flow control, and variables

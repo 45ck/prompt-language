@@ -1,6 +1,6 @@
 # How prompt-language works (internals)
 
-This guide explains the mechanics behind the prompt-language runtime — what Claude actually sees on each turn, how variables persist, why gates can't be fooled, and how to write effective flows. The core idea is simple: engineers already act as Claude's runtime by tracking state, restating context, choosing the next step, and verifying completion. prompt-language moves that supervision loop into terminal hooks and persistent state. For installation, see the [README](https://github.com/45ck/prompt-language/blob/main/README.md). For syntax details, see the [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md).
+This guide explains the mechanics behind the prompt-language runtime — what Claude actually sees on each turn, how variables persist, why gates can't be fooled, and how to write effective flows. The core idea is simple: engineers already act as Claude's runtime by tracking state, restating context, choosing the next step, and verifying completion. prompt-language moves that supervision loop into terminal hooks and persistent state. For installation, see the [README](https://github.com/45ck/prompt-language/blob/main/README.md). For per-feature syntax docs, see the [Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md). For the one-page reference, see the [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md).
 
 ## The closed loop
 
@@ -288,6 +288,7 @@ npx @45ck/prompt-language
 
 ## Further reading
 
+- [Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md) — Per-feature reference pages for `ask`, `if`, `while`, `spawn`, `await`, `let/var`, gates, defaults, and runtime behavior
 - [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md) — Full syntax, defaults, composition rules, built-in variables, and gate predicates
 - [Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md) — Debugging stuck flows, known issues, common fixes
 - [Hooks Architecture](https://github.com/45ck/prompt-language/blob/main/docs/hooks-architecture.md) — Implementation details of the three-hook enforcement loop

@@ -158,33 +158,174 @@ done when:
 
 Common predicates:
 
-- `tests_pass`
-- `lint_pass`
+- `tests_pass`, `tests_fail`
+- `lint_pass`, `lint_fail`
+- `pytest_pass`, `pytest_fail`
+- `go_test_pass`, `go_test_fail`
+- `cargo_test_pass`, `cargo_test_fail`
 - `diff_nonempty`
 - `file_exists dist/index.js`
 - `gate typecheck: npx tsc --noEmit`
 
-For the full predicate list and syntax, see the **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)**.
+Built-in verification predicates:
 
-## Runtime primitives
+| Predicate          | Runs               | Passes when      |
+| ------------------ | ------------------ | ---------------- |
+| `tests_pass`       | `npm test`         | exit 0           |
+| `tests_fail`       | `npm test`         | exit non-zero    |
+| `lint_pass`        | `npm run lint`     | exit 0           |
+| `lint_fail`        | `npm run lint`     | exit non-zero    |
+| `pytest_pass`      | `pytest`           | exit 0           |
+| `pytest_fail`      | `pytest`           | exit non-zero    |
+| `go_test_pass`     | `go test ./...`    | exit 0           |
+| `go_test_fail`     | `go test ./...`    | exit non-zero    |
+| `cargo_test_pass`  | `cargo test`       | exit 0           |
+| `cargo_test_fail`  | `cargo test`       | exit non-zero    |
+| `diff_nonempty`    | `git diff --quiet` | diff has changes |
+| `file_exists path` | `test -f 'path'`   | file exists      |
 
-The language is small, but it covers the main runtime concerns:
-
-| Category            | Primitives                                 | Purpose                                |
-| ------------------- | ------------------------------------------ | -------------------------------------- |
-| Actions             | `prompt`, `run`, `try/catch`               | Tell Claude what to do or run commands |
-| State and context   | `let`, `var`                               | Capture values and reuse them later    |
-| Control flow        | `if`, `while`, `until`, `retry`, `foreach` | Sequence work explicitly               |
-| Parallelism         | `spawn`, `await`                           | Run independent sub-tasks concurrently |
-| Completion criteria | `done when:`                               | Enforce real exit conditions           |
-
-Example of a custom verification command:
+You can also define custom and composite gates:
 
 ```
 done when:
-  gate typecheck: mypy src/
+  gate typecheck: npx tsc --noEmit
   gate e2e: npx playwright test
+  any(tests_pass, pytest_pass)
+  all(lint_pass, diff_nonempty)
+  2_of(tests_pass, lint_pass, diff_nonempty)
 ```
+
+Supported gate forms also include direct equality checks such as `tests_pass == true` and negation such as `not tests_pass`.
+
+## Complete feature surface
+
+The README should not make this look smaller than it is. The runtime surface includes:
+
+### Program structure
+
+| Section      | Purpose                                             |
+| ------------ | --------------------------------------------------- |
+| `Goal:`      | Human-readable task description                     |
+| `env:`       | Inject environment variables into command execution |
+| `flow:`      | Ordered runtime steps                               |
+| `done when:` | Completion criteria                                 |
+
+Example:
+
+```yaml
+Goal: deploy the service safely
+
+env: NODE_ENV=production
+  API_BASE=https://api.example.com
+
+flow:
+  run: npm run build
+
+done when: tests_pass
+  lint_pass
+```
+
+### Actions
+
+| Feature           | Syntax                              | Purpose                                      |
+| ----------------- | ----------------------------------- | -------------------------------------------- |
+| Prompt injection  | `prompt: Fix the auth module.`      | Give Claude its next task                    |
+| Command execution | `run: npm test`                     | Run a real shell command                     |
+| Command timeout   | `run: npm test [timeout 60]`        | Kill long-running commands                   |
+| Error handling    | `try ... catch ... finally ... end` | Recover from failures and always run cleanup |
+
+### State and context
+
+| Feature                | Syntax / Example                                       | Purpose                           |
+| ---------------------- | ------------------------------------------------------ | --------------------------------- |
+| Literal variable       | `let env = "prod"`                                     | Store a static value              |
+| Command capture        | `let version = run "node -v"`                          | Store command output              |
+| Prompt capture         | `let analysis = prompt "Summarize the failure"`        | Capture Claude's response as data |
+| Interpolation          | `${version}`                                           | Reuse captured values             |
+| Default values         | `${env:-development}`                                  | Fallback when a variable is unset |
+| Inline arithmetic      | `let count = ${count} + 1`                             | Update integers inside the flow   |
+| List variables         | `let items = []` and `let items += "value"`            | Build lists incrementally         |
+| Pipe transforms        | `let branch = run "git branch --show-current" \| trim` | Clean captured output             |
+| Built-in run variables | `last_exit_code`, `command_failed`, `last_stdout`      | Observe the last command exactly  |
+
+Supported transforms: `trim`, `upper`, `lower`, `first`, `last`.
+
+Prompt capture and `ask` conditions use a two-turn capture mechanism. If capture is missed repeatedly, the runtime retries and then continues with an empty value instead of hanging forever.
+
+### Control flow
+
+| Feature                | Syntax / Example                       | Purpose                          |
+| ---------------------- | -------------------------------------- | -------------------------------- |
+| Conditional branch     | `if tests_fail ... else ... end`       | Choose the next path             |
+| Chained branches       | `else if lint_fail` / `elif lint_fail` | Multi-branch decision making     |
+| While loop             | `while tests_fail max 5`               | Repeat while true                |
+| Until loop             | `until tests_pass max 5`               | Repeat until true                |
+| Retry loop             | `retry max 3`                          | Re-run a block on failure        |
+| Foreach loop           | `foreach file in ${files}`             | Iterate over a list              |
+| Loop exit              | `break`                                | Exit the nearest loop            |
+| Loop skip              | `continue`                             | Skip to the next iteration       |
+| Labeled loops          | `outer: foreach file in ${files}`      | Name a loop for explicit control |
+| Labeled break/continue | `break outer` / `continue outer`       | Target a specific outer loop     |
+| Comments               | `# this is ignored by the parser`      | Annotate flows inline            |
+
+`foreach` can iterate JSON arrays, newline-delimited strings, whitespace-delimited strings, or `run "command"` results directly.
+
+### AI-evaluated conditions
+
+`ask` is part of the language and should be surfaced explicitly:
+
+```yaml
+while ask "does the code still have performance issues?" grounded-by "node bench.js" max 5
+  prompt: Optimize the hottest code path.
+  run: node bench.js
+end
+```
+
+`ask` works with `if`, `while`, and `until`. Use it when the condition is subjective and cannot be reduced to a deterministic shell command.
+
+### Parallelism
+
+| Feature               | Syntax / Example                         | Purpose                                 |
+| --------------------- | ---------------------------------------- | --------------------------------------- |
+| Spawn child           | `spawn "frontend" ... end`               | Launch an independent child flow        |
+| Cross-directory spawn | `spawn "backend" in "packages/api"`      | Run child work in another directory     |
+| Selective var passing | `spawn "frontend" with vars branch, sha` | Limit which parent vars enter the child |
+| Await all             | `await all`                              | Join all children                       |
+| Await one child       | `await "frontend"`                       | Join a specific child                   |
+| Child variable import | `${frontend.last_exit_code}`             | Read child results after `await`        |
+
+Each `spawn` launches a separate `claude -p` process with its own state. Parent and child share the filesystem, but not session state.
+
+### Runtime behavior
+
+| Feature                    | What it does                                                 |
+| -------------------------- | ------------------------------------------------------------ |
+| Persistent session state   | Saves flow progress to `.prompt-language/session-state.json` |
+| Natural-language detection | Can translate control-flow intent into DSL scaffolding       |
+| Status line                | Shows current step, loop progress, and gate state            |
+| Watch mode                 | Live TUI for long-running flows                              |
+| Default loop limits        | `while`/`until` default to 5, `retry` to 3, `foreach` to 50  |
+
+## Runtime primitives by name
+
+If you want the flat list, the language includes all of these user-facing primitives and forms:
+
+- `prompt`
+- `run`
+- `let` / `var`
+- `if` / `else if` / `elif` / `else`
+- `while`
+- `until`
+- `retry`
+- `foreach`
+- `try` / `catch` / `finally`
+- `break`
+- `continue`
+- `spawn`
+- `await`
+- `ask ... grounded-by ...`
+- `done when:`
+- `env:`
 
 ## Examples
 
@@ -314,6 +455,7 @@ Shows the full flow state updating in real time — useful for watching long-run
 ## Learn more
 
 - **[Getting Started](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)** — see it work in 2 minutes
+- **[Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md)** — per-feature reference pages for `ask`, `if`, `spawn`, `await`, `let/var`, `done when:`, and more
 - **[How prompt-language works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md)** — how it works, variable lifecycle, gate trust model
 - **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)** — complete syntax specification
 - **[Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md)** — debugging stuck flows, known issues

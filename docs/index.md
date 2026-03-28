@@ -26,6 +26,7 @@ prompt-language is a programmable runtime for Claude Code. It wraps Claude in a 
 | [Use Cases](use-cases.md)                 | When the plugin wins, when it doesn't, quick recipes            |
 | [Non-Node Projects](non-node-projects.md) | Python, Go, Rust, and custom test runners                       |
 | [Roadmap](roadmap.md)                     | Tracked but not yet shipped features from `.beads`              |
+| [WIP Features](wip/index.md)              | Proposed feature pages for the future language and tooling      |
 | [Troubleshooting](troubleshooting.md)     | Stuck flows, failed gates, state file inspection                |
 
 ## Examples

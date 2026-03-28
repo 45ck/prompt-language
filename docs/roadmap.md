@@ -10,6 +10,8 @@ Use it to keep three things separate:
 - **Tracked next**: open backlog items with clear product value, but not implemented
 - **Exploratory**: credible ideas that may change substantially or never ship
 
+For feature-by-feature proposed syntax and behavior, see [WIP Features](wip/index.md).
+
 If a keyword or command is **not** documented in the [Language Reference](reference/index.md), treat it as **not available today**.
 
 ## Shipped vs tracked

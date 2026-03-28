@@ -15,6 +15,7 @@ Use this section to showcase where the language is heading without confusing it 
 | [approve](approve.md)                       | Hard human approval checkpoints         |
 | [Structured Capture](structured-capture.md) | `let x = prompt ... as json { schema }` |
 | [import](import.md)                         | Reusable sub-flow composition           |
+| [Prompt Libraries](prompt-libraries.md)     | Exported reusable flows, gates, prompts |
 | [Conditional Spawn](conditional-spawn.md)   | `spawn "name" if condition`             |
 | [Spawn Model Selection](spawn-model.md)     | `spawn "name" model "haiku"`            |
 | [Deterministic ask](deterministic-ask.md)   | `grounded-by` decides `ask` directly    |

@@ -30,18 +30,19 @@ Everything below is roadmap, not syntax you can use right now.
 
 These are open `.beads` items that fit the current product direction and are easy for users to understand.
 
-| Feature                                                                     | Status               | Current workaround                                                    | Beads issue            |
-| --------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------- | ---------------------- |
-| Approval checkpoint node such as `approve "message"`                        | Tracked, not shipped | Use `let approval = prompt "..."` as a manual checkpoint              | `prompt-language-ln6k` |
-| Structured output capture such as `let x = prompt "..." as json { schema }` | Tracked, not shipped | Capture plain text and parse it with shell tools or follow-up prompts | `prompt-language-rg6v` |
-| Flow composition via `import`                                               | Tracked, not shipped | Reuse snippets by copy-paste or Claude Code skills                    | `prompt-language-jkfn` |
-| Conditional spawn such as `spawn "name" if condition`                       | Tracked, not shipped | Wrap `spawn` in an outer `if` block                                   | `prompt-language-lmep` |
-| Per-spawn model selection such as `spawn "name" model "haiku"`              | Tracked, not shipped | All spawns inherit the current Claude configuration                   | `prompt-language-2j9v` |
-| Deterministic `ask` verdict from `grounded-by` exit code                    | Tracked, not shipped | `ask` still relies on Claude judgment today                           | `prompt-language-dekn` |
-| Programmatic Node.js API / public SDK                                       | Tracked, not shipped | Use the CLI and hook runtime directly                                 | `prompt-language-syg2` |
-| Flow registry and `.flow` run/validate conventions                          | Tracked, not shipped | Store flow files manually and invoke them with `claude -p`            | `prompt-language-yd9w` |
-| Review / critique block such as `review max N`                              | Tracked, not shipped | Write the critique loop explicitly with `prompt` plus `if` or `retry` | `prompt-language-s6zz` |
-| MCP server exposing flow state to other AI clients                          | Tracked, not shipped | Inspect `.prompt-language/session-state.json` directly                | `prompt-language-folr` |
+| Feature                                                                     | Status               | Current workaround                                                    | Beads issue               |
+| --------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------- | ------------------------- |
+| Approval checkpoint node such as `approve "message"`                        | Tracked, not shipped | Use `let approval = prompt "..."` as a manual checkpoint              | `prompt-language-ln6k`    |
+| Structured output capture such as `let x = prompt "..." as json { schema }` | Tracked, not shipped | Capture plain text and parse it with shell tools or follow-up prompts | `prompt-language-rg6v`    |
+| Flow composition via `import`                                               | Tracked, not shipped | Reuse snippets by copy-paste or Claude Code skills                    | `prompt-language-jkfn`    |
+| Reusable prompt libraries such as `export flow`, `export gates`, and `use`  | Tracked, not shipped | Reuse patterns with copy-paste or Claude Code skills                  | `prompt-language-9uqe.12` |
+| Conditional spawn such as `spawn "name" if condition`                       | Tracked, not shipped | Wrap `spawn` in an outer `if` block                                   | `prompt-language-lmep`    |
+| Per-spawn model selection such as `spawn "name" model "haiku"`              | Tracked, not shipped | All spawns inherit the current Claude configuration                   | `prompt-language-2j9v`    |
+| Deterministic `ask` verdict from `grounded-by` exit code                    | Tracked, not shipped | `ask` still relies on Claude judgment today                           | `prompt-language-dekn`    |
+| Programmatic Node.js API / public SDK                                       | Tracked, not shipped | Use the CLI and hook runtime directly                                 | `prompt-language-syg2`    |
+| Flow registry and `.flow` run/validate conventions                          | Tracked, not shipped | Store flow files manually and invoke them with `claude -p`            | `prompt-language-yd9w`    |
+| Review / critique block such as `review max N`                              | Tracked, not shipped | Write the critique loop explicitly with `prompt` plus `if` or `retry` | `prompt-language-s6zz`    |
+| MCP server exposing flow state to other AI clients                          | Tracked, not shipped | Inspect `.prompt-language/session-state.json` directly                | `prompt-language-folr`    |
 
 ## Platform and DX roadmap
 

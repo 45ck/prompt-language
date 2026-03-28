@@ -1,6 +1,6 @@
 # How prompt-language works (internals)
 
-This guide explains the mechanics behind the prompt-language plugin — what Claude actually sees on each turn, how variables persist, why gates can't be fooled, and how to write effective flows. For installation, see the [README](https://github.com/45ck/prompt-language/blob/main/README.md). For syntax details, see the [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md).
+This guide explains the mechanics behind the prompt-language runtime — what Claude actually sees on each turn, how variables persist, why gates can't be fooled, and how to write effective flows. The core idea is simple: engineers already act as Claude's runtime by tracking state, restating context, choosing the next step, and verifying completion. prompt-language moves that supervision loop into terminal hooks and persistent state. For installation, see the [README](https://github.com/45ck/prompt-language/blob/main/README.md). For syntax details, see the [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md).
 
 ## The closed loop
 

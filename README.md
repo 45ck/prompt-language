@@ -1,8 +1,8 @@
 # @45ck/prompt-language
 
-Stop telling Claude to run the tests.
+A programmable runtime for Claude Code.
 
-A Claude Code plugin that runs real commands before letting Claude stop — so it can't claim "done" until your tests actually pass.
+It wraps Claude in a terminal-side state machine with persistent state, explicit context, control flow, parallel work, and real verification commands, so Claude keeps working until the checks you define actually pass.
 
 [![npm](https://img.shields.io/npm/v/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 [![CI](https://github.com/45ck/prompt-language/actions/workflows/quality.yml/badge.svg)](https://github.com/45ck/prompt-language/actions/workflows/quality.yml)
@@ -10,6 +10,16 @@ A Claude Code plugin that runs real commands before letting Claude stop — so i
 [![node](https://img.shields.io/node/v/@45ck/prompt-language)](package.json)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![npm downloads](https://img.shields.io/npm/dm/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
+
+## Why engineers use it
+
+Claude is already a capable agent. The missing piece is the runtime engineers usually provide by hand: remember the task state, restate the right context, decide what happens next, rerun checks, and refuse to accept a premature "done." prompt-language moves that supervision loop into the terminal.
+
+- Persist task state across turns instead of relying on chat history
+- Re-inject exact context and variables instead of hoping Claude remembers
+- Encode retries, branching, foreach loops, and parallel work explicitly
+- Run real tests, lint, build, and custom verification commands before completion
+- Let longer tasks run with less babysitting
 
 ## The problem
 
@@ -25,7 +35,7 @@ done when:
   lint_pass
 ```
 
-No DSL to learn. Claude works however it wants, but it cannot stop until both `npm test` and `npm run lint` exit 0. The plugin intercepts Claude's stop signal and re-injects the task if any gate fails.
+Start with `done when:` and let the runtime enforce verification. Add `flow:` only when you want explicit control flow around Claude. Claude still works however it wants, but it cannot stop until both `npm test` and `npm run lint` exit 0.
 
 ## Install
 
@@ -40,7 +50,7 @@ npx @45ck/prompt-language status     # check installation
 npx @45ck/prompt-language uninstall  # remove
 ```
 
-**New to the plugin?** Start with the **[Getting Started tutorial](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)**.
+**New to prompt-language?** Start with the **[Getting Started tutorial](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)**.
 
 <details>
 <summary>Manual install</summary>
@@ -58,7 +68,7 @@ node bin/cli.mjs install
 
 | Command                                | What it does                             |
 | -------------------------------------- | ---------------------------------------- |
-| `npx @45ck/prompt-language`            | Install the plugin (default)             |
+| `npx @45ck/prompt-language`            | Install the runtime (default)            |
 | `npx @45ck/prompt-language status`     | Check installation status                |
 | `npx @45ck/prompt-language uninstall`  | Remove the plugin                        |
 | `npx @45ck/prompt-language init`       | Scaffold a starter flow for your project |

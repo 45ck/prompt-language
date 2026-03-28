@@ -1,11 +1,13 @@
 # Documentation
 
+prompt-language is a programmable runtime for Claude Code. It wraps Claude in a terminal-side state machine so you can define state, context, control flow, parallel work, and completion checks around the agent instead of supervising every step manually.
+
 ## Start here
 
-| Guide                                 | What you'll learn                                                 |
-| ------------------------------------- | ----------------------------------------------------------------- |
-| [Getting Started](getting-started.md) | Install, run your first gate, see it work in 2 minutes            |
-| [Language Guide](language-guide.md)   | All 13 primitives, patterns, when to use (and not use) the plugin |
+| Guide                                 | What you'll learn                                                                   |
+| ------------------------------------- | ----------------------------------------------------------------------------------- |
+| [Getting Started](getting-started.md) | Install the runtime, run your first gate, see Claude stay blocked until checks pass |
+| [Language Guide](language-guide.md)   | The runtime model, all 13 primitives, and when to use each capability               |
 
 ## Reference
 

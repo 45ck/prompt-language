@@ -1,7 +1,7 @@
 {
   "name": "@45ck/prompt-language",
   "version": "0.3.0",
-  "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates so the agent cannot stop early or skip steps.",
+  "description": "A programmable runtime for Claude Code with persistent state, context, control flow, and verification so Claude cannot stop early or skip real checks.",
   "license": "MIT",
   "author": {
     "name": "45ck",

@@ -10,3 +10,4 @@ test-results/
 scripts/eval/results/
 .dolt/
 .beads-credential-key
+.claude/worktrees/

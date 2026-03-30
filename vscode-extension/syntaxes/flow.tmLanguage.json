@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Prompt Language",
+  "scopeName": "source.flow",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#keywords" },
+    { "include": "#strings" },
+    { "include": "#variables" },
+    { "include": "#numbers" },
+    { "include": "#builtins" }
+  ],
+  "repository": {
+    "comments": {
+      "name": "comment.line.number-sign.flow",
+      "match": "#.*$"
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.flow",
+          "match": "\\b(while|until|retry|if|else|elif|try|catch|finally|foreach|foreach-spawn|break|continue|spawn|await|end|race|approve|review|import|use)\\b"
+        },
+        {
+          "name": "keyword.control.section.flow",
+          "match": "^\\s*(flow:|done when:|Goal:|env:|library:)"
+        },
+        {
+          "name": "keyword.other.directive.flow",
+          "match": "^\\s*(prompt:|run:|let|var)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.flow",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [{ "include": "#variables" }]
+    },
+    "variables": {
+      "name": "variable.other.flow",
+      "match": "\\$\\{[^}]+\\}"
+    },
+    "numbers": {
+      "name": "constant.numeric.flow",
+      "match": "\\b\\d+\\b"
+    },
+    "builtins": {
+      "name": "support.constant.flow",
+      "match": "\\b(tests_pass|lint_pass|command_failed|command_succeeded|file_exists|last_exit_code|last_stdout|last_stderr)\\b"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "prompt-language",
+  "displayName": "Prompt Language",
+  "description": "Syntax highlighting and lint for .flow files",
+  "version": "0.1.0",
+  "publisher": "45ck",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "prompt-language",
+        "aliases": [
+          "Prompt Language",
+          "flow"
+        ],
+        "extensions": [
+          ".flow"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "prompt-language",
+        "scopeName": "source.flow",
+        "path": "./syntaxes/flow.tmLanguage.json"
+      }
+    ]
+  },
+  "main": "./extension.js"
+}

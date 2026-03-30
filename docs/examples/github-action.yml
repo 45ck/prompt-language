@@ -1,0 +1,15 @@
+name: AI-assisted test fix
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  fix-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: 45ck/prompt-language-action@v1
+        with:
+          flow-file: flows/fix-and-test.flow
+          api-key: ${{ secrets.ANTHROPIC_API_KEY }}

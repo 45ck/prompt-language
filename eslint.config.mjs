@@ -23,6 +23,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/.stryker-tmp/**',
       '**/.claude/**',
+      'vscode-extension/**',
       'vitest.config.ts',
       'scripts/eval/comparative-eval-v4.mjs',
       'scripts/eval/fixtures/**',

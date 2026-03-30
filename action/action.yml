@@ -1,0 +1,54 @@
+name: 'Prompt Language'
+description: 'Run a prompt-language flow file with Claude'
+author: '45ck'
+
+inputs:
+  flow-file:
+    description: 'Path to the .flow file to run'
+    required: true
+  api-key:
+    description: 'Anthropic API key'
+    required: true
+  model:
+    description: 'Claude model to use'
+    required: false
+    default: 'claude-sonnet-4-6'
+  timeout-minutes:
+    description: 'Maximum minutes to run'
+    required: false
+    default: '30'
+
+outputs:
+  result:
+    description: 'Success or failure'
+    value: ${{ steps.run.outputs.result }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Claude Code CLI
+      shell: bash
+      run: npm install -g @anthropic-ai/claude-code
+
+    - name: Install prompt-language plugin
+      shell: bash
+      run: npx @45ck/prompt-language install
+
+    - name: Run flow file
+      id: run
+      shell: bash
+      env:
+        ANTHROPIC_API_KEY: ${{ inputs.api-key }}
+      run: |
+        if claude -p --dangerously-skip-permissions --model "${{ inputs.model }}" "$(cat '${{ inputs.flow-file }}')" ; then
+          echo "result=success" >> $GITHUB_OUTPUT
+        else
+          echo "result=failure" >> $GITHUB_OUTPUT
+          exit 1
+        fi
+      timeout-minutes: ${{ fromJSON(inputs.timeout-minutes) }}

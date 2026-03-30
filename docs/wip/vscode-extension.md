@@ -1,18 +1,32 @@
-# VS Code Extension (WIP)
+# VS Code Extension
 
-> **WIP: not implemented yet.** This page describes intended behavior, not a released extension.
+> **Status: basic package available.** Syntax highlighting is implemented. Diagnostics and autocomplete are future work.
 
 ## Goal
 
 Make flow files pleasant to author in VS Code.
 
-## Intended features
+## Available now
 
-- syntax highlighting for flow files
+A basic extension package lives in `vscode-extension/` at the project root. It provides:
+
+- syntax highlighting for `.flow` files (TextMate grammar)
+- comment toggling with `#`
+- variable interpolation highlighting inside strings (`${...}`)
+- keyword coloring for all DSL primitives and section headers
+- built-in predicate highlighting (`tests_pass`, `command_failed`, etc.)
+
+To package for local install:
+
+```bash
+cd vscode-extension
+npm install -g @vscode/vsce
+vsce package
+code --install-extension prompt-language-0.1.0.vsix
+```
+
+## Intended features (future)
+
 - inline lint warnings
 - keyword autocomplete
 - "did you mean?" suggestions from the linter
-
-## Current workaround
-
-Author flows in markdown or plain text with no dedicated editor support.

@@ -1,0 +1,5 @@
+{
+  "comments": { "lineComment": "#" },
+  "brackets": [["flow:", "done when:"]],
+  "wordPattern": "[\\w_-]+"
+}

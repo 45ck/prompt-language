@@ -218,18 +218,26 @@ function renderNode(
       );
     }
     case 'remember': {
-      if (node.key != null && node.value != null) {
-        return [`${prefix}${indent}remember ${node.key} = "${node.value}"${suffix}`];
+      if (node.key !== undefined && node.value !== undefined) {
+        return [`${prefix}${indent}remember key="${node.key}" value="${node.value}"${suffix}`];
       }
       return [`${prefix}${indent}remember "${node.text ?? ''}"${suffix}`];
     }
     case 'send': {
-      return [`${prefix}${indent}send to "${node.target}": ${node.message}${suffix}`];
+      return [`${prefix}${indent}send "${node.target}" "${node.message}"${suffix}`];
     }
     case 'receive': {
-      const from = node.from != null ? ` from "${node.from}"` : '';
-      const timeout = node.timeoutSeconds != null ? ` timeout ${node.timeoutSeconds}` : '';
-      return [`${prefix}${indent}receive ${node.variableName}${from}${timeout}${suffix}`];
+      const progress = state.nodeProgress[node.id];
+      const statusTag =
+        progress?.status === 'completed'
+          ? ' [received]'
+          : progress?.status === 'running'
+            ? ' [waiting]'
+            : '';
+      const fromTag = node.from !== undefined ? ` from "${node.from}"` : '';
+      return [
+        `${prefix}${indent}receive ${node.variableName}${fromTag}${statusTag}${suffix}`,
+      ];
     }
     default: {
       const _exhaustive: never = node;

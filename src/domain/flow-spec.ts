@@ -33,6 +33,8 @@ export interface FlowSpec {
   readonly env?: Readonly<Record<string, string>> | undefined;
   /** Resolved absolute file paths of all imported library files. */
   readonly imports?: readonly string[] | undefined;
+  /** Keys to prefetch from memory store before flow starts. */
+  readonly memoryKeys?: readonly string[] | undefined;
 }
 
 const DEFAULT_FLOW_DEFAULTS: FlowDefaults = {
@@ -48,6 +50,7 @@ export function createFlowSpec(
   defaults?: Partial<FlowDefaults>,
   env?: Readonly<Record<string, string>>,
   imports?: readonly string[],
+  memoryKeys?: readonly string[],
 ): FlowSpec {
   return {
     goal,
@@ -57,6 +60,7 @@ export function createFlowSpec(
     warnings,
     ...(env != null ? { env } : {}),
     ...(imports != null && imports.length > 0 ? { imports } : {}),
+    ...(memoryKeys != null && memoryKeys.length > 0 ? { memoryKeys } : {}),
   };
 }
 

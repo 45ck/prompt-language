@@ -977,6 +977,22 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   return createPromptNode(nextId(ctx), trimmed);
 }
 
+/** Parse the optional "memory:" section into an array of key names to prefetch. */
+export function parseMemoryKeys(input: string): readonly string[] {
+  const match =
+    /^memory:\s*\n([\s\S]*?)(?=\n\s*(?:env:|flow:|done when:))/im.exec(input) ??
+    /^memory:\s*\n([\s\S]+)/im.exec(input);
+  if (!match?.[1]) return [];
+  const keys: string[] = [];
+  for (const line of match[1].split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (/^(?:env|flow|done when):/i.test(trimmed)) break;
+    if (/^\w+$/.test(trimmed)) keys.push(trimmed);
+  }
+  return keys;
+}
+
 /** H-LANG-009: Parse the "env:" section into key-value pairs. */
 export function parseEnv(input: string): Readonly<Record<string, string>> | undefined {
   // Try matching env: followed by flow: or done when: section
@@ -1322,6 +1338,7 @@ export function parseFlow(
   const warnings: string[] = [];
   const goal = parseGoal(input);
   const env = parseEnv(input);
+  const memoryKeys = parseMemoryKeys(input);
   const basePath = options?.basePath ?? process.cwd();
   const fileReader = options?.fileReader ?? ((p: string) => readFileSync(p, 'utf-8'));
 
@@ -1341,5 +1358,14 @@ export function parseFlow(
     registry,
   };
   const nodes = parseBlock(ctx, -1);
-  return createFlowSpec(goal, nodes, gates, warnings, undefined, env, importedPaths);
+  return createFlowSpec(
+    goal,
+    nodes,
+    gates,
+    warnings,
+    undefined,
+    env,
+    importedPaths,
+    memoryKeys.length > 0 ? memoryKeys : undefined,
+  );
 }

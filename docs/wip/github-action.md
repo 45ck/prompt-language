@@ -1,6 +1,6 @@
 # GitHub Action (WIP)
 
-> **WIP: not implemented yet.** This page describes intended behavior, not a released action.
+> **Status: shipped.** The action is available at `45ck/prompt-language-action`. See `action/action.yml` in the project root.
 
 ## Goal
 

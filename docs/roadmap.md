@@ -1,8 +1,8 @@
 # Roadmap
 
-<!-- cspell:ignore jkfn lmep dekn folr idbc jstc -->
+<!-- cspell:ignore jkfn lmep dekn folr idbc jstc syg2 yd9w ik3n g6pl g58 n6gr q72l ln6k rg6v uqe s6zz u0k 8u0k 2j9v -->
 
-This page tracks notable features in `.beads` that are **not shipped yet**.
+This page tracks notable features in `.beads` and records what has shipped versus what is still planned.
 
 Use it to keep three things separate:
 
@@ -23,49 +23,47 @@ The runtime already ships:
 - `if`, `while`, `until`, `retry`, `foreach`, `break`, `continue`
 - `spawn` / `await`
 - `done when:` gates and built-in predicates
-
-Everything below is roadmap, not syntax you can use right now.
+- `approve "message"` and `approve "message" timeout N` — hard human approval checkpoint
+- `let x = prompt "..." as json { schema }` — structured JSON capture
+- `import "file.flow"` and `import "file.flow" as ns` — flow composition
+- export/use prompt library system — namespaced reusable flows, prompts, and gates
+- `spawn "name" if condition` — conditional spawn
+- `spawn "name" model "model-id"` — per-spawn model selection
+- `grounded-by "cmd"` on `while`, `until`, `if` — deterministic exit-code condition
+- `review max N` block with optional `criteria:` and `grounded-by` — critique loop
+- `race` block — competitive parallel execution, first success wins
+- `foreach-spawn item in list max N` — parallel fan-out
+- `remember "text"` and `remember key="k" value="v"` — persistent memory
+- `memory:` section — prefetch keys from memory store
+- `send "target" "msg"` / `receive varName` — inter-agent messaging
+- VS Code extension (basic syntax highlighting in `vscode-extension/`)
+- GitHub Actions integration (`action/action.yml` — `45ck/prompt-language-action`)
 
 ## Tracked next
 
 These are open `.beads` items that fit the current product direction and are easy for users to understand.
 
-| Feature                                                                     | Status               | Current workaround                                                    | Beads issue               |
-| --------------------------------------------------------------------------- | -------------------- | --------------------------------------------------------------------- | ------------------------- |
-| Approval checkpoint node such as `approve "message"`                        | Tracked, not shipped | Use `let approval = prompt "..."` as a manual checkpoint              | `prompt-language-ln6k`    |
-| Structured output capture such as `let x = prompt "..." as json { schema }` | Tracked, not shipped | Capture plain text and parse it with shell tools or follow-up prompts | `prompt-language-rg6v`    |
-| Flow composition via `import`                                               | Tracked, not shipped | Reuse snippets by copy-paste or Claude Code skills                    | `prompt-language-jkfn`    |
-| Reusable prompt libraries such as `export flow`, `export gates`, and `use`  | Tracked, not shipped | Reuse patterns with copy-paste or Claude Code skills                  | `prompt-language-9uqe.12` |
-| Conditional spawn such as `spawn "name" if condition`                       | Tracked, not shipped | Wrap `spawn` in an outer `if` block                                   | `prompt-language-lmep`    |
-| Per-spawn model selection such as `spawn "name" model "haiku"`              | Tracked, not shipped | All spawns inherit the current Claude configuration                   | `prompt-language-2j9v`    |
-| Deterministic `ask` verdict from `grounded-by` exit code                    | Tracked, not shipped | `ask` still relies on Claude judgment today                           | `prompt-language-dekn`    |
-| Programmatic Node.js API / public SDK                                       | Tracked, not shipped | Use the CLI and hook runtime directly                                 | `prompt-language-syg2`    |
-| Flow registry and `.flow` run/validate conventions                          | Tracked, not shipped | Store flow files manually and invoke them with `claude -p`            | `prompt-language-yd9w`    |
-| Review / critique block such as `review max N`                              | Tracked, not shipped | Write the critique loop explicitly with `prompt` plus `if` or `retry` | `prompt-language-s6zz`    |
-| MCP server exposing flow state to other AI clients                          | Tracked, not shipped | Inspect `.prompt-language/session-state.json` directly                | `prompt-language-folr`    |
+| Feature                                            | Status               | Current workaround                                         | Beads issue            |
+| -------------------------------------------------- | -------------------- | ---------------------------------------------------------- | ---------------------- |
+| Programmatic Node.js API / public SDK              | Tracked, not shipped | Use the CLI and hook runtime directly                      | `prompt-language-syg2` |
+| Flow registry and `.flow` run/validate conventions | Tracked, not shipped | Store flow files manually and invoke them with `claude -p` | `prompt-language-yd9w` |
+| MCP server exposing flow state to other AI clients | Tracked, not shipped | Inspect `.prompt-language/session-state.json` directly     | `prompt-language-folr` |
 
 ## Platform and DX roadmap
 
-These are substantial product improvements, but they are not part of the shipped runtime surface today.
+These are substantial product improvements that are not yet fully shipped.
 
 | Feature                                                                | Status  | Notes                                         | Beads issue            |
 | ---------------------------------------------------------------------- | ------- | --------------------------------------------- | ---------------------- |
-| VS Code extension for syntax highlighting and inline lint              | Planned | Editor-specific first step                    | `prompt-language-8u0k` |
 | Language server (LSP) for editor-agnostic autocomplete and diagnostics | Planned | Depends on extension groundwork               | `prompt-language-idbc` |
 | Web playground for browser-based flow authoring and dry-run simulation | Planned | Good onboarding and docs surface              | `prompt-language-528q` |
 | Workspace-aware monorepo orchestration                                 | Planned | Would build on `spawn` plus package discovery | `prompt-language-ik3n` |
-| GitHub Action for running prompt-language in CI                        | Planned | Integration surface, not core language        | `prompt-language-jstc` |
 
 ## Exploratory orchestration ideas
 
 These are interesting, but they are a step beyond the current core runtime and should not be described like committed syntax.
 
-| Feature                                                     | Status      | Notes                                                              | Beads issue            |
-| ----------------------------------------------------------- | ----------- | ------------------------------------------------------------------ | ---------------------- |
-| `race` block for speculative execution                      | Exploratory | Parallel competitive strategies, first success wins                | `prompt-language-g6pl` |
-| Persistent cross-flow memory such as `remember` / `memory:` | Exploratory | Bigger change to state model and product positioning               | `prompt-language-7g58` |
-| Parent/child messaging between spawned flows                | Exploratory | More like a distributed workflow engine                            | `prompt-language-n6gr` |
-| Fan-out / reduce constructs such as `foreach-spawn`         | Exploratory | Higher-level parallel orchestration over current `spawn` / `await` | `prompt-language-q72l` |
+No exploratory items remain — all previously listed ideas have shipped.
 
 ## Documentation rule
 
@@ -75,4 +73,4 @@ To keep the docs honest:
 - This roadmap documents **tracked but unavailable features**
 - Research docs may discuss ideas, but they are **not product guarantees**
 
-That keeps “what exists” separate from “what might exist next.”
+That keeps "what exists" separate from "what might exist next."

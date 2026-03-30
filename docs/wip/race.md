@@ -1,6 +1,6 @@
 # `race` (WIP)
 
-> **WIP: not implemented yet.** This page describes intended behavior, not current syntax.
+> **Status: shipped.** See [race](../reference/race.md) in the Language Reference.
 
 ## Goal
 

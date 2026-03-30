@@ -1,6 +1,6 @@
 # `approve` (WIP)
 
-> **WIP: not implemented yet.** This page describes intended behavior, not current syntax.
+> **Status: shipped.** See [approve](../reference/approve.md) in the Language Reference.
 
 ## Goal
 

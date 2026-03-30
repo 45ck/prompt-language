@@ -63,6 +63,23 @@ Supported transforms:
 - `first`
 - `last`
 
+### Structured JSON capture
+
+Capture a prompt response and validate it against a schema:
+
+```yaml
+let analysis = prompt "Analyze the diff" as json {
+  "summary": "string",
+  "risk": "low | medium | high",
+  "files_changed": "number"
+}
+```
+
+- The agent is instructed to respond with JSON matching the given schema.
+- On successful parse, `analysis` holds the raw JSON string.
+- Individual fields are accessible as `${analysis.summary}`, `${analysis.risk}`, etc.
+- If the response cannot be parsed, the capture retries up to 3 times before storing the raw text.
+
 ## Semantics
 
 - `let`/`var` auto-advance; they do not wait for manual confirmation.

@@ -1,6 +1,6 @@
 # Structured Capture (WIP)
 
-> **WIP: not implemented yet.** This page describes intended behavior, not current syntax.
+> **Status: shipped.** See [let-var](../reference/let-var.md) in the Language Reference.
 
 ## Goal
 

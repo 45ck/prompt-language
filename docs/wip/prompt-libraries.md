@@ -1,6 +1,6 @@
 # `prompt libraries` (WIP)
 
-> **WIP: not implemented yet.** This page describes intended behavior, not current syntax.
+> **Status: shipped.** See [prompt-libraries](../reference/prompt-libraries.md) in the Language Reference.
 
 <!-- cspell:ignore jkfn -->
 

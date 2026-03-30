@@ -15,3 +15,5 @@ subagents
 tsconfig
 worktree
 lmep
+automatable
+mylib

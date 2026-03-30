@@ -1,6 +1,6 @@
 # Deterministic `ask` (WIP)
 
-> **WIP: not implemented yet.** This page describes intended behavior, not current syntax.
+> **Status: shipped.** See [if](../reference/if.md) in the Language Reference for `grounded-by` behavior.
 
 ## Goal
 

@@ -33,6 +33,26 @@ end
 - Parent variables are copied into the child at spawn time.
 - The parent does not wait automatically.
 
+## Model selection
+
+```yaml
+spawn "reviewer" model "haiku"
+  prompt: Review the diff for obvious bugs.
+end
+```
+
+Passes `--model haiku` to the child `claude -p` invocation. Any Claude model identifier is accepted.
+
+## Conditional spawn
+
+```yaml
+spawn "deployer" if command_succeeded
+  run: npm run deploy
+end
+```
+
+The spawn is only launched if the condition is true at the point of evaluation. Conditions follow the same rules as `if`.
+
 ## Limitations
 
 - No nested spawn support.

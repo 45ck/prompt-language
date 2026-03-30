@@ -1,26 +1,24 @@
 # WIP Features
 
-These pages describe **proposed** prompt-language features that are **not implemented yet**.
-
-Use this section to showcase where the language is heading without confusing it with the shipped runtime.
+> **Most features listed here have shipped.** The [Language Reference](../reference/index.md) is the authoritative source for what is available today. Pages below are kept for design context and history.
 
 - If a feature is in the [Language Reference](../reference/index.md), it is shipped
 - If a feature is only in this section, it is **WIP** and **not available today**
 - For backlog status and prioritization, see the [Roadmap](../roadmap.md)
 
-## Proposed language features
+## Language features (shipped — see Language Reference)
 
-| Page                                        | Focus                                   |
-| ------------------------------------------- | --------------------------------------- |
-| [approve](approve.md)                       | Hard human approval checkpoints         |
-| [Structured Capture](structured-capture.md) | `let x = prompt ... as json { schema }` |
-| [import](import.md)                         | Reusable sub-flow composition           |
-| [Prompt Libraries](prompt-libraries.md)     | Exported reusable flows, gates, prompts |
-| [Conditional Spawn](conditional-spawn.md)   | `spawn "name" if condition`             |
-| [Spawn Model Selection](spawn-model.md)     | `spawn "name" model "haiku"`            |
-| [Deterministic ask](deterministic-ask.md)   | `grounded-by` decides `ask` directly    |
-| [review](review.md)                         | Generator-evaluator critique loops      |
-| [race](race.md)                             | Speculative parallel execution          |
+The following features are implemented and documented in the reference:
+
+- [approve](approve.md) — hard human approval checkpoints
+- [Structured Capture](structured-capture.md) — `let x = prompt ... as json { schema }`
+- [import](import.md) — reusable sub-flow composition
+- [Prompt Libraries](prompt-libraries.md) — exported reusable flows, gates, prompts
+- [Conditional Spawn](conditional-spawn.md) — `spawn "name" if condition`
+- [Spawn Model Selection](spawn-model.md) — `spawn "name" model "haiku"`
+- [Deterministic ask](deterministic-ask.md) — `grounded-by` decides condition directly
+- [review](review.md) — generator-evaluator critique loops
+- [race](race.md) — speculative parallel execution
 
 ## Proposed runtime and integration features
 
@@ -30,12 +28,11 @@ Use this section to showcase where the language is heading without confusing it 
 | [Flow Registry](flow-registry.md)       | `.flow` files plus run and validate commands |
 | [MCP Server](mcp.md)                    | Expose flow state to MCP clients             |
 | [Workspace Orchestration](workspace.md) | Monorepo-aware flow execution                |
-| [GitHub Action](github-action.md)       | CI wrapper for prompt-language               |
 
 ## Proposed tooling features
 
-| Page                                     | Focus                                               |
-| ---------------------------------------- | --------------------------------------------------- |
-| [VS Code Extension](vscode-extension.md) | Syntax highlighting and inline lint                 |
-| [Language Server](lsp.md)                | Editor-agnostic autocomplete and diagnostics        |
-| [Web Playground](playground.md)          | Browser-based flow authoring and dry-run simulation |
+| Page                                     | Focus                                               | Status                                      |
+| ---------------------------------------- | --------------------------------------------------- | ------------------------------------------- |
+| [VS Code Extension](vscode-extension.md) | Syntax highlighting and inline lint                 | Basic package shipped (`vscode-extension/`) |
+| [Language Server](lsp.md)                | Editor-agnostic autocomplete and diagnostics        | Planned                                     |
+| [Web Playground](playground.md)          | Browser-based flow authoring and dry-run simulation | Planned                                     |

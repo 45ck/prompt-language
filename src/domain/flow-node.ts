@@ -22,7 +22,10 @@ export type FlowNodeKind =
   | 'approve'
   | 'review'
   | 'race'
-  | 'foreach_spawn';
+  | 'foreach_spawn'
+  | 'remember'
+  | 'send'
+  | 'receive';
 
 interface BaseNode {
   readonly kind: FlowNodeKind;
@@ -195,6 +198,37 @@ export interface ForeachSpawnNode extends BaseNode {
   readonly label?: string | undefined;
 }
 
+/**
+ * RememberNode — stores a fact in the persistent memory store.
+ * If `key`+`value` are both set, stores key/value. Otherwise stores free-form `text`.
+ */
+export interface RememberNode extends BaseNode {
+  readonly kind: 'remember';
+  readonly text?: string | undefined;
+  readonly key?: string | undefined;
+  readonly value?: string | undefined;
+}
+
+/**
+ * SendNode — sends a message to a named channel (inter-agent messaging).
+ */
+export interface SendNode extends BaseNode {
+  readonly kind: 'send';
+  readonly target: string;
+  readonly message: string;
+}
+
+/**
+ * ReceiveNode — reads a message from a named channel into a variable.
+ * Blocks until a message arrives or `timeoutSeconds` elapses.
+ */
+export interface ReceiveNode extends BaseNode {
+  readonly kind: 'receive';
+  readonly variableName: string;
+  readonly from?: string | undefined;
+  readonly timeoutSeconds?: number | undefined;
+}
+
 export type FlowNode =
   | WhileNode
   | UntilNode
@@ -212,7 +246,10 @@ export type FlowNode =
   | ApproveNode
   | ReviewNode
   | RaceNode
-  | ForeachSpawnNode;
+  | ForeachSpawnNode
+  | RememberNode
+  | SendNode
+  | ReceiveNode;
 
 export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;
@@ -438,6 +475,40 @@ export function createForeachSpawnNode(
     body,
     ...(label != null ? { label } : {}),
     ...(listCommand != null ? { listCommand } : {}),
+  };
+}
+
+export function createRememberNode(
+  id: string,
+  text?: string,
+  key?: string,
+  value?: string,
+): RememberNode {
+  return {
+    kind: 'remember',
+    id,
+    ...(text != null ? { text } : {}),
+    ...(key != null ? { key } : {}),
+    ...(value != null ? { value } : {}),
+  };
+}
+
+export function createSendNode(id: string, target: string, message: string): SendNode {
+  return { kind: 'send', id, target, message };
+}
+
+export function createReceiveNode(
+  id: string,
+  variableName: string,
+  from?: string,
+  timeoutSeconds?: number,
+): ReceiveNode {
+  return {
+    kind: 'receive',
+    id,
+    variableName,
+    ...(from != null ? { from } : {}),
+    ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
   };
 }
 

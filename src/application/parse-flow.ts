@@ -25,6 +25,9 @@ import {
   createAwaitNode,
   createRaceNode,
   createForeachSpawnNode,
+  createRememberNode,
+  createSendNode,
+  createReceiveNode,
   DEFAULT_MAX_ITERATIONS,
 } from '../domain/flow-node.js';
 import type { SpawnNode } from '../domain/flow-node.js';
@@ -766,6 +769,75 @@ function parseAwaitLine(ctx: ParseContext, line: string): FlowNode {
   return createAwaitNode(nextId(ctx), match[1].trim());
 }
 
+function parseRememberLine(ctx: ParseContext, trimmed: string): FlowNode {
+  const rest = trimmed.slice('remember'.length).trim();
+  if (!rest) {
+    warn(ctx, 'remember node has no content — add a quoted text or key=... value=...');
+    return createRememberNode(nextId(ctx));
+  }
+  // remember key = "k" value = "v"
+  const kvMatch = /^key\s*=\s*["']([^"']*)["']\s+value\s*=\s*["']([^"']*)["']$/i.exec(rest);
+  if (kvMatch?.[1] !== undefined && kvMatch[2] !== undefined) {
+    return createRememberNode(nextId(ctx), undefined, kvMatch[1], kvMatch[2]);
+  }
+  // remember "text"
+  const textMatch = /^["'](.*)["']$/.exec(rest);
+  if (textMatch?.[1] !== undefined) {
+    return createRememberNode(nextId(ctx), textMatch[1]);
+  }
+  return createRememberNode(nextId(ctx), rest);
+}
+
+function parseSendLine(ctx: ParseContext, trimmed: string): FlowNode {
+  // send "target" "message"
+  const doubleQuoteMatch = /^send\s+"([^"]+)"\s+"([^"]*)"$/i.exec(trimmed);
+  if (doubleQuoteMatch?.[1] !== undefined && doubleQuoteMatch[2] !== undefined) {
+    return createSendNode(nextId(ctx), doubleQuoteMatch[1], doubleQuoteMatch[2]);
+  }
+  // send parent "message"
+  const parentMatch = /^send\s+parent\s+"([^"]*)"$/i.exec(trimmed);
+  if (parentMatch?.[1] !== undefined) {
+    return createSendNode(nextId(ctx), 'parent', parentMatch[1]);
+  }
+  // send parent 'message' (single quotes)
+  const parentSingleMatch = /^send\s+parent\s+'([^']*)'$/i.exec(trimmed);
+  if (parentSingleMatch?.[1] !== undefined) {
+    return createSendNode(nextId(ctx), 'parent', parentSingleMatch[1]);
+  }
+  // send 'target' 'message' (single quotes)
+  const singleQuoteMatch = /^send\s+'([^']+)'\s+'([^']*)'$/i.exec(trimmed);
+  if (singleQuoteMatch?.[1] !== undefined && singleQuoteMatch[2] !== undefined) {
+    return createSendNode(nextId(ctx), singleQuoteMatch[1], singleQuoteMatch[2]);
+  }
+  warn(ctx, `Invalid send syntax: "${trimmed}". Try: send "target" "message" or send parent "msg"`);
+  return createPromptNode(nextId(ctx), trimmed);
+}
+
+function parseReceiveLine(ctx: ParseContext, trimmed: string): FlowNode {
+  // receive varName from "source"
+  const fromDoubleMatch = /^receive\s+(\w+)\s+from\s+"([^"]+)"$/i.exec(trimmed);
+  if (fromDoubleMatch?.[1] && fromDoubleMatch[2]) {
+    return createReceiveNode(nextId(ctx), fromDoubleMatch[1], fromDoubleMatch[2]);
+  }
+  // receive varName from parent
+  const fromParentMatch = /^receive\s+(\w+)\s+from\s+parent$/i.exec(trimmed);
+  if (fromParentMatch?.[1]) {
+    return createReceiveNode(nextId(ctx), fromParentMatch[1], 'parent');
+  }
+  // receive varName from 'source' (single quotes)
+  const fromSingleMatch = /^receive\s+(\w+)\s+from\s+'([^']+)'$/i.exec(trimmed);
+  if (fromSingleMatch?.[1] && fromSingleMatch[2]) {
+    return createReceiveNode(nextId(ctx), fromSingleMatch[1], fromSingleMatch[2]);
+  }
+  // receive varName (no from — uses context default)
+  const bareMatch = /^receive\s+(\w+)$/i.exec(trimmed);
+  if (bareMatch?.[1]) {
+    return createReceiveNode(nextId(ctx), bareMatch[1]);
+  }
+  warn(ctx, `Invalid receive syntax: "${trimmed}". Try: receive msg or receive msg from "source"`);
+  return createPromptNode(nextId(ctx), trimmed);
+}
+
 function consumeEnd(ctx: ParseContext): void {
   if (ctx.pos < ctx.lines.length) {
     const peekLine = ctx.lines[ctx.pos];
@@ -889,9 +961,18 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   if (lower.startsWith('foreach-spawn ')) {
     return parseForeachSpawnLine(ctx, trimmed, indent);
   }
+  if (lower.startsWith('remember') || lower === 'remember') {
+    return parseRememberLine(ctx, trimmed);
+  }
+  if (lower.startsWith('send ')) {
+    return parseSendLine(ctx, trimmed);
+  }
+  if (lower.startsWith('receive ') || lower === 'receive') {
+    return parseReceiveLine(ctx, trimmed);
+  }
   warn(
     ctx,
-    `Unknown keyword "${trimmed}" — treating as prompt. Valid keywords: prompt, run, let, while, until, retry, if, try, foreach, foreach-spawn, break, continue, spawn, await, race`,
+    `Unknown keyword "${trimmed}" — treating as prompt. Valid keywords: prompt, run, let, while, until, retry, if, try, foreach, foreach-spawn, break, continue, spawn, await, race, remember, send, receive`,
   );
   return createPromptNode(nextId(ctx), trimmed);
 }

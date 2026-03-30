@@ -217,6 +217,20 @@ function renderNode(
         node.id,
       );
     }
+    case 'remember': {
+      if (node.key != null && node.value != null) {
+        return [`${prefix}${indent}remember ${node.key} = "${node.value}"${suffix}`];
+      }
+      return [`${prefix}${indent}remember "${node.text ?? ''}"${suffix}`];
+    }
+    case 'send': {
+      return [`${prefix}${indent}send to "${node.target}": ${node.message}${suffix}`];
+    }
+    case 'receive': {
+      const from = node.from != null ? ` from "${node.from}"` : '';
+      const timeout = node.timeoutSeconds != null ? ` timeout ${node.timeoutSeconds}` : '';
+      return [`${prefix}${indent}receive ${node.variableName}${from}${timeout}${suffix}`];
+    }
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -670,6 +684,12 @@ function compactNode(
     }
     case 'foreach_spawn':
       return [`${mark}${pad}foreach-spawn ${node.variableName}`];
+    case 'remember':
+      return [`${mark}${pad}remember`];
+    case 'send':
+      return [`${mark}${pad}send → ${node.target}`];
+    case 'receive':
+      return [`${mark}${pad}receive ${node.variableName}`];
   }
 }
 
@@ -725,6 +745,9 @@ function countAllNodes(nodes: readonly FlowNode[]): number {
       case 'continue':
       case 'await':
       case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
         break;
     }
   }
@@ -770,6 +793,9 @@ function flattenNodes(nodes: readonly FlowNode[]): FlowNode[] {
       case 'continue':
       case 'await':
       case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
         break;
     }
   }
@@ -849,6 +875,12 @@ function describeNode(node: FlowNode): string {
       return 'race';
     case 'foreach_spawn':
       return `foreach-spawn ${node.variableName}`;
+    case 'remember':
+      return `remember${node.key != null ? ` ${node.key}` : ''}`;
+    case 'send':
+      return `send to "${node.target}"`;
+    case 'receive':
+      return `receive ${node.variableName}`;
   }
 }
 

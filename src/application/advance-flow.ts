@@ -31,11 +31,16 @@ import type {
   ReviewNode,
   RaceNode,
   ForeachSpawnNode,
+  RememberNode,
+  SendNode,
+  ReceiveNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { AuditLogger } from './ports/audit-logger.js';
+import type { MemoryStore } from './ports/memory-store.js';
+import type { MessageStore } from './ports/message-store.js';
 import { interpolate, shellInterpolate } from '../domain/interpolate.js';
 import { evaluateCondition } from '../domain/evaluate-condition.js';
 import { resolveBuiltinCommand, isInvertedPredicate } from './evaluate-completion.js';
@@ -979,6 +984,18 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
+    case 'remember': {
+      if (node.key !== undefined && node.value !== undefined) {
+        return [`${pad}remember key="${node.key}" value="${node.value}"`];
+      }
+      return [`${pad}remember "${node.text ?? ''}"`];
+    }
+    case 'send':
+      return [`${pad}send "${node.target}" "${node.message}"`];
+    case 'receive': {
+      const fromPart = node.from !== undefined ? ` from "${node.from}"` : '';
+      return [`${pad}receive ${node.variableName}${fromPart}`];
+    }
     default:
       return [`${pad}prompt: [unsupported node]`];
   }
@@ -1098,6 +1115,8 @@ export async function autoAdvanceNodes(
   captureReader?: CaptureReader,
   processSpawner?: ProcessSpawner,
   auditLogger?: AuditLogger,
+  memoryStore?: MemoryStore,
+  messageStore?: MessageStore,
 ): Promise<AutoAdvanceResult> {
   const MAX_ADVANCES = 100;
   let advances = 0;
@@ -1122,6 +1141,8 @@ export async function autoAdvanceNodes(
       captureReader,
       processSpawner,
       auditLogger,
+      memoryStore,
+      messageStore,
     );
     if ('capturedPrompt' in result) return result;
     current = result.state;
@@ -1330,6 +1351,104 @@ async function advanceForeachSpawnNode(
   return { state, advanced: true };
 }
 
+/** Advance a remember node: persist a memory entry and auto-advance. */
+async function advanceRememberNode(
+  node: RememberNode,
+  current: SessionState,
+  memoryStore?: MemoryStore,
+): Promise<{ state: SessionState; advanced: true }> {
+  if (memoryStore) {
+    const resolvedValue =
+      node.value !== undefined ? interpolate(node.value, current.variables) : undefined;
+    const resolvedText =
+      node.text !== undefined ? interpolate(node.text, current.variables) : undefined;
+    await memoryStore.append({
+      timestamp: new Date().toISOString(),
+      ...(resolvedText !== undefined ? { text: resolvedText } : {}),
+      ...(node.key !== undefined ? { key: node.key } : {}),
+      ...(resolvedValue !== undefined ? { value: resolvedValue } : {}),
+    });
+  }
+  return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+}
+
+/** Advance a send node: write a message to the target's inbox and auto-advance. */
+async function advanceSendNode(
+  node: SendNode,
+  current: SessionState,
+  messageStore?: MessageStore,
+): Promise<{ state: SessionState; advanced: true }> {
+  if (messageStore) {
+    const resolvedMessage = interpolate(node.message, current.variables);
+    await messageStore.send(node.target, resolvedMessage);
+  }
+  return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+}
+
+/**
+ * Advance a receive node: read the oldest unconsumed message from the inbox.
+ *
+ * If a message is available, store it in the named variable and advance.
+ * If no message is available, do NOT advance (block until next hook call).
+ * If timeoutSeconds is set and the node has been waiting longer than that,
+ * store "" and advance.
+ */
+async function advanceReceiveNode(
+  node: ReceiveNode,
+  current: SessionState,
+  messageStore?: MessageStore,
+): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
+  // Check wall-clock timeout first
+  if (node.timeoutSeconds !== undefined) {
+    const progress = current.nodeProgress[node.id];
+    const startedAt = progress?.startedAt ?? Date.now();
+    const elapsed = (Date.now() - startedAt) / 1000;
+    if (elapsed >= node.timeoutSeconds) {
+      let s = updateVariable(current, node.variableName, '');
+      s = updateNodeProgress(s, node.id, {
+        iteration: 1,
+        maxIterations: 1,
+        status: 'completed',
+        startedAt,
+        completedAt: Date.now(),
+      });
+      return { state: advanceNode(s, advancePath(s.currentNodePath)), advanced: true };
+    }
+  }
+
+  if (!messageStore) {
+    const s = updateVariable(current, node.variableName, '');
+    return { state: advanceNode(s, advancePath(s.currentNodePath)), advanced: true };
+  }
+
+  const from = node.from ?? 'parent';
+  const message = await messageStore.receive(from);
+
+  if (message === undefined) {
+    const existingProgress = current.nodeProgress[node.id];
+    if (!existingProgress) {
+      const s = updateNodeProgress(current, node.id, {
+        iteration: 1,
+        maxIterations: 1,
+        status: 'running',
+        startedAt: Date.now(),
+      });
+      return { kind: 'pause', state: s, capturedPrompt: null };
+    }
+    return { kind: 'pause', state: current, capturedPrompt: null };
+  }
+
+  let s = updateVariable(current, node.variableName, message);
+  s = updateNodeProgress(s, node.id, {
+    iteration: 1,
+    maxIterations: 1,
+    status: 'completed',
+    startedAt: current.nodeProgress[node.id]?.startedAt ?? Date.now(),
+    completedAt: Date.now(),
+  });
+  return { state: advanceNode(s, advancePath(s.currentNodePath)), advanced: true };
+}
+
 /** Advance a single node by kind. Returns either an early-exit result or updated state. */
 async function advanceSingleNode(
   node: FlowNode,
@@ -1338,6 +1457,8 @@ async function advanceSingleNode(
   captureReader?: CaptureReader,
   processSpawner?: ProcessSpawner,
   auditLogger?: AuditLogger,
+  memoryStore?: MemoryStore,
+  messageStore?: MessageStore,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   switch (node.kind) {
     case 'let':
@@ -1407,6 +1528,12 @@ async function advanceSingleNode(
       return advanceRaceNode(node, current, processSpawner);
     case 'foreach_spawn':
       return advanceForeachSpawnNode(node, current, processSpawner);
+    case 'remember':
+      return advanceRememberNode(node, current, memoryStore);
+    case 'send':
+      return advanceSendNode(node, current, messageStore);
+    case 'receive':
+      return advanceReceiveNode(node, current, messageStore);
   }
 }
 

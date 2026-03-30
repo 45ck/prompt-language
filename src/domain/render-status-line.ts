@@ -120,6 +120,12 @@ function summarizeNode(node: FlowNode): string {
       return 'race';
     case 'foreach_spawn':
       return `foreach-spawn ${node.variableName}`;
+    case 'remember':
+      return `remember${node.key != null ? ` ${node.key}` : ''}`;
+    case 'send':
+      return `send → ${node.target}`;
+    case 'receive':
+      return `receive ${node.variableName}`;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;

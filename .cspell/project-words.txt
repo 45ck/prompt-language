@@ -1,9 +1,11 @@
 promptlanguage
 dedent
+dedented
 depcruise
 flownode
 flowspec
 gitignored
+modelcontextprotocol
 noslop
 repo
 resolvers

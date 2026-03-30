@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseFlow, parseGates, detectBareFlow } from './parse-flow.js';
+import { parseFlow, parseGates, detectBareFlow, parseLibraryFile } from './parse-flow.js';
 import type { FlowSpec } from '../domain/flow-spec.js';
 import type {
   WhileNode,
@@ -1582,5 +1582,291 @@ describe('parseGates — composite gates', () => {
     expect(gates[0]!.nOf).toBeDefined();
     expect(gates[0]!.nOf!.n).toBe(2);
     expect(gates[0]!.nOf!.gates).toHaveLength(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Library system tests
+// ---------------------------------------------------------------------------
+
+describe('parseLibraryFile', () => {
+  const LIBRARY_CONTENT = `library: testing
+
+export flow fix_and_test(max_retries = "3"):
+  retry max \${max_retries}
+    run: npm test
+    if command_failed
+      prompt: Fix the failing tests.
+    end
+  end
+
+export gates ci_pass():
+  tests_pass
+  lint_pass
+
+export prompt review_findings(topic = "the code"):
+  Please review \${topic} and summarize findings.
+`;
+
+  it('parses library name', () => {
+    const lib = parseLibraryFile(LIBRARY_CONTENT);
+    expect(lib.name).toBe('testing');
+  });
+
+  it('parses export flow with default param', () => {
+    const lib = parseLibraryFile(LIBRARY_CONTENT);
+    const exp = lib.exports.get('fix_and_test');
+    expect(exp).toBeDefined();
+    expect(exp!.kind).toBe('flow');
+    expect(exp!.params).toHaveLength(1);
+    expect(exp!.params[0]!.name).toBe('max_retries');
+    expect(exp!.params[0]!.default).toBe('3');
+  });
+
+  it('parses export gates', () => {
+    const lib = parseLibraryFile(LIBRARY_CONTENT);
+    const exp = lib.exports.get('ci_pass');
+    expect(exp).toBeDefined();
+    expect(exp!.kind).toBe('gates');
+    expect(exp!.body).toContain('tests_pass');
+    expect(exp!.body).toContain('lint_pass');
+  });
+
+  it('parses export prompt', () => {
+    const lib = parseLibraryFile(LIBRARY_CONTENT);
+    const exp = lib.exports.get('review_findings');
+    expect(exp).toBeDefined();
+    expect(exp!.kind).toBe('prompt');
+    expect(exp!.params[0]!.name).toBe('topic');
+    expect(exp!.params[0]!.default).toBe('the code');
+    expect(exp!.body).toContain('${topic}');
+  });
+
+  it('returns empty map for file with no exports', () => {
+    const lib = parseLibraryFile('library: empty\n\n# no exports here\n');
+    expect(lib.name).toBe('empty');
+    expect(lib.exports.size).toBe(0);
+  });
+});
+
+describe('parseFlow — anonymous import inlines flow content', () => {
+  const SHARED_FLOW = `Goal: shared steps
+
+flow:
+  run: npm test
+  prompt: Review results.
+`;
+
+  it('inlines anonymous import flow block into parent', () => {
+    const mainDsl = `Goal: main task
+
+import "shared.flow"
+
+flow:
+  prompt: Start here.
+`;
+    const spec = parseFlow(mainDsl, {
+      basePath: '/fake',
+      fileReader: (p: string) => {
+        if (p.endsWith('shared.flow')) return SHARED_FLOW;
+        throw new Error(`unexpected: ${p}`);
+      },
+    });
+    // The inlined flow block replaces the import line; nodes from shared file appear
+    const kinds = spec.nodes.map((n) => n.kind);
+    expect(kinds).toContain('run');
+    expect(kinds).toContain('prompt');
+  });
+
+  it('adds imported file path to spec.imports for namespaced import', () => {
+    const libContent = `library: testing
+
+export prompt greet():
+  Hello from library.
+`;
+    const spec = parseFlow(`Goal: test\n\nimport "lib.flow" as testing\n\nflow:\n  use testing.greet()\n`, {
+      basePath: '/fake',
+      fileReader: (p: string) => {
+        if (p.endsWith('lib.flow')) return libContent;
+        throw new Error(`unexpected: ${p}`);
+      },
+    });
+    expect(spec.imports).toBeDefined();
+    expect(spec.imports!.some((p) => p.endsWith('lib.flow'))).toBe(true);
+  });
+});
+
+describe('parseFlow — use namespace.symbol expansion', () => {
+  const LIB_CONTENT = `library: testing
+
+export flow fix_and_test(max_retries = "3"):
+  retry max \${max_retries}
+    run: npm test
+    if command_failed
+      prompt: Fix the failing tests.
+    end
+  end
+
+export prompt review_findings(topic = "the code"):
+  Please review \${topic} and summarize findings.
+`;
+
+  function makeSpec(flowBody: string): ReturnType<typeof parseFlow> {
+    return parseFlow(`Goal: test\n\nimport "lib.flow" as testing\n\nflow:\n${flowBody}\n`, {
+      basePath: '/fake',
+      fileReader: (p: string) => {
+        if (p.endsWith('lib.flow')) return LIB_CONTENT;
+        throw new Error(`unexpected: ${p}`);
+      },
+    });
+  }
+
+  it('expands use testing.fix_and_test() to retry nodes using default param', () => {
+    const spec = makeSpec('  use testing.fix_and_test()');
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.nodes[0]!.kind).toBe('retry');
+  });
+
+  it('expands use testing.fix_and_test() with overridden param', () => {
+    const spec = makeSpec('  use testing.fix_and_test(max_retries = "5")');
+    expect(spec.nodes).toHaveLength(1);
+    const retry = spec.nodes[0] as import('../domain/flow-node.js').RetryNode;
+    expect(retry.kind).toBe('retry');
+    expect(retry.maxAttempts).toBe(5);
+  });
+
+  it('expands use testing.review_findings() to prompt node', () => {
+    const spec = makeSpec('  use testing.review_findings()');
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+    const p = spec.nodes[0] as import('../domain/flow-node.js').PromptNode;
+    expect(p.text).toContain('the code');
+  });
+
+  it('expands use testing.review_findings() with custom topic', () => {
+    const spec = makeSpec('  use testing.review_findings(topic = "the API design")');
+    const p = spec.nodes[0] as import('../domain/flow-node.js').PromptNode;
+    expect(p.text).toContain('the API design');
+  });
+
+  it('warns on unknown namespace', () => {
+    const spec = makeSpec('  use unknown.foo()');
+    expect(spec.warnings.some((w) => w.includes('Unknown namespace'))).toBe(true);
+  });
+
+  it('warns on unknown symbol', () => {
+    const spec = makeSpec('  use testing.nonexistent()');
+    expect(spec.warnings.some((w) => w.includes('Unknown symbol'))).toBe(true);
+  });
+});
+
+describe('parseFlow — import cycle detection', () => {
+  it('warns on circular import and skips the repeat', () => {
+    const callCount: Record<string, number> = {};
+    const spec = parseFlow(`Goal: test\n\nimport "a.flow"\n\nflow:\n  prompt: hi\n`, {
+      basePath: '/fake',
+      fileReader: (p: string) => {
+        const key = p.replace(/\\/g, '/');
+        callCount[key] = (callCount[key] ?? 0) + 1;
+        // Simulate a.flow that imports itself (circular)
+        if (key.endsWith('a.flow')) {
+          if ((callCount[key] ?? 0) > 1) throw new Error('read twice');
+          return `Goal: a\n\nimport "a.flow"\n\nflow:\n  run: echo a\n`;
+        }
+        throw new Error(`unexpected: ${p}`);
+      },
+    });
+    expect(spec.warnings.some((w) => w.toLowerCase().includes('circular'))).toBe(true);
+  });
+});
+
+describe('parseFlow — missing import file warning', () => {
+  it('emits warning when import file cannot be read', () => {
+    const spec = parseFlow(`Goal: test\n\nimport "missing.flow"\n\nflow:\n  prompt: hi\n`, {
+      basePath: '/fake',
+      fileReader: () => { throw new Error('ENOENT'); },
+    });
+    expect(spec.warnings.some((w) => w.includes('missing.flow'))).toBe(true);
+  });
+});
+
+// ── Feature: let x = prompt "..." as json { ... } ─────────────────────────
+describe('parseLetLine — prompt_json single-line as json', () => {
+  it('parses a single-line as-json schema into prompt_json source', () => {
+    const spec = parse(
+      'Goal: test\n\nflow:\n  let x = prompt "analyze" as json { severity: "low" | "high" }',
+    );
+    const node = spec.nodes[0] as LetNode;
+    expect(node.kind).toBe('let');
+    expect(node.variableName).toBe('x');
+    expect(node.source.type).toBe('prompt_json');
+    if (node.source.type === 'prompt_json') {
+      expect(node.source.text).toBe('analyze');
+      expect(node.source.schema).toContain('severity');
+    }
+  });
+
+  it('stores the schema text for a single-line declaration', () => {
+    const spec = parse('Goal: test\n\nflow:\n  let result = prompt "scan" as json { count: 0 }');
+    const node = spec.nodes[0] as LetNode;
+    expect(node.source.type).toBe('prompt_json');
+    if (node.source.type === 'prompt_json') {
+      expect(node.source.schema).toContain('count');
+    }
+  });
+});
+
+describe('parseLetLine — prompt_json multi-line as json', () => {
+  it('parses a multi-line schema block into prompt_json source', () => {
+    const dsl = [
+      'Goal: test',
+      '',
+      'flow:',
+      '  let analysis = prompt "review" as json {',
+      '    severity: "low" | "high",',
+      '    files: string[]',
+      '  }',
+    ].join('\n');
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.kind).toBe('let');
+    expect(node.variableName).toBe('analysis');
+    expect(node.source.type).toBe('prompt_json');
+    if (node.source.type === 'prompt_json') {
+      expect(node.source.text).toBe('review');
+      expect(node.source.schema).toContain('severity');
+      expect(node.source.schema).toContain('files');
+    }
+  });
+
+  it('does not include the closing brace in the schema text', () => {
+    const dsl = [
+      'Goal: test',
+      '',
+      'flow:',
+      '  let x = prompt "scan" as json {',
+      '    key: "value"',
+      '  }',
+    ].join('\n');
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    if (node.source.type === 'prompt_json') {
+      expect(node.source.schema).not.toContain('}');
+    }
+  });
+
+  it('continues parsing subsequent nodes after a multi-line as-json block', () => {
+    const dsl = [
+      'Goal: test',
+      '',
+      'flow:',
+      '  let x = prompt "scan" as json {',
+      '    field: "value"',
+      '  }',
+      '  prompt: next step',
+    ].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.nodes[1]!.kind).toBe('prompt');
   });
 });

@@ -1307,3 +1307,46 @@ describe('renderStateHash', () => {
     expect(renderStateHash(state1)).not.toBe(renderStateHash(state2));
   });
 });
+
+// ── Feature: prompt_json source rendering ────────────────────────────────
+describe('renderFlow — prompt_json let node', () => {
+  it('renders a short prompt_json schema inline', () => {
+    const node = createLetNode('n1', 'analysis', {
+      type: 'prompt_json',
+      text: 'scan the code',
+      schema: 'severity: "low" | "high"',
+    });
+    const spec = createFlowSpec('test', [node]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('prompt "scan the code" as json');
+    expect(output).toContain('severity');
+  });
+
+  it('truncates a schema longer than 40 characters in the preview', () => {
+    const longSchema = 'severity: "low" | "high", files: string[], count: number';
+    const node = createLetNode('n1', 'result', {
+      type: 'prompt_json',
+      text: 'analyze',
+      schema: longSchema,
+    });
+    const spec = createFlowSpec('test', [node]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('...');
+    // The full long schema should not appear verbatim
+    expect(output).not.toContain(longSchema);
+  });
+
+  it('renders the variable name with = operator for non-append', () => {
+    const node = createLetNode('n1', 'myVar', {
+      type: 'prompt_json',
+      text: 'check',
+      schema: 'ok: boolean',
+    });
+    const spec = createFlowSpec('test', [node]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('let myVar =');
+  });
+});

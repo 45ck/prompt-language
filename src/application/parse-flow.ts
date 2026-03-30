@@ -28,11 +28,31 @@ import {
 import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
 import { ASK_CONDITION_PREFIX } from '../domain/judge-prompt.js';
 
+interface LibraryParam {
+  readonly name: string;
+  readonly default?: string | undefined;
+}
+
+interface LibraryExport {
+  readonly kind: 'flow' | 'gates' | 'prompt';
+  readonly name: string;
+  readonly params: readonly LibraryParam[];
+  readonly body: string;
+}
+
+interface LibraryFile {
+  readonly name: string;
+  readonly exports: ReadonlyMap<string, LibraryExport>;
+}
+
+type LibraryRegistry = ReadonlyMap<string, LibraryFile>;
+
 interface ParseContext {
   lines: readonly string[];
   pos: number;
   warnings: string[];
   nodeCounter: number;
+  registry: LibraryRegistry;
 }
 
 function nextId(ctx: ParseContext): string {
@@ -60,8 +80,62 @@ function parseGoal(input: string): string {
   return match?.[1] ? match[1].trim() : '';
 }
 
+/** Strip surrounding single or double quotes from a string value. */
+function stripQuotesStandalone(s: string): string {
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    return s.slice(1, -1);
+  }
+  return s;
+}
+
+/** Parse key=value args from a use call argument string (standalone, no ParseContext). */
+function parseUseArgsStandalone(argsStr: string): Map<string, string> {
+  const result = new Map<string, string>();
+  if (!argsStr.trim()) return result;
+  const parts: string[] = [];
+  let current = '';
+  let inQuote = false;
+  let quoteChar = '';
+  for (const ch of argsStr) {
+    if (!inQuote && (ch === '"' || ch === "'")) {
+      inQuote = true;
+      quoteChar = ch;
+      current += ch;
+    } else if (inQuote && ch === quoteChar) {
+      inQuote = false;
+      current += ch;
+    } else if (!inQuote && ch === ',') {
+      parts.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+  for (const part of parts) {
+    const eqIdx = part.indexOf('=');
+    if (eqIdx < 0) continue;
+    const key = part.slice(0, eqIdx).trim();
+    const rawVal = part.slice(eqIdx + 1).trim();
+    const val = stripQuotesStandalone(rawVal);
+    if (key) result.set(key, val);
+  }
+  return result;
+}
+
+/** Substitute ${param} placeholders (standalone, no ParseContext). */
+function substituteParamsStandalone(body: string, bindings: Map<string, string>): string {
+  return body.replace(/\$\{(\w+)\}/g, (match, name: string) => {
+    return bindings.has(name) ? (bindings.get(name) ?? match) : match;
+  });
+}
+
 /** Parse the "done when:" section into completion gates. */
-export function parseGates(input: string): readonly CompletionGate[] {
+export function parseGates(
+  input: string,
+  registry?: LibraryRegistry,
+  warnings?: string[],
+): readonly CompletionGate[] {
   const match = /done when:\s*\n([\s\S]*)$/im.exec(input);
   if (!match?.[1]) return [];
   const block = match[1];
@@ -71,6 +145,46 @@ export function parseGates(input: string): readonly CompletionGate[] {
     // D3: stop at first blank line to avoid consuming trailing prose
     if (!trimmed) {
       if (gates.length > 0) break;
+      continue;
+    }
+
+    // Handle `use namespace.symbol()` for export gates
+    const useMatch = /^use\s+(\w+)\.(\w+)\s*\(([^)]*)\)\s*$/i.exec(trimmed);
+    if (useMatch?.[1] && useMatch[2] && registry) {
+      const namespace = useMatch[1];
+      const symbol = useMatch[2];
+      const argsStr = useMatch[3] ?? '';
+      const libFile = registry.get(namespace);
+      if (!libFile) {
+        warnings?.push(`Unknown namespace "${namespace}" in done when: use`);
+      } else {
+        const exported = libFile.exports.get(symbol);
+        if (!exported) {
+          warnings?.push(`Unknown symbol "${symbol}" in namespace "${namespace}"`);
+        } else if (exported.kind === 'gates') {
+          // Parse bound body as gate predicates
+          const providedArgs = parseUseArgsStandalone(argsStr);
+          const bindings = new Map<string, string>();
+          for (const param of exported.params) {
+            if (providedArgs.has(param.name)) {
+              bindings.set(param.name, providedArgs.get(param.name)!);
+            } else if (param.default !== undefined) {
+              bindings.set(param.name, param.default);
+            } else {
+              warnings?.push(
+                `Missing required argument "${param.name}" for use ${namespace}.${symbol}`,
+              );
+            }
+          }
+          const expandedBody = substituteParamsStandalone(exported.body, bindings);
+          for (const gateLine of expandedBody.split('\n')) {
+            const gt = gateLine.trim();
+            if (gt) gates.push(createCompletionGate(gt));
+          }
+        } else {
+          warnings?.push(`Symbol "${symbol}" is not an export gates — cannot use in done when:`);
+        }
+      }
       continue;
     }
 
@@ -446,8 +560,38 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
   let source: LetSource;
 
   if (effectiveLower.startsWith('prompt ')) {
-    const text = stripQuotes(effectiveRhs.slice(7).trim());
-    source = { type: 'prompt', text };
+    // Check for `as json { ... }` suffix — may be single-line or multi-line
+    const promptRhs = effectiveRhs.slice(7).trim();
+    const asJsonMatch = /^(["'][^"']*["'])\s+as\s+json\s*\{(.*)$/i.exec(promptRhs);
+    if (asJsonMatch?.[1] && asJsonMatch[2] !== undefined) {
+      const text = stripQuotes(asJsonMatch[1]);
+      const afterBrace = asJsonMatch[2];
+      // Collect schema lines until closing `}` at base indent or dedented
+      const schemaLines: string[] = [];
+      if (afterBrace.trim().endsWith('}')) {
+        // Single-line: `as json { ... }`
+        const inner = afterBrace.trim().slice(0, -1).trim();
+        schemaLines.push(inner);
+      } else {
+        // Multi-line: consume ctx lines until we see a `}` alone or a dedented `}`
+        if (afterBrace.trim()) schemaLines.push(afterBrace.trim());
+        while (ctx.pos < ctx.lines.length) {
+          const schemaLine = ctx.lines[ctx.pos] ?? '';
+          ctx.pos += 1;
+          const trimmedSchema = schemaLine.trim();
+          if (trimmedSchema === '}' || trimmedSchema.startsWith('}')) {
+            // Stop at closing brace — don't include it in schema text
+            break;
+          }
+          schemaLines.push(trimmedSchema);
+        }
+      }
+      const schema = schemaLines.join('\n').trim();
+      source = { type: 'prompt_json', text, schema };
+    } else {
+      const text = stripQuotes(promptRhs);
+      source = { type: 'prompt', text };
+    }
   } else if (effectiveLower.startsWith('run ')) {
     const command = stripQuotes(effectiveRhs.slice(4).trim());
     source = { type: 'run', command };
@@ -587,6 +731,11 @@ function parseBlock(
     if (stopKeywords.some((kw) => firstWord === kw)) break;
     if (lower === 'end') break;
     ctx.pos += 1;
+    if (lower.startsWith('use ')) {
+      const expanded = expandUse(trimmed, ctx);
+      nodes.push(...expanded);
+      continue;
+    }
     const node = parseLine(ctx, trimmed, indent);
     if (node) nodes.push(node);
   }
@@ -749,24 +898,286 @@ function resolveIncludes(
   return result;
 }
 
+/** Parse a library file into a LibraryFile structure. */
+export function parseLibraryFile(content: string): LibraryFile {
+  const lines = content.split('\n');
+  let libraryName = '';
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const headerMatch = /^library:\s*(\S+)/i.exec(trimmed);
+    if (headerMatch?.[1]) {
+      libraryName = headerMatch[1];
+    }
+    break;
+  }
+
+  const exports = new Map<string, LibraryExport>();
+  const exportRe = /^export\s+(flow|gates|prompt)\s+(\w+)\s*(?:\(([^)]*)\))?\s*:\s*$/i;
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i] ?? '';
+    const trimmed = line.trim();
+    const exportMatch = exportRe.exec(trimmed);
+    if (exportMatch?.[1] && exportMatch[2]) {
+      const kind = exportMatch[1].toLowerCase() as 'flow' | 'gates' | 'prompt';
+      const name = exportMatch[2];
+      const rawParams = exportMatch[3] ?? '';
+      const params: LibraryParam[] = [];
+      if (rawParams.trim()) {
+        for (const part of rawParams.split(',')) {
+          const p = part.trim();
+          if (!p) continue;
+          const defaultMatch =
+            /^(\w+)\s*=\s*"([^"]*)"$/.exec(p) ?? /^(\w+)\s*=\s*'([^']*)'$/.exec(p);
+          if (defaultMatch?.[1] && defaultMatch[2] !== undefined) {
+            params.push({ name: defaultMatch[1], default: defaultMatch[2] });
+          } else {
+            params.push({ name: p });
+          }
+        }
+      }
+      i += 1;
+      const bodyLines: string[] = [];
+      while (i < lines.length) {
+        const bodyLine = lines[i] ?? '';
+        const bodyTrimmed = bodyLine.trim();
+        if (exportRe.test(bodyTrimmed)) break;
+        bodyLines.push(bodyLine);
+        i += 1;
+      }
+      while (bodyLines.length > 0 && !(bodyLines[bodyLines.length - 1] ?? '').trim()) {
+        bodyLines.pop();
+      }
+      const body = bodyLines.join('\n');
+      exports.set(name, { kind, name, params, body });
+    } else {
+      i += 1;
+    }
+  }
+
+  return { name: libraryName, exports };
+}
+
+/** Parse positional or key=value args from a `use` call argument string. */
+function parseUseArgs(argsStr: string): Map<string, string> {
+  const result = new Map<string, string>();
+  if (!argsStr.trim()) return result;
+  const parts: string[] = [];
+  let current = '';
+  let inQuote = false;
+  let quoteChar = '';
+  for (const ch of argsStr) {
+    if (!inQuote && (ch === '"' || ch === "'")) {
+      inQuote = true;
+      quoteChar = ch;
+      current += ch;
+    } else if (inQuote && ch === quoteChar) {
+      inQuote = false;
+      current += ch;
+    } else if (!inQuote && ch === ',') {
+      parts.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+
+  for (const part of parts) {
+    const eqIdx = part.indexOf('=');
+    if (eqIdx < 0) continue;
+    const key = part.slice(0, eqIdx).trim();
+    const rawVal = part.slice(eqIdx + 1).trim();
+    const val = stripQuotes(rawVal);
+    if (key) result.set(key, val);
+  }
+  return result;
+}
+
+/** Substitute ${param} placeholders in body text with bound values (only known params). */
+function substituteParams(body: string, bindings: Map<string, string>): string {
+  return body.replace(/\$\{(\w+)\}/g, (match, name: string) => {
+    return bindings.has(name) ? (bindings.get(name) ?? match) : match;
+  });
+}
+
+/** Expand a `use namespace.symbol(args)` line into FlowNodes. */
+function expandUse(line: string, ctx: ParseContext): FlowNode[] {
+  const useMatch = /^use\s+(\w+)\.(\w+)\s*\(([^)]*)\)\s*$/i.exec(line);
+  if (!useMatch?.[1] || !useMatch[2]) {
+    ctx.warnings.push(
+      `line ${ctx.pos}: Invalid use syntax: "${line}" — expected: use namespace.symbol(args)`,
+    );
+    return [];
+  }
+  const namespace = useMatch[1];
+  const symbol = useMatch[2];
+  const argsStr = useMatch[3] ?? '';
+
+  if (!ctx.registry) {
+    ctx.warnings.push(
+      `line ${ctx.pos}: No library registry available — cannot resolve "${namespace}.${symbol}"`,
+    );
+    return [];
+  }
+  const libFile = ctx.registry.get(namespace);
+  if (!libFile) {
+    ctx.warnings.push(`line ${ctx.pos}: Unknown namespace "${namespace}" — did you import it?`);
+    return [];
+  }
+  const exported = libFile.exports.get(symbol);
+  if (!exported) {
+    ctx.warnings.push(`line ${ctx.pos}: Unknown symbol "${symbol}" in namespace "${namespace}"`);
+    return [];
+  }
+
+  const providedArgs = parseUseArgs(argsStr);
+  const bindings = new Map<string, string>();
+  for (const param of exported.params) {
+    if (providedArgs.has(param.name)) {
+      bindings.set(param.name, providedArgs.get(param.name)!);
+    } else if (param.default !== undefined) {
+      bindings.set(param.name, param.default);
+    } else {
+      ctx.warnings.push(
+        `line ${ctx.pos}: Missing required argument "${param.name}" for use ${namespace}.${symbol}`,
+      );
+    }
+  }
+
+  const expandedBody = substituteParams(exported.body, bindings);
+
+  if (exported.kind === 'prompt') {
+    return [createPromptNode(nextId(ctx), expandedBody.trim())];
+  }
+
+  if (exported.kind === 'flow') {
+    const bodyLines = expandedBody.split('\n');
+    const savedLines = ctx.lines;
+    const savedPos = ctx.pos;
+    ctx.lines = bodyLines;
+    ctx.pos = 0;
+    const nodes = parseBlock(ctx, -1);
+    ctx.lines = savedLines;
+    ctx.pos = savedPos;
+    return nodes;
+  }
+
+  ctx.warnings.push(`line ${ctx.pos}: Cannot use export gates "${symbol}" as a flow node`);
+  return [];
+}
+
+/** IMPORT_RE matches: import "path" or import 'path' or import "path" as namespace */
+const IMPORT_RE = /^import\s+(?:"([^"]+)"|'([^']+)')(?:\s+as\s+(\w+))?$/i;
+
+interface ImportResult {
+  /** Input text with import lines removed (for gate/env/goal parsing). */
+  text: string;
+  /** Flow lines inlined from anonymous imports, to be prepended to the extracted flow block. */
+  inlinedFlowLines: string[];
+  registry: LibraryRegistry;
+  importedPaths: string[];
+}
+
+/**
+ * Resolve `import "path"` and `import "path" as namespace` directives.
+ * Anonymous imports collect the imported file's flow lines into inlinedFlowLines
+ * (prepended to the parent flow block by parseFlow).
+ * Namespaced imports register the library in the registry.
+ */
+function resolveImports(
+  input: string,
+  warnings: string[],
+  basePath: string,
+  seen: Set<string>,
+  fileReader: (path: string) => string,
+): ImportResult {
+  const registry = new Map<string, LibraryFile>();
+  const importedPaths: string[] = [];
+  const outputLines: string[] = [];
+  const inlinedFlowLines: string[] = [];
+
+  for (const line of input.split('\n')) {
+    const trimmed = line.trim();
+    const importMatch = IMPORT_RE.exec(trimmed);
+
+    if (!importMatch) {
+      outputLines.push(line);
+      continue;
+    }
+
+    const importPath = (importMatch[1] ?? importMatch[2])!;
+    const namespace = importMatch[3] ?? null;
+
+    if (isAbsolute(importPath) || !SAFE_INCLUDE_RE.test(importPath)) {
+      warnings.push(
+        `Invalid import path "${importPath}" — must be a relative path with .flow/.prompt/.txt extension`,
+      );
+      continue;
+    }
+
+    const fullPath = resolve(basePath, importPath);
+    if (seen.has(fullPath)) {
+      warnings.push(`Circular import detected: "${importPath}" — skipping`);
+      continue;
+    }
+
+    seen.add(fullPath);
+    let content: string;
+    try {
+      content = fileReader(fullPath);
+    } catch {
+      warnings.push(`Could not read import file "${importPath}"`);
+      continue;
+    }
+
+    importedPaths.push(fullPath);
+
+    if (namespace !== null) {
+      const libFile = parseLibraryFile(content);
+      registry.set(namespace, libFile);
+    } else {
+      // Anonymous import: recursively resolve imports in the file, then collect its flow lines
+      const subResult = resolveImports(content, warnings, dirname(fullPath), seen, fileReader);
+      for (const [ns, lib] of subResult.registry) {
+        if (!registry.has(ns)) registry.set(ns, lib);
+      }
+      importedPaths.push(...subResult.importedPaths);
+      const importedFlowLines = extractFlowBlock(subResult.text);
+      inlinedFlowLines.push(...subResult.inlinedFlowLines);
+      inlinedFlowLines.push(...importedFlowLines.map((l) => `  ${l.trimStart()}`));
+    }
+  }
+
+  return { text: outputLines.join('\n'), inlinedFlowLines, registry, importedPaths };
+}
+
 export function parseFlow(
   input: string,
   options?: { basePath?: string; fileReader?: (path: string) => string },
 ): FlowSpec {
   const warnings: string[] = [];
   const goal = parseGoal(input);
-  const gates = parseGates(input);
   const env = parseEnv(input);
-  const rawLines = extractFlowBlock(input);
-  // H-INT-001: Resolve include directives
   const basePath = options?.basePath ?? process.cwd();
-  const flowLines = resolveIncludes(rawLines, warnings, basePath, undefined, options?.fileReader);
+  const fileReader = options?.fileReader ?? ((p: string) => readFileSync(p, 'utf-8'));
+
+  const seen = new Set<string>();
+  const importResult = resolveImports(input, warnings, basePath, seen, fileReader);
+  const { text: resolvedText, inlinedFlowLines, registry, importedPaths } = importResult;
+
+  const gates = parseGates(resolvedText, registry, warnings);
+  const rawLines = [...inlinedFlowLines, ...extractFlowBlock(resolvedText)];
+  // H-INT-001: Resolve include directives (share `seen` for cross-pass cycle detection)
+  const flowLines = resolveIncludes(rawLines, warnings, basePath, seen, fileReader);
   const ctx: ParseContext = {
     lines: flowLines,
     pos: 0,
     warnings,
     nodeCounter: 0,
+    registry,
   };
   const nodes = parseBlock(ctx, -1);
-  return createFlowSpec(goal, nodes, gates, warnings, undefined, env);
+  return createFlowSpec(goal, nodes, gates, warnings, undefined, env, importedPaths);
 }

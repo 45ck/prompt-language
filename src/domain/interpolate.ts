@@ -41,8 +41,10 @@ export function interpolate(
   // H#10: Support ${var:-default} syntax for default values.
   // H-LANG-004: Support ${var[index]} for array element access.
   // Three-branch alternation: default syntax, array index, plain variable.
+  // Dot-notation keys (e.g. ${analysis.severity}) are supported via [\w.]+ —
+  // the variables map stores them as flat keys like "analysis.severity".
   return template.replace(
-    /\$\{(\w+):-((?:[^}\\]|\\.)*)\}|\$\{(\w+)\[(-?\d+)\]\}|\$\{(\w+)\}/g,
+    /\$\{([\w.]+):-((?:[^}\\]|\\.)*)\}|\$\{(\w+)\[(-?\d+)\]\}|\$\{([\w.]+)\}/g,
     (
       match,
       nameWithDefault: string | undefined,
@@ -82,8 +84,9 @@ export function shellInterpolate(
 ): string {
   // H#10: Support ${var:-default} syntax for default values (shell-escaped)
   // H-LANG-004: Support ${var[index]} for array element access (shell-escaped)
+  // Dot-notation keys (e.g. ${analysis.severity}) are supported via [\w.]+.
   return template.replace(
-    /\$\{(\w+):-((?:[^}\\]|\\.)*)\}|\$\{(\w+)\[(-?\d+)\]\}|\$\{(\w+)\}/g,
+    /\$\{([\w.]+):-((?:[^}\\]|\\.)*)\}|\$\{(\w+)\[(-?\d+)\]\}|\$\{([\w.]+)\}/g,
     (
       match,
       nameWithDefault: string | undefined,

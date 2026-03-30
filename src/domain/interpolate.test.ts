@@ -190,3 +190,36 @@ describe('shellInterpolate', () => {
     expect(shellInterpolate('echo ${items[0]}', {})).toBe('echo ${items[0]}');
   });
 });
+
+// ── Dot-notation variable access (Feature: prompt_json flat keys) ──────────
+describe('interpolate — dot-notation flat key access', () => {
+  it('resolves ${foo.bar} from flat key "foo.bar" in variables', () => {
+    const result = interpolate('severity is ${foo.bar}', { 'foo.bar': 'high' });
+    expect(result).toBe('severity is high');
+  });
+
+  it('resolves multiple dot-notation references in one template', () => {
+    const result = interpolate('${a.x} and ${a.y}', { 'a.x': 'alpha', 'a.y': 'beta' });
+    expect(result).toBe('alpha and beta');
+  });
+
+  it('leaves ${foo.bar} unchanged when flat key not in variables', () => {
+    expect(interpolate('${foo.bar}', {})).toBe('${foo.bar}');
+  });
+
+  it('does not confuse plain name with dot-notation key', () => {
+    const result = interpolate('${foo} ${foo.bar}', { foo: 'plain', 'foo.bar': 'dotted' });
+    expect(result).toBe('plain dotted');
+  });
+});
+
+describe('shellInterpolate — dot-notation flat key access', () => {
+  it('shell-escapes ${foo.bar} resolved from flat key', () => {
+    const result = shellInterpolate('echo ${foo.bar}', { 'foo.bar': 'hello world' });
+    expect(result).toBe("echo 'hello world'");
+  });
+
+  it('leaves ${foo.bar} unchanged when flat key not present', () => {
+    expect(shellInterpolate('echo ${foo.bar}', {})).toBe('echo ${foo.bar}');
+  });
+});

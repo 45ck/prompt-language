@@ -16,6 +16,11 @@ export interface LintWarning {
   readonly message: string;
 }
 
+export interface ImportRegistry {
+  hasNamespace(ns: string): boolean;
+  hasSymbol(ns: string, symbol: string): boolean;
+}
+
 /** Built-in auto-variables that are always available at runtime. */
 const BUILTIN_AUTO_VARIABLES = new Set([
   'last_exit_code',
@@ -82,6 +87,9 @@ function collectDefinedVariables(nodes: readonly FlowNode[]): Set<string> {
         collectDefinedVariables(node.finallyBody).forEach((v) => defined.add(v));
         break;
       case 'spawn':
+        collectDefinedVariables(node.body).forEach((v) => defined.add(v));
+        break;
+      case 'review':
         collectDefinedVariables(node.body).forEach((v) => defined.add(v));
         break;
       default:
@@ -213,6 +221,9 @@ function lintUnresolvedVars(
       case 'spawn':
         lintUnresolvedVars(node.body, definedVars, warnings);
         break;
+      case 'review':
+        lintUnresolvedVars(node.body, definedVars, warnings);
+        break;
       default:
         break;
     }
@@ -246,6 +257,9 @@ function containsRunNode(nodes: readonly FlowNode[]): boolean {
         if (containsRunNode(node.body)) return true;
         break;
       case 'spawn':
+        if (containsRunNode(node.body)) return true;
+        break;
+      case 'review':
         if (containsRunNode(node.body)) return true;
         break;
       case 'let':
@@ -342,6 +356,17 @@ function lintNodes(nodes: readonly FlowNode[], insideLoop: boolean, warnings: Li
         }
         lintNodes(node.body, false, warnings);
         break;
+      case 'approve':
+        if (!node.message.trim()) {
+          warnings.push({ nodeId: node.id, message: 'approve node has empty message' });
+        }
+        break;
+      case 'review':
+        if (node.body.length === 0) {
+          warnings.push({ nodeId: node.id, message: 'Empty review body' });
+        }
+        lintNodes(node.body, false, warnings);
+        break;
       case 'await':
       case 'prompt':
       case 'run':
@@ -411,6 +436,9 @@ function allRunsInsideConditional(nodes: readonly FlowNode[]): boolean {
         case 'spawn':
           walk(node.body, insideConditional);
           break;
+        case 'review':
+          walk(node.body, insideConditional);
+          break;
         default:
           break;
       }
@@ -421,7 +449,7 @@ function allRunsInsideConditional(nodes: readonly FlowNode[]): boolean {
   return hasRun && !hasUnconditionalRun;
 }
 
-export function lintFlow(spec: FlowSpec): readonly LintWarning[] {
+export function lintFlow(spec: FlowSpec, _importRegistry?: ImportRegistry): readonly LintWarning[] {
   const warnings: LintWarning[] = [];
 
   if (!spec.goal) {

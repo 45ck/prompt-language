@@ -18,7 +18,9 @@ export type FlowNodeKind =
   | 'break'
   | 'continue'
   | 'spawn'
-  | 'await';
+  | 'await'
+  | 'approve'
+  | 'review';
 
 interface BaseNode {
   readonly kind: FlowNodeKind;
@@ -86,6 +88,7 @@ export interface TryNode extends BaseNode {
 
 export type LetSource =
   | { readonly type: 'prompt'; readonly text: string }
+  | { readonly type: 'prompt_json'; readonly text: string; readonly schema: string }
   | { readonly type: 'run'; readonly command: string }
   | { readonly type: 'literal'; readonly value: string }
   | { readonly type: 'empty_list' };
@@ -138,6 +141,30 @@ export interface AwaitNode extends BaseNode {
   readonly target: AwaitTarget;
 }
 
+/**
+ * ApproveNode — interactive human-approval gate.
+ * The agent waits for a yes/no response before advancing.
+ * On rejection, sets session variable `approve_rejected = "true"`.
+ */
+export interface ApproveNode extends BaseNode {
+  readonly kind: 'approve';
+  readonly message: string;
+  readonly timeoutSeconds?: number | undefined;
+}
+
+/**
+ * ReviewNode — iterative AI review loop.
+ * Enters body, then evaluates against criteria (optionally grounded by a command).
+ * Re-loops up to maxRounds until the grounded-by command exits 0 or rounds are exhausted.
+ */
+export interface ReviewNode extends BaseNode {
+  readonly kind: 'review';
+  readonly maxRounds: number;
+  readonly criteria?: string | undefined;
+  readonly groundedBy?: string | undefined;
+  readonly body: readonly FlowNode[];
+}
+
 export type FlowNode =
   | WhileNode
   | UntilNode
@@ -151,7 +178,9 @@ export type FlowNode =
   | BreakNode
   | ContinueNode
   | SpawnNode
-  | AwaitNode;
+  | AwaitNode
+  | ApproveNode
+  | ReviewNode;
 
 export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;
@@ -315,6 +344,33 @@ export function createAwaitNode(id: string, target: AwaitTarget): AwaitNode {
   return { kind: 'await', id, target };
 }
 
+export function createApproveNode(
+  id: string,
+  message: string,
+  timeoutSeconds?: number,
+): ApproveNode {
+  return timeoutSeconds != null
+    ? { kind: 'approve', id, message, timeoutSeconds }
+    : { kind: 'approve', id, message };
+}
+
+export function createReviewNode(
+  id: string,
+  body: readonly FlowNode[],
+  maxRounds: number,
+  criteria?: string,
+  groundedBy?: string,
+): ReviewNode {
+  return {
+    kind: 'review',
+    id,
+    maxRounds,
+    body,
+    ...(criteria != null ? { criteria } : {}),
+    ...(groundedBy != null ? { groundedBy } : {}),
+  };
+}
+
 /** Recursively search a flow tree for a node by its id. Early-exit on match. */
 export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode | null {
   for (const node of nodes) {
@@ -325,6 +381,11 @@ export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode |
       case 'retry':
       case 'foreach':
       case 'spawn': {
+        const found = findNodeById(node.body, id);
+        if (found) return found;
+        break;
+      }
+      case 'review': {
         const found = findNodeById(node.body, id);
         if (found) return found;
         break;

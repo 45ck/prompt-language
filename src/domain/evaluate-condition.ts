@@ -32,8 +32,8 @@ function resolveOperand(
   // Direct variable name
   if (trimmed in variables) return variables[trimmed]!;
 
-  // ${var} reference
-  const varMatch = /^\$\{(\w+)\}$/.exec(trimmed);
+  // ${var} or ${var.field} reference (dot-notation for JSON field access)
+  const varMatch = /^\$\{([\w.]+)\}$/.exec(trimmed);
   if (varMatch?.[1] && varMatch[1] in variables) return variables[varMatch[1]]!;
 
   // Quoted string literal

@@ -61,3 +61,47 @@ export function extractCaptureTag(text: string, varName: string, nonce?: string)
   if (!value) return null;
   return value.length > MAX_CAPTURE_LENGTH ? value.slice(0, MAX_CAPTURE_LENGTH) : value;
 }
+
+/**
+ * Build a meta-prompt that asks Claude to respond with a JSON object matching the given schema.
+ *
+ * The response is captured via the standard tag + file mechanism, same as buildCapturePrompt.
+ */
+export function buildJsonCapturePrompt(
+  promptText: string,
+  varName: string,
+  schema: string,
+  nonce?: string,
+): string {
+  const tag = nonce ? captureTagName(nonce) : CAPTURE_TAG_BASE;
+  return `${promptText}
+
+[Internal — prompt-language JSON capture: Respond with a JSON object that matches this schema:
+\`\`\`
+${schema}
+\`\`\`
+After completing the task above, you MUST do both of the following:
+1. Wrap your JSON answer in tags: <${tag} name="${varName}">{"field":"value",...}</${tag}>
+2. Also save your JSON answer to \`${captureFilePath(varName)}\` using the Write tool.
+Respond with ONLY valid JSON — no explanation, no markdown fences, just the JSON object. \
+Maximum ${MAX_CAPTURE_LENGTH} characters.]`;
+}
+
+/**
+ * Build a retry prompt when a JSON capture response was not valid JSON or not found.
+ */
+export function buildJsonCaptureRetryPrompt(
+  varName: string,
+  schema: string,
+  nonce?: string,
+): string {
+  const tag = nonce ? captureTagName(nonce) : CAPTURE_TAG_BASE;
+  return `[Internal — prompt-language: JSON capture for "${varName}" failed. \
+Please provide a valid JSON object matching this schema:
+\`\`\`
+${schema}
+\`\`\`
+Wrap it in tags: <${tag} name="${varName}">{"field":"value"}</${tag}> \
+and also save it to \`${captureFilePath(varName)}\` using the Write tool. \
+Respond with ONLY valid JSON.]`;
+}

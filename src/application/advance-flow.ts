@@ -26,6 +26,8 @@ import type {
   UntilNode,
   RetryNode,
   ForeachNode,
+  ApproveNode,
+  ReviewNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -39,6 +41,8 @@ import { initEmptyList, appendToList, listLength } from '../domain/list-variable
 import {
   buildCapturePrompt,
   buildCaptureRetryPrompt,
+  buildJsonCapturePrompt,
+  buildJsonCaptureRetryPrompt,
   DEFAULT_MAX_CAPTURE_RETRIES,
   extractCaptureTag,
 } from '../domain/capture-prompt.js';
@@ -68,6 +72,7 @@ export function resolveCurrentNode(
     case 'retry':
     case 'foreach':
     case 'spawn':
+    case 'review':
       return resolveCurrentNode(node.body, rest);
     case 'if':
       return resolveCurrentNode([...node.thenBranch, ...node.elseBranch], rest);
@@ -328,6 +333,10 @@ async function handleBodyExhaustion(
       return advanceNode(current, advancePath(parentPath));
     }
 
+    case 'review': {
+      return handleReviewBodyExhaustion(state, parentPath, parentNode, commandRunner);
+    }
+
     case 'if':
     case 'try':
     case 'spawn':
@@ -336,6 +345,97 @@ async function handleBodyExhaustion(
     default:
       return null;
   }
+}
+
+/** Accepted response tokens for approve node approval. */
+const APPROVE_YES_TOKENS = new Set(['yes', 'y', 'approved', 'ok', 'approve']);
+const APPROVE_NO_TOKENS = new Set(['no', 'n', 'reject', 'cancel', 'rejected']);
+
+export function advanceApproveNode(
+  node: ApproveNode,
+  current: SessionState,
+  replyText?: string,
+): AutoAdvanceResult {
+  if (replyText === undefined) {
+    return {
+      kind: 'prompt',
+      state: current,
+      capturedPrompt: node.message + '\n\nPlease respond with "yes" to approve or "no" to reject.',
+    };
+  }
+
+  const normalized = replyText.trim().toLowerCase();
+  const firstWord = normalized.split(/[\s]+/)[0] ?? '';
+
+  if (APPROVE_YES_TOKENS.has(firstWord)) {
+    let next = updateVariable(current, 'approve_rejected', 'false');
+    next = advanceNode(next, advancePath(next.currentNodePath));
+    return { kind: 'advance', state: next, capturedPrompt: null };
+  }
+
+  if (APPROVE_NO_TOKENS.has(firstWord)) {
+    let next = updateVariable(current, 'approve_rejected', 'true');
+    next = advanceNode(next, advancePath(next.currentNodePath));
+    return { kind: 'advance', state: next, capturedPrompt: null };
+  }
+
+  return {
+    kind: 'prompt',
+    state: current,
+    capturedPrompt: 'Please respond with "yes" to approve or "no" to reject: ' + node.message,
+  };
+}
+
+export const DEFAULT_MAX_REVIEW_ROUNDS = 3;
+
+async function handleReviewBodyExhaustion(
+  state: SessionState,
+  parentPath: readonly number[],
+  parentNode: ReviewNode,
+  commandRunner?: CommandRunner,
+): Promise<SessionState> {
+  const progress = state.nodeProgress[parentNode.id];
+  const round = progress?.iteration ?? 1;
+
+  let reviewPasses = false;
+  if (parentNode.groundedBy && commandRunner) {
+    const cmd = interpolate(parentNode.groundedBy, state.variables);
+    const result = await commandRunner.run(cmd);
+    reviewPasses = result.exitCode === 0;
+  } else if (!parentNode.groundedBy) {
+    reviewPasses = true;
+  }
+
+  if (reviewPasses || round >= parentNode.maxRounds) {
+    const next = updateNodeProgress(state, parentNode.id, {
+      iteration: round,
+      maxIterations: parentNode.maxRounds,
+      status: 'completed',
+      startedAt: progress?.startedAt,
+      completedAt: Date.now(),
+    });
+    return advanceNode(next, advancePath(parentPath));
+  }
+
+  const critiqueBase =
+    'Review round ' +
+    String(round + 1) +
+    '/' +
+    String(parentNode.maxRounds) +
+    ': Please revise your work.';
+  const critiquePrompt = parentNode.criteria
+    ? critiqueBase + ' Evaluation criteria: ' + parentNode.criteria
+    : critiqueBase + ' Based on the feedback.';
+
+  let looping = updateNodeProgress(state, parentNode.id, {
+    iteration: round + 1,
+    maxIterations: parentNode.maxRounds,
+    status: 'running',
+    startedAt: progress?.startedAt,
+  });
+  looping = updateVariable(looping, '_review_critique', critiquePrompt);
+  looping = advanceNode(looping, [...parentPath, 0]);
+  return looping;
 }
 
 export type AutoAdvanceResult =
@@ -368,6 +468,41 @@ async function advanceLetNode(
       if ('capturedPrompt' in result) return result;
       current = result.state;
       value = result.value;
+      break;
+    }
+    case 'prompt_json': {
+      const result = await advanceLetPromptJson(node, current, captureReader);
+      if ('capturedPrompt' in result) return result;
+      // JSON field expansion: store root + each top-level field as flat keys
+      current = result.state;
+      const jsonStr = result.value;
+      try {
+        const fencedMatch = /```(?:json)?\s*([\s\S]*?)```/i.exec(jsonStr);
+        const rawJson = fencedMatch?.[1] ? fencedMatch[1].trim() : jsonStr.trim();
+        const parsed: unknown = JSON.parse(rawJson);
+        if (parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          // Store full JSON string as the root variable
+          value = rawJson;
+          for (const [key, val] of Object.entries(parsed as Record<string, unknown>)) {
+            const flatKey = `${node.variableName}.${key}`;
+            if (Array.isArray(val)) {
+              current = updateVariable(current, flatKey, JSON.stringify(val));
+              current = updateVariable(current, `${flatKey}_length`, val.length);
+            } else {
+              current = updateVariable(current, flatKey, val !== null ? String(val) : '');
+            }
+          }
+        } else {
+          value = jsonStr;
+        }
+      } catch {
+        // JSON parse failed; store raw value and warn
+        value = jsonStr;
+        current = addWarning(
+          current,
+          `Variable '${node.variableName}' JSON parse failed; stored raw response.`,
+        );
+      }
       break;
     }
     case 'run': {
@@ -477,6 +612,86 @@ async function advanceLetPrompt(
       warnings: [
         ...current.warnings,
         `Variable capture for '${node.variableName}' failed after ${progress.maxIterations} attempts; using empty string.`,
+      ],
+    },
+    value: '',
+  };
+}
+
+/**
+ * Handle let-prompt_json two-phase capture: emit JSON-schema-guided prompt, then read back
+ * and validate. Falls back to raw string if JSON parse fails on retry.
+ */
+async function advanceLetPromptJson(
+  node: LetNode,
+  current: SessionState,
+  captureReader?: CaptureReader,
+): Promise<AutoAdvanceResult | { state: SessionState; value: string }> {
+  if (node.source.type !== 'prompt_json') {
+    return { state: current, value: '' };
+  }
+
+  const progress = current.nodeProgress[node.id];
+  const isAwaiting = progress?.status === 'awaiting_capture';
+
+  if (!isAwaiting) {
+    if (captureReader) await captureReader.clear(node.variableName);
+    const updated = updateNodeProgress(current, node.id, {
+      iteration: 1,
+      maxIterations: DEFAULT_MAX_CAPTURE_RETRIES,
+      status: 'awaiting_capture',
+    });
+    const promptText = interpolate(node.source.text, current.variables);
+    return {
+      kind: 'prompt' as const,
+      state: updated,
+      capturedPrompt: buildJsonCapturePrompt(
+        promptText,
+        node.variableName,
+        node.source.schema,
+        current.captureNonce,
+      ),
+    };
+  }
+
+  let failureReason: string;
+  if (captureReader) {
+    const captured = await captureReader.read(node.variableName);
+    if (captured) {
+      const tagValue = extractCaptureTag(captured, node.variableName, current.captureNonce);
+      await captureReader.clear(node.variableName);
+      return { state: current, value: tagValue ?? captured };
+    }
+    failureReason = 'capture file empty or not found';
+  } else {
+    failureReason = 'no capture reader available';
+  }
+
+  const iteration = progress.iteration;
+  if (iteration < progress.maxIterations) {
+    const updated = updateNodeProgress(current, node.id, {
+      iteration: iteration + 1,
+      maxIterations: progress.maxIterations,
+      status: 'awaiting_capture',
+      captureFailureReason: failureReason,
+    });
+    return {
+      kind: 'prompt' as const,
+      state: updated,
+      capturedPrompt: buildJsonCaptureRetryPrompt(
+        node.variableName,
+        node.source.schema,
+        current.captureNonce,
+      ),
+    };
+  }
+
+  return {
+    state: {
+      ...current,
+      warnings: [
+        ...current.warnings,
+        `JSON capture for '${node.variableName}' failed after ${progress.maxIterations} attempts; using empty string.`,
       ],
     },
     value: '',
@@ -636,6 +851,9 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
         case 'prompt':
           src = `prompt "${node.source.text}"`;
           break;
+        case 'prompt_json':
+          src = `prompt "${node.source.text}" as json {\n${node.source.schema}\n}`;
+          break;
         case 'run':
           src = `run "${node.source.command}"`;
           break;
@@ -713,6 +931,23 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
     }
     case 'await':
       return [`${pad}await ${node.target === 'all' ? 'all' : `"${node.target}"`}`];
+    case 'approve': {
+      const approveTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds / 60}m` : '';
+      return [`${pad}approve "${node.message}"${approveTimeout}`];
+    }
+    case 'review': {
+      const criteriaLine = node.criteria ? [`${pad}  criteria: "${node.criteria}"`] : [];
+      const groundedByLine = node.groundedBy ? [`${pad}  grounded-by: ${node.groundedBy}`] : [];
+      return [
+        `${pad}review max ${node.maxRounds}`,
+        ...criteriaLine,
+        ...groundedByLine,
+        ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        `${pad}end`,
+      ];
+    }
+    default:
+      return [`${pad}prompt: [unsupported node]`];
   }
 }
 
@@ -945,6 +1180,24 @@ async function advanceSingleNode(
       return advanceSpawnNode(node, current, processSpawner);
     case 'await':
       return advanceAwaitNode(node, current, processSpawner);
+    case 'approve':
+      return advanceApproveNode(node, current);
+    case 'review': {
+      const now = Date.now();
+      return {
+        state: advanceNode(
+          updateNodeProgress(current, node.id, {
+            iteration: 1,
+            maxIterations: node.maxRounds,
+            status: 'running',
+            startedAt: now,
+            loopStartedAt: now,
+          }),
+          [...current.currentNodePath, 0],
+        ),
+        advanced: true,
+      };
+    }
   }
 }
 
@@ -1022,17 +1275,30 @@ async function advanceConditionLoop(
     const isAwaiting = progress?.status === 'awaiting_capture';
 
     if (!isAwaiting) {
-      // Phase 1: emit judge prompt and wait for Claude's verdict
-      if (captureReader) await captureReader.clear(varName);
-      let groundingOutput: string | undefined;
+      // Grounded-by fast path: use command exit code directly, skip AI judge entirely
       if (node.groundedBy && commandRunner) {
         try {
           const groundingResult = await commandRunner.run(node.groundedBy);
-          if (groundingResult.stdout) groundingOutput = groundingResult.stdout.slice(0, 1000);
+          const groundingMet = groundingResult.exitCode === 0;
+          const enterBody = node.kind === 'while' ? groundingMet : !groundingMet;
+          return {
+            state: handleLoopReentry(
+              current,
+              current.currentNodePath,
+              node.id,
+              enterBody,
+              node.maxIterations,
+              node.timeoutSeconds,
+            ),
+            advanced: true as const,
+          };
         } catch {
-          // Grounding failure is non-fatal — proceed without evidence
+          // Grounding command failed to run — fall through to AI judge path
         }
       }
+
+      // Phase 1: emit judge prompt and wait for Claude's verdict
+      if (captureReader) await captureReader.clear(varName);
       const question = extractAskQuestion(node.condition);
       const now = Date.now();
       const updated = updateNodeProgress(current, node.id, {
@@ -1045,7 +1311,7 @@ async function advanceConditionLoop(
       return {
         kind: 'prompt',
         state: updated,
-        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce),
       };
     }
 
@@ -1190,17 +1456,34 @@ async function advanceIfNode(
     const isAwaiting = progress?.status === 'awaiting_capture';
 
     if (!isAwaiting) {
-      // Phase 1: emit judge prompt
-      if (captureReader) await captureReader.clear(varName);
-      let groundingOutput: string | undefined;
+      // Grounded-by fast path: use command exit code directly, skip AI judge entirely
       if (node.groundedBy && commandRunner) {
         try {
           const groundingResult = await commandRunner.run(node.groundedBy);
-          if (groundingResult.stdout) groundingOutput = groundingResult.stdout.slice(0, 1000);
+          const verdict = groundingResult.exitCode === 0;
+          if (verdict) {
+            return {
+              state: advanceNode(current, [...current.currentNodePath, 0]),
+              advanced: true,
+            };
+          }
+          if (node.elseBranch.length > 0) {
+            return {
+              state: advanceNode(current, [...current.currentNodePath, node.thenBranch.length]),
+              advanced: true,
+            };
+          }
+          return {
+            state: advanceNode(current, advancePath(current.currentNodePath)),
+            advanced: true,
+          };
         } catch {
-          // Grounding failure is non-fatal
+          // Grounding command failed to run — fall through to AI judge path
         }
       }
+
+      // Phase 1: emit judge prompt
+      if (captureReader) await captureReader.clear(varName);
       const question = extractAskQuestion(node.condition);
       const now = Date.now();
       const updated = updateNodeProgress(current, node.id, {
@@ -1212,7 +1495,7 @@ async function advanceIfNode(
       return {
         kind: 'prompt',
         state: updated,
-        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce),
       };
     }
 

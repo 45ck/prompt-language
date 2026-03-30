@@ -167,6 +167,32 @@ function renderNode(
       return [
         `${prefix}${indent}await ${node.target === 'all' ? 'all' : `"${node.target}"`}${suffix}`,
       ];
+    case 'approve': {
+      const approveTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds / 60}m` : '';
+      const approveRejected = state.variables['approve_rejected'];
+      const approveTag =
+        approveRejected === 'true'
+          ? '  [rejected]'
+          : approveRejected === 'false'
+            ? '  [approved]'
+            : '  [pending]';
+      return [`${prefix}${indent}approve "${node.message}"${approveTimeout}${approveTag}${suffix}`];
+    }
+    case 'review': {
+      const reviewProgress = state.nodeProgress[node.id];
+      const reviewRound = reviewProgress?.iteration ?? 0;
+      const roundTag = reviewRound > 0 ? ` [round ${reviewRound}/${node.maxRounds}]` : '';
+      return renderLoopNode(
+        `review max ${node.maxRounds}${roundTag}`,
+        node.body,
+        state,
+        path,
+        indentLevel,
+        prefix,
+        suffix,
+        node.id,
+      );
+    }
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -284,6 +310,14 @@ function renderLetNode(
     case 'prompt':
       sourceText = `prompt "${node.source.text}"`;
       break;
+    case 'prompt_json': {
+      const schemaPreview =
+        node.source.schema.length > 40
+          ? node.source.schema.slice(0, 40) + '...'
+          : node.source.schema;
+      sourceText = `prompt "${node.source.text}" as json { ${schemaPreview} }`;
+      break;
+    }
     case 'run':
       sourceText = `run "${node.source.command}"`;
       break;
@@ -594,6 +628,17 @@ function compactNode(
     }
     case 'await':
       return [`${mark}${pad}await ${node.target}`];
+    case 'approve':
+      return [`${mark}${pad}approve "${node.message.slice(0, 40)}"`];
+    case 'review': {
+      const rvProg = state.nodeProgress[node.id];
+      const rvIter = rvProg ? `${rvProg.iteration}/${rvProg.maxIterations}` : '';
+      const rvLines = [`${mark}${pad}review ${rvIter}`];
+      for (let i = 0; i < node.body.length; i++) {
+        rvLines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
+      }
+      return rvLines;
+    }
   }
 }
 
@@ -635,12 +680,16 @@ function countAllNodes(nodes: readonly FlowNode[]): number {
           countAllNodes(node.catchBody) +
           countAllNodes(node.finallyBody);
         break;
+      case 'review':
+        count += countAllNodes(node.body);
+        break;
       case 'prompt':
       case 'run':
       case 'let':
       case 'break':
       case 'continue':
       case 'await':
+      case 'approve':
         break;
     }
   }
@@ -669,12 +718,16 @@ function flattenNodes(nodes: readonly FlowNode[]): FlowNode[] {
           ...flattenNodes(node.finallyBody),
         );
         break;
+      case 'review':
+        result.push(...flattenNodes(node.body));
+        break;
       case 'prompt':
       case 'run':
       case 'let':
       case 'break':
       case 'continue':
       case 'await':
+      case 'approve':
         break;
     }
   }
@@ -693,6 +746,7 @@ function resolveNodeByPath(nodes: readonly FlowNode[], path: readonly number[]):
     case 'until':
     case 'retry':
     case 'foreach':
+    case 'review':
     case 'spawn':
       return resolveNodeByPath(node.body, rest);
     case 'if':
@@ -740,6 +794,10 @@ function describeNode(node: FlowNode): string {
       return `spawn "${node.name}"`;
     case 'await':
       return `await ${node.target}`;
+    case 'approve':
+      return `approve "${node.message}"`;
+    case 'review':
+      return `review max ${node.maxRounds}`;
   }
 }
 

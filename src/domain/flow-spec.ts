@@ -31,6 +31,8 @@ export interface FlowSpec {
   readonly warnings: readonly string[];
   /** H-LANG-009: Environment variables to inject into command execution. */
   readonly env?: Readonly<Record<string, string>> | undefined;
+  /** Resolved absolute file paths of all imported library files. */
+  readonly imports?: readonly string[] | undefined;
 }
 
 const DEFAULT_FLOW_DEFAULTS: FlowDefaults = {
@@ -45,6 +47,7 @@ export function createFlowSpec(
   warnings: readonly string[] = [],
   defaults?: Partial<FlowDefaults>,
   env?: Readonly<Record<string, string>>,
+  imports?: readonly string[],
 ): FlowSpec {
   return {
     goal,
@@ -53,6 +56,7 @@ export function createFlowSpec(
     defaults: { ...DEFAULT_FLOW_DEFAULTS, ...defaults },
     warnings,
     ...(env != null ? { env } : {}),
+    ...(imports != null && imports.length > 0 ? { imports } : {}),
   };
 }
 

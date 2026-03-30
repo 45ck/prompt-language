@@ -31,6 +31,7 @@ function resolveNode(nodes: readonly FlowNode[], path: readonly number[]): FlowN
     case 'retry':
     case 'foreach':
     case 'spawn':
+    case 'review':
       return resolveNode(node.body, rest);
     case 'if':
       return resolveNode([...node.thenBranch, ...node.elseBranch], rest);
@@ -56,6 +57,7 @@ function collectAncestors(nodes: readonly FlowNode[], path: readonly number[]): 
       case 'retry':
       case 'foreach':
       case 'spawn':
+      case 'review':
         currentNodes = node.body;
         break;
       case 'if':
@@ -103,6 +105,10 @@ function summarizeNode(node: FlowNode): string {
       return `spawn "${node.name}"`;
     case 'await':
       return `await ${node.target === 'all' ? 'all' : `"${node.target}"`}`;
+    case 'approve':
+      return `approve: ${truncate(node.message, 30)}`;
+    case 'review':
+      return `review (max ${node.maxRounds} rounds)`;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;

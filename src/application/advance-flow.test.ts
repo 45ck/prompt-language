@@ -2740,7 +2740,7 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
     expect(captureReader.clear).toHaveBeenCalledWith('__judge_w1__');
   });
 
-  it('Phase 1: includes grounding command output in judge prompt', async () => {
+  it('grounded-by with exit 0: enters while body (deterministic — no AI judge)', async () => {
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 0, stdout: 'grounding evidence here', stderr: '' }),
     };
@@ -2760,8 +2760,37 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
     const spec = createFlowSpec('test', [whileNode]);
     const state = createSessionState('s1', spec);
 
-    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
-    expect(capturedPrompt).toContain('grounding evidence here');
+    // grounded-by exit 0 = condition true => enter while body (no AI judge needed)
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(capturedPrompt).toBe('fix');
+    expect(result.nodeProgress['w1']?.status).toBe('running');
+  });
+
+  it('grounded-by with exit non-zero: exits while loop (deterministic — no AI judge)', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: 'tests failed', stderr: '' }),
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"is it passing?"',
+      [createPromptNode('p1', 'fix')],
+      3,
+      undefined,
+      undefined,
+      'npm test',
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    // grounded-by exit non-zero = condition false => exit while loop
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(capturedPrompt).toBeNull();
+    // Path advances past the while node (to index 1, past the only node)
+    expect(result.currentNodePath).toEqual([1]);
   });
 
   it('Phase 2: verdict=true enters while body', async () => {
@@ -3136,7 +3165,7 @@ describe('autoAdvanceNodes — ask condition edge cases', () => {
     expect(phase2.capturedPrompt).toContain('__judge_w1__');
   });
 
-  it('grounding command with empty stdout: judge prompt has no grounding section', async () => {
+  it('grounded-by with empty stdout but exit 0: still enters while body (exit code wins)', async () => {
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
     };
@@ -3156,11 +3185,10 @@ describe('autoAdvanceNodes — ask condition edge cases', () => {
     const spec = createFlowSpec('test', [whileNode]);
     const state = createSessionState('s1', spec);
 
-    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
-    expect(capturedPrompt).toContain('is it clean?');
-    // Empty stdout means no grounding section in the judge prompt
-    expect(capturedPrompt).not.toContain('grounding command');
-    expect(capturedPrompt).not.toContain('Output from grounding');
+    // Exit code 0 = condition true => enters while body (no AI judge, even with empty stdout)
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(capturedPrompt).toBe('fix');
+    expect(result.nodeProgress['w1']?.status).toBe('running');
   });
 
   it('ask condition iteration count preserved across body re-entry', async () => {
@@ -3193,5 +3221,281 @@ describe('autoAdvanceNodes — ask condition edge cases', () => {
     // Iteration should increment from 2 to 3
     expect(result.nodeProgress['w1']?.iteration).toBe(3);
     expect(result.nodeProgress['w1']?.status).toBe('running');
+  });
+});
+
+// ── autoAdvanceNodes — let prompt_json capture ───────────────────────
+
+describe('autoAdvanceNodes — let prompt_json capture', () => {
+  it('Phase 1: emits JSON-guided capture meta-prompt on first visit', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const letNode = createLetNode('l1', 'analysis', {
+      type: 'prompt_json',
+      text: 'Analyze this code',
+      schema: 'severity: "low"|"medium"|"high"',
+    });
+    const spec = createFlowSpec('test', [letNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('Analyze this code');
+    expect(capturedPrompt).toContain('JSON');
+    expect(result.nodeProgress['l1']?.status).toBe('awaiting_capture');
+    expect(captureReader.clear).toHaveBeenCalledWith('analysis');
+  });
+
+  it('Phase 2: parses JSON response and stores flat keys', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('{"severity":"high","summary":"bad code"}'),
+      clear: vi.fn(),
+    };
+    const letNode = createLetNode('l1', 'analysis', {
+      type: 'prompt_json',
+      text: 'Analyze this code',
+      schema: 'severity: "low"|"medium"|"high", summary: string',
+    });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toBe('done');
+    expect(result.variables['analysis.severity']).toBe('high');
+    expect(result.variables['analysis.summary']).toBe('bad code');
+  });
+
+  it('Phase 2: parses fenced JSON response', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('```json\n{"severity":"low"}\n```'),
+      clear: vi.fn(),
+    };
+    const letNode = createLetNode('l1', 'result', {
+      type: 'prompt_json',
+      text: 'Analyze',
+      schema: 'severity: string',
+    });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'next')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { state: result } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.variables['result.severity']).toBe('low');
+  });
+
+  it('Phase 2: stores array field as JSON string and sets _length variable', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('{"files":["a.ts","b.ts"]}'),
+      clear: vi.fn(),
+    };
+    const letNode = createLetNode('l1', 'analysis', {
+      type: 'prompt_json',
+      text: 'List files',
+      schema: 'files: string[]',
+    });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'next')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { state: result } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.variables['analysis.files']).toBe('["a.ts","b.ts"]');
+    expect(result.variables['analysis.files_length']).toBe(2);
+  });
+
+  it('Phase 2: warns and stores raw string when JSON parse fails', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('not valid json'),
+      clear: vi.fn(),
+    };
+    const letNode = createLetNode('l1', 'analysis', {
+      type: 'prompt_json',
+      text: 'Analyze',
+      schema: 'severity: string',
+    });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'next')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { state: result } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.variables['analysis']).toBe('not valid json');
+    expect(result.warnings.some((w) => w.includes('JSON parse failed'))).toBe(true);
+  });
+
+  it('retries JSON capture when read returns null', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const letNode = createLetNode('l1', 'analysis', {
+      type: 'prompt_json',
+      text: 'Analyze',
+      schema: 'severity: string',
+    });
+    const spec = createFlowSpec('test', [letNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('JSON capture for');
+    expect(capturedPrompt).toContain('failed');
+    expect(result.nodeProgress['l1']?.iteration).toBe(2);
+  });
+
+  it('uses empty string after max JSON capture retries exhausted', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const letNode = createLetNode('l1', 'analysis', {
+      type: 'prompt_json',
+      text: 'Analyze',
+      schema: 'severity: string',
+    });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'next')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 3,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toBe('next');
+    expect(result.variables['analysis']).toBe('');
+    expect(result.warnings.some((w) => w.includes('failed after'))).toBe(true);
+  });
+});
+
+// ── autoAdvanceNodes — if grounded-by fast path ───────────────────────
+
+describe('autoAdvanceNodes — if grounded-by fast path', () => {
+  it('grounded-by exit 0: enters then-branch (no AI judge)', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode(
+      'i1',
+      'ask:"is it ready?"',
+      [createPromptNode('p1', 'then-body')],
+      [],
+      'npm test',
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(capturedPrompt).toBe('then-body');
+  });
+
+  it('grounded-by exit non-zero: skips if node (no else branch)', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode(
+      'i1',
+      'ask:"is it ready?"',
+      [createPromptNode('p1', 'then-body')],
+      [],
+      'npm test',
+    );
+    const spec = createFlowSpec('test', [ifNode, createPromptNode('p2', 'after-if')]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(capturedPrompt).toBe('after-if');
+  });
+
+  it('grounded-by exit non-zero: enters else-branch when present', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode(
+      'i1',
+      'ask:"is it ready?"',
+      [createPromptNode('p1', 'then-body')],
+      [createPromptNode('p2', 'else-body')],
+      'npm test',
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(capturedPrompt).toBe('else-body');
+  });
+
+  it('grounded-by command failure: falls through to AI judge path', async () => {
+    const runner: CommandRunner = {
+      run: async () => {
+        throw new Error('command not found');
+      },
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode(
+      'i1',
+      'ask:"is it ready?"',
+      [createPromptNode('p1', 'then-body')],
+      [],
+      'nonexistent-command',
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(state, runner, captureReader);
+    // Should fall through to AI judge — emits judge prompt (Phase 1)
+    expect(capturedPrompt).toContain('__judge_i1__');
+    expect(result.nodeProgress['i1']?.status).toBe('awaiting_capture');
   });
 });

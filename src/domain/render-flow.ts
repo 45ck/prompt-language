@@ -193,6 +193,30 @@ function renderNode(
         node.id,
       );
     }
+    case 'race': {
+      const winner = state.variables['race_winner'];
+      const raceTag = winner !== undefined && winner !== '' ? `  [winner: ${String(winner)}]` : '';
+      const raceLines = [`${prefix}${indent}race${raceTag}${suffix}`];
+      for (let i = 0; i < node.children.length; i++) {
+        raceLines.push(...renderNode(node.children[i]!, state, [...path, i], indentLevel + 1));
+      }
+      raceLines.push(`${prefix}${indent}end${suffix}`);
+      return raceLines;
+    }
+    case 'foreach_spawn': {
+      const prog = state.nodeProgress[node.id];
+      const iter = prog ? `  [${prog.iteration}/${prog.maxIterations}]` : '';
+      return renderLoopNode(
+        `foreach-spawn ${node.variableName} in "${node.listExpression}"${iter}`,
+        node.body,
+        state,
+        path,
+        indentLevel,
+        prefix,
+        suffix,
+        node.id,
+      );
+    }
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -639,6 +663,13 @@ function compactNode(
       }
       return rvLines;
     }
+    case 'race': {
+      const winner = state.variables['race_winner'];
+      const raceTag = winner !== undefined && winner !== '' ? `[winner:${winner}]` : '';
+      return [`${mark}${pad}race ${raceTag}`];
+    }
+    case 'foreach_spawn':
+      return [`${mark}${pad}foreach-spawn ${node.variableName}`];
   }
 }
 
@@ -668,8 +699,12 @@ function countAllNodes(nodes: readonly FlowNode[]): number {
       case 'until':
       case 'retry':
       case 'foreach':
+      case 'foreach_spawn':
       case 'spawn':
         count += countAllNodes(node.body);
+        break;
+      case 'race':
+        for (const child of node.children) count += 1 + countAllNodes(child.body);
         break;
       case 'if':
         count += countAllNodes(node.thenBranch) + countAllNodes(node.elseBranch);
@@ -705,8 +740,15 @@ function flattenNodes(nodes: readonly FlowNode[]): FlowNode[] {
       case 'until':
       case 'retry':
       case 'foreach':
+      case 'foreach_spawn':
       case 'spawn':
         result.push(...flattenNodes(node.body));
+        break;
+      case 'race':
+        for (const child of node.children) {
+          result.push(child);
+          result.push(...flattenNodes(child.body));
+        }
         break;
       case 'if':
         result.push(...flattenNodes(node.thenBranch), ...flattenNodes(node.elseBranch));
@@ -746,9 +788,14 @@ function resolveNodeByPath(nodes: readonly FlowNode[], path: readonly number[]):
     case 'until':
     case 'retry':
     case 'foreach':
+    case 'foreach_spawn':
     case 'review':
     case 'spawn':
       return resolveNodeByPath(node.body, rest);
+    case 'race': {
+      const raceBodies = node.children.flatMap((c) => [c, ...c.body]);
+      return resolveNodeByPath(raceBodies, rest);
+    }
     case 'if':
       return resolveNodeByPath([...node.thenBranch, ...node.elseBranch], rest);
     case 'try':
@@ -798,6 +845,10 @@ function describeNode(node: FlowNode): string {
       return `approve "${node.message}"`;
     case 'review':
       return `review max ${node.maxRounds}`;
+    case 'race':
+      return 'race';
+    case 'foreach_spawn':
+      return `foreach-spawn ${node.variableName}`;
   }
 }
 

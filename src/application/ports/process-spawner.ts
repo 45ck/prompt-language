@@ -12,6 +12,8 @@ export interface SpawnInput {
   readonly variables: Readonly<Record<string, string | number | boolean>>;
   readonly stateDir: string;
   readonly cwd?: string | undefined;
+  /** beads: prompt-language-2j9v — model to pass as --model to child claude process. */
+  readonly model?: string | undefined;
 }
 
 export interface SpawnResult {

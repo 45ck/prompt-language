@@ -30,9 +30,12 @@ function resolveNode(nodes: readonly FlowNode[], path: readonly number[]): FlowN
     case 'until':
     case 'retry':
     case 'foreach':
+    case 'foreach_spawn':
     case 'spawn':
     case 'review':
       return resolveNode(node.body, rest);
+    case 'race':
+      return resolveNode(node.children.flatMap((c) => [c, ...c.body]), rest);
     case 'if':
       return resolveNode([...node.thenBranch, ...node.elseBranch], rest);
     case 'try':
@@ -56,9 +59,13 @@ function collectAncestors(nodes: readonly FlowNode[], path: readonly number[]): 
       case 'until':
       case 'retry':
       case 'foreach':
+      case 'foreach_spawn':
       case 'spawn':
       case 'review':
         currentNodes = node.body;
+        break;
+      case 'race':
+        currentNodes = node.children.flatMap((c) => [c, ...c.body]);
         break;
       case 'if':
         currentNodes = [...node.thenBranch, ...node.elseBranch];
@@ -109,6 +116,10 @@ function summarizeNode(node: FlowNode): string {
       return `approve: ${truncate(node.message, 30)}`;
     case 'review':
       return `review (max ${node.maxRounds} rounds)`;
+    case 'race':
+      return 'race';
+    case 'foreach_spawn':
+      return `foreach-spawn ${node.variableName}`;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -124,7 +135,8 @@ function loopProgress(ancestors: FlowNode[], state: SessionState): string {
       anc.kind === 'retry' ||
       anc.kind === 'while' ||
       anc.kind === 'until' ||
-      anc.kind === 'foreach'
+      anc.kind === 'foreach' ||
+      anc.kind === 'foreach_spawn'
     ) {
       const progress = state.nodeProgress[anc.id];
       if (progress) {

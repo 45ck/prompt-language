@@ -23,8 +23,11 @@ import {
   createContinueNode,
   createSpawnNode,
   createAwaitNode,
+  createRaceNode,
+  createForeachSpawnNode,
   DEFAULT_MAX_ITERATIONS,
 } from '../domain/flow-node.js';
+import type { SpawnNode } from '../domain/flow-node.js';
 import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
 import { ASK_CONDITION_PREFIX } from '../domain/judge-prompt.js';
 
@@ -646,10 +649,42 @@ function stripVarsSuffix(line: string): string {
   return line.replace(/\s+with\s+vars\s+.+$/i, '');
 }
 
+/** Extract optional `if <condition>` suffix from spawn line. */
+function extractSpawnCondition(line: string): string | undefined {
+  const condMatch = /\bif\s+(\S.*)$/i.exec(line);
+  const trimmed = condMatch?.[1]?.trim();
+  return trimmed !== '' ? trimmed : undefined;
+}
+
+/** Strip `if <condition>` suffix from spawn line. */
+function stripConditionSuffix(line: string): string {
+  return line.replace(/\s+if\s+\S.*$/i, '');
+}
+
+/** Extract optional `model "name"` from spawn line (after spawn name). */
+function extractSpawnModel(line: string): string | undefined {
+  const modelMatch = /\bmodel\s+(?:"([^"]+)"|'([^']+)')/i.exec(line);
+  return modelMatch?.[1] ?? modelMatch?.[2] ?? undefined;
+}
+
+/** Strip `model "name"` from spawn line. */
+function stripModelSuffix(line: string): string {
+  return line.replace(/\s+model\s+(?:"[^"]*"|'[^']*')/i, '');
+}
+
 function parseSpawnBlock(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
-  // H-SEC-005: Extract optional vars allowlist before parsing name/cwd
+  // Parse in order: vars (suffix), condition (suffix), model (middle), cwd (middle), name
+  // H-SEC-005: Extract optional vars allowlist before other parsing
   const vars = extractSpawnVars(line);
-  const cleanLine = stripVarsSuffix(line);
+  let cleanLine = stripVarsSuffix(line);
+
+  // beads: prompt-language-lmep — extract optional `if <condition>` suffix
+  const condition = extractSpawnCondition(cleanLine);
+  cleanLine = stripConditionSuffix(cleanLine);
+
+  // beads: prompt-language-2j9v — extract optional `model "name"`
+  const model = extractSpawnModel(cleanLine);
+  cleanLine = stripModelSuffix(cleanLine);
 
   // H-INT-005: Parse optional `in "path"` for cross-directory spawn
   const cwdMatch =
@@ -658,7 +693,7 @@ function parseSpawnBlock(ctx: ParseContext, line: string, baseIndent: number): F
   if (cwdMatch?.[1] && cwdMatch[2]) {
     const body = parseBlock(ctx, baseIndent);
     consumeEnd(ctx);
-    return createSpawnNode(nextId(ctx), cwdMatch[1], body, cwdMatch[2], vars);
+    return createSpawnNode(nextId(ctx), cwdMatch[1], body, cwdMatch[2], vars, model, condition);
   }
 
   const match = /^spawn\s+"([^"]+)"/i.exec(cleanLine) ?? /^spawn\s+'([^']+)'/i.exec(cleanLine);
@@ -670,7 +705,47 @@ function parseSpawnBlock(ctx: ParseContext, line: string, baseIndent: number): F
   }
   const body = parseBlock(ctx, baseIndent);
   consumeEnd(ctx);
-  return createSpawnNode(nextId(ctx), name, body, undefined, vars);
+  return createSpawnNode(nextId(ctx), name, body, undefined, vars, model, condition);
+}
+
+function parseRaceBlock(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
+  const timeout = parseTimeout(line);
+  const rawNodes = parseBlock(ctx, baseIndent);
+  consumeEnd(ctx);
+  const children: SpawnNode[] = [];
+  for (const node of rawNodes) {
+    if (node.kind === 'spawn') {
+      children.push(node);
+    } else {
+      warn(ctx, `Only spawn nodes are allowed inside a race block; ignoring "${node.kind}" node`);
+    }
+  }
+  return createRaceNode(nextId(ctx), children, timeout);
+}
+
+function parseForeachSpawnLine(
+  ctx: ParseContext,
+  line: string,
+  baseIndent: number,
+  label?: string,
+): FlowNode {
+  const match = /^foreach-spawn\s+(\w+)\s+in\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
+  if (!match?.[1] || !match[2]) {
+    warn(ctx, `Invalid foreach-spawn syntax: "${line}". Try: foreach-spawn item in \${list}`);
+    return createPromptNode(nextId(ctx), line);
+  }
+  const variableName = match[1];
+  const rawExpr = match[2].trim();
+  const max = match[3] ? parseInt(match[3], 10) : undefined;
+  const body = parseBlock(ctx, baseIndent);
+  consumeEnd(ctx);
+  const runMatch = /^run\s+(.+)$/i.exec(rawExpr);
+  if (runMatch?.[1]) {
+    const command = stripQuotes(runMatch[1].trim());
+    return createForeachSpawnNode(nextId(ctx), variableName, '', body, max, label, command);
+  }
+  const listExpression = stripQuotes(rawExpr);
+  return createForeachSpawnNode(nextId(ctx), variableName, listExpression, body, max, label);
 }
 
 function parseAwaitLine(ctx: ParseContext, line: string): FlowNode {
@@ -808,9 +883,15 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   if (lower.startsWith('await ') || lower === 'await') {
     return parseAwaitLine(ctx, trimmed);
   }
+  if (lower === 'race' || lower.startsWith('race ')) {
+    return parseRaceBlock(ctx, trimmed, indent);
+  }
+  if (lower.startsWith('foreach-spawn ')) {
+    return parseForeachSpawnLine(ctx, trimmed, indent);
+  }
   warn(
     ctx,
-    `Unknown keyword "${trimmed}" — treating as prompt. Valid keywords: prompt, run, let, while, until, retry, if, try, foreach, break, continue, spawn, await`,
+    `Unknown keyword "${trimmed}" — treating as prompt. Valid keywords: prompt, run, let, while, until, retry, if, try, foreach, foreach-spawn, break, continue, spawn, await, race`,
   );
   return createPromptNode(nextId(ctx), trimmed);
 }

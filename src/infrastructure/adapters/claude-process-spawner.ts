@@ -34,12 +34,21 @@ export class ClaudeProcessSpawner implements ProcessSpawner {
       );
     }
 
+    if (input.model?.trim() === '') {
+      throw new Error(
+        `Invalid model name for spawn "${input.name}" — model must be a non-empty string`,
+      );
+    }
+
     const prompt = this.buildChildPrompt(input);
 
     // H-INT-005: Use spawn-level cwd if specified, otherwise fall back to instance cwd
     const childCwd = input.cwd ?? this.cwd;
 
-    const child = spawn('claude', ['-p', '--dangerously-skip-permissions', prompt], {
+    // beads: prompt-language-2j9v — pass --model when specified
+    const modelArgs: string[] = input.model !== undefined ? ['--model', input.model] : [];
+
+    const child = spawn('claude', ['-p', '--dangerously-skip-permissions', ...modelArgs, prompt], {
       cwd: childCwd,
       stdio: 'ignore',
       detached: true,

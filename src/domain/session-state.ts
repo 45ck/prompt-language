@@ -52,6 +52,8 @@ export interface SessionState {
   readonly status: FlowStatus;
   readonly warnings: readonly string[];
   readonly spawnedChildren: Readonly<Record<string, SpawnedChild>>;
+  /** Maps race node id → names of spawn children belonging to that race. */
+  readonly raceChildren: Readonly<Record<string, readonly string[]>>;
   readonly failureReason?: string | undefined;
   // H-SEC-004: Per-session nonce for capture tag anti-spoofing
   readonly captureNonce: string;
@@ -88,6 +90,7 @@ export function createSessionState(
     status: 'active',
     warnings: [...flowSpec.warnings],
     spawnedChildren: {},
+    raceChildren: {},
     captureNonce: captureNonce ?? generateCaptureNonce(),
   };
 }
@@ -148,6 +151,17 @@ export function updateSpawnedChild(
   return {
     ...state,
     spawnedChildren: { ...state.spawnedChildren, [name]: child },
+  };
+}
+
+export function updateRaceChildren(
+  state: SessionState,
+  raceNodeId: string,
+  childNames: readonly string[],
+): SessionState {
+  return {
+    ...state,
+    raceChildren: { ...state.raceChildren, [raceNodeId]: childNames },
   };
 }
 

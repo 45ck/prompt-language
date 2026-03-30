@@ -20,7 +20,9 @@ export type FlowNodeKind =
   | 'spawn'
   | 'await'
   | 'approve'
-  | 'review';
+  | 'review'
+  | 'race'
+  | 'foreach_spawn';
 
 interface BaseNode {
   readonly kind: FlowNodeKind;
@@ -132,6 +134,10 @@ export interface SpawnNode extends BaseNode {
   readonly cwd?: string | undefined;
   /** H-SEC-005: Optional allowlist of variable names to pass to child. */
   readonly vars?: readonly string[] | undefined;
+  /** beads: prompt-language-2j9v — model to use for the child claude process. */
+  readonly model?: string | undefined;
+  /** beads: prompt-language-lmep — condition guard; spawn is skipped when false. */
+  readonly condition?: string | undefined;
 }
 
 export type AwaitTarget = string | 'all';
@@ -165,6 +171,30 @@ export interface ReviewNode extends BaseNode {
   readonly body: readonly FlowNode[];
 }
 
+/**
+ * RaceNode — launches multiple spawn children in parallel; the first to succeed wins.
+ * The winner's variables are imported with a name prefix and race_winner is set.
+ */
+export interface RaceNode extends BaseNode {
+  readonly kind: 'race';
+  readonly children: readonly SpawnNode[];
+  readonly timeoutSeconds?: number | undefined;
+}
+
+/**
+ * ForeachSpawnNode — for each item in a list, launches a separate spawn child in parallel.
+ * Use `await all` after this node to synchronize.
+ */
+export interface ForeachSpawnNode extends BaseNode {
+  readonly kind: 'foreach_spawn';
+  readonly variableName: string;
+  readonly listExpression: string;
+  readonly listCommand?: string | undefined;
+  readonly maxItems: number;
+  readonly body: readonly FlowNode[];
+  readonly label?: string | undefined;
+}
+
 export type FlowNode =
   | WhileNode
   | UntilNode
@@ -180,7 +210,9 @@ export type FlowNode =
   | SpawnNode
   | AwaitNode
   | ApproveNode
-  | ReviewNode;
+  | ReviewNode
+  | RaceNode
+  | ForeachSpawnNode;
 
 export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;
@@ -329,6 +361,8 @@ export function createSpawnNode(
   body: readonly FlowNode[],
   cwd?: string,
   vars?: readonly string[],
+  model?: string,
+  condition?: string,
 ): SpawnNode {
   return {
     kind: 'spawn',
@@ -337,6 +371,8 @@ export function createSpawnNode(
     body,
     ...(cwd != null ? { cwd } : {}),
     ...(vars != null ? { vars } : {}),
+    ...(model != null ? { model } : {}),
+    ...(condition != null ? { condition } : {}),
   };
 }
 
@@ -371,6 +407,40 @@ export function createReviewNode(
   };
 }
 
+export function createRaceNode(
+  id: string,
+  children: readonly SpawnNode[],
+  timeoutSeconds?: number,
+): RaceNode {
+  return {
+    kind: 'race',
+    id,
+    children,
+    ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
+  };
+}
+
+export function createForeachSpawnNode(
+  id: string,
+  variableName: string,
+  listExpression: string,
+  body: readonly FlowNode[],
+  maxItems?: number,
+  label?: string,
+  listCommand?: string,
+): ForeachSpawnNode {
+  return {
+    kind: 'foreach_spawn',
+    id,
+    variableName,
+    listExpression,
+    maxItems: maxItems ?? DEFAULT_MAX_FOREACH,
+    body,
+    ...(label != null ? { label } : {}),
+    ...(listCommand != null ? { listCommand } : {}),
+  };
+}
+
 /** Recursively search a flow tree for a node by its id. Early-exit on match. */
 export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode | null {
   for (const node of nodes) {
@@ -385,8 +455,14 @@ export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode |
         if (found) return found;
         break;
       }
-      case 'review': {
+      case 'review':
+      case 'foreach_spawn': {
         const found = findNodeById(node.body, id);
+        if (found) return found;
+        break;
+      }
+      case 'race': {
+        const found = findNodeById([...node.children], id);
         if (found) return found;
         break;
       }

@@ -9,6 +9,7 @@ import {
   updateVariable,
   updateNodeProgress,
   updateSpawnedChild,
+  updateRaceChildren,
   addWarning,
   markCompleted,
   allGatesPassing,
@@ -28,6 +29,8 @@ import type {
   ForeachNode,
   ApproveNode,
   ReviewNode,
+  RaceNode,
+  ForeachSpawnNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -71,9 +74,14 @@ export function resolveCurrentNode(
     case 'until':
     case 'retry':
     case 'foreach':
+    case 'foreach_spawn':
     case 'spawn':
     case 'review':
       return resolveCurrentNode(node.body, rest);
+    case 'race': {
+      const raceBodies = node.children.flatMap((c) => [c as FlowNode, ...c.body]);
+      return resolveCurrentNode(raceBodies, rest);
+    }
     case 'if':
       return resolveCurrentNode([...node.thenBranch, ...node.elseBranch], rest);
     case 'try':
@@ -337,6 +345,7 @@ async function handleBodyExhaustion(
       return handleReviewBodyExhaustion(state, parentPath, parentNode, commandRunner);
     }
 
+    case 'foreach_spawn':
     case 'if':
     case 'try':
     case 'spawn':
@@ -773,7 +782,18 @@ async function advanceSpawnNode(
   node: SpawnNode,
   current: SessionState,
   processSpawner?: ProcessSpawner,
+  commandRunner?: CommandRunner,
 ): Promise<{ state: SessionState; advanced: true }> {
+  // beads: prompt-language-lmep — evaluate optional condition guard before launching
+  if (node.condition != null) {
+    const condResult = await evaluateFlowCondition(node.condition, current.variables, commandRunner);
+    if (condResult === false) {
+      // Condition is false: skip spawn entirely without launching
+      return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+    }
+    // condResult === null means unresolvable — proceed with spawn (fail-open)
+  }
+
   if (!processSpawner) {
     // No spawner available — skip spawn and advance past it
     return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
@@ -795,6 +815,7 @@ async function advanceSpawnNode(
     variables: parentVars,
     stateDir,
     ...(node.cwd != null ? { cwd: node.cwd } : {}),
+    ...(node.model != null ? { model: node.model } : {}),
   });
 
   // D7: Detect failed spawn (pid=0 or undefined) and mark child as failed
@@ -946,6 +967,18 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
         `${pad}end`,
       ];
     }
+    case 'race':
+      return [
+        `${pad}race`,
+        ...node.children.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        `${pad}end`,
+      ];
+    case 'foreach_spawn':
+      return [
+        `${pad}foreach-spawn ${node.variableName} in "${node.listExpression}"`,
+        ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
+        `${pad}end`,
+      ];
     default:
       return [`${pad}prompt: [unsupported node]`];
   }
@@ -1125,6 +1158,178 @@ export async function autoAdvanceNodes(
   return { kind: 'advance', state: current, capturedPrompt: null };
 }
 
+/** Advance a race node: launch all spawn children in parallel and poll for a winner. */
+async function advanceRaceNode(
+  node: RaceNode,
+  current: SessionState,
+  processSpawner?: ProcessSpawner,
+): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
+  if (!processSpawner) {
+    let state = updateVariable(current, 'race_winner', '');
+    state = advanceNode(state, advancePath(state.currentNodePath));
+    return { state, advanced: true };
+  }
+
+  const existingChildNames = current.raceChildren[node.id];
+
+  if (!existingChildNames) {
+    let state = current;
+    const childNames: string[] = [];
+    for (const spawnChild of node.children) {
+      const stateDir = `.prompt-language-${spawnChild.name}`;
+      const flowText = renderSpawnBody(spawnChild);
+      const goal = `Race sub-task: ${spawnChild.name}`;
+      const parentVars: Record<string, string | number | boolean> = filterSpawnVariables(
+        state.variables,
+        spawnChild.vars,
+      );
+      const { pid } = await processSpawner.spawn({
+        name: spawnChild.name,
+        goal,
+        flowText,
+        variables: parentVars,
+        stateDir,
+        ...(spawnChild.cwd != null ? { cwd: spawnChild.cwd } : {}),
+      });
+      if (!pid) {
+        state = updateSpawnedChild(state, spawnChild.name, {
+          name: spawnChild.name,
+          status: 'failed',
+          pid: 0,
+          stateDir,
+        });
+        state = addWarning(state, `Race child "${spawnChild.name}" failed to start.`);
+      } else {
+        state = updateSpawnedChild(state, spawnChild.name, {
+          name: spawnChild.name,
+          status: 'running',
+          pid,
+          stateDir,
+        });
+        childNames.push(spawnChild.name);
+      }
+    }
+    state = updateRaceChildren(state, node.id, childNames);
+    state = updateNodeProgress(state, node.id, {
+      iteration: 1,
+      maxIterations: MAX_AWAIT_POLLS,
+      status: 'running',
+      startedAt: Date.now(),
+    });
+    await new Promise((resolve) => setTimeout(resolve, computePollInterval(1)));
+    return { kind: 'pause', state, capturedPrompt: null };
+  }
+
+  // Check wall-clock timeout
+  if (node.timeoutSeconds != null) {
+    const progress = current.nodeProgress[node.id];
+    const startedAt = progress?.startedAt;
+    if (startedAt != null) {
+      const elapsed = (Date.now() - startedAt) / 1000;
+      if (elapsed >= node.timeoutSeconds) {
+        let state = updateVariable(current, 'race_winner', '');
+        state = addWarning(state, `Race node timed out after ${node.timeoutSeconds}s.`);
+        state = advanceNode(state, advancePath(state.currentNodePath));
+        return { state, advanced: true };
+      }
+    }
+  }
+
+  // Poll children for winner
+  let state = current;
+  let winner: string | null = null;
+  for (const childName of existingChildNames) {
+    const child = state.spawnedChildren[childName];
+    if (!child) continue;
+    if (child.status !== 'running') {
+      if (child.status === 'completed' && winner === null) winner = childName;
+      continue;
+    }
+    const status = await processSpawner.poll(child.stateDir);
+    const updatedChild = { name: child.name, pid: child.pid, stateDir: child.stateDir, status: status.status, variables: status.variables ?? undefined } as const;
+    state = updateSpawnedChild(state, childName, updatedChild);
+    if (status.status === 'completed' && winner === null) {
+      winner = childName;
+      if (status.variables) {
+        for (const [k, v] of Object.entries(status.variables)) {
+          state = updateVariable(state, `${childName}.${k}`, v);
+        }
+      }
+    }
+  }
+
+  if (winner !== null) {
+    state = updateVariable(state, 'race_winner', winner);
+    state = advanceNode(state, advancePath(state.currentNodePath));
+    return { state, advanced: true };
+  }
+
+  const allSettled = existingChildNames.every((name) => {
+    const child = state.spawnedChildren[name];
+    return child?.status === 'completed' || child?.status === 'failed';
+  });
+  if (allSettled) {
+    state = updateVariable(state, 'race_winner', '');
+    state = advanceNode(state, advancePath(state.currentNodePath));
+    return { state, advanced: true };
+  }
+
+  const progress = state.nodeProgress[node.id];
+  const pollCount = (progress?.iteration ?? 0) + 1;
+  if (pollCount >= MAX_AWAIT_POLLS) {
+    state = updateVariable(state, 'race_winner', '');
+    state = addWarning(state, `Race timeout after ${MAX_AWAIT_POLLS} polls; no winner declared.`);
+    state = advanceNode(state, advancePath(state.currentNodePath));
+    return { state, advanced: true };
+  }
+  state = updateNodeProgress(state, node.id, {
+    iteration: pollCount,
+    maxIterations: MAX_AWAIT_POLLS,
+    status: 'running',
+    startedAt: progress?.startedAt ?? Date.now(),
+  });
+  await new Promise((resolve) => setTimeout(resolve, computePollInterval(pollCount)));
+  return { kind: 'pause', state, capturedPrompt: null };
+}
+
+/** Advance a foreach-spawn node: resolve the list and launch one spawn child per item. */
+async function advanceForeachSpawnNode(
+  node: ForeachSpawnNode,
+  current: SessionState,
+  processSpawner?: ProcessSpawner,
+): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
+  if (!processSpawner) {
+    return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+  }
+  const rawList = node.listCommand
+    ? String(current.variables[`_foreach_${node.id}_list`] ?? '')
+    : interpolate(node.listExpression, current.variables);
+  const items = splitIterable(rawList).slice(0, node.maxItems);
+  let state = current;
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]!;
+    const childName = `${node.variableName}_${i}`;
+    const stateDir = `.prompt-language-${childName}`;
+    const parentVars: Record<string, string | number | boolean> = filterSpawnVariables(state.variables);
+    parentVars[node.variableName] = item;
+    const bodyLines: string[] = [];
+    for (const bodyNode of node.body) {
+      bodyLines.push(...renderNodeToDsl(bodyNode, 1));
+    }
+    const flowText = bodyLines.join('\n');
+    const goal = `${node.variableName} item ${i}: ${item}`;
+    const { pid } = await processSpawner.spawn({ name: childName, goal, flowText, variables: parentVars, stateDir });
+    if (!pid) {
+      state = updateSpawnedChild(state, childName, { name: childName, status: 'failed', pid: 0, stateDir });
+      state = addWarning(state, `foreach-spawn child "${childName}" failed to start.`);
+    } else {
+      state = updateSpawnedChild(state, childName, { name: childName, status: 'running', pid, stateDir });
+    }
+  }
+  state = advanceNode(state, advancePath(state.currentNodePath));
+  return { state, advanced: true };
+}
+
 /** Advance a single node by kind. Returns either an early-exit result or updated state. */
 async function advanceSingleNode(
   node: FlowNode,
@@ -1177,7 +1382,7 @@ async function advanceSingleNode(
     case 'continue':
       return advanceContinueNode(node, current);
     case 'spawn':
-      return advanceSpawnNode(node, current, processSpawner);
+      return advanceSpawnNode(node, current, processSpawner, commandRunner);
     case 'await':
       return advanceAwaitNode(node, current, processSpawner);
     case 'approve':
@@ -1198,6 +1403,10 @@ async function advanceSingleNode(
         advanced: true,
       };
     }
+    case 'race':
+      return advanceRaceNode(node, current, processSpawner);
+    case 'foreach_spawn':
+      return advanceForeachSpawnNode(node, current, processSpawner);
   }
 }
 

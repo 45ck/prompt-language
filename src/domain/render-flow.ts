@@ -235,9 +235,7 @@ function renderNode(
             ? ' [waiting]'
             : '';
       const fromTag = node.from !== undefined ? ` from "${node.from}"` : '';
-      return [
-        `${prefix}${indent}receive ${node.variableName}${fromTag}${statusTag}${suffix}`,
-      ];
+      return [`${prefix}${indent}receive ${node.variableName}${fromTag}${statusTag}${suffix}`];
     }
     default: {
       const _exhaustive: never = node;

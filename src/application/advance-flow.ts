@@ -791,7 +791,11 @@ async function advanceSpawnNode(
 ): Promise<{ state: SessionState; advanced: true }> {
   // beads: prompt-language-lmep — evaluate optional condition guard before launching
   if (node.condition != null) {
-    const condResult = await evaluateFlowCondition(node.condition, current.variables, commandRunner);
+    const condResult = await evaluateFlowCondition(
+      node.condition,
+      current.variables,
+      commandRunner,
+    );
     if (condResult === false) {
       // Condition is false: skip spawn entirely without launching
       return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
@@ -1267,7 +1271,13 @@ async function advanceRaceNode(
       continue;
     }
     const status = await processSpawner.poll(child.stateDir);
-    const updatedChild = { name: child.name, pid: child.pid, stateDir: child.stateDir, status: status.status, variables: status.variables ?? undefined } as const;
+    const updatedChild = {
+      name: child.name,
+      pid: child.pid,
+      stateDir: child.stateDir,
+      status: status.status,
+      variables: status.variables ?? undefined,
+    } as const;
     state = updateSpawnedChild(state, childName, updatedChild);
     if (status.status === 'completed' && winner === null) {
       winner = childName;
@@ -1331,7 +1341,9 @@ async function advanceForeachSpawnNode(
     const item = items[i]!;
     const childName = `${node.variableName}_${i}`;
     const stateDir = `.prompt-language-${childName}`;
-    const parentVars: Record<string, string | number | boolean> = filterSpawnVariables(state.variables);
+    const parentVars: Record<string, string | number | boolean> = filterSpawnVariables(
+      state.variables,
+    );
     parentVars[node.variableName] = item;
     const bodyLines: string[] = [];
     for (const bodyNode of node.body) {
@@ -1339,12 +1351,28 @@ async function advanceForeachSpawnNode(
     }
     const flowText = bodyLines.join('\n');
     const goal = `${node.variableName} item ${i}: ${item}`;
-    const { pid } = await processSpawner.spawn({ name: childName, goal, flowText, variables: parentVars, stateDir });
+    const { pid } = await processSpawner.spawn({
+      name: childName,
+      goal,
+      flowText,
+      variables: parentVars,
+      stateDir,
+    });
     if (!pid) {
-      state = updateSpawnedChild(state, childName, { name: childName, status: 'failed', pid: 0, stateDir });
+      state = updateSpawnedChild(state, childName, {
+        name: childName,
+        status: 'failed',
+        pid: 0,
+        stateDir,
+      });
       state = addWarning(state, `foreach-spawn child "${childName}" failed to start.`);
     } else {
-      state = updateSpawnedChild(state, childName, { name: childName, status: 'running', pid, stateDir });
+      state = updateSpawnedChild(state, childName, {
+        name: childName,
+        status: 'running',
+        pid,
+        stateDir,
+      });
     }
   }
   state = advanceNode(state, advancePath(state.currentNodePath));

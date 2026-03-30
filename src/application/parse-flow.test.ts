@@ -1684,13 +1684,16 @@ flow:
 export prompt greet():
   Hello from library.
 `;
-    const spec = parseFlow(`Goal: test\n\nimport "lib.flow" as testing\n\nflow:\n  use testing.greet()\n`, {
-      basePath: '/fake',
-      fileReader: (p: string) => {
-        if (p.endsWith('lib.flow')) return libContent;
-        throw new Error(`unexpected: ${p}`);
+    const spec = parseFlow(
+      `Goal: test\n\nimport "lib.flow" as testing\n\nflow:\n  use testing.greet()\n`,
+      {
+        basePath: '/fake',
+        fileReader: (p: string) => {
+          if (p.endsWith('lib.flow')) return libContent;
+          throw new Error(`unexpected: ${p}`);
+        },
       },
-    });
+    );
     expect(spec.imports).toBeDefined();
     expect(spec.imports!.some((p) => p.endsWith('lib.flow'))).toBe(true);
   });
@@ -1784,7 +1787,9 @@ describe('parseFlow — missing import file warning', () => {
   it('emits warning when import file cannot be read', () => {
     const spec = parseFlow(`Goal: test\n\nimport "missing.flow"\n\nflow:\n  prompt: hi\n`, {
       basePath: '/fake',
-      fileReader: () => { throw new Error('ENOENT'); },
+      fileReader: () => {
+        throw new Error('ENOENT');
+      },
     });
     expect(spec.warnings.some((w) => w.includes('missing.flow'))).toBe(true);
   });

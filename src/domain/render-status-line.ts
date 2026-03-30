@@ -35,7 +35,10 @@ function resolveNode(nodes: readonly FlowNode[], path: readonly number[]): FlowN
     case 'review':
       return resolveNode(node.body, rest);
     case 'race':
-      return resolveNode(node.children.flatMap((c) => [c, ...c.body]), rest);
+      return resolveNode(
+        node.children.flatMap((c) => [c, ...c.body]),
+        rest,
+      );
     case 'if':
       return resolveNode([...node.thenBranch, ...node.elseBranch], rest);
     case 'try':

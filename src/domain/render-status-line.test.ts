@@ -2,14 +2,22 @@ import { describe, expect, it } from 'vitest';
 
 import { createCompletionGate, createFlowSpec } from './flow-spec.js';
 import {
+  createApproveNode,
   createAwaitNode,
   createBreakNode,
+  createContinueNode,
   createForeachNode,
+  createForeachSpawnNode,
   createIfNode,
   createLetNode,
   createPromptNode,
+  createRaceNode,
+  createReceiveNode,
+  createRememberNode,
   createRetryNode,
+  createReviewNode,
   createRunNode,
+  createSendNode,
   createSpawnNode,
   createTryNode,
   createUntilNode,
@@ -361,5 +369,93 @@ describe('renderStatusLine', () => {
       ),
     );
     expect(line).toContain('prompt: Fix error');
+  });
+});
+
+// ── New node kinds in summarizeNode ──────────────────────────────────────────
+describe('renderStatusLine — new node kinds', () => {
+  it('shows approve node message', () => {
+    const line = renderStatusLine(state('Goal', [createApproveNode('a1', 'Please approve')]));
+    expect(line).toContain('approve');
+  });
+
+  it('shows review node round count', () => {
+    const line = renderStatusLine(
+      state('Goal', [createReviewNode('r1', [createPromptNode('p1', 'work')], 3)]),
+    );
+    expect(line).toContain('review');
+  });
+
+  it('shows race node label', () => {
+    const child = createSpawnNode('s1', 'approach-a', [createPromptNode('p1', 'fix')]);
+    const line = renderStatusLine(state('Goal', [createRaceNode('rc1', [child])]));
+    expect(line).toContain('race');
+  });
+
+  it('shows foreach-spawn variable name', () => {
+    const line = renderStatusLine(
+      state('Goal', [
+        createForeachSpawnNode('fs1', 'item', '${list}', [createPromptNode('p1', 'work')]),
+      ]),
+    );
+    expect(line).toContain('foreach-spawn');
+  });
+
+  it('shows remember key when present', () => {
+    const line = renderStatusLine(
+      state('Goal', [createRememberNode('rm1', undefined, 'my-key', 'value')]),
+    );
+    expect(line).toContain('remember');
+  });
+
+  it('shows remember without key for text form', () => {
+    const line = renderStatusLine(state('Goal', [createRememberNode('rm2', 'some fact')]));
+    expect(line).toContain('remember');
+  });
+
+  it('shows send target', () => {
+    const line = renderStatusLine(state('Goal', [createSendNode('sn1', 'worker', 'hello')]));
+    expect(line).toContain('send');
+  });
+
+  it('shows receive variable name', () => {
+    const line = renderStatusLine(state('Goal', [createReceiveNode('rc1', 'result')]));
+    expect(line).toContain('receive');
+  });
+
+  it('navigates into review body', () => {
+    const inner = createPromptNode('p1', 'Review this');
+    const reviewNode = createReviewNode('rv1', [inner], 3);
+    const line = renderStatusLine(state('Goal', [reviewNode], [], { currentNodePath: [0, 0] }));
+    expect(line).toContain('Review this');
+  });
+
+  it('navigates into foreach-spawn body', () => {
+    const inner = createRunNode('r1', 'npm test');
+    const fsNode = createForeachSpawnNode('fs1', 'f', '${list}', [inner]);
+    const line = renderStatusLine(state('Goal', [fsNode], [], { currentNodePath: [0, 0] }));
+    expect(line).toContain('npm test');
+  });
+
+  it('navigates into race child (covers collectAncestors race case)', () => {
+    // Path [0, 1] goes through race (at 0) then to flatMap index 1 (the prompt inside spawn body)
+    // collectAncestors pushes race as ancestor, exercises case 'race': branch (line 70-72)
+    const inner = createPromptNode('p1', 'racing prompt');
+    const spawnChild = createSpawnNode('s1', 'approach-a', [inner]);
+    const raceNode = createRaceNode('rc1', [spawnChild]);
+    // resolveCurrentNode for race: raceBodies = [spawnChild, inner]; path[1]=1 → inner
+    const line = renderStatusLine(state('Goal', [raceNode], [], { currentNodePath: [0, 1] }));
+    // The node at [0, 1] is the prompt inside the spawn child body (via race flatMap)
+    expect(line).toContain('racing prompt');
+  });
+});
+
+describe('renderStatusLine — continue node summary', () => {
+  it('summarizeNode shows continue for continue node at current path', () => {
+    // A continue node as current node exercises the 'continue' case (line 113)
+    const line = renderStatusLine(
+      state('Goal', [createContinueNode('cn1')], [], { currentNodePath: [0] }),
+    );
+    expect(line).toContain('continue');
   });
 });

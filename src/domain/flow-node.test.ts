@@ -11,6 +11,9 @@ import {
   createForeachNode,
   createSpawnNode,
   createAwaitNode,
+  createReviewNode,
+  createForeachSpawnNode,
+  createRaceNode,
   findNodeById,
 } from './flow-node.js';
 
@@ -341,5 +344,24 @@ describe('findNodeById', () => {
 
   it('returns empty array produces null', () => {
     expect(findNodeById([], 'any')).toBeNull();
+  });
+
+  it('finds node nested in review body', () => {
+    const inner = createPromptNode('p1', 'draft');
+    const reviewNode = createReviewNode('rv1', [inner], 3);
+    expect(findNodeById([reviewNode], 'p1')).toBe(inner);
+  });
+
+  it('finds node nested in foreach_spawn body', () => {
+    const inner = createRunNode('r1', 'work');
+    const fsNode = createForeachSpawnNode('fs1', 'item', 'a b', [inner]);
+    expect(findNodeById([fsNode], 'r1')).toBe(inner);
+  });
+
+  it('finds node nested in race children', () => {
+    const inner = createRunNode('r1', 'echo');
+    const spawnChild = createSpawnNode('sp1', 'worker', [inner]);
+    const raceNode = createRaceNode('rc1', [spawnChild]);
+    expect(findNodeById([raceNode], 'r1')).toBe(inner);
   });
 });

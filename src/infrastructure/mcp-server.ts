@@ -27,7 +27,7 @@ import {
 
 // ---- helpers ----------------------------------------------------------------
 
-function parseStateDirArg(): string | undefined {
+export function parseStateDirArg(): string | undefined {
   const idx = process.argv.indexOf('--state-dir');
   return idx >= 0 ? process.argv[idx + 1] : undefined;
 }
@@ -40,7 +40,7 @@ function buildStateDir(): string {
   );
 }
 
-function stateOrEmpty(state: SessionState | null): string {
+export function stateOrEmpty(state: SessionState | null): string {
   return state ? JSON.stringify(state, null, 2) : 'No active session';
 }
 
@@ -162,7 +162,7 @@ function buildSetVariableTool(server: McpServer, stateDir: string): void {
 
 // ---- formatting helpers -----------------------------------------------------
 
-interface GateDiagnosticSummary {
+export interface GateDiagnosticSummary {
   command: string;
   exitCode: number;
   stderr: string;
@@ -174,7 +174,7 @@ interface GateSummary {
   diagnostic?: GateDiagnosticSummary;
 }
 
-function buildGateDiagnostic(
+export function buildGateDiagnostic(
   command: string | undefined,
   exitCode: number | undefined,
   stderr: string | undefined,
@@ -186,7 +186,7 @@ function buildGateDiagnostic(
   };
 }
 
-function formatGates(state: SessionState): string {
+export function formatGates(state: SessionState): string {
   const gates = state.flowSpec.completionGates;
   if (gates.length === 0) return 'No completion gates defined';
 
@@ -207,7 +207,7 @@ function formatGates(state: SessionState): string {
   return JSON.stringify(summaries, null, 2);
 }
 
-interface FlowStatusSummary {
+export interface FlowStatusSummary {
   goal: string;
   status: string;
   currentNodePath: readonly number[];
@@ -218,7 +218,7 @@ interface FlowStatusSummary {
   gatesPassing: number;
 }
 
-function buildStatusSummary(state: SessionState): FlowStatusSummary {
+export function buildStatusSummary(state: SessionState): FlowStatusSummary {
   const gates = state.flowSpec.completionGates;
   const gatesPassing = gates.filter((g) => state.gateResults[g.predicate] === true).length;
   const iterationCount = Object.values(state.nodeProgress).reduce((sum, p) => sum + p.iteration, 0);

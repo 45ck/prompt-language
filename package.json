@@ -63,7 +63,7 @@
     "depgraph": "dependency-cruiser --config .dependency-cruiser.cjs --output-type mermaid src --output-to reports/dependency-graph.mmd",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "node -e \"require('fs').mkdirSync('coverage/.tmp',{recursive:true})\" && vitest run --coverage",
     "mutation": "stryker run",
     "mutation:domain": "stryker run --mutate 'src/domain/**/*.ts,!src/**/*.test.ts,!src/**/index.ts'",
     "eval": "npm run build && node scripts/eval/roundtrip-eval.mjs",

@@ -28,6 +28,8 @@ import {
   createRememberNode,
   createSendNode,
   createReceiveNode,
+  createApproveNode,
+  createReviewNode,
   DEFAULT_MAX_ITERATIONS,
 } from '../domain/flow-node.js';
 import type { SpawnNode } from '../domain/flow-node.js';
@@ -838,6 +840,70 @@ function parseReceiveLine(ctx: ParseContext, trimmed: string): FlowNode {
   return createPromptNode(nextId(ctx), trimmed);
 }
 
+function parseApproveLine(ctx: ParseContext, trimmed: string): FlowNode {
+  const match = /^approve\s+(?:"([^"]+)"|'([^']+)')(?:\s+timeout\s+(\d+))?$/i.exec(trimmed);
+  if (!match) {
+    warn(
+      ctx,
+      `Invalid approve syntax: "${trimmed}". Try: approve "message" or approve "message" timeout 60`,
+    );
+    return createPromptNode(nextId(ctx), trimmed);
+  }
+  const message = (match[1] ?? match[2])!;
+  const timeoutSeconds = match[3] != null ? parseInt(match[3], 10) : undefined;
+  return createApproveNode(nextId(ctx), message, timeoutSeconds);
+}
+
+interface ReviewSpec {
+  readonly maxRounds: number;
+  readonly criteria: string | undefined;
+  readonly groundedBy: string | undefined;
+}
+
+function parseReviewOpenLine(trimmed: string): ReviewSpec | null {
+  // Strip leading "review" keyword
+  const rest = trimmed.slice('review'.length).trim();
+  if (!rest) return null;
+
+  // Extract criteria: "..." or criteria: '...'
+  let criteria: string | undefined;
+  let working = rest;
+  const criteriaMatch = /\bcriteria:\s*(?:"([^"]+)"|'([^']+)')/i.exec(working);
+  if (criteriaMatch) {
+    criteria = criteriaMatch[1] ?? criteriaMatch[2];
+    working = working.replace(criteriaMatch[0], '').trim();
+  }
+
+  // Extract grounded-by "cmd" or grounded-by 'cmd'
+  let groundedBy: string | undefined;
+  const groundedMatch = /\bgrounded-by\s+(?:"([^"]+)"|'([^']+)')/i.exec(working);
+  if (groundedMatch) {
+    groundedBy = groundedMatch[1] ?? groundedMatch[2];
+    working = working.replace(groundedMatch[0], '').trim();
+  }
+
+  // Extract required max N
+  const maxMatch = /\bmax\s+(\d+)\b/i.exec(working);
+  if (!maxMatch?.[1]) return null;
+  const maxRounds = parseInt(maxMatch[1], 10);
+
+  return { maxRounds, criteria, groundedBy };
+}
+
+function parseReviewBlock(ctx: ParseContext, trimmed: string, baseIndent: number): FlowNode {
+  const spec = parseReviewOpenLine(trimmed);
+  if (!spec) {
+    warn(
+      ctx,
+      `Invalid review syntax: "${trimmed}". Try: review max 3 or review criteria: "..." max 3`,
+    );
+    return createPromptNode(nextId(ctx), trimmed);
+  }
+  const body = parseBlock(ctx, baseIndent);
+  consumeEnd(ctx);
+  return createReviewNode(nextId(ctx), body, spec.maxRounds, spec.criteria, spec.groundedBy);
+}
+
 function consumeEnd(ctx: ParseContext): void {
   if (ctx.pos < ctx.lines.length) {
     const peekLine = ctx.lines[ctx.pos];
@@ -970,9 +1036,15 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   if (lower.startsWith('receive ') || lower === 'receive') {
     return parseReceiveLine(ctx, trimmed);
   }
+  if (lower.startsWith('approve ')) {
+    return parseApproveLine(ctx, trimmed);
+  }
+  if (lower.startsWith('review ') || lower === 'review') {
+    return parseReviewBlock(ctx, trimmed, indent);
+  }
   warn(
     ctx,
-    `Unknown keyword "${trimmed}" — treating as prompt. Valid keywords: prompt, run, let, while, until, retry, if, try, foreach, foreach-spawn, break, continue, spawn, await, race, remember, send, receive`,
+    `Unknown keyword "${trimmed}" — treating as prompt. Valid keywords: prompt, run, let, while, until, retry, if, try, foreach, foreach-spawn, break, continue, spawn, await, race, remember, send, receive, approve, review`,
   );
   return createPromptNode(nextId(ctx), trimmed);
 }
@@ -1193,12 +1265,6 @@ function expandUse(line: string, ctx: ParseContext): FlowNode[] {
   const symbol = useMatch[2];
   const argsStr = useMatch[3] ?? '';
 
-  if (!ctx.registry) {
-    ctx.warnings.push(
-      `line ${ctx.pos}: No library registry available — cannot resolve "${namespace}.${symbol}"`,
-    );
-    return [];
-  }
   const libFile = ctx.registry.get(namespace);
   if (!libFile) {
     ctx.warnings.push(`line ${ctx.pos}: Unknown namespace "${namespace}" — did you import it?`);

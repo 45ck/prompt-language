@@ -1875,3 +1875,297 @@ describe('parseLetLine — prompt_json multi-line as json', () => {
     expect(spec.nodes[1]!.kind).toBe('prompt');
   });
 });
+
+import type { ApproveNode, ReviewNode } from '../domain/flow-node.js';
+
+describe('parseFlow — approve node', () => {
+  it('parses approve with double-quoted message', () => {
+    const spec = parse(
+      'Goal: g\n\nflow:\n  approve "Please review these changes before deploying"',
+    );
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as ApproveNode;
+    expect(node.kind).toBe('approve');
+    expect(node.message).toBe('Please review these changes before deploying');
+    expect(node.timeoutSeconds).toBeUndefined();
+  });
+
+  it('parses approve with single-quoted message', () => {
+    const spec = parse("Goal: g\n\nflow:\n  approve 'Deploy to production?'");
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as ApproveNode;
+    expect(node.kind).toBe('approve');
+    expect(node.message).toBe('Deploy to production?');
+  });
+
+  it('parses approve with timeout', () => {
+    const spec = parse('Goal: g\n\nflow:\n  approve "Deploy to production?" timeout 60');
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as ApproveNode;
+    expect(node.kind).toBe('approve');
+    expect(node.message).toBe('Deploy to production?');
+    expect(node.timeoutSeconds).toBe(60);
+  });
+
+  it('falls back to prompt node and emits warning on invalid approve syntax', () => {
+    const spec = parse('Goal: g\n\nflow:\n  approve missing-quotes');
+    expect(spec.nodes).toHaveLength(1);
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+    expect(spec.warnings.some((w) => w.includes('Invalid approve syntax'))).toBe(true);
+  });
+
+  it('assigns unique ids to approve nodes', () => {
+    const spec = parse(
+      'Goal: g\n\nflow:\n  approve "First gate"\n  approve "Second gate" timeout 30',
+    );
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.nodes[0]!.id).not.toBe(spec.nodes[1]!.id);
+  });
+});
+
+describe('parseFlow — review block', () => {
+  it('parses review with max only', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  review max 3',
+      '    prompt: Do the work',
+      '    run: npm test',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as ReviewNode;
+    expect(node.kind).toBe('review');
+    expect(node.maxRounds).toBe(3);
+    expect(node.criteria).toBeUndefined();
+    expect(node.groundedBy).toBeUndefined();
+    expect(node.body).toHaveLength(2);
+  });
+
+  it('parses review with criteria and max', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  review criteria: "Code must pass all tests" max 5',
+      '    prompt: Fix the code',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as ReviewNode;
+    expect(node.kind).toBe('review');
+    expect(node.maxRounds).toBe(5);
+    expect(node.criteria).toBe('Code must pass all tests');
+    expect(node.groundedBy).toBeUndefined();
+  });
+
+  it('parses review with grounded-by and max', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  review grounded-by "npm test" max 3',
+      '    prompt: Fix the failures',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as ReviewNode;
+    expect(node.kind).toBe('review');
+    expect(node.maxRounds).toBe(3);
+    expect(node.groundedBy).toBe('npm test');
+    expect(node.criteria).toBeUndefined();
+  });
+
+  it('parses review with criteria, grounded-by, and max', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  review criteria: "Be thorough" grounded-by "npm test" max 3',
+      '    prompt: Do the work',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as ReviewNode;
+    expect(node.kind).toBe('review');
+    expect(node.maxRounds).toBe(3);
+    expect(node.criteria).toBe('Be thorough');
+    expect(node.groundedBy).toBe('npm test');
+  });
+
+  it('parses review with single-quoted grounded-by', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      "  review grounded-by 'node verify.js' max 2",
+      '    prompt: Implement',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as ReviewNode;
+    expect(node.groundedBy).toBe('node verify.js');
+  });
+
+  it('falls back to prompt node and emits warning on review missing max', () => {
+    const dsl = ['Goal: g', '', 'flow:', '  review criteria: "xyz"', '  end'].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes[0]!.kind).toBe('prompt');
+    expect(spec.warnings.some((w) => w.includes('Invalid review syntax'))).toBe(true);
+  });
+
+  it('review body nodes are correctly populated', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  review max 2',
+      '    prompt: Step one',
+      '    run: echo done',
+      '    prompt: Step two',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as ReviewNode;
+    expect(node.body).toHaveLength(3);
+    expect(node.body[0]!.kind).toBe('prompt');
+    expect(node.body[1]!.kind).toBe('run');
+    expect(node.body[2]!.kind).toBe('prompt');
+  });
+
+  it('review node gets a unique id', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  review max 1',
+      '    prompt: work',
+      '  end',
+      '  review max 2',
+      '    prompt: more work',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes[0]!.id).not.toBe(spec.nodes[1]!.id);
+  });
+});
+
+// ── Import path validation edge cases ─────────────────────────────────────
+describe('parseFlow — import path validation', () => {
+  it('warns and skips an absolute import path', () => {
+    const spec = parseFlow('Goal: g\n\nimport "/etc/passwd.flow"\n\nflow:\n  prompt: hi\n', {
+      basePath: '/proj',
+      fileReader: () => 'Goal: x\nflow:\n  prompt: y',
+    });
+    expect(spec.warnings.some((w) => w.includes('/etc/passwd.flow'))).toBe(true);
+    expect(spec.warnings.some((w) => w.includes('Invalid import path'))).toBe(true);
+  });
+
+  it('warns and skips an import with a disallowed extension', () => {
+    const spec = parseFlow('Goal: g\n\nimport "script.sh"\n\nflow:\n  prompt: hi\n', {
+      basePath: '/proj',
+      fileReader: () => 'content',
+    });
+    expect(spec.warnings.some((w) => w.includes('Invalid import path'))).toBe(true);
+  });
+
+  it('does not duplicate a namespace already in registry during recursive import', () => {
+    // Outer imports ns "lib"; inner also imports ns "lib" — second should be skipped
+    const fileReaderMap: Record<string, string> = {
+      '/proj/outer.flow':
+        'Goal: outer\n\nimport "inner.flow"\nimport "lib.flow" as lib\n\nflow:\n  prompt: hi\n',
+      '/proj/inner.flow': 'Goal: inner\n\nimport "lib.flow" as lib\n\nflow:\n  prompt: inner\n',
+      '/proj/lib.flow': 'library: lib\nexport prompt greet():\n  hello\n',
+    };
+    const spec = parseFlow('Goal: g\n\nimport "outer.flow"\n\nflow:\n  prompt: go\n', {
+      basePath: '/proj',
+      fileReader: (p: string) => {
+        if (fileReaderMap[p]) return fileReaderMap[p];
+        throw new Error(`ENOENT: ${p}`);
+      },
+    });
+    // Should parse without errors (no crash from duplicate namespace)
+    expect(spec.goal).toBe('g');
+  });
+});
+
+// ── resolveImports — anonymous import propagates sub-namespace ─────────
+
+describe('parseFlow — anonymous import propagates namespaced imports', () => {
+  it('propagates sub-namespaced library from anonymous import to parent registry', () => {
+    // outer.flow is imported anonymously; it imports lib.flow as "utils"
+    // The parent should then be able to use "utils" namespace
+    const libContent = `library: utils\nexport prompt greet():\n  hello\n`;
+    const outerContent = `Goal: outer\n\nimport "lib.flow" as utils\n\nflow:\n  prompt: from outer\n`;
+    const spec = parseFlow(`Goal: main\n\nimport "outer.flow"\n\nflow:\n  use utils.greet()\n`, {
+      basePath: '/proj',
+      fileReader: (p: string) => {
+        if (p.endsWith('outer.flow')) return outerContent;
+        if (p.endsWith('lib.flow')) return libContent;
+        throw new Error(`unexpected: ${p}`);
+      },
+    });
+    // The utils.greet() should expand to a prompt node
+    expect(spec.nodes.some((n) => n.kind === 'prompt')).toBe(true);
+  });
+});
+
+// ── expandUseNode — unknown namespace (no import) ─────────────────────
+
+describe('parseFlow — use without import emits unknown-namespace warning', () => {
+  it('warns when use references a namespace that was never imported', () => {
+    const spec = parseFlow(`Goal: test\n\nflow:\n  use mylib.do_something()\n`);
+    expect(spec.warnings.some((w) => w.includes('Unknown namespace') && w.includes('mylib'))).toBe(
+      true,
+    );
+  });
+});
+
+// ── expandUseNode — missing required argument ─────────────────────────
+
+describe('parseFlow — use with missing required argument', () => {
+  it('warns when required argument is missing in use call', () => {
+    const libContent = `library: mylib\nexport flow process(required_arg):\n  prompt: do ${'{required_arg}'}\n`;
+    const spec = parseFlow(
+      `Goal: test\n\nimport "mylib.flow" as mylib\n\nflow:\n  use mylib.process()\n`,
+      {
+        basePath: '/fake',
+        fileReader: (p: string) => {
+          if (p.endsWith('mylib.flow')) return libContent;
+          throw new Error(`unexpected: ${p}`);
+        },
+      },
+    );
+    expect(spec.warnings.some((w) => w.includes('Missing required argument'))).toBe(true);
+  });
+});
+
+// ── expandUseNode — gates export cannot be used as flow node ─────────
+
+describe('parseFlow — use gates export emits warning', () => {
+  it('warns when trying to use a gates export as a flow node', () => {
+    // A library with an "export gates" section (kind = 'gates'), used via `use`
+    const libContent = `library: mylib
+
+export gates must_pass:
+  tests_pass
+`;
+    const spec = parseFlow(
+      `Goal: test\n\nimport "mylib.flow" as mylib\n\nflow:\n  use mylib.must_pass()\n`,
+      {
+        basePath: '/fake',
+        fileReader: (p: string) => {
+          if (p.endsWith('mylib.flow')) return libContent;
+          throw new Error(`unexpected: ${p}`);
+        },
+      },
+    );
+    // Should warn and not create a node for the gates export
+    expect(spec.warnings.some((w) => w.includes('Cannot use export gates'))).toBe(true);
+  });
+});

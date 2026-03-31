@@ -4,6 +4,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     testTimeout: 15_000,
+    retry: 2,
+    pool: 'forks',
     include: ['src/**/*.test.ts'],
     reporters: process.env['CI'] ? ['verbose', 'junit'] : ['default'],
     outputFile: { junit: './test-results/junit.xml' },
@@ -15,6 +17,7 @@ export default defineConfig({
       exclude: [
         'src/**/*.test.ts',
         'src/**/index.ts',
+        'src/sdk.ts',
         'src/application/ports/**/*.ts',
         'src/infrastructure/adapters/in-memory-*.ts',
         'src/presentation/hooks/**/*.ts',

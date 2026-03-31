@@ -17,3 +17,5 @@ worktree
 lmep
 automatable
 mylib
+unrecognised
+normalised

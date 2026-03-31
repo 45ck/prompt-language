@@ -121,11 +121,11 @@ Unit tests and CI are necessary but **not sufficient**. Smoke tests are **requir
 ### Automated smoke tests
 
 ```bash
-npm run eval:smoke        # full suite (26 tests, ~8 min)
+npm run eval:smoke        # full suite (32 tests, ~10 min)
 npm run eval:smoke:quick  # fast subset without gate/loop tests (~2 min)
 ```
 
-The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 26 live `claude -p` tests in temp directories:
+The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 32 live `claude -p` tests in temp directories:
 
 - **A: Context file relay** — two prompts, second reads file created by first
 - **B: Context recall** — second prompt recalls a code from the first
@@ -153,6 +153,12 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **X: Break in nested** — `break` inside nested `if` within loop
 - **Y: Until variable** — `until` with variable-based condition
 - **Z: Multi-var interpolation** — multiple `${var}` references in single prompt
+- **AA: Approve timeout** — `approve "msg" timeout N` auto-advances without human interaction
+- **AB: Review block** — `review max 1` runs body then exits, flow advances
+- **AC: Remember + memory:** — `remember key/value` persists; `memory:` prefetch loads into variables
+- **AD: Race block** — two spawns race; `race_winner` is set to first completer (slow)
+- **AE: foreach-spawn** — parallel fan-out creates per-item files via spawned children (slow)
+- **AF: Send/receive** — child sends message to parent via `send parent`, parent captures via `receive` (slow)
 
 ### When to smoke test
 

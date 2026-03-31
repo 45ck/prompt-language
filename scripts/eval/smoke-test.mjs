@@ -22,6 +22,9 @@
  *   U: And/or conditions         V: Numeric comparison
  *   W: Try/finally               X: Break in nested (slow)
  *   Y: Until variable (slow)     Z: Multi-var interpolation
+ *   AA: Approve timeout          AB: Review block
+ *   AC: Remember + memory:       AD: Race block (slow)
+ *   AE: foreach-spawn (slow)     AF: Send/receive (slow)
  *
  * Usage:
  *   node scripts/eval/smoke-test.mjs          # all tests
@@ -56,9 +59,9 @@ function assert(label, condition, detail = '') {
     console.log(`  FAIL  ${label}${detail ? ` — ${detail}` : ''}`);
   }
 
-  // Extract test letter from label (e.g. "A: Context file relay" → "A")
-  const testName = label.match(/^([A-Z]):/)?.[1] ?? label;
-  const testLabel = label.replace(/^[A-Z]:\s*/, '');
+  // Extract test code from label (e.g. "A: Context file relay" → "A", "AA: Approve" → "AA")
+  const testName = label.match(/^([A-Z]+):/)?.[1] ?? label;
+  const testLabel = label.replace(/^[A-Z]+:\s*/, '');
   const duration = Date.now() - currentTest.startTime;
 
   results.push({
@@ -1117,6 +1120,233 @@ async function testMultiVarInterpolation() {
   });
 }
 
+// ── Test AA: Approve (timeout auto-advance) ───────────────────────────
+
+async function testApproveTimeout() {
+  await withTempDir(async (dir) => {
+    // approve with timeout 2 — auto-advances without human interaction
+    const prompt = [
+      'Goal: test approve node',
+      '',
+      'flow:',
+      '  run: echo before > before.txt',
+      '  approve "Auto-approve this?" timeout 2',
+      '  run: echo after > after.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let beforeOk = false;
+    let afterOk = false;
+    try {
+      await readFile(join(dir, 'before.txt'), 'utf-8');
+      beforeOk = true;
+    } catch {
+      /* not created */
+    }
+    try {
+      await readFile(join(dir, 'after.txt'), 'utf-8');
+      afterOk = true;
+    } catch {
+      /* not created */
+    }
+
+    assert(
+      'AA: Approve timeout auto-advance',
+      beforeOk && afterOk,
+      beforeOk && afterOk
+        ? 'flow continued past approve after timeout'
+        : `before=${beforeOk} after=${afterOk}`,
+    );
+  });
+}
+
+// ── Test AB: Review block (max 1, exits after one pass) ───────────────
+
+async function testReviewBlock() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test review block',
+      '',
+      'flow:',
+      '  review max 1',
+      '    prompt: Write a single word to review-output.txt. Use exactly one word.',
+      '  end',
+      '  run: echo review-done > review-done.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let doneOk = false;
+    try {
+      await readFile(join(dir, 'review-done.txt'), 'utf-8');
+      doneOk = true;
+    } catch {
+      /* not created */
+    }
+
+    assert(
+      'AB: Review block completes and advances',
+      doneOk,
+      doneOk ? 'flow advanced past review block' : 'review-done.txt not created',
+    );
+  });
+}
+
+// ── Test AC: Remember + memory: prefetch ─────────────────────────────
+
+async function testRememberMemory() {
+  await withTempDir(async (dir) => {
+    // Phase 1: write to memory store
+    const writePrompt = [
+      'Goal: store memory',
+      '',
+      'flow:',
+      '  remember key="smoke_lang" value="TypeScript-42"',
+    ].join('\n');
+
+    claudeRun(writePrompt, dir);
+
+    // Phase 2: read back via memory: section (same dir, same state)
+    const readPrompt = [
+      'Goal: read memory',
+      '',
+      'memory:',
+      '  smoke_lang',
+      '',
+      'flow:',
+      '  run: echo "${smoke_lang}" > lang.txt',
+    ].join('\n');
+
+    claudeRun(readPrompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'lang.txt'), 'utf-8')).trim();
+    } catch {
+      /* not created */
+    }
+
+    assert(
+      'AC: Remember + memory: prefetch',
+      content.includes('TypeScript-42'),
+      content.includes('TypeScript-42')
+        ? 'memory value correctly retrieved'
+        : `got: "${content.slice(0, 60)}"`,
+    );
+  });
+}
+
+// ── Test AD: Race block (first spawn wins) ────────────────────────────
+
+async function testRaceBlock() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test race block',
+      '',
+      'flow:',
+      '  race timeout 60',
+      '    spawn "fast"',
+      '      run: echo fast > fast-result.txt',
+      '    end',
+      '    spawn "slow"',
+      '      prompt: Please wait a moment, then create slow-result.txt.',
+      '    end',
+      '  end',
+      '  await all',
+      '  run: echo "${race_winner}" > winner.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let winner = '';
+    try {
+      winner = (await readFile(join(dir, 'winner.txt'), 'utf-8')).trim();
+    } catch {
+      /* not created */
+    }
+
+    assert(
+      'AD: Race block sets race_winner',
+      winner.length > 0,
+      winner.length > 0 ? `winner="${winner}"` : 'winner.txt not created or empty',
+    );
+  });
+}
+
+// ── Test AE: foreach-spawn (parallel fan-out) ─────────────────────────
+
+async function testForeachSpawn() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test foreach-spawn',
+      '',
+      'flow:',
+      '  let items = "alpha beta gamma"',
+      '  foreach-spawn item in ${items} max 5',
+      '    run: echo ${item} > spawn-${item}.txt',
+      '  end',
+      '  await all',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    const expectedFiles = ['spawn-alpha.txt', 'spawn-beta.txt', 'spawn-gamma.txt'];
+    let found = 0;
+    for (const f of expectedFiles) {
+      try {
+        await readFile(join(dir, f), 'utf-8');
+        found++;
+      } catch {
+        /* not created */
+      }
+    }
+
+    assert(
+      'AE: foreach-spawn creates per-item files',
+      found === expectedFiles.length,
+      found === expectedFiles.length
+        ? `all ${found} spawn files created`
+        : `only ${found}/${expectedFiles.length} files created`,
+    );
+  });
+}
+
+// ── Test AF: send / receive (inter-agent messaging) ───────────────────
+
+async function testSendReceive() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test send/receive messaging',
+      '',
+      'flow:',
+      '  spawn "worker"',
+      '    run: echo "worker-done"',
+      '    send parent "hello-from-worker"',
+      '  end',
+      '  receive msg from "worker" timeout 30',
+      '  run: echo "${msg}" > received.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'received.txt'), 'utf-8')).trim();
+    } catch {
+      /* not created */
+    }
+
+    assert(
+      'AF: send/receive inter-agent messaging',
+      content.includes('hello-from-worker'),
+      content.includes('hello-from-worker')
+        ? 'message received from worker'
+        : `got: "${content.slice(0, 60)}"`,
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -1147,6 +1377,9 @@ async function main() {
   await timed('V', 'Numeric comparison', testNumericComparison);
   await timed('W', 'Try/finally', testTryFinally);
   await timed('Z', 'Multi-var interpolation', testMultiVarInterpolation);
+  await timed('AA', 'Approve timeout', testApproveTimeout);
+  await timed('AB', 'Review block', testReviewBlock);
+  await timed('AC', 'Remember + memory:', testRememberMemory);
 
   if (!QUICK_MODE) {
     await timed('D', 'Gate evaluation', testGateEvaluation);
@@ -1161,6 +1394,9 @@ async function main() {
     await timed('T', 'List accumulation', testListAccumulation);
     await timed('X', 'Break in nested', testBreakInsideIfForeach);
     await timed('Y', 'Until variable', testUntilVariable);
+    await timed('AD', 'Race block', testRaceBlock);
+    await timed('AE', 'foreach-spawn', testForeachSpawn);
+    await timed('AF', 'Send/receive', testSendReceive);
   } else {
     console.log('  SKIP  D: Gate evaluation (--quick mode)');
     console.log('  SKIP  J: While loop (--quick mode)');
@@ -1174,6 +1410,9 @@ async function main() {
     console.log('  SKIP  T: List accumulation (--quick mode)');
     console.log('  SKIP  X: Break in nested (--quick mode)');
     console.log('  SKIP  Y: Until variable (--quick mode)');
+    console.log('  SKIP  AD: Race block (--quick mode)');
+    console.log('  SKIP  AE: foreach-spawn (--quick mode)');
+    console.log('  SKIP  AF: Send/receive (--quick mode)');
   }
 
   console.log(`\n[smoke-test] Summary: ${passed}/${passed + failed} passed`);

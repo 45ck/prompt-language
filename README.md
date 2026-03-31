@@ -235,20 +235,23 @@ done when: tests_pass
 | Command execution | `run: npm test`                     | Run a real shell command                     |
 | Command timeout   | `run: npm test [timeout 60]`        | Kill long-running commands                   |
 | Error handling    | `try ... catch ... finally ... end` | Recover from failures and always run cleanup |
+| Human approval    | `approve "message" [timeout N]`     | Block until human says yes or no             |
 
 ### State and context
 
-| Feature                | Syntax / Example                                       | Purpose                           |
-| ---------------------- | ------------------------------------------------------ | --------------------------------- |
-| Literal variable       | `let env = "prod"`                                     | Store a static value              |
-| Command capture        | `let version = run "node -v"`                          | Store command output              |
-| Prompt capture         | `let analysis = prompt "Summarize the failure"`        | Capture Claude's response as data |
-| Interpolation          | `${version}`                                           | Reuse captured values             |
-| Default values         | `${env:-development}`                                  | Fallback when a variable is unset |
-| Inline arithmetic      | `let count = ${count} + 1`                             | Update integers inside the flow   |
-| List variables         | `let items = []` and `let items += "value"`            | Build lists incrementally         |
-| Pipe transforms        | `let branch = run "git branch --show-current" \| trim` | Clean captured output             |
-| Built-in run variables | `last_exit_code`, `command_failed`, `last_stdout`      | Observe the last command exactly  |
+| Feature                | Syntax / Example                                       | Purpose                                       |
+| ---------------------- | ------------------------------------------------------ | --------------------------------------------- |
+| Literal variable       | `let env = "prod"`                                     | Store a static value                          |
+| Command capture        | `let version = run "node -v"`                          | Store command output                          |
+| Prompt capture         | `let analysis = prompt "Summarize the failure"`        | Capture Claude's response as data             |
+| Interpolation          | `${version}`                                           | Reuse captured values                         |
+| Default values         | `${env:-development}`                                  | Fallback when a variable is unset             |
+| Inline arithmetic      | `let count = ${count} + 1`                             | Update integers inside the flow               |
+| List variables         | `let items = []` and `let items += "value"`            | Build lists incrementally                     |
+| Pipe transforms        | `let branch = run "git branch --show-current" \| trim` | Clean captured output                         |
+| Built-in run variables | `last_exit_code`, `command_failed`, `last_stdout`      | Observe the last command exactly              |
+| Persistent memory      | `remember "text"` / `remember key="k" value="v"`       | Write to the persistent memory store          |
+| Memory prefetch        | `memory:` section before `flow:`                       | Load stored keys into variables at flow start |
 
 Supported transforms: `trim`, `upper`, `lower`, `first`, `last`.
 
@@ -256,19 +259,20 @@ Prompt capture and `ask` conditions use a two-turn capture mechanism. If capture
 
 ### Control flow
 
-| Feature                | Syntax / Example                       | Purpose                          |
-| ---------------------- | -------------------------------------- | -------------------------------- |
-| Conditional branch     | `if tests_fail ... else ... end`       | Choose the next path             |
-| Chained branches       | `else if lint_fail` / `elif lint_fail` | Multi-branch decision making     |
-| While loop             | `while tests_fail max 5`               | Repeat while true                |
-| Until loop             | `until tests_pass max 5`               | Repeat until true                |
-| Retry loop             | `retry max 3`                          | Re-run a block on failure        |
-| Foreach loop           | `foreach file in ${files}`             | Iterate over a list              |
-| Loop exit              | `break`                                | Exit the nearest loop            |
-| Loop skip              | `continue`                             | Skip to the next iteration       |
-| Labeled loops          | `outer: foreach file in ${files}`      | Name a loop for explicit control |
-| Labeled break/continue | `break outer` / `continue outer`       | Target a specific outer loop     |
-| Comments               | `# this is ignored by the parser`      | Annotate flows inline            |
+| Feature                | Syntax / Example                                     | Purpose                          |
+| ---------------------- | ---------------------------------------------------- | -------------------------------- |
+| Conditional branch     | `if tests_fail ... else ... end`                     | Choose the next path             |
+| Chained branches       | `else if lint_fail` / `elif lint_fail`               | Multi-branch decision making     |
+| While loop             | `while tests_fail max 5`                             | Repeat while true                |
+| Until loop             | `until tests_pass max 5`                             | Repeat until true                |
+| Retry loop             | `retry max 3`                                        | Re-run a block on failure        |
+| Review loop            | `review [criteria: "..."] [grounded-by "cmd"] max N` | Critique-and-revise loop         |
+| Foreach loop           | `foreach file in ${files}`                           | Iterate over a list              |
+| Loop exit              | `break`                                              | Exit the nearest loop            |
+| Loop skip              | `continue`                                           | Skip to the next iteration       |
+| Labeled loops          | `outer: foreach file in ${files}`                    | Name a loop for explicit control |
+| Labeled break/continue | `break outer` / `continue outer`                     | Target a specific outer loop     |
+| Comments               | `# this is ignored by the parser`                    | Annotate flows inline            |
 
 `foreach` can iterate JSON arrays, newline-delimited strings, whitespace-delimited strings, or `run "command"` results directly.
 
@@ -287,16 +291,34 @@ end
 
 ### Parallelism
 
-| Feature               | Syntax / Example                         | Purpose                                 |
-| --------------------- | ---------------------------------------- | --------------------------------------- |
-| Spawn child           | `spawn "frontend" ... end`               | Launch an independent child flow        |
-| Cross-directory spawn | `spawn "backend" in "packages/api"`      | Run child work in another directory     |
-| Selective var passing | `spawn "frontend" with vars branch, sha` | Limit which parent vars enter the child |
-| Await all             | `await all`                              | Join all children                       |
-| Await one child       | `await "frontend"`                       | Join a specific child                   |
-| Child variable import | `${frontend.last_exit_code}`             | Read child results after `await`        |
+| Feature               | Syntax / Example                                        | Purpose                                                   |
+| --------------------- | ------------------------------------------------------- | --------------------------------------------------------- |
+| Spawn child           | `spawn "frontend" ... end`                              | Launch an independent child flow                          |
+| Cross-directory spawn | `spawn "backend" in "packages/api"`                     | Run child work in another directory                       |
+| Selective var passing | `spawn "frontend" with vars branch, sha`                | Limit which parent vars enter the child                   |
+| Await all             | `await all`                                             | Join all children                                         |
+| Await one child       | `await "frontend"`                                      | Join a specific child                                     |
+| Child variable import | `${frontend.last_exit_code}`                            | Read child results after `await`                          |
+| Race                  | `race ... spawn "a" ... end spawn "b" ... end end`      | First child to complete wins; sets `race_winner`          |
+| Parallel fan-out      | `foreach-spawn item in ${list} max N ... end await all` | One spawn per list item, all running in parallel          |
+| Send message          | `send "target" "message"`                               | Write a message to a child's or parent's inbox            |
+| Receive message       | `receive varName [from "source"] [timeout N]`           | Read the next message into a variable; blocks until ready |
 
-Each `spawn` launches a separate `claude -p` process with its own state. Parent and child share the filesystem, but not session state.
+Each `spawn` launches a separate `claude -p` process with its own state. Parent and child share the filesystem, but not session state. Use `parent` as the target or source name to communicate from child to parent.
+
+### Reuse and composition
+
+| Feature       | Syntax / Example                             | Purpose                                                 |
+| ------------- | -------------------------------------------- | ------------------------------------------------------- |
+| Inline import | `import "flows/setup.flow"`                  | Insert all nodes from a file at the point of the import |
+| Named import  | `import "libraries/testing.flow" as testing` | Register a library namespace for `use`                  |
+| Use a symbol  | `use testing.fix_and_test(test_cmd="jest")`  | Inline an exported flow, prompt, or gate set            |
+| Library file  | `library: name` at top of file               | Declare a file as a reusable library                    |
+| Export flow   | `export flow name(param="default"): ...`     | Export a parameterized block of flow nodes              |
+| Export prompt | `export prompt name(param): ...`             | Export a reusable prompt node                           |
+| Export gates  | `export gates name(param): ...`              | Export reusable `done when:` entries                    |
+
+Paths must be relative; `..` traversal is not allowed. Circular imports are detected and skipped. Imported files may themselves import other files.
 
 ### Runtime behavior
 
@@ -319,15 +341,23 @@ If you want the flat list, the language includes all of these user-facing primit
 - `while`
 - `until`
 - `retry`
+- `review`
 - `foreach`
+- `foreach-spawn`
 - `try` / `catch` / `finally`
 - `break`
 - `continue`
 - `spawn`
 - `await`
+- `race`
+- `approve`
+- `remember`
+- `send` / `receive`
+- `import` / `use`
 - `ask ... grounded-by ...`
 - `done when:`
 - `env:`
+- `memory:`
 
 ## Examples
 
@@ -454,12 +484,17 @@ npx @45ck/prompt-language watch
 
 Shows the full flow state updating in real time — useful for watching long-running flows.
 
+## Tooling and integrations
+
+- **VS Code extension** — basic DSL syntax highlighting for `.flow`, `.prompt`, and inline flow blocks. Source in `vscode-extension/`.
+- **GitHub Actions** — run flows in CI with the [`45ck/prompt-language-action`](https://github.com/45ck/prompt-language-action) action.
+
 ## Learn more
 
 - **[Getting Started](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)** — see it work in 2 minutes
 - **[Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/roadmap.md)** — tracked but not yet shipped features from `.beads`
 - **[WIP Features](https://github.com/45ck/prompt-language/blob/main/docs/wip/index.md)** — individual proposed docs for not-yet-implemented language and tooling features
-- **[Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md)** — per-feature reference pages for `ask`, `if`, `spawn`, `await`, `let/var`, `done when:`, and more
+- **[Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md)** — per-feature reference pages for `ask`, `if`, `spawn`, `await`, `let/var`, `done when:`, and more, including [approve](https://github.com/45ck/prompt-language/blob/main/docs/reference/approve.md), [review](https://github.com/45ck/prompt-language/blob/main/docs/reference/review.md), [race](https://github.com/45ck/prompt-language/blob/main/docs/reference/race.md), [foreach-spawn](https://github.com/45ck/prompt-language/blob/main/docs/reference/foreach-spawn.md), [remember](https://github.com/45ck/prompt-language/blob/main/docs/reference/remember.md), [send/receive](https://github.com/45ck/prompt-language/blob/main/docs/reference/send-receive.md), [import](https://github.com/45ck/prompt-language/blob/main/docs/reference/import.md), and [prompt libraries](https://github.com/45ck/prompt-language/blob/main/docs/reference/prompt-libraries.md)
 - **[How prompt-language works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md)** — how it works, variable lifecycle, gate trust model
 - **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)** — complete syntax specification
 - **[Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md)** — debugging stuck flows, known issues

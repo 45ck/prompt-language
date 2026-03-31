@@ -18,22 +18,32 @@ Lines starting with `#` are comments (stripped before parsing).
 
 ## Primitives
 
-| Primitive        | Syntax                       | Notes                             |
-| ---------------- | ---------------------------- | --------------------------------- |
-| prompt           | `prompt: Do X`               | Injects text as agent instruction |
-| run              | `run: npm test`              | Executes shell command            |
-| run (timeout)    | `run: npm test [timeout 60]` | Kills after N seconds             |
-| let/var          | `let x = "literal"`          | Stores string variable            |
-| let (run)        | `let x = run "cmd"`          | Stores command stdout             |
-| let (prompt)     | `let x = prompt "text"`      | Captures agent response           |
-| let (list)       | `let x = []`                 | Initializes empty list            |
-| let (append)     | `let x += "val"`             | Appends to list                   |
-| let (append run) | `let x += run "cmd"`         | Appends stdout to list            |
-| break            | `break`                      | Exits nearest loop                |
-| continue         | `continue`                   | Skips to next loop iteration      |
-| spawn            | `spawn "name"` ... `end`     | Launches child process            |
-| spawn (dir)      | `spawn "name" in "path"`     | Child runs in given directory     |
-| await            | `await "name"` / `await all` | Blocks until child(ren) complete  |
+| Primitive            | Syntax                                        | Notes                             |
+| -------------------- | --------------------------------------------- | --------------------------------- |
+| prompt               | `prompt: Do X`                                | Injects text as agent instruction |
+| run                  | `run: npm test`                               | Executes shell command            |
+| run (timeout)        | `run: npm test [timeout 60]`                  | Kills after N seconds             |
+| let/var              | `let x = "literal"`                           | Stores string variable            |
+| let (run)            | `let x = run "cmd"`                           | Stores command stdout             |
+| let (prompt)         | `let x = prompt "text"`                       | Captures agent response           |
+| let (list)           | `let x = []`                                  | Initializes empty list            |
+| let (append)         | `let x += "val"`                              | Appends to list                   |
+| let (append run)     | `let x += run "cmd"`                          | Appends stdout to list            |
+| break                | `break`                                       | Exits nearest loop                |
+| continue             | `continue`                                    | Skips to next loop iteration      |
+| spawn                | `spawn "name"` ... `end`                      | Launches child process            |
+| spawn (dir)          | `spawn "name" in "path"`                      | Child runs in given directory     |
+| await                | `await "name"` / `await all`                  | Blocks until child(ren) complete  |
+| approve              | `approve "message"`                           | Hard human approval checkpoint    |
+| approve (timeout)    | `approve "message" timeout 30`                | Timeout in seconds                |
+| review               | `review max N ... end`                        | Critique-and-revise loop          |
+| race                 | `race ... end`                                | First child to complete wins      |
+| foreach-spawn        | `foreach-spawn item in ${list} max N ... end` | Parallel fan-out per item         |
+| remember (text)      | `remember "text"`                             | Store free-form memory            |
+| remember (key/value) | `remember key="k" value="v"`                  | Store keyed memory                |
+| send                 | `send "target" "message"`                     | Send message to agent             |
+| receive              | `receive varName`                             | Receive message into variable     |
+| import               | `import "file.flow"`                          | Inline another flow file          |
 
 ## Control Flow
 
@@ -86,6 +96,15 @@ end
 
 `catch` defaults to `command_failed`. `finally` always executes.
 
+### approve
+
+```
+approve "Deploy to production?"
+approve "Confirm?" timeout 30
+```
+
+Sets `approve_rejected = true` if user declines. Flow continues; check `approve_rejected` to handle rejection.
+
 ### foreach
 
 ```
@@ -97,6 +116,16 @@ end
 Default `max`: 50. List splitting priority: JSON array > newline > whitespace.
 
 Auto-set: `${file}`, `${file_index}` (0-based), `${file_length}`.
+
+### review
+
+```
+review criteria: "Is the output complete?" max 3
+  prompt: Draft the document.
+end
+```
+
+Critique loop: body runs, then Claude evaluates. Repeats up to `max` times. Sets `_review_critique` variable. Optional `grounded-by "cmd"` for deterministic grounding.
 
 ### ask conditions (AI-evaluated)
 
@@ -197,6 +226,75 @@ prompt: Worker result was ${worker.last_exit_code}.
 - Child gets snapshot of parent variables at spawn time.
 - After `await`, child vars imported as `${childName.varName}`.
 - `await all` waits for every spawned child.
+
+## Race
+
+```
+race timeout 120
+  spawn "fast"
+    prompt: Quick approach.
+  end
+  spawn "thorough"
+    prompt: Careful approach.
+  end
+end
+await all
+```
+
+Sets `race_winner` to the name of the first child to complete.
+
+## foreach-spawn
+
+```
+foreach-spawn item in ${files} max 10
+  prompt: Process ${item}.
+end
+await all
+```
+
+Spawns one child per item, all run in parallel. Use `await all` to join.
+
+## send / receive
+
+```
+# In parent:
+receive result from "worker" timeout 30
+
+# In child (sends to parent):
+send parent "done"
+
+# Between named agents:
+send "worker" "start"
+receive ack from "worker"
+```
+
+## Memory / remember
+
+```
+remember "The user prefers TypeScript"
+remember key="lang" value="TypeScript"
+```
+
+Persists to the agent's memory store. Retrieve at flow start using the `memory:` section:
+
+```
+memory:
+  lang
+  preferences
+```
+
+Prefetched keys are available as `${lang}`, `${preferences}` etc.
+
+## Import / Library
+
+```
+import "shared/helpers.flow"
+import "lib/validators.flow" as validators
+
+use validators.check_output()
+```
+
+Library files use `library: name` and `export flow name(params):`.
 
 ## Defaults
 

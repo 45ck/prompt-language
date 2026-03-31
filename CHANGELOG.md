@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- **`approve` node** — hard human approval checkpoint. `approve "message"` blocks execution until the human confirms (yes/no). `approve "message" timeout N` auto-continues after N seconds. Sets `approve_rejected = true` on decline.
+- **`review` block** — generator-evaluator critique loop. Body runs, then Claude evaluates against optional `criteria: "..."`. Repeats up to `max N` times. Optional `grounded-by "cmd"` for deterministic grounding. Sets `_review_critique` variable.
+- **`race` block** — competitive parallel execution. First child to complete (exit 0) wins. Sets `race_winner` to the winning child name. Optional `timeout N` seconds.
+- **`foreach-spawn` block** — fan-out: spawns one child process per list item, all running in parallel. `foreach-spawn item in ${list} max N`. Use `await all` to join.
+- **`remember` node** — writes free-form text or key-value pairs to the agent's persistent memory store. `remember "text"` or `remember key="k" value="v"`.
+- **`memory:` section** — prefetch named keys from memory at flow start; values are available as `${key}` variables.
+- **`send` / `receive` nodes** — inter-agent messaging. `send "target" "message"` sends a message to a named agent or `parent`. `receive varName [from "source"] [timeout N]` blocks until a message arrives.
+- **`import` directive** — `import "file.flow"` inlines another flow file at parse time. `import "file.flow" as ns` creates a namespace for library access.
+- **Prompt library system** — `library: name` declares a reusable library. `export flow name(params):` exports a flow block. `use ns.symbol(args)` inlines it at the call site.
+- **VS Code extension** — basic DSL syntax highlighting for `.flow` and `PROMPT.md` files in `vscode-extension/`.
+- **GitHub Actions integration** — `45ck/prompt-language-action` for running flows in CI pipelines (`action/action.yml`).
+- **`approve`/`review`/`race`/`foreach-spawn`/`remember`/`send`/`receive`/`import`/`prompt-libraries` reference docs** added to `docs/reference/`.
+- Test coverage thresholds met (statements 90.73%, branches 85%, functions 91.48%, lines 91.56%) with 1,898 tests across 56 files.
+
 ## [0.3.0] - 2026-03-26
 
 ### Added

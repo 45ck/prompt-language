@@ -140,7 +140,7 @@ async function install() {
   // Auto-configure status line if not already set
   await configureStatusLine(settings, true);
 
-  console.log(`\nprompt-language v${version} installed successfully.\n`);
+  console.log(`\nprompt-language runtime v${version} installed successfully.\n`);
   console.log('Try it now:');
   console.log('  claude -p "Fix the failing tests. done when: tests_pass"\n');
   console.log('Or use a built-in skill:');
@@ -194,7 +194,7 @@ async function uninstall() {
     console.log('  Removed from settings.json');
   }
 
-  console.log('\nprompt-language uninstalled successfully.');
+  console.log('\nprompt-language runtime uninstalled successfully.');
 }
 
 async function status() {
@@ -305,7 +305,7 @@ async function init() {
 
 function demo() {
   const example = `\
-# prompt-language: verified task completion for Claude Code
+# prompt-language: control-flow runtime for Claude Code
 #
 # The core idea: "done when:" gates run real commands.
 # Claude cannot stop until they pass.

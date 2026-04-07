@@ -1,6 +1,6 @@
 # Documentation
 
-prompt-language is a programmable runtime for Claude Code. It wraps Claude in a terminal-side state machine so you can define state, context, control flow, parallel work, and completion checks around the agent instead of supervising every step manually.
+prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code in a persistent state machine with verification gates, deterministic control flow, variable management, and parallelism. Gates are real shell commands that must pass before the agent can stop. The runtime handles supervision so you don't have to.
 
 ## Start here
 
@@ -23,7 +23,7 @@ prompt-language is a programmable runtime for Claude Code. It wraps Claude in a 
 | Doc                                       | Contents                                                        |
 | ----------------------------------------- | --------------------------------------------------------------- |
 | [How It Works](guide.md)                  | Internals: hook lifecycle, variable lifecycle, gate trust model |
-| [Use Cases](use-cases.md)                 | When the plugin wins, when it doesn't, quick recipes            |
+| [Use Cases](use-cases.md)                 | When the runtime wins, when it doesn't, quick recipes           |
 | [Non-Node Projects](non-node-projects.md) | Python, Go, Rust, and custom test runners                       |
 | [Roadmap](roadmap.md)                     | Tracked but not yet shipped features from `.beads`              |
 | [WIP Features](wip/index.md)              | Proposed feature pages for the future language and tooling      |

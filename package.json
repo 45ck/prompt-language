@@ -1,7 +1,7 @@
 {
   "name": "@45ck/prompt-language",
   "version": "0.3.0",
-  "description": "A programmable runtime for Claude Code with persistent state, context, control flow, and verification so Claude cannot stop early or skip real checks.",
+  "description": "A control-flow runtime for Claude Code that enforces verification gates, manages persistent state, and prevents premature completion.",
   "license": "MIT",
   "author": {
     "name": "45ck",
@@ -25,7 +25,10 @@
     "automation",
     "completion-gates",
     "control-flow",
-    "prompt-engineering",
+    "runtime",
+    "verification",
+    "gates",
+    "agent-runtime",
     "ai",
     "llm",
     "anthropic"

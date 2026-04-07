@@ -1,8 +1,8 @@
 # @45ck/prompt-language
 
-A programmable runtime for Claude Code.
+A control-flow runtime for Claude Code.
 
-It wraps Claude in a terminal-side state machine so you can define state, context, control flow, parallel work, and completion checks around the agent instead of supervising every turn by hand.
+It wraps Claude Code in a persistent state machine with verification gates, deterministic control flow, and state management — so the runtime handles supervision instead of you.
 
 [![npm](https://img.shields.io/npm/v/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 [![CI](https://github.com/45ck/prompt-language/actions/workflows/quality.yml/badge.svg)](https://github.com/45ck/prompt-language/actions/workflows/quality.yml)
@@ -13,33 +13,33 @@ It wraps Claude in a terminal-side state machine so you can define state, contex
 
 ## What it is
 
-Without prompt-language, the engineer is the runtime: keep track of the task, restate the right context, decide what happens next, rerun checks, and reject premature "done." prompt-language moves that supervision loop into the terminal.
+Without the runtime, the engineer is the runtime: keep track of the task, restate the right context, decide what happens next, rerun checks, and reject premature "done." The runtime moves that supervision loop into the terminal.
 
-Claude still does the reasoning, editing, and tool use. prompt-language provides the runtime around it.
+Claude still does the reasoning, editing, and tool use. The runtime provides the structure and verification around it.
 
 ## What you get
 
 | Capability            | What it gives you                              | Example                                |
 | --------------------- | ---------------------------------------------- | -------------------------------------- |
+| Verification          | Block completion until real checks pass        | `done when: tests_pass lint_pass`      |
 | Persistent state      | Remember where the task is across turns        | resumable loops and long-running flows |
 | Deterministic context | Capture exact values and reuse them later      | `let baseline = run "node bench.js"`   |
 | Control flow          | Encode retries, branching, batching, and loops | `retry`, `if`, `while`, `foreach`      |
 | Parallel work         | Fan out independent tasks and join them back   | `spawn "frontend"` + `await all`       |
-| Verification          | Block completion until real checks pass        | `done when: tests_pass lint_pass`      |
 
 ## Why engineers use it
 
+- Real verification before completion, not model self-report
 - Less babysitting during long autonomous runs
 - Exact context instead of "Claude probably remembers"
 - Repeatable workflows instead of ad hoc follow-up prompts
 - Parallel work when tasks are independent
-- Real verification before completion, not model self-report
 
 ## The problem
 
 You ask Claude to fix a bug. It makes a change and says "Done!" You say "run the tests." They fail. You say "fix those." It fixes one. You say "run the tests again." Two more fail. Five back-and-forth messages for something that should have been automatic.
 
-With prompt-language, you can make the runtime own that loop instead of doing it yourself.
+The runtime owns that loop. You define the gate; it handles the enforcement.
 
 ## Quick examples
 
@@ -108,7 +108,7 @@ npx @45ck/prompt-language status     # check installation
 npx @45ck/prompt-language uninstall  # remove
 ```
 
-**New to prompt-language?** Start with the **[Getting Started tutorial](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)**.
+**New to the runtime?** Start with the **[Getting Started tutorial](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)**.
 
 <details>
 <summary>Manual install</summary>
@@ -136,7 +136,7 @@ node bin/cli.mjs install
 
 ## Packaged workflows
 
-prompt-language also ships a few ready-made slash commands built on top of the runtime. They are shortcuts and examples, not the core feature.
+The runtime also ships ready-made slash commands as workflow shortcuts. They are examples, not the core feature.
 
 | Command         | What it does                                                                                       |
 | --------------- | -------------------------------------------------------------------------------------------------- |
@@ -452,7 +452,7 @@ done when:
 
 ## When to use this
 
-Use prompt-language when you want a runtime around Claude, not just a better prompt.
+Use the runtime when you want verification and structure around Claude's work, not just a better prompt.
 
 Verification is where the repo has the clearest measured wins. State, variables, control flow, and parallelism are about programmability, repeatability, and reducing manual supervision.
 
@@ -495,12 +495,12 @@ Shows the full flow state updating in real time — useful for watching long-run
 - **[Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/roadmap.md)** — tracked but not yet shipped features from `.beads`
 - **[WIP Features](https://github.com/45ck/prompt-language/blob/main/docs/wip/index.md)** — individual proposed docs for not-yet-implemented language and tooling features
 - **[Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md)** — per-feature reference pages for `ask`, `if`, `spawn`, `await`, `let/var`, `done when:`, and more, including [approve](https://github.com/45ck/prompt-language/blob/main/docs/reference/approve.md), [review](https://github.com/45ck/prompt-language/blob/main/docs/reference/review.md), [race](https://github.com/45ck/prompt-language/blob/main/docs/reference/race.md), [foreach-spawn](https://github.com/45ck/prompt-language/blob/main/docs/reference/foreach-spawn.md), [remember](https://github.com/45ck/prompt-language/blob/main/docs/reference/remember.md), [send/receive](https://github.com/45ck/prompt-language/blob/main/docs/reference/send-receive.md), [import](https://github.com/45ck/prompt-language/blob/main/docs/reference/import.md), and [prompt libraries](https://github.com/45ck/prompt-language/blob/main/docs/reference/prompt-libraries.md)
-- **[How prompt-language works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md)** — how it works, variable lifecycle, gate trust model
+- **[How the runtime works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md)** — how it works, variable lifecycle, gate trust model
 - **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)** — complete syntax specification
 - **[Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md)** — debugging stuck flows, known issues
 - **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)** — A/B testing methodology and results
 - **[CLI Reference](https://github.com/45ck/prompt-language/blob/main/docs/cli-reference.md)** — all CLI commands and slash commands
-- **[Use Cases](https://github.com/45ck/prompt-language/blob/main/docs/use-cases.md)** — when the plugin wins, anti-patterns, quick recipes
+- **[Use Cases](https://github.com/45ck/prompt-language/blob/main/docs/use-cases.md)** — when the runtime wins, anti-patterns, quick recipes
 - **[Documentation Index](https://github.com/45ck/prompt-language/blob/main/docs/index.md)** — full documentation hub
 
 ## Contributing

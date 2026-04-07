@@ -2,7 +2,7 @@
 
 Claude will tell you it's done when it isn't. Not out of malice — it pattern-matches completion from context clues, but it doesn't run your tests unless you tell it to. And when you tell it to, it might run them once, see a failure, and still say "Done! I've fixed the issue" without actually fixing anything.
 
-prompt-language closes that gap. Append two lines to any prompt:
+The runtime closes that gap. Append two lines to any prompt:
 
 ```
 done when:
@@ -15,14 +15,14 @@ That's the entire idea. The rest of this guide is about how far you can take it.
 
 ## Two building blocks
 
-The plugin gives you two independent tools:
+The runtime gives you two independent tools:
 
 | Tool      | What it does                                                    | When you need it                                                      |
 | --------- | --------------------------------------------------------------- | --------------------------------------------------------------------- |
 | **Gates** | Run commands before Claude can stop. Block on failure.          | Always. This is the core value.                                       |
 | **Flows** | Structure multi-step execution with loops, branches, variables. | When you need iterative fix-test cycles or multi-phase orchestration. |
 
-You can use gates without flows. Most of the time, you should. Gates alone cover the plugin's proven wins — in 45 controlled A/B experiments, every plugin victory came from gate enforcement.
+You can use gates without flows. Most of the time, you should. Gates alone cover the runtime's proven wins — in 45 controlled A/B experiments, every plugin victory came from gate enforcement.
 
 ## Gates
 
@@ -70,7 +70,7 @@ You said "fix the test failures." The gates also enforce lint and a successful b
 
 ### Why gates can't be fooled
 
-Gates don't read variables or trust Claude's claims. When Claude tries to stop, the plugin runs the real command and checks the exit code. Even if Claude sets a variable named `tests_pass` to `"true"`, the gate ignores it and runs `npm test` itself. This is a deliberate design asymmetry: flow conditions (like `if command_failed`) trust the variable store for speed; gates never do.
+Gates don't read variables or trust Claude's claims. When Claude tries to stop, the runtime runs the real command and checks the exit code. Even if Claude sets a variable named `tests_pass` to `"true"`, the gate ignores it and runs `npm test` itself. This is a deliberate design asymmetry: flow conditions (like `if command_failed`) trust the variable store for speed; gates never do.
 
 ## Flows
 
@@ -97,7 +97,7 @@ Three sections: `Goal:` describes the task. `flow:` defines the steps. `done whe
 
 ### What Claude sees
 
-On every turn, the plugin injects a state snapshot into Claude's context. Claude doesn't rely on conversation history to know where it is — it gets a deterministic re-injection from the session state file:
+On every turn, the runtime injects a state snapshot into Claude's context. Claude doesn't rely on conversation history to know where it is — it gets a deterministic re-injection from the session state file:
 
 ```
 [prompt-language] Flow: fix the auth tests | Status: active
@@ -247,7 +247,7 @@ while ask "are there still failing tests?" grounded-by "npm test" max 5
 end
 ```
 
-`ask` conditions work with `while`, `until`, and `if`. They take one extra turn to evaluate — Claude receives the judge prompt, answers true/false, and the plugin captures the verdict the same way as `let x = prompt`.
+`ask` conditions work with `while`, `until`, and `if`. They take one extra turn to evaluate — Claude receives the judge prompt, answers true/false, and the runtime captures the verdict the same way as `let x = prompt`.
 
 **Choosing between loop primitives:**
 
@@ -315,7 +315,7 @@ let version = run "node -v"
 let analysis = prompt "Summarize the test failures"
 ```
 
-Prompt capture takes two turns: Claude answers and writes the value to a file, then the plugin reads it on the next turn. If the file isn't written after 3 retries, the variable is set to empty string and the flow continues.
+Prompt capture takes two turns: Claude answers and writes the value to a file, then the runtime reads it on the next turn. If the file isn't written after 3 retries, the variable is set to empty string and the flow continues.
 
 **Interpolation** — use `${varName}` in prompt and run text:
 
@@ -564,16 +564,16 @@ Be honest about tradeoffs. From 45 controlled A/B experiments (300+ test runs):
 - **Gates win 15/45** — all from enforcing criteria the prompt omitted or lied about
 - **Flow control wins 0/45** — Claude follows explicit multi-step instructions without scaffolding
 - **Variable capture wins 0/45** — at tested distances (2-15 steps), vanilla Claude recalls values accurately
-- **Latency overhead: 2-3x** — a 30-second task takes 90+ seconds through the plugin
+- **Latency overhead: 2-3x** — a 30-second task takes 90+ seconds through the runtime
 
-**Skip the plugin when:**
+**Skip the runtime when:**
 
 - The prompt is clear and complete. Vanilla Claude matches correctness at 2-3x less latency.
 - There's no verifiable exit condition. No command to run = no gate to add = overhead without benefit.
 - Speed matters and you'll verify manually.
 - You're adding a flow to improve correctness. Write a better prompt instead — flows are for organizational convenience.
 
-**Use the plugin when:**
+**Use the runtime when:**
 
 - You have a verifiable completion criterion that the prompt omits, understates, or lies about.
 - You need compound verification (tests AND lint AND build) enforced mechanically.

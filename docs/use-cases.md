@@ -1,14 +1,14 @@
 # Use Cases
 
-Honest guidance on when prompt-language helps, when it doesn't, and quick recipes for common tasks.
+Honest guidance on when the runtime helps, when it doesn't, and quick recipes for common tasks.
 
 ## When it wins
 
 Based on 45 controlled A/B experiments (300+ test runs at `--repeat 3` reliability):
 
-**Gates won 15/45.** Every win came from enforcement — catching gaps, lies, or premature stops. The plugin didn't make Claude smarter. It made verification mandatory.
+**Gates won 15/45.** Every win came from enforcement — catching gaps, lies, or premature stops. The runtime didn't make Claude smarter. It made verification mandatory.
 
-Situations where the plugin consistently helps:
+Situations where the runtime consistently helps:
 
 - **Untrustworthy or incomplete prompts** — Gates enforce what the prompt doesn't say. "Fix the tests" + `done when: tests_pass lint_pass` catches the lint issues the prompt never mentioned.
 - **Verification-heavy tasks** — The agent can claim success, but `npm test` returning exit code 1 overrides any claim.
@@ -21,9 +21,9 @@ Situations where the plugin consistently helps:
 
 **Variable capture won 0/45.** At tested distances (2-15 steps), vanilla Claude recalls values accurately from conversation context.
 
-**Latency overhead: 2-3x.** A 30-second task takes 90+ seconds through the plugin. Every hook invocation, gate check, and state file read/write adds time.
+**Latency overhead: 2-3x.** A 30-second task takes 90+ seconds through the runtime. Every hook invocation, gate check, and state file read/write adds time.
 
-Skip the plugin when:
+Skip the runtime when:
 
 - The prompt is clear and complete — vanilla Claude matches correctness at lower latency
 - There's no verifiable exit condition — no command to run = no gate to add

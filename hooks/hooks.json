@@ -1,5 +1,5 @@
 {
-  "description": "prompt-language flow engine hooks for context injection, gate enforcement, and flow visualization",
+  "description": "prompt-language runtime hooks for context injection, gate enforcement, and flow visualization",
   "hooks": {
     "UserPromptSubmit": [
       {

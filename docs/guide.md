@@ -1,10 +1,10 @@
-# How prompt-language works (internals)
+# How the runtime works
 
-This guide explains the mechanics behind the prompt-language runtime — what Claude actually sees on each turn, how variables persist, why gates can't be fooled, and how to write effective flows. The core idea is simple: engineers already act as Claude's runtime by tracking state, restating context, choosing the next step, and verifying completion. prompt-language moves that supervision loop into terminal hooks and persistent state. For installation, see the [README](https://github.com/45ck/prompt-language/blob/main/README.md). For per-feature syntax docs, see the [Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md). For the one-page reference, see the [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md).
+This guide explains the mechanics behind the runtime — what Claude actually sees on each turn, how variables persist, why gates can't be fooled, and how to write effective flows. The core idea is simple: engineers already act as Claude's runtime by tracking state, restating context, choosing the next step, and verifying completion. prompt-language moves that supervision loop into terminal hooks and persistent state. For installation, see the [README](https://github.com/45ck/prompt-language/blob/main/README.md). For per-feature syntax docs, see the [Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md). For the one-page reference, see the [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md).
 
 ## The closed loop
 
-**Hooks** are entry points where the plugin intercepts Claude Code's lifecycle. Think of them as checkpoints: the plugin can inspect the current state, inject context into Claude's prompt, or block an action entirely. prompt-language uses three hooks to form an enforcement loop:
+**Hooks** are entry points where the runtime intercepts Claude Code's lifecycle. Think of them as checkpoints: the runtime can inspect the current state, inject context into Claude's prompt, or block an action entirely. The runtime uses three hooks to form an enforcement loop:
 
 - **UserPromptSubmit** — Parses DSL from the prompt, creates session state, injects the first step into Claude's context.
 - **Stop** — Intercepts when Claude tries to stop. If steps remain or gates haven't passed, it blocks the stop and injects the next step.
@@ -93,14 +93,14 @@ For `run:` nodes, `shellInterpolate()` wraps substituted values in single-quotes
 
 `let x = prompt "..."` is the only node type that requires two turns to complete:
 
-- **Phase 1**: The plugin emits a meta-prompt telling Claude to answer the question AND write its response to `.prompt-language/vars/{varName}`. Claude answers naturally while also writing the file.
-- **Phase 2**: On the next turn, the plugin reads the file, stores the value in `state.variables`, and advances past the node.
+- **Phase 1**: The runtime emits a meta-prompt telling Claude to answer the question AND write its response to `.prompt-language/vars/{varName}`. Claude answers naturally while also writing the file.
+- **Phase 2**: On the next turn, the runtime reads the file, stores the value in `state.variables`, and advances past the node.
 
 During phase 1, the rendered flow shows `[awaiting response...]` on the let node.
 
 This mechanism lets flows capture Claude's reasoning as a variable for use in later steps — for example, storing an analysis result to interpolate into a follow-up prompt.
 
-> **Warning: fail-open behavior.** If Claude doesn't write the capture file, the plugin retries up to 3 times, then sets the variable to `""` (empty string) and continues. If `${x}` is later interpolated into a `run:` command, the command will receive an empty argument. Use `${x:-fallback}` default values or add an `if` check before using captured values in critical commands.
+> **Warning: fail-open behavior.** If Claude doesn't write the capture file, the runtime retries up to 3 times, then sets the variable to `""` (empty string) and continues. If `${x}` is later interpolated into a `run:` command, the command will receive an empty argument. Use `${x:-fallback}` default values or add an `if` check before using captured values in critical commands.
 
 ## How gates prevent lying
 
@@ -166,8 +166,8 @@ For anything with a clear pass/fail command (`tests_pass`, `lint_pass`, `command
 
 Ask conditions use the same two-phase capture mechanism as `let x = prompt`:
 
-1. **Phase 1**: The plugin emits a meta-prompt asking Claude to answer "true" or "false". Claude writes its verdict to a capture file.
-2. **Phase 2**: On the next turn, the plugin reads the verdict and decides whether to enter the body (for loops) or which branch to take (for `if`).
+1. **Phase 1**: The runtime emits a meta-prompt asking Claude to answer "true" or "false". Claude writes its verdict to a capture file.
+2. **Phase 2**: On the next turn, the runtime reads the verdict and decides whether to enter the body (for loops) or which branch to take (for `if`).
 
 This means ask conditions add one extra turn of latency compared to variable-based conditions. The verdict is not stored as a user-visible variable -- it's consumed internally by the condition evaluator.
 
@@ -192,7 +192,7 @@ Ask conditions count toward `maxIterations` the same way regular conditions do. 
 
 > **Flows add latency without correctness benefit for well-specified tasks.** In 45 controlled A/B tests, flow control (while, retry, if, try/catch) won 0 times against vanilla Claude. Gates won 15. Add `done when:` to any prompt without a flow first. Only add a flow when you need iterative loop behavior that would require multiple manual follow-up messages.
 
-1. **Start with gates, not flows** — Just adding `done when: tests_pass` to any prompt prevents premature stopping. You don't need a full flow to get value from the plugin.
+1. **Start with gates, not flows** — Just adding `done when: tests_pass` to any prompt prevents premature stopping. You don't need a full flow to get value from the runtime.
 
 2. **Pair loops with gates** — A `retry max 5` structures execution, but only a gate enforces that the final result actually passes. Use both together.
 
@@ -215,9 +215,9 @@ For worked examples, see [Fix Tests](https://github.com/45ck/prompt-language/blo
 **Loses:**
 
 - **Simple, well-specified tasks** — When the prompt is clear and complete, vanilla Claude matches correctness at 2-3x less latency.
-- **No verifiable exit condition** — If there's no command that can check whether the task is done, there's no gate to add, and the plugin adds overhead without enforcement value.
+- **No verifiable exit condition** — If there's no command that can check whether the task is done, there's no gate to add, and the runtime adds overhead without enforcement value.
 
-In controlled evaluation (45 hypotheses, 300+ test runs at `--repeat 3` reliability), the plugin won 15, tied 28, and 2 were both-fail (neither side succeeded). Wins cluster around gate enforcement; ties cluster around tasks where the prompt is already explicit. See [Eval Analysis](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) for the full breakdown.
+In controlled evaluation (45 hypotheses, 300+ test runs at `--repeat 3` reliability), the runtime won 15, tied 28, and 2 were both-fail (neither side succeeded). Wins cluster around gate enforcement; ties cluster around tasks where the prompt is already explicit. See [Eval Analysis](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) for the full breakdown.
 
 ## Debugging
 
@@ -237,7 +237,7 @@ If a flow is stuck in a loop, going in the wrong direction, or you simply want t
 - **stop flow**
 - **reset flow**
 
-These work as natural language -- just include the phrase anywhere in your message (e.g., "this isn't working, abort flow"). The plugin detects the phrase, sets the flow status to `cancelled`, and clears any pending prompts. You will see `[prompt-language] Flow cancelled by user.` as confirmation.
+These work as natural language -- just include the phrase anywhere in your message (e.g., "this isn't working, abort flow"). The runtime detects the phrase, sets the flow status to `cancelled`, and clears any pending prompts. You will see `[prompt-language] Flow cancelled by user.` as confirmation.
 
 The `/flow:reset` slash command also cancels the active flow and clears all state. The difference:
 
@@ -280,7 +280,7 @@ Key fields:
 
 ## Compatibility
 
-The plugin hooks into Claude Code's plugin API, which is not versioned. Breaking changes are possible on Claude Code updates. If gates or flows stop working after a Claude Code update, reinstall the plugin:
+The runtime hooks into Claude Code's plugin API, which is not versioned. Breaking changes are possible on Claude Code updates. If gates or flows stop working after a Claude Code update, reinstall the plugin:
 
 ```bash
 npx @45ck/prompt-language

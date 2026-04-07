@@ -1,13 +1,13 @@
 # Getting Started
 
-See the plugin work in 2 minutes. You'll create a buggy file, add a gate, and watch Claude fix it automatically.
+See the runtime work in 2 minutes. You'll create a buggy file, add a gate, and watch Claude fix it automatically.
 
 ## Prerequisites
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) installed
 - Node.js >= 22
 
-## Step 1: Install the plugin
+## Step 1: Install the runtime
 
 ```bash
 npx @45ck/prompt-language
@@ -97,7 +97,7 @@ done when:
 
 Claude cannot stop until `npm test` actually exits with code 0. If it claims "done" before the tests pass, the gate blocks it and sends it back to keep working.
 
-Without this plugin, Claude might fix the obvious issue and say "Done!" without running the tests at all. The gate makes verification mandatory.
+Without the runtime, Claude might fix the obvious issue and say "Done!" without running the tests at all. The gate makes verification mandatory.
 
 ## Step 4: Try a flow for more control
 
@@ -122,7 +122,7 @@ The `retry` loop runs the tests, and if they fail, asks Claude to fix the errors
 
 ## What just happened
 
-1. The plugin parsed your prompt and found the `flow:` block and `done when:` gate.
+1. The runtime parsed your prompt and found the `flow:` block and `done when:` gate.
 2. It created a session state file (`.prompt-language/session-state.json`) tracking execution progress.
 3. On each turn, it injected the current step into Claude's context — showing exactly where in the flow Claude is, what variables are set, and which gates have passed or failed.
 4. When Claude tried to stop, the Stop hook checked whether all gates passed. If not, it blocked the stop and injected the next step.
@@ -130,7 +130,7 @@ The `retry` loop runs the tests, and if they fail, asks Claude to fix the errors
 
 ## Slash commands
 
-The plugin includes ready-made workflows as slash commands. No DSL to write:
+The runtime includes ready-made workflows as slash commands. No DSL to write:
 
 | Command         | What it does                                                                     |
 | --------------- | -------------------------------------------------------------------------------- |
@@ -213,7 +213,7 @@ flow:
 **I'm stuck or confused:**
 
 - [Troubleshooting](troubleshooting.md) — stuck flows, failed gates, state file inspection
-- [Use Cases](use-cases.md) — anti-patterns, when (not) to use the plugin
+- [Use Cases](use-cases.md) — anti-patterns, when (not) to use the runtime
 
 **I want all the CLI options:**
 

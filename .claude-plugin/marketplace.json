@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "prompt-language",
   "displayName": "Prompt Language",
-  "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates.",
+  "description": "A control-flow runtime for Claude Code with verification gates, persistent state, and deterministic execution. Loops, conditionals, retries, and completion enforcement.",
   "owner": {
     "name": "45ck"
   },
@@ -10,18 +10,19 @@
   "homepage": "https://github.com/45ck/prompt-language",
   "keywords": [
     "prompt-language",
-    "workflow",
+    "runtime",
+    "verification",
+    "gates",
     "control-flow",
     "enforcement",
-    "hooks",
-    "loops",
-    "retries"
+    "state-machine",
+    "agent-runtime"
   ],
   "installInstructions": "npx @45ck/prompt-language",
   "plugins": [
     {
       "name": "prompt-language",
-      "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates.",
+      "description": "A control-flow runtime for Claude Code with verification gates, persistent state, and deterministic execution. Loops, conditionals, retries, and completion enforcement.",
       "version": "0.3.0",
       "author": {
         "name": "45ck"

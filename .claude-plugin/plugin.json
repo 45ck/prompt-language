@@ -1,7 +1,7 @@
 {
   "name": "prompt-language",
   "version": "0.3.0",
-  "description": "A prompt-shaped workflow language that compiles into enforced agent execution. Loops, conditionals, retries, and completion gates.",
+  "description": "A control-flow runtime for Claude Code with verification gates, persistent state, and deterministic execution. Loops, conditionals, retries, and completion enforcement.",
   "author": {
     "name": "45ck"
   },

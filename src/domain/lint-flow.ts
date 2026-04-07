@@ -92,7 +92,26 @@ function collectDefinedVariables(nodes: readonly FlowNode[]): Set<string> {
       case 'review':
         collectDefinedVariables(node.body).forEach((v) => defined.add(v));
         break;
-      default:
+      case 'race':
+        node.children.forEach((child) =>
+          collectDefinedVariables(child.body).forEach((v) => defined.add(v)),
+        );
+        break;
+      case 'foreach_spawn':
+        defined.add(node.variableName);
+        collectDefinedVariables(node.body).forEach((v) => defined.add(v));
+        break;
+      case 'receive':
+        defined.add(node.variableName);
+        break;
+      case 'prompt':
+      case 'run':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
         break;
     }
   }
@@ -224,7 +243,29 @@ function lintUnresolvedVars(
       case 'review':
         lintUnresolvedVars(node.body, definedVars, warnings);
         break;
-      default:
+      case 'race':
+        node.children.forEach((child) => lintUnresolvedVars(child.body, definedVars, warnings));
+        break;
+      case 'foreach_spawn': {
+        for (const ref of extractVarRefs(node.listExpression)) {
+          if (!definedVars.has(ref) && !isAutoVariable(ref)) {
+            const suggestion = findClosestMatch(ref, definedVars);
+            const msg = suggestion
+              ? `Reference to undefined variable "\${${ref}}" — did you mean "\${${suggestion}}"?`
+              : `Reference to undefined variable "\${${ref}}"`;
+            warnings.push({ nodeId: node.id, message: msg });
+          }
+        }
+        lintUnresolvedVars(node.body, definedVars, warnings);
+        break;
+      }
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
         break;
     }
   }
@@ -265,7 +306,20 @@ function containsRunNode(nodes: readonly FlowNode[]): boolean {
       case 'let':
         if (node.source.type === 'run') return true;
         break;
-      default:
+      case 'race':
+        if (node.children.some((child) => containsRunNode(child.body))) return true;
+        break;
+      case 'foreach_spawn':
+        if (containsRunNode(node.body)) return true;
+        break;
+      case 'prompt':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
         break;
     }
   }
@@ -367,10 +421,25 @@ function lintNodes(nodes: readonly FlowNode[], insideLoop: boolean, warnings: Li
         }
         lintNodes(node.body, false, warnings);
         break;
+      case 'race':
+        if (node.children.length === 0) {
+          warnings.push({ nodeId: node.id, message: 'Empty race — no children to race' });
+        }
+        node.children.forEach((child) => lintNodes(child.body, false, warnings));
+        break;
+      case 'foreach_spawn':
+        if (node.body.length === 0) {
+          warnings.push({ nodeId: node.id, message: 'Empty foreach_spawn body' });
+        }
+        lintNodes(node.body, false, warnings);
+        break;
       case 'await':
       case 'prompt':
       case 'run':
       case 'let':
+      case 'remember':
+      case 'send':
+      case 'receive':
         break;
     }
   }
@@ -439,7 +508,20 @@ function allRunsInsideConditional(nodes: readonly FlowNode[]): boolean {
         case 'review':
           walk(node.body, insideConditional);
           break;
-        default:
+        case 'race':
+          node.children.forEach((child) => walk(child.body, insideConditional));
+          break;
+        case 'foreach_spawn':
+          walk(node.body, insideConditional);
+          break;
+        case 'prompt':
+        case 'break':
+        case 'continue':
+        case 'await':
+        case 'approve':
+        case 'remember':
+        case 'send':
+        case 'receive':
           break;
       }
     }

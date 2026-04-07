@@ -1266,7 +1266,7 @@ describe('autoAdvanceNodes — let prompt capture', () => {
       captureReader,
     );
     expect(capturedPrompt).toContain('What color?');
-    expect(capturedPrompt).toContain('prompt-language-capture');
+    expect(capturedPrompt).toContain('.prompt-language/vars/');
     expect(result.nodeProgress['l1']?.status).toBe('awaiting_capture');
     expect(captureReader.clear).toHaveBeenCalledWith('answer');
   });
@@ -1314,7 +1314,7 @@ describe('autoAdvanceNodes — let prompt capture', () => {
       undefined,
       captureReader,
     );
-    expect(capturedPrompt).toContain('was not detected');
+    expect(capturedPrompt).toContain('was not found');
     expect(result.nodeProgress['l1']?.iteration).toBe(2);
   });
 
@@ -2734,7 +2734,7 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
       captureReader,
     );
     expect(capturedPrompt).toContain('is the code clean?');
-    expect(capturedPrompt).toContain('prompt-language-capture');
+    expect(capturedPrompt).toContain('.prompt-language/vars/');
     expect(capturedPrompt).toContain('__judge_w1__');
     expect(result.nodeProgress['w1']?.status).toBe('awaiting_capture');
     expect(captureReader.clear).toHaveBeenCalledWith('__judge_w1__');
@@ -2866,7 +2866,7 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
     });
 
     const { capturedPrompt } = await autoAdvanceNodes(state, undefined, captureReader);
-    expect(capturedPrompt).toContain('was not detected');
+    expect(capturedPrompt).toContain('was not found');
     expect(capturedPrompt).toContain('__judge_w1__');
   });
 
@@ -3071,7 +3071,7 @@ describe('autoAdvanceNodes — if ask condition (AI-evaluated)', () => {
     });
 
     const { capturedPrompt } = await autoAdvanceNodes(state, undefined, captureReader);
-    expect(capturedPrompt).toContain('was not detected');
+    expect(capturedPrompt).toContain('was not found');
     expect(capturedPrompt).toContain('__judge_i1__');
   });
 });
@@ -3161,7 +3161,7 @@ describe('autoAdvanceNodes — ask condition edge cases', () => {
 
     // Phase 2: still no captureReader — should fall through to retry path
     const phase2 = await autoAdvanceNodes(phase1.state, undefined, undefined);
-    expect(phase2.capturedPrompt).toContain('was not detected');
+    expect(phase2.capturedPrompt).toContain('was not found');
     expect(phase2.capturedPrompt).toContain('__judge_w1__');
   });
 

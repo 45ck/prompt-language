@@ -219,6 +219,6 @@ describe('session-start hook (integration)', () => {
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
     expect(parsed.additionalContext).toContain('Variable capture');
     expect(parsed.additionalContext).toContain('answer');
-    expect(parsed.additionalContext).toContain('prompt-language-capture-abc12345');
+    expect(parsed.additionalContext).toContain('.prompt-language/vars/answer');
   });
 });

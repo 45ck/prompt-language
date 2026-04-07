@@ -2,19 +2,23 @@
  * capture-prompt — Pure functions to build meta-prompts for variable capture.
  *
  * When `let x = prompt "..."` is encountered, we need Claude to capture its
- * response. Dual strategy: inline capture tag (primary) + file write (fallback).
+ * response. Capture channel: Write-tool file write to .prompt-language/vars/{varName}.
  */
 
 const MAX_CAPTURE_LENGTH = 2000;
 
 export const CAPTURE_VARS_DIR = '.prompt-language/vars';
 
+/**
+ * @deprecated Tag-based capture has been removed. Kept for tag-capture-reader.ts compatibility.
+ * The sole capture channel is now file write via the Write tool.
+ */
 export const CAPTURE_TAG_BASE = 'prompt-language-capture';
 
-/** @deprecated Use captureTagName(nonce) for nonce-aware tag names. */
+/** @deprecated Tag-based capture has been removed. */
 export const CAPTURE_TAG = CAPTURE_TAG_BASE;
 
-/** Build the nonce-specific capture tag name. */
+/** @deprecated Tag-based capture has been removed. Kept for tag-capture-reader.ts compatibility. */
 export function captureTagName(nonce: string): string {
   return `${CAPTURE_TAG_BASE}-${nonce}`;
 }
@@ -23,32 +27,25 @@ export function captureFilePath(varName: string): string {
   return `${CAPTURE_VARS_DIR}/${varName}`;
 }
 
-export function buildCapturePrompt(promptText: string, varName: string, nonce?: string): string {
-  const tag = nonce ? captureTagName(nonce) : CAPTURE_TAG_BASE;
+export function buildCapturePrompt(promptText: string, varName: string, _nonce?: string): string {
   return `${promptText}
 
 [Internal — prompt-language variable capture: After completing the task above, \
-you MUST do both of the following:
-1. Wrap your answer in tags: <${tag} name="${varName}">your answer here</${tag}>
-2. Also save your answer to \`${captureFilePath(varName)}\` using the Write tool.
+save your answer to \`${captureFilePath(varName)}\` using the Write tool. \
 If listing multiple items, write one item per line — no bullets, no numbers, just plain text lines. \
 Maximum ${MAX_CAPTURE_LENGTH} characters.]`;
 }
 
-export function buildCaptureRetryPrompt(varName: string, nonce?: string): string {
-  const tag = nonce ? captureTagName(nonce) : CAPTURE_TAG_BASE;
-  return `[Internal — prompt-language: Variable capture for "${varName}" was not detected. \
-Please provide your response again, wrapping it in tags: \
-<${tag} name="${varName}">your answer</${tag}> \
-and also save it to \`${captureFilePath(varName)}\` using the Write tool.]`;
+export function buildCaptureRetryPrompt(varName: string, _nonce?: string): string {
+  return `[Internal — prompt-language: Variable capture for "${varName}" was not found. \
+Please save your response to \`${captureFilePath(varName)}\` using the Write tool.]`;
 }
 
 export const DEFAULT_MAX_CAPTURE_RETRIES = 3;
 
 /**
- * H-REL-005: Extract captured value from inline tags in text.
- * Looks for `<prompt-language-capture-NONCE name="varName">value</prompt-language-capture-NONCE>`
- * Returns the captured value or null if not found.
+ * @deprecated Tag-based capture has been removed. Use file-based capture instead.
+ * Kept for backward compatibility only. Will be removed in a future version.
  */
 export function extractCaptureTag(text: string, varName: string, nonce?: string): string | null {
   const tag = nonce ? captureTagName(nonce) : CAPTURE_TAG_BASE;
@@ -65,24 +62,21 @@ export function extractCaptureTag(text: string, varName: string, nonce?: string)
 /**
  * Build a meta-prompt that asks Claude to respond with a JSON object matching the given schema.
  *
- * The response is captured via the standard tag + file mechanism, same as buildCapturePrompt.
+ * The response is captured via file write to .prompt-language/vars/{varName}.
  */
 export function buildJsonCapturePrompt(
   promptText: string,
   varName: string,
   schema: string,
-  nonce?: string,
+  _nonce?: string,
 ): string {
-  const tag = nonce ? captureTagName(nonce) : CAPTURE_TAG_BASE;
   return `${promptText}
 
 [Internal — prompt-language JSON capture: Respond with a JSON object that matches this schema:
 \`\`\`
 ${schema}
 \`\`\`
-After completing the task above, you MUST do both of the following:
-1. Wrap your JSON answer in tags: <${tag} name="${varName}">{"field":"value",...}</${tag}>
-2. Also save your JSON answer to \`${captureFilePath(varName)}\` using the Write tool.
+Save your JSON answer to \`${captureFilePath(varName)}\` using the Write tool. \
 Respond with ONLY valid JSON — no explanation, no markdown fences, just the JSON object. \
 Maximum ${MAX_CAPTURE_LENGTH} characters.]`;
 }
@@ -93,15 +87,13 @@ Maximum ${MAX_CAPTURE_LENGTH} characters.]`;
 export function buildJsonCaptureRetryPrompt(
   varName: string,
   schema: string,
-  nonce?: string,
+  _nonce?: string,
 ): string {
-  const tag = nonce ? captureTagName(nonce) : CAPTURE_TAG_BASE;
   return `[Internal — prompt-language: JSON capture for "${varName}" failed. \
 Please provide a valid JSON object matching this schema:
 \`\`\`
 ${schema}
 \`\`\`
-Wrap it in tags: <${tag} name="${varName}">{"field":"value"}</${tag}> \
-and also save it to \`${captureFilePath(varName)}\` using the Write tool. \
+Save it to \`${captureFilePath(varName)}\` using the Write tool. \
 Respond with ONLY valid JSON.]`;
 }

@@ -59,15 +59,16 @@ describe('buildJudgePrompt', () => {
     expect(prompt).toContain('is the code clean?');
   });
 
-  it('includes the capture tag for the verdict variable', () => {
+  it('includes the verdict variable file path', () => {
     const prompt = buildJudgePrompt('question', 'n5');
     expect(prompt).toContain('__judge_n5__');
-    expect(prompt).toContain('prompt-language-capture');
+    expect(prompt).toContain('.prompt-language/vars/__judge_n5__');
   });
 
-  it('includes the nonce in the capture tag when provided', () => {
+  it('instructs file-write capture (no XML tags) when nonce provided', () => {
     const prompt = buildJudgePrompt('question', 'n1', 'abc123');
-    expect(prompt).toContain('prompt-language-capture-abc123');
+    expect(prompt).toContain('.prompt-language/vars/__judge_n1__');
+    expect(prompt).not.toContain('prompt-language-capture-abc123');
   });
 
   it('includes grounding output when provided', () => {
@@ -100,13 +101,14 @@ describe('buildJudgeRetryPrompt', () => {
     expect(prompt).toContain('__judge_n1__');
   });
 
-  it('includes nonce in tag when provided', () => {
+  it('includes file path (no XML tag) when nonce provided', () => {
     const prompt = buildJudgeRetryPrompt('n2', 'xyz');
-    expect(prompt).toContain('prompt-language-capture-xyz');
+    expect(prompt).toContain('.prompt-language/vars/__judge_n2__');
+    expect(prompt).not.toContain('prompt-language-capture-xyz');
   });
 
-  it('mentions that the capture was not detected', () => {
+  it('mentions that the capture was not found', () => {
     const prompt = buildJudgeRetryPrompt('n1');
-    expect(prompt).toContain('was not detected');
+    expect(prompt).toContain('was not found');
   });
 });

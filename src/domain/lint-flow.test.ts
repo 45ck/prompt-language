@@ -14,6 +14,11 @@ import {
   createContinueNode,
   createSpawnNode,
   createLetNode,
+  createRaceNode,
+  createForeachSpawnNode,
+  createRememberNode,
+  createSendNode,
+  createReceiveNode,
 } from './flow-node.js';
 
 describe('lintFlow', () => {
@@ -795,6 +800,78 @@ describe('H-SEC-007: gaslighting lint rule', () => {
       expect.objectContaining({
         message: expect.stringContaining('agent could skip execution entirely'),
       }),
+    );
+  });
+});
+
+describe('lintFlow — race / foreach_spawn / remember / send / receive nodes', () => {
+  it('warns on empty race node', () => {
+    const spec = createFlowSpec('test', [createRaceNode('r1', [])], []);
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('Empty race') }),
+    );
+  });
+
+  it('no warnings for race with spawn children', () => {
+    const spawn = createSpawnNode('s1', 'worker', [createPromptNode('p1', 'go')]);
+    const spec = createFlowSpec('test', [createRaceNode('r1', [spawn])], []);
+    expect(lintFlow(spec)).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('Empty race') }),
+    );
+  });
+
+  it('warns on empty foreach_spawn body', () => {
+    const spec = createFlowSpec('test', [createForeachSpawnNode('fs1', 'item', 'items', [])], []);
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('Empty foreach_spawn') }),
+    );
+  });
+
+  it('no warnings for foreach_spawn with body', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createForeachSpawnNode('fs1', 'item', 'items', [createPromptNode('p1', 'process ${item}')])],
+      [],
+    );
+    expect(lintFlow(spec)).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('Empty foreach_spawn') }),
+    );
+  });
+
+  it('no warnings for remember, send, receive nodes', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createRememberNode('m1', 'some fact'),
+        createSendNode('snd1', 'parent', 'hello'),
+        createReceiveNode('rcv1', 'msg', 'parent'),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
+
+  it('foreach_spawn defines its variable (no unresolved-var warning)', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createForeachSpawnNode('fs1', 'item', 'a b c', [createPromptNode('p1', 'process ${item}')])],
+      [],
+    );
+    expect(lintFlow(spec)).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('item') }),
+    );
+  });
+
+  it('receive defines its variable (no unresolved-var warning)', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createReceiveNode('rcv1', 'msg', 'parent'), createPromptNode('p1', 'got: ${msg}')],
+      [],
+    );
+    expect(lintFlow(spec)).not.toContainEqual(
+      expect.objectContaining({ message: expect.stringContaining('msg') }),
     );
   });
 });

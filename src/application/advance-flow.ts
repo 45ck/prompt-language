@@ -52,7 +52,6 @@ import {
   buildJsonCapturePrompt,
   buildJsonCaptureRetryPrompt,
   DEFAULT_MAX_CAPTURE_RETRIES,
-  extractCaptureTag,
 } from '../domain/capture-prompt.js';
 import { evaluateArithmetic } from '../domain/arithmetic.js';
 import { applyTransform } from '../domain/transforms.js';
@@ -91,7 +90,16 @@ export function resolveCurrentNode(
       return resolveCurrentNode([...node.thenBranch, ...node.elseBranch], rest);
     case 'try':
       return resolveCurrentNode([...node.body, ...node.catchBody, ...node.finallyBody], rest);
-    default:
+    case 'prompt':
+    case 'run':
+    case 'let':
+    case 'break':
+    case 'continue':
+    case 'await':
+    case 'approve':
+    case 'remember':
+    case 'send':
+    case 'receive':
       return null;
   }
 }
@@ -595,10 +603,8 @@ async function advanceLetPrompt(
   if (captureReader) {
     const captured = await captureReader.read(node.variableName);
     if (captured) {
-      // H-REL-005: Try tag extraction first — strips wrapper tags for cleaner value
-      const tagValue = extractCaptureTag(captured, node.variableName, current.captureNonce);
       await captureReader.clear(node.variableName);
-      return { state: current, value: tagValue ?? captured };
+      return { state: current, value: captured };
     }
     failureReason = 'capture file empty or not found';
   } else {
@@ -672,9 +678,8 @@ async function advanceLetPromptJson(
   if (captureReader) {
     const captured = await captureReader.read(node.variableName);
     if (captured) {
-      const tagValue = extractCaptureTag(captured, node.variableName, current.captureNonce);
       await captureReader.clear(node.variableName);
-      return { state: current, value: tagValue ?? captured };
+      return { state: current, value: captured };
     }
     failureReason = 'capture file empty or not found';
   } else {

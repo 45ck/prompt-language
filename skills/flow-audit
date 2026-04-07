@@ -1,0 +1,52 @@
+# /flow-audit — Query the prompt-language audit log
+
+Read and filter `.prompt-language/audit.jsonl` to inspect command execution history.
+
+## Instructions
+
+1. Check if `.prompt-language/audit.jsonl` exists. If not, tell the user no audit log was found and suggest running a flow first.
+
+2. Read the full file using the Read tool.
+
+3. Parse each line as a JSON object. Each entry has fields like:
+   - `timestamp` — ISO date string
+   - `type` — event type: `"gate"`, `"run"`, or `"command"`
+   - `command` — the shell command that was run
+   - `exitCode` — numeric exit code (0 = success)
+   - `durationMs` — execution time in milliseconds
+   - `stdout` — captured output (may be truncated)
+   - `stderr` — error output (may be truncated)
+
+4. Apply filters based on any arguments the user passed:
+   - `--failures` — show only entries where `exitCode !== 0`
+   - `--slow [N]` — show the top N slowest entries by `durationMs` (default N=10)
+   - `--type gate|run|command` — show only entries matching that `type`
+   - No flags — show the last 20 entries
+
+5. Display results as a formatted table:
+   ```
+   Timestamp            Type    Exit  Duration  Command
+   -------------------  ------  ----  --------  -------
+   2026-03-26 14:23:01  run       0    1,234ms  npm test
+   2026-03-26 14:23:03  gate      1      456ms  node verify.js
+   ```
+
+6. If `--slow` was requested or if showing all entries, add a "Slowest Commands" summary section showing the top 5 by duration.
+
+7. If the audit log is empty, say so clearly.
+
+## Example output format
+
+```
+Audit log: .prompt-language/audit.jsonl (47 entries, showing last 20)
+
+Timestamp            Type    Exit  Duration  Command
+-------------------  ------  ----  --------  -------
+2026-03-26 14:23:01  run       0    1,234ms  npm test
+2026-03-26 14:23:03  gate      1      456ms  node verify.js
+...
+
+Top 5 slowest commands:
+  1. 12,345ms — npm run build (run)
+  2.  8,901ms — npm test (gate)
+```

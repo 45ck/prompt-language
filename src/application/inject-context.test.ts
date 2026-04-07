@@ -1770,7 +1770,7 @@ describe('injectContext — let-prompt capture', () => {
     );
 
     expect(result.prompt).toContain('.prompt-language/vars/out');
-    expect(result.prompt).toContain('not detected');
+    expect(result.prompt).toContain('not found');
     const saved = await store.loadCurrent();
     expect(saved?.nodeProgress['l1']?.iteration).toBe(2);
     expect(saved?.currentNodePath).toEqual([0]);

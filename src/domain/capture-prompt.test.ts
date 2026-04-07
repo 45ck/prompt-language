@@ -33,12 +33,6 @@ describe('buildCapturePrompt', () => {
     expect(result).toContain('.prompt-language/vars/tasks');
   });
 
-  it('includes capture tag instructions', () => {
-    const result = buildCapturePrompt('List colors', 'colors');
-    expect(result).toContain(`<${CAPTURE_TAG} name="colors">`);
-    expect(result).toContain(`</${CAPTURE_TAG}>`);
-  });
-
   it('instructs one item per line for lists', () => {
     const result = buildCapturePrompt('List colors', 'colors');
     expect(result).toContain('one item per line');
@@ -54,10 +48,10 @@ describe('buildCapturePrompt', () => {
     expect(result).toContain('2000 characters');
   });
 
-  it('instructs both tag and file capture', () => {
+  it('instructs file-write-only capture (no XML tags)', () => {
     const result = buildCapturePrompt('Do work', 'out');
-    expect(result).toContain('Wrap your answer in tags');
-    expect(result).toContain('Also save your answer');
+    expect(result).not.toContain('Wrap your answer in tags');
+    expect(result).toContain('save your answer to');
   });
 });
 
@@ -67,15 +61,15 @@ describe('buildCaptureRetryPrompt', () => {
     expect(result).toContain('.prompt-language/vars/tasks');
   });
 
-  it('includes capture tag instructions', () => {
+  it('instructs file-write-only retry (no XML tags)', () => {
     const result = buildCaptureRetryPrompt('tasks');
-    expect(result).toContain(`<${CAPTURE_TAG} name="tasks">`);
-    expect(result).toContain(`</${CAPTURE_TAG}>`);
+    expect(result).not.toContain(`<${CAPTURE_TAG} name="tasks">`);
+    expect(result).toContain('Write tool');
   });
 
-  it('mentions capture was not detected', () => {
+  it('mentions capture was not found', () => {
     const result = buildCaptureRetryPrompt('out');
-    expect(result).toContain('not detected');
+    expect(result).toContain('not found');
   });
 });
 
@@ -92,30 +86,28 @@ describe('CAPTURE_TAG_BASE', () => {
 });
 
 describe('buildCapturePrompt with nonce', () => {
-  it('uses nonce-specific tag when nonce is provided', () => {
+  it('does not embed nonce in output (nonce no longer used in prompt)', () => {
     const result = buildCapturePrompt('Do work', 'out', 'abc12345');
-    expect(result).toContain('<prompt-language-capture-abc12345 name="out">');
-    expect(result).toContain('</prompt-language-capture-abc12345>');
+    expect(result).not.toContain('abc12345');
+    expect(result).toContain('.prompt-language/vars/out');
   });
 
-  it('falls back to base tag when no nonce', () => {
+  it('includes file path without nonce', () => {
     const result = buildCapturePrompt('Do work', 'out');
-    expect(result).toContain(`<${CAPTURE_TAG_BASE} name="out">`);
-    expect(result).toContain(`</${CAPTURE_TAG_BASE}>`);
+    expect(result).toContain('.prompt-language/vars/out');
   });
 });
 
 describe('buildCaptureRetryPrompt with nonce', () => {
-  it('uses nonce-specific tag when nonce is provided', () => {
+  it('does not embed nonce in output (nonce no longer used in prompt)', () => {
     const result = buildCaptureRetryPrompt('tasks', 'abc12345');
-    expect(result).toContain('<prompt-language-capture-abc12345 name="tasks">');
-    expect(result).toContain('</prompt-language-capture-abc12345>');
+    expect(result).not.toContain('abc12345');
+    expect(result).toContain('.prompt-language/vars/tasks');
   });
 
-  it('falls back to base tag when no nonce', () => {
+  it('includes file path without nonce', () => {
     const result = buildCaptureRetryPrompt('tasks');
-    expect(result).toContain(`<${CAPTURE_TAG_BASE} name="tasks">`);
-    expect(result).toContain(`</${CAPTURE_TAG_BASE}>`);
+    expect(result).toContain('.prompt-language/vars/tasks');
   });
 });
 

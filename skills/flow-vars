@@ -1,0 +1,57 @@
+# /flow-vars — Inspect flow variables with full values and types
+
+Display all variables from the current flow session state without truncation.
+
+## Instructions
+
+1. Check if `.prompt-language/session-state.json` exists. If not, tell the user no session state was found and suggest running a flow first.
+
+2. Read the file using the Read tool and parse the JSON.
+
+3. Extract the `variables` map from the session state.
+
+4. Separate variables into two groups:
+   - **Auto-variables**: names starting/ending with `__`, or matching `last_stdout`, `last_stderr`, `last_exit_code`, `command_failed`, `command_succeeded`, or ending with `_index`, `_length`, `_winner`
+   - **User variables**: everything else
+
+5. For each variable, detect and display its type:
+   - If the value is a JSON array string (starts with `[`): show as `[list, N items]` and expand each item on its own line
+   - If the value is `"true"` or `"false"`: show as `[boolean]`
+   - If the value matches a number: show as `[number]`
+   - Otherwise: show as `[string]`
+
+6. Display user variables first, then auto-variables in a collapsed section.
+
+7. If the user provided a filter argument (e.g. `/flow-vars count` or `/flow-vars --filter test`), show only variables whose names match the pattern.
+
+8. Show full values — never truncate.
+
+## Example output format
+
+```
+Flow variables (session: abc12345)
+
+USER VARIABLES (4)
+──────────────────
+output         [string]
+  "Tests completed: 42 passed, 0 failed."
+
+count          [number]
+  42
+
+items          [list, 3 items]
+  [0] "src/auth.ts"
+  [1] "src/user.ts"
+  [2] "src/api.ts"
+
+ready          [boolean]
+  true
+
+AUTO-VARIABLES (5)
+──────────────────
+last_exit_code    0
+command_succeeded true
+command_failed    false
+last_stdout       "Tests completed: 42 passed, 0 failed."
+last_stderr       ""
+```

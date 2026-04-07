@@ -65,6 +65,10 @@ These are interesting, but they are a step beyond the current core runtime and s
 
 No exploratory items remain — all previously listed ideas have shipped.
 
+## Long-term research direction
+
+For the broader thesis — prompt language as a primary engineering surface — and a concrete research plan with falsifiable experiments, see [Thesis](thesis.md) and [Thesis Roadmap](thesis-roadmap.md).
+
 ## Documentation rule
 
 To keep the docs honest:

@@ -468,6 +468,32 @@ Verification is where the repo has the clearest measured wins. State, variables,
 
 Full methodology, hypothesis-by-hypothesis results, and latency data: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)**
 
+## Long-term thesis
+
+The runtime is positioned today as a control-flow layer with verification gates. That is honest — gates are the clearest proven advantage (15/45 hypothesis wins, all from gates catching what prompts miss).
+
+But the longer-term ambition is bigger: **prompt language as the primary engineering surface for bounded software systems.**
+
+In this model, engineers write goals, constraints, workflows, verification gates, and recovery logic in prompt-language projects. Agents produce and maintain the code beneath that layer. When a recurring failure happens, the fix goes into the prompt-language project — not just the generated code — so the same class of problem is less likely to recur.
+
+**What is proven today:**
+
+- Verification gates catch omissions that vanilla prompting misses (100% reliable across 6 gate patterns)
+- The runtime provides persistent state, control flow, imports, memory, approvals, and multi-agent coordination
+- The mechanism works end-to-end through Claude's real agent loop (32 smoke tests)
+
+**What the project aims to prove:**
+
+- That multi-file prompt-language projects outperform monolithic flows
+- That accumulated wisdom (`memory:`, `remember`) reduces babysitting over time
+- That recurring failures can be eliminated by fixing the execution layer, not the output
+- That bounded software can be built primarily through prompt-language edits
+- That multi-agent coordination via `spawn`/`await` improves outcomes when seams are real
+
+These are falsifiable hypotheses, not marketing claims. The research plan includes concrete experiments with numeric success criteria and explicit conditions for rejection.
+
+Read the full argument: **[Thesis](https://github.com/45ck/prompt-language/blob/main/docs/thesis.md)** · Research plan: **[Thesis Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/thesis-roadmap.md)** · Current evidence: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)**
+
 ## Monitoring
 
 ### Status line
@@ -499,6 +525,8 @@ Shows the full flow state updating in real time — useful for watching long-run
 - **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)** — complete syntax specification
 - **[Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md)** — debugging stuck flows, known issues
 - **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)** — A/B testing methodology and results
+- **[Thesis](https://github.com/45ck/prompt-language/blob/main/docs/thesis.md)** — long-term thesis and research agenda
+- **[Thesis Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/thesis-roadmap.md)** — concrete experiments to prove or disprove the thesis
 - **[CLI Reference](https://github.com/45ck/prompt-language/blob/main/docs/cli-reference.md)** — all CLI commands and slash commands
 - **[Use Cases](https://github.com/45ck/prompt-language/blob/main/docs/use-cases.md)** — when the runtime wins, anti-patterns, quick recipes
 - **[Documentation Index](https://github.com/45ck/prompt-language/blob/main/docs/index.md)** — full documentation hub

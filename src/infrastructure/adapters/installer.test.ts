@@ -10,6 +10,37 @@ const ROOT = join(import.meta.dirname, '..', '..', '..');
 // Helpers
 // ---------------------------------------------------------------------------
 
+async function readPluginVersion(): Promise<string> {
+  const raw = await readFile(join(ROOT, '.claude-plugin', 'plugin.json'), 'utf8');
+  return (JSON.parse(raw) as { version: string }).version;
+}
+
+/** Cache-based install path: .claude/plugins/cache/prompt-language-local/prompt-language/{version} */
+function cachePath(home: string, version: string): string {
+  return join(
+    home,
+    '.claude',
+    'plugins',
+    'cache',
+    'prompt-language-local',
+    'prompt-language',
+    version,
+  );
+}
+
+/** Marketplace catalog path: .claude/plugins/cache/prompt-language-local/.claude-plugin/marketplace.json */
+function marketplacePath(home: string): string {
+  return join(
+    home,
+    '.claude',
+    'plugins',
+    'cache',
+    'prompt-language-local',
+    '.claude-plugin',
+    'marketplace.json',
+  );
+}
+
 async function createFakeHome(): Promise<string> {
   return mkdtemp(join(tmpdir(), 'pl-install-'));
 }
@@ -47,9 +78,11 @@ function runInstaller(fakeHome: string): void {
 
 describe('Installer — install verification', () => {
   let fakeHome: string;
+  let version: string;
 
   beforeEach(async () => {
     fakeHome = await createFakeHome();
+    version = await readPluginVersion();
     // Build dist first so the installer has something to copy
     runInstaller(fakeHome);
   });
@@ -59,7 +92,7 @@ describe('Installer — install verification', () => {
   });
 
   it('copies all required directories to plugin location', async () => {
-    const pluginsDir = join(fakeHome, '.claude', 'plugins', 'local', 'prompt-language');
+    const pluginsDir = cachePath(fakeHome, version);
     const expectedDirs = ['dist', 'hooks', 'skills', '.claude-plugin', 'bin'];
 
     for (const dir of expectedDirs) {
@@ -69,15 +102,7 @@ describe('Installer — install verification', () => {
   });
 
   it('plugin.json has author as an object (not a string)', async () => {
-    const pluginJsonPath = join(
-      fakeHome,
-      '.claude',
-      'plugins',
-      'local',
-      'prompt-language',
-      '.claude-plugin',
-      'plugin.json',
-    );
+    const pluginJsonPath = join(cachePath(fakeHome, version), '.claude-plugin', 'plugin.json');
     const pluginJson = (await readJsonFile(pluginJsonPath)) as Record<string, unknown>;
 
     expect(pluginJson).toHaveProperty('name');
@@ -89,15 +114,8 @@ describe('Installer — install verification', () => {
   });
 
   it('marketplace.json has valid catalog schema', async () => {
-    const marketplacePath = join(
-      fakeHome,
-      '.claude',
-      'plugins',
-      'local',
-      '.claude-plugin',
-      'marketplace.json',
-    );
-    const catalog = (await readJsonFile(marketplacePath)) as Record<string, unknown>;
+    const catPath = marketplacePath(fakeHome);
+    const catalog = (await readJsonFile(catPath)) as Record<string, unknown>;
 
     expect(catalog).toHaveProperty('name', 'prompt-language-local');
     expect(catalog).toHaveProperty('owner');
@@ -110,7 +128,7 @@ describe('Installer — install verification', () => {
 
     const entry = plugins[0];
     expect(entry).toHaveProperty('name', 'prompt-language');
-    expect(entry).toHaveProperty('source', './prompt-language');
+    expect(entry).toHaveProperty('source', `./prompt-language/${version}`);
     expect(entry).toHaveProperty('version');
   });
 
@@ -162,7 +180,7 @@ describe('Installer — install verification', () => {
 
   it('copyDir handles nested directories', async () => {
     // Verify that nested files under dist/ were copied correctly
-    const distDir = join(fakeHome, '.claude', 'plugins', 'local', 'prompt-language', 'dist');
+    const distDir = join(cachePath(fakeHome, version), 'dist');
     const entries = await readdir(distDir, { recursive: true });
     // dist/ should contain JS files from the build
     const jsFiles = entries.filter((e) => typeof e === 'string' && e.endsWith('.js'));
@@ -174,15 +192,7 @@ describe('Installer — install verification', () => {
       join(ROOT, '.claude-plugin', 'plugin.json'),
     )) as Record<string, unknown>;
     const installedPluginJson = (await readJsonFile(
-      join(
-        fakeHome,
-        '.claude',
-        'plugins',
-        'local',
-        'prompt-language',
-        '.claude-plugin',
-        'plugin.json',
-      ),
+      join(cachePath(fakeHome, version), '.claude-plugin', 'plugin.json'),
     )) as Record<string, unknown>;
 
     expect(installedPluginJson['version']).toBe(sourcePluginJson['version']);
@@ -211,7 +221,8 @@ describe('Installer — cross-platform paths', () => {
     // Should not throw even with spaces in the path
     runInstaller(fakeHome);
 
-    const pluginsDir = join(fakeHome, '.claude', 'plugins', 'local', 'prompt-language');
+    const version = await readPluginVersion();
+    const pluginsDir = cachePath(fakeHome, version);
     expect(await dirExists(pluginsDir)).toBe(true);
     expect(await dirExists(join(pluginsDir, 'dist'))).toBe(true);
 
@@ -225,16 +236,9 @@ describe('Installer — cross-platform paths', () => {
     fakeHome = await createFakeHome();
     runInstaller(fakeHome);
 
-    // The installer must have created: .claude/plugins/local/prompt-language/...
-    // which is 4 levels deep — verify the full path was created
-    const deepPath = join(
-      fakeHome,
-      '.claude',
-      'plugins',
-      'local',
-      'prompt-language',
-      '.claude-plugin',
-    );
+    // The installer must have created the cache path which is deeply nested
+    const version = await readPluginVersion();
+    const deepPath = join(cachePath(fakeHome, version), '.claude-plugin');
     expect(await dirExists(deepPath)).toBe(true);
   });
 

@@ -11,10 +11,18 @@ const ROOT = join(__dirname, '..');
 const MARKETPLACE_NAME = 'prompt-language-local';
 const PLUGIN_KEY = `prompt-language@${MARKETPLACE_NAME}`;
 const CLAUDE_DIR = join(homedir(), '.claude');
-const MARKETPLACE_DIR = join(CLAUDE_DIR, 'plugins', 'local');
-const PLUGINS_DIR = join(MARKETPLACE_DIR, 'prompt-language');
+const CACHE_DIR = join(CLAUDE_DIR, 'plugins', 'cache', MARKETPLACE_NAME);
+// PLUGINS_DIR is set dynamically per version in install() — see pluginsDir()
 const INSTALLED_PLUGINS_PATH = join(CLAUDE_DIR, 'plugins', 'installed_plugins.json');
 const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json');
+
+// Old install location (pre-cache migration) — cleaned up during install/uninstall
+const OLD_LOCAL_DIR = join(CLAUDE_DIR, 'plugins', 'local', 'prompt-language');
+const OLD_MARKETPLACE_DIR = join(CLAUDE_DIR, 'plugins', 'local');
+
+function pluginsDir(version) {
+  return join(CACHE_DIR, 'prompt-language', version);
+}
 
 const DIRS_TO_COPY = ['dist', 'hooks', 'skills', '.claude-plugin', 'bin'];
 
@@ -57,11 +65,20 @@ async function writeJson(filePath, data) {
 async function install() {
   const version = await readPluginVersion();
   const now = new Date().toISOString();
+  const PLUGINS_DIR = pluginsDir(version);
   console.log(`Installing prompt-language v${version}...`);
 
   if (!existsSync(join(ROOT, 'dist'))) {
     console.error('Error: dist/ directory not found. Run "npm run build" first.');
     process.exit(1);
+  }
+
+  // Clean up old install location (pre-cache migration)
+  try {
+    await fs.rm(OLD_LOCAL_DIR, { recursive: true, force: true });
+    await fs.rm(join(OLD_MARKETPLACE_DIR, '.claude-plugin'), { recursive: true, force: true });
+  } catch {
+    // ignore — old location may not exist
   }
 
   await ensureDir(PLUGINS_DIR);
@@ -84,7 +101,7 @@ async function install() {
     }
   }
 
-  // Write marketplace catalog to parent directory for Claude Code discovery
+  // Write marketplace catalog to cache directory for Claude Code discovery
   const pluginJson = JSON.parse(
     await fs.readFile(join(PLUGINS_DIR, '.claude-plugin', 'plugin.json'), 'utf8'),
   );
@@ -99,12 +116,12 @@ async function install() {
         description: pluginJson.description,
         version: pluginJson.version,
         author: pluginJson.author,
-        source: './prompt-language',
+        source: `./prompt-language/${version}`,
         category: 'development',
       },
     ],
   };
-  await writeJson(join(MARKETPLACE_DIR, '.claude-plugin', 'marketplace.json'), marketplaceCatalog);
+  await writeJson(join(CACHE_DIR, '.claude-plugin', 'marketplace.json'), marketplaceCatalog);
   console.log('  Generated marketplace catalog');
 
   // Register in installed_plugins.json
@@ -128,7 +145,7 @@ async function install() {
   settings.extraKnownMarketplaces[MARKETPLACE_NAME] = {
     source: {
       source: 'directory',
-      path: MARKETPLACE_DIR,
+      path: CACHE_DIR,
     },
   };
   settings.enabledPlugins = settings.enabledPlugins ?? {};
@@ -138,7 +155,7 @@ async function install() {
   console.log('  Enabled in settings.json');
 
   // Auto-configure status line if not already set
-  await configureStatusLine(settings, true);
+  await configureStatusLine(settings, PLUGINS_DIR, true);
 
   console.log(`\nprompt-language runtime v${version} installed successfully.\n`);
   console.log('Try it now:');
@@ -153,17 +170,20 @@ async function install() {
 async function uninstall() {
   console.log('Uninstalling prompt-language...');
 
+  // Remove cache directory (current install location)
   try {
-    await fs.rm(PLUGINS_DIR, { recursive: true, force: true });
-    console.log(`  Removed ${PLUGINS_DIR}`);
+    await fs.rm(CACHE_DIR, { recursive: true, force: true });
+    console.log(`  Removed ${CACHE_DIR}`);
   } catch {
-    console.log('  Plugin directory not found (already removed)');
+    console.log('  Cache directory not found (already removed)');
   }
 
+  // Remove old local directory (pre-cache migration)
   try {
-    await fs.rm(join(MARKETPLACE_DIR, '.claude-plugin'), { recursive: true, force: true });
+    await fs.rm(OLD_LOCAL_DIR, { recursive: true, force: true });
+    await fs.rm(join(OLD_MARKETPLACE_DIR, '.claude-plugin'), { recursive: true, force: true });
   } catch {
-    // ignore
+    // ignore — old location may not exist
   }
 
   const installed = await readJsonSafe(INSTALLED_PLUGINS_PATH);
@@ -199,6 +219,7 @@ async function uninstall() {
 
 async function status() {
   const version = await readPluginVersion().catch(() => 'unknown');
+  const PLUGINS_DIR = pluginsDir(version);
 
   let installed = false;
   try {
@@ -226,12 +247,16 @@ async function status() {
   }
 }
 
-async function configureStatusLine(settings, autoMode = false) {
-  const statuslineScript = join(PLUGINS_DIR, 'bin', 'statusline.mjs').replace(/\\/g, '/');
+async function configureStatusLine(settings, installDir, autoMode = false) {
+  const statuslineScript = join(installDir, 'bin', 'statusline.mjs').replace(/\\/g, '/');
   const command = `node "${statuslineScript}"`;
 
   if (settings?.statusLine) {
-    if (autoMode) {
+    // Always update if the existing status line points to a prompt-language path
+    // (handles migration from old install locations)
+    const existingCmd = settings.statusLine.command ?? '';
+    const isOurStatusLine = existingCmd.includes('prompt-language');
+    if (autoMode && !isOurStatusLine) {
       console.log('  Status line already configured (skipping auto-config)');
       return;
     }
@@ -412,7 +437,8 @@ switch (command) {
     break;
   case 'statusline': {
     const settings = (await readJsonSafe(SETTINGS_PATH)) ?? {};
-    await configureStatusLine(settings);
+    const ver = await readPluginVersion().catch(() => '0.0.0');
+    await configureStatusLine(settings, pluginsDir(ver));
     break;
   }
   case 'watch': {

@@ -51,7 +51,7 @@ function buildStateResource(server: McpServer, stateDir: string): void {
     'flow-state',
     'flow://state',
     { description: 'Current prompt-language session state (raw JSON)' },
-    async (_uri) => {
+    async (_uri: URL) => {
       const state = await readSessionState(stateDir);
       return { contents: [{ uri: 'flow://state', text: stateOrEmpty(state) }] };
     },
@@ -63,7 +63,7 @@ function buildVariablesResource(server: McpServer, stateDir: string): void {
     'flow-variables',
     'flow://variables',
     { description: 'Variables map from current session state' },
-    async (_uri) => {
+    async (_uri: URL) => {
       const state = await readSessionState(stateDir);
       const text = state ? JSON.stringify(state.variables, null, 2) : 'No active session';
       return { contents: [{ uri: 'flow://variables', text }] };
@@ -76,7 +76,7 @@ function buildGatesResource(server: McpServer, stateDir: string): void {
     'flow-gates',
     'flow://gates',
     { description: 'Completion gates and their current pass/fail status' },
-    async (_uri) => {
+    async (_uri: URL) => {
       const state = await readSessionState(stateDir);
       const text = state ? formatGates(state) : 'No active session';
       return { contents: [{ uri: 'flow://gates', text }] };
@@ -89,7 +89,7 @@ function buildAuditResource(server: McpServer, stateDir: string): void {
     'flow-audit',
     'flow://audit',
     { description: 'Rendered flow with execution status annotations' },
-    async (_uri) => {
+    async (_uri: URL) => {
       const state = await readSessionState(stateDir);
       const text = state ? renderFlow(state) : 'No active session';
       return { contents: [{ uri: 'flow://audit', text }] };
@@ -143,7 +143,7 @@ function buildSetVariableTool(server: McpServer, stateDir: string): void {
       description: 'Sets a variable in the current session state',
       inputSchema: SetVariableInput,
     },
-    async ({ name, value }) => {
+    async ({ name, value }: { name: string; value: string }) => {
       const state = await readSessionState(stateDir);
       if (!state) {
         return { content: [{ type: 'text' as const, text: 'No active session' }], isError: true };

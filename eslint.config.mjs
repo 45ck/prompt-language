@@ -160,6 +160,15 @@ export default tseslint.config(
     },
   },
 
+  // MCP server uses deep imports (@modelcontextprotocol/sdk/server/mcp.js)
+  // that are valid TypeScript paths but not in the SDK's package.json exports map.
+  {
+    files: ['**/src/infrastructure/mcp-server.ts'],
+    rules: {
+      'import/no-unresolved': 'off',
+    },
+  },
+
   // In-memory adapter implementations are test doubles for external services.
   // They route many operations through a single switch and legitimately need
   // higher complexity/size budgets. require-await is off because they fulfil

@@ -6,6 +6,14 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **`/flow-audit` skill** — queries `.prompt-language/audit.jsonl` with `--failures`, `--slow`, and `--type` filters; outputs a formatted table with timing summary.
+- **`/flow-vars` skill** — inspects all session variables with full values (no truncation), type detection (`[list]`, `[boolean]`, `[number]`, `[string]`), list expansion, and auto-variable separation.
+- **Exhaustive node-kind switches** — all dispatch switches in `lint-flow.ts` and `advance-flow.ts` now enumerate every node kind explicitly; adding a new node kind produces a TypeScript compile error if any switch is missed. Added correct handling for `race`, `foreach_spawn`, `remember`, `send`, and `receive` in lint traversals (including `receive.variableName` and `foreach_spawn.variableName` as defined variables).
+
+### Changed
+
+- **Capture protocol simplified** — `buildCapturePrompt()` now instructs Claude to write answers via the Write tool only. XML tag wrapping has been removed from all capture prompts (`buildCapturePrompt`, `buildCaptureRetryPrompt`, `buildJsonCapturePrompt`, `buildJsonCaptureRetryPrompt`). The `extractCaptureTag()` fallback is removed from `advanceLetPrompt` Phase 2 — file content is used directly. This eliminates the #1 flakiness source (malformed XML in nested loops and long contexts).
+
 - **`approve` node** — hard human approval checkpoint. `approve "message"` blocks execution until the human confirms (yes/no). `approve "message" timeout N` auto-continues after N seconds. Sets `approve_rejected = true` on decline.
 - **`review` block** — generator-evaluator critique loop. Body runs, then Claude evaluates against optional `criteria: "..."`. Repeats up to `max N` times. Optional `grounded-by "cmd"` for deterministic grounding. Sets `_review_critique` variable.
 - **`race` block** — competitive parallel execution. First child to complete (exit 0) wins. Sets `race_winner` to the winning child name. Optional `timeout N` seconds.

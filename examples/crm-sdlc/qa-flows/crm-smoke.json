@@ -58,9 +58,7 @@
       "assertion": { "kind": "textPresent", "text": "Jamie Smith" }
     }
   ],
-  "assertions": [
-    { "kind": "noCriticalA11yViolations" }
-  ],
+  "assertions": [{ "kind": "noCriticalA11yViolations" }],
   "policies": {
     "consoleErrors": { "max": 0, "allowMessages": [] },
     "networkFailures": { "max": 0, "allowUrls": [] },

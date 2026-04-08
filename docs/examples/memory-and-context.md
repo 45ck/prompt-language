@@ -1,6 +1,6 @@
 # Example: Memory and Context
 
-Load persistent context into flow variables at the start of a session. Files, project notes, and previous results survive across sessions — the DSL reads them via `let x = run "cat ..."`.
+Load persistent context into flow variables at the start of a session. The DSL can prefetch remembered values with `memory:` and can write new facts with `remember`.
 
 ## Natural language
 
@@ -10,17 +10,19 @@ Before starting, read the project conventions from CLAUDE.md and any notes from 
 
 ## DSL equivalent
 
-```
-Goal: implement feature with project context
+```yaml
+Goal: implement feature with remembered context
+
+memory:
+  preferred_language
+  last_approach
 
 flow:
-  let conventions = run "cat CLAUDE.md"
-  let notes = run "cat .project-notes 2>/dev/null || echo 'No previous notes'"
-  let recent_changes = run "git log --oneline -5"
-  prompt: Implement the user authentication feature.
-    Follow these project conventions: ${conventions}
-    Notes from previous work: ${notes}
-    Recent changes for context: ${recent_changes}
+  prompt: Implement the user authentication feature using ${preferred_language}.
+    Last approach we tried: ${last_approach}
+  let current_approach = prompt "What approach are you taking?"
+  remember key="last_approach" value="${current_approach}"
+  run: npm test
 
 done when:
   tests_pass
@@ -28,56 +30,52 @@ done when:
 
 ## What happens
 
-1. `let conventions = run "cat CLAUDE.md"` loads the project instructions file into a variable. This gives the agent access to coding standards, naming conventions, and architecture rules.
-2. `let notes = run "cat .project-notes 2>/dev/null || echo '...'"` loads session notes from a previous run. The `2>/dev/null || echo` pattern handles the case where the file doesn't exist yet.
-3. `let recent_changes = run "git log --oneline -5"` captures recent git history for context.
-4. All three variables are interpolated into the prompt, giving the agent rich context before it starts work.
+1. The `memory:` section preloads `preferred_language` and `last_approach` from `.prompt-language/memory.json` before the first flow node runs.
+2. The prompt receives both values immediately, so the agent starts with project memory instead of reconstructing it from scratch.
+3. `let current_approach = prompt "What approach are you taking?"` captures the agent's current plan.
+4. `remember key="last_approach" value="${current_approach}"` stores that plan for the next session.
 
 ## Why this works
 
-Cross-session memory is a file system concern, not a language concern. Any file that persists on disk is accessible via `let x = run "cat ..."`:
+Cross-session memory is a first-class runtime concern, not just a shell trick. The DSL owns the persistent memory store:
 
-- **CLAUDE.md** — project instructions (automatically loaded by Claude Code, but also available as a variable for explicit reference)
-- **`.project-notes`** — a simple text file for session-to-session notes
-- **beads issues** — structured task tracking that persists across sessions
-- **git history** — previous commits, diffs, and logs
-
-The DSL doesn't need a `memory` keyword because `run "cat file"` already reads any file.
+- **`memory:`** — prefetches keys into variables before flow execution starts
+- **`remember`** — stores free-form notes or keyed values for later runs
+- **`.prompt-language/memory.json`** — the persistent backing store
+- **`let x = run "cat ..."`** — still useful for ad hoc file reads, but no longer the only mechanism
 
 ## Variation: save notes for next session
 
 Write results back to persistent storage at the end of a flow:
 
-```
+```yaml
 Goal: implement feature and save notes
 
 flow:
-  let conventions = run "cat CLAUDE.md"
-  prompt: Implement the payment processing module following conventions: ${conventions}
+  prompt: Implement the payment processing module.
   run: npm test
   let results = run "npm test 2>&1 | tail -5"
-  run: echo "Session $(date): Implemented payment module. Test results: ${results}" >> .project-notes
+  remember "Session note: implemented payment module. Test results: ${results}"
 ```
 
-The final `run` appends a session summary to `.project-notes`, which the next session can read.
+The final `remember` call appends a session summary to the persistent memory store, which the next session can read through `memory:`.
 
 ## Variation: load structured context
 
 Pull in multiple context sources for complex tasks:
 
-```
+```yaml
 flow:
-  let schema = run "cat prisma/schema.prisma"
-  let api_spec = run "cat docs/api-spec.yaml"
-  let test_patterns = run "cat src/__tests__/README.md 2>/dev/null || echo 'No test guide'"
+  memory:
+    api_style
+    test_strategy
+
   prompt: Add a new /users endpoint.
-    Database schema: ${schema}
-    API specification: ${api_spec}
-    Test patterns to follow: ${test_patterns}
+    API style: ${api_style}
+    Test strategy: ${test_strategy}
 
 done when:
   tests_pass
-  gate typecheck: npx tsc --noEmit
 ```
 
-Loading the schema, API spec, and test patterns into variables ensures the agent has all the context it needs in a single prompt, reducing the chance of convention violations.
+Loading the shared context into memory ensures the agent has all the context it needs in a single prompt, reducing the chance of convention violations.

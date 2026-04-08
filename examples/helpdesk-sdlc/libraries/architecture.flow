@@ -1,0 +1,11 @@
+library: architecture
+
+export flow synthesize_scope():
+  prompt: Use agent: software-architect. Use skills: software-architecture-skills, enterprise-architecture-integration-skills, uml-analysis-modelling-skills, backend-persistence-skills. From docs/prd.md and the research docs, write docs/architecture/context.md, docs/architecture/container.md, docs/architecture/domain-model.md, docs/architecture/sequence-ticket-triage.md, docs/api-contracts.md, docs/data-model.md, and docs/adr-001-stack.md. Keep the MVP bounded.
+  prompt: Use agent: system-modeler. Write specs/domain-glossary.md and specs/invariants.md so every worker shares the same domain language and invariants.
+  review criteria: "The architecture must be buildable by parallel backend and frontend workers without hidden coupling, speculative abstractions, or missing invariants." grounded-by "test -f docs/architecture/domain-model.md && test -f docs/api-contracts.md && test -f docs/data-model.md" max 3
+    prompt: Critique the architecture for overengineering, unclear boundaries, weak queue and workflow modeling, missing invariants, and misalignment with the PRD. Apply the fixes directly to the docs.
+  end
+
+export flow write_engineering_docs():
+  prompt: Use agent: delivery-manager. Update README.md, AGENTS.md, docs/traceability.md, and docs/test-strategy.md so implementation, QA, and demo artifacts all trace back to the approved scope.

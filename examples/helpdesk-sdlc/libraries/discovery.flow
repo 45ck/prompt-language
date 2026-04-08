@@ -1,0 +1,13 @@
+library: discovery
+
+export flow bootstrap_workspace():
+  prompt: Use skill-harness to install the shared Claude and Codex agents, the shared skill packs, noslop, agent-docs, and Beads into this repo. Create docs/, docs/research/, docs/architecture/, specs/, qa-flows/, demo/, artifacts/, apps/web/, and packages/api/, but do not implement product code yet.
+
+export flow market_research():
+  prompt: Use agent: research-writer. Use skills: business-analysis-skills, marketing-product-skills. Research helpdesk requirements for ${helpdesk_target_market}. Write docs/research/problem-space.md, docs/research/competitors.md, docs/research/risk-register.md, docs/research/success-metrics.md, and docs/research/workflow-patterns.md. Ground the findings in small-team support and service desk workflows.
+  prompt: Use agent: research-writer. Summarize the highest-leverage differentiation opportunities, likely adoption blockers, and operational pain points in docs/research/adoption-notes.md.
+
+export flow requirements_discovery():
+  prompt: Use agent: requirements-analyst. Use skills: business-analysis-skills, uml-analysis-modelling-skills, software-quality-skills. Produce docs/prd.md, docs/personas.md, docs/use-cases.md, docs/non-functional-requirements.md, and docs/acceptance-criteria.md for a bounded helpdesk MVP with auth, requesters, tickets, assignments, queues, internal notes, canned replies, and dashboard reporting.
+  prompt: Use agent: delivery-manager. Convert the approved scope into a clear backlog or bead set covering discovery, architecture, implementation, QA, demo, and release milestones.
+  remember key="helpdesk_scope_version" value="v1"

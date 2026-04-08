@@ -603,6 +603,19 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
   } else if (effectiveLower.startsWith('run ')) {
     const command = stripQuotes(effectiveRhs.slice(4).trim());
     source = { type: 'run', command };
+  } else if (effectiveLower.startsWith('memory ')) {
+    const memoryRhs = effectiveRhs.slice(7).trim();
+    const memoryMatch = /^(?:"([^"]+)"|'([^']+)'|(\S+))$/i.exec(memoryRhs);
+    if (!memoryMatch?.[1] && !memoryMatch?.[2] && !memoryMatch?.[3]) {
+      warn(ctx, `Invalid memory syntax: "${trimmed}" — try: let name = memory "key"`);
+      return createPromptNode(nextId(ctx), trimmed);
+    }
+    const key = (memoryMatch[1] ?? memoryMatch[2] ?? memoryMatch[3] ?? '').trim();
+    if (!key) {
+      warn(ctx, `Invalid memory syntax: "${trimmed}" — try: let name = memory "key"`);
+      return createPromptNode(nextId(ctx), trimmed);
+    }
+    source = { type: 'memory', key };
   } else {
     const value = stripQuotes(effectiveRhs);
     source = { type: 'literal', value };

@@ -5,7 +5,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createRememberNode, createSendNode, createReceiveNode } from './flow-node.js';
+import {
+  createRememberNode,
+  createSendNode,
+  createReceiveNode,
+  createLetNode,
+} from './flow-node.js';
 import { createFlowSpec } from './flow-spec.js';
 import { createSessionState, updateNodeProgress } from './session-state.js';
 import { renderFlow } from './render-flow.js';
@@ -99,5 +104,14 @@ describe('renderFlow — ReceiveNode', () => {
     state = { ...state, currentNodePath: [1] };
     const output = renderFlow(state);
     expect(output).toContain('[received]');
+  });
+});
+
+describe('renderFlow — memory let source', () => {
+  it('renders let x = memory "key"', () => {
+    const node = createLetNode('l1', 'pref', { type: 'memory', key: 'preferred_language' });
+    const state = makeState([node]);
+    const output = renderFlow(state);
+    expect(output).toContain('let pref = memory "preferred_language"');
   });
 });

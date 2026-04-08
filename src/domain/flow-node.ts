@@ -95,6 +95,7 @@ export type LetSource =
   | { readonly type: 'prompt'; readonly text: string }
   | { readonly type: 'prompt_json'; readonly text: string; readonly schema: string }
   | { readonly type: 'run'; readonly command: string }
+  | { readonly type: 'memory'; readonly key: string }
   | { readonly type: 'literal'; readonly value: string }
   | { readonly type: 'empty_list' };
 

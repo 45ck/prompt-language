@@ -28,18 +28,25 @@ Declare a `memory:` section before `flow:` to prefetch stored keys into flow var
 
 ```yaml
 memory:
-  preferred-language
+  preferred_language
   last-branch
 
 flow:
-  prompt: Use ${preferred-language} for this task
+  prompt: Use ${preferred_language} for this task
 end
+```
+
+You can read a keyed value directly with:
+
+```yaml
+let preferred_language = memory "preferred-language"
 ```
 
 ## Semantics
 
 - Free-form text is stored with a timestamp.
 - Key-value form enables structured retrieval; the key becomes the variable name when prefetched.
+- `memory "key"` reads the most recent keyed value into a variable.
 - The `memory:` section fetches the listed keys and injects them as variables before the first flow node runs.
 - The memory file persists across flow runs.
 - Unknown keys in `memory:` silently inject empty strings.

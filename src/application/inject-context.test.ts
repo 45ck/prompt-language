@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   injectContext,
   looksLikeNaturalLanguage,
@@ -24,6 +24,7 @@ import {
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
+import type { MemoryStore } from './ports/memory-store.js';
 
 function makeStore(): InMemoryStateStore {
   return new InMemoryStateStore();
@@ -466,6 +467,37 @@ describe('injectContext — variable interpolation', () => {
 
     const result = await injectContext({ prompt: 'Refactor ${name}', sessionId: 's1' }, store);
     expect(result.prompt).toContain('Refactor auth module');
+  });
+});
+
+describe('injectContext — memory prefetch', () => {
+  it('hydrates memory keys before the first node runs', async () => {
+    const store = makeStore();
+    const memoryStore: MemoryStore = {
+      append: vi.fn().mockResolvedValue(undefined),
+      findByKey: vi.fn().mockResolvedValue({
+        timestamp: '2024-01-01T00:00:00Z',
+        key: 'preferred_language',
+        value: 'TypeScript',
+      }),
+      readAll: vi.fn().mockResolvedValue([]),
+    };
+    const prompt =
+      'Goal: test\n\nmemory:\n  preferred_language\n\nflow:\n  prompt: Use ${preferred_language}\n';
+
+    const result = await injectContext(
+      { prompt, sessionId: 'mem-1' },
+      store,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      memoryStore,
+    );
+
+    expect(result.prompt).toContain('Use TypeScript');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['preferred_language']).toBe('TypeScript');
   });
 });
 

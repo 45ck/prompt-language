@@ -353,6 +353,37 @@ describe('autoAdvanceNodes — race node', () => {
     expect(result.variables['race_winner']).toBe('');
   });
 
+  it('poll limit: times out after MAX_AWAIT_POLLS when children keep running', async () => {
+    const spawner: ProcessSpawner = {
+      spawn: vi.fn().mockResolvedValue({ pid: 42 }),
+      poll: vi.fn().mockResolvedValue({ status: 'running' }),
+    };
+    const spawnA = createSpawnNode('s1', 'alpha', [createPromptNode('pa', 'work')]);
+    const raceNode = createRaceNode('r1', [spawnA]);
+    const spec = createFlowSpec('test', [raceNode]);
+
+    let state = createSessionState('s1', spec);
+    state = updateRaceChildren(state, 'r1', ['alpha']);
+    state = updateSpawnedChild(state, 'alpha', {
+      name: 'alpha',
+      status: 'running',
+      pid: 42,
+      stateDir: '.prompt-language-alpha',
+    });
+    state = updateNodeProgress(state, 'r1', {
+      iteration: MAX_AWAIT_POLLS - 1,
+      maxIterations: MAX_AWAIT_POLLS,
+      status: 'running',
+      startedAt: Date.now(),
+    });
+
+    const { state: result } = await autoAdvanceNodes(state, undefined, undefined, spawner);
+    expect(result.variables['race_winner']).toBe('');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('Race timeout after')]),
+    );
+  });
+
   it('wall-clock timeout: sets race_winner to empty string with warning', async () => {
     const spawner: ProcessSpawner = {
       spawn: vi.fn().mockResolvedValue({ pid: 42 }),
@@ -590,6 +621,49 @@ describe('autoAdvanceNodes — remember node', () => {
 
     const { state: result } = await autoAdvanceNodes(state);
     expect(result.variables['x']).toBe('done');
+  });
+});
+
+// ── memory source via autoAdvanceNodes ─────────────────────────────────
+
+describe('autoAdvanceNodes — memory let source', () => {
+  it('reads a stored key and advances', async () => {
+    const mockMemoryStore: MemoryStore = {
+      append: vi.fn().mockResolvedValue(undefined),
+      findByKey: vi.fn().mockResolvedValue({
+        timestamp: '2024-01-01T00:00:00Z',
+        key: 'preferred-language',
+        value: 'TypeScript',
+      }),
+      readAll: vi.fn().mockResolvedValue([]),
+    };
+    const letNode = createLetNode('l1', 'lang', { type: 'memory', key: 'preferred-language' });
+    const after = createLetNode('l2', 'done', { type: 'literal', value: 'yes' });
+    const spec = createFlowSpec('test', [letNode, after]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      mockMemoryStore,
+    );
+    expect(mockMemoryStore.findByKey).toHaveBeenCalledWith('preferred-language');
+    expect(result.variables['lang']).toBe('TypeScript');
+    expect(result.variables['done']).toBe('yes');
+  });
+
+  it('without memoryStore: stores empty string and advances', async () => {
+    const letNode = createLetNode('l1', 'lang', { type: 'memory', key: 'preferred-language' });
+    const after = createLetNode('l2', 'done', { type: 'literal', value: 'yes' });
+    const spec = createFlowSpec('test', [letNode, after]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state);
+    expect(result.variables['lang']).toBe('');
+    expect(result.variables['done']).toBe('yes');
   });
 });
 

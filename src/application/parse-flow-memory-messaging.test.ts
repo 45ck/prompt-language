@@ -214,3 +214,18 @@ describe('parseFlow — memoryKeys in FlowSpec', () => {
     expect(spec.memoryKeys).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// let ... = memory "key"
+// ---------------------------------------------------------------------------
+
+describe('parseFlow — memory let source', () => {
+  it('parses let x = memory "key"', () => {
+    const spec = parseFlow('Goal: test\n\nflow:\n  let pref = memory "preferred-language"\n');
+    const node = spec.nodes[0];
+    expect(node?.kind).toBe('let');
+    if (node?.kind === 'let') {
+      expect(node.source).toEqual({ type: 'memory', key: 'preferred-language' });
+    }
+  });
+});

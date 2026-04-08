@@ -5,7 +5,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { createRememberNode, createSendNode, createReceiveNode } from './flow-node.js';
+import {
+  createRememberNode,
+  createSendNode,
+  createReceiveNode,
+  createLetNode,
+} from './flow-node.js';
 
 describe('createRememberNode', () => {
   it('creates a free-form text memory node', () => {
@@ -115,5 +120,12 @@ describe('createReceiveNode', () => {
     const node = createReceiveNode('rec6', 'msg');
     expect('from' in node).toBe(false);
     expect('timeoutSeconds' in node).toBe(false);
+  });
+});
+
+describe('createLetNode — memory source', () => {
+  it('creates a memory-backed let node', () => {
+    const node = createLetNode('l1', 'pref', { type: 'memory', key: 'preferred-language' });
+    expect(node.source).toEqual({ type: 'memory', key: 'preferred-language' });
   });
 });

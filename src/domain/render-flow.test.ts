@@ -28,6 +28,12 @@ import {
   createSpawnNode,
   createAwaitNode,
   createBreakNode,
+  createContinueNode,
+  createApproveNode,
+  createReviewNode,
+  createRememberNode,
+  createSendNode,
+  createReceiveNode,
 } from './flow-node.js';
 import { updateSpawnedChild } from './session-state.js';
 
@@ -1305,6 +1311,29 @@ describe('renderStateHash', () => {
     const state1 = createSessionState('s1', spec);
     const state2 = { ...state1, gateResults: { tests_pass: true } };
     expect(renderStateHash(state1)).not.toBe(renderStateHash(state2));
+  });
+});
+
+describe('renderFlowSummary — node descriptions', () => {
+  it('describes continue, approve, review, remember, send, and receive nodes', () => {
+    const cases = [
+      { node: createContinueNode('c1'), expected: 'continue' },
+      { node: createApproveNode('a1', 'Ship it?'), expected: 'approve "Ship it?"' },
+      {
+        node: createReviewNode('rv1', [createPromptNode('p1', 'draft')], 2),
+        expected: 'review max 2',
+      },
+      { node: createRememberNode('m1', 'fact'), expected: 'remember' },
+      { node: createSendNode('s1', 'parent', 'hi'), expected: 'send to "parent"' },
+      { node: createReceiveNode('r1', 'msg'), expected: 'receive msg' },
+    ] as const;
+
+    for (const { node, expected } of cases) {
+      const spec = createFlowSpec('test', [node]);
+      const state = createSessionState('s1', spec);
+      const summary = renderFlowSummary(state);
+      expect(summary).toContain(expected);
+    }
   });
 });
 

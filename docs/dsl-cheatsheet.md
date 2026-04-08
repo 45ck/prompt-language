@@ -273,6 +273,7 @@ receive ack from "worker"
 ```
 remember "The user prefers TypeScript"
 remember key="lang" value="TypeScript"
+let lang = memory "lang"
 ```
 
 Persists to the agent's memory store. Retrieve at flow start using the `memory:` section:
@@ -284,6 +285,7 @@ memory:
 ```
 
 Prefetched keys are available as `${lang}`, `${preferences}` etc.
+You can also read a single keyed value directly with `let x = memory "key"`.
 
 ## Import / Library
 

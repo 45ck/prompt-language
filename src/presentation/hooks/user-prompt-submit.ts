@@ -13,6 +13,7 @@ import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-
 import { FileCaptureReader } from '../../infrastructure/adapters/file-capture-reader.js';
 import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
 import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
+import { FileMemoryStore } from '../../infrastructure/adapters/file-memory-store.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
@@ -50,6 +51,7 @@ async function main(): Promise<void> {
   const captureReader = new FileCaptureReader(process.cwd());
   const processSpawner = new ClaudeProcessSpawner(process.cwd());
   const auditLogger = new FileAuditLogger(process.cwd());
+  const memoryStore = new FileMemoryStore(process.cwd());
   const sessionId = randomUUID();
 
   let stateBefore: SessionState | null = null;
@@ -69,6 +71,7 @@ async function main(): Promise<void> {
     captureReader,
     processSpawner,
     auditLogger,
+    memoryStore,
   );
 
   debug(`UserPromptSubmit: prompt modified=${result.prompt !== input.prompt}`);

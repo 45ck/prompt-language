@@ -16,6 +16,12 @@ Command capture:
 let version = run "node -v"
 ```
 
+Memory lookup:
+
+```yaml
+let preferred_language = memory "preferred-language"
+```
+
 Prompt capture:
 
 ```yaml
@@ -79,6 +85,13 @@ let analysis = prompt "Analyze the diff" as json {
 - On successful parse, `analysis` holds the raw JSON string.
 - Individual fields are accessible as `${analysis.summary}`, `${analysis.risk}`, etc.
 - If the response cannot be parsed, the capture retries up to 3 times before storing the raw text.
+
+### Persistent memory lookup
+
+Use `memory "key"` to read a keyed memory value into a variable.
+
+- Missing keys resolve to an empty string.
+- The `memory:` section can still prefetch keys at flow start.
 
 ## Semantics
 

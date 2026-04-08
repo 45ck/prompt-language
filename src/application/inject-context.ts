@@ -5,7 +5,12 @@
  * If a flow is already active, inject step context into the prompt.
  */
 
-import { createSessionState, markCancelled, markFailed } from '../domain/session-state.js';
+import {
+  createSessionState,
+  markCancelled,
+  markFailed,
+  type SessionState,
+} from '../domain/session-state.js';
 import { createFlowSpec, flowSpecHash } from '../domain/flow-spec.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
@@ -20,6 +25,7 @@ import { formatError } from '../domain/format-error.js';
 import { lintFlow } from '../domain/lint-flow.js';
 import { flowComplexityScore } from '../domain/flow-complexity.js';
 import { terminateRunningSpawnedChildren } from './terminate-spawned-children.js';
+import type { MemoryStore } from './ports/memory-store.js';
 
 const FLOW_BLOCK_RE = /^\s*flow:\s*$/m;
 
@@ -117,6 +123,7 @@ Gates are the core value — the agent cannot stop until these hold.
   let greeting = "hello world"        # literal string
   let info = prompt "Summarize this"  # captures Claude's response
   var output = run "echo hi"          # executes command, stores stdout
+  let cached = memory "preferred-language"  # reads from persistent memory
 
 **while** — Loop while condition is true. Requires \`max N\`.
   while tests_fail max 5
@@ -255,6 +262,25 @@ function removeDryRun(prompt: string): string {
     .trim();
 }
 
+async function preloadMemoryVariables(
+  state: SessionState,
+  memoryStore?: MemoryStore,
+): Promise<SessionState> {
+  if (!memoryStore || !state.flowSpec.memoryKeys || state.flowSpec.memoryKeys.length === 0) {
+    return state;
+  }
+
+  let changed = false;
+  const variables = { ...state.variables };
+  for (const key of state.flowSpec.memoryKeys) {
+    if (variables[key] !== undefined) continue;
+    const entry = await memoryStore.findByKey(key);
+    variables[key] = entry?.value ?? entry?.text ?? '';
+    changed = true;
+  }
+  return changed ? { ...state, variables } : state;
+}
+
 export function isTrivialPrompt(prompt: string): boolean {
   return TRIVIAL_PROMPTS.has(
     prompt
@@ -271,6 +297,7 @@ export async function injectContext(
   captureReader?: CaptureReader,
   processSpawner?: ProcessSpawner,
   auditLogger?: AuditLogger,
+  memoryStore?: MemoryStore,
 ): Promise<InjectContextOutput> {
   const existing = await stateStore.loadCurrent();
 
@@ -314,10 +341,15 @@ export async function injectContext(
   if (existing?.status === 'active') {
     // H-REL-003: Checkpoint/Resume — detect resumed session
     const isResumed = existing.sessionId !== input.sessionId;
+    const hydratedExisting = await preloadMemoryVariables(existing, memoryStore);
+    if (hydratedExisting !== existing) {
+      await stateStore.save(hydratedExisting);
+    }
     if (hasFlowBlock(input.prompt)) {
       const parsedPromptSpec = parseFlow(input.prompt);
       const nextFlowHash = flowSpecHash(parsedPromptSpec);
-      const currentFlowHash = existing.flowSpecHash ?? flowSpecHash(existing.flowSpec);
+      const currentFlowHash =
+        hydratedExisting.flowSpecHash ?? flowSpecHash(hydratedExisting.flowSpec);
       if (nextFlowHash !== currentFlowHash) {
         return {
           prompt:
@@ -329,14 +361,15 @@ export async function injectContext(
     }
     try {
       const result = await autoAdvanceNodes(
-        existing,
+        hydratedExisting,
         commandRunner,
         captureReader,
         processSpawner,
         auditLogger,
+        memoryStore,
       );
       const toSave = result.kind === 'prompt' ? result.state : maybeCompleteFlow(result.state);
-      if (toSave !== existing) {
+      if (toSave !== hydratedExisting) {
         await stateStore.save(toSave);
       }
       // H-DX-009: Emit completion summary when flow just completed
@@ -359,7 +392,7 @@ export async function injectContext(
     } catch (err: unknown) {
       const reason = formatError(err);
       const failed = await terminateRunningSpawnedChildren(
-        markFailed(existing, reason),
+        markFailed(hydratedExisting, reason),
         processSpawner,
       );
       try {
@@ -393,13 +426,17 @@ export async function injectContext(
   if (hasFlowBlock(input.prompt)) {
     try {
       const spec = parseFlow(input.prompt);
-      const session = createSessionState(input.sessionId, spec);
+      const session = await preloadMemoryVariables(
+        createSessionState(input.sessionId, spec),
+        memoryStore,
+      );
       const result = await autoAdvanceNodes(
         session,
         commandRunner,
         captureReader,
         processSpawner,
         auditLogger,
+        memoryStore,
       );
       const toSave = result.kind === 'prompt' ? result.state : maybeCompleteFlow(result.state);
       await stateStore.save(toSave);

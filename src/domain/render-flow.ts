@@ -365,6 +365,9 @@ function renderLetNode(
     case 'run':
       sourceText = `run "${node.source.command}"`;
       break;
+    case 'memory':
+      sourceText = `memory "${node.source.key}"`;
+      break;
     case 'literal':
       sourceText = `"${node.source.value}"`;
       break;

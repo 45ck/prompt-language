@@ -35,6 +35,7 @@ import type {
   SendNode,
   ReceiveNode,
 } from '../domain/flow-node.js';
+import type { MemoryEntry } from './ports/memory-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
@@ -173,6 +174,10 @@ function setExitVariables(
   s = updateVariable(s, 'last_stdout', truncateOutput(stdout.trimEnd()));
   s = updateVariable(s, 'last_stderr', truncateOutput(stderr.trimEnd()));
   return s;
+}
+
+function readMemoryValue(entry?: MemoryEntry): string {
+  return entry?.value ?? entry?.text ?? '';
 }
 
 /**
@@ -521,12 +526,13 @@ export type AutoAdvanceResult =
   | { readonly kind: 'advance'; readonly state: SessionState; readonly capturedPrompt: null }
   | { readonly kind: 'pause'; readonly state: SessionState; readonly capturedPrompt: null };
 
-/** Advance a let node, handling all source types (literal, empty_list, prompt, run). */
+/** Advance a let node, handling all source types (literal, empty_list, prompt, memory, run). */
 async function advanceLetNode(
   node: LetNode,
   current: SessionState,
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
+  memoryStore?: MemoryStore,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   let value: string;
   let tryCatchJump: readonly number[] | null = null;
@@ -581,6 +587,15 @@ async function advanceLetNode(
           `Variable '${node.variableName}' JSON parse failed; stored raw response.`,
         );
       }
+      break;
+    }
+    case 'memory': {
+      if (!memoryStore) {
+        value = '';
+        break;
+      }
+      const entry = await memoryStore.findByKey(node.source.key);
+      value = readMemoryValue(entry);
       break;
     }
     case 'run': {
@@ -948,6 +963,9 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
           break;
         case 'run':
           src = `run "${node.source.command}"`;
+          break;
+        case 'memory':
+          src = `memory "${node.source.key}"`;
           break;
         case 'empty_list':
           src = '[]';
@@ -1570,7 +1588,7 @@ async function advanceSingleNode(
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   switch (node.kind) {
     case 'let':
-      return advanceLetNode(node, current, commandRunner, captureReader);
+      return advanceLetNode(node, current, commandRunner, captureReader, memoryStore);
     case 'run':
       return advanceRunNode(node, current, commandRunner, auditLogger);
     case 'prompt': {

@@ -97,6 +97,24 @@ describe('FileAuditLogger', () => {
     expect(record['stderr']).toBeUndefined();
   });
 
+  it('records timedOut and truncates stderr when needed', async () => {
+    const logger = new FileAuditLogger(tempDir);
+    logger.log({
+      timestamp: '2024-01-01T00:00:00.000Z',
+      event: 'run_command',
+      command: 'cmd',
+      exitCode: 124,
+      timedOut: true,
+      stderr: 'b'.repeat(600),
+    });
+
+    const content = await readFile(join(tempDir, '.prompt-language', 'audit.jsonl'), 'utf-8');
+    const record = JSON.parse(content.trim()) as Record<string, unknown>;
+    expect(record['timedOut']).toBe(true);
+    expect(typeof record['stderr']).toBe('string');
+    expect((record['stderr'] as string).endsWith('[truncated]')).toBe(true);
+  });
+
   it('accepts a custom stateDir parameter', async () => {
     const logger = new FileAuditLogger(tempDir, 'my-state');
     logger.log({

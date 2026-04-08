@@ -38,6 +38,7 @@ export class FileAuditLogger implements AuditLogger {
       event: entry.event,
       command: entry.command,
       exitCode: entry.exitCode,
+      ...(entry.timedOut ? { timedOut: true } : {}),
       ...(truncate(entry.stdout) != null ? { stdout: truncate(entry.stdout) } : {}),
       ...(truncate(entry.stderr) != null ? { stderr: truncate(entry.stderr) } : {}),
     };

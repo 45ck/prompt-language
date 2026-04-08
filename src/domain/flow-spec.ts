@@ -37,6 +37,25 @@ export interface FlowSpec {
   readonly memoryKeys?: readonly string[] | undefined;
 }
 
+/** Pure JS hash of a FlowSpec for stale-state detection. */
+export function flowSpecHash(spec: FlowSpec): string {
+  const payload = JSON.stringify({
+    goal: spec.goal,
+    nodes: spec.nodes,
+    completionGates: spec.completionGates,
+    defaults: spec.defaults,
+    env: spec.env ?? null,
+    imports: spec.imports ?? null,
+    memoryKeys: spec.memoryKeys ?? null,
+  });
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < payload.length; i++) {
+    hash ^= payload.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
 const DEFAULT_FLOW_DEFAULTS: FlowDefaults = {
   maxIterations: DEFAULT_MAX_ITERATIONS,
   maxAttempts: DEFAULT_MAX_ATTEMPTS,

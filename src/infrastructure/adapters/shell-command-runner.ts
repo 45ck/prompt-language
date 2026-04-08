@@ -2,7 +2,7 @@
  * ShellCommandRunner — executes commands via child_process.
  */
 
-import { exec } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import type {
   CommandRunner,
   CommandResult,
@@ -19,34 +19,148 @@ function getDefaultTimeoutMs(): number {
 }
 
 const DEFAULT_TIMEOUT_MS = getDefaultTimeoutMs();
+const MAX_BUFFER_BYTES = 4 * 1024 * 1024;
+
+async function terminateProcessTree(pid: number): Promise<boolean> {
+  if (process.platform === 'win32') {
+    return await new Promise<boolean>((resolve) => {
+      const killer = spawn('taskkill', ['/F', '/T', '/PID', String(pid)], {
+        windowsHide: true,
+        stdio: 'ignore',
+      });
+      killer.once('error', () => resolve(false));
+      killer.once('close', (code) => resolve(code === 0));
+    });
+  }
+
+  try {
+    process.kill(-pid, 'SIGTERM');
+    return true;
+  } catch {
+    try {
+      process.kill(pid, 'SIGTERM');
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+function createTimedOutResult(stdout: string, stderr: string, timeoutMs: number): CommandResult {
+  const timeoutSeconds = Math.max(1, Math.ceil(timeoutMs / 1000));
+  const timeoutMessage = `timed out after ${timeoutSeconds}s`;
+  const nextStdout = stdout.trimEnd();
+  const nextStderr = [stderr.trimEnd(), timeoutMessage].filter(Boolean).join('\n');
+  return {
+    exitCode: 124,
+    stdout: nextStdout,
+    stderr: nextStderr,
+    timedOut: true,
+  };
+}
 
 export class ShellCommandRunner implements CommandRunner {
   async run(command: string, options?: RunOptions): Promise<CommandResult> {
     const timeout = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-    // H-LANG-009: Merge env from options with process.env
-    const envOverride = options?.env ? { env: { ...process.env, ...options.env } } : {};
-    return new Promise((resolve) => {
-      exec(
-        command,
-        {
-          encoding: 'utf-8',
-          timeout,
-          maxBuffer: 4 * 1024 * 1024,
-          ...(process.platform === 'win32' && { shell: 'bash' }),
-          ...envOverride,
-        },
-        (error, stdout, stderr) => {
-          if (error) {
-            resolve({
-              exitCode: typeof error.code === 'number' ? error.code : 1,
-              stdout: stdout ?? '',
-              stderr: stderr ?? '',
-            });
-            return;
-          }
-          resolve({ exitCode: 0, stdout: stdout ?? '', stderr: stderr ?? '' });
-        },
-      );
+    const envOverride = options?.env ? { ...process.env, ...options.env } : process.env;
+    const shell = process.platform === 'win32' ? 'bash' : true;
+    const detached = process.platform !== 'win32';
+
+    return await new Promise<CommandResult>((resolve) => {
+      const child = spawn(command, {
+        shell,
+        detached,
+        windowsHide: true,
+        env: envOverride,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+
+      let stdout = '';
+      let stderr = '';
+      let finished = false;
+      let timedOut = false;
+      let tooMuchOutput = false;
+
+      const finish = (result: CommandResult): void => {
+        if (finished) return;
+        finished = true;
+        resolve(result);
+      };
+
+      const killChild = async (): Promise<void> => {
+        if (child.pid == null) return;
+        await terminateProcessTree(child.pid);
+      };
+
+      const timer =
+        timeout > 0
+          ? setTimeout(() => {
+              timedOut = true;
+              void killChild();
+            }, timeout)
+          : null;
+
+      child.stdout?.on('data', (chunk: Buffer) => {
+        if (tooMuchOutput) return;
+        stdout += chunk.toString('utf-8');
+        if (Buffer.byteLength(stdout, 'utf-8') > MAX_BUFFER_BYTES) {
+          tooMuchOutput = true;
+          void killChild();
+        }
+      });
+
+      child.stderr?.on('data', (chunk: Buffer) => {
+        if (tooMuchOutput) return;
+        stderr += chunk.toString('utf-8');
+        if (Buffer.byteLength(stderr, 'utf-8') > MAX_BUFFER_BYTES) {
+          tooMuchOutput = true;
+          void killChild();
+        }
+      });
+
+      child.once('error', (error: NodeJS.ErrnoException) => {
+        if (timer) clearTimeout(timer);
+        finish({
+          exitCode: typeof error.code === 'number' ? error.code : 1,
+          stdout,
+          stderr,
+          timedOut,
+        });
+      });
+
+      child.once('close', (code) => {
+        if (timer) clearTimeout(timer);
+
+        if (timedOut) {
+          finish(createTimedOutResult(stdout, stderr, timeout));
+          return;
+        }
+
+        if (tooMuchOutput) {
+          finish({
+            exitCode: 1,
+            stdout,
+            stderr,
+          });
+          return;
+        }
+
+        if (typeof code === 'number') {
+          finish({
+            exitCode: code,
+            stdout,
+            stderr,
+          });
+          return;
+        }
+
+        finish({
+          exitCode: 1,
+          stdout,
+          stderr,
+          timedOut,
+        });
+      });
     });
   }
 }

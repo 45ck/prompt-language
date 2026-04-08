@@ -59,6 +59,25 @@ describe('injectContext', () => {
     expect(result.prompt).toContain('Do work');
   });
 
+  it('warns when an active flow receives a different flow definition', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Build feature', [createPromptNode('p1', 'Do work')]);
+    const session = createSessionState('test-3b', spec);
+    await store.save(session);
+
+    const result = await injectContext(
+      {
+        prompt: 'Goal: Different\nflow:\n  prompt: New work',
+        sessionId: 'test-3b',
+      },
+      store,
+    );
+
+    expect(result.prompt).toContain('Flow definition changed while a flow is active');
+    const saved = await store.loadCurrent();
+    expect(saved?.flowSpec.goal).toBe('Build feature');
+  });
+
   // H-REL-011: Flow heartbeat summary appended at end of context
   it('appends flow heartbeat summary at end of injected context', async () => {
     const store = makeStore();

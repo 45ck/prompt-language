@@ -121,6 +121,45 @@ function truncateOutput(output: string): string {
   return output.slice(0, MAX_OUTPUT_LENGTH) + '\n... (truncated)';
 }
 
+function isPidAlive(pid: number): boolean {
+  if (process.platform === 'win32') return true;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function terminateRaceLosers(
+  state: SessionState,
+  raceNodeId: string,
+  winnerName: string,
+  processSpawner?: ProcessSpawner,
+): Promise<SessionState> {
+  const childNames = state.raceChildren[raceNodeId] ?? [];
+  let next = state;
+
+  for (const childName of childNames) {
+    if (childName === winnerName) continue;
+    const child = next.spawnedChildren[childName];
+    if (child?.status !== 'running') continue;
+
+    let warning = `Race winner "${winnerName}" completed; marked losing child "${childName}" as failed.`;
+    if (child.pid !== undefined && processSpawner?.terminate) {
+      const terminated = await processSpawner.terminate(child.pid);
+      warning = terminated
+        ? `Race winner "${winnerName}" completed; terminated losing child "${childName}" (pid ${child.pid}).`
+        : `Race winner "${winnerName}" completed; losing child "${childName}" (pid ${child.pid}) was already gone.`;
+    }
+
+    next = updateSpawnedChild(next, childName, { ...child, status: 'failed' });
+    next = addWarning(next, warning);
+  }
+
+  return next;
+}
+
 /** Store the 5 standard exit variables after a command execution. */
 function setExitVariables(
   state: SessionState,
@@ -760,6 +799,7 @@ async function advanceRunNode(
       event: 'run_command',
       command,
       exitCode: result.exitCode,
+      ...(result.timedOut ? { timedOut: true } : {}),
       stdout: result.stdout,
       stderr: result.stderr,
     });
@@ -1074,6 +1114,13 @@ async function advanceAwaitNode(
 
     const status = await processSpawner.poll(child.stateDir);
     if (status.status === 'running') {
+      if (child.pid !== undefined && !isPidAlive(child.pid)) {
+        state = updateSpawnedChild(state, child.name, {
+          ...child,
+          status: 'failed',
+        });
+        continue;
+      }
       allDone = false;
       continue;
     }
@@ -1307,14 +1354,23 @@ async function advanceRaceNode(
       winner = childName;
       if (status.variables) {
         for (const [k, v] of Object.entries(status.variables)) {
-          state = updateVariable(state, `${childName}.${k}`, v);
+          state = updateVariable(state, k, v);
         }
       }
+    }
+    if (status.status === 'running' && child.pid !== undefined && !isPidAlive(child.pid)) {
+      state = updateSpawnedChild(state, childName, {
+        ...child,
+        status: 'failed',
+      });
     }
   }
 
   if (winner !== null) {
     state = updateVariable(state, 'race_winner', winner);
+    if (processSpawner) {
+      state = await terminateRaceLosers(state, node.id, winner, processSpawner);
+    }
     state = advanceNode(state, advancePath(state.currentNodePath));
     return { state, advanced: true };
   }

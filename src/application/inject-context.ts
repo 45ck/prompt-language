@@ -6,7 +6,7 @@
  */
 
 import { createSessionState, markCancelled, markFailed } from '../domain/session-state.js';
-import { createFlowSpec } from '../domain/flow-spec.js';
+import { createFlowSpec, flowSpecHash } from '../domain/flow-spec.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -314,6 +314,19 @@ export async function injectContext(
   if (existing?.status === 'active') {
     // H-REL-003: Checkpoint/Resume — detect resumed session
     const isResumed = existing.sessionId !== input.sessionId;
+    if (hasFlowBlock(input.prompt)) {
+      const parsedPromptSpec = parseFlow(input.prompt);
+      const nextFlowHash = flowSpecHash(parsedPromptSpec);
+      const currentFlowHash = existing.flowSpecHash ?? flowSpecHash(existing.flowSpec);
+      if (nextFlowHash !== currentFlowHash) {
+        return {
+          prompt:
+            '[prompt-language] Flow definition changed while a flow is active. ' +
+            'Use "reset flow" to start over, or continue if you intend to keep the current flow.\n\n' +
+            input.prompt,
+        };
+      }
+    }
     try {
       const result = await autoAdvanceNodes(
         existing,

@@ -5,7 +5,7 @@
  * All condition evaluation reads from this state.
  */
 
-import type { FlowSpec } from './flow-spec.js';
+import { flowSpecHash, type FlowSpec } from './flow-spec.js';
 
 export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
 
@@ -54,6 +54,7 @@ export interface SessionState {
   readonly spawnedChildren: Readonly<Record<string, SpawnedChild>>;
   /** Maps race node id → names of spawn children belonging to that race. */
   readonly raceChildren: Readonly<Record<string, readonly string[]>>;
+  readonly flowSpecHash?: string | undefined;
   readonly failureReason?: string | undefined;
   // H-SEC-004: Per-session nonce for capture tag anti-spoofing
   readonly captureNonce: string;
@@ -91,6 +92,7 @@ export function createSessionState(
     warnings: [...flowSpec.warnings],
     spawnedChildren: {},
     raceChildren: {},
+    flowSpecHash: flowSpecHash(flowSpec),
     captureNonce: captureNonce ?? generateCaptureNonce(),
   };
 }

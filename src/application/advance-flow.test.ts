@@ -937,7 +937,7 @@ describe('autoAdvanceNodes — await', () => {
     state = updateSpawnedChild(state, 'task-a', {
       name: 'task-a',
       status: 'running',
-      pid: 1,
+      pid: undefined,
       stateDir: '.prompt-language-task-a',
     });
 
@@ -979,6 +979,49 @@ describe('autoAdvanceNodes — await', () => {
     );
   });
 
+  it('marks a running await child failed when its PID is gone', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(((
+      pid: number,
+      signal?: NodeJS.Signals | number,
+    ) => {
+      if (pid === 123 && signal === 0) {
+        const error = new Error('ESRCH');
+        (error as NodeJS.ErrnoException).code = 'ESRCH';
+        throw error;
+      }
+      return true;
+    }) as typeof process.kill);
+
+    try {
+      const mockSpawner: ProcessSpawner = {
+        async spawn() {
+          return { pid: 1 };
+        },
+        async poll() {
+          return { status: 'running' };
+        },
+      };
+
+      const awaitNode = createAwaitNode('aw1', 'all');
+      const prompt = createPromptNode('p1', 'done');
+      const spec = createFlowSpec('test', [awaitNode, prompt]);
+      let state = createSessionState('s1', spec);
+      state = updateSpawnedChild(state, 'task-a', {
+        name: 'task-a',
+        status: 'running',
+        pid: 123,
+        stateDir: '.prompt-language-task-a',
+      });
+
+      const { state: result } = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+      expect(result.spawnedChildren['task-a']?.status).toBe('failed');
+    } finally {
+      killSpy.mockRestore();
+      platformSpy.mockRestore();
+    }
+  });
+
   it('D2: times out after MAX_AWAIT_POLLS and marks children failed', async () => {
     const mockSpawner: ProcessSpawner = {
       async spawn() {
@@ -996,7 +1039,7 @@ describe('autoAdvanceNodes — await', () => {
     state = updateSpawnedChild(state, 'task-a', {
       name: 'task-a',
       status: 'running',
-      pid: 1,
+      pid: undefined,
       stateDir: '.prompt-language-task-a',
     });
     // Simulate being at poll count = MAX_AWAIT_POLLS - 1 (next poll triggers timeout)

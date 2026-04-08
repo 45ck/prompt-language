@@ -14,6 +14,8 @@ run: npm run build [timeout 120]
 - The command runs in the current workspace.
 - A non-zero exit code marks the command as failed.
 - Optional `[timeout N]` is in seconds.
+- Timeout kills the full command tree. On Windows, the runtime falls back to `taskkill /F /T`.
+- Timed-out commands set `last_stderr` to `timed out after Ns` and are recorded in `audit.jsonl`.
 - After each `run:`, runtime variables are updated.
 
 ## Runtime variables set by `run:`

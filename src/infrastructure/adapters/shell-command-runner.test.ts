@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { EventEmitter } from 'node:events';
 import { ShellCommandRunner } from './shell-command-runner.js';
 
 const REAL_COMMAND_TEST_TIMEOUT_MS = 30_000;
@@ -167,162 +168,264 @@ describe('ShellCommandRunner edge cases (real commands)', () => {
   });
 });
 
-describe('ShellCommandRunner (mocked exec)', () => {
+type MockChild = EventEmitter & {
+  pid: number;
+  stdout: EventEmitter;
+  stderr: EventEmitter;
+};
+
+function createMockChild(pid = 1234): MockChild {
+  const child = new EventEmitter() as MockChild;
+  child.pid = pid;
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  return child;
+}
+
+describe('ShellCommandRunner (mocked spawn)', () => {
+  beforeEach(() => {
+    vi.resetModules();
+  });
+
   afterEach(() => {
     vi.resetModules();
     vi.restoreAllMocks();
   });
 
-  it('falls back to exitCode 1 when error.code is undefined', async () => {
+  it('captures output and exit code from a spawned command', async () => {
+    const child = createMockChild();
+    let capturedCmd = '';
+    let capturedOpts: Record<string, unknown> = {};
     vi.doMock('node:child_process', () => ({
-      exec: vi.fn(
-        (
-          _cmd: string,
-          _opts: Record<string, unknown>,
-          cb: (err: Error | null, stdout: string | null, stderr: string | null) => void,
-        ) => {
-          const err = new Error('something failed');
-          // error.code is undefined (not set)
-          cb(err, 'partial', 'errmsg');
-        },
-      ),
+      spawn: vi.fn((cmd: string, opts: Record<string, unknown>) => {
+        capturedCmd = cmd;
+        capturedOpts = opts;
+        return child;
+      }),
     }));
     const mod = await import('./shell-command-runner.js');
     const runner = new mod.ShellCommandRunner();
-    const result = await runner.run('anything');
-    expect(result.exitCode).toBe(1);
+    const runPromise = runner.run('anything');
+    child.stdout.emit('data', Buffer.from('partial'));
+    child.stderr.emit('data', Buffer.from('errmsg'));
+    child.emit('close', 3);
+    const result = await runPromise;
+    expect(capturedCmd).toBe('anything');
+    expect(capturedOpts['shell']).toBeTruthy();
+    expect(result.exitCode).toBe(3);
     expect(result.stdout).toBe('partial');
     expect(result.stderr).toBe('errmsg');
   });
 
-  it('falls back to exitCode 1 when error.code is a string like ETIMEDOUT', async () => {
+  it('falls back to exitCode 1 when spawn emits an error without a numeric code', async () => {
+    const child = createMockChild();
     vi.doMock('node:child_process', () => ({
-      exec: vi.fn(
-        (
-          _cmd: string,
-          _opts: Record<string, unknown>,
-          cb: (err: Error | null, stdout: string | null, stderr: string | null) => void,
-        ) => {
-          const err = new Error('timed out') as Error & { code: string };
-          err.code = 'ETIMEDOUT';
-          cb(err, '', '');
-        },
-      ),
+      spawn: vi.fn(() => child),
     }));
     const mod = await import('./shell-command-runner.js');
     const runner = new mod.ShellCommandRunner();
-    const result = await runner.run('anything');
+    const runPromise = runner.run('anything');
+    child.emit('error', new Error('something failed'));
+    const result = await runPromise;
     expect(result.exitCode).toBe(1);
   });
 
-  it('returns empty string when stdout is null on success', async () => {
+  it('marks timed-out commands and records the timeout message', async () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+    const killSpy = vi.spyOn(process, 'kill').mockReturnValue(true as never);
+    const child = createMockChild(4321);
     vi.doMock('node:child_process', () => ({
-      exec: vi.fn(
-        (
-          _cmd: string,
-          _opts: Record<string, unknown>,
-          cb: (err: Error | null, stdout: string | null, stderr: string | null) => void,
-        ) => {
-          cb(null, null, null);
-        },
-      ),
+      spawn: vi.fn(() => child),
+    }));
+    try {
+      const mod = await import('./shell-command-runner.js');
+      const runner = new mod.ShellCommandRunner();
+      const runPromise = runner.run('anything', { timeoutMs: 5 });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      child.emit('close', null);
+      const result = await runPromise;
+      expect(killSpy).toHaveBeenCalledWith(-4321, 'SIGTERM');
+      expect(result.exitCode).toBe(124);
+      expect(result.timedOut).toBe(true);
+      expect(result.stderr).toContain('timed out after 1s');
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+    }
+  });
+
+  it('fails closed when output exceeds the buffer limit', async () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+    const killSpy = vi.spyOn(process, 'kill').mockReturnValue(true as never);
+    const child = createMockChild(9753);
+    vi.doMock('node:child_process', () => ({
+      spawn: vi.fn(() => child),
+    }));
+    try {
+      const mod = await import('./shell-command-runner.js');
+      const runner = new mod.ShellCommandRunner();
+      const runPromise = runner.run('anything');
+      child.stdout.emit('data', Buffer.alloc(4 * 1024 * 1024 + 1, 'a'));
+      child.emit('close', 0);
+      const result = await runPromise;
+      expect(killSpy).toHaveBeenCalledWith(-9753, 'SIGTERM');
+      expect(result.exitCode).toBe(1);
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+    }
+  });
+
+  it('falls back to killing the direct pid when process-group kill fails', async () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((pid: number) => {
+      if (pid < 0) {
+        throw new Error('group kill failed');
+      }
+      return true;
+    });
+    const child = createMockChild(1357);
+    vi.doMock('node:child_process', () => ({
+      spawn: vi.fn(() => child),
+    }));
+    try {
+      const mod = await import('./shell-command-runner.js');
+      const runner = new mod.ShellCommandRunner();
+      const runPromise = runner.run('anything', { timeoutMs: 5 });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      child.emit('close', null);
+      const result = await runPromise;
+      expect(killSpy).toHaveBeenCalledWith(-1357, 'SIGTERM');
+      expect(killSpy).toHaveBeenCalledWith(1357, 'SIGTERM');
+      expect(result.exitCode).toBe(124);
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+    }
+  });
+
+  it('uses taskkill on win32 timeout', async () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    const child = createMockChild(2468);
+    const killer = createMockChild(8642);
+    const spawnMock = vi.fn((cmd: string) => {
+      if (cmd === 'taskkill') {
+        queueMicrotask(() => killer.emit('close', 0));
+        return killer;
+      }
+      return child;
+    });
+    vi.doMock('node:child_process', () => ({
+      spawn: spawnMock,
+    }));
+    try {
+      const mod = await import('./shell-command-runner.js');
+      const runner = new mod.ShellCommandRunner();
+      const runPromise = runner.run('anything', { timeoutMs: 5 });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      child.emit('close', null);
+      const result = await runPromise;
+      expect(result.timedOut).toBe(true);
+      expect(spawnMock).toHaveBeenCalledWith(
+        'taskkill',
+        ['/F', '/T', '/PID', '2468'],
+        expect.objectContaining({ windowsHide: true, stdio: 'ignore' }),
+      );
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+    }
+  });
+
+  it('returns empty strings when stdout and stderr are empty on success', async () => {
+    const child = createMockChild();
+    vi.doMock('node:child_process', () => ({
+      spawn: vi.fn(() => child),
     }));
     const mod = await import('./shell-command-runner.js');
     const runner = new mod.ShellCommandRunner();
-    const result = await runner.run('anything');
+    const runPromise = runner.run('anything');
+    child.emit('close', 0);
+    const result = await runPromise;
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toBe('');
     expect(result.stderr).toBe('');
   });
 
-  it('returns empty strings when stdout and stderr are null on error', async () => {
+  it('returns empty strings when stdout and stderr are empty on error', async () => {
+    const child = createMockChild();
     vi.doMock('node:child_process', () => ({
-      exec: vi.fn(
-        (
-          _cmd: string,
-          _opts: Record<string, unknown>,
-          cb: (err: Error | null, stdout: string | null, stderr: string | null) => void,
-        ) => {
-          const err = new Error('fail') as Error & { code: number };
-          err.code = 3;
-          cb(err, null, null);
-        },
-      ),
+      spawn: vi.fn(() => child),
     }));
     const mod = await import('./shell-command-runner.js');
     const runner = new mod.ShellCommandRunner();
-    const result = await runner.run('anything');
+    const runPromise = runner.run('anything');
+    child.emit('error', Object.assign(new Error('fail'), { code: 3 }));
+    const result = await runPromise;
     expect(result.exitCode).toBe(3);
     expect(result.stdout).toBe('');
     expect(result.stderr).toBe('');
   });
 
-  it('passes maxBuffer of 4MB to exec', async () => {
-    let capturedOpts: Record<string, unknown> = {};
-    vi.doMock('node:child_process', () => ({
-      exec: vi.fn(
-        (
-          _cmd: string,
-          opts: Record<string, unknown>,
-          cb: (err: Error | null, stdout: string, stderr: string) => void,
-        ) => {
-          capturedOpts = opts;
-          cb(null, '', '');
-        },
-      ),
-    }));
-    const mod = await import('./shell-command-runner.js');
-    const runner = new mod.ShellCommandRunner();
-    await runner.run('anything');
-    expect(capturedOpts['maxBuffer']).toBe(4 * 1024 * 1024);
-  });
-
-  it('passes encoding utf-8 and timeout to exec', async () => {
-    let capturedOpts: Record<string, unknown> = {};
-    vi.doMock('node:child_process', () => ({
-      exec: vi.fn(
-        (
-          _cmd: string,
-          opts: Record<string, unknown>,
-          cb: (err: Error | null, stdout: string, stderr: string) => void,
-        ) => {
-          capturedOpts = opts;
-          cb(null, '', '');
-        },
-      ),
-    }));
-    const mod = await import('./shell-command-runner.js');
-    const runner = new mod.ShellCommandRunner();
-    await runner.run('anything', { timeoutMs: 5000 });
-    expect(capturedOpts['encoding']).toBe('utf-8');
-    expect(capturedOpts['timeout']).toBe(5000);
-  });
-
-  it('includes shell: bash on win32', async () => {
+  it('passes shell: bash on win32', async () => {
     const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
     let capturedOpts: Record<string, unknown> = {};
+    const child = createMockChild();
     vi.doMock('node:child_process', () => ({
-      exec: vi.fn(
-        (
-          _cmd: string,
-          opts: Record<string, unknown>,
-          cb: (err: Error | null, stdout: string, stderr: string) => void,
-        ) => {
-          capturedOpts = opts;
-          cb(null, '', '');
-        },
-      ),
+      spawn: vi.fn((_cmd: string, opts: Record<string, unknown>) => {
+        capturedOpts = opts;
+        return child;
+      }),
     }));
     Object.defineProperty(process, 'platform', { value: 'win32' });
     try {
       const mod = await import('./shell-command-runner.js');
       const runner = new mod.ShellCommandRunner();
-      await runner.run('anything');
+      const runPromise = runner.run('anything');
+      child.emit('close', 0);
+      await runPromise;
       expect(capturedOpts['shell']).toBe('bash');
     } finally {
       if (originalPlatform) {
         Object.defineProperty(process, 'platform', originalPlatform);
       }
     }
+  });
+
+  it('falls back to exitCode 1 when stdout and stderr are null on error', async () => {
+    const child = createMockChild();
+    vi.doMock('node:child_process', () => ({
+      spawn: vi.fn(() => child),
+    }));
+    const mod = await import('./shell-command-runner.js');
+    const runner = new mod.ShellCommandRunner();
+    const runPromise = runner.run('anything');
+    child.emit('error', Object.assign(new Error('fail'), { code: 3 }));
+    const result = await runPromise;
+    expect(result.exitCode).toBe(3);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toBe('');
+  });
+
+  it('returns exitCode 1 when close emits no numeric code', async () => {
+    const child = createMockChild();
+    vi.doMock('node:child_process', () => ({
+      spawn: vi.fn(() => child),
+    }));
+    const mod = await import('./shell-command-runner.js');
+    const runner = new mod.ShellCommandRunner();
+    const runPromise = runner.run('anything');
+    child.emit('close', null);
+    const result = await runPromise;
+    expect(result.exitCode).toBe(1);
+    expect(result.timedOut).toBe(false);
   });
 });

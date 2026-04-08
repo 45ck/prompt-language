@@ -10,6 +10,7 @@ export interface AuditEntry {
   readonly event: 'run_command' | 'gate_evaluation';
   readonly command: string;
   readonly exitCode: number;
+  readonly timedOut?: boolean | undefined;
   readonly stdout?: string | undefined;
   readonly stderr?: string | undefined;
 }

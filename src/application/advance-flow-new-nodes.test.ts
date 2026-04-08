@@ -271,22 +271,43 @@ describe('autoAdvanceNodes — race node', () => {
   });
 
   it('when first child completes on poll: sets race_winner to child name', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(((
+      _pid: number,
+      signal?: NodeJS.Signals | number,
+    ) => {
+      if (signal === 0) return true;
+      return true;
+    }) as typeof process.kill);
     const spawner: ProcessSpawner = {
-      spawn: vi.fn().mockResolvedValue({ pid: 42 }),
-      poll: vi.fn().mockResolvedValue({ status: 'completed', variables: { result: 'ok' } }),
+      spawn: vi.fn().mockResolvedValueOnce({ pid: 42 }).mockResolvedValueOnce({ pid: 43 }),
+      poll: vi.fn().mockImplementation(async (stateDir: string) => {
+        if (stateDir.includes('alpha')) {
+          return { status: 'completed', variables: { result: 'ok' } };
+        }
+        return { status: 'running' };
+      }),
+      terminate: vi.fn().mockResolvedValue(true),
     };
     const spawnA = createSpawnNode('s1', 'alpha', [createPromptNode('pa', 'work')]);
-    const raceNode = createRaceNode('r1', [spawnA]);
+    const spawnB = createSpawnNode('s2', 'beta', [createPromptNode('pb', 'work')]);
+    const raceNode = createRaceNode('r1', [spawnA, spawnB]);
     const spec = createFlowSpec('test', [raceNode]);
 
     // Pre-build state as if children were already launched
     let state = createSessionState('s1', spec);
-    state = updateRaceChildren(state, 'r1', ['alpha']);
+    state = updateRaceChildren(state, 'r1', ['alpha', 'beta']);
     state = updateSpawnedChild(state, 'alpha', {
       name: 'alpha',
       status: 'running',
       pid: 42,
       stateDir: '.prompt-language-alpha',
+    });
+    state = updateSpawnedChild(state, 'beta', {
+      name: 'beta',
+      status: 'running',
+      pid: 43,
+      stateDir: '.prompt-language-beta',
     });
     state = updateNodeProgress(state, 'r1', {
       iteration: 1,
@@ -297,8 +318,11 @@ describe('autoAdvanceNodes — race node', () => {
 
     const { state: result } = await autoAdvanceNodes(state, undefined, undefined, spawner);
     expect(result.variables['race_winner']).toBe('alpha');
-    // Winner variables are imported with prefix
-    expect(result.variables['alpha.result']).toBe('ok');
+    // Winner variables are imported without child-name prefix
+    expect(result.variables['result']).toBe('ok');
+    expect(spawner.terminate).toHaveBeenCalledWith(43);
+    killSpy.mockRestore();
+    platformSpy.mockRestore();
   });
 
   it('when all children fail: sets race_winner to empty string', async () => {
@@ -375,6 +399,14 @@ describe('autoAdvanceNodes — race node', () => {
 });
 
 it('continues polling when children still running (returns pause on second call)', async () => {
+  const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
+  const killSpy = vi.spyOn(process, 'kill').mockImplementation(((
+    _pid: number,
+    signal?: NodeJS.Signals | number,
+  ) => {
+    if (signal === 0) return true;
+    return true;
+  }) as typeof process.kill);
   const spawner: ProcessSpawner = {
     spawn: vi.fn().mockResolvedValue({ pid: 42 }),
     poll: vi.fn().mockResolvedValue({ status: 'running' }),
@@ -391,6 +423,8 @@ it('continues polling when children still running (returns pause on second call)
   // Second call: children still running → exercises line 1323 (poll returns pause again)
   const r2 = await autoAdvanceNodes(r1.state, undefined, undefined, spawner);
   expect(r2.kind).toBe('pause');
+  killSpy.mockRestore();
+  platformSpy.mockRestore();
 });
 
 // ── foreach-spawn via autoAdvanceNodes ───────────────────────────────

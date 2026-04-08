@@ -370,6 +370,27 @@ describe('renderStatusLine', () => {
     );
     expect(line).toContain('prompt: Fix error');
   });
+
+  it('resolves node inside try finally body', () => {
+    // try body has 1 node, catch body has 1 node, finally body has 1 node → finally is at index 2
+    const line = renderStatusLine(
+      state(
+        'Goal',
+        [
+          createTryNode(
+            't1',
+            [createRunNode('r1', 'npm test')],
+            'error',
+            [createPromptNode('p1', 'Fix error')],
+            [createPromptNode('p2', 'Clean up')],
+          ),
+        ],
+        [],
+        { currentNodePath: [0, 2] },
+      ),
+    );
+    expect(line).toContain('prompt: Clean up');
+  });
 });
 
 // ── New node kinds in summarizeNode ──────────────────────────────────────────

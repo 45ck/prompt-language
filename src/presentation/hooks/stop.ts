@@ -7,7 +7,9 @@
  */
 
 import { evaluateStop } from '../../application/evaluate-stop.js';
+import { terminateRunningSpawnedChildren } from '../../application/terminate-spawned-children.js';
 import { renderCompletionSummary } from '../../domain/render-flow.js';
+import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { readStdin } from './read-stdin.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
@@ -43,9 +45,21 @@ async function main(): Promise<void> {
   }
 
   // Flow completion banner: show summary when flow is done
-  if (result.state) {
-    const summary = renderCompletionSummary(result.state);
-    const color = result.state.status === 'completed' ? '\x1b[32;1m' : '\x1b[31;1m';
+  let state = result.state;
+  if (state && (state.status === 'failed' || state.status === 'cancelled')) {
+    const cleaned = await terminateRunningSpawnedChildren(
+      state,
+      new ClaudeProcessSpawner(process.cwd()),
+    );
+    if (cleaned !== state) {
+      await stateStore.save(cleaned);
+      state = cleaned;
+    }
+  }
+
+  if (state) {
+    const summary = renderCompletionSummary(state);
+    const color = state.status === 'completed' ? '\x1b[32;1m' : '\x1b[31;1m';
     process.stderr.write(`${color}[PL] ${summary}\x1b[0m\n`);
   }
 

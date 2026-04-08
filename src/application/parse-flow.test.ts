@@ -1738,6 +1738,14 @@ export prompt review_findings(topic = "the code"):
     expect(retry.maxAttempts).toBe(5);
   });
 
+  it('expands use testing.fix_and_test() with multiple args', () => {
+    const spec = makeSpec('  use testing.fix_and_test(max_retries = "5", extra = "ignored")');
+    expect(spec.nodes).toHaveLength(1);
+    const retry = spec.nodes[0] as import('../domain/flow-node.js').RetryNode;
+    expect(retry.kind).toBe('retry');
+    expect(retry.maxAttempts).toBe(5);
+  });
+
   it('expands use testing.review_findings() to prompt node', () => {
     const spec = makeSpec('  use testing.review_findings()');
     expect(spec.nodes).toHaveLength(1);
@@ -1760,6 +1768,17 @@ export prompt review_findings(topic = "the code"):
   it('warns on unknown symbol', () => {
     const spec = makeSpec('  use testing.nonexistent()');
     expect(spec.warnings.some((w) => w.includes('Unknown symbol'))).toBe(true);
+  });
+
+  it('warns on invalid use syntax', () => {
+    const spec = parseFlow('Goal: test\n\nimport "lib.flow" as testing\n\nflow:\n  use testing\n', {
+      basePath: '/fake',
+      fileReader: (p: string) => {
+        if (p.endsWith('lib.flow')) return LIB_CONTENT;
+        throw new Error(`unexpected: ${p}`);
+      },
+    });
+    expect(spec.warnings.some((w) => w.includes('Invalid use syntax'))).toBe(true);
   });
 });
 

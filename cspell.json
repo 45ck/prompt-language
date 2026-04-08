@@ -86,7 +86,9 @@
     "cheatsheet",
     "desugars",
     "AIDD",
-    "LMQL"
+    "LMQL",
+    "deadbeefdeadbeefdeadbeefdeadbeef",
+    "taskkill"
   ],
   "ignorePaths": [
     "dist/**",

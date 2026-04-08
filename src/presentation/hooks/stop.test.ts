@@ -141,4 +141,45 @@ describe('stop hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
   });
+
+  it('marks running spawned children failed when a terminal flow stops', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      version: 1,
+      sessionId: 'test-session',
+      flowSpec: {
+        goal: 'Failed task',
+        nodes: [],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+      currentNodePath: [0],
+      nodeProgress: {},
+      variables: {},
+      gateResults: {},
+      gateDiagnostics: {},
+      status: 'failed',
+      warnings: [],
+      spawnedChildren: {
+        child: {
+          name: 'child',
+          status: 'running',
+          pid: 999999,
+          stateDir: join(tempDir, '.prompt-language-child'),
+        },
+      },
+      raceChildren: {},
+      captureNonce: 'test-nonce-1234',
+    };
+    const statePath = join(stateDir, 'session-state.json');
+    await writeFile(statePath, JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+
+    const saved = JSON.parse(await (await import('node:fs/promises')).readFile(statePath, 'utf-8'));
+    expect(saved.spawnedChildren.child.status).toBe('failed');
+  });
 });

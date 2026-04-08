@@ -56,6 +56,52 @@ describe('evaluateCompletion', () => {
     expect(result.gateResults['tests_pass']).toBe(false);
   });
 
+  it('hard-stops after too many consecutive failures', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec('Test task', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s-hard-stop', spec);
+    await store.save({ ...session, gateFailureCount: 50 });
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toContain('hard-stopped');
+    expect(result.gateResults).toEqual({});
+
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('failed');
+  });
+
+  it('applies backoff delay after the failure threshold', async () => {
+    vi.useFakeTimers();
+    try {
+      const store = makeStore();
+      const runner = makeRunner();
+      runner.setResult('npm test', { exitCode: 0, stdout: 'OK', stderr: '' });
+
+      const spec = createFlowSpec(
+        'Backoff task',
+        [],
+        [createCompletionGate('tests_pass', 'npm test')],
+      );
+      const session = createSessionState('s-backoff', spec);
+      await store.save({ ...session, gateFailureCount: 20 });
+
+      const resultPromise = evaluateCompletion(store, runner);
+      await vi.advanceTimersByTimeAsync(5000);
+      const result = await resultPromise;
+
+      expect(result.blocked).toBe(false);
+      expect(result.gateResults['tests_pass']).toBe(true);
+
+      const saved = await store.loadCurrent();
+      expect(saved?.status).toBe('completed');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('allows completion when all gate commands pass', async () => {
     const store = makeStore();
     const runner = makeRunner();
@@ -89,6 +135,19 @@ describe('evaluateCompletion', () => {
     const spec = createFlowSpec('Manual gate', [], [createCompletionGate('manual_check')]);
     const session = createSessionState('s4', spec);
     await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+    expect(result.gateResults['manual_check']).toBe(false);
+  });
+
+  it('treats non-boolean variable gates as false when no command is provided', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec('Manual gate', [], [createCompletionGate('manual_check')]);
+    const session = createSessionState('s4b', spec);
+    await store.save({ ...session, variables: { ...session.variables, manual_check: 'yes' } });
 
     const result = await evaluateCompletion(store, runner);
     expect(result.blocked).toBe(true);

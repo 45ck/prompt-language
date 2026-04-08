@@ -113,6 +113,10 @@ function collectDefinedVariables(nodes: readonly FlowNode[]): Set<string> {
       case 'remember':
       case 'send':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
   return defined;
@@ -267,6 +271,10 @@ function lintUnresolvedVars(
       case 'send':
       case 'receive':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
 }
@@ -321,6 +329,10 @@ function containsRunNode(nodes: readonly FlowNode[]): boolean {
       case 'send':
       case 'receive':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
   return false;
@@ -441,6 +453,10 @@ function lintNodes(nodes: readonly FlowNode[], insideLoop: boolean, warnings: Li
       case 'send':
       case 'receive':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
 }
@@ -523,6 +539,10 @@ function allRunsInsideConditional(nodes: readonly FlowNode[]): boolean {
         case 'send':
         case 'receive':
           break;
+        default: {
+          const _exhaustive: never = node;
+          return _exhaustive;
+        }
       }
     }
   }

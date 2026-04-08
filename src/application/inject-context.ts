@@ -19,6 +19,7 @@ import { autoAdvanceNodes, maybeCompleteFlow } from './advance-flow.js';
 import { formatError } from '../domain/format-error.js';
 import { lintFlow } from '../domain/lint-flow.js';
 import { flowComplexityScore } from '../domain/flow-complexity.js';
+import { terminateRunningSpawnedChildren } from './terminate-spawned-children.js';
 
 const FLOW_BLOCK_RE = /^\s*flow:\s*$/m;
 
@@ -278,7 +279,11 @@ export async function injectContext(
     const lower = input.prompt.trim().toLowerCase();
     const ABORT_PHRASES = ['abort flow', 'cancel flow', 'stop flow', 'reset flow'];
     if (ABORT_PHRASES.some((phrase) => lower.includes(phrase))) {
-      await stateStore.save(markCancelled(existing));
+      const cancelled = await terminateRunningSpawnedChildren(
+        markCancelled(existing),
+        processSpawner,
+      );
+      await stateStore.save(cancelled);
       await stateStore.clearPendingPrompt();
       return { prompt: '[prompt-language] Flow cancelled by user.' };
     }
@@ -340,7 +345,10 @@ export async function injectContext(
       return { prompt: `${ctx}\n\n${resumeTag}${interpolated}\n\n${summary}` };
     } catch (err: unknown) {
       const reason = formatError(err);
-      const failed = markFailed(existing, reason);
+      const failed = await terminateRunningSpawnedChildren(
+        markFailed(existing, reason),
+        processSpawner,
+      );
       try {
         await stateStore.save(failed);
       } catch {

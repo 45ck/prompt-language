@@ -5,7 +5,7 @@
  * and runs as a separate Claude session with its own flow definition.
  */
 
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type {
@@ -81,6 +81,32 @@ export class ClaudeProcessSpawner implements ProcessSpawner {
     } catch {
       // State file doesn't exist yet or is unreadable — child still starting
       return { status: 'running' };
+    }
+  }
+
+  async terminate(pid: number): Promise<boolean> {
+    try {
+      if (process.platform === 'win32') {
+        // Windows does not support signaling detached process groups by negative PID.
+        execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+        return true;
+      }
+
+      // Detached child processes become their own process group on POSIX.
+      process.kill(-pid, 'SIGTERM');
+      return true;
+    } catch (error: unknown) {
+      const err = error as NodeJS.ErrnoException;
+      if (err.code === 'ESRCH') return false;
+
+      try {
+        process.kill(pid, 'SIGTERM');
+        return true;
+      } catch (fallbackError: unknown) {
+        const fallback = fallbackError as NodeJS.ErrnoException;
+        if (fallback.code === 'ESRCH') return false;
+        throw fallbackError;
+      }
     }
   }
 

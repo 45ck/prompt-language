@@ -10,6 +10,9 @@ import {
   createRetryNode,
   createForeachNode,
   createSpawnNode,
+  createReviewNode,
+  createForeachSpawnNode,
+  createRaceNode,
 } from './flow-node.js';
 
 describe('flowComplexityScore', () => {
@@ -105,6 +108,19 @@ describe('flowComplexityScore', () => {
       [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
     );
     expect(flowComplexityScore(spec)).toBe(5);
+  });
+
+  it('counts review, race, and foreach_spawn nodes', () => {
+    const review = createReviewNode('rv1', [createPromptNode('p1', 'draft')], 2);
+    const race = createRaceNode('rc1', [
+      createSpawnNode('s1', 'worker', [createPromptNode('p2', 'done')]),
+    ]);
+    const foreachSpawn = createForeachSpawnNode('fs1', 'item', 'a b', [
+      createPromptNode('p3', 'item done'),
+    ]);
+    const spec = createFlowSpec('test', [review, race, foreachSpawn]);
+
+    expect(flowComplexityScore(spec)).toBeGreaterThanOrEqual(3);
   });
 
   it('returns exactly 5 for deep nesting + many control flows + gates', () => {

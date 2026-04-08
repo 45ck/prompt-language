@@ -28,13 +28,32 @@ function countNodes(nodes: readonly FlowNode[]): number {
       case 'spawn':
         count += countNodes(node.body);
         break;
+      case 'review':
+        count += countNodes(node.body);
+        break;
+      case 'race':
+        for (const child of node.children) {
+          count += 1 + countNodes(child.body);
+        }
+        break;
+      case 'foreach_spawn':
+        count += countNodes(node.body);
+        break;
       case 'await':
+      case 'approve':
       case 'break':
       case 'continue':
       case 'prompt':
       case 'run':
       case 'let':
+      case 'remember':
+      case 'send':
+      case 'receive':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
   return count;
@@ -68,13 +87,32 @@ function maxDepth(nodes: readonly FlowNode[], depth: number): number {
       case 'spawn':
         max = Math.max(max, maxDepth(node.body, depth + 1));
         break;
+      case 'review':
+        max = Math.max(max, maxDepth(node.body, depth + 1));
+        break;
+      case 'race':
+        for (const child of node.children) {
+          max = Math.max(max, maxDepth(child.body, depth + 1));
+        }
+        break;
+      case 'foreach_spawn':
+        max = Math.max(max, maxDepth(node.body, depth + 1));
+        break;
       case 'await':
+      case 'approve':
       case 'break':
       case 'continue':
       case 'prompt':
       case 'run':
       case 'let':
+      case 'remember':
+      case 'send':
+      case 'receive':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
   return max;
@@ -105,13 +143,32 @@ function countControlFlow(nodes: readonly FlowNode[]): number {
       case 'spawn':
         count += countControlFlow(node.body);
         break;
+      case 'review':
+        count += countControlFlow(node.body);
+        break;
+      case 'race':
+        for (const child of node.children) {
+          count += 1 + countControlFlow(child.body);
+        }
+        break;
+      case 'foreach_spawn':
+        count += countControlFlow(node.body);
+        break;
       case 'await':
+      case 'approve':
       case 'break':
       case 'continue':
       case 'prompt':
       case 'run':
       case 'let':
+      case 'remember':
+      case 'send':
+      case 'receive':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
   return count;

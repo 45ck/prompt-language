@@ -28,6 +28,7 @@ import {
   createContinueNode,
   createSpawnNode,
   createAwaitNode,
+  createRaceNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -1017,6 +1018,54 @@ describe('autoAdvanceNodes — await', () => {
     expect(result.spawnedChildren['task-a']?.status).toBe('failed');
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.stringContaining('Await timeout')]),
+    );
+  });
+
+  it('race node times out after its wall-clock limit', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+    const raceChild = createSpawnNode('task-a', 'task-a', [createPromptNode('p1', 'inner')]);
+    const raceNode = createRaceNode('race1', [raceChild], 1);
+    const prompt = createPromptNode('p2', 'done');
+    const spec = createFlowSpec('test', [raceNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      raceChildren: { race1: ['task-a'] },
+      spawnedChildren: {
+        'task-a': {
+          name: 'task-a',
+          status: 'running',
+          pid: 1,
+          stateDir: '.prompt-language-task-a',
+        },
+      },
+      nodeProgress: {
+        race1: {
+          iteration: 1,
+          maxIterations: MAX_AWAIT_POLLS,
+          status: 'running',
+          startedAt: Date.now() - 2000,
+        },
+      },
+    };
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+    );
+    expect(capturedPrompt).toBe('done');
+    expect(result.variables['race_winner']).toBe('');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('Race node timed out after 1s')]),
     );
   });
 });
@@ -2822,6 +2871,42 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
     expect(capturedPrompt).toBe('inner work');
     expect(result.nodeProgress['w1']?.iteration).toBe(1);
     expect(result.nodeProgress['w1']?.status).toBe('running');
+  });
+
+  it('Phase 2: verdict=true times out and exits while loop', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('true'),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"still needed?"',
+      [createPromptNode('p1', 'inner work')],
+      3,
+      undefined,
+      1,
+    );
+    const spec = createFlowSpec('test', [whileNode, createPromptNode('p2', 'after-while')]);
+    let state = createSessionState('s1', spec);
+    const now = Date.now();
+    state = updateNodeProgress(state, 'w1', {
+      iteration: 0,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+      startedAt: now - 2000,
+      loopStartedAt: now - 2000,
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toBe('after-while');
+    expect(result.nodeProgress['w1']?.status).toBe('completed');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('timed out after 1s')]),
+    );
   });
 
   it('Phase 2: verdict=false exits while loop', async () => {

@@ -31,4 +31,10 @@ export interface ProcessSpawner {
 
   /** Poll the status of a spawned child by reading its state directory. */
   poll(stateDir: string): Promise<ChildStatus>;
+
+  /**
+   * Best-effort termination for a spawned child.
+   * Returns true when a termination signal was sent, false when the process was already gone.
+   */
+  terminate?(pid: number): Promise<boolean>;
 }

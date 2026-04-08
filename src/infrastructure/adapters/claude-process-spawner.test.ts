@@ -3,13 +3,14 @@ import type { SpawnInput } from '../../application/ports/process-spawner.js';
 
 vi.mock('node:child_process', () => ({
   spawn: vi.fn(),
+  execFileSync: vi.fn(),
 }));
 
 vi.mock('node:fs/promises', () => ({
   readFile: vi.fn(),
 }));
 
-const { spawn: mockedSpawn } = await import('node:child_process');
+const { spawn: mockedSpawn, execFileSync: mockedExecFileSync } = await import('node:child_process');
 const { readFile: mockedReadFile } = await import('node:fs/promises');
 
 // Import after mocks are set up
@@ -89,6 +90,22 @@ describe('ClaudeProcessSpawner', () => {
       const prompt = callArgs[1][2];
       expect(prompt).toContain('let greeting = "hello"');
       expect(prompt).toContain('let count = "42"');
+    });
+
+    it('passes through the model flag when provided', async () => {
+      const fakeChild = { pid: 1, unref: vi.fn() };
+      vi.mocked(mockedSpawn).mockReturnValue(fakeChild as never);
+
+      const spawner = new ClaudeProcessSpawner('/work');
+      await spawner.spawn(
+        makeInput({
+          model: 'gpt-5.4',
+        }),
+      );
+
+      const callArgs = vi.mocked(mockedSpawn).mock.calls[0]!;
+      expect(callArgs[1]).toContain('--model');
+      expect(callArgs[1]).toContain('gpt-5.4');
     });
 
     it('escapes double quotes and backslashes in variable values', async () => {
@@ -392,6 +409,97 @@ describe('ClaudeProcessSpawner — concurrent spawns', () => {
   });
 });
 
+describe('ClaudeProcessSpawner — terminate', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns false when the process is already gone', async () => {
+    const spawner = new ClaudeProcessSpawner('/work');
+
+    if (process.platform === 'win32') {
+      vi.mocked(mockedExecFileSync).mockImplementation(() => {
+        const err = Object.assign(new Error('missing'), { code: 'ESRCH' });
+        throw err;
+      });
+      await expect(spawner.terminate(12345)).resolves.toBe(false);
+      return;
+    }
+
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => {
+      const err = Object.assign(new Error('missing'), { code: 'ESRCH' });
+      throw err;
+    });
+    await expect(spawner.terminate(12345)).resolves.toBe(false);
+    killSpy.mockRestore();
+  });
+
+  it('uses taskkill on Windows and signals the process group elsewhere', async () => {
+    const spawner = new ClaudeProcessSpawner('/work');
+
+    if (process.platform === 'win32') {
+      await expect(spawner.terminate(123)).resolves.toBe(true);
+      expect(mockedExecFileSync).toHaveBeenCalledWith('taskkill', ['/PID', '123', '/T', '/F'], {
+        stdio: 'ignore',
+      });
+      return;
+    }
+
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
+    await expect(spawner.terminate(123)).resolves.toBe(true);
+    expect(killSpy).toHaveBeenCalledWith(-123, 'SIGTERM');
+    killSpy.mockRestore();
+  });
+
+  it('falls back to the direct pid when the process group signal fails', async () => {
+    const spawner = new ClaudeProcessSpawner('/work');
+
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((pid: number) => {
+      if (pid === -123) {
+        const err = Object.assign(new Error('group failed'), { code: 'EACCES' });
+        throw err;
+      }
+      const err = Object.assign(new Error('gone'), { code: 'ESRCH' });
+      throw err;
+    });
+
+    const platform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+
+    try {
+      await expect(spawner.terminate(123)).resolves.toBe(false);
+      expect(killSpy).toHaveBeenCalledWith(-123, 'SIGTERM');
+      expect(killSpy).toHaveBeenCalledWith(123, 'SIGTERM');
+    } finally {
+      Object.defineProperty(process, 'platform', { value: platform });
+      killSpy.mockRestore();
+    }
+  });
+
+  it('throws when both signals fail with non-ESRCH errors', async () => {
+    const spawner = new ClaudeProcessSpawner('/work');
+
+    const killSpy = vi.spyOn(process, 'kill').mockImplementation((pid: number) => {
+      const err = Object.assign(new Error(pid < 0 ? 'group failed' : 'direct pid failed'), {
+        code: 'EACCES',
+      });
+      throw err;
+    });
+
+    const platform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+
+    try {
+      await expect(spawner.terminate(123)).rejects.toThrow('direct pid failed');
+      expect(killSpy).toHaveBeenCalledWith(-123, 'SIGTERM');
+      expect(killSpy).toHaveBeenCalledWith(123, 'SIGTERM');
+    } finally {
+      Object.defineProperty(process, 'platform', { value: platform });
+      killSpy.mockRestore();
+    }
+  });
+});
+
 // Bead sk6y: Goal sanitization and spawn name validation
 describe('ClaudeProcessSpawner — goal sanitization', () => {
   beforeEach(() => {
@@ -453,6 +561,13 @@ describe('ClaudeProcessSpawner — spawn name validation', () => {
     const spawner = new ClaudeProcessSpawner('/work');
     await expect(spawner.spawn(makeInput({ name: 'bad;name' }))).rejects.toThrow(
       'Invalid spawn name',
+    );
+  });
+
+  it('throws when spawn is called with an empty model name', async () => {
+    const spawner = new ClaudeProcessSpawner('/work');
+    await expect(spawner.spawn(makeInput({ model: '   ' }))).rejects.toThrow(
+      'model must be a non-empty string',
     );
   });
 });

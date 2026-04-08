@@ -696,6 +696,10 @@ function compactNode(
       return [`${mark}${pad}send → ${node.target}`];
     case 'receive':
       return [`${mark}${pad}receive ${node.variableName}`];
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
   }
 }
 
@@ -755,6 +759,10 @@ function countAllNodes(nodes: readonly FlowNode[]): number {
       case 'send':
       case 'receive':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
   return count;
@@ -803,6 +811,10 @@ function flattenNodes(nodes: readonly FlowNode[]): FlowNode[] {
       case 'send':
       case 'receive':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
   return result;
@@ -832,8 +844,21 @@ function resolveNodeByPath(nodes: readonly FlowNode[], path: readonly number[]):
       return resolveNodeByPath([...node.thenBranch, ...node.elseBranch], rest);
     case 'try':
       return resolveNodeByPath([...node.body, ...node.catchBody, ...node.finallyBody], rest);
-    default:
+    case 'prompt':
+    case 'run':
+    case 'let':
+    case 'break':
+    case 'continue':
+    case 'await':
+    case 'approve':
+    case 'remember':
+    case 'send':
+    case 'receive':
       return null;
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
   }
 }
 

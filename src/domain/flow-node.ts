@@ -550,8 +550,21 @@ export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode |
         if (found) return found;
         break;
       }
-      default:
+      case 'prompt':
+      case 'run':
+      case 'let':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
         break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
   return null;

@@ -43,8 +43,21 @@ function resolveNode(nodes: readonly FlowNode[], path: readonly number[]): FlowN
       return resolveNode([...node.thenBranch, ...node.elseBranch], rest);
     case 'try':
       return resolveNode([...node.body, ...node.catchBody, ...node.finallyBody], rest);
-    default:
+    case 'prompt':
+    case 'run':
+    case 'let':
+    case 'break':
+    case 'continue':
+    case 'await':
+    case 'approve':
+    case 'remember':
+    case 'send':
+    case 'receive':
       return null;
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
   }
 }
 
@@ -76,8 +89,22 @@ function collectAncestors(nodes: readonly FlowNode[], path: readonly number[]): 
       case 'try':
         currentNodes = [...node.body, ...node.catchBody, ...node.finallyBody];
         break;
-      default:
+      case 'prompt':
+      case 'run':
+      case 'let':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
         currentNodes = [];
+        break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
     }
   }
   return ancestors;

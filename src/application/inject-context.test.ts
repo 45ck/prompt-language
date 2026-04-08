@@ -23,6 +23,7 @@ import {
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
+import type { ProcessSpawner } from './ports/process-spawner.js';
 
 function makeStore(): InMemoryStateStore {
   return new InMemoryStateStore();
@@ -734,12 +735,34 @@ describe('injectContext — error handling and limits', () => {
         throw new Error('connection failed');
       },
     };
+    const processSpawner: ProcessSpawner = {
+      spawn: async () => ({ pid: 1 }),
+      poll: async () => ({ status: 'running' }),
+      terminate: async () => true,
+    };
     const runNode = createRunNode('r1', 'echo ok');
     const spec = createFlowSpec('test', [runNode]);
-    const session = createSessionState('s1', spec);
+    let session = createSessionState('s1', spec);
+    session = {
+      ...session,
+      spawnedChildren: {
+        worker: {
+          name: 'worker',
+          status: 'running',
+          pid: 4321,
+          stateDir: '/tmp/worker',
+        },
+      },
+    };
     await store.save(session);
 
-    const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, throwingRunner);
+    const result = await injectContext(
+      { prompt: 'Go', sessionId: 's1' },
+      store,
+      throwingRunner,
+      undefined,
+      processSpawner,
+    );
     expect(result.prompt).toContain('[prompt-language] Flow failed:');
     expect(result.prompt).toContain('connection failed');
     expect(result.prompt).toContain('Go');
@@ -747,6 +770,10 @@ describe('injectContext — error handling and limits', () => {
     const saved = await store.loadCurrent();
     expect(saved?.status).toBe('failed');
     expect(saved?.failureReason).toContain('connection failed');
+    expect(saved?.spawnedChildren['worker']?.status).toBe('failed');
+    expect(saved?.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('terminated spawned child "worker"')]),
+    );
   });
 
   it('catches TypeError during active flow and includes error type', async () => {
@@ -881,17 +908,37 @@ describe('isTrivialPrompt', () => {
 describe('injectContext — abort flow', () => {
   it('cancels active flow on "abort flow" phrase', async () => {
     const store = makeStore();
+    const processSpawner: ProcessSpawner = {
+      spawn: async () => ({ pid: 1 }),
+      poll: async () => ({ status: 'running' }),
+      terminate: async () => true,
+    };
     const spec = parseFlow('Goal: test\n\nflow:\n  prompt: do work');
-    const session = createSessionState('abort-1', spec);
+    let session = createSessionState('abort-1', spec);
+    session = {
+      ...session,
+      spawnedChildren: {
+        child: {
+          name: 'child',
+          status: 'running',
+          pid: 2222,
+          stateDir: '/tmp/child',
+        },
+      },
+    };
     await store.save(session);
 
     const result = await injectContext(
       { prompt: 'abort flow please', sessionId: 'abort-1' },
       store,
+      undefined,
+      undefined,
+      processSpawner,
     );
     expect(result.prompt).toContain('cancelled');
     const saved = await store.loadCurrent();
     expect(saved?.status).toBe('cancelled');
+    expect(saved?.spawnedChildren['child']?.status).toBe('failed');
   });
 
   it('cancels active flow on "cancel flow"', async () => {

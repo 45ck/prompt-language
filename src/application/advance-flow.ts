@@ -101,6 +101,10 @@ export function resolveCurrentNode(
     case 'send':
     case 'receive':
       return null;
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
   }
 }
 
@@ -362,10 +366,23 @@ async function handleBodyExhaustion(
     case 'if':
     case 'try':
     case 'spawn':
+    case 'race':
       return advanceNode(state, advancePath(parentPath));
-
-    default:
+    case 'prompt':
+    case 'run':
+    case 'let':
+    case 'break':
+    case 'continue':
+    case 'await':
+    case 'approve':
+    case 'remember':
+    case 'send':
+    case 'receive':
       return null;
+    default: {
+      const _exhaustive: never = parentNode;
+      return _exhaustive;
+    }
   }
 }
 
@@ -1005,8 +1022,10 @@ function renderNodeToDsl(node: FlowNode, indent: number): string[] {
       const fromPart = node.from !== undefined ? ` from "${node.from}"` : '';
       return [`${pad}receive ${node.variableName}${fromPart}`];
     }
-    default:
-      return [`${pad}prompt: [unsupported node]`];
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
   }
 }
 
@@ -1567,6 +1586,10 @@ async function advanceSingleNode(
       return advanceSendNode(node, current, messageStore);
     case 'receive':
       return advanceReceiveNode(node, current, messageStore);
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
   }
 }
 

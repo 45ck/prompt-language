@@ -150,4 +150,4 @@ These are available inside Claude Code sessions when the plugin is installed:
 | `/flow:reset`    | Reset flow and clear all session state                                           |
 | `/flow-validate` | Validate flow syntax: run `lintFlow` and show complexity score without executing |
 | `/flow-audit`    | Query `.prompt-language/audit.jsonl` — supports `--failures`, `--slow`, `--type` |
-| `/flow-vars`     | Inspect all session variables with full values, types, and list expansion         |
+| `/flow-vars`     | Inspect all session variables with full values, types, and list expansion        |

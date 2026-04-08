@@ -3,7 +3,7 @@
 import { promises as fs, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -165,6 +165,66 @@ async function install() {
   console.log('Learn more:');
   console.log('  npx @45ck/prompt-language init    (scaffold a starter flow)');
   console.log('  https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md');
+}
+
+async function readFlowText(args, commandName) {
+  let flowText = '';
+  const readFromFile = async (path) => {
+    try {
+      return await fs.readFile(path, 'utf8');
+    } catch (error) {
+      const reason =
+        error.code === 'ENOENT'
+          ? `File not found: ${path}`
+          : error.code === 'EACCES' || error.code === 'EPERM'
+            ? `Permission denied: ${path}`
+            : `Could not read flow file: ${path}`;
+      console.error(`Error: ${reason}`);
+      process.exit(1);
+    }
+  };
+
+  const fileIdx = args.indexOf('--file');
+  if (fileIdx >= 0 && args[fileIdx + 1]) {
+    flowText = await readFromFile(args[fileIdx + 1]);
+  } else if (args.length > 0 && !args[0].startsWith('-')) {
+    flowText = await readFromFile(args[0]);
+  } else if (!process.stdin.isTTY) {
+    const chunks = [];
+    for await (const chunk of process.stdin) {
+      chunks.push(chunk);
+    }
+    flowText = Buffer.concat(chunks).toString('utf8');
+  }
+
+  if (!flowText.trim()) {
+    console.error(`Error: No flow provided. Usage:`);
+    console.error(`  npx @45ck/prompt-language ${commandName} --file my.flow`);
+    console.error(`  npx @45ck/prompt-language ${commandName} my.flow`);
+    console.error(`  cat my.flow | npx @45ck/prompt-language ${commandName}`);
+    process.exit(1);
+  }
+
+  if (flowText.includes('\0')) {
+    console.error('Error: Flow text contains null bytes.');
+    process.exit(1);
+  }
+
+  return flowText;
+}
+
+async function validate() {
+  if (!existsSync(join(ROOT, 'dist'))) {
+    console.error('Error: dist/ directory not found. Run "npm run build" first.');
+    process.exit(1);
+  }
+
+  const flowText = await readFlowText(process.argv.slice(3), 'validate');
+  const { buildValidateFlowPreview } = await import(
+    pathToFileURL(join(ROOT, 'dist', 'presentation', 'validate-flow.js')).href
+  );
+  const preview = buildValidateFlowPreview(flowText);
+  console.log(preview.output);
 }
 
 async function uninstall() {
@@ -363,40 +423,7 @@ done when:
 
 // H-INT-003: CI/CD mode — run a flow headlessly via `claude -p`
 async function ci() {
-  // Accept flow from --file <path> or remaining positional args
-  const args = process.argv.slice(3);
-  let flowText = '';
-
-  const fileIdx = args.indexOf('--file');
-  if (fileIdx >= 0 && args[fileIdx + 1]) {
-    flowText = await fs.readFile(args[fileIdx + 1], 'utf8');
-  } else if (args.length > 0 && !args[0].startsWith('-')) {
-    // Treat remaining args as the flow file path
-    flowText = await fs.readFile(args[0], 'utf8');
-  } else {
-    // Try reading from stdin (piped input)
-    const chunks = [];
-    if (!process.stdin.isTTY) {
-      for await (const chunk of process.stdin) {
-        chunks.push(chunk);
-      }
-      flowText = Buffer.concat(chunks).toString('utf8');
-    }
-  }
-
-  if (!flowText.trim()) {
-    console.error('Error: No flow provided. Usage:');
-    console.error('  npx @45ck/prompt-language ci --file my.flow');
-    console.error('  npx @45ck/prompt-language ci my.flow');
-    console.error('  cat my.flow | npx @45ck/prompt-language ci');
-    process.exit(1);
-  }
-
-  // Guard against null bytes that could truncate arguments in child processes
-  if (flowText.includes('\0')) {
-    console.error('Error: Flow text contains null bytes.');
-    process.exit(1);
-  }
+  const flowText = await readFlowText(process.argv.slice(3), 'ci');
 
   console.log('[prompt-language CI] Running flow headlessly...');
   try {
@@ -432,6 +459,9 @@ switch (command) {
   case 'demo':
     demo();
     break;
+  case 'validate':
+    await validate();
+    break;
   case 'ci':
     await ci();
     break;
@@ -457,6 +487,7 @@ Commands:
   status       Show installation status
   init         Scaffold a starter flow in the current directory
   demo         Print an example flow to stdout
+  validate     Parse, lint, score, and render a flow without executing it
   ci           Run a flow headlessly (CI/CD mode)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild

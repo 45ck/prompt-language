@@ -1,8 +1,10 @@
 # @45ck/prompt-language
 
-A control-flow runtime for Claude Code.
+Turn Claude Code into a supervised runtime.
 
-It wraps Claude Code in a persistent state machine with verification gates, deterministic control flow, and state management — so the runtime handles supervision instead of you.
+`prompt-language` is a control-flow runtime for Claude Code that enforces real completion gates, persistent state, and deterministic execution for bounded engineering workflows.
+
+It wraps Claude Code in a persistent state machine with verification gates, deterministic control flow, and state management, so the runtime handles supervision instead of you.
 
 [![npm](https://img.shields.io/npm/v/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 [![CI](https://github.com/45ck/prompt-language/actions/workflows/quality.yml/badge.svg)](https://github.com/45ck/prompt-language/actions/workflows/quality.yml)
@@ -130,6 +132,7 @@ node bin/cli.mjs install
 | `npx @45ck/prompt-language status`     | Check installation status                |
 | `npx @45ck/prompt-language uninstall`  | Remove the runtime                       |
 | `npx @45ck/prompt-language init`       | Scaffold a starter flow for your project |
+| `npx @45ck/prompt-language validate`   | Parse, lint, score, and preview a flow   |
 | `npx @45ck/prompt-language demo`       | Print an annotated example flow          |
 | `npx @45ck/prompt-language statusline` | Configure Claude Code status line        |
 | `npx @45ck/prompt-language watch`      | Launch live TUI flow monitor             |

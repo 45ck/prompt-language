@@ -84,7 +84,9 @@
     "myloop",
     "toctou",
     "cheatsheet",
-    "desugars"
+    "desugars",
+    "AIDD",
+    "LMQL"
   ],
   "ignorePaths": [
     "dist/**",

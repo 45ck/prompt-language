@@ -77,14 +77,14 @@ Instead of the engineer manually acting as the runtime — tracking progress, re
 
 ## Positioning matrix
 
-| System | Best understood as | Core strength | Weakness relative to prompt-language | Where prompt-language wins |
-|---|---|---|---|---|
-| **prompt-language** | Enforcement-first control-flow runtime for Claude Code | Real completion gates, persistent state, deterministic context, bounded execution | Narrower scope today than broader orchestration ecosystems | Governs the coding work loop directly |
-| **OpenProse** | Markdown-native language for AI sessions | Declarative authoring, contracts, service/session composition | More composition-first than enforcement-first | Better when the goal is supervising Claude's real coding loop with explicit gates |
-| **AIDD / SudoLang** | AI-driven development framework with pseudocode-style orchestration | Strong methodology and reusable workflow patterns | Broader framework shape, less sharply centered on one runtime thesis | Stronger as a focused runtime identity |
-| **IBM PDL** | Declarative prompt programming language | Clear language-first model | More general prompt programming than coding-loop supervision | Stronger on bounded engineering workflows |
-| **LMQL** | LLM programming/query language | Powerful language model programming abstraction | Not centered on repo-native coding-agent supervision | Better for engineering execution control |
-| **Guidance** | Control language for LLM generation and structure | Mature model-control framing | General generation control, not coding-agent runtime supervision | Better for terminal-native verification-gated execution |
+| System              | Best understood as                                                  | Core strength                                                                     | Weakness relative to prompt-language                                 | Where prompt-language wins                                                        |
+| ------------------- | ------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **prompt-language** | Enforcement-first control-flow runtime for Claude Code              | Real completion gates, persistent state, deterministic context, bounded execution | Narrower scope today than broader orchestration ecosystems           | Governs the coding work loop directly                                             |
+| **OpenProse**       | Markdown-native language for AI sessions                            | Declarative authoring, contracts, service/session composition                     | More composition-first than enforcement-first                        | Better when the goal is supervising Claude's real coding loop with explicit gates |
+| **AIDD / SudoLang** | AI-driven development framework with pseudocode-style orchestration | Strong methodology and reusable workflow patterns                                 | Broader framework shape, less sharply centered on one runtime thesis | Stronger as a focused runtime identity                                            |
+| **IBM PDL**         | Declarative prompt programming language                             | Clear language-first model                                                        | More general prompt programming than coding-loop supervision         | Stronger on bounded engineering workflows                                         |
+| **LMQL**            | LLM programming/query language                                      | Powerful language model programming abstraction                                   | Not centered on repo-native coding-agent supervision                 | Better for engineering execution control                                          |
+| **Guidance**        | Control language for LLM generation and structure                   | Mature model-control framing                                                      | General generation control, not coding-agent runtime supervision     | Better for terminal-native verification-gated execution                           |
 
 ## Sharp contrast
 

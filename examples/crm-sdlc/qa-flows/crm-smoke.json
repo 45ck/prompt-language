@@ -1,0 +1,71 @@
+{
+  "formatVersion": 1,
+  "id": "crm-smoke",
+  "name": "CRM Smoke",
+  "startUrl": "http://localhost:3000/sign-in",
+  "sessionMode": "fresh",
+  "viewports": [
+    { "name": "desktop", "width": 1440, "height": 900 },
+    { "name": "mobile", "width": 390, "height": 844 }
+  ],
+  "steps": [
+    {
+      "kind": "type",
+      "name": "Enter email",
+      "target": { "kind": "label", "text": "Email" },
+      "value": "owner@example.com"
+    },
+    {
+      "kind": "type",
+      "name": "Enter password",
+      "target": { "kind": "label", "text": "Password" },
+      "value": "Password123!"
+    },
+    {
+      "kind": "click",
+      "name": "Sign in",
+      "target": { "kind": "role", "role": "button", "name": "Sign in" }
+    },
+    {
+      "kind": "waitFor",
+      "condition": { "kind": "url", "pattern": "**/dashboard" }
+    },
+    {
+      "kind": "click",
+      "name": "New contact",
+      "target": { "kind": "role", "role": "button", "name": "New contact" }
+    },
+    {
+      "kind": "type",
+      "name": "Contact name",
+      "target": { "kind": "label", "text": "Full name" },
+      "value": "Jamie Smith"
+    },
+    {
+      "kind": "type",
+      "name": "Contact email",
+      "target": { "kind": "label", "text": "Email" },
+      "value": "jamie@acme.test"
+    },
+    {
+      "kind": "click",
+      "name": "Save contact",
+      "target": { "kind": "role", "role": "button", "name": "Save contact" }
+    },
+    {
+      "kind": "assert",
+      "name": "Contact visible",
+      "assertion": { "kind": "textPresent", "text": "Jamie Smith" }
+    }
+  ],
+  "assertions": [
+    { "kind": "noCriticalA11yViolations" }
+  ],
+  "policies": {
+    "consoleErrors": { "max": 0, "allowMessages": [] },
+    "networkFailures": { "max": 0, "allowUrls": [] },
+    "pageErrors": { "max": 0, "allowMessages": [] },
+    "performance": { "maxPageLoadMs": 4000 },
+    "accessibility": { "maxCritical": 0 }
+  }
+}

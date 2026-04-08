@@ -1,0 +1,13 @@
+library: discovery
+
+export flow bootstrap_workspace():
+  prompt: Use skill-harness to install the shared Claude and Codex agents, the shared skill packs, noslop, agent-docs, and Beads into this repo. Create docs/, docs/research/, docs/architecture/, specs/, qa-flows/, demo/, artifacts/, apps/web/, and packages/api/, but do not implement product code yet.
+
+export flow market_research():
+  prompt: Use agent: research-writer. Use skills: business-analysis-skills, marketing-product-skills. Research CRM requirements for Newcastle and Hunter SMEs with sales and service workflows. Write docs/research/problem-space.md, docs/research/competitors.md, docs/research/risk-register.md, docs/research/success-metrics.md, and docs/research/workflow-patterns.md. Ground the findings in local SME sales and service workflows.
+  prompt: Use agent: research-writer. Summarize the most valuable differentiation opportunities, workflow pain points, and likely adoption blockers in docs/research/adoption-notes.md.
+
+export flow requirements_discovery():
+  prompt: Use agent: requirements-analyst. Use skills: business-analysis-skills, uml-analysis-modelling-skills, software-quality-skills. Produce docs/prd.md, docs/personas.md, docs/use-cases.md, docs/non-functional-requirements.md, and docs/acceptance-criteria.md for a bounded CRM MVP with auth, contacts, companies, opportunities, pipeline stages, tasks, notes, and dashboard reporting.
+  prompt: Use agent: delivery-manager. Convert the approved scope into a clear backlog or bead set covering discovery, architecture, implementation, QA, demo, and release milestones.
+  remember key="crm_scope_version" value="v1"

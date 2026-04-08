@@ -1,0 +1,58 @@
+Goal: build a production-ready CRM web app from discovery through release
+
+memory:
+  crm_target_market
+  crm_stack
+  preferred_package_manager
+
+import "libraries/discovery.flow" as discovery
+import "libraries/architecture.flow" as architecture
+import "libraries/implementation.flow" as implementation
+import "libraries/quality.flow" as quality
+import "libraries/release.flow" as release
+
+flow:
+  remember key="crm_target_market" value="Newcastle and Hunter SMEs with sales and service workflows"
+  remember key="crm_stack" value="Next.js + TypeScript + PostgreSQL + Prisma"
+  remember key="preferred_package_manager" value="pnpm"
+
+  use discovery.bootstrap_workspace()
+
+  spawn "market-research" with vars crm_target_market, crm_stack
+    use discovery.market_research()
+  end
+
+  spawn "requirements" with vars crm_target_market, crm_stack
+    use discovery.requirements_discovery()
+  end
+
+  await all
+
+  use architecture.synthesize_scope()
+
+  approve "Review docs/prd.md, docs/research/competitors.md, docs/architecture/domain-model.md, and the backlog before implementation."
+
+  spawn "backend" with vars crm_stack, preferred_package_manager
+    use implementation.backend(pkg_mgr="pnpm")
+  end
+
+  spawn "frontend" with vars crm_stack, preferred_package_manager
+    use implementation.frontend(pkg_mgr="pnpm")
+  end
+
+  spawn "engineering-docs" with vars crm_stack
+    use architecture.write_engineering_docs()
+  end
+
+  await all
+
+  use quality.local_verification(pkg_mgr="pnpm")
+  use quality.manual_qa()
+  use quality.product_demo()
+
+  approve "Review the latest QA report and artifacts/demo/output.mp4 before release."
+
+  use release.prepare_release(pkg_mgr="pnpm")
+
+done when:
+  use quality.crm_ship_gates(pkg_mgr="pnpm")

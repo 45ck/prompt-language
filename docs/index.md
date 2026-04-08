@@ -64,3 +64,4 @@ prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code 
 | ------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
 | [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)             | Subagent-first decision, agent-team out of scope                |
 | [Skill / Profile / Agent / Flow File](design/terminology-skill-profile-agent-flow.md) | Canonical terminology and layer placement for the backlog track |
+| [Host Extension Boundary](design/host-extension-boundary.md)                          | Host-managed skills/hooks/plugins/MCP stay outside core DSL    |

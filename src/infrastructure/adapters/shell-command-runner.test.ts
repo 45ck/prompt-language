@@ -375,7 +375,7 @@ describe('ShellCommandRunner (mocked spawn)', () => {
     expect(result.stderr).toBe('');
   });
 
-  it('passes shell: bash on win32', async () => {
+  it('passes shell: true on win32', async () => {
     const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
     let capturedOpts: Record<string, unknown> = {};
     const child = createMockChild();
@@ -392,7 +392,7 @@ describe('ShellCommandRunner (mocked spawn)', () => {
       const runPromise = runner.run('anything');
       child.emit('close', 0);
       await runPromise;
-      expect(capturedOpts['shell']).toBe('bash');
+      expect(capturedOpts['shell']).toBe(true);
     } finally {
       if (originalPlatform) {
         Object.defineProperty(process, 'platform', originalPlatform);

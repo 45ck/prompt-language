@@ -19,6 +19,9 @@ The following features are implemented and documented in the reference:
 - [Deterministic ask](deterministic-ask.md) — `grounded-by` decides condition directly
 - [review](review.md) — generator-evaluator critique loops
 - [race](race.md) — speculative parallel execution
+- [remember](../reference/remember.md) — persistent memory store and `memory:` prefetch
+- [foreach-spawn](../reference/foreach-spawn.md) — parallel fan-out per list item
+- [send / receive](../reference/send-receive.md) — inter-agent messaging between children and parent
 
 ## Proposed runtime and integration features
 

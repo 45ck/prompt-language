@@ -63,7 +63,7 @@ export class ShellCommandRunner implements CommandRunner {
   async run(command: string, options?: RunOptions): Promise<CommandResult> {
     const timeout = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const envOverride = options?.env ? { ...process.env, ...options.env } : process.env;
-    const shell = process.platform === 'win32' ? 'bash' : true;
+    const shell = true;
     const detached = process.platform !== 'win32';
 
     return await new Promise<CommandResult>((resolve) => {

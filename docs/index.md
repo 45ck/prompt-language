@@ -57,3 +57,10 @@ prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code 
 | [Architecture Position](research/00-architecture-position.md)         | How prompt-language differs from LangChain, DSPy, CrewAI                   |
 | [Enhancement Opportunities](research/07-enhancement-opportunities.md) | Wishlist with evidence tiers, proposed syntax, priorities                  |
 | [Feature Completeness](research/08-feature-completeness.md)           | Assessment: 10/15 enhancements already achievable with existing primitives |
+
+## Design
+
+| Doc                                                                                   | Contents                                                        |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)             | Subagent-first decision, agent-team out of scope                |
+| [Skill / Profile / Agent / Flow File](design/terminology-skill-profile-agent-flow.md) | Canonical terminology and layer placement for the backlog track |

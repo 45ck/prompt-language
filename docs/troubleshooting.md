@@ -195,10 +195,10 @@ Use the audit log to verify what commands ran, in what order, and what they retu
 When `let x = prompt` fails to capture Claude's response, the plugin logs a diagnostic explaining why. Look for a message like:
 
 ```
-[PL] Capture failed: expected tag __capture_<nonce>__ not found in response
+[PL] Capture failed: capture file empty or not found
 ```
 
-This means Claude answered but didn't include the required capture tag. The plugin will retry up to 3 times. If all retries fail, the variable is set to `""` and the flow continues.
+This means Claude answered but did not write the capture file. The plugin will retry up to 3 times. If all retries fail, the variable is set to `""` and the flow continues.
 
 **Fix**: Ensure Claude isn't being asked to do too many things in the same turn as a capture. If the capture prompt is buried in a long response, try shortening it or splitting it from other `prompt:` nodes.
 

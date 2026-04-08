@@ -6,40 +6,16 @@
  * colorized flow visualization to stderr as a persistent visual reminder
  * of the active flow step.
  *
- * Also scans tool output for capture tags and writes extracted values
- * to the capture vars directory for tag-based variable capture.
  */
 
-import { writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
-import { formatError } from '../../domain/format-error.js';
-import { CAPTURE_VARS_DIR } from '../../domain/capture-prompt.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
-import { extractAllCaptureTags } from '../../infrastructure/adapters/tag-capture-reader.js';
 import { readStdin } from './read-stdin.js';
 import type { SessionState } from '../../domain/session-state.js';
-
-/** Scan text for capture tags and write extracted values to var files. */
-async function scanAndSaveCapturedVars(
-  text: string,
-  basePath: string,
-  nonce?: string,
-): Promise<void> {
-  const matches = extractAllCaptureTags(text, nonce);
-  if (matches.length === 0) return;
-
-  const varsDir = join(basePath, CAPTURE_VARS_DIR);
-  await mkdir(varsDir, { recursive: true });
-
-  for (const { varName, value } of matches) {
-    await writeFile(join(varsDir, varName), value, 'utf-8');
-  }
-}
 
 // H-PERF-006: Read-only tools that don't need flow re-rendering
 const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch']);
@@ -84,19 +60,12 @@ async function main(): Promise<void> {
 
   // Parse stdin JSON once
   let toolName: string | undefined;
-  let toolOutput: string | undefined;
   if (stdinData) {
     try {
       const parsed: unknown = JSON.parse(stdinData);
       if (parsed && typeof parsed === 'object') {
         if ('tool_name' in parsed) {
           toolName = (parsed as { tool_name: string }).tool_name;
-        }
-        if ('tool_output' in parsed) {
-          const output = (parsed as { tool_output: unknown }).tool_output;
-          if (typeof output === 'string') {
-            toolOutput = output;
-          }
         }
       }
     } catch {
@@ -113,15 +82,6 @@ async function main(): Promise<void> {
     if (!toolName || !READ_ONLY_TOOLS.has(toolName)) {
       const rendered = renderFlow(state);
       process.stderr.write(`\n${colorizeFlow(rendered)}\n`);
-    }
-
-    // Scan tool output for capture tags
-    if (toolOutput) {
-      try {
-        await scanAndSaveCapturedVars(toolOutput, process.cwd(), state.captureNonce);
-      } catch (captureErr: unknown) {
-        process.stderr.write(`[prompt-language] capture write error: ${formatError(captureErr)}\n`);
-      }
     }
 
     // H-INT-012: Fast gate pre-check after Write/Edit tools

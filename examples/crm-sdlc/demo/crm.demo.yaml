@@ -1,0 +1,85 @@
+meta:
+  title: "Apex CRM Demo"
+
+runner:
+  url: "http://localhost:3000"
+
+chapters:
+  - title: "Sign in"
+    steps:
+      - action: navigate
+        url: "/sign-in"
+        narration: "This CRM gives small teams a clear view of contacts, pipeline, and follow-up work."
+      - action: type
+        target:
+          by: label
+          text: "Email"
+          exact: true
+        text: "owner@example.com"
+      - action: type
+        target:
+          by: label
+          text: "Password"
+          exact: true
+        text: "Password123!"
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "Sign in"
+          exact: true
+
+  - title: "Create a contact"
+    steps:
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "New contact"
+          exact: true
+        narration: "Create new customer records in a few seconds."
+      - action: type
+        target:
+          by: label
+          text: "Full name"
+          exact: true
+        text: "Jamie Smith"
+      - action: type
+        target:
+          by: label
+          text: "Email"
+          exact: true
+        text: "jamie@acme.test"
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "Save contact"
+          exact: true
+
+  - title: "Advance the opportunity"
+    steps:
+      - action: click
+        target:
+          by: text
+          text: "Jamie Smith"
+          exact: true
+        narration: "Track progress through the pipeline and keep follow-up work visible."
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "Move to Qualified"
+          exact: true
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "Add note"
+          exact: true
+      - action: type
+        target:
+          by: label
+          text: "Note"
+          exact: true
+        text: "Requested proposal by Friday."

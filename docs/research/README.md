@@ -20,6 +20,12 @@ prompt-language is **not** a chaining framework (LangChain), an optimization com
 | 07  | [Enhancement Opportunities](07-enhancement-opportunities.md) | Full wishlist with evidence tiers (Strong/Moderate/Speculative), proposed DSL syntax, and priority matrix. Top items: approval nodes, retry backoff, flow budgets, compact rendering, self-reflection on failure.                                                                                                    |
 | 08  | [Feature Completeness](08-feature-completeness.md)           | Re-evaluates all 15 enhancements from Report 07 against existing primitives. Finds 10/15 already achievable, 2 handled by host agent, 2 integration patterns, 1 genuine gap (niche). Concludes the DSL is feature-complete; forward work is documentation, hardening, and eval coverage.                             |
 
+## Tracked Research Plans
+
+| Doc                                                                       | Purpose                                                                                   |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [Context-Adaptive Rendering Research Plan](context-adaptive-rendering.md) | Defines hypotheses, metrics, fixtures, and rejection criteria for the render-mode program |
+
 ## Sources
 
 All source materials are archived in [`sources/`](sources/) with descriptive filenames. Reports cite these using relative links. Sources include compass artifacts, deep-research reports, and project documentation spanning context engineering, agent verification, developer trust, retry/recovery patterns, chaining architectures, agentic IDE design, and autonomous operations research.

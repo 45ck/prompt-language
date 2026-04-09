@@ -58,19 +58,21 @@ prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code 
 
 ## Evaluation
 
-| Doc                                          | Contents                                           |
-| -------------------------------------------- | -------------------------------------------------- |
-| [Eval Analysis](eval-analysis.md)            | 45-hypothesis A/B comparison, methodology, results |
-| [Codex Parity Matrix](eval-parity-matrix.md) | Current parity bar for tests, CI, smoke, and evals |
+| Doc                                                                                      | Contents                                                  |
+| ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [Eval Analysis](eval-analysis.md)                                                        | 45-hypothesis A/B comparison, methodology, results        |
+| [Codex Parity Matrix](eval-parity-matrix.md)                                             | Current parity bar for tests, CI, smoke, and evals        |
+| [Context-Adaptive Results Template](eval/context-adaptive-rendering-results-template.md) | Draft template for full vs compact render-mode evaluation |
 
 ## Research
 
-| Doc                                                                   | Contents                                                                   |
-| --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [Research Index](research/README.md)                                  | Index of all research reports with abstracts and source list               |
-| [Architecture Position](research/00-architecture-position.md)         | How prompt-language differs from LangChain, DSPy, CrewAI                   |
-| [Enhancement Opportunities](research/07-enhancement-opportunities.md) | Wishlist with evidence tiers, proposed syntax, priorities                  |
-| [Feature Completeness](research/08-feature-completeness.md)           | Assessment: 10/15 enhancements already achievable with existing primitives |
+| Doc                                                                                | Contents                                                                   |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [Research Index](research/README.md)                                               | Index of all research reports with abstracts and source list               |
+| [Architecture Position](research/00-architecture-position.md)                      | How prompt-language differs from LangChain, DSPy, CrewAI                   |
+| [Enhancement Opportunities](research/07-enhancement-opportunities.md)              | Wishlist with evidence tiers, proposed syntax, priorities                  |
+| [Feature Completeness](research/08-feature-completeness.md)                        | Assessment: 10/15 enhancements already achievable with existing primitives |
+| [Context-Adaptive Rendering Research Plan](research/context-adaptive-rendering.md) | Hypotheses, metrics, fixtures, and rejection criteria for render-mode work |
 
 ## Design
 
@@ -79,3 +81,4 @@ prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code 
 | [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)             | Subagent-first decision, agent-team out of scope                |
 | [Skill / Profile / Agent / Flow File](design/terminology-skill-profile-agent-flow.md) | Canonical terminology and layer placement for the backlog track |
 | [Host Extension Boundary](design/host-extension-boundary.md)                          | Host-managed skills/hooks/plugins/MCP stay outside core DSL     |
+| [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md)    | Proposed runtime decision to measure compact rendering safely   |

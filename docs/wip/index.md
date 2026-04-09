@@ -25,12 +25,13 @@ The following features are implemented and documented in the reference:
 
 ## Proposed runtime and integration features
 
-| Page                                    | Focus                                        |
-| --------------------------------------- | -------------------------------------------- |
-| [Node.js SDK](sdk.md)                   | Public programmatic API                      |
-| [Flow Registry](flow-registry.md)       | `.flow` files plus run and validate commands |
-| [MCP Server](mcp.md)                    | Expose flow state to MCP clients             |
-| [Workspace Orchestration](workspace.md) | Monorepo-aware flow execution                |
+| Page                                            | Focus                                                     |
+| ----------------------------------------------- | --------------------------------------------------------- |
+| [Node.js SDK](sdk.md)                           | Public programmatic API                                   |
+| [Flow Registry](flow-registry.md)               | `.flow` files plus run and validate commands              |
+| [MCP Server](mcp.md)                            | Expose flow state to MCP clients                          |
+| [Workspace Orchestration](workspace.md)         | Monorepo-aware flow execution                             |
+| [Routing and Dispatch](routing-and-dispatch.md) | Closed-world route selection vs general symbolic dispatch |
 
 ## Proposed tooling features
 
@@ -40,3 +41,21 @@ The following features are implemented and documented in the reference:
 | [VS Code Extension](vscode-extension.md) | Syntax highlighting and inline lint                 | Basic package shipped (`vscode-extension/`) |
 | [Language Server](lsp.md)                | Editor-agnostic autocomplete and diagnostics        | Planned                                     |
 | [Web Playground](playground.md)          | Browser-based flow authoring and dry-run simulation | Planned                                     |
+
+## Design memos: memory, knowledge, and retrieval
+
+| Page                                                                                       | Focus                                                                                          |
+| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| [Memory, Knowledge, Markdown, and Evaluation Positioning](memory-knowledge-positioning.md) | Layering memory, Markdown knowledge, retrieval, and evals without blurring the runtime's role  |
+| [Scrutiny and Risks](memory-scrutiny-and-risks.md)                                         | Tightens the memory/Markdown proposal around trust, checkpoints, and DSL creep                 |
+| [Markdown, Agent Memory, and Prompt Language](markdown-agent-memory.md)                    | Defines the Markdown interop model and the split between deterministic and grounding retrieval |
+| [Memory Roadmap](memory-roadmap.md)                                                        | Phased implementation order for disciplined memory and knowledge features                      |
+| [Memory Source Notes](memory-source-notes.md)                                              | Repo-grounded and external source notes behind the memory/Markdown direction                   |
+
+## Architecture packs and future-facing design sets
+
+| Page                                                        | Focus                                                                    |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [vNext Pack README](vnext/README.md)                        | Entry point to the imported vNext architecture and planning package      |
+| [vNext Executive Summary](vnext/00-executive-summary.md)    | Refined thesis, critiques of the current roadmap, and build-first order  |
+| [vNext Master Spec and Plan](vnext/MASTER-SPEC-AND-PLAN.md) | Consolidated architecture target, major specs, and phased implementation |

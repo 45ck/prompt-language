@@ -1,0 +1,36 @@
+library: quality
+
+export flow local_verification(pkg_mgr="pnpm"):
+  run: ${pkg_mgr} lint
+  run: ${pkg_mgr} typecheck
+  run: ${pkg_mgr} test
+  run: noslop doctor
+  run: noslop check --tier=fast
+  run: noslop check --tier=slow
+  review criteria: "No bypasses, no skipped checks, no red tests, and no fragile automation paths." grounded-by "${pkg_mgr} lint && ${pkg_mgr} typecheck && ${pkg_mgr} test" max 3
+    prompt: Use agent: quality-reviewer. Use skills: software-quality-skills, code-review-inspection-skills, refactoring-code-smells-skills. Inspect the repo state and repair violations, flaky tests, fragile selectors, and missing traceability.
+  end
+
+export flow manual_qa():
+  prompt: Use agent: qa-automation-engineer. Use skills: automation-testing-skills, verification-test-design-skills, non-functional-testing-skills. Generate or update qa-flows/helpdesk-smoke.json for sign-in, create ticket, assign ticket, change priority, add internal note, and verify queue visibility. Use stable role, label, and text targets.
+  run: mqm validate --flow ./qa-flows/helpdesk-smoke.json
+  run: mqm run --flow ./qa-flows/helpdesk-smoke.json
+
+export flow product_demo():
+  prompt: Use agent: workflow-engineer. Use demo-machine to generate demo/helpdesk.demo.yaml that showcases the best happy path: sign in, create ticket, assign the ticket, add an internal note, and show queue visibility. Prefer stable accessible targets and narration-ready chapters.
+  run: demo-machine validate demo/helpdesk.demo.yaml
+  run: demo-machine run demo/helpdesk.demo.yaml --output artifacts/demo
+
+export gates helpdesk_ship_gates(pkg_mgr="pnpm"):
+  gate lint: ${pkg_mgr} lint
+  gate typecheck: ${pkg_mgr} typecheck
+  gate tests: ${pkg_mgr} test
+  gate noslop_fast: noslop check --tier=fast
+  gate noslop_slow: noslop check --tier=slow
+  gate qa_reports_present: test -d qa-reports
+  gate demo_artifacts_present: test -d artifacts/demo
+  file_exists docs/prd.md
+  file_exists docs/architecture/domain-model.md
+  file_exists docs/api-contracts.md
+  file_exists qa-flows/helpdesk-smoke.json
+  file_exists demo/helpdesk.demo.yaml

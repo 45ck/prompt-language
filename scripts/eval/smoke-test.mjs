@@ -55,6 +55,7 @@ import {
   checkHarnessVersion,
   getCommandLabel,
   getHarnessLabel,
+  getHarnessName,
   runHarnessPrompt,
 } from './harness.mjs';
 
@@ -64,7 +65,8 @@ const FLAKY_REPORT = join(__dirname, 'flaky-report.mjs');
 
 const QUICK_MODE = process.argv.includes('--quick');
 const HISTORY_MODE = process.argv.includes('--history');
-const TIMEOUT = 120_000;
+const ONLY_FILTERS = parseOnlyFilters(process.argv, process.env.SMOKE_ONLY);
+const TIMEOUT = getHarnessName() === 'codex' ? 240_000 : 120_000;
 
 let passed = 0;
 let failed = 0;
@@ -98,8 +100,26 @@ function assert(label, condition, detail = '') {
 
 /** Wrap a test function to track timing. */
 async function timed(name, label, fn) {
+  if (ONLY_FILTERS && !ONLY_FILTERS.has(name)) {
+    console.log(`  SKIP  ${name}: ${label} (--only filter)`);
+    return;
+  }
+
   currentTest = { name, label, startTime: Date.now() };
   await fn();
+}
+
+function parseOnlyFilters(argv, envOnly) {
+  const flagIndex = argv.indexOf('--only');
+  const flagValue = flagIndex >= 0 ? argv[flagIndex + 1] : null;
+  const raw = flagValue || envOnly;
+  if (!raw) return null;
+
+  const values = raw
+    .split(',')
+    .map((value) => value.trim().toUpperCase())
+    .filter((value) => value.length > 0);
+  return values.length > 0 ? new Set(values) : null;
 }
 
 /** Write structured results to a JSON file. */
@@ -1818,6 +1838,9 @@ async function main() {
   }
 
   const totalStart = Date.now();
+  if (ONLY_FILTERS) {
+    console.log(`[smoke-test] Restricting run to: ${[...ONLY_FILTERS].join(', ')}\n`);
+  }
   console.log(`[smoke-test] Starting live CLI smoke tests via ${getCommandLabel()}...\n`);
 
   // Check harness CLI is available

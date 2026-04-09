@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * plugin-validation-eval.mjs — Live plugin validation via claude CLI.
+ * plugin-validation-eval.mjs — Live plugin validation via the configured CLI harness.
  *
  * Runs `claude -p` with --plugin-dir to test the full end-to-end pipeline:
  *   NL input → UserPromptSubmit hook → meta-prompt → model outputs DSL → parseFlow validates.
  *
- * Uses the logged-in Claude Code auth. No API key needed.
+ * Uses the logged-in CLI auth. No API key needed.
  * Non-deterministic by nature — uses a pass threshold.
  *
  * Usage:
@@ -19,6 +19,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { parseFlow } from '../../dist/application/parse-flow.js';
+import { checkHarnessVersion, getHarnessLabel, getHarnessName } from './harness.mjs';
 
 const SRC_ROOT = resolve(import.meta.dirname, '..', '..');
 const REPORT_MODE = process.argv.includes('--report');
@@ -126,17 +127,22 @@ const TEST_CASES = [
 // ── Run ──────────────────────────────────────────────────────────────
 
 async function run() {
-  console.log(separator('Live Plugin Validation (claude -p)'));
+  console.log(separator(`Live Plugin Validation (${getHarnessLabel()})`));
   console.log();
 
   const env = cleanEnv();
 
-  // Preflight: check claude CLI is available
+  // Preflight: check the configured CLI harness is available
   try {
-    const ver = execSync('claude --version', { encoding: 'utf-8', timeout: 5000, env }).trim();
-    console.log(`  Claude CLI: ${ver}`);
+    const ver = checkHarnessVersion();
+    console.log(`  ${getHarnessLabel()}: ${ver}`);
   } catch {
-    console.log('  SKIP  claude CLI not found.');
+    console.log(`  SKIP  ${getHarnessLabel()} not found.`);
+    return { passed: 0, failed: 0, results: [] };
+  }
+
+  if (getHarnessName() !== 'claude') {
+    console.log('  SKIP  --plugin-dir validation is only supported with Claude CLI.');
     return { passed: 0, failed: 0, results: [] };
   }
 

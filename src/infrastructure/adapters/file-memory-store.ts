@@ -19,7 +19,7 @@ export class FileMemoryStore implements MemoryStore {
   private readonly memoryPath: string;
 
   constructor(stateDir: string) {
-    this.memoryPath = join(stateDir, 'memory.json');
+    this.memoryPath = join(stateDir, '.prompt-language', 'memory.json');
   }
 
   async append(entry: MemoryEntry): Promise<void> {

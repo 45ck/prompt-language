@@ -6,7 +6,7 @@ Common issues and how to resolve them.
 
 When a flow gets stuck or behaves unexpectedly, use this order:
 
-1. Check the live state with `npx @45ck/prompt-language status` or `/flow:status`.
+1. Check the live flow state with `/flow:status`.
 2. Inspect `.prompt-language/session-state.json` for `status`, `currentNodePath`, and `nodeProgress`.
 3. Inspect `.prompt-language/audit.jsonl` to see what commands actually ran.
 4. If capture is involved, check `.prompt-language/vars/` for the expected file.

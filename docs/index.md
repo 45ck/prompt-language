@@ -39,6 +39,10 @@ prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code 
 | [Retry with Backoff](examples/retry-with-backoff.md)           | Exponential delay between retry attempts           |
 | [Approval Checkpoint](examples/approval-checkpoint.md)         | Human review gate before destructive action        |
 | [Parallel Tasks](examples/parallel-tasks.md)                   | Spawn/await for concurrent work streams            |
+| [Race Between Repair Strategies](examples/race-strategies.md)  | Competing repair approaches with first-success win |
+| [Parallel Review](examples/parallel-review.md)                 | Fan-out review work across changed files           |
+| [Review Loop](examples/review-loop.md)                         | Grounded generator-evaluator revision loop         |
+| [JSON Capture](examples/json-capture.md)                       | Capture structured fields for branching            |
 | [Variable Pipeline](examples/variable-pipeline.md)             | Shell pipes for transforms and filtering           |
 | [Memory and Context](examples/memory-and-context.md)           | Load remembered context into flow variables        |
 | [Using Libraries](examples/using-libraries.md)                 | Share prompts, flows, and gates across files       |

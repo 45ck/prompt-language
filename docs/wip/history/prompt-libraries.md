@@ -1,6 +1,6 @@
 # `prompt libraries` (WIP)
 
-> **Status: shipped.** See [prompt-libraries](../reference/prompt-libraries.md) in the Language Reference.
+> **Status: shipped.** See [prompt-libraries](../../reference/prompt-libraries.md) in the Language Reference.
 
 <!-- cspell:ignore jkfn -->
 

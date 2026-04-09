@@ -14,7 +14,7 @@ Flows with 10+ sequential auto-advancing nodes (e.g., 5 `let` + 5 `prompt` nodes
 
 **Workaround**: Keep sequential chains of auto-advancing nodes (`let`, `var`) under 8 nodes. Break long sequences with `run:` or `prompt:` nodes that require agent interaction.
 
-**Status**: Under investigation. See [Troubleshooting](troubleshooting.md#long-sequential-flows-hanging) for details.
+**Status**: Under investigation. See [Troubleshooting](../operations/troubleshooting.md#long-sequential-flows-hanging) for details.
 
 ## What the Plugin Actually Changes
 

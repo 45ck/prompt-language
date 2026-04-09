@@ -22,4 +22,4 @@ import {
 - stable TypeScript types for the public surface
 - hook entry points reuse the same exported functions internally
 
-See the SDK section in the [README](../../README.md) for the current import path and example usage.
+See the SDK section in the [README](../../../README.md) for the current import path and example usage.

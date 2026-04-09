@@ -57,4 +57,4 @@ done when:
   tests_pass
 ```
 
-See [DSL reference — let/var](../dsl-reference.md#letvar) for variable interpolation syntax.
+See [DSL reference — let/var](../reference/dsl-reference.md#letvar) for variable interpolation syntax.

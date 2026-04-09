@@ -27,7 +27,7 @@ Today, evaluation logic is split across:
 - local scripts in `scripts/eval/`
 - one-off benchmark fixtures
 - evaluator behavior embedded inside `review`
-- thesis plans in `docs/thesis-roadmap.md`
+- thesis plans in `docs/strategy/thesis-roadmap.md`
 
 That is enough to run experiments, but not enough to make evaluation a first-class engineering surface.
 
@@ -359,9 +359,9 @@ Only after the earlier stages are stable should the project explore parser, exec
 
 This proposal extends existing project direction rather than replacing it:
 
-- `docs/eval-analysis.md` shows that deterministic gates are the current proven differentiator
+- `docs/evaluation/eval-analysis.md` shows that deterministic gates are the current proven differentiator
 - `docs/reference/review.md` already contains evaluator behavior that can be extracted into reusable judges
-- `docs/thesis-roadmap.md` already defines experiment shapes that map naturally to first-class eval suites
+- `docs/strategy/thesis-roadmap.md` already defines experiment shapes that map naturally to first-class eval suites
 
 ## Current workaround
 
@@ -383,7 +383,7 @@ Today, the closest approximation is:
 ## Acceptance criteria for the proposal
 
 - The language keeps deterministic completion separate from evaluator-based quality scoring.
-- The design supports the thesis experiments already defined in `docs/thesis-roadmap.md`.
+- The design supports the thesis experiments already defined in `docs/strategy/thesis-roadmap.md`.
 - `review` can reuse evaluator definitions instead of embedding all judge behavior inline.
 - The proposal includes a path for baselines, replay, and human calibration.
 - The self-hosting path is staged and regression-driven rather than speculative.

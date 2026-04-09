@@ -47,7 +47,7 @@ Use the runtime in this order:
 4. Smoke-test any hook, parsing, advancement, or state-transition change with `npm run eval:smoke`
 5. Recover with `/flow:status`, `/flow:reset`, or the troubleshooting guide when state gets stuck
 
-The recovery path is documented in [Troubleshooting](docs/troubleshooting.md). The parity bar and smoke limitations are documented in [Codex Parity Matrix](docs/eval-parity-matrix.md).
+The recovery path is documented in [Troubleshooting](docs/operations/troubleshooting.md). The parity bar and smoke limitations are documented in [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
 
 ## The problem
 
@@ -144,7 +144,7 @@ npx @45ck/prompt-language status     # check installation
 npx @45ck/prompt-language uninstall  # remove
 ```
 
-**New to the runtime?** Start with the **[Getting Started tutorial](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)**.
+**New to the runtime?** Start with the **[Getting Started tutorial](https://github.com/45ck/prompt-language/blob/main/docs/guides/getting-started.md)**.
 
 <details>
 <summary>Manual install</summary>
@@ -506,7 +506,7 @@ Verification is where the repo has the clearest measured wins. State, variables,
 | No verifiable exit condition exists and no runtime structure helps | **Maybe not** | Added machinery may not buy you much                |
 | Speed matters and you'll supervise manually                        | **Maybe not** | The runtime adds overhead                           |
 
-Full methodology, hypothesis-by-hypothesis results, and latency data: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)**
+Full methodology, hypothesis-by-hypothesis results, and latency data: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md)**
 
 ## Long-term thesis
 
@@ -532,7 +532,7 @@ In this model, engineers write goals, constraints, workflows, verification gates
 
 These are falsifiable hypotheses, not marketing claims. The research plan includes concrete experiments with numeric success criteria and explicit conditions for rejection.
 
-Read the full argument: **[Thesis](https://github.com/45ck/prompt-language/blob/main/docs/thesis.md)** · Research plan: **[Thesis Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/thesis-roadmap.md)** · Current evidence: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)**
+Read the full argument: **[Thesis](https://github.com/45ck/prompt-language/blob/main/docs/strategy/thesis.md)** · Research plan: **[Thesis Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/strategy/thesis-roadmap.md)** · Current evidence: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md)**
 
 ## Monitoring
 
@@ -557,18 +557,18 @@ Shows the full flow state updating in real time — useful for watching long-run
 
 ## Learn more
 
-- **[Getting Started](https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md)** — see it work in 2 minutes
+- **[Getting Started](https://github.com/45ck/prompt-language/blob/main/docs/guides/getting-started.md)** — see it work in 2 minutes
 - **[Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/roadmap.md)** — tracked but not yet shipped features from `.beads`
-- **[WIP Features](https://github.com/45ck/prompt-language/blob/main/docs/wip/index.md)** — individual proposed docs for not-yet-implemented language and tooling features
+- **[WIP Features](https://github.com/45ck/prompt-language/blob/main/docs/wip/index.md)** — grouped WIP hub for active proposals, planning packs, and shipped design history
 - **[Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md)** — per-feature reference pages for `ask`, `if`, `spawn`, `await`, `let/var`, `done when:`, and more, including [approve](https://github.com/45ck/prompt-language/blob/main/docs/reference/approve.md), [review](https://github.com/45ck/prompt-language/blob/main/docs/reference/review.md), [race](https://github.com/45ck/prompt-language/blob/main/docs/reference/race.md), [foreach-spawn](https://github.com/45ck/prompt-language/blob/main/docs/reference/foreach-spawn.md), [remember](https://github.com/45ck/prompt-language/blob/main/docs/reference/remember.md), [send/receive](https://github.com/45ck/prompt-language/blob/main/docs/reference/send-receive.md), [import](https://github.com/45ck/prompt-language/blob/main/docs/reference/import.md), and [prompt libraries](https://github.com/45ck/prompt-language/blob/main/docs/reference/prompt-libraries.md)
-- **[How the runtime works](https://github.com/45ck/prompt-language/blob/main/docs/guide.md)** — how it works, variable lifecycle, gate trust model
-- **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md)** — complete syntax specification
-- **[Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md)** — debugging stuck flows, known issues
-- **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md)** — A/B testing methodology and results
-- **[Thesis](https://github.com/45ck/prompt-language/blob/main/docs/thesis.md)** — long-term thesis and research agenda
-- **[Thesis Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/thesis-roadmap.md)** — concrete experiments to prove or disprove the thesis
-- **[CLI Reference](https://github.com/45ck/prompt-language/blob/main/docs/cli-reference.md)** — all CLI commands and slash commands
-- **[Use Cases](https://github.com/45ck/prompt-language/blob/main/docs/use-cases.md)** — when the runtime wins, anti-patterns, quick recipes
+- **[How the runtime works](https://github.com/45ck/prompt-language/blob/main/docs/guides/guide.md)** — how it works, variable lifecycle, gate trust model
+- **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/dsl-reference.md)** — complete syntax specification
+- **[Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/operations/troubleshooting.md)** — debugging stuck flows, known issues
+- **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md)** — A/B testing methodology and results
+- **[Thesis](https://github.com/45ck/prompt-language/blob/main/docs/strategy/thesis.md)** — long-term thesis and research agenda
+- **[Thesis Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/strategy/thesis-roadmap.md)** — concrete experiments to prove or disprove the thesis
+- **[CLI Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/cli-reference.md)** — all CLI commands and slash commands
+- **[Use Cases](https://github.com/45ck/prompt-language/blob/main/docs/guides/use-cases.md)** — when the runtime wins, anti-patterns, quick recipes
 - **[Documentation Index](https://github.com/45ck/prompt-language/blob/main/docs/index.md)** — full documentation hub
 
 ## Contributing

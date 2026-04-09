@@ -1,6 +1,6 @@
 # How the runtime works
 
-This guide explains the mechanics behind the runtime — what Claude actually sees on each turn, how variables persist, why gates can't be fooled, and how to write effective flows. The core idea is simple: engineers already act as Claude's runtime by tracking state, restating context, choosing the next step, and verifying completion. prompt-language moves that supervision loop into terminal hooks and persistent state. For installation, see the [README](https://github.com/45ck/prompt-language/blob/main/README.md). For per-feature syntax docs, see the [Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md). For the one-page reference, see the [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md).
+This guide explains the mechanics behind the runtime — what Claude actually sees on each turn, how variables persist, why gates can't be fooled, and how to write effective flows. The core idea is simple: engineers already act as Claude's runtime by tracking state, restating context, choosing the next step, and verifying completion. prompt-language moves that supervision loop into terminal hooks and persistent state. For installation, see the [README](https://github.com/45ck/prompt-language/blob/main/README.md). For per-feature syntax docs, see the [Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md). For the one-page reference, see the [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/dsl-reference.md).
 
 ## The closed loop
 
@@ -19,7 +19,7 @@ This guide explains the mechanics behind the runtime — what Claude actually se
   └──────────────┘    └─────────────┘     └──────────────────┘
 ```
 
-Hooks are stateless processes — they read and write `.prompt-language/session-state.json` but hold no in-memory state between invocations. For implementation details, see [Hooks Architecture](https://github.com/45ck/prompt-language/blob/main/docs/hooks-architecture.md).
+Hooks are stateless processes — they read and write `.prompt-language/session-state.json` but hold no in-memory state between invocations. For implementation details, see [Hooks Architecture](https://github.com/45ck/prompt-language/blob/main/docs/design/hooks-architecture.md).
 
 ## What Claude sees each turn
 
@@ -219,7 +219,7 @@ For worked examples, see [Fix Tests](https://github.com/45ck/prompt-language/blo
 - **Simple, well-specified tasks** — When the prompt is clear and complete, vanilla Claude matches correctness at 2-3x less latency.
 - **No verifiable exit condition** — If there's no command that can check whether the task is done, there's no gate to add, and the runtime adds overhead without enforcement value.
 
-In controlled evaluation (45 hypotheses, 300+ test runs at `--repeat 3` reliability), the runtime won 15, tied 28, and 2 were both-fail (neither side succeeded). Wins cluster around gate enforcement; ties cluster around tasks where the prompt is already explicit. See [Eval Analysis](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) for the full breakdown.
+In controlled evaluation (45 hypotheses, 300+ test runs at `--repeat 3` reliability), the runtime won 15, tied 28, and 2 were both-fail (neither side succeeded). Wins cluster around gate enforcement; ties cluster around tasks where the prompt is already explicit. See [Eval Analysis](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md) for the full breakdown.
 
 ## Debugging
 
@@ -291,8 +291,8 @@ npx @45ck/prompt-language
 ## Further reading
 
 - [Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md) — Per-feature reference pages for `ask`, `if`, `while`, `spawn`, `await`, `let/var`, gates, defaults, and runtime behavior
-- [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/dsl-reference.md) — Full syntax, defaults, composition rules, built-in variables, and gate predicates
-- [Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/troubleshooting.md) — Debugging stuck flows, known issues, common fixes
-- [Hooks Architecture](https://github.com/45ck/prompt-language/blob/main/docs/hooks-architecture.md) — Implementation details of the three-hook enforcement loop
-- [Eval Analysis](https://github.com/45ck/prompt-language/blob/main/docs/eval-analysis.md) — 45-hypothesis comparative evaluation against vanilla Claude
+- [DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/dsl-reference.md) — Full syntax, defaults, composition rules, built-in variables, and gate predicates
+- [Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/operations/troubleshooting.md) — Debugging stuck flows, known issues, common fixes
+- [Hooks Architecture](https://github.com/45ck/prompt-language/blob/main/docs/design/hooks-architecture.md) — Implementation details of the three-hook enforcement loop
+- [Eval Analysis](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md) — 45-hypothesis comparative evaluation against vanilla Claude
 - [Examples](https://github.com/45ck/prompt-language/blob/main/docs/examples/) — Worked flow examples for common patterns

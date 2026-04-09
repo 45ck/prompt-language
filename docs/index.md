@@ -1,86 +1,48 @@
 # Documentation
 
-prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code in a persistent state machine with verification gates, deterministic control flow, variable management, and parallelism. Gates are real shell commands that must pass before the agent can stop. The runtime handles supervision so you don't have to.
+prompt-language is a control-flow runtime for Claude Code. The docs are organized by purpose so you can tell, from the directory structure alone, whether a page is a tutorial, shipped reference, design rationale, operational runbook, evaluation artifact, or future-facing proposal.
+
+## Folder map
+
+| Folder                             | Purpose                                                                       |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| [guides/](guides/index.md)         | Tutorials, conceptual walkthroughs, and usage guidance                        |
+| [reference/](reference/index.md)   | Shipped language and runtime reference, including CLI and DSL quick refs      |
+| [design/](design/index.md)         | Architecture boundaries, canonical design docs, and superseded design history |
+| [examples/](examples/index.md)     | Worked examples and the showcase catalog                                      |
+| [evaluation/](evaluation/index.md) | Evidence, parity matrices, hypothesis sets, and QA gap analysis               |
+| [operations/](operations/index.md) | Troubleshooting and smoke/validation runbooks                                 |
+| [strategy/](strategy/index.md)     | Positioning, thesis, and long-term research direction                         |
+| [research/](research/README.md)    | External research syntheses and source archive                                |
+| [wip/](wip/index.md)               | Proposed and imported future work that is not shipped today                   |
+| [roadmap.md](roadmap.md)           | Shipped-vs-tracked product roadmap backed by `.beads`                         |
 
 ## Start here
 
-| Guide                                 | What you'll learn                                                                   |
-| ------------------------------------- | ----------------------------------------------------------------------------------- |
-| [Getting Started](getting-started.md) | Install the runtime, run your first gate, see Claude stay blocked until checks pass |
-| [Language Guide](language-guide.md)   | The runtime model, all 13 primitives, and when to use each capability               |
+| Doc                                          | What you'll get                                                                        |
+| -------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [Getting Started](guides/getting-started.md) | Install the runtime, run your first gate, and see the supervision loop work end to end |
+| [Language Guide](guides/language-guide.md)   | A high-level walkthrough of the runtime model and the shipped language surface         |
+| [How It Works](guides/guide.md)              | Hook lifecycle, variable state, gate trust model, and runtime mechanics                |
 
-## Reference
+## Core entry points
 
-| Doc                                         | Contents                                                            |
-| ------------------------------------------- | ------------------------------------------------------------------- |
-| [Language Reference](reference/index.md)    | Concept- and keyword-based reference pages for the full language    |
-| [DSL Reference](dsl-reference.md)           | One-page full syntax, defaults, built-in variables, gate predicates |
-| [CLI Reference](cli-reference.md)           | All CLI commands: install, status, init, demo, watch                |
-| [Hooks Architecture](hooks-architecture.md) | Three-hook enforcement loop, state file schema                      |
+| Area              | Entry point                                | Contents                                                              |
+| ----------------- | ------------------------------------------ | --------------------------------------------------------------------- |
+| Shipped reference | [reference/index.md](reference/index.md)   | Keyword-by-keyword language reference plus CLI and DSL summaries      |
+| Examples          | [examples/index.md](examples/index.md)     | Worked flows for gates, loops, parallelism, memory, and composition   |
+| Operations        | [operations/index.md](operations/index.md) | Recovery paths, smoke testing, and support expectations               |
+| Evaluation        | [evaluation/index.md](evaluation/index.md) | Comparative results, parity matrix, and QA analysis                   |
+| Design            | [design/index.md](design/index.md)         | Architecture boundaries, design decisions, and canonical design notes |
+| Strategy          | [strategy/index.md](strategy/index.md)     | Positioning, thesis, and experiment roadmap                           |
+| Future work       | [wip/index.md](wip/index.md)               | Proposed features and imported planning packs                         |
 
-## Guides
+## Research and design anchors
 
-| Doc                                       | Contents                                                        |
-| ----------------------------------------- | --------------------------------------------------------------- |
-| [How It Works](guide.md)                  | Internals: hook lifecycle, variable lifecycle, gate trust model |
-| [Use Cases](use-cases.md)                 | When the runtime wins, when it doesn't, quick recipes           |
-| [Non-Node Projects](non-node-projects.md) | Python, Go, Rust, and custom test runners                       |
-| [Roadmap](roadmap.md)                     | Tracked but not yet shipped features from `.beads`              |
-| [WIP Features](wip/index.md)              | Proposed feature pages for the future language and tooling      |
-| [Troubleshooting](troubleshooting.md)     | Stuck flows, failed gates, state file inspection                |
-
-## Operations
-
-| Doc                                          | Contents                                                 |
-| -------------------------------------------- | -------------------------------------------------------- |
-| [Troubleshooting](troubleshooting.md)        | Canonical recovery path for stuck flows and failed smoke |
-| [Codex Parity Matrix](eval-parity-matrix.md) | QA commands, smoke expectations, and host support limits |
-
-## Examples
-
-| Example                                                        | Pattern                                            |
-| -------------------------------------------------------------- | -------------------------------------------------- |
-| [Fix Tests](examples/fix-tests.md)                             | Retry loop with test gate                          |
-| [Lint and Fix](examples/lint-and-fix.md)                       | Compound gates (tests + lint)                      |
-| [Self-Reflection](examples/self-reflection.md)                 | Analyze failure before retrying                    |
-| [Retry with Backoff](examples/retry-with-backoff.md)           | Exponential delay between retry attempts           |
-| [Approval Checkpoint](examples/approval-checkpoint.md)         | Human review gate before destructive action        |
-| [Parallel Tasks](examples/parallel-tasks.md)                   | Spawn/await for concurrent work streams            |
-| [Race Between Repair Strategies](examples/race-strategies.md)  | Competing repair approaches with first-success win |
-| [Parallel Review](examples/parallel-review.md)                 | Fan-out review work across changed files           |
-| [Review Loop](examples/review-loop.md)                         | Grounded generator-evaluator revision loop         |
-| [JSON Capture](examples/json-capture.md)                       | Capture structured fields for branching            |
-| [Variable Pipeline](examples/variable-pipeline.md)             | Shell pipes for transforms and filtering           |
-| [Memory and Context](examples/memory-and-context.md)           | Load remembered context into flow variables        |
-| [Using Libraries](examples/using-libraries.md)                 | Share prompts, flows, and gates across files       |
-| [Producer / Consumer Messaging](examples/producer-consumer.md) | Child-to-child task handoff via `send` / `receive` |
-| [Showcase](showcase.md)                                        | 140+ worked examples across all primitives         |
-
-## Evaluation
-
-| Doc                                                                                      | Contents                                                  |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| [Eval Analysis](eval-analysis.md)                                                        | 45-hypothesis A/B comparison, methodology, results        |
-| [Codex Parity Matrix](eval-parity-matrix.md)                                             | Current parity bar for tests, CI, smoke, and evals        |
-| [Context-Adaptive Results Template](eval/context-adaptive-rendering-results-template.md) | Draft template for full vs compact render-mode evaluation |
-
-## Research
-
-| Doc                                                                                | Contents                                                                   |
-| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| [Research Index](research/README.md)                                               | Index of all research reports with abstracts and source list               |
-| [Architecture Position](research/00-architecture-position.md)                      | How prompt-language differs from LangChain, DSPy, CrewAI                   |
-| [Enhancement Opportunities](research/07-enhancement-opportunities.md)              | Wishlist with evidence tiers, proposed syntax, priorities                  |
-| [Feature Completeness](research/08-feature-completeness.md)                        | Assessment: 10/15 enhancements already achievable with existing primitives |
-| [Context-Adaptive Rendering Research Plan](research/context-adaptive-rendering.md) | Hypotheses, metrics, fixtures, and rejection criteria for render-mode work |
-
-## Design
-
-| Doc                                                                                   | Contents                                                             |
-| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)             | Subagent-first decision, agent-team out of scope                     |
-| [Skill / Profile / Agent / Flow File](design/terminology-skill-profile-agent-flow.md) | Canonical terminology and layer placement for the backlog track      |
-| [Host Extension Boundary](design/host-extension-boundary.md)                          | Host-managed skills/hooks/plugins/MCP stay outside core DSL          |
-| [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md)    | Proposed runtime decision to measure compact rendering safely        |
-| [Swarm Design Pack](wip/swarm/README.md)                                              | WIP design pack for lowering-based swarm orchestration               |
-| [Knowledge Plan Pack](wip/knowledge-plan/README.md)                                   | WIP companion pack for memory, knowledge, checkpoints, and retrieval |
+| Doc                                                                                | Contents                                                        |
+| ---------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [Research Index](research/README.md)                                               | Research reports with abstracts and source list                 |
+| [Architecture Position](research/00-architecture-position.md)                      | How prompt-language differs from LangChain, DSPy, and CrewAI    |
+| [Feature Completeness](research/08-feature-completeness.md)                        | Assessment of what the current shipped primitives already cover |
+| [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)          | Accepted subagent-first boundary                                |
+| [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md) | Proposed render-mode decision under evaluation                  |

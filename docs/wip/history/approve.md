@@ -1,6 +1,6 @@
 # `approve` (WIP)
 
-> **Status: shipped.** See [approve](../reference/approve.md) in the Language Reference.
+> **Status: shipped.** See [approve](../../reference/approve.md) in the Language Reference.
 
 ## Goal
 

@@ -69,7 +69,7 @@ If a keyword or command is not documented here, treat it as not shipped yet. Tra
 
 ## Consolidated reference
 
-| Page                                   | Covers                  |
-| -------------------------------------- | ----------------------- |
-| [DSL Reference](../dsl-reference.md)   | One-page full reference |
-| [DSL Cheatsheet](../dsl-cheatsheet.md) | One-page quick lookup   |
+| Page                                | Covers                  |
+| ----------------------------------- | ----------------------- |
+| [DSL Reference](dsl-reference.md)   | One-page full reference |
+| [DSL Cheatsheet](dsl-cheatsheet.md) | One-page quick lookup   |

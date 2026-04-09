@@ -1,6 +1,6 @@
 # Spawn Model Selection (WIP)
 
-> **Status: shipped.** See [spawn](../reference/spawn.md) in the Language Reference.
+> **Status: shipped.** See [spawn](../../reference/spawn.md) in the Language Reference.
 
 ## Goal
 

@@ -1,63 +1,44 @@
+<!-- cspell:ignore vnext -->
+
 # WIP Features
 
-> **Most features listed here have shipped.** The [Language Reference](../reference/index.md) is the authoritative source for what is available today. Pages below are kept for design context and history.
+> **Most features listed here have shipped.** The [Language Reference](../reference/index.md) is the authoritative source for what is available today. The WIP area is now grouped by folder so design history, active proposals, and imported planning packs are easier to browse.
 
 - If a feature is in the [Language Reference](../reference/index.md), it is shipped
 - If a feature is only in this section, it is **WIP** and **not available today**
 - For backlog status and prioritization, see the [Roadmap](../roadmap.md)
 
-## Language features (shipped — see Language Reference)
+## Folder map
 
-The following features are implemented and documented in the reference:
+| Folder                       | Purpose                                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| [history/](history/index.md) | Design-history pages for features that already shipped and now live in the Language Reference |
+| [runtime/](runtime/index.md) | Active runtime and integration proposals that are not shipped yet                             |
+| [tooling/](tooling/index.md) | Active tooling and ecosystem proposals such as evals, editor support, and playground work     |
+| [memory/](memory/index.md)   | Memory, knowledge, retrieval, and checkpoint planning docs                                    |
+| [swarm/](swarm/README.md)    | Imported swarm design pack with its own phased proposal set                                   |
+| [vNext/](vnext/README.md)    | Imported vNext architecture/spec pack                                                         |
 
-- [approve](approve.md) — hard human approval checkpoints
-- [Structured Capture](structured-capture.md) — `let x = prompt ... as json { schema }`
-- [import](import.md) — reusable sub-flow composition
-- [Prompt Libraries](prompt-libraries.md) — exported reusable flows, gates, prompts
-- [Conditional Spawn](conditional-spawn.md) — `spawn "name" if condition`
-- [Spawn Model Selection](spawn-model.md) — `spawn "name" model "haiku"`
-- [Deterministic ask](deterministic-ask.md) — `grounded-by` decides condition directly
-- [review](review.md) — generator-evaluator critique loops
-- [race](race.md) — speculative parallel execution
+## Shipped design history
+
+These pages are still useful for rationale and timing, but the shipped behavior lives in the reference:
+
+- [History Index](history/index.md)
 - [remember](../reference/remember.md) — persistent memory store and `memory:` prefetch
 - [foreach-spawn](../reference/foreach-spawn.md) — parallel fan-out per list item
 - [send / receive](../reference/send-receive.md) — inter-agent messaging between children and parent
 
-## Proposed runtime and integration features
+## Active proposal sets
 
-| Page                                            | Focus                                                     |
-| ----------------------------------------------- | --------------------------------------------------------- |
-| [Node.js SDK](sdk.md)                           | Public programmatic API                                   |
-| [Flow Registry](flow-registry.md)               | `.flow` files plus run and validate commands              |
-| [MCP Server](mcp.md)                            | Expose flow state to MCP clients                          |
-| [Workspace Orchestration](workspace.md)         | Monorepo-aware flow execution                             |
-| [Routing and Dispatch](routing-and-dispatch.md) | Closed-world route selection vs general symbolic dispatch |
+| Area                          | Entry point                          | Focus                                                        |
+| ----------------------------- | ------------------------------------ | ------------------------------------------------------------ |
+| Runtime and integrations      | [runtime/index.md](runtime/index.md) | SDK, registry, MCP, workspace orchestration, routing         |
+| Tooling and host integrations | [tooling/index.md](tooling/index.md) | Evals, editor tooling, GitHub Action, playground             |
+| Memory and knowledge planning | [memory/index.md](memory/index.md)   | Memory semantics, Markdown knowledge, retrieval, checkpoints |
 
-## Proposed tooling features
+## Imported packs
 
-| Page                                     | Focus                                               | Status                                      |
-| ---------------------------------------- | --------------------------------------------------- | ------------------------------------------- |
-| [Evals and Judges](evals-and-judges.md)  | Evaluation suites, reusable judges, and baselines   | Proposed                                    |
-| [VS Code Extension](vscode-extension.md) | Syntax highlighting and inline lint                 | Basic package shipped (`vscode-extension/`) |
-| [Language Server](lsp.md)                | Editor-agnostic autocomplete and diagnostics        | Planned                                     |
-| [Web Playground](playground.md)          | Browser-based flow authoring and dry-run simulation | Planned                                     |
-
-## Design memos: memory, knowledge, and retrieval
-
-| Page                                                                                       | Focus                                                                                          |
-| ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| [Memory, Knowledge, Markdown, and Evaluation Positioning](memory-knowledge-positioning.md) | Layering memory, Markdown knowledge, retrieval, and evals without blurring the runtime's role  |
-| [Scrutiny and Risks](memory-scrutiny-and-risks.md)                                         | Tightens the memory/Markdown proposal around trust, checkpoints, and DSL creep                 |
-| [Markdown, Agent Memory, and Prompt Language](markdown-agent-memory.md)                    | Defines the Markdown interop model and the split between deterministic and grounding retrieval |
-| [Memory Roadmap](memory-roadmap.md)                                                        | Phased implementation order for disciplined memory and knowledge features                      |
-| [Memory Source Notes](memory-source-notes.md)                                              | Repo-grounded and external source notes behind the memory/Markdown direction                   |
-| [Knowledge Plan Pack README](knowledge-plan/README.md)                                     | Condensed companion pack for knowledge, checkpoints, retrieval, and phased adoption order      |
-
-## Architecture packs and future-facing design sets
-
-| Page                                                        | Focus                                                                    |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [Swarm Design Pack README](swarm/README.md)                 | Manager-owned swarm macros that lower to existing spawn/await primitives |
-| [vNext Pack README](vnext/README.md)                        | Entry point to the imported vNext architecture and planning package      |
-| [vNext Executive Summary](vnext/00-executive-summary.md)    | Refined thesis, critiques of the current roadmap, and build-first order  |
-| [vNext Master Spec and Plan](vnext/MASTER-SPEC-AND-PLAN.md) | Consolidated architecture target, major specs, and phased implementation |
+| Pack              | Entry point                        | Focus                                                                    |
+| ----------------- | ---------------------------------- | ------------------------------------------------------------------------ |
+| Swarm design pack | [swarm/README.md](swarm/README.md) | Manager-owned swarm macros that lower to existing spawn/await primitives |
+| vNext pack        | [vnext/README.md](vnext/README.md) | Imported architecture/spec package with ADRs, specs, and rollout plans   |

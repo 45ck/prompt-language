@@ -17,4 +17,4 @@ prompt-language can detect control-flow intent in ordinary English and ask Claud
 ## Related
 
 - [Program Structure](program-structure.md)
-- [DSL Reference](../dsl-reference.md)
+- [DSL Reference](dsl-reference.md)

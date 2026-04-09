@@ -61,4 +61,4 @@ Reject or pause the program if:
 
 ## Output
 
-Results should be published to `docs/eval/context-adaptive-rendering-results.md` with the same honesty standard used elsewhere in the project: wins, ties, losses, and regressions all reported.
+Results should be published to `docs/evaluation/context-adaptive-rendering-results.md` with the same honesty standard used elsewhere in the project: wins, ties, losses, and regressions all reported.

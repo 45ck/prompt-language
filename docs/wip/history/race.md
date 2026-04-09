@@ -1,6 +1,6 @@
 # `race` (WIP)
 
-> **Status: shipped.** See [race](../reference/race.md) in the Language Reference.
+> **Status: shipped.** See [race](../../reference/race.md) in the Language Reference.
 
 ## Goal
 

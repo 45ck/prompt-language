@@ -206,19 +206,19 @@ flow:
 
 **I need syntax reference:**
 
-- [Language Reference](reference/index.md) — per-feature docs for `ask`, `if`, `spawn`, `await`, `let/var`, gates, and runtime behavior
-- [DSL Reference](dsl-reference.md) — all 13 primitives, parameters, built-in variables and gates
-- [DSL Cheatsheet](dsl-cheatsheet.md) — one-page quick reference
+- [Language Reference](../reference/index.md) — per-feature docs for `ask`, `if`, `spawn`, `await`, `let/var`, gates, and runtime behavior
+- [DSL Reference](../reference/dsl-reference.md) — all 13 primitives, parameters, built-in variables and gates
+- [DSL Cheatsheet](../reference/dsl-cheatsheet.md) — one-page quick reference
 
 **I'm stuck or confused:**
 
-- [Troubleshooting](troubleshooting.md) — stuck flows, failed gates, state file inspection
+- [Troubleshooting](../operations/troubleshooting.md) — stuck flows, failed gates, state file inspection
 - [Use Cases](use-cases.md) — anti-patterns, when (not) to use the runtime
 
 **I want all the CLI options:**
 
-- [CLI Reference](cli-reference.md) — install, status, init, run, list, validate, watch, slash commands
+- [CLI Reference](../reference/cli-reference.md) — install, status, init, run, list, validate, watch, slash commands
 
 **I want proof it works:**
 
-- [Evaluation Results](eval-analysis.md) — 45 controlled A/B tests, latency data, methodology
+- [Evaluation Results](../evaluation/eval-analysis.md) — 45 controlled A/B tests, latency data, methodology

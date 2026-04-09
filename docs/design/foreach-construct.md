@@ -1,6 +1,6 @@
 # SUPERSEDED
 
-> This design has been superseded by `docs/design-foreach.md`, which is the canonical foreach design.
+> This design has been superseded by `docs/design/foreach.md`, which is the canonical foreach design.
 > Key difference: the canonical design uses `nodeProgress` for iteration tracking (consistent with while/until/retry)
 > and `${varName}_index` / `${varName}_length` variables (namespaced per loop variable for safe nesting).
 

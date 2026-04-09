@@ -1,6 +1,6 @@
 # Structured Capture (WIP)
 
-> **Status: shipped.** See [let-var](../reference/let-var.md) in the Language Reference.
+> **Status: shipped.** See [let-var](../../reference/let-var.md) in the Language Reference.
 
 ## Goal
 

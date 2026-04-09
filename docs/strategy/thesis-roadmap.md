@@ -22,7 +22,7 @@ This document maps the [thesis experiments](thesis.md#experiments-that-can-prove
 | `scripts/eval/comparative-eval-v4.mjs` | A/B plugin-vs-vanilla harness with `--repeat N` reliability |
 | `scripts/eval/ab-eval.mjs`             | Earlier A/B framework (v1/v2 patterns)                      |
 | `scripts/eval/verification-eval.mjs`   | Gate-focused eval                                           |
-| `docs/eval-analysis.md`                | 45+ hypothesis results, latency data, pattern taxonomy      |
+| `docs/evaluation/eval-analysis.md`     | 45+ hypothesis results, latency data, pattern taxonomy      |
 
 All experiments below assume the project builds (`npm run ci`) and smoke tests pass (`npm run eval:smoke`) before any research eval begins.
 
@@ -220,4 +220,4 @@ The thesis experiments extend — not replace — the existing evaluation infras
 - **Comparative evals** (`comparative-eval-v4.mjs`) remain the evidence base for gate-win claims
 - **Thesis evals** are a separate tier focused on the broader research questions above
 
-Results from thesis experiments should be documented in `docs/` alongside the existing `eval-analysis.md`, with the same honesty standard: wins, ties, and losses all reported.
+Results from thesis experiments should be documented in `docs/` alongside the existing `evaluation/eval-analysis.md`, with the same honesty standard: wins, ties, and losses all reported.

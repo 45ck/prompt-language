@@ -63,4 +63,4 @@ done when:
   lint_pass
 ```
 
-The `command_failed` variable is set after each `run:` node, so the `if` branch reacts to whichever command just ran. See [DSL reference — built-in resolvers](../dsl-reference.md#built-in-resolvers) for variable semantics.
+The `command_failed` variable is set after each `run:` node, so the `if` branch reacts to whichever command just ran. See [DSL reference — built-in resolvers](../reference/dsl-reference.md#built-in-resolvers) for variable semantics.

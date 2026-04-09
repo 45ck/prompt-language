@@ -1,6 +1,6 @@
 # `import` (WIP)
 
-> **Status: shipped.** See [import](../reference/import.md) in the Language Reference.
+> **Status: shipped.** See [import](../../reference/import.md) in the Language Reference.
 
 ## Goal
 

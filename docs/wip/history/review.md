@@ -1,6 +1,6 @@
 # `review` (WIP)
 
-> **Status: shipped.** See [review](../reference/review.md) in the Language Reference.
+> **Status: shipped.** See [review](../../reference/review.md) in the Language Reference.
 
 ## Goal
 

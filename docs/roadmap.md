@@ -53,11 +53,12 @@ These are open `.beads` items that fit the current product direction and are eas
 
 These are substantial product improvements that are not yet fully shipped.
 
-| Feature                                                                | Status  | Notes                                         | Beads issue            |
-| ---------------------------------------------------------------------- | ------- | --------------------------------------------- | ---------------------- |
-| Language server (LSP) for editor-agnostic autocomplete and diagnostics | Planned | Depends on extension groundwork               | `prompt-language-idbc` |
-| Web playground for browser-based flow authoring and dry-run simulation | Planned | Good onboarding and docs surface              | `prompt-language-528q` |
-| Workspace-aware monorepo orchestration                                 | Planned | Would build on `spawn` plus package discovery | `prompt-language-ik3n` |
+| Feature                                                                | Status  | Notes                                                                       | Beads issue                                         |
+| ---------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------- | --------------------------------------------------- |
+| Generic runner abstraction and OpenCode runner                         | Planned | Runner-first path for Claude/Codex/OpenCode; unlocks lower-cost experiments | `prompt-language-9uqe.4`, `prompt-language-9uqe.15` |
+| Language server (LSP) for editor-agnostic autocomplete and diagnostics | Planned | Depends on extension groundwork                                             | `prompt-language-idbc`                              |
+| Web playground for browser-based flow authoring and dry-run simulation | Planned | Good onboarding and docs surface                                            | `prompt-language-528q`                              |
+| Workspace-aware monorepo orchestration                                 | Planned | Would build on `spawn` plus package discovery                               | `prompt-language-ik3n`                              |
 
 ## Exploratory orchestration ideas
 
@@ -67,7 +68,7 @@ No exploratory items remain — all previously listed ideas have shipped.
 
 ## Long-term research direction
 
-For the broader thesis — prompt language as a primary engineering surface — and a concrete research plan with falsifiable experiments, see [Thesis](thesis.md) and [Thesis Roadmap](thesis-roadmap.md).
+For the broader thesis — prompt language as a primary engineering surface — and a concrete research plan with falsifiable experiments, see [Thesis](strategy/thesis.md) and [Thesis Roadmap](strategy/thesis-roadmap.md).
 
 ## Documentation rule
 

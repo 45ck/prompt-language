@@ -15,9 +15,9 @@ These repo docs were used to ground the critique in the current project surface:
 - `docs/reference/ask.md`
 - `docs/reference/review.md`
 - `docs/wip/index.md`
-- `docs/wip/evals-and-judges.md`
-- `docs/wip/structured-capture.md`
-- `docs/thesis-roadmap.md`
+- `docs/wip/tooling/evals-and-judges.md`
+- `docs/wip/history/structured-capture.md`
+- `docs/strategy/thesis-roadmap.md`
 
 ## Public docs examined
 

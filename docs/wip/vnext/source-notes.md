@@ -5,18 +5,18 @@ This spec pack is grounded in the following repo docs and current official agent
 ## prompt-language repo docs used
 
 - `README.md`
-- `docs/guide.md`
-- `docs/eval-analysis.md`
-- `docs/thesis.md`
-- `docs/thesis-roadmap.md`
+- `docs/guides/guide.md`
+- `docs/evaluation/eval-analysis.md`
+- `docs/strategy/thesis.md`
+- `docs/strategy/thesis-roadmap.md`
 - `docs/roadmap.md`
 - `docs/reference/let-var.md`
 - `docs/reference/review.md`
 - `docs/reference/approve.md`
-- `docs/eval-parity-matrix.md`
-- `docs/wip/evals-and-judges.md`
-- `docs/wip/workspace.md`
-- `docs/hooks-architecture.md`
+- `docs/evaluation/eval-parity-matrix.md`
+- `docs/wip/tooling/evals-and-judges.md`
+- `docs/wip/runtime/workspace.md`
+- `docs/design/hooks-architecture.md`
 
 ## Main repo-derived conclusions used
 

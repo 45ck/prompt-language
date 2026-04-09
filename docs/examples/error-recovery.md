@@ -62,4 +62,4 @@ done when:
 
 The `retry` block after the `try` handles transient startup delays — it retries the health check up to 3 times before giving up. If the deploy itself fails, the `catch` block rolls back immediately without reaching the health check.
 
-See [DSL reference — try/catch](../dsl-reference.md#trycatch) and [let/var](../dsl-reference.md#letvar) for syntax details.
+See [DSL reference — try/catch](../reference/dsl-reference.md#trycatch) and [let/var](../reference/dsl-reference.md#letvar) for syntax details.

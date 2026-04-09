@@ -180,6 +180,28 @@ function readMemoryValue(entry?: MemoryEntry): string {
   return entry?.value ?? entry?.text ?? '';
 }
 
+function parseAskVerdict(captured: string): boolean | null {
+  const raw = captured.trim().toLowerCase();
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return null;
+}
+
+async function buildAskGroundingEvidence(
+  groundedBy: string | undefined,
+  variables: Readonly<Record<string, string | number | boolean>>,
+  commandRunner?: CommandRunner,
+): Promise<string | undefined> {
+  if (!groundedBy || !commandRunner) return undefined;
+  try {
+    const command = interpolate(groundedBy, variables);
+    const result = await commandRunner.run(command);
+    return result.stdout.trimEnd();
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Evaluate a flow condition using variable lookup, falling back to command execution.
  * Returns null if the condition cannot be resolved.
@@ -1728,6 +1750,7 @@ async function advanceConditionLoop(
     readonly kind: 'while' | 'until';
     readonly condition: string;
     readonly maxIterations: number;
+    readonly askMaxRetries?: number | undefined;
     readonly groundedBy?: string | undefined;
   },
   current: SessionState,
@@ -1739,12 +1762,18 @@ async function advanceConditionLoop(
     const varName = judgeVarName(node.id);
     const progress = current.nodeProgress[node.id];
     const isAwaiting = progress?.status === 'awaiting_capture';
+    const retryCount = progress?.askRetryCount ?? 0;
+    const maxRetries = node.askMaxRetries ?? 0;
+    const usesRetryBudget = node.askMaxRetries != null;
+    const question = extractAskQuestion(node.condition);
 
     if (!isAwaiting) {
-      // Grounded-by fast path: use command exit code directly, skip AI judge entirely
-      if (node.groundedBy && commandRunner) {
+      // Grounded-by fast path: keep current deterministic behavior unless max-retries
+      // is explicitly enabled for the ask condition.
+      if (!usesRetryBudget && node.groundedBy && commandRunner) {
         try {
-          const groundingResult = await commandRunner.run(node.groundedBy);
+          const groundingCommand = interpolate(node.groundedBy, current.variables);
+          const groundingResult = await commandRunner.run(groundingCommand);
           const groundingMet = groundingResult.exitCode === 0;
           const enterBody = node.kind === 'while' ? groundingMet : !groundingMet;
           return {
@@ -1765,19 +1794,22 @@ async function advanceConditionLoop(
 
       // Phase 1: emit judge prompt and wait for Claude's verdict
       if (captureReader) await captureReader.clear(varName);
-      const question = extractAskQuestion(node.condition);
       const now = Date.now();
       const updated = updateNodeProgress(current, node.id, {
         iteration: progress?.iteration ?? 0,
         maxIterations: node.maxIterations,
         status: 'awaiting_capture',
+        askRetryCount: retryCount,
         startedAt: progress?.startedAt ?? now,
         loopStartedAt: progress?.loopStartedAt ?? now,
       });
+      const groundingOutput = usesRetryBudget
+        ? await buildAskGroundingEvidence(node.groundedBy, current.variables, commandRunner)
+        : undefined;
       return {
         kind: 'prompt',
         state: updated,
-        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce),
+        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
       };
     }
 
@@ -1785,9 +1817,38 @@ async function advanceConditionLoop(
     if (captureReader) {
       const captured = await captureReader.read(varName);
       if (captured) {
-        const rawVerdict = captured.trim().toLowerCase();
-        const verdict = rawVerdict === 'true' || rawVerdict.startsWith('true');
+        const verdict = parseAskVerdict(captured);
         await captureReader.clear(varName);
+        if (verdict === null) {
+          if (usesRetryBudget && retryCount < maxRetries) {
+            const retryUpdated = updateNodeProgress(current, node.id, {
+              iteration: progress?.iteration ?? 0,
+              maxIterations: node.maxIterations,
+              status: 'awaiting_capture',
+              askRetryCount: retryCount + 1,
+              captureFailureReason: 'ambiguous verdict',
+              startedAt: progress?.startedAt,
+              loopStartedAt: progress?.loopStartedAt,
+            });
+            const groundingOutput = await buildAskGroundingEvidence(
+              node.groundedBy,
+              current.variables,
+              commandRunner,
+            );
+            return {
+              kind: 'prompt',
+              state: retryUpdated,
+              capturedPrompt: buildJudgePrompt(
+                question,
+                node.id,
+                current.captureNonce,
+                groundingOutput,
+              ),
+            };
+          }
+
+          return { kind: 'pause', state: current, capturedPrompt: null };
+        }
 
         const iteration = progress?.iteration ?? 0;
         const enterBody = node.kind === 'while' ? verdict : !verdict;
@@ -1844,6 +1905,7 @@ async function advanceConditionLoop(
             iteration: iteration + 1,
             maxIterations: node.maxIterations,
             status: 'running',
+            askRetryCount: retryCount,
             startedAt: progress?.startedAt ?? now,
             loopStartedAt: progress?.loopStartedAt ?? now,
           });
@@ -1856,6 +1918,7 @@ async function advanceConditionLoop(
           iteration,
           maxIterations: node.maxIterations,
           status: 'completed',
+          askRetryCount: retryCount,
           startedAt: progress?.startedAt,
           completedAt: Date.now(),
           loopStartedAt: progress?.loopStartedAt,
@@ -1868,17 +1931,39 @@ async function advanceConditionLoop(
     }
 
     // No verdict captured yet — retry the judge prompt
+    if (usesRetryBudget && retryCount >= maxRetries) {
+      return { kind: 'pause', state: current, capturedPrompt: null };
+    }
+
+    if (!usesRetryBudget) {
+      return {
+        kind: 'prompt',
+        state: current,
+        capturedPrompt: buildJudgeRetryPrompt(node.id, current.captureNonce),
+      };
+    }
+
     const retryUpdated = updateNodeProgress(current, node.id, {
       iteration: progress?.iteration ?? 0,
       maxIterations: node.maxIterations,
       status: 'awaiting_capture',
+      askRetryCount: retryCount + 1,
+      captureFailureReason: 'capture file empty or not found',
       startedAt: progress?.startedAt,
       loopStartedAt: progress?.loopStartedAt,
     });
+    const retryGroundingOutput = usesRetryBudget
+      ? await buildAskGroundingEvidence(node.groundedBy, current.variables, commandRunner)
+      : undefined;
     return {
       kind: 'prompt',
       state: retryUpdated,
-      capturedPrompt: buildJudgeRetryPrompt(node.id, current.captureNonce),
+      capturedPrompt: buildJudgePrompt(
+        question,
+        node.id,
+        current.captureNonce,
+        retryGroundingOutput,
+      ),
     };
   }
 
@@ -1909,6 +1994,7 @@ async function advanceIfNode(
     readonly condition: string;
     readonly thenBranch: readonly FlowNode[];
     readonly elseBranch: readonly FlowNode[];
+    readonly askMaxRetries?: number | undefined;
     readonly groundedBy?: string | undefined;
   },
   current: SessionState,
@@ -1920,12 +2006,16 @@ async function advanceIfNode(
     const varName = judgeVarName(node.id);
     const progress = current.nodeProgress[node.id];
     const isAwaiting = progress?.status === 'awaiting_capture';
+    const retryCount = progress?.askRetryCount ?? 0;
+    const maxRetries = node.askMaxRetries ?? 0;
+    const usesRetryBudget = node.askMaxRetries != null;
+    const question = extractAskQuestion(node.condition);
 
     if (!isAwaiting) {
-      // Grounded-by fast path: use command exit code directly, skip AI judge entirely
-      if (node.groundedBy && commandRunner) {
+      if (!usesRetryBudget && node.groundedBy && commandRunner) {
         try {
-          const groundingResult = await commandRunner.run(node.groundedBy);
+          const groundingCommand = interpolate(node.groundedBy, current.variables);
+          const groundingResult = await commandRunner.run(groundingCommand);
           const verdict = groundingResult.exitCode === 0;
           if (verdict) {
             return {
@@ -1950,18 +2040,21 @@ async function advanceIfNode(
 
       // Phase 1: emit judge prompt
       if (captureReader) await captureReader.clear(varName);
-      const question = extractAskQuestion(node.condition);
       const now = Date.now();
       const updated = updateNodeProgress(current, node.id, {
         iteration: 1,
         maxIterations: 1,
         status: 'awaiting_capture',
+        askRetryCount: retryCount,
         startedAt: now,
       });
+      const groundingOutput = usesRetryBudget
+        ? await buildAskGroundingEvidence(node.groundedBy, current.variables, commandRunner)
+        : undefined;
       return {
         kind: 'prompt',
         state: updated,
-        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce),
+        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
       };
     }
 
@@ -1969,9 +2062,36 @@ async function advanceIfNode(
     if (captureReader) {
       const captured = await captureReader.read(varName);
       if (captured) {
-        const rawVerdict = captured.trim().toLowerCase();
-        const verdict = rawVerdict === 'true' || rawVerdict.startsWith('true');
+        const verdict = parseAskVerdict(captured);
         await captureReader.clear(varName);
+        if (verdict === null) {
+          if (usesRetryBudget && retryCount < maxRetries) {
+            const retryUpdated = updateNodeProgress(current, node.id, {
+              iteration: 1,
+              maxIterations: 1,
+              status: 'awaiting_capture',
+              askRetryCount: retryCount + 1,
+              captureFailureReason: 'ambiguous verdict',
+              startedAt: progress?.startedAt,
+            });
+            const groundingOutput = await buildAskGroundingEvidence(
+              node.groundedBy,
+              current.variables,
+              commandRunner,
+            );
+            return {
+              kind: 'prompt',
+              state: retryUpdated,
+              capturedPrompt: buildJudgePrompt(
+                question,
+                node.id,
+                current.captureNonce,
+                groundingOutput,
+              ),
+            };
+          }
+          return { kind: 'pause', state: current, capturedPrompt: null };
+        }
         if (verdict) {
           return { state: advanceNode(current, [...current.currentNodePath, 0]), advanced: true };
         }
@@ -1989,10 +2109,37 @@ async function advanceIfNode(
     }
 
     // No verdict captured yet — retry the judge prompt
+    if (usesRetryBudget && retryCount >= maxRetries) {
+      return { kind: 'pause', state: current, capturedPrompt: null };
+    }
+
+    if (!usesRetryBudget) {
+      return {
+        kind: 'prompt',
+        state: current,
+        capturedPrompt: buildJudgeRetryPrompt(node.id, current.captureNonce),
+      };
+    }
+
+    const retryGroundingOutput = usesRetryBudget
+      ? await buildAskGroundingEvidence(node.groundedBy, current.variables, commandRunner)
+      : undefined;
     return {
       kind: 'prompt',
-      state: current,
-      capturedPrompt: buildJudgeRetryPrompt(node.id, current.captureNonce),
+      state: updateNodeProgress(current, node.id, {
+        iteration: 1,
+        maxIterations: 1,
+        status: 'awaiting_capture',
+        askRetryCount: retryCount + 1,
+        captureFailureReason: 'capture file empty or not found',
+        startedAt: progress?.startedAt,
+      }),
+      capturedPrompt: buildJudgePrompt(
+        question,
+        node.id,
+        current.captureNonce,
+        retryGroundingOutput,
+      ),
     };
   }
 

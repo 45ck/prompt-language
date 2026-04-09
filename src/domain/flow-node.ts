@@ -39,6 +39,8 @@ export interface WhileNode extends BaseNode {
   readonly body: readonly FlowNode[];
   readonly label?: string | undefined;
   readonly timeoutSeconds?: number | undefined;
+  /** H-ASK-002: Maximum retry prompts for unresolved ask verdicts. */
+  readonly askMaxRetries?: number | undefined;
   /** Shell command whose stdout is included as evidence for AI condition evaluation. */
   readonly groundedBy?: string | undefined;
 }
@@ -50,6 +52,8 @@ export interface UntilNode extends BaseNode {
   readonly body: readonly FlowNode[];
   readonly label?: string | undefined;
   readonly timeoutSeconds?: number | undefined;
+  /** H-ASK-002: Maximum retry prompts for unresolved ask verdicts. */
+  readonly askMaxRetries?: number | undefined;
   /** Shell command whose stdout is included as evidence for AI condition evaluation. */
   readonly groundedBy?: string | undefined;
 }
@@ -68,6 +72,8 @@ export interface IfNode extends BaseNode {
   readonly condition: string;
   readonly thenBranch: readonly FlowNode[];
   readonly elseBranch: readonly FlowNode[];
+  /** H-ASK-002: Maximum retry prompts for unresolved ask verdicts. */
+  readonly askMaxRetries?: number | undefined;
   /** Shell command whose stdout is included as evidence for AI condition evaluation. */
   readonly groundedBy?: string | undefined;
 }
@@ -264,6 +270,7 @@ export function createWhileNode(
   label?: string,
   timeoutSeconds?: number,
   groundedBy?: string,
+  askMaxRetries?: number,
 ): WhileNode {
   return {
     kind: 'while',
@@ -273,6 +280,7 @@ export function createWhileNode(
     body,
     ...(label != null ? { label } : {}),
     ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
+    ...(askMaxRetries != null ? { askMaxRetries } : {}),
     ...(groundedBy != null ? { groundedBy } : {}),
   };
 }
@@ -285,6 +293,7 @@ export function createUntilNode(
   label?: string,
   timeoutSeconds?: number,
   groundedBy?: string,
+  askMaxRetries?: number,
 ): UntilNode {
   return {
     kind: 'until',
@@ -294,6 +303,7 @@ export function createUntilNode(
     body,
     ...(label != null ? { label } : {}),
     ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
+    ...(askMaxRetries != null ? { askMaxRetries } : {}),
     ...(groundedBy != null ? { groundedBy } : {}),
   };
 }
@@ -323,6 +333,7 @@ export function createIfNode(
   thenBranch: readonly FlowNode[],
   elseBranch: readonly FlowNode[] = [],
   groundedBy?: string,
+  askMaxRetries?: number,
 ): IfNode {
   return {
     kind: 'if',
@@ -330,6 +341,7 @@ export function createIfNode(
     condition,
     thenBranch,
     elseBranch,
+    ...(askMaxRetries != null ? { askMaxRetries } : {}),
     ...(groundedBy != null ? { groundedBy } : {}),
   };
 }

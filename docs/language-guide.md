@@ -247,6 +247,14 @@ while ask "are there still failing tests?" grounded-by "npm test" max 5
 end
 ```
 
+Add `max-retries N` when an ambiguous verdict should be retried with fresh grounding evidence before the runtime gives up:
+
+```
+if ask "is this safe to deploy?" grounded-by "npm test" max-retries 2
+  prompt: Roll out the change.
+end
+```
+
 `ask` conditions work with `while`, `until`, and `if`. They take one extra turn to evaluate — Claude receives the judge prompt, answers true/false, and the runtime captures the verdict the same way as `let x = prompt`.
 
 **Choosing between loop primitives:**

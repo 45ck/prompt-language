@@ -105,6 +105,22 @@ Requires [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) 
 npx @45ck/prompt-language
 ```
 
+## SDK
+
+For programmatic use, import the SDK subpath:
+
+```ts
+import {
+  parseFlow,
+  createSession,
+  advanceFlow,
+  evaluateGates,
+  renderFlow,
+} from '@45ck/prompt-language';
+```
+
+The SDK exposes the stable parse/session/advance/gate/render surface for integrations that want to work with flow state directly.
+
 ```bash
 npx @45ck/prompt-language status     # check installation
 npx @45ck/prompt-language uninstall  # remove

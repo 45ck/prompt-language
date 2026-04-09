@@ -184,6 +184,8 @@ end
 
 The grounding command's stdout (up to 1000 chars) is embedded in the judge prompt. If the grounding command fails or returns empty output, the judgment proceeds without evidence.
 
+If you add `max-retries N`, the runtime will re-run the grounding command and re-ask Claude up to `N` times before pausing on an unresolved verdict.
+
 ### Iteration counting
 
 Ask conditions count toward `maxIterations` the same way regular conditions do. If a `while ask "..." max 3` loop enters its body 3 times, the loop exits on the next evaluation regardless of the verdict.

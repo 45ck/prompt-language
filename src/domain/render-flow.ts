@@ -99,11 +99,13 @@ function renderNode(
     case 'while': {
       const whileLabel = node.label ? `${node.label}: ` : '';
       const whileTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds}` : '';
+      const whileAskRetries =
+        node.askMaxRetries != null ? ` max-retries ${node.askMaxRetries}` : '';
       const whileCond = isAskCondition(node.condition)
         ? `ask: "${extractAskQuestion(node.condition)}"`
         : node.condition;
       return renderLoopNode(
-        `${whileLabel}while ${whileCond} max ${node.maxIterations}${whileTimeout}`,
+        `${whileLabel}while ${whileCond} max ${node.maxIterations}${whileAskRetries}${whileTimeout}`,
         node.body,
         state,
         path,
@@ -116,11 +118,13 @@ function renderNode(
     case 'until': {
       const untilLabel = node.label ? `${node.label}: ` : '';
       const untilTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds}` : '';
+      const untilAskRetries =
+        node.askMaxRetries != null ? ` max-retries ${node.askMaxRetries}` : '';
       const untilCond = isAskCondition(node.condition)
         ? `ask: "${extractAskQuestion(node.condition)}"`
         : node.condition;
       return renderLoopNode(
-        `${untilLabel}until ${untilCond} max ${node.maxIterations}${untilTimeout}`,
+        `${untilLabel}until ${untilCond} max ${node.maxIterations}${untilAskRetries}${untilTimeout}`,
         node.body,
         state,
         path,
@@ -280,7 +284,9 @@ function renderIfNode(
   const ifCond = isAskCondition(node.condition)
     ? `ask: "${extractAskQuestion(node.condition)}"`
     : node.condition;
-  const lines: string[] = [`${prefix}${indent}if ${ifCond}${suffix}`];
+  const askRetries = node.askMaxRetries != null ? ` max-retries ${node.askMaxRetries}` : '';
+  const groundedBy = node.groundedBy ? ` grounded-by "${node.groundedBy}"` : '';
+  const lines: string[] = [`${prefix}${indent}if ${ifCond}${groundedBy}${askRetries}${suffix}`];
 
   for (let i = 0; i < node.thenBranch.length; i++) {
     const child = node.thenBranch[i]!;

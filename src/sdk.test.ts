@@ -10,6 +10,8 @@ import { describe, it, expect } from 'vitest';
 import {
   parseFlow,
   createSessionState,
+  createSession,
+  advanceFlow,
   renderFlow,
   renderFlowCompact,
   renderFlowSummary,
@@ -48,6 +50,12 @@ describe('SDK exports: createSessionState', () => {
   });
 });
 
+describe('SDK exports: createSession alias', () => {
+  it('is the same function as createSessionState', () => {
+    expect(createSession).toBe(createSessionState);
+  });
+});
+
 describe('SDK exports: renderFlow', () => {
   it('is a function', () => {
     expect(typeof renderFlow).toBe('function');
@@ -83,5 +91,18 @@ describe('SDK exports: lintFlow', () => {
     const spec = parseFlow('Goal: clean\n\nflow:\n  prompt: do it\n');
     const warnings = lintFlow(spec);
     expect(Array.isArray(warnings)).toBe(true);
+  });
+});
+
+describe('SDK exports: advanceFlow', () => {
+  it('is a function', () => {
+    expect(typeof advanceFlow).toBe('function');
+  });
+});
+
+describe('SDK exports: evaluateGates', () => {
+  it('is a function', async () => {
+    const mod = await import('./sdk.js');
+    expect(mod.evaluateGates).toBe(mod.evaluateCompletion);
   });
 });

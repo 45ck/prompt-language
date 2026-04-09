@@ -25,6 +25,11 @@
  *   AA: Approve timeout          AB: Review block
  *   AC: Remember + memory:       AD: Race block (slow)
  *   AE: foreach-spawn (slow)     AF: Send/receive (slow)
+ *   AG: Import anonymous flow     AH: Namespaced library
+ *   AI: Continue iteration        AJ: Remember key-value
+ *   AK: Grounded-by while         AL: Continue in while
+ *   AM: Spawn/await               AN: Spawn variable import
+ *   AO: Include file directive
  *
  * Usage:
  *   node scripts/eval/smoke-test.mjs          # all tests
@@ -1237,6 +1242,345 @@ async function testRememberMemory() {
   });
 }
 
+// ── Test AG: Import anonymous flow ──────────────────────────────────
+
+async function testImportAnonymousFlow() {
+  await withTempDir(async (dir) => {
+    await writeFile(
+      join(dir, 'helpers.flow'),
+      ['flow:', '  run: echo imported > imported.txt'].join('\n'),
+    );
+
+    const prompt = [
+      'Goal: test import',
+      '',
+      'import "helpers.flow"',
+      '',
+      'flow:',
+      '  run: echo main > main-marker.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let imported = '';
+    let mainMarker = '';
+    try {
+      imported = (await readFile(join(dir, 'imported.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      mainMarker = (await readFile(join(dir, 'main-marker.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AG: Import anonymous flow',
+      imported.includes('imported') && mainMarker.includes('main'),
+      imported.includes('imported') && mainMarker.includes('main')
+        ? 'imported flow ran before main flow'
+        : `imported="${imported}", main="${mainMarker}"`,
+    );
+  });
+}
+
+// ── Test AH: Import namespaced library ───────────────────────────────
+
+async function testImportNamespacedLibrary() {
+  await withTempDir(async (dir) => {
+    await writeFile(
+      join(dir, 'mylib.flow'),
+      [
+        'library: mylib',
+        '',
+        'export flow greet(name="world"):',
+        '  run: echo hello-${name} > greet-result.txt',
+      ].join('\n'),
+    );
+
+    const prompt = [
+      'Goal: test namespaced import',
+      '',
+      'import "mylib.flow" as mylib',
+      '',
+      'flow:',
+      '  use mylib.greet(name="smoke-test")',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'greet-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AH: Import namespaced library',
+      content.includes('hello-smoke-test'),
+      content.includes('hello-smoke-test')
+        ? 'library export expanded correctly'
+        : `got: "${content.slice(0, 60)}"`,
+    );
+  });
+}
+
+// ── Test AI: Continue skips loop iteration ───────────────────────────
+
+async function testContinueSkipsIteration() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test continue',
+      '',
+      'flow:',
+      '  foreach item in "alpha beta gamma delta" max 5',
+      '    if ${item} == "beta"',
+      '      continue',
+      '    end',
+      '    run: echo ${item} >> continue-result.txt',
+      '  end',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = await readFile(join(dir, 'continue-result.txt'), 'utf-8');
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AI: Continue skips loop iteration',
+      content.includes('alpha') &&
+        content.includes('gamma') &&
+        content.includes('delta') &&
+        !content.includes('beta'),
+      content.includes('alpha') && !content.includes('beta')
+        ? 'continue skipped beta as expected'
+        : `got: "${content.slice(0, 80)}"`,
+    );
+  });
+}
+
+// ── Test AJ: Remember key-value storage ──────────────────────────────
+
+async function testRememberKeyValue() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test remember key-value',
+      '',
+      'flow:',
+      '  remember key="color" value="red"',
+      '  remember key="color" value="blue"',
+      '  remember key="size" value="large"',
+      '  run: echo done > kv-marker.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let memory = [];
+    try {
+      const parsed = JSON.parse(
+        await readFile(join(dir, '.prompt-language', 'memory.json'), 'utf-8'),
+      );
+      if (Array.isArray(parsed)) {
+        memory = parsed;
+      }
+    } catch {
+      /* memory file not created */
+    }
+
+    const colorEntries = memory.filter((entry) => entry.key === 'color');
+    const sizeEntries = memory.filter((entry) => entry.key === 'size');
+    let marker = '';
+    try {
+      marker = (await readFile(join(dir, 'kv-marker.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AJ: Remember key-value storage',
+      marker === 'done' &&
+        colorEntries.length === 1 &&
+        colorEntries[0]?.value === 'blue' &&
+        sizeEntries.length === 1 &&
+        sizeEntries[0]?.value === 'large',
+      colorEntries.length === 1
+        ? `color=${colorEntries[0]?.value}, size=${sizeEntries[0]?.value}`
+        : `memory entries=${JSON.stringify(memory).slice(0, 80)}`,
+    );
+  });
+}
+
+// ── Test AK: Grounded-by condition in while loop ─────────────────────
+
+async function testGroundedWhileLoop() {
+  await withTempDir(async (dir) => {
+    await writeFile(join(dir, 'counter.txt'), 'count=0\n');
+
+    const prompt = [
+      'Goal: test grounded-by while',
+      '',
+      'flow:',
+      '  run: echo "count=0" > counter.txt',
+      '  while ask "Is count less than 2?" grounded-by "cat counter.txt" max 5',
+      "    let c = run \"node -e \\\"const fs=require('fs'); const p='counter.txt'; const text=fs.readFileSync(p, 'utf8'); const n=Number((text.match(/\\\\d+/)||['0'])[0]); fs.writeFileSync(p, `count=${n+1}\\n`); console.log(n+1);\\\"\"",
+      '  end',
+      '  run: echo loop-done > while-grounded.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let done = '';
+    let counter = '';
+    try {
+      done = (await readFile(join(dir, 'while-grounded.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      counter = (await readFile(join(dir, 'counter.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AK: Grounded-by while loop',
+      done === 'loop-done' && /count=[2-9]/.test(counter),
+      done === 'loop-done' ? `counter="${counter}"` : 'while-grounded.txt not created',
+    );
+  });
+}
+
+// ── Test AL: Continue in while loop ──────────────────────────────────
+
+async function testContinueInWhileLoop() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test continue in while',
+      '',
+      'flow:',
+      '  let counter = "0"',
+      '  until ${counter} == "5" max 10',
+      '    let counter = run "node -e \\"console.log(Number(\'${counter}\') + 1)\\""',
+      '    if ${counter} == "3"',
+      '      continue',
+      '    end',
+      '    run: echo iter-${counter} >> while-continue.txt',
+      '  end',
+      '  run: echo final-${counter} > while-continue-final.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    let final = '';
+    try {
+      content = await readFile(join(dir, 'while-continue.txt'), 'utf-8');
+    } catch {
+      /* file not created */
+    }
+    try {
+      final = (await readFile(join(dir, 'while-continue-final.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AL: Continue in while loop',
+      content.includes('iter-1') &&
+        content.includes('iter-2') &&
+        !content.includes('iter-3') &&
+        content.includes('iter-4') &&
+        content.includes('iter-5') &&
+        final.includes('final-5'),
+      final ? `final="${final}"` : `got: "${content.slice(0, 80)}"`,
+    );
+  });
+}
+
+// ── Test AM: Spawn basic child process ───────────────────────────────
+
+async function testSpawnBasicChild() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test spawn and await',
+      '',
+      'flow:',
+      '  spawn "worker"',
+      '    run: echo child-output > worker-result.txt',
+      '  end',
+      '  await "worker"',
+      '  run: echo parent-done > parent-marker.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let worker = '';
+    let parent = '';
+    try {
+      worker = (await readFile(join(dir, 'worker-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      parent = (await readFile(join(dir, 'parent-marker.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AM: Spawn basic child process',
+      worker === 'child-output' && parent === 'parent-done',
+      worker === 'child-output' ? `parent="${parent}"` : `worker="${worker}"`,
+    );
+  });
+}
+
+// ── Test AN: Spawn inherits parent variables ────────────────────────
+
+async function testSpawnInheritsParentVariables() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test spawn variable passing',
+      '',
+      'flow:',
+      '  let color = "purple"',
+      '  spawn "painter"',
+      '    run: echo ${color} > painted.txt',
+      '    let result = run "echo painted-${color}"',
+      '  end',
+      '  await "painter"',
+      '  run: echo ${painter.result} > spawn-var.txt',
+    ].join('\n');
+
+    claudeRun(prompt, dir);
+
+    let painted = '';
+    let spawnVar = '';
+    try {
+      painted = (await readFile(join(dir, 'painted.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      spawnVar = (await readFile(join(dir, 'spawn-var.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AN: Spawn inherits parent variables',
+      painted.includes('purple') && spawnVar.includes('painted-purple'),
+      painted.includes('purple') ? `spawnVar="${spawnVar}"` : `painted="${painted}"`,
+    );
+  });
+}
+
 // ── Test AD: Race block (first spawn wins) ────────────────────────────
 
 async function testRaceBlock() {
@@ -1347,6 +1691,38 @@ async function testSendReceive() {
   });
 }
 
+// ── Test AO: Include file directive ─────────────────────────────────
+
+async function testIncludeDirective() {
+  await withTempDir(async (dir) => {
+    await writeFile(
+      join(dir, 'shared.prompt'),
+      'prompt: Create include-result.txt containing exactly "included-ok"',
+    );
+
+    const prompt = ['Goal: test include directive', '', 'flow:', '  include "shared.prompt"'].join(
+      '\n',
+    );
+
+    claudeRun(prompt, dir);
+
+    let content = '';
+    try {
+      content = (await readFile(join(dir, 'include-result.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AO: Include file directive',
+      content.includes('included-ok'),
+      content.includes('included-ok')
+        ? 'include directive inlined shared prompt'
+        : `got: "${content.slice(0, 60)}"`,
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -1380,6 +1756,15 @@ async function main() {
   await timed('AA', 'Approve timeout', testApproveTimeout);
   await timed('AB', 'Review block', testReviewBlock);
   await timed('AC', 'Remember + memory:', testRememberMemory);
+  await timed('AK', 'Grounded-by while', testGroundedWhileLoop);
+  await timed('AL', 'Continue in while', testContinueInWhileLoop);
+  await timed('AM', 'Spawn basic child', testSpawnBasicChild);
+  await timed('AN', 'Spawn inherits parent variables', testSpawnInheritsParentVariables);
+  await timed('AG', 'Import anonymous flow', testImportAnonymousFlow);
+  await timed('AH', 'Import namespaced library', testImportNamespacedLibrary);
+  await timed('AI', 'Continue skips iteration', testContinueSkipsIteration);
+  await timed('AJ', 'Remember key-value storage', testRememberKeyValue);
+  await timed('AO', 'Include file directive', testIncludeDirective);
 
   if (!QUICK_MODE) {
     await timed('D', 'Gate evaluation', testGateEvaluation);

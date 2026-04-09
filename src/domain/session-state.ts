@@ -24,6 +24,8 @@ export interface NodeProgress {
   readonly maxIterations: number;
   readonly status: 'pending' | 'running' | 'completed' | 'failed' | 'awaiting_capture';
   readonly captureFailureReason?: string | undefined;
+  /** H-ASK-002: Retry counter for ask conditions with explicit max-retries. */
+  readonly askRetryCount?: number | undefined;
   // H-DX-002: Node execution timing
   readonly startedAt?: number | undefined;
   readonly completedAt?: number | undefined;

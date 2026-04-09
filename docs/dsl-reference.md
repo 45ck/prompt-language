@@ -9,7 +9,7 @@ If you want per-feature reference pages instead of one long document, start at t
 | Primitive   | Syntax                                         | Purpose                         |
 | ----------- | ---------------------------------------------- | ------------------------------- |
 | `prompt`    | `prompt: text`                                 | Inject instruction for Claude   |
-| `run`       | `run: command [timeout N]`                     | Execute shell command           |
+| `run`       | `run: command timeout N` or `[timeout N]`      | Execute shell command           |
 | `let`/`var` | `let x = "val"` \| `run "cmd"` \| `prompt "q"` | Store a variable                |
 | `while`     | `while condition max N` … `end`                | Loop while condition is true    |
 | `until`     | `until condition max N` … `end`                | Loop until condition is true    |
@@ -439,6 +439,14 @@ else
 end
 ```
 
+Use `max-retries N` to retry an ambiguous verdict with fresh grounding evidence before pausing:
+
+```
+if ask "is this safe to deploy?" grounded-by "npm test" max-retries 2
+  prompt: Roll out the change.
+end
+```
+
 **How it works:** The plugin emits a meta-prompt asking Claude to evaluate the question and answer "true" or "false". The verdict is captured via the standard capture-file mechanism (same as `let x = prompt`). This takes two turns: one to ask, one to read the verdict.
 
 - For `while ask`: the body is entered when the verdict is `true` (same as regular `while`).
@@ -460,6 +468,7 @@ The grounding command's stdout (up to 1000 chars) is included in the judge promp
 
 - `ask "question"`: The question for Claude to evaluate. Required.
 - `grounded-by "command"`: (Optional) Shell command whose stdout provides evidence.
+- `max-retries N`: Optional retry budget for ambiguous or missing verdicts.
 - `max N`: Maximum iterations (for while/until). Ask conditions count toward `maxIterations` the same way regular conditions do.
 
 **Note:** If the verdict capture fails (e.g., Claude doesn't write the capture file), the plugin retries the judge prompt. Ask conditions are slower than variable-based conditions because they require an extra turn for verdict capture.

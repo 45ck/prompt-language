@@ -315,6 +315,40 @@ function stripTimeout(line: string): string {
   return line.replace(/\s+timeout\s+\d+/i, '');
 }
 
+interface AskConditionOptions {
+  readonly groundedBy?: string | undefined;
+  readonly maxRetries?: number | undefined;
+}
+
+function parseAskConditionOptions(trailing: string, ctx: ParseContext): AskConditionOptions {
+  let working = trailing;
+  let groundedBy: string | undefined;
+  let maxRetries: number | undefined;
+
+  const groundedMatch = /\bgrounded-by\s+(?:"([^"]+)"|'([^']+)')/i.exec(working);
+  if (groundedMatch) {
+    groundedBy = groundedMatch[1] ?? groundedMatch[2];
+    working = working.replace(groundedMatch[0], '').trim();
+  }
+
+  const maxRetriesMatch = /\bmax-retries\s+(\d+)\b/i.exec(working);
+  if (maxRetriesMatch?.[1]) {
+    maxRetries = parseInt(maxRetriesMatch[1], 10);
+    working = working.replace(maxRetriesMatch[0], '').trim();
+  }
+
+  working = working.replace(/\bmax\s+\d+\b/i, '').trim();
+
+  if (working.trim()) {
+    warn(ctx, `Unrecognized ask condition options: "${working.trim()}"`);
+  }
+
+  return {
+    ...(groundedBy != null ? { groundedBy } : {}),
+    ...(maxRetries != null ? { maxRetries } : {}),
+  };
+}
+
 function parseWhileLine(
   ctx: ParseContext,
   line: string,
@@ -325,14 +359,12 @@ function parseWhileLine(
   const stripped = stripTimeout(line);
 
   // AI-evaluated condition: while ask "question" [grounded-by "cmd"] [max N]
-  const askMatch =
-    /^while\s+ask\s+["']([^"']+)["'](?:\s+grounded-by\s+["']([^"']+)["'])?(?:\s+max\s+(\d+))?$/i.exec(
-      stripped,
-    );
+  const askMatch = /^while\s+ask\s+["']([^"']+)["'](.*)$/i.exec(stripped);
   if (askMatch) {
     const question = askMatch[1]!;
-    const groundedBy = askMatch[2];
-    let askMax = askMatch[3] ? parseInt(askMatch[3], 10) : undefined;
+    const askOpts = parseAskConditionOptions(askMatch[2] ?? '', ctx);
+    const maxMatch = /\bmax\s+(\d+)\b/i.exec(askMatch[2] ?? '');
+    let askMax = maxMatch?.[1] ? parseInt(maxMatch[1], 10) : undefined;
     if (askMax === undefined) {
       warn(
         ctx,
@@ -348,7 +380,8 @@ function parseWhileLine(
       askMax,
       label,
       timeout,
-      groundedBy,
+      askOpts.groundedBy,
+      askOpts.maxRetries,
     );
   }
 
@@ -375,14 +408,12 @@ function parseUntilLine(
   const stripped = stripTimeout(line);
 
   // AI-evaluated condition: until ask "question" [grounded-by "cmd"] [max N]
-  const askMatch =
-    /^until\s+ask\s+["']([^"']+)["'](?:\s+grounded-by\s+["']([^"']+)["'])?(?:\s+max\s+(\d+))?$/i.exec(
-      stripped,
-    );
+  const askMatch = /^until\s+ask\s+["']([^"']+)["'](.*)$/i.exec(stripped);
   if (askMatch) {
     const question = askMatch[1]!;
-    const groundedBy = askMatch[2];
-    let askMax = askMatch[3] ? parseInt(askMatch[3], 10) : undefined;
+    const askOpts = parseAskConditionOptions(askMatch[2] ?? '', ctx);
+    const maxMatch = /\bmax\s+(\d+)\b/i.exec(askMatch[2] ?? '');
+    let askMax = maxMatch?.[1] ? parseInt(maxMatch[1], 10) : undefined;
     if (askMax === undefined) {
       warn(
         ctx,
@@ -398,7 +429,8 @@ function parseUntilLine(
       askMax,
       label,
       timeout,
-      groundedBy,
+      askOpts.groundedBy,
+      askOpts.maxRetries,
     );
   }
 
@@ -430,14 +462,15 @@ function parseRetryLine(
 
 function parseIfLine(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
   // AI-evaluated condition: if ask "question" [grounded-by "cmd"]
-  const askMatch = /^if\s+ask\s+["']([^"']+)["'](?:\s+grounded-by\s+["']([^"']+)["'])?$/i.exec(
-    line.trim(),
-  );
+  const askMatch = /^if\s+ask\s+["']([^"']+)["'](.*)$/i.exec(line.trim());
   let condition: string;
   let groundedBy: string | undefined;
+  let askMaxRetries: number | undefined;
   if (askMatch) {
     condition = `${ASK_CONDITION_PREFIX}"${askMatch[1]!}"`;
-    groundedBy = askMatch[2];
+    const askOpts = parseAskConditionOptions(askMatch[2] ?? '', ctx);
+    groundedBy = askOpts.groundedBy;
+    askMaxRetries = askOpts.maxRetries;
   } else {
     const match = /^if\s+(.+)/i.exec(line);
     condition = match?.[1] ? match[1].trim() : 'true';
@@ -467,7 +500,7 @@ function parseIfLine(ctx: ParseContext, line: string, baseIndent: number): FlowN
   if (!nestedElseIf) {
     consumeEnd(ctx);
   }
-  return createIfNode(nextId(ctx), condition, thenBranch, elseBranch, groundedBy);
+  return createIfNode(nextId(ctx), condition, thenBranch, elseBranch, groundedBy, askMaxRetries);
 }
 
 function parseTryBlock(ctx: ParseContext, baseIndent: number): FlowNode {
@@ -1003,10 +1036,17 @@ function parseLine(ctx: ParseContext, trimmed: string, indent: number): FlowNode
   }
   if (lower.startsWith('run:')) {
     const runText = trimmed.slice(4).trim();
-    // D2: bracket syntax [timeout N] is unambiguous — can't conflict with command text
-    const timeoutMatch = /^(.+?)\s+\[timeout\s+(\d+)\]$/i.exec(runText);
+    // D2: allow either [timeout N] or bare trailing timeout N.
+    const bracketTimeoutMatch = /^(.+?)\s+\[timeout\s+(\d+)\]$/i.exec(runText);
+    const bareTimeoutMatch = /^(.+?)\s+timeout\s+(\d+)$/i.exec(runText);
+    const timeoutMatch =
+      bracketTimeoutMatch ??
+      (bareTimeoutMatch && (bareTimeoutMatch[1]?.trim().split(/\s+/).length ?? 0) > 1
+        ? bareTimeoutMatch
+        : null);
     if (timeoutMatch?.[1] && timeoutMatch[2]) {
-      const timeoutSec = parseInt(timeoutMatch[2], 10);
+      const timeoutSecondsRaw = timeoutMatch[2] ?? timeoutMatch[3];
+      const timeoutSec = parseInt(timeoutSecondsRaw ?? '', 10);
       if (timeoutSec > 0) {
         return createRunNode(nextId(ctx), timeoutMatch[1].trim(), timeoutSec * 1000);
       }

@@ -2832,6 +2832,48 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
     expect(captureReader.clear).toHaveBeenCalledWith('__judge_w1__');
   });
 
+  it('max-retries reruns grounded evidence and pauses when exhausted', async () => {
+    let groundingCall = 0;
+    const runner: CommandRunner = {
+      run: async () => ({
+        exitCode: 0,
+        stdout: `evidence-${++groundingCall}`,
+        stderr: '',
+      }),
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"is it passing?"',
+      [createPromptNode('p1', 'fix')],
+      3,
+      undefined,
+      undefined,
+      'npm test',
+      1,
+    );
+    expect(whileNode.askMaxRetries).toBe(1);
+    const spec = createFlowSpec('test', [whileNode]);
+    let state = createSessionState('s1', spec);
+
+    const phase1 = await autoAdvanceNodes(state, runner, captureReader);
+    expect(phase1.capturedPrompt).toContain('evidence-1');
+    expect(phase1.state.nodeProgress['w1']?.askRetryCount).toBe(0);
+
+    state = phase1.state;
+    const phase2 = await autoAdvanceNodes(state, runner, captureReader);
+    expect(phase2.capturedPrompt).toContain('evidence-2');
+    expect(phase2.state.nodeProgress['w1']?.askRetryCount).toBe(1);
+
+    state = phase2.state;
+    const phase3 = await autoAdvanceNodes(state, runner, captureReader);
+    expect((phase3 as { kind?: string }).kind).toBe('pause');
+    expect(phase3.capturedPrompt).toBeNull();
+  });
+
   it('grounded-by with exit 0: enters while body (deterministic — no AI judge)', async () => {
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 0, stdout: 'grounding evidence here', stderr: '' }),
@@ -2998,6 +3040,79 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
     expect(capturedPrompt).toContain('__judge_w1__');
   });
 
+  it('max-retries with grounded-by re-prompts with fresh evidence and then pauses when exhausted', async () => {
+    const runner: CommandRunner = {
+      run: vi
+        .fn()
+        .mockResolvedValue({ exitCode: 0, stdout: 'grounding evidence here', stderr: '' }),
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"is it good?"',
+      [createPromptNode('p1', 'body')],
+      3,
+      undefined,
+      undefined,
+      'npm test',
+      1,
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const first = await autoAdvanceNodes(state, runner, captureReader);
+    expect(first.capturedPrompt).toContain('grounding evidence here');
+    expect(first.state.nodeProgress['w1']?.askRetryCount).toBe(0);
+
+    const second = await autoAdvanceNodes(first.state, runner, captureReader);
+    expect(second.capturedPrompt).toContain('grounding evidence here');
+    expect(second.state.nodeProgress['w1']?.askRetryCount).toBe(1);
+
+    const third = await autoAdvanceNodes(second.state, runner, captureReader);
+    expect((third as { kind?: string }).kind).toBe('pause');
+    expect(third.capturedPrompt).toBeNull();
+  });
+
+  it('max-retries re-runs grounded evidence and tracks askRetryCount', async () => {
+    const runs: string[] = [];
+    const runner: CommandRunner = {
+      run: async (command: string) => {
+        runs.push(command);
+        return {
+          exitCode: 0,
+          stdout: `fresh evidence ${runs.length}`,
+          stderr: '',
+        };
+      },
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('maybe'),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"ready?"',
+      [createPromptNode('p1', 'body')],
+      3,
+      undefined,
+      undefined,
+      'npm test',
+      2,
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const phase1 = await autoAdvanceNodes(createSessionState('s1', spec), runner, captureReader);
+    expect(phase1.capturedPrompt).toContain('fresh evidence 1');
+    expect(phase1.state.nodeProgress['w1']?.askRetryCount).toBe(0);
+
+    const phase2 = await autoAdvanceNodes(phase1.state, runner, captureReader);
+    expect(phase2.capturedPrompt).toContain('fresh evidence 2');
+    expect(phase2.state.nodeProgress['w1']?.askRetryCount).toBe(1);
+    expect(runs).toHaveLength(2);
+  });
+
   it('Phase 2: max iterations reached → exits loop with warning', async () => {
     const captureReader: CaptureReader = {
       read: vi.fn().mockResolvedValue('true'),
@@ -3114,6 +3229,35 @@ describe('autoAdvanceNodes — if ask condition (AI-evaluated)', () => {
     expect(captureReader.clear).toHaveBeenCalledWith('__judge_i1__');
   });
 
+  it('max-retries pauses once the retry budget is exhausted', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode(
+      'i1',
+      'ask:"is it good?"',
+      [createPromptNode('p1', 'then-action')],
+      [createPromptNode('p2', 'else-action')],
+      undefined,
+      1,
+    );
+    expect(ifNode.askMaxRetries).toBe(1);
+    const spec = createFlowSpec('test', [ifNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'i1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'awaiting_capture',
+      askRetryCount: 1,
+      startedAt: Date.now(),
+    });
+
+    const result = await autoAdvanceNodes(state, undefined, captureReader);
+    expect((result as { kind?: string }).kind).toBe('pause');
+    expect(result.capturedPrompt).toBeNull();
+  });
+
   it('Phase 2: verdict=true enters then-branch', async () => {
     const captureReader: CaptureReader = {
       read: vi.fn().mockResolvedValue('true'),
@@ -3201,6 +3345,41 @@ describe('autoAdvanceNodes — if ask condition (AI-evaluated)', () => {
     const { capturedPrompt } = await autoAdvanceNodes(state, undefined, captureReader);
     expect(capturedPrompt).toContain('was not found');
     expect(capturedPrompt).toContain('__judge_i1__');
+  });
+
+  it('max-retries re-runs grounded evidence for if ask conditions', async () => {
+    const runs: string[] = [];
+    const runner: CommandRunner = {
+      run: async (command: string) => {
+        runs.push(command);
+        return {
+          exitCode: 0,
+          stdout: `fresh evidence ${runs.length}`,
+          stderr: '',
+        };
+      },
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('maybe'),
+      clear: vi.fn(),
+    };
+    const ifNode = createIfNode(
+      'i1',
+      'ask:"ready?"',
+      [createPromptNode('p1', 'then')],
+      [createPromptNode('p2', 'else')],
+      'npm test',
+      1,
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    const phase1 = await autoAdvanceNodes(createSessionState('s1', spec), runner, captureReader);
+    expect(phase1.capturedPrompt).toContain('fresh evidence 1');
+    expect(phase1.state.nodeProgress['i1']?.askRetryCount).toBe(0);
+
+    const phase2 = await autoAdvanceNodes(phase1.state, runner, captureReader);
+    expect(phase2.capturedPrompt).toContain('fresh evidence 2');
+    expect(phase2.state.nodeProgress['i1']?.askRetryCount).toBe(1);
+    expect(runs).toHaveLength(2);
   });
 });
 

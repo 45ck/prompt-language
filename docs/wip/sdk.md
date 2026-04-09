@@ -1,12 +1,10 @@
-# Node.js SDK (WIP)
-
-> **WIP: not implemented yet.** This page describes intended behavior, not current API.
+# Node.js SDK
 
 ## Goal
 
 Expose prompt-language's core application layer as a stable programmatic SDK.
 
-## Intended API shape
+## Public API shape
 
 ```ts
 import {
@@ -18,12 +16,10 @@ import {
 } from '@45ck/prompt-language';
 ```
 
-## Intended behavior
+## Status
 
-- public exports for parsing, session creation, advancement, gate evaluation, and rendering
+- shipped public exports for parsing, session creation, advancement, gate evaluation, and rendering
 - stable TypeScript types for the public surface
 - hook entry points reuse the same exported functions internally
 
-## Current workaround
-
-Use the CLI and hook protocol directly.
+See the SDK section in the [README](../../README.md) for the current import path and example usage.

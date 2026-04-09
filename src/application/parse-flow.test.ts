@@ -59,6 +59,15 @@ describe('parseFlow — prompt and run nodes', () => {
     expect(node.timeoutMs).toBe(60000);
   });
 
+  it('parses run node with bare timeout suffix', () => {
+    const spec = parse('Goal: g\n\nflow:\n  run: npm test timeout 60');
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as RunNode;
+    expect(node.kind).toBe('run');
+    expect(node.command).toBe('npm test');
+    expect(node.timeoutMs).toBe(60000);
+  });
+
   it('parses run node without timeout (no timeoutMs property)', () => {
     const spec = parse('Goal: g\n\nflow:\n  run: echo hello');
     const node = spec.nodes[0] as RunNode;
@@ -1538,6 +1547,42 @@ describe('parseFlow — loop timeout', () => {
   });
 });
 
+// ── H-ASK-002: ask condition retry budget ────────────────────────────
+
+describe('parseFlow — ask condition retry budget', () => {
+  it('parses while ask with max-retries and grounded-by', () => {
+    const spec = parse(
+      'Goal: test\n\nflow:\n  while ask "ready?" grounded-by "npm test" max-retries 2 max 4\n    prompt: work\n  end',
+    );
+    const node = spec.nodes[0] as WhileNode;
+    expect(node.kind).toBe('while');
+    expect(node.condition).toBe('ask:"ready?"');
+    expect(node.maxIterations).toBe(4);
+    expect(node.askMaxRetries).toBe(2);
+    expect(node.groundedBy).toBe('npm test');
+  });
+
+  it('parses until ask with max-retries', () => {
+    const spec = parse(
+      'Goal: test\n\nflow:\n  until ask "done?" max-retries 3 max 5\n    prompt: work\n  end',
+    );
+    const node = spec.nodes[0] as UntilNode;
+    expect(node.kind).toBe('until');
+    expect(node.askMaxRetries).toBe(3);
+    expect(node.maxIterations).toBe(5);
+  });
+
+  it('parses if ask with max-retries', () => {
+    const spec = parse(
+      'Goal: test\n\nflow:\n  if ask "safe?" grounded-by "npm test" max-retries 1\n    prompt: work\n  end',
+    );
+    const node = spec.nodes[0] as IfNode;
+    expect(node.kind).toBe('if');
+    expect(node.askMaxRetries).toBe(1);
+    expect(node.groundedBy).toBe('npm test');
+  });
+});
+
 // ── H-LANG-009: env: section ──────────────────────────────────────────
 
 describe('parseFlow — env section', () => {
@@ -2071,6 +2116,65 @@ describe('parseFlow — review block', () => {
     ].join('\n');
     const spec = parse(dsl);
     expect(spec.nodes[0]!.id).not.toBe(spec.nodes[1]!.id);
+  });
+});
+
+describe('parseFlow — ask conditions', () => {
+  it('parses while ask with grounded-by and max-retries', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  while ask "is it ready?" grounded-by "npm test" max-retries 2 max 3',
+      '    prompt: keep working',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as WhileNode;
+    expect(node.kind).toBe('while');
+    expect(node.groundedBy).toBe('npm test');
+    expect(node.askMaxRetries).toBe(2);
+    expect(node.maxIterations).toBe(3);
+  });
+
+  it('parses until ask with max-retries even when option order changes', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  until ask "done yet?" max-retries 4 grounded-by "cat status.txt" max 5',
+      '    prompt: keep going',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as UntilNode;
+    expect(node.kind).toBe('until');
+    expect(node.groundedBy).toBe('cat status.txt');
+    expect(node.askMaxRetries).toBe(4);
+    expect(node.maxIterations).toBe(5);
+  });
+
+  it('parses if ask with max-retries', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  if ask "should proceed?" grounded-by "check.sh" max-retries 1',
+      '    prompt: then',
+      '  else',
+      '    prompt: else',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as IfNode;
+    expect(node.kind).toBe('if');
+    expect(node.groundedBy).toBe('check.sh');
+    expect(node.askMaxRetries).toBe(1);
+    expect(node.thenBranch).toHaveLength(1);
+    expect(node.elseBranch).toHaveLength(1);
   });
 });
 

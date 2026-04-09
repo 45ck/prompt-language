@@ -217,7 +217,7 @@ flow:
 
 **I want all the CLI options:**
 
-- [CLI Reference](cli-reference.md) — install, status, init, watch, dry-run, slash commands
+- [CLI Reference](cli-reference.md) — install, status, init, run, list, validate, watch, slash commands
 
 **I want proof it works:**
 

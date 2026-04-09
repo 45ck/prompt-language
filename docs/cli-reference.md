@@ -21,23 +21,6 @@ npx @45ck/prompt-language --version
 # prompt-language v0.3.0
 ```
 
-### --dry-run
-
-Parse, lint, and render a flow without executing it. Useful for validating syntax before a live run.
-
-```bash
-claude -p --dry-run "Goal: test
-
-flow:
-  prompt: Hello
-  run: npm test
-
-done when:
-  tests_pass"
-```
-
-Outputs the rendered flow with lint warnings but takes no actions and starts no gates.
-
 ## Commands
 
 ### install (default)
@@ -105,6 +88,36 @@ Run the generated flow:
 ```bash
 claude -p "$(cat example.flow)"
 ```
+
+### run
+
+Execute a `.flow` file or inline flow text through Claude.
+
+```bash
+npx @45ck/prompt-language run --file my.flow
+npx @45ck/prompt-language run my.flow
+cat my.flow | npx @45ck/prompt-language run
+```
+
+### list
+
+Recursively list `.flow` files under the current directory.
+
+```bash
+npx @45ck/prompt-language list
+```
+
+### validate
+
+Parse, lint, score, and render a flow without executing it.
+
+```bash
+npx @45ck/prompt-language validate --file my.flow
+npx @45ck/prompt-language validate my.flow
+cat my.flow | npx @45ck/prompt-language validate
+```
+
+Outputs the rendered flow with lint warnings but takes no actions and starts no gates.
 
 ### demo
 

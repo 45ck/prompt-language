@@ -568,6 +568,24 @@ describe('renderFlow', () => {
     expect(output).toContain('run: npm test [timeout 60s]');
   });
 
+  it('renders ask max-retries on ask conditions', () => {
+    const spec = createFlowSpec('test', [
+      createWhileNode(
+        'w1',
+        'ask:"ready?"',
+        [createPromptNode('p1', 'work')],
+        4,
+        undefined,
+        undefined,
+        'npm test',
+        2,
+      ),
+    ]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('while ask: "ready?" max 4 max-retries 2');
+  });
+
   it('does not render timeout annotation when no timeout', () => {
     const spec = createFlowSpec('test', [createRunNode('r1', 'npm test')]);
     const state = createSessionState('s1', spec);

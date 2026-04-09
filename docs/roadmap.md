@@ -36,6 +36,7 @@ The runtime already ships:
 - `remember "text"` and `remember key="k" value="v"` — persistent memory
 - `memory:` section — prefetch keys from memory store
 - `send "target" "msg"` / `receive varName` — inter-agent messaging
+- public SDK from the root package and `./sdk` subpath — stable programmatic API for integrations
 - VS Code extension (basic syntax highlighting in `vscode-extension/`)
 - GitHub Actions integration (`action/action.yml` — `45ck/prompt-language-action`)
 
@@ -45,7 +46,6 @@ These are open `.beads` items that fit the current product direction and are eas
 
 | Feature                                            | Status               | Current workaround                                         | Beads issue            |
 | -------------------------------------------------- | -------------------- | ---------------------------------------------------------- | ---------------------- |
-| Programmatic Node.js API / public SDK              | Tracked, not shipped | Use the CLI and hook runtime directly                      | `prompt-language-syg2` |
 | Flow registry and `.flow` run/validate conventions | Tracked, not shipped | Store flow files manually and invoke them with `claude -p` | `prompt-language-yd9w` |
 | MCP server exposing flow state to other AI clients | Tracked, not shipped | Inspect `.prompt-language/session-state.json` directly     | `prompt-language-folr` |
 

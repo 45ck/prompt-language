@@ -7,13 +7,14 @@
 ```yaml
 run: npm test
 run: npm run build [timeout 120]
+run: npm run build timeout 120
 ```
 
 ## Semantics
 
 - The command runs in the current workspace.
 - A non-zero exit code marks the command as failed.
-- Optional `[timeout N]` is in seconds.
+- Optional `timeout N` is in seconds. The bracket form `[timeout N]` is also accepted.
 - Timeout kills the full command tree. On Windows, the runtime falls back to `taskkill /F /T`.
 - Timed-out commands set `last_stderr` to `timed out after Ns` and are recorded in `audit.jsonl`.
 - After each `run:`, runtime variables are updated.

@@ -44,6 +44,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./sdk": {
+      "types": "./dist/sdk.d.ts",
+      "import": "./dist/sdk.js"
     }
   },
   "files": [
@@ -129,6 +133,7 @@
     "eslint-plugin-sonarjs": "^4.0.2",
     "eslint-plugin-unicorn": "^63.0.0",
     "eslint-plugin-unused-imports": "^4.0.0",
+    "fast-check": "^4.6.0",
     "globals": "^17.0.0",
     "husky": "^9.0.0",
     "knip": "^5.0.0",

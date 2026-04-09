@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import * as fc from 'fast-check';
 import { parseFlow } from './parse-flow.js';
 import type { FlowSpec } from '../domain/flow-spec.js';
 
@@ -251,6 +252,107 @@ describe('Fuzz harness — parser crash resistance', () => {
       }
       assertNoCrash(flow);
     }
+  });
+});
+
+describe('Property-based fuzzing — parser safety', () => {
+  const noNewlines = fc
+    .string()
+    .filter((s) => !/[\r\n]/.test(s))
+    .filter((s) => s.trim().length > 0);
+  const safePromptText = noNewlines.filter((s) => !/^\s|\s$/.test(s) && !s.includes('#'));
+
+  it('prompt text with shell-special characters and unicode round-trips without crashing', () => {
+    fc.assert(
+      fc.property(safePromptText, (text) => {
+        const spec = parseFlow(`flow:\n  prompt: ${text}`);
+        expect(spec.nodes).toHaveLength(1);
+        expect(spec.nodes[0]!.kind).toBe('prompt');
+        expect((spec.nodes[0] as { text: string }).text).toBe(text);
+      }),
+      { numRuns: 1000 },
+    );
+  });
+
+  it('indentation variations do not crash or change the node shape', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 8 }), (indent) => {
+        const pad = ' '.repeat(indent);
+        const spec = parseFlow(`${pad}flow:\n${pad}  prompt: hello`);
+        expect(spec.nodes.length).toBeGreaterThanOrEqual(1);
+        expect(spec.nodes[0]!.kind).toBe('prompt');
+      }),
+      { numRuns: 1000 },
+    );
+  });
+
+  it('deeply nested valid container flows do not crash', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 10, max: 16 }), (depth) => {
+        let flow = 'flow:\n';
+        for (let i = 0; i < depth; i++) {
+          flow += `${'  '.repeat(i + 1)}while not done max 2\n`;
+        }
+        flow += `${'  '.repeat(depth + 1)}prompt: leaf\n`;
+        for (let i = depth - 1; i >= 0; i--) {
+          flow += `${'  '.repeat(i + 1)}end\n`;
+        }
+        assertNoCrash(flow);
+      }),
+      { numRuns: 1000 },
+    );
+  });
+
+  it('long variable names and values parse or warn gracefully', () => {
+    fc.assert(
+      fc.property(
+        fc
+          .string({ minLength: 1, maxLength: 120 })
+          .filter((s) => /^[A-Za-z_][A-Za-z0-9_]*$/.test(s)),
+        noNewlines,
+        (name, value) => {
+          assertNoCrash(`flow:\n  let ${name} = "${value.replace(/"/g, '\\"')}"`);
+        },
+      ),
+      { numRuns: 1000 },
+    );
+  });
+
+  it('random valid single-node flows do not throw unhandled exceptions', () => {
+    const kinds = ['prompt', 'run', 'while', 'until', 'retry', 'if', 'try', 'foreach'] as const;
+    fc.assert(
+      fc.property(fc.constantFrom(...kinds), noNewlines, (kind, text) => {
+        let flow = 'flow:\n';
+        switch (kind) {
+          case 'prompt':
+            flow += `  prompt: ${text}`;
+            break;
+          case 'run':
+            flow += `  run: echo ${text}`;
+            break;
+          case 'while':
+            flow += `  while not done max 2\n    prompt: ${text}\n  end`;
+            break;
+          case 'until':
+            flow += `  until done max 2\n    prompt: ${text}\n  end`;
+            break;
+          case 'retry':
+            flow += `  retry max 2\n    run: echo ${text}\n  end`;
+            break;
+          case 'if':
+            flow += `  if tests_pass\n    prompt: ${text}\n  end`;
+            break;
+          case 'try':
+            flow += `  try\n    run: echo ${text}\n  catch\n    prompt: ${text}\n  end`;
+            break;
+          case 'foreach':
+            flow += `  foreach item in "a b c"\n    prompt: ${text}\n  end`;
+            break;
+        }
+        assertNoCrash(flow);
+      }),
+      { numRuns: 1000 },
+    );
   });
 });
 

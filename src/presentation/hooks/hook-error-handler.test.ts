@@ -170,6 +170,11 @@ describe('logHookError', () => {
     expect(entry.error).toContain('audit error');
     expect(entry.wasRetried).toBe(false);
 
-    await rm(tempDir, { recursive: true, force: true });
+    await rm(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 100,
+    });
   });
 });

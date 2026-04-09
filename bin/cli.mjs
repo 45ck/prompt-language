@@ -227,6 +227,48 @@ async function validate() {
   console.log(preview.output);
 }
 
+async function runFlow() {
+  if (!existsSync(join(ROOT, 'dist'))) {
+    console.error('Error: dist/ directory not found. Run "npm run build" first.');
+    process.exit(1);
+  }
+
+  const flowText = await readFlowText(process.argv.slice(3), 'run');
+  const { execFileSync } = await import('node:child_process');
+  const claudeCommand = process.platform === 'win32' ? 'claude.cmd' : 'claude';
+  execFileSync(claudeCommand, ['-p', '--dangerously-skip-permissions', flowText], {
+    stdio: 'inherit',
+    timeout: 600_000,
+  });
+}
+
+async function listFlows() {
+  const cwd = process.cwd();
+  const results = [];
+
+  async function walk(dir) {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') {
+          continue;
+        }
+        await walk(join(dir, entry.name));
+        continue;
+      }
+      if (entry.isFile() && entry.name.endsWith('.flow')) {
+        results.push(join(dir, entry.name));
+      }
+    }
+  }
+
+  await walk(cwd);
+  results.sort((a, b) => a.localeCompare(b));
+  for (const filePath of results) {
+    console.log(filePath.slice(cwd.length + 1));
+  }
+}
+
 async function uninstall() {
   console.log('Uninstalling prompt-language...');
 
@@ -456,8 +498,14 @@ switch (command) {
   case 'init':
     await init();
     break;
+  case 'run':
+    await runFlow();
+    break;
   case 'demo':
     demo();
+    break;
+  case 'list':
+    await listFlows();
     break;
   case 'validate':
     await validate();
@@ -486,7 +534,9 @@ Commands:
   uninstall    Remove the plugin and clean up settings
   status       Show installation status
   init         Scaffold a starter flow in the current directory
+  run          Execute a .flow file or inline flow text via Claude
   demo         Print an example flow to stdout
+  list         Recursively list .flow files in the current directory
   validate     Parse, lint, score, and render a flow without executing it
   ci           Run a flow headlessly (CI/CD mode)
   statusline   Configure the Claude Code status line

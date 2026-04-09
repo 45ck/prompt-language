@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * smoke-test.mjs — Live CLI smoke tests via `claude -p`.
+ * smoke-test.mjs — Live CLI smoke tests via the configured AI harness.
  *
  * Validates the full plugin pipeline end-to-end through Claude's real agent
  * loop. Unlike unit tests (mocks) and e2e-eval (hook pipe-through), these
@@ -51,6 +51,12 @@ import {
 import { tmpdir, platform } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  checkHarnessVersion,
+  getCommandLabel,
+  getHarnessLabel,
+  runHarnessPrompt,
+} from './harness.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RESULTS_DIR = join(__dirname, 'results');
@@ -167,44 +173,46 @@ async function cleanupOldResults() {
   }
 }
 
-function claudeRun(prompt, cwd) {
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
-  try {
-    return execSync('claude -p --dangerously-skip-permissions', {
-      input: prompt,
-      encoding: 'utf-8',
-      cwd,
-      timeout: TIMEOUT,
-      env,
-    });
-  } catch (err) {
-    // Log stderr for debugging when Claude exits non-zero or times out
-    if (err.stderr) console.error(`  [debug] stderr: ${err.stderr.slice(0, 200)}`);
-    return err.stdout ?? '';
-  }
-}
-
 function assertClaudeAccess() {
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
   try {
-    execSync('claude -p "Smoke preflight"', {
-      encoding: 'utf-8',
-      timeout: 15_000,
-      env,
+    const version = checkHarnessVersion();
+    console.log(`[smoke-test] Harness: ${getHarnessLabel()} ${version}`);
+  } catch {
+    console.error(`[smoke-test] SKIP — ${getHarnessLabel()} not found.`);
+    process.exit(2);
+  }
+
+  try {
+    runHarnessPrompt('Smoke preflight', {
+      cwd: process.cwd(),
+      timeout: TIMEOUT,
+      strict: true,
     });
-  } catch (err) {
-    const output = `${err?.stdout ?? ''}\n${err?.stderr ?? ''}\n${err?.message ?? ''}`;
-    if (/does not have access to Claude|login again|contact your administrator/i.test(output)) {
+  } catch (error) {
+    const output = `${error?.stdout ?? ''}\n${error?.stderr ?? ''}\n${error?.message ?? ''}`;
+    if (
+      /does not have access to Claude|login again|contact your administrator|auth/i.test(output)
+    ) {
       console.error(
-        '[smoke-test] BLOCKED — Claude login/access is unavailable in this environment.',
+        `[smoke-test] BLOCKED — ${getHarnessLabel()} login/access is unavailable in this environment.`,
       );
       console.error(
-        '[smoke-test] `claude -p` returned an authorization error; smoke scenarios were not run.',
+        `[smoke-test] \`${getCommandLabel()}\` returned an authorization error; smoke scenarios were not run.`,
       );
       process.exit(2);
     }
+    throw error;
+  }
+}
+
+function claudeRun(prompt, cwd) {
+  try {
+    return runHarnessPrompt(prompt, { cwd, timeout: TIMEOUT });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    return error.stdout ?? '';
   }
 }
 
@@ -1798,13 +1806,14 @@ async function main() {
   }
 
   const totalStart = Date.now();
-  console.log('[smoke-test] Starting live CLI smoke tests...\n');
+  console.log(`[smoke-test] Starting live CLI smoke tests via ${getCommandLabel()}...\n`);
 
-  // Check claude CLI is available
+  // Check harness CLI is available
   try {
-    execSync('claude --version', { encoding: 'utf-8', timeout: 5000 });
+    const version = checkHarnessVersion();
+    console.log(`[smoke-test] Version: ${version}`);
   } catch {
-    console.log('[smoke-test] SKIP — claude CLI not found.');
+    console.log(`[smoke-test] SKIP — ${getHarnessLabel()} not found.`);
     process.exit(0);
   }
 

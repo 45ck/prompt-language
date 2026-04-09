@@ -5,9 +5,9 @@
  * Phase A: Deterministic hook pipe-through (no API key needed).
  *   Pipes JSON into the UserPromptSubmit hook via execSync and validates output.
  *
- * Phase B (--full flag): Optional Claude CLI roundtrip.
- *   Runs `claude -p "NL input"` with the plugin installed, feeds response
- *   through parseFlow(). Best-effort — skips gracefully if claude CLI unavailable.
+ * Phase B (--full flag): Optional AI harness roundtrip.
+ *   Runs the configured harness with the plugin installed, feeds response
+ *   through parseFlow(). Best-effort — skips gracefully if the configured harness is unavailable.
  *
  * Usage:
  *   node scripts/eval/e2e-eval.mjs          # Phase A only
@@ -19,6 +19,12 @@ import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { parseFlow } from '../../dist/application/parse-flow.js';
+import {
+  checkHarnessVersion,
+  getCommandLabel,
+  getHarnessLabel,
+  runHarnessPrompt,
+} from './harness.mjs';
 
 const SRC_ROOT = resolve(import.meta.dirname, '..', '..');
 const HOOK_SCRIPT = join(SRC_ROOT, 'src', 'presentation', 'hooks', 'user-prompt-submit.ts');
@@ -202,13 +208,14 @@ async function phaseA() {
 // ── Phase B: Claude CLI roundtrip ────────────────────────────────────
 
 async function phaseB() {
-  console.log('\n[e2e-eval] Phase B: Claude CLI roundtrip\n');
+  console.log(`\n[e2e-eval] Phase B: ${getCommandLabel()} roundtrip\n`);
 
-  // Check if claude CLI is available
+  // Check if harness CLI is available
   try {
-    execSync('claude --version', { encoding: 'utf-8', timeout: 5000 });
+    const version = checkHarnessVersion();
+    console.log(`  Harness: ${getHarnessLabel()} ${version}`);
   } catch {
-    console.log('  SKIP  claude CLI not found — skipping Phase B.');
+    console.log(`  SKIP  ${getHarnessLabel()} not found — skipping Phase B.`);
     return { passed: 0, failed: 0, skipped: true };
   }
 
@@ -235,10 +242,9 @@ async function phaseB() {
 
   for (const testCase of cases) {
     try {
-      const output = execSync(`claude -p "${testCase.input.replace(/"/g, '\\"')}"`, {
-        encoding: 'utf-8',
-        timeout: 30_000,
+      const output = runHarnessPrompt(testCase.input, {
         cwd: process.cwd(),
+        timeout: 30_000,
       });
 
       // Strip markdown fences if present

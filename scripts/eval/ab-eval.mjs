@@ -19,10 +19,11 @@
  *   node scripts/eval/ab-eval.mjs --quick  # same (no slow tests to skip)
  */
 
-import { execSync } from 'node:child_process';
 import { mkdtemp, rm, readFile, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { execSync } from 'node:child_process';
+import { checkHarnessVersion, getHarnessLabel, runHarnessPrompt } from './harness.mjs';
 
 const QUICK_MODE = process.argv.includes('--quick');
 const SETTINGS_PATH = join(homedir(), '.claude', 'settings.json');
@@ -55,19 +56,11 @@ async function withTempDir(fn) {
 }
 
 function claudeRun(prompt, cwd, timeout = 120_000) {
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
   try {
-    return execSync('claude -p --dangerously-skip-permissions', {
-      input: prompt,
-      encoding: 'utf-8',
-      cwd,
-      timeout,
-      env,
-    });
-  } catch (err) {
-    if (err.stderr) console.error(`    [debug] stderr: ${err.stderr.slice(0, 200)}`);
-    return err.stdout ?? '';
+    return runHarnessPrompt(prompt, { cwd, timeout });
+  } catch (error) {
+    if (error.stderr) console.error(`    [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    return error.stdout ?? '';
   }
 }
 
@@ -399,11 +392,12 @@ async function runScenario(scenario, pluginEnabled) {
 async function main() {
   console.log('[ab-eval] A/B Evaluation v4: Final Hypothesis Testing\n');
 
-  // Check claude CLI
+  // Check harness CLI
   try {
-    execSync('claude --version', { encoding: 'utf-8', timeout: 5000 });
+    const version = checkHarnessVersion();
+    console.log(`[ab-eval] Harness: ${getHarnessLabel()} ${version}`);
   } catch {
-    console.log('[ab-eval] SKIP — claude CLI not found.');
+    console.log(`[ab-eval] SKIP — ${getHarnessLabel()} not found.`);
     process.exit(0);
   }
 

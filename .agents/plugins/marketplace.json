@@ -1,0 +1,35 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "prompt-language",
+  "displayName": "Prompt Language",
+  "description": "A control-flow runtime for Codex CLI with verification gates, persistent state, and deterministic execution. Loops, conditionals, retries, and completion enforcement.",
+  "owner": {
+    "name": "45ck"
+  },
+  "repository": "https://github.com/45ck/prompt-language",
+  "homepage": "https://github.com/45ck/prompt-language",
+  "keywords": [
+    "prompt-language",
+    "runtime",
+    "verification",
+    "gates",
+    "control-flow",
+    "enforcement",
+    "state-machine",
+    "agent-runtime",
+    "codex"
+  ],
+  "installInstructions": "npx @45ck/prompt-language codex-install",
+  "plugins": [
+    {
+      "name": "prompt-language",
+      "description": "A control-flow runtime for Codex CLI with verification gates, persistent state, and deterministic execution. Loops, conditionals, retries, and completion enforcement.",
+      "version": "0.3.0",
+      "author": {
+        "name": "45ck"
+      },
+      "source": ".",
+      "category": "development"
+    }
+  ]
+}

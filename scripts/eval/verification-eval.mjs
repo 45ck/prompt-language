@@ -22,6 +22,7 @@ import { mkdtemp, rm, readdir, readFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runHarnessPrompt } from './harness.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = join(__dirname, 'fixtures');
@@ -35,16 +36,8 @@ const fixtureIdx = args.indexOf('--fixture');
 const FIXTURE_FILTER = fixtureIdx >= 0 ? args[fixtureIdx + 1] : null;
 
 function claudeRun(prompt, cwd) {
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
   try {
-    execSync('claude -p --dangerously-skip-permissions', {
-      input: prompt,
-      encoding: 'utf-8',
-      cwd,
-      timeout: TIMEOUT,
-      env,
-    });
+    runHarnessPrompt(prompt, { cwd, timeout: TIMEOUT });
     return true;
   } catch {
     return false;

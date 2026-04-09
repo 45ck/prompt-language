@@ -31,6 +31,7 @@ import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkHarnessVersion, getHarnessLabel, runHarnessPrompt } from './harness.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
@@ -120,21 +121,12 @@ async function withTempDir(fn) {
 }
 
 function claudeRun(prompt, cwd, timeout = DEFAULT_TIMEOUT) {
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
   try {
-    return execSync('claude -p --dangerously-skip-permissions', {
-      input: prompt,
-      encoding: 'utf-8',
-      cwd,
-      timeout,
-      env,
-      maxBuffer: 10 * 1024 * 1024,
-    });
-  } catch (err) {
-    if (err.killed) console.error(`  [timeout] claude -p killed after ${timeout / 1000}s`);
-    else if (err.stderr) console.error(`  [debug] stderr: ${err.stderr.slice(0, 200)}`);
-    return err.stdout ?? '';
+    return runHarnessPrompt(prompt, { cwd, timeout });
+  } catch (error) {
+    if (error.killed) console.error(`  [timeout] harness killed after ${timeout / 1000}s`);
+    else if (error.stderr) console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    return error.stdout ?? '';
   }
 }
 
@@ -3456,9 +3448,10 @@ async function main() {
   console.log(`  Estimated runtime: ~${estMinutes} minutes\n`);
 
   try {
-    execSync('claude --version', { encoding: 'utf-8', timeout: 5000 });
+    const version = checkHarnessVersion();
+    console.log(`[eval-v3] Harness: ${getHarnessLabel()} ${version}`);
   } catch {
-    console.log('[eval-v3] SKIP — claude CLI not found.');
+    console.log(`[eval-v3] SKIP — ${getHarnessLabel()} not found.`);
     process.exit(0);
   }
 

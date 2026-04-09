@@ -1,0 +1,5 @@
+# prompt-language Codex scaffold.
+# Codex hooks are experimental; opt in explicitly before using the local install.
+
+[features]
+codex_hooks = true

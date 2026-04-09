@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * skill-eval.mjs — Skill parse + execution eval tests via `claude -p`.
+ * skill-eval.mjs — Skill parse + execution eval tests via the configured AI harness.
  *
  * Validates that skills (SKILL.md files with embedded flow DSL) parse correctly
  * and execute end-to-end through Claude's real agent loop.
@@ -30,6 +30,12 @@ import { mkdtemp, rm, readFile, writeFile, mkdir, readdir, unlink } from 'node:f
 import { tmpdir, platform } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  checkHarnessVersion,
+  getCommandLabel,
+  getHarnessLabel,
+  runHarnessPrompt,
+} from './harness.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(__dirname, '..', '..');
@@ -124,19 +130,11 @@ async function cleanupOldResults() {
 }
 
 function claudeRun(prompt, cwd) {
-  const env = { ...process.env };
-  delete env.CLAUDECODE;
   try {
-    return execSync('claude -p --dangerously-skip-permissions', {
-      input: prompt,
-      encoding: 'utf-8',
-      cwd,
-      timeout: TIMEOUT,
-      env,
-    });
-  } catch (err) {
-    if (err.stderr) console.error(`  [debug] stderr: ${err.stderr.slice(0, 200)}`);
-    return err.stdout ?? '';
+    return runHarnessPrompt(prompt, { cwd, timeout: TIMEOUT });
+  } catch (error) {
+    if (error.stderr) console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    return error.stdout ?? '';
   }
 }
 
@@ -743,7 +741,7 @@ async function testListAggregation() {
 
 async function main() {
   const totalStart = Date.now();
-  console.log('[skill-eval] Starting skill eval tests...\n');
+  console.log(`[skill-eval] Starting skill eval tests via ${getCommandLabel()}...\n`);
 
   // Section 1: Parse-only (always run, fast)
   console.log('── Section 1: Parse-only tests ──');
@@ -754,19 +752,20 @@ async function main() {
   await timed('SE', 'All skills frontmatter', testAllSkillsFrontmatter);
   await timed('SF', 'All flow blocks parse', testAllFlowBlocksParse);
 
-  // Section 3 quick tests: experimental flows that need claude -p but no LLM reasoning
+  // Section 3 quick tests: experimental flows that need the configured harness but no LLM reasoning
   console.log('\n── Section 3: Experimental skill flows (quick) ──');
 
-  // Check claude CLI is available before running execution tests
-  let claudeAvailable = false;
+  // Check harness CLI is available before running execution tests
+  let harnessAvailable = false;
   try {
-    execSync('claude --version', { encoding: 'utf-8', timeout: 5000 });
-    claudeAvailable = true;
+    const version = checkHarnessVersion();
+    console.log(`[skill-eval] Version: ${version}`);
+    harnessAvailable = true;
   } catch {
-    console.log('  [skill-eval] claude CLI not found — skipping execution tests.');
+    console.log(`  [skill-eval] ${getHarnessLabel()} not found — skipping execution tests.`);
   }
 
-  if (claudeAvailable) {
+  if (harnessAvailable) {
     await timed('SK', 'Environment scan', testEnvScan);
     await timed('SL', 'Foreach file generator', testForeachFileGenerator);
     await timed('SM', 'Pipeline chain', testPipelineChain);

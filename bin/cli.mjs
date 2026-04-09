@@ -15,16 +15,24 @@ const CACHE_DIR = join(CLAUDE_DIR, 'plugins', 'cache', MARKETPLACE_NAME);
 // PLUGINS_DIR is set dynamically per version in install() — see pluginsDir()
 const INSTALLED_PLUGINS_PATH = join(CLAUDE_DIR, 'plugins', 'installed_plugins.json');
 const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json');
+const CODEX_DIR = join(homedir(), '.codex');
+const CODEX_CACHE_DIR = join(CODEX_DIR, 'plugins', 'cache', MARKETPLACE_NAME);
+const CODEX_INSTALLED_PLUGINS_PATH = join(CODEX_DIR, 'plugins', 'installed_plugins.json');
+const CODEX_SETTINGS_PATH = join(CODEX_DIR, 'settings.json');
+const CODEX_CONFIG_PATH = join(CODEX_DIR, 'config.toml');
 
 // Old install location (pre-cache migration) — cleaned up during install/uninstall
 const OLD_LOCAL_DIR = join(CLAUDE_DIR, 'plugins', 'local', 'prompt-language');
 const OLD_MARKETPLACE_DIR = join(CLAUDE_DIR, 'plugins', 'local');
+const OLD_CODEX_LOCAL_DIR = join(CODEX_DIR, 'plugins', 'local', 'prompt-language');
+const OLD_CODEX_MARKETPLACE_DIR = join(CODEX_DIR, 'plugins', 'local');
 
 function pluginsDir(version) {
   return join(CACHE_DIR, 'prompt-language', version);
 }
 
 const DIRS_TO_COPY = ['dist', 'hooks', 'skills', '.claude-plugin', 'bin'];
+const DIRS_TO_COPY_CODEX = ['dist', 'skills', '.codex-plugin', '.agents', '.codex', 'bin'];
 
 async function readPluginVersion() {
   const raw = await fs.readFile(join(ROOT, '.claude-plugin', 'plugin.json'), 'utf8');
@@ -165,6 +173,86 @@ async function install() {
   console.log('Learn more:');
   console.log('  npx @45ck/prompt-language init    (scaffold a starter flow)');
   console.log('  https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md');
+}
+
+async function installCodex() {
+  const version = await readPluginVersion();
+  const now = new Date().toISOString();
+  const PLUGINS_DIR = join(CODEX_CACHE_DIR, 'prompt-language', version);
+  console.log(`Installing prompt-language Codex scaffold v${version}...`);
+
+  if (!existsSync(join(ROOT, 'dist'))) {
+    console.error('Error: dist/ directory not found. Run "npm run build" first.');
+    process.exit(1);
+  }
+
+  try {
+    await fs.rm(OLD_CODEX_LOCAL_DIR, { recursive: true, force: true });
+    await fs.rm(join(OLD_CODEX_MARKETPLACE_DIR, '.codex-plugin'), { recursive: true, force: true });
+  } catch {
+    // ignore — old location may not exist
+  }
+
+  await ensureDir(PLUGINS_DIR);
+  for (const dir of DIRS_TO_COPY_CODEX) {
+    const src = join(ROOT, dir);
+    try {
+      await fs.access(src);
+      await copyDir(src, join(PLUGINS_DIR, dir));
+      console.log(`  Copied ${dir}/`);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        console.warn(`  Skipping ${dir}/ (not found)`);
+      } else if (error.code === 'EACCES' || error.code === 'EPERM') {
+        console.error(`  Permission denied copying ${dir}/`);
+      } else if (error.code === 'ENOSPC') {
+        console.error(`  Disk full - cannot copy ${dir}/`);
+      } else {
+        console.error(`  Error copying ${dir}/: ${error.message}`);
+      }
+    }
+  }
+
+  await fs.readFile(join(PLUGINS_DIR, '.codex-plugin', 'plugin.json'), 'utf8');
+  const installed = (await readJsonSafe(CODEX_INSTALLED_PLUGINS_PATH)) ?? {
+    version: 2,
+    plugins: {},
+  };
+  installed.plugins = installed.plugins ?? {};
+  installed.plugins[PLUGIN_KEY] = [
+    {
+      scope: 'user',
+      installPath: PLUGINS_DIR,
+      version,
+      installedAt: now,
+      lastUpdated: now,
+    },
+  ];
+  await writeJson(CODEX_INSTALLED_PLUGINS_PATH, installed);
+  console.log('  Registered in Codex installed_plugins.json');
+
+  const settings = (await readJsonSafe(CODEX_SETTINGS_PATH)) ?? {};
+  settings.extraKnownMarketplaces = settings.extraKnownMarketplaces ?? {};
+  settings.extraKnownMarketplaces[MARKETPLACE_NAME] = {
+    source: {
+      source: 'directory',
+      path: CODEX_CACHE_DIR,
+    },
+  };
+  settings.enabledPlugins = settings.enabledPlugins ?? {};
+  settings.enabledPlugins[PLUGIN_KEY] = true;
+  await writeJson(CODEX_SETTINGS_PATH, settings);
+  console.log('  Registered marketplace in Codex settings.json');
+  console.log('  Enabled in Codex settings.json');
+
+  await enableCodexHooksConfig();
+
+  console.log(`\nprompt-language Codex scaffold v${version} installed successfully.\n`);
+  console.log('Try it now:');
+  console.log('  codex exec "Fix the failing tests. done when: tests_pass"\n');
+  console.log('Learn more:');
+  console.log('  npx @45ck/prompt-language validate    (preview a flow)');
+  console.log('  https://github.com/45ck/prompt-language/blob/main/docs/eval-parity-matrix.md');
 }
 
 async function readFlowText(args, commandName) {
@@ -319,6 +407,50 @@ async function uninstall() {
   console.log('\nprompt-language runtime uninstalled successfully.');
 }
 
+async function uninstallCodex() {
+  console.log('Uninstalling prompt-language Codex scaffold...');
+
+  try {
+    await fs.rm(CODEX_CACHE_DIR, { recursive: true, force: true });
+    console.log(`  Removed ${CODEX_CACHE_DIR}`);
+  } catch {
+    console.log('  Cache directory not found (already removed)');
+  }
+
+  try {
+    await fs.rm(OLD_CODEX_LOCAL_DIR, { recursive: true, force: true });
+    await fs.rm(join(OLD_CODEX_MARKETPLACE_DIR, '.codex-plugin'), { recursive: true, force: true });
+  } catch {
+    // ignore — old location may not exist
+  }
+
+  const installed = await readJsonSafe(CODEX_INSTALLED_PLUGINS_PATH);
+  if (installed?.plugins?.[PLUGIN_KEY]) {
+    delete installed.plugins[PLUGIN_KEY];
+    await writeJson(CODEX_INSTALLED_PLUGINS_PATH, installed);
+    console.log('  Removed from Codex installed_plugins.json');
+  }
+
+  const settings = await readJsonSafe(CODEX_SETTINGS_PATH);
+  let changed = false;
+  if (settings?.enabledPlugins?.[PLUGIN_KEY]) {
+    delete settings.enabledPlugins[PLUGIN_KEY];
+    changed = true;
+  }
+  if (settings?.extraKnownMarketplaces?.[MARKETPLACE_NAME]) {
+    delete settings.extraKnownMarketplaces[MARKETPLACE_NAME];
+    changed = true;
+  }
+  if (changed) {
+    await writeJson(CODEX_SETTINGS_PATH, settings);
+    console.log('  Removed from Codex settings.json');
+  }
+
+  await disableCodexHooksConfig();
+
+  console.log('\nprompt-language Codex scaffold uninstalled successfully.');
+}
+
 async function status() {
   const version = await readPluginVersion().catch(() => 'unknown');
   const PLUGINS_DIR = pluginsDir(version);
@@ -347,6 +479,126 @@ async function status() {
   if (!installed || !registered || !enabled || !marketplace) {
     console.log('\nRun "npx @45ck/prompt-language" to install.');
   }
+}
+
+async function statusCodex() {
+  const version = await readPluginVersion().catch(() => 'unknown');
+  const PLUGINS_DIR = join(CODEX_CACHE_DIR, 'prompt-language', version);
+
+  let installed = false;
+  try {
+    await fs.access(PLUGINS_DIR);
+    installed = true;
+  } catch {
+    // not installed
+  }
+
+  const registry = await readJsonSafe(CODEX_INSTALLED_PLUGINS_PATH);
+  const registered = !!registry?.plugins?.[PLUGIN_KEY];
+
+  const settings = await readJsonSafe(CODEX_SETTINGS_PATH);
+  const enabled = !!settings?.enabledPlugins?.[PLUGIN_KEY];
+  const marketplace = !!settings?.extraKnownMarketplaces?.[MARKETPLACE_NAME];
+
+  let configEnabled = false;
+  try {
+    const raw = await fs.readFile(CODEX_CONFIG_PATH, 'utf8');
+    configEnabled = /codex_hooks\s*=\s*true/i.test(raw);
+  } catch {
+    // not configured
+  }
+
+  console.log(`prompt-language Codex scaffold v${version}`);
+  console.log(`  Installed:    ${installed ? 'yes' : 'no'}${installed ? ` (${PLUGINS_DIR})` : ''}`);
+  console.log(`  Registered:   ${registered ? 'yes' : 'no'}`);
+  console.log(`  Marketplace:  ${marketplace ? 'yes' : 'no'}`);
+  console.log(`  Enabled:      ${enabled ? 'yes' : 'no'}`);
+  console.log(`  codex_hooks:  ${configEnabled ? 'yes' : 'no'}`);
+
+  if (!installed || !registered || !enabled || !marketplace || !configEnabled) {
+    console.log('\nRun "npx @45ck/prompt-language codex-install" to install the Codex scaffold.');
+  }
+}
+
+async function enableCodexHooksConfig() {
+  try {
+    const raw = await fs.readFile(CODEX_CONFIG_PATH, 'utf8');
+    if (/codex_hooks\s*=\s*true/i.test(raw)) {
+      return;
+    }
+
+    const updated = insertOrUpdateCodexHooks(raw, true);
+    await fs.writeFile(CODEX_CONFIG_PATH, updated, 'utf8');
+    console.log('  Enabled codex_hooks in config.toml');
+    return;
+  } catch {
+    // create a minimal config if it does not exist
+  }
+
+  await ensureDir(CODEX_DIR);
+  await fs.writeFile(
+    CODEX_CONFIG_PATH,
+    '# prompt-language Codex scaffold.\n# Codex hooks are experimental; opt in explicitly before using the local install.\n\n[features]\ncodex_hooks = true\n',
+    'utf8',
+  );
+  console.log('  Wrote config.toml with codex_hooks = true');
+}
+
+async function disableCodexHooksConfig() {
+  try {
+    const raw = await fs.readFile(CODEX_CONFIG_PATH, 'utf8');
+    if (!/codex_hooks\s*=\s*true/i.test(raw)) {
+      return;
+    }
+
+    const updated = insertOrUpdateCodexHooks(raw, false);
+    await fs.writeFile(CODEX_CONFIG_PATH, updated, 'utf8');
+    console.log('  Removed codex_hooks from config.toml');
+  } catch {
+    // ignore — config may not exist
+  }
+}
+
+function insertOrUpdateCodexHooks(raw, enabled) {
+  const normalized = raw.replace(/\r\n/g, '\n');
+  const lines = normalized.split('\n');
+  const featuresIndex = lines.findIndex((line) => line.trim() === '[features]');
+
+  if (featuresIndex === -1) {
+    if (!enabled) {
+      return raw;
+    }
+    const prefix = normalized.trim().length > 0 ? `${normalized.trimEnd()}\n\n` : '';
+    return `${prefix}[features]\ncodex_hooks = true\n`;
+  }
+
+  let nextSectionIndex = lines.length;
+  for (let i = featuresIndex + 1; i < lines.length; i += 1) {
+    if (lines[i].startsWith('[')) {
+      nextSectionIndex = i;
+      break;
+    }
+  }
+
+  const sectionLines = lines.slice(featuresIndex + 1, nextSectionIndex);
+  const codexLineIndex = sectionLines.findIndex((line) =>
+    /^\s*codex_hooks\s*=\s*true\s*$/.test(line),
+  );
+
+  if (enabled) {
+    if (codexLineIndex >= 0) {
+      return normalized.endsWith('\n') ? normalized : `${normalized}\n`;
+    }
+    lines.splice(nextSectionIndex, 0, 'codex_hooks = true');
+    return lines.join('\n').replace(/\n+$/, '\n');
+  }
+
+  if (codexLineIndex >= 0) {
+    lines.splice(featuresIndex + 1 + codexLineIndex, 1);
+    return lines.join('\n').replace(/\n+$/, '\n');
+  }
+
+  return normalized.endsWith('\n') ? normalized : `${normalized}\n`;
 }
 
 async function configureStatusLine(settings, installDir, autoMode = false) {
@@ -489,11 +741,20 @@ switch (command) {
   case 'install':
     await install();
     break;
+  case 'codex-install':
+    await installCodex();
+    break;
   case 'uninstall':
     await uninstall();
     break;
+  case 'codex-uninstall':
+    await uninstallCodex();
+    break;
   case 'status':
     await status();
+    break;
+  case 'codex-status':
+    await statusCodex();
     break;
   case 'init':
     await init();
@@ -531,8 +792,11 @@ switch (command) {
 
 Commands:
   install      Install the prompt-language plugin (default)
+  codex-install Install the Codex scaffold and local config
   uninstall    Remove the plugin and clean up settings
+  codex-uninstall Remove the Codex scaffold and clean up settings
   status       Show installation status
+  codex-status Show Codex scaffold status
   init         Scaffold a starter flow in the current directory
   run          Execute a .flow file or inline flow text via Claude
   demo         Print an example flow to stdout

@@ -41,7 +41,7 @@ Claude still does the reasoning, editing, and tool use. The runtime provides the
 
 Use the runtime in this order:
 
-1. Install it with `npx @45ck/prompt-language`
+1. Install it with `npx @45ck/prompt-language` or `npx @45ck/prompt-language codex-install`
 2. Validate a flow with `npx @45ck/prompt-language validate`
 3. Run it with `claude -p` or the CLI `run` command
 4. Smoke-test any hook, parsing, advancement, or state-transition change with `npm run eval:smoke`
@@ -117,6 +117,12 @@ Requires [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) 
 npx @45ck/prompt-language
 ```
 
+To install the Codex scaffold locally instead:
+
+```bash
+npx @45ck/prompt-language codex-install
+```
+
 ## SDK
 
 For programmatic use, import the SDK subpath:
@@ -154,16 +160,19 @@ node bin/cli.mjs install
 
 ## CLI commands
 
-| Command                                | What it does                             |
-| -------------------------------------- | ---------------------------------------- |
-| `npx @45ck/prompt-language`            | Install the runtime (default)            |
-| `npx @45ck/prompt-language status`     | Check installation status                |
-| `npx @45ck/prompt-language uninstall`  | Remove the runtime                       |
-| `npx @45ck/prompt-language init`       | Scaffold a starter flow for your project |
-| `npx @45ck/prompt-language validate`   | Parse, lint, score, and preview a flow   |
-| `npx @45ck/prompt-language demo`       | Print an annotated example flow          |
-| `npx @45ck/prompt-language statusline` | Configure Claude Code status line        |
-| `npx @45ck/prompt-language watch`      | Launch live TUI flow monitor             |
+| Command                                     | What it does                             |
+| ------------------------------------------- | ---------------------------------------- |
+| `npx @45ck/prompt-language`                 | Install the runtime (default)            |
+| `npx @45ck/prompt-language codex-install`   | Install the Codex scaffold locally       |
+| `npx @45ck/prompt-language status`          | Check installation status                |
+| `npx @45ck/prompt-language codex-status`    | Check Codex scaffold status              |
+| `npx @45ck/prompt-language uninstall`       | Remove the runtime                       |
+| `npx @45ck/prompt-language codex-uninstall` | Remove the Codex scaffold                |
+| `npx @45ck/prompt-language init`            | Scaffold a starter flow for your project |
+| `npx @45ck/prompt-language validate`        | Parse, lint, score, and preview a flow   |
+| `npx @45ck/prompt-language demo`            | Print an annotated example flow          |
+| `npx @45ck/prompt-language statusline`      | Configure Claude Code status line        |
+| `npx @45ck/prompt-language watch`           | Launch live TUI flow monitor             |
 
 ## Packaged workflows
 

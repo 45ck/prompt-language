@@ -1,0 +1,9 @@
+{
+  "name": "prompt-language",
+  "version": "0.3.0",
+  "description": "A control-flow runtime for Codex CLI with verification gates, persistent state, and deterministic execution. Loops, conditionals, retries, and completion enforcement.",
+  "author": {
+    "name": "45ck"
+  },
+  "license": "MIT"
+}

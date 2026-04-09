@@ -1,0 +1,51 @@
+{
+  "description": "prompt-language runtime hooks for Codex context injection, gate enforcement, and flow visualization",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CODEX_PLUGIN_ROOT}/dist/presentation/hooks/codex-user-prompt-submit.js",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CODEX_PLUGIN_ROOT}/dist/presentation/hooks/codex-stop.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CODEX_PLUGIN_ROOT}/dist/presentation/hooks/codex-post-tool-use.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CODEX_PLUGIN_ROOT}/dist/presentation/hooks/codex-session-start.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

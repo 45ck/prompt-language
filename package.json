@@ -1,7 +1,7 @@
 {
   "name": "@45ck/prompt-language",
   "version": "0.3.0",
-  "description": "A control-flow runtime for Claude Code that enforces verification gates, manages persistent state, and prevents premature completion.",
+  "description": "A control-flow runtime for Claude Code and Codex CLI that enforces verification gates, manages persistent state, and prevents premature completion.",
   "license": "MIT",
   "author": {
     "name": "45ck",
@@ -22,6 +22,7 @@
     "workflow",
     "dsl",
     "agent",
+    "codex",
     "automation",
     "completion-gates",
     "control-flow",
@@ -55,7 +56,10 @@
     "dist/**",
     "skills/**",
     "hooks/**",
-    ".claude-plugin/**"
+    ".claude-plugin/**",
+    ".codex/**",
+    ".codex-plugin/**",
+    ".agents/**"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

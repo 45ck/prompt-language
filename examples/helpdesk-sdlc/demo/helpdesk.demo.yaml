@@ -1,0 +1,85 @@
+meta:
+  title: "QueueDesk Helpdesk Demo"
+
+runner:
+  url: "http://localhost:3000"
+
+chapters:
+  - title: "Sign in"
+    steps:
+      - action: navigate
+        url: "/sign-in"
+        narration: "This helpdesk gives small service teams a clear inbox, ticket workflow, and response handling view."
+      - action: type
+        target:
+          by: label
+          text: "Email"
+          exact: true
+        text: "agent@example.com"
+      - action: type
+        target:
+          by: label
+          text: "Password"
+          exact: true
+        text: "Password123!"
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "Sign in"
+          exact: true
+
+  - title: "Create a ticket"
+    steps:
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "New ticket"
+          exact: true
+        narration: "Capture support issues quickly and route them into the inbox."
+      - action: type
+        target:
+          by: label
+          text: "Subject"
+          exact: true
+        text: "Printer not connecting"
+      - action: type
+        target:
+          by: label
+          text: "Requester email"
+          exact: true
+        text: "jamie@acme.test"
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "Save ticket"
+          exact: true
+
+  - title: "Triage and assign"
+    steps:
+      - action: click
+        target:
+          by: text
+          text: "Printer not connecting"
+          exact: true
+        narration: "Agents can triage, assign, and annotate tickets without losing queue visibility."
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "Assign to me"
+          exact: true
+      - action: click
+        target:
+          by: role
+          role: button
+          name: "Add internal note"
+          exact: true
+      - action: type
+        target:
+          by: label
+          text: "Internal note"
+          exact: true
+        text: "Requested device restart and network check."

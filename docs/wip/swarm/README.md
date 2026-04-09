@@ -4,6 +4,8 @@ This pack captures the current swarm design direction discussed so far and turns
 
 Repo alignment note: this pack is only compatible with the current roadmap if `swarm` stays inside the accepted subagent-first boundary in [docs/design/multi-agent-orchestration.md](../../design/multi-agent-orchestration.md) and lowers to existing runtime primitives.
 
+WIP note: this is an imported planning pack, not shipped syntax or committed runtime behavior.
+
 ## Included docs
 
 - `01-context-and-thesis.md` — what swarms are, why they fit prompt-language, and the guiding mental model
@@ -38,6 +40,8 @@ This keeps the feature aligned with the current product identity:
 - **v1.5**: better ergonomics for competition and coordination
 - **v2**: permissions, richer result schemas, optional cancellation
 - **v3+**: handoffs / nested swarms / shared memory only if evals prove the need
+
+Tracked in Beads as `prompt-language-1wr7`.
 
 ## Artifact generation note
 

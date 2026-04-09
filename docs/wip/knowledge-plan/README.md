@@ -14,6 +14,9 @@ This bundle packages the current plan discussed for Prompt Language around:
 The intent is to keep Prompt Language aligned with its core identity:
 an executable, stateful, verifiable engineering medium for bounded software systems.
 
+WIP note: this is an imported companion planning pack, not shipped syntax or a separate roadmap fork.
+Its backlog impact is folded into the existing memory and vNext alignment beads rather than a new standalone program.
+
 Files:
 
 - docs/01-plan-overview.md

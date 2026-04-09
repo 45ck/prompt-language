@@ -184,6 +184,7 @@ These may still be discussed in research notes, but they should not be described
 
 These fit the accepted subagent-first model:
 
+- `prompt-language-1wr7` — swarm program, provided it stays a lowering-based macro over parent-authored `spawn` / `await` orchestration
 - `prompt-language-9uqe.4` — harness abstraction: configurable runtime adapters instead of claude-only spawn
 - `prompt-language-9uqe.3` — named agents for spawn as harness + default profile resolution
 - `prompt-language-72a5.5` — Codex CLI: spawn/await harness via `codex exec`

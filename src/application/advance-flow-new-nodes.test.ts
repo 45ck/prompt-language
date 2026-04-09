@@ -93,6 +93,28 @@ describe('advanceApproveNode', () => {
     expect(result.state.currentNodePath).toEqual(state.currentNodePath);
   });
 
+  it('timeoutSeconds auto-advances as approved after expiry', () => {
+    const node = createApproveNode('a1', 'Proceed?', 2);
+    const state = buildSession([node, createPromptNode('p1', 'after')]);
+    const awaitingState = {
+      ...state,
+      nodeProgress: {
+        a1: {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'running',
+          startedAt: Date.now() - 5_000,
+        },
+      },
+    } as typeof state;
+
+    const result = advanceApproveNode(node, awaitingState, undefined);
+    expect(result.kind).toBe('advance');
+    expect(result.state.variables['approve_rejected']).toBe('false');
+    expect(result.state.currentNodePath).toEqual([1]);
+    expect(result.state.nodeProgress['a1']?.status).toBe('completed');
+  });
+
   it('yes reply with leading whitespace is normalised', () => {
     const node = createApproveNode('a1', 'Ok?');
     const state = buildSession([node]);

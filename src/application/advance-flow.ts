@@ -461,10 +461,42 @@ export function advanceApproveNode(
   current: SessionState,
   replyText?: string,
 ): AutoAdvanceResult {
+  const progress = current.nodeProgress[node.id];
+  const startedAt = progress?.startedAt;
+  const now = Date.now();
+
+  if (
+    replyText === undefined &&
+    node.timeoutSeconds !== undefined &&
+    node.timeoutSeconds > 0 &&
+    startedAt !== undefined &&
+    now - startedAt >= node.timeoutSeconds * 1000
+  ) {
+    let next = updateVariable(current, 'approve_rejected', 'false');
+    next = updateNodeProgress(next, node.id, {
+      iteration: progress?.iteration ?? 1,
+      maxIterations: progress?.maxIterations ?? 1,
+      status: 'completed',
+      startedAt,
+      completedAt: now,
+    });
+    next = advanceNode(next, advancePath(next.currentNodePath));
+    return { kind: 'advance', state: next, capturedPrompt: null };
+  }
+
   if (replyText === undefined) {
+    const promptState =
+      progress === undefined
+        ? updateNodeProgress(current, node.id, {
+            iteration: 1,
+            maxIterations: 1,
+            status: 'running',
+            startedAt: now,
+          })
+        : current;
     return {
       kind: 'prompt',
-      state: current,
+      state: promptState,
       capturedPrompt: node.message + '\n\nPlease respond with "yes" to approve or "no" to reject.',
     };
   }
@@ -474,12 +506,26 @@ export function advanceApproveNode(
 
   if (APPROVE_YES_TOKENS.has(firstWord)) {
     let next = updateVariable(current, 'approve_rejected', 'false');
+    next = updateNodeProgress(next, node.id, {
+      iteration: progress?.iteration ?? 1,
+      maxIterations: progress?.maxIterations ?? 1,
+      status: 'completed',
+      startedAt,
+      completedAt: now,
+    });
     next = advanceNode(next, advancePath(next.currentNodePath));
     return { kind: 'advance', state: next, capturedPrompt: null };
   }
 
   if (APPROVE_NO_TOKENS.has(firstWord)) {
     let next = updateVariable(current, 'approve_rejected', 'true');
+    next = updateNodeProgress(next, node.id, {
+      iteration: progress?.iteration ?? 1,
+      maxIterations: progress?.maxIterations ?? 1,
+      status: 'completed',
+      startedAt,
+      completedAt: now,
+    });
     next = advanceNode(next, advancePath(next.currentNodePath));
     return { kind: 'advance', state: next, capturedPrompt: null };
   }

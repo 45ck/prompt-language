@@ -1525,13 +1525,25 @@ async function testGroundedWhileLoop() {
 
 async function testContinueInWhileLoop() {
   await withTempDir(async (dir) => {
+    await writeFile(join(dir, 'counter.txt'), '0');
+    await writeFile(
+      join(dir, 'bump-counter.js'),
+      [
+        "const fs = require('node:fs');",
+        "const p = 'counter.txt';",
+        "const current = Number(fs.readFileSync(p, 'utf8').trim());",
+        'const next = current + 1;',
+        'fs.writeFileSync(p, String(next));',
+        'console.log(next);',
+      ].join('\n'),
+    );
     const prompt = [
       'Goal: test continue in while',
       '',
       'flow:',
       '  let counter = "0"',
       '  until ${counter} == "5" max 10',
-      '    let counter = run "node -e \\"console.log(Number(\'${counter}\') + 1)\\""',
+      '    let counter = run "node bump-counter.js"',
       '    if ${counter} == "3"',
       '      continue',
       '    end',

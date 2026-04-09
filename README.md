@@ -37,6 +37,18 @@ Claude still does the reasoning, editing, and tool use. The runtime provides the
 - Repeatable workflows instead of ad hoc follow-up prompts
 - Parallel work when tasks are independent
 
+## Operating model
+
+Use the runtime in this order:
+
+1. Install it with `npx @45ck/prompt-language`
+2. Validate a flow with `npx @45ck/prompt-language validate`
+3. Run it with `claude -p` or the CLI `run` command
+4. Smoke-test any hook, parsing, advancement, or state-transition change with `npm run eval:smoke`
+5. Recover with `/flow:status`, `/flow:reset`, or the troubleshooting guide when state gets stuck
+
+The recovery path is documented in [Troubleshooting](docs/troubleshooting.md). The parity bar and smoke limitations are documented in [Codex Parity Matrix](docs/eval-parity-matrix.md).
+
 ## The problem
 
 You ask Claude to fix a bug. It makes a change and says "Done!" You say "run the tests." They fail. You say "fix those." It fixes one. You say "run the tests again." Two more fail. Five back-and-forth messages for something that should have been automatic.

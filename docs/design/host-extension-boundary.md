@@ -43,6 +43,8 @@ The following do not become prompt-language core features:
 - host MCP server lifecycle management
 - direct editing of host extension manifests as a prompt-language language feature
 
+The same boundary applies to multi-agent work: prompt-language may orchestrate spawned children, but it does not manage host-level agent teams, shared task boards, or skill marketplaces as core runtime concepts.
+
 This is a deliberate boundary, not a missing feature.
 
 ## MCP scope

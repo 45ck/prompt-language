@@ -2,6 +2,19 @@
 
 Common issues and how to resolve them.
 
+## Canonical recovery path
+
+When a flow gets stuck or behaves unexpectedly, use this order:
+
+1. Check the live state with `npx @45ck/prompt-language status` or `/flow:status`.
+2. Inspect `.prompt-language/session-state.json` for `status`, `currentNodePath`, and `nodeProgress`.
+3. Inspect `.prompt-language/audit.jsonl` to see what commands actually ran.
+4. If capture is involved, check `.prompt-language/vars/` for the expected file.
+5. If spawned children are involved, inspect `.prompt-language-*/session-state.json`.
+6. Reset only after you have enough evidence to explain the failure.
+
+If the flow is recoverable, prefer fixing the cause over wiping state. Use `/flow:reset` only when you need a clean rerun or the state is corrupted.
+
 ## Flow not advancing
 
 **Symptom**: Claude keeps receiving the same step, or the flow seems stuck.
@@ -151,6 +164,18 @@ If a child's state file doesn't exist, the child never started or crashed early.
 - Kill orphan child processes: `ps aux | grep 'claude -p'`
 - Clean up child state directories: `rm -rf .prompt-language-*/`
 - Use `/flow:reset` to clear the parent flow and start over.
+
+## Smoke test blocked by auth
+
+**Symptom**: `npm run eval:smoke` exits immediately and reports that Claude login/access is unavailable.
+
+**Meaning**: The harness is working as designed. The host cannot run live smoke because `claude -p` cannot authenticate in this workspace.
+
+**Action**:
+
+- Confirm the host supports live Claude execution.
+- Rerun smoke on a supported host with valid Claude access.
+- Use `node scripts/eval/smoke-test.mjs --history` to inspect historical pass/fail and flake patterns locally.
 
 **Prevention**: Keep spawn count low (2-4 children). Ensure child flows have bounded loops (`max N`) to prevent infinite execution.
 

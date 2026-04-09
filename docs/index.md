@@ -29,6 +29,13 @@ prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code 
 | [WIP Features](wip/index.md)              | Proposed feature pages for the future language and tooling      |
 | [Troubleshooting](troubleshooting.md)     | Stuck flows, failed gates, state file inspection                |
 
+## Operations
+
+| Doc                                          | Contents                                                 |
+| -------------------------------------------- | -------------------------------------------------------- |
+| [Troubleshooting](troubleshooting.md)        | Canonical recovery path for stuck flows and failed smoke |
+| [Codex Parity Matrix](eval-parity-matrix.md) | QA commands, smoke expectations, and host support limits |
+
 ## Examples
 
 | Example                                                        | Pattern                                            |

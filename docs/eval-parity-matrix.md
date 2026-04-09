@@ -25,6 +25,13 @@ This note records the validation bar for Codex parity runs and the evidence coll
 - Live smoke is mandatory for feature-level QA, but it requires a host where `claude -p` can authenticate.
 - Native Windows remains unsupported for hooks and live smoke parity.
 - When auth is missing, the harness should fail fast with one explicit blocker instead of running empty scenarios.
+- `node scripts/eval/smoke-test.mjs --history` is a local analysis tool only. It summarizes stored smoke runs, pass rates, and fail streaks, but it does not validate the live host.
+
+## How to read this matrix
+
+- `npm run test`, `npm run ci`, and `npm run eval:e2e` are repo-side evidence.
+- `npm run eval:smoke` is host-side evidence and is the only entry that proves the plugin works through a real Claude loop.
+- If smoke is blocked, the gap is environmental, not a passing signal.
 
 ## Workspace evidence
 

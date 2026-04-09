@@ -160,6 +160,8 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **AE: foreach-spawn** — parallel fan-out creates per-item files via spawned children (slow)
 - **AF: Send/receive** — child sends message to parent via `send parent`, parent captures via `receive` (slow)
 
+If smoke fails fast with a Claude auth or login blocker, that is a host limitation, not a plugin success signal. Use [docs/troubleshooting.md](docs/troubleshooting.md) for the recovery path and [docs/eval-parity-matrix.md](docs/eval-parity-matrix.md) for the current parity bar. The history report command `node scripts/eval/smoke-test.mjs --history` is for local analysis only.
+
 ### When to smoke test
 
 Always. Specifically:

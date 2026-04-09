@@ -240,7 +240,7 @@ end
 ### Pairwise comparison
 
 ```text
-eval "single-vs-multifile"
+eval "single-vs-multi-file"
   dataset: "datasets/factory/*.jsonl"
   candidates:
     - flow "flows/single-file.flow"
@@ -274,7 +274,7 @@ These capabilities are necessary for evaluation, but they are better treated as 
 
 ```text
 prompt-language eval run docs/evals/auth-regression.flow
-prompt-language eval compare docs/evals/single-vs-multifile.flow
+prompt-language eval compare docs/evals/single-vs-multi-file.flow
 prompt-language eval replay run_2026_04_09_001
 prompt-language eval annotate run_2026_04_09_001 --rubric bugfix_quality
 ```
@@ -374,7 +374,7 @@ Today, the closest approximation is:
 
 ## Open questions
 
-1. Should `judge` results be capturable directly in normal flows, or only inside `eval` and `review`?
+1. Should `judge` results be captured directly in normal flows, or only inside `eval` and `review`?
 2. Should pairwise comparison be a first-class `compare` block or a mode on `eval`?
 3. Where should traces live: session state, separate event logs, or eval-only artifacts?
 4. How much of the eval stack belongs in the DSL versus the CLI and report tooling?

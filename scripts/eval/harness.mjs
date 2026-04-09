@@ -20,6 +20,25 @@ function cleanEnv() {
   return env;
 }
 
+function buildCodexPrompt(prompt) {
+  return [
+    'You are executing a prompt-language flow, not doing open-ended coding.',
+    'Treat the text below as a DSL program and follow it literally.',
+    'Rules:',
+    '- Execute prompt, run, let/var, while, until, retry, if/else, try/catch/finally, foreach, break, continue, spawn, await, remember, send, receive, import, and use exactly as written.',
+    '- Honor variable interpolation like ${name} and conditionals like and/or, comparisons, and grounded-by commands.',
+    '- Remember nodes are concrete file writes, not abstract memory: write `.prompt-language/memory.json` as a JSON array of objects with at least `timestamp`, and optionally `text`, `key`, and `value`.',
+    '- For `remember key="..." value="..."`, replace any older entry with the same key so the file keeps the latest value.',
+    '- let x = memory "key" reads the latest remembered value back from that file.',
+    '- Imported libraries and use namespace.symbol(...) calls must be expanded before continuing.',
+    '- Do not inspect the repository unless the flow explicitly tells you to.',
+    '- Do not explain your reasoning.',
+    '- Do not write code unless the flow commands explicitly create or modify files.',
+    '',
+    prompt,
+  ].join('\n');
+}
+
 function versionCommand() {
   if (HARNESS === 'codex') {
     return codexBinaryCommand('--version');
@@ -98,7 +117,7 @@ function execCodex(prompt, cwd, timeout, model, strict) {
   try {
     const [command, ...commandArgs] = codexBinaryCommand(...args);
     execFileSync(command, commandArgs, {
-      input: prompt,
+      input: buildCodexPrompt(prompt),
       encoding: 'utf-8',
       timeout,
       env: cleanEnv(),

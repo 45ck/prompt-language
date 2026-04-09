@@ -36,6 +36,7 @@ The following features are implemented and documented in the reference:
 
 | Page                                     | Focus                                               | Status                                      |
 | ---------------------------------------- | --------------------------------------------------- | ------------------------------------------- |
+| [Evals and Judges](evals-and-judges.md)  | Evaluation suites, reusable judges, and baselines   | Proposed                                    |
 | [VS Code Extension](vscode-extension.md) | Syntax highlighting and inline lint                 | Basic package shipped (`vscode-extension/`) |
 | [Language Server](lsp.md)                | Editor-agnostic autocomplete and diagnostics        | Planned                                     |
 | [Web Playground](playground.md)          | Browser-based flow authoring and dry-run simulation | Planned                                     |

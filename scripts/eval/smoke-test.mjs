@@ -151,6 +151,29 @@ function claudeRun(prompt, cwd) {
   }
 }
 
+function assertClaudeAccess() {
+  const env = { ...process.env };
+  delete env.CLAUDECODE;
+  try {
+    execSync('claude -p "Smoke preflight"', {
+      encoding: 'utf-8',
+      timeout: 15_000,
+      env,
+    });
+  } catch (err) {
+    const output = `${err?.stdout ?? ''}\n${err?.stderr ?? ''}\n${err?.message ?? ''}`;
+    if (/does not have access to Claude|login again|contact your administrator/i.test(output)) {
+      console.error(
+        '[smoke-test] BLOCKED — Claude login/access is unavailable in this environment.',
+      );
+      console.error(
+        '[smoke-test] `claude -p` returned an authorization error; smoke scenarios were not run.',
+      );
+      process.exit(2);
+    }
+  }
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -1736,6 +1759,8 @@ async function main() {
     console.log('[smoke-test] SKIP — claude CLI not found.');
     process.exit(0);
   }
+
+  assertClaudeAccess();
 
   // Plugin should already be built + installed by npm run eval:smoke.
   // Run tests — A, B, E, H, I, K are fast; C is medium; D is slow (gate loop)

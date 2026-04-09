@@ -1,0 +1,15 @@
+name: prompt-language-ghax
+
+on:
+  pull_request:
+
+jobs:
+  run-flow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: 45ck/prompt-language-action@v1
+        with:
+          flow-file: examples/ilex-libraries/project.flow
+          api-key: ${{ secrets.ANTHROPIC_API_KEY }}

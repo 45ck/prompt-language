@@ -115,14 +115,14 @@ This is the more general and lower-risk feature.
 
 ```yaml
 match ${route.label}
-  case "crm"
-    use crm.run()
-  case "helpdesk"
-    use helpdesk.run()
-  case "booking"
-    use booking.run()
-  default
-    use generic.run()
+case "crm"
+use crm.run()
+case "helpdesk"
+use helpdesk.run()
+case "booking"
+use booking.run()
+default
+use generic.run()
 end
 ```
 

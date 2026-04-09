@@ -76,9 +76,11 @@ prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code 
 
 ## Design
 
-| Doc                                                                                   | Contents                                                        |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)             | Subagent-first decision, agent-team out of scope                |
-| [Skill / Profile / Agent / Flow File](design/terminology-skill-profile-agent-flow.md) | Canonical terminology and layer placement for the backlog track |
-| [Host Extension Boundary](design/host-extension-boundary.md)                          | Host-managed skills/hooks/plugins/MCP stay outside core DSL     |
-| [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md)    | Proposed runtime decision to measure compact rendering safely   |
+| Doc                                                                                   | Contents                                                             |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)             | Subagent-first decision, agent-team out of scope                     |
+| [Skill / Profile / Agent / Flow File](design/terminology-skill-profile-agent-flow.md) | Canonical terminology and layer placement for the backlog track      |
+| [Host Extension Boundary](design/host-extension-boundary.md)                          | Host-managed skills/hooks/plugins/MCP stay outside core DSL          |
+| [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md)    | Proposed runtime decision to measure compact rendering safely        |
+| [Swarm Design Pack](wip/swarm/README.md)                                              | WIP design pack for lowering-based swarm orchestration               |
+| [Knowledge Plan Pack](wip/knowledge-plan/README.md)                                   | WIP companion pack for memory, knowledge, checkpoints, and retrieval |

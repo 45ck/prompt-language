@@ -51,11 +51,13 @@ The following features are implemented and documented in the reference:
 | [Markdown, Agent Memory, and Prompt Language](markdown-agent-memory.md)                    | Defines the Markdown interop model and the split between deterministic and grounding retrieval |
 | [Memory Roadmap](memory-roadmap.md)                                                        | Phased implementation order for disciplined memory and knowledge features                      |
 | [Memory Source Notes](memory-source-notes.md)                                              | Repo-grounded and external source notes behind the memory/Markdown direction                   |
+| [Knowledge Plan Pack README](knowledge-plan/README.md)                                     | Condensed companion pack for knowledge, checkpoints, retrieval, and phased adoption order      |
 
 ## Architecture packs and future-facing design sets
 
 | Page                                                        | Focus                                                                    |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Swarm Design Pack README](swarm/README.md)                 | Manager-owned swarm macros that lower to existing spawn/await primitives |
 | [vNext Pack README](vnext/README.md)                        | Entry point to the imported vNext architecture and planning package      |
 | [vNext Executive Summary](vnext/00-executive-summary.md)    | Refined thesis, critiques of the current roadmap, and build-first order  |
 | [vNext Master Spec and Plan](vnext/MASTER-SPEC-AND-PLAN.md) | Consolidated architecture target, major specs, and phased implementation |

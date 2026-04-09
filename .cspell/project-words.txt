@@ -17,12 +17,14 @@ worktree
 worktrees
 lmep
 automatable
+checkpointed
 mylib
 unrecognised
 normalised
 taskkill
 diffable
 editability
+ebnf
 helpdesk
 overclaiming
 overformalize
@@ -32,6 +34,7 @@ reranking
 resumability
 adrs
 backout
+desugared
 deprioritizations
 flowtest
 lintable
@@ -40,4 +43,5 @@ overdesigned
 replayability
 replayable
 snapshotderivation
+statefulness
 underweights

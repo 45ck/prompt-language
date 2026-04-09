@@ -150,6 +150,7 @@ The project already has an active terminology backlog because "skill", "profile"
 - experimentation with explicit fan-out patterns remains in scope
 - named agents remain valid if they mean **spawn-time defaults**, not always-on peers
 - harness abstraction remains valid if it preserves the same parent-child orchestration contract
+- future swarm-style design work is still valid if it compiles down to the same parent-authored model; see [docs/wip/swarm/README.md](../wip/swarm/README.md)
 
 ### What does not happen now
 

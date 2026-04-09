@@ -37,15 +37,27 @@
  */
 
 import { execSync } from 'node:child_process';
-import { mkdtemp, rm, readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises';
+import {
+  mkdtemp,
+  rm,
+  readFile,
+  writeFile,
+  mkdir,
+  readdir,
+  unlink,
+  appendFile,
+  access,
+} from 'node:fs/promises';
 import { tmpdir, platform } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RESULTS_DIR = join(__dirname, 'results');
+const FLAKY_REPORT = join(__dirname, 'flaky-report.mjs');
 
 const QUICK_MODE = process.argv.includes('--quick');
+const HISTORY_MODE = process.argv.includes('--history');
 const TIMEOUT = 120_000;
 
 let passed = 0;
@@ -89,6 +101,7 @@ async function writeResults(totalStart) {
   await mkdir(RESULTS_DIR, { recursive: true });
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const runId = new Date().toISOString();
   const filename = `smoke-${timestamp}.json`;
   const filepath = join(RESULTS_DIR, filename);
 
@@ -100,7 +113,7 @@ async function writeResults(totalStart) {
   }
 
   const report = {
-    timestamp: new Date().toISOString(),
+    timestamp: runId,
     os: platform(),
     nodeVersion,
     quickMode: QUICK_MODE,
@@ -112,6 +125,27 @@ async function writeResults(totalStart) {
 
   await writeFile(filepath, JSON.stringify(report, null, 2));
   console.log(`\n[smoke-test] Results written to ${filepath}`);
+  await appendHistory(report, runId);
+}
+
+async function appendHistory(report, runId) {
+  const lines = report.tests.map((test) =>
+    JSON.stringify({
+      date: report.timestamp,
+      runId,
+      testId: test.name,
+      testName: test.label,
+      passed: test.passed,
+      durationMs: test.duration_ms,
+      attempt: 1,
+      quickMode: report.quickMode,
+      os: report.os,
+      nodeVersion: report.nodeVersion,
+    }),
+  );
+
+  await mkdir(RESULTS_DIR, { recursive: true });
+  await appendFile(join(RESULTS_DIR, 'history.jsonl'), `${lines.join('\n')}\n`);
 }
 
 /** Keep only the most recent 50 result files. */
@@ -1749,6 +1783,20 @@ async function testIncludeDirective() {
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
+  if (HISTORY_MODE) {
+    try {
+      await access(FLAKY_REPORT);
+      execSync(`${process.execPath} ${JSON.stringify(FLAKY_REPORT)} --history`, {
+        stdio: 'inherit',
+      });
+      process.exit(0);
+    } catch (err) {
+      if (err?.status != null) process.exit(err.status);
+      console.error('[smoke-test] History report unavailable.');
+      process.exit(1);
+    }
+  }
+
   const totalStart = Date.now();
   console.log('[smoke-test] Starting live CLI smoke tests...\n');
 

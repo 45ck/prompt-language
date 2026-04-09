@@ -13,15 +13,17 @@
  * Exits with code 1 if any test is flaky (for CI integration).
  */
 
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, access } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RESULTS_DIR = join(__dirname, 'results');
+const HISTORY_FILE = join(RESULTS_DIR, 'history.jsonl');
 const FLAKY_THRESHOLD = 0.95;
+const HISTORY_MODE = process.argv.includes('--history');
 
-async function loadResults() {
+async function loadRunFiles() {
   let files;
   try {
     files = (await readdir(RESULTS_DIR))
@@ -39,6 +41,11 @@ async function loadResults() {
     process.exit(1);
   }
 
+  return files;
+}
+
+async function loadResults() {
+  const files = await loadRunFiles();
   const runs = [];
   for (const f of files) {
     try {
@@ -50,6 +57,50 @@ async function loadResults() {
   }
 
   return runs;
+}
+
+async function loadHistoryRuns() {
+  try {
+    await access(HISTORY_FILE);
+  } catch {
+    return loadResults();
+  }
+
+  const content = await readFile(HISTORY_FILE, 'utf-8');
+  const entries = content
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        return JSON.parse(line);
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+
+  const runs = new Map();
+  for (const entry of entries) {
+    const runId = entry.runId ?? entry.date;
+    if (!runs.has(runId)) {
+      runs.set(runId, {
+        timestamp: entry.date,
+        os: entry.os,
+        nodeVersion: entry.nodeVersion,
+        quickMode: Boolean(entry.quickMode),
+        tests: [],
+      });
+    }
+    runs.get(runId).tests.push({
+      name: entry.testId,
+      label: entry.testName,
+      passed: entry.passed,
+      duration_ms: entry.durationMs,
+    });
+  }
+
+  return [...runs.values()].sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
 }
 
 function buildReport(runs) {
@@ -81,12 +132,23 @@ function buildReport(runs) {
     const passRate = s.total > 0 ? s.passes / s.total : 0;
     const avgDuration =
       s.durations.length > 0 ? s.durations.reduce((a, b) => a + b, 0) / s.durations.length : 0;
+
+    let failureStreak = 0;
+    for (let i = runs.length - 1; i >= 0; i--) {
+      const run = runs[i];
+      const test = run.tests.find((t) => t.name === s.name);
+      if (!test) continue;
+      if (test.passed) break;
+      failureStreak++;
+    }
+
     return {
       name: s.name,
       label: s.label,
       passRate,
       runs: s.total,
       avgDuration_ms: avgDuration,
+      failureStreak,
       status: passRate >= FLAKY_THRESHOLD ? 'stable' : 'FLAKY',
     };
   });
@@ -96,15 +158,18 @@ function printReport(entries, runs) {
   console.log('## Smoke Test Stability Report');
   console.log('');
   console.log(`Based on ${runs.length} run(s).`);
+  if (HISTORY_MODE) {
+    console.log('Source: scripts/eval/results/history.jsonl');
+  }
   console.log('');
-  console.log('| Test | Label | Pass Rate | Runs | Avg Duration | Status |');
-  console.log('|------|-------|-----------|------|-------------|--------|');
+  console.log('| Test | Label | Pass Rate | Runs | Avg Duration | Fail Streak | Status |');
+  console.log('|------|-------|-----------|------|-------------|------------|--------|');
 
   for (const e of entries) {
     const rate = `${(e.passRate * 100).toFixed(0)}%`;
     const avgSec = `${(e.avgDuration_ms / 1000).toFixed(1)}s`;
     console.log(
-      `| ${e.name}    | ${e.label.padEnd(30)} | ${rate.padStart(4)}      | ${String(e.runs).padStart(4)} | ${avgSec.padStart(11)} | ${e.status.padEnd(6)} |`,
+      `| ${e.name}    | ${e.label.padEnd(30)} | ${rate.padStart(4)}      | ${String(e.runs).padStart(4)} | ${avgSec.padStart(11)} | ${String(e.failureStreak).padStart(10)} | ${e.status.padEnd(6)} |`,
     );
   }
 
@@ -126,7 +191,7 @@ function printReport(entries, runs) {
 }
 
 async function main() {
-  const runs = await loadResults();
+  const runs = HISTORY_MODE ? await loadHistoryRuns() : await loadResults();
   const entries = buildReport(runs);
   const flakyCount = printReport(entries, runs);
 

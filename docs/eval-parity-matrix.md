@@ -13,11 +13,12 @@ This note records the validation bar for Codex parity runs and the evidence coll
 
 ## Advisory commands
 
-| Command                         | Why it matters                                            | Status in this workspace |
-| ------------------------------- | --------------------------------------------------------- | ------------------------ |
-| `npm run eval:compare:quick`    | Quick parity signal for comparative experiments           | Not rerun in this pass   |
-| `npm run eval:verify`           | Stronger verification benchmark when the host supports it | Not rerun in this pass   |
-| `npm run eval:compare:v4:quick` | Newer comparative eval for regression deltas              | Not rerun in this pass   |
+| Command                                      | Why it matters                                               | Status in this workspace |
+| -------------------------------------------- | ------------------------------------------------------------ | ------------------------ |
+| `node scripts/eval/smoke-test.mjs --history` | Local smoke-history summary with pass rates and fail streaks | Implemented              |
+| `npm run eval:compare:quick`                 | Quick parity signal for comparative experiments              | Not rerun in this pass   |
+| `npm run eval:verify`                        | Stronger verification benchmark when the host supports it    | Not rerun in this pass   |
+| `npm run eval:compare:v4:quick`              | Newer comparative eval for regression deltas                 | Not rerun in this pass   |
 
 ## Supported-host expectation
 

@@ -1,0 +1,15 @@
+Goal: validate shared imports and prompt libraries across multiple flow files
+
+import "libraries/common.flow" as common
+import "libraries/discovery.flow" as discovery
+import "libraries/implementation.flow" as implementation
+import "libraries/release.flow" as release
+
+flow:
+  use discovery.map_shared_scope()
+  use implementation.fix_shared_flow(pkg_mgr="pnpm")
+  use release.prepare_release()
+
+done when:
+  use common.all_tests_pass(test_cmd="pnpm test")
+  gate docs: test -f docs/examples/using-libraries.md

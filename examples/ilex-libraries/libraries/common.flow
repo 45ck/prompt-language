@@ -1,0 +1,17 @@
+library: common
+
+export prompt review_prompt(target="the change"):
+  Review ${target} for correctness, regressions, missing tests, and unclear edge cases. Present findings first.
+
+export flow fix_and_test(test_cmd="npm test"):
+  retry max 3
+    run: ${test_cmd}
+    if command_failed
+      prompt: Use the failure output to fix the root cause. Keep the change scoped to the files that need it.
+    end
+  end
+
+export gates all_tests_pass(test_cmd="npm test"):
+  gate tests: ${test_cmd}
+  gate lint: npm run lint
+  gate typecheck: npm run typecheck

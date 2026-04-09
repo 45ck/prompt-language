@@ -1,0 +1,7 @@
+library: implementation
+
+import "libraries/common.flow" as common
+
+export flow fix_shared_flow(pkg_mgr="pnpm"):
+  prompt: Use the shared fix-and-test loop to keep implementation changes small and verified.
+  use common.fix_and_test(test_cmd="${pkg_mgr} test")

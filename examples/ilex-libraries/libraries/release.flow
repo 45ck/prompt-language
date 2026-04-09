@@ -1,0 +1,7 @@
+library: release
+
+import "libraries/common.flow" as common
+
+export flow prepare_release():
+  prompt: Confirm the release handoff still points at the shared library example and its consumer flows.
+  use common.review_prompt(target="the release handoff")

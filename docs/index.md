@@ -41,6 +41,7 @@ prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code 
 | [Parallel Tasks](examples/parallel-tasks.md)                   | Spawn/await for concurrent work streams            |
 | [Variable Pipeline](examples/variable-pipeline.md)             | Shell pipes for transforms and filtering           |
 | [Memory and Context](examples/memory-and-context.md)           | Load remembered context into flow variables        |
+| [Using Libraries](examples/using-libraries.md)                 | Share prompts, flows, and gates across files       |
 | [Producer / Consumer Messaging](examples/producer-consumer.md) | Child-to-child task handoff via `send` / `receive` |
 | [Showcase](showcase.md)                                        | 140+ worked examples across all primitives         |
 

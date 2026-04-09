@@ -1,0 +1,7 @@
+library: discovery
+
+import "libraries/common.flow" as common
+
+export flow map_shared_scope():
+  prompt: Describe which flow files reuse the shared library and what each consumer is responsible for.
+  use common.review_prompt(target="the shared-library discovery flow")

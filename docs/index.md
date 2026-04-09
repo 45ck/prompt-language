@@ -51,9 +51,10 @@ prompt-language is a control-flow runtime for Claude Code. It wraps Claude Code 
 
 ## Evaluation
 
-| Doc                               | Contents                                           |
-| --------------------------------- | -------------------------------------------------- |
-| [Eval Analysis](eval-analysis.md) | 45-hypothesis A/B comparison, methodology, results |
+| Doc                                          | Contents                                           |
+| -------------------------------------------- | -------------------------------------------------- |
+| [Eval Analysis](eval-analysis.md)            | 45-hypothesis A/B comparison, methodology, results |
+| [Codex Parity Matrix](eval-parity-matrix.md) | Current parity bar for tests, CI, smoke, and evals |
 
 ## Research
 

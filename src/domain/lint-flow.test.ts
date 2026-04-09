@@ -291,6 +291,34 @@ describe('H-DX-001: unresolved variable warnings', () => {
     expect(lintFlow(spec)).toEqual([]);
   });
 
+  it('does not warn on runtime critique, race, or approval variables', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createPromptNode(
+          'p1',
+          'Critique: ${_review_critique}, winner: ${race_winner}, rejected: ${approve_rejected}',
+        ),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
+
+  it('does not warn on memory-prefetched keys', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'Lang: ${preferred_language}, Stack: ${preferred_stack}')],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      ['preferred_language', 'preferred_stack'],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
+
   it('does not warn on _index and _length auto-variables', () => {
     const spec = createFlowSpec(
       'test',

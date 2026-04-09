@@ -28,6 +28,9 @@ const BUILTIN_AUTO_VARIABLES = new Set([
   'command_succeeded',
   'last_stdout',
   'last_stderr',
+  'approve_rejected',
+  '_review_critique',
+  'race_winner',
 ]);
 
 /** Condition predicates that require a run node to change state. */
@@ -59,8 +62,11 @@ export function levenshtein(a: string, b: string): number {
 }
 
 /** Collect all variable names defined by let/var nodes in the AST. */
-function collectDefinedVariables(nodes: readonly FlowNode[]): Set<string> {
-  const defined = new Set<string>();
+function collectDefinedVariables(
+  nodes: readonly FlowNode[],
+  initialNames: readonly string[] = [],
+): Set<string> {
+  const defined = new Set<string>(initialNames);
   for (const node of nodes) {
     switch (node.kind) {
       case 'let':
@@ -565,7 +571,7 @@ export function lintFlow(spec: FlowSpec, _importRegistry?: ImportRegistry): read
   lintNodes(spec.nodes, false, warnings);
 
   // H-DX-001: Check for unresolved variable references
-  const definedVars = collectDefinedVariables(spec.nodes);
+  const definedVars = collectDefinedVariables(spec.nodes, spec.memoryKeys ?? []);
   lintUnresolvedVars(spec.nodes, definedVars, warnings);
 
   // H-SEC-007: Gaslighting detection — warn when all run nodes are conditional

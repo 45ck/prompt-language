@@ -3,11 +3,10 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 
 const DEFAULT_HARNESS = 'claude';
 const HARNESS = parseHarness(process.argv, process.env.EVAL_HARNESS);
-let codexEntryPoint;
 
 function parseHarness(argv, envHarness) {
   const flagIndex = argv.indexOf('--harness');
@@ -29,39 +28,24 @@ function versionCommand() {
   return ['claude', '--version'];
 }
 
-function resolveCodexEntryPoint() {
-  if (codexEntryPoint) {
-    return codexEntryPoint;
-  }
+function quotePowerShellArg(value) {
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
 
-  if (process.platform === 'win32') {
-    const wrapperPath = execFileSync(
-      'powershell',
-      ['-NoProfile', '-Command', '(Get-Command codex).Path'],
-      {
-        encoding: 'utf-8',
-        timeout: 5000,
-        env: cleanEnv(),
-      },
-    ).trim();
-    codexEntryPoint = join(
-      dirname(wrapperPath),
-      'node_modules',
-      '@openai',
-      'codex',
-      'bin',
-      'codex.js',
-    );
-    return codexEntryPoint;
-  }
-
-  codexEntryPoint = 'codex';
-  return codexEntryPoint;
+function buildCodexPowerShellCommand(args) {
+  return `& codex ${args.map(quotePowerShellArg).join(' ')}`;
 }
 
 function codexBinaryCommand(...args) {
   if (process.platform === 'win32') {
-    return ['node', resolveCodexEntryPoint(), ...args];
+    return [
+      'powershell',
+      '-NoProfile',
+      '-ExecutionPolicy',
+      'Bypass',
+      '-Command',
+      buildCodexPowerShellCommand(args),
+    ];
   }
 
   return ['codex', ...args];
@@ -97,7 +81,7 @@ function execCodex(prompt, cwd, timeout, model, strict) {
   );
   const args = [
     'exec',
-    '--full-auto',
+    '--dangerously-bypass-approvals-and-sandbox',
     '--skip-git-repo-check',
     '--output-last-message',
     outputFile,

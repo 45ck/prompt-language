@@ -183,7 +183,7 @@ function assertClaudeAccess() {
   }
 
   try {
-    runHarnessPrompt('Smoke preflight', {
+    runHarnessPrompt('Return only OK', {
       cwd: process.cwd(),
       timeout: TIMEOUT,
       strict: true,

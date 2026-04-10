@@ -13,6 +13,7 @@ import { FileStateStore } from '../../infrastructure/adapters/file-state-store.j
 import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
+import { buildReviewJudgeRetryPrompt } from '../../domain/review-judge-capture.js';
 import { findNodeById } from '../../domain/flow-node.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
 import type { SessionState } from '../../domain/session-state.js';
@@ -47,11 +48,15 @@ async function suggestFlows(): Promise<string | null> {
  * Find a let-prompt node that is currently awaiting capture.
  * Returns the variable name if found, null otherwise.
  */
-function findAwaitingCapture(state: SessionState): string | null {
+function findAwaitingCapturePrompt(state: SessionState): string | null {
   for (const [nodeId, progress] of Object.entries(state.nodeProgress)) {
     if (progress.status === 'awaiting_capture') {
       const node = findNodeById(state.flowSpec.nodes, nodeId);
-      if (node?.kind === 'let') return node.variableName;
+      if (node?.kind === 'let')
+        return buildCaptureRetryPrompt(node.variableName, state.captureNonce);
+      if (node?.kind === 'review' && node.judgeName) {
+        return buildReviewJudgeRetryPrompt(node.id, state.captureNonce);
+      }
     }
   }
   return null;
@@ -95,11 +100,11 @@ async function main(): Promise<void> {
     process.stderr.write(`\n${colorizeFlow(rendered)}\n`);
 
     // Compaction-aware: re-emit capture prompt if a variable is awaiting capture
-    const awaitingVar = findAwaitingCapture(state);
+    const capturePrompt = findAwaitingCapturePrompt(state);
     let captureContext = '';
-    if (awaitingVar) {
-      debug(`SessionStart: re-emitting capture for var "${awaitingVar}"`);
-      captureContext = '\n\n' + buildCaptureRetryPrompt(awaitingVar, state.captureNonce);
+    if (capturePrompt) {
+      debug('SessionStart: re-emitting awaiting capture prompt');
+      captureContext = '\n\n' + capturePrompt;
     }
 
     const output = JSON.stringify({

@@ -228,4 +228,39 @@ describe('session-start hook (integration)', () => {
     expect(parsed.additionalContext).toContain('answer');
     expect(parsed.additionalContext).toContain('.prompt-language/vars/answer');
   });
+
+  it('re-emits named review judge capture when a review node is awaiting capture', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Review judge resume'),
+      captureNonce: 'judge12345',
+      nodeProgress: {
+        rv1: { iteration: 1, maxIterations: 3, status: 'awaiting_capture' },
+      },
+      flowSpec: {
+        goal: 'Review judge resume',
+        nodes: [
+          {
+            kind: 'review',
+            id: 'rv1',
+            maxRounds: 3,
+            judgeName: 'impl_quality',
+            body: [{ kind: 'prompt', id: 'p1', text: 'Draft' }],
+          },
+        ],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+        judges: [{ name: 'impl_quality', lines: ['kind: model'] }],
+      },
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain('JSON capture');
+    expect(parsed.additionalContext).toContain('__review_judge_rv1__');
+  });
 });

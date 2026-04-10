@@ -6,7 +6,11 @@ import {
   updateSpawnedChild,
 } from '../domain/session-state.js';
 import { updateRaceChildren } from '../domain/session-state.js';
-import { createFlowSpec } from '../domain/flow-spec.js';
+import {
+  createFlowSpec,
+  createJudgeDefinition,
+  createRubricDefinition,
+} from '../domain/flow-spec.js';
 import {
   createApproveNode,
   createReviewNode,
@@ -20,6 +24,7 @@ import {
   createLetNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
+import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { MemoryStore } from './ports/memory-store.js';
 import type { MessageStore } from './ports/message-store.js';
@@ -33,6 +38,28 @@ function buildSession(nodes: Parameters<typeof createFlowSpec>[1]) {
 
 function makeRunner(exitCode = 0, stdout = '', stderr = ''): CommandRunner {
   return { run: vi.fn().mockResolvedValue({ exitCode, stdout, stderr }) };
+}
+
+function buildSessionWithJudges(nodes: Parameters<typeof createFlowSpec>[1]) {
+  const spec = createFlowSpec(
+    'test',
+    nodes,
+    [],
+    [],
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    [createRubricDefinition('bugfix_quality', ['criterion correctness type boolean'])],
+    [
+      createJudgeDefinition(
+        'impl_quality',
+        ['kind: model', 'rubric: "bugfix_quality"'],
+        'bugfix_quality',
+      ),
+    ],
+  );
+  return createSessionState('s1', spec);
 }
 
 // ── advanceApproveNode (exported directly) ────────────────────────────
@@ -265,6 +292,115 @@ describe('autoAdvanceNodes — review node', () => {
       'Grounded review could not run because no command runner is available.',
     );
     expect(capturedPrompt).toBe('Draft');
+  });
+
+  it('with named judge: emits a JSON capture prompt after body exhaustion', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn().mockResolvedValue(undefined),
+    };
+    const reviewNode = createReviewNode(
+      'rv1',
+      [createPromptNode('p1', 'Draft')],
+      3,
+      'Keep the fix minimal.',
+      undefined,
+      false,
+      'impl_quality',
+    );
+    let state = buildSessionWithJudges([reviewNode]);
+    state = {
+      ...state,
+      currentNodePath: [0, 1],
+      nodeProgress: { rv1: { iteration: 1, maxIterations: 3, status: 'running' } },
+      variables: {
+        last_stdout: 'tests passed',
+        last_stderr: '',
+        command_failed: false,
+      },
+    };
+
+    const result = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toContain('.prompt-language/vars/__review_judge_rv1__');
+    expect(result.capturedPrompt).toContain('Execute the named review judge "impl_quality"');
+    expect(result.capturedPrompt).toContain('kind: model');
+    expect(result.state.nodeProgress['rv1']?.status).toBe('awaiting_capture');
+    expect(captureReader.clear).toHaveBeenCalledWith('__review_judge_rv1__');
+  });
+
+  it('with named judge captured pass JSON: persists verdict and advances', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          pass: true,
+          confidence: 0.88,
+          reason: 'Implementation quality is acceptable.',
+          evidence: ['tests passed', 'stderr empty'],
+          abstain: false,
+        }),
+      ),
+      clear: vi.fn().mockResolvedValue(undefined),
+    };
+    const reviewNode = createReviewNode(
+      'rv1',
+      [createPromptNode('p1', 'Draft')],
+      3,
+      undefined,
+      undefined,
+      false,
+      'impl_quality',
+    );
+    const after = createPromptNode('p2', 'Judged');
+    let state = buildSessionWithJudges([reviewNode, after]);
+    state = {
+      ...state,
+      currentNodePath: [0, 1],
+      nodeProgress: {
+        rv1: { iteration: 1, maxIterations: 3, status: 'awaiting_capture', askRetryCount: 0 },
+      },
+    };
+
+    const result = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toBe('Judged');
+    expect(result.state.variables['_review_result.pass']).toBe(true);
+    expect(result.state.variables['_review_result.reason']).toBe(
+      'Implementation quality is acceptable.',
+    );
+    expect(result.state.variables['_review_result.judge']).toBe('impl_quality');
+  });
+
+  it('with named judge invalid JSON: retries the judge capture prompt', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('not valid json'),
+      clear: vi.fn().mockResolvedValue(undefined),
+    };
+    const reviewNode = createReviewNode(
+      'rv1',
+      [createPromptNode('p1', 'Draft')],
+      3,
+      undefined,
+      undefined,
+      false,
+      'impl_quality',
+    );
+    let state = buildSessionWithJudges([reviewNode]);
+    state = {
+      ...state,
+      currentNodePath: [0, 1],
+      nodeProgress: {
+        rv1: { iteration: 1, maxIterations: 3, status: 'awaiting_capture', askRetryCount: 0 },
+      },
+    };
+
+    const result = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toContain('JSON capture');
+    expect(result.state.nodeProgress['rv1']?.askRetryCount).toBe(1);
+    expect(result.state.nodeProgress['rv1']?.captureFailureReason).toBe(
+      'invalid judge-result JSON',
+    );
   });
 
   it('max rounds exhausted: advances past non-strict review node', async () => {

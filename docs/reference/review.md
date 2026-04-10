@@ -29,6 +29,24 @@ review grounded-by "npm test" max 3
 end
 ```
 
+Strict fail-closed review:
+
+```yaml
+review strict max 3
+  prompt: Improve the implementation
+  run: npm test
+end
+```
+
+Named judge reuse:
+
+```yaml
+review strict using judge "impl_quality" max 3
+  prompt: Improve the implementation
+  run: npm test
+end
+```
+
 Criteria and grounded together:
 
 ```yaml
@@ -43,12 +61,18 @@ end
 - If `grounded-by` is specified and its command exits 0, the review passes and execution continues.
 - If `grounded-by` exits non-zero, critique is generated and injected as `_review_critique`.
 - `criteria` text is included in the evaluator prompt.
-- If no `grounded-by` is specified, an AI evaluator judges the output.
+- If `using judge "name"` is specified, the named judge is executed through JSON capture and its verdict is stored in `_review_result.*`.
+- Named review judges currently support `kind: model` in runtime v1. Other judge kinds abstain until runner-side support lands.
+- If no `grounded-by` and no named judge are specified, review keeps the backward-compatible permissive evaluator behavior.
 - Default `max` is 3. When rounds are exhausted, execution continues past the block.
+- `review strict` changes the exhaustion behavior: if no passing verdict is reached by `max`, the flow fails closed.
 
 ## Auto-set variables
 
 - `_review_critique` — critique text from the last evaluator round
+- `_review_result` — JSON-serialized v1 judge-result envelope
+- `_review_result.pass` / `.confidence` / `.reason` / `.evidence` / `.evidence_length` / `.abstain`
+- `_review_result.judge` — named judge used for the current review round, when applicable
 
 ## Related
 

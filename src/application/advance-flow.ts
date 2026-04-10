@@ -66,6 +66,11 @@ import {
   buildJudgeRetryPrompt,
 } from '../domain/judge-prompt.js';
 import { createJudgeResult, type JudgeResult } from '../domain/judge-result.js';
+import {
+  buildReviewJudgeCapturePrompt,
+  buildReviewJudgeRetryPrompt,
+  parseReviewJudgeCapture,
+} from '../domain/review-judge-capture.js';
 import { renderNodesToDsl, renderSpawnBody } from './render-node-to-dsl.js';
 
 export function resolveCurrentNode(
@@ -467,7 +472,8 @@ function handleLoopReentry(
 async function handleBodyExhaustion(
   state: SessionState,
   commandRunner?: CommandRunner,
-): Promise<SessionState | null> {
+  captureReader?: CaptureReader,
+): Promise<SessionState | AutoAdvanceResult | null> {
   const path = state.currentNodePath;
   if (path.length <= 1) return null;
 
@@ -579,7 +585,13 @@ async function handleBodyExhaustion(
     }
 
     case 'review': {
-      return handleReviewBodyExhaustion(state, parentPath, parentNode, commandRunner);
+      return handleReviewBodyExhaustion(
+        state,
+        parentPath,
+        parentNode,
+        commandRunner,
+        captureReader,
+      );
     }
 
     case 'foreach_spawn':
@@ -713,6 +725,202 @@ function buildReviewEvidence(parentNode: ReviewNode, state: SessionState): strin
   return evidence;
 }
 
+function extractJudgeKind(parentNode: ReviewNode, state: SessionState): string | null {
+  if (!parentNode.judgeName) return null;
+  const judge = state.flowSpec.judges?.find((entry) => entry.name === parentNode.judgeName);
+  if (!judge) return null;
+  for (const line of judge.lines) {
+    const match = /^kind:\s*(.+)$/i.exec(line.trim());
+    if (!match?.[1]) continue;
+    return match[1].trim().toLowerCase();
+  }
+  return null;
+}
+
+function buildReviewJudgePromptText(parentNode: ReviewNode, state: SessionState): string {
+  const judge = state.flowSpec.judges?.find((entry) => entry.name === parentNode.judgeName);
+  const rubric =
+    judge?.rubric != null
+      ? state.flowSpec.rubrics?.find((entry) => entry.name === judge.rubric)
+      : undefined;
+
+  const availableInputs: string[] = [];
+  const candidateInputs = [
+    ['output', state.variables['output']],
+    ['diff', state.variables['diff'] ?? state.variables['last_diff']],
+    ['last_exit_code', state.variables['last_exit_code']],
+    ['command_failed', state.variables['command_failed']],
+    ['last_stdout', state.variables['last_stdout']],
+    ['last_stderr', state.variables['last_stderr']],
+    ['_review_critique', state.variables['_review_critique']],
+  ] as const;
+
+  for (const [name, value] of candidateInputs) {
+    if (value == null) continue;
+    const serialized =
+      typeof value === 'string'
+        ? truncateReviewEvidence(value)
+        : typeof value === 'boolean' || typeof value === 'number'
+          ? String(value)
+          : truncateReviewEvidence(JSON.stringify(value));
+    if (serialized.trim().length === 0) continue;
+    availableInputs.push(`${name}: ${serialized}`);
+  }
+
+  const judgeLines = judge?.lines?.join('\n') ?? 'judge definition not found';
+  const rubricLines =
+    rubric != null
+      ? rubric.lines.join('\n')
+      : judge?.rubric != null
+        ? `rubric "${judge.rubric}" not found`
+        : '';
+  const reviewCriteria =
+    parentNode.criteria != null ? `\n\nReview criteria:\n${parentNode.criteria}` : '';
+  const rubricSection = rubricLines.length > 0 ? `\n\nReferenced rubric:\n${rubricLines}` : '';
+  const inputSection =
+    availableInputs.length > 0
+      ? `\n\nAvailable review inputs:\n${availableInputs.map((line) => `- ${line}`).join('\n')}`
+      : '\n\nAvailable review inputs:\n- none captured for this round';
+
+  return `[Internal — prompt-language named review judge]
+
+Execute the named review judge "${parentNode.judgeName}" for the current review round.
+Return only JSON matching the provided schema.
+If the available evidence is insufficient, set "abstain": true and "pass": false.
+Do not include markdown fences or extra commentary.${reviewCriteria}
+
+Judge definition:
+${judgeLines}${rubricSection}${inputSection}`;
+}
+
+type ReviewJudgeCaptureStep =
+  | { readonly kind: 'result'; readonly reviewResult: JudgeResult }
+  | AutoAdvanceResult;
+
+async function maybeRunNamedReviewJudge(
+  state: SessionState,
+  parentNode: ReviewNode,
+  captureReader?: CaptureReader,
+): Promise<ReviewJudgeCaptureStep> {
+  const evidence = buildReviewEvidence(parentNode, state);
+  const judgeKind = extractJudgeKind(parentNode, state);
+
+  if (judgeKind != null && judgeKind !== 'model') {
+    evidence.push(`judge-kind: ${judgeKind}`);
+    return {
+      kind: 'result',
+      reviewResult: createJudgeResult(
+        false,
+        0,
+        `Named review judge "${parentNode.judgeName}" uses unsupported kind "${judgeKind}" in runtime v1.`,
+        evidence,
+        true,
+      ),
+    };
+  }
+
+  if (!captureReader) {
+    evidence.push('judge-runtime: no capture reader available');
+    return {
+      kind: 'result',
+      reviewResult: createJudgeResult(
+        false,
+        0,
+        'Named review judge could not run because no capture reader is available.',
+        evidence,
+        true,
+      ),
+    };
+  }
+
+  const progress = state.nodeProgress[parentNode.id];
+  const retryCount = progress?.askRetryCount ?? 0;
+  const isAwaiting = progress?.status === 'awaiting_capture';
+  const captureVar = `__review_judge_${parentNode.id}__`;
+  const updatedBase = {
+    iteration: progress?.iteration ?? 1,
+    maxIterations: progress?.maxIterations ?? parentNode.maxRounds,
+    startedAt: progress?.startedAt,
+    loopStartedAt: progress?.loopStartedAt,
+  };
+
+  if (!isAwaiting) {
+    await captureReader.clear(captureVar);
+    return {
+      kind: 'prompt',
+      state: updateNodeProgress(state, parentNode.id, {
+        ...updatedBase,
+        status: 'awaiting_capture',
+        askRetryCount: 0,
+      }),
+      capturedPrompt: buildReviewJudgeCapturePrompt(
+        buildReviewJudgePromptText(parentNode, state),
+        parentNode.id,
+        state.captureNonce,
+      ),
+    };
+  }
+
+  const captured = await captureReader.read(captureVar);
+  if (captured) {
+    await captureReader.clear(captureVar);
+    const parsed = parseReviewJudgeCapture(captured);
+    if (parsed != null) {
+      return { kind: 'result', reviewResult: parsed };
+    }
+
+    if (retryCount + 1 < DEFAULT_MAX_CAPTURE_RETRIES) {
+      return {
+        kind: 'prompt',
+        state: updateNodeProgress(state, parentNode.id, {
+          ...updatedBase,
+          status: 'awaiting_capture',
+          askRetryCount: retryCount + 1,
+          captureFailureReason: 'invalid judge-result JSON',
+        }),
+        capturedPrompt: buildReviewJudgeRetryPrompt(parentNode.id, state.captureNonce),
+      };
+    }
+
+    evidence.push('judge-runtime: invalid judge-result JSON after retry budget exhausted');
+    return {
+      kind: 'result',
+      reviewResult: createJudgeResult(
+        false,
+        0,
+        'Named review judge did not return valid JSON within the retry budget.',
+        evidence,
+        true,
+      ),
+    };
+  }
+
+  if (retryCount + 1 < DEFAULT_MAX_CAPTURE_RETRIES) {
+    return {
+      kind: 'prompt',
+      state: updateNodeProgress(state, parentNode.id, {
+        ...updatedBase,
+        status: 'awaiting_capture',
+        askRetryCount: retryCount + 1,
+        captureFailureReason: 'capture file empty or not found',
+      }),
+      capturedPrompt: buildReviewJudgeRetryPrompt(parentNode.id, state.captureNonce),
+    };
+  }
+
+  evidence.push('judge-runtime: capture file empty or missing after retry budget exhausted');
+  return {
+    kind: 'result',
+    reviewResult: createJudgeResult(
+      false,
+      0,
+      'Named review judge capture did not arrive within the retry budget.',
+      evidence,
+      true,
+    ),
+  };
+}
+
 async function evaluateReviewResult(
   state: SessionState,
   parentNode: ReviewNode,
@@ -765,10 +973,6 @@ async function evaluateReviewResult(
     }
   }
 
-  if (parentNode.judgeName) {
-    evidence.push('judge-runtime: compatibility fallback (no dedicated judge executor yet)');
-  }
-
   return createJudgeResult(
     true,
     0.25,
@@ -804,11 +1008,22 @@ async function handleReviewBodyExhaustion(
   parentPath: readonly number[],
   parentNode: ReviewNode,
   commandRunner?: CommandRunner,
-): Promise<SessionState> {
+  captureReader?: CaptureReader,
+): Promise<SessionState | AutoAdvanceResult> {
   const progress = state.nodeProgress[parentNode.id];
   const round = progress?.iteration ?? 1;
 
-  const reviewResult = await evaluateReviewResult(state, parentNode, commandRunner);
+  const reviewEvaluation = parentNode.judgeName
+    ? await maybeRunNamedReviewJudge(state, parentNode, captureReader)
+    : {
+        kind: 'result' as const,
+        reviewResult: await evaluateReviewResult(state, parentNode, commandRunner),
+      };
+  if (reviewEvaluation.kind !== 'result') {
+    return reviewEvaluation;
+  }
+
+  const reviewResult = reviewEvaluation.reviewResult;
   let current = persistReviewResult(state, parentNode, reviewResult);
 
   if (reviewResult.pass) {
@@ -1501,8 +1716,9 @@ export async function autoAdvanceNodes(
     const node = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
 
     if (!node) {
-      const exhaustionResult = await handleBodyExhaustion(current, commandRunner);
+      const exhaustionResult = await handleBodyExhaustion(current, commandRunner, captureReader);
       if (!exhaustionResult) break;
+      if ('kind' in exhaustionResult) return exhaustionResult;
       current = exhaustionResult;
       if (current.status !== 'active') {
         return { kind: 'advance', state: current, capturedPrompt: null };

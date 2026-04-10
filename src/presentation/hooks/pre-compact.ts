@@ -17,6 +17,7 @@
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { renderFlowCompact, renderFlowSummary } from '../../domain/render-flow.js';
 import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
+import { buildReviewJudgeRetryPrompt } from '../../domain/review-judge-capture.js';
 import { findNodeById } from '../../domain/flow-node.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
 import type { SessionState } from '../../domain/session-state.js';
@@ -24,12 +25,15 @@ import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
 
 /** Find the variable name awaiting capture, if any. */
-function findAwaitingCapture(state: SessionState): { varName: string; nodeId: string } | null {
+function findAwaitingCapturePrompt(state: SessionState): string | null {
   for (const [nodeId, progress] of Object.entries(state.nodeProgress)) {
     if (progress.status === 'awaiting_capture') {
       const node = findNodeById(state.flowSpec.nodes, nodeId);
       if (node?.kind === 'let') {
-        return { varName: node.variableName, nodeId };
+        return buildCaptureRetryPrompt(node.variableName, state.captureNonce);
+      }
+      if (node?.kind === 'review' && node.judgeName) {
+        return buildReviewJudgeRetryPrompt(node.id, state.captureNonce);
       }
     }
   }
@@ -56,13 +60,11 @@ async function main(): Promise<void> {
   const compact = renderFlowCompact(state);
 
   // Build capture context if a variable is awaiting capture
-  const awaiting = findAwaitingCapture(state);
+  const capturePrompt = findAwaitingCapturePrompt(state);
   let captureContext = '';
-  if (awaiting) {
-    debug(`PreCompact: awaiting capture for var "${awaiting.varName}"`);
-    captureContext =
-      '\n\nIMPORTANT: Variable capture is in progress. ' +
-      buildCaptureRetryPrompt(awaiting.varName, state.captureNonce);
+  if (capturePrompt) {
+    debug('PreCompact: awaiting capture prompt detected');
+    captureContext = '\n\nIMPORTANT: Capture is in progress. ' + capturePrompt;
   }
 
   const summary =

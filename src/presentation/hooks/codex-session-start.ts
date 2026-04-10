@@ -11,6 +11,7 @@ import { FileStateStore } from '../../infrastructure/adapters/file-state-store.j
 import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
+import { buildReviewJudgeRetryPrompt } from '../../domain/review-judge-capture.js';
 import { findNodeById } from '../../domain/flow-node.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
 import type { SessionState } from '../../domain/session-state.js';
@@ -40,11 +41,15 @@ async function suggestFlows(): Promise<string | null> {
   return null;
 }
 
-function findAwaitingCapture(state: SessionState): string | null {
+function findAwaitingCapturePrompt(state: SessionState): string | null {
   for (const [nodeId, progress] of Object.entries(state.nodeProgress)) {
     if (progress.status === 'awaiting_capture') {
       const node = findNodeById(state.flowSpec.nodes, nodeId);
-      if (node?.kind === 'let') return node.variableName;
+      if (node?.kind === 'let')
+        return buildCaptureRetryPrompt(node.variableName, state.captureNonce);
+      if (node?.kind === 'review' && node.judgeName) {
+        return buildReviewJudgeRetryPrompt(node.id, state.captureNonce);
+      }
     }
   }
   return null;
@@ -81,11 +86,11 @@ async function main(): Promise<void> {
     const rendered = renderFlow(state);
     process.stderr.write(`\n${colorizeFlow(rendered)}\n`);
 
-    const awaitingVar = findAwaitingCapture(state);
+    const capturePrompt = findAwaitingCapturePrompt(state);
     let captureContext = '';
-    if (awaitingVar) {
-      debug(`Codex SessionStart: re-emitting capture for var "${awaitingVar}"`);
-      captureContext = '\n\n' + buildCaptureRetryPrompt(awaitingVar, state.captureNonce);
+    if (capturePrompt) {
+      debug('Codex SessionStart: re-emitting awaiting capture prompt');
+      captureContext = '\n\n' + capturePrompt;
     }
 
     const output = JSON.stringify({

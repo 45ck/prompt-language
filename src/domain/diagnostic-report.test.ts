@@ -33,8 +33,10 @@ describe('diagnostic-report', () => {
 
   it('exposes stable code ranges and preflight profile codes', () => {
     expect(DIAGNOSTIC_CODE_RANGES.profile).toBe('PLC');
+    expect(PROFILE_DIAGNOSTIC_CODES.unsupportedApprove).toBe('PLC-004');
     expect(PROFILE_DIAGNOSTIC_CODES.missingGatePrerequisite).toBe('PLC-005');
     expect(RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed).toBe('PLR-006');
+    expect(FLOW_OUTCOME_CODES.approvalDenied).toBe('PLO-003');
     expect(FLOW_OUTCOME_CODES.gateFailed).toBe('PLO-001');
   });
 

@@ -20,12 +20,19 @@ import type { AuditLogger } from './ports/audit-logger.js';
 import { parseFlow, parseGates, detectBareFlow } from './parse-flow.js';
 import { renderFlow, renderFlowSummary, renderCompletionSummary } from '../domain/render-flow.js';
 import { interpolate } from '../domain/interpolate.js';
-import { autoAdvanceNodes, maybeCompleteFlow } from './advance-flow.js';
+import {
+  advanceApproveNode,
+  autoAdvanceNodes,
+  maybeCompleteFlow,
+  resolveCurrentNode,
+  type AutoAdvanceResult,
+} from './advance-flow.js';
 import { formatError } from '../domain/format-error.js';
 import { lintFlow } from '../domain/lint-flow.js';
 import { flowComplexityScore } from '../domain/flow-complexity.js';
 import { terminateRunningSpawnedChildren } from './terminate-spawned-children.js';
 import type { MemoryStore } from './ports/memory-store.js';
+import { FLOW_OUTCOME_CODES, type FlowOutcome } from '../domain/diagnostic-report.js';
 
 const FLOW_BLOCK_RE = /^\s*flow:\s*$/m;
 
@@ -80,6 +87,21 @@ export function looksLikeNaturalLanguage(prompt: string): boolean {
     }
   }
   return false;
+}
+
+function renderAutoAdvanceOutcomeBanner(result: AutoAdvanceResult): string | undefined {
+  const outcome = result.outcomes?.[0];
+  return outcome == null ? undefined : `${outcome.code} ${outcome.summary}`;
+}
+
+function deriveTerminalOutcome(state: SessionState): FlowOutcome | undefined {
+  if (state.status === 'completed' && state.variables['approve_rejected'] === 'true') {
+    return {
+      code: FLOW_OUTCOME_CODES.approvalDenied,
+      summary: 'Approval denied.',
+    };
+  }
+  return undefined;
 }
 
 const DSL_REFERENCE = `\
@@ -329,6 +351,10 @@ export async function injectContext(
 
   // H-PERF-012: Skip full render for terminal flow states
   if (existing?.status === 'completed') {
+    const outcome = deriveTerminalOutcome(existing);
+    if (outcome) {
+      return { prompt: `[prompt-language] ${outcome.code} ${outcome.summary}\n\n${input.prompt}` };
+    }
     return { prompt: `[prompt-language] Flow completed successfully.\n\n${input.prompt}` };
   }
   if (existing?.status === 'failed') {
@@ -358,6 +384,27 @@ export async function injectContext(
             input.prompt,
         };
       }
+    }
+    const currentNode = resolveCurrentNode(
+      hydratedExisting.flowSpec.nodes,
+      hydratedExisting.currentNodePath,
+    );
+    if (currentNode?.kind === 'approve') {
+      const result = advanceApproveNode(currentNode, hydratedExisting, input.prompt);
+      const toSave = result.kind === 'prompt' ? result.state : maybeCompleteFlow(result.state);
+      if (toSave !== hydratedExisting) {
+        await stateStore.save(toSave);
+      }
+      const ctx = renderFlow(toSave);
+      const summary = renderFlowSummary(toSave);
+      const resumeTag = isResumed ? `[resumed from ${summary}]\n` : '';
+      const outcomeBanner = renderAutoAdvanceOutcomeBanner(result);
+      if (result.kind === 'prompt') {
+        return { prompt: `${ctx}\n\n${resumeTag}${result.capturedPrompt}\n\n${summary}` };
+      }
+      const interpolated = interpolate(input.prompt, toSave.variables);
+      const outcomeBlock = outcomeBanner == null ? '' : `[${outcomeBanner}]\n\n`;
+      return { prompt: `${ctx}\n\n${resumeTag}${outcomeBlock}${interpolated}\n\n${summary}` };
     }
     try {
       const result = await autoAdvanceNodes(

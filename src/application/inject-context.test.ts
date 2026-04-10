@@ -11,6 +11,7 @@ import { parseFlow } from './parse-flow.js';
 import { createSessionState } from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
 import {
+  createApproveNode,
   createPromptNode,
   createWhileNode,
   createRunNode,
@@ -380,6 +381,34 @@ describe('injectContext — NL meta-prompt', () => {
 
     expect(result.prompt).toContain('[prompt-language] Flow: Existing flow');
     expect(result.prompt).not.toContain('DSL reference');
+  });
+
+  it('routes active approve replies through runtime approval handling', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Approval flow', [createApproveNode('a1', 'Ship it?')]);
+    const session = createSessionState('approve-1', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'no', sessionId: 'approve-1' }, store);
+
+    expect(result.prompt).toContain('PLO-003 Approval denied: Ship it?');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['approve_rejected']).toBe('true');
+    expect(saved?.status).toBe('completed');
+  });
+
+  it('records approved replies without emitting approval-denied outcomes', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Approval flow', [createApproveNode('a1', 'Ship it?')]);
+    const session = createSessionState('approve-2', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'yes', sessionId: 'approve-2' }, store);
+
+    expect(result.prompt).not.toContain('PLO-003');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['approve_rejected']).toBe('false');
+    expect(saved?.status).toBe('completed');
   });
 });
 
@@ -1051,6 +1080,24 @@ describe('injectContext — terminal flow states', () => {
     expect(result.prompt).toContain('[prompt-language] Flow completed successfully.');
     expect(result.prompt).toContain('What next?');
     expect(result.prompt).not.toContain('prompt: work');
+  });
+
+  it('renders approval denial instead of generic success for completed approve flows', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Approval flow', [createApproveNode('a1', 'Ship it?')]);
+    let session = createSessionState('done-approve', spec);
+    session = {
+      ...session,
+      status: 'completed',
+      variables: { ...session.variables, approve_rejected: 'true' },
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'What next?', sessionId: 'done-approve' }, store);
+
+    expect(result.prompt).toContain('[prompt-language] PLO-003 Approval denied.');
+    expect(result.prompt).toContain('What next?');
+    expect(result.prompt).not.toContain('Flow completed successfully.');
   });
 
   it('returns short summary for failed flow', async () => {

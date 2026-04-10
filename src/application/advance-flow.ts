@@ -67,6 +67,11 @@ import {
 } from '../domain/judge-prompt.js';
 import { createJudgeResult, type JudgeResult } from '../domain/judge-result.js';
 import {
+  createFlowOutcome,
+  FLOW_OUTCOME_CODES,
+  type FlowOutcome,
+} from '../domain/diagnostic-report.js';
+import {
   buildReviewJudgeCapturePrompt,
   buildReviewJudgeRetryPrompt,
   parseReviewJudgeCapture,
@@ -701,7 +706,14 @@ export function advanceApproveNode(
       completedAt: now,
     });
     next = advanceFromPath(next, next.currentNodePath);
-    return { kind: 'advance', state: next, capturedPrompt: null };
+    return {
+      kind: 'advance',
+      state: next,
+      capturedPrompt: null,
+      outcomes: [
+        createFlowOutcome(FLOW_OUTCOME_CODES.approvalDenied, `Approval denied: ${node.message}`),
+      ],
+    };
   }
 
   return {
@@ -1086,9 +1098,24 @@ async function handleReviewBodyExhaustion(
 }
 
 export type AutoAdvanceResult =
-  | { readonly kind: 'prompt'; readonly state: SessionState; readonly capturedPrompt: string }
-  | { readonly kind: 'advance'; readonly state: SessionState; readonly capturedPrompt: null }
-  | { readonly kind: 'pause'; readonly state: SessionState; readonly capturedPrompt: null };
+  | {
+      readonly kind: 'prompt';
+      readonly state: SessionState;
+      readonly capturedPrompt: string;
+      readonly outcomes?: readonly FlowOutcome[] | undefined;
+    }
+  | {
+      readonly kind: 'advance';
+      readonly state: SessionState;
+      readonly capturedPrompt: null;
+      readonly outcomes?: readonly FlowOutcome[] | undefined;
+    }
+  | {
+      readonly kind: 'pause';
+      readonly state: SessionState;
+      readonly capturedPrompt: null;
+      readonly outcomes?: readonly FlowOutcome[] | undefined;
+    };
 
 /** Advance a let node, handling all source types (literal, empty_list, prompt, memory, run). */
 async function advanceLetNode(

@@ -11,6 +11,7 @@ import {
   createJudgeDefinition,
   createRubricDefinition,
 } from '../domain/flow-spec.js';
+import { FLOW_OUTCOME_CODES } from '../domain/diagnostic-report.js';
 import {
   createApproveNode,
   createReviewNode,
@@ -102,6 +103,12 @@ describe('advanceApproveNode', () => {
     const result = advanceApproveNode(node, state, 'no');
     expect(result.kind).toBe('advance');
     expect(result.state.variables['approve_rejected']).toBe('true');
+    expect(result.outcomes).toEqual([
+      {
+        code: FLOW_OUTCOME_CODES.approvalDenied,
+        summary: 'Approval denied: Proceed?',
+      },
+    ]);
   });
 
   it('given "reject" (alias) sets approve_rejected=true and advances', () => {
@@ -110,6 +117,12 @@ describe('advanceApproveNode', () => {
     const result = advanceApproveNode(node, state, 'reject');
     expect(result.kind).toBe('advance');
     expect(result.state.variables['approve_rejected']).toBe('true');
+    expect(result.outcomes).toEqual([
+      {
+        code: FLOW_OUTCOME_CODES.approvalDenied,
+        summary: 'Approval denied: Proceed?',
+      },
+    ]);
   });
 
   it('given unrecognised reply re-prompts without advancing', () => {

@@ -119,6 +119,23 @@ export function advancePath(path: readonly number[]): readonly number[] {
 
 const MAX_OUTPUT_LENGTH = 2000;
 
+type DebugCategory = 'advance' | 'condition' | 'gate' | 'capture';
+
+function parseDebugLevel(value: string | undefined): 0 | 1 | 2 | 3 {
+  if (!value) return 0;
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || normalized === '0' || normalized === 'false') return 0;
+  if (normalized === '1' || normalized === 'true') return 1;
+  if (normalized === '2') return 2;
+  if (normalized === '3') return 3;
+  return 1;
+}
+
+function debugLog(category: DebugCategory, message: string, level: 1 | 2 | 3 = 2): void {
+  if (parseDebugLevel(process.env['PROMPT_LANGUAGE_DEBUG']) < level) return;
+  process.stderr.write(`[PL:${category}] ${message}\n`);
+}
+
 function truncateOutput(output: string): string {
   if (output.length <= MAX_OUTPUT_LENGTH) return output;
   return output.slice(0, MAX_OUTPUT_LENGTH) + '\n... (truncated)';
@@ -215,17 +232,34 @@ export async function evaluateFlowCondition(
 ): Promise<boolean | null> {
   // H-LANG-006: Interpolate ${var} and ${var:-default} before condition evaluation
   const interpolatedCondition = interpolate(condition, variables);
+  debugLog('condition', `Evaluating "${condition}" -> "${interpolatedCondition}"`, 2);
   const pureResult = evaluateCondition(interpolatedCondition, variables);
-  if (pureResult !== null) return pureResult;
+  if (pureResult !== null) {
+    debugLog('condition', `Resolved via expression evaluator: ${String(pureResult)}`, 2);
+    return pureResult;
+  }
 
-  if (!commandRunner) return null;
+  if (!commandRunner) {
+    debugLog('condition', 'Condition unresolved and no command runner available', 2);
+    return null;
+  }
 
   const command = resolveBuiltinCommand(interpolatedCondition);
-  if (!command) return null;
+  if (!command) {
+    debugLog('condition', `No builtin command mapping for "${interpolatedCondition}"`, 2);
+    return null;
+  }
 
+  debugLog('gate', `Running condition command: ${command}`, 3);
   const result = await commandRunner.run(command);
   const inverted = isInvertedPredicate(interpolatedCondition);
-  return inverted ? result.exitCode !== 0 : result.exitCode === 0;
+  const outcome = inverted ? result.exitCode !== 0 : result.exitCode === 0;
+  debugLog(
+    'condition',
+    `Command exit=${result.exitCode} inverted=${String(inverted)} => ${String(outcome)}`,
+    2,
+  );
+  return outcome;
 }
 
 /**
@@ -726,6 +760,7 @@ async function advanceLetPrompt(
     if (captureReader) {
       await captureReader.clear(node.variableName);
       await captureReader.prime?.(node.variableName);
+      debugLog('capture', `Primed capture file for "${node.variableName}"`, 3);
     }
     const updated = updateNodeProgress(current, node.id, {
       iteration: 1,
@@ -749,6 +784,7 @@ async function advanceLetPrompt(
     const captured = await captureReader.read(node.variableName);
     if (captured && captured !== CAPTURE_PENDING_SENTINEL) {
       await captureReader.clear(node.variableName);
+      debugLog('capture', `Captured value for "${node.variableName}"`, 2);
       return { state: current, value: captured };
     }
     if (captured === CAPTURE_PENDING_SENTINEL) {
@@ -762,8 +798,10 @@ async function advanceLetPrompt(
         buildCaptureRetryPrompt(node.variableName, current.captureNonce) +
         '\n\nPlease write a non-empty response to the capture file.';
     }
+    debugLog('capture', `Capture retry for "${node.variableName}": ${failureReason}`, 2);
   } else {
     failureReason = 'no capture reader available';
+    debugLog('capture', `Capture reader unavailable for "${node.variableName}"`, 2);
   }
 
   const iteration = progress.iteration;
@@ -813,6 +851,7 @@ async function advanceLetPromptJson(
     if (captureReader) {
       await captureReader.clear(node.variableName);
       await captureReader.prime?.(node.variableName);
+      debugLog('capture', `Primed JSON capture file for "${node.variableName}"`, 3);
     }
     const updated = updateNodeProgress(current, node.id, {
       iteration: 1,
@@ -842,6 +881,7 @@ async function advanceLetPromptJson(
     const captured = await captureReader.read(node.variableName);
     if (captured && captured !== CAPTURE_PENDING_SENTINEL) {
       await captureReader.clear(node.variableName);
+      debugLog('capture', `Captured JSON value for "${node.variableName}"`, 2);
       return { state: current, value: captured };
     }
     if (captured === CAPTURE_PENDING_SENTINEL) {
@@ -855,8 +895,10 @@ async function advanceLetPromptJson(
         buildJsonCaptureRetryPrompt(node.variableName, node.source.schema, current.captureNonce) +
         '\n\nPlease write a non-empty JSON object to the capture file.';
     }
+    debugLog('capture', `JSON capture retry for "${node.variableName}": ${failureReason}`, 2);
   } else {
     failureReason = 'no capture reader available';
+    debugLog('capture', `JSON capture reader unavailable for "${node.variableName}"`, 2);
   }
 
   const iteration = progress.iteration;
@@ -895,6 +937,8 @@ async function advanceRunNode(
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!commandRunner) return { kind: 'pause', state: current, capturedPrompt: null };
   const command = shellInterpolate(node.command, current.variables);
+  debugLog('advance', `Running node ${node.id} command`, 2);
+  debugLog('gate', `Command: ${command}`, 3);
   // H-LANG-009: Pass env from flowSpec to command runner
   const runOptions: import('./ports/command-runner.js').RunOptions = {
     ...(node.timeoutMs != null ? { timeoutMs: node.timeoutMs } : {}),
@@ -903,6 +947,11 @@ async function advanceRunNode(
   const result = await commandRunner.run(
     command,
     Object.keys(runOptions).length > 0 ? runOptions : undefined,
+  );
+  debugLog(
+    'gate',
+    `Command exit=${result.exitCode} timedOut=${String(result.timedOut ?? false)}`,
+    3,
   );
 
   // H-SEC-006: Log command execution to audit trail

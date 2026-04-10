@@ -143,6 +143,16 @@ describe('evaluateCondition', () => {
       expect(evaluateCondition('status == "active"', { status: 'active' })).toBe(true);
       expect(evaluateCondition("status == 'active'", { status: 'active' })).toBe(true);
     });
+
+    it('interpolates direct ${var} truthiness conditions', () => {
+      expect(evaluateCondition('${ready}', { ready: 'true' })).toBe(true);
+      expect(evaluateCondition('${ready}', { ready: 'false' })).toBe(false);
+    });
+
+    it('interpolates ${var} in numeric comparisons', () => {
+      expect(evaluateCondition('${count} > 0', { count: 2 })).toBe(true);
+      expect(evaluateCondition('${count} > 0', { count: 0 })).toBe(false);
+    });
   });
 
   // H-LANG-012: "contains" operator

@@ -1,3 +1,5 @@
+import { interpolate } from './interpolate.js';
+
 /**
  * evaluateCondition — Pure condition evaluation against variable state.
  *
@@ -137,7 +139,7 @@ export function evaluateCondition(
   condition: string,
   variables: Readonly<Record<string, string | number | boolean>>,
 ): boolean | null {
-  const trimmed = condition.trim();
+  const trimmed = interpolate(condition, variables).trim();
 
   // Strip outer parentheses: (expr) → recurse on expr
   if (trimmed.startsWith('(')) {

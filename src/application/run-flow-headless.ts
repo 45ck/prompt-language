@@ -160,9 +160,13 @@ export async function runFlowHeadless(
     });
 
     if (runResult.exitCode !== 0) {
+      const detail = summarizeAssistantText(runResult.assistantText);
       return {
         finalState: state,
-        reason: `Prompt runner exited with code ${runResult.exitCode}.`,
+        reason:
+          detail == null
+            ? `Prompt runner exited with code ${runResult.exitCode}.`
+            : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`,
         turns,
       };
     }

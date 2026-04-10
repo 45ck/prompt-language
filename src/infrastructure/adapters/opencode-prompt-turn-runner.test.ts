@@ -1,6 +1,8 @@
 import { EventEmitter } from 'node:events';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // cspell:ignore unstub LOCALAPPDATA USERPROFILE
 
 const mockedSpawn = vi.fn();
@@ -11,7 +13,7 @@ vi.mock('node:child_process', () => ({
 
 const { OpenCodePromptTurnRunner, buildOpenCodePrompt, summarizeOpenCodeJsonOutput } =
   await import('./opencode-prompt-turn-runner.js');
-const { buildOpenCodeEnv } = await import('./opencode-prompt-turn-runner.js');
+const { buildOpenCodeEnv, prepareOpenCodeEnv } = await import('./opencode-prompt-turn-runner.js');
 
 class MockStream extends EventEmitter {
   setEncoding(_encoding: string): void {}
@@ -24,13 +26,23 @@ class MockChild extends EventEmitter {
 }
 
 describe('OpenCodePromptTurnRunner', () => {
+  let tempDir = '';
+
   beforeEach(() => {
     vi.resetAllMocks();
     vi.unstubAllEnvs();
     vi.useRealTimers();
   });
 
+  afterEach(async () => {
+    if (!tempDir) return;
+    await rm(tempDir, { recursive: true, force: true });
+    tempDir = '';
+  });
+
   it('launches opencode run with the expected flags', async () => {
+    vi.stubEnv('PROMPT_LANGUAGE_OPENCODE_HOME', '/tmp/opencode-home');
+
     const runner = new OpenCodePromptTurnRunner();
     const child = new MockChild();
     vi.mocked(mockedSpawn).mockReturnValue(child as never);
@@ -41,6 +53,7 @@ describe('OpenCodePromptTurnRunner', () => {
       prompt: 'Fix the bug',
     });
 
+    await Promise.resolve();
     child.emit('close', 0);
     const result = await runPromise;
 
@@ -49,6 +62,7 @@ describe('OpenCodePromptTurnRunner', () => {
       'opencode',
       [
         'run',
+        '--pure',
         '--format',
         'json',
         '--dangerously-skip-permissions',
@@ -60,7 +74,10 @@ describe('OpenCodePromptTurnRunner', () => {
       ],
       {
         cwd: '/repo',
-        env: undefined,
+        env: expect.objectContaining({
+          HOME: '/tmp/opencode-home',
+          USERPROFILE: '/tmp/opencode-home',
+        }),
         stdio: ['ignore', 'pipe', 'pipe'],
       },
     );
@@ -76,6 +93,7 @@ describe('OpenCodePromptTurnRunner', () => {
       }),
     ).toEqual([
       'run',
+      '--pure',
       '--format',
       'json',
       '--dangerously-skip-permissions',
@@ -98,6 +116,7 @@ describe('OpenCodePromptTurnRunner', () => {
       }),
     ).toEqual([
       'run',
+      '--pure',
       '--format',
       'json',
       '--dangerously-skip-permissions',
@@ -124,6 +143,34 @@ describe('OpenCodePromptTurnRunner', () => {
         XDG_DATA_HOME: join('/tmp/opencode-home', '.local', 'share'),
       }),
     );
+  });
+
+  it('creates a workspace-scoped ollama profile when no explicit opencode home is provided', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-opencode-home-'));
+
+    const env = await prepareOpenCodeEnv({
+      cwd: tempDir,
+      model: 'ollama/gemma4:31b',
+      prompt: 'Reply with exactly OK',
+    });
+
+    const root = join(tempDir, '.prompt-language', 'opencode-home');
+    const configPath = join(root, '.config', 'opencode', 'opencode.json');
+    const packagePath = join(root, '.config', 'opencode', 'package.json');
+    const configText = await readFile(configPath, 'utf8');
+    const pkgText = await readFile(packagePath, 'utf8');
+
+    expect(env).toEqual(
+      expect.objectContaining({
+        HOME: root,
+        USERPROFILE: root,
+        OLLAMA_API_KEY: 'ollama-local',
+      }),
+    );
+    expect(configText).toContain('"enabled_providers": [\n    "ollama"\n  ]');
+    expect(configText).toContain('"model": "ollama/gemma4:31b"');
+    expect(configText).toContain('"small_model": "ollama/gemma4:31b"');
+    expect(pkgText).toContain('"@ai-sdk/openai-compatible": "latest"');
   });
 
   it('wraps prompts with execution rules', () => {
@@ -173,6 +220,7 @@ describe('OpenCodePromptTurnRunner', () => {
 
   it('settles after step_finish even if the opencode process does not close', async () => {
     vi.useFakeTimers();
+    vi.stubEnv('PROMPT_LANGUAGE_OPENCODE_HOME', '/tmp/opencode-home');
 
     const runner = new OpenCodePromptTurnRunner();
     const child = new MockChild();
@@ -184,6 +232,7 @@ describe('OpenCodePromptTurnRunner', () => {
       prompt: 'Return only OK',
     });
 
+    await Promise.resolve();
     child.stdout.emit(
       'data',
       [
@@ -202,5 +251,60 @@ describe('OpenCodePromptTurnRunner', () => {
       assistantText: 'OK',
       madeProgress: false,
     });
+  });
+
+  it('times out with an ollama-specific hint when opencode never emits output', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('PROMPT_LANGUAGE_OPENCODE_TIMEOUT_MS', '10');
+    vi.stubEnv('PROMPT_LANGUAGE_OPENCODE_HOME', '/tmp/opencode-home');
+
+    const runner = new OpenCodePromptTurnRunner();
+    const child = new MockChild();
+    vi.mocked(mockedSpawn).mockReturnValue(child as never);
+
+    const runPromise = runner.run({
+      cwd: '/repo',
+      model: 'ollama/gemma4:31b',
+      prompt: 'Return only OK',
+    });
+
+    await vi.advanceTimersByTimeAsync(10);
+    const result = await runPromise;
+
+    expect(child.kill).toHaveBeenCalledTimes(1);
+    expect(result.exitCode).toBe(124);
+    expect(result.assistantText).toContain('local Ollama streaming stall');
+    expect(result.madeProgress).toBe(false);
+  });
+
+  it('preserves stderr details and still appends the ollama timeout hint', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('PROMPT_LANGUAGE_OPENCODE_TIMEOUT_MS', '10');
+    vi.stubEnv('PROMPT_LANGUAGE_OPENCODE_HOME', '/tmp/opencode-home');
+
+    const runner = new OpenCodePromptTurnRunner();
+    const child = new MockChild();
+    vi.mocked(mockedSpawn).mockReturnValue(child as never);
+
+    const runPromise = runner.run({
+      cwd: '/repo',
+      model: 'ollama/gemma4:31b',
+      prompt: 'Return only OK',
+    });
+
+    await Promise.resolve();
+    child.stderr.emit(
+      'data',
+      'Performing one time database migration, may take a few minutes... sqlite-migration:done Database migration complete.\n',
+    );
+
+    await vi.advanceTimersByTimeAsync(10);
+    const result = await runPromise;
+
+    expect(result.assistantText).toContain('Database migration complete.');
+    expect(result.assistantText).toContain(
+      'OpenCode timed out after 10ms waiting for ollama/gemma4:31b.',
+    );
+    expect(result.assistantText).toContain('local Ollama streaming stall');
   });
 });

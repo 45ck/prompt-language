@@ -8,3 +8,5 @@ node_modules
 tmp-cov.mjs
 scripts/eval/comparative-eval-v4.mjs
 docs/research/sources
+tmp-opencode*/
+.tmp-opencode*/

@@ -206,16 +206,7 @@ describe('installed file layout contract', () => {
   });
 
   describe('skills/ directory', () => {
-    const expectedSkills = [
-      'deploy-check',
-      'fix-and-test',
-      'flow-executor',
-      'flow-reset',
-      'flow-status',
-      'refactor',
-      'tdd',
-      'write-flow',
-    ];
+    const expectedSkills = ['deploy-check', 'fix-and-test', 'refactor', 'tdd', 'write-flow'];
 
     it('skills/ directory exists', () => {
       expect(existsSync(join(PROJECT_ROOT, 'skills'))).toBe(true);
@@ -224,6 +215,20 @@ describe('installed file layout contract', () => {
     for (const skill of expectedSkills) {
       it(`skills/${skill}/ subdirectory exists`, () => {
         expect(existsSync(join(PROJECT_ROOT, 'skills', skill))).toBe(true);
+      });
+    }
+  });
+
+  describe('commands/ directory', () => {
+    const expectedCommands = ['flow-reset.md', 'flow-status.md', 'flow-run.md'];
+
+    it('commands/ directory exists', () => {
+      expect(existsSync(join(PROJECT_ROOT, 'commands'))).toBe(true);
+    });
+
+    for (const command of expectedCommands) {
+      it(`commands/${command} exists`, () => {
+        expect(existsSync(join(PROJECT_ROOT, 'commands', command))).toBe(true);
       });
     }
   });

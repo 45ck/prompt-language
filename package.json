@@ -55,6 +55,7 @@
     "bin/**",
     "dist/**",
     "skills/**",
+    "commands/**",
     "hooks/**",
     ".claude-plugin/**",
     ".codex/**",

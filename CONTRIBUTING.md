@@ -75,18 +75,20 @@ hooks/
   hooks.json        Hook registration for Claude Code
 
 skills/
-  flow-executor/    /flow:run skill
-  flow-status/      /flow:status skill
-  flow-reset/       /flow:reset skill
   fix-and-test/     /fix-and-test skill — retry loop + tests_pass gate
   tdd/              /tdd skill — red-green-refactor cycle
   refactor/         /refactor skill — incremental refactoring with test verification
   deploy-check/     /deploy-check skill — lint + test + build pipeline
+
+commands/
+  flow-run.md       /flow:run command — manual single-step flow advance
+  flow-status.md    /flow:status command — inspect active flow state
+  flow-reset.md     /flow:reset command — clear active flow state
 ```
 
 ## Creating skills
 
-Skills are slash commands that provide Claude with a structured flow and instructions. Each skill lives in its own directory under `skills/`.
+Skills provide Claude with structured workflow context and instructions. Each skill lives in its own directory under `skills/`. Imperative `/flow:*` operations are implemented as command markdown files under `commands/`.
 
 ### Directory structure
 

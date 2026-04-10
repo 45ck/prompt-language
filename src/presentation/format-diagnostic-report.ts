@@ -8,7 +8,10 @@ export function formatDiagnosticReport(
     return `${header} OK`;
   }
 
-  const lines = [`${header} BLOCKED (${report.diagnostics.length})`];
+  const state = report.diagnostics.some((diagnostic) => diagnostic.blocksExecution)
+    ? 'BLOCKED'
+    : 'WARN';
+  const lines = [`${header} ${state} (${report.diagnostics.length})`];
   for (const diagnostic of report.diagnostics) {
     lines.push(`- ${diagnostic.code} ${diagnostic.summary}`);
     if (diagnostic.action) {

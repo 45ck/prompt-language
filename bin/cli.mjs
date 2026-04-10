@@ -266,7 +266,7 @@ async function installCodex() {
 
 async function readFlowText(args, commandName) {
   let flowText = '';
-  const flagsWithValues = new Set(['--file', '--runner', '--model', '--state-dir']);
+  const flagsWithValues = new Set(['--file', '--runner', '--model', '--state-dir', '--mode']);
   const readFromFile = async (path) => {
     try {
       return await fs.readFile(path, 'utf8');
@@ -386,6 +386,18 @@ function ensureSupportedRunner(runner) {
   return runner;
 }
 
+function ensureSupportedMode(mode) {
+  if (mode !== 'interactive' && mode !== 'headless') {
+    console.error(`Error: Unsupported mode "${mode}". Supported modes: interactive, headless.`);
+    process.exit(1);
+  }
+  return mode;
+}
+
+function defaultValidateModeForRunner(runner) {
+  return runner === 'claude' ? 'interactive' : 'headless';
+}
+
 function readRunnerOptions(args) {
   const runner = ensureSupportedRunner(readOptionValue(args, '--runner') ?? 'claude');
   const model = readOptionValue(args, '--model') ?? defaultModelForRunner(runner);
@@ -393,12 +405,24 @@ function readRunnerOptions(args) {
   return { runner, model, stateDir };
 }
 
-function readOptionalRunner(args) {
-  const runner = readOptionValue(args, '--runner');
-  return runner == null ? undefined : ensureSupportedRunner(runner);
+function readValidateProfileOptions(args) {
+  const runnerValue = readOptionValue(args, '--runner');
+  const modeValue = readOptionValue(args, '--mode');
+
+  if (runnerValue == null) {
+    if (modeValue != null) {
+      console.error('Error: --mode requires --runner.');
+      process.exit(1);
+    }
+    return {};
+  }
+
+  const runner = ensureSupportedRunner(runnerValue);
+  const mode = ensureSupportedMode(modeValue ?? defaultValidateModeForRunner(runner));
+  return { runner, mode };
 }
 
-async function evaluateExecutionPreflight(flowText, runner) {
+async function evaluateExecutionPreflight(flowText, runner, mode) {
   const [{ parseFlow }, { runExecutionPreflight }, { probeRunnerBinary }] = await Promise.all([
     import(pathToFileURL(join(ROOT, 'dist', 'application', 'parse-flow.js')).href),
     import(pathToFileURL(join(ROOT, 'dist', 'application', 'execution-preflight.js')).href),
@@ -408,12 +432,20 @@ async function evaluateExecutionPreflight(flowText, runner) {
   ]);
 
   const spec = parseFlow(flowText, { basePath: process.cwd() });
-  return runExecutionPreflight(spec, { cwd: process.cwd(), runner }, { probeRunnerBinary });
+  return runExecutionPreflight(
+    spec,
+    {
+      cwd: process.cwd(),
+      runner,
+      ...(mode != null ? { mode } : {}),
+    },
+    { probeRunnerBinary },
+  );
 }
 
-async function printAndExitBlockedPreflight(flowText, runner) {
+async function printAndExitBlockedPreflight(flowText, runner, mode) {
   const [report, { formatDiagnosticReport }] = await Promise.all([
-    evaluateExecutionPreflight(flowText, runner),
+    evaluateExecutionPreflight(flowText, runner, mode),
     import(pathToFileURL(join(ROOT, 'dist', 'presentation', 'format-diagnostic-report.js')).href),
   ]);
 
@@ -670,7 +702,7 @@ async function validate() {
 
   const args = process.argv.slice(3);
   const flowText = await readFlowText(args, 'validate');
-  const runner = readOptionalRunner(args);
+  const profile = readValidateProfileOptions(args);
   const json = hasOption(args, '--json');
   const { buildValidateFlowPreview } = await import(
     pathToFileURL(join(ROOT, 'dist', 'presentation', 'validate-flow.js')).href
@@ -680,7 +712,8 @@ async function validate() {
   );
   const preview = buildValidateFlowPreview(flowText, {
     cwd: process.cwd(),
-    ...(runner != null ? { runner, probeRunnerBinary } : {}),
+    ...profile,
+    ...(profile.runner != null ? { probeRunnerBinary } : {}),
   });
 
   if (json) {
@@ -1252,7 +1285,7 @@ Commands:
   eval         Run a JSONL eval dataset and optionally compare against a baseline report
   demo         Print an example flow to stdout
   list         Recursively list .flow files in the current directory
-  validate     Parse, lint, score, and render a flow without executing it
+  validate     Parse, lint, score, and render a flow without executing it (\`--runner ... --mode interactive|headless\`)
   ci           Run a flow headlessly (CI/CD mode, supports \`--runner codex|opencode|ollama\`)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild

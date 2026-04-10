@@ -107,7 +107,7 @@ Notes:
 2. `--runner codex` and `--runner opencode` both use the headless flow runner rather than Claude's interactive hook loop.
 3. When `--runner codex` is selected without an explicit `--model`, prompt-language defaults to `gpt-5.2` on this workstation because the ambient Codex default may fall back to a rate-limited Spark profile.
 4. OpenCode models use the `provider/model` form, for example `opencode/gpt-5-nano`.
-5. Before execution starts, `run` now performs a shared preflight for runner availability and built-in gate prerequisites. A blocked preflight exits with code `2`.
+5. Before execution starts, `run` performs shared preflight for runner availability and built-in gate prerequisites. A blocked preflight exits with code `2`.
 6. On this workstation, prefer hosted harness models for headless runner paths; do not install local models here just to exercise `run`.
 7. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
 8. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
@@ -166,14 +166,19 @@ npx @45ck/prompt-language validate --file my.flow
 npx @45ck/prompt-language validate my.flow
 cat my.flow | npx @45ck/prompt-language validate
 npx @45ck/prompt-language validate --runner codex --json --file my.flow
+npx @45ck/prompt-language validate --runner claude --mode interactive --json --file my.flow
 ```
 
 Notes:
 
 1. Plain `validate` remains parse/lint/render only.
 2. `validate --runner ...` adds execution preflight for runner availability and built-in gate prerequisites without starting execution.
-3. `validate --json` emits `{ status, diagnostics, outcomes }` plus complexity and rendered flow metadata.
-4. A blocked preflight exits with code `2`.
+3. `validate --runner ... --mode interactive|headless` adds static profile-compatibility checks without starting execution.
+4. The shipped compatibility blockers are currently: unsupported runner/mode combinations, `approve` in headless mode, and `send` / `receive` when validating Claude profiles without message passing.
+5. Supported headless runtime profiles currently preserve `ask` / capture and `spawn` / `await` semantics for `claude`, `codex`, `opencode`, and `ollama`.
+6. Headless profiles also surface warning-only UX diagnostics for interactive-only affordances such as the status line and watch mode.
+7. `validate --json` emits `{ status, diagnostics, outcomes }` plus complexity and rendered flow metadata.
+8. A blocked preflight exits with code `2`.
 
 ### demo
 

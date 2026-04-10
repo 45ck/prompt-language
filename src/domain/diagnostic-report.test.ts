@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createBlockingProfileDiagnostic,
   createDiagnosticReport,
+  createProfileWarningDiagnostic,
   DIAGNOSTIC_CODE_RANGES,
   PROFILE_DIAGNOSTIC_CODES,
 } from './diagnostic-report.js';
@@ -29,5 +30,16 @@ describe('diagnostic-report', () => {
   it('exposes stable code ranges and preflight profile codes', () => {
     expect(DIAGNOSTIC_CODE_RANGES.profile).toBe('PLC');
     expect(PROFILE_DIAGNOSTIC_CODES.missingGatePrerequisite).toBe('PLC-005');
+  });
+
+  it('preserves optional warning actions', () => {
+    const diagnostic = createProfileWarningDiagnostic(
+      PROFILE_DIAGNOSTIC_CODES.unavailableUxSurface,
+      'Status line is unavailable.',
+      'Use an interactive profile.',
+    );
+
+    expect(diagnostic.severity).toBe('warning');
+    expect(diagnostic.action).toBe('Use an interactive profile.');
   });
 });

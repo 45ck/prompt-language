@@ -35,4 +35,30 @@ describe('buildValidateFlowPreview', () => {
     expect(preview.output).toContain('[prompt-language preflight] BLOCKED');
     expect(preview.output).toContain('PLC-001');
   });
+
+  it('includes runner-mode compatibility diagnostics when mode is selected', () => {
+    const preview = buildValidateFlowPreview('Goal: test\n\nflow:\n  approve "Ship it?"\n', {
+      cwd: '/repo',
+      runner: 'opencode',
+      mode: 'headless',
+      probeRunnerBinary: () => true,
+    });
+
+    expect(preview.report.status).toBe('blocked');
+    expect(preview.output).toContain('PLC-004');
+    expect(preview.output).toContain('approve is unsupported for runner=opencode mode=headless');
+  });
+
+  it('renders warning-only profile diagnostics without blocking', () => {
+    const preview = buildValidateFlowPreview('Goal: test\n\nflow:\n  prompt: hello\n', {
+      cwd: '/repo',
+      runner: 'opencode',
+      mode: 'headless',
+      probeRunnerBinary: () => true,
+    });
+
+    expect(preview.report.status).toBe('ok');
+    expect(preview.output).toContain('[prompt-language preflight] WARN');
+    expect(preview.output).toContain('PLC-007');
+  });
 });

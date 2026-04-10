@@ -1,6 +1,10 @@
 import { parseFlow } from '../application/parse-flow.js';
 import { createDiagnosticReport, type DiagnosticReport } from '../domain/diagnostic-report.js';
-import { runExecutionPreflight, type RunnerName } from '../application/execution-preflight.js';
+import {
+  runExecutionPreflight,
+  type ExecutionMode,
+  type RunnerName,
+} from '../application/execution-preflight.js';
 import { flowComplexityScore } from '../domain/flow-complexity.js';
 import { lintFlow } from '../domain/lint-flow.js';
 import { renderFlow } from '../domain/render-flow.js';
@@ -18,6 +22,7 @@ export interface ValidateFlowPreview {
 export interface BuildValidateFlowPreviewOptions {
   readonly cwd?: string | undefined;
   readonly runner?: RunnerName | undefined;
+  readonly mode?: ExecutionMode | undefined;
   readonly probeRunnerBinary?: ((runner: RunnerName) => boolean) | undefined;
 }
 
@@ -40,7 +45,11 @@ export function buildValidateFlowPreview(
       ? createDiagnosticReport([])
       : runExecutionPreflight(
           spec,
-          { cwd, runner: options.runner },
+          {
+            cwd,
+            runner: options.runner,
+            ...(options.mode != null ? { mode: options.mode } : {}),
+          },
           { probeRunnerBinary: options.probeRunnerBinary },
         );
 

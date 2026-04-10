@@ -87,3 +87,4 @@ repairability
 streetrace
 zhog
 PATHEXT
+affordances

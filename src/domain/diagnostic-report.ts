@@ -77,3 +77,20 @@ export function createBlockingProfileDiagnostic(
     ...(action != null ? { action } : {}),
   };
 }
+
+export function createProfileWarningDiagnostic(
+  code: string,
+  summary: string,
+  action?: string,
+): FlowDiagnostic {
+  return {
+    code,
+    kind: 'profile',
+    phase: 'preflight',
+    severity: 'warning',
+    blocksExecution: false,
+    retryable: false,
+    summary,
+    ...(action != null ? { action } : {}),
+  };
+}

@@ -65,6 +65,16 @@ describe('parseFlow — remember node', () => {
 // ---------------------------------------------------------------------------
 
 describe('parseFlow — send node', () => {
+  it('parses send "message" to bare target', () => {
+    const spec = parseFlow('Goal: test\n\nflow:\n  send "hello" to worker\n');
+    const node = spec.nodes[0];
+    expect(node?.kind).toBe('send');
+    if (node?.kind === 'send') {
+      expect(node.target).toBe('worker');
+      expect(node.message).toBe('hello');
+    }
+  });
+
   it('parses send to named child with double quotes', () => {
     const spec = parseFlow('Goal: test\n\nflow:\n  send "fix-lint" "Focus on imports"\n');
     const node = spec.nodes[0];
@@ -108,6 +118,17 @@ describe('parseFlow — send node', () => {
 // ---------------------------------------------------------------------------
 
 describe('parseFlow — receive node', () => {
+  it('parses receive varname from bare source with timeout', () => {
+    const spec = parseFlow('Goal: test\n\nflow:\n  receive reply from worker timeout 10\n');
+    const node = spec.nodes[0];
+    expect(node?.kind).toBe('receive');
+    if (node?.kind === 'receive') {
+      expect(node.variableName).toBe('reply');
+      expect(node.from).toBe('worker');
+      expect(node.timeoutSeconds).toBe(10);
+    }
+  });
+
   it('parses bare receive varname', () => {
     const spec = parseFlow('Goal: test\n\nflow:\n  receive msg\n');
     const node = spec.nodes[0];
@@ -135,6 +156,17 @@ describe('parseFlow — receive node', () => {
     if (node?.kind === 'receive') {
       expect(node.variableName).toBe('context');
       expect(node.from).toBe('parent');
+    }
+  });
+
+  it('parses receive varname from parent with timeout', () => {
+    const spec = parseFlow('Goal: test\n\nflow:\n  receive note from parent timeout 10\n');
+    const node = spec.nodes[0];
+    expect(node?.kind).toBe('receive');
+    if (node?.kind === 'receive') {
+      expect(node.variableName).toBe('note');
+      expect(node.from).toBe('parent');
+      expect(node.timeoutSeconds).toBe(10);
     }
   });
 

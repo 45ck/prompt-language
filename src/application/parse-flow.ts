@@ -842,6 +842,26 @@ function parseRememberLine(ctx: ParseContext, trimmed: string): FlowNode {
 }
 
 function parseSendLine(ctx: ParseContext, trimmed: string): FlowNode {
+  // send "message" to target
+  const messageToTargetDoubleMatch =
+    /^send\s+"([^"]*)"\s+to\s+(parent|[\w-]+|"[^"]+"|'[^']+')$/i.exec(trimmed);
+  if (messageToTargetDoubleMatch?.[1] !== undefined && messageToTargetDoubleMatch[2]) {
+    return createSendNode(
+      nextId(ctx),
+      stripQuotes(messageToTargetDoubleMatch[2]),
+      messageToTargetDoubleMatch[1],
+    );
+  }
+  // send 'message' to target
+  const messageToTargetSingleMatch =
+    /^send\s+'([^']*)'\s+to\s+(parent|[\w-]+|"[^"]+"|'[^']+')$/i.exec(trimmed);
+  if (messageToTargetSingleMatch?.[1] !== undefined && messageToTargetSingleMatch[2]) {
+    return createSendNode(
+      nextId(ctx),
+      stripQuotes(messageToTargetSingleMatch[2]),
+      messageToTargetSingleMatch[1],
+    );
+  }
   // send "target" "message"
   const doubleQuoteMatch = /^send\s+"([^"]+)"\s+"([^"]*)"$/i.exec(trimmed);
   if (doubleQuoteMatch?.[1] !== undefined && doubleQuoteMatch[2] !== undefined) {
@@ -867,25 +887,17 @@ function parseSendLine(ctx: ParseContext, trimmed: string): FlowNode {
 }
 
 function parseReceiveLine(ctx: ParseContext, trimmed: string): FlowNode {
-  // receive varName from "source"
-  const fromDoubleMatch = /^receive\s+(\w+)\s+from\s+"([^"]+)"$/i.exec(trimmed);
-  if (fromDoubleMatch?.[1] && fromDoubleMatch[2]) {
-    return createReceiveNode(nextId(ctx), fromDoubleMatch[1], fromDoubleMatch[2]);
-  }
-  // receive varName from parent
-  const fromParentMatch = /^receive\s+(\w+)\s+from\s+parent$/i.exec(trimmed);
-  if (fromParentMatch?.[1]) {
-    return createReceiveNode(nextId(ctx), fromParentMatch[1], 'parent');
-  }
-  // receive varName from 'source' (single quotes)
-  const fromSingleMatch = /^receive\s+(\w+)\s+from\s+'([^']+)'$/i.exec(trimmed);
-  if (fromSingleMatch?.[1] && fromSingleMatch[2]) {
-    return createReceiveNode(nextId(ctx), fromSingleMatch[1], fromSingleMatch[2]);
-  }
-  // receive varName (no from — uses context default)
-  const bareMatch = /^receive\s+(\w+)$/i.exec(trimmed);
-  if (bareMatch?.[1]) {
-    return createReceiveNode(nextId(ctx), bareMatch[1]);
+  const match =
+    /^receive\s+(\w+)(?:\s+from\s+(parent|[\w-]+|"[^"]+"|'[^']+'))?(?:\s+timeout\s+(\d+))?$/i.exec(
+      trimmed,
+    );
+  if (match?.[1]) {
+    return createReceiveNode(
+      nextId(ctx),
+      match[1],
+      match[2] ? stripQuotes(match[2]) : undefined,
+      match[3] ? parseInt(match[3], 10) : undefined,
+    );
   }
   warn(ctx, `Invalid receive syntax: "${trimmed}". Try: receive msg or receive msg from "source"`);
   return createPromptNode(nextId(ctx), trimmed);

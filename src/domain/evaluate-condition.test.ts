@@ -30,6 +30,11 @@ describe('evaluateCondition', () => {
     expect(evaluateCondition('tests_pass', {})).toBeNull();
   });
 
+  it('defaults unset command status flags to false', () => {
+    expect(evaluateCondition('command_failed', {})).toBe(false);
+    expect(evaluateCondition('command_succeeded', {})).toBe(false);
+  });
+
   it('negates with "not" prefix', () => {
     expect(evaluateCondition('not command_failed', { command_failed: true })).toBe(false);
     expect(evaluateCondition('not command_failed', { command_failed: false })).toBe(true);

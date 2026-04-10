@@ -27,6 +27,13 @@ interface DirectExecution {
   readonly args: readonly string[];
 }
 
+function expandWindowsEnvPlaceholders(
+  text: string,
+  env: NodeJS.ProcessEnv | Readonly<Record<string, string>>,
+): string {
+  return text.replace(/%([A-Za-z_][A-Za-z0-9_]*)%/g, (_match, name: string) => env[name] ?? '');
+}
+
 function tryParseDirectExecution(command: string): DirectExecution | undefined {
   if (process.platform !== 'win32') {
     return undefined;
@@ -105,6 +112,10 @@ export class ShellCommandRunner implements CommandRunner {
     const detached = process.platform !== 'win32';
 
     return await new Promise<CommandResult>((resolve) => {
+      const directArgs =
+        directExecution === undefined
+          ? undefined
+          : directExecution.args.map((arg) => expandWindowsEnvPlaceholders(arg, envOverride));
       const child =
         directExecution === undefined
           ? spawn(command, {
@@ -114,7 +125,7 @@ export class ShellCommandRunner implements CommandRunner {
               env: envOverride,
               stdio: ['ignore', 'pipe', 'pipe'],
             })
-          : spawn(directExecution.file, [...directExecution.args], {
+          : spawn(directExecution.file, directArgs ?? [], {
               shell,
               detached,
               windowsHide: true,

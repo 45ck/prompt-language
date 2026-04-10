@@ -33,6 +33,18 @@ describe('ShellCommandRunner', () => {
     expect(result.stderr).toContain('err');
   });
 
+  it('expands Windows env placeholders for direct node -e execution', async () => {
+    if (process.platform !== 'win32') {
+      return;
+    }
+    const runner = new ShellCommandRunner();
+    const result = await runner.run('node -e "console.log(\'%PL_TEST_VALUE%\')"', {
+      env: { PL_TEST_VALUE: 'expanded' },
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe('expanded');
+  });
+
   it('uses custom timeout from options', async () => {
     const runner = new ShellCommandRunner();
     const result = await runner.run('node -e "setTimeout(() => {}, 5000)"', { timeoutMs: 100 });

@@ -347,6 +347,7 @@ async function runHeadlessFlow(flowText, model, runner, stateDir = '.prompt-lang
     { FileCaptureReader },
     { FileAuditLogger },
     { FileMemoryStore },
+    { FileMessageStore },
     { HeadlessProcessSpawner },
     runnerModule,
   ] = await Promise.all([
@@ -366,6 +367,9 @@ async function runHeadlessFlow(flowText, model, runner, stateDir = '.prompt-lang
     ),
     import(
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-memory-store.js')).href
+    ),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-message-store.js')).href
     ),
     import(
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'headless-process-spawner.js'))
@@ -406,6 +410,7 @@ async function runHeadlessFlow(flowText, model, runner, stateDir = '.prompt-lang
       captureReader: new FileCaptureReader(cwd, stateDir),
       commandRunner: new ShellCommandRunner(),
       memoryStore: new FileMemoryStore(cwd, stateDir),
+      messageStore: new FileMessageStore(join(cwd, stateDir), {}),
       processSpawner: new HeadlessProcessSpawner({
         cliPath: join(ROOT, 'bin', 'cli.mjs'),
         cwd,

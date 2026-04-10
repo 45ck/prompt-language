@@ -4,6 +4,7 @@ import type { AuditLogger } from './ports/audit-logger.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { MemoryStore, MemoryEntry } from './ports/memory-store.js';
+import type { MessageStore } from './ports/message-store.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { PromptTurnRunner } from './ports/prompt-turn-runner.js';
 import type { StateStore } from './ports/state-store.js';
@@ -34,6 +35,17 @@ function hasRunningChildren(state: SessionState): boolean {
 
 function buildPromptEnvelope(state: SessionState, capturedPrompt: string): string {
   return `${renderFlow(state)}\n\n${capturedPrompt}\n\n${renderFlowSummary(state)}`;
+}
+
+function extractGateOnlyGoal(flowText: string): string {
+  const doneWhenIndex = flowText.search(/^\s*done when:\s*$/im);
+  return (doneWhenIndex >= 0 ? flowText.slice(0, doneWhenIndex) : flowText).trim();
+}
+
+function buildGateOnlyPrompt(state: SessionState, flowText: string): string {
+  const goal = state.flowSpec.goal.trim() || extractGateOnlyGoal(flowText);
+  const gates = state.flowSpec.completionGates.map((gate) => `  ${gate.predicate}`).join('\n');
+  return gates ? `${goal}\n\ndone when:\n${gates}` : goal;
 }
 
 function summarizeAssistantText(text?: string): string | undefined {
@@ -77,6 +89,7 @@ export async function runFlowHeadless(
     readonly captureReader?: CaptureReader | undefined;
     readonly commandRunner: CommandRunner;
     readonly memoryStore?: MemoryStore | undefined;
+    readonly messageStore?: MessageStore | undefined;
     readonly processSpawner?: ProcessSpawner | undefined;
     readonly promptTurnRunner: PromptTurnRunner;
     readonly stateStore: StateStore;
@@ -101,6 +114,7 @@ export async function runFlowHeadless(
       deps.processSpawner,
       deps.auditLogger,
       deps.memoryStore,
+      deps.messageStore,
     );
 
     state = step.state;
@@ -137,6 +151,63 @@ export async function runFlowHeadless(
       const currentNode = current
         ? resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath)
         : null;
+      if (
+        current &&
+        currentNode === null &&
+        current.flowSpec.nodes.length === 0 &&
+        current.flowSpec.completionGates.length > 0
+      ) {
+        const gateResult = await evaluateCompletion(
+          deps.stateStore,
+          deps.commandRunner,
+          deps.auditLogger,
+        );
+        state = (await deps.stateStore.loadCurrent()) ?? state;
+        if (!gateResult.blocked && state.status === 'completed') {
+          return { finalState: state, turns };
+        }
+
+        turns += 1;
+        if (turns > maxTurns) {
+          return {
+            finalState: state,
+            reason: `Headless runner reached the max turn limit (${maxTurns}).`,
+            turns,
+          };
+        }
+
+        const runResult = await deps.promptTurnRunner.run({
+          cwd: input.cwd,
+          model: input.model,
+          prompt: buildGateOnlyPrompt(state, input.flowText),
+        });
+
+        if (runResult.exitCode !== 0) {
+          const detail = summarizeAssistantText(runResult.assistantText);
+          return {
+            finalState: state,
+            reason:
+              detail == null
+                ? `Prompt runner exited with code ${runResult.exitCode}.`
+                : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`,
+            turns,
+          };
+        }
+
+        if (runResult.madeProgress === false) {
+          const detail = summarizeAssistantText(runResult.assistantText);
+          return {
+            finalState: state,
+            reason:
+              detail == null
+                ? 'Prompt runner completed without observable workspace progress.'
+                : `Prompt runner completed without observable workspace progress. Last assistant output: ${detail}`,
+            turns,
+          };
+        }
+
+        continue;
+      }
       if (current && currentNode === null && current.flowSpec.completionGates.length > 0) {
         const gateResult = await evaluateCompletion(
           deps.stateStore,

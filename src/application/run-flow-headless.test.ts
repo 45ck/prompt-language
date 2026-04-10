@@ -178,6 +178,56 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.prompts).toHaveLength(0);
   });
 
+  it('prompts for gate-only flows before re-evaluating completion gates', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-only-'));
+    await writeFile(join(tempDir, 'app.js'), 'process.exit(1)\n', 'utf8');
+    await writeFile(
+      join(tempDir, 'package.json'),
+      JSON.stringify({ name: 'gate-only-test', scripts: { test: 'node app.js' } }),
+      'utf8',
+    );
+
+    const promptRunner = new RecordingPromptRunner(async ({ cwd }) => {
+      await writeFile(join(cwd, 'app.js'), 'process.exit(0)\n', 'utf8');
+      return { exitCode: 0, madeProgress: true };
+    });
+    const commandRunner = {
+      run: async (command: string) => {
+        if (command !== 'npm test') {
+          return { exitCode: 1, stdout: '', stderr: `unexpected command: ${command}` };
+        }
+        const app = await import('node:fs/promises').then((fs) =>
+          fs.readFile(join(tempDir, 'app.js'), 'utf8'),
+        );
+        return app.includes('process.exit(0)')
+          ? { exitCode: 0, stdout: '', stderr: '' }
+          : { exitCode: 1, stdout: '', stderr: '' };
+      },
+    };
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: 'Fix app.js so it exits 0 instead of 1.\n\ndone when:\n  tests_pass\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.turns).toBe(1);
+    expect(promptRunner.prompts).toHaveLength(1);
+    expect(promptRunner.prompts[0]).toContain('Fix app.js so it exits 0 instead of 1.');
+    expect(promptRunner.prompts[0]).toContain('done when:');
+  });
+
   it('executes the final prompt before completing a multi-prompt flow', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-final-prompt-'));
 

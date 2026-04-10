@@ -133,6 +133,7 @@ function findRightmostOperatorOutsideParens(
  * - "A and B": both must be true (returns false if either is false, null if either unknown).
  * - "A or B": either must be true (returns true if either is true, null if both unknown).
  * - Comparison operators: ==, !=, >, <, >=, <=.
+ * - Unset command_failed/command_succeeded default to false before any run executes.
  * - Returns null when the variable is not present (needs external evaluation).
  */
 export function evaluateCondition(
@@ -204,6 +205,10 @@ export function evaluateCondition(
     if (typeof value === 'number') return value !== 0;
     if (typeof value === 'string') return value.length > 0;
     return null;
+  }
+
+  if (trimmed === 'command_failed' || trimmed === 'command_succeeded') {
+    return false;
   }
 
   // Literal boolean values (after variable lookup so vars named 'true'/'false' work)

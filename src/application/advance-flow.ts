@@ -13,6 +13,7 @@ import {
   addWarning,
   markCompleted,
   allGatesPassing,
+  markFailed,
 } from '../domain/session-state.js';
 import type { SessionState } from '../domain/session-state.js';
 import type {
@@ -64,6 +65,7 @@ import {
   buildJudgePrompt,
   buildJudgeRetryPrompt,
 } from '../domain/judge-prompt.js';
+import { createJudgeResult, type JudgeResult } from '../domain/judge-result.js';
 import { renderNodesToDsl, renderSpawnBody } from './render-node-to-dsl.js';
 
 export function resolveCurrentNode(
@@ -691,6 +693,112 @@ export function advanceApproveNode(
 
 export const DEFAULT_MAX_REVIEW_ROUNDS = 3;
 
+const REVIEW_RESULT_VAR = '_review_result';
+const MAX_REVIEW_EVIDENCE_LENGTH = 300;
+
+function truncateReviewEvidence(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= MAX_REVIEW_EVIDENCE_LENGTH) return trimmed;
+  return `${trimmed.slice(0, MAX_REVIEW_EVIDENCE_LENGTH)}...[truncated]`;
+}
+
+function buildReviewEvidence(parentNode: ReviewNode, state: SessionState): string[] {
+  const evidence: string[] = [];
+  if (parentNode.judgeName) {
+    evidence.push(`judge: ${parentNode.judgeName}`);
+    const judge = state.flowSpec.judges?.find((entry) => entry.name === parentNode.judgeName);
+    if (judge?.rubric) evidence.push(`rubric: ${judge.rubric}`);
+  }
+  if (parentNode.criteria) evidence.push(`criteria: ${parentNode.criteria}`);
+  return evidence;
+}
+
+async function evaluateReviewResult(
+  state: SessionState,
+  parentNode: ReviewNode,
+  commandRunner?: CommandRunner,
+): Promise<JudgeResult> {
+  const evidence = buildReviewEvidence(parentNode, state);
+
+  if (parentNode.groundedBy) {
+    const command = interpolate(parentNode.groundedBy, state.variables);
+    evidence.push(`grounded-by: ${command}`);
+
+    if (!commandRunner) {
+      return createJudgeResult(
+        false,
+        0,
+        'Grounded review could not run because no command runner is available.',
+        evidence,
+        true,
+      );
+    }
+
+    try {
+      const result = await commandRunner.run(command);
+      evidence.push(`exit-code: ${result.exitCode}`);
+      if (result.stdout.trim().length > 0) {
+        evidence.push(`stdout: ${truncateReviewEvidence(result.stdout)}`);
+      }
+      if (result.stderr.trim().length > 0) {
+        evidence.push(`stderr: ${truncateReviewEvidence(result.stderr)}`);
+      }
+
+      return result.exitCode === 0
+        ? createJudgeResult(true, 1, 'Grounded review checks passed.', evidence)
+        : createJudgeResult(
+            false,
+            1,
+            `Grounded review checks failed with exit code ${result.exitCode}.`,
+            evidence,
+          );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      evidence.push(`runner-error: ${truncateReviewEvidence(reason)}`);
+      return createJudgeResult(
+        false,
+        0,
+        'Grounded review command failed before a verdict was available.',
+        evidence,
+        true,
+      );
+    }
+  }
+
+  if (parentNode.judgeName) {
+    evidence.push('judge-runtime: compatibility fallback (no dedicated judge executor yet)');
+  }
+
+  return createJudgeResult(
+    true,
+    0.25,
+    'Review completed without explicit grounding; treating the round as a pass for backward compatibility.',
+    evidence.length > 0 ? evidence : ['review completed without explicit grounding'],
+  );
+}
+
+function persistReviewResult(
+  state: SessionState,
+  parentNode: ReviewNode,
+  reviewResult: JudgeResult,
+): SessionState {
+  let next = updateVariable(state, REVIEW_RESULT_VAR, JSON.stringify(reviewResult));
+  next = updateVariable(next, `${REVIEW_RESULT_VAR}.pass`, reviewResult.pass);
+  next = updateVariable(next, `${REVIEW_RESULT_VAR}.confidence`, reviewResult.confidence);
+  next = updateVariable(next, `${REVIEW_RESULT_VAR}.reason`, reviewResult.reason);
+  next = updateVariable(
+    next,
+    `${REVIEW_RESULT_VAR}.evidence`,
+    JSON.stringify(reviewResult.evidence),
+  );
+  next = updateVariable(next, `${REVIEW_RESULT_VAR}.evidence_length`, reviewResult.evidence.length);
+  next = updateVariable(next, `${REVIEW_RESULT_VAR}.abstain`, reviewResult.abstain);
+  if (parentNode.judgeName) {
+    next = updateVariable(next, `${REVIEW_RESULT_VAR}.judge`, parentNode.judgeName);
+  }
+  return next;
+}
+
 async function handleReviewBodyExhaustion(
   state: SessionState,
   parentPath: readonly number[],
@@ -700,22 +808,42 @@ async function handleReviewBodyExhaustion(
   const progress = state.nodeProgress[parentNode.id];
   const round = progress?.iteration ?? 1;
 
-  let reviewPasses = false;
-  if (parentNode.groundedBy && commandRunner) {
-    const cmd = normalizeGroundingCommand(interpolate(parentNode.groundedBy, state.variables));
-    const result = await commandRunner.run(cmd);
-    reviewPasses = result.exitCode === 0;
-  } else if (!parentNode.groundedBy) {
-    reviewPasses = true;
-  }
+  const reviewResult = await evaluateReviewResult(state, parentNode, commandRunner);
+  let current = persistReviewResult(state, parentNode, reviewResult);
 
-  if (reviewPasses || round >= parentNode.maxRounds) {
-    const next = updateNodeProgress(state, parentNode.id, {
+  if (reviewResult.pass) {
+    const next = updateNodeProgress(current, parentNode.id, {
       iteration: round,
       maxIterations: parentNode.maxRounds,
       status: 'completed',
       startedAt: progress?.startedAt,
       completedAt: Date.now(),
+      loopStartedAt: progress?.loopStartedAt,
+    });
+    return advanceNode(next, advancePath(parentPath));
+  }
+
+  if (round >= parentNode.maxRounds) {
+    if (parentNode.strict) {
+      current = updateNodeProgress(current, parentNode.id, {
+        iteration: round,
+        maxIterations: parentNode.maxRounds,
+        status: 'failed',
+        startedAt: progress?.startedAt,
+        completedAt: Date.now(),
+        loopStartedAt: progress?.loopStartedAt,
+      });
+      const strictReason = `Review strict failed after ${round}/${parentNode.maxRounds} rounds: ${reviewResult.reason}`;
+      return markFailed(current, strictReason);
+    }
+
+    const next = updateNodeProgress(current, parentNode.id, {
+      iteration: round,
+      maxIterations: parentNode.maxRounds,
+      status: 'completed',
+      startedAt: progress?.startedAt,
+      completedAt: Date.now(),
+      loopStartedAt: progress?.loopStartedAt,
     });
     return advanceNode(next, advancePath(parentPath));
   }
@@ -726,15 +854,17 @@ async function handleReviewBodyExhaustion(
     '/' +
     String(parentNode.maxRounds) +
     ': Please revise your work.';
+  const critiqueFeedback = ` Latest verdict: ${reviewResult.reason}`;
   const critiquePrompt = parentNode.criteria
-    ? critiqueBase + ' Evaluation criteria: ' + parentNode.criteria
-    : critiqueBase + ' Based on the feedback.';
+    ? critiqueBase + ' Evaluation criteria: ' + parentNode.criteria + critiqueFeedback
+    : critiqueBase + ' Based on the feedback.' + critiqueFeedback;
 
-  let looping = updateNodeProgress(state, parentNode.id, {
+  let looping = updateNodeProgress(current, parentNode.id, {
     iteration: round + 1,
     maxIterations: parentNode.maxRounds,
     status: 'running',
     startedAt: progress?.startedAt,
+    loopStartedAt: progress?.loopStartedAt,
   });
   looping = updateVariable(looping, '_review_critique', critiquePrompt);
   looping = advanceNode(looping, [...parentPath, 0]);
@@ -1362,6 +1492,10 @@ export async function autoAdvanceNodes(
   let advances = 0;
   let current = state;
 
+  if (current.status !== 'active') {
+    return { kind: 'advance', state: current, capturedPrompt: null };
+  }
+
   while (advances < MAX_ADVANCES) {
     const prevPath = current.currentNodePath;
     const node = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
@@ -1370,6 +1504,9 @@ export async function autoAdvanceNodes(
       const exhaustionResult = await handleBodyExhaustion(current, commandRunner);
       if (!exhaustionResult) break;
       current = exhaustionResult;
+      if (current.status !== 'active') {
+        return { kind: 'advance', state: current, capturedPrompt: null };
+      }
       advances += 1;
       continue;
     }
@@ -1386,6 +1523,9 @@ export async function autoAdvanceNodes(
     );
     if ('capturedPrompt' in result) return result;
     current = result.state;
+    if (current.status !== 'active') {
+      return { kind: 'advance', state: current, capturedPrompt: null };
+    }
     advances += 1;
 
     // Stale-state detection: if path didn't change, node failed to advance — bail out

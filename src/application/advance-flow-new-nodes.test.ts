@@ -169,8 +169,10 @@ describe('autoAdvanceNodes — review node', () => {
       },
     };
     // Without grounded-by, reviewPasses = true → exits immediately
-    const { capturedPrompt } = await autoAdvanceNodes(state);
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
     expect(capturedPrompt).toBe('Review done');
+    expect(result.variables['_review_result.pass']).toBe(true);
+    expect(result.variables['_review_result.abstain']).toBe(false);
   });
 
   it('with grounded-by exiting 0: completes after body exhaustion', async () => {
@@ -190,8 +192,10 @@ describe('autoAdvanceNodes — review node', () => {
       currentNodePath: [0, 1],
       nodeProgress: { rv1: { iteration: 1, maxIterations: 3, status: 'running' } },
     };
-    const { capturedPrompt } = await autoAdvanceNodes(state, runner);
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
     expect(capturedPrompt).toBe('Passed');
+    expect(result.variables['_review_result.pass']).toBe(true);
+    expect(result.variables['_review_result.reason']).toBe('Grounded review checks passed.');
   });
 
   it('with grounded-by exiting non-zero: re-loops body and sets _review_critique', async () => {
@@ -213,6 +217,9 @@ describe('autoAdvanceNodes — review node', () => {
     const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
     // Re-loops to body with critique variable set
     expect(result.variables['_review_critique']).toMatch(/round 2/i);
+    expect(result.variables['_review_critique']).toMatch(/latest verdict/i);
+    expect(result.variables['_review_result.pass']).toBe(false);
+    expect(result.variables['_review_result.abstain']).toBe(false);
     expect(capturedPrompt).toBe('Draft');
   });
 
@@ -236,7 +243,31 @@ describe('autoAdvanceNodes — review node', () => {
     expect(String(result.variables['_review_critique'])).toContain('Must be concise');
   });
 
-  it('max rounds exhausted: advances past review node', async () => {
+  it('with grounded-by but no command runner: stores abstain verdict and re-loops', async () => {
+    const reviewNode = createReviewNode(
+      'rv1',
+      [createPromptNode('p1', 'Draft')],
+      3,
+      undefined,
+      'check.sh',
+    );
+    const spec = createFlowSpec('test', [reviewNode]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      currentNodePath: [0, 1],
+      nodeProgress: { rv1: { iteration: 1, maxIterations: 3, status: 'running' } },
+    };
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+    expect(result.variables['_review_result.pass']).toBe(false);
+    expect(result.variables['_review_result.abstain']).toBe(true);
+    expect(result.variables['_review_result.reason']).toBe(
+      'Grounded review could not run because no command runner is available.',
+    );
+    expect(capturedPrompt).toBe('Draft');
+  });
+
+  it('max rounds exhausted: advances past non-strict review node', async () => {
     const runner = makeRunner(1); // still failing
     const reviewNode = createReviewNode(
       'rv1',
@@ -253,8 +284,35 @@ describe('autoAdvanceNodes — review node', () => {
       currentNodePath: [0, 1],
       nodeProgress: { rv1: { iteration: 2, maxIterations: 2, status: 'running' } },
     };
-    const { capturedPrompt } = await autoAdvanceNodes(state, runner);
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
     expect(capturedPrompt).toBe('Max rounds reached');
+    expect(result.status).toBe('active');
+    expect(result.variables['_review_result.pass']).toBe(false);
+  });
+
+  it('strict review fails closed when rounds are exhausted', async () => {
+    const runner = makeRunner(1);
+    const reviewNode = createReviewNode(
+      'rv1',
+      [createPromptNode('p1', 'Draft')],
+      2,
+      undefined,
+      'check.sh',
+      true,
+    );
+    const spec = createFlowSpec('test', [reviewNode]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      currentNodePath: [0, 1],
+      nodeProgress: { rv1: { iteration: 2, maxIterations: 2, status: 'running' } },
+    };
+    const result = await autoAdvanceNodes(state, runner);
+    expect(result.kind).toBe('advance');
+    expect(result.state.status).toBe('failed');
+    expect(result.state.failureReason).toContain('Review strict failed after 2/2 rounds');
+    expect(result.state.nodeProgress['rv1']?.status).toBe('failed');
+    expect(result.state.variables['_review_result.pass']).toBe(false);
   });
 });
 

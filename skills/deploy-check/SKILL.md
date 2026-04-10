@@ -38,3 +38,39 @@ done when:
 - Fix the first error you encounter — later stages may depend on earlier ones.
 - If a fix in a later stage breaks an earlier stage, the next retry will catch it.
 - Report the final status of all three stages when done.
+
+## Environment-Specific Command Mapping
+
+When the repo uses a non-Node stack, substitute equivalent commands:
+
+- Python: `ruff check . && pytest && python -m build`
+- Go: `go test ./... && go vet ./...`
+- Rust: `cargo test && cargo clippy -- -D warnings && cargo build`
+
+Use project-native commands if scripts are already defined in package/tooling config.
+
+## Deployment Readiness Checklist
+
+Before declaring ready:
+
+1. Lint is clean.
+2. Tests are green.
+3. Build/package step completes.
+4. No unresolved TODO-level warnings introduced in touched files.
+5. Any migration or rollout prerequisites are called out explicitly.
+
+## Failure Classification
+
+- `lint` failures: style/static correctness; fix first.
+- `test` failures: behavior regressions; isolate smallest failing unit first.
+- `build` failures: integration/packaging/runtime typing.
+
+If failures are flaky or environment-specific, report the exact command and stderr fragment.
+
+## Done Response Template
+
+- `Lint:` pass/fail
+- `Tests:` pass/fail
+- `Build:` pass/fail
+- `Ready:` yes/no
+- `Notes:` any remaining risk or prerequisite

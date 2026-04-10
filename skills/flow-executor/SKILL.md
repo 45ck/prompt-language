@@ -58,3 +58,35 @@ These are evaluated on-demand for `done when:` gates and flow conditions. They r
 - `diff_nonempty` -- runs `git diff --quiet`
 
 Inverted predicates (`tests_fail`, `lint_fail`, `diff_nonempty`) pass when the command fails.
+
+## Manual Advance Protocol
+
+When stepping manually, apply this order:
+
+1. Read state and resolve current node from path.
+2. Execute node action.
+3. Persist state mutation (variables, progress, path).
+4. Re-read state and confirm one-step progression.
+
+If state does not change after a step, stop and report a likely advancement bug.
+
+## Node-Type Troubleshooting
+
+- `await` stuck: check spawned child statuses and poll counters.
+- `foreach` drift: verify loop index/length variables are consistent.
+- `if` misbranching: print resolved condition and variable interpolation.
+- `retry` loops: inspect `command_failed`, `last_exit_code`, and max attempts.
+
+## Do Not Do
+
+- Do not rewrite large parts of state manually without a reproducible reason.
+- Do not bypass gates by force-marking completion.
+- Do not delete state as a first response; preserve evidence first, then reset only if requested.
+
+## Minimal Incident Report Template
+
+- `Observed:` what is stuck or failing
+- `Current node/path:` from state
+- `Expected next node:` inferred from flow
+- `Action taken:` command/step
+- `Result:` advanced/not advanced

@@ -57,3 +57,31 @@ Parse, lint, and score a prompt-language flow to find issues before execution.
 - **Infinite loop risk**: Loop condition depends on a predicate (like `command_failed`) but body has no `run` node
 - **Missing goal**: No `Goal:` line found
 - **Empty flow**: No nodes defined in the `flow:` block
+
+## Review Prioritization
+
+When many warnings exist, report in this priority order:
+
+1. Parse blockers (flow cannot be executed safely)
+2. Control-flow safety issues (infinite loop risk, invalid break/continue)
+3. Semantic issues (unresolved interpolation, retry-without-run)
+4. Complexity/readability concerns
+
+## Suggested Fix Strategy
+
+- First make the flow executable (parse/lint blockers).
+- Then reduce control-flow risk.
+- Then simplify complexity (collapse unnecessary phases, remove short-distance variables).
+
+## Output Format
+
+- `Parse:` pass/fail + count
+- `Lint:` pass/fail + count
+- `Complexity:` score + short rationale
+- `Top 3 fixes:` concrete edits with expected impact
+
+## Edge Cases
+
+- If multiple `.flow` files exist and no argument is given, ask which file to validate.
+- If no flow source is discoverable, report exactly what was searched.
+- If validation script path is missing, report plugin installation mismatch instead of guessing.

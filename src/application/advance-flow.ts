@@ -309,6 +309,19 @@ function parseAskVerdict(captured: string): boolean | null {
   return null;
 }
 
+function normalizeGroundingCommand(command: string): string {
+  if (process.platform !== 'win32') {
+    return command;
+  }
+
+  const catMatch = /^\s*cat(\s+.+)$/i.exec(command);
+  if (catMatch?.[1]) {
+    return `type${catMatch[1]}`;
+  }
+
+  return command;
+}
+
 async function buildAskGroundingEvidence(
   groundedBy: string | undefined,
   variables: Readonly<Record<string, string | number | boolean>>,
@@ -316,7 +329,7 @@ async function buildAskGroundingEvidence(
 ): Promise<string | undefined> {
   if (!groundedBy || !commandRunner) return undefined;
   try {
-    const command = interpolate(groundedBy, variables);
+    const command = normalizeGroundingCommand(interpolate(groundedBy, variables));
     const result = await commandRunner.run(command);
     return result.stdout.trimEnd();
   } catch {
@@ -689,7 +702,7 @@ async function handleReviewBodyExhaustion(
 
   let reviewPasses = false;
   if (parentNode.groundedBy && commandRunner) {
-    const cmd = interpolate(parentNode.groundedBy, state.variables);
+    const cmd = normalizeGroundingCommand(interpolate(parentNode.groundedBy, state.variables));
     const result = await commandRunner.run(cmd);
     reviewPasses = result.exitCode === 0;
   } else if (!parentNode.groundedBy) {
@@ -893,7 +906,15 @@ async function advanceLetPrompt(
     if (captured && captured !== CAPTURE_PENDING_SENTINEL) {
       await captureReader.clear(node.variableName);
       debugLog('capture', `Captured value for "${node.variableName}"`, 2);
-      return { state: current, value: captured };
+      return {
+        state: updateNodeProgress(current, node.id, {
+          iteration: progress.iteration,
+          maxIterations: progress.maxIterations,
+          status: 'completed',
+          completedAt: Date.now(),
+        }),
+        value: captured,
+      };
     }
     if (captured === CAPTURE_PENDING_SENTINEL) {
       failureReason = 'capture file still pending (model did not write response)';
@@ -928,13 +949,22 @@ async function advanceLetPrompt(
   }
 
   return {
-    state: {
-      ...current,
-      warnings: [
-        ...current.warnings,
-        `Variable capture for '${node.variableName}' failed after ${progress.maxIterations} attempts; using empty string.`,
-      ],
-    },
+    state: updateNodeProgress(
+      {
+        ...current,
+        warnings: [
+          ...current.warnings,
+          `Variable capture for '${node.variableName}' failed after ${progress.maxIterations} attempts; using empty string.`,
+        ],
+      },
+      node.id,
+      {
+        iteration: progress.iteration,
+        maxIterations: progress.maxIterations,
+        status: 'completed',
+        completedAt: Date.now(),
+      },
+    ),
     value: '',
   };
 }
@@ -990,7 +1020,15 @@ async function advanceLetPromptJson(
     if (captured && captured !== CAPTURE_PENDING_SENTINEL) {
       await captureReader.clear(node.variableName);
       debugLog('capture', `Captured JSON value for "${node.variableName}"`, 2);
-      return { state: current, value: captured };
+      return {
+        state: updateNodeProgress(current, node.id, {
+          iteration: progress.iteration,
+          maxIterations: progress.maxIterations,
+          status: 'completed',
+          completedAt: Date.now(),
+        }),
+        value: captured,
+      };
     }
     if (captured === CAPTURE_PENDING_SENTINEL) {
       failureReason = 'capture file still pending (model did not write response)';
@@ -1025,13 +1063,22 @@ async function advanceLetPromptJson(
   }
 
   return {
-    state: {
-      ...current,
-      warnings: [
-        ...current.warnings,
-        `JSON capture for '${node.variableName}' failed after ${progress.maxIterations} attempts; using empty string.`,
-      ],
-    },
+    state: updateNodeProgress(
+      {
+        ...current,
+        warnings: [
+          ...current.warnings,
+          `JSON capture for '${node.variableName}' failed after ${progress.maxIterations} attempts; using empty string.`,
+        ],
+      },
+      node.id,
+      {
+        iteration: progress.iteration,
+        maxIterations: progress.maxIterations,
+        status: 'completed',
+        completedAt: Date.now(),
+      },
+    ),
     value: '',
   };
 }
@@ -1846,7 +1893,9 @@ async function advanceConditionLoop(
       // is explicitly enabled for the ask condition.
       if (!usesRetryBudget && node.groundedBy && commandRunner) {
         try {
-          const groundingCommand = interpolate(node.groundedBy, current.variables);
+          const groundingCommand = normalizeGroundingCommand(
+            interpolate(node.groundedBy, current.variables),
+          );
           const groundingResult = await commandRunner.run(groundingCommand);
           const groundingMet = groundingResult.exitCode === 0;
           const enterBody = node.kind === 'while' ? groundingMet : !groundingMet;
@@ -2088,7 +2137,9 @@ async function advanceIfNode(
     if (!isAwaiting) {
       if (!usesRetryBudget && node.groundedBy && commandRunner) {
         try {
-          const groundingCommand = interpolate(node.groundedBy, current.variables);
+          const groundingCommand = normalizeGroundingCommand(
+            interpolate(node.groundedBy, current.variables),
+          );
           const groundingResult = await commandRunner.run(groundingCommand);
           const verdict = groundingResult.exitCode === 0;
           if (verdict) {

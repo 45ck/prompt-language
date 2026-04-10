@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { access, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { FileMemoryStore } from './file-memory-store.js';
@@ -114,5 +114,13 @@ describe('FileMemoryStore.findByKey', () => {
     await store.append({ timestamp: '2024-01-01T00:00:00Z', text: 'just text' });
     const entry = await store.findByKey('text');
     expect(entry).toBeUndefined();
+  });
+
+  it('writes to a custom state directory when provided', async () => {
+    const store = new FileMemoryStore(tempDir, '.prompt-language-worker');
+    await store.append({ timestamp: '2024-01-01T00:00:00Z', key: 'color', value: 'purple' });
+    await expect(
+      access(join(tempDir, '.prompt-language-worker', 'memory.json')),
+    ).resolves.toBeUndefined();
   });
 });

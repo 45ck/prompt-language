@@ -101,6 +101,14 @@ describe('FileCaptureReader', () => {
     it('is a no-op for path-traversal variable name', async () => {
       await expect(reader.prime('../hack')).resolves.toBeUndefined();
     });
+
+    it('uses a custom state directory when provided', async () => {
+      const customReader = new FileCaptureReader(baseDir, '.prompt-language-worker');
+      await customReader.prime('tasks');
+      await expect(
+        access(join(baseDir, '.prompt-language-worker', 'vars', 'tasks')),
+      ).resolves.toBeUndefined();
+    });
   });
 
   describe('read rethrows non-ENOENT errors', () => {

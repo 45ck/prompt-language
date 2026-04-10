@@ -373,6 +373,7 @@ function parseWhileLine(
       askMax = DEFAULT_MAX_ITERATIONS;
     }
     const askBody = parseBlock(ctx, baseIndent);
+    consumeEnd(ctx);
     return createWhileNode(
       nextId(ctx),
       `${ASK_CONDITION_PREFIX}"${question}"`,
@@ -395,6 +396,7 @@ function parseWhileLine(
   const negated = /^while\s+not\s+/i.test(stripped);
   const cond = negated ? `not ${condition}` : condition;
   const body = parseBlock(ctx, baseIndent);
+  consumeEnd(ctx);
   return createWhileNode(nextId(ctx), cond, body, max, label, timeout);
 }
 
@@ -422,6 +424,7 @@ function parseUntilLine(
       askMax = DEFAULT_MAX_ITERATIONS;
     }
     const askBody = parseBlock(ctx, baseIndent);
+    consumeEnd(ctx);
     return createUntilNode(
       nextId(ctx),
       `${ASK_CONDITION_PREFIX}"${question}"`,
@@ -442,6 +445,7 @@ function parseUntilLine(
     max = DEFAULT_MAX_ITERATIONS;
   }
   const body = parseBlock(ctx, baseIndent);
+  consumeEnd(ctx);
   return createUntilNode(nextId(ctx), condition, body, max, label, timeout);
 }
 
@@ -457,6 +461,7 @@ function parseRetryLine(
   const max = match?.[1] ? parseInt(match[1], 10) : undefined;
   const backoffMs = match?.[2] ? parseInt(match[2], 10) * 1000 : undefined;
   const body = parseBlock(ctx, baseIndent);
+  consumeEnd(ctx);
   return createRetryNode(nextId(ctx), body, max, label, timeout, backoffMs);
 }
 

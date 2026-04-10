@@ -20,6 +20,43 @@ function getDefaultTimeoutMs(): number {
 
 const DEFAULT_TIMEOUT_MS = getDefaultTimeoutMs();
 const MAX_BUFFER_BYTES = 4 * 1024 * 1024;
+const SHELL_META_PATTERN = /(?:\|\||&&|>>|[|><;&])/;
+
+interface DirectExecution {
+  readonly file: string;
+  readonly args: readonly string[];
+}
+
+function tryParseDirectExecution(command: string): DirectExecution | undefined {
+  if (process.platform !== 'win32') {
+    return undefined;
+  }
+
+  const trimmed = command.trim();
+  if (!/^node\s+-e\s+/i.test(trimmed)) {
+    if (SHELL_META_PATTERN.test(trimmed)) {
+      return undefined;
+    }
+    return undefined;
+  }
+
+  let script = trimmed.replace(/^node\s+-e\s+/i, '').trim();
+  if (script.startsWith('\\"') && script.endsWith('\\"')) {
+    script = script.slice(2, -2);
+  } else if (
+    (script.startsWith('"') && script.endsWith('"')) ||
+    (script.startsWith("'") && script.endsWith("'"))
+  ) {
+    script = script.slice(1, -1);
+  } else {
+    return undefined;
+  }
+
+  return {
+    file: process.execPath,
+    args: ['-e', script.replace(/\\"/g, '"').replace(/\\\\/g, '\\')],
+  };
+}
 
 async function terminateProcessTree(pid: number): Promise<boolean> {
   if (process.platform === 'win32') {
@@ -63,17 +100,27 @@ export class ShellCommandRunner implements CommandRunner {
   async run(command: string, options?: RunOptions): Promise<CommandResult> {
     const timeout = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const envOverride = options?.env ? { ...process.env, ...options.env } : process.env;
-    const shell = true;
+    const directExecution = tryParseDirectExecution(command);
+    const shell = directExecution === undefined;
     const detached = process.platform !== 'win32';
 
     return await new Promise<CommandResult>((resolve) => {
-      const child = spawn(command, {
-        shell,
-        detached,
-        windowsHide: true,
-        env: envOverride,
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
+      const child =
+        directExecution === undefined
+          ? spawn(command, {
+              shell,
+              detached,
+              windowsHide: true,
+              env: envOverride,
+              stdio: ['ignore', 'pipe', 'pipe'],
+            })
+          : spawn(directExecution.file, [...directExecution.args], {
+              shell,
+              detached,
+              windowsHide: true,
+              env: envOverride,
+              stdio: ['ignore', 'pipe', 'pipe'],
+            });
 
       let stdout = '';
       let stderr = '';

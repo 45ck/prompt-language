@@ -1,7 +1,7 @@
 /**
- * ProcessSpawner — port for spawning child Claude processes.
+ * ProcessSpawner — port for spawning child flow processes.
  *
- * Each spawn node launches a separate `claude -p` process with its own
+ * Each spawn node launches a separate child runner with its own
  * isolated state directory and flow definition.
  */
 
@@ -12,7 +12,7 @@ export interface SpawnInput {
   readonly variables: Readonly<Record<string, string | number | boolean>>;
   readonly stateDir: string;
   readonly cwd?: string | undefined;
-  /** beads: prompt-language-2j9v — model to pass as --model to child claude process. */
+  /** beads: prompt-language-2j9v — model to pass through to the child runner. */
   readonly model?: string | undefined;
 }
 
@@ -26,7 +26,7 @@ export interface ChildStatus {
 }
 
 export interface ProcessSpawner {
-  /** Launch a child Claude process with the given flow. Returns the child PID. */
+  /** Launch a child flow process with the given flow. Returns the child PID. */
   spawn(input: SpawnInput): Promise<SpawnResult>;
 
   /** Poll the status of a spawned child by reading its state directory. */

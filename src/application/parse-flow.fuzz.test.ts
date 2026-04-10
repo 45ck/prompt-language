@@ -680,16 +680,11 @@ describe('Edge case fixtures — parser boundary conditions', () => {
 // ─── Section 3: Error Message Quality (rtm0) ────────────────────────────────
 
 describe('Error message quality — parse failure diagnostics', () => {
-  it('missing "end" for while: no warning emitted (parser inconsistency — while/until/retry do not call consumeEnd)', () => {
+  it('missing "end" for while warns about auto-closed block', () => {
     const spec = parseFlow('flow:\n  while not done max 3\n    prompt: work');
-    // BUG FOUND: while, until, retry do NOT call consumeEnd() so they silently
-    // accept missing "end". In contrast, if, foreach, spawn, try all call
-    // consumeEnd() and emit a "Missing end" warning. This is a parser inconsistency.
-    // The while node still parses correctly via dedent-based block closing.
     expect(spec.nodes).toHaveLength(1);
     expect(spec.nodes[0]!.kind).toBe('while');
-    // No warning about missing end is emitted (only the "max N" warning if missing)
-    expect(spec.warnings.some((w) => /auto-closed|missing.*end/i.test(w))).toBe(false);
+    expect(spec.warnings.some((w) => /auto-closed|missing.*end/i.test(w))).toBe(true);
   });
 
   it('missing "end" for if warns about auto-closed block', () => {

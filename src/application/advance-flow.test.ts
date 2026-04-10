@@ -1386,6 +1386,7 @@ describe('autoAdvanceNodes — let prompt capture', () => {
       captureReader,
     );
     expect(result.variables['answer']).toBe('blue');
+    expect(result.nodeProgress['l1']?.status).toBe('completed');
     expect(capturedPrompt).toBe('Got: blue');
     expect(captureReader.clear).toHaveBeenCalledWith('answer');
   });
@@ -1458,6 +1459,7 @@ describe('autoAdvanceNodes — let prompt capture', () => {
       captureReader,
     );
     expect(result.variables['answer']).toBe('');
+    expect(result.nodeProgress['l1']?.status).toBe('completed');
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.stringContaining('failed after 3 attempts')]),
     );
@@ -3040,6 +3042,33 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
     expect(result.currentNodePath).toEqual([1]);
   });
 
+  it('normalizes simple cat grounding commands on Windows', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const run = vi.fn(async () => ({ exitCode: 0, stdout: 'count=0', stderr: '' }));
+    const runner: CommandRunner = { run };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"is count less than 2?"',
+      [createPromptNode('p1', 'increment')],
+      3,
+      undefined,
+      undefined,
+      'cat counter.txt',
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(run).toHaveBeenCalledWith('type counter.txt');
+    expect(capturedPrompt).toBe('increment');
+
+    platformSpy.mockRestore();
+  });
+
   it('Phase 2: verdict=true enters while body', async () => {
     const captureReader: CaptureReader = {
       read: vi.fn().mockResolvedValue('true'),
@@ -3695,6 +3724,7 @@ describe('autoAdvanceNodes — let prompt_json capture', () => {
       captureReader,
     );
     expect(capturedPrompt).toBe('done');
+    expect(result.nodeProgress['l1']?.status).toBe('completed');
     expect(result.variables['analysis.severity']).toBe('high');
     expect(result.variables['analysis.summary']).toBe('bad code');
   });
@@ -3718,6 +3748,7 @@ describe('autoAdvanceNodes — let prompt_json capture', () => {
     });
 
     const { state: result } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.nodeProgress['l1']?.status).toBe('completed');
     expect(result.variables['result.severity']).toBe('low');
   });
 
@@ -3740,6 +3771,7 @@ describe('autoAdvanceNodes — let prompt_json capture', () => {
     });
 
     const { state: result } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.nodeProgress['l1']?.status).toBe('completed');
     expect(result.variables['analysis.files']).toBe('["a.ts","b.ts"]');
     expect(result.variables['analysis.files_length']).toBe(2);
   });
@@ -3763,6 +3795,7 @@ describe('autoAdvanceNodes — let prompt_json capture', () => {
     });
 
     const { state: result } = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.nodeProgress['l1']?.status).toBe('completed');
     expect(result.variables['analysis']).toBe('not valid json');
     expect(result.warnings.some((w) => w.includes('JSON parse failed'))).toBe(true);
   });
@@ -3820,6 +3853,7 @@ describe('autoAdvanceNodes — let prompt_json capture', () => {
     );
     expect(capturedPrompt).toBe('next');
     expect(result.variables['analysis']).toBe('');
+    expect(result.nodeProgress['l1']?.status).toBe('completed');
     expect(result.warnings.some((w) => w.includes('failed after'))).toBe(true);
   });
 });

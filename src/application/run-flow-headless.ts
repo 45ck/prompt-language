@@ -28,6 +28,10 @@ export interface RunFlowHeadlessOutput {
 const DEFAULT_MAX_TURNS = 24;
 const MAX_ASSISTANT_TEXT_SNIPPET = 160;
 
+function hasRunningChildren(state: SessionState): boolean {
+  return Object.values(state.spawnedChildren).some((child) => child?.status === 'running');
+}
+
 function buildPromptEnvelope(state: SessionState, capturedPrompt: string): string {
   return `${renderFlow(state)}\n\n${capturedPrompt}\n\n${renderFlowSummary(state)}`;
 }
@@ -111,6 +115,9 @@ export async function runFlowHeadless(
     }
 
     if (step.kind === 'pause') {
+      if (hasRunningChildren(state)) {
+        continue;
+      }
       return {
         finalState: state,
         reason: 'Flow paused before reaching completion.',

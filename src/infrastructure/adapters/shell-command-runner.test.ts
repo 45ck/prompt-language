@@ -428,4 +428,52 @@ describe('ShellCommandRunner (mocked spawn)', () => {
     expect(result.exitCode).toBe(1);
     expect(result.timedOut).toBe(false);
   });
+
+  it('bypasses cmd.exe for direct node -e commands on win32', async () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    const child = createMockChild(3579);
+    let capturedFile = '';
+    let capturedArgs: unknown[] = [];
+    let capturedOpts: Record<string, unknown> = {};
+    vi.doMock('node:child_process', () => ({
+      spawn: vi.fn(
+        (file: string, argsOrOptions: unknown, maybeOptions?: Record<string, unknown>) => {
+          capturedFile = file;
+          if (Array.isArray(argsOrOptions)) {
+            capturedArgs = argsOrOptions;
+            capturedOpts = maybeOptions ?? {};
+          } else {
+            capturedArgs = [];
+            capturedOpts = (argsOrOptions as Record<string, unknown>) ?? {};
+          }
+          return child;
+        },
+      ),
+    }));
+
+    try {
+      const mod = await import('./shell-command-runner.js');
+      const runner = new mod.ShellCommandRunner();
+      const runPromise = runner.run(
+        "node -e \\\"const fs=require('fs'); fs.writeFileSync('x.txt', `count=${1}\\\\n`); console.log(1);\\\"",
+      );
+      child.stdout.emit('data', Buffer.from('1'));
+      child.emit('close', 0);
+      const result = await runPromise;
+
+      expect(capturedFile).toBe(process.execPath);
+      expect(capturedArgs).toEqual([
+        '-e',
+        "const fs=require('fs'); fs.writeFileSync('x.txt', `count=${1}\\n`); console.log(1);",
+      ]);
+      expect(capturedOpts['shell']).toBe(false);
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe('1');
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+    }
+  });
 });

@@ -18,8 +18,8 @@ import type { MemoryStore, MemoryEntry } from '../../application/ports/memory-st
 export class FileMemoryStore implements MemoryStore {
   private readonly memoryPath: string;
 
-  constructor(stateDir: string) {
-    this.memoryPath = join(stateDir, '.prompt-language', 'memory.json');
+  constructor(basePath: string, stateDir = '.prompt-language') {
+    this.memoryPath = join(basePath, stateDir, 'memory.json');
   }
 
   async append(entry: MemoryEntry): Promise<void> {

@@ -133,6 +133,20 @@ flow:
     expect(node.maxIterations).toBe(5);
     expect(spec.warnings.some((w) => w.includes('Missing "max N" on while'))).toBe(true);
   });
+
+  it('preserves sibling nodes after a while block', () => {
+    const dsl = `Goal: g
+
+flow:
+  while ready max 2
+    prompt: work
+  end
+  run: echo done`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.nodes[0]?.kind).toBe('while');
+    expect(spec.nodes[1]?.kind).toBe('run');
+  });
 });
 
 describe('parseFlow — until loop', () => {
@@ -174,6 +188,20 @@ flow:
     const node = spec.nodes[0] as UntilNode;
     expect(node.maxIterations).toBe(5);
     expect(spec.warnings.some((w) => w.includes('Missing "max N" on until'))).toBe(true);
+  });
+
+  it('preserves sibling nodes after an until block', () => {
+    const dsl = `Goal: g
+
+flow:
+  until done max 3
+    run: pnpm test
+  end
+  run: echo done`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.nodes[0]?.kind).toBe('until');
+    expect(spec.nodes[1]?.kind).toBe('run');
   });
 });
 
@@ -228,6 +256,20 @@ flow:
     const spec = parse(dsl);
     const node = spec.nodes[0] as RetryNode;
     expect(node.backoffMs).toBeUndefined();
+  });
+
+  it('preserves sibling nodes after a retry block', () => {
+    const dsl = `Goal: g
+
+flow:
+  retry max 3
+    run: pnpm build
+  end
+  run: echo done`;
+    const spec = parse(dsl);
+    expect(spec.nodes).toHaveLength(2);
+    expect(spec.nodes[0]?.kind).toBe('retry');
+    expect(spec.nodes[1]?.kind).toBe('run');
   });
 });
 

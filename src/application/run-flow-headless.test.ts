@@ -35,15 +35,21 @@ class RecordingPromptRunner implements PromptTurnRunner {
   }
 }
 
-class FixedStatusProcessSpawner implements ProcessSpawner {
-  constructor(private readonly status: ChildStatus) {}
+class SequenceStatusProcessSpawner implements ProcessSpawner {
+  private pollIndex = 0;
+
+  constructor(private readonly statuses: readonly ChildStatus[]) {}
 
   async spawn(_input: SpawnInput): Promise<SpawnResult> {
     return { pid: 1234 };
   }
 
   async poll(_stateDir: string): Promise<ChildStatus> {
-    return this.status;
+    const status = this.statuses[Math.min(this.pollIndex, this.statuses.length - 1)] ?? {
+      status: 'running' as const,
+    };
+    this.pollIndex += 1;
+    return status;
   }
 }
 
@@ -372,7 +378,7 @@ describe('runFlowHeadless', () => {
     expect(result.reason).toBe('Prompt runner completed without observable workspace progress.');
   });
 
-  it('returns paused when spawned children are still running', async () => {
+  it('keeps polling spawned children until they complete', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-pause-'));
 
     const result = await runFlowHeadless(
@@ -394,15 +400,17 @@ describe('runFlowHeadless', () => {
         captureReader: new FileCaptureReader(tempDir),
         commandRunner: new InMemoryCommandRunner(),
         memoryStore: new FileMemoryStore(tempDir),
-        processSpawner: new FixedStatusProcessSpawner({ status: 'running' }),
+        processSpawner: new SequenceStatusProcessSpawner([
+          { status: 'running' },
+          { status: 'completed' },
+        ]),
         promptTurnRunner: new RecordingPromptRunner(),
         stateStore: new InMemoryStateStore(),
       },
     );
 
-    expect(result.finalState.status).toBe('active');
+    expect(result.finalState.status).toBe('completed');
     expect(result.turns).toBe(0);
-    expect(result.reason).toBe('Flow paused before reaching completion.');
   });
 
   it('completes multi-step run-only flows without invoking the model', async () => {

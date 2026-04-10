@@ -335,10 +335,11 @@ function readOptionValue(args, name) {
 function readRunnerOptions(args) {
   const runner = readOptionValue(args, '--runner') ?? 'claude';
   const model = readOptionValue(args, '--model');
-  return { runner, model };
+  const stateDir = readOptionValue(args, '--state-dir');
+  return { runner, model, stateDir };
 }
 
-async function runHeadlessFlow(flowText, model, runner) {
+async function runHeadlessFlow(flowText, model, runner, stateDir = '.prompt-language') {
   const [
     { runFlowHeadless },
     { FileStateStore },
@@ -346,6 +347,7 @@ async function runHeadlessFlow(flowText, model, runner) {
     { FileCaptureReader },
     { FileAuditLogger },
     { FileMemoryStore },
+    { HeadlessProcessSpawner },
     runnerModule,
   ] = await Promise.all([
     import(pathToFileURL(join(ROOT, 'dist', 'application', 'run-flow-headless.js')).href),
@@ -364,6 +366,10 @@ async function runHeadlessFlow(flowText, model, runner) {
     ),
     import(
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-memory-store.js')).href
+    ),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'headless-process-spawner.js'))
+        .href
     ),
     runner === 'opencode'
       ? import(
@@ -384,7 +390,7 @@ async function runHeadlessFlow(flowText, model, runner) {
       : new runnerModule.OllamaPromptTurnRunner();
 
   const cwd = process.cwd();
-  const stateStore = new FileStateStore(cwd);
+  const stateStore = new FileStateStore(cwd, stateDir);
   await stateStore.clear('');
   await stateStore.clearPendingPrompt();
 
@@ -396,10 +402,16 @@ async function runHeadlessFlow(flowText, model, runner) {
       sessionId: randomUUID(),
     },
     {
-      auditLogger: new FileAuditLogger(cwd),
-      captureReader: new FileCaptureReader(cwd),
+      auditLogger: new FileAuditLogger(cwd, stateDir),
+      captureReader: new FileCaptureReader(cwd, stateDir),
       commandRunner: new ShellCommandRunner(),
-      memoryStore: new FileMemoryStore(cwd),
+      memoryStore: new FileMemoryStore(cwd, stateDir),
+      processSpawner: new HeadlessProcessSpawner({
+        cliPath: join(ROOT, 'bin', 'cli.mjs'),
+        cwd,
+        ...(model != null ? { model } : {}),
+        runner,
+      }),
       promptTurnRunner,
       stateStore,
     },
@@ -435,10 +447,10 @@ async function runFlow() {
 
   const args = process.argv.slice(3);
   const flowText = await readFlowText(args, 'run');
-  const { runner, model } = readRunnerOptions(args);
+  const { runner, model, stateDir } = readRunnerOptions(args);
 
   if (runner === 'opencode' || runner === 'ollama') {
-    await runHeadlessFlow(flowText, model, runner);
+    await runHeadlessFlow(flowText, model, runner, stateDir);
     return;
   }
 
@@ -861,12 +873,12 @@ done when:
 async function ci() {
   const args = process.argv.slice(3);
   const flowText = await readFlowText(args, 'ci');
-  const { runner, model } = readRunnerOptions(args);
+  const { runner, model, stateDir } = readRunnerOptions(args);
 
   console.log(`[prompt-language CI] Running flow via ${runner}...`);
   try {
     if (runner === 'opencode' || runner === 'ollama') {
-      await runHeadlessFlow(flowText, model, runner);
+      await runHeadlessFlow(flowText, model, runner, stateDir);
     } else if (runner === 'claude') {
       const { execFileSync } = await import('node:child_process');
       const claudeArgs = ['-p', '--dangerously-skip-permissions'];

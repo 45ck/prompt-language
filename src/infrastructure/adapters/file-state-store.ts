@@ -43,8 +43,8 @@ export class FileStateStore implements StateStore {
   private readonly backupPath: string;
   private readonly backupPath2: string;
 
-  constructor(basePath: string) {
-    this.dirPath = join(basePath, DIR_NAME);
+  constructor(basePath: string, stateDir = DIR_NAME) {
+    this.dirPath = join(basePath, stateDir);
     this.filePath = join(this.dirPath, FILE_NAME);
     this.tempFilePath = join(this.dirPath, TEMP_FILE_NAME);
     this.lockPath = join(this.dirPath, LOCK_NAME);

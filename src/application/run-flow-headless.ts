@@ -117,6 +117,7 @@ export async function runFlowHeadless(
   await deps.stateStore.save(state);
 
   let turns = 0;
+  let lastRunningChildrenSnapshot: string | undefined;
 
   while (true) {
     const step = await autoAdvanceNodes(
@@ -142,14 +143,26 @@ export async function runFlowHeadless(
 
     if (step.kind === 'pause') {
       if (hasRunningChildren(state)) {
+        const snapshot = JSON.stringify(state.spawnedChildren);
+        if (lastRunningChildrenSnapshot === snapshot) {
+          return {
+            finalState: state,
+            reason: 'Flow paused before reaching completion.',
+            turns,
+          };
+        }
+        lastRunningChildrenSnapshot = snapshot;
         continue;
       }
+      lastRunningChildrenSnapshot = undefined;
       return {
         finalState: state,
         reason: 'Flow paused before reaching completion.',
         turns,
       };
     }
+
+    lastRunningChildrenSnapshot = undefined;
 
     if (step.kind === 'advance') {
       state = maybeCompleteFlow(state);
@@ -272,6 +285,18 @@ export async function runFlowHeadless(
       gateBlocked = gateResult.blocked;
     }
 
+    if (runResult.madeProgress === false) {
+      const detail = summarizeAssistantText(runResult.assistantText);
+      return {
+        finalState: (await deps.stateStore.loadCurrent()) ?? state,
+        reason:
+          detail == null
+            ? 'Prompt runner completed without observable workspace progress.'
+            : `Prompt runner completed without observable workspace progress. Last assistant output: ${detail}`,
+        turns,
+      };
+    }
+
     state = maybeCompleteFlow((await deps.stateStore.loadCurrent()) ?? state);
     await deps.stateStore.save(state);
 
@@ -287,17 +312,6 @@ export async function runFlowHeadless(
           detail == null
             ? 'Completion gates remained blocked after the final prompt turn.'
             : `Completion gates remained blocked after the final prompt turn. Last assistant output: ${detail}`,
-        turns,
-      };
-    }
-    if (runResult.madeProgress === false) {
-      const detail = summarizeAssistantText(runResult.assistantText);
-      return {
-        finalState: state,
-        reason:
-          detail == null
-            ? 'Prompt runner completed without observable workspace progress.'
-            : `Prompt runner completed without observable workspace progress. Last assistant output: ${detail}`,
         turns,
       };
     }

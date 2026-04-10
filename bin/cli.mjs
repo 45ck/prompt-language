@@ -380,24 +380,39 @@ function readRunnerOptions(args) {
 }
 
 async function runOpenCodeFlow(flowText, model, stateDir) {
-  return runHeadlessFlow(flowText, model, {
-    runnerModule: 'opencode-prompt-turn-runner.js',
-    runnerExport: 'OpenCodePromptTurnRunner',
-  }, stateDir);
+  return runHeadlessFlow(
+    flowText,
+    model,
+    {
+      runnerModule: 'opencode-prompt-turn-runner.js',
+      runnerExport: 'OpenCodePromptTurnRunner',
+    },
+    stateDir,
+  );
 }
 
 async function runCodexFlow(flowText, model, stateDir) {
-  return runHeadlessFlow(flowText, model, {
-    runnerModule: 'codex-prompt-turn-runner.js',
-    runnerExport: 'CodexPromptTurnRunner',
-  }, stateDir);
+  return runHeadlessFlow(
+    flowText,
+    model,
+    {
+      runnerModule: 'codex-prompt-turn-runner.js',
+      runnerExport: 'CodexPromptTurnRunner',
+    },
+    stateDir,
+  );
 }
 
 async function runOllamaFlow(flowText, model, stateDir) {
-  return runHeadlessFlow(flowText, model, {
-    runnerModule: 'ollama-prompt-turn-runner.js',
-    runnerExport: 'OllamaPromptTurnRunner',
-  }, stateDir);
+  return runHeadlessFlow(
+    flowText,
+    model,
+    {
+      runnerModule: 'ollama-prompt-turn-runner.js',
+      runnerExport: 'OllamaPromptTurnRunner',
+    },
+    stateDir,
+  );
 }
 
 async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.prompt-language') {

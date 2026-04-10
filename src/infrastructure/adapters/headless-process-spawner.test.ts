@@ -1,24 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { join } from 'node:path';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { CommandResult, CommandRunner } from '../../application/ports/command-runner.js';
 import type { SpawnInput } from '../../application/ports/process-spawner.js';
+import type {
+  PromptTurnResult,
+  PromptTurnRunner,
+} from '../../application/ports/prompt-turn-runner.js';
 
-vi.mock('node:child_process', () => ({
-  execFileSync: vi.fn(),
-  spawn: vi.fn(),
+vi.mock('../../application/run-flow-headless.js', () => ({
+  runFlowHeadless: vi.fn(),
 }));
 
-vi.mock('node:fs/promises', () => ({
-  mkdir: vi.fn(),
-  readFile: vi.fn(),
-  writeFile: vi.fn(),
-}));
-
-const { execFileSync: mockedExecFileSync, spawn: mockedSpawn } = await import('node:child_process');
-const {
-  mkdir: mockedMkdir,
-  readFile: mockedReadFile,
-  writeFile: mockedWriteFile,
-} = await import('node:fs/promises');
+const { runFlowHeadless } = await import('../../application/run-flow-headless.js');
 const { HeadlessProcessSpawner } = await import('./headless-process-spawner.js');
 
 function makeInput(overrides: Partial<SpawnInput> = {}): SpawnInput {
@@ -32,113 +24,124 @@ function makeInput(overrides: Partial<SpawnInput> = {}): SpawnInput {
   };
 }
 
+function createCommandRunner(): CommandRunner {
+  return {
+    run: vi.fn<() => Promise<CommandResult>>().mockResolvedValue({
+      exitCode: 0,
+      stdout: '',
+      stderr: '',
+    }),
+  };
+}
+
+function createPromptTurnRunner(): PromptTurnRunner {
+  return {
+    run: vi.fn<() => Promise<PromptTurnResult>>().mockResolvedValue({ exitCode: 0 }),
+  };
+}
+
+async function flushTasks(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 describe('HeadlessProcessSpawner', () => {
-  beforeEach(() => {
+  afterEach(() => {
     vi.resetAllMocks();
   });
 
-  it('writes a child flow file and spawns the headless CLI', async () => {
-    const fakeChild = { pid: 4321, unref: vi.fn() };
-    vi.mocked(mockedSpawn).mockReturnValue(fakeChild as never);
+  it('runs child flows in-process and returns the current pid', async () => {
+    vi.mocked(runFlowHeadless).mockResolvedValue({
+      finalState: {
+        status: 'completed',
+        variables: { result: 'done' },
+      } as never,
+      turns: 0,
+    });
 
+    const commandRunner = createCommandRunner();
+    const promptTurnRunner = createPromptTurnRunner();
     const spawner = new HeadlessProcessSpawner({
-      cliPath: '/repo/bin/cli.mjs',
+      commandRunner,
       cwd: '/repo/workspace',
-      runner: 'ollama',
-      model: 'ollama/gemma4:31b',
+      promptTurnRunner,
     });
 
     const result = await spawner.spawn(makeInput({ variables: { color: 'purple' } }));
 
-    const stateDir = join('/repo/workspace', '.prompt-language-worker');
-    const flowPath = join(stateDir, 'spawn.flow');
+    expect(result).toEqual({ pid: process.pid });
 
-    expect(result).toEqual({ pid: 4321 });
-    expect(mockedMkdir).toHaveBeenCalledWith(stateDir, {
-      recursive: true,
-    });
-    expect(mockedWriteFile).toHaveBeenCalledWith(
-      flowPath,
-      expect.stringContaining('let color = "purple"'),
-      'utf8',
-    );
-    expect(fakeChild.unref).toHaveBeenCalled();
-    expect(mockedSpawn).toHaveBeenCalledWith(
-      process.execPath,
-      [
-        '/repo/bin/cli.mjs',
-        'ci',
-        '--runner',
-        'ollama',
-        '--state-dir',
-        '.prompt-language-worker',
-        '--model',
-        'ollama/gemma4:31b',
-        '--file',
-        flowPath,
-      ],
+    await flushTasks();
+
+    expect(runFlowHeadless).toHaveBeenCalledTimes(1);
+
+    expect(runFlowHeadless).toHaveBeenCalledWith(
       expect.objectContaining({
         cwd: '/repo/workspace',
-        detached: true,
-        stdio: 'ignore',
-        windowsHide: true,
+        flowText: expect.stringContaining('let color = "purple"'),
+        sessionId: expect.any(String),
+      }),
+      expect.objectContaining({
+        commandRunner,
+        processSpawner: spawner,
+        promptTurnRunner,
       }),
     );
   });
 
-  it('returns pid 0 when the spawned child has no pid', async () => {
-    const fakeChild = { pid: undefined, unref: vi.fn() };
-    vi.mocked(mockedSpawn).mockReturnValue(fakeChild as never);
-
-    const spawner = new HeadlessProcessSpawner({
-      cliPath: '/repo/bin/cli.mjs',
-      cwd: '/repo/workspace',
-      runner: 'opencode',
-    });
-
-    await expect(spawner.spawn(makeInput())).resolves.toEqual({ pid: 0 });
-  });
-
-  it('reads completed child state from the configured state directory', async () => {
-    vi.mocked(mockedReadFile).mockResolvedValue(
-      JSON.stringify({ status: 'completed', variables: { result: 'done' } }),
+  it('reports running until the in-process child completes', async () => {
+    let resolveChild: ((value: unknown) => void) | undefined;
+    vi.mocked(runFlowHeadless).mockReturnValue(
+      new Promise((resolve) => {
+        resolveChild = resolve;
+      }) as never,
     );
 
     const spawner = new HeadlessProcessSpawner({
-      cliPath: '/repo/bin/cli.mjs',
+      commandRunner: createCommandRunner(),
       cwd: '/repo/workspace',
-      runner: 'ollama',
+      promptTurnRunner: createPromptTurnRunner(),
     });
 
-    const status = await spawner.poll('.prompt-language-worker');
+    await spawner.spawn(makeInput());
+    await expect(spawner.poll('.prompt-language-worker')).resolves.toEqual({ status: 'running' });
 
-    expect(status).toEqual({
+    resolveChild?.({
+      finalState: {
+        status: 'completed',
+        variables: { result: 'done' },
+      },
+      turns: 0,
+    });
+
+    await flushTasks();
+    await expect(spawner.poll('.prompt-language-worker')).resolves.toEqual({
       status: 'completed',
       variables: { result: 'done' },
     });
   });
 
-  it('terminates detached child processes on Windows and POSIX', async () => {
+  it('reports failed when the child run rejects', async () => {
+    vi.mocked(runFlowHeadless).mockRejectedValue(new Error('boom'));
+
     const spawner = new HeadlessProcessSpawner({
-      cliPath: '/repo/bin/cli.mjs',
+      commandRunner: createCommandRunner(),
       cwd: '/repo/workspace',
-      runner: 'ollama',
+      promptTurnRunner: createPromptTurnRunner(),
     });
 
-    const platformSpy = vi.spyOn(process, 'platform', 'get');
+    await spawner.spawn(makeInput());
 
-    platformSpy.mockReturnValue('win32');
-    await expect(spawner.terminate(99)).resolves.toBe(true);
-    expect(mockedExecFileSync).toHaveBeenCalledWith('taskkill', ['/PID', '99', '/T', '/F'], {
-      stdio: 'ignore',
+    await flushTasks();
+    await expect(spawner.poll('.prompt-language-worker')).resolves.toEqual({ status: 'failed' });
+  });
+
+  it('does not support external termination for in-process children', async () => {
+    const spawner = new HeadlessProcessSpawner({
+      commandRunner: createCommandRunner(),
+      cwd: '/repo/workspace',
+      promptTurnRunner: createPromptTurnRunner(),
     });
 
-    platformSpy.mockReturnValue('linux');
-    const killSpy = vi.spyOn(process, 'kill').mockReturnValue(true);
-    await expect(spawner.terminate(88)).resolves.toBe(true);
-    expect(killSpy).toHaveBeenCalledWith(-88, 'SIGTERM');
-
-    killSpy.mockRestore();
-    platformSpy.mockRestore();
+    await expect(spawner.terminate(99)).resolves.toBe(false);
   });
 });

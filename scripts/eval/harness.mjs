@@ -523,10 +523,10 @@ export function runHarnessFlow(
       ? execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict)
       : HARNESS === 'ollama'
         ? execOllamaFlow(flowText, cwd, timeout, resolvedModel, strict)
-      : runHarnessPrompt(flowText, {
-          cwd,
-          timeout,
-          model: resolvedModel,
-          strict,
-        });
+        : runHarnessPrompt(flowText, {
+            cwd,
+            timeout,
+            model: resolvedModel,
+            strict,
+          });
 }

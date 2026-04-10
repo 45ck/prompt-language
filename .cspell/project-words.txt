@@ -80,3 +80,9 @@ xcworkspace
 gateable
 overdesigning
 subflows
+agentscope
+hankweave
+packetized
+repairability
+streetrace
+zhog

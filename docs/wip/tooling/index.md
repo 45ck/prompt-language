@@ -6,6 +6,7 @@ Active tooling, integration, and ecosystem proposals. These pages describe candi
 
 | Page                                      | Focus                                                          | Status                                        |
 | ----------------------------------------- | -------------------------------------------------------------- | --------------------------------------------- |
+| [Ecosystem Pack](ecosystem/README.md)     | Curated comparison pack for adjacent runtimes and tool layers  | Imported WIP reference pack                   |
 | [Diagnostics Pack](diagnostics/README.md) | Proposal pack for diagnostics, outcomes, and CLI exit behavior | Imported proposal pack                        |
 | [Evals and Judges](evals-and-judges.md)   | Evaluation suites, reusable judges, and baselines              | Partially shipped; broader DSL still proposed |
 | [GitHub Action](github-action.md)         | CI-oriented flow execution packaging                           | Proposed                                      |

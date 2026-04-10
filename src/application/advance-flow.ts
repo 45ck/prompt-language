@@ -161,37 +161,28 @@ function prepareShellCommand(
   return baseEnv != null ? { command, env: baseEnv } : { command };
 }
 
-function advancePastCurrentNode(state: SessionState): SessionState {
-  const path = state.currentNodePath;
-  if (path.length < 2) {
-    return advanceNode(state, advancePath(path));
-  }
-
-  const parentPath = path.slice(0, -1);
-  const childIndex = path[path.length - 1]!;
-  const parentNode = resolveCurrentNode(state.flowSpec.nodes, parentPath);
-  if (!parentNode) {
-    return advanceNode(state, advancePath(path));
-  }
-
-  switch (parentNode.kind) {
-    case 'if': {
-      if (childIndex < parentNode.thenBranch.length) {
-        if (childIndex + 1 < parentNode.thenBranch.length) {
-          return advanceNode(state, [...parentPath, childIndex + 1]);
-        }
-        return advanceNode(state, advancePath(parentPath));
+function advanceFromPath(state: SessionState, path: readonly number[]): SessionState {
+  if (path.length > 0) {
+    const parentPath = path.slice(0, -1);
+    const parentNode = resolveCurrentNode(state.flowSpec.nodes, parentPath);
+    if (parentNode?.kind === 'if') {
+      const childIndex = path[path.length - 1]!;
+      const progress = state.nodeProgress[parentNode.id];
+      if (progress?.branchEndOffset !== undefined && childIndex + 1 >= progress.branchEndOffset) {
+        const completed = updateNodeProgress(state, parentNode.id, {
+          iteration: progress.iteration,
+          maxIterations: progress.maxIterations,
+          status: 'completed',
+          branchEndOffset: progress.branchEndOffset,
+          startedAt: progress.startedAt,
+          completedAt: Date.now(),
+        });
+        return advanceNode(completed, advancePath(parentPath));
       }
-
-      const elseStart = parentNode.thenBranch.length;
-      const elseOffset = childIndex - elseStart;
-      if (elseOffset + 1 < parentNode.elseBranch.length) {
-        return advanceNode(state, [...parentPath, childIndex + 1]);
-      }
-      return advanceNode(state, advancePath(parentPath));
     }
 
-    case 'try': {
+    if (parentNode?.kind === 'try') {
+      const childIndex = path[path.length - 1]!;
       const bodyLen = parentNode.body.length;
       const catchLen = parentNode.catchBody.length;
       const finallyLen = parentNode.finallyBody.length;
@@ -221,31 +212,6 @@ function advancePastCurrentNode(state: SessionState): SessionState {
         return advanceNode(state, [...parentPath, childIndex + 1]);
       }
       return advanceNode(state, advancePath(parentPath));
-    }
-
-    default:
-      return advanceNode(state, advancePath(path));
-  }
-}
-
-function advanceFromPath(state: SessionState, path: readonly number[]): SessionState {
-  if (path.length > 0) {
-    const parentPath = path.slice(0, -1);
-    const parentNode = resolveCurrentNode(state.flowSpec.nodes, parentPath);
-    if (parentNode?.kind === 'if') {
-      const childIndex = path[path.length - 1]!;
-      const progress = state.nodeProgress[parentNode.id];
-      if (progress?.branchEndOffset !== undefined && childIndex + 1 >= progress.branchEndOffset) {
-        const completed = updateNodeProgress(state, parentNode.id, {
-          iteration: progress.iteration,
-          maxIterations: progress.maxIterations,
-          status: 'completed',
-          branchEndOffset: progress.branchEndOffset,
-          startedAt: progress.startedAt,
-          completedAt: Date.now(),
-        });
-        return advanceNode(completed, advancePath(parentPath));
-      }
     }
   }
 

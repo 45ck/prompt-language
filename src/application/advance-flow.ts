@@ -68,7 +68,10 @@ import {
 import { createJudgeResult, type JudgeResult } from '../domain/judge-result.js';
 import {
   createFlowOutcome,
+  createRuntimeWarningDiagnostic,
   FLOW_OUTCOME_CODES,
+  RUNTIME_DIAGNOSTIC_CODES,
+  type FlowDiagnostic,
   type FlowOutcome,
 } from '../domain/diagnostic-report.js';
 import {
@@ -316,6 +319,16 @@ function setExitVariables(
   s = updateVariable(s, 'last_stdout', truncateOutput(stdout.trimEnd()));
   s = updateVariable(s, 'last_stderr', truncateOutput(stderr.trimEnd()));
   return s;
+}
+
+function persistRuntimeDiagnostic(
+  state: SessionState,
+  code: string,
+  summary: string,
+): SessionState {
+  let next = updateVariable(state, '_runtime_diagnostic.code', code);
+  next = updateVariable(next, '_runtime_diagnostic.summary', summary);
+  return next;
 }
 
 function readMemoryValue(entry?: MemoryEntry): string {
@@ -1128,20 +1141,29 @@ export type AutoAdvanceResult =
       readonly kind: 'prompt';
       readonly state: SessionState;
       readonly capturedPrompt: string;
+      readonly diagnostics?: readonly FlowDiagnostic[] | undefined;
       readonly outcomes?: readonly FlowOutcome[] | undefined;
     }
   | {
       readonly kind: 'advance';
       readonly state: SessionState;
       readonly capturedPrompt: null;
+      readonly diagnostics?: readonly FlowDiagnostic[] | undefined;
       readonly outcomes?: readonly FlowOutcome[] | undefined;
     }
   | {
       readonly kind: 'pause';
       readonly state: SessionState;
       readonly capturedPrompt: null;
+      readonly diagnostics?: readonly FlowDiagnostic[] | undefined;
       readonly outcomes?: readonly FlowOutcome[] | undefined;
     };
+
+interface CapturedValueResult {
+  readonly state: SessionState;
+  readonly value: string;
+  readonly diagnostics?: readonly FlowDiagnostic[] | undefined;
+}
 
 function shouldContinueAutoAdvance(result: AutoAdvanceResult): boolean {
   return (
@@ -1149,15 +1171,22 @@ function shouldContinueAutoAdvance(result: AutoAdvanceResult): boolean {
   );
 }
 
-function mergeAutoAdvanceOutcomes(
+function mergeAutoAdvanceSignals(
+  pendingDiagnostics: readonly FlowDiagnostic[],
   pending: readonly FlowOutcome[],
   result: AutoAdvanceResult,
 ): AutoAdvanceResult {
-  if (pending.length === 0 && (result.outcomes == null || result.outcomes.length === 0)) {
+  if (
+    pendingDiagnostics.length === 0 &&
+    pending.length === 0 &&
+    (result.diagnostics == null || result.diagnostics.length === 0) &&
+    (result.outcomes == null || result.outcomes.length === 0)
+  ) {
     return result;
   }
   return {
     ...result,
+    diagnostics: [...pendingDiagnostics, ...(result.diagnostics ?? [])],
     outcomes: [...pending, ...(result.outcomes ?? [])],
   };
 }
@@ -1172,6 +1201,7 @@ async function advanceLetNode(
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   let value: string;
   let tryCatchJump: readonly number[] | null = null;
+  const pendingDiagnostics: FlowDiagnostic[] = [];
 
   switch (node.source.type) {
     case 'literal': {
@@ -1188,6 +1218,7 @@ async function advanceLetNode(
       if ('capturedPrompt' in result) return result;
       current = result.state;
       value = result.value;
+      pendingDiagnostics.push(...(result.diagnostics ?? []));
       break;
     }
     case 'prompt_json': {
@@ -1196,6 +1227,7 @@ async function advanceLetNode(
       // JSON field expansion: store root + each top-level field as flat keys
       current = result.state;
       const jsonStr = result.value;
+      pendingDiagnostics.push(...(result.diagnostics ?? []));
       try {
         const fencedMatch = /```(?:json)?\s*([\s\S]*?)```/i.exec(jsonStr);
         const rawJson = fencedMatch?.[1] ? fencedMatch[1].trim() : jsonStr.trim();
@@ -1281,6 +1313,14 @@ async function advanceLetNode(
   } else {
     current = advanceFromPath(current, current.currentNodePath);
   }
+  if (pendingDiagnostics.length > 0) {
+    return {
+      kind: 'advance',
+      state: current,
+      capturedPrompt: null,
+      diagnostics: pendingDiagnostics,
+    };
+  }
   return { state: current, advanced: true };
 }
 
@@ -1289,7 +1329,7 @@ async function advanceLetPrompt(
   node: LetNode,
   current: SessionState,
   captureReader?: CaptureReader,
-): Promise<AutoAdvanceResult | { state: SessionState; value: string }> {
+): Promise<AutoAdvanceResult | CapturedValueResult> {
   const progress = current.nodeProgress[node.id];
   const isAwaiting = progress?.status === 'awaiting_capture';
 
@@ -1364,24 +1404,31 @@ async function advanceLetPrompt(
     };
   }
 
+  const summary = `Capture for '${node.variableName}' fell back to empty string after ${progress.maxIterations} attempts.`;
+  const fallbackState = persistRuntimeDiagnostic(
+    {
+      ...current,
+      warnings: [...current.warnings, summary],
+    },
+    RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
+    summary,
+  );
   return {
-    state: updateNodeProgress(
-      {
-        ...current,
-        warnings: [
-          ...current.warnings,
-          `Variable capture for '${node.variableName}' failed after ${progress.maxIterations} attempts; using empty string.`,
-        ],
-      },
-      node.id,
-      {
-        iteration: progress.iteration,
-        maxIterations: progress.maxIterations,
-        status: 'completed',
-        completedAt: Date.now(),
-      },
-    ),
+    state: updateNodeProgress(fallbackState, node.id, {
+      iteration: progress.iteration,
+      maxIterations: progress.maxIterations,
+      status: 'completed',
+      completedAt: Date.now(),
+    }),
     value: '',
+    diagnostics: [
+      createRuntimeWarningDiagnostic(
+        RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
+        summary,
+        'Inspect the capture path or rerun with a working Write/capture surface.',
+        true,
+      ),
+    ],
   };
 }
 
@@ -1393,7 +1440,7 @@ async function advanceLetPromptJson(
   node: LetNode,
   current: SessionState,
   captureReader?: CaptureReader,
-): Promise<AutoAdvanceResult | { state: SessionState; value: string }> {
+): Promise<AutoAdvanceResult | CapturedValueResult> {
   if (node.source.type !== 'prompt_json') {
     return { state: current, value: '' };
   }
@@ -1478,24 +1525,31 @@ async function advanceLetPromptJson(
     };
   }
 
+  const summary = `JSON capture for '${node.variableName}' fell back to empty string after ${progress.maxIterations} attempts.`;
+  const fallbackState = persistRuntimeDiagnostic(
+    {
+      ...current,
+      warnings: [...current.warnings, summary],
+    },
+    RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
+    summary,
+  );
   return {
-    state: updateNodeProgress(
-      {
-        ...current,
-        warnings: [
-          ...current.warnings,
-          `JSON capture for '${node.variableName}' failed after ${progress.maxIterations} attempts; using empty string.`,
-        ],
-      },
-      node.id,
-      {
-        iteration: progress.iteration,
-        maxIterations: progress.maxIterations,
-        status: 'completed',
-        completedAt: Date.now(),
-      },
-    ),
+    state: updateNodeProgress(fallbackState, node.id, {
+      iteration: progress.iteration,
+      maxIterations: progress.maxIterations,
+      status: 'completed',
+      completedAt: Date.now(),
+    }),
     value: '',
+    diagnostics: [
+      createRuntimeWarningDiagnostic(
+        RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
+        summary,
+        'Inspect the capture path or rerun with a working Write/capture surface.',
+        true,
+      ),
+    ],
   };
 }
 
@@ -1777,6 +1831,7 @@ export async function autoAdvanceNodes(
   const MAX_ADVANCES = 100;
   let advances = 0;
   let current = state;
+  const pendingDiagnostics: FlowDiagnostic[] = [];
   const pendingOutcomes: FlowOutcome[] = [];
 
   if (current.status !== 'active') {
@@ -1792,16 +1847,17 @@ export async function autoAdvanceNodes(
       if (!exhaustionResult) break;
       if ('kind' in exhaustionResult) {
         if (shouldContinueAutoAdvance(exhaustionResult)) {
+          pendingDiagnostics.push(...(exhaustionResult.diagnostics ?? []));
           pendingOutcomes.push(...(exhaustionResult.outcomes ?? []));
           current = exhaustionResult.state;
           advances += 1;
           continue;
         }
-        return mergeAutoAdvanceOutcomes(pendingOutcomes, exhaustionResult);
+        return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, exhaustionResult);
       }
       current = exhaustionResult;
       if (current.status !== 'active') {
-        return mergeAutoAdvanceOutcomes(pendingOutcomes, {
+        return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
           kind: 'advance',
           state: current,
           capturedPrompt: null,
@@ -1823,6 +1879,7 @@ export async function autoAdvanceNodes(
     );
     if ('capturedPrompt' in result) {
       if (shouldContinueAutoAdvance(result)) {
+        pendingDiagnostics.push(...(result.diagnostics ?? []));
         pendingOutcomes.push(...(result.outcomes ?? []));
         current = result.state;
         advances += 1;
@@ -1834,11 +1891,11 @@ export async function autoAdvanceNodes(
         }
         continue;
       }
-      return mergeAutoAdvanceOutcomes(pendingOutcomes, result);
+      return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, result);
     }
     current = result.state;
     if (current.status !== 'active') {
-      return mergeAutoAdvanceOutcomes(pendingOutcomes, {
+      return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
         kind: 'advance',
         state: current,
         capturedPrompt: null,
@@ -1866,7 +1923,7 @@ export async function autoAdvanceNodes(
     const currentNode = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
     if (currentNode?.kind === 'prompt') {
       const capturedPrompt = interpolate(currentNode.text, current.variables);
-      return mergeAutoAdvanceOutcomes(pendingOutcomes, {
+      return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
         kind: 'prompt',
         state: advanceFromPath(current, current.currentNodePath),
         capturedPrompt,
@@ -1874,7 +1931,7 @@ export async function autoAdvanceNodes(
     }
   }
 
-  return mergeAutoAdvanceOutcomes(pendingOutcomes, {
+  return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
     kind: 'advance',
     state: current,
     capturedPrompt: null,

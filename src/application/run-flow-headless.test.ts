@@ -141,6 +141,40 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.prompts[0]).toContain('Say hello');
   });
 
+  it('returns the persisted PLR-005 reason when capture falls back to empty string', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-capture-fallback-'));
+    await mkdir(join(tempDir, '.prompt-language', 'vars'), { recursive: true });
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 0,
+      assistantText: 'Tried to respond without writing the capture file.',
+      madeProgress: true,
+    }));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: 'Goal: capture response\n\nflow:\n  let answer = prompt "Say hello"\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.finalState.variables['answer']).toBe('');
+    expect(result.reason).toBe(
+      "PLR-005 Capture for 'answer' fell back to empty string after 3 attempts.",
+    );
+    expect(promptRunner.prompts).toHaveLength(3);
+  });
+
   it('finishes prompt-free flows without invoking the model runner', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-run-only-'));
 

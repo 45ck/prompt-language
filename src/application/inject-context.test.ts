@@ -1290,6 +1290,33 @@ describe('injectContext — terminal flow states', () => {
     expect(result.prompt).not.toContain('PLO-002');
   });
 
+  it('renders persisted runtime diagnostics instead of generic success for completed flows', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Capture flow', [createPromptNode('p1', 'work')]);
+    let session = createSessionState('done-runtime-diag', spec);
+    session = {
+      ...session,
+      status: 'completed',
+      variables: {
+        ...session.variables,
+        '_runtime_diagnostic.code': 'PLR-005',
+        '_runtime_diagnostic.summary':
+          "Capture for 'answer' fell back to empty string after 3 attempts.",
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'What next?', sessionId: 'done-runtime-diag' },
+      store,
+    );
+
+    expect(result.prompt).toContain(
+      "[prompt-language] PLR-005 Capture for 'answer' fell back to empty string after 3 attempts.",
+    );
+    expect(result.prompt).not.toContain('Flow completed successfully.');
+  });
+
   it('returns short summary for failed flow', async () => {
     const store = makeStore();
     const spec = createFlowSpec('Deploy', [createRunNode('r1', 'deploy')]);
@@ -2183,9 +2210,20 @@ describe('injectContext — let-prompt capture', () => {
     );
 
     expect(result.prompt).toContain('work');
+    expect(result.prompt).toContain(
+      "[PLR-005 Capture for 'out' fell back to empty string after 3 attempts.]",
+    );
     const saved = await store.loadCurrent();
     expect(saved?.variables['out']).toBe('');
-    expect(saved?.warnings).toEqual(expect.arrayContaining([expect.stringContaining('failed')]));
+    expect(saved?.variables['_runtime_diagnostic.code']).toBe('PLR-005');
+    expect(saved?.variables['_runtime_diagnostic.summary']).toBe(
+      "Capture for 'out' fell back to empty string after 3 attempts.",
+    );
+    expect(saved?.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('fell back to empty string after 3 attempts'),
+      ]),
+    );
   });
 
   it('interpolates variables in let-prompt text', async () => {

@@ -34,6 +34,7 @@ import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import { CAPTURE_PENDING_SENTINEL } from './ports/capture-reader.js';
 import type { ProcessSpawner, SpawnInput } from './ports/process-spawner.js';
+import { RUNTIME_DIAGNOSTIC_CODES } from '../domain/diagnostic-report.js';
 
 // ── resolveCurrentNode ───────────────────────────────────────────────
 
@@ -1453,17 +1454,29 @@ describe('autoAdvanceNodes — let prompt capture', () => {
       status: 'awaiting_capture',
     });
 
-    const { state: result, capturedPrompt } = await autoAdvanceNodes(
-      state,
-      undefined,
-      captureReader,
+    const result = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.kind).toBe('prompt');
+    expect(result.state.variables['answer']).toBe('');
+    expect(result.state.nodeProgress['l1']?.status).toBe('completed');
+    expect(result.state.warnings).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining('fell back to empty string after 3 attempts'),
+      ]),
     );
-    expect(result.variables['answer']).toBe('');
-    expect(result.nodeProgress['l1']?.status).toBe('completed');
-    expect(result.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining('failed after 3 attempts')]),
+    expect(result.state.variables['_runtime_diagnostic.code']).toBe(
+      RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
     );
-    expect(capturedPrompt).toBe('next');
+    expect(result.state.variables['_runtime_diagnostic.summary']).toBe(
+      "Capture for 'answer' fell back to empty string after 3 attempts.",
+    );
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
+        severity: 'warning',
+        blocksExecution: false,
+      }),
+    ]);
+    expect(result.capturedPrompt).toBe('next');
   });
 
   it('let prompt without captureReader emits prompt then stalls on retry', async () => {
@@ -3846,15 +3859,27 @@ describe('autoAdvanceNodes — let prompt_json capture', () => {
       status: 'awaiting_capture',
     });
 
-    const { capturedPrompt, state: result } = await autoAdvanceNodes(
-      state,
-      undefined,
-      captureReader,
+    const result = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toBe('next');
+    expect(result.state.variables['analysis']).toBe('');
+    expect(result.state.nodeProgress['l1']?.status).toBe('completed');
+    expect(
+      result.state.warnings.some((w) => w.includes('fell back to empty string after 3 attempts')),
+    ).toBe(true);
+    expect(result.state.variables['_runtime_diagnostic.code']).toBe(
+      RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
     );
-    expect(capturedPrompt).toBe('next');
-    expect(result.variables['analysis']).toBe('');
-    expect(result.nodeProgress['l1']?.status).toBe('completed');
-    expect(result.warnings.some((w) => w.includes('failed after'))).toBe(true);
+    expect(result.state.variables['_runtime_diagnostic.summary']).toBe(
+      "JSON capture for 'analysis' fell back to empty string after 3 attempts.",
+    );
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
+        severity: 'warning',
+        blocksExecution: false,
+      }),
+    ]);
   });
 });
 

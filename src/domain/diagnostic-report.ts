@@ -51,6 +51,7 @@ export const PROFILE_DIAGNOSTIC_CODES = {
 } as const;
 
 export const RUNTIME_DIAGNOSTIC_CODES = {
+  captureRetryFallback: 'PLR-005',
   gateEvaluationCrashed: 'PLR-006',
 } as const;
 
@@ -119,6 +120,24 @@ export function createRuntimeDiagnostic(
     phase: 'gate-eval',
     severity: 'error',
     blocksExecution: true,
+    retryable,
+    summary,
+    ...(action != null ? { action } : {}),
+  };
+}
+
+export function createRuntimeWarningDiagnostic(
+  code: string,
+  summary: string,
+  action?: string,
+  retryable = false,
+): FlowDiagnostic {
+  return {
+    code,
+    kind: 'runtime',
+    phase: 'advance',
+    severity: 'warning',
+    blocksExecution: false,
     retryable,
     summary,
     ...(action != null ? { action } : {}),

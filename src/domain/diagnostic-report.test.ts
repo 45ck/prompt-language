@@ -9,6 +9,7 @@ import {
   PROFILE_DIAGNOSTIC_CODES,
   RUNTIME_DIAGNOSTIC_CODES,
   createRuntimeDiagnostic,
+  createRuntimeWarningDiagnostic,
 } from './diagnostic-report.js';
 
 describe('diagnostic-report', () => {
@@ -35,6 +36,7 @@ describe('diagnostic-report', () => {
     expect(DIAGNOSTIC_CODE_RANGES.profile).toBe('PLC');
     expect(PROFILE_DIAGNOSTIC_CODES.unsupportedApprove).toBe('PLC-004');
     expect(PROFILE_DIAGNOSTIC_CODES.missingGatePrerequisite).toBe('PLC-005');
+    expect(RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback).toBe('PLR-005');
     expect(RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed).toBe('PLR-006');
     expect(FLOW_OUTCOME_CODES.reviewRejected).toBe('PLO-002');
     expect(FLOW_OUTCOME_CODES.approvalDenied).toBe('PLO-003');
@@ -69,5 +71,20 @@ describe('diagnostic-report', () => {
       code: FLOW_OUTCOME_CODES.gateFailed,
       summary: 'Completion gates failed.',
     });
+  });
+
+  it('creates non-blocking runtime warning diagnostics', () => {
+    const diagnostic = createRuntimeWarningDiagnostic(
+      RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
+      "Capture for 'answer' fell back to empty string after 3 attempts.",
+      'Inspect the capture path.',
+      true,
+    );
+
+    expect(diagnostic.kind).toBe('runtime');
+    expect(diagnostic.phase).toBe('advance');
+    expect(diagnostic.severity).toBe('warning');
+    expect(diagnostic.blocksExecution).toBe(false);
+    expect(diagnostic.retryable).toBe(true);
   });
 });

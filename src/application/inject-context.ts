@@ -94,6 +94,11 @@ function renderAutoAdvanceOutcomeBanner(result: AutoAdvanceResult): string | und
   return outcome == null ? undefined : `${outcome.code} ${outcome.summary}`;
 }
 
+function renderAutoAdvanceDiagnosticBanner(result: AutoAdvanceResult): string | undefined {
+  const diagnostic = result.diagnostics?.[0];
+  return diagnostic == null ? undefined : `${diagnostic.code} ${diagnostic.summary}`;
+}
+
 function deriveTerminalOutcome(state: SessionState): FlowOutcome | undefined {
   if (state.status !== 'completed' && state.status !== 'failed') {
     return undefined;
@@ -125,6 +130,26 @@ function deriveTerminalOutcome(state: SessionState): FlowOutcome | undefined {
     };
   }
   return undefined;
+}
+
+function deriveTerminalRuntimeDiagnosticBanner(state: SessionState): string | undefined {
+  if (state.status !== 'completed' && state.status !== 'failed') {
+    return undefined;
+  }
+  const code = String(state.variables['_runtime_diagnostic.code'] ?? '').trim();
+  const summary = String(state.variables['_runtime_diagnostic.summary'] ?? '').trim();
+  if (code.length === 0 || summary.length === 0) {
+    return undefined;
+  }
+  return `${code} ${summary}`;
+}
+
+function deriveTerminalBanner(state: SessionState): string | undefined {
+  const outcome = deriveTerminalOutcome(state);
+  if (outcome) {
+    return `${outcome.code} ${outcome.summary}`;
+  }
+  return deriveTerminalRuntimeDiagnosticBanner(state);
 }
 
 const DSL_REFERENCE = `\
@@ -374,16 +399,16 @@ export async function injectContext(
 
   // H-PERF-012: Skip full render for terminal flow states
   if (existing?.status === 'completed') {
-    const outcome = deriveTerminalOutcome(existing);
-    if (outcome) {
-      return { prompt: `[prompt-language] ${outcome.code} ${outcome.summary}\n\n${input.prompt}` };
+    const terminalBanner = deriveTerminalBanner(existing);
+    if (terminalBanner) {
+      return { prompt: `[prompt-language] ${terminalBanner}\n\n${input.prompt}` };
     }
     return { prompt: `[prompt-language] Flow completed successfully.\n\n${input.prompt}` };
   }
   if (existing?.status === 'failed') {
-    const outcome = deriveTerminalOutcome(existing);
-    if (outcome) {
-      return { prompt: `[prompt-language] ${outcome.code} ${outcome.summary}\n\n${input.prompt}` };
+    const terminalBanner = deriveTerminalBanner(existing);
+    if (terminalBanner) {
+      return { prompt: `[prompt-language] ${terminalBanner}\n\n${input.prompt}` };
     }
     return { prompt: `[prompt-language] Flow failed.\n\n${input.prompt}` };
   }
@@ -446,12 +471,14 @@ export async function injectContext(
       if (toSave !== hydratedExisting) {
         await stateStore.save(toSave);
       }
+      const diagnosticBanner = renderAutoAdvanceDiagnosticBanner(result);
       const outcomeBanner = renderAutoAdvanceOutcomeBanner(result);
       // H-DX-009: Emit completion summary when flow just completed
       if (toSave.status === 'completed' && existing.status === 'active') {
         const completionMsg =
+          diagnosticBanner ??
           outcomeBanner ??
-          deriveTerminalOutcome(toSave)?.summary ??
+          deriveTerminalBanner(toSave) ??
           renderCompletionSummary(toSave);
         const ctx = renderFlow(toSave);
         return { prompt: `${ctx}\n\n[${completionMsg}]\n\n${input.prompt}` };
@@ -460,15 +487,19 @@ export async function injectContext(
       const summary = renderFlowSummary(toSave);
       const resumeTag = isResumed ? `[resumed from ${summary}]\n` : '';
       if (result.kind === 'prompt') {
+        const diagnosticBlock = diagnosticBanner == null ? '' : `[${diagnosticBanner}]\n\n`;
         const outcomeBlock = outcomeBanner == null ? '' : `[${outcomeBanner}]\n\n`;
         const output = isTrivialPrompt(input.prompt)
-          ? `${ctx}\n\n${resumeTag}${outcomeBlock}${result.capturedPrompt}\n\n${summary}`
-          : `${ctx}\n\n${resumeTag}${outcomeBlock}${result.capturedPrompt}\n\n[User message: ${input.prompt}]\n\n${summary}`;
+          ? `${ctx}\n\n${resumeTag}${diagnosticBlock}${outcomeBlock}${result.capturedPrompt}\n\n${summary}`
+          : `${ctx}\n\n${resumeTag}${diagnosticBlock}${outcomeBlock}${result.capturedPrompt}\n\n[User message: ${input.prompt}]\n\n${summary}`;
         return { prompt: output };
       }
       const interpolated = interpolate(input.prompt, toSave.variables);
+      const diagnosticBlock = diagnosticBanner == null ? '' : `[${diagnosticBanner}]\n\n`;
       const outcomeBlock = outcomeBanner == null ? '' : `[${outcomeBanner}]\n\n`;
-      return { prompt: `${ctx}\n\n${resumeTag}${outcomeBlock}${interpolated}\n\n${summary}` };
+      return {
+        prompt: `${ctx}\n\n${resumeTag}${diagnosticBlock}${outcomeBlock}${interpolated}\n\n${summary}`,
+      };
     } catch (err: unknown) {
       const reason = formatError(err);
       const failed = await terminateRunningSpawnedChildren(
@@ -522,10 +553,26 @@ export async function injectContext(
       await stateStore.save(toSave);
       const ctx = renderFlow(toSave);
       const summary = renderFlowSummary(toSave);
+      const diagnosticBanner = renderAutoAdvanceDiagnosticBanner(result);
+      const outcomeBanner = renderAutoAdvanceOutcomeBanner(result);
       if (result.kind === 'prompt') {
-        return { prompt: `${ctx}\n\n${result.capturedPrompt}\n\n${summary}` };
+        const diagnosticBlock = diagnosticBanner == null ? '' : `[${diagnosticBanner}]\n\n`;
+        const outcomeBlock = outcomeBanner == null ? '' : `[${outcomeBanner}]\n\n`;
+        return {
+          prompt: `${ctx}\n\n${diagnosticBlock}${outcomeBlock}${result.capturedPrompt}\n\n${summary}`,
+        };
       }
-      return { prompt: `${ctx}\n\n${input.prompt}\n\n${summary}` };
+      if (toSave.status === 'completed') {
+        const completionMsg =
+          diagnosticBanner ??
+          outcomeBanner ??
+          deriveTerminalBanner(toSave) ??
+          renderCompletionSummary(toSave);
+        return { prompt: `${ctx}\n\n[${completionMsg}]` };
+      }
+      const diagnosticBlock = diagnosticBanner == null ? '' : `[${diagnosticBanner}]\n\n`;
+      const outcomeBlock = outcomeBanner == null ? '' : `[${outcomeBanner}]\n\n`;
+      return { prompt: `${ctx}\n\n${diagnosticBlock}${outcomeBlock}${input.prompt}\n\n${summary}` };
     } catch (err: unknown) {
       const reason = formatError(err);
       return { prompt: `[prompt-language] Flow failed: ${reason}\n\n${input.prompt}` };

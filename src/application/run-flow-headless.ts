@@ -81,6 +81,15 @@ function appendAssistantDetail(reason: string, assistantText?: string): string {
   return detail == null ? reason : `${reason} Last assistant output: ${detail}`;
 }
 
+function readPersistedRuntimeDiagnosticReason(state: SessionState): string | undefined {
+  const code = String(state.variables['_runtime_diagnostic.code'] ?? '').trim();
+  const summary = String(state.variables['_runtime_diagnostic.summary'] ?? '').trim();
+  if (code.length === 0 || summary.length === 0) {
+    return undefined;
+  }
+  return `${code} ${summary}`;
+}
+
 function readMemoryValue(entry?: MemoryEntry): string {
   return entry?.value ?? entry?.text ?? '';
 }
@@ -181,7 +190,11 @@ export async function runFlowHeadless(
       await deps.stateStore.save(state);
 
       if (state.status === 'completed') {
-        return { finalState: state, turns };
+        return {
+          finalState: state,
+          reason: readPersistedRuntimeDiagnosticReason(state),
+          turns,
+        };
       }
 
       const current = await deps.stateStore.loadCurrent();
@@ -201,7 +214,11 @@ export async function runFlowHeadless(
         );
         state = (await deps.stateStore.loadCurrent()) ?? state;
         if (!gateResult.blocked && state.status === 'completed') {
-          return { finalState: state, turns };
+          return {
+            finalState: state,
+            reason: readPersistedRuntimeDiagnosticReason(state),
+            turns,
+          };
         }
         if (gateResult.diagnostics.length > 0 || state.status === 'failed') {
           return {
@@ -260,7 +277,11 @@ export async function runFlowHeadless(
         );
         state = (await deps.stateStore.loadCurrent()) ?? state;
         if (!gateResult.blocked && state.status === 'completed') {
-          return { finalState: state, turns };
+          return {
+            finalState: state,
+            reason: readPersistedRuntimeDiagnosticReason(state),
+            turns,
+          };
         }
         if (gateResult.diagnostics.length > 0 || state.status === 'failed') {
           return {
@@ -331,7 +352,11 @@ export async function runFlowHeadless(
     await deps.stateStore.save(state);
 
     if (!gateBlocked && state.status === 'completed') {
-      return { finalState: state, turns };
+      return {
+        finalState: state,
+        reason: readPersistedRuntimeDiagnosticReason(state),
+        turns,
+      };
     }
 
     if (gateBlocked && currentNode === null) {

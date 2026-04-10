@@ -67,6 +67,15 @@ describe('eval harness selection', () => {
     expect(info.flowCommandLabel).toBe('prompt-language ci --runner opencode');
   });
 
+  it('supports selecting Ollama via EVAL_HARNESS', () => {
+    const info = readHarnessInfo({ env: { EVAL_HARNESS: 'ollama' } });
+
+    expect(info.harness).toBe('ollama');
+    expect(info.harnessLabel).toBe('Ollama CLI');
+    expect(info.commandLabel).toBe('ollama run');
+    expect(info.flowCommandLabel).toBe('prompt-language ci --runner ollama');
+  });
+
   it('lets AI_CMD override command labels for custom template runs', () => {
     const info = readHarnessInfo({
       env: {

@@ -338,7 +338,7 @@ function readRunnerOptions(args) {
   return { runner, model };
 }
 
-async function runOpenCodeFlow(flowText, model) {
+async function runHeadlessFlow(flowText, model, runner) {
   const [
     { runFlowHeadless },
     { FileStateStore },
@@ -346,7 +346,7 @@ async function runOpenCodeFlow(flowText, model) {
     { FileCaptureReader },
     { FileAuditLogger },
     { FileMemoryStore },
-    { OpenCodePromptTurnRunner },
+    runnerModule,
   ] = await Promise.all([
     import(pathToFileURL(join(ROOT, 'dist', 'application', 'run-flow-headless.js')).href),
     import(
@@ -365,12 +365,23 @@ async function runOpenCodeFlow(flowText, model) {
     import(
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-memory-store.js')).href
     ),
-    import(
-      pathToFileURL(
-        join(ROOT, 'dist', 'infrastructure', 'adapters', 'opencode-prompt-turn-runner.js'),
-      ).href
-    ),
+    runner === 'opencode'
+      ? import(
+          pathToFileURL(
+            join(ROOT, 'dist', 'infrastructure', 'adapters', 'opencode-prompt-turn-runner.js'),
+          ).href
+        )
+      : import(
+          pathToFileURL(
+            join(ROOT, 'dist', 'infrastructure', 'adapters', 'ollama-prompt-turn-runner.js'),
+          ).href
+        ),
   ]);
+
+  const promptTurnRunner =
+    runner === 'opencode'
+      ? new runnerModule.OpenCodePromptTurnRunner()
+      : new runnerModule.OllamaPromptTurnRunner();
 
   const cwd = process.cwd();
   const stateStore = new FileStateStore(cwd);
@@ -389,7 +400,7 @@ async function runOpenCodeFlow(flowText, model) {
       captureReader: new FileCaptureReader(cwd),
       commandRunner: new ShellCommandRunner(),
       memoryStore: new FileMemoryStore(cwd),
-      promptTurnRunner: new OpenCodePromptTurnRunner(),
+      promptTurnRunner,
       stateStore,
     },
   );
@@ -426,13 +437,15 @@ async function runFlow() {
   const flowText = await readFlowText(args, 'run');
   const { runner, model } = readRunnerOptions(args);
 
-  if (runner === 'opencode') {
-    await runOpenCodeFlow(flowText, model);
+  if (runner === 'opencode' || runner === 'ollama') {
+    await runHeadlessFlow(flowText, model, runner);
     return;
   }
 
   if (runner !== 'claude') {
-    console.error(`Error: Unsupported runner "${runner}". Supported runners: claude, opencode.`);
+    console.error(
+      `Error: Unsupported runner "${runner}". Supported runners: claude, opencode, ollama.`,
+    );
     process.exit(1);
   }
 
@@ -852,8 +865,8 @@ async function ci() {
 
   console.log(`[prompt-language CI] Running flow via ${runner}...`);
   try {
-    if (runner === 'opencode') {
-      await runOpenCodeFlow(flowText, model);
+    if (runner === 'opencode' || runner === 'ollama') {
+      await runHeadlessFlow(flowText, model, runner);
     } else if (runner === 'claude') {
       const { execFileSync } = await import('node:child_process');
       const claudeArgs = ['-p', '--dangerously-skip-permissions'];
@@ -866,7 +879,9 @@ async function ci() {
         timeout: 600_000, // 10 min max
       });
     } else {
-      throw new Error(`Unsupported runner "${runner}". Supported runners: claude, opencode.`);
+      throw new Error(
+        `Unsupported runner "${runner}". Supported runners: claude, opencode, ollama.`,
+      );
     }
     console.log('[prompt-language CI] Flow completed.');
     process.exit(0);
@@ -941,11 +956,11 @@ Commands:
   status       Show installation status
   codex-status Show Codex scaffold status
   init         Scaffold a starter flow in the current directory
-  run          Execute a .flow file or inline flow text (\`--runner claude|opencode\`)
+  run          Execute a .flow file or inline flow text (\`--runner claude|opencode|ollama\`)
   demo         Print an example flow to stdout
   list         Recursively list .flow files in the current directory
   validate     Parse, lint, score, and render a flow without executing it
-  ci           Run a flow headlessly (CI/CD mode, supports \`--runner opencode\`)
+  ci           Run a flow headlessly (CI/CD mode, supports \`--runner opencode|ollama\`)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild
 

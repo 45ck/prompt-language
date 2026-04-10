@@ -15,11 +15,17 @@ function parseHarness(argv, envHarness) {
   const flagIndex = argv.indexOf('--harness');
   const flagValue = flagIndex >= 0 ? argv[flagIndex + 1] : null;
   const raw = (flagValue || envHarness || DEFAULT_HARNESS).toLowerCase();
-  if (raw === 'claude' || raw === 'codex' || raw === 'gemini' || raw === 'opencode') {
+  if (
+    raw === 'claude' ||
+    raw === 'codex' ||
+    raw === 'gemini' ||
+    raw === 'opencode' ||
+    raw === 'ollama'
+  ) {
     return raw;
   }
   throw new Error(
-    `Unsupported harness "${raw}". Supported values: claude, codex, gemini, opencode.`,
+    `Unsupported harness "${raw}". Supported values: claude, codex, gemini, opencode, ollama.`,
   );
 }
 
@@ -93,6 +99,10 @@ function versionCommand() {
 
   if (HARNESS === 'opencode') {
     return ['opencode', '--version'];
+  }
+
+  if (HARNESS === 'ollama') {
+    return ['ollama', '--version'];
   }
 
   return ['claude', '--version'];
@@ -253,8 +263,65 @@ function execOpenCode(prompt, cwd, timeout, model, strict) {
   }
 }
 
+function normalizeOllamaModel(model) {
+  if (!model) {
+    return 'gemma4:31b';
+  }
+  return model.startsWith('ollama/') ? model.slice('ollama/'.length) : model;
+}
+
+function execOllama(prompt, cwd, timeout, model, strict) {
+  const resolvedModel = normalizeOllamaModel(model);
+  const args = ['run', resolvedModel, prompt];
+
+  try {
+    return execFileSync('ollama', args, {
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: cleanEnv(),
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
+
 function execOpenCodeFlow(flowText, cwd, timeout, model, strict) {
   const args = [join(ROOT, 'bin', 'cli.mjs'), 'ci', '--runner', 'opencode'];
+
+  if (model) {
+    args.push('--model', model);
+  }
+
+  try {
+    return execFileSync('node', args, {
+      input: flowText,
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: cleanEnv(),
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
+
+function execOllamaFlow(flowText, cwd, timeout, model, strict) {
+  const args = [join(ROOT, 'bin', 'cli.mjs'), 'ci', '--runner', 'ollama'];
 
   if (model) {
     args.push('--model', model);
@@ -345,6 +412,10 @@ export function getHarnessLabel() {
     return 'OpenCode CLI';
   }
 
+  if (HARNESS === 'ollama') {
+    return 'Ollama CLI';
+  }
+
   return 'Claude CLI';
 }
 
@@ -365,11 +436,21 @@ export function getCommandLabel() {
     return 'opencode run';
   }
 
+  if (HARNESS === 'ollama') {
+    return 'ollama run';
+  }
+
   return 'claude -p';
 }
 
 export function getFlowCommandLabel() {
-  return HARNESS === 'opencode' ? 'prompt-language ci --runner opencode' : getCommandLabel();
+  if (HARNESS === 'opencode') {
+    return 'prompt-language ci --runner opencode';
+  }
+  if (HARNESS === 'ollama') {
+    return 'prompt-language ci --runner ollama';
+  }
+  return getCommandLabel();
 }
 
 export function checkHarnessVersion(timeout = 5000) {
@@ -396,7 +477,9 @@ export function runHarnessPrompt(
       ? execGemini(prompt, cwd, timeout, resolvedModel, strict)
       : HARNESS === 'opencode'
         ? execOpenCode(prompt, cwd, timeout, resolvedModel, strict)
-        : execClaude(prompt, cwd, timeout, resolvedModel, strict);
+        : HARNESS === 'ollama'
+          ? execOllama(prompt, cwd, timeout, resolvedModel, strict)
+          : execClaude(prompt, cwd, timeout, resolvedModel, strict);
 }
 
 export function runHarnessFlow(
@@ -408,12 +491,16 @@ export function runHarnessFlow(
     return execTemplateCommand(flowText, cwd, timeout, resolvedModel, strict);
   }
 
-  return HARNESS === 'opencode'
-    ? execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict)
-    : runHarnessPrompt(flowText, {
-        cwd,
-        timeout,
-        model: resolvedModel,
-        strict,
-      });
+  if (HARNESS === 'opencode') {
+    return execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict);
+  }
+  if (HARNESS === 'ollama') {
+    return execOllamaFlow(flowText, cwd, timeout, resolvedModel, strict);
+  }
+  return runHarnessPrompt(flowText, {
+    cwd,
+    timeout,
+    model: resolvedModel,
+    strict,
+  });
 }

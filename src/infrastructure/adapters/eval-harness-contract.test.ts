@@ -15,9 +15,13 @@ describe('eval harness contracts', () => {
       'const DEFAULT_MODEL = parseModel(process.argv, process.env.EVAL_MODEL);',
     );
     expect(source).toContain("return ['opencode', '--version'];");
+    expect(source).toContain("return ['ollama', '--version'];");
     expect(source).toContain('function execOpenCode(');
     expect(source).toContain('function execOpenCodeFlow(');
     expect(source).toContain("'ci', '--runner', 'opencode'");
+    expect(source).toContain('function execOllama(');
+    expect(source).toContain('function execOllamaFlow(');
+    expect(source).toContain("'ci', '--runner', 'ollama'");
     expect(source).toContain('export function runHarnessFlow(');
   });
 
@@ -54,12 +58,14 @@ describe('eval harness contracts', () => {
     expect(source).toContain('return 1_800_000;');
   });
 
-  it('exposes npm smoke commands for the OpenCode baseline', async () => {
+  it('exposes npm smoke commands for the OpenCode and Ollama baselines', async () => {
     const pkg = JSON.parse(await readFile(PACKAGE_JSON, 'utf8')) as {
       scripts?: Record<string, string>;
     };
 
     expect(pkg.scripts?.['eval:smoke:opencode']).toContain('--harness opencode');
     expect(pkg.scripts?.['eval:smoke:opencode:quick']).toContain('--harness opencode --quick');
+    expect(pkg.scripts?.['eval:smoke:ollama']).toContain('--harness ollama');
+    expect(pkg.scripts?.['eval:smoke:ollama:quick']).toContain('--harness ollama --quick');
   });
 });

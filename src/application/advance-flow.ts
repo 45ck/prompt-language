@@ -38,6 +38,7 @@ import type {
 import type { MemoryEntry } from './ports/memory-store.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
+import { CAPTURE_PENDING_SENTINEL } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { AuditLogger } from './ports/audit-logger.js';
 import type { MemoryStore } from './ports/memory-store.js';
@@ -722,7 +723,10 @@ async function advanceLetPrompt(
   const isAwaiting = progress?.status === 'awaiting_capture';
 
   if (!isAwaiting) {
-    if (captureReader) await captureReader.clear(node.variableName);
+    if (captureReader) {
+      await captureReader.clear(node.variableName);
+      await captureReader.prime?.(node.variableName);
+    }
     const updated = updateNodeProgress(current, node.id, {
       iteration: 1,
       maxIterations: DEFAULT_MAX_CAPTURE_RETRIES,
@@ -740,13 +744,24 @@ async function advanceLetPrompt(
   }
 
   let failureReason: string;
+  let retryPrompt = buildCaptureRetryPrompt(node.variableName, current.captureNonce);
   if (captureReader) {
     const captured = await captureReader.read(node.variableName);
-    if (captured) {
+    if (captured && captured !== CAPTURE_PENDING_SENTINEL) {
       await captureReader.clear(node.variableName);
       return { state: current, value: captured };
     }
-    failureReason = 'capture file empty or not found';
+    if (captured === CAPTURE_PENDING_SENTINEL) {
+      failureReason = 'capture file still pending (model did not write response)';
+      retryPrompt =
+        buildCaptureRetryPrompt(node.variableName, current.captureNonce) +
+        '\n\nPlease use the Write tool to save your answer to the capture file.';
+    } else {
+      failureReason = 'capture file exists but is empty';
+      retryPrompt =
+        buildCaptureRetryPrompt(node.variableName, current.captureNonce) +
+        '\n\nPlease write a non-empty response to the capture file.';
+    }
   } else {
     failureReason = 'no capture reader available';
   }
@@ -762,7 +777,7 @@ async function advanceLetPrompt(
     return {
       kind: 'prompt' as const,
       state: updated,
-      capturedPrompt: buildCaptureRetryPrompt(node.variableName, current.captureNonce),
+      capturedPrompt: retryPrompt,
     };
   }
 
@@ -795,7 +810,10 @@ async function advanceLetPromptJson(
   const isAwaiting = progress?.status === 'awaiting_capture';
 
   if (!isAwaiting) {
-    if (captureReader) await captureReader.clear(node.variableName);
+    if (captureReader) {
+      await captureReader.clear(node.variableName);
+      await captureReader.prime?.(node.variableName);
+    }
     const updated = updateNodeProgress(current, node.id, {
       iteration: 1,
       maxIterations: DEFAULT_MAX_CAPTURE_RETRIES,
@@ -815,13 +833,28 @@ async function advanceLetPromptJson(
   }
 
   let failureReason: string;
+  let retryPrompt = buildJsonCaptureRetryPrompt(
+    node.variableName,
+    node.source.schema,
+    current.captureNonce,
+  );
   if (captureReader) {
     const captured = await captureReader.read(node.variableName);
-    if (captured) {
+    if (captured && captured !== CAPTURE_PENDING_SENTINEL) {
       await captureReader.clear(node.variableName);
       return { state: current, value: captured };
     }
-    failureReason = 'capture file empty or not found';
+    if (captured === CAPTURE_PENDING_SENTINEL) {
+      failureReason = 'capture file still pending (model did not write response)';
+      retryPrompt =
+        buildJsonCaptureRetryPrompt(node.variableName, node.source.schema, current.captureNonce) +
+        '\n\nPlease use the Write tool to save your JSON response to the capture file.';
+    } else {
+      failureReason = 'capture file exists but is empty';
+      retryPrompt =
+        buildJsonCaptureRetryPrompt(node.variableName, node.source.schema, current.captureNonce) +
+        '\n\nPlease write a non-empty JSON object to the capture file.';
+    }
   } else {
     failureReason = 'no capture reader available';
   }
@@ -837,11 +870,7 @@ async function advanceLetPromptJson(
     return {
       kind: 'prompt' as const,
       state: updated,
-      capturedPrompt: buildJsonCaptureRetryPrompt(
-        node.variableName,
-        node.source.schema,
-        current.captureNonce,
-      ),
+      capturedPrompt: retryPrompt,
     };
   }
 

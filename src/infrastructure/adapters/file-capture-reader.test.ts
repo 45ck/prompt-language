@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { captureFilePath, CAPTURE_VARS_DIR } from '../../domain/capture-prompt.js';
 import { FileCaptureReader } from './file-capture-reader.js';
+import { CAPTURE_PENDING_SENTINEL } from '../../application/ports/capture-reader.js';
 
 describe('FileCaptureReader', () => {
   let baseDir: string;
@@ -88,6 +89,17 @@ describe('FileCaptureReader', () => {
       await reader.ensureDir();
       const varsDir = join(baseDir, CAPTURE_VARS_DIR);
       await expect(access(varsDir)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('prime', () => {
+    it('writes pending sentinel to capture file', async () => {
+      await reader.prime('tasks');
+      expect(await reader.read('tasks')).toBe(CAPTURE_PENDING_SENTINEL);
+    });
+
+    it('is a no-op for path-traversal variable name', async () => {
+      await expect(reader.prime('../hack')).resolves.toBeUndefined();
     });
   });
 

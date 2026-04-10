@@ -10,3 +10,5 @@ scripts/eval/comparative-eval-v4.mjs
 docs/research/sources
 tmp-opencode*/
 .tmp-opencode*/
+tmp-oc-home*/
+.tmp-oc-home*/

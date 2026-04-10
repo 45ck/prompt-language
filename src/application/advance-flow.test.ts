@@ -32,6 +32,7 @@ import {
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
+import { CAPTURE_PENDING_SENTINEL } from './ports/capture-reader.js';
 import type { ProcessSpawner, SpawnInput } from './ports/process-spawner.js';
 
 // ── resolveCurrentNode ───────────────────────────────────────────────
@@ -1347,6 +1348,7 @@ describe('autoAdvanceNodes — let prompt capture', () => {
     const captureReader: CaptureReader = {
       read: vi.fn().mockResolvedValue(null),
       clear: vi.fn(),
+      prime: vi.fn(),
     };
     const letPrompt = createLetNode('l1', 'answer', { type: 'prompt', text: 'What color?' });
     const spec = createFlowSpec('test', [letPrompt]);
@@ -1361,6 +1363,7 @@ describe('autoAdvanceNodes — let prompt capture', () => {
     expect(capturedPrompt).toContain('.prompt-language/vars/');
     expect(result.nodeProgress['l1']?.status).toBe('awaiting_capture');
     expect(captureReader.clear).toHaveBeenCalledWith('answer');
+    expect(captureReader.prime).toHaveBeenCalledWith('answer');
   });
 
   it('reads captured value on second visit', async () => {
@@ -1406,7 +1409,32 @@ describe('autoAdvanceNodes — let prompt capture', () => {
       undefined,
       captureReader,
     );
-    expect(capturedPrompt).toContain('was not found');
+    expect(capturedPrompt).toContain('write a non-empty response');
+    expect(result.nodeProgress['l1']?.captureFailureReason).toContain('exists but is empty');
+    expect(result.nodeProgress['l1']?.iteration).toBe(2);
+  });
+
+  it('retries with write-tool emphasis when capture remains pending', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(CAPTURE_PENDING_SENTINEL),
+      clear: vi.fn(),
+    };
+    const letPrompt = createLetNode('l1', 'answer', { type: 'prompt', text: 'Question' });
+    const spec = createFlowSpec('test', [letPrompt]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('use the Write tool');
+    expect(result.nodeProgress['l1']?.captureFailureReason).toContain('still pending');
     expect(result.nodeProgress['l1']?.iteration).toBe(2);
   });
 

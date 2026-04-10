@@ -137,6 +137,11 @@ done when:
 
 Before outputting the flow, check for these anti-patterns.
 
+For the full anti-pattern catalog and deeper examples, see:
+
+- `references/anti-patterns.md`
+- `references/advanced.md`
+
 ### Anti-pattern: Sequential prompts
 
 **BAD** — 3 prompts that could be 1:
@@ -258,3 +263,7 @@ These features exist but should be the exception, not the default:
 - **If/else branching** — `if`/`else` for conditional paths. Usually indicates the flow is trying to do too much. Consider splitting into separate tasks.
 - **Variable capture** — `let x = run "cmd"` or `let x = prompt "text"` for storing values. Only useful when a value must cross many steps or drive a `foreach` loop.
 - **While/until loops** — `while condition`/`until condition` for open-ended loops. `retry max N` is preferred for bounded iteration.
+
+Additional advanced guidance and tradeoffs:
+
+- `references/advanced.md`

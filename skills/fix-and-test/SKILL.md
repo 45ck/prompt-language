@@ -42,3 +42,7 @@ done when:
 - Focus on fixing the source code, not the tests, unless the tests themselves are incorrect.
 - During active triage you may run a scoped test command, but finish with the full suite.
 - If you cannot fix a test after 5 attempts, explain what you tried and why it's failing.
+
+## Examples
+
+For ecosystem-specific command patterns, see `examples/multi-ecosystem.md`.

@@ -42,3 +42,7 @@ done when:
 - Run tests after every change, no matter how small.
 - If a refactoring breaks tests, revert it or fix the breakage before continuing.
 - Prefer small, incremental changes over large rewrites.
+
+## Examples
+
+For refactor loops across JavaScript, Python, Go, and Rust projects, see `examples/multi-ecosystem.md`.

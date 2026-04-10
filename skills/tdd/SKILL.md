@@ -44,3 +44,7 @@ done when:
 - The test must fail before you write implementation code. If it passes immediately, the test is not testing the new behavior.
 - Write the minimum code to pass. Do not over-engineer.
 - Once green, refactor for clarity. Do not add new behavior during refactor.
+
+## Examples
+
+For language-specific TDD loop command examples, see `examples/multi-ecosystem.md`.

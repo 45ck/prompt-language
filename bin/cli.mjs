@@ -2,7 +2,7 @@
 
 import { promises as fs, existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -332,23 +332,84 @@ function readOptionValue(args, name) {
   return args[idx + 1];
 }
 
+function readPositionalValue(args, flagsWithValues) {
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (!arg) continue;
+    if (flagsWithValues.has(arg)) {
+      i += 1;
+      continue;
+    }
+    if (!arg.startsWith('-')) {
+      return arg;
+    }
+  }
+  return undefined;
+}
+
+function readPositiveIntegerOption(args, name, label) {
+  const raw = readOptionValue(args, name);
+  if (raw == null) return undefined;
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    console.error(`Error: ${label} must be a positive integer.`);
+    process.exit(1);
+  }
+  return parsed;
+}
+
+function buildDefaultEvalOutputPath(datasetPath, candidate) {
+  const datasetName = datasetPath
+    .replace(/^.*[\\/]/, '')
+    .replace(/\.[^.]+$/, '')
+    .replace(/[^a-z0-9_-]+/gi, '-')
+    .toLowerCase();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  return join('.prompt-language', 'eval-reports', `${datasetName}.${candidate}.${timestamp}.json`);
+}
+
+function defaultModelForRunner(runner) {
+  return runner === 'codex' ? 'gpt-5.2' : undefined;
+}
+
 function readRunnerOptions(args) {
   const runner = readOptionValue(args, '--runner') ?? 'claude';
-  const model = readOptionValue(args, '--model');
+  const model = readOptionValue(args, '--model') ?? defaultModelForRunner(runner);
   const stateDir = readOptionValue(args, '--state-dir');
   return { runner, model, stateDir };
 }
 
-async function runHeadlessFlow(flowText, model, runner, stateDir = '.prompt-language') {
+async function runOpenCodeFlow(flowText, model, stateDir) {
+  return runHeadlessFlow(flowText, model, {
+    runnerModule: 'opencode-prompt-turn-runner.js',
+    runnerExport: 'OpenCodePromptTurnRunner',
+  }, stateDir);
+}
+
+async function runCodexFlow(flowText, model, stateDir) {
+  return runHeadlessFlow(flowText, model, {
+    runnerModule: 'codex-prompt-turn-runner.js',
+    runnerExport: 'CodexPromptTurnRunner',
+  }, stateDir);
+}
+
+async function runOllamaFlow(flowText, model, stateDir) {
+  return runHeadlessFlow(flowText, model, {
+    runnerModule: 'ollama-prompt-turn-runner.js',
+    runnerExport: 'OllamaPromptTurnRunner',
+  }, stateDir);
+}
+
+async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.prompt-language') {
   const [
     { runFlowHeadless },
     { FileStateStore },
     { ShellCommandRunner },
+    { HeadlessProcessSpawner },
     { FileCaptureReader },
     { FileAuditLogger },
     { FileMemoryStore },
     { FileMessageStore },
-    { HeadlessProcessSpawner },
     runnerModule,
   ] = await Promise.all([
     import(pathToFileURL(join(ROOT, 'dist', 'application', 'run-flow-headless.js')).href),
@@ -357,6 +418,10 @@ async function runHeadlessFlow(flowText, model, runner, stateDir = '.prompt-lang
     ),
     import(
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'shell-command-runner.js'))
+        .href
+    ),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'headless-process-spawner.js'))
         .href
     ),
     import(
@@ -372,29 +437,31 @@ async function runHeadlessFlow(flowText, model, runner, stateDir = '.prompt-lang
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-message-store.js')).href
     ),
     import(
-      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'headless-process-spawner.js'))
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', runnerConfig.runnerModule))
         .href
     ),
-    runner === 'opencode'
-      ? import(
-          pathToFileURL(
-            join(ROOT, 'dist', 'infrastructure', 'adapters', 'opencode-prompt-turn-runner.js'),
-          ).href
-        )
-      : import(
-          pathToFileURL(
-            join(ROOT, 'dist', 'infrastructure', 'adapters', 'ollama-prompt-turn-runner.js'),
-          ).href
-        ),
   ]);
-
-  const promptTurnRunner =
-    runner === 'opencode'
-      ? new runnerModule.OpenCodePromptTurnRunner()
-      : new runnerModule.OllamaPromptTurnRunner();
+  const PromptTurnRunner = runnerModule[runnerConfig.runnerExport];
 
   const cwd = process.cwd();
-  const stateStore = new FileStateStore(cwd, stateDir);
+  const resolvedStateDir = stateDir ?? '.prompt-language';
+  const stateStore = new FileStateStore(cwd, resolvedStateDir);
+  const auditLogger = new FileAuditLogger(cwd, resolvedStateDir);
+  const captureReader = new FileCaptureReader(cwd, resolvedStateDir);
+  const memoryStore = new FileMemoryStore(cwd, resolvedStateDir);
+  const messageStore = new FileMessageStore(join(cwd, resolvedStateDir), {});
+  const commandRunner = new ShellCommandRunner();
+  const promptTurnRunner = new PromptTurnRunner();
+  const processSpawner = new HeadlessProcessSpawner({
+    auditLogger,
+    captureReader,
+    commandRunner,
+    cwd,
+    memoryStore,
+    messageStore,
+    promptTurnRunner,
+  });
+
   await stateStore.clear('');
   await stateStore.clearPendingPrompt();
 
@@ -406,17 +473,12 @@ async function runHeadlessFlow(flowText, model, runner, stateDir = '.prompt-lang
       sessionId: randomUUID(),
     },
     {
-      auditLogger: new FileAuditLogger(cwd, stateDir),
-      captureReader: new FileCaptureReader(cwd, stateDir),
-      commandRunner: new ShellCommandRunner(),
-      memoryStore: new FileMemoryStore(cwd, stateDir),
-      messageStore: new FileMessageStore(join(cwd, stateDir), {}),
-      processSpawner: new HeadlessProcessSpawner({
-        cliPath: join(ROOT, 'bin', 'cli.mjs'),
-        cwd,
-        ...(model != null ? { model } : {}),
-        runner,
-      }),
+      auditLogger,
+      captureReader,
+      commandRunner,
+      memoryStore,
+      messageStore,
+      processSpawner,
       promptTurnRunner,
       stateStore,
     },
@@ -428,6 +490,115 @@ async function runHeadlessFlow(flowText, model, runner, stateDir = '.prompt-lang
 
   const reason = result.reason ?? `Flow ended with status "${result.finalState.status}".`;
   throw new Error(reason);
+}
+
+async function evalDataset() {
+  if (!existsSync(join(ROOT, 'dist'))) {
+    console.error('Error: dist/ directory not found. Run "npm run build" first.');
+    process.exit(1);
+  }
+
+  const args = process.argv.slice(3);
+  const flagsWithValues = new Set([
+    '--dataset',
+    '--candidate',
+    '--repeat',
+    '--harness',
+    '--model',
+    '--baseline',
+    '--baseline-report',
+    '--output',
+    '--out',
+    '--timeout-ms',
+  ]);
+  const datasetArg =
+    readOptionValue(args, '--dataset') ?? readPositionalValue(args, flagsWithValues);
+  if (!datasetArg) {
+    console.error('Error: No dataset provided. Usage:');
+    console.error('  npx @45ck/prompt-language eval --dataset experiments/eval/datasets/e1.jsonl');
+    console.error('  npx @45ck/prompt-language eval experiments/eval/datasets/e1.jsonl');
+    process.exit(1);
+  }
+
+  const candidate = readOptionValue(args, '--candidate') ?? 'gated';
+  if (candidate !== 'gated' && candidate !== 'vanilla') {
+    console.error('Error: --candidate must be either "gated" or "vanilla".');
+    process.exit(1);
+  }
+
+  const repeat = readPositiveIntegerOption(args, '--repeat', '--repeat');
+  const timeoutMs = readPositiveIntegerOption(args, '--timeout-ms', '--timeout-ms');
+  const harness = readOptionValue(args, '--harness');
+  const model = readOptionValue(args, '--model');
+  const baselinePath =
+    readOptionValue(args, '--baseline-report') ?? readOptionValue(args, '--baseline');
+  const outputPath =
+    readOptionValue(args, '--output') ??
+    readOptionValue(args, '--out') ??
+    buildDefaultEvalOutputPath(datasetArg, candidate);
+
+  const datasetPath = resolve(process.cwd(), datasetArg);
+  const resolvedOutputPath = resolve(process.cwd(), outputPath);
+
+  if (harness) {
+    if (harness !== 'claude' && harness !== 'codex' && harness !== 'opencode') {
+      console.error('Error: --harness must be one of "claude", "codex", or "opencode".');
+      process.exit(1);
+    }
+    process.env.EVAL_HARNESS = harness;
+  }
+
+  const { readEvalReport, runEvalDatasetFromFile } = await import(
+    pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'eval-dataset-runner.js')).href
+  );
+
+  let baselineReport;
+  if (baselinePath) {
+    try {
+      baselineReport = await readEvalReport(resolve(process.cwd(), baselinePath));
+    } catch (error) {
+      console.error(
+        `Error: Could not read baseline report: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      process.exit(1);
+    }
+  }
+
+  let report;
+  try {
+    report = await runEvalDatasetFromFile(datasetPath, {
+      candidate,
+      ...(repeat != null ? { repeat } : {}),
+      ...(model != null ? { model } : {}),
+      ...(timeoutMs != null ? { timeoutMs } : {}),
+      ...(baselineReport != null ? { baselineReport } : {}),
+      outputPath: resolvedOutputPath,
+    });
+  } catch (error) {
+    console.error(
+      `Error: Eval run failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    process.exit(1);
+  }
+
+  const passRate = (report.summary.passRate * 100).toFixed(1);
+  const averageSeconds = (report.summary.averageDurationMs / 1000).toFixed(2);
+
+  console.log(`[prompt-language eval] Dataset: ${report.datasetName}`);
+  console.log(`[prompt-language eval] Harness: ${report.harness}`);
+  console.log(`[prompt-language eval] Candidate: ${report.candidate}`);
+  console.log(
+    `[prompt-language eval] Summary: ${report.summary.passedRuns}/${report.summary.totalRuns} passed (${passRate}%), avg ${averageSeconds}s`,
+  );
+
+  if (report.comparison) {
+    const delta = (report.comparison.passRateDelta * 100).toFixed(1);
+    console.log(
+      `[prompt-language eval] Compare vs ${report.comparison.baselineCandidate}: winner=${report.comparison.winner}, delta=${delta} points, case wins ${report.comparison.candidateWins}-${report.comparison.baselineWins} (${report.comparison.ties} ties)`,
+    );
+  }
+
+  console.log(`[prompt-language eval] Report written to ${resolvedOutputPath}`);
 }
 
 async function validate() {
@@ -454,14 +625,24 @@ async function runFlow() {
   const flowText = await readFlowText(args, 'run');
   const { runner, model, stateDir } = readRunnerOptions(args);
 
-  if (runner === 'opencode' || runner === 'ollama') {
-    await runHeadlessFlow(flowText, model, runner, stateDir);
+  if (runner === 'codex') {
+    await runCodexFlow(flowText, model, stateDir);
+    return;
+  }
+
+  if (runner === 'opencode') {
+    await runOpenCodeFlow(flowText, model, stateDir);
+    return;
+  }
+
+  if (runner === 'ollama') {
+    await runOllamaFlow(flowText, model, stateDir);
     return;
   }
 
   if (runner !== 'claude') {
     console.error(
-      `Error: Unsupported runner "${runner}". Supported runners: claude, opencode, ollama.`,
+      `Error: Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama.`,
     );
     process.exit(1);
   }
@@ -882,8 +1063,12 @@ async function ci() {
 
   console.log(`[prompt-language CI] Running flow via ${runner}...`);
   try {
-    if (runner === 'opencode' || runner === 'ollama') {
-      await runHeadlessFlow(flowText, model, runner, stateDir);
+    if (runner === 'codex') {
+      await runCodexFlow(flowText, model, stateDir);
+    } else if (runner === 'opencode') {
+      await runOpenCodeFlow(flowText, model, stateDir);
+    } else if (runner === 'ollama') {
+      await runOllamaFlow(flowText, model, stateDir);
     } else if (runner === 'claude') {
       const { execFileSync } = await import('node:child_process');
       const claudeArgs = ['-p', '--dangerously-skip-permissions'];
@@ -897,7 +1082,7 @@ async function ci() {
       });
     } else {
       throw new Error(
-        `Unsupported runner "${runner}". Supported runners: claude, opencode, ollama.`,
+        `Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama.`,
       );
     }
     console.log('[prompt-language CI] Flow completed.');
@@ -937,6 +1122,9 @@ switch (command) {
   case 'run':
     await runFlow();
     break;
+  case 'eval':
+    await evalDataset();
+    break;
   case 'demo':
     demo();
     break;
@@ -973,11 +1161,12 @@ Commands:
   status       Show installation status
   codex-status Show Codex scaffold status
   init         Scaffold a starter flow in the current directory
-  run          Execute a .flow file or inline flow text (\`--runner claude|opencode|ollama\`)
+  run          Execute a .flow file or inline flow text (\`--runner claude|codex|opencode|ollama\`)
+  eval         Run a JSONL eval dataset and optionally compare against a baseline report
   demo         Print an example flow to stdout
   list         Recursively list .flow files in the current directory
   validate     Parse, lint, score, and render a flow without executing it
-  ci           Run a flow headlessly (CI/CD mode, supports \`--runner opencode|ollama\`)
+  ci           Run a flow headlessly (CI/CD mode, supports \`--runner codex|opencode|ollama\`)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild
 

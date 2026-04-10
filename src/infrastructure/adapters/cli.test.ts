@@ -58,12 +58,29 @@ describe('CLI commands', () => {
     expect(output).toContain('prompt: hello');
   });
 
-  it('run supports the claude, opencode, and ollama runners', async () => {
+  it('run supports the native claude path and all headless runners', async () => {
     const source = await readFile(CLI, 'utf8');
     expect(source).toContain("case 'run':");
-    expect(source).toContain("if (runner === 'opencode' || runner === 'ollama')");
+    expect(source).toContain("if (runner === 'codex')");
+    expect(source).toContain("if (runner === 'opencode')");
+    expect(source).toContain("if (runner === 'ollama')");
+    expect(source).toContain("return runner === 'codex' ? 'gpt-5.2' : undefined;");
     expect(source).toContain("const claudeArgs = ['-p', '--dangerously-skip-permissions']");
     expect(source).toContain("readOptionValue(args, '--model')");
-    expect(source).toContain('Supported runners: claude, opencode, ollama.');
+    expect(source).toContain('Supported runners: claude, codex, opencode, ollama.');
+  });
+
+  it('eval exposes the dataset runner with harness, baseline, and report output support', async () => {
+    const source = await readFile(CLI, 'utf8');
+    expect(source).toContain("case 'eval':");
+    expect(source).toContain('async function evalDataset()');
+    expect(source).toContain("readOptionValue(args, '--harness')");
+    expect(source).toContain("readOptionValue(args, '--baseline-report')");
+    expect(source).toContain("readOptionValue(args, '--baseline')");
+    expect(source).toContain("readOptionValue(args, '--output')");
+    expect(source).toContain("readOptionValue(args, '--out')");
+    expect(source).toContain('buildDefaultEvalOutputPath');
+    expect(source).toContain('runEvalDatasetFromFile');
+    expect(source).toContain('readEvalReport');
   });
 });

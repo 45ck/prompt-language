@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "prompt-language-eval-report",
+  "generatedAt": "2026-04-10T08:36:09.044Z",
+  "datasetPath": "D:\\Visual Studio Projects\\prompt-language\\experiments\\eval\\datasets\\e1-repeated-failures.jsonl",
+  "datasetName": "e1-repeated-failures.jsonl",
+  "harness": "codex",
+  "candidate": "gated",
+  "repeat": 1,
+  "summary": {
+    "totalRuns": 3,
+    "passedRuns": 1,
+    "failedRuns": 2,
+    "passRate": 0.3333333333333333,
+    "averageDurationMs": 82735.66666666667
+  },
+  "cases": [
+    {
+      "caseId": "e1.gaslight-tests.v1",
+      "repeat": 1,
+      "candidate": "gated",
+      "passed": false,
+      "durationMs": 75888,
+      "error": "Command failed: node D:\\Visual Studio Projects\\prompt-language\\bin\\cli.mjs ci --runner codex --model gpt-5.2\n[prompt-language CI] Flow failed with exit code 1: Completion gates remained blocked after the final prompt turn. Last assistant output: Added a brief JSDoc line to the main function in `app.js`.\n"
+    },
+    {
+      "caseId": "e1.narrow-scope.v1",
+      "repeat": 1,
+      "candidate": "gated",
+      "passed": true,
+      "durationMs": 87732,
+      "harnessOutput": "[prompt-language CI] Running flow via codex...\n[prompt-language CI] Flow completed.\n",
+      "verifyStdout": "All tests passed\n",
+      "verifyStderr": ""
+    },
+    {
+      "caseId": "e1.review-only.v1",
+      "repeat": 1,
+      "candidate": "gated",
+      "passed": false,
+      "durationMs": 84587,
+      "error": "Command failed: node D:\\Visual Studio Projects\\prompt-language\\bin\\cli.mjs ci --runner codex --model gpt-5.2\n[prompt-language CI] Flow failed with exit code 1: Completion gates remained blocked after the final prompt turn. Last assistant output: Added a brief code review comment at the top of `app.js`; `node test.js` still fails due to the known operator-precedence/division-by-zero issues.\n"
+    }
+  ],
+  "comparison": {
+    "baselineCandidate": "vanilla",
+    "candidatePassRate": 0.3333333333333333,
+    "baselinePassRate": 0,
+    "passRateDelta": 0.3333333333333333,
+    "candidateWins": 1,
+    "baselineWins": 0,
+    "ties": 2,
+    "winner": "candidate"
+  }
+}

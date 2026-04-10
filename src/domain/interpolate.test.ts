@@ -155,8 +155,8 @@ describe('shellEscapeValue', () => {
 });
 
 describe('shellInterpolate', () => {
-  it('shell-escapes substituted values', () => {
-    expect(shellInterpolate('echo ${x}', { x: 'hello' })).toBe("echo 'hello'");
+  it('leaves simple safe substituted values unquoted', () => {
+    expect(shellInterpolate('echo ${x}', { x: 'hello' })).toBe('echo hello');
   });
 
   it('prevents shell injection via variable values', () => {
@@ -175,15 +175,13 @@ describe('shellInterpolate', () => {
   });
 
   // H#10: Default value in shell context
-  it('shell-escapes default value', () => {
-    expect(shellInterpolate('echo ${x:-hello}', {})).toBe("echo 'hello'");
+  it('leaves simple safe default values unquoted', () => {
+    expect(shellInterpolate('echo ${x:-hello}', {})).toBe('echo hello');
   });
 
   // H-LANG-004: Array indexing in shell context
-  it('shell-escapes array element access', () => {
-    expect(shellInterpolate('echo ${items[0]}', { items: '["hello","world"]' })).toBe(
-      "echo 'hello'",
-    );
+  it('leaves simple safe array element access unquoted', () => {
+    expect(shellInterpolate('echo ${items[0]}', { items: '["hello","world"]' })).toBe('echo hello');
   });
 
   it('leaves array access as-is when variable not set', () => {

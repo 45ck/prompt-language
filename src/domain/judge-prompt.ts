@@ -7,8 +7,6 @@
  */
 
 import { buildCapturePrompt, buildCaptureRetryPrompt } from './capture-prompt.js';
-import { buildJsonCapturePrompt } from './capture-prompt.js';
-import { JUDGE_RESULT_JSON_SCHEMA } from './judge-result.js';
 
 /** Prefix used to encode AI-evaluated conditions in the condition string. */
 export const ASK_CONDITION_PREFIX = 'ask:';
@@ -35,10 +33,6 @@ export function extractAskQuestion(condition: string): string {
 /** Build the variable name used to cache an AI judgment verdict for a node. */
 export function judgeVarName(nodeId: string): string {
   return `__judge_${nodeId}__`;
-}
-
-export function reviewJudgeVarName(nodeId: string): string {
-  return `__review_judge_${nodeId}__`;
 }
 
 /**
@@ -71,54 +65,4 @@ Answer with ONLY "true" or "false" — nothing else.`;
 /** Build a retry meta-prompt when the verdict was not captured on the first attempt. */
 export function buildJudgeRetryPrompt(nodeId: string, nonce?: string): string {
   return buildCaptureRetryPrompt(judgeVarName(nodeId), nonce);
-}
-
-interface ReviewJudgePromptInput {
-  readonly judgeName: string;
-  readonly nodeId: string;
-  readonly judgeLines: readonly string[];
-  readonly rubricName?: string | undefined;
-  readonly rubricLines?: readonly string[] | undefined;
-  readonly criteria?: string | undefined;
-  readonly evidenceSections?:
-    | readonly { readonly label: string; readonly value: string }[]
-    | undefined;
-  readonly retryReason?: string | undefined;
-  readonly nonce?: string | undefined;
-}
-
-export function buildReviewJudgePrompt(input: ReviewJudgePromptInput): string {
-  const sections: string[] = [
-    '[Internal — prompt-language named judge evaluation]',
-    `Evaluate the completed review round using judge "${input.judgeName}".`,
-  ];
-
-  if (input.retryReason) {
-    sections.push(`Previous capture issue: ${input.retryReason}.`);
-  }
-
-  if (input.criteria) {
-    sections.push(`Review criteria:\n${input.criteria}`);
-  }
-
-  sections.push(`Judge definition:\n${input.judgeLines.join('\n')}`);
-
-  if (input.rubricName && input.rubricLines && input.rubricLines.length > 0) {
-    sections.push(`Rubric "${input.rubricName}":\n${input.rubricLines.join('\n')}`);
-  }
-
-  for (const section of input.evidenceSections ?? []) {
-    sections.push(`${section.label}:\n${section.value}`);
-  }
-
-  sections.push(
-    'Return one JSON verdict only. Keep `reason` brief and keep `evidence` concrete and short. Do not include hidden reasoning.',
-  );
-
-  return buildJsonCapturePrompt(
-    sections.join('\n\n'),
-    reviewJudgeVarName(input.nodeId),
-    JUDGE_RESULT_JSON_SCHEMA,
-    input.nonce,
-  );
 }

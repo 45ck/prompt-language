@@ -16,13 +16,14 @@ This document maps the [thesis experiments](thesis.md#experiments-that-can-prove
 
 ## Existing infrastructure
 
-| Asset                                  | What it provides                                            |
-| -------------------------------------- | ----------------------------------------------------------- |
-| `scripts/eval/smoke-test.mjs`          | 32 live `claude -p` tests, temp-dir isolation, pass/fail    |
-| `scripts/eval/comparative-eval-v4.mjs` | A/B plugin-vs-vanilla harness with `--repeat N` reliability |
-| `scripts/eval/ab-eval.mjs`             | Earlier A/B framework (v1/v2 patterns)                      |
-| `scripts/eval/verification-eval.mjs`   | Gate-focused eval                                           |
-| `docs/evaluation/eval-analysis.md`     | 45+ hypothesis results, latency data, pattern taxonomy      |
+| Asset                                  | What it provides                                                          |
+| -------------------------------------- | ------------------------------------------------------------------------- |
+| `scripts/eval/smoke-test.mjs`          | Live smoke suite spanning `A` through `AO`, temp-dir isolation, pass/fail |
+| `scripts/eval/comparative-eval-v4.mjs` | A/B plugin-vs-vanilla harness with `--repeat N` reliability               |
+| `scripts/eval/ab-eval.mjs`             | Earlier A/B framework (v1/v2 patterns)                                    |
+| `scripts/eval/verification-eval.mjs`   | Gate-focused eval                                                         |
+| `experiments/eval/datasets/*.jsonl`    | Checked-in dataset bank for the v1 eval runner                            |
+| `docs/evaluation/eval-analysis.md`     | 45+ hypothesis results, latency data, pattern taxonomy                    |
 
 All experiments below assume the project builds (`npm run ci`) and smoke tests pass (`npm run eval:smoke`) before any research eval begins.
 
@@ -36,12 +37,14 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 
 - `comparative-eval-v4.mjs` already runs plugin-vs-vanilla with repeat sweeps
 - `smoke-test.mjs` has fixture patterns for `run:`, `if`, `retry`, and gate evaluation
+- the seeded E1 JSONL bank now exists at `experiments/eval/datasets/e1-repeated-failures.jsonl`
+- the locked Codex pair currently shows directional lift on the seed: vanilla `0/3` vs gated `1/3`
 
 ### What is needed
 
 1. **Failure catalog** — curate 10 recurring failure patterns from real usage (e.g., missing error handling, forgotten edge cases, incomplete migrations)
-2. **Baseline fixture set** — one `.flow` per failure pattern, no recovery logic, record baseline pass rate over 3 runs
-3. **Recovery fixture set** — same patterns with prompt-language recovery (`retry`, `if command_failed`, wisdom in `memory:`, additional gates)
+2. **Baseline fixture set** — start from `experiments/eval/datasets/e1-repeated-failures.jsonl`, then grow it to 10+ failure patterns
+3. **Recovery fixture set** — compare `candidate=vanilla` against `candidate=gated` first, then add richer recovery flows (`retry`, `if command_failed`, wisdom in `memory:`)
 4. **Eval script** — `scripts/eval/thesis-e1-eval.mjs` extending the v4 harness to compare baseline vs recovery pass rates
 
 ### Success criteria
@@ -71,8 +74,8 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 ### What is needed
 
 1. **Bounded task spec** — a concrete feature (e.g., "build a REST API with auth, CRUD, and tests")
-2. **Single-file fixture** — one large `.flow` encoding everything
-3. **Multi-file fixture** — `architecture.flow`, `policies.flow`, `wisdom.flow`, `build.flow`, `gates.flow` with imports
+2. **Single-file fixture** — one large `.flow` encoding everything, planned under `experiments/eval/datasets/e2-single-vs-multi-file.jsonl`
+3. **Multi-file fixture** — `architecture.flow`, `policies.flow`, `wisdom.flow`, `build.flow`, `gates.flow` with imports, paired in that same planned dataset
 4. **Eval script** — `scripts/eval/thesis-e2-eval.mjs` running both variants on 5+ tasks, comparing:
    - task pass rate
    - lines changed per edit
@@ -105,7 +108,7 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 ### What is needed
 
 1. **Wisdom file** — a curated `wisdom.flow` with 10+ concrete lessons (e.g., "always check empty states", "verify tenant isolation")
-2. **Task set** — 10 bounded tasks where those lessons are relevant
+2. **Task set** — planned under `experiments/eval/datasets/e3-wisdom-accumulation.jsonl`
 3. **Two-arm eval** — run with and without wisdom loaded, 3 iterations each
 4. **Eval script** — `scripts/eval/thesis-e3-eval.mjs` tracking:
    - repeated-mistake count
@@ -139,7 +142,7 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 ### What is needed
 
 1. **App spec** — a bounded CRUD app on a fixed stack (e.g., Express + SQLite + Vitest)
-2. **Prompt-language project** — multi-file repository expressing all engineering intent
+2. **Prompt-language project** — planned under `experiments/eval/datasets/e4-factory-starters.jsonl`, anchored to the CRM and helpdesk starter surfaces
 3. **Execution harness** — runs the project end-to-end, measures:
    - whether a working app is produced
    - core journey pass rate (manual or automated)
@@ -175,7 +178,7 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 
 1. **Task spec** — a medium-complexity bounded feature requiring multiple concerns (architecture, backend, frontend, testing, review)
 2. **Single-agent fixture** — one flow doing everything sequentially
-3. **Multi-agent fixture** — separate flows for planner, architect, implementer, tester, reviewer coordinated via `spawn`/`await`/`send`/`receive`
+3. **Multi-agent fixture** — planned under `experiments/eval/datasets/e5-parallel-specialists.jsonl`, comparing the same task set with explicit specialist coordination
 4. **Eval script** — `scripts/eval/thesis-e5-eval.mjs` comparing:
    - plan quality (acceptance criteria coverage)
    - task pass rate

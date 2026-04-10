@@ -133,9 +133,7 @@ describe('shellInterpolate cross-platform safety', () => {
   it('handles very long values (10,000+ chars) without breaking quoting', () => {
     const longVal = 'a'.repeat(10_000);
     const result = shellInterpolate('echo ${val}', { val: longVal });
-    expect(result).toBe(`echo '${longVal}'`);
-    expect(result.startsWith("echo '")).toBe(true);
-    expect(result.endsWith("'")).toBe(true);
+    expect(result).toBe(`echo ${longVal}`);
   });
 
   it('handles values with null bytes', () => {
@@ -153,7 +151,15 @@ describe('shellInterpolate cross-platform safety', () => {
 
   it('handles multiple interpolations in one template', () => {
     const result = shellInterpolate('${a} and ${b}', { a: 'foo', b: 'bar' });
-    expect(result).toBe("'foo' and 'bar'");
+    expect(result).toBe('foo and bar');
+  });
+
+  it('keeps adjacent safe fragments unquoted so shell words compose cleanly', () => {
+    const result = shellInterpolate('echo iter-${counter}-${label}', {
+      counter: 3,
+      label: 'done',
+    });
+    expect(result).toBe('echo iter-3-done');
   });
 
   it('leaves unknown variables as-is', () => {
@@ -163,7 +169,7 @@ describe('shellInterpolate cross-platform safety', () => {
 
   it('handles numeric and boolean values', () => {
     const result = shellInterpolate('${n} ${b}', { n: 42, b: true });
-    expect(result).toBe("'42' 'true'");
+    expect(result).toBe('42 true');
   });
 
   it('shellEscapeValue handles values with multiple single quotes', () => {
@@ -175,11 +181,11 @@ describe('shellInterpolate cross-platform safety', () => {
   it('handles default values with ${var:-default} syntax', () => {
     // Variable exists — use it
     const result1 = shellInterpolate('echo ${val:-fallback}', { val: 'real' });
-    expect(result1).toBe("echo 'real'");
+    expect(result1).toBe('echo real');
 
     // Variable missing — use default, also shell-escaped
     const result2 = shellInterpolate('echo ${val:-fallback}', {});
-    expect(result2).toBe("echo 'fallback'");
+    expect(result2).toBe('echo fallback');
   });
 
   // Verify raw interpolate does NOT escape (contrast with shellInterpolate)

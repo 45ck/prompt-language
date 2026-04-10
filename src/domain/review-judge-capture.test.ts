@@ -6,6 +6,7 @@ import {
   parseReviewJudgeCapture,
   reviewJudgeVarName,
 } from './review-judge-capture.js';
+import { JUDGE_RESULT_JSON_SCHEMA } from './judge-result.js';
 
 describe('review-judge-capture', () => {
   it('uses a dedicated capture variable name for review judges', () => {
@@ -16,8 +17,7 @@ describe('review-judge-capture', () => {
     const prompt = buildReviewJudgeCapturePrompt('Judge this round.', 'rv1');
     expect(prompt).toContain('Judge this round.');
     expect(prompt).toContain('.prompt-language/vars/__review_judge_rv1__');
-    expect(prompt).toContain('"pass"');
-    expect(prompt).toContain('"abstain"');
+    expect(prompt).toContain(JUDGE_RESULT_JSON_SCHEMA.trim());
   });
 
   it('builds a JSON retry prompt for review judges', () => {
@@ -54,20 +54,22 @@ describe('review-judge-capture', () => {
     ).toBeNull();
   });
 
-  it('forces abstaining captures to non-pass', () => {
-    const result = parseReviewJudgeCapture(`{
-      "pass": true,
-      "confidence": 0.2,
-      "reason": "Not enough evidence.",
-      "evidence": "missing diff",
-      "abstain": true
-    }`);
+  it('parses fenced JSON through the shared judge-result parser', () => {
+    const result = parseReviewJudgeCapture(`\`\`\`json
+{
+  "pass": false,
+  "confidence": 0.2,
+  "reason": "Not enough evidence.",
+  "evidence": [],
+  "abstain": true
+}
+\`\`\``);
 
     expect(result).toEqual({
       pass: false,
       confidence: 0.2,
       reason: 'Not enough evidence.',
-      evidence: ['missing diff'],
+      evidence: [],
       abstain: true,
     });
   });

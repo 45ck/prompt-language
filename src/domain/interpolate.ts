@@ -6,8 +6,8 @@
  *
  * **Security note:** `interpolate()` performs raw substitution and MUST NOT be
  * used to build shell commands from untrusted input. Use `shellInterpolate()`
- * for run-node commands — it wraps substituted values in single-quotes to
- * prevent shell injection.
+ * for run-node commands — it shell-encodes substituted values, leaving only a
+ * narrow safe unquoted subset untouched.
  */
 
 /** Maximum payload size (bytes) for JSON.parse in array index resolution. */
@@ -77,7 +77,13 @@ export function shellEscapeValue(value: string): string {
   return "'" + value.replace(/'/g, "'\\''") + "'";
 }
 
-/** Like interpolate(), but wraps substituted values in single-quotes for shell safety. */
+const SAFE_UNQUOTED_SHELL_VALUE_RE = /^[A-Za-z0-9_./:-]+$/;
+
+function shellEncodeInterpolatedValue(value: string): string {
+  return SAFE_UNQUOTED_SHELL_VALUE_RE.test(value) ? value : shellEscapeValue(value);
+}
+
+/** Like interpolate(), but shell-encodes substituted values for command safety. */
 export function shellInterpolate(
   template: string,
   variables: Readonly<Record<string, string | number | boolean>>,
@@ -99,15 +105,15 @@ export function shellInterpolate(
       if (arrayName !== undefined && arrayIndex !== undefined) {
         if (!(arrayName in variables)) return match;
         const result = resolveArrayIndex(String(variables[arrayName]), arrayIndex);
-        return result !== null ? shellEscapeValue(result) : match;
+        return result !== null ? shellEncodeInterpolatedValue(result) : match;
       }
 
       const name = nameWithDefault ?? plainName!;
       if (name in variables) {
-        return shellEscapeValue(String(variables[name]));
+        return shellEncodeInterpolatedValue(String(variables[name]));
       }
       if (nameWithDefault !== undefined) {
-        return shellEscapeValue(defaultVal!);
+        return shellEncodeInterpolatedValue(defaultVal!);
       }
       return match;
     },

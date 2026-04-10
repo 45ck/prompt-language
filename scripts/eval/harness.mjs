@@ -32,7 +32,7 @@ function parseHarness(argv, envHarness) {
 function parseModel(argv, envModel) {
   const flagIndex = argv.indexOf('--model');
   const flagValue = flagIndex >= 0 ? argv[flagIndex + 1] : null;
-  return flagValue || envModel || undefined;
+  return flagValue || envModel || (HARNESS === 'codex' ? 'gpt-5.2' : undefined);
 }
 
 function cleanEnv() {
@@ -320,8 +320,8 @@ function execOpenCodeFlow(flowText, cwd, timeout, model, strict) {
   }
 }
 
-function execOllamaFlow(flowText, cwd, timeout, model, strict) {
-  const args = [join(ROOT, 'bin', 'cli.mjs'), 'ci', '--runner', 'ollama'];
+function execCodexFlow(flowText, cwd, timeout, model, strict) {
+  const args = [join(ROOT, 'bin', 'cli.mjs'), 'ci', '--runner', 'codex'];
 
   if (model) {
     args.push('--model', model);
@@ -391,6 +391,32 @@ function execTemplateCommand(prompt, cwd, timeout, model, strict) {
   }
 }
 
+function execOllamaFlow(flowText, cwd, timeout, model, strict) {
+  const args = [join(ROOT, 'bin', 'cli.mjs'), 'ci', '--runner', 'ollama'];
+
+  if (model) {
+    args.push('--model', model);
+  }
+
+  try {
+    return execFileSync('node', args, {
+      input: flowText,
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: cleanEnv(),
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
 export function getHarnessName() {
   return HARNESS;
 }
@@ -444,13 +470,13 @@ export function getCommandLabel() {
 }
 
 export function getFlowCommandLabel() {
-  if (HARNESS === 'opencode') {
-    return 'prompt-language ci --runner opencode';
-  }
-  if (HARNESS === 'ollama') {
-    return 'prompt-language ci --runner ollama';
-  }
-  return getCommandLabel();
+  return HARNESS === 'codex'
+    ? 'prompt-language ci --runner codex'
+    : HARNESS === 'opencode'
+      ? 'prompt-language ci --runner opencode'
+      : HARNESS === 'ollama'
+        ? 'prompt-language ci --runner ollama'
+        : getCommandLabel();
 }
 
 export function checkHarnessVersion(timeout = 5000) {
@@ -491,16 +517,16 @@ export function runHarnessFlow(
     return execTemplateCommand(flowText, cwd, timeout, resolvedModel, strict);
   }
 
-  if (HARNESS === 'opencode') {
-    return execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict);
-  }
-  if (HARNESS === 'ollama') {
-    return execOllamaFlow(flowText, cwd, timeout, resolvedModel, strict);
-  }
-  return runHarnessPrompt(flowText, {
-    cwd,
-    timeout,
-    model: resolvedModel,
-    strict,
-  });
+  return HARNESS === 'codex'
+    ? execCodexFlow(flowText, cwd, timeout, resolvedModel, strict)
+    : HARNESS === 'opencode'
+      ? execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict)
+      : HARNESS === 'ollama'
+        ? execOllamaFlow(flowText, cwd, timeout, resolvedModel, strict)
+      : runHarnessPrompt(flowText, {
+          cwd,
+          timeout,
+          model: resolvedModel,
+          strict,
+        });
 }

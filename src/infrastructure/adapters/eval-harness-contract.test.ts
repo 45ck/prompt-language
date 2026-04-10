@@ -8,12 +8,17 @@ const SMOKE = join(ROOT, 'scripts', 'eval', 'smoke-test.mjs');
 const PACKAGE_JSON = join(ROOT, 'package.json');
 
 describe('eval harness contracts', () => {
-  it('keeps OpenCode direct prompts and flow execution as separate paths', async () => {
+  it('keeps Codex and OpenCode direct prompts and flow execution as separate paths', async () => {
     const source = await readFile(HARNESS, 'utf8');
 
     expect(source).toContain(
       'const DEFAULT_MODEL = parseModel(process.argv, process.env.EVAL_MODEL);',
     );
+    expect(source).toContain(
+      "return flagValue || envModel || (HARNESS === 'codex' ? 'gpt-5.2' : undefined);",
+    );
+    expect(source).toContain('function execCodexFlow(');
+    expect(source).toContain("'ci', '--runner', 'codex'");
     expect(source).toContain("return ['opencode', '--version'];");
     expect(source).toContain("return ['ollama', '--version'];");
     expect(source).toContain('function execOpenCode(');

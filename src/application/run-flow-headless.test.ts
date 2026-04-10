@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -7,7 +7,9 @@ import { InMemoryCommandRunner } from '../infrastructure/adapters/in-memory-comm
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { FileCaptureReader } from '../infrastructure/adapters/file-capture-reader.js';
 import { FileAuditLogger } from '../infrastructure/adapters/file-audit-logger.js';
+import { HeadlessProcessSpawner } from '../infrastructure/adapters/headless-process-spawner.js';
 import { FileMemoryStore } from '../infrastructure/adapters/file-memory-store.js';
+import { ShellCommandRunner } from '../infrastructure/adapters/shell-command-runner.js';
 import { runFlowHeadless } from './run-flow-headless.js';
 import type { PromptTurnResult, PromptTurnRunner } from './ports/prompt-turn-runner.js';
 import type {
@@ -428,6 +430,82 @@ describe('runFlowHeadless', () => {
     expect(result.reason).toBe('Prompt runner completed without observable workspace progress.');
   });
 
+  it('fails cleanly when the final prompt turn leaves completion gates blocked', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-blocked-'));
+    const commandRunner = new InMemoryCommandRunner();
+    commandRunner.setResult("test -f 'done.txt'", {
+      exitCode: 1,
+      stdout: '',
+      stderr: '',
+    });
+
+    const promptRunner = new RecordingPromptRunner(async ({ cwd }) => {
+      await writeFile(join(cwd, 'notes.txt'), 'partial', 'utf8');
+      return {
+        exitCode: 0,
+        assistantText: 'Made a partial change but the required file was not created.',
+        madeProgress: true,
+      };
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText:
+          'Goal: create file\n\nflow:\n  prompt: Create done.txt\n\ndone when:\n  file_exists done.txt\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(1);
+    expect(result.reason).toContain(
+      'Completion gates remained blocked after the final prompt turn.',
+    );
+    expect(result.reason).toContain('Made a partial change');
+  });
+
+  it('returns paused when spawned children are still running', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-pause-'));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: pause',
+          '',
+          'flow:',
+          '  spawn "worker"',
+          '    prompt: Create worker.txt',
+          '  end',
+          '  await all',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        processSpawner: new SequenceStatusProcessSpawner([{ status: 'running' }]),
+        promptTurnRunner: new RecordingPromptRunner(),
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(0);
+    expect(result.reason).toBe('Flow paused before reaching completion.');
+  });
+
   it('keeps polling spawned children until they complete', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-pause-'));
 
@@ -461,6 +539,106 @@ describe('runFlowHeadless', () => {
 
     expect(result.finalState.status).toBe('completed');
     expect(result.turns).toBe(0);
+  });
+
+  it('executes spawned child work in headless mode and resumes the parent flow', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-spawn-child-'));
+
+    const commandRunner = new ShellCommandRunner();
+    const promptRunner = new RecordingPromptRunner();
+    const processSpawner = new HeadlessProcessSpawner({
+      auditLogger: new FileAuditLogger(tempDir),
+      captureReader: new FileCaptureReader(tempDir),
+      commandRunner,
+      cwd: tempDir,
+      memoryStore: new FileMemoryStore(tempDir),
+      promptTurnRunner: promptRunner,
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: spawn child',
+          '',
+          'flow:',
+          '  spawn "worker"',
+          '    run: echo child-output > worker-result.txt',
+          '  end',
+          '  await "worker"',
+          '  run: echo parent-done > parent-marker.txt',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        processSpawner,
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(promptRunner.prompts).toHaveLength(0);
+    await expect(readFile(join(tempDir, 'worker-result.txt'), 'utf8')).resolves.toContain(
+      'child-output',
+    );
+    await expect(readFile(join(tempDir, 'parent-marker.txt'), 'utf8')).resolves.toContain(
+      'parent-done',
+    );
+  });
+
+  it('imports spawned child variables back into the parent namespace in headless mode', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-spawn-vars-'));
+
+    const commandRunner = new ShellCommandRunner();
+    const promptRunner = new RecordingPromptRunner();
+    const processSpawner = new HeadlessProcessSpawner({
+      auditLogger: new FileAuditLogger(tempDir),
+      captureReader: new FileCaptureReader(tempDir),
+      commandRunner,
+      cwd: tempDir,
+      memoryStore: new FileMemoryStore(tempDir),
+      promptTurnRunner: promptRunner,
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: spawn variable passing',
+          '',
+          'flow:',
+          '  let color = "purple"',
+          '  spawn "painter"',
+          '    run: echo ${color} > painted.txt',
+          '    let result = run "echo painted-${color}"',
+          '  end',
+          '  await "painter"',
+          '  run: echo ${painter.result} > spawn-var.txt',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        processSpawner,
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.finalState.variables['painter.result']).toBe('painted-purple');
+    await expect(readFile(join(tempDir, 'painted.txt'), 'utf8')).resolves.toContain('purple');
+    await expect(readFile(join(tempDir, 'spawn-var.txt'), 'utf8')).resolves.toContain(
+      'painted-purple',
+    );
   });
 
   it('completes multi-step run-only flows without invoking the model', async () => {
@@ -497,5 +675,115 @@ describe('runFlowHeadless', () => {
     expect(result.finalState.status).toBe('completed');
     expect(result.turns).toBe(0);
     expect(promptRunner.prompts).toHaveLength(0);
+  });
+
+  it('runs shell commands in the flow workspace instead of the repo cwd', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-cwd-'));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: workspace cwd',
+          '',
+          'flow:',
+          "  run: node -e \"require('node:fs').writeFileSync('cwd.txt', process.cwd())\"",
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new ShellCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: new RecordingPromptRunner(),
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    await expect(readFile(join(tempDir, 'cwd.txt'), 'utf8')).resolves.toBe(tempDir);
+  });
+
+  it('executes only the selected if branch for prompt nodes', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-if-prompt-'));
+
+    let promptCount = 0;
+    const promptRunner = new RecordingPromptRunner(async ({ cwd }) => {
+      promptCount += 1;
+      await writeFile(join(cwd, 'branch.txt'), promptCount === 1 ? 'then-branch' : 'else-branch');
+      return { exitCode: 0, madeProgress: true };
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: if prompt branch',
+          '',
+          'flow:',
+          '  let flag = "yes"',
+          '  if ${flag} == "yes"',
+          '    prompt: Write then branch',
+          '  else',
+          '    prompt: Write else branch',
+          '  end',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(promptCount).toBe(1);
+    await expect(readFile(join(tempDir, 'branch.txt'), 'utf8')).resolves.toBe('then-branch');
+  });
+
+  it('executes only the selected if branch for run-only conditions', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-if-run-'));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: if run branch',
+          '',
+          'flow:',
+          '  let a = "yes"',
+          '  let b = "yes"',
+          '  run: node -e "process.exit(0)"',
+          '  if command_succeeded and ${a} == "yes"',
+          '    run: echo and-pass > and-result.txt',
+          '  else',
+          '    run: echo and-fail > and-result.txt',
+          '  end',
+          '  if ${a} == "no" or ${b} == "yes"',
+          '    run: echo or-pass > or-result.txt',
+          '  else',
+          '    run: echo or-fail > or-result.txt',
+          '  end',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new ShellCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: new RecordingPromptRunner(),
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    await expect(readFile(join(tempDir, 'and-result.txt'), 'utf8')).resolves.toContain('and-pass');
+    await expect(readFile(join(tempDir, 'or-result.txt'), 'utf8')).resolves.toContain('or-pass');
   });
 });

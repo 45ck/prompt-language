@@ -10,14 +10,16 @@
 
 ## Folder map
 
-| Folder                       | Purpose                                                                                       |
-| ---------------------------- | --------------------------------------------------------------------------------------------- |
-| [history/](history/index.md) | Design-history pages for features that already shipped and now live in the Language Reference |
-| [runtime/](runtime/index.md) | Active runtime and integration proposals that are not shipped yet                             |
-| [tooling/](tooling/index.md) | Active tooling and ecosystem proposals such as evals, editor support, and playground work     |
-| [memory/](memory/index.md)   | Memory, knowledge, retrieval, and checkpoint planning docs                                    |
-| [swarm/](swarm/README.md)    | Imported swarm design pack with its own phased proposal set                                   |
-| [vNext/](vnext/README.md)    | Imported vNext architecture/spec pack                                                         |
+| Folder                            | Purpose                                                                                       |
+| --------------------------------- | --------------------------------------------------------------------------------------------- |
+| [history/](history/index.md)      | Design-history pages for features that already shipped and now live in the Language Reference |
+| [runtime/](runtime/index.md)      | Active runtime and integration proposals that are not shipped yet                             |
+| [tooling/](tooling/index.md)      | Active tooling and ecosystem proposals such as evals, editor support, and playground work     |
+| [memory/](memory/index.md)        | Memory, knowledge, retrieval, and checkpoint planning docs                                    |
+| [artifacts/](artifacts/README.md) | Artifact packages, review surfaces, and manifest/runtime proposal docs                        |
+| [reviews/](reviews/index.md)      | Imported review and plan packs used for backlog shaping and positioning follow-ups            |
+| [swarm/](swarm/README.md)         | Imported swarm design pack with its own phased proposal set                                   |
+| [vNext/](vnext/README.md)         | Imported vNext architecture/spec pack                                                         |
 
 ## Shipped design history
 

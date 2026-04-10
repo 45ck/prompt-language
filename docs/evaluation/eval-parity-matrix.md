@@ -16,6 +16,7 @@ This note records the validation bar for Codex parity runs and the evidence coll
 | Command                                                      | Why it matters                                               | Status in this workspace |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | ------------------------ |
 | `node scripts/eval/smoke-test.mjs --history`                 | Local smoke-history summary with pass rates and fail streaks | Implemented              |
+| `npm run eval:smoke:codex:quick`                             | Fast Codex regression signal over the quick smoke subset     | `27/27` passed           |
 | `node scripts/eval/smoke-test.mjs --harness codex`           | Runs smoke through Codex CLI harness                         | Implemented              |
 | `node scripts/eval/smoke-test.mjs --harness gemini`          | Runs smoke through Gemini CLI harness                        | Implemented              |
 | `AI_CMD="gemini -p --yolo" node scripts/eval/smoke-test.mjs` | Uses a custom AI command template override                   | Implemented              |
@@ -41,9 +42,11 @@ This note records the validation bar for Codex parity runs and the evidence coll
 - `npm run test`: passed
 - `npm run ci`: passed
 - `npm run eval:e2e`: passed
+- `npm run eval:smoke:codex:quick`: passed `27/27`
 - `npm run eval:smoke`: blocked by missing Claude login/access in this environment
 
 ## Notes
 
 - This matrix is the current source of truth for the Codex parity task tracked in Beads.
+- The quick Codex pass is useful evidence for the headless runner path, but it does not replace supported-host live smoke.
 - Unsupported or blocked commands stay in the matrix so the gap stays visible until a supported run is available.

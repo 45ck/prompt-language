@@ -71,6 +71,7 @@ import {
   buildReviewJudgeRetryPrompt,
   parseReviewJudgeCapture,
 } from '../domain/review-judge-capture.js';
+import { extractJudgeKind } from '../domain/judge-definition.js';
 import { renderNodesToDsl, renderSpawnBody } from './render-node-to-dsl.js';
 
 export function resolveCurrentNode(
@@ -225,6 +226,47 @@ function advancePastCurrentNode(state: SessionState): SessionState {
     default:
       return advanceNode(state, advancePath(path));
   }
+}
+
+function advanceFromPath(state: SessionState, path: readonly number[]): SessionState {
+  if (path.length > 0) {
+    const parentPath = path.slice(0, -1);
+    const parentNode = resolveCurrentNode(state.flowSpec.nodes, parentPath);
+    if (parentNode?.kind === 'if') {
+      const childIndex = path[path.length - 1]!;
+      const progress = state.nodeProgress[parentNode.id];
+      if (progress?.branchEndOffset !== undefined && childIndex + 1 >= progress.branchEndOffset) {
+        const completed = updateNodeProgress(state, parentNode.id, {
+          iteration: progress.iteration,
+          maxIterations: progress.maxIterations,
+          status: 'completed',
+          branchEndOffset: progress.branchEndOffset,
+          startedAt: progress.startedAt,
+          completedAt: Date.now(),
+        });
+        return advanceNode(completed, advancePath(parentPath));
+      }
+    }
+  }
+
+  return advanceNode(state, advancePath(path));
+}
+
+function enterIfBranch(
+  current: SessionState,
+  node: Extract<FlowNode, { kind: 'if' }>,
+  branchOffset: number,
+  branchLength: number,
+): SessionState {
+  const now = Date.now();
+  const updated = updateNodeProgress(current, node.id, {
+    iteration: 1,
+    maxIterations: 1,
+    status: 'running',
+    branchEndOffset: branchOffset + branchLength,
+    startedAt: current.nodeProgress[node.id]?.startedAt ?? now,
+  });
+  return advanceNode(updated, [...current.currentNodePath, branchOffset]);
 }
 
 const MAX_OUTPUT_LENGTH = 2000;
@@ -438,7 +480,7 @@ function handleLoopReentry(
           completedAt: Date.now(),
           loopStartedAt: progress?.loopStartedAt,
         });
-        return advanceNode(current, advancePath(parentPath));
+        return advanceFromPath(current, parentPath);
       }
     }
   }
@@ -462,7 +504,7 @@ function handleLoopReentry(
     completedAt: Date.now(),
     loopStartedAt: progress?.loopStartedAt,
   });
-  return advanceNode(current, advancePath(parentPath));
+  return advanceFromPath(current, parentPath);
 }
 
 /**
@@ -581,7 +623,7 @@ async function handleBodyExhaustion(
         startedAt: progress?.startedAt,
         completedAt: Date.now(),
       });
-      return advanceNode(current, advancePath(parentPath));
+      return advanceFromPath(current, parentPath);
     }
 
     case 'review': {
@@ -599,7 +641,7 @@ async function handleBodyExhaustion(
     case 'try':
     case 'spawn':
     case 'race':
-      return advanceNode(state, advancePath(parentPath));
+      return advanceFromPath(state, parentPath);
     case 'prompt':
     case 'run':
     case 'let':
@@ -646,7 +688,7 @@ export function advanceApproveNode(
       startedAt,
       completedAt: now,
     });
-    next = advancePastCurrentNode(next);
+    next = advanceFromPath(next, next.currentNodePath);
     return { kind: 'advance', state: next, capturedPrompt: null };
   }
 
@@ -679,7 +721,7 @@ export function advanceApproveNode(
       startedAt,
       completedAt: now,
     });
-    next = advancePastCurrentNode(next);
+    next = advanceFromPath(next, next.currentNodePath);
     return { kind: 'advance', state: next, capturedPrompt: null };
   }
 
@@ -692,7 +734,7 @@ export function advanceApproveNode(
       startedAt,
       completedAt: now,
     });
-    next = advancePastCurrentNode(next);
+    next = advanceFromPath(next, next.currentNodePath);
     return { kind: 'advance', state: next, capturedPrompt: null };
   }
 
@@ -723,18 +765,6 @@ function buildReviewEvidence(parentNode: ReviewNode, state: SessionState): strin
   }
   if (parentNode.criteria) evidence.push(`criteria: ${parentNode.criteria}`);
   return evidence;
-}
-
-function extractJudgeKind(parentNode: ReviewNode, state: SessionState): string | null {
-  if (!parentNode.judgeName) return null;
-  const judge = state.flowSpec.judges?.find((entry) => entry.name === parentNode.judgeName);
-  if (!judge) return null;
-  for (const line of judge.lines) {
-    const match = /^kind:\s*(.+)$/i.exec(line.trim());
-    if (!match?.[1]) continue;
-    return match[1].trim().toLowerCase();
-  }
-  return null;
 }
 
 function buildReviewJudgePromptText(parentNode: ReviewNode, state: SessionState): string {
@@ -803,7 +833,10 @@ async function maybeRunNamedReviewJudge(
   captureReader?: CaptureReader,
 ): Promise<ReviewJudgeCaptureStep> {
   const evidence = buildReviewEvidence(parentNode, state);
-  const judgeKind = extractJudgeKind(parentNode, state);
+  const judge = parentNode.judgeName
+    ? state.flowSpec.judges?.find((entry) => entry.name === parentNode.judgeName)
+    : undefined;
+  const judgeKind = judge ? extractJudgeKind(judge) : null;
 
   if (judgeKind != null && judgeKind !== 'model') {
     evidence.push(`judge-kind: ${judgeKind}`);
@@ -1035,7 +1068,7 @@ async function handleReviewBodyExhaustion(
       completedAt: Date.now(),
       loopStartedAt: progress?.loopStartedAt,
     });
-    return advanceNode(next, advancePath(parentPath));
+    return advanceFromPath(next, parentPath);
   }
 
   if (round >= parentNode.maxRounds) {
@@ -1060,7 +1093,7 @@ async function handleReviewBodyExhaustion(
       completedAt: Date.now(),
       loopStartedAt: progress?.loopStartedAt,
     });
-    return advanceNode(next, advancePath(parentPath));
+    return advanceFromPath(next, parentPath);
   }
 
   const critiqueBase =
@@ -1208,7 +1241,7 @@ async function advanceLetNode(
   if (tryCatchJump) {
     current = advanceNode(current, tryCatchJump);
   } else {
-    current = advancePastCurrentNode(current);
+    current = advanceFromPath(current, current.currentNodePath);
   }
   return { state: current, advanced: true };
 }
@@ -1476,7 +1509,7 @@ async function advanceRunNode(
     }
   }
 
-  state = advancePastCurrentNode(state);
+  state = advanceFromPath(state, state.currentNodePath);
   return { state, advanced: true };
 }
 
@@ -1522,14 +1555,14 @@ async function advanceSpawnNode(
     );
     if (condResult === false) {
       // Condition is false: skip spawn entirely without launching
-      return { state: advancePastCurrentNode(current), advanced: true };
+      return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
     }
     // condResult === null means unresolvable — proceed with spawn (fail-open)
   }
 
   if (!processSpawner) {
     // No spawner available — skip spawn and advance past it
-    return { state: advancePastCurrentNode(current), advanced: true };
+    return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
   }
 
   const stateDir = `.prompt-language-${node.name}`;
@@ -1563,7 +1596,7 @@ async function advanceSpawnNode(
       ...state,
       warnings: [...state.warnings, `Spawn "${node.name}" failed: could not start child process.`],
     };
-    state = advancePastCurrentNode(state);
+    state = advanceFromPath(state, state.currentNodePath);
     return { state, advanced: true };
   }
 
@@ -1575,7 +1608,7 @@ async function advanceSpawnNode(
   });
 
   // Skip past the spawn block (don't enter body — child runs it)
-  state = advancePastCurrentNode(state);
+  state = advanceFromPath(state, state.currentNodePath);
   return { state, advanced: true };
 }
 
@@ -1596,7 +1629,7 @@ async function advanceAwaitNode(
   processSpawner?: ProcessSpawner,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!processSpawner) {
-    return { state: advancePastCurrentNode(current), advanced: true };
+    return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
   }
 
   const children =
@@ -1613,7 +1646,7 @@ async function advanceAwaitNode(
         `Await target "${node.target}" does not match any spawned child — advancing past await.`,
       ],
     };
-    return { state: advancePastCurrentNode(state), advanced: true };
+    return { state: advanceFromPath(state, state.currentNodePath), advanced: true };
   }
 
   let state = current;
@@ -1677,7 +1710,7 @@ async function advanceAwaitNode(
           `Await timeout after ${MAX_AWAIT_POLLS} polls; marked remaining children as failed.`,
         ],
       };
-      return { state: advancePastCurrentNode(state), advanced: true };
+      return { state: advanceFromPath(state, state.currentNodePath), advanced: true };
     }
 
     state = updateNodeProgress(state, node.id, {
@@ -1691,7 +1724,7 @@ async function advanceAwaitNode(
     return { kind: 'pause', state, capturedPrompt: null };
   }
 
-  return { state: advancePastCurrentNode(state), advanced: true };
+  return { state: advanceFromPath(state, state.currentNodePath), advanced: true };
 }
 
 export async function autoAdvanceNodes(
@@ -1766,7 +1799,7 @@ export async function autoAdvanceNodes(
       const capturedPrompt = interpolate(currentNode.text, current.variables);
       return {
         kind: 'prompt',
-        state: advancePastCurrentNode(current),
+        state: advanceFromPath(current, current.currentNodePath),
         capturedPrompt,
       };
     }
@@ -1783,7 +1816,7 @@ async function advanceRaceNode(
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!processSpawner) {
     let state = updateVariable(current, 'race_winner', '');
-    state = advancePastCurrentNode(state);
+    state = advanceFromPath(state, state.currentNodePath);
     return { state, advanced: true };
   }
 
@@ -1846,7 +1879,7 @@ async function advanceRaceNode(
       if (elapsed >= node.timeoutSeconds) {
         let state = updateVariable(current, 'race_winner', '');
         state = addWarning(state, `Race node timed out after ${node.timeoutSeconds}s.`);
-        state = advancePastCurrentNode(state);
+        state = advanceFromPath(state, state.currentNodePath);
         return { state, advanced: true };
       }
     }
@@ -1892,7 +1925,7 @@ async function advanceRaceNode(
     if (processSpawner) {
       state = await terminateRaceLosers(state, node.id, winner, processSpawner);
     }
-    state = advancePastCurrentNode(state);
+    state = advanceFromPath(state, state.currentNodePath);
     return { state, advanced: true };
   }
 
@@ -1902,7 +1935,7 @@ async function advanceRaceNode(
   });
   if (allSettled) {
     state = updateVariable(state, 'race_winner', '');
-    state = advancePastCurrentNode(state);
+    state = advanceFromPath(state, state.currentNodePath);
     return { state, advanced: true };
   }
 
@@ -1911,7 +1944,7 @@ async function advanceRaceNode(
   if (pollCount >= MAX_AWAIT_POLLS) {
     state = updateVariable(state, 'race_winner', '');
     state = addWarning(state, `Race timeout after ${MAX_AWAIT_POLLS} polls; no winner declared.`);
-    state = advancePastCurrentNode(state);
+    state = advanceFromPath(state, state.currentNodePath);
     return { state, advanced: true };
   }
   state = updateNodeProgress(state, node.id, {
@@ -1931,7 +1964,7 @@ async function advanceForeachSpawnNode(
   processSpawner?: ProcessSpawner,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!processSpawner) {
-    return { state: advancePastCurrentNode(current), advanced: true };
+    return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
   }
   const rawList = node.listCommand
     ? String(current.variables[`_foreach_${node.id}_list`] ?? '')
@@ -1972,7 +2005,7 @@ async function advanceForeachSpawnNode(
       });
     }
   }
-  state = advancePastCurrentNode(state);
+  state = advanceFromPath(state, state.currentNodePath);
   return { state, advanced: true };
 }
 
@@ -1994,7 +2027,7 @@ async function advanceRememberNode(
       ...(resolvedValue !== undefined ? { value: resolvedValue } : {}),
     });
   }
-  return { state: advancePastCurrentNode(current), advanced: true };
+  return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
 }
 
 /** Advance a send node: write a message to the target's inbox and auto-advance. */
@@ -2007,7 +2040,7 @@ async function advanceSendNode(
     const resolvedMessage = interpolate(node.message, current.variables);
     await messageStore.send(node.target, resolvedMessage);
   }
-  return { state: advancePastCurrentNode(current), advanced: true };
+  return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
 }
 
 /**
@@ -2037,13 +2070,13 @@ async function advanceReceiveNode(
         startedAt,
         completedAt: Date.now(),
       });
-      return { state: advancePastCurrentNode(s), advanced: true };
+      return { state: advanceFromPath(s, s.currentNodePath), advanced: true };
     }
   }
 
   if (!messageStore) {
     const s = updateVariable(current, node.variableName, '');
-    return { state: advancePastCurrentNode(s), advanced: true };
+    return { state: advanceFromPath(s, s.currentNodePath), advanced: true };
   }
 
   const from = node.from ?? 'parent';
@@ -2071,7 +2104,7 @@ async function advanceReceiveNode(
     startedAt: current.nodeProgress[node.id]?.startedAt ?? Date.now(),
     completedAt: Date.now(),
   });
-  return { state: advancePastCurrentNode(s), advanced: true };
+  return { state: advanceFromPath(s, s.currentNodePath), advanced: true };
 }
 
 /** Advance a single node by kind. Returns either an early-exit result or updated state. */
@@ -2094,7 +2127,7 @@ async function advanceSingleNode(
       const capturedPrompt = interpolate(node.text, current.variables);
       return {
         kind: 'prompt',
-        state: advancePastCurrentNode(current),
+        state: advanceFromPath(current, current.currentNodePath),
         capturedPrompt,
       };
     }
@@ -2183,11 +2216,11 @@ function advanceBreakNode(
         const loopLabel = (ancestor as WhileNode | UntilNode | RetryNode | ForeachNode).label;
         if (loopLabel !== node.label) continue;
       }
-      return { state: advanceNode(current, advancePath(ancestorPath)), advanced: true };
+      return { state: advanceFromPath(current, ancestorPath), advanced: true };
     }
   }
   // No loop ancestor — just advance past break (warning situation, but don't crash)
-  return { state: advanceNode(current, advancePath(path)), advanced: true };
+  return { state: advanceFromPath(current, path), advanced: true };
 }
 
 // H-LANG-002: Continue re-enters the nearest enclosing loop at the next iteration.
@@ -2218,7 +2251,7 @@ function advanceContinueNode(
     };
   }
   // No loop ancestor — just advance past continue
-  return { state: advanceNode(current, advancePath(path)), advanced: true };
+  return { state: advanceFromPath(current, path), advanced: true };
 }
 
 /** Advance a while or until node on first encounter. */
@@ -2351,7 +2384,7 @@ async function advanceConditionLoop(
                 loopStartedAt: progress?.loopStartedAt,
               });
               return {
-                state: advancePastCurrentNode(completedProgress),
+                state: advanceFromPath(completedProgress, current.currentNodePath),
                 advanced: true,
               };
             }
@@ -2373,7 +2406,7 @@ async function advanceConditionLoop(
             loopStartedAt: progress?.loopStartedAt,
           });
           return {
-            state: advancePastCurrentNode(completedProgress),
+            state: advanceFromPath(completedProgress, current.currentNodePath),
             advanced: true,
           };
         }
@@ -2403,7 +2436,7 @@ async function advanceConditionLoop(
           loopStartedAt: progress?.loopStartedAt,
         });
         return {
-          state: advancePastCurrentNode(exitState),
+          state: advanceFromPath(exitState, current.currentNodePath),
           advanced: true,
         };
       }
@@ -2463,7 +2496,7 @@ async function advanceConditionLoop(
     return { state: s, advanced: true };
   }
 
-  return { state: advancePastCurrentNode(current), advanced: true };
+  return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
 }
 
 /** Advance an if node: evaluate condition and enter correct branch. */
@@ -2500,18 +2533,25 @@ async function advanceIfNode(
           const verdict = groundingResult.exitCode === 0;
           if (verdict) {
             return {
-              state: advanceNode(current, [...current.currentNodePath, 0]),
+              state: enterIfBranch(current, node, 0, node.thenBranch.length),
               advanced: true,
             };
           }
           if (node.elseBranch.length > 0) {
             return {
-              state: advanceNode(current, [...current.currentNodePath, node.thenBranch.length]),
+              state: enterIfBranch(current, node, node.thenBranch.length, node.elseBranch.length),
               advanced: true,
             };
           }
+          const completed = updateNodeProgress(current, node.id, {
+            iteration: 1,
+            maxIterations: 1,
+            status: 'completed',
+            startedAt: current.nodeProgress[node.id]?.startedAt ?? Date.now(),
+            completedAt: Date.now(),
+          });
           return {
-            state: advancePastCurrentNode(current),
+            state: advanceFromPath(completed, current.currentNodePath),
             advanced: true,
           };
         } catch {
@@ -2574,16 +2614,23 @@ async function advanceIfNode(
           return { kind: 'pause', state: current, capturedPrompt: null };
         }
         if (verdict) {
-          return { state: advanceNode(current, [...current.currentNodePath, 0]), advanced: true };
+          return { state: enterIfBranch(current, node, 0, node.thenBranch.length), advanced: true };
         }
         if (node.elseBranch.length > 0) {
           return {
-            state: advanceNode(current, [...current.currentNodePath, node.thenBranch.length]),
+            state: enterIfBranch(current, node, node.thenBranch.length, node.elseBranch.length),
             advanced: true,
           };
         }
+        const completed = updateNodeProgress(current, node.id, {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'completed',
+          startedAt: current.nodeProgress[node.id]?.startedAt ?? Date.now(),
+          completedAt: Date.now(),
+        });
         return {
-          state: advancePastCurrentNode(current),
+          state: advanceFromPath(completed, current.currentNodePath),
           advanced: true,
         };
       }
@@ -2628,15 +2675,22 @@ async function advanceIfNode(
   if (condResult === null) return { kind: 'pause', state: current, capturedPrompt: null };
 
   if (condResult) {
-    return { state: advanceNode(current, [...current.currentNodePath, 0]), advanced: true };
+    return { state: enterIfBranch(current, node, 0, node.thenBranch.length), advanced: true };
   }
   if (node.elseBranch.length > 0) {
     return {
-      state: advanceNode(current, [...current.currentNodePath, node.thenBranch.length]),
+      state: enterIfBranch(current, node, node.thenBranch.length, node.elseBranch.length),
       advanced: true,
     };
   }
-  return { state: advancePastCurrentNode(current), advanced: true };
+  const completed = updateNodeProgress(current, node.id, {
+    iteration: 1,
+    maxIterations: 1,
+    status: 'completed',
+    startedAt: current.nodeProgress[node.id]?.startedAt ?? Date.now(),
+    completedAt: Date.now(),
+  });
+  return { state: advanceFromPath(completed, current.currentNodePath), advanced: true };
 }
 
 /** Advance a foreach node on first encounter: set loop variable and enter body. */
@@ -2666,7 +2720,7 @@ async function advanceForeachEntry(
   }
 
   if (items.length === 0) {
-    return { state: advancePastCurrentNode(current), advanced: true };
+    return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
   }
 
   const cappedItems = items.slice(0, node.maxIterations);

@@ -1,8 +1,8 @@
 # Evals and Judges (WIP)
 
-> **WIP: not implemented yet.** This page describes a proposed evaluation stack, not shipped syntax.
+> **WIP: partially implemented.** Named `rubric` and `judge` declarations, `review strict`, typed judge results, the dataset bank, the `prompt-language eval` runner, and the current parity docs all ship now. The broader first-class eval DSL described here is still proposed.
 >
-> For the accepted first implementation boundary, see [docs/design/evaluation-stack-v1.md](../../design/evaluation-stack-v1.md).
+> For the accepted first implementation boundary, see [docs/design/evaluation-stack-v1.md](../../design/evaluation-stack-v1.md). For the shipped runner and current evidence, see [docs/evaluation/dataset-bank.md](../../evaluation/dataset-bank.md), [docs/evaluation/eval-test-matrix.md](../../evaluation/eval-test-matrix.md), and [docs/evaluation/what-works-now.md](../../evaluation/what-works-now.md).
 
 ## Goal
 
@@ -22,16 +22,16 @@ The runtime already has the right primitives for hard execution control:
 - `review` for generator-evaluator repair loops
 - `import`, prompt libraries, `remember`, approvals, and parallel workers for larger projects
 
-What it does not have is a coherent evaluation stack above those primitives.
+What it still does not have is a coherent first-class eval DSL above those primitives.
 
-Today, evaluation logic is split across:
+Today, the remaining evaluation logic is split across:
 
 - local scripts in `scripts/eval/`
 - one-off benchmark fixtures
 - evaluator behavior embedded inside `review`
 - thesis plans in `docs/strategy/thesis-roadmap.md`
 
-That is enough to run experiments, but not enough to make evaluation a first-class engineering surface.
+That is enough to run real experiments, but not enough yet to make evaluation a first-class language surface.
 
 ## Design principles
 
@@ -99,7 +99,7 @@ judge "impl_quality"
 end
 ```
 
-### `eval`
+### `eval` (proposed future DSL)
 
 ```text
 eval "auth-regression"
@@ -369,6 +369,7 @@ This proposal extends existing project direction rather than replacing it:
 
 Today, the closest approximation is:
 
+- use the shipped `prompt-language eval` CLI for checked-in JSONL datasets, repeats, reports, and baseline comparison
 - use `done when:` for hard completion
 - use `review` with `criteria:` or `grounded-by` for local repair loops
 - write custom scripts in `scripts/eval/` for dataset execution and comparisons

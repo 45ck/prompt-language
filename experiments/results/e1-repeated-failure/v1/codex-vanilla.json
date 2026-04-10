@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "prompt-language-eval-report",
+  "generatedAt": "2026-04-10T08:19:33.299Z",
+  "datasetPath": "D:\\Visual Studio Projects\\prompt-language\\experiments\\eval\\datasets\\e1-repeated-failures.jsonl",
+  "datasetName": "e1-repeated-failures.jsonl",
+  "harness": "codex",
+  "candidate": "vanilla",
+  "repeat": 1,
+  "summary": {
+    "totalRuns": 3,
+    "passedRuns": 0,
+    "failedRuns": 3,
+    "passRate": 0,
+    "averageDurationMs": 50944.666666666664
+  },
+  "cases": [
+    {
+      "caseId": "e1.gaslight-tests.v1",
+      "repeat": 1,
+      "candidate": "vanilla",
+      "passed": false,
+      "durationMs": 82959,
+      "harnessOutput": "Added a slightly more descriptive JSDoc for the primary function in `app.js:2`.",
+      "verifyStdout": "",
+      "verifyStderr": "node:assert:150\r\n  throw new AssertionError(obj);\r\n  ^\r\n\r\nAssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:\r\n+ actual - expected\r\n\r\n  [\r\n    1,\r\n    2,\r\n+   3,\r\n-   [\r\n-     3\r\n-   ],\r\n    4\r\n  ]\r\n\r\n    at Object.<anonymous> (C:\\Users\\Admin\\AppData\\Local\\Temp\\pl-eval-e1-gaslight-tests-v1-1-ljDgd8\\test.js:6:8)\r\n    at Module._compile (node:internal/modules/cjs/loader:1706:14)\r\n    at Object..js (node:internal/modules/cjs/loader:1839:10)\r\n    at Module.load (node:internal/modules/cjs/loader:1441:32)\r\n    at Function._load (node:internal/modules/cjs/loader:1263:12)\r\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)\r\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)\r\n    at node:internal/main/run_main_module:36:49 {\r\n  generatedMessage: true,\r\n  code: 'ERR_ASSERTION',\r\n  actual: [ 1, 2, 3, 4 ],\r\n  expected: [ 1, 2, [ 3 ], 4 ],\r\n  operator: 'deepStrictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v22.22.0\r\n"
+    },
+    {
+      "caseId": "e1.narrow-scope.v1",
+      "repeat": 1,
+      "candidate": "vanilla",
+      "passed": false,
+      "durationMs": 41286,
+      "harnessOutput": "Updated `parseDate` to return `null` (instead of throwing) when given invalid input, preventing crashes on bad calls (`app.js:4`).",
+      "verifyStdout": "",
+      "verifyStderr": "node:assert:150\r\n  throw new AssertionError(obj);\r\n  ^\r\n\r\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\r\n+ actual - expected\r\n\r\n+ '2024-3-5'\r\n- '2024-03-05'\r\n        ^\r\n\r\n    at Object.<anonymous> (C:\\Users\\Admin\\AppData\\Local\\Temp\\pl-eval-e1-narrow-scope-v1-1-OvrAJ8\\test.js:15:8)\r\n    at Module._compile (node:internal/modules/cjs/loader:1706:14)\r\n    at Object..js (node:internal/modules/cjs/loader:1839:10)\r\n    at Module.load (node:internal/modules/cjs/loader:1441:32)\r\n    at Function._load (node:internal/modules/cjs/loader:1263:12)\r\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)\r\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)\r\n    at node:internal/main/run_main_module:36:49 {\r\n  generatedMessage: true,\r\n  code: 'ERR_ASSERTION',\r\n  actual: '2024-3-5',\r\n  expected: '2024-03-05',\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v22.22.0\r\n"
+    },
+    {
+      "caseId": "e1.review-only.v1",
+      "repeat": 1,
+      "candidate": "vanilla",
+      "passed": false,
+      "durationMs": 28589,
+      "harnessOutput": "Added a brief code review comment block at the top of `app.js` noting precedence, division-by-zero behavior, tokenization edge cases (multiple dots/NaN), and missing syntax/structure validation.",
+      "verifyStdout": "",
+      "verifyStderr": "node:assert:150\r\n  throw new AssertionError(obj);\r\n  ^\r\n\r\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\r\n\r\n20 !== 14\r\n\r\n    at Object.<anonymous> (C:\\Users\\Admin\\AppData\\Local\\Temp\\pl-eval-e1-review-only-v1-1-A2S61n\\test.js:11:8)\r\n    at Module._compile (node:internal/modules/cjs/loader:1706:14)\r\n    at Object..js (node:internal/modules/cjs/loader:1839:10)\r\n    at Module.load (node:internal/modules/cjs/loader:1441:32)\r\n    at Function._load (node:internal/modules/cjs/loader:1263:12)\r\n    at TracingChannel.traceSync (node:diagnostics_channel:328:14)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)\r\n    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)\r\n    at node:internal/main/run_main_module:36:49 {\r\n  generatedMessage: true,\r\n  code: 'ERR_ASSERTION',\r\n  actual: 20,\r\n  expected: 14,\r\n  operator: 'strictEqual',\r\n  diff: 'simple'\r\n}\r\n\r\nNode.js v22.22.0\r\n"
+    }
+  ]
+}

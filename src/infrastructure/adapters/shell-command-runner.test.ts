@@ -229,6 +229,23 @@ describe('ShellCommandRunner (mocked spawn)', () => {
     expect(result.stderr).toBe('errmsg');
   });
 
+  it('forwards the requested cwd to spawn', async () => {
+    const child = createMockChild();
+    let capturedOpts: Record<string, unknown> = {};
+    vi.doMock('node:child_process', () => ({
+      spawn: vi.fn((_cmd: string, opts: Record<string, unknown>) => {
+        capturedOpts = opts;
+        return child;
+      }),
+    }));
+    const mod = await import('./shell-command-runner.js');
+    const runner = new mod.ShellCommandRunner();
+    const runPromise = runner.run('anything', { cwd: '/tmp/workspace' });
+    child.emit('close', 0);
+    await runPromise;
+    expect(capturedOpts['cwd']).toBe('/tmp/workspace');
+  });
+
   it('falls back to exitCode 1 when spawn emits an error without a numeric code', async () => {
     const child = createMockChild();
     vi.doMock('node:child_process', () => ({

@@ -4,10 +4,8 @@ import {
   isAskCondition,
   extractAskQuestion,
   judgeVarName,
-  reviewJudgeVarName,
   buildJudgePrompt,
   buildJudgeRetryPrompt,
-  buildReviewJudgePrompt,
 } from './judge-prompt.js';
 
 describe('isAskCondition', () => {
@@ -52,12 +50,6 @@ describe('judgeVarName', () => {
   it('works for typical node IDs', () => {
     expect(judgeVarName('n42')).toBe('__judge_n42__');
     expect(judgeVarName('n100')).toBe('__judge_n100__');
-  });
-});
-
-describe('reviewJudgeVarName', () => {
-  it('generates a dedicated review judge capture variable name', () => {
-    expect(reviewJudgeVarName('r1')).toBe('__review_judge_r1__');
   });
 });
 
@@ -118,37 +110,5 @@ describe('buildJudgeRetryPrompt', () => {
   it('mentions that the capture was not found', () => {
     const prompt = buildJudgeRetryPrompt('n1');
     expect(prompt).toContain('was not found');
-  });
-});
-
-describe('buildReviewJudgePrompt', () => {
-  it('includes judge metadata, rubric text, and capture file path', () => {
-    const prompt = buildReviewJudgePrompt({
-      judgeName: 'impl_quality',
-      nodeId: 'rv1',
-      judgeLines: ['kind: model', 'inputs: [diff, test_output]'],
-      rubricName: 'bugfix_quality',
-      rubricLines: ['criterion correctness type boolean'],
-      criteria: 'Keep the diff scoped.',
-      evidenceSections: [{ label: 'Diff', value: 'diff --git a/app.js b/app.js' }],
-    });
-
-    expect(prompt).toContain('judge "impl_quality"');
-    expect(prompt).toContain('criterion correctness type boolean');
-    expect(prompt).toContain('Keep the diff scoped.');
-    expect(prompt).toContain('.prompt-language/vars/__review_judge_rv1__');
-    expect(prompt).toContain('"confidence"');
-  });
-
-  it('includes retry context when provided', () => {
-    const prompt = buildReviewJudgePrompt({
-      judgeName: 'impl_quality',
-      nodeId: 'rv1',
-      judgeLines: ['kind: model'],
-      retryReason: 'capture file empty or not found',
-    });
-
-    expect(prompt).toContain('Previous capture issue');
-    expect(prompt).toContain('capture file empty or not found');
   });
 });

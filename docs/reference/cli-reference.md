@@ -91,23 +91,25 @@ claude -p "$(cat example.flow)"
 
 ### run
 
-Execute a `.flow` file or inline flow text through Claude or OpenCode.
+Execute a `.flow` file or inline flow text through Claude, Codex, or OpenCode.
 
 ```bash
 npx @45ck/prompt-language run --file my.flow
 npx @45ck/prompt-language run my.flow
 cat my.flow | npx @45ck/prompt-language run
+npx @45ck/prompt-language run --runner codex my.flow
 npx @45ck/prompt-language run --runner opencode --model opencode/gpt-5-nano my.flow
 ```
 
 Notes:
 
 1. `--runner claude` is the default.
-2. `--runner opencode` uses the headless flow runner rather than Claude's interactive hook loop.
-3. Models use the `provider/model` form, for example `opencode/gpt-5-nano`.
-4. On this workstation, prefer hosted OpenCode models for the headless runner path; do not install local models here just to exercise `run --runner opencode`.
-5. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
-6. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
+2. `--runner codex` and `--runner opencode` both use the headless flow runner rather than Claude's interactive hook loop.
+3. When `--runner codex` is selected without an explicit `--model`, prompt-language defaults to `gpt-5.2` on this workstation because the ambient Codex default may fall back to a rate-limited Spark profile.
+4. OpenCode models use the `provider/model` form, for example `opencode/gpt-5-nano`.
+5. On this workstation, prefer hosted harness models for headless runner paths; do not install local models here just to exercise `run`.
+6. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
+7. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
 
 ### ci
 
@@ -115,10 +117,34 @@ Run a flow in headless mode for CI or automation.
 
 ```bash
 npx @45ck/prompt-language ci --file my.flow
+npx @45ck/prompt-language ci --runner codex my.flow
 npx @45ck/prompt-language ci --runner opencode --model opencode/gpt-5-nano my.flow
 ```
 
-This is the same headless runner path used by `run --runner opencode`, so prompt quality and tool-use behavior depend on the selected model.
+This is the same headless runner path used by `run --runner codex|opencode`, so prompt quality and tool-use behavior depend on the selected model. On this workstation, `ci --runner codex` defaults to `gpt-5.2` when `--model` is omitted.
+
+### eval
+
+Run a checked-in JSONL eval dataset and emit a machine-readable report.
+
+```bash
+npx @45ck/prompt-language eval --dataset experiments/eval/datasets/e1-repeated-failures.jsonl
+npx @45ck/prompt-language eval --harness codex --candidate vanilla --output experiments/results/e1-repeated-failure/v1/codex-vanilla.json --dataset experiments/eval/datasets/e1-repeated-failures.jsonl
+npx @45ck/prompt-language eval --harness codex --candidate gated --baseline experiments/results/e1-repeated-failure/v1/codex-vanilla.json --output experiments/results/e1-repeated-failure/v1/codex-gated.json --dataset experiments/eval/datasets/e1-repeated-failures.jsonl
+```
+
+Notes:
+
+1. `--candidate vanilla` runs the checked-in prompt or flow exactly as written.
+2. `--candidate gated` wraps prompt cases as a one-step flow and appends the dataset case's `gates` as real `done when:` checks.
+3. `--harness` accepts `claude`, `codex`, or `opencode`.
+4. `--baseline` points at a locked JSON report to compare against. `--baseline-report` remains an alias.
+5. `--out` is accepted as a short alias for `--output`.
+6. Codex-backed eval runs default to `gpt-5.2` when no `--model` is provided.
+7. `--baseline` must point at a locked report for the same dataset bank; the runner rejects mismatched datasets and case sets.
+8. If you do not pass `--output`, the CLI writes a timestamped report under `.prompt-language/eval-reports/`.
+9. The seeded dataset bank and locked-results layout are documented in [Dataset Bank](../evaluation/dataset-bank.md).
+10. On this workstation, use hosted harnesses for this command; do not install local models just to populate eval artifacts.
 
 ### list
 

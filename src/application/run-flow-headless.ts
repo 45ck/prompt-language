@@ -33,6 +33,17 @@ function hasRunningChildren(state: SessionState): boolean {
   return Object.values(state.spawnedChildren).some((child) => child?.status === 'running');
 }
 
+function bindCommandRunnerCwd(commandRunner: CommandRunner, cwd: string): CommandRunner {
+  return {
+    run(command, options) {
+      return commandRunner.run(command, {
+        ...options,
+        cwd: options?.cwd ?? cwd,
+      });
+    },
+  };
+}
+
 function buildPromptEnvelope(state: SessionState, capturedPrompt: string): string {
   return `${renderFlow(state)}\n\n${capturedPrompt}\n\n${renderFlowSummary(state)}`;
 }
@@ -97,6 +108,7 @@ export async function runFlowHeadless(
 ): Promise<RunFlowHeadlessOutput> {
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS;
   const spec = parseFlow(input.flowText, { basePath: input.cwd });
+  const commandRunner = bindCommandRunnerCwd(deps.commandRunner, input.cwd);
 
   let state = await preloadMemoryVariables(
     createSessionState(input.sessionId, spec),
@@ -109,7 +121,7 @@ export async function runFlowHeadless(
   while (true) {
     const step = await autoAdvanceNodes(
       state,
-      deps.commandRunner,
+      commandRunner,
       deps.captureReader,
       deps.processSpawner,
       deps.auditLogger,
@@ -211,7 +223,7 @@ export async function runFlowHeadless(
       if (current && currentNode === null && current.flowSpec.completionGates.length > 0) {
         const gateResult = await evaluateCompletion(
           deps.stateStore,
-          deps.commandRunner,
+          commandRunner,
           deps.auditLogger,
         );
         state = (await deps.stateStore.loadCurrent()) ?? state;
@@ -256,14 +268,28 @@ export async function runFlowHeadless(
     let gateBlocked = false;
 
     if (current && currentNode === null && current.flowSpec.completionGates.length > 0) {
-      const gateResult = await evaluateCompletion(
-        deps.stateStore,
-        deps.commandRunner,
-        deps.auditLogger,
-      );
+      const gateResult = await evaluateCompletion(deps.stateStore, commandRunner, deps.auditLogger);
       gateBlocked = gateResult.blocked;
     }
 
+    state = maybeCompleteFlow((await deps.stateStore.loadCurrent()) ?? state);
+    await deps.stateStore.save(state);
+
+    if (!gateBlocked && state.status === 'completed') {
+      return { finalState: state, turns };
+    }
+
+    if (gateBlocked && currentNode === null) {
+      const detail = summarizeAssistantText(runResult.assistantText);
+      return {
+        finalState: state,
+        reason:
+          detail == null
+            ? 'Completion gates remained blocked after the final prompt turn.'
+            : `Completion gates remained blocked after the final prompt turn. Last assistant output: ${detail}`,
+        turns,
+      };
+    }
     if (runResult.madeProgress === false) {
       const detail = summarizeAssistantText(runResult.assistantText);
       return {
@@ -274,13 +300,6 @@ export async function runFlowHeadless(
             : `Prompt runner completed without observable workspace progress. Last assistant output: ${detail}`,
         turns,
       };
-    }
-
-    state = maybeCompleteFlow((await deps.stateStore.loadCurrent()) ?? state);
-    await deps.stateStore.save(state);
-
-    if (!gateBlocked && state.status === 'completed') {
-      return { finalState: state, turns };
     }
   }
 }

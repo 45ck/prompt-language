@@ -122,6 +122,7 @@ export class ShellCommandRunner implements CommandRunner {
               shell,
               detached,
               windowsHide: true,
+              cwd: options?.cwd,
               env: envOverride,
               stdio: ['ignore', 'pipe', 'pipe'],
             })
@@ -129,6 +130,7 @@ export class ShellCommandRunner implements CommandRunner {
               shell,
               detached,
               windowsHide: true,
+              cwd: options?.cwd,
               env: envOverride,
               stdio: ['ignore', 'pipe', 'pipe'],
             });

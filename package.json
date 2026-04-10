@@ -54,6 +54,7 @@
   "files": [
     "bin/**",
     "dist/**",
+    "scripts/eval/harness.mjs",
     "skills/**",
     "commands/**",
     "agents/**",
@@ -87,6 +88,8 @@
     "eval:smoke": "npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs",
     "eval:smoke:ci": "node scripts/eval/smoke-ci.mjs",
     "eval:smoke:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs --quick",
+    "eval:smoke:codex": "npm run build && node scripts/eval/smoke-test.mjs --harness codex",
+    "eval:smoke:codex:quick": "npm run build && node scripts/eval/smoke-test.mjs --harness codex --quick",
     "eval:smoke:opencode": "npm run build && node scripts/eval/smoke-test.mjs --harness opencode",
     "eval:smoke:opencode:quick": "npm run build && node scripts/eval/smoke-test.mjs --harness opencode --quick",
     "eval:smoke:ollama": "npm run build && node scripts/eval/smoke-test.mjs --harness ollama",

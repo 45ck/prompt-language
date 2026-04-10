@@ -21,6 +21,7 @@ import {
   createUntilNode,
   createLetNode,
   createForeachNode,
+  createReviewNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -410,6 +411,114 @@ describe('injectContext — NL meta-prompt', () => {
     expect(saved?.variables['approve_rejected']).toBe('false');
     expect(saved?.status).toBe('completed');
   });
+
+  it('re-prompts active approve nodes on unrecognized replies', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Approval flow', [createApproveNode('a1', 'Ship it?')]);
+    const session = createSessionState('approve-3', spec);
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'maybe', sessionId: 'approve-3' }, store);
+
+    expect(result.prompt).toContain('Ship it?');
+    expect(result.prompt).toContain(
+      'Please respond with "yes" to approve or "no" to reject: Ship it?',
+    );
+  });
+
+  it('renders review rejection outcomes when non-strict review advances to the next prompt', async () => {
+    const store = makeStore();
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: 'bad implementation' }),
+    };
+    const spec = createFlowSpec('Review flow', [
+      createReviewNode('rv1', [createPromptNode('p1', 'Draft')], 2, undefined, 'check.sh'),
+      createPromptNode('p2', 'Revise and continue'),
+    ]);
+    let session = createSessionState('review-next', spec);
+    session = {
+      ...session,
+      currentNodePath: [0, 1],
+      nodeProgress: { rv1: { iteration: 2, maxIterations: 2, status: 'running' } },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'continue', sessionId: 'review-next' },
+      store,
+      runner,
+    );
+
+    expect(result.prompt).toContain(
+      '[PLO-002 Review rejected: Grounded review checks failed with exit code 1.]',
+    );
+    expect(result.prompt).toContain('Revise and continue');
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('active');
+    expect(saved?.variables['_review_result.pass']).toBe(false);
+    expect(saved?.variables['_review_result.abstain']).toBe(false);
+  });
+
+  it('renders review rejection instead of generic completion when non-strict review ends the flow', async () => {
+    const store = makeStore();
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: 'bad implementation' }),
+    };
+    const spec = createFlowSpec('Review flow', [
+      createReviewNode('rv1', [createPromptNode('p1', 'Draft')], 2, undefined, 'check.sh'),
+    ]);
+    let session = createSessionState('review-done', spec);
+    session = {
+      ...session,
+      currentNodePath: [0, 1],
+      nodeProgress: { rv1: { iteration: 2, maxIterations: 2, status: 'running' } },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'continue', sessionId: 'review-done' },
+      store,
+      runner,
+    );
+
+    expect(result.prompt).toContain(
+      '[PLO-002 Review rejected: Grounded review checks failed with exit code 1.]',
+    );
+    expect(result.prompt).not.toContain('Flow completed successfully.');
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('completed');
+    expect(saved?.variables['_review_result.pass']).toBe(false);
+  });
+
+  it('renders review rejection outcomes when strict review exhausts', async () => {
+    const store = makeStore();
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: 'bad implementation' }),
+    };
+    const spec = createFlowSpec('Strict review flow', [
+      createReviewNode('rv1', [createPromptNode('p1', 'Draft')], 2, undefined, 'check.sh', true),
+    ]);
+    let session = createSessionState('review-1', spec);
+    session = {
+      ...session,
+      currentNodePath: [0, 1],
+      nodeProgress: { rv1: { iteration: 2, maxIterations: 2, status: 'running' } },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'continue', sessionId: 'review-1' },
+      store,
+      runner,
+    );
+
+    expect(result.prompt).toContain(
+      'PLO-002 Review strict failed after 2/2 rounds: Grounded review checks failed with exit code 1.',
+    );
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('failed');
+    expect(saved?.variables['_review_result.pass']).toBe(false);
+  });
 });
 
 describe('injectContext — variable interpolation', () => {
@@ -539,6 +648,38 @@ describe('injectContext — memory prefetch', () => {
 
     const result = await injectContext(
       { prompt, sessionId: 'mem-1' },
+      store,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      memoryStore,
+    );
+
+    expect(result.prompt).toContain('Use TypeScript');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['preferred_language']).toBe('TypeScript');
+  });
+
+  it('hydrates memory keys for active flows and persists the hydrated state', async () => {
+    const store = makeStore();
+    const memoryStore: MemoryStore = {
+      append: vi.fn().mockResolvedValue(undefined),
+      findByKey: vi.fn().mockResolvedValue({
+        timestamp: '2024-01-01T00:00:00Z',
+        key: 'preferred_language',
+        value: 'TypeScript',
+      }),
+      readAll: vi.fn().mockResolvedValue([]),
+    };
+    const spec = parseFlow(
+      'Goal: test\n\nmemory:\n  preferred_language\n\nflow:\n  prompt: Use ${preferred_language}\n',
+    );
+    const session = createSessionState('mem-active', spec);
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'continue', sessionId: 'mem-active' },
       store,
       undefined,
       undefined,
@@ -1100,6 +1241,55 @@ describe('injectContext — terminal flow states', () => {
     expect(result.prompt).not.toContain('Flow completed successfully.');
   });
 
+  it('renders review rejection instead of generic success for completed review flows', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Review flow', [createReviewNode('rv1', [], 2)]);
+    let session = createSessionState('done-review', spec);
+    session = {
+      ...session,
+      status: 'completed',
+      variables: {
+        ...session.variables,
+        '_review_result.pass': false,
+        '_review_result.abstain': false,
+        '_review_result.reason': 'Needs stronger evidence.',
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'What next?', sessionId: 'done-review' }, store);
+
+    expect(result.prompt).toContain(
+      '[prompt-language] PLO-002 Review rejected: Needs stronger evidence.',
+    );
+    expect(result.prompt).not.toContain('Flow completed successfully.');
+  });
+
+  it('keeps generic success for completed abstaining review flows', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Review flow', [createReviewNode('rv1', [], 2)]);
+    let session = createSessionState('done-review-abstain', spec);
+    session = {
+      ...session,
+      status: 'completed',
+      variables: {
+        ...session.variables,
+        '_review_result.pass': false,
+        '_review_result.abstain': true,
+        '_review_result.reason': 'Not enough evidence.',
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'What next?', sessionId: 'done-review-abstain' },
+      store,
+    );
+
+    expect(result.prompt).toContain('[prompt-language] Flow completed successfully.');
+    expect(result.prompt).not.toContain('PLO-002');
+  });
+
   it('returns short summary for failed flow', async () => {
     const store = makeStore();
     const spec = createFlowSpec('Deploy', [createRunNode('r1', 'deploy')]);
@@ -1111,6 +1301,29 @@ describe('injectContext — terminal flow states', () => {
     expect(result.prompt).toContain('[prompt-language] Flow failed.');
     expect(result.prompt).toContain('Help');
     expect(result.prompt).not.toContain('run: deploy');
+  });
+
+  it('renders review rejection outcome for failed strict review flows', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('Strict review flow', [
+      createReviewNode('rv1', [createPromptNode('p1', 'Draft')], 2, undefined, 'check.sh', true),
+    ]);
+    let session = createSessionState('fail-review', spec);
+    session = {
+      ...session,
+      status: 'failed',
+      failureReason:
+        'Review strict failed after 2/2 rounds: Review command failed with exit code 1.',
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Help', sessionId: 'fail-review' }, store);
+
+    expect(result.prompt).toContain(
+      '[prompt-language] PLO-002 Review strict failed after 2/2 rounds: Review command failed with exit code 1.',
+    );
+    expect(result.prompt).toContain('Help');
+    expect(result.prompt).not.toContain('[prompt-language] Flow failed.');
   });
 
   it('returns short summary for cancelled flow', async () => {

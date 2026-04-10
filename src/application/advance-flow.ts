@@ -716,9 +716,18 @@ export function advanceApproveNode(
     };
   }
 
+  const promptState =
+    progress === undefined
+      ? updateNodeProgress(current, node.id, {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'running',
+          startedAt: now,
+        })
+      : current;
   return {
     kind: 'prompt',
-    state: current,
+    state: promptState,
     capturedPrompt: 'Please respond with "yes" to approve or "no" to reject: ' + node.message,
   };
 }
@@ -1060,7 +1069,12 @@ async function handleReviewBodyExhaustion(
         loopStartedAt: progress?.loopStartedAt,
       });
       const strictReason = `Review strict failed after ${round}/${parentNode.maxRounds} rounds: ${reviewResult.reason}`;
-      return markFailed(current, strictReason);
+      return {
+        kind: 'advance',
+        capturedPrompt: null,
+        state: markFailed(current, strictReason),
+        outcomes: [createFlowOutcome(FLOW_OUTCOME_CODES.reviewRejected, strictReason)],
+      };
     }
 
     const next = updateNodeProgress(current, parentNode.id, {
@@ -1071,7 +1085,19 @@ async function handleReviewBodyExhaustion(
       completedAt: Date.now(),
       loopStartedAt: progress?.loopStartedAt,
     });
-    return advanceFromPath(next, parentPath);
+    return {
+      kind: 'advance',
+      capturedPrompt: null,
+      state: advanceFromPath(next, parentPath),
+      outcomes: reviewResult.abstain
+        ? undefined
+        : [
+            createFlowOutcome(
+              FLOW_OUTCOME_CODES.reviewRejected,
+              `Review rejected: ${reviewResult.reason}`,
+            ),
+          ],
+    };
   }
 
   const critiqueBase =
@@ -1116,6 +1142,25 @@ export type AutoAdvanceResult =
       readonly capturedPrompt: null;
       readonly outcomes?: readonly FlowOutcome[] | undefined;
     };
+
+function shouldContinueAutoAdvance(result: AutoAdvanceResult): boolean {
+  return (
+    result.kind === 'advance' && result.capturedPrompt === null && result.state.status === 'active'
+  );
+}
+
+function mergeAutoAdvanceOutcomes(
+  pending: readonly FlowOutcome[],
+  result: AutoAdvanceResult,
+): AutoAdvanceResult {
+  if (pending.length === 0 && (result.outcomes == null || result.outcomes.length === 0)) {
+    return result;
+  }
+  return {
+    ...result,
+    outcomes: [...pending, ...(result.outcomes ?? [])],
+  };
+}
 
 /** Advance a let node, handling all source types (literal, empty_list, prompt, memory, run). */
 async function advanceLetNode(
@@ -1732,6 +1777,7 @@ export async function autoAdvanceNodes(
   const MAX_ADVANCES = 100;
   let advances = 0;
   let current = state;
+  const pendingOutcomes: FlowOutcome[] = [];
 
   if (current.status !== 'active') {
     return { kind: 'advance', state: current, capturedPrompt: null };
@@ -1744,10 +1790,22 @@ export async function autoAdvanceNodes(
     if (!node) {
       const exhaustionResult = await handleBodyExhaustion(current, commandRunner, captureReader);
       if (!exhaustionResult) break;
-      if ('kind' in exhaustionResult) return exhaustionResult;
+      if ('kind' in exhaustionResult) {
+        if (shouldContinueAutoAdvance(exhaustionResult)) {
+          pendingOutcomes.push(...(exhaustionResult.outcomes ?? []));
+          current = exhaustionResult.state;
+          advances += 1;
+          continue;
+        }
+        return mergeAutoAdvanceOutcomes(pendingOutcomes, exhaustionResult);
+      }
       current = exhaustionResult;
       if (current.status !== 'active') {
-        return { kind: 'advance', state: current, capturedPrompt: null };
+        return mergeAutoAdvanceOutcomes(pendingOutcomes, {
+          kind: 'advance',
+          state: current,
+          capturedPrompt: null,
+        });
       }
       advances += 1;
       continue;
@@ -1763,10 +1821,28 @@ export async function autoAdvanceNodes(
       memoryStore,
       messageStore,
     );
-    if ('capturedPrompt' in result) return result;
+    if ('capturedPrompt' in result) {
+      if (shouldContinueAutoAdvance(result)) {
+        pendingOutcomes.push(...(result.outcomes ?? []));
+        current = result.state;
+        advances += 1;
+        if (
+          current.currentNodePath.length === prevPath.length &&
+          current.currentNodePath.every((v, i) => v === prevPath[i])
+        ) {
+          break;
+        }
+        continue;
+      }
+      return mergeAutoAdvanceOutcomes(pendingOutcomes, result);
+    }
     current = result.state;
     if (current.status !== 'active') {
-      return { kind: 'advance', state: current, capturedPrompt: null };
+      return mergeAutoAdvanceOutcomes(pendingOutcomes, {
+        kind: 'advance',
+        state: current,
+        capturedPrompt: null,
+      });
     }
     advances += 1;
 
@@ -1790,15 +1866,19 @@ export async function autoAdvanceNodes(
     const currentNode = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
     if (currentNode?.kind === 'prompt') {
       const capturedPrompt = interpolate(currentNode.text, current.variables);
-      return {
+      return mergeAutoAdvanceOutcomes(pendingOutcomes, {
         kind: 'prompt',
         state: advanceFromPath(current, current.currentNodePath),
         capturedPrompt,
-      };
+      });
     }
   }
 
-  return { kind: 'advance', state: current, capturedPrompt: null };
+  return mergeAutoAdvanceOutcomes(pendingOutcomes, {
+    kind: 'advance',
+    state: current,
+    capturedPrompt: null,
+  });
 }
 
 /** Advance a race node: launch all spawn children in parallel and poll for a winner. */

@@ -95,10 +95,33 @@ function renderAutoAdvanceOutcomeBanner(result: AutoAdvanceResult): string | und
 }
 
 function deriveTerminalOutcome(state: SessionState): FlowOutcome | undefined {
-  if (state.status === 'completed' && state.variables['approve_rejected'] === 'true') {
+  if (state.status !== 'completed' && state.status !== 'failed') {
+    return undefined;
+  }
+  if (state.variables['approve_rejected'] === 'true') {
     return {
       code: FLOW_OUTCOME_CODES.approvalDenied,
       summary: 'Approval denied.',
+    };
+  }
+  if (
+    state.status === 'failed' &&
+    state.failureReason?.startsWith('Review strict failed after') === true
+  ) {
+    return {
+      code: FLOW_OUTCOME_CODES.reviewRejected,
+      summary: state.failureReason,
+    };
+  }
+  if (
+    state.status === 'completed' &&
+    state.variables['_review_result.pass'] === false &&
+    state.variables['_review_result.abstain'] !== true
+  ) {
+    const reason = String(state.variables['_review_result.reason'] ?? '').trim();
+    return {
+      code: FLOW_OUTCOME_CODES.reviewRejected,
+      summary: reason.length > 0 ? `Review rejected: ${reason}` : 'Review rejected.',
     };
   }
   return undefined;
@@ -358,6 +381,10 @@ export async function injectContext(
     return { prompt: `[prompt-language] Flow completed successfully.\n\n${input.prompt}` };
   }
   if (existing?.status === 'failed') {
+    const outcome = deriveTerminalOutcome(existing);
+    if (outcome) {
+      return { prompt: `[prompt-language] ${outcome.code} ${outcome.summary}\n\n${input.prompt}` };
+    }
     return { prompt: `[prompt-language] Flow failed.\n\n${input.prompt}` };
   }
   if (existing?.status === 'cancelled') {
@@ -419,9 +446,13 @@ export async function injectContext(
       if (toSave !== hydratedExisting) {
         await stateStore.save(toSave);
       }
+      const outcomeBanner = renderAutoAdvanceOutcomeBanner(result);
       // H-DX-009: Emit completion summary when flow just completed
       if (toSave.status === 'completed' && existing.status === 'active') {
-        const completionMsg = renderCompletionSummary(toSave);
+        const completionMsg =
+          outcomeBanner ??
+          deriveTerminalOutcome(toSave)?.summary ??
+          renderCompletionSummary(toSave);
         const ctx = renderFlow(toSave);
         return { prompt: `${ctx}\n\n[${completionMsg}]\n\n${input.prompt}` };
       }
@@ -429,13 +460,15 @@ export async function injectContext(
       const summary = renderFlowSummary(toSave);
       const resumeTag = isResumed ? `[resumed from ${summary}]\n` : '';
       if (result.kind === 'prompt') {
+        const outcomeBlock = outcomeBanner == null ? '' : `[${outcomeBanner}]\n\n`;
         const output = isTrivialPrompt(input.prompt)
-          ? `${ctx}\n\n${resumeTag}${result.capturedPrompt}\n\n${summary}`
-          : `${ctx}\n\n${resumeTag}${result.capturedPrompt}\n\n[User message: ${input.prompt}]\n\n${summary}`;
+          ? `${ctx}\n\n${resumeTag}${outcomeBlock}${result.capturedPrompt}\n\n${summary}`
+          : `${ctx}\n\n${resumeTag}${outcomeBlock}${result.capturedPrompt}\n\n[User message: ${input.prompt}]\n\n${summary}`;
         return { prompt: output };
       }
       const interpolated = interpolate(input.prompt, toSave.variables);
-      return { prompt: `${ctx}\n\n${resumeTag}${interpolated}\n\n${summary}` };
+      const outcomeBlock = outcomeBanner == null ? '' : `[${outcomeBanner}]\n\n`;
+      return { prompt: `${ctx}\n\n${resumeTag}${outcomeBlock}${interpolated}\n\n${summary}` };
     } catch (err: unknown) {
       const reason = formatError(err);
       const failed = await terminateRunningSpawnedChildren(

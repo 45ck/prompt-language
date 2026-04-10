@@ -433,10 +433,17 @@ describe('autoAdvanceNodes — review node', () => {
       currentNodePath: [0, 1],
       nodeProgress: { rv1: { iteration: 2, maxIterations: 2, status: 'running' } },
     };
-    const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
-    expect(capturedPrompt).toBe('Max rounds reached');
-    expect(result.status).toBe('active');
-    expect(result.variables['_review_result.pass']).toBe(false);
+    const result = await autoAdvanceNodes(state, runner);
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toBe('Max rounds reached');
+    expect(result.state.status).toBe('active');
+    expect(result.state.variables['_review_result.pass']).toBe(false);
+    expect(result.outcomes).toEqual([
+      {
+        code: FLOW_OUTCOME_CODES.reviewRejected,
+        summary: 'Review rejected: Grounded review checks failed with exit code 1.',
+      },
+    ]);
   });
 
   it('strict review fails closed when rounds are exhausted', async () => {
@@ -462,6 +469,13 @@ describe('autoAdvanceNodes — review node', () => {
     expect(result.state.failureReason).toContain('Review strict failed after 2/2 rounds');
     expect(result.state.nodeProgress['rv1']?.status).toBe('failed');
     expect(result.state.variables['_review_result.pass']).toBe(false);
+    expect(result.outcomes).toEqual([
+      {
+        code: FLOW_OUTCOME_CODES.reviewRejected,
+        summary:
+          'Review strict failed after 2/2 rounds: Grounded review checks failed with exit code 1.',
+      },
+    ]);
   });
 });
 

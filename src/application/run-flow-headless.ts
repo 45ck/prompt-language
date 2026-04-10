@@ -182,13 +182,6 @@ export async function runFlowHeadless(
       gateBlocked = gateResult.blocked;
     }
 
-    state = maybeCompleteFlow((await deps.stateStore.loadCurrent()) ?? state);
-    await deps.stateStore.save(state);
-
-    if (!gateBlocked && state.status === 'completed') {
-      return { finalState: state, turns };
-    }
-
     if (runResult.madeProgress === false) {
       const detail = summarizeAssistantText(runResult.assistantText);
       return {
@@ -199,6 +192,13 @@ export async function runFlowHeadless(
             : `Prompt runner completed without observable workspace progress. Last assistant output: ${detail}`,
         turns,
       };
+    }
+
+    state = maybeCompleteFlow((await deps.stateStore.loadCurrent()) ?? state);
+    await deps.stateStore.save(state);
+
+    if (!gateBlocked && state.status === 'completed') {
+      return { finalState: state, turns };
     }
   }
 }

@@ -250,6 +250,36 @@ describe('runFlowHeadless', () => {
     expect(result.reason).toContain('without observable workspace progress');
   });
 
+  it('does not mark a final prompt node complete when the runner reports no observable progress', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-final-no-progress-'));
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 0,
+      assistantText: 'OK',
+      madeProgress: false,
+    }));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: ['Goal: final no-op', '', 'flow:', '  prompt: Create hello.txt'].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(1);
+    expect(result.reason).toContain('without observable workspace progress');
+  });
+
   it('returns a max-turns reason before invoking the model when the limit is exceeded', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-max-turns-'));
 

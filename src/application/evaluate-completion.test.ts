@@ -8,6 +8,7 @@ import {
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { InMemoryCommandRunner } from '../infrastructure/adapters/in-memory-command-runner.js';
 import { createSessionState } from '../domain/session-state.js';
+import { FLOW_OUTCOME_CODES, RUNTIME_DIAGNOSTIC_CODES } from '../domain/diagnostic-report.js';
 import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
 import type { CommandRunner } from './ports/command-runner.js';
 
@@ -25,6 +26,8 @@ describe('evaluateCompletion', () => {
     const runner = makeRunner();
     const result = await evaluateCompletion(store, runner);
     expect(result.blocked).toBe(false);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.outcomes).toEqual([]);
   });
 
   it('allows completion when flow has no gates', async () => {
@@ -36,6 +39,7 @@ describe('evaluateCompletion', () => {
 
     const result = await evaluateCompletion(store, runner);
     expect(result.blocked).toBe(false);
+    expect(result.outcomes).toEqual([]);
 
     const saved = await store.loadCurrent();
     expect(saved?.status).toBe('completed');
@@ -68,6 +72,14 @@ describe('evaluateCompletion', () => {
     expect(result.blocked).toBe(true);
     expect(result.reason).toContain('hard-stopped');
     expect(result.gateResults).toEqual({});
+    expect(result.diagnostics).toEqual([]);
+    expect(result.outcomes).toEqual([
+      {
+        code: FLOW_OUTCOME_CODES.budgetExhausted,
+        summary:
+          'Gate evaluation hard-stopped after 50 consecutive failures. Flow marked as failed.',
+      },
+    ]);
 
     const saved = await store.loadCurrent();
     expect(saved?.status).toBe('failed');
@@ -139,6 +151,14 @@ describe('evaluateCompletion', () => {
     const result = await evaluateCompletion(store, runner);
     expect(result.blocked).toBe(true);
     expect(result.gateResults['manual_check']).toBe(false);
+    expect(result.diagnostics).toEqual([]);
+    expect(result.outcomes).toEqual([
+      {
+        code: FLOW_OUTCOME_CODES.gateFailed,
+        summary:
+          'Completion gates failed: manual_check. Fix the failing checks before completing the task.',
+      },
+    ]);
   });
 
   it('treats non-boolean variable gates as false when no command is provided', async () => {
@@ -152,6 +172,13 @@ describe('evaluateCompletion', () => {
     const result = await evaluateCompletion(store, runner);
     expect(result.blocked).toBe(true);
     expect(result.gateResults['manual_check']).toBe(false);
+    expect(result.outcomes).toEqual([
+      {
+        code: FLOW_OUTCOME_CODES.gateFailed,
+        summary:
+          'Completion gates failed: manual_check. Fix the failing checks before completing the task.',
+      },
+    ]);
   });
 
   it('propagates command gate result to subsequent commandless gate sharing predicate', async () => {
@@ -498,7 +525,7 @@ describe('evaluateCompletion — edge cases', () => {
     expect(result.gateResults['tests_fail']).toBe(true);
   });
 
-  it('propagates error when runner throws during gate evaluation', async () => {
+  it('returns a blocking runtime diagnostic when gate evaluation crashes', async () => {
     const store = makeStore();
     const throwingRunner: CommandRunner = {
       run: async () => {
@@ -510,7 +537,23 @@ describe('evaluateCompletion — edge cases', () => {
     const session = createSessionState('s1', spec);
     await store.save(session);
 
-    await expect(evaluateCompletion(store, throwingRunner)).rejects.toThrow('network error');
+    const result = await evaluateCompletion(store, throwingRunner);
+
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toContain('network error');
+    expect(result.outcomes).toEqual([]);
+    expect(result.diagnostics).toEqual([
+      {
+        code: RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed,
+        kind: 'runtime',
+        phase: 'gate-eval',
+        severity: 'error',
+        blocksExecution: true,
+        retryable: true,
+        summary: 'Gate evaluation crashed: network error',
+        action: 'Fix the failing gate command or predicate before rerunning completion.',
+      },
+    ]);
   });
 
   // H#5: Variable-based gate predicates

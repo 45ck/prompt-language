@@ -1,5 +1,5 @@
 import { autoAdvanceNodes, maybeCompleteFlow, resolveCurrentNode } from './advance-flow.js';
-import { evaluateCompletion } from './evaluate-completion.js';
+import { evaluateCompletion, type EvaluateCompletionOutput } from './evaluate-completion.js';
 import type { AuditLogger } from './ports/audit-logger.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { CommandRunner } from './ports/command-runner.js';
@@ -67,6 +67,18 @@ function summarizeAssistantText(text?: string): string | undefined {
     return normalized;
   }
   return normalized.slice(0, MAX_ASSISTANT_TEXT_SNIPPET) + '...';
+}
+
+function summarizeCompletionBlock(result: EvaluateCompletionOutput): string {
+  return (
+    (result.diagnostics[0]?.summary ?? result.outcomes[0]?.summary ?? result.reason) ||
+    'Completion remained blocked.'
+  );
+}
+
+function appendAssistantDetail(reason: string, assistantText?: string): string {
+  const detail = summarizeAssistantText(assistantText);
+  return detail == null ? reason : `${reason} Last assistant output: ${detail}`;
 }
 
 function readMemoryValue(entry?: MemoryEntry): string {
@@ -191,6 +203,13 @@ export async function runFlowHeadless(
         if (!gateResult.blocked && state.status === 'completed') {
           return { finalState: state, turns };
         }
+        if (gateResult.diagnostics.length > 0 || state.status === 'failed') {
+          return {
+            finalState: state,
+            reason: summarizeCompletionBlock(gateResult),
+            turns,
+          };
+        }
 
         turns += 1;
         if (turns > maxTurns) {
@@ -243,6 +262,13 @@ export async function runFlowHeadless(
         if (!gateResult.blocked && state.status === 'completed') {
           return { finalState: state, turns };
         }
+        if (gateResult.diagnostics.length > 0 || state.status === 'failed') {
+          return {
+            finalState: state,
+            reason: summarizeCompletionBlock(gateResult),
+            turns,
+          };
+        }
       }
       continue;
     }
@@ -279,10 +305,14 @@ export async function runFlowHeadless(
       ? resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath)
       : null;
     let gateBlocked = false;
+    let gateBlockReason: string | undefined;
+    let gateBlockedByDiagnostic = false;
 
     if (current && currentNode === null && current.flowSpec.completionGates.length > 0) {
       const gateResult = await evaluateCompletion(deps.stateStore, commandRunner, deps.auditLogger);
       gateBlocked = gateResult.blocked;
+      gateBlockedByDiagnostic = gateResult.diagnostics.length > 0;
+      gateBlockReason = gateBlocked ? summarizeCompletionBlock(gateResult) : undefined;
     }
 
     if (runResult.madeProgress === false) {
@@ -305,13 +335,14 @@ export async function runFlowHeadless(
     }
 
     if (gateBlocked && currentNode === null) {
-      const detail = summarizeAssistantText(runResult.assistantText);
       return {
         finalState: state,
-        reason:
-          detail == null
-            ? 'Completion gates remained blocked after the final prompt turn.'
-            : `Completion gates remained blocked after the final prompt turn. Last assistant output: ${detail}`,
+        reason: gateBlockedByDiagnostic
+          ? (gateBlockReason ?? 'Completion remained blocked after the final prompt turn.')
+          : appendAssistantDetail(
+              gateBlockReason ?? 'Completion remained blocked after the final prompt turn.',
+              runResult.assistantText,
+            ),
         turns,
       };
     }

@@ -15,6 +15,14 @@ import {
 } from '../domain/session-state.js';
 import type { SessionState } from '../domain/session-state.js';
 import { findSimilarPredicate } from '../domain/fuzzy-match.js';
+import {
+  createFlowOutcome,
+  createRuntimeDiagnostic,
+  FLOW_OUTCOME_CODES,
+  RUNTIME_DIAGNOSTIC_CODES,
+  type FlowDiagnostic,
+  type FlowOutcome,
+} from '../domain/diagnostic-report.js';
 import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner, CommandResult } from './ports/command-runner.js';
 import type { CompletionGate } from '../domain/flow-spec.js';
@@ -27,6 +35,8 @@ export interface EvaluateCompletionOutput {
   readonly blocked: boolean;
   readonly reason: string;
   readonly gateResults: Readonly<Record<string, boolean>>;
+  readonly diagnostics: readonly FlowDiagnostic[];
+  readonly outcomes: readonly FlowOutcome[];
 }
 
 // H#93: Multi-language gate predicates
@@ -273,6 +283,22 @@ function buildFailureReason(state: SessionState): string {
   );
 }
 
+function createCompletionOutput(input: {
+  blocked: boolean;
+  reason: string;
+  gateResults: Readonly<Record<string, boolean>>;
+  diagnostics?: readonly FlowDiagnostic[];
+  outcomes?: readonly FlowOutcome[];
+}): EvaluateCompletionOutput {
+  return {
+    blocked: input.blocked,
+    reason: input.reason,
+    gateResults: input.gateResults,
+    diagnostics: input.diagnostics ?? [],
+    outcomes: input.outcomes ?? [],
+  };
+}
+
 export async function evaluateCompletion(
   stateStore: StateStore,
   commandRunner: CommandRunner,
@@ -281,28 +307,30 @@ export async function evaluateCompletion(
   const state = await stateStore.loadCurrent();
 
   if (!state) {
-    return { blocked: false, reason: '', gateResults: {} };
+    return createCompletionOutput({ blocked: false, reason: '', gateResults: {} });
   }
 
   if (state.flowSpec.completionGates.length === 0) {
     const done = markCompleted(state);
     await stateStore.save(done);
-    return { blocked: false, reason: '', gateResults: {} };
+    return createCompletionOutput({ blocked: false, reason: '', gateResults: {} });
   }
 
   // H-SEC-010: Hard stop after too many consecutive gate failures
   const failureCount = state.gateFailureCount ?? 0;
   if (failureCount >= GATE_HARD_STOP_THRESHOLD) {
+    const summary = `Gate evaluation hard-stopped after ${GATE_HARD_STOP_THRESHOLD} consecutive failures. Flow marked as failed.`;
     const failed = markFailed(
       state,
       `Gate evaluation stopped after ${GATE_HARD_STOP_THRESHOLD} consecutive failures.`,
     );
     await stateStore.save(failed);
-    return {
+    return createCompletionOutput({
       blocked: true,
-      reason: `Gate evaluation hard-stopped after ${GATE_HARD_STOP_THRESHOLD} consecutive failures. Flow marked as failed.`,
-      gateResults: state.gateResults,
-    };
+      reason: summary,
+      gateResults: failed.gateResults,
+      outcomes: [createFlowOutcome(FLOW_OUTCOME_CODES.budgetExhausted, summary)],
+    });
   }
 
   // H-SEC-010: Apply backoff delay after threshold
@@ -310,25 +338,46 @@ export async function evaluateCompletion(
     await new Promise((resolve) => setTimeout(resolve, GATE_BACKOFF_MS));
   }
 
-  const evaluated = await runGates(state, commandRunner, auditLogger);
+  let evaluated: SessionState;
+  try {
+    evaluated = await runGates(state, commandRunner, auditLogger);
+  } catch (error) {
+    const diagnostic = createRuntimeDiagnostic(
+      RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed,
+      error instanceof Error
+        ? `Gate evaluation crashed: ${error.message}`
+        : `Gate evaluation crashed: ${String(error)}`,
+      'Fix the failing gate command or predicate before rerunning completion.',
+      true,
+    );
+    return createCompletionOutput({
+      blocked: true,
+      reason: diagnostic.summary,
+      gateResults: state.gateResults,
+      diagnostics: [diagnostic],
+    });
+  }
 
   if (allGatesPassing(evaluated)) {
     // Reset failure count on success
     const done = markCompleted({ ...evaluated, gateFailureCount: 0 });
     await stateStore.save(done);
-    return {
+    return createCompletionOutput({
       blocked: false,
       reason: '',
       gateResults: done.gateResults,
-    };
+    });
   }
 
   // H-SEC-010: Increment consecutive failure count
   const updatedWithCount = { ...evaluated, gateFailureCount: failureCount + 1 };
   await stateStore.save(updatedWithCount);
-  return {
+  return createCompletionOutput({
     blocked: true,
     reason: buildFailureReason(updatedWithCount),
     gateResults: updatedWithCount.gateResults,
-  };
+    outcomes: [
+      createFlowOutcome(FLOW_OUTCOME_CODES.gateFailed, buildFailureReason(updatedWithCount)),
+    ],
+  });
 }

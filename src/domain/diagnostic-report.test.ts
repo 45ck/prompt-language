@@ -1,10 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createFlowOutcome,
   createBlockingProfileDiagnostic,
   createDiagnosticReport,
   createProfileWarningDiagnostic,
   DIAGNOSTIC_CODE_RANGES,
+  FLOW_OUTCOME_CODES,
   PROFILE_DIAGNOSTIC_CODES,
+  RUNTIME_DIAGNOSTIC_CODES,
+  createRuntimeDiagnostic,
 } from './diagnostic-report.js';
 
 describe('diagnostic-report', () => {
@@ -30,6 +34,8 @@ describe('diagnostic-report', () => {
   it('exposes stable code ranges and preflight profile codes', () => {
     expect(DIAGNOSTIC_CODE_RANGES.profile).toBe('PLC');
     expect(PROFILE_DIAGNOSTIC_CODES.missingGatePrerequisite).toBe('PLC-005');
+    expect(RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed).toBe('PLR-006');
+    expect(FLOW_OUTCOME_CODES.gateFailed).toBe('PLO-001');
   });
 
   it('preserves optional warning actions', () => {
@@ -41,5 +47,24 @@ describe('diagnostic-report', () => {
 
     expect(diagnostic.severity).toBe('warning');
     expect(diagnostic.action).toBe('Use an interactive profile.');
+  });
+
+  it('creates runtime diagnostics and flow outcomes', () => {
+    const diagnostic = createRuntimeDiagnostic(
+      RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed,
+      'Gate evaluation crashed: network error',
+      'Fix the gate command.',
+      true,
+    );
+    const outcome = createFlowOutcome(FLOW_OUTCOME_CODES.gateFailed, 'Completion gates failed.');
+
+    expect(diagnostic.kind).toBe('runtime');
+    expect(diagnostic.phase).toBe('gate-eval');
+    expect(diagnostic.blocksExecution).toBe(true);
+    expect(diagnostic.retryable).toBe(true);
+    expect(outcome).toEqual({
+      code: FLOW_OUTCOME_CODES.gateFailed,
+      summary: 'Completion gates failed.',
+    });
   });
 });

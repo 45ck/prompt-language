@@ -121,6 +121,7 @@ describe('task-completed hook (integration)', () => {
       const result = runHook('{}', tempDir);
       expect(result.exitCode).toBe(2);
       expect(result.stderr).toContain('[prompt-language]');
+      expect(result.stderr).toContain('PLO-001');
       expect(result.stderr).toContain('tests_pass');
     },
     HOOK_TEST_TIMEOUT_MS,

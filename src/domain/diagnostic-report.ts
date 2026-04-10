@@ -50,6 +50,18 @@ export const PROFILE_DIAGNOSTIC_CODES = {
   unsupportedCaptureSemantics: 'PLC-008',
 } as const;
 
+export const RUNTIME_DIAGNOSTIC_CODES = {
+  gateEvaluationCrashed: 'PLR-006',
+} as const;
+
+export const FLOW_OUTCOME_CODES = {
+  gateFailed: 'PLO-001',
+  reviewRejected: 'PLO-002',
+  approvalDenied: 'PLO-003',
+  budgetExhausted: 'PLO-004',
+  completed: 'PLO-005',
+} as const;
+
 export function createDiagnosticReport(
   diagnostics: readonly FlowDiagnostic[],
   outcomes: readonly FlowOutcome[] = [],
@@ -93,4 +105,26 @@ export function createProfileWarningDiagnostic(
     summary,
     ...(action != null ? { action } : {}),
   };
+}
+
+export function createRuntimeDiagnostic(
+  code: string,
+  summary: string,
+  action?: string,
+  retryable = false,
+): FlowDiagnostic {
+  return {
+    code,
+    kind: 'runtime',
+    phase: 'gate-eval',
+    severity: 'error',
+    blocksExecution: true,
+    retryable,
+    summary,
+    ...(action != null ? { action } : {}),
+  };
+}
+
+export function createFlowOutcome(code: string, summary: string): FlowOutcome {
+  return { code, summary };
 }

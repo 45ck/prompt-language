@@ -13,6 +13,7 @@ import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-
 import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
 import { readStdin } from './read-stdin.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
+import { renderCompletionResult } from './render-completion-result.js';
 
 async function main(): Promise<void> {
   const raw = await readStdin();
@@ -43,8 +44,8 @@ async function main(): Promise<void> {
   const commandRunner = new ShellCommandRunner();
   const auditLogger = new FileAuditLogger(process.cwd());
   const completion = await evaluateCompletion(stateStore, commandRunner, auditLogger);
-  if (completion.blocked) {
-    process.stderr.write(`[prompt-language] ${completion.reason}\n`);
+  if (completion.blocked || completion.outcomes.length > 0) {
+    process.stderr.write(`[prompt-language] ${renderCompletionResult(completion)}\n`);
     process.exitCode = 2;
     return;
   }

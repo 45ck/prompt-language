@@ -468,9 +468,46 @@ describe('runFlowHeadless', () => {
     expect(result.finalState.status).toBe('active');
     expect(result.turns).toBe(1);
     expect(result.reason).toContain(
-      'Completion gates remained blocked after the final prompt turn.',
+      'Completion gates failed: file_exists done.txt. Fix the failing checks before completing the task.',
     );
     expect(result.reason).toContain('Made a partial change');
+  });
+
+  it('returns the classified runtime diagnostic when gate evaluation crashes', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-crash-'));
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 0,
+      assistantText: 'Tried to make progress.',
+      madeProgress: true,
+    }));
+
+    const crashingRunner = {
+      run: async () => {
+        throw new Error('gate runner offline');
+      },
+    };
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText:
+          'Goal: create file\n\nflow:\n  prompt: Create done.txt\n\ndone when:\n  file_exists done.txt\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: crashingRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(1);
+    expect(result.reason).toBe('Gate evaluation crashed: gate runner offline');
   });
 
   it('returns paused when spawned children are still running', async () => {

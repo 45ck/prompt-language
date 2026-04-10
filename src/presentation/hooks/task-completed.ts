@@ -13,6 +13,7 @@ import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-
 import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
 import { readStdin } from './read-stdin.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
+import { renderCompletionResult } from './render-completion-result.js';
 
 async function main(): Promise<void> {
   // Consume stdin (required by hook protocol)
@@ -35,8 +36,8 @@ async function main(): Promise<void> {
     }
   }
 
-  if (result.blocked) {
-    process.stderr.write(`[prompt-language] ${result.reason}\n`);
+  if (result.blocked || result.outcomes.length > 0) {
+    process.stderr.write(`[prompt-language] ${renderCompletionResult(result)}\n`);
     process.exitCode = 2;
     return;
   }

@@ -1,6 +1,6 @@
 # Roadmap
 
-<!-- cspell:ignore jkfn lmep dekn folr idbc jstc syg2 yd9w ik3n g6pl g58 n6gr q72l ln6k rg6v uqe s6zz u0k 8u0k 2j9v -->
+<!-- cspell:ignore jkfn lmep dekn folr idbc jstc syg2 yd9w ik3n g6pl g58 n6gr q72l ln6k rg6v uqe s6zz u0k 8u0k 2j9v 0ovo -->
 
 This page tracks notable features in `.beads` and records what has shipped versus what is still planned.
 
@@ -53,18 +53,19 @@ These are open `.beads` items that fit the current product direction and are eas
 
 These are substantial product improvements that are not yet fully shipped.
 
-| Feature                                                                | Status  | Notes                                                                       | Beads issue                                         |
-| ---------------------------------------------------------------------- | ------- | --------------------------------------------------------------------------- | --------------------------------------------------- |
-| Generic runner abstraction and OpenCode runner                         | Planned | Runner-first path for Claude/Codex/OpenCode; unlocks lower-cost experiments | `prompt-language-9uqe.4`, `prompt-language-9uqe.15` |
-| Language server (LSP) for editor-agnostic autocomplete and diagnostics | Planned | Depends on extension groundwork                                             | `prompt-language-idbc`                              |
-| Web playground for browser-based flow authoring and dry-run simulation | Planned | Good onboarding and docs surface                                            | `prompt-language-528q`                              |
-| Workspace-aware monorepo orchestration                                 | Planned | Would build on `spawn` plus package discovery                               | `prompt-language-ik3n`                              |
+| Feature                                                                | Status  | Notes                                                                                                                                                            | Beads issue                                                                                                                                              |
+| ---------------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Context-adaptive rendering program                                     | Planned | Sequence: instrumentation -> canonical renderer -> compact mode -> recovery-safe fallback -> evaluation; keep full-state as baseline until evidence is published | `prompt-language-0ovo`, `prompt-language-0ovo.1`, `prompt-language-0ovo.2`, `prompt-language-0ovo.3`, `prompt-language-0ovo.5`, `prompt-language-0ovo.6` |
+| Generic runner abstraction and OpenCode runner                         | Planned | Runner-first path for Claude/Codex/OpenCode; unlocks lower-cost experiments                                                                                      | `prompt-language-9uqe.4`, `prompt-language-9uqe.15`                                                                                                      |
+| Language server (LSP) for editor-agnostic autocomplete and diagnostics | Planned | Depends on extension groundwork                                                                                                                                  | `prompt-language-idbc`                                                                                                                                   |
+| Web playground for browser-based flow authoring and dry-run simulation | Planned | Good onboarding and docs surface                                                                                                                                 | `prompt-language-528q`                                                                                                                                   |
+| Workspace-aware monorepo orchestration                                 | Planned | Would build on `spawn` plus package discovery                                                                                                                    | `prompt-language-ik3n`                                                                                                                                   |
 
 ## Exploratory orchestration ideas
 
 These are interesting, but they are a step beyond the current core runtime and should not be described like committed syntax.
 
-No exploratory items remain — all previously listed ideas have shipped.
+- Deferred spawn/session-aware compact rendering heuristics — keep out of open priorities until the core context-adaptive program and recovery-safe fallback track are validated.
 
 ## Long-term research direction
 

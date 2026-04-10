@@ -40,7 +40,7 @@ describe('eval harness contracts', () => {
     );
     expect(source).toContain("if (model.startsWith('ollama/')) {");
     expect(source).toContain('if (/(^|[:/-])(26b|27b|31b|70b)([:/-]|$)/.test(model)) {');
-    expect(source).toContain('return 900_000;');
+    expect(source).toContain('return 1_800_000;');
   });
 
   it('exposes npm smoke commands for the OpenCode baseline', async () => {

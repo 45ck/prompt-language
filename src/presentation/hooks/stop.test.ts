@@ -1,10 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { execSync, type ExecSyncOptionsWithStringEncoding } from 'node:child_process';
+import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from 'node:child_process';
 import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const HOOK_TEST_TIMEOUT_MS = 30_000;
+const HOOK_TEST_TIMEOUT_MS = process.platform === 'win32' ? 60_000 : 30_000;
 
 let tempDir: string;
 
@@ -16,8 +16,8 @@ afterEach(async () => {
   await rm(tempDir, {
     recursive: true,
     force: true,
-    maxRetries: 5,
-    retryDelay: 100,
+    maxRetries: 10,
+    retryDelay: 200,
   });
 });
 
@@ -30,7 +30,7 @@ interface HookResult {
 function runHook(input: string, cwd: string): HookResult {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', 'stop.ts');
-  const opts: ExecSyncOptionsWithStringEncoding = {
+  const opts: ExecFileSyncOptionsWithStringEncoding = {
     input,
     encoding: 'utf-8',
     cwd,
@@ -38,7 +38,7 @@ function runHook(input: string, cwd: string): HookResult {
     stdio: ['pipe', 'pipe', 'pipe'],
   };
   try {
-    const stdout = execSync(`npx tsx "${scriptPath}"`, opts);
+    const stdout = execFileSync('npx', ['tsx', scriptPath], opts);
     return { exitCode: 0, stdout, stderr: '' };
   } catch (error: unknown) {
     const e = error as {

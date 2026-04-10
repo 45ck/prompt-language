@@ -4,7 +4,7 @@ import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-const HOOK_TEST_TIMEOUT_MS = 30_000;
+const HOOK_TEST_TIMEOUT_MS = process.platform === 'win32' ? 60_000 : 30_000;
 
 let tempDir: string;
 
@@ -16,8 +16,8 @@ afterEach(async () => {
   await rm(tempDir, {
     recursive: true,
     force: true,
-    maxRetries: 5,
-    retryDelay: 100,
+    maxRetries: 10,
+    retryDelay: 200,
   });
 });
 

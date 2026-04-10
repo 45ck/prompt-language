@@ -141,7 +141,7 @@ function resolveTimeout() {
   const model = (process.env.EVAL_MODEL ?? '').toLowerCase();
   if (model.startsWith('ollama/')) {
     if (/(^|[:/-])(26b|27b|31b|70b)([:/-]|$)/.test(model)) {
-      return 900_000;
+      return 1_800_000;
     }
     return 300_000;
   }

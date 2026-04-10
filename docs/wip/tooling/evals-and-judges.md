@@ -1,6 +1,8 @@
 # Evals and Judges (WIP)
 
 > **WIP: not implemented yet.** This page describes a proposed evaluation stack, not shipped syntax.
+>
+> For the accepted first implementation boundary, see [docs/design/evaluation-stack-v1.md](../../design/evaluation-stack-v1.md).
 
 ## Goal
 

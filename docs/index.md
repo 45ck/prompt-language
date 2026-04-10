@@ -39,10 +39,11 @@ prompt-language is a control-flow runtime for Claude Code. The docs are organize
 
 ## Research and design anchors
 
-| Doc                                                                                | Contents                                                        |
-| ---------------------------------------------------------------------------------- | --------------------------------------------------------------- |
-| [Research Index](research/README.md)                                               | Research reports with abstracts and source list                 |
-| [Architecture Position](research/00-architecture-position.md)                      | How prompt-language differs from LangChain, DSPy, and CrewAI    |
-| [Feature Completeness](research/08-feature-completeness.md)                        | Assessment of what the current shipped primitives already cover |
-| [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)          | Accepted subagent-first boundary                                |
-| [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md) | Proposed render-mode decision under evaluation                  |
+| Doc                                                                                | Contents                                                                  |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [Research Index](research/README.md)                                               | Research reports with abstracts and source list                           |
+| [Architecture Position](research/00-architecture-position.md)                      | How prompt-language differs from LangChain, DSPy, and CrewAI              |
+| [Feature Completeness](research/08-feature-completeness.md)                        | Assessment of what the current shipped primitives already cover           |
+| [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)          | Accepted subagent-first boundary                                          |
+| [Evaluation Stack V1 Boundary](design/evaluation-stack-v1.md)                      | Accepted first implementation slice for rubrics, judges, and eval tooling |
+| [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md) | Proposed render-mode decision under evaluation                            |

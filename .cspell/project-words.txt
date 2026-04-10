@@ -75,4 +75,5 @@ shortstat
 testdb
 virtualservice
 vulns
+vnext
 xcworkspace

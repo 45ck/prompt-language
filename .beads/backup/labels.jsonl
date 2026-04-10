@@ -182,6 +182,7 @@
 {"issue_id":"prompt-language-1wr7.6","label":"area:qa"}
 {"issue_id":"prompt-language-1wr7.6","label":"area:runtime"}
 {"issue_id":"prompt-language-1wr7.6","label":"initiative:swarm"}
+{"issue_id":"prompt-language-3713","label":"quick-win"}
 {"issue_id":"prompt-language-50m6","label":"area:docs"}
 {"issue_id":"prompt-language-50m6","label":"area:runtime"}
 {"issue_id":"prompt-language-50m6","label":"initiative:artifacts"}
@@ -216,6 +217,8 @@
 {"issue_id":"prompt-language-50m6.9","label":"area:docs"}
 {"issue_id":"prompt-language-50m6.9","label":"initiative:artifacts"}
 {"issue_id":"prompt-language-50m6.9","label":"type:research"}
+{"issue_id":"prompt-language-9xmr","label":"quick-win"}
+{"issue_id":"prompt-language-vxii","label":"quick-win"}
 {"issue_id":"prompt-language-zhog","label":"area:docs"}
 {"issue_id":"prompt-language-zhog","label":"area:runtime"}
 {"issue_id":"prompt-language-zhog","label":"initiative:vnext"}

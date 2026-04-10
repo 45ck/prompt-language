@@ -1,6 +1,8 @@
 # OpenCode Gemma 4 Plan
 
-This note defines the first honest experiment path for `opencode` plus `ollama/gemma4:e2b` in this repo.
+This note records the bounded `opencode` plus `ollama/gemma4:e2b` comparison track in this repo.
+
+Workstation rule for this repository: do not install local models on the main development PC just to exercise the OpenCode runner path. The default verification path on this host is the hosted OpenCode baseline (`opencode/gpt-5-nano`). Gemma 4 remains an optional comparison only when the environment is already provisioned elsewhere.
 
 Status on April 10, 2026:
 
@@ -9,7 +11,7 @@ Status on April 10, 2026:
 - Gemma 4 still fails the same tool-driven smoke case on this host
 - the historical comparative harness still targets Claude/Codex, not OpenCode
 
-The goal is not to claim parity early. The goal is to decide whether OpenCode plus Gemma 4 is useful enough to justify cheaper repeatable experiments before the full CRM/helpdesk starter runs.
+The goal is not to claim parity early. The goal is to decide whether OpenCode plus Gemma 4 is useful enough to justify cheaper repeatable experiments before the full CRM/helpdesk starter runs, without making local-model setup a default requirement.
 
 ## Decision target
 

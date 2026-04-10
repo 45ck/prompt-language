@@ -44,7 +44,7 @@ Use the runtime in this order:
 1. Install it with `npx @45ck/prompt-language` or `npx @45ck/prompt-language codex-install`
 2. Validate a flow with `npx @45ck/prompt-language validate`
 3. Run it with `claude -p` or the CLI `run` command
-   For local models, use `run --runner opencode --model ollama/gemma4:e2b`
+   For the OpenCode headless path on this workstation, prefer `run --runner opencode --model opencode/gpt-5-nano`
 4. Smoke-test any hook, parsing, advancement, or state-transition change with `npm run eval:smoke`
 5. Recover with `/flow:status`, `/flow:reset`, or the troubleshooting guide when state gets stuck
 
@@ -124,20 +124,19 @@ To install the Codex scaffold locally instead:
 npx @45ck/prompt-language codex-install
 ```
 
-For headless local-model execution with OpenCode and Ollama:
+For headless OpenCode execution on this workstation:
 
 ```bash
-npx @45ck/prompt-language run --runner opencode --model ollama/gemma4:e2b my.flow
+npx @45ck/prompt-language run --runner opencode --model opencode/gpt-5-nano my.flow
 ```
 
 This path is intended for non-interactive flow execution. Claude hook parity remains the primary runtime surface.
 
 Current OpenCode validation on this workspace as of April 10, 2026:
 
-- Prompt-only headless runs work through OpenCode with local Gemma 4.
-- On this Windows AMD host, Ollama's default GPU path could not reliably load Gemma 4; the runnable local baseline was `ollama/gemma4-cpu:e2b`.
-- Tool-driven headless execution is runner- and model-dependent. `opencode/gpt-5-nano` passed smoke test `A` (`Context file relay`) through `prompt-language ci --runner opencode`.
-- `ollama/gemma4-cpu:e2b` still failed the same tool-driven smoke case on this host, so Gemma 4 remains baseline-only here rather than a credible rerun surface.
+- Hosted baseline: `opencode/gpt-5-nano` passed smoke test `A` (`Context file relay`) through `prompt-language ci --runner opencode`.
+- Tool-driven headless execution is still runner- and model-dependent, so lower-cost reruns remain staged rather than parity-ready.
+- Local Gemma 4 remains a bounded evaluation note in [docs/evaluation/opencode-gemma-plan.md](docs/evaluation/opencode-gemma-plan.md); do not treat it as required setup for this workstation.
 
 ## SDK
 

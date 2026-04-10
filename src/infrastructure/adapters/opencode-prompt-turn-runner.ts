@@ -1,9 +1,11 @@
 import { spawn } from 'node:child_process';
+import { join } from 'node:path';
 import type {
   PromptTurnInput,
   PromptTurnResult,
   PromptTurnRunner,
 } from '../../application/ports/prompt-turn-runner.js';
+// cspell:ignore LOCALAPPDATA USERPROFILE
 
 interface OpenCodeJsonEvent {
   readonly type?: string | undefined;
@@ -16,6 +18,47 @@ interface OpenCodeJsonEvent {
 }
 
 const STEP_FINISH_GRACE_MS = 1_000;
+const OPENCODE_AGENT_ENV = 'PROMPT_LANGUAGE_OPENCODE_AGENT';
+const OPENCODE_VARIANT_ENV = 'PROMPT_LANGUAGE_OPENCODE_VARIANT';
+const OPENCODE_HOME_ENV = 'PROMPT_LANGUAGE_OPENCODE_HOME';
+const OPENCODE_CONFIG_HOME_ENV = 'PROMPT_LANGUAGE_OPENCODE_XDG_CONFIG_HOME';
+const OPENCODE_DATA_HOME_ENV = 'PROMPT_LANGUAGE_OPENCODE_XDG_DATA_HOME';
+
+function readEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  return value ?? undefined;
+}
+
+export function buildOpenCodeEnv(): NodeJS.ProcessEnv | undefined {
+  const home = readEnv(OPENCODE_HOME_ENV);
+  const configHomeOverride = readEnv(OPENCODE_CONFIG_HOME_ENV);
+  const dataHomeOverride = readEnv(OPENCODE_DATA_HOME_ENV);
+
+  if (home === undefined && configHomeOverride === undefined && dataHomeOverride === undefined) {
+    return undefined;
+  }
+
+  const env: NodeJS.ProcessEnv = { ...process.env };
+
+  if (home !== undefined) {
+    env['HOME'] = home;
+    env['USERPROFILE'] = home;
+    env['APPDATA'] = join(home, 'AppData', 'Roaming');
+    env['LOCALAPPDATA'] = join(home, 'AppData', 'Local');
+    env['XDG_CONFIG_HOME'] ??= join(home, '.config');
+    env['XDG_DATA_HOME'] ??= join(home, '.local', 'share');
+  }
+
+  if (configHomeOverride !== undefined) {
+    env['XDG_CONFIG_HOME'] = configHomeOverride;
+  }
+
+  if (dataHomeOverride !== undefined) {
+    env['XDG_DATA_HOME'] = dataHomeOverride;
+  }
+
+  return env;
+}
 
 export function summarizeOpenCodeJsonOutput(
   output: string,
@@ -78,8 +121,10 @@ export function buildOpenCodePrompt(prompt: string): string {
 export class OpenCodePromptTurnRunner implements PromptTurnRunner {
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
     const args = this.buildArgs(input);
+    const env = buildOpenCodeEnv();
     const child = spawn('opencode', args, {
       cwd: input.cwd,
+      env,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
@@ -147,9 +192,19 @@ export class OpenCodePromptTurnRunner implements PromptTurnRunner {
 
   buildArgs(input: PromptTurnInput): string[] {
     const args = ['run', '--format', 'json', '--dangerously-skip-permissions', '--dir', input.cwd];
+    const agent = readEnv(OPENCODE_AGENT_ENV);
+    const variant = readEnv(OPENCODE_VARIANT_ENV);
 
     if (input.model != null) {
       args.push('--model', input.model);
+    }
+
+    if (agent !== undefined) {
+      args.push('--agent', agent);
+    }
+
+    if (variant !== undefined) {
+      args.push('--variant', variant);
     }
 
     args.push(buildOpenCodePrompt(input.prompt));

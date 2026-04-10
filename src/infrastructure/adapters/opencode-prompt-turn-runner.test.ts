@@ -1,5 +1,7 @@
 import { EventEmitter } from 'node:events';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+// cspell:ignore unstub LOCALAPPDATA USERPROFILE
 
 const mockedSpawn = vi.fn();
 
@@ -9,6 +11,7 @@ vi.mock('node:child_process', () => ({
 
 const { OpenCodePromptTurnRunner, buildOpenCodePrompt, summarizeOpenCodeJsonOutput } =
   await import('./opencode-prompt-turn-runner.js');
+const { buildOpenCodeEnv } = await import('./opencode-prompt-turn-runner.js');
 
 class MockStream extends EventEmitter {
   setEncoding(_encoding: string): void {}
@@ -23,6 +26,7 @@ class MockChild extends EventEmitter {
 describe('OpenCodePromptTurnRunner', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.unstubAllEnvs();
     vi.useRealTimers();
   });
 
@@ -56,6 +60,7 @@ describe('OpenCodePromptTurnRunner', () => {
       ],
       {
         cwd: '/repo',
+        env: undefined,
         stdio: ['ignore', 'pipe', 'pipe'],
       },
     );
@@ -78,6 +83,47 @@ describe('OpenCodePromptTurnRunner', () => {
       '/repo',
       buildOpenCodePrompt('Continue'),
     ]);
+  });
+
+  it('adds agent and variant flags from environment overrides', () => {
+    vi.stubEnv('PROMPT_LANGUAGE_OPENCODE_AGENT', 'build');
+    vi.stubEnv('PROMPT_LANGUAGE_OPENCODE_VARIANT', 'minimal');
+
+    const runner = new OpenCodePromptTurnRunner();
+
+    expect(
+      runner.buildArgs({
+        cwd: '/repo',
+        prompt: 'Continue',
+      }),
+    ).toEqual([
+      'run',
+      '--format',
+      'json',
+      '--dangerously-skip-permissions',
+      '--dir',
+      '/repo',
+      '--agent',
+      'build',
+      '--variant',
+      'minimal',
+      buildOpenCodePrompt('Continue'),
+    ]);
+  });
+
+  it('builds an isolated opencode environment from PROMPT_LANGUAGE_OPENCODE_HOME', () => {
+    vi.stubEnv('PROMPT_LANGUAGE_OPENCODE_HOME', '/tmp/opencode-home');
+
+    expect(buildOpenCodeEnv()).toEqual(
+      expect.objectContaining({
+        HOME: '/tmp/opencode-home',
+        USERPROFILE: '/tmp/opencode-home',
+        APPDATA: join('/tmp/opencode-home', 'AppData', 'Roaming'),
+        LOCALAPPDATA: join('/tmp/opencode-home', 'AppData', 'Local'),
+        XDG_CONFIG_HOME: join('/tmp/opencode-home', '.config'),
+        XDG_DATA_HOME: join('/tmp/opencode-home', '.local', 'share'),
+      }),
+    );
   });
 
   it('wraps prompts with execution rules', () => {

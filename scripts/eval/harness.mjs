@@ -82,7 +82,7 @@ function codexBinaryCommand(...args) {
   return ['codex', ...args];
 }
 
-function execClaude(prompt, cwd, timeout, model) {
+function execClaude(prompt, cwd, timeout, model, strict) {
   const args = ['-p', '--dangerously-skip-permissions'];
   if (model) {
     args.push('--model', model);
@@ -100,6 +100,9 @@ function execClaude(prompt, cwd, timeout, model) {
   } catch (error) {
     if (error.stderr) {
       console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
     }
     return error.stdout ?? '';
   }
@@ -262,7 +265,7 @@ export function runHarnessPrompt(
     ? execCodex(prompt, cwd, timeout, resolvedModel, strict)
     : HARNESS === 'opencode'
       ? execOpenCode(prompt, cwd, timeout, resolvedModel, strict)
-      : execClaude(prompt, cwd, timeout, resolvedModel);
+      : execClaude(prompt, cwd, timeout, resolvedModel, strict);
 }
 
 export function runHarnessFlow(

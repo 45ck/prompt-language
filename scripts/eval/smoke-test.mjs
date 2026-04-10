@@ -230,11 +230,18 @@ function assertHarnessReady() {
   }
 
   try {
-    runHarnessFlow(['Goal: readiness check', '', 'flow:', '  prompt: Return only OK'].join('\n'), {
-      cwd: process.cwd(),
-      timeout: TIMEOUT,
-      strict: true,
-    });
+    const readinessOutput = runHarnessFlow(
+      ['Goal: readiness check', '', 'flow:', '  prompt: Return only OK'].join('\n'),
+      {
+        cwd: process.cwd(),
+        timeout: TIMEOUT,
+        strict: true,
+      },
+    ).trim();
+
+    if (readinessOutput.length === 0) {
+      throw new Error('empty readiness output');
+    }
   } catch (error) {
     const output = `${error?.stdout ?? ''}\n${error?.stderr ?? ''}\n${error?.message ?? ''}`;
     if (
@@ -245,6 +252,15 @@ function assertHarnessReady() {
       );
       console.error(
         `[smoke-test] \`${getFlowCommandLabel()}\` returned an authorization error; smoke scenarios were not run.`,
+      );
+      process.exit(2);
+    }
+    if (/empty readiness output/i.test(output)) {
+      console.error(
+        `[smoke-test] BLOCKED — ${getHarnessLabel()} readiness check returned no output.`,
+      );
+      console.error(
+        `[smoke-test] \`${getFlowCommandLabel()}\` produced empty output for a trivial flow; smoke scenarios were not run.`,
       );
       process.exit(2);
     }

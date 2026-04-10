@@ -10,6 +10,12 @@ import { FileAuditLogger } from '../infrastructure/adapters/file-audit-logger.js
 import { FileMemoryStore } from '../infrastructure/adapters/file-memory-store.js';
 import { runFlowHeadless } from './run-flow-headless.js';
 import type { PromptTurnResult, PromptTurnRunner } from './ports/prompt-turn-runner.js';
+import type {
+  ChildStatus,
+  ProcessSpawner,
+  SpawnInput,
+  SpawnResult,
+} from './ports/process-spawner.js';
 
 class RecordingPromptRunner implements PromptTurnRunner {
   readonly prompts: string[] = [];
@@ -26,6 +32,18 @@ class RecordingPromptRunner implements PromptTurnRunner {
     this.prompts.push(input.prompt);
     const result = await this.effect?.(input);
     return result ?? { exitCode: 0 };
+  }
+}
+
+class FixedStatusProcessSpawner implements ProcessSpawner {
+  constructor(private readonly status: ChildStatus) {}
+
+  async spawn(_input: SpawnInput): Promise<SpawnResult> {
+    return { pid: 1234 };
+  }
+
+  async poll(_stateDir: string): Promise<ChildStatus> {
+    return this.status;
   }
 }
 
@@ -230,5 +248,166 @@ describe('runFlowHeadless', () => {
     expect(result.finalState.status).toBe('active');
     expect(result.turns).toBe(1);
     expect(result.reason).toContain('without observable workspace progress');
+  });
+
+  it('returns a max-turns reason before invoking the model when the limit is exceeded', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-max-turns-'));
+
+    const promptRunner = new RecordingPromptRunner();
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: ['Goal: max turns', '', 'flow:', '  prompt: Create done.txt'].join('\n'),
+        maxTurns: 0,
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(1);
+    expect(result.reason).toContain('max turn limit');
+    expect(promptRunner.prompts).toHaveLength(0);
+  });
+
+  it('returns a prompt-runner exit-code reason when the model invocation fails', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-exit-code-'));
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 42,
+    }));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: ['Goal: exit code', '', 'flow:', '  prompt: Create done.txt'].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(1);
+    expect(result.reason).toBe('Prompt runner exited with code 42.');
+  });
+
+  it('uses the generic no-progress reason when assistant text is empty', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-no-progress-empty-'));
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 0,
+      assistantText: '   \n\t   ',
+      madeProgress: false,
+    }));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: no-op empty text',
+          '',
+          'flow:',
+          '  prompt: Create secret.txt containing exactly hello',
+          '  prompt: Read secret.txt and write its contents to answer.txt',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(1);
+    expect(result.reason).toBe('Prompt runner completed without observable workspace progress.');
+  });
+
+  it('returns paused when spawned children are still running', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-pause-'));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: pause',
+          '',
+          'flow:',
+          '  spawn "worker"',
+          '    prompt: Create worker.txt',
+          '  end',
+          '  await all',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        processSpawner: new FixedStatusProcessSpawner({ status: 'running' }),
+        promptTurnRunner: new RecordingPromptRunner(),
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(0);
+    expect(result.reason).toBe('Flow paused before reaching completion.');
+  });
+
+  it('completes multi-step run-only flows without invoking the model', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-advance-continue-'));
+
+    const commandRunner = new InMemoryCommandRunner();
+    commandRunner.setResult('echo one > one.txt', { exitCode: 0, stdout: '', stderr: '' });
+    commandRunner.setResult('echo two > two.txt', { exitCode: 0, stdout: '', stderr: '' });
+
+    const promptRunner = new RecordingPromptRunner();
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: run chain',
+          '',
+          'flow:',
+          '  run: echo one > one.txt',
+          '  run: echo two > two.txt',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.turns).toBe(0);
+    expect(promptRunner.prompts).toHaveLength(0);
   });
 });

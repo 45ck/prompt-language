@@ -17,6 +17,28 @@ For each enhancement, we asked:
 3. If not, is it an integration concern (external tools, hooks, file system)?
 4. If none of the above, is it a genuine structural gap?
 
+## [RESEARCH] Capability matrix: Claude hooks vs Codex lifecycle surfaces
+
+Scope note: this matrix is limited to surfaces implemented and tested in this repo snapshot.
+
+Legend:
+
+- `[EVIDENCE]` directly backed by checked-in code/tests/docs
+- `[INFERRED]` reasoned implication from the implementation; may vary by host/runtime revisions
+
+| Capability                                                  | Claude hook surface                                                                                                      | Codex lifecycle surface                                                                                                                                                            | Confidence   |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| Prompt interception and context injection before model turn | `UserPromptSubmit` is wired in `hooks/hooks.json`; `user-prompt-submit.ts` injects context by rewriting `prompt`         | `UserPromptSubmit` is wired in `.codex/hooks.json`; `codex-user-prompt-submit.ts` injects via `hookSpecificOutput.additionalContext`                                               | `[EVIDENCE]` |
+| Blocking premature stop                                     | `stop.ts` uses `evaluateStop()` and exits 2 when blocked                                                                 | `codex-stop.ts` uses `evaluateStop()` and exits 2 when blocked                                                                                                                     | `[EVIDENCE]` |
+| Completion-gate enforcement checkpoint                      | Dedicated `TaskCompleted` hook runs `evaluateCompletion()` (`task-completed.ts`)                                         | No `TaskCompleted` hook in Codex contract (`codex-plugin-contract.test.ts`); completion checks are merged into `codex-stop.ts`                                                     | `[EVIDENCE]` |
+| Tool-phase visibility used by runtime                       | `PostToolUse` matcher includes `Bash\|Write\|Edit\|NotebookEdit` in `hooks/hooks.json`                                   | `PostToolUse` matcher is `Bash` in `.codex/hooks.json`; `codex-post-tool-use.ts` notes Bash-only emission                                                                          | `[EVIDENCE]` |
+| Compaction lifecycle surface                                | `PreCompact` hook is present in `hooks/hooks.json`                                                                       | Codex contract explicitly omits `PreCompact` (`codex-plugin-contract.test.ts`)                                                                                                     | `[EVIDENCE]` |
+| Session restore/start signal                                | `SessionStart` matcher `startup\|resume` in `hooks/hooks.json`; `session-start.ts` restores flow context/capture prompts | `SessionStart` matcher `startup\|resume` in `.codex/hooks.json`; `codex-session-start.ts` restores flow context/capture prompts                                                    | `[EVIDENCE]` |
+| Stability posture of hook integration                       | Claude path is documented as core runtime architecture (`docs/design/hooks-architecture.md`)                             | Codex path is scaffolded with explicit experimental opt-in (`.codex/config.toml`: `codex_hooks = true`)                                                                            | `[EVIDENCE]` |
+| Host-neutral lifecycle abstraction viability                | A shared core exists (`UserPromptSubmit`, `Stop`, `PostToolUse`, `SessionStart`)                                         | Semantics diverge for completion timing (`TaskCompleted` vs merged `Stop`) and compaction (`PreCompact` only on Claude), so strict normalization would hide host-specific behavior | `[INFERRED]` |
+
+Practical reading for this repo: "host-neutral" is viable for a minimal common subset, but misleading for completion and compaction semantics unless host-specific behavior remains explicit.
+
 ## Assessment
 
 ### Already achievable with existing primitives (10/15)

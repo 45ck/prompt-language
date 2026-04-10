@@ -89,3 +89,21 @@ When evaluating a new feature, ask:
 - Or is it about administering the host's extension ecosystem?
 
 If it is the second case, it does not belong in prompt-language core.
+
+## Capability snapshot (Claude vs Codex)
+
+This boundary is reinforced by current host-surface differences.
+
+Legend:
+
+- `[EVIDENCE]` directly backed by checked-in code/tests/docs
+- `[INFERRED]` reasoned implication from implementation
+
+| Concern                       | Claude surface in this repo                                                                                                                    | Codex surface in this repo                                                                                      | Confidence   |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------ |
+| Completion enforcement timing | Dedicated `TaskCompleted` hook (`hooks/hooks.json`, `task-completed.ts`)                                                                       | No `TaskCompleted`; gate enforcement is merged into `codex-stop.ts` and Codex contract excludes `TaskCompleted` | `[EVIDENCE]` |
+| Compaction lifecycle          | `PreCompact` is wired (`hooks/hooks.json`)                                                                                                     | `PreCompact` is absent and explicitly excluded by Codex contract test                                           | `[EVIDENCE]` |
+| Hook stability posture        | Claude hook loop is the documented runtime core (`docs/design/hooks-architecture.md`)                                                          | Codex hooks are explicitly opt-in/experimental (`.codex/config.toml`)                                           | `[EVIDENCE]` |
+| Design implication            | Normalizing these differences into one "generic host lifecycle" would hide real behavior differences and create misleading language guarantees | Keep host-specific lifecycle semantics inside adapters and docs, not as unified DSL primitives                  | `[INFERRED]` |
+
+For the full capability matrix (including prompt interception, tool-phase visibility, and session start), see [docs/research/08-feature-completeness.md](../research/08-feature-completeness.md).

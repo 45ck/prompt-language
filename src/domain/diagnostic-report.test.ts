@@ -1,0 +1,33 @@
+import { describe, expect, it } from 'vitest';
+import {
+  createBlockingProfileDiagnostic,
+  createDiagnosticReport,
+  DIAGNOSTIC_CODE_RANGES,
+  PROFILE_DIAGNOSTIC_CODES,
+} from './diagnostic-report.js';
+
+describe('diagnostic-report', () => {
+  it('marks reports blocked when any diagnostic blocks execution', () => {
+    const report = createDiagnosticReport([
+      createBlockingProfileDiagnostic(
+        PROFILE_DIAGNOSTIC_CODES.missingRunnerBinary,
+        'runner missing',
+      ),
+    ]);
+
+    expect(report.status).toBe('blocked');
+    expect(report.outcomes).toEqual([]);
+  });
+
+  it('keeps empty reports ok', () => {
+    const report = createDiagnosticReport([]);
+
+    expect(report.status).toBe('ok');
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it('exposes stable code ranges and preflight profile codes', () => {
+    expect(DIAGNOSTIC_CODE_RANGES.profile).toBe('PLC');
+    expect(PROFILE_DIAGNOSTIC_CODES.missingGatePrerequisite).toBe('PLC-005');
+  });
+});

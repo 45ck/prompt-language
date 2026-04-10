@@ -347,6 +347,10 @@ function readPositionalValue(args, flagsWithValues) {
   return undefined;
 }
 
+function hasOption(args, name) {
+  return args.includes(name);
+}
+
 function readPositiveIntegerOption(args, name, label) {
   const raw = readOptionValue(args, name);
   if (raw == null) return undefined;
@@ -372,11 +376,53 @@ function defaultModelForRunner(runner) {
   return runner === 'codex' ? 'gpt-5.2' : undefined;
 }
 
+function ensureSupportedRunner(runner) {
+  if (runner !== 'claude' && runner !== 'codex' && runner !== 'opencode' && runner !== 'ollama') {
+    console.error(
+      `Error: Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama.`,
+    );
+    process.exit(1);
+  }
+  return runner;
+}
+
 function readRunnerOptions(args) {
-  const runner = readOptionValue(args, '--runner') ?? 'claude';
+  const runner = ensureSupportedRunner(readOptionValue(args, '--runner') ?? 'claude');
   const model = readOptionValue(args, '--model') ?? defaultModelForRunner(runner);
   const stateDir = readOptionValue(args, '--state-dir');
   return { runner, model, stateDir };
+}
+
+function readOptionalRunner(args) {
+  const runner = readOptionValue(args, '--runner');
+  return runner == null ? undefined : ensureSupportedRunner(runner);
+}
+
+async function evaluateExecutionPreflight(flowText, runner) {
+  const [{ parseFlow }, { runExecutionPreflight }, { probeRunnerBinary }] = await Promise.all([
+    import(pathToFileURL(join(ROOT, 'dist', 'application', 'parse-flow.js')).href),
+    import(pathToFileURL(join(ROOT, 'dist', 'application', 'execution-preflight.js')).href),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'runner-binary-probe.js')).href
+    ),
+  ]);
+
+  const spec = parseFlow(flowText, { basePath: process.cwd() });
+  return runExecutionPreflight(spec, { cwd: process.cwd(), runner }, { probeRunnerBinary });
+}
+
+async function printAndExitBlockedPreflight(flowText, runner) {
+  const [report, { formatDiagnosticReport }] = await Promise.all([
+    evaluateExecutionPreflight(flowText, runner),
+    import(pathToFileURL(join(ROOT, 'dist', 'presentation', 'format-diagnostic-report.js')).href),
+  ]);
+
+  if (report.status !== 'blocked') {
+    return report;
+  }
+
+  console.error(formatDiagnosticReport(report));
+  process.exit(2);
 }
 
 async function runOpenCodeFlow(flowText, model, stateDir) {
@@ -622,12 +668,43 @@ async function validate() {
     process.exit(1);
   }
 
-  const flowText = await readFlowText(process.argv.slice(3), 'validate');
+  const args = process.argv.slice(3);
+  const flowText = await readFlowText(args, 'validate');
+  const runner = readOptionalRunner(args);
+  const json = hasOption(args, '--json');
   const { buildValidateFlowPreview } = await import(
     pathToFileURL(join(ROOT, 'dist', 'presentation', 'validate-flow.js')).href
   );
-  const preview = buildValidateFlowPreview(flowText);
-  console.log(preview.output);
+  const { probeRunnerBinary } = await import(
+    pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'runner-binary-probe.js')).href
+  );
+  const preview = buildValidateFlowPreview(flowText, {
+    cwd: process.cwd(),
+    ...(runner != null ? { runner, probeRunnerBinary } : {}),
+  });
+
+  if (json) {
+    console.log(
+      JSON.stringify(
+        {
+          status: preview.report.status,
+          diagnostics: preview.report.diagnostics,
+          outcomes: preview.report.outcomes,
+          complexity: preview.complexity,
+          lintWarningCount: preview.lintWarningCount,
+          renderedFlow: preview.renderedFlow,
+        },
+        null,
+        2,
+      ),
+    );
+  } else {
+    console.log(preview.output);
+  }
+
+  if (preview.report.status === 'blocked') {
+    process.exit(2);
+  }
 }
 
 async function runFlow() {
@@ -639,6 +716,7 @@ async function runFlow() {
   const args = process.argv.slice(3);
   const flowText = await readFlowText(args, 'run');
   const { runner, model, stateDir } = readRunnerOptions(args);
+  await printAndExitBlockedPreflight(flowText, runner);
 
   if (runner === 'codex') {
     await runCodexFlow(flowText, model, stateDir);
@@ -653,13 +731,6 @@ async function runFlow() {
   if (runner === 'ollama') {
     await runOllamaFlow(flowText, model, stateDir);
     return;
-  }
-
-  if (runner !== 'claude') {
-    console.error(
-      `Error: Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama.`,
-    );
-    process.exit(1);
   }
 
   const { execFileSync } = await import('node:child_process');
@@ -1075,6 +1146,7 @@ async function ci() {
   const args = process.argv.slice(3);
   const flowText = await readFlowText(args, 'ci');
   const { runner, model, stateDir } = readRunnerOptions(args);
+  await printAndExitBlockedPreflight(flowText, runner);
 
   console.log(`[prompt-language CI] Running flow via ${runner}...`);
   try {

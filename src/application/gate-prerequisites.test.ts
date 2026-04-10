@@ -1,0 +1,71 @@
+import { afterEach, describe, expect, it } from 'vitest';
+import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { detectWorkspaceTestCommand, explainGatePrerequisite } from './gate-prerequisites.js';
+
+describe('gate-prerequisites', () => {
+  let tempDir = '';
+
+  afterEach(async () => {
+    if (!tempDir) return;
+    await rm(tempDir, { recursive: true, force: true });
+    tempDir = '';
+  });
+
+  it('blocks generic tests_pass when no supported project markers exist', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-gate-prerequisite-empty-'));
+
+    expect(detectWorkspaceTestCommand(tempDir)).toBeUndefined();
+    expect(explainGatePrerequisite('tests_pass', tempDir)?.summary).toContain(
+      'detectable test runner',
+    );
+  });
+
+  it('blocks lint_pass when package.json lacks a lint script', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-gate-prerequisite-lint-'));
+    await writeFile(
+      join(tempDir, 'package.json'),
+      JSON.stringify({ name: 'demo', scripts: { test: 'node test.js' } }),
+      'utf8',
+    );
+
+    expect(explainGatePrerequisite('lint_pass', tempDir)?.summary).toContain(
+      'requires package.json with a lint script',
+    );
+  });
+
+  it('accepts polyglot test markers without forcing npm', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-gate-prerequisite-polyglot-'));
+
+    await writeFile(join(tempDir, 'pyproject.toml'), '[project]\nname = "demo"\n', 'utf8');
+    expect(detectWorkspaceTestCommand(tempDir)).toBe('python -m pytest');
+
+    await rm(join(tempDir, 'pyproject.toml'));
+    await writeFile(join(tempDir, 'go.mod'), 'module example.com/demo\n', 'utf8');
+    expect(detectWorkspaceTestCommand(tempDir)).toBe('go test ./...');
+
+    await rm(join(tempDir, 'go.mod'));
+    await writeFile(
+      join(tempDir, 'Cargo.toml'),
+      '[package]\nname = "demo"\nversion = "0.1.0"\n',
+      'utf8',
+    );
+    expect(detectWorkspaceTestCommand(tempDir)).toBe('cargo test');
+  });
+
+  it('does not treat file_exists as a preflight blocker', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-gate-prerequisite-file-exists-'));
+    await mkdir(join(tempDir, 'nested'), { recursive: true });
+
+    expect(explainGatePrerequisite('file_exists nested/output.txt', tempDir)).toBeNull();
+  });
+
+  it('requires a git worktree for diff_nonempty', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-gate-prerequisite-git-'));
+
+    expect(explainGatePrerequisite('diff_nonempty', tempDir)?.summary).toContain(
+      'requires a git worktree',
+    );
+  });
+});

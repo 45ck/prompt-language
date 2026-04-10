@@ -5,8 +5,6 @@
  * Blocks completion if any gate fails.
  */
 
-import { existsSync } from 'node:fs';
-
 import {
   updateGateResult,
   updateGateDiagnostic,
@@ -21,6 +19,9 @@ import type { StateStore } from './ports/state-store.js';
 import type { CommandRunner, CommandResult } from './ports/command-runner.js';
 import type { CompletionGate } from '../domain/flow-spec.js';
 import type { AuditLogger } from './ports/audit-logger.js';
+import { detectTestCommand } from './gate-prerequisites.js';
+
+export { detectTestCommand } from './gate-prerequisites.js';
 
 export interface EvaluateCompletionOutput {
   readonly blocked: boolean;
@@ -60,14 +61,6 @@ function isAbsoluteOrUnsafePath(p: string): boolean {
   if (p.includes('\\')) return true;
   if (/^[A-Za-z]:/.test(p)) return true;
   return false;
-}
-
-// H-INT-002: Detect project type from filesystem markers and map tests_pass accordingly
-export function detectTestCommand(): string {
-  if (existsSync('go.mod')) return 'go test ./...';
-  if (existsSync('pyproject.toml') || existsSync('setup.py')) return 'python -m pytest';
-  if (existsSync('Cargo.toml')) return 'cargo test';
-  return 'npm test';
 }
 
 /** Map a built-in predicate to the shell command that evaluates it. */

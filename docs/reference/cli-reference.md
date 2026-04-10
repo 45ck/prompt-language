@@ -107,9 +107,10 @@ Notes:
 2. `--runner codex` and `--runner opencode` both use the headless flow runner rather than Claude's interactive hook loop.
 3. When `--runner codex` is selected without an explicit `--model`, prompt-language defaults to `gpt-5.2` on this workstation because the ambient Codex default may fall back to a rate-limited Spark profile.
 4. OpenCode models use the `provider/model` form, for example `opencode/gpt-5-nano`.
-5. On this workstation, prefer hosted harness models for headless runner paths; do not install local models here just to exercise `run`.
-6. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
-7. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
+5. Before execution starts, `run` now performs a shared preflight for runner availability and built-in gate prerequisites. A blocked preflight exits with code `2`.
+6. On this workstation, prefer hosted harness models for headless runner paths; do not install local models here just to exercise `run`.
+7. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
+8. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
 
 ### ci
 
@@ -122,6 +123,8 @@ npx @45ck/prompt-language ci --runner opencode --model opencode/gpt-5-nano my.fl
 ```
 
 This is the same headless runner path used by `run --runner codex|opencode`, so prompt quality and tool-use behavior depend on the selected model. On this workstation, `ci --runner codex` defaults to `gpt-5.2` when `--model` is omitted.
+
+`ci` also runs the shared execution preflight before starting the runner. A blocked preflight exits with code `2` instead of attempting execution.
 
 ### eval
 
@@ -162,9 +165,15 @@ Parse, lint, score, and render a flow without executing it.
 npx @45ck/prompt-language validate --file my.flow
 npx @45ck/prompt-language validate my.flow
 cat my.flow | npx @45ck/prompt-language validate
+npx @45ck/prompt-language validate --runner codex --json --file my.flow
 ```
 
-Outputs the rendered flow with lint warnings but takes no actions and starts no gates.
+Notes:
+
+1. Plain `validate` remains parse/lint/render only.
+2. `validate --runner ...` adds execution preflight for runner availability and built-in gate prerequisites without starting execution.
+3. `validate --json` emits `{ status, diagnostics, outcomes }` plus complexity and rendered flow metadata.
+4. A blocked preflight exits with code `2`.
 
 ### demo
 

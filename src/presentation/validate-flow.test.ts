@@ -23,4 +23,16 @@ describe('buildValidateFlowPreview', () => {
     expect(preview.output).toContain('Warnings:');
     expect(preview.output).toContain('condition may never change');
   });
+
+  it('includes blocked preflight diagnostics when a runner is selected', () => {
+    const preview = buildValidateFlowPreview('Goal: test\n\nflow:\n  prompt: hello\n', {
+      cwd: '/repo',
+      runner: 'codex',
+      probeRunnerBinary: () => false,
+    });
+
+    expect(preview.report.status).toBe('blocked');
+    expect(preview.output).toContain('[prompt-language preflight] BLOCKED');
+    expect(preview.output).toContain('PLC-001');
+  });
 });

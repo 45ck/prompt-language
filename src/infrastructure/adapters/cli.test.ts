@@ -2,13 +2,33 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
 const CLI = join(ROOT, 'bin', 'cli.mjs');
 
 async function createTempDir(prefix: string): Promise<string> {
   return mkdtemp(join(tmpdir(), prefix));
+}
+
+async function createFakeRunner(
+  directory: string,
+  name: string,
+  sentinelPath: string,
+): Promise<void> {
+  if (process.platform === 'win32') {
+    await writeFile(
+      join(directory, `${name}.cmd`),
+      `@echo off\r\necho ran>"${sentinelPath}"\r\nexit /b 0\r\n`,
+      'utf8',
+    );
+    return;
+  }
+
+  await writeFile(join(directory, name), `#!/bin/sh\nprintf 'ran' > '${sentinelPath}'\n`, {
+    encoding: 'utf8',
+    mode: 0o755,
+  });
 }
 
 describe('CLI commands', () => {
@@ -58,6 +78,99 @@ describe('CLI commands', () => {
     expect(output).toContain('prompt: hello');
   });
 
+  it('validate --runner --json exits 2 with a blocked preflight report when the runner is missing', async () => {
+    tempDir = await createTempDir('pl-cli-validate-json-');
+    const flowPath = join(tempDir, 'sample.flow');
+    await writeFile(flowPath, 'Goal: test\n\nflow:\n  prompt: hello\n', 'utf8');
+
+    try {
+      execFileSync(
+        process.execPath,
+        [CLI, 'validate', '--runner', 'codex', '--json', '--file', flowPath],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+          env: {
+            ...process.env,
+            PATH: dirname(process.execPath),
+          },
+        },
+      );
+      expect.unreachable();
+    } catch (error) {
+      const failure = error as { status?: number; stdout?: string };
+      expect(failure.status).toBe(2);
+      const payload = JSON.parse(failure.stdout ?? '{}') as {
+        status?: string;
+        diagnostics?: { code?: string }[];
+      };
+      expect(payload.status).toBe('blocked');
+      expect(payload.diagnostics?.[0]?.code).toBe('PLC-001');
+    }
+  });
+
+  it('run blocks on preflight gate prerequisites before invoking the runner', async () => {
+    tempDir = await createTempDir('pl-cli-run-preflight-');
+    const sentinelPath = join(tempDir, 'codex-ran.txt');
+    await mkdir(join(tempDir, 'bin'), { recursive: true });
+    await writeFile(
+      join(tempDir, 'package.json'),
+      JSON.stringify({ name: 'demo', scripts: { test: 'node test.js' } }),
+      'utf8',
+    );
+    await createFakeRunner(join(tempDir, 'bin'), 'codex', sentinelPath);
+
+    try {
+      execFileSync(process.execPath, [CLI, 'run', '--runner', 'codex'], {
+        cwd: tempDir,
+        encoding: 'utf8',
+        input: 'Goal: test\n\ndone when:\n  lint_pass\n',
+        env: {
+          ...process.env,
+          PATH: `${join(tempDir, 'bin')}${delimiter}${dirname(process.execPath)}`,
+        },
+      });
+      expect.unreachable();
+    } catch (error) {
+      const failure = error as { status?: number; stderr?: string };
+      expect(failure.status).toBe(2);
+      expect(failure.stderr ?? '').toContain('PLC-005');
+    }
+
+    await expect(readFile(sentinelPath, 'utf8')).rejects.toThrow();
+  });
+
+  it('ci blocks on preflight gate prerequisites before invoking the runner', async () => {
+    tempDir = await createTempDir('pl-cli-ci-preflight-');
+    const sentinelPath = join(tempDir, 'codex-ran.txt');
+    await mkdir(join(tempDir, 'bin'), { recursive: true });
+    await writeFile(
+      join(tempDir, 'package.json'),
+      JSON.stringify({ name: 'demo', scripts: { test: 'node test.js' } }),
+      'utf8',
+    );
+    await createFakeRunner(join(tempDir, 'bin'), 'codex', sentinelPath);
+
+    try {
+      execFileSync(process.execPath, [CLI, 'ci', '--runner', 'codex'], {
+        cwd: tempDir,
+        encoding: 'utf8',
+        input: 'Goal: test\n\ndone when:\n  lint_pass\n',
+        env: {
+          ...process.env,
+          PATH: `${join(tempDir, 'bin')}${delimiter}${dirname(process.execPath)}`,
+        },
+      });
+      expect.unreachable();
+    } catch (error) {
+      const failure = error as { status?: number; stderr?: string };
+      expect(failure.status).toBe(2);
+      expect(failure.stderr ?? '').toContain('PLC-005');
+    }
+
+    await expect(readFile(sentinelPath, 'utf8')).rejects.toThrow();
+  });
+
   it('run supports the native claude path and all headless runners', async () => {
     const source = await readFile(CLI, 'utf8');
     expect(source).toContain("case 'run':");
@@ -82,5 +195,13 @@ describe('CLI commands', () => {
     expect(source).toContain('buildDefaultEvalOutputPath');
     expect(source).toContain('runEvalDatasetFromFile');
     expect(source).toContain('readEvalReport');
+  });
+
+  it('validate source supports runner-aware JSON output', async () => {
+    const source = await readFile(CLI, 'utf8');
+    expect(source).toContain("hasOption(args, '--json')");
+    expect(source).toContain('readOptionalRunner(args)');
+    expect(source).toContain('JSON.stringify(');
+    expect(source).toContain('process.exit(2)');
   });
 });

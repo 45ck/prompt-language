@@ -110,6 +110,13 @@ export function simplifyPromptLanguageEnvelope(prompt: string): string {
   if (!trimmed.startsWith('[prompt-language] Flow:')) {
     return prompt;
   }
+  if (
+    trimmed.includes('[Internal — prompt-language variable capture:') ||
+    trimmed.includes('[Internal — prompt-language JSON capture:') ||
+    trimmed.includes('[Capture active:')
+  ) {
+    return prompt;
+  }
 
   const sections = trimmed
     .split(/\n{2,}/)

@@ -120,6 +120,27 @@ describe('simplifyPromptLanguageEnvelope', () => {
       ].join('\n'),
     );
   });
+
+  it('leaves capture envelopes unchanged so write instructions are preserved', () => {
+    const original = [
+      '[prompt-language] Flow: test let-prompt capture | Status: active',
+      '',
+      '> let items = prompt "List exactly three colors: red, green, blue. One per line, no bullets."  [awaiting response...]  <-- current',
+      '  foreach item in ${items}',
+      '    run: echo ${item} >> colors.txt',
+      '  end',
+      '',
+      '[Capture active: write response to .prompt-language/vars/items using Write tool]',
+      '',
+      'List exactly three colors: red, green, blue. One per line, no bullets.',
+      '',
+      '[Internal — prompt-language variable capture: After completing the task above, save your answer to `.prompt-language/vars/items` using the Write tool.]',
+      '',
+      '[prompt-language: step 1/3 "let items", vars: 0]',
+    ].join('\n');
+
+    expect(simplifyPromptLanguageEnvelope(original)).toBe(original);
+  });
 });
 
 describe('OllamaPromptTurnRunner', () => {

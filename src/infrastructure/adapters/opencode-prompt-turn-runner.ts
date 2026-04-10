@@ -97,7 +97,7 @@ export function summarizeOpenCodeJsonOutput(
   const madeProgress =
     startSnapshot !== undefined && finishSnapshot !== undefined
       ? startSnapshot !== finishSnapshot
-      : undefined;
+      : false;
 
   return { assistantText, madeProgress };
 }

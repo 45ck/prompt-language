@@ -162,6 +162,15 @@ describe('OpenCodePromptTurnRunner', () => {
     });
   });
 
+  it('treats missing snapshot events as no progress', () => {
+    expect(
+      summarizeOpenCodeJsonOutput(['{"type":"text","part":{"text":"OK"}}'].join('\n')),
+    ).toEqual({
+      assistantText: 'OK',
+      madeProgress: false,
+    });
+  });
+
   it('settles after step_finish even if the opencode process does not close', async () => {
     vi.useFakeTimers();
 

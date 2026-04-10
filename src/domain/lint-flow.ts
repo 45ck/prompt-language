@@ -285,6 +285,108 @@ function lintUnresolvedVars(
   }
 }
 
+/** Warn when declarations in nested scopes shadow outer-scope variables. */
+function lintVariableShadowing(
+  nodes: readonly FlowNode[],
+  inheritedDefinitions: ReadonlyMap<string, string>,
+  warnings: LintWarning[],
+): void {
+  const definitionsInScope = new Map<string, string>();
+
+  const inheritedPlusScope = (): Map<string, string> => {
+    const merged = new Map(inheritedDefinitions);
+    for (const [name, nodeId] of definitionsInScope) {
+      merged.set(name, nodeId);
+    }
+    return merged;
+  };
+
+  const warnIfShadowed = (
+    name: string,
+    nodeId: string,
+    declarationKind: 'variable' | 'foreach',
+    includeCurrentScope = false,
+  ) => {
+    const outerDefinitionNodeId =
+      inheritedDefinitions.get(name) ??
+      (includeCurrentScope ? definitionsInScope.get(name) : undefined);
+    if (outerDefinitionNodeId != null) {
+      const prefix = declarationKind === 'foreach' ? 'Foreach loop variable' : 'Variable';
+      warnings.push({
+        nodeId,
+        message: `${prefix} "${name}" shadows variable from an outer scope (outer definition at node "${outerDefinitionNodeId}")`,
+      });
+    }
+  };
+
+  for (const node of nodes) {
+    switch (node.kind) {
+      case 'let':
+        warnIfShadowed(node.variableName, node.id, 'variable');
+        definitionsInScope.set(node.variableName, node.id);
+        break;
+      case 'receive':
+        warnIfShadowed(node.variableName, node.id, 'variable');
+        definitionsInScope.set(node.variableName, node.id);
+        break;
+      case 'foreach': {
+        warnIfShadowed(node.variableName, node.id, 'foreach', true);
+        const foreachScope = inheritedPlusScope();
+        foreachScope.set(node.variableName, node.id);
+        lintVariableShadowing(node.body, foreachScope, warnings);
+        break;
+      }
+      case 'foreach_spawn': {
+        warnIfShadowed(node.variableName, node.id, 'foreach', true);
+        const foreachScope = inheritedPlusScope();
+        foreachScope.set(node.variableName, node.id);
+        lintVariableShadowing(node.body, foreachScope, warnings);
+        break;
+      }
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'spawn':
+      case 'review':
+        lintVariableShadowing(node.body, inheritedPlusScope(), warnings);
+        break;
+      case 'if': {
+        const scope = inheritedPlusScope();
+        lintVariableShadowing(node.thenBranch, scope, warnings);
+        lintVariableShadowing(node.elseBranch, scope, warnings);
+        break;
+      }
+      case 'try': {
+        const scope = inheritedPlusScope();
+        lintVariableShadowing(node.body, scope, warnings);
+        lintVariableShadowing(node.catchBody, scope, warnings);
+        lintVariableShadowing(node.finallyBody, scope, warnings);
+        break;
+      }
+      case 'race': {
+        const scope = inheritedPlusScope();
+        for (const child of node.children) {
+          lintVariableShadowing(child.body, scope, warnings);
+        }
+        break;
+      }
+      case 'await':
+      case 'approve':
+      case 'break':
+      case 'continue':
+      case 'prompt':
+      case 'remember':
+      case 'run':
+      case 'send':
+        break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
+    }
+  }
+}
+
 /** H-DX-010: Check if any node tree contains a run node recursively. */
 function containsRunNode(nodes: readonly FlowNode[]): boolean {
   for (const node of nodes) {
@@ -573,6 +675,7 @@ export function lintFlow(spec: FlowSpec, _importRegistry?: ImportRegistry): read
   // H-DX-001: Check for unresolved variable references
   const definedVars = collectDefinedVariables(spec.nodes, spec.memoryKeys ?? []);
   lintUnresolvedVars(spec.nodes, definedVars, warnings);
+  lintVariableShadowing(spec.nodes, new Map(), warnings);
 
   // H-SEC-007: Gaslighting detection — warn when all run nodes are conditional
   // but gates depend on their side effects

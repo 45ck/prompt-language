@@ -469,6 +469,121 @@ describe('H-DX-001: unresolved variable warnings', () => {
   });
 });
 
+describe('variable shadowing warnings', () => {
+  it('warns when nested let shadows outer let', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'name', { type: 'literal', value: 'outer' }),
+        createIfNode(
+          'i1',
+          'cond',
+          [createLetNode('l2', 'name', { type: 'literal', value: 'inner' })],
+          [],
+        ),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'l2',
+      message:
+        'Variable "name" shadows variable from an outer scope (outer definition at node "l1")',
+    });
+  });
+
+  it('warns when foreach loop variable shadows outer let', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'item', { type: 'literal', value: 'top-level-item' }),
+        createForeachNode('f1', 'item', 'a b c', [createPromptNode('p1', 'Process ${item}')], 10),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'f1',
+      message:
+        'Foreach loop variable "item" shadows variable from an outer scope (outer definition at node "l1")',
+    });
+  });
+
+  it('warns when foreach_spawn loop variable shadows outer let', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'job', { type: 'literal', value: 'x' }),
+        createForeachSpawnNode('fs1', 'job', 'a b c', [createPromptNode('p1', 'Process ${job}')]),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'fs1',
+      message:
+        'Foreach loop variable "job" shadows variable from an outer scope (outer definition at node "l1")',
+    });
+  });
+
+  it('does not warn when inner declaration uses a distinct name', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'outer', { type: 'literal', value: '1' }),
+        createIfNode(
+          'i1',
+          'cond',
+          [createLetNode('l2', 'inner', { type: 'literal', value: '2' })],
+          [],
+        ),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).not.toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('shadows variable from an outer scope'),
+      }),
+    );
+  });
+
+  it('does not warn for duplicate names in sibling scopes without outer declaration', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createIfNode(
+          'i1',
+          'cond',
+          [createLetNode('l1', 'name', { type: 'literal', value: 'then' })],
+          [createLetNode('l2', 'name', { type: 'literal', value: 'else' })],
+        ),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).not.toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('shadows variable from an outer scope'),
+      }),
+    );
+  });
+
+  it('does not warn for top-level reassignment of the same variable name', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'name', { type: 'literal', value: 'first' }),
+        createLetNode('l2', 'name', { type: 'literal', value: 'second' }),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).not.toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('shadows variable from an outer scope'),
+      }),
+    );
+  });
+});
+
 describe('H-DX-010: infinite loop lint warnings', () => {
   it('warns when while with tests_fail has no run node', () => {
     const spec = createFlowSpec(

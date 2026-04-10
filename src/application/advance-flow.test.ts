@@ -1703,6 +1703,91 @@ describe('autoAdvanceNodes — if node branching', () => {
     const { capturedPrompt } = await autoAdvanceNodes(state);
     expect(capturedPrompt).toBeNull();
   });
+
+  it('does not execute elseBranch after a successful thenBranch run', async () => {
+    const commandRunner: CommandRunner = {
+      run: vi.fn().mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createIfNode(
+        'i1',
+        'flag',
+        [createRunNode('r1', 'then-cmd')],
+        [createRunNode('r2', 'else-cmd')],
+      ),
+      createPromptNode('p3', 'after-if'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, variables: { flag: true } };
+
+    const result = await autoAdvanceNodes(state, commandRunner);
+
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toBe('after-if');
+    expect(commandRunner.run).toHaveBeenCalledTimes(1);
+    expect(commandRunner.run).toHaveBeenCalledWith('then-cmd', undefined);
+  });
+
+  it('skips catchBody after a successful try body and still runs finally', async () => {
+    const commandRunner: CommandRunner = {
+      run: vi
+        .fn()
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' })
+        .mockResolvedValueOnce({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createTryNode(
+        't1',
+        [createRunNode('r1', 'body-cmd')],
+        'command_failed',
+        [createRunNode('r2', 'catch-cmd')],
+        [createRunNode('r3', 'finally-cmd')],
+      ),
+      createPromptNode('p4', 'after-try'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const result = await autoAdvanceNodes(state, commandRunner);
+
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toBe('after-try');
+    expect(commandRunner.run).toHaveBeenCalledTimes(2);
+    expect(commandRunner.run).toHaveBeenNthCalledWith(1, 'body-cmd', undefined);
+    expect(commandRunner.run).toHaveBeenNthCalledWith(2, 'finally-cmd', undefined);
+  });
+
+  it('uses delayed-expansion env refs for Windows run interpolation', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const commandRunner: CommandRunner = {
+      run: vi.fn().mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    try {
+      const spec = createFlowSpec('test', [
+        createLetNode('l1', 'proto', { type: 'literal', value: 'https' }),
+        createLetNode('l2', 'host', { type: 'literal', value: 'localhost' }),
+        createLetNode('l3', 'port', { type: 'literal', value: '8080' }),
+        createRunNode('r1', 'echo ${proto}-${host}-${port} > multi-var.txt'),
+        createPromptNode('p1', 'done'),
+      ]);
+      const state = createSessionState('s1', spec);
+
+      const result = await autoAdvanceNodes(state, commandRunner);
+
+      expect(result.kind).toBe('prompt');
+      expect(commandRunner.run).toHaveBeenCalledWith(
+        'echo %PROMPT_LANGUAGE_VAR_0%-%PROMPT_LANGUAGE_VAR_1%-%PROMPT_LANGUAGE_VAR_2% > multi-var.txt',
+        {
+          env: {
+            PROMPT_LANGUAGE_VAR_0: 'https',
+            PROMPT_LANGUAGE_VAR_1: 'localhost',
+            PROMPT_LANGUAGE_VAR_2: '8080',
+          },
+        },
+      );
+    } finally {
+      platformSpy.mockRestore();
+    }
+  });
 });
 
 // ── while/until condition loop entry edge cases ─────────────────────

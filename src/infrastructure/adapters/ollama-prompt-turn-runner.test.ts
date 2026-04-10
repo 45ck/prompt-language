@@ -4,7 +4,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // cspell:ignore unstub
 
-import { OllamaPromptTurnRunner, parseActionEnvelope } from './ollama-prompt-turn-runner.js';
+import {
+  OllamaPromptTurnRunner,
+  parseActionEnvelope,
+  simplifyPromptLanguageEnvelope,
+} from './ollama-prompt-turn-runner.js';
 
 describe('parseActionEnvelope', () => {
   it('parses a strict json action envelope', () => {
@@ -27,6 +31,94 @@ describe('parseActionEnvelope', () => {
 
   it('rejects invalid action shapes', () => {
     expect(parseActionEnvelope('{"actions":[{"type":"write_file"}]}')).toBeUndefined();
+  });
+});
+
+describe('simplifyPromptLanguageEnvelope', () => {
+  it('compacts prompt-language headless envelopes for local models', () => {
+    const original = [
+      '[prompt-language] Flow: test let/var | Status: active',
+      '',
+      '~ let greeting = "hello world"  [= hello world]',
+      '~ let ver = run "node -v"  [= v25.6.1]',
+      '~ prompt: Write the greeting "${greeting}" and node version "${ver}" to result.txt',
+      '',
+      'Variables:',
+      '  greeting = hello world',
+      '  ver = v25.6.1',
+      '',
+      'Write the greeting "hello world" and node version "v25.6.1" to result.txt',
+      '',
+      '[prompt-language: step 0/3 "done", vars: 7]',
+    ].join('\n');
+
+    expect(simplifyPromptLanguageEnvelope(original)).toBe(
+      [
+        'Context:',
+        'Flow: test let/var | Status: active',
+        '',
+        'Variables:',
+        '  greeting = hello world',
+        '  ver = v25.6.1',
+        '',
+        'Current task:',
+        'Write the greeting "hello world" and node version "v25.6.1" to result.txt',
+      ].join('\n'),
+    );
+  });
+
+  it('leaves non-envelope prompts unchanged', () => {
+    expect(simplifyPromptLanguageEnvelope('Create hello.txt containing OK')).toBe(
+      'Create hello.txt containing OK',
+    );
+  });
+
+  it('preserves prior prompt history when it carries recall context', () => {
+    const original = [
+      '[prompt-language] Flow: recall test | Status: active',
+      '',
+      '~ prompt: The code is "alpha-bravo-99". Acknowledge it.',
+      '~ prompt: Create recall.txt containing the code from the previous step.',
+      '',
+      'Create a file called recall.txt containing exactly the code from the previous step, nothing else.',
+      '',
+      '[prompt-language: step 0/2 "done", vars: 2]',
+    ].join('\n');
+
+    expect(simplifyPromptLanguageEnvelope(original)).toBe(
+      [
+        'Context:',
+        'Flow: recall test | Status: active',
+        '',
+        '~ prompt: The code is "alpha-bravo-99". Acknowledge it.',
+        '',
+        'Current task:',
+        'Create a file called recall.txt containing exactly the code from the previous step, nothing else.',
+      ].join('\n'),
+    );
+  });
+
+  it('drops the current marked prompt line when compacting an active step envelope', () => {
+    const original = [
+      '[prompt-language] Flow: recall test | Status: active',
+      '',
+      '~ prompt: The code is "alpha-bravo-99". Acknowledge it.',
+      '> prompt: Create a file called recall.txt containing exactly the code from the previous step, nothing else.  <-- current',
+      '',
+      'The code is "alpha-bravo-99". Acknowledge it.',
+      '',
+      '[prompt-language: step 2/2 "prompt: Create recall...", vars: 0]',
+    ].join('\n');
+
+    expect(simplifyPromptLanguageEnvelope(original)).toBe(
+      [
+        'Context:',
+        'Flow: recall test | Status: active',
+        '',
+        'Current task:',
+        'The code is "alpha-bravo-99". Acknowledge it.',
+      ].join('\n'),
+    );
   });
 });
 
@@ -98,6 +190,40 @@ describe('OllamaPromptTurnRunner', () => {
     expect(result).toEqual({
       exitCode: 0,
       assistantText: 'Acknowledged',
+      madeProgress: true,
+    });
+  });
+
+  it('treats a compacted first-step acknowledgement as progress even when the raw envelope contains later file work', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: '{"actions":[{"type":"done","message":"Code alpha-bravo-99 acknowledged."}]}',
+        },
+      }),
+    });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/gemma4:31b',
+      prompt: [
+        '[prompt-language] Flow: recall test | Status: active',
+        '',
+        '~ prompt: The code is "alpha-bravo-99". Acknowledge it.',
+        '~ prompt: Create a file called recall.txt containing exactly the code from the previous step, nothing else.',
+        '',
+        'The code is "alpha-bravo-99". Acknowledge it.',
+        '',
+        '[prompt-language: step 0/2 "done", vars: 0]',
+      ].join('\n'),
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'Code alpha-bravo-99 acknowledged.',
       madeProgress: true,
     });
   });

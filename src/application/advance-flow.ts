@@ -117,6 +117,109 @@ export function advancePath(path: readonly number[]): readonly number[] {
   return [...path.slice(0, -1), last + 1];
 }
 
+const INTERPOLATION_TOKEN_RE =
+  /\$\{([\w.]+):-((?:[^}\\]|\\.)*)\}|\$\{(\w+)\[(-?\d+)\]\}|\$\{([\w.]+)\}/g;
+
+function prepareWindowsCommand(
+  template: string,
+  variables: Readonly<Record<string, string | number | boolean>>,
+  baseEnv?: Readonly<Record<string, string>>,
+): { command: string; env?: Readonly<Record<string, string>> } {
+  let index = 0;
+  const env: Record<string, string> = { ...(baseEnv ?? {}) };
+  const command = template.replace(INTERPOLATION_TOKEN_RE, (match) => {
+    const resolved = interpolate(match, variables);
+    if (resolved === match) return match;
+    const envName = `PROMPT_LANGUAGE_VAR_${index}`;
+    index += 1;
+    env[envName] = resolved;
+    return `%${envName}%`;
+  });
+  if (index > 0) {
+    return { command, env };
+  }
+  return baseEnv != null ? { command, env: baseEnv } : { command };
+}
+
+function prepareShellCommand(
+  template: string,
+  variables: Readonly<Record<string, string | number | boolean>>,
+  baseEnv?: Readonly<Record<string, string>>,
+): { command: string; env?: Readonly<Record<string, string>> } {
+  if (process.platform === 'win32') {
+    return prepareWindowsCommand(template, variables, baseEnv);
+  }
+  const command = shellInterpolate(template, variables);
+  return baseEnv != null ? { command, env: baseEnv } : { command };
+}
+
+function advancePastCurrentNode(state: SessionState): SessionState {
+  const path = state.currentNodePath;
+  if (path.length < 2) {
+    return advanceNode(state, advancePath(path));
+  }
+
+  const parentPath = path.slice(0, -1);
+  const childIndex = path[path.length - 1]!;
+  const parentNode = resolveCurrentNode(state.flowSpec.nodes, parentPath);
+  if (!parentNode) {
+    return advanceNode(state, advancePath(path));
+  }
+
+  switch (parentNode.kind) {
+    case 'if': {
+      if (childIndex < parentNode.thenBranch.length) {
+        if (childIndex + 1 < parentNode.thenBranch.length) {
+          return advanceNode(state, [...parentPath, childIndex + 1]);
+        }
+        return advanceNode(state, advancePath(parentPath));
+      }
+
+      const elseStart = parentNode.thenBranch.length;
+      const elseOffset = childIndex - elseStart;
+      if (elseOffset + 1 < parentNode.elseBranch.length) {
+        return advanceNode(state, [...parentPath, childIndex + 1]);
+      }
+      return advanceNode(state, advancePath(parentPath));
+    }
+
+    case 'try': {
+      const bodyLen = parentNode.body.length;
+      const catchLen = parentNode.catchBody.length;
+      const finallyLen = parentNode.finallyBody.length;
+      const finallyStart = bodyLen + catchLen;
+
+      if (childIndex < bodyLen) {
+        if (childIndex + 1 < bodyLen) {
+          return advanceNode(state, [...parentPath, childIndex + 1]);
+        }
+        if (finallyLen > 0) {
+          return advanceNode(state, [...parentPath, finallyStart]);
+        }
+        return advanceNode(state, advancePath(parentPath));
+      }
+
+      if (childIndex < finallyStart) {
+        if (childIndex + 1 < finallyStart) {
+          return advanceNode(state, [...parentPath, childIndex + 1]);
+        }
+        if (finallyLen > 0) {
+          return advanceNode(state, [...parentPath, finallyStart]);
+        }
+        return advanceNode(state, advancePath(parentPath));
+      }
+
+      if (childIndex + 1 < finallyStart + finallyLen) {
+        return advanceNode(state, [...parentPath, childIndex + 1]);
+      }
+      return advanceNode(state, advancePath(parentPath));
+    }
+
+    default:
+      return advanceNode(state, advancePath(path));
+  }
+}
+
 const MAX_OUTPUT_LENGTH = 2000;
 
 type DebugCategory = 'advance' | 'condition' | 'gate' | 'capture';
@@ -516,7 +619,7 @@ export function advanceApproveNode(
       startedAt,
       completedAt: now,
     });
-    next = advanceNode(next, advancePath(next.currentNodePath));
+    next = advancePastCurrentNode(next);
     return { kind: 'advance', state: next, capturedPrompt: null };
   }
 
@@ -549,7 +652,7 @@ export function advanceApproveNode(
       startedAt,
       completedAt: now,
     });
-    next = advanceNode(next, advancePath(next.currentNodePath));
+    next = advancePastCurrentNode(next);
     return { kind: 'advance', state: next, capturedPrompt: null };
   }
 
@@ -562,7 +665,7 @@ export function advanceApproveNode(
       startedAt,
       completedAt: now,
     });
-    next = advanceNode(next, advancePath(next.currentNodePath));
+    next = advancePastCurrentNode(next);
     return { kind: 'advance', state: next, capturedPrompt: null };
   }
 
@@ -704,10 +807,15 @@ async function advanceLetNode(
     }
     case 'run': {
       if (!commandRunner) return { kind: 'pause', state: current, capturedPrompt: null };
-      const letCmd = shellInterpolate(node.source.command, current.variables);
-      // H-LANG-009: Pass env from flowSpec to command runner
-      const letRunOpts = current.flowSpec.env != null ? { env: current.flowSpec.env } : undefined;
-      const result = await commandRunner.run(letCmd, letRunOpts);
+      const prepared = prepareShellCommand(
+        node.source.command,
+        current.variables,
+        current.flowSpec.env,
+      );
+      const result = await commandRunner.run(
+        prepared.command,
+        prepared.env != null ? { env: prepared.env } : undefined,
+      );
       value = result.stdout.trimEnd();
       // H-REL-010: Truncate captured variable to MAX_OUTPUT_LENGTH
       if (value.length > MAX_OUTPUT_LENGTH) {
@@ -742,7 +850,7 @@ async function advanceLetNode(
   if (tryCatchJump) {
     current = advanceNode(current, tryCatchJump);
   } else {
-    current = advanceNode(current, advancePath(current.currentNodePath));
+    current = advancePastCurrentNode(current);
   }
   return { state: current, advanced: true };
 }
@@ -936,13 +1044,13 @@ async function advanceRunNode(
   auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!commandRunner) return { kind: 'pause', state: current, capturedPrompt: null };
-  const command = shellInterpolate(node.command, current.variables);
+  const prepared = prepareShellCommand(node.command, current.variables, current.flowSpec.env);
+  const command = prepared.command;
   debugLog('advance', `Running node ${node.id} command`, 2);
   debugLog('gate', `Command: ${command}`, 3);
-  // H-LANG-009: Pass env from flowSpec to command runner
   const runOptions: import('./ports/command-runner.js').RunOptions = {
     ...(node.timeoutMs != null ? { timeoutMs: node.timeoutMs } : {}),
-    ...(current.flowSpec.env != null ? { env: current.flowSpec.env } : {}),
+    ...(prepared.env != null ? { env: prepared.env } : {}),
   };
   const result = await commandRunner.run(
     command,
@@ -976,7 +1084,7 @@ async function advanceRunNode(
     }
   }
 
-  state = advanceNode(state, advancePath(state.currentNodePath));
+  state = advancePastCurrentNode(state);
   return { state, advanced: true };
 }
 
@@ -1022,14 +1130,14 @@ async function advanceSpawnNode(
     );
     if (condResult === false) {
       // Condition is false: skip spawn entirely without launching
-      return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+      return { state: advancePastCurrentNode(current), advanced: true };
     }
     // condResult === null means unresolvable — proceed with spawn (fail-open)
   }
 
   if (!processSpawner) {
     // No spawner available — skip spawn and advance past it
-    return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+    return { state: advancePastCurrentNode(current), advanced: true };
   }
 
   const stateDir = `.prompt-language-${node.name}`;
@@ -1063,7 +1171,7 @@ async function advanceSpawnNode(
       ...state,
       warnings: [...state.warnings, `Spawn "${node.name}" failed: could not start child process.`],
     };
-    state = advanceNode(state, advancePath(state.currentNodePath));
+    state = advancePastCurrentNode(state);
     return { state, advanced: true };
   }
 
@@ -1075,7 +1183,7 @@ async function advanceSpawnNode(
   });
 
   // Skip past the spawn block (don't enter body — child runs it)
-  state = advanceNode(state, advancePath(state.currentNodePath));
+  state = advancePastCurrentNode(state);
   return { state, advanced: true };
 }
 
@@ -1096,7 +1204,7 @@ async function advanceAwaitNode(
   processSpawner?: ProcessSpawner,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!processSpawner) {
-    return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+    return { state: advancePastCurrentNode(current), advanced: true };
   }
 
   const children =
@@ -1113,7 +1221,7 @@ async function advanceAwaitNode(
         `Await target "${node.target}" does not match any spawned child — advancing past await.`,
       ],
     };
-    return { state: advanceNode(state, advancePath(state.currentNodePath)), advanced: true };
+    return { state: advancePastCurrentNode(state), advanced: true };
   }
 
   let state = current;
@@ -1177,7 +1285,7 @@ async function advanceAwaitNode(
           `Await timeout after ${MAX_AWAIT_POLLS} polls; marked remaining children as failed.`,
         ],
       };
-      return { state: advanceNode(state, advancePath(state.currentNodePath)), advanced: true };
+      return { state: advancePastCurrentNode(state), advanced: true };
     }
 
     state = updateNodeProgress(state, node.id, {
@@ -1191,7 +1299,7 @@ async function advanceAwaitNode(
     return { kind: 'pause', state, capturedPrompt: null };
   }
 
-  return { state: advanceNode(state, advancePath(state.currentNodePath)), advanced: true };
+  return { state: advancePastCurrentNode(state), advanced: true };
 }
 
 export async function autoAdvanceNodes(
@@ -1255,7 +1363,7 @@ export async function autoAdvanceNodes(
       const capturedPrompt = interpolate(currentNode.text, current.variables);
       return {
         kind: 'prompt',
-        state: advanceNode(current, advancePath(current.currentNodePath)),
+        state: advancePastCurrentNode(current),
         capturedPrompt,
       };
     }
@@ -1272,7 +1380,7 @@ async function advanceRaceNode(
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!processSpawner) {
     let state = updateVariable(current, 'race_winner', '');
-    state = advanceNode(state, advancePath(state.currentNodePath));
+    state = advancePastCurrentNode(state);
     return { state, advanced: true };
   }
 
@@ -1335,7 +1443,7 @@ async function advanceRaceNode(
       if (elapsed >= node.timeoutSeconds) {
         let state = updateVariable(current, 'race_winner', '');
         state = addWarning(state, `Race node timed out after ${node.timeoutSeconds}s.`);
-        state = advanceNode(state, advancePath(state.currentNodePath));
+        state = advancePastCurrentNode(state);
         return { state, advanced: true };
       }
     }
@@ -1381,7 +1489,7 @@ async function advanceRaceNode(
     if (processSpawner) {
       state = await terminateRaceLosers(state, node.id, winner, processSpawner);
     }
-    state = advanceNode(state, advancePath(state.currentNodePath));
+    state = advancePastCurrentNode(state);
     return { state, advanced: true };
   }
 
@@ -1391,7 +1499,7 @@ async function advanceRaceNode(
   });
   if (allSettled) {
     state = updateVariable(state, 'race_winner', '');
-    state = advanceNode(state, advancePath(state.currentNodePath));
+    state = advancePastCurrentNode(state);
     return { state, advanced: true };
   }
 
@@ -1400,7 +1508,7 @@ async function advanceRaceNode(
   if (pollCount >= MAX_AWAIT_POLLS) {
     state = updateVariable(state, 'race_winner', '');
     state = addWarning(state, `Race timeout after ${MAX_AWAIT_POLLS} polls; no winner declared.`);
-    state = advanceNode(state, advancePath(state.currentNodePath));
+    state = advancePastCurrentNode(state);
     return { state, advanced: true };
   }
   state = updateNodeProgress(state, node.id, {
@@ -1420,7 +1528,7 @@ async function advanceForeachSpawnNode(
   processSpawner?: ProcessSpawner,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!processSpawner) {
-    return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+    return { state: advancePastCurrentNode(current), advanced: true };
   }
   const rawList = node.listCommand
     ? String(current.variables[`_foreach_${node.id}_list`] ?? '')
@@ -1461,7 +1569,7 @@ async function advanceForeachSpawnNode(
       });
     }
   }
-  state = advanceNode(state, advancePath(state.currentNodePath));
+  state = advancePastCurrentNode(state);
   return { state, advanced: true };
 }
 
@@ -1483,7 +1591,7 @@ async function advanceRememberNode(
       ...(resolvedValue !== undefined ? { value: resolvedValue } : {}),
     });
   }
-  return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+  return { state: advancePastCurrentNode(current), advanced: true };
 }
 
 /** Advance a send node: write a message to the target's inbox and auto-advance. */
@@ -1496,7 +1604,7 @@ async function advanceSendNode(
     const resolvedMessage = interpolate(node.message, current.variables);
     await messageStore.send(node.target, resolvedMessage);
   }
-  return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+  return { state: advancePastCurrentNode(current), advanced: true };
 }
 
 /**
@@ -1526,13 +1634,13 @@ async function advanceReceiveNode(
         startedAt,
         completedAt: Date.now(),
       });
-      return { state: advanceNode(s, advancePath(s.currentNodePath)), advanced: true };
+      return { state: advancePastCurrentNode(s), advanced: true };
     }
   }
 
   if (!messageStore) {
     const s = updateVariable(current, node.variableName, '');
-    return { state: advanceNode(s, advancePath(s.currentNodePath)), advanced: true };
+    return { state: advancePastCurrentNode(s), advanced: true };
   }
 
   const from = node.from ?? 'parent';
@@ -1560,7 +1668,7 @@ async function advanceReceiveNode(
     startedAt: current.nodeProgress[node.id]?.startedAt ?? Date.now(),
     completedAt: Date.now(),
   });
-  return { state: advanceNode(s, advancePath(s.currentNodePath)), advanced: true };
+  return { state: advancePastCurrentNode(s), advanced: true };
 }
 
 /** Advance a single node by kind. Returns either an early-exit result or updated state. */
@@ -1583,7 +1691,7 @@ async function advanceSingleNode(
       const capturedPrompt = interpolate(node.text, current.variables);
       return {
         kind: 'prompt',
-        state: advanceNode(current, advancePath(current.currentNodePath)),
+        state: advancePastCurrentNode(current),
         capturedPrompt,
       };
     }
@@ -1838,7 +1946,7 @@ async function advanceConditionLoop(
                 loopStartedAt: progress?.loopStartedAt,
               });
               return {
-                state: advanceNode(completedProgress, advancePath(current.currentNodePath)),
+                state: advancePastCurrentNode(completedProgress),
                 advanced: true,
               };
             }
@@ -1860,7 +1968,7 @@ async function advanceConditionLoop(
             loopStartedAt: progress?.loopStartedAt,
           });
           return {
-            state: advanceNode(completedProgress, advancePath(current.currentNodePath)),
+            state: advancePastCurrentNode(completedProgress),
             advanced: true,
           };
         }
@@ -1890,7 +1998,7 @@ async function advanceConditionLoop(
           loopStartedAt: progress?.loopStartedAt,
         });
         return {
-          state: advanceNode(exitState, advancePath(current.currentNodePath)),
+          state: advancePastCurrentNode(exitState),
           advanced: true,
         };
       }
@@ -1950,7 +2058,7 @@ async function advanceConditionLoop(
     return { state: s, advanced: true };
   }
 
-  return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+  return { state: advancePastCurrentNode(current), advanced: true };
 }
 
 /** Advance an if node: evaluate condition and enter correct branch. */
@@ -1996,7 +2104,7 @@ async function advanceIfNode(
             };
           }
           return {
-            state: advanceNode(current, advancePath(current.currentNodePath)),
+            state: advancePastCurrentNode(current),
             advanced: true,
           };
         } catch {
@@ -2068,7 +2176,7 @@ async function advanceIfNode(
           };
         }
         return {
-          state: advanceNode(current, advancePath(current.currentNodePath)),
+          state: advancePastCurrentNode(current),
           advanced: true,
         };
       }
@@ -2121,7 +2229,7 @@ async function advanceIfNode(
       advanced: true,
     };
   }
-  return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+  return { state: advancePastCurrentNode(current), advanced: true };
 }
 
 /** Advance a foreach node on first encounter: set loop variable and enter body. */
@@ -2135,8 +2243,11 @@ async function advanceForeachEntry(
   // H-LANG-007: Dynamic list from command execution
   if (node.listCommand) {
     if (!commandRunner) return { kind: 'pause', state: current, capturedPrompt: null };
-    const cmd = shellInterpolate(node.listCommand, current.variables);
-    const result = await commandRunner.run(cmd);
+    const prepared = prepareShellCommand(node.listCommand, current.variables, current.flowSpec.env);
+    const result = await commandRunner.run(
+      prepared.command,
+      prepared.env != null ? { env: prepared.env } : undefined,
+    );
     current = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
     const output = result.stdout.trimEnd();
     items = splitIterable(output);
@@ -2148,7 +2259,7 @@ async function advanceForeachEntry(
   }
 
   if (items.length === 0) {
-    return { state: advanceNode(current, advancePath(current.currentNodePath)), advanced: true };
+    return { state: advancePastCurrentNode(current), advanced: true };
   }
 
   const cappedItems = items.slice(0, node.maxIterations);

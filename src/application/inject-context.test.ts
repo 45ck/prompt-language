@@ -25,9 +25,32 @@ import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { MemoryStore } from './ports/memory-store.js';
+import type { RunOptions } from './ports/command-runner.js';
 
 function makeStore(): InMemoryStateStore {
   return new InMemoryStateStore();
+}
+
+interface RecordedCommand {
+  readonly command: string;
+  readonly env: Readonly<Record<string, string>> | undefined;
+}
+
+function expectRecordedInterpolation(
+  recorded: RecordedCommand | undefined,
+  unixCommand: string,
+  expectedValue: string,
+): void {
+  expect(recorded).toBeDefined();
+  if (!recorded) return;
+
+  if (process.platform === 'win32') {
+    expect(recorded.command).toContain('%PROMPT_LANGUAGE_VAR_0%');
+    expect(recorded.env?.['PROMPT_LANGUAGE_VAR_0']).toBe(expectedValue);
+    return;
+  }
+
+  expect(recorded.command).toBe(unixCommand);
 }
 
 describe('injectContext', () => {
@@ -578,10 +601,10 @@ describe('injectContext — run node auto-advance', () => {
 
   it('interpolates variables in run node command', async () => {
     const store = makeStore();
-    const commands: string[] = [];
+    const commands: RecordedCommand[] = [];
     const mockRunner: CommandRunner = {
-      run: async (cmd: string) => {
-        commands.push(cmd);
+      run: async (cmd: string, options?: RunOptions) => {
+        commands.push({ command: cmd, env: options?.env });
         return { exitCode: 0, stdout: '', stderr: '' };
       },
     };
@@ -594,7 +617,8 @@ describe('injectContext — run node auto-advance', () => {
 
     await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
 
-    expect(commands).toEqual(["node 'app.js'"]);
+    expect(commands).toHaveLength(1);
+    expectRecordedInterpolation(commands[0], "node 'app.js'", 'app.js');
   });
 });
 
@@ -645,10 +669,10 @@ describe('injectContext — prompt node auto-advance', () => {
 
   it('mixed let → run → prompt sequence advances correctly', async () => {
     const store = makeStore();
-    const commands: string[] = [];
+    const commands: RecordedCommand[] = [];
     const mockRunner: CommandRunner = {
-      run: async (cmd: string) => {
-        commands.push(cmd);
+      run: async (cmd: string, options?: RunOptions) => {
+        commands.push({ command: cmd, env: options?.env });
         return { exitCode: 0, stdout: 'v20\n', stderr: '' };
       },
     };
@@ -661,7 +685,8 @@ describe('injectContext — prompt node auto-advance', () => {
 
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
 
-    expect(commands).toEqual(["echo 'test-file'"]);
+    expect(commands).toHaveLength(1);
+    expectRecordedInterpolation(commands[0], "echo 'test-file'", 'test-file');
     expect(result.prompt).toContain('Check test-file output');
     const saved = await store.loadCurrent();
     expect(saved?.currentNodePath).toEqual([3]);
@@ -735,10 +760,10 @@ describe('injectContext — let run edge cases', () => {
 
   it('interpolates variables in let run command', async () => {
     const store = makeStore();
-    const commands: string[] = [];
+    const commands: RecordedCommand[] = [];
     const mockRunner: CommandRunner = {
-      run: async (cmd: string) => {
-        commands.push(cmd);
+      run: async (cmd: string, options?: RunOptions) => {
+        commands.push({ command: cmd, env: options?.env });
         return { exitCode: 0, stdout: 'result\n', stderr: '' };
       },
     };
@@ -751,7 +776,8 @@ describe('injectContext — let run edge cases', () => {
 
     await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
 
-    expect(commands).toEqual(["echo 'foo'"]);
+    expect(commands).toHaveLength(1);
+    expectRecordedInterpolation(commands[0], "echo 'foo'", 'foo');
   });
 
   it('let run sets exit variables (last_exit_code, command_failed, etc.)', async () => {
@@ -1498,8 +1524,8 @@ describe('injectContext — try/catch', () => {
     expect(saved?.variables['result']).toBe('partial output');
     expect(saved?.variables['command_failed']).toBe(true);
     expect(saved?.variables['command_succeeded']).toBe(false);
-    // Path advanced past catch body prompt (body=2 nodes, catch=1 node at index 2, so 3 = past)
-    expect(saved?.currentNodePath).toEqual([0, 3]);
+    // Path advanced past the try node entirely after the catch prompt was captured.
+    expect(saved?.currentNodePath).toEqual([1]);
   });
 });
 
@@ -1740,10 +1766,10 @@ describe('injectContext — foreach iteration', () => {
 
   it('sets loop variable per iteration for run nodes', async () => {
     const store = makeStore();
-    const commands: string[] = [];
+    const commands: RecordedCommand[] = [];
     const mockRunner: CommandRunner = {
-      run: async (cmd: string) => {
-        commands.push(cmd);
+      run: async (cmd: string, options?: RunOptions) => {
+        commands.push({ command: cmd, env: options?.env });
         return { exitCode: 0, stdout: '', stderr: '' };
       },
     };
@@ -1759,12 +1785,12 @@ describe('injectContext — foreach iteration', () => {
     // First: let auto-advances, foreach enters with f=a.ts, run executes, prompt captures
     const result1 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
     expect(result1.prompt).toContain('check a.ts');
-    expect(commands).toContain("lint 'a.ts'");
+    expectRecordedInterpolation(commands[0], "lint 'a.ts'", 'a.ts');
 
     // Second: body exhausted, f=b.ts, re-enter
     const result2 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
     expect(result2.prompt).toContain('check b.ts');
-    expect(commands).toContain("lint 'b.ts'");
+    expectRecordedInterpolation(commands[1], "lint 'b.ts'", 'b.ts');
   });
 
   it('parses and executes foreach from DSL text', async () => {

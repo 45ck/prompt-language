@@ -105,6 +105,53 @@ function createSystemPrompt(): string {
   ].join('\n');
 }
 
+export function simplifyPromptLanguageEnvelope(prompt: string): string {
+  const trimmed = prompt.trim();
+  if (!trimmed.startsWith('[prompt-language] Flow:')) {
+    return prompt;
+  }
+
+  const sections = trimmed
+    .split(/\n{2,}/)
+    .map((section) => section.trim())
+    .filter((section) => section.length > 0);
+  if (sections.length < 2) {
+    return prompt;
+  }
+
+  const lastSection = sections[sections.length - 1];
+  if (lastSection?.startsWith('[prompt-language:')) {
+    sections.pop();
+  }
+  if (sections.length < 2) {
+    return prompt;
+  }
+
+  const task = sections.pop();
+  if (!task) {
+    return prompt;
+  }
+
+  const flowHeader = sections[0]?.replace(/^\[prompt-language\]\s*/, '');
+  const variablesSection = sections.find((section) => section.startsWith('Variables:'));
+  const priorPromptLines = sections
+    .flatMap((section) => section.split('\n'))
+    .map((line) => line.trim())
+    .filter((line) => /^[~>]\s+prompt:/i.test(line) && !line.includes('${'))
+    .slice(0, -1)
+    .filter((line) => !line.includes(task))
+    .map((line) => line.replace(/^>\s+prompt:/i, '~ prompt:'));
+
+  const contextSections = [flowHeader, ...priorPromptLines, variablesSection].filter(
+    (value): value is string => value != null && value.length > 0,
+  );
+  if (contextSections.length === 0) {
+    return `Current task:\n${task}`;
+  }
+
+  return `Context:\n${contextSections.join('\n\n')}\n\nCurrent task:\n${task}`;
+}
+
 function extractJsonObject(text: string): string | undefined {
   const trimmed = text.trim();
   if (!trimmed) return undefined;
@@ -373,9 +420,10 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
     const requestedModel = resolveOllamaModel(input.model);
     const timeoutMs = getOllamaTimeoutMs();
+    const prompt = simplifyPromptLanguageEnvelope(input.prompt);
     const messages: OllamaMessage[] = [
       { role: 'system', content: createSystemPrompt() },
-      { role: 'user', content: input.prompt },
+      { role: 'user', content: prompt },
     ];
 
     let workspaceActions = 0;
@@ -441,11 +489,11 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
         }
 
         if (reachedDone) {
-          const madeProgress = workspaceActions > 0 || !promptRequiresWorkspaceAction(input.prompt);
+          const madeProgress = workspaceActions > 0 || !promptRequiresWorkspaceAction(prompt);
           await appendTrace(input.cwd, {
             requestedModel,
             actualModel,
-            prompt: input.prompt,
+            prompt,
             rounds: round,
             workspaceActions,
             message: finalMessage,

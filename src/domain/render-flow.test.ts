@@ -915,6 +915,36 @@ describe('renderFlow — H-DX-005 capture failure diagnostics', () => {
   });
 });
 
+describe('renderFlow — prompt-language-7b1a capture reminder', () => {
+  it('shows active-capture reminder with variable file path when awaiting capture', () => {
+    const letNode = createLetNode('l1', 'tasks', { type: 'prompt', text: 'List next steps' });
+    const spec = createFlowSpec('test', [letNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+    const output = renderFlow(state);
+    expect(output).toContain(
+      '[Capture active: write response to .prompt-language/vars/tasks using Write tool]',
+    );
+  });
+
+  it('does not show active-capture reminder when capture is not awaiting', () => {
+    const letNode = createLetNode('l1', 'tasks', { type: 'prompt', text: 'List next steps' });
+    const spec = createFlowSpec('test', [letNode]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'running',
+    });
+    const output = renderFlow(state);
+    expect(output).not.toContain('[Capture active: write response to .prompt-language/vars/');
+  });
+});
+
 // Coverage: formatGateDiagnostic stdout fallback (H-DX-004)
 describe('renderFlow — formatGateDiagnostic stdout fallback', () => {
   it('shows stdout when stderr is empty', () => {

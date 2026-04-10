@@ -2,7 +2,7 @@
 
 <!-- cspell:ignore jkfn lmep dekn folr idbc jstc syg2 yd9w ik3n g6pl g58 n6gr q72l ln6k rg6v uqe s6zz u0k 8u0k 2j9v 0ovo -->
 
-This page tracks notable features in `.beads` and records what has shipped versus what is still planned.
+This page is the public status boundary for notable `.beads` work. It records what has shipped, what is active WIP, and what is still exploratory.
 
 Use it to keep three things separate:
 
@@ -10,7 +10,7 @@ Use it to keep three things separate:
 - **Tracked next**: open backlog items with clear product value, but not implemented
 - **Exploratory**: credible ideas that may change substantially or never ship
 
-For feature-by-feature proposed syntax and behavior, see [WIP Features](wip/index.md).
+For feature-by-feature proposed syntax and behavior, see [WIP Features](wip/index.md). Future-facing detail belongs there, not in the shipped reference.
 
 If a keyword or command is **not** documented in the [Language Reference](reference/index.md), treat it as **not available today**.
 
@@ -40,29 +40,29 @@ The runtime already ships:
 - VS Code extension (basic syntax highlighting in `vscode-extension/`)
 - GitHub Actions integration (`action/action.yml` — `45ck/prompt-language-action`)
 
-## Tracked next
+## WIP: tracked next
 
 These are open `.beads` items that fit the current product direction and are easy for users to understand.
 
-| Feature                                            | Status               | Current workaround                                         | Beads issue            |
-| -------------------------------------------------- | -------------------- | ---------------------------------------------------------- | ---------------------- |
-| Flow registry and `.flow` run/validate conventions | Tracked, not shipped | Store flow files manually and invoke them with `claude -p` | `prompt-language-yd9w` |
-| MCP server exposing flow state to other AI clients | Tracked, not shipped | Inspect `.prompt-language/session-state.json` directly     | `prompt-language-folr` |
+| Feature                                            | Status            | Current workaround                                         | Beads issue            |
+| -------------------------------------------------- | ----------------- | ---------------------------------------------------------- | ---------------------- |
+| Flow registry and `.flow` run/validate conventions | WIP, tracked next | Store flow files manually and invoke them with `claude -p` | `prompt-language-yd9w` |
+| MCP server exposing flow state to other AI clients | WIP, tracked next | Inspect `.prompt-language/session-state.json` directly     | `prompt-language-folr` |
 
-## Platform and DX roadmap
+## WIP: platform and DX roadmap
 
 These are substantial product improvements that are not yet fully shipped.
 
-| Feature                                                                | Status            | Notes                                                                                              | Beads issue               |
-| ---------------------------------------------------------------------- | ----------------- | -------------------------------------------------------------------------------------------------- | ------------------------- |
-| Context-adaptive rendering program                                     | Planned           | Canonical renderer, compact mode, fallback, and eval evidence remain staged follow-up work         | `prompt-language-0ovo`    |
-| Headless OpenCode flow runner                                          | Partially shipped | `run/ci --runner opencode` exists for headless prompt turns; default Claude hook loop stays intact | `prompt-language-9uqe.15` |
-| Full harness abstraction for spawned sessions and runner resolution    | Planned           | Claude `spawn`/`await`, named-agent defaults, and broader runner config are still open             | `prompt-language-9uqe.4`  |
-| Language server (LSP) for editor-agnostic autocomplete and diagnostics | Planned           | Depends on extension groundwork                                                                    | `prompt-language-idbc`    |
-| Web playground for browser-based flow authoring and dry-run simulation | Planned           | Good onboarding and docs surface                                                                   | `prompt-language-528q`    |
-| Workspace-aware monorepo orchestration                                 | Planned           | Would build on `spawn` plus package discovery                                                      | `prompt-language-ik3n`    |
+| Feature                                                                | Status       | Notes                                                                                              | Beads issue               |
+| ---------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------- | ------------------------- |
+| Context-adaptive rendering program                                     | WIP, planned | Canonical renderer, compact mode, fallback, and eval evidence remain staged follow-up work         | `prompt-language-0ovo`    |
+| Headless OpenCode flow runner                                          | WIP, partial | `run/ci --runner opencode` exists for headless prompt turns; default Claude hook loop stays intact | `prompt-language-9uqe.15` |
+| Full harness abstraction for spawned sessions and runner resolution    | WIP, planned | Claude `spawn`/`await`, named-agent defaults, and broader runner config are still open             | `prompt-language-9uqe.4`  |
+| Language server (LSP) for editor-agnostic autocomplete and diagnostics | WIP, planned | Depends on extension groundwork                                                                    | `prompt-language-idbc`    |
+| Web playground for browser-based flow authoring and dry-run simulation | WIP, planned | Good onboarding and docs surface                                                                   | `prompt-language-528q`    |
+| Workspace-aware monorepo orchestration                                 | WIP, planned | Would build on `spawn` plus package discovery                                                      | `prompt-language-ik3n`    |
 
-## Exploratory orchestration ideas
+## WIP: exploratory orchestration ideas
 
 These are interesting, but they are a step beyond the current core runtime and should not be described like committed syntax.
 
@@ -76,8 +76,9 @@ For the broader thesis — prompt language as a primary engineering surface — 
 
 To keep the docs honest:
 
-- The [Language Reference](reference/index.md) documents **only shipped features**
-- This roadmap documents **tracked but unavailable features**
+- The [README](../README.md) and [Language Reference](reference/index.md) document **only shipped features**
+- This roadmap summarizes **tracked WIP, partial delivery, and exploratory items**
+- Detailed future-facing behavior belongs in [WIP Features](wip/index.md), not the shipped reference
 - Research docs may discuss ideas, but they are **not product guarantees**
 
 That keeps "what exists" separate from "what might exist next."

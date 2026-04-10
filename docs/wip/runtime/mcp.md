@@ -1,10 +1,16 @@
 # MCP Server (WIP)
 
-> **WIP: not implemented yet.** This page describes intended behavior, not a released package.
+> **WIP: partial in-repo support exists, but the public MCP product surface described here is not a stable shipped contract yet.** The repo contains an MCP server module and entrypoint, but the external-client packaging and supported surface remain tracked work.
 
 ## Goal
 
 Expose prompt-language flow state to any MCP-capable AI client.
+
+## Current state
+
+- the repo contains MCP server implementation work and a checked-in entrypoint
+- the public docs do not yet treat this as a supported, finished cross-client integration surface
+- the roadmap still tracks the broader MCP product surface as WIP rather than shipped
 
 ## Intended surface
 

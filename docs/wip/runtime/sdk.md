@@ -1,6 +1,10 @@
 # Node.js SDK
 
-## Goal
+> **Status: shipped.** The public SDK now lives in the shipped docs set. This page remains under `docs/wip/` only as transitional context.
+
+See [SDK Reference](../../reference/sdk.md) for the current contract and [README](../../../README.md) for the install-time overview.
+
+## Historical goal
 
 Expose prompt-language's core application layer as a stable programmatic SDK.
 
@@ -22,4 +26,4 @@ import {
 - stable TypeScript types for the public surface
 - hook entry points reuse the same exported functions internally
 
-See the SDK section in the [README](../../../README.md) for the current import path and example usage.
+The live contract is now documented in [SDK Reference](../../reference/sdk.md).

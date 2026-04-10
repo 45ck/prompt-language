@@ -2,28 +2,38 @@
 
 # WIP Features
 
-> **Most features listed here have shipped.** The [Language Reference](../reference/index.md) is the authoritative source for what is available today. The WIP area is now grouped by folder so design history, active proposals, and imported planning packs are easier to browse.
+> **This section is for future-facing work, imported planning packs, and design history.** It is not the source of truth for shipped behavior. The [Language Reference](../reference/index.md), [README](../../README.md), and [Roadmap](../roadmap.md) define what exists today and what is merely tracked next.
 
 - If a feature is in the [Language Reference](../reference/index.md), it is shipped
-- If a feature is only in this section, it is **WIP** and **not available today**
+- If a page in this section describes something that has since shipped, treat it as design history unless it is explicitly called out as an active proposal extension
 - For backlog status and prioritization, see the [Roadmap](../roadmap.md)
 
-## Folder map
+## How WIP is organized
+
+### Active proposals
+
+These folders should be read as candidate future work, not as available product surface:
 
 | Folder                            | Purpose                                                                                       |
 | --------------------------------- | --------------------------------------------------------------------------------------------- |
-| [history/](history/index.md)      | Design-history pages for features that already shipped and now live in the Language Reference |
-| [runtime/](runtime/index.md)      | Active runtime and integration proposals that are not shipped yet                             |
-| [tooling/](tooling/index.md)      | Active tooling and ecosystem proposals such as evals, editor support, and playground work     |
+| [runtime/](runtime/index.md)      | Unshipped runtime and integration proposals, plus a small amount of shipped context           |
+| [tooling/](tooling/index.md)      | Tooling proposals, imported tooling packs, and shipped tooling context that is marked as such |
 | [memory/](memory/index.md)        | Memory, knowledge, retrieval, and checkpoint planning docs                                    |
 | [artifacts/](artifacts/README.md) | Artifact packages, review surfaces, and manifest/runtime proposal docs                        |
-| [reviews/](reviews/index.md)      | Imported review and plan packs used for backlog shaping and positioning follow-ups            |
-| [swarm/](swarm/README.md)         | Imported swarm design pack with its own phased proposal set                                   |
-| [vNext/](vnext/README.md)         | Imported vNext architecture/spec pack                                                         |
 
-## Shipped design history
+### Imported packs
 
-These pages are still useful for rationale and timing, but the shipped behavior lives in the reference:
+These folders are imported design or planning packs. They may inform the roadmap, but they are not commitments:
+
+| Folder                       | Purpose                                                                           |
+| ---------------------------- | --------------------------------------------------------------------------------- |
+| [reviews/](reviews/index.md) | Imported review and plan packs used for backlog shaping and follow-up positioning |
+| [swarm/](swarm/README.md)    | Imported swarm design pack with its own phased proposal set                       |
+| [vnext/](vnext/README.md)    | Imported vNext architecture/spec pack with ADRs, specs, and delivery planning     |
+
+### Design history
+
+These pages are retained for rationale, migration notes, and historical context. The shipped behavior lives elsewhere:
 
 - [History Index](history/index.md)
 - [remember](../reference/remember.md) — persistent memory store and `memory:` prefetch
@@ -32,11 +42,11 @@ These pages are still useful for rationale and timing, but the shipped behavior 
 
 ## Active proposal sets
 
-| Area                          | Entry point                          | Focus                                                        |
-| ----------------------------- | ------------------------------------ | ------------------------------------------------------------ |
-| Runtime and integrations      | [runtime/index.md](runtime/index.md) | SDK, registry, MCP, workspace orchestration, routing         |
-| Tooling and host integrations | [tooling/index.md](tooling/index.md) | Evals, editor tooling, GitHub Action, playground             |
-| Memory and knowledge planning | [memory/index.md](memory/index.md)   | Memory semantics, Markdown knowledge, retrieval, checkpoints |
+| Area                          | Entry point                          | Focus                                                         |
+| ----------------------------- | ------------------------------------ | ------------------------------------------------------------- |
+| Runtime and integrations      | [runtime/index.md](runtime/index.md) | Registry, MCP, workspace orchestration, and routing proposals |
+| Tooling and host integrations | [tooling/index.md](tooling/index.md) | Evals, editor tooling, imported packs, and playground work    |
+| Memory and knowledge planning | [memory/index.md](memory/index.md)   | Memory semantics, Markdown knowledge, retrieval, checkpoints  |
 
 ## Imported packs
 

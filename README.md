@@ -13,6 +13,17 @@ It wraps Claude Code in a persistent state machine with verification gates, dete
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![npm downloads](https://img.shields.io/npm/dm/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 
+## Status guide
+
+Use the public docs with these boundaries:
+
+- **Shipped today**: this README plus the [Language Reference](docs/reference/index.md)
+- **Tracked next**: the [Roadmap](docs/roadmap.md)
+- **WIP / proposed**: [WIP Features](docs/wip/index.md)
+- **Evidence and research**: [Evaluation](docs/evaluation/index.md) and [Strategy](docs/strategy/index.md)
+
+If a feature is not documented in the shipped docs, treat it as unavailable today.
+
 ## What it is
 
 Without the runtime, the engineer is the runtime: keep track of the task, restate the right context, decide what happens next, rerun checks, and reject premature "done." The runtime moves that supervision loop into the terminal.
@@ -44,11 +55,10 @@ Use the runtime in this order:
 1. Install it with `npx @45ck/prompt-language` or `npx @45ck/prompt-language codex-install`
 2. Validate a flow with `npx @45ck/prompt-language validate`
 3. Run it with `claude -p` or the CLI `run` command
-   For the OpenCode headless path on this workstation, prefer `run --runner opencode --model opencode/gpt-5-nano`
 4. Smoke-test any hook, parsing, advancement, or state-transition change with `npm run eval:smoke`
 5. Recover with `/flow:status`, `/flow:reset`, or the troubleshooting guide when state gets stuck
 
-The recovery path is documented in [Troubleshooting](docs/operations/troubleshooting.md). The parity bar and smoke limitations are documented in [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
+The recovery path is documented in [Troubleshooting](docs/operations/troubleshooting.md). For runner status beyond the default Claude path, see the [Roadmap](docs/roadmap.md) and [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
 
 ## The problem
 
@@ -124,19 +134,7 @@ To install the Codex scaffold locally instead:
 npx @45ck/prompt-language codex-install
 ```
 
-For headless OpenCode execution on this workstation:
-
-```bash
-npx @45ck/prompt-language run --runner opencode --model opencode/gpt-5-nano my.flow
-```
-
-This path is intended for non-interactive flow execution. Claude hook parity remains the primary runtime surface.
-
-Current OpenCode validation on this workspace as of April 10, 2026:
-
-- Hosted baseline: `opencode/gpt-5-nano` passed smoke test `A` (`Context file relay`) through `prompt-language ci --runner opencode`.
-- Tool-driven headless execution is still runner- and model-dependent, so lower-cost reruns remain staged rather than parity-ready.
-- Local Gemma 4 remains a bounded evaluation note in [docs/evaluation/opencode-gemma-plan.md](docs/evaluation/opencode-gemma-plan.md); do not treat it as required setup for this workstation.
+The default shipped runtime surface is the Claude path above. Additional runner work, including partial headless OpenCode support, is tracked in the [Roadmap](docs/roadmap.md) and measured in the [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
 
 ## SDK
 
@@ -254,11 +252,11 @@ done when:
 
 Supported gate forms also include direct equality checks such as `tests_pass == true` and negation such as `not tests_pass`.
 
-## Complete feature surface
+## Shipped feature surface
 
-Everything in this section is part of the shipped runtime. For tracked but unavailable features, see the [Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/roadmap.md).
+Everything in this section is part of the shipped runtime today. For tracked but unavailable features, see the [Roadmap](docs/roadmap.md). For proposed syntax or planning artifacts, see [WIP Features](docs/wip/index.md).
 
-The README should not make this look smaller than it is. The runtime surface includes:
+The public runtime surface includes:
 
 ### Program structure
 
@@ -525,9 +523,11 @@ Verification is where the repo has the clearest measured wins. State, variables,
 
 Full methodology, hypothesis-by-hypothesis results, and latency data: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md)**
 
-## Long-term thesis
+## Research direction
 
-The runtime is positioned today as a control-flow layer with verification gates. That is honest — gates are the clearest proven advantage (15/45 hypothesis wins, all from gates catching what prompts miss).
+This section is not the shipped product contract. It describes the longer-term research direction behind the project. For what is available today, rely on this README, the [Language Reference](docs/reference/index.md), and the [Roadmap](docs/roadmap.md).
+
+The runtime is positioned today as a control-flow layer with verification gates. That is the current public claim: gates are the clearest proven advantage (15/45 hypothesis wins, all from gates catching what prompts miss).
 
 But the longer-term ambition is bigger: **prompt language as the primary engineering surface for bounded software systems.**
 
@@ -549,7 +549,7 @@ In this model, engineers write goals, constraints, workflows, verification gates
 
 These are falsifiable hypotheses, not marketing claims. The research plan includes concrete experiments with numeric success criteria and explicit conditions for rejection.
 
-Read the full argument: **[Thesis](https://github.com/45ck/prompt-language/blob/main/docs/strategy/thesis.md)** · Research plan: **[Thesis Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/strategy/thesis-roadmap.md)** · Current evidence: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md)**
+Read the full argument: **[Thesis](docs/strategy/thesis.md)** · Research plan: **[Thesis Roadmap](docs/strategy/thesis-roadmap.md)** · Current evidence: **[Evaluation Results](docs/evaluation/eval-analysis.md)**
 
 ## Monitoring
 
@@ -574,19 +574,26 @@ Shows the full flow state updating in real time — useful for watching long-run
 
 ## Learn more
 
-- **[Getting Started](https://github.com/45ck/prompt-language/blob/main/docs/guides/getting-started.md)** — see it work in 2 minutes
-- **[Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/roadmap.md)** — tracked but not yet shipped features from `.beads`
-- **[WIP Features](https://github.com/45ck/prompt-language/blob/main/docs/wip/index.md)** — grouped WIP hub for active proposals, planning packs, and shipped design history
-- **[Language Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/index.md)** — per-feature reference pages for `ask`, `if`, `spawn`, `await`, `let/var`, `done when:`, and more, including [approve](https://github.com/45ck/prompt-language/blob/main/docs/reference/approve.md), [review](https://github.com/45ck/prompt-language/blob/main/docs/reference/review.md), [race](https://github.com/45ck/prompt-language/blob/main/docs/reference/race.md), [foreach-spawn](https://github.com/45ck/prompt-language/blob/main/docs/reference/foreach-spawn.md), [remember](https://github.com/45ck/prompt-language/blob/main/docs/reference/remember.md), [send/receive](https://github.com/45ck/prompt-language/blob/main/docs/reference/send-receive.md), [import](https://github.com/45ck/prompt-language/blob/main/docs/reference/import.md), and [prompt libraries](https://github.com/45ck/prompt-language/blob/main/docs/reference/prompt-libraries.md)
-- **[How the runtime works](https://github.com/45ck/prompt-language/blob/main/docs/guides/guide.md)** — how it works, variable lifecycle, gate trust model
-- **[DSL Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/dsl-reference.md)** — complete syntax specification
-- **[Troubleshooting](https://github.com/45ck/prompt-language/blob/main/docs/operations/troubleshooting.md)** — debugging stuck flows, known issues
-- **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md)** — A/B testing methodology and results
-- **[Thesis](https://github.com/45ck/prompt-language/blob/main/docs/strategy/thesis.md)** — long-term thesis and research agenda
-- **[Thesis Roadmap](https://github.com/45ck/prompt-language/blob/main/docs/strategy/thesis-roadmap.md)** — concrete experiments to prove or disprove the thesis
-- **[CLI Reference](https://github.com/45ck/prompt-language/blob/main/docs/reference/cli-reference.md)** — all CLI commands and slash commands
-- **[Use Cases](https://github.com/45ck/prompt-language/blob/main/docs/guides/use-cases.md)** — when the runtime wins, anti-patterns, quick recipes
-- **[Documentation Index](https://github.com/45ck/prompt-language/blob/main/docs/index.md)** — full documentation hub
+### Use today
+
+- **[Getting Started](docs/guides/getting-started.md)** — install the runtime and run the first shipped flow
+- **[Language Reference](docs/reference/index.md)** — shipped syntax and runtime surface
+- **[CLI Reference](docs/reference/cli-reference.md)** — CLI commands and slash commands
+- **[How the runtime works](docs/guides/guide.md)** — variable lifecycle, gate trust model, and runtime mechanics
+- **[Troubleshooting](docs/operations/troubleshooting.md)** — recovery and support paths
+- **[Documentation Index](docs/index.md)** — the full doc map
+
+### Tracked and proposed
+
+- **[Roadmap](docs/roadmap.md)** — tracked but not yet shipped features from `.beads`
+- **[WIP Features](docs/wip/index.md)** — proposal hub, planning packs, and other future-facing material
+
+### Evidence and research
+
+- **[Evaluation Results](docs/evaluation/eval-analysis.md)** — A/B methodology and results
+- **[Thesis](docs/strategy/thesis.md)** — long-term research thesis
+- **[Thesis Roadmap](docs/strategy/thesis-roadmap.md)** — experiments to prove or disprove the thesis
+- **[Use Cases](docs/guides/use-cases.md)** — where the runtime helps and where it does not
 
 ## Contributing
 

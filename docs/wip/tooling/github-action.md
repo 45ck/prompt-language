@@ -1,12 +1,12 @@
-# GitHub Action (WIP)
+# GitHub Action
 
-> **Status: shipped.** The action is available at `45ck/prompt-language-action`. See `action/action.yml` in the project root.
+> **Status: shipped integration, retained here as transition context.** The action is available at `45ck/prompt-language-action`. This page stays under `docs/wip/` because the repo does not yet have a dedicated shipped integrations section.
 
 ## Goal
 
 Make prompt-language usable in CI through a dedicated GitHub Action wrapper.
 
-## Intended workflow
+## Available workflow
 
 ```yaml
 - uses: 45ck/prompt-language-action@v1
@@ -15,12 +15,13 @@ Make prompt-language usable in CI through a dedicated GitHub Action wrapper.
     api-key: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-## Intended behavior
+## Current behavior
 
 - wraps the existing headless CLI path
 - surfaces pass or fail as a normal GitHub Action result
 - uploads gate results and audit output as artifacts
 
-## Current workaround
+## Related
 
-Call the CLI directly from workflow steps.
+- [CLI Reference](../../reference/cli-reference.md)
+- [Roadmap](../../roadmap.md)

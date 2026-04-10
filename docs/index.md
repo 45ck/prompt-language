@@ -1,6 +1,15 @@
 # Documentation
 
-prompt-language is a control-flow runtime for Claude Code. The docs are organized by purpose so you can tell, from the directory structure alone, whether a page is a tutorial, shipped reference, design rationale, operational runbook, evaluation artifact, or future-facing proposal.
+prompt-language is a control-flow runtime for Claude Code. The docs are organized so the entry surface tells you what is shipped, what is evidence, and what is only tracked or proposed.
+
+## How to read this docs set
+
+- **Shipped today**: [guides/](guides/index.md), [reference/](reference/index.md), [examples/](examples/index.md), and [operations/](operations/index.md)
+- **Status boundary**: [roadmap.md](roadmap.md) summarizes tracked but unavailable work
+- **WIP / proposed**: [wip/](wip/index.md) holds future-facing specs, planning packs, and active design work
+- **Evidence and research**: [evaluation/](evaluation/index.md), [strategy/](strategy/index.md), and [research/](research/README.md)
+
+If a feature is not described in the shipped docs, treat it as unavailable today.
 
 ## Folder map
 
@@ -12,12 +21,12 @@ prompt-language is a control-flow runtime for Claude Code. The docs are organize
 | [examples/](examples/index.md)     | Worked examples and the showcase catalog                                      |
 | [evaluation/](evaluation/index.md) | Evidence, parity matrices, hypothesis sets, and QA gap analysis               |
 | [operations/](operations/index.md) | Troubleshooting and smoke/validation runbooks                                 |
-| [strategy/](strategy/index.md)     | Positioning, thesis, and long-term research direction                         |
+| [strategy/](strategy/index.md)     | Positioning, thesis, and long-term research direction, not shipped guarantees |
 | [research/](research/README.md)    | External research syntheses and source archive                                |
 | [wip/](wip/index.md)               | Proposed and imported future work that is not shipped today                   |
-| [roadmap.md](roadmap.md)           | Shipped-vs-tracked product roadmap backed by `.beads`                         |
+| [roadmap.md](roadmap.md)           | Public shipped-vs-WIP boundary backed by `.beads`                             |
 
-## Start here
+## Start here for shipped usage
 
 | Doc                                          | What you'll get                                                                        |
 | -------------------------------------------- | -------------------------------------------------------------------------------------- |
@@ -25,17 +34,23 @@ prompt-language is a control-flow runtime for Claude Code. The docs are organize
 | [Language Guide](guides/language-guide.md)   | A high-level walkthrough of the runtime model and the shipped language surface         |
 | [How It Works](guides/guide.md)              | Hook lifecycle, variable state, gate trust model, and runtime mechanics                |
 
-## Core entry points
+## Shipped entry points
 
 | Area              | Entry point                                | Contents                                                              |
 | ----------------- | ------------------------------------------ | --------------------------------------------------------------------- |
 | Shipped reference | [reference/index.md](reference/index.md)   | Keyword-by-keyword language reference plus CLI and DSL summaries      |
 | Examples          | [examples/index.md](examples/index.md)     | Worked flows for gates, loops, parallelism, memory, and composition   |
 | Operations        | [operations/index.md](operations/index.md) | Recovery paths, smoke testing, and support expectations               |
-| Evaluation        | [evaluation/index.md](evaluation/index.md) | Comparative results, parity matrix, and QA analysis                   |
 | Design            | [design/index.md](design/index.md)         | Architecture boundaries, design decisions, and canonical design notes |
-| Strategy          | [strategy/index.md](strategy/index.md)     | Positioning, thesis, and experiment roadmap                           |
-| Future work       | [wip/index.md](wip/index.md)               | Proposed features and imported planning packs                         |
+
+## Evidence and future-facing entry points
+
+| Area            | Entry point                                | Contents                                                              |
+| --------------- | ------------------------------------------ | --------------------------------------------------------------------- |
+| Evaluation      | [evaluation/index.md](evaluation/index.md) | Comparative results, parity matrix, and QA analysis                   |
+| Strategy        | [strategy/index.md](strategy/index.md)     | Positioning, thesis, and experiment roadmap                           |
+| Future work     | [wip/index.md](wip/index.md)               | Proposed features and imported planning packs                         |
+| Status tracking | [roadmap.md](roadmap.md)                   | Public summary of tracked WIP, partial delivery, and exploratory work |
 
 ## Research and design anchors
 

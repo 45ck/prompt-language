@@ -1,6 +1,6 @@
 # VS Code Extension
 
-> **Status: basic package available.** Syntax highlighting is implemented. Diagnostics and autocomplete are future work.
+> **Status: basic package shipped; richer editor tooling remains WIP.** This page remains under `docs/wip/` because the shipped syntax-highlighting package and the still-planned diagnostics/autocomplete work are described together.
 
 ## Goal
 

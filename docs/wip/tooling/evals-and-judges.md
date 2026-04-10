@@ -1,8 +1,27 @@
 # Evals and Judges (WIP)
 
-> **WIP: partially implemented.** Named `rubric` and `judge` declarations, `review strict`, typed judge results, the dataset bank, the `prompt-language eval` runner, and the current parity docs all ship now. The broader first-class eval DSL described here is still proposed.
+> **WIP: extension on top of a shipped v1 surface.** Named `rubric` and `judge` declarations, judge-backed `review strict`, typed judge results, the checked-in dataset bank, and the CLI `prompt-language eval` runner are already real. This page is about the broader future-facing eval layer beyond that v1 slice.
 >
-> For the accepted first implementation boundary, see [docs/design/evaluation-stack-v1.md](../../design/evaluation-stack-v1.md). For the shipped runner and current evidence, see [docs/evaluation/dataset-bank.md](../../evaluation/dataset-bank.md), [docs/evaluation/eval-test-matrix.md](../../evaluation/eval-test-matrix.md), and [docs/evaluation/what-works-now.md](../../evaluation/what-works-now.md).
+> For the shipped contract, see [Evals and Judges V1](../../reference/evals-and-judges-v1.md). For the accepted first implementation boundary, see [docs/design/evaluation-stack-v1.md](../../design/evaluation-stack-v1.md). For the shipped runner and current evidence, see [docs/evaluation/dataset-bank.md](../../evaluation/dataset-bank.md), [docs/evaluation/eval-test-matrix.md](../../evaluation/eval-test-matrix.md), and [docs/evaluation/what-works-now.md](../../evaluation/what-works-now.md).
+
+## Shipped v1 today
+
+These pieces are already part of the current runtime or CLI surface:
+
+- top-level `rubric` declarations
+- top-level `judge` declarations
+- `review strict using judge "name"`
+- typed `_review_result.*` capture
+- the CLI `prompt-language eval` runner over checked-in JSONL datasets
+
+## Still proposed here
+
+This page remains WIP because it goes beyond the shipped v1 slice:
+
+- a standalone `eval { ... }` DSL block
+- broader judge kinds and runtime support beyond the current v1 path
+- replay, annotation, and calibration surfaces as first-class product features
+- richer comparison and artifact tooling promoted into the language surface
 
 ## Goal
 
@@ -45,13 +64,13 @@ That is enough to run real experiments, but not enough yet to make evaluation a 
 
 ## Proposed surface
 
-| Construct              | Role                                  | Notes                                                    |
-| ---------------------- | ------------------------------------- | -------------------------------------------------------- |
-| `rubric`               | Reusable scoring schema               | Criterion-level, structured, low-precision outputs       |
-| `judge`                | Reusable evaluator definition         | Pure by default; code, model, or human                   |
-| `eval`                 | Dataset and experiment runner         | Owns cases, repeats, metrics, baselines, and comparison  |
-| `review strict`        | Repair loop with fail-closed behavior | Reuses named judges instead of embedding evaluator logic |
-| trace / replay tooling | Audit and reproducibility support     | Better as tooling and reports than ordinary flow control |
+| Construct              | Role                                  | Notes                                                                         |
+| ---------------------- | ------------------------------------- | ----------------------------------------------------------------------------- |
+| `rubric`               | Reusable scoring schema               | Shipped in v1 as declaration syntax; richer semantics may grow later          |
+| `judge`                | Reusable evaluator definition         | Shipped in v1 for review reuse; broader runtime support remains future-facing |
+| `eval`                 | Dataset and experiment runner         | CLI runner ships today; this table covers proposed DSL promotion              |
+| `review strict`        | Repair loop with fail-closed behavior | Shipped in v1; broader evaluator layering remains WIP                         |
+| trace / replay tooling | Audit and reproducibility support     | Better as tooling and reports than ordinary flow control                      |
 
 ## Non-goals
 
@@ -283,34 +302,34 @@ prompt-language eval annotate run_2026_04_09_001 --rubric bugfix_quality
 
 ## Implementation direction
 
-### Phase 1: extract and type evaluator results
+### Phase 1: landed v1 runtime slice
 
 - define a stable internal judge-result shape
 - extract reusable evaluator logic from `review`
 - add `review strict`
 - support named `rubric` and `judge` definitions in parsing and rendering
 
-### Phase 2: ship the eval runner
+### Phase 2: landed v1 CLI runner
 
-- add `eval` parsing and execution
+- add `prompt-language eval` execution over checked-in datasets
 - support datasets, repeats, metrics, and baseline files
 - wire in existing `scripts/eval/` harness concepts instead of replacing them wholesale
 - keep checks deterministic and cheap by default
 
-### Phase 3: add comparisons and artifacts
+### Phase 3: still proposed
 
 - pairwise candidate comparison
 - trace and artifact persistence
 - replay support
 - report generation suitable for thesis experiments and regression tracking
 
-### Phase 4: add human calibration
+### Phase 4: still proposed
 
 - human annotation and approval-backed scoring
 - judge audit trails
 - calibration workflows that compare model judges against human scorecards
 
-### Phase 5: add trajectory-aware judging where justified
+### Phase 5: still proposed
 
 - policy compliance
 - tool selection quality

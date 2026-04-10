@@ -2,7 +2,28 @@
 
 This section documents prompt-language as a language and runtime, not as a tutorial. Use it when you need exact syntax, semantics, defaults, and edge cases for a specific feature.
 
-If a keyword or command is not documented here, treat it as not shipped yet. Tracked future work lives on the [Roadmap](../roadmap.md).
+The reference is the contract for shipped behavior. If a keyword or command is not documented here, treat it as not shipped yet. Tracked future work lives on the [Roadmap](../roadmap.md), proposed syntax and design history live in [WIP Features](../wip/index.md), and the repo-wide interpretation rules live in [Documentation Governance](../documentation-governance.md).
+
+## Reference boundaries
+
+| If you need...                     | Go here                                   | Why                                                             |
+| ---------------------------------- | ----------------------------------------- | --------------------------------------------------------------- |
+| Learn the runtime from scratch     | [Guides](../guides/index.md)              | Tutorials and conceptual walkthroughs                           |
+| Check shipped syntax and semantics | This section                              | Authoritative language and runtime contract                     |
+| Check CLI commands and flags       | [CLI Reference](cli-reference.md)         | Exact install, run, validate, eval, and utility command surface |
+| See worked examples                | [Examples](../examples/index.md)          | Runnable patterns and end-to-end flow snippets                  |
+| Check backlog status               | [Roadmap](../roadmap.md)                  | `.beads`-backed shipped, tracked, and exploratory status        |
+| Inspect unshipped proposals        | [WIP Features](../wip/index.md)           | Not available today                                             |
+| Understand product direction       | [Strategy](../strategy/index.md)          | Positioning, thesis, and long-range bets                        |
+| Review the evidence base           | [Research Reports](../research/README.md) | External-source syntheses behind the direction                  |
+
+## Runtime, SDK, and CLI
+
+| Page                                          | Covers                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------ |
+| [CLI Reference](cli-reference.md)             | Installation, `run`/`ci`/`eval`, validation, and utility tools     |
+| [SDK](sdk.md)                                 | Stable programmatic parse/session/advance/gate/render API          |
+| [Evals and Judges V1](evals-and-judges-v1.md) | Shipped v1 judge declarations, review integration, and eval runner |
 
 ## Program structure
 

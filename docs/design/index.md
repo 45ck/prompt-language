@@ -1,8 +1,16 @@
 # Design
 
-Architecture boundaries, canonical design notes, and superseded design history.
+`docs/design/` is the canonical home for accepted architecture boundaries and long-lived design decisions that still shape the codebase.
 
-## Current anchors
+Use this section for current design rationale. Do not use it as a backlog, feature-status board, or archive for every proposal revision.
+
+For the repo-wide docs cleanup:
+
+- Put planned or in-flight feature proposals under `docs/wip/` and mark them clearly as WIP or proposed.
+- Move shipped behavior into the reference and other user-facing docs; keep a design note here only when the design rationale remains important.
+- Keep superseded notes separate from canonical design docs so readers can distinguish current guidance from history.
+
+## Canonical design docs
 
 | Doc                                                                            | Focus                                                                                |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
@@ -16,7 +24,7 @@ Architecture boundaries, canonical design notes, and superseded design history.
 
 ## Historical and superseded notes
 
-| Doc                                          | Status                                      |
-| -------------------------------------------- | ------------------------------------------- |
-| [foreach-construct.md](foreach-construct.md) | Superseded by [foreach.md](foreach.md)      |
-| [output-parsing.md](output-parsing.md)       | Superseded design note retained for context |
+| Doc                                          | Status                                                          |
+| -------------------------------------------- | --------------------------------------------------------------- |
+| [foreach-construct.md](foreach-construct.md) | Superseded by the canonical [foreach.md](foreach.md) design doc |
+| [output-parsing.md](output-parsing.md)       | Superseded note retained only for design history and context    |

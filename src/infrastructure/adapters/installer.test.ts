@@ -93,7 +93,7 @@ describe('Installer — install verification', () => {
 
   it('copies all required directories to plugin location', async () => {
     const pluginsDir = cachePath(fakeHome, version);
-    const expectedDirs = ['dist', 'hooks', 'skills', 'commands', '.claude-plugin', 'bin'];
+    const expectedDirs = ['dist', 'hooks', 'skills', 'commands', 'agents', '.claude-plugin', 'bin'];
 
     for (const dir of expectedDirs) {
       const exists = await dirExists(join(pluginsDir, dir));

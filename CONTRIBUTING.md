@@ -84,6 +84,9 @@ commands/
   flow-run.md       /flow:run command — manual single-step flow advance
   flow-status.md    /flow:status command — inspect active flow state
   flow-reset.md     /flow:reset command — clear active flow state
+
+agents/
+  flow-debug.md     flow debugging specialist (read-only diagnostics for stuck/failed flows)
 ```
 
 ## Creating skills

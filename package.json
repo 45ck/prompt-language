@@ -56,6 +56,7 @@
     "dist/**",
     "skills/**",
     "commands/**",
+    "agents/**",
     "hooks/**",
     ".claude-plugin/**",
     ".codex/**",

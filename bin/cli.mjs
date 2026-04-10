@@ -32,8 +32,16 @@ function pluginsDir(version) {
   return join(CACHE_DIR, 'prompt-language', version);
 }
 
-const DIRS_TO_COPY = ['dist', 'hooks', 'skills', 'commands', '.claude-plugin', 'bin'];
-const DIRS_TO_COPY_CODEX = ['dist', 'skills', '.codex-plugin', '.agents', '.codex', 'bin'];
+const DIRS_TO_COPY = ['dist', 'hooks', 'skills', 'commands', 'agents', '.claude-plugin', 'bin'];
+const DIRS_TO_COPY_CODEX = [
+  'dist',
+  'skills',
+  'agents',
+  '.codex-plugin',
+  '.agents',
+  '.codex',
+  'bin',
+];
 
 async function readPluginVersion() {
   const raw = await fs.readFile(join(ROOT, '.claude-plugin', 'plugin.json'), 'utf8');

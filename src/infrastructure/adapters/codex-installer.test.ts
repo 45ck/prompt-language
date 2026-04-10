@@ -65,7 +65,7 @@ describe('Codex installer — install verification', () => {
 
   it('copies the Codex scaffold directories to the cache location', async () => {
     const pluginsDir = codexCachePath(fakeHome, version);
-    const expectedDirs = ['dist', 'skills', '.codex-plugin', '.agents', '.codex', 'bin'];
+    const expectedDirs = ['dist', 'skills', 'agents', '.codex-plugin', '.agents', '.codex', 'bin'];
 
     for (const dir of expectedDirs) {
       expect(

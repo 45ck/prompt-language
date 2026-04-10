@@ -233,6 +233,16 @@ describe('installed file layout contract', () => {
     }
   });
 
+  describe('agents/ directory', () => {
+    it('agents/ directory exists', () => {
+      expect(existsSync(join(PROJECT_ROOT, 'agents'))).toBe(true);
+    });
+
+    it('agents/flow-debug.md exists', () => {
+      expect(existsSync(join(PROJECT_ROOT, 'agents', 'flow-debug.md'))).toBe(true);
+    });
+  });
+
   it('all hook command dist files exist', () => {
     const hooksFile = readJson('hooks/hooks.json') as {
       hooks: Record<string, { hooks: { command: string }[] }[]>;

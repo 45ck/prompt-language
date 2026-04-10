@@ -44,7 +44,7 @@ describe('render-node-to-dsl', () => {
       createLetNode('l4', 'd', { type: 'run', command: 'git status' }),
       createLetNode('l5', 'e', { type: 'memory', key: 'theme' }, true),
       createLetNode('l6', 'f', { type: 'empty_list' }),
-    ];
+    ] as const;
 
     expect(renderNodeToDsl(cases[0], 0)).toEqual(['let a = "x\\\\\\"y\\nz"']);
     expect(renderNodeToDsl(cases[1], 0)).toEqual(['let b = prompt "Answer?"']);

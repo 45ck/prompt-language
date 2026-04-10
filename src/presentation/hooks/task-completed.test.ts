@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -31,15 +31,14 @@ interface HookResult {
 function runHook(input: string, cwd: string): HookResult {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', 'task-completed.ts');
-  const opts: ExecFileSyncOptionsWithStringEncoding = {
-    input,
-    encoding: 'utf-8',
-    cwd,
-    timeout: HOOK_TEST_TIMEOUT_MS_WIN,
-    stdio: ['pipe', 'pipe', 'pipe'],
-  };
   try {
-    const stdout = execFileSync('npx', ['tsx', scriptPath], opts);
+    const stdout = execSync(`npx tsx "${scriptPath}"`, {
+      input,
+      encoding: 'utf-8',
+      cwd,
+      timeout: HOOK_TEST_TIMEOUT_MS_WIN,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
     return { exitCode: 0, stdout, stderr: '' };
   } catch (error: unknown) {
     const e = error as {

@@ -753,6 +753,10 @@ async function init() {
 
   // Detect project type and generate starter flow
   const pkg = await readJsonSafe(join(cwd, 'package.json'));
+  const hasPyproject = existsSync(join(cwd, 'pyproject.toml'));
+  const hasSetupPy = existsSync(join(cwd, 'setup.py'));
+  const hasGoMod = existsSync(join(cwd, 'go.mod'));
+  const hasCargoToml = existsSync(join(cwd, 'Cargo.toml'));
   let flow = '';
 
   if (pkg?.scripts) {
@@ -776,6 +780,12 @@ async function init() {
     if (gates.length > 0) {
       flow += `\ndone when:\n${gates.join('\n')}\n`;
     }
+  } else if (hasPyproject || hasSetupPy) {
+    flow = `Goal: <describe your goal here>\n\nflow:\n  prompt: Implement the requested changes.\n  run: python -m pytest\n\ndone when:\n  pytest_pass\n`;
+  } else if (hasGoMod) {
+    flow = `Goal: <describe your goal here>\n\nflow:\n  prompt: Implement the requested changes.\n  run: go test ./...\n\ndone when:\n  go_test_pass\n`;
+  } else if (hasCargoToml) {
+    flow = `Goal: <describe your goal here>\n\nflow:\n  prompt: Implement the requested changes.\n  run: cargo test\n\ndone when:\n  cargo_test_pass\n`;
   } else {
     flow = `Goal: <describe your goal here>\n\nflow:\n  prompt: Implement the requested changes.\n  run: echo "done"\n`;
   }

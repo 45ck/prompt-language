@@ -40,7 +40,7 @@ describe('user-prompt-submit hook (integration)', () => {
     expect(result.prompt).toBe('Hello world');
   });
 
-  it('passes through prompt when state file contains corrupted JSON (fail-open)', async () => {
+  it('surfaces PLR-004 when state file contains unrecoverable corrupted JSON', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     await writeFile(join(stateDir, 'session-state.json'), '{{corrupted garbage');
@@ -48,7 +48,9 @@ describe('user-prompt-submit hook (integration)', () => {
     const input = JSON.stringify({ prompt: 'Hello world' });
     const output = runHook(input, tempDir);
     const result = JSON.parse(output);
-    expect(result.prompt).toBe('Hello world');
+    expect(result.prompt).toContain('[prompt-language] PLR-004');
+    expect(result.prompt).toContain('Resume state is corrupted and could not be recovered');
+    expect(result.prompt).toContain('Hello world');
   });
 
   it('injects context when flow state file exists', async () => {

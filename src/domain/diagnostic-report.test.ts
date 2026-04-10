@@ -9,6 +9,7 @@ import {
   PROFILE_DIAGNOSTIC_CODES,
   RUNTIME_DIAGNOSTIC_CODES,
   createRuntimeDiagnostic,
+  createRuntimeSessionDiagnostic,
   createRuntimeWarningDiagnostic,
 } from './diagnostic-report.js';
 
@@ -36,6 +37,7 @@ describe('diagnostic-report', () => {
     expect(DIAGNOSTIC_CODE_RANGES.profile).toBe('PLC');
     expect(PROFILE_DIAGNOSTIC_CODES.unsupportedApprove).toBe('PLC-004');
     expect(PROFILE_DIAGNOSTIC_CODES.missingGatePrerequisite).toBe('PLC-005');
+    expect(RUNTIME_DIAGNOSTIC_CODES.resumeStateCorruption).toBe('PLR-004');
     expect(RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback).toBe('PLR-005');
     expect(RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed).toBe('PLR-006');
     expect(FLOW_OUTCOME_CODES.reviewRejected).toBe('PLO-002');
@@ -86,5 +88,19 @@ describe('diagnostic-report', () => {
     expect(diagnostic.severity).toBe('warning');
     expect(diagnostic.blocksExecution).toBe(false);
     expect(diagnostic.retryable).toBe(true);
+  });
+
+  it('creates blocking session-init runtime diagnostics', () => {
+    const diagnostic = createRuntimeSessionDiagnostic(
+      RUNTIME_DIAGNOSTIC_CODES.resumeStateCorruption,
+      'Resume state is corrupted and could not be recovered from backup.',
+      'Reset the flow state before continuing.',
+    );
+
+    expect(diagnostic.kind).toBe('runtime');
+    expect(diagnostic.phase).toBe('session-init');
+    expect(diagnostic.severity).toBe('error');
+    expect(diagnostic.blocksExecution).toBe(true);
+    expect(diagnostic.retryable).toBe(false);
   });
 });

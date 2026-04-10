@@ -164,7 +164,7 @@ async function phaseA() {
     await teardown();
   }
 
-  // Case 5: Corrupted state file fails open
+  // Case 5: Corrupted state file surfaces PLR-004
   await setup();
   try {
     const stateDir = join(tempDir, '.prompt-language');
@@ -175,12 +175,14 @@ async function phaseA() {
     const output = runHook(input, tempDir);
     const result = JSON.parse(output);
     assert(
-      'A5: Corrupted state fails open',
-      result.prompt === 'Hello world',
-      result.prompt === 'Hello world' ? 'passed through' : `got: ${result.prompt.slice(0, 50)}...`,
+      'A5: Corrupted state surfaces PLR-004',
+      result.prompt.includes('[prompt-language] PLR-004') && result.prompt.includes('Hello world'),
+      result.prompt.includes('[prompt-language] PLR-004')
+        ? 'PLR-004 surfaced'
+        : `got: ${result.prompt.slice(0, 80)}...`,
     );
   } catch (err) {
-    assert('A5: Corrupted state fails open', false, err.message);
+    assert('A5: Corrupted state surfaces PLR-004', false, err.message);
   } finally {
     await teardown();
   }

@@ -119,13 +119,19 @@ describe('session-start hook (integration)', () => {
     expect(result.stderr).not.toContain('[PL]');
   });
 
-  it('exits 0 on corrupted state (fail-open)', async () => {
+  it('surfaces PLR-004 when resume state cannot be recovered', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     await writeFile(join(stateDir, 'session-state.json'), '{{broken json');
 
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain('[prompt-language] PLR-004');
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain('PLR-004');
+    expect(parsed.additionalContext).toContain(
+      'Resume state is corrupted and could not be recovered',
+    );
   });
 
   it('warns when state version is newer than expected (H-INT-009)', async () => {

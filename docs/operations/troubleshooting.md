@@ -67,7 +67,7 @@ cat .prompt-language/session-state.json
 
 **Common causes**:
 
-- The state file is corrupted or contains invalid JSON. The plugin fails open for safety — if it can't read the state, it allows Claude to stop without gate enforcement.
+- The state file is corrupted or contains invalid JSON and backup recovery also failed. The plugin now blocks resume with `PLR-004` so you can reset the flow instead of silently running without enforcement.
 - The prompt wasn't parsed as DSL. The `done when:` syntax requires the exact format — `done when:` on its own line, followed by indented predicates.
 - The plugin isn't installed. Run `npx @45ck/prompt-language status` to check.
 

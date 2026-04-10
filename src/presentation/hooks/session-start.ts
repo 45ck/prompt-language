@@ -19,6 +19,7 @@ import { withHookErrorRecovery } from './hook-error-handler.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
+import { formatStateLoadDiagnosticMessage } from './format-state-load-diagnostic.js';
 
 // H#100: Detect project type and suggest relevant flows
 async function suggestFlows(): Promise<string | null> {
@@ -73,8 +74,16 @@ async function main(): Promise<void> {
 
   const stateStore = new FileStateStore(process.cwd());
   const state = await stateStore.loadCurrent();
+  const loadDiagnostic = stateStore.getLastLoadDiagnostic();
 
   debug(`SessionStart: state status=${state?.status ?? 'none'}`);
+
+  if (state == null && loadDiagnostic != null) {
+    const message = formatStateLoadDiagnosticMessage(loadDiagnostic);
+    process.stderr.write(`${message}\n`);
+    process.stdout.write(JSON.stringify({ additionalContext: message }));
+    return;
+  }
 
   // Self-heal: clean up stale state from a previous session
   if (state && (state.status === 'completed' || state.status === 'failed')) {

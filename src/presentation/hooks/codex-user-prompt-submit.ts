@@ -18,6 +18,7 @@ import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
 import { logHookError } from './hook-error-handler.js';
+import { formatStateLoadDiagnosticMessage } from './format-state-load-diagnostic.js';
 
 function parseInput(raw: string): { prompt: string } | null {
   try {
@@ -62,6 +63,19 @@ async function main(): Promise<void> {
     process.stderr.write('[prompt-language] WARNING: Corrupt state detected, resetting\n');
     debug('Codex UserPromptSubmit: corrupt state detected, resetting');
     await stateStore.clear('');
+  }
+  const loadDiagnostic = stateStore.getLastLoadDiagnostic();
+  if (stateBefore == null && loadDiagnostic != null) {
+    const message = formatStateLoadDiagnosticMessage(loadDiagnostic);
+    process.stderr.write(`${message}\n`);
+    process.stdout.write(
+      JSON.stringify({
+        hookSpecificOutput: {
+          additionalContext: message,
+        },
+      }),
+    );
+    return;
   }
 
   const result = await injectContext(

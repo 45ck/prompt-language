@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { FileStateStore } from './file-state-store.js';
 import { createSessionState, type SessionState } from '../../domain/session-state.js';
 import { createFlowSpec } from '../../domain/flow-spec.js';
+import { RUNTIME_DIAGNOSTIC_CODES } from '../../domain/diagnostic-report.js';
 
 vi.mock('node:fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs/promises')>();
@@ -569,6 +570,7 @@ describe('FileStateStore', () => {
       const loaded = await store.loadCurrent();
       expect(loaded).not.toBeNull();
       expect(loaded?.sessionId).toBe('s1'); // Recovered from backup
+      expect(store.getLastLoadDiagnostic()).toBeNull();
       expect(stderrSpy).toHaveBeenCalledWith(
         '[prompt-language] WARNING: session-state.json is corrupted, trying backup\n',
       );
@@ -590,6 +592,9 @@ describe('FileStateStore', () => {
       const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
       const loaded = await store.loadCurrent();
       expect(loaded).toBeNull();
+      expect(store.getLastLoadDiagnostic()?.code).toBe(
+        RUNTIME_DIAGNOSTIC_CODES.resumeStateCorruption,
+      );
       stderrSpy.mockRestore();
     });
 
@@ -620,6 +625,7 @@ describe('FileStateStore', () => {
       const loaded = await store.loadCurrent();
       expect(loaded).not.toBeNull();
       expect(loaded?.sessionId).toBe('s1'); // Recovered from bak2
+      expect(store.getLastLoadDiagnostic()).toBeNull();
       expect(stderrSpy).toHaveBeenCalledWith(
         '[prompt-language] Recovered state from second-generation backup\n',
       );
@@ -638,6 +644,9 @@ describe('FileStateStore', () => {
       const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
       const loaded = await store.loadCurrent();
       expect(loaded).toBeNull();
+      expect(store.getLastLoadDiagnostic()?.code).toBe(
+        RUNTIME_DIAGNOSTIC_CODES.resumeStateCorruption,
+      );
       stderrSpy.mockRestore();
     });
 

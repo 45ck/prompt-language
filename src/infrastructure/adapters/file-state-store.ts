@@ -16,6 +16,11 @@ import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import type { StateStore } from '../../application/ports/state-store.js';
 import type { SessionState } from '../../domain/session-state.js';
+import {
+  createRuntimeSessionDiagnostic,
+  RUNTIME_DIAGNOSTIC_CODES,
+  type FlowDiagnostic,
+} from '../../domain/diagnostic-report.js';
 
 const DIR_NAME = '.prompt-language';
 const FILE_NAME = 'session-state.json';
@@ -42,6 +47,7 @@ export class FileStateStore implements StateStore {
   private readonly pendingPromptPath: string;
   private readonly backupPath: string;
   private readonly backupPath2: string;
+  private lastLoadDiagnostic: FlowDiagnostic | null = null;
 
   constructor(basePath: string, stateDir = DIR_NAME) {
     this.dirPath = join(basePath, stateDir);
@@ -107,6 +113,10 @@ export class FileStateStore implements StateStore {
     return this.readState();
   }
 
+  getLastLoadDiagnostic(): FlowDiagnostic | null {
+    return this.lastLoadDiagnostic;
+  }
+
   async savePendingPrompt(prompt: string): Promise<void> {
     await this.ensureDir();
     const json = JSON.stringify({ prompt, timestamp: Date.now() });
@@ -136,9 +146,12 @@ export class FileStateStore implements StateStore {
   private async readState(): Promise<SessionState | null> {
     try {
       const raw = await readFile(this.filePath, 'utf-8');
-      return this.parseStateJson(raw);
+      const state = this.parseStateJson(raw);
+      this.lastLoadDiagnostic = null;
+      return state;
     } catch (error: unknown) {
       if (isNodeError(error) && error.code === 'ENOENT') {
+        this.lastLoadDiagnostic = null;
         return null;
       }
       // D03-fix: Catch all parse/corruption errors, not just SyntaxError
@@ -146,7 +159,17 @@ export class FileStateStore implements StateStore {
       process.stderr.write(
         '[prompt-language] WARNING: session-state.json is corrupted, trying backup\n',
       );
-      return this.readBackupState();
+      const recovered = await this.readBackupState();
+      if (recovered !== null) {
+        this.lastLoadDiagnostic = null;
+        return recovered;
+      }
+      this.lastLoadDiagnostic = createRuntimeSessionDiagnostic(
+        RUNTIME_DIAGNOSTIC_CODES.resumeStateCorruption,
+        'Resume state is corrupted and could not be recovered from backup.',
+        'Run "reset flow" or remove the .prompt-language/session-state*.json files before continuing.',
+      );
+      return null;
     }
   }
 

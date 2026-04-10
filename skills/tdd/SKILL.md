@@ -11,12 +11,16 @@ argument-hint: '<feature or requirement>'
 
 Implement the requested feature using strict TDD: red, green, refactor.
 
+Use this when adding or changing behavior.
+Do not use this to recover an already failing test suite (use `fix-and-test`) or to perform behavior-preserving cleanup only (use `refactor`).
+
 ## What to do
 
-1. Read the user's feature description from the argument.
-2. Write a failing test that captures the expected behavior. Run it to confirm it fails (red).
-3. Write the minimum code to make the test pass. If tests fail, iterate (green).
-4. Once green, refactor for clarity while keeping tests green.
+1. Read the feature requirement from the argument.
+2. Add or update one test that expresses the next behavior slice.
+3. Run the targeted test and confirm it fails first (red).
+4. Implement the smallest change to pass that test (green).
+5. Refactor with all tests still green before starting the next slice.
 
 ## Flow
 
@@ -36,7 +40,7 @@ done when:
 
 ## Rules
 
-- Always write the test BEFORE the implementation.
+- Always create the failing test before implementation for new behavior.
 - The test must fail before you write implementation code. If it passes immediately, the test is not testing the new behavior.
 - Write the minimum code to pass. Do not over-engineer.
 - Once green, refactor for clarity. Do not add new behavior during refactor.

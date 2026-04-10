@@ -11,20 +11,23 @@ argument-hint: '<file or module to refactor>'
 
 Refactor the target code incrementally, verifying tests pass after each change.
 
+Use this when the intended behavior should stay the same and the goal is maintainability.
+Do not use this for feature work that requires new failing tests (use `tdd`) or for already-broken suites where the primary goal is recovery (use `fix-and-test`).
+
 ## What to do
 
-1. Read the target file or module specified by the user.
-2. Run the test suite to establish a green baseline. If tests are failing, fix them first.
-3. Apply one refactoring at a time. After each change, run the tests.
-4. If tests fail after a change, fix the issue before moving to the next refactoring.
-5. Repeat until the code is clean or you've made 5 refactoring passes.
+1. Read the target file/module and identify concrete smells.
+2. Establish a green baseline with tests before changing structure.
+3. Apply one behavior-preserving refactor at a time.
+4. Run tests after each step; if they fail, stop and fix before proceeding.
+5. Repeat up to 5 focused refactor passes.
 
 ## Flow
 
 ```
 flow:
   retry max 5
-    prompt: Apply the next refactoring to the target code. Make one focused change. Keep tests green.
+    prompt: Apply one behavior-preserving refactor to the target code. Make one focused structural change only.
     run: npm test
   end
 

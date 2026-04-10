@@ -11,14 +11,16 @@ argument-hint: '[test command or pattern]'
 
 Run a fix-test loop: identify failing tests, fix them, re-run tests, repeat until green.
 
+Use this when the codebase is already in a failing state and the goal is recovery.
+Do not use this for greenfield feature delivery (use `tdd`) or structural cleanup of already-green code (use `refactor`).
+
 ## What to do
 
-1. If the user provided an argument, use it as the test command (e.g., `npm test -- auth`). Otherwise use `npm test`.
-2. Run the test command to see current failures.
-3. Analyze the test output and fix the failing code.
-4. Re-run the test command.
-5. If tests still fail, go back to step 3. Try up to 5 times.
-6. Do not stop until all tests pass or you've exhausted all 5 attempts.
+1. If the user provided an argument, use it as the test command (for example `npm test -- auth`). Otherwise use `npm test`.
+2. Run the command and triage existing failures.
+3. Fix production code first; only edit tests when they are demonstrably wrong.
+4. Re-run the same command and iterate until green (max 5 passes).
+5. Once scoped tests are green, run full `npm test` before declaring done.
 
 ## Flow
 
@@ -38,5 +40,5 @@ done when:
 ## Rules
 
 - Focus on fixing the source code, not the tests, unless the tests themselves are incorrect.
-- After each fix, always re-run the full test suite, not just the previously failing test.
+- During active triage you may run a scoped test command, but finish with the full suite.
 - If you cannot fix a test after 5 attempts, explain what you tried and why it's failing.

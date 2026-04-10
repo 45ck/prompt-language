@@ -21,3 +21,34 @@ Display the current flow execution status.
    - Completion gate results
    - Any warnings
 3. Format as a clear progress summary
+
+## Output Contract
+
+Always structure output in this order:
+
+1. Goal and high-level status
+2. Current node path and human-readable node summary
+3. Loop progress (only active loops)
+4. Gate status
+5. Warnings and blockers
+6. Immediate next action
+
+## Minimal Status Block
+
+- `Goal`: short text
+- `Status`: active/completed/failed/cancelled
+- `Current node`: node kind + short payload
+- `Path`: e.g. `[0,2,1]`
+- `Gate summary`: pass/fail/pending counts
+
+## Triage Hints
+
+- If `status=active` and node path does not change across repeated checks, flag as possibly stuck.
+- If there are warnings about capture failures or retries near max, call that out first.
+- If gates are all passing but flow is still active, highlight possible advancement mismatch.
+
+## Failure Modes
+
+- Missing state file: report no active flow.
+- Corrupted state file: report corrupted-state condition and suggest reset/recovery path.
+- Unknown node kind in path: report stale or mismatched flow state and recommend reset.

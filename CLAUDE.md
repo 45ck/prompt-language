@@ -39,7 +39,7 @@ Dependency flow is strictly inward. Domain never imports from other layers.
 
 ## DSL primitives
 
-Twelve node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, `foreach`, `spawn`, `await`, `break`, plus `let`/`var` for variable storage.
+Current node kinds: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try`, `foreach`, `foreach_spawn`, `spawn`, `await`, `approve`, `review`, `race`, `remember`, `send`, `receive`, `break`, `continue`, plus `let`/`var` for variable storage.
 
 ### let/var nodes
 

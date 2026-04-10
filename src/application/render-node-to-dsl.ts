@@ -120,8 +120,10 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
     case 'review': {
       const criteriaLine = node.criteria ? [`${pad}  criteria: "${node.criteria}"`] : [];
       const groundedByLine = node.groundedBy ? [`${pad}  grounded-by: ${node.groundedBy}`] : [];
+      const strictTag = node.strict ? ' strict' : '';
+      const judgeTag = node.judgeName ? ` using judge "${node.judgeName}"` : '';
       return [
-        `${pad}review max ${node.maxRounds}`,
+        `${pad}review${strictTag}${judgeTag} max ${node.maxRounds}`,
         ...criteriaLine,
         ...groundedByLine,
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),

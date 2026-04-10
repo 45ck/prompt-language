@@ -7,7 +7,12 @@
 import { readFileSync } from 'node:fs';
 import { resolve, dirname, isAbsolute } from 'node:path';
 import type { FlowNode } from '../domain/flow-node.js';
-import type { CompletionGate, FlowSpec } from '../domain/flow-spec.js';
+import type {
+  CompletionGate,
+  FlowSpec,
+  RubricDefinition,
+  JudgeDefinition,
+} from '../domain/flow-spec.js';
 import type { LetSource } from '../domain/flow-node.js';
 import {
   createWhileNode,
@@ -33,7 +38,12 @@ import {
   DEFAULT_MAX_ITERATIONS,
 } from '../domain/flow-node.js';
 import type { SpawnNode } from '../domain/flow-node.js';
-import { createFlowSpec, createCompletionGate } from '../domain/flow-spec.js';
+import {
+  createFlowSpec,
+  createCompletionGate,
+  createRubricDefinition,
+  createJudgeDefinition,
+} from '../domain/flow-spec.js';
 import { ASK_CONDITION_PREFIX } from '../domain/judge-prompt.js';
 
 interface LibraryParam {
@@ -61,6 +71,11 @@ interface ParseContext {
   warnings: string[];
   nodeCounter: number;
   registry: LibraryRegistry;
+}
+
+interface DeclarationParseResult {
+  readonly rubrics: readonly RubricDefinition[];
+  readonly judges: readonly JudgeDefinition[];
 }
 
 function nextId(ctx: ParseContext): string {
@@ -153,6 +168,17 @@ export function parseGates(
     // D3: stop at first blank line to avoid consuming trailing prose
     if (!trimmed) {
       if (gates.length > 0) break;
+      continue;
+    }
+
+    if (
+      /^rubric\b/i.test(trimmed) ||
+      /^judge\b/i.test(trimmed) ||
+      /\busing\s+judge\s+(?:"[^"]+"|'[^']+')/i.test(trimmed)
+    ) {
+      warnings?.push(
+        `Unsupported judge/rubric gate syntax in "done when:": "${trimmed}" — judge references inside completion gates are not supported in v1`,
+      );
       continue;
     }
 
@@ -919,8 +945,10 @@ function parseApproveLine(ctx: ParseContext, trimmed: string): FlowNode {
 
 interface ReviewSpec {
   readonly maxRounds: number;
-  readonly criteria: string | undefined;
-  readonly groundedBy: string | undefined;
+  readonly strict: boolean;
+  readonly judgeName?: string | undefined;
+  readonly criteria?: string | undefined;
+  readonly groundedBy?: string | undefined;
 }
 
 function parseReviewOpenLine(trimmed: string): ReviewSpec | null {
@@ -928,9 +956,23 @@ function parseReviewOpenLine(trimmed: string): ReviewSpec | null {
   const rest = trimmed.slice('review'.length).trim();
   if (!rest) return null;
 
+  let working = rest;
+  let strict = false;
+  const strictMatch = /\bstrict\b/i.exec(working);
+  if (strictMatch) {
+    strict = true;
+    working = working.replace(strictMatch[0], '').trim();
+  }
+
+  let judgeName: string | undefined;
+  const judgeMatch = /\busing\s+judge\s+(?:"([^"]+)"|'([^']+)')/i.exec(working);
+  if (judgeMatch) {
+    judgeName = judgeMatch[1] ?? judgeMatch[2];
+    working = working.replace(judgeMatch[0], '').trim();
+  }
+
   // Extract criteria: "..." or criteria: '...'
   let criteria: string | undefined;
-  let working = rest;
   const criteriaMatch = /\bcriteria:\s*(?:"([^"]+)"|'([^']+)')/i.exec(working);
   if (criteriaMatch) {
     criteria = criteriaMatch[1] ?? criteriaMatch[2];
@@ -949,8 +991,17 @@ function parseReviewOpenLine(trimmed: string): ReviewSpec | null {
   const maxMatch = /\bmax\s+(\d+)\b/i.exec(working);
   if (!maxMatch?.[1]) return null;
   const maxRounds = parseInt(maxMatch[1], 10);
+  working = working.replace(maxMatch[0], '').trim();
 
-  return { maxRounds, criteria, groundedBy };
+  if (working) return null;
+
+  return {
+    maxRounds,
+    strict,
+    ...(judgeName != null ? { judgeName } : {}),
+    ...(criteria != null ? { criteria } : {}),
+    ...(groundedBy != null ? { groundedBy } : {}),
+  };
 }
 
 function parseReviewBlock(ctx: ParseContext, trimmed: string, baseIndent: number): FlowNode {
@@ -958,13 +1009,21 @@ function parseReviewBlock(ctx: ParseContext, trimmed: string, baseIndent: number
   if (!spec) {
     warn(
       ctx,
-      `Invalid review syntax: "${trimmed}". Try: review max 3 or review criteria: "..." max 3`,
+      `Invalid review syntax: "${trimmed}". Try: review max 3, review strict max 3, or review using judge "name" max 3`,
     );
     return createPromptNode(nextId(ctx), trimmed);
   }
   const body = parseBlock(ctx, baseIndent);
   consumeEnd(ctx);
-  return createReviewNode(nextId(ctx), body, spec.maxRounds, spec.criteria, spec.groundedBy);
+  return createReviewNode(
+    nextId(ctx),
+    body,
+    spec.maxRounds,
+    spec.criteria,
+    spec.groundedBy,
+    spec.strict,
+    spec.judgeName,
+  );
 }
 
 function consumeEnd(ctx: ParseContext): void {
@@ -1153,6 +1212,110 @@ export function parseEnv(input: string): Readonly<Record<string, string>> | unde
     if (key) env[key] = stripQuotes(value);
   }
   return Object.keys(env).length > 0 ? env : undefined;
+}
+
+const TOP_LEVEL_SECTION_RE = /^(?:goal:|memory:|env:|flow:|done when:|import\b)/i;
+
+function trimTrailingBlankLines(lines: string[]): void {
+  while (lines.length > 0 && !(lines[lines.length - 1] ?? '').trim()) {
+    lines.pop();
+  }
+}
+
+function extractJudgeRubric(lines: readonly string[]): string | undefined {
+  for (const line of lines) {
+    const match = /^rubric:\s*(?:"([^"]+)"|'([^']+)')$/i.exec(line.trim());
+    if (match) {
+      return match[1] ?? match[2];
+    }
+  }
+  return undefined;
+}
+
+function parseTopLevelDeclarations(input: string, warnings: string[]): DeclarationParseResult {
+  const rubrics: RubricDefinition[] = [];
+  const judges: JudgeDefinition[] = [];
+  const lines = input.split('\n');
+
+  let i = 0;
+  while (i < lines.length) {
+    const raw = lines[i] ?? '';
+    const cleaned = stripComment(raw);
+    const trimmed = cleaned.trim();
+    const indent = currentIndent(raw);
+
+    if (!trimmed) {
+      i += 1;
+      continue;
+    }
+
+    if (indent > 0 || TOP_LEVEL_SECTION_RE.test(trimmed)) {
+      i += 1;
+      continue;
+    }
+
+    const invalidDeclarationMatch = /^(rubric|judge)\b/i.exec(trimmed);
+    const declarationMatch = /^(rubric|judge)\s+(?:"([^"]+)"|'([^']+)')$/i.exec(trimmed);
+    if (!declarationMatch) {
+      if (invalidDeclarationMatch?.[1]) {
+        warnings.push(
+          `line ${i + 1}: Invalid ${invalidDeclarationMatch[1].toLowerCase()} syntax: "${trimmed}" — expected ${invalidDeclarationMatch[1].toLowerCase()} "name"`,
+        );
+      }
+      i += 1;
+      continue;
+    }
+
+    const kind = declarationMatch[1]!.toLowerCase();
+    const name = declarationMatch[2] ?? declarationMatch[3]!;
+    const openLine = i + 1;
+    const bodyLines: string[] = [];
+    let bodyIndent: number | undefined;
+    let foundEnd = false;
+
+    i += 1;
+    while (i < lines.length) {
+      const bodyRaw = lines[i] ?? '';
+      const bodyClean = stripComment(bodyRaw);
+      const bodyTrimmed = bodyClean.trim();
+      const bodyIndentLevel = currentIndent(bodyRaw);
+
+      if (!bodyTrimmed) {
+        if (bodyLines.length > 0) bodyLines.push('');
+        i += 1;
+        continue;
+      }
+
+      if (bodyIndentLevel === 0 && bodyTrimmed.toLowerCase() === 'end') {
+        foundEnd = true;
+        i += 1;
+        break;
+      }
+
+      if (bodyIndentLevel === 0) {
+        warnings.push(`line ${openLine}: Missing "end" for ${kind} "${name}" — auto-closed block`);
+        break;
+      }
+
+      bodyIndent ??= bodyIndentLevel;
+      bodyLines.push(bodyClean.slice(bodyIndent).replace(/\s+$/, ''));
+      i += 1;
+    }
+
+    if (!foundEnd && i >= lines.length) {
+      warnings.push(`line ${openLine}: Missing "end" for ${kind} "${name}" — auto-closed block`);
+    }
+
+    trimTrailingBlankLines(bodyLines);
+
+    if (kind === 'rubric') {
+      rubrics.push(createRubricDefinition(name, bodyLines));
+    } else {
+      judges.push(createJudgeDefinition(name, bodyLines, extractJudgeRubric(bodyLines)));
+    }
+  }
+
+  return { rubrics, judges };
 }
 
 /** H-INT-001: Safe path check — must be relative, no "..", no absolute paths. */
@@ -1482,6 +1645,7 @@ export function parseFlow(
   const importResult = resolveImports(input, warnings, basePath, seen, fileReader);
   const { text: resolvedText, inlinedFlowLines, registry, importedPaths } = importResult;
 
+  const { rubrics, judges } = parseTopLevelDeclarations(resolvedText, warnings);
   const gates = parseGates(resolvedText, registry, warnings);
   const rawLines = [...inlinedFlowLines, ...extractFlowBlock(resolvedText)];
   // H-INT-001: Resolve include directives (share `seen` for cross-pass cycle detection)
@@ -1503,5 +1667,7 @@ export function parseFlow(
     env,
     importedPaths,
     memoryKeys.length > 0 ? memoryKeys : undefined,
+    rubrics.length > 0 ? rubrics : undefined,
+    judges.length > 0 ? judges : undefined,
   );
 }

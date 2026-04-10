@@ -14,7 +14,12 @@ import {
   markFailed,
   markCompleted,
 } from './session-state.js';
-import { createFlowSpec, createCompletionGate } from './flow-spec.js';
+import {
+  createFlowSpec,
+  createCompletionGate,
+  createRubricDefinition,
+  createJudgeDefinition,
+} from './flow-spec.js';
 import {
   createPromptNode,
   createRunNode,
@@ -57,6 +62,27 @@ describe('renderFlow', () => {
     const state = createSessionState('s1', spec);
     const output = renderFlow(state);
     expect(output).toContain('run: npm test');
+  });
+
+  it('renders rubric and judge declarations before executable nodes', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'ship it')],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [createRubricDefinition('bugfix_quality', ['criterion correctness type boolean'])],
+      [createJudgeDefinition('impl_quality', ['rubric: "bugfix_quality"'], 'bugfix_quality')],
+    );
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+
+    expect(output).toContain('rubric "bugfix_quality"');
+    expect(output).toContain('judge "impl_quality"');
+    expect(output).toContain('prompt: ship it');
   });
 
   it('marks current node with > prefix and <-- current suffix', () => {
@@ -1368,8 +1394,16 @@ describe('renderFlowSummary — node descriptions', () => {
       { node: createContinueNode('c1'), expected: 'continue' },
       { node: createApproveNode('a1', 'Ship it?'), expected: 'approve "Ship it?"' },
       {
-        node: createReviewNode('rv1', [createPromptNode('p1', 'draft')], 2),
-        expected: 'review max 2',
+        node: createReviewNode(
+          'rv1',
+          [createPromptNode('p1', 'draft')],
+          2,
+          undefined,
+          undefined,
+          true,
+          'impl_quality',
+        ),
+        expected: 'review strict using judge',
       },
       { node: createRememberNode('m1', 'fact'), expected: 'remember' },
       { node: createSendNode('s1', 'parent', 'hi'), expected: 'send to "parent"' },

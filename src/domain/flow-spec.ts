@@ -23,6 +23,20 @@ export interface FlowDefaults {
   readonly maxAttempts: number;
 }
 
+export interface RubricDefinition {
+  readonly name: string;
+  /** Normalized body lines with block indentation stripped once. */
+  readonly lines: readonly string[];
+}
+
+export interface JudgeDefinition {
+  readonly name: string;
+  /** Normalized body lines with block indentation stripped once. */
+  readonly lines: readonly string[];
+  /** Optional referenced rubric extracted from `rubric: "name"` in the body. */
+  readonly rubric?: string | undefined;
+}
+
 export interface FlowSpec {
   readonly goal: string;
   readonly nodes: readonly FlowNode[];
@@ -35,6 +49,10 @@ export interface FlowSpec {
   readonly imports?: readonly string[] | undefined;
   /** Keys to prefetch from memory store before flow starts. */
   readonly memoryKeys?: readonly string[] | undefined;
+  /** Named reusable evaluation rubrics. */
+  readonly rubrics?: readonly RubricDefinition[] | undefined;
+  /** Named reusable judges. */
+  readonly judges?: readonly JudgeDefinition[] | undefined;
 }
 
 /** Pure JS hash of a FlowSpec for stale-state detection. */
@@ -47,6 +65,8 @@ export function flowSpecHash(spec: FlowSpec): string {
     env: spec.env ?? null,
     imports: spec.imports ?? null,
     memoryKeys: spec.memoryKeys ?? null,
+    rubrics: spec.rubrics ?? null,
+    judges: spec.judges ?? null,
   });
   let hash = 0x811c9dc5;
   for (let i = 0; i < payload.length; i++) {
@@ -70,6 +90,8 @@ export function createFlowSpec(
   env?: Readonly<Record<string, string>>,
   imports?: readonly string[],
   memoryKeys?: readonly string[],
+  rubrics?: readonly RubricDefinition[],
+  judges?: readonly JudgeDefinition[],
 ): FlowSpec {
   return {
     goal,
@@ -80,9 +102,27 @@ export function createFlowSpec(
     ...(env != null ? { env } : {}),
     ...(imports != null && imports.length > 0 ? { imports } : {}),
     ...(memoryKeys != null && memoryKeys.length > 0 ? { memoryKeys } : {}),
+    ...(rubrics != null && rubrics.length > 0 ? { rubrics } : {}),
+    ...(judges != null && judges.length > 0 ? { judges } : {}),
   };
 }
 
 export function createCompletionGate(predicate: string, command?: string): CompletionGate {
   return { predicate, command };
+}
+
+export function createRubricDefinition(name: string, lines: readonly string[]): RubricDefinition {
+  return { name, lines };
+}
+
+export function createJudgeDefinition(
+  name: string,
+  lines: readonly string[],
+  rubric?: string,
+): JudgeDefinition {
+  return {
+    name,
+    lines,
+    ...(rubric != null ? { rubric } : {}),
+  };
 }

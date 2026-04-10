@@ -2159,6 +2159,79 @@ describe('parseFlow — review block', () => {
     const spec = parse(dsl);
     expect(spec.nodes[0]!.id).not.toBe(spec.nodes[1]!.id);
   });
+
+  it('parses review strict using judge', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'judge "impl_quality"',
+      '  kind: model',
+      'end',
+      '',
+      'flow:',
+      '  review strict using judge "impl_quality" max 3',
+      '    prompt: Do the work',
+      '  end',
+    ].join('\n');
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as ReviewNode;
+    expect(node.kind).toBe('review');
+    expect(node.strict).toBe(true);
+    expect(node.judgeName).toBe('impl_quality');
+    expect(node.maxRounds).toBe(3);
+  });
+});
+
+describe('parseFlow — rubric and judge declarations', () => {
+  it('parses top-level rubric and judge blocks', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'rubric "bugfix_quality"',
+      '  criterion correctness type boolean weight 0.50',
+      '  pass when:',
+      '    correctness == true',
+      'end',
+      '',
+      'judge "impl_quality"',
+      '  kind: model',
+      '  rubric: "bugfix_quality"',
+      'end',
+      '',
+      'flow:',
+      '  prompt: continue',
+    ].join('\n');
+    const spec = parse(dsl);
+
+    expect(spec.rubrics).toHaveLength(1);
+    expect(spec.rubrics?.[0]?.name).toBe('bugfix_quality');
+    expect(spec.rubrics?.[0]?.lines).toEqual([
+      'criterion correctness type boolean weight 0.50',
+      'pass when:',
+      '  correctness == true',
+    ]);
+    expect(spec.judges).toHaveLength(1);
+    expect(spec.judges?.[0]?.name).toBe('impl_quality');
+    expect(spec.judges?.[0]?.rubric).toBe('bugfix_quality');
+  });
+
+  it('warns and skips judge syntax inside done when', () => {
+    const dsl = [
+      'Goal: g',
+      '',
+      'flow:',
+      '  prompt: continue',
+      '',
+      'done when:',
+      '  judge "impl_quality"',
+    ].join('\n');
+    const spec = parse(dsl);
+
+    expect(spec.completionGates).toEqual([]);
+    expect(
+      spec.warnings.some((warning) => warning.includes('Unsupported judge/rubric gate syntax')),
+    ).toBe(true);
+  });
 });
 
 describe('parseFlow — ask conditions', () => {

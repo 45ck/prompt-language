@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { lintFlow, levenshtein } from './lint-flow.js';
-import { createFlowSpec, createCompletionGate } from './flow-spec.js';
+import {
+  createFlowSpec,
+  createCompletionGate,
+  createRubricDefinition,
+  createJudgeDefinition,
+} from './flow-spec.js';
 import {
   createPromptNode,
   createRunNode,
@@ -19,6 +24,7 @@ import {
   createRememberNode,
   createSendNode,
   createReceiveNode,
+  createReviewNode,
 } from './flow-node.js';
 
 describe('lintFlow', () => {
@@ -1016,5 +1022,77 @@ describe('lintFlow — race / foreach_spawn / remember / send / receive nodes', 
     expect(lintFlow(spec)).not.toContainEqual(
       expect.objectContaining({ message: expect.stringContaining('msg') }),
     );
+  });
+});
+
+describe('lintFlow — rubric and judge declarations', () => {
+  it('warns on duplicate rubric and judge declarations', () => {
+    const spec = createFlowSpec(
+      'test',
+      [],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [
+        createRubricDefinition('bugfix_quality', ['criterion correctness type boolean']),
+        createRubricDefinition('bugfix_quality', ['criterion maintainability type boolean']),
+      ],
+      [
+        createJudgeDefinition('impl_quality', ['kind: model']),
+        createJudgeDefinition('impl_quality', ['kind: human']),
+      ],
+    );
+
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: '',
+      message: 'Duplicate rubric declaration "bugfix_quality"',
+    });
+    expect(warnings).toContainEqual({
+      nodeId: '',
+      message: 'Duplicate judge declaration "impl_quality"',
+    });
+  });
+
+  it('warns when a judge references an unknown rubric', () => {
+    const spec = createFlowSpec(
+      'test',
+      [],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [createRubricDefinition('known_rubric', ['criterion correctness type boolean'])],
+      [createJudgeDefinition('impl_quality', ['rubric: "missing_rubric"'], 'missing_rubric')],
+    );
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: '',
+      message: 'Judge "impl_quality" references unknown rubric "missing_rubric"',
+    });
+  });
+
+  it('warns when review references an unknown judge', () => {
+    const spec = createFlowSpec('test', [
+      createReviewNode(
+        'rv1',
+        [createPromptNode('p1', 'draft')],
+        3,
+        undefined,
+        undefined,
+        true,
+        'missing_judge',
+      ),
+    ]);
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'rv1',
+      message: 'review references unknown judge "missing_judge"',
+    });
   });
 });

@@ -221,6 +221,24 @@ describe('render-node-to-dsl', () => {
     ]);
   });
 
+  it('renders review strict using judge in the header', () => {
+    const review = createReviewNode(
+      'rv2',
+      [createPromptNode('rv2-p', 'Repair the implementation')],
+      3,
+      undefined,
+      undefined,
+      true,
+      'impl_quality',
+    );
+
+    expect(renderNodeToDsl(review, 0)).toEqual([
+      'review strict using judge "impl_quality" max 3',
+      '  prompt: Repair the implementation',
+      'end',
+    ]);
+  });
+
   it('renders race and foreach-spawn wrappers', () => {
     const race = createRaceNode(
       'rc1',

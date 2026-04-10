@@ -659,6 +659,101 @@ function allRunsInsideConditional(nodes: readonly FlowNode[]): boolean {
   return hasRun && !hasUnconditionalRun;
 }
 
+function lintReviewJudgeReferences(
+  nodes: readonly FlowNode[],
+  judgeNames: ReadonlySet<string>,
+  warnings: LintWarning[],
+): void {
+  for (const node of nodes) {
+    switch (node.kind) {
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'foreach':
+      case 'spawn':
+      case 'review':
+      case 'foreach_spawn':
+        if (node.kind === 'review' && node.judgeName && !judgeNames.has(node.judgeName)) {
+          warnings.push({
+            nodeId: node.id,
+            message: `review references unknown judge "${node.judgeName}"`,
+          });
+        }
+        lintReviewJudgeReferences(node.body, judgeNames, warnings);
+        break;
+      case 'if':
+        lintReviewJudgeReferences(node.thenBranch, judgeNames, warnings);
+        lintReviewJudgeReferences(node.elseBranch, judgeNames, warnings);
+        break;
+      case 'try':
+        lintReviewJudgeReferences(node.body, judgeNames, warnings);
+        lintReviewJudgeReferences(node.catchBody, judgeNames, warnings);
+        lintReviewJudgeReferences(node.finallyBody, judgeNames, warnings);
+        break;
+      case 'race':
+        node.children.forEach((child) =>
+          lintReviewJudgeReferences(child.body, judgeNames, warnings),
+        );
+        break;
+      case 'prompt':
+      case 'run':
+      case 'let':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
+        break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
+    }
+  }
+}
+
+function lintEvaluationDeclarations(spec: FlowSpec, warnings: LintWarning[]): void {
+  const rubrics = spec.rubrics ?? [];
+  const judges = spec.judges ?? [];
+  const rubricNames = new Set<string>();
+  const judgeNames = new Set<string>();
+
+  for (const rubric of rubrics) {
+    if (rubricNames.has(rubric.name)) {
+      warnings.push({ nodeId: '', message: `Duplicate rubric declaration "${rubric.name}"` });
+    } else {
+      rubricNames.add(rubric.name);
+    }
+
+    if (rubric.lines.length === 0) {
+      warnings.push({ nodeId: '', message: `Rubric "${rubric.name}" has empty body` });
+    }
+  }
+
+  for (const judge of judges) {
+    if (judgeNames.has(judge.name)) {
+      warnings.push({ nodeId: '', message: `Duplicate judge declaration "${judge.name}"` });
+    } else {
+      judgeNames.add(judge.name);
+    }
+
+    if (judge.lines.length === 0) {
+      warnings.push({ nodeId: '', message: `Judge "${judge.name}" has empty body` });
+    }
+
+    if (judge.rubric && !rubricNames.has(judge.rubric)) {
+      warnings.push({
+        nodeId: '',
+        message: `Judge "${judge.name}" references unknown rubric "${judge.rubric}"`,
+      });
+    }
+  }
+
+  lintReviewJudgeReferences(spec.nodes, judgeNames, warnings);
+}
+
 export function lintFlow(spec: FlowSpec, _importRegistry?: ImportRegistry): readonly LintWarning[] {
   const warnings: LintWarning[] = [];
 
@@ -675,6 +770,7 @@ export function lintFlow(spec: FlowSpec, _importRegistry?: ImportRegistry): read
   // H-DX-001: Check for unresolved variable references
   const definedVars = collectDefinedVariables(spec.nodes, spec.memoryKeys ?? []);
   lintUnresolvedVars(spec.nodes, definedVars, warnings);
+  lintEvaluationDeclarations(spec, warnings);
   lintVariableShadowing(spec.nodes, new Map(), warnings);
 
   // H-SEC-007: Gaslighting detection — warn when all run nodes are conditional

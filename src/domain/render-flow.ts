@@ -6,6 +6,7 @@
  */
 
 import type { FlowNode, ForeachNode, IfNode, LetNode, SpawnNode, TryNode } from './flow-node.js';
+import type { FlowSpec } from './flow-spec.js';
 import type { SessionState } from './session-state.js';
 import { isAskCondition, extractAskQuestion } from './judge-prompt.js';
 
@@ -73,6 +74,37 @@ function isCompletedNode(path: readonly number[], currentPath: readonly number[]
     if (path[i] !== currentPath[i]) return false;
   }
   return path[path.length - 1]! < currentPath[path.length - 1]!;
+}
+
+function buildReviewHeader(node: Extract<FlowNode, { kind: 'review' }>, roundTag = ''): string {
+  const strictTag = node.strict ? ' strict' : '';
+  const judgeTag = node.judgeName ? ` using judge "${node.judgeName}"` : '';
+  return `review${strictTag}${judgeTag} max ${node.maxRounds}${roundTag}`;
+}
+
+function renderDeclarationBlock(header: string, lines: readonly string[]): string[] {
+  const rendered = [`  ${header}`];
+  for (const line of lines) {
+    rendered.push(line ? `    ${line}` : '');
+  }
+  rendered.push('  end');
+  return rendered;
+}
+
+function renderDeclarations(spec: FlowSpec): string[] {
+  const rendered: string[] = [];
+
+  for (const rubric of spec.rubrics ?? []) {
+    if (rendered.length > 0) rendered.push('');
+    rendered.push(...renderDeclarationBlock(`rubric "${rubric.name}"`, rubric.lines));
+  }
+
+  for (const judge of spec.judges ?? []) {
+    if (rendered.length > 0) rendered.push('');
+    rendered.push(...renderDeclarationBlock(`judge "${judge.name}"`, judge.lines));
+  }
+
+  return rendered;
 }
 
 function renderNode(
@@ -187,7 +219,7 @@ function renderNode(
       const reviewRound = reviewProgress?.iteration ?? 0;
       const roundTag = reviewRound > 0 ? ` [round ${reviewRound}/${node.maxRounds}]` : '';
       return renderLoopNode(
-        `review max ${node.maxRounds}${roundTag}`,
+        buildReviewHeader(node, roundTag),
         node.body,
         state,
         path,
@@ -633,6 +665,11 @@ export function renderFlow(state: SessionState): string {
     '',
   ];
 
+  const declarationLines = renderDeclarations(state.flowSpec);
+  if (declarationLines.length > 0) {
+    lines.push(...declarationLines, '');
+  }
+
   for (let i = 0; i < state.flowSpec.nodes.length; i++) {
     const node = state.flowSpec.nodes[i]!;
     lines.push(...renderNode(node, state, [i], 0));
@@ -755,7 +792,9 @@ function compactNode(
     case 'review': {
       const rvProg = state.nodeProgress[node.id];
       const rvIter = rvProg ? `${rvProg.iteration}/${rvProg.maxIterations}` : '';
-      const rvLines = [`${mark}${pad}review ${rvIter}`];
+      const rvHeader = node.strict ? 'review strict' : 'review';
+      const rvJudge = node.judgeName ? ` judge="${node.judgeName}"` : '';
+      const rvLines = [`${mark}${pad}${rvHeader}${rvJudge} ${rvIter}`.trimEnd()];
       for (let i = 0; i < node.body.length; i++) {
         rvLines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
       }
@@ -979,7 +1018,7 @@ function describeNode(node: FlowNode): string {
     case 'approve':
       return `approve "${node.message}"`;
     case 'review':
-      return `review max ${node.maxRounds}`;
+      return buildReviewHeader(node);
     case 'race':
       return 'race';
     case 'foreach_spawn':

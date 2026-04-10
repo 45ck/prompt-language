@@ -145,7 +145,9 @@ function summarizeNode(node: FlowNode): string {
     case 'approve':
       return `approve: ${truncate(node.message, 30)}`;
     case 'review':
-      return `review (max ${node.maxRounds} rounds)`;
+      return node.strict
+        ? `review strict${node.judgeName ? ` judge "${node.judgeName}"` : ''} (max ${node.maxRounds} rounds)`
+        : `review${node.judgeName ? ` judge "${node.judgeName}"` : ''} (max ${node.maxRounds} rounds)`;
     case 'race':
       return 'race';
     case 'foreach_spawn':

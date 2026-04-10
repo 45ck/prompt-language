@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { createFlowSpec, createCompletionGate } from './flow-spec.js';
+import {
+  createFlowSpec,
+  createCompletionGate,
+  createRubricDefinition,
+  createJudgeDefinition,
+} from './flow-spec.js';
 import { createPromptNode } from './flow-node.js';
 
 describe('createCompletionGate', () => {
@@ -50,5 +55,29 @@ describe('createFlowSpec', () => {
       maxAttempts: 7,
     });
     expect(spec.defaults).toEqual({ maxIterations: 20, maxAttempts: 7 });
+  });
+
+  it('includes rubric and judge declarations when provided', () => {
+    const rubric = createRubricDefinition('bugfix_quality', ['criterion correctness type boolean']);
+    const judge = createJudgeDefinition(
+      'impl_quality',
+      ['kind: model', 'rubric: "bugfix_quality"'],
+      'bugfix_quality',
+    );
+    const spec = createFlowSpec(
+      'g',
+      [],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [rubric],
+      [judge],
+    );
+
+    expect(spec.rubrics).toEqual([rubric]);
+    expect(spec.judges).toEqual([judge]);
   });
 });

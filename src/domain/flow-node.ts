@@ -176,6 +176,8 @@ export interface ApproveNode extends BaseNode {
 export interface ReviewNode extends BaseNode {
   readonly kind: 'review';
   readonly maxRounds: number;
+  readonly strict?: boolean | undefined;
+  readonly judgeName?: string | undefined;
   readonly criteria?: string | undefined;
   readonly groundedBy?: string | undefined;
   readonly body: readonly FlowNode[];
@@ -446,12 +448,16 @@ export function createReviewNode(
   maxRounds: number,
   criteria?: string,
   groundedBy?: string,
+  strict?: boolean,
+  judgeName?: string,
 ): ReviewNode {
   return {
     kind: 'review',
     id,
     maxRounds,
     body,
+    ...(strict === true ? { strict: true } : {}),
+    ...(judgeName != null ? { judgeName } : {}),
     ...(criteria != null ? { criteria } : {}),
     ...(groundedBy != null ? { groundedBy } : {}),
   };

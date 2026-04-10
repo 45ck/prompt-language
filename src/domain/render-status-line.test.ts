@@ -407,6 +407,24 @@ describe('renderStatusLine — new node kinds', () => {
     expect(line).toContain('review');
   });
 
+  it('shows strict review judge context when present', () => {
+    const line = renderStatusLine(
+      state('Goal', [
+        createReviewNode(
+          'r1',
+          [createPromptNode('p1', 'work')],
+          3,
+          undefined,
+          undefined,
+          true,
+          'impl_quality',
+        ),
+      ]),
+    );
+    expect(line).toContain('review strict');
+    expect(line).toContain('impl_quality');
+  });
+
   it('shows race node label', () => {
     const child = createSpawnNode('s1', 'approach-a', [createPromptNode('p1', 'fix')]);
     const line = renderStatusLine(state('Goal', [createRaceNode('rc1', [child])]));

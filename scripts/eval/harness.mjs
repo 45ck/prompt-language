@@ -7,13 +7,20 @@ import { join, resolve } from 'node:path';
 
 const DEFAULT_HARNESS = 'claude';
 const HARNESS = parseHarness(process.argv, process.env.EVAL_HARNESS);
+const AI_CMD = parseAiCommand(process.env.AI_CMD);
 const DEFAULT_MODEL = parseModel(process.argv, process.env.EVAL_MODEL);
 const ROOT = resolve(import.meta.dirname, '..', '..');
 
 function parseHarness(argv, envHarness) {
   const flagIndex = argv.indexOf('--harness');
   const flagValue = flagIndex >= 0 ? argv[flagIndex + 1] : null;
-  return (flagValue || envHarness || DEFAULT_HARNESS).toLowerCase();
+  const raw = (flagValue || envHarness || DEFAULT_HARNESS).toLowerCase();
+  if (raw === 'claude' || raw === 'codex' || raw === 'gemini' || raw === 'opencode') {
+    return raw;
+  }
+  throw new Error(
+    `Unsupported harness "${raw}". Supported values: claude, codex, gemini, opencode.`,
+  );
 }
 
 function parseModel(argv, envModel) {
@@ -26,6 +33,30 @@ function cleanEnv() {
   const env = { ...process.env };
   delete env.CLAUDECODE;
   return env;
+}
+
+function parseAiCommand(rawValue) {
+  const raw = rawValue?.trim();
+  if (!raw) {
+    return null;
+  }
+
+  const tokens = raw.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g) ?? [];
+  const unquoted = tokens
+    .map((token) =>
+      (token.startsWith('"') && token.endsWith('"')) ||
+      (token.startsWith("'") && token.endsWith("'"))
+        ? token.slice(1, -1)
+        : token,
+    )
+    .filter((token) => token.length > 0);
+
+  if (unquoted.length === 0) {
+    return null;
+  }
+
+  const [command, ...args] = unquoted;
+  return { raw, command, args };
 }
 
 function buildCodexPrompt(prompt) {
@@ -48,8 +79,16 @@ function buildCodexPrompt(prompt) {
 }
 
 function versionCommand() {
+  if (AI_CMD) {
+    return [AI_CMD.command, '--version'];
+  }
+
   if (HARNESS === 'codex') {
     return codexBinaryCommand('--version');
+  }
+
+  if (HARNESS === 'gemini') {
+    return ['gemini', '--version'];
   }
 
   if (HARNESS === 'opencode') {
@@ -90,6 +129,32 @@ function execClaude(prompt, cwd, timeout, model, strict) {
 
   try {
     return execFileSync('claude', args, {
+      input: prompt,
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: cleanEnv(),
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
+
+function execGemini(prompt, cwd, timeout, model, strict) {
+  const args = ['-p', '--yolo'];
+  if (model) {
+    args.push('--model', model);
+  }
+
+  try {
+    return execFileSync('gemini', args, {
       input: prompt,
       encoding: 'utf-8',
       cwd,
@@ -215,13 +280,65 @@ function execOpenCodeFlow(flowText, cwd, timeout, model, strict) {
   }
 }
 
+function applyTemplateValue(value, { prompt, model, cwd }) {
+  if (value === '{prompt}') {
+    return prompt;
+  }
+  if (value === '{model}') {
+    return model ?? '';
+  }
+  if (value === '{cwd}') {
+    return cwd;
+  }
+  return value;
+}
+
+function execTemplateCommand(prompt, cwd, timeout, model, strict) {
+  if (!AI_CMD) {
+    return '';
+  }
+
+  const resolved = AI_CMD.args
+    .map((value) => applyTemplateValue(value, { prompt, model, cwd }))
+    .filter((value) => value.length > 0);
+  const useStdin = !AI_CMD.args.includes('{prompt}');
+
+  try {
+    return execFileSync(AI_CMD.command, resolved, {
+      input: useStdin ? prompt : undefined,
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: cleanEnv(),
+      maxBuffer: 20 * 1024 * 1024,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
+
 export function getHarnessName() {
   return HARNESS;
 }
 
 export function getHarnessLabel() {
+  if (AI_CMD) {
+    return `Custom AI command (${AI_CMD.command})`;
+  }
+
   if (HARNESS === 'codex') {
     return 'Codex CLI';
+  }
+
+  if (HARNESS === 'gemini') {
+    return 'Gemini CLI';
   }
 
   if (HARNESS === 'opencode') {
@@ -232,8 +349,16 @@ export function getHarnessLabel() {
 }
 
 export function getCommandLabel() {
+  if (AI_CMD) {
+    return AI_CMD.raw;
+  }
+
   if (HARNESS === 'codex') {
     return 'codex exec';
+  }
+
+  if (HARNESS === 'gemini') {
+    return 'gemini -p --yolo';
   }
 
   if (HARNESS === 'opencode') {
@@ -261,11 +386,17 @@ export function runHarnessPrompt(
   { cwd = process.cwd(), timeout = 120_000, model, strict = false } = {},
 ) {
   const resolvedModel = model ?? DEFAULT_MODEL;
+  if (AI_CMD) {
+    return execTemplateCommand(prompt, cwd, timeout, resolvedModel, strict);
+  }
+
   return HARNESS === 'codex'
     ? execCodex(prompt, cwd, timeout, resolvedModel, strict)
-    : HARNESS === 'opencode'
-      ? execOpenCode(prompt, cwd, timeout, resolvedModel, strict)
-      : execClaude(prompt, cwd, timeout, resolvedModel, strict);
+    : HARNESS === 'gemini'
+      ? execGemini(prompt, cwd, timeout, resolvedModel, strict)
+      : HARNESS === 'opencode'
+        ? execOpenCode(prompt, cwd, timeout, resolvedModel, strict)
+        : execClaude(prompt, cwd, timeout, resolvedModel, strict);
 }
 
 export function runHarnessFlow(
@@ -273,6 +404,10 @@ export function runHarnessFlow(
   { cwd = process.cwd(), timeout = 120_000, model, strict = false } = {},
 ) {
   const resolvedModel = model ?? DEFAULT_MODEL;
+  if (AI_CMD) {
+    return execTemplateCommand(flowText, cwd, timeout, resolvedModel, strict);
+  }
+
   return HARNESS === 'opencode'
     ? execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict)
     : runHarnessPrompt(flowText, {

@@ -21,6 +21,17 @@ describe('eval harness contracts', () => {
     expect(source).toContain('export function runHarnessFlow(');
   });
 
+  it('supports Gemini and custom AI_CMD templates in the harness adapter', async () => {
+    const source = await readFile(HARNESS, 'utf8');
+
+    expect(source).toContain("if (HARNESS === 'gemini') {");
+    expect(source).toContain("return ['gemini', '--version'];");
+    expect(source).toContain('function execGemini(');
+    expect(source).toContain('const AI_CMD = parseAiCommand(process.env.AI_CMD);');
+    expect(source).toContain('function execTemplateCommand(');
+    expect(source).toContain('if (AI_CMD) {');
+  });
+
   it('routes smoke readiness checks through the flow runner', async () => {
     const source = await readFile(SMOKE, 'utf8');
 

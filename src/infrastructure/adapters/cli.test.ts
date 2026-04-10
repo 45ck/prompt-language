@@ -58,11 +58,11 @@ describe('CLI commands', () => {
     expect(output).toContain('prompt: hello');
   });
 
-  it('run is wired to call claude -p in the CLI implementation', async () => {
+  it('run supports both the native claude path and the opencode headless runner', async () => {
     const source = await readFile(CLI, 'utf8');
     expect(source).toContain("case 'run':");
-    expect(source).toMatch(
-      /execFileSync\('claude', \['-p', '--dangerously-skip-permissions', flowText\]/s,
-    );
+    expect(source).toContain("if (runner === 'opencode')");
+    expect(source).toContain("const claudeArgs = ['-p', '--dangerously-skip-permissions']");
+    expect(source).toContain("readOptionValue(args, '--model')");
   });
 });

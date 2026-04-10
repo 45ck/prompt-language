@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * smoke-test.mjs — Live CLI smoke tests via the configured AI harness.
+ * smoke-test.mjs — Live flow smoke tests via the configured AI harness.
  *
- * Validates the full plugin pipeline end-to-end through Claude's real agent
- * loop. Unlike unit tests (mocks) and e2e-eval (hook pipe-through), these
- * tests run the actual installed plugin with a live Claude session.
+ * Validates end-to-end flow execution through the configured harness.
+ * Unlike unit tests (mocks) and e2e-eval (hook pipe-through), these
+ * tests run the actual flow runtime against a live model session.
  *
- * Requires: `claude` CLI available, plugin installed.
+ * Requires: the configured harness CLI available.
+ * Claude smoke runs still expect the plugin to be installed.
  *
  * Tests:
  *   A: Context file relay       B: Context recall
@@ -53,10 +54,10 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   checkHarnessVersion,
-  getCommandLabel,
+  getFlowCommandLabel,
   getHarnessLabel,
   getHarnessName,
-  runHarnessPrompt,
+  runHarnessFlow,
 } from './harness.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -66,7 +67,7 @@ const FLAKY_REPORT = join(__dirname, 'flaky-report.mjs');
 const QUICK_MODE = process.argv.includes('--quick');
 const HISTORY_MODE = process.argv.includes('--history');
 const ONLY_FILTERS = parseOnlyFilters(process.argv, process.env.SMOKE_ONLY);
-const TIMEOUT = getHarnessName() === 'codex' ? 240_000 : 120_000;
+const TIMEOUT = resolveTimeout();
 
 let passed = 0;
 let failed = 0;
@@ -120,6 +121,32 @@ function parseOnlyFilters(argv, envOnly) {
     .map((value) => value.trim().toUpperCase())
     .filter((value) => value.length > 0);
   return values.length > 0 ? new Set(values) : null;
+}
+
+function resolveTimeout() {
+  const override = Number.parseInt(process.env.EVAL_TIMEOUT_MS ?? '', 10);
+  if (Number.isFinite(override) && override > 0) {
+    return override;
+  }
+
+  const harness = getHarnessName();
+  if (harness === 'codex') {
+    return 240_000;
+  }
+
+  if (harness !== 'opencode') {
+    return 120_000;
+  }
+
+  const model = (process.env.EVAL_MODEL ?? '').toLowerCase();
+  if (model.startsWith('ollama/')) {
+    if (/(^|[:/-])(26b|27b|31b|70b)([:/-]|$)/.test(model)) {
+      return 900_000;
+    }
+    return 300_000;
+  }
+
+  return 120_000;
 }
 
 /** Write structured results to a JSON file. */
@@ -193,7 +220,7 @@ async function cleanupOldResults() {
   }
 }
 
-function assertClaudeAccess() {
+function assertHarnessReady() {
   try {
     const version = checkHarnessVersion();
     console.log(`[smoke-test] Harness: ${getHarnessLabel()} ${version}`);
@@ -203,7 +230,7 @@ function assertClaudeAccess() {
   }
 
   try {
-    runHarnessPrompt('Return only OK', {
+    runHarnessFlow(['Goal: readiness check', '', 'flow:', '  prompt: Return only OK'].join('\n'), {
       cwd: process.cwd(),
       timeout: TIMEOUT,
       strict: true,
@@ -217,7 +244,16 @@ function assertClaudeAccess() {
         `[smoke-test] BLOCKED — ${getHarnessLabel()} login/access is unavailable in this environment.`,
       );
       console.error(
-        `[smoke-test] \`${getCommandLabel()}\` returned an authorization error; smoke scenarios were not run.`,
+        `[smoke-test] \`${getFlowCommandLabel()}\` returned an authorization error; smoke scenarios were not run.`,
+      );
+      process.exit(2);
+    }
+    if (getHarnessName() === 'opencode') {
+      console.error(
+        `[smoke-test] BLOCKED — ${getHarnessLabel()} could not complete a trivial flow in this environment.`,
+      );
+      console.error(
+        `[smoke-test] \`${getFlowCommandLabel()}\` failed during readiness check. Review the configured model and local runner state.`,
       );
       process.exit(2);
     }
@@ -225,9 +261,9 @@ function assertClaudeAccess() {
   }
 }
 
-function claudeRun(prompt, cwd) {
+function harnessRun(prompt, cwd) {
   try {
-    return runHarnessPrompt(prompt, { cwd, timeout: TIMEOUT });
+    return runHarnessFlow(prompt, { cwd, timeout: TIMEOUT });
   } catch (error) {
     if (error.stderr) {
       console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
@@ -273,7 +309,7 @@ async function testContextFileRelay() {
       '  prompt: Read secret.txt and write its contents to answer.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -304,7 +340,7 @@ async function testContextRecall() {
       '  prompt: Create a file called recall.txt containing exactly the code from the previous step, nothing else.',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -334,7 +370,7 @@ async function testVariableInterpolation() {
       '  prompt: Write the greeting "${greeting}" and node version "${ver}" to result.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -373,7 +409,7 @@ async function testGateEvaluation() {
       '  tests_pass',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     // Verify app.js was fixed — should exit 0 now
     let exitCode = 1;
@@ -404,7 +440,7 @@ async function testRunAutoExecution() {
       '  prompt: Check if run-output.txt exists and confirm its contents.',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -434,7 +470,7 @@ async function testForeachIteration() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let found = 0;
     for (const name of ['alpha', 'beta', 'gamma']) {
@@ -468,7 +504,7 @@ async function testLetPromptCapture() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -507,7 +543,7 @@ async function testIfElseBranching() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -541,7 +577,7 @@ async function testTryCatch() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -574,7 +610,7 @@ async function testVariableChain() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -614,7 +650,7 @@ async function testWhileLoop() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let exitCode = 1;
     try {
@@ -650,7 +686,7 @@ async function testRetryOnFailure() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let exitCode = 1;
     try {
@@ -682,7 +718,7 @@ async function testGateOnlyMode() {
     // No flow: block — just a prompt with done when:
     const prompt = 'Fix app.js so it exits 0 instead of 1.\n\ndone when:\n  tests_pass';
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let exitCode = 1;
     try {
@@ -713,7 +749,7 @@ async function testCaptureReliability() {
       '  prompt: Write the answer "${answer}" to capture-result.txt. Write only the variable value, nothing else.',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -748,7 +784,7 @@ async function testUntilLoop() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let exitCode = 1;
     try {
@@ -783,7 +819,7 @@ async function testBreakNode() {
       '  prompt: Confirm items.txt exists and contains only "first".',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -818,7 +854,7 @@ async function testListAppend() {
       '  prompt: Write the value of "${items}" to list-result.txt. Write only the raw variable value.',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -854,7 +890,7 @@ async function testCustomGate() {
       '  gate app_works: node app.js',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let exitCode = 1;
     try {
@@ -887,7 +923,7 @@ async function testNestedForeach() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     const expected = ['red-small', 'red-large', 'blue-small', 'blue-large'];
     let found = 0;
@@ -925,7 +961,7 @@ async function testListAccumulation() {
       '  run: echo ${results} > accumulated.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let countContent = '';
     let accContent = '';
@@ -982,7 +1018,7 @@ async function testAndOrConditions() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let andContent = '';
     let orContent = '';
@@ -1028,7 +1064,7 @@ async function testNumericComparison() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let cmpContent = '';
     let gteContent = '';
@@ -1070,7 +1106,7 @@ async function testTryFinally() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let catchContent = '';
     let finallyContent = '';
@@ -1112,7 +1148,7 @@ async function testBreakInsideIfForeach() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let visitedContent = '';
     let markerContent = '';
@@ -1158,7 +1194,7 @@ async function testUntilVariable() {
       '  run: echo counter-reached-${counter} > until-final.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let finalContent = '';
     try {
@@ -1191,7 +1227,7 @@ async function testMultiVarInterpolation() {
       '  run: echo ${proto}-${host}-${port} > multi-var.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -1224,7 +1260,7 @@ async function testApproveTimeout() {
       '  run: echo after > after.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let beforeOk = false;
     let afterOk = false;
@@ -1265,7 +1301,7 @@ async function testReviewBlock() {
       '  run: echo review-done > review-done.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let doneOk = false;
     try {
@@ -1295,7 +1331,7 @@ async function testRememberMemory() {
       '  remember key="smoke_lang" value="TypeScript-42"',
     ].join('\n');
 
-    claudeRun(writePrompt, dir);
+    harnessRun(writePrompt, dir);
 
     // Phase 2: read back via memory: section (same dir, same state)
     const readPrompt = [
@@ -1308,7 +1344,7 @@ async function testRememberMemory() {
       '  run: echo "${smoke_lang}" > lang.txt',
     ].join('\n');
 
-    claudeRun(readPrompt, dir);
+    harnessRun(readPrompt, dir);
 
     let content = '';
     try {
@@ -1345,7 +1381,7 @@ async function testImportAnonymousFlow() {
       '  run: echo main > main-marker.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let imported = '';
     let mainMarker = '';
@@ -1393,7 +1429,7 @@ async function testImportNamespacedLibrary() {
       '  use mylib.greet(name="smoke-test")',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -1428,7 +1464,7 @@ async function testContinueSkipsIteration() {
       '  end',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -1464,7 +1500,7 @@ async function testRememberKeyValue() {
       '  run: echo done > kv-marker.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let memory = [];
     try {
@@ -1518,7 +1554,7 @@ async function testGroundedWhileLoop() {
       '  run: echo loop-done > while-grounded.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let done = '';
     let counter = '';
@@ -1572,7 +1608,7 @@ async function testContinueInWhileLoop() {
       '  run: echo final-${counter} > while-continue-final.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     let final = '';
@@ -1615,7 +1651,7 @@ async function testSpawnBasicChild() {
       '  run: echo parent-done > parent-marker.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let worker = '';
     let parent = '';
@@ -1655,7 +1691,7 @@ async function testSpawnInheritsParentVariables() {
       '  run: echo ${painter.result} > spawn-var.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let painted = '';
     let spawnVar = '';
@@ -1698,7 +1734,7 @@ async function testRaceBlock() {
       '  run: echo "${race_winner}" > winner.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let winner = '';
     try {
@@ -1730,7 +1766,7 @@ async function testForeachSpawn() {
       '  await all',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     const expectedFiles = ['spawn-alpha.txt', 'spawn-beta.txt', 'spawn-gamma.txt'];
     let found = 0;
@@ -1769,7 +1805,7 @@ async function testSendReceive() {
       '  run: echo "${msg}" > received.txt',
     ].join('\n');
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -1801,7 +1837,7 @@ async function testIncludeDirective() {
       '\n',
     );
 
-    claudeRun(prompt, dir);
+    harnessRun(prompt, dir);
 
     let content = '';
     try {
@@ -1841,7 +1877,7 @@ async function main() {
   if (ONLY_FILTERS) {
     console.log(`[smoke-test] Restricting run to: ${[...ONLY_FILTERS].join(', ')}\n`);
   }
-  console.log(`[smoke-test] Starting live CLI smoke tests via ${getCommandLabel()}...\n`);
+  console.log(`[smoke-test] Starting live flow smoke tests via ${getFlowCommandLabel()}...\n`);
 
   // Check harness CLI is available
   try {
@@ -1852,7 +1888,7 @@ async function main() {
     process.exit(0);
   }
 
-  assertClaudeAccess();
+  assertHarnessReady();
 
   // Plugin should already be built + installed by npm run eval:smoke.
   // Run tests — A, B, E, H, I, K are fast; C is medium; D is slow (gate loop)

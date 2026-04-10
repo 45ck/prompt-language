@@ -91,13 +91,33 @@ claude -p "$(cat example.flow)"
 
 ### run
 
-Execute a `.flow` file or inline flow text through Claude.
+Execute a `.flow` file or inline flow text through Claude or OpenCode.
 
 ```bash
 npx @45ck/prompt-language run --file my.flow
 npx @45ck/prompt-language run my.flow
 cat my.flow | npx @45ck/prompt-language run
+npx @45ck/prompt-language run --runner opencode --model ollama/gemma4:e2b my.flow
 ```
+
+Notes:
+
+1. `--runner claude` is the default.
+2. `--runner opencode` uses the headless flow runner rather than Claude's interactive hook loop.
+3. Local Ollama models use the `provider/model` form, for example `ollama/gemma4:e2b`.
+4. On this host, the runnable local Gemma baseline was `ollama/gemma4-cpu:e2b`; prompt-only headless runs worked through OpenCode, but tool-driven smoke still failed.
+5. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
+
+### ci
+
+Run a flow in headless mode for CI or automation.
+
+```bash
+npx @45ck/prompt-language ci --file my.flow
+npx @45ck/prompt-language ci --runner opencode --model ollama/gemma4:e2b my.flow
+```
+
+This is the same headless runner path used by `run --runner opencode`, so prompt quality and tool-use behavior depend on the selected model.
 
 ### list
 

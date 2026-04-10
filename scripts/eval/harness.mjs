@@ -3,15 +3,23 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 const DEFAULT_HARNESS = 'claude';
 const HARNESS = parseHarness(process.argv, process.env.EVAL_HARNESS);
+const DEFAULT_MODEL = parseModel(process.argv, process.env.EVAL_MODEL);
+const ROOT = resolve(import.meta.dirname, '..', '..');
 
 function parseHarness(argv, envHarness) {
   const flagIndex = argv.indexOf('--harness');
   const flagValue = flagIndex >= 0 ? argv[flagIndex + 1] : null;
   return (flagValue || envHarness || DEFAULT_HARNESS).toLowerCase();
+}
+
+function parseModel(argv, envModel) {
+  const flagIndex = argv.indexOf('--model');
+  const flagValue = flagIndex >= 0 ? argv[flagIndex + 1] : null;
+  return flagValue || envModel || undefined;
 }
 
 function cleanEnv() {
@@ -42,6 +50,10 @@ function buildCodexPrompt(prompt) {
 function versionCommand() {
   if (HARNESS === 'codex') {
     return codexBinaryCommand('--version');
+  }
+
+  if (HARNESS === 'opencode') {
+    return ['opencode', '--version'];
   }
 
   return ['claude', '--version'];
@@ -145,16 +157,91 @@ function execCodex(prompt, cwd, timeout, model, strict) {
   }
 }
 
+function execOpenCode(prompt, cwd, timeout, model, strict) {
+  const args = ['run', '--dangerously-skip-permissions', '--dir', cwd];
+
+  if (model) {
+    args.push('--model', model);
+  }
+
+  args.push(prompt);
+
+  try {
+    return execFileSync('opencode', args, {
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: cleanEnv(),
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
+
+function execOpenCodeFlow(flowText, cwd, timeout, model, strict) {
+  const args = [join(ROOT, 'bin', 'cli.mjs'), 'ci', '--runner', 'opencode'];
+
+  if (model) {
+    args.push('--model', model);
+  }
+
+  try {
+    return execFileSync('node', args, {
+      input: flowText,
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: cleanEnv(),
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
+
 export function getHarnessName() {
   return HARNESS;
 }
 
 export function getHarnessLabel() {
-  return HARNESS === 'codex' ? 'Codex CLI' : 'Claude CLI';
+  if (HARNESS === 'codex') {
+    return 'Codex CLI';
+  }
+
+  if (HARNESS === 'opencode') {
+    return 'OpenCode CLI';
+  }
+
+  return 'Claude CLI';
 }
 
 export function getCommandLabel() {
-  return HARNESS === 'codex' ? 'codex exec' : 'claude -p';
+  if (HARNESS === 'codex') {
+    return 'codex exec';
+  }
+
+  if (HARNESS === 'opencode') {
+    return 'opencode run';
+  }
+
+  return 'claude -p';
+}
+
+export function getFlowCommandLabel() {
+  return HARNESS === 'opencode' ? 'prompt-language ci --runner opencode' : getCommandLabel();
 }
 
 export function checkHarnessVersion(timeout = 5000) {
@@ -170,7 +257,25 @@ export function runHarnessPrompt(
   prompt,
   { cwd = process.cwd(), timeout = 120_000, model, strict = false } = {},
 ) {
+  const resolvedModel = model ?? DEFAULT_MODEL;
   return HARNESS === 'codex'
-    ? execCodex(prompt, cwd, timeout, model, strict)
-    : execClaude(prompt, cwd, timeout, model);
+    ? execCodex(prompt, cwd, timeout, resolvedModel, strict)
+    : HARNESS === 'opencode'
+      ? execOpenCode(prompt, cwd, timeout, resolvedModel, strict)
+      : execClaude(prompt, cwd, timeout, resolvedModel);
+}
+
+export function runHarnessFlow(
+  flowText,
+  { cwd = process.cwd(), timeout = 120_000, model, strict = false } = {},
+) {
+  const resolvedModel = model ?? DEFAULT_MODEL;
+  return HARNESS === 'opencode'
+    ? execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict)
+    : runHarnessPrompt(flowText, {
+        cwd,
+        timeout,
+        model: resolvedModel,
+        strict,
+      });
 }

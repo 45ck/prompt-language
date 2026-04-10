@@ -85,6 +85,8 @@
     "eval:smoke": "npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs",
     "eval:smoke:ci": "node scripts/eval/smoke-ci.mjs",
     "eval:smoke:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs --quick",
+    "eval:smoke:opencode": "npm run build && node scripts/eval/smoke-test.mjs --harness opencode",
+    "eval:smoke:opencode:quick": "npm run build && node scripts/eval/smoke-test.mjs --harness opencode --quick",
     "eval:skill": "npm run build && node bin/cli.mjs install && node scripts/eval/skill-eval.mjs",
     "eval:skill:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/skill-eval.mjs --quick",
     "eval:ab": "npm run build && node bin/cli.mjs install && node scripts/eval/ab-eval.mjs",

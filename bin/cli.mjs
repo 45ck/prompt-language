@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { promises as fs, existsSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -257,6 +258,7 @@ async function installCodex() {
 
 async function readFlowText(args, commandName) {
   let flowText = '';
+  const flagsWithValues = new Set(['--file', '--runner', '--model', '--state-dir']);
   const readFromFile = async (path) => {
     try {
       return await fs.readFile(path, 'utf8');
@@ -275,14 +277,29 @@ async function readFlowText(args, commandName) {
   const fileIdx = args.indexOf('--file');
   if (fileIdx >= 0 && args[fileIdx + 1]) {
     flowText = await readFromFile(args[fileIdx + 1]);
-  } else if (args.length > 0 && !args[0].startsWith('-')) {
-    flowText = await readFromFile(args[0]);
-  } else if (!process.stdin.isTTY) {
-    const chunks = [];
-    for await (const chunk of process.stdin) {
-      chunks.push(chunk);
+  } else {
+    let positionalFile = null;
+    for (let i = 0; i < args.length; i += 1) {
+      const arg = args[i];
+      if (!arg) continue;
+      if (flagsWithValues.has(arg)) {
+        i += 1;
+        continue;
+      }
+      if (!arg.startsWith('-')) {
+        positionalFile = arg;
+        break;
+      }
     }
-    flowText = Buffer.concat(chunks).toString('utf8');
+    if (positionalFile) {
+      flowText = await readFromFile(positionalFile);
+    } else if (!process.stdin.isTTY) {
+      const chunks = [];
+      for await (const chunk of process.stdin) {
+        chunks.push(chunk);
+      }
+      flowText = Buffer.concat(chunks).toString('utf8');
+    }
   }
 
   if (!flowText.trim()) {
@@ -299,6 +316,82 @@ async function readFlowText(args, commandName) {
   }
 
   return flowText;
+}
+
+function readOptionValue(args, name) {
+  const idx = args.indexOf(name);
+  if (idx < 0) return undefined;
+  return args[idx + 1];
+}
+
+function readRunnerOptions(args) {
+  const runner = readOptionValue(args, '--runner') ?? 'claude';
+  const model = readOptionValue(args, '--model');
+  return { runner, model };
+}
+
+async function runOpenCodeFlow(flowText, model) {
+  const [
+    { runFlowHeadless },
+    { FileStateStore },
+    { ShellCommandRunner },
+    { FileCaptureReader },
+    { FileAuditLogger },
+    { FileMemoryStore },
+    { OpenCodePromptTurnRunner },
+  ] = await Promise.all([
+    import(pathToFileURL(join(ROOT, 'dist', 'application', 'run-flow-headless.js')).href),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-state-store.js')).href
+    ),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'shell-command-runner.js'))
+        .href
+    ),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-capture-reader.js')).href
+    ),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-audit-logger.js')).href
+    ),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-memory-store.js')).href
+    ),
+    import(
+      pathToFileURL(
+        join(ROOT, 'dist', 'infrastructure', 'adapters', 'opencode-prompt-turn-runner.js'),
+      ).href
+    ),
+  ]);
+
+  const cwd = process.cwd();
+  const stateStore = new FileStateStore(cwd);
+  await stateStore.clear('');
+  await stateStore.clearPendingPrompt();
+
+  const result = await runFlowHeadless(
+    {
+      cwd,
+      flowText,
+      ...(model != null ? { model } : {}),
+      sessionId: randomUUID(),
+    },
+    {
+      auditLogger: new FileAuditLogger(cwd),
+      captureReader: new FileCaptureReader(cwd),
+      commandRunner: new ShellCommandRunner(),
+      memoryStore: new FileMemoryStore(cwd),
+      promptTurnRunner: new OpenCodePromptTurnRunner(),
+      stateStore,
+    },
+  );
+
+  if (result.finalState.status === 'completed') {
+    return;
+  }
+
+  const reason = result.reason ?? `Flow ended with status "${result.finalState.status}".`;
+  throw new Error(reason);
 }
 
 async function validate() {
@@ -321,10 +414,28 @@ async function runFlow() {
     process.exit(1);
   }
 
-  const flowText = await readFlowText(process.argv.slice(3), 'run');
+  const args = process.argv.slice(3);
+  const flowText = await readFlowText(args, 'run');
+  const { runner, model } = readRunnerOptions(args);
+
+  if (runner === 'opencode') {
+    await runOpenCodeFlow(flowText, model);
+    return;
+  }
+
+  if (runner !== 'claude') {
+    console.error(`Error: Unsupported runner "${runner}". Supported runners: claude, opencode.`);
+    process.exit(1);
+  }
+
   const { execFileSync } = await import('node:child_process');
   const claudeCommand = process.platform === 'win32' ? 'claude.cmd' : 'claude';
-  execFileSync(claudeCommand, ['-p', '--dangerously-skip-permissions', flowText], {
+  const claudeArgs = ['-p', '--dangerously-skip-permissions'];
+  if (model) {
+    claudeArgs.push('--model', model);
+  }
+  claudeArgs.push(flowText);
+  execFileSync(claudeCommand, claudeArgs, {
     stdio: 'inherit',
     timeout: 600_000,
   });
@@ -717,20 +828,34 @@ done when:
 
 // H-INT-003: CI/CD mode — run a flow headlessly via `claude -p`
 async function ci() {
-  const flowText = await readFlowText(process.argv.slice(3), 'ci');
+  const args = process.argv.slice(3);
+  const flowText = await readFlowText(args, 'ci');
+  const { runner, model } = readRunnerOptions(args);
 
-  console.log('[prompt-language CI] Running flow headlessly...');
+  console.log(`[prompt-language CI] Running flow via ${runner}...`);
   try {
-    const { execFileSync } = await import('node:child_process');
-    // D01-fix: Use execFileSync with array args to prevent shell injection
-    execFileSync('claude', ['-p', '--dangerously-skip-permissions', flowText], {
-      stdio: 'inherit',
-      timeout: 600_000, // 10 min max
-    });
+    if (runner === 'opencode') {
+      await runOpenCodeFlow(flowText, model);
+    } else if (runner === 'claude') {
+      const { execFileSync } = await import('node:child_process');
+      const claudeArgs = ['-p', '--dangerously-skip-permissions'];
+      if (model) {
+        claudeArgs.push('--model', model);
+      }
+      claudeArgs.push(flowText);
+      execFileSync('claude', claudeArgs, {
+        stdio: 'inherit',
+        timeout: 600_000, // 10 min max
+      });
+    } else {
+      throw new Error(`Unsupported runner "${runner}". Supported runners: claude, opencode.`);
+    }
     console.log('[prompt-language CI] Flow completed.');
     process.exit(0);
   } catch (error) {
-    console.error(`[prompt-language CI] Flow failed with exit code ${error.status ?? 1}`);
+    console.error(
+      `[prompt-language CI] Flow failed with exit code ${error.status ?? 1}: ${error.message ?? error}`,
+    );
     process.exit(error.status ?? 1);
   }
 }
@@ -798,11 +923,11 @@ Commands:
   status       Show installation status
   codex-status Show Codex scaffold status
   init         Scaffold a starter flow in the current directory
-  run          Execute a .flow file or inline flow text via Claude
+  run          Execute a .flow file or inline flow text (\`--runner claude|opencode\`)
   demo         Print an example flow to stdout
   list         Recursively list .flow files in the current directory
   validate     Parse, lint, score, and render a flow without executing it
-  ci           Run a flow headlessly (CI/CD mode)
+  ci           Run a flow headlessly (CI/CD mode, supports \`--runner opencode\`)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild
 

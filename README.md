@@ -44,6 +44,7 @@ Use the runtime in this order:
 1. Install it with `npx @45ck/prompt-language` or `npx @45ck/prompt-language codex-install`
 2. Validate a flow with `npx @45ck/prompt-language validate`
 3. Run it with `claude -p` or the CLI `run` command
+   For local models, use `run --runner opencode --model ollama/gemma4:e2b`
 4. Smoke-test any hook, parsing, advancement, or state-transition change with `npm run eval:smoke`
 5. Recover with `/flow:status`, `/flow:reset`, or the troubleshooting guide when state gets stuck
 
@@ -123,6 +124,21 @@ To install the Codex scaffold locally instead:
 npx @45ck/prompt-language codex-install
 ```
 
+For headless local-model execution with OpenCode and Ollama:
+
+```bash
+npx @45ck/prompt-language run --runner opencode --model ollama/gemma4:e2b my.flow
+```
+
+This path is intended for non-interactive flow execution. Claude hook parity remains the primary runtime surface.
+
+Current OpenCode validation on this workspace as of April 10, 2026:
+
+- Prompt-only headless runs work through OpenCode with local Gemma 4.
+- On this Windows AMD host, Ollama's default GPU path could not reliably load Gemma 4; the runnable local baseline was `ollama/gemma4-cpu:e2b`.
+- Tool-driven headless execution is runner- and model-dependent. `opencode/gpt-5-nano` passed smoke test `A` (`Context file relay`) through `prompt-language ci --runner opencode`.
+- `ollama/gemma4-cpu:e2b` still failed the same tool-driven smoke case on this host, so Gemma 4 remains baseline-only here rather than a credible rerun surface.
+
 ## SDK
 
 For programmatic use, import the SDK subpath:
@@ -160,19 +176,21 @@ node bin/cli.mjs install
 
 ## CLI commands
 
-| Command                                     | What it does                             |
-| ------------------------------------------- | ---------------------------------------- |
-| `npx @45ck/prompt-language`                 | Install the runtime (default)            |
-| `npx @45ck/prompt-language codex-install`   | Install the Codex scaffold locally       |
-| `npx @45ck/prompt-language status`          | Check installation status                |
-| `npx @45ck/prompt-language codex-status`    | Check Codex scaffold status              |
-| `npx @45ck/prompt-language uninstall`       | Remove the runtime                       |
-| `npx @45ck/prompt-language codex-uninstall` | Remove the Codex scaffold                |
-| `npx @45ck/prompt-language init`            | Scaffold a starter flow for your project |
-| `npx @45ck/prompt-language validate`        | Parse, lint, score, and preview a flow   |
-| `npx @45ck/prompt-language demo`            | Print an annotated example flow          |
-| `npx @45ck/prompt-language statusline`      | Configure Claude Code status line        |
-| `npx @45ck/prompt-language watch`           | Launch live TUI flow monitor             |
+| Command                                     | What it does                               |
+| ------------------------------------------- | ------------------------------------------ |
+| `npx @45ck/prompt-language`                 | Install the runtime (default)              |
+| `npx @45ck/prompt-language codex-install`   | Install the Codex scaffold locally         |
+| `npx @45ck/prompt-language status`          | Check installation status                  |
+| `npx @45ck/prompt-language codex-status`    | Check Codex scaffold status                |
+| `npx @45ck/prompt-language uninstall`       | Remove the runtime                         |
+| `npx @45ck/prompt-language codex-uninstall` | Remove the Codex scaffold                  |
+| `npx @45ck/prompt-language init`            | Scaffold a starter flow for your project   |
+| `npx @45ck/prompt-language validate`        | Parse, lint, score, and preview a flow     |
+| `npx @45ck/prompt-language run`             | Execute a flow via Claude or OpenCode      |
+| `npx @45ck/prompt-language ci`              | Run a flow in headless mode for automation |
+| `npx @45ck/prompt-language demo`            | Print an annotated example flow            |
+| `npx @45ck/prompt-language statusline`      | Configure Claude Code status line          |
+| `npx @45ck/prompt-language watch`           | Launch live TUI flow monitor               |
 
 ## Packaged workflows
 

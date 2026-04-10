@@ -7,6 +7,9 @@ flowspec
 gitignored
 modelcontextprotocol
 noslop
+ollama
+opencode
+gemma4
 repo
 resolvers
 sessionid

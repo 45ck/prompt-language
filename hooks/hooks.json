@@ -23,6 +23,17 @@
         ]
       }
     ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/presentation/hooks/subagent-stop.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "TaskCompleted": [
       {
         "_comment": "TaskCompleted fires when Claude finishes the current task. Used for gate evaluation — exits 2 to block completion if any done-when gate fails.",

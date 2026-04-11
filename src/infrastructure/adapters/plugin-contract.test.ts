@@ -115,8 +115,10 @@ describe('hooks.json structure contract', () => {
   const EXPECTED_EVENTS = [
     'UserPromptSubmit',
     'Stop',
+    'SubagentStop',
     'TaskCompleted',
     'PostToolUse',
+    'PreCompact',
     'SessionStart',
   ];
 

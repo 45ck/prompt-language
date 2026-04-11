@@ -32,6 +32,7 @@ As of April 11, 2026, the repo has enough checked-in evidence to say where Codex
 - Codex is credible for repo-local validation and the quick headless smoke subset.
 - Codex has a real checked-in eval/report path, with locked artifacts regenerated on April 10, 2026.
 - Codex has not yet earned a full Claude-equivalent lifecycle claim, because no supported-host live-smoke pass is checked in and the broader compare and verify reruns are still open.
+- No additional checked-in classification layer is missing; the remaining delta is evidence collection on supported-host smoke plus compare and verify reruns.
 
 ## What is not currently showing up as a product bug
 
@@ -62,6 +63,14 @@ No additional follow-up bead is justified from the current workspace evidence al
 The honest current verdict is **partial parity**.
 
 Codex is at parity for the repo-local validation bar that this workspace can execute today, and it has a strong quick-smoke signal. It is **not yet at supported-host parity** because the remaining host-side smoke and broader comparative and verification evidence are still open.
+
+For bead tracking, that means `prompt-language-5pej.2` remains materially open
+at current `HEAD`. The open portion is narrow and explicit:
+
+- supported-host `npm run eval:smoke` evidence through the real agent loop
+- current reruns for `npm run eval:compare:quick`
+- current reruns for `npm run eval:compare:v4:quick`
+- current rerun for `npm run eval:verify`
 
 That means the repo can reasonably say:
 

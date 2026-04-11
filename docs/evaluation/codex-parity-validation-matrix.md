@@ -10,6 +10,27 @@ It is intentionally stricter than a one-command smoke note. A Codex parity claim
 
 This note is a validation contract. It is not a claim that the matrix is currently green on every host.
 
+## Current checked-in execution status
+
+As of April 11, 2026 at `194d074a6f052662e99e69784beacc5ccfa95049`, the
+checked-in evidence supports the following status for the `prompt-language-5pej.2`
+full-run bead:
+
+| Surface                          | Current checked-in status                                    | Result          | Why the bead still matters                                                 |
+| -------------------------------- | ------------------------------------------------------------ | --------------- | -------------------------------------------------------------------------- |
+| `npm run test`                   | recorded as passing in the current parity notes              | `passed`        | repo-local regression bar is green                                         |
+| `npm run ci`                     | recorded as passing in the current parity notes              | `passed`        | repo quality gate is green                                                 |
+| `npm run eval:e2e`               | recorded as passing in the current parity notes              | `passed`        | repo-local eval runner path is proven                                      |
+| `npm run eval:smoke:codex:quick` | recorded as `27/27` scenarios passed                         | `passed`        | quick Codex smoke is green                                                 |
+| `npm run eval:smoke`             | blocked before scenarios by missing Claude auth on this host | `blocked`       | supported-host live-smoke evidence is still missing                        |
+| `npm run eval:compare:quick`     | no current rerun checked in                                  | `not attempted` | broader comparative parity still lacks current execution evidence          |
+| `npm run eval:compare:v4:quick`  | no current rerun checked in                                  | `not attempted` | current comparative-v4 parity still lacks current execution evidence       |
+| `npm run eval:verify`            | no current rerun checked in                                  | `not attempted` | strong verification parity is still unproven in the current checked-in set |
+
+This means `prompt-language-5pej.2` is still materially open. The remaining
+work is execution evidence on a supported host, not a newly identified runtime
+or semantic regression.
+
 ## Evidence fields
 
 Capture the same evidence fields for every parity attempt:

@@ -30,9 +30,12 @@ That is the clearest place where prompt-language adds value over plain prompting
 ## What is not fully proven yet
 
 - supported-host live smoke with Claude access in a supported host environment: `npm run eval:smoke` is still not closed out by native-Windows evidence alone
-- full Codex parity on a supported Linux/macOS/WSL host with live smoke and comparative runs
+- full Codex parity on a supported Linux/macOS/WSL host with live smoke plus compare and verify reruns
 - broad thesis claims beyond the seeded E1 dataset bank and the historical comparative eval set
 - larger orchestration-shell positioning beyond the current supervision-runtime boundary
+
+That means the full-run parity bead is still open on evidence capture, not on a
+known Codex-specific runtime break.
 
 ## Caveats
 

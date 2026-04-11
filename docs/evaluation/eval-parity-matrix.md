@@ -36,6 +36,17 @@ Use the same fields for every matrix row so closure review stays checkable.
 | CI-safe smoke posture      | `npm run eval:smoke:ci` passed on Windows native and WSL Ubuntu; hosted CI already runs it on `ubuntu-latest`, `macos-latest`, and `windows-latest` | `2026-04-12` | Useful non-auth cross-platform evidence, but not a substitute for live smoke    | [2026-04-12 Cross-Platform Smoke Verification](2026-04-12-cross-platform-smoke-verification.md)                                                               |
 | Worktree state             | Dirty worktree with unrelated existing changes                                                                                                      | `2026-04-12` | Results apply to the checked-out branch state, not a pristine baseline snapshot | [2026-04-12 Codex Parity Full Run Evidence](2026-04-12-codex-parity-full-run-evidence.md)                                                                     |
 
+## Check Families
+
+This is the exact required-versus-advisory split for `prompt-language-5pej.1`.
+
+| Family                    | Checks                                                                               | Required now?                                                  | Why                                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Repo-local regression bar | `npm run test`, `npm run ci`, `npm run eval:e2e`                                     | yes                                                            | These are the deterministic repo-local checks that must be green before any honest repo-local parity claim.                             |
+| Supported-host live smoke | `npm run eval:smoke`                                                                 | yes                                                            | This is the mandatory live-loop proof for supported-host parity and for behavior touching hooks, parsing, advancement, state, or gates. |
+| Fast runner regression    | `npm run eval:smoke:codex:quick`                                                     | advisory but high-signal                                       | This is the fastest Codex-specific regression signal, but it does not replace supported-host live smoke.                                |
+| Broader comparative evals | `npm run eval:compare:quick`, `npm run eval:compare:v4:quick`, `npm run eval:verify` | advisory for `5pej.1`; required only for broader parity claims | These widen the claim beyond repo-local and live-smoke parity.                                                                          |
+
 ## Required Checks
 
 These checks define the authoritative parity bar.
@@ -64,6 +75,16 @@ These checks add confidence or diagnostic context, but they do not replace the r
 | `node scripts/eval/smoke-test.mjs --harness gemini`            | Direct harness execution path                          | Implemented, but no fresh executed evidence found in the checked-in April 11-12 note set       | `not rerun`  | No current executed-host record     | `not rerun`               | Capability exists, but no current closure evidence                                                                     | none in current note set                                                                    |
 | `AI_CMD=\"gemini -p --yolo\" node scripts/eval/smoke-test.mjs` | Custom command-template override                       | Supported path, but no fresh executed evidence found in the checked-in April 11-12 note set    | `not rerun`  | No current executed-host record     | `not rerun`               | Confirms configurability only, not parity                                                                              | none in current note set                                                                    |
 
+## Current Claim-Level Status
+
+This is the current parity status implied by the repo-local evidence above.
+
+| Claim level                 | Current status | Why                                                                                                                                                        |
+| --------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repo-local Codex parity     | not satisfied  | `npm run test` and `npm run ci` are both failing in the latest checked-in evidence, and `npm run eval:e2e` has no fresh rerun in the April 11-12 note set. |
+| Supported-host Codex parity | not satisfied  | `npm run eval:smoke` is still blocked before scenarios on this host, and no passing supported-host live-smoke rerun is checked in.                         |
+| Broader eval parity         | not satisfied  | Compare and verify reruns are still missing from the latest checked-in evidence.                                                                           |
+
 ## Blocked Checks And External Reruns
 
 These are the concrete blocked paths that still need external resolution.
@@ -77,6 +98,7 @@ These are the concrete blocked paths that still need external resolution.
 ## Closure Review Reading
 
 - `prompt-language-5pej.1` owns the matrix definition, required-versus-advisory split, and evidence format.
+- The tables above are intentionally based on repo-local checked-in evidence only; they do not infer unsupported-host passes or carry forward stale green runs as current truth.
 - The matrix is now explicit about April 12 failures, stale evidence, and external blockers instead of carrying forward the earlier all-green snapshot.
 - This matrix refresh does not claim `prompt-language-5pej.2` is green. It records that full execution parity remains open.
 - The only closure blocker that is still external to this docs task is the existing dependency on `prompt-language-72a5.6` for supported-host smoke/support-matrix evidence.

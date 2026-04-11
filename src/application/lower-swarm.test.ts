@@ -4,6 +4,106 @@ import { parseFlow } from './parse-flow.js';
 import { expandSwarmDocument, lowerSwarmFlowLines } from './lower-swarm.js';
 import { renderNodesToDsl } from './render-node-to-dsl.js';
 
+const managerWorkerSwarmDsl = [
+  'Goal: manager worker equivalence',
+  '',
+  'flow:',
+  '  swarm delivery',
+  '    role worker',
+  '      run: echo worker-ready > worker-note.txt',
+  `      return '{"status":"ready","artifact":"worker-note.txt"}'`,
+  '    end',
+  '    flow:',
+  '      start worker',
+  '      await all',
+  '    end',
+  '  end',
+  '  run: echo ${delivery.worker.returned} > manager-returned.json',
+  '  run: echo ${delivery.worker.status} > manager-status.txt',
+].join('\n');
+
+const managerWorkerExplicitDsl = [
+  'Goal: manager worker equivalence',
+  '',
+  'flow:',
+  '  spawn "worker"',
+  '    let __swarm_id = "delivery"',
+  '    let __swarm_role = "worker"',
+  '    run: echo worker-ready > worker-note.txt',
+  `    let __swarm_return = '{"status":"ready","artifact":"worker-note.txt"}'`,
+  '    send parent "${__swarm_return}"',
+  '  end',
+  '  await "worker"',
+  '  receive __delivery_worker_returned from "worker" timeout 30',
+  '  run: echo ${delivery.worker.returned} > manager-returned.json',
+  '  run: echo ${delivery.worker.status} > manager-status.txt',
+].join('\n');
+
+const reviewerAfterWorkersSwarmDsl = [
+  'Goal: reviewer after workers equivalence',
+  '',
+  'flow:',
+  '  swarm review_pass',
+  '    role frontend',
+  '      run: echo frontend-ready > frontend.txt',
+  '      return "frontend-ready"',
+  '    end',
+  '    role backend',
+  '      run: echo backend-ready > backend.txt',
+  '      return "backend-ready"',
+  '    end',
+  '    role reviewer',
+  '      run: echo ${frontend_result}+${backend_result} > review.txt',
+  '      return ${frontend_result}-${backend_result}',
+  '    end',
+  '    flow:',
+  '      start frontend, backend',
+  '      await all',
+  '      let frontend_result = ${review_pass.frontend.returned}',
+  '      let backend_result = ${review_pass.backend.returned}',
+  '      start reviewer',
+  '      await reviewer',
+  '    end',
+  '  end',
+  '  run: echo ${review_pass.reviewer.returned} > summary.txt',
+].join('\n');
+
+const reviewerAfterWorkersExplicitDsl = [
+  'Goal: reviewer after workers equivalence',
+  '',
+  'flow:',
+  '  spawn "frontend"',
+  '    let __swarm_id = "review_pass"',
+  '    let __swarm_role = "frontend"',
+  '    run: echo frontend-ready > frontend.txt',
+  '    let __swarm_return = "frontend-ready"',
+  '    send parent "${__swarm_return}"',
+  '  end',
+  '  spawn "backend"',
+  '    let __swarm_id = "review_pass"',
+  '    let __swarm_role = "backend"',
+  '    run: echo backend-ready > backend.txt',
+  '    let __swarm_return = "backend-ready"',
+  '    send parent "${__swarm_return}"',
+  '  end',
+  '  await "frontend"',
+  '  receive __review_pass_frontend_returned from "frontend" timeout 30',
+  '  await "backend"',
+  '  receive __review_pass_backend_returned from "backend" timeout 30',
+  '  let frontend_result = ${review_pass.frontend.returned}',
+  '  let backend_result = ${review_pass.backend.returned}',
+  '  spawn "reviewer"',
+  '    let __swarm_id = "review_pass"',
+  '    let __swarm_role = "reviewer"',
+  '    run: echo ${frontend_result}+${backend_result} > review.txt',
+  '    let __swarm_return = ${frontend_result}-${backend_result}',
+  '    send parent "${__swarm_return}"',
+  '  end',
+  '  await "reviewer"',
+  '  receive __review_pass_reviewer_returned from "reviewer" timeout 30',
+  '  run: echo ${review_pass.reviewer.returned} > summary.txt',
+].join('\n');
+
 describe('lowerSwarmFlowLines', () => {
   it('lowers swarm roles into spawn and receive primitives', () => {
     const source = [
@@ -393,6 +493,45 @@ describe('swarm lowering integration', () => {
     expect(authored.warnings).toEqual([]);
     expect(explicit.warnings).toEqual([]);
     expect(renderNodesToDsl(authored.nodes, 0)).toEqual(renderNodesToDsl(explicit.nodes, 0));
+  });
+
+  it('matches the explicit manager-worker orchestration through parsing and lowering', () => {
+    const authored = parseFlow(managerWorkerSwarmDsl);
+    const explicit = parseFlow(managerWorkerExplicitDsl);
+
+    expect(authored.warnings).toEqual([]);
+    expect(explicit.warnings).toEqual([]);
+    expect(renderNodesToDsl(authored.nodes, 0)).toEqual(renderNodesToDsl(explicit.nodes, 0));
+    expect(authored.nodes.map((node) => node.kind)).toEqual([
+      'spawn',
+      'await',
+      'receive',
+      'run',
+      'run',
+    ]);
+  });
+
+  it('matches the explicit reviewer-after-workers orchestration through parsing and lowering', () => {
+    const authored = parseFlow(reviewerAfterWorkersSwarmDsl);
+    const explicit = parseFlow(reviewerAfterWorkersExplicitDsl);
+
+    expect(authored.warnings).toEqual([]);
+    expect(explicit.warnings).toEqual([]);
+    expect(renderNodesToDsl(authored.nodes, 0)).toEqual(renderNodesToDsl(explicit.nodes, 0));
+    expect(authored.nodes.map((node) => node.kind)).toEqual([
+      'spawn',
+      'spawn',
+      'await',
+      'receive',
+      'await',
+      'receive',
+      'let',
+      'let',
+      'spawn',
+      'await',
+      'receive',
+      'run',
+    ]);
   });
 
   it('returns the original document unchanged when no flow block exists', () => {

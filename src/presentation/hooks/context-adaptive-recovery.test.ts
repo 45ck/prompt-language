@@ -268,9 +268,19 @@ describe('context-adaptive recovery hooks', () => {
     expect(additionalContext).toContain(
       '[prompt-language] Active flow preserved across compaction.',
     );
-    expect(additionalContext).toContain('[pl] Recovered compact flow | active');
-    expect(additionalContext).toContain('>R: npm test');
-    expect(additionalContext).toContain('gates: +tests_pass -lint_pass');
+    expect(additionalContext).toContain(
+      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch',
+    );
+    expect(additionalContext).toContain(
+      '[prompt-language] Auto-escalated to full mode: state recovered from session-state.bak.json',
+    );
+    expect(additionalContext).toContain(
+      '[prompt-language] Flow: Recovered compact flow | Status: active',
+    );
+    expect(additionalContext).toContain('> run: npm test');
+    expect(additionalContext).toContain('gates: 1/2 passed');
+    expect(additionalContext).toContain('tests_pass  [pass]');
+    expect(additionalContext).toContain('lint_pass  [fail]');
   });
 
   it('pre-compact preserves capture retry instructions when backup recovery crosses a compaction boundary (compaction_boundary, capture_failure)', async () => {
@@ -318,6 +328,9 @@ describe('context-adaptive recovery hooks', () => {
     expect(additionalContext).toContain(
       '[prompt-language] Active flow preserved across compaction.',
     );
+    expect(additionalContext).toContain(
+      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch,capture_recovery',
+    );
     expect(additionalContext).toContain('Recovered capture flow');
     expect(additionalContext).toContain('IMPORTANT: Capture is in progress.');
     expect(additionalContext).toContain('Variable capture');
@@ -357,9 +370,16 @@ describe('context-adaptive recovery hooks', () => {
       '[prompt-language] Active flow preserved across compaction.',
     );
     expect(additionalContext).toContain(
-      '[pl] Recovered compact flow from second-generation backup | active',
+      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch',
     );
-    expect(additionalContext).toContain('>R: npm run lint');
-    expect(additionalContext).toContain('gates: -lint_pass');
+    expect(additionalContext).toContain(
+      '[prompt-language] Auto-escalated to full mode: state recovered from session-state.bak2.json',
+    );
+    expect(additionalContext).toContain(
+      '[prompt-language] Flow: Recovered compact flow from second-generation backup | Status: active',
+    );
+    expect(additionalContext).toContain('> run: npm run lint');
+    expect(additionalContext).toContain('gates: 0/1 passed');
+    expect(additionalContext).toContain('lint_pass  [fail]');
   });
 });

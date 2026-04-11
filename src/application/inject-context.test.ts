@@ -589,6 +589,65 @@ describe('injectContext — variable interpolation', () => {
     expect(result.prompt).toContain('secret = keep visible on fallback');
   });
 
+  it('keeps covered interpolation dependencies without leaking unrelated variables', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'ctx', {
+        type: 'prompt',
+        text: 'Use ${repo:-default} with ${items[0]} and ${analysis.severity} before continuing',
+      }),
+    ]);
+    let session = createSessionState('slice-covered-patterns', spec);
+    session = {
+      ...session,
+      variables: {
+        repo: 'auth module',
+        items: '["first","second"]',
+        'analysis.severity': 'high',
+        secret: 'ignore me',
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'Continue', sessionId: 'slice-covered-patterns' },
+      store,
+    );
+
+    expect(result.prompt).toContain('repo = auth module');
+    expect(result.prompt).toContain('items = [2 items: "first", "second"]');
+    expect(result.prompt).toContain('analysis.severity = high');
+    expect(result.prompt).not.toContain('secret = ignore me');
+  });
+
+  it('falls back to full variable injection when interpolation syntax is uncertain', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'ctx', {
+        type: 'prompt',
+        text: 'Inspect ${${dynamic}} before continuing',
+      }),
+    ]);
+    let session = createSessionState('slice-uncertain-fallback', spec);
+    session = {
+      ...session,
+      variables: {
+        dynamic: 'repo',
+        repo: 'auth module',
+        secret: 'keep visible on uncertainty fallback',
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext(
+      { prompt: 'Continue', sessionId: 'slice-uncertain-fallback' },
+      store,
+    );
+
+    expect(result.prompt).toContain('repo = auth module');
+    expect(result.prompt).toContain('secret = keep visible on uncertainty fallback');
+  });
+
   it('interpolates ${varName} in captured prompt text', async () => {
     const store = makeStore();
     const spec = createFlowSpec('test', [createPromptNode('p1', 'Refactor the ${name}')]);

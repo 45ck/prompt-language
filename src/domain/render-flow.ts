@@ -968,6 +968,57 @@ export function renderFlowCompact(state: SessionState): string {
   return lines.join('\n');
 }
 
+export const FLOW_SUMMARY_POLICY = {
+  inlineNodeDescriptionMaxLength: 40,
+} as const;
+
+interface FlowSummarySnapshot {
+  readonly gateCount: number;
+  readonly gatesPassed: number;
+  readonly inlineNodeDescription: string;
+  readonly nodeDescription: string;
+  readonly stepNum: number;
+  readonly status: SessionState['status'];
+  readonly totalNodes: number;
+  readonly varCount: number;
+}
+
+function normalizeSummaryText(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function truncateSummaryText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  if (maxLength <= 3) {
+    return '.'.repeat(maxLength);
+  }
+  return `${value.slice(0, maxLength - 3)}...`;
+}
+
+function buildFlowSummarySnapshot(state: SessionState): FlowSummarySnapshot {
+  const totalNodes = countAllNodes(state.flowSpec.nodes);
+  const stepNum = findStepIndex(state.flowSpec.nodes, state.currentNodePath);
+  const currentNode = resolveNodeByPath(state.flowSpec.nodes, state.currentNodePath);
+  const nodeDescription = normalizeSummaryText(currentNode ? describeNode(currentNode) : 'done');
+  const gates = state.flowSpec.completionGates;
+
+  return {
+    gateCount: gates.length,
+    gatesPassed: gates.filter((gate) => state.gateResults[gate.predicate] === true).length,
+    inlineNodeDescription: truncateSummaryText(
+      nodeDescription,
+      FLOW_SUMMARY_POLICY.inlineNodeDescriptionMaxLength,
+    ),
+    nodeDescription,
+    stepNum,
+    status: state.status,
+    totalNodes,
+    varCount: Object.keys(state.variables).length,
+  };
+}
+
 // H-REL-011: Compact single-line summary for compaction resilience
 function countAllNodes(nodes: readonly FlowNode[]): number {
   let count = 0;
@@ -1230,25 +1281,33 @@ export function renderTimingReport(state: SessionState): string {
 }
 
 export function renderFlowSummary(state: SessionState): string {
-  const totalNodes = countAllNodes(state.flowSpec.nodes);
-  const stepNum = findStepIndex(state.flowSpec.nodes, state.currentNodePath);
-  const currentNode = resolveNodeByPath(state.flowSpec.nodes, state.currentNodePath);
-  const nodeDesc = currentNode ? describeNode(currentNode) : 'done';
+  const snapshot = buildFlowSummarySnapshot(state);
 
-  const varCount = Object.keys(state.variables).length;
-  const gates = state.flowSpec.completionGates;
-  const gatesPassed = gates.filter((g) => state.gateResults[g.predicate] === true).length;
-
-  const truncatedDesc = nodeDesc.length > 40 ? nodeDesc.slice(0, 37) + '...' : nodeDesc;
-
-  let summary = `[prompt-language: step ${stepNum}/${totalNodes} "${truncatedDesc}"`;
-  summary += `, vars: ${varCount}`;
-  if (gates.length > 0) {
-    summary += `, gates: ${gatesPassed}/${gates.length} passed`;
+  let summary = `[prompt-language: step ${snapshot.stepNum}/${snapshot.totalNodes} "${snapshot.inlineNodeDescription}"`;
+  summary += `, vars: ${snapshot.varCount}`;
+  if (snapshot.gateCount > 0) {
+    summary += `, gates: ${snapshot.gatesPassed}/${snapshot.gateCount} passed`;
   }
   summary += ']';
 
   return summary;
+}
+
+export function renderFlowSummaryBlock(state: SessionState): string {
+  const snapshot = buildFlowSummarySnapshot(state);
+  const lines = [
+    '[prompt-language summary]',
+    `status: ${snapshot.status}`,
+    `step: ${snapshot.stepNum}/${snapshot.totalNodes}`,
+    `node: ${snapshot.nodeDescription}`,
+    `vars: ${snapshot.varCount}`,
+  ];
+
+  if (snapshot.gateCount > 0) {
+    lines.push(`gates: ${snapshot.gatesPassed}/${snapshot.gateCount} passed`);
+  }
+
+  return lines.join('\n');
 }
 
 // H-DX-009: Final summary emitted when flow transitions to completed

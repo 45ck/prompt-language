@@ -41,6 +41,7 @@ describe('FileStateStore', () => {
     const store = new FileStateStore(tempDir);
     const result = await store.loadCurrent();
     expect(result).toBeNull();
+    expect(store.getLastLoadStatus()).toBeNull();
   });
 
   it('reports exists as false when no file', async () => {
@@ -411,6 +412,7 @@ describe('FileStateStore', () => {
       expect(loaded?.sessionId).toBe('s1');
       // _checksum should be stripped from loaded state
       expect((loaded as unknown as Record<string, unknown>)['_checksum']).toBeUndefined();
+      expect(store.getLastLoadStatus()).toEqual({ source: 'primary' });
     });
 
     it('clears gate results when checksum is tampered', async () => {
@@ -432,6 +434,10 @@ describe('FileStateStore', () => {
       expect(loaded).not.toBeNull();
       expect(loaded?.gateResults).toEqual({});
       expect(loaded?.gateDiagnostics).toEqual({});
+      expect(store.getLastLoadStatus()).toEqual({
+        source: 'checksum_sanitized',
+        reason: 'checksum_mismatch',
+      });
       expect(stderrSpy).toHaveBeenCalledWith(
         '[prompt-language] WARNING: state file checksum mismatch, clearing gate results\n',
       );
@@ -571,6 +577,10 @@ describe('FileStateStore', () => {
       expect(loaded).not.toBeNull();
       expect(loaded?.sessionId).toBe('s1'); // Recovered from backup
       expect(store.getLastLoadDiagnostic()).toBeNull();
+      expect(store.getLastLoadStatus()).toEqual({
+        source: 'backup',
+        recoveredFrom: 'session-state.bak.json',
+      });
       expect(stderrSpy).toHaveBeenCalledWith(
         '[prompt-language] WARNING: session-state.json is corrupted, trying backup\n',
       );
@@ -595,6 +605,10 @@ describe('FileStateStore', () => {
       expect(store.getLastLoadDiagnostic()?.code).toBe(
         RUNTIME_DIAGNOSTIC_CODES.resumeStateCorruption,
       );
+      expect(store.getLastLoadStatus()).toEqual({
+        source: 'unrecoverable',
+        reason: 'resume_state_corruption',
+      });
       stderrSpy.mockRestore();
     });
 
@@ -626,6 +640,10 @@ describe('FileStateStore', () => {
       expect(loaded).not.toBeNull();
       expect(loaded?.sessionId).toBe('s1'); // Recovered from bak2
       expect(store.getLastLoadDiagnostic()).toBeNull();
+      expect(store.getLastLoadStatus()).toEqual({
+        source: 'backup2',
+        recoveredFrom: 'session-state.bak2.json',
+      });
       expect(stderrSpy).toHaveBeenCalledWith(
         '[prompt-language] Recovered state from second-generation backup\n',
       );
@@ -647,6 +665,10 @@ describe('FileStateStore', () => {
       expect(store.getLastLoadDiagnostic()?.code).toBe(
         RUNTIME_DIAGNOSTIC_CODES.resumeStateCorruption,
       );
+      expect(store.getLastLoadStatus()).toEqual({
+        source: 'unrecoverable',
+        reason: 'resume_state_corruption',
+      });
       stderrSpy.mockRestore();
     });
 

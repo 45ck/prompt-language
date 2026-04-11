@@ -72,6 +72,44 @@ describe('runFlowHeadless', () => {
     tempDir = '';
   });
 
+  async function runWithHeadlessSpawner(
+    cwd: string,
+    flowText: string,
+  ): Promise<{
+    readonly promptRunner: RecordingPromptRunner;
+    readonly result: Awaited<ReturnType<typeof runFlowHeadless>>;
+  }> {
+    const commandRunner = new ShellCommandRunner();
+    const promptRunner = new RecordingPromptRunner();
+    const processSpawner = new HeadlessProcessSpawner({
+      auditLogger: new FileAuditLogger(cwd),
+      captureReader: new FileCaptureReader(cwd),
+      commandRunner,
+      cwd,
+      memoryStore: new FileMemoryStore(cwd),
+      promptTurnRunner: promptRunner,
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd,
+        flowText,
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(cwd),
+        captureReader: new FileCaptureReader(cwd),
+        commandRunner,
+        memoryStore: new FileMemoryStore(cwd),
+        processSpawner,
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    return { promptRunner, result };
+  }
+
   it('completes a prompt-driven flow once the gate passes', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-'));
     const commandRunner = new InMemoryCommandRunner();
@@ -1051,6 +1089,169 @@ describe('runFlowHeadless', () => {
     await expect(readFile(join(tempDir, 'painted.txt'), 'utf8')).resolves.toContain('purple');
     await expect(readFile(join(tempDir, 'spawn-var.txt'), 'utf8')).resolves.toContain(
       'painted-purple',
+    );
+  });
+
+  it('keeps manager-worker swarm runtime equivalent to the explicit lowered orchestration', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-swarm-manager-worker-'));
+    const authoredDir = join(tempDir, 'authored');
+    const explicitDir = join(tempDir, 'explicit');
+    await mkdir(authoredDir);
+    await mkdir(explicitDir);
+
+    const swarmFlow = [
+      'Goal: manager worker equivalence',
+      '',
+      'flow:',
+      '  swarm delivery',
+      '    role worker',
+      '      run: echo worker-ready > worker-note.txt',
+      `      return '{"status":"ready","artifact":"worker-note.txt"}'`,
+      '    end',
+      '    flow:',
+      '      start worker',
+      '      await all',
+      '    end',
+      '  end',
+      '  run: echo ${delivery.worker.returned} > manager-returned.json',
+      '  run: echo ${delivery.worker.status} > manager-status.txt',
+    ].join('\n');
+    const explicitFlow = [
+      'Goal: manager worker equivalence',
+      '',
+      'flow:',
+      '  spawn "worker"',
+      '    let __swarm_id = "delivery"',
+      '    let __swarm_role = "worker"',
+      '    run: echo worker-ready > worker-note.txt',
+      `    let __swarm_return = '{"status":"ready","artifact":"worker-note.txt"}'`,
+      '    send parent "${__swarm_return}"',
+      '  end',
+      '  await "worker"',
+      '  receive __delivery_worker_returned from "worker" timeout 30',
+      '  run: echo ${delivery.worker.returned} > manager-returned.json',
+      '  run: echo ${delivery.worker.status} > manager-status.txt',
+    ].join('\n');
+
+    const authored = await runWithHeadlessSpawner(authoredDir, swarmFlow);
+    const explicit = await runWithHeadlessSpawner(explicitDir, explicitFlow);
+
+    expect(authored.promptRunner.prompts).toHaveLength(0);
+    expect(explicit.promptRunner.prompts).toHaveLength(0);
+    expect(authored.result.finalState.status).toBe('completed');
+    expect(explicit.result.finalState.status).toBe('completed');
+    expect(authored.result.finalState.variables['delivery.worker.returned']).toEqual(
+      explicit.result.finalState.variables['delivery.worker.returned'],
+    );
+    expect(authored.result.finalState.variables['delivery.worker.result']).toEqual(
+      explicit.result.finalState.variables['delivery.worker.result'],
+    );
+    await expect(readFile(join(authoredDir, 'manager-returned.json'), 'utf8')).resolves.toBe(
+      await readFile(join(explicitDir, 'manager-returned.json'), 'utf8'),
+    );
+    await expect(readFile(join(authoredDir, 'manager-status.txt'), 'utf8')).resolves.toBe(
+      await readFile(join(explicitDir, 'manager-status.txt'), 'utf8'),
+    );
+    await expect(readFile(join(authoredDir, 'worker-note.txt'), 'utf8')).resolves.toBe(
+      await readFile(join(explicitDir, 'worker-note.txt'), 'utf8'),
+    );
+  });
+
+  it('keeps reviewer-after-workers swarm runtime equivalent to the explicit lowered orchestration', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-swarm-review-chain-'));
+    const authoredDir = join(tempDir, 'authored');
+    const explicitDir = join(tempDir, 'explicit');
+    await mkdir(authoredDir);
+    await mkdir(explicitDir);
+
+    const swarmFlow = [
+      'Goal: reviewer after workers equivalence',
+      '',
+      'flow:',
+      '  swarm review_pass',
+      '    role frontend',
+      '      run: echo frontend-ready > frontend.txt',
+      '      return "frontend-ready"',
+      '    end',
+      '    role backend',
+      '      run: echo backend-ready > backend.txt',
+      '      return "backend-ready"',
+      '    end',
+      '    role reviewer',
+      '      run: echo ${frontend_result}+${backend_result} > review.txt',
+      '      return ${frontend_result}-${backend_result}',
+      '    end',
+      '    flow:',
+      '      start frontend, backend',
+      '      await all',
+      '      let frontend_result = ${review_pass.frontend.returned}',
+      '      let backend_result = ${review_pass.backend.returned}',
+      '      start reviewer',
+      '      await reviewer',
+      '    end',
+      '  end',
+      '  run: echo ${review_pass.reviewer.returned} > summary.txt',
+    ].join('\n');
+    const explicitFlow = [
+      'Goal: reviewer after workers equivalence',
+      '',
+      'flow:',
+      '  spawn "frontend"',
+      '    let __swarm_id = "review_pass"',
+      '    let __swarm_role = "frontend"',
+      '    run: echo frontend-ready > frontend.txt',
+      '    let __swarm_return = "frontend-ready"',
+      '    send parent "${__swarm_return}"',
+      '  end',
+      '  spawn "backend"',
+      '    let __swarm_id = "review_pass"',
+      '    let __swarm_role = "backend"',
+      '    run: echo backend-ready > backend.txt',
+      '    let __swarm_return = "backend-ready"',
+      '    send parent "${__swarm_return}"',
+      '  end',
+      '  await "frontend"',
+      '  receive __review_pass_frontend_returned from "frontend" timeout 30',
+      '  await "backend"',
+      '  receive __review_pass_backend_returned from "backend" timeout 30',
+      '  let frontend_result = ${review_pass.frontend.returned}',
+      '  let backend_result = ${review_pass.backend.returned}',
+      '  spawn "reviewer"',
+      '    let __swarm_id = "review_pass"',
+      '    let __swarm_role = "reviewer"',
+      '    run: echo ${frontend_result}+${backend_result} > review.txt',
+      '    let __swarm_return = ${frontend_result}-${backend_result}',
+      '    send parent "${__swarm_return}"',
+      '  end',
+      '  await "reviewer"',
+      '  receive __review_pass_reviewer_returned from "reviewer" timeout 30',
+      '  run: echo ${review_pass.reviewer.returned} > summary.txt',
+    ].join('\n');
+
+    const authored = await runWithHeadlessSpawner(authoredDir, swarmFlow);
+    const explicit = await runWithHeadlessSpawner(explicitDir, explicitFlow);
+
+    expect(authored.promptRunner.prompts).toHaveLength(0);
+    expect(explicit.promptRunner.prompts).toHaveLength(0);
+    expect(authored.result.finalState.status).toBe('completed');
+    expect(explicit.result.finalState.status).toBe('completed');
+    expect(authored.result.finalState.variables['review_pass.reviewer.returned']).toEqual(
+      explicit.result.finalState.variables['review_pass.reviewer.returned'],
+    );
+    expect(authored.result.finalState.variables['review_pass.reviewer.status']).toEqual(
+      explicit.result.finalState.variables['review_pass.reviewer.status'],
+    );
+    expect(authored.result.finalState.variables['review_pass.reviewer.returned']).toBe(
+      'frontend-ready-backend-ready',
+    );
+    await expect(readFile(join(authoredDir, 'review.txt'), 'utf8')).resolves.toBe(
+      await readFile(join(explicitDir, 'review.txt'), 'utf8'),
+    );
+    await expect(readFile(join(authoredDir, 'summary.txt'), 'utf8')).resolves.toBe(
+      await readFile(join(explicitDir, 'summary.txt'), 'utf8'),
+    );
+    await expect(readFile(join(authoredDir, 'review.txt'), 'utf8')).resolves.toContain(
+      'frontend-ready+backend-ready',
     );
   });
 

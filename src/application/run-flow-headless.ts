@@ -9,7 +9,7 @@ import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { PromptTurnRunner } from './ports/prompt-turn-runner.js';
 import type { StateStore } from './ports/state-store.js';
 import { parseFlow } from './parse-flow.js';
-import { renderFlow, renderFlowSummary } from '../domain/render-flow.js';
+import { renderFlow, renderFlowSummaryBlock } from '../domain/render-flow.js';
 import { createSessionState, type SessionState } from '../domain/session-state.js';
 import {
   createExecutionReport,
@@ -54,7 +54,7 @@ function bindCommandRunnerCwd(commandRunner: CommandRunner, cwd: string): Comman
 }
 
 function buildPromptEnvelope(state: SessionState, capturedPrompt: string): string {
-  return `${renderFlow(state)}\n\n${capturedPrompt}\n\n${renderFlowSummary(state)}`;
+  return `${renderFlow(state)}\n\n${capturedPrompt}\n\n${renderFlowSummaryBlock(state)}`;
 }
 
 function extractGateOnlyGoal(flowText: string): string {

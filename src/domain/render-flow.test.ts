@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   renderFlow,
   renderFlowSummary,
+  renderFlowSummaryBlock,
   renderCompletionSummary,
   renderTimingReport,
   renderFlowCompact,
@@ -982,6 +983,32 @@ describe('renderFlowSummary', () => {
     expect(summary).toContain('...');
   });
 
+  it('keeps node descriptions at the threshold without ellipsis', () => {
+    const exactLength = 'a'.repeat(32);
+    const spec = createFlowSpec('test', [createPromptNode('p1', exactLength)]);
+    const state = createSessionState('s1', spec);
+
+    expect(renderFlowSummary(state)).toContain(`"prompt: ${exactLength}"`);
+    expect(renderFlowSummary(state)).not.toContain('...');
+  });
+
+  it('truncates node descriptions one character over the threshold', () => {
+    const overLimit = 'a'.repeat(33);
+    const spec = createFlowSpec('test', [createPromptNode('p1', overLimit)]);
+    const state = createSessionState('s1', spec);
+
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('...');
+    expect(summary).not.toContain(`"prompt: ${overLimit}"`);
+  });
+
+  it('normalizes summary whitespace into a single line', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'first line\n\nsecond\tstep')]);
+    const state = createSessionState('s1', spec);
+
+    expect(renderFlowSummary(state)).toContain('"prompt: first line second step"');
+  });
+
   it('shows "done" when path resolves to no node', () => {
     const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
     let state = createSessionState('s1', spec);
@@ -1000,6 +1027,53 @@ describe('renderFlowSummary', () => {
     const summary = renderFlowSummary(state);
     // 1 while + 2 body + 1 prompt = 4 total nodes
     expect(summary).toContain('/4');
+  });
+});
+
+describe('renderFlowSummaryBlock', () => {
+  it('renders a deterministic summary block with fixed field order', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createRunNode('r1', 'npm test')],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      gateResults: { lint_pass: false, tests_pass: true },
+      variables: { b: '2', a: '1' },
+    };
+
+    expect(renderFlowSummaryBlock(state)).toBe(
+      [
+        '[prompt-language summary]',
+        'status: active',
+        'step: 1/1',
+        'node: run: npm test',
+        'vars: 2',
+        'gates: 1/2 passed',
+      ].join('\n'),
+    );
+  });
+
+  it('renders the same block for equivalent state with different insertion order', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createRunNode('r1', 'npm test')],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+    const stateA = {
+      ...createSessionState('s1', spec),
+      gateResults: { lint_pass: false, tests_pass: true },
+      variables: { zebra: 'last', alpha: 'first' },
+    };
+    const stateB = {
+      ...createSessionState('s1', spec),
+      gateResults: { tests_pass: true, lint_pass: false },
+      variables: { alpha: 'first', zebra: 'last' },
+    };
+
+    expect(renderFlowSummaryBlock(stateA)).toBe(renderFlowSummaryBlock(stateB));
   });
 });
 

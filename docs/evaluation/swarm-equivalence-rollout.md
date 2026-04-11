@@ -186,3 +186,41 @@ Do not promote, or narrow the feature, if any of these patterns appear:
 `swarm` should advance on evidence that it preserves the orchestration model while improving real authoring and review work.
 
 It should not advance because the syntax looks modern, more "multi-agent", or more concise in screenshots. The rollout bar is runtime equivalence plus clearer maintenance outcomes.
+
+## 2026-04-12 evidence update
+
+### Evidence criteria for the newly added scenarios
+
+- manager-worker passes only if authored `swarm` and explicit lowered orchestration both complete, import the child result into `delivery.worker.*`, and produce the same parent-visible files
+- reviewer-after-workers passes only if frontend and backend finish first, their imported results are aliased into plain variables before reviewer spawn, and the reviewer produces the same summary in both authored and explicit forms
+- smoke coverage is only counted as host-validated if the real harness runs the scenario end to end; blocked auth does not count as a pass
+
+### Results captured
+
+- `npm exec vitest run src/application/lower-swarm.test.ts src/application/run-flow-headless.test.ts`
+  Result: passed on 2026-04-12
+  Evidence:
+  manager-worker authored `swarm` matches explicit lowered orchestration at parse/lowering level and at headless runtime
+  reviewer-after-workers authored `swarm` matches explicit lowered orchestration at parse/lowering level and at headless runtime
+- `node scripts/eval/smoke-ci.mjs`
+  Result: passed on 2026-04-12
+  Evidence:
+  `11. Swarm manager-worker pattern` passed
+  `12. Swarm reviewer-after-workers pattern` passed
+- `npm run eval:smoke:quick -- --only AP,AQ`
+  Result: blocked on 2026-04-12
+  Blocker:
+  Claude CLI auth/login was unavailable in the current environment, so live harness smoke evidence for `AP` and `AQ` was not collected
+
+### Repo-level verification status during this update
+
+- `npm run test`
+  Result: blocked by unrelated existing failures in [src/presentation/hooks/context-adaptive-recovery.test.ts](/D:/Visual%20Studio%20Projects/prompt-language/src/presentation/hooks/context-adaptive-recovery.test.ts)
+  Failing cases:
+  `pre-compact recovers from backup and preserves compact current-step and gate visibility (compaction_boundary)`
+  `pre-compact falls back to the second-generation backup and preserves the resumed step across compaction (compaction_boundary)`
+- `npm run ci`
+  Result: blocked by unrelated existing formatting drift before later stages ran
+  Blocking files:
+  [src/application/inject-context.test.ts](/D:/Visual%20Studio%20Projects/prompt-language/src/application/inject-context.test.ts)
+  [src/presentation/hooks/context-adaptive-mode.ts](/D:/Visual%20Studio%20Projects/prompt-language/src/presentation/hooks/context-adaptive-mode.ts)

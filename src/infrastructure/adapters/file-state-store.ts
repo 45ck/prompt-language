@@ -39,6 +39,13 @@ const LOCK_RETRY_MS = 50;
 const RENAME_MAX_RETRIES = 3;
 const RENAME_RETRY_MS = 50;
 
+export type StateLoadStatus =
+  | { readonly source: 'primary' }
+  | { readonly source: 'backup'; readonly recoveredFrom: 'session-state.bak.json' }
+  | { readonly source: 'backup2'; readonly recoveredFrom: 'session-state.bak2.json' }
+  | { readonly source: 'checksum_sanitized'; readonly reason: 'checksum_mismatch' }
+  | { readonly source: 'unrecoverable'; readonly reason: 'resume_state_corruption' };
+
 export class FileStateStore implements StateStore {
   private readonly dirPath: string;
   private readonly filePath: string;
@@ -48,6 +55,7 @@ export class FileStateStore implements StateStore {
   private readonly backupPath: string;
   private readonly backupPath2: string;
   private lastLoadDiagnostic: FlowDiagnostic | null = null;
+  private lastLoadStatus: StateLoadStatus | null = null;
 
   constructor(basePath: string, stateDir = DIR_NAME) {
     this.dirPath = join(basePath, stateDir);
@@ -117,6 +125,10 @@ export class FileStateStore implements StateStore {
     return this.lastLoadDiagnostic;
   }
 
+  getLastLoadStatus(): StateLoadStatus | null {
+    return this.lastLoadStatus;
+  }
+
   async savePendingPrompt(prompt: string): Promise<void> {
     await this.ensureDir();
     const json = JSON.stringify({ prompt, timestamp: Date.now() });
@@ -144,14 +156,17 @@ export class FileStateStore implements StateStore {
   }
 
   private async readState(): Promise<SessionState | null> {
+    this.lastLoadStatus = null;
     try {
       const raw = await readFile(this.filePath, 'utf-8');
       const state = this.parseStateJson(raw);
       this.lastLoadDiagnostic = null;
+      this.lastLoadStatus ??= { source: 'primary' };
       return state;
     } catch (error: unknown) {
       if (isNodeError(error) && error.code === 'ENOENT') {
         this.lastLoadDiagnostic = null;
+        this.lastLoadStatus = null;
         return null;
       }
       // D03-fix: Catch all parse/corruption errors, not just SyntaxError
@@ -169,6 +184,10 @@ export class FileStateStore implements StateStore {
         'Resume state is corrupted and could not be recovered from backup.',
         'Run "reset flow" or remove the .prompt-language/session-state*.json files before continuing.',
       );
+      this.lastLoadStatus = {
+        source: 'unrecoverable',
+        reason: 'resume_state_corruption',
+      };
       return null;
     }
   }
@@ -190,8 +209,13 @@ export class FileStateStore implements StateStore {
         if (!isStateStructureValid(sanitized)) {
           throw new Error('State file has invalid structure after checksum mismatch');
         }
+        this.lastLoadStatus = {
+          source: 'checksum_sanitized',
+          reason: 'checksum_mismatch',
+        };
         return sanitized as SessionState;
       }
+      this.lastLoadStatus ??= { source: 'primary' };
       return stateWithout as SessionState;
     }
 
@@ -199,6 +223,7 @@ export class FileStateStore implements StateStore {
     if (!isStateStructureValid(parsed)) {
       throw new Error('State file has invalid structure (no checksum, missing required fields)');
     }
+    this.lastLoadStatus ??= { source: 'primary' };
     return parsed as SessionState;
   }
 
@@ -207,12 +232,20 @@ export class FileStateStore implements StateStore {
     try {
       const raw = await readFile(this.backupPath, 'utf-8');
       process.stderr.write('[prompt-language] Recovered state from backup file\n');
+      this.lastLoadStatus = {
+        source: 'backup',
+        recoveredFrom: 'session-state.bak.json',
+      };
       return this.parseStateJson(raw);
     } catch {
       // bak.json failed — try second-generation backup
       try {
         const raw = await readFile(this.backupPath2, 'utf-8');
         process.stderr.write('[prompt-language] Recovered state from second-generation backup\n');
+        this.lastLoadStatus = {
+          source: 'backup2',
+          recoveredFrom: 'session-state.bak2.json',
+        };
         return this.parseStateJson(raw);
       } catch {
         return null;

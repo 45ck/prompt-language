@@ -15,7 +15,7 @@
  */
 
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
-import { renderFlowCompact, renderFlowSummary } from '../../domain/render-flow.js';
+import { renderFlow, renderFlowCompact, renderFlowSummaryBlock } from '../../domain/render-flow.js';
 import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
 import { buildReviewJudgeRetryPrompt } from '../../domain/review-judge-capture.js';
 import { findNodeById } from '../../domain/flow-node.js';
@@ -23,6 +23,7 @@ import { withHookErrorRecovery } from './hook-error-handler.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
+import { selectPreCompactMode } from './context-adaptive-mode.js';
 
 /** Find the variable name awaiting capture, if any. */
 function findAwaitingCapturePrompt(state: SessionState): string | null {
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
 
   const stateStore = new FileStateStore(process.cwd());
   const state = await stateStore.loadCurrent();
+  const loadStatus = stateStore.getLastLoadStatus();
 
   if (state?.status !== 'active') {
     debug(`PreCompact: no active flow (status=${state?.status ?? 'none'})`);
@@ -56,8 +58,16 @@ async function main(): Promise<void> {
 
   debug(`PreCompact: preserving flow "${state.flowSpec.goal}"`);
 
-  const oneLiner = renderFlowSummary(state);
+  const summaryBlock = renderFlowSummaryBlock(state);
   const compact = renderFlowCompact(state);
+  const full = renderFlow(state);
+  const modeDecision = selectPreCompactMode(state, loadStatus);
+  process.stderr.write(`${modeDecision.markerLine}\n`);
+  if (modeDecision.escalated) {
+    process.stderr.write(
+      `[prompt-language] WARNING: compact mode suppressed; full mode required for ${modeDecision.summary}\n`,
+    );
+  }
 
   // Build capture context if a variable is awaiting capture
   const capturePrompt = findAwaitingCapturePrompt(state);
@@ -69,8 +79,10 @@ async function main(): Promise<void> {
 
   const summary =
     `[prompt-language] Active flow preserved across compaction.\n` +
-    `${oneLiner}\n\n` +
-    compact +
+    `${modeDecision.markerLine}\n\n` +
+    (modeDecision.escalated
+      ? `[prompt-language] Auto-escalated to full mode: ${modeDecision.summary}\n\n${summaryBlock}\n\n${full}`
+      : `${summaryBlock}\n\n${compact}`) +
     captureContext +
     '\n\n' +
     'DSL reference: nodes are prompt, run, let/var, while, until, retry, ' +

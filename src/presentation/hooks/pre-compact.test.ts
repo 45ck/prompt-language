@@ -89,6 +89,14 @@ describe('pre-compact hook (integration)', () => {
     expect(parsed.additionalContext).toContain(
       '[prompt-language] Active flow preserved across compaction.',
     );
+    expect(parsed.additionalContext).toContain(
+      'render-mode requested=compact actual=compact escalated=false triggerIds=none',
+    );
+    expect(parsed.additionalContext).toContain('[prompt-language summary]');
+    expect(parsed.additionalContext).toContain('status: active');
+    expect(parsed.additionalContext).toContain('step: 1/1');
+    expect(parsed.additionalContext).toContain('node: prompt: do work');
+    expect(parsed.additionalContext).toContain('vars: 0');
     expect(parsed.additionalContext).toContain('Build feature');
     expect(parsed.additionalContext).toContain('DSL reference');
   });
@@ -192,6 +200,18 @@ describe('pre-compact hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(result.stderr).toContain(
+      'render-mode requested=compact actual=full escalated=true triggerIds=capture_recovery',
+    );
+    expect(result.stderr).toContain(
+      'compact mode suppressed; full mode required for capture recovery is active',
+    );
+    expect(parsed.additionalContext).toContain(
+      'render-mode requested=compact actual=full escalated=true triggerIds=capture_recovery',
+    );
+    expect(parsed.additionalContext).toContain(
+      '[prompt-language] Auto-escalated to full mode: capture recovery is active',
+    );
     expect(parsed.additionalContext).toContain('Variable capture');
     expect(parsed.additionalContext).toContain('answer');
   });
@@ -232,6 +252,9 @@ describe('pre-compact hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain(
+      'render-mode requested=compact actual=full escalated=true triggerIds=capture_recovery',
+    );
     expect(parsed.additionalContext).toContain('IMPORTANT: Capture is in progress.');
     expect(parsed.additionalContext).toContain(
       'Variable capture for "answer" was not found. Please save your response',
@@ -270,8 +293,49 @@ describe('pre-compact hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain(
+      'render-mode requested=compact actual=full escalated=true triggerIds=capture_recovery',
+    );
     expect(parsed.additionalContext).toContain('Capture is in progress');
     expect(parsed.additionalContext).toContain('__review_judge_rv1__');
     expect(parsed.additionalContext).toContain('JSON capture');
+  });
+
+  it('auto-escalates to full mode when backup recovery makes compact rendering unsafe', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(join(stateDir, 'session-state.json'), '{{broken primary');
+    await writeFile(
+      join(stateDir, 'session-state.bak.json'),
+      JSON.stringify({
+        ...makeState('active', 'Recovered flow'),
+        flowSpec: {
+          goal: 'Recovered flow',
+          nodes: [{ kind: 'run', id: 'r1', command: 'npm test' }],
+          completionGates: [],
+          defaults: { maxIterations: 5, maxAttempts: 3 },
+          warnings: [],
+        },
+      }),
+    );
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain(
+      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch',
+    );
+    expect(result.stderr).toContain(
+      'compact mode suppressed; full mode required for state recovered from session-state.bak.json',
+    );
+
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain(
+      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch',
+    );
+    expect(parsed.additionalContext).toContain(
+      '[prompt-language] Auto-escalated to full mode: state recovered from session-state.bak.json',
+    );
+    expect(parsed.additionalContext).toContain('> run: npm test');
+    expect(parsed.additionalContext).not.toContain('>R: npm test');
   });
 });

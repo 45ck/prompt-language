@@ -14,6 +14,9 @@
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { readFileSync, existsSync } from 'node:fs';
+import { mkdtemp, mkdir, readFile, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
 
@@ -25,6 +28,7 @@ function distUrl(relativePath) {
 // ── Dynamic imports from dist/ ──────────────────────────────────────
 
 const { parseFlow } = await import(distUrl('application/parse-flow.js'));
+const { runFlowHeadless } = await import(distUrl('application/run-flow-headless.js'));
 const {
   createSessionState,
   advanceNode,
@@ -40,6 +44,20 @@ const { resolveCurrentNode, advancePath } = await import(distUrl('application/ad
 const { evaluateCondition } = await import(distUrl('domain/evaluate-condition.js'));
 const { lintFlow } = await import(distUrl('domain/lint-flow.js'));
 const { flowComplexityScore } = await import(distUrl('domain/flow-complexity.js'));
+const { FileAuditLogger } = await import(distUrl('infrastructure/adapters/file-audit-logger.js'));
+const { FileCaptureReader } = await import(
+  distUrl('infrastructure/adapters/file-capture-reader.js')
+);
+const { HeadlessProcessSpawner } = await import(
+  distUrl('infrastructure/adapters/headless-process-spawner.js')
+);
+const { FileMemoryStore } = await import(distUrl('infrastructure/adapters/file-memory-store.js'));
+const { ShellCommandRunner } = await import(
+  distUrl('infrastructure/adapters/shell-command-runner.js')
+);
+const { InMemoryStateStore } = await import(
+  distUrl('infrastructure/adapters/in-memory-state-store.js')
+);
 
 // ── Test harness ────────────────────────────────────────────────────
 
@@ -54,6 +72,49 @@ function assert(label, condition, detail = '') {
     failed++;
     console.log(`  FAIL  ${label}${detail ? ` — ${detail}` : ''}`);
   }
+}
+
+async function withTempDir(fn) {
+  const dir = await mkdtemp(join(tmpdir(), 'pl-smoke-ci-'));
+  try {
+    await fn(dir);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+async function runHeadlessSwarmFlow(cwd, flowText) {
+  const commandRunner = new ShellCommandRunner();
+  const promptTurnRunner = {
+    async run() {
+      return { exitCode: 0 };
+    },
+  };
+  const processSpawner = new HeadlessProcessSpawner({
+    auditLogger: new FileAuditLogger(cwd),
+    captureReader: new FileCaptureReader(cwd),
+    commandRunner,
+    cwd,
+    memoryStore: new FileMemoryStore(cwd),
+    promptTurnRunner,
+  });
+
+  return runFlowHeadless(
+    {
+      cwd,
+      flowText,
+      sessionId: randomUUID(),
+    },
+    {
+      auditLogger: new FileAuditLogger(cwd),
+      captureReader: new FileCaptureReader(cwd),
+      commandRunner,
+      memoryStore: new FileMemoryStore(cwd),
+      processSpawner,
+      promptTurnRunner,
+      stateStore: new InMemoryStateStore(),
+    },
+  );
 }
 
 // ── Test 1: Parse all 12 node kinds ─────────────────────────────────
@@ -287,6 +348,176 @@ if (existsSync(hooksJsonPath)) {
   assert('10g: has Stop hook', hookNames.includes('Stop'));
   assert('10h: has PostToolUse hook', hookNames.includes('PostToolUse'));
 }
+
+// ── Test 11: Swarm manager-worker runtime parity ────────────────────
+
+console.log('\n11. Swarm manager-worker pattern');
+
+await withTempDir(async (dir) => {
+  const authoredDir = join(dir, 'authored');
+  const explicitDir = join(dir, 'explicit');
+  await mkdir(authoredDir);
+  await mkdir(explicitDir);
+
+  const swarmFlow = [
+    'Goal: manager worker equivalence',
+    '',
+    'flow:',
+    '  swarm delivery',
+    '    role worker',
+    '      run: echo worker-ready > worker-note.txt',
+    '      return "worker-ready"',
+    '    end',
+    '    flow:',
+    '      start worker',
+    '      await all',
+    '    end',
+    '  end',
+    '  run: echo ${delivery.worker.returned} > manager-summary.txt',
+    '  run: echo ${delivery.worker.status} > manager-status.txt',
+  ].join('\n');
+  const explicitFlow = [
+    'Goal: manager worker equivalence',
+    '',
+    'flow:',
+    '  spawn "worker"',
+    '    let __swarm_id = "delivery"',
+    '    let __swarm_role = "worker"',
+    '    run: echo worker-ready > worker-note.txt',
+    '    let __swarm_return = "worker-ready"',
+    '    send parent "${__swarm_return}"',
+    '  end',
+    '  await "worker"',
+    '  receive __delivery_worker_returned from "worker" timeout 30',
+    '  run: echo ${delivery.worker.returned} > manager-summary.txt',
+    '  run: echo ${delivery.worker.status} > manager-status.txt',
+  ].join('\n');
+
+  const authored = await runHeadlessSwarmFlow(authoredDir, swarmFlow);
+  const explicit = await runHeadlessSwarmFlow(explicitDir, explicitFlow);
+  const authoredSummary = (
+    await readFile(join(authoredDir, 'manager-summary.txt'), 'utf-8')
+  ).trim();
+  const explicitSummary = (
+    await readFile(join(explicitDir, 'manager-summary.txt'), 'utf-8')
+  ).trim();
+  const authoredStatus = (await readFile(join(authoredDir, 'manager-status.txt'), 'utf-8')).trim();
+  const explicitStatus = (await readFile(join(explicitDir, 'manager-status.txt'), 'utf-8')).trim();
+
+  assert(
+    '11a: manager-worker finishes in swarm form',
+    authored.finalState.status === 'completed',
+    authored.finalState.status,
+  );
+  assert(
+    '11b: manager-worker matches explicit lowered flow',
+    explicit.finalState.status === 'completed' &&
+      authored.finalState.variables['delivery.worker.returned'] ===
+        explicit.finalState.variables['delivery.worker.returned'] &&
+      authoredSummary === explicitSummary &&
+      authoredStatus === explicitStatus,
+    `swarm="${authoredSummary}/${authoredStatus}" explicit="${explicitSummary}/${explicitStatus}"`,
+  );
+});
+
+// ── Test 12: Swarm reviewer-after-workers runtime parity ────────────
+
+console.log('\n12. Swarm reviewer-after-workers pattern');
+
+await withTempDir(async (dir) => {
+  const authoredDir = join(dir, 'authored');
+  const explicitDir = join(dir, 'explicit');
+  await mkdir(authoredDir);
+  await mkdir(explicitDir);
+
+  const swarmFlow = [
+    'Goal: reviewer after workers equivalence',
+    '',
+    'flow:',
+    '  swarm review_pass',
+    '    role frontend',
+    '      run: echo frontend-ready > frontend.txt',
+    '      return "frontend-ready"',
+    '    end',
+    '    role backend',
+    '      run: echo backend-ready > backend.txt',
+    '      return "backend-ready"',
+    '    end',
+    '    role reviewer',
+    '      run: echo ${frontend_result}+${backend_result} > review.txt',
+    '      return ${frontend_result}-${backend_result}',
+    '    end',
+    '    flow:',
+    '      start frontend, backend',
+    '      await all',
+    '      let frontend_result = ${review_pass.frontend.returned}',
+    '      let backend_result = ${review_pass.backend.returned}',
+    '      start reviewer',
+    '      await reviewer',
+    '    end',
+    '  end',
+    '  run: echo ${review_pass.reviewer.returned} > summary.txt',
+  ].join('\n');
+  const explicitFlow = [
+    'Goal: reviewer after workers equivalence',
+    '',
+    'flow:',
+    '  spawn "frontend"',
+    '    let __swarm_id = "review_pass"',
+    '    let __swarm_role = "frontend"',
+    '    run: echo frontend-ready > frontend.txt',
+    '    let __swarm_return = "frontend-ready"',
+    '    send parent "${__swarm_return}"',
+    '  end',
+    '  spawn "backend"',
+    '    let __swarm_id = "review_pass"',
+    '    let __swarm_role = "backend"',
+    '    run: echo backend-ready > backend.txt',
+    '    let __swarm_return = "backend-ready"',
+    '    send parent "${__swarm_return}"',
+    '  end',
+    '  await "frontend"',
+    '  receive __review_pass_frontend_returned from "frontend" timeout 30',
+    '  await "backend"',
+    '  receive __review_pass_backend_returned from "backend" timeout 30',
+    '  let frontend_result = ${review_pass.frontend.returned}',
+    '  let backend_result = ${review_pass.backend.returned}',
+    '  spawn "reviewer"',
+    '    let __swarm_id = "review_pass"',
+    '    let __swarm_role = "reviewer"',
+    '    run: echo ${frontend_result}+${backend_result} > review.txt',
+    '    let __swarm_return = ${frontend_result}-${backend_result}',
+    '    send parent "${__swarm_return}"',
+    '  end',
+    '  await "reviewer"',
+    '  receive __review_pass_reviewer_returned from "reviewer" timeout 30',
+    '  run: echo ${review_pass.reviewer.returned} > summary.txt',
+  ].join('\n');
+
+  const authored = await runHeadlessSwarmFlow(authoredDir, swarmFlow);
+  const explicit = await runHeadlessSwarmFlow(explicitDir, explicitFlow);
+  const authoredReview = (await readFile(join(authoredDir, 'review.txt'), 'utf-8')).trim();
+  const explicitReview = (await readFile(join(explicitDir, 'review.txt'), 'utf-8')).trim();
+  const authoredSummary = (await readFile(join(authoredDir, 'summary.txt'), 'utf-8')).trim();
+  const explicitSummary = (await readFile(join(explicitDir, 'summary.txt'), 'utf-8')).trim();
+
+  assert(
+    '12a: reviewer-after-workers finishes in swarm form',
+    authored.finalState.status === 'completed',
+    authored.finalState.status,
+  );
+  assert(
+    '12b: reviewer-after-workers matches explicit lowered flow',
+    explicit.finalState.status === 'completed' &&
+      authored.finalState.variables['review_pass.reviewer.returned'] ===
+        explicit.finalState.variables['review_pass.reviewer.returned'] &&
+      authored.finalState.variables['review_pass.reviewer.returned'] ===
+        'frontend-ready-backend-ready' &&
+      authoredReview === explicitReview &&
+      authoredSummary === explicitSummary,
+    `swarm="${authoredReview}/${authoredSummary}" explicit="${explicitReview}/${explicitSummary}"`,
+  );
+});
 
 // ── Summary ─────────────────────────────────────────────────────────
 

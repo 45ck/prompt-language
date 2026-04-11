@@ -30,7 +30,8 @@
  *   AI: Continue iteration        AJ: Remember key-value
  *   AK: Grounded-by while         AL: Continue in while
  *   AM: Spawn/await               AN: Spawn variable import
- *   AO: Include file directive
+ *   AO: Include file directive    AP: Swarm manager-worker
+ *   AQ: Swarm reviewer-after-workers
  *
  * Usage:
  *   node scripts/eval/smoke-test.mjs          # all tests
@@ -1758,6 +1759,118 @@ async function testSpawnInheritsParentVariables() {
   });
 }
 
+// ── Test AP: Swarm manager-worker equivalence pattern ───────────────
+
+async function testSwarmManagerWorker() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: swarm manager worker',
+      '',
+      'flow:',
+      '  swarm delivery',
+      '    role worker',
+      '      run: echo worker-ready > worker-note.txt',
+      '      return "worker-ready"',
+      '    end',
+      '    flow:',
+      '      start worker',
+      '      await all',
+      '    end',
+      '  end',
+      '  run: echo ${delivery.worker.returned} > manager-summary.txt',
+      '  run: echo ${delivery.worker.status} > manager-status.txt',
+    ].join('\n');
+
+    harnessRun(prompt, dir);
+
+    let summary = '';
+    let status = '';
+    let worker = '';
+    try {
+      summary = (await readFile(join(dir, 'manager-summary.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      status = (await readFile(join(dir, 'manager-status.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      worker = (await readFile(join(dir, 'worker-note.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AP: Swarm manager-worker pattern',
+      summary.includes('worker-ready') && status === 'completed' && worker.includes('worker-ready'),
+      summary.includes('worker-ready')
+        ? `status="${status}", worker="${worker}"`
+        : `summary="${summary}", status="${status}", worker="${worker}"`,
+    );
+  });
+}
+
+// ── Test AQ: Swarm reviewer-after-workers pattern ───────────────────
+
+async function testSwarmReviewerAfterWorkers() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: swarm reviewer after workers',
+      '',
+      'flow:',
+      '  swarm review_pass',
+      '    role frontend',
+      '      run: echo frontend-ready > frontend.txt',
+      '      return "frontend-ready"',
+      '    end',
+      '    role backend',
+      '      run: echo backend-ready > backend.txt',
+      '      return "backend-ready"',
+      '    end',
+      '    role reviewer',
+      '      run: echo ${frontend_result}+${backend_result} > review.txt',
+      '      return ${frontend_result}-${backend_result}',
+      '    end',
+      '    flow:',
+      '      start frontend, backend',
+      '      await all',
+      '      let frontend_result = ${review_pass.frontend.returned}',
+      '      let backend_result = ${review_pass.backend.returned}',
+      '      start reviewer',
+      '      await reviewer',
+      '    end',
+      '  end',
+      '  run: echo ${review_pass.reviewer.returned} > summary.txt',
+    ].join('\n');
+
+    harnessRun(prompt, dir);
+
+    let review = '';
+    let summary = '';
+    try {
+      review = (await readFile(join(dir, 'review.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      summary = (await readFile(join(dir, 'summary.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    assert(
+      'AQ: Swarm reviewer-after-workers pattern',
+      review.includes('frontend-ready+backend-ready') &&
+        summary.includes('frontend-ready-backend-ready'),
+      review.includes('frontend-ready+backend-ready')
+        ? `summary="${summary}"`
+        : `review="${review}", summary="${summary}"`,
+    );
+  });
+}
+
 // ── Test AD: Race block (first spawn wins) ────────────────────────────
 
 async function testRaceBlock() {
@@ -1962,6 +2075,8 @@ async function main() {
   await timed('AI', 'Continue skips iteration', testContinueSkipsIteration);
   await timed('AJ', 'Remember key-value storage', testRememberKeyValue);
   await timed('AO', 'Include file directive', testIncludeDirective);
+  await timed('AP', 'Swarm manager-worker', testSwarmManagerWorker);
+  await timed('AQ', 'Swarm reviewer-after-workers', testSwarmReviewerAfterWorkers);
 
   if (!QUICK_MODE) {
     await timed('D', 'Gate evaluation', testGateEvaluation);

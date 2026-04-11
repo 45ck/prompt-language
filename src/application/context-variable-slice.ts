@@ -22,7 +22,13 @@ const ALWAYS_INCLUDED_VARIABLES = new Set([
 
 const ALWAYS_INCLUDED_PREFIXES = ['_review_result.', '_runtime_diagnostic.'];
 
-function collectInterpolatedVariables(text: string, required: Set<string>): void {
+function hasUncertainInterpolation(text: string): boolean {
+  const stripped = text.replace(INTERPOLATION_TOKEN_RE, '');
+  return stripped.includes('${');
+}
+
+function collectInterpolatedVariables(text: string, required: Set<string>): boolean {
+  const uncertain = hasUncertainInterpolation(text);
   INTERPOLATION_TOKEN_RE.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = INTERPOLATION_TOKEN_RE.exec(text)) !== null) {
@@ -31,13 +37,15 @@ function collectInterpolatedVariables(text: string, required: Set<string>): void
       required.add(name);
     }
   }
+  return uncertain;
 }
 
 function collectBareConditionVariables(
   condition: string,
   variables: VariableStore,
   required: Set<string>,
-): void {
+): boolean {
+  const uncertain = hasUncertainInterpolation(condition);
   const scrubbed = condition.replace(INTERPOLATION_TOKEN_RE, ' ');
   const identifiers = scrubbed.match(/\b[A-Za-z_][\w.]*\b/g) ?? [];
   for (const identifier of identifiers) {
@@ -48,16 +56,18 @@ function collectBareConditionVariables(
       required.add(identifier);
     }
   }
+  return uncertain;
 }
 
 function collectConditionVariables(
   condition: string,
   variables: VariableStore,
   required: Set<string>,
-): void {
+): boolean {
   const subject = isAskCondition(condition) ? extractAskQuestion(condition) : condition;
-  collectInterpolatedVariables(subject, required);
-  collectBareConditionVariables(subject, variables, required);
+  const interpolationUncertain = collectInterpolatedVariables(subject, required);
+  const bareIdentifierUncertain = collectBareConditionVariables(subject, variables, required);
+  return interpolationUncertain || bareIdentifierUncertain;
 }
 
 function collectNodeVariables(
@@ -67,44 +77,42 @@ function collectNodeVariables(
 ): boolean {
   switch (node.kind) {
     case 'prompt':
-      collectInterpolatedVariables(node.text, required);
-      return true;
+      return !collectInterpolatedVariables(node.text, required);
     case 'run':
-      collectInterpolatedVariables(node.command, required);
-      return true;
+      return !collectInterpolatedVariables(node.command, required);
     case 'let':
       if (node.append && node.variableName in variables) {
         required.add(node.variableName);
       }
       switch (node.source.type) {
         case 'prompt':
-          collectInterpolatedVariables(node.source.text, required);
-          return true;
+          return !collectInterpolatedVariables(node.source.text, required);
         case 'prompt_json':
-          collectInterpolatedVariables(node.source.text, required);
-          collectInterpolatedVariables(node.source.schema, required);
-          return true;
+          return !(
+            collectInterpolatedVariables(node.source.text, required) ||
+            collectInterpolatedVariables(node.source.schema, required)
+          );
         case 'run':
-          collectInterpolatedVariables(node.source.command, required);
-          return true;
+          return !collectInterpolatedVariables(node.source.command, required);
         case 'literal':
-          collectInterpolatedVariables(node.source.value, required);
-          return true;
+          return !collectInterpolatedVariables(node.source.value, required);
         case 'memory':
         case 'empty_list':
           return true;
+        default: {
+          const _exhaustive: never = node.source;
+          return _exhaustive;
+        }
       }
-      return true;
     case 'while':
     case 'until':
     case 'if':
-      collectConditionVariables(node.condition, variables, required);
-      if (node.groundedBy != null) {
-        collectInterpolatedVariables(node.groundedBy, required);
-      }
-      return true;
+      return !(
+        collectConditionVariables(node.condition, variables, required) ||
+        (node.groundedBy != null && collectInterpolatedVariables(node.groundedBy, required))
+      );
     case 'try':
-      return true;
+      return !collectConditionVariables(node.catchCondition, variables, required);
     case 'retry':
       if ('command_failed' in variables) {
         required.add('command_failed');
@@ -115,25 +123,21 @@ function collectNodeVariables(
       if (node.variableName in variables) {
         required.add(node.variableName);
       }
-      collectInterpolatedVariables(node.listExpression, required);
-      collectBareConditionVariables(node.listExpression, variables, required);
-      if (node.listCommand != null) {
-        collectInterpolatedVariables(node.listCommand, required);
-      }
-      return true;
+      return !(
+        collectInterpolatedVariables(node.listExpression, required) ||
+        collectBareConditionVariables(node.listExpression, variables, required) ||
+        (node.listCommand != null && collectInterpolatedVariables(node.listCommand, required))
+      );
     case 'spawn':
       if (node.condition != null) {
-        collectConditionVariables(node.condition, variables, required);
+        return !collectConditionVariables(node.condition, variables, required);
       }
       return true;
     case 'review':
-      if (node.criteria != null) {
-        collectInterpolatedVariables(node.criteria, required);
-      }
-      if (node.groundedBy != null) {
-        collectInterpolatedVariables(node.groundedBy, required);
-      }
-      return true;
+      return !(
+        (node.criteria != null && collectInterpolatedVariables(node.criteria, required)) ||
+        (node.groundedBy != null && collectInterpolatedVariables(node.groundedBy, required))
+      );
     case 'approve':
     case 'await':
     case 'break':
@@ -142,20 +146,16 @@ function collectNodeVariables(
     case 'receive':
       return true;
     case 'remember':
-      if (node.text != null) {
-        collectInterpolatedVariables(node.text, required);
-      }
-      if (node.key != null) {
-        collectInterpolatedVariables(node.key, required);
-      }
-      if (node.value != null) {
-        collectInterpolatedVariables(node.value, required);
-      }
-      return true;
+      return !(
+        (node.text != null && collectInterpolatedVariables(node.text, required)) ||
+        (node.key != null && collectInterpolatedVariables(node.key, required)) ||
+        (node.value != null && collectInterpolatedVariables(node.value, required))
+      );
     case 'send':
-      collectInterpolatedVariables(node.target, required);
-      collectInterpolatedVariables(node.message, required);
-      return true;
+      return !(
+        collectInterpolatedVariables(node.target, required) ||
+        collectInterpolatedVariables(node.message, required)
+      );
     case 'swarm':
     case 'start':
     case 'return':
@@ -173,12 +173,16 @@ function collectPathNodes(state: SessionState): FlowNode[] | null {
   }
 
   const pathNodes: FlowNode[] = [];
-  for (let depth = 1; depth <= state.currentNodePath.length; depth++) {
-    const node = resolveCurrentNode(state.flowSpec.nodes, state.currentNodePath.slice(0, depth));
-    if (node == null) {
-      return null;
+  try {
+    for (let depth = 1; depth <= state.currentNodePath.length; depth++) {
+      const node = resolveCurrentNode(state.flowSpec.nodes, state.currentNodePath.slice(0, depth));
+      if (node == null) {
+        return null;
+      }
+      pathNodes.push(node);
     }
-    pathNodes.push(node);
+  } catch {
+    return null;
   }
   return pathNodes;
 }

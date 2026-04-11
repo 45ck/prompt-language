@@ -269,10 +269,10 @@ describe('context-adaptive recovery hooks', () => {
       '[prompt-language] Active flow preserved across compaction.',
     );
     expect(additionalContext).toContain(
-      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,resume_boundary,state_mismatch',
     );
     expect(additionalContext).toContain(
-      '[prompt-language] Auto-escalated to full mode: state recovered from session-state.bak.json',
+      '[prompt-language] Auto-escalated to full mode: hook pre-compact crossed a compaction boundary; state recovered from session-state.bak.json',
     );
     expect(additionalContext).toContain(
       '[prompt-language] Flow: Recovered compact flow | Status: active',
@@ -329,7 +329,7 @@ describe('context-adaptive recovery hooks', () => {
       '[prompt-language] Active flow preserved across compaction.',
     );
     expect(additionalContext).toContain(
-      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch,capture_recovery',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,resume_boundary,state_mismatch,capture_failure',
     );
     expect(additionalContext).toContain('Recovered capture flow');
     expect(additionalContext).toContain('IMPORTANT: Capture is in progress.');
@@ -370,10 +370,10 @@ describe('context-adaptive recovery hooks', () => {
       '[prompt-language] Active flow preserved across compaction.',
     );
     expect(additionalContext).toContain(
-      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,resume_boundary,state_mismatch',
     );
     expect(additionalContext).toContain(
-      '[prompt-language] Auto-escalated to full mode: state recovered from session-state.bak2.json',
+      '[prompt-language] Auto-escalated to full mode: hook pre-compact crossed a compaction boundary; state recovered from session-state.bak2.json',
     );
     expect(additionalContext).toContain(
       '[prompt-language] Flow: Recovered compact flow from second-generation backup | Status: active',

@@ -86,11 +86,17 @@ describe('pre-compact hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(result.stderr).toContain(
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary',
+    );
     expect(parsed.additionalContext).toContain(
       '[prompt-language] Active flow preserved across compaction.',
     );
     expect(parsed.additionalContext).toContain(
-      'render-mode requested=compact actual=compact escalated=false triggerIds=none',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary',
+    );
+    expect(parsed.additionalContext).toContain(
+      '[prompt-language] Auto-escalated to full mode: hook pre-compact crossed a compaction boundary',
     );
     expect(parsed.additionalContext).toContain('[prompt-language summary]');
     expect(parsed.additionalContext).toContain('status: active');
@@ -201,16 +207,16 @@ describe('pre-compact hook (integration)', () => {
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
     expect(result.stderr).toContain(
-      'render-mode requested=compact actual=full escalated=true triggerIds=capture_recovery',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,capture_failure',
     );
     expect(result.stderr).toContain(
-      'compact mode suppressed; full mode required for capture recovery is active',
+      '[prompt-language] WARNING: compact mode suppressed; full mode required for hook pre-compact crossed a compaction boundary; capture recovery is active',
     );
     expect(parsed.additionalContext).toContain(
-      'render-mode requested=compact actual=full escalated=true triggerIds=capture_recovery',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,capture_failure',
     );
     expect(parsed.additionalContext).toContain(
-      '[prompt-language] Auto-escalated to full mode: capture recovery is active',
+      '[prompt-language] Auto-escalated to full mode: hook pre-compact crossed a compaction boundary; capture recovery is active',
     );
     expect(parsed.additionalContext).toContain('Variable capture');
     expect(parsed.additionalContext).toContain('answer');
@@ -253,7 +259,7 @@ describe('pre-compact hook (integration)', () => {
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
     expect(parsed.additionalContext).toContain(
-      'render-mode requested=compact actual=full escalated=true triggerIds=capture_recovery',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,capture_failure',
     );
     expect(parsed.additionalContext).toContain('IMPORTANT: Capture is in progress.');
     expect(parsed.additionalContext).toContain(
@@ -294,7 +300,7 @@ describe('pre-compact hook (integration)', () => {
     expect(result.exitCode).toBe(0);
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
     expect(parsed.additionalContext).toContain(
-      'render-mode requested=compact actual=full escalated=true triggerIds=capture_recovery',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,capture_failure',
     );
     expect(parsed.additionalContext).toContain('Capture is in progress');
     expect(parsed.additionalContext).toContain('__review_judge_rv1__');
@@ -322,20 +328,64 @@ describe('pre-compact hook (integration)', () => {
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
     expect(result.stderr).toContain(
-      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,resume_boundary,state_mismatch',
     );
     expect(result.stderr).toContain(
-      'compact mode suppressed; full mode required for state recovered from session-state.bak.json',
+      '[prompt-language] WARNING: compact mode suppressed; full mode required for hook pre-compact crossed a compaction boundary; state recovered from session-state.bak.json',
     );
 
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
     expect(parsed.additionalContext).toContain(
-      'render-mode requested=compact actual=full escalated=true triggerIds=resume_boundary,state_shape_mismatch',
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,resume_boundary,state_mismatch',
     );
     expect(parsed.additionalContext).toContain(
-      '[prompt-language] Auto-escalated to full mode: state recovered from session-state.bak.json',
+      '[prompt-language] Auto-escalated to full mode: hook pre-compact crossed a compaction boundary; state recovered from session-state.bak.json',
     );
     expect(parsed.additionalContext).toContain('> run: npm test');
     expect(parsed.additionalContext).not.toContain('>R: npm test');
+  });
+
+  it('auto-escalates to full mode when checksum sanitization clears gate results', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Checksum-sanitized flow'),
+      flowSpec: {
+        goal: 'Checksum-sanitized flow',
+        nodes: [{ kind: 'run', id: 'r1', command: 'npm test' }],
+        completionGates: [{ predicate: 'tests_pass' }],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+      gateResults: { tests_pass: true },
+      gateDiagnostics: { tests_pass: { passed: true } },
+      _checksum: 'deadbeef'.repeat(8),
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state, null, 2), 'utf-8');
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain('state file checksum mismatch, clearing gate results');
+    expect(result.stderr).toContain(
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,state_mismatch',
+    );
+    expect(result.stderr).toContain(
+      '[prompt-language] WARNING: compact mode suppressed; full mode required for hook pre-compact crossed a compaction boundary; state checksum mismatch required gate-result sanitization',
+    );
+
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain(
+      '[prompt-language] Active flow preserved across compaction.',
+    );
+    expect(parsed.additionalContext).toContain(
+      '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,state_mismatch',
+    );
+    expect(parsed.additionalContext).toContain(
+      '[prompt-language] Auto-escalated to full mode: hook pre-compact crossed a compaction boundary; state checksum mismatch required gate-result sanitization',
+    );
+    expect(parsed.additionalContext).toContain('[prompt-language summary]');
+    expect(parsed.additionalContext).toContain('gates: 0/1 passed');
+    expect(parsed.additionalContext).toContain('tests_pass  [pending]');
+    expect(parsed.additionalContext).not.toContain('tests_pass  [pass]');
   });
 });

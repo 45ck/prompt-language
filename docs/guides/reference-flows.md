@@ -82,6 +82,49 @@ Notes:
 - In many cases, a shipped [`review`](../reference/review.md) block is a cheaper fit than a separate reviewer child.
 - Keep the verification gate in the parent so the flow ends on observable checks, not on role self-report.
 
+## Generator / evaluator debate
+
+Use this when you want an explicit iterative debate between two child roles and the parent must stay in charge of rounds, joins, and the stop condition.
+
+```yaml
+flow:
+  let brief = "Draft the migration announcement."
+  let critique = ""
+  let approved = "false"
+
+  foreach round in [1, 2, 3]
+    if approved == "true"
+      break
+    end
+
+    spawn "generator" with vars brief critique round
+      let draft = prompt "Write round ${round}. Revise against this critique if present: ${critique}"
+    end
+
+    await "generator"
+
+    spawn "evaluator" with vars brief generator.draft
+      let critique = prompt "Critique this draft against the brief. Start with APPROVED if it passes: ${generator.draft}"
+    end
+
+    await "evaluator"
+
+    let critique = "${evaluator.critique}"
+    if evaluator.critique contains "APPROVED"
+      let approved = "true"
+    end
+  end
+```
+
+Why this is a reference flow:
+
+- The debate is assembled from shipped `spawn`, `await`, variable import, `foreach`, and `if`.
+- Parent variables are snapshotted into each child via `with vars ...`.
+- Child outputs come back through the normal `{child}.{var}` import path after `await`.
+- The parent, not the children, decides whether to continue, stop, or publish the final result.
+
+Use this pattern when the orchestration itself matters. If you only need a bounded revision loop, the worked [Generator / Evaluator Debate](../examples/generator-evaluator-debate.md) example and the simpler [Review Loop](../examples/review-loop.md) example show when explicit child orchestration is worth the extra ceremony.
+
 ## Judge / worker
 
 Use this when the worker should iterate until a shipped judge-backed review surface returns a passing verdict.

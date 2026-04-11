@@ -18,6 +18,7 @@ import {
   createBreakNode,
   createContinueNode,
   createSpawnNode,
+  createAwaitNode,
   createLetNode,
   createRaceNode,
   createForeachSpawnNode,
@@ -25,6 +26,10 @@ import {
   createSendNode,
   createReceiveNode,
   createReviewNode,
+  createSwarmRoleDefinition,
+  createSwarmNode,
+  createStartNode,
+  createReturnNode,
 } from './flow-node.js';
 
 describe('lintFlow', () => {
@@ -1093,6 +1098,171 @@ describe('lintFlow — rubric and judge declarations', () => {
     expect(lintFlow(spec)).toContainEqual({
       nodeId: 'rv1',
       message: 'review references unknown judge "missing_judge"',
+    });
+  });
+});
+
+describe('lintFlow — swarm validation', () => {
+  it('warns on duplicate role names inside a swarm', () => {
+    const spec = createFlowSpec('test', [
+      createSwarmNode(
+        'sw1',
+        'checkout_fix',
+        [
+          createSwarmRoleDefinition('role1', 'frontend', [createPromptNode('p1', 'work')]),
+          createSwarmRoleDefinition('role2', 'frontend', [createPromptNode('p2', 'work')]),
+        ],
+        [createStartNode('st1', ['frontend'])],
+      ),
+    ]);
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'role2',
+      message: 'Duplicate role name "frontend" in swarm "checkout_fix"',
+    });
+  });
+
+  it('warns when start references an undeclared role', () => {
+    const spec = createFlowSpec('test', [
+      createSwarmNode(
+        'sw1',
+        'checkout_fix',
+        [createSwarmRoleDefinition('role1', 'frontend', [createPromptNode('p1', 'work')])],
+        [createStartNode('st1', ['frontend', 'backend'])],
+      ),
+    ]);
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'st1',
+      message: 'start references undeclared role "backend" in swarm "checkout_fix"',
+    });
+  });
+
+  it('warns when await references an undeclared role inside swarm flow', () => {
+    const spec = createFlowSpec('test', [
+      createSwarmNode(
+        'sw1',
+        'checkout_fix',
+        [createSwarmRoleDefinition('role1', 'frontend', [createPromptNode('p1', 'work')])],
+        [createAwaitNode('aw1', ['frontend', 'backend'])],
+      ),
+    ]);
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'aw1',
+      message: 'await references undeclared role "backend" in swarm "checkout_fix"',
+    });
+  });
+
+  it('warns when return appears outside a role', () => {
+    const spec = createFlowSpec('test', [createReturnNode('ret1', '${summary}')], []);
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'ret1',
+      message: '"return" is only valid inside a role',
+    });
+  });
+
+  it('warns on nested swarms inside role bodies', () => {
+    const nestedSwarm = createSwarmNode(
+      'sw2',
+      'nested',
+      [createSwarmRoleDefinition('role2', 'helper', [createPromptNode('p2', 'help')])],
+      [createStartNode('st2', ['helper'])],
+    );
+    const spec = createFlowSpec('test', [
+      createSwarmNode(
+        'sw1',
+        'checkout_fix',
+        [createSwarmRoleDefinition('role1', 'frontend', [nestedSwarm])],
+        [createStartNode('st1', ['frontend'])],
+      ),
+    ]);
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'sw2',
+      message: 'Nested swarm "nested" is not allowed in v1 inside role "frontend"',
+    });
+  });
+
+  it('warns when a role declares more than one return statement', () => {
+    const spec = createFlowSpec('test', [
+      createSwarmNode(
+        'sw1',
+        'checkout_fix',
+        [
+          createSwarmRoleDefinition('role1', 'frontend', [
+            createReturnNode('ret1', '${summary}'),
+            createReturnNode('ret2', '${confidence}'),
+          ]),
+        ],
+        [createStartNode('st1', ['frontend'])],
+      ),
+    ]);
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'role1',
+      message: 'Role "frontend" declares more than one return statement',
+    });
+  });
+
+  it('warns when start is used outside swarm flow', () => {
+    const spec = createFlowSpec('test', [createStartNode('st1', ['frontend'])], []);
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'st1',
+      message: '"start" is only valid inside swarm flow:',
+    });
+  });
+
+  it('warns on nested swarms inside swarm flow and multi-target await outside swarm flow', () => {
+    const nested = createSwarmNode(
+      'sw2',
+      'nested',
+      [createSwarmRoleDefinition('role2', 'helper', [createPromptNode('p2', 'help')])],
+      [createStartNode('st2', ['helper'])],
+    );
+    const spec = createFlowSpec('test', [
+      createSwarmNode(
+        'sw1',
+        'checkout_fix',
+        [createSwarmRoleDefinition('role1', 'frontend', [createPromptNode('p1', 'work')])],
+        [nested, createStartNode('st1', ['frontend'])],
+      ),
+      createAwaitNode('aw1', ['frontend', 'backend']),
+    ]);
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'sw2',
+      message: 'Nested swarm "nested" is not allowed in v1',
+    });
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'aw1',
+      message: 'await with multiple targets is only valid inside swarm flow:',
+    });
+  });
+});
+
+describe('lintFlow — evaluation declaration validation', () => {
+  it('warns on empty rubric and judge bodies', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'ship it')],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      [createRubricDefinition('bugfix_quality', [])],
+      [createJudgeDefinition('impl_quality', [], 'bugfix_quality')],
+    );
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: '',
+      message: 'Rubric "bugfix_quality" has empty body',
+    });
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: '',
+      message: 'Judge "impl_quality" has empty body',
     });
   });
 });

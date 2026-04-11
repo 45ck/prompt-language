@@ -25,7 +25,10 @@ export type FlowNodeKind =
   | 'foreach_spawn'
   | 'remember'
   | 'send'
-  | 'receive';
+  | 'receive'
+  | 'swarm'
+  | 'start'
+  | 'return';
 
 interface BaseNode {
   readonly kind: FlowNodeKind;
@@ -150,7 +153,7 @@ export interface SpawnNode extends BaseNode {
   readonly condition?: string | undefined;
 }
 
-export type AwaitTarget = string | 'all';
+export type AwaitTarget = string | 'all' | readonly string[];
 
 export interface AwaitNode extends BaseNode {
   readonly kind: 'await';
@@ -238,6 +241,32 @@ export interface ReceiveNode extends BaseNode {
   readonly timeoutSeconds?: number | undefined;
 }
 
+export interface SwarmRoleDefinition {
+  readonly id: string;
+  readonly name: string;
+  readonly body: readonly FlowNode[];
+  readonly cwd?: string | undefined;
+  readonly vars?: readonly string[] | undefined;
+  readonly model?: string | undefined;
+}
+
+export interface SwarmNode extends BaseNode {
+  readonly kind: 'swarm';
+  readonly name: string;
+  readonly roles: readonly SwarmRoleDefinition[];
+  readonly flow: readonly FlowNode[];
+}
+
+export interface StartNode extends BaseNode {
+  readonly kind: 'start';
+  readonly targets: readonly string[];
+}
+
+export interface ReturnNode extends BaseNode {
+  readonly kind: 'return';
+  readonly expression: string;
+}
+
 export type FlowNode =
   | WhileNode
   | UntilNode
@@ -258,7 +287,10 @@ export type FlowNode =
   | ForeachSpawnNode
   | RememberNode
   | SendNode
-  | ReceiveNode;
+  | ReceiveNode
+  | SwarmNode
+  | StartNode
+  | ReturnNode;
 
 export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;
@@ -531,6 +563,41 @@ export function createReceiveNode(
   };
 }
 
+export function createSwarmRoleDefinition(
+  id: string,
+  name: string,
+  body: readonly FlowNode[],
+  cwd?: string,
+  vars?: readonly string[],
+  model?: string,
+): SwarmRoleDefinition {
+  return {
+    id,
+    name,
+    body,
+    ...(cwd != null ? { cwd } : {}),
+    ...(vars != null ? { vars } : {}),
+    ...(model != null ? { model } : {}),
+  };
+}
+
+export function createSwarmNode(
+  id: string,
+  name: string,
+  roles: readonly SwarmRoleDefinition[],
+  flow: readonly FlowNode[],
+): SwarmNode {
+  return { kind: 'swarm', id, name, roles, flow };
+}
+
+export function createStartNode(id: string, targets: readonly string[]): StartNode {
+  return { kind: 'start', id, targets };
+}
+
+export function createReturnNode(id: string, expression: string): ReturnNode {
+  return { kind: 'return', id, expression };
+}
+
 /** Recursively search a flow tree for a node by its id. Early-exit on match. */
 export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode | null {
   for (const node of nodes) {
@@ -569,6 +636,15 @@ export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode |
         if (found) return found;
         break;
       }
+      case 'swarm': {
+        for (const role of node.roles) {
+          const found = findNodeById(role.body, id);
+          if (found) return found;
+        }
+        const found = findNodeById(node.flow, id);
+        if (found) return found;
+        break;
+      }
       case 'prompt':
       case 'run':
       case 'let':
@@ -579,6 +655,8 @@ export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode |
       case 'remember':
       case 'send':
       case 'receive':
+      case 'start':
+      case 'return':
         break;
       default: {
         const _exhaustive: never = node;

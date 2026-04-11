@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed architecture note for bead `prompt-language-9uqe.4`.
+Proposed implementation note for bead `prompt-language-9uqe.4`.
 
 Primary related notes:
 
@@ -10,333 +10,399 @@ Primary related notes:
 - [Provider Adapters Over Shared Flow IR](provider-adapters-shared-flow-ir.md)
 - [Codex External Child-Session Decision](codex-external-child-session-decision.md)
 
-## Question
+## Problem
 
-Can prompt-language define a provider-neutral contract for spawned child sessions without pretending that Claude, Codex, and OpenCode already share one identical host lifecycle?
+`prompt-language` already has two materially different child-runner paths:
+
+- `src/infrastructure/adapters/claude-process-spawner.ts` launches an external `claude -p` process and treats `session-state.json` in `stateDir` as the source of truth.
+- `src/infrastructure/adapters/headless-process-spawner.ts` runs the child flow in-process and keeps liveness in memory until `runFlowHeadless()` finishes.
+
+Both are forced through the same application port:
+
+```ts
+export interface ProcessSpawner {
+  spawn(input: SpawnInput): Promise<SpawnResult>;
+  poll(stateDir: string): Promise<ChildStatus>;
+  terminate?(pid: number): Promise<boolean>;
+}
+```
+
+That port is correct for the runtime, but it is too low-level and too Claude-shaped to serve as the long-term infrastructure boundary. The result today is that:
+
+- external-process concerns and provider concerns are mixed together
+- `stateDir` polling is treated like the default lifecycle rather than one transport
+- hook entry points instantiate `ClaudeProcessSpawner` directly
+- adding another external runner would require cloning Claude-specific logic instead of plugging into one explicit contract
 
 ## Decision
 
-Yes. Add a **provider-neutral spawned-session runner contract** as an adapter-facing abstraction below the runtime's `spawn` / `await` semantics.
+Add an **infrastructure-only `SpawnedSessionRunner` abstraction** beneath `ProcessSpawner`.
 
-The contract should normalize:
+The design is intentionally two-layered:
 
-- launch intent
-- workspace and session continuity inputs
-- provider, model, and environment pass-through
-- result capture
-- capability reporting
+1. `application` continues to depend only on `ProcessSpawner`.
+2. `infrastructure` gains `SpawnedSessionRunner` plus a thin `RunnerBackedProcessSpawner`.
 
-It should **not** claim that all providers support the same session lifecycle. Instead, each provider adapter reports its own capabilities and chooses its own launch and capture strategy.
+This keeps the runtime stable while giving the adapter layer one concrete, provider-neutral place to describe:
 
-The current Claude path remains the **backward-compatible default behavior** until another provider-specific adapter is explicitly selected.
+- how a child run is launched
+- which transport is used to observe completion
+- which behaviors are actually supported by that runner
+- how current `ProcessSpawner` semantics are preserved during migration
 
-## Why this layer exists
+## Non-goals
 
-The repo already has two different child-work shapes:
+This note does not propose:
 
-- `ClaudeProcessSpawner` launches an external `claude -p` child process and polls file-backed state
-- `HeadlessProcessSpawner` runs child work in-process for headless Codex/OpenCode-style runner flows
+- new DSL syntax
+- changes to `spawn`, `await`, `race`, or `foreach_spawn` semantics
+- a claim that Claude, Codex, and OpenCode already share one lifecycle model
+- a domain-layer provider concept
+- immediate changes to hook UX or flow authoring
 
-Both satisfy the runtime's current `ProcessSpawner` port, but they hide provider differences inside ad hoc adapter logic. A generic runner layer gives the repo one place to describe:
+## Current repo constraints
 
-- what a spawned child session needs
-- how provider-specific launch details are injected
-- which lifecycle features are actually supported
+This design must fit the code that exists today.
 
-That improves clarity without widening the language surface.
+### Runtime-facing data is currently narrow
+
+`advance-flow.ts` only supplies these child-launch inputs:
+
+- `name`
+- `goal`
+- `flowText`
+- `variables`
+- `stateDir`
+- optional `cwd`
+- optional `model`
+
+There is no runtime-level `provider`, `env`, `resumeToken`, or workspace-isolation selection today. Phase 1 of this abstraction must not widen the application port just to appear more generic.
+
+### Session state only persists `pid` and `stateDir`
+
+`src/domain/session-state.ts` stores spawned-child runtime data as:
+
+- `pid`
+- `stateDir`
+- timestamps
+- returned variables
+- terminal status
+
+It does not persist a provider session id or runner-specific opaque handle. Phase 1 therefore needs a polling contract that can operate from `stateDir` plus optional in-memory handle data.
+
+### Hooks are currently Claude-defaulted
+
+Interactive hook entry points create `ClaudeProcessSpawner(process.cwd())` directly:
+
+- `src/presentation/hooks/user-prompt-submit.ts`
+- `src/presentation/hooks/stop.ts`
+- `src/presentation/hooks/task-completed.ts`
+
+That default must remain behaviorally unchanged until a separate provider-selection change is made.
+
+### Headless spawn is already a real second implementation
+
+`HeadlessProcessSpawner` is not hypothetical. It is the current deterministic path for headless Codex/OpenCode/Ollama-style flows. The generic runner abstraction must treat that path as a first-class implementation, not as a temporary exception.
 
 ## Boundary
 
-This note does **not** propose:
+The boundary is:
 
-- new DSL syntax
-- a promise of full Claude/Codex/OpenCode lifecycle parity
-- changes to `spawn` / `await` semantics
-- a host-extension management plane
+```text
+presentation -> infrastructure -> application -> domain
+```
 
-It proposes an internal contract that provider adapters can implement or emulate.
+Ownership by layer:
 
-## Placement
+- `domain`: no awareness of runner/provider abstractions
+- `application`: depends only on `ProcessSpawner`
+- `infrastructure`: owns runner contracts, provider-specific implementations, and default selection
+- `presentation`: may choose which `ProcessSpawner` implementation to instantiate, but should not know provider-specific launch details
 
-The abstraction belongs below the runtime and above provider-specific launchers.
+The critical rule is: **provider-specific lifecycle details stay below `ProcessSpawner`**.
 
-Suggested layering:
+## Phase-1 contract
 
-- runtime keeps using `spawn` / `await` as prompt-language concepts
-- the current `ProcessSpawner` remains the narrow runtime port for now
-- a new `SpawnedSessionRunner` sits behind provider adapters and can back `ProcessSpawner` implementations
-
-That keeps the language stable while giving infrastructure a cleaner provider-neutral seam.
-
-## Contract shape
+Phase 1 should be concrete and shaped around the repo as it exists today.
 
 ```ts
-export interface SpawnedSessionLaunch {
+import type { VariableStore } from '../../domain/variable-value.js';
+
+export type SpawnCaptureMode = 'state-file' | 'memory';
+
+export interface SpawnedSessionRequest {
   readonly name: string;
   readonly goal: string;
   readonly flowText: string;
+  readonly variables: VariableStore;
   readonly stateDir: string;
   readonly cwd?: string | undefined;
-  readonly provider?: string | undefined;
   readonly model?: string | undefined;
-  readonly env?: Readonly<Record<string, string>> | undefined;
-  readonly session?:
-    | {
-        readonly parentSessionId?: string | undefined;
-        readonly childSessionId?: string | undefined;
-        readonly resumeToken?: string | undefined;
-        readonly continuity: 'fresh' | 'resume' | 'provider-managed';
-      }
-    | undefined;
-  readonly workspace?:
-    | {
-        readonly mode: 'inherit' | 'state-dir' | 'worktree' | 'provider-managed';
-        readonly root?: string | undefined;
-      }
-    | undefined;
-  readonly launch?:
-    | {
-        readonly executable?: string | undefined;
-        readonly args?: readonly string[] | undefined;
-      }
-    | undefined;
 }
 
 export interface SpawnedSessionHandle {
+  /**
+   * Infrastructure-local identifier for the launched child. Phase 1 does not
+   * need to persist this in SessionState.
+   */
   readonly runId: string;
-  readonly provider: string;
+  /**
+   * Stable lookup key shared with the current runtime contract.
+   */
   readonly stateDir: string;
+  /**
+   * Present for external-process runners. Omitted for in-process runners.
+   */
   readonly pid?: number | undefined;
-  readonly externalSessionId?: string | undefined;
-  readonly captureMode: 'state-file' | 'stdout-json' | 'memory' | 'provider-api';
+  readonly captureMode: SpawnCaptureMode;
 }
 
-export interface SpawnedSessionResult {
+export interface SpawnedSessionSnapshot {
   readonly status: 'running' | 'completed' | 'failed';
   readonly variables?: Readonly<Record<string, string>> | undefined;
-  readonly summary?: string | undefined;
-  readonly error?: string | undefined;
-  readonly exitCode?: number | undefined;
-  readonly rawOutputRef?: string | undefined;
 }
 
 export interface SpawnedSessionCapabilities {
   readonly externalProcess: boolean;
   readonly terminate: boolean;
   readonly cwdOverride: boolean;
-  readonly customEnv: boolean;
   readonly modelPassThrough: boolean;
-  readonly providerPassThrough: boolean;
-  readonly sessionResume: boolean;
-  readonly worktreeIsolation: boolean;
   readonly stateDirPolling: boolean;
-  readonly structuredStdout: boolean;
-  readonly providerManagedSessionId: boolean;
-  readonly inProcessFallback: boolean;
+  readonly inProcessExecution: boolean;
 }
 
 export interface SpawnedSessionRunner {
-  capabilities(provider?: string): SpawnedSessionCapabilities;
-  launch(input: SpawnedSessionLaunch): Promise<SpawnedSessionHandle>;
-  poll(handle: SpawnedSessionHandle): Promise<SpawnedSessionResult>;
-  terminate?(handle: SpawnedSessionHandle): Promise<boolean>;
+  readonly capabilities: SpawnedSessionCapabilities;
+
+  launch(request: SpawnedSessionRequest): Promise<SpawnedSessionHandle>;
+
+  /**
+   * stateDir is mandatory because the current runtime persists only stateDir
+   * and pid. handle is optional so in-memory runners can use it when present,
+   * while file-backed runners can re-derive state from disk.
+   */
+  poll(
+    ref: Readonly<{
+      readonly stateDir: string;
+      readonly handle?: SpawnedSessionHandle | undefined;
+    }>,
+  ): Promise<SpawnedSessionSnapshot>;
+
+  /**
+   * Best effort. External-process runners may use pid and/or handle metadata.
+   * In-process runners may always return false.
+   */
+  terminate?(
+    ref: Readonly<{
+      readonly pid?: number | undefined;
+      readonly handle?: SpawnedSessionHandle | undefined;
+      readonly stateDir: string;
+    }>,
+  ): Promise<boolean>;
 }
 ```
 
-## Field responsibilities
+## Why this contract is the right minimum
 
-### Launch command
+### It matches current runtime inputs
 
-`launch.executable` and `launch.args` allow an adapter to accept an explicit command shape when the caller already knows it, but the normal rule should be:
+`SpawnedSessionRequest` is deliberately the same data shape the application already emits. No speculative `provider`, `env`, or session-resume fields are required to land Phase 1.
 
-- runtime declares intent
-- provider adapter resolves the actual command
+### It keeps `stateDir` as the stable rendezvous key
 
-That prevents prompt-language runtime code from hard-coding `claude`, `codex`, or `opencode` launch details.
+That is the implementation-critical detail missing from a more generic design. In this repo:
 
-### Workspace handling
+- Claude can recover status from `stateDir` alone
+- headless runners can use `stateDir` as the map key for in-memory child bookkeeping
+- `await` and cleanup logic already persist and reload `stateDir`
 
-`workspace.mode` makes isolation explicit instead of implicit.
+If `poll()` required an opaque handle only, the abstraction would not fit the current persisted state model.
 
-Recommended meanings:
+### It models the real transport split
 
-- `inherit`: child shares the parent workspace root
-- `state-dir`: child uses the same workspace but writes lifecycle artifacts under `stateDir`
-- `worktree`: child gets an isolated worktree or sandbox workspace
-- `provider-managed`: the provider owns workspace or session storage outside the repo
+Phase 1 only needs two capture modes:
 
-This keeps worktree and sandbox support additive instead of assumed.
+- `state-file`: Claude-style external child writes `session-state.json`
+- `memory`: headless child returns results in-process
 
-### Session handling
+`stdout-json`, `provider-api`, and session-resume semantics can be added later if the repo actually grows those paths.
 
-`session.continuity` is the contract's honesty mechanism.
+## Compatibility adapter
 
-- `fresh`: start a new child session
-- `resume`: reopen a known child session if the provider supports it
-- `provider-managed`: defer continuity to the provider's own session abstraction
+The migration seam should be a thin adapter:
 
-The contract can carry `childSessionId` or `resumeToken` without claiming every provider can honor them.
+```ts
+export class RunnerBackedProcessSpawner implements ProcessSpawner {
+  constructor(private readonly runner: SpawnedSessionRunner) {}
 
-### Env, model, and provider pass-through
+  private readonly handles = new Map<string, SpawnedSessionHandle>();
 
-The launch input intentionally separates:
+  async spawn(input: SpawnInput): Promise<SpawnResult> {
+    const handle = await this.runner.launch(input);
+    this.handles.set(input.stateDir, handle);
+    return { pid: handle.pid ?? 0 };
+  }
 
-- `provider`: which adapter family to use
-- `model`: which model hint to pass through
-- `env`: provider- or host-specific environment additions
+  async poll(stateDir: string): Promise<ChildStatus> {
+    const snapshot = await this.runner.poll({
+      stateDir,
+      handle: this.handles.get(stateDir),
+    });
+    return snapshot.variables != null
+      ? { status: snapshot.status, variables: snapshot.variables }
+      : { status: snapshot.status };
+  }
 
-This is enough for current and near-term needs:
+  async terminate(pid: number): Promise<boolean> {
+    if (!this.runner.terminate) return false;
 
-- Claude needs model and `PROMPT_LANGUAGE_STATE_DIR`
-- Codex may need model plus different CLI or JSON-mode arguments
-- OpenCode may need provider-routed model names and API-key-backed environment variables
+    const handle = [...this.handles.values()].find((candidate) => candidate.pid === pid);
+    return this.runner.terminate({
+      pid,
+      handle,
+      stateDir: handle?.stateDir ?? '',
+    });
+  }
+}
+```
 
-The runtime should pass these through only when the chosen adapter reports support.
+Design rules for this adapter:
 
-### Result capture
+- it stays in `infrastructure`, not `application`
+- it does not add new runtime semantics
+- it is responsible for the ephemeral `stateDir -> handle` map
+- it returns `pid: 0` for runners that do not have a real OS process, preserving current headless behavior
 
-`captureMode` and `SpawnedSessionResult` normalize child completion without forcing one transport.
+## Provider mappings in this repo
 
-Supported capture families:
+### Claude external runner
 
-- `state-file`: poll `session-state.json` or similar child-owned artifacts
-- `stdout-json`: parse structured CLI output
-- `memory`: in-process child execution returns final state directly
-- `provider-api`: poll a provider session or run API
-
-The runtime cares about normalized status and imported variables, not the transport.
-
-## Capability flags
-
-Capability flags are required so prompt-language does not silently assume unsupported behavior.
-
-Minimum flag meanings:
-
-| Flag                       | Meaning                                                          |
-| -------------------------- | ---------------------------------------------------------------- |
-| `externalProcess`          | Child work runs in a separate OS process                         |
-| `terminate`                | Adapter can attempt best-effort termination                      |
-| `cwdOverride`              | Caller may choose a child working directory                      |
-| `customEnv`                | Adapter accepts additional environment variables                 |
-| `modelPassThrough`         | Adapter can forward a model selection                            |
-| `providerPassThrough`      | Adapter can switch behavior based on provider identity           |
-| `sessionResume`            | Adapter can resume an existing child session                     |
-| `worktreeIsolation`        | Adapter can launch child work in an isolated worktree or sandbox |
-| `stateDirPolling`          | Adapter supports file-backed polling                             |
-| `structuredStdout`         | Adapter can return machine-readable terminal output              |
-| `providerManagedSessionId` | Adapter returns a durable external session identifier            |
-| `inProcessFallback`        | Adapter can execute child work without a second external session |
-
-These flags should be surfaced in diagnostics and future support matrices.
-
-## Backward-compatible Claude default
-
-This abstraction should not change current shipped behavior by default.
-
-Default rule:
-
-- if no provider is specified for interactive spawned-child execution, use the current Claude-backed adapter behavior
-
-That means the effective default remains:
-
-- launch `claude -p`
-- pass `--model` only when a non-empty model is supplied
-- set `PROMPT_LANGUAGE_STATE_DIR`
-- inherit the current workspace unless spawn-level `cwd` overrides it
-- capture completion through child state files in the spawn state directory
-
-This preserves the repo's current Claude continuity story while making the abstraction ready for other providers.
-
-## Provider mappings
-
-### Claude
-
-Claude is the default external-child implementation.
-
-Recommended capability profile:
+`ClaudeProcessSpawner` maps cleanly to `SpawnedSessionRunner` with:
 
 - `externalProcess: true`
 - `terminate: true`
 - `cwdOverride: true`
-- `customEnv: true`
 - `modelPassThrough: true`
-- `providerPassThrough: false`
-- `sessionResume: false`
-- `worktreeIsolation: false`
 - `stateDirPolling: true`
-- `structuredStdout: false`
-- `providerManagedSessionId: false`
-- `inProcessFallback: false`
+- `inProcessExecution: false`
 
-### Codex
+Concrete behavior that must remain unchanged:
 
-This note should not reopen the existing Codex decision. The current honest Codex story in this repo is still the headless or supervised path documented in [Codex External Child-Session Decision](codex-external-child-session-decision.md).
+- launch `claude -p --dangerously-skip-permissions`
+- pass `--model` only when `model` is supplied
+- set `PROMPT_LANGUAGE_STATE_DIR`
+- use spawn-level `cwd` when provided, otherwise instance `cwd`
+- treat unreadable or absent `session-state.json` as `running`
+- map `completed` to completed, and `failed` or `cancelled` to failed
 
-Recommended near-term Codex profile:
+### Headless runner
 
-- support `provider` and `model` pass-through
-- allow either `memory` capture or structured CLI capture
-- report `inProcessFallback: true` for the current shipped headless path
-- report `externalProcess` and `sessionResume` only when a dedicated external-child adapter actually exists
+`HeadlessProcessSpawner` maps cleanly to `SpawnedSessionRunner` with:
 
-In other words: the contract can represent future Codex external-child work, but it must not pretend that work is already shipped.
-
-### OpenCode
-
-OpenCode should be treated the same way: the abstraction may carry provider and model routing now, while capability flags state exactly what the repo can truly do.
-
-Recommended near-term OpenCode profile:
-
-- `providerPassThrough: true`
+- `externalProcess: false`
+- `terminate: false`
+- `cwdOverride: true`
 - `modelPassThrough: true`
-- `customEnv: true`
-- choose `memory`, `stdout-json`, or `provider-api` capture depending on the actual launcher
-- leave `sessionResume` and `worktreeIsolation` false until verified
+- `stateDirPolling: false`
+- `inProcessExecution: true`
 
-This keeps OpenCode additive and evidence-driven rather than aspirational.
+Concrete behavior that must remain unchanged:
 
-## Migration path
+- launch via `runFlowHeadless()`
+- key child bookkeeping by `stateDir`
+- return `pid: process.pid` through the current `ProcessSpawner` shim so `await` liveness checks remain stable
+- expose terminal variables as stringified child variables
 
-1. Keep `ProcessSpawner` as the runtime-facing port for current code.
-2. Introduce `SpawnedSessionRunner` as infrastructure-facing adapter contract.
-3. Re-express `ClaudeProcessSpawner` in terms of a Claude runner profile.
-4. Let headless Codex/OpenCode paths implement the same contract via `memory` capture.
-5. Add diagnostics so support matrices report actual child-session capabilities by provider.
+## Explicitly out of scope for Phase 1
 
-This sequence avoids a large rewrite and preserves current behavior.
+These are valid future extensions, but they should not be bundled into the first abstraction change:
+
+- provider routing on the application port
+- extra environment-variable pass-through
+- worktree or sandbox isolation modes
+- provider-managed session ids
+- resume tokens
+- structured stdout capture
+- provider API polling
+
+Each of those changes widens semantics beyond what the runtime currently emits and would need its own evidence and tests.
+
+## Migration plan
+
+### Step 1: add the runner contract in infrastructure
+
+Add an infrastructure-local contract file, for example:
+
+- `src/infrastructure/adapters/spawned-session-runner.ts`
+
+Do not change `ProcessSpawner` yet.
+
+### Step 2: add the compatibility adapter
+
+Add:
+
+- `src/infrastructure/adapters/runner-backed-process-spawner.ts`
+
+This becomes the only place that translates between `ProcessSpawner` and `SpawnedSessionRunner`.
+
+### Step 3: extract Claude logic behind the runner
+
+Refactor `src/infrastructure/adapters/claude-process-spawner.ts` into one of two acceptable shapes:
+
+- rename it to a Claude runner and introduce a new `ClaudeProcessSpawner` wrapper, or
+- keep the public filename/class stable, but internally delegate to `RunnerBackedProcessSpawner(new ClaudeSpawnedSessionRunner(...))`
+
+The key requirement is that the Claude-specific launch and poll logic moves behind the runner contract.
+
+### Step 4: extract the headless path behind the same runner
+
+Do the same for `src/infrastructure/adapters/headless-process-spawner.ts`.
+
+After this step, Claude and headless implementations share one infrastructure contract while the application still sees `ProcessSpawner`.
+
+### Step 5: remove direct provider knowledge from hooks
+
+Once the runner-backed spawners exist, hook entry points should instantiate a repo-default spawner factory rather than constructing `ClaudeProcessSpawner` directly.
+
+That follow-up is outside this bead's file-only scope, but it is the next repo change needed to make the abstraction operationally real.
+
+## Required tests for the migration
+
+The code change that follows this note should add or preserve tests covering:
+
+- Claude launch arguments and env propagation still match current behavior
+- Claude poll still treats missing state files as `running`
+- headless child execution still returns parent-visible variables
+- `RunnerBackedProcessSpawner` preserves `pid: 0` and `pid: process.pid` behavior exactly as current callers expect
+- `terminateRunningSpawnedChildren()` still works against the process-spawner surface without learning about provider concepts
+
+## Acceptance criteria
+
+This bead should be considered satisfied when the note is concrete enough that an implementer can make the change without inventing repo-specific behavior. Specifically:
+
+- the abstraction boundary is explicitly below `ProcessSpawner`
+- the contract is limited to fields the repo already emits today
+- `stateDir` is called out as the stable poll key for Phase 1
+- the Claude and headless mappings are described in terms of actual checked-in behavior
+- the migration path names the exact compatibility adapter needed for this repo
+- future extensions are separated from the minimum viable migration
 
 ## Consequences
 
-What this improves:
+What improves:
 
-- provider-specific child-launch logic becomes explicit and easier to compare
-- model, provider, and environment pass-through stop being Claude-only assumptions
-- result capture becomes normalized across external and in-process children
-- future Codex/OpenCode work gains a contract without overclaiming parity
+- the repo gets one explicit infrastructure contract for child-runner behavior
+- Claude-specific assumptions stop leaking into the generic adapter boundary
+- headless child execution becomes a first-class implementation of the same abstraction
+- future provider work can extend from a concrete seam rather than from copied spawner logic
 
-What this intentionally does not solve yet:
+What remains intentionally unchanged:
 
-- generic host lifecycle parity
-- worktree-based merge isolation
-- provider-managed session restore guarantees
-- rich child telemetry beyond normalized completion and variables
-
-## Follow-up links
-
-Codex follow-up:
-
-- [Codex External Child-Session Decision](codex-external-child-session-decision.md)
-- [Codex Parity Delta Analysis](../evaluation/codex-parity-delta-analysis.md)
-
-OpenCode follow-up:
-
-- [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md)
-- [OpenCode Minimal Gate Subset](../evaluation/opencode-minimal-gate-subset.md)
-
-Shared adapter boundary:
-
-- [Provider Adapters Over Shared Flow IR](provider-adapters-shared-flow-ir.md)
+- application/runtime semantics
+- domain state shape
+- default Claude behavior in interactive hooks
+- the existing Codex external-child decision
 
 ## Summary
 
-prompt-language should define one provider-neutral spawned-session runner contract, but it should use capability flags and capture modes to stay honest about provider differences. Claude remains the default external-child behavior. Codex and OpenCode can plug into the same contract only to the extent that checked-in evidence supports their actual capabilities.
+The implementation-ready design for this repo is not "replace `ProcessSpawner` with a universal provider API". It is: keep `ProcessSpawner` as the application port, add an infrastructure-only `SpawnedSessionRunner`, and bridge them with a thin compatibility adapter keyed by `stateDir`. That is the smallest change that fits the current runtime, preserves Claude defaults, treats headless execution as a first-class runner, and creates a real extension seam for later provider work.

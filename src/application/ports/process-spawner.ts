@@ -5,11 +5,13 @@
  * isolated state directory and flow definition.
  */
 
+import type { VariableStore } from '../../domain/variable-value.js';
+
 export interface SpawnInput {
   readonly name: string;
   readonly goal: string;
   readonly flowText: string;
-  readonly variables: Readonly<Record<string, string | number | boolean>>;
+  readonly variables: VariableStore;
   readonly stateDir: string;
   readonly cwd?: string | undefined;
   /** beads: prompt-language-2j9v — model to pass through to the child runner. */

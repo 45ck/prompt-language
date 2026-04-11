@@ -81,6 +81,18 @@ import {
 } from '../domain/review-judge-capture.js';
 import { extractJudgeKind } from '../domain/judge-definition.js';
 import { renderNodesToDsl, renderSpawnBody } from './render-node-to-dsl.js';
+import {
+  decodeJsonVariableValue,
+  stringifyVariableValue,
+  type VariableStore,
+  type VariableValue,
+} from '../domain/variable-value.js';
+
+type LoweredAwayFlowNode = Extract<FlowNode, { kind: 'swarm' | 'start' | 'return' }>;
+
+function unexpectedLoweredAwayNode(node: LoweredAwayFlowNode): never {
+  throw new Error(`Flow node "${node.kind}" must be lowered before runtime execution`);
+}
 
 export function resolveCurrentNode(
   nodes: readonly FlowNode[],
@@ -120,6 +132,10 @@ export function resolveCurrentNode(
     case 'send':
     case 'receive':
       return null;
+    case 'swarm':
+    case 'start':
+    case 'return':
+      return unexpectedLoweredAwayNode(node);
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -138,7 +154,7 @@ const INTERPOLATION_TOKEN_RE =
 
 function prepareWindowsCommand(
   template: string,
-  variables: Readonly<Record<string, string | number | boolean>>,
+  variables: VariableStore,
   baseEnv?: Readonly<Record<string, string>>,
 ): { command: string; env?: Readonly<Record<string, string>> } {
   let index = 0;
@@ -159,7 +175,7 @@ function prepareWindowsCommand(
 
 function prepareShellCommand(
   template: string,
-  variables: Readonly<Record<string, string | number | boolean>>,
+  variables: VariableStore,
   baseEnv?: Readonly<Record<string, string>>,
 ): { command: string; env?: Readonly<Record<string, string>> } {
   if (process.platform === 'win32') {
@@ -357,7 +373,7 @@ function normalizeGroundingCommand(command: string): string {
 
 async function buildAskGroundingEvidence(
   groundedBy: string | undefined,
-  variables: Readonly<Record<string, string | number | boolean>>,
+  variables: VariableStore,
   commandRunner?: CommandRunner,
 ): Promise<string | undefined> {
   if (!groundedBy || !commandRunner) return undefined;
@@ -376,7 +392,7 @@ async function buildAskGroundingEvidence(
  */
 export async function evaluateFlowCondition(
   condition: string,
-  variables: Readonly<Record<string, string | number | boolean>>,
+  variables: VariableStore,
   commandRunner?: CommandRunner,
 ): Promise<boolean | null> {
   // H-LANG-006: Interpolate ${var} and ${var:-default} before condition evaluation
@@ -578,7 +594,7 @@ async function handleBodyExhaustion(
     case 'foreach': {
       // H-LANG-007: For command-based foreach, read from stored variable
       const rawList = parentNode.listCommand
-        ? String(state.variables[`_foreach_${parentNode.id}_list`] ?? '')
+        ? stringifyVariableValue(state.variables[`_foreach_${parentNode.id}_list`] ?? '')
         : interpolate(parentNode.listExpression, state.variables);
       const items = splitIterable(rawList).slice(0, parentNode.maxIterations);
       const progress = state.nodeProgress[parentNode.id];
@@ -637,6 +653,10 @@ async function handleBodyExhaustion(
     case 'send':
     case 'receive':
       return null;
+    case 'swarm':
+    case 'start':
+    case 'return':
+      return unexpectedLoweredAwayNode(parentNode);
     default: {
       const _exhaustive: never = parentNode;
       return _exhaustive;
@@ -1616,19 +1636,19 @@ const SENSITIVE_VAR_SUFFIXES = ['_key', '_token', '_secret', '_password'];
 
 /** H-SEC-005: Filter variables for spawn child based on allowlist or default deny. */
 function filterSpawnVariables(
-  variables: Readonly<Record<string, string | number | boolean>>,
+  variables: VariableStore,
   allowlist?: readonly string[],
-): Record<string, string | number | boolean> {
+): Record<string, VariableValue> {
   if (allowlist) {
     const allowed = new Set(allowlist);
-    const result: Record<string, string | number | boolean> = {};
+    const result: Record<string, VariableValue> = {};
     for (const [key, value] of Object.entries(variables)) {
       if (allowed.has(key)) result[key] = value;
     }
     return result;
   }
   // Default: exclude variables matching sensitive patterns
-  const result: Record<string, string | number | boolean> = {};
+  const result: Record<string, VariableValue> = {};
   for (const [key, value] of Object.entries(variables)) {
     const lower = key.toLowerCase();
     if (SENSITIVE_VAR_SUFFIXES.some((suffix) => lower.endsWith(suffix))) continue;
@@ -1667,7 +1687,7 @@ async function advanceSpawnNode(
   const flowText = renderSpawnBody(node);
   const goal = `Sub-task: ${node.name}`;
   // H-SEC-005: Filter variables based on allowlist
-  const parentVars: Record<string, string | number | boolean> = filterSpawnVariables(
+  const parentVars: Record<string, VariableValue> = filterSpawnVariables(
     current.variables,
     node.vars,
   );
@@ -1703,6 +1723,7 @@ async function advanceSpawnNode(
     status: 'running',
     pid,
     stateDir,
+    startedAt: new Date().toISOString(),
   });
 
   // Skip past the spawn block (don't enter body — child runs it)
@@ -1720,28 +1741,84 @@ function computePollInterval(pollCount: number): number {
   return 10000;
 }
 
+function parseExitCode(raw: string | undefined): string | number {
+  const trimmed = raw?.trim() ?? '';
+  if (trimmed === '') return '';
+  return /^-?\d+$/.test(trimmed) ? Number(trimmed) : trimmed;
+}
+
+function importChildVariablesWithPrefix(
+  state: SessionState,
+  child: import('../domain/session-state.js').SpawnedChild,
+): SessionState {
+  let next = state;
+  if (!child.variables) return next;
+
+  for (const [key, value] of Object.entries(child.variables)) {
+    next = updateVariable(next, `${child.name}.${key}`, value);
+  }
+
+  return next;
+}
+
+async function importAwaitedSwarmResult(
+  state: SessionState,
+  child: import('../domain/session-state.js').SpawnedChild,
+  messageStore?: MessageStore,
+): Promise<SessionState> {
+  const swarmId = child.variables?.['__swarm_id']?.trim();
+  if (!swarmId) return state;
+
+  const roleId = child.variables?.['__swarm_role']?.trim() ?? child.name;
+  const returned =
+    child.returned ??
+    (messageStore ? ((await messageStore.receive(child.name)) ?? undefined) : undefined) ??
+    child.variables?.['__swarm_return'] ??
+    '';
+  const prefix = `${swarmId}.${roleId}`;
+
+  let next = updateVariable(state, `${prefix}.status`, child.status);
+  next = updateVariable(
+    next,
+    `${prefix}.exit_code`,
+    parseExitCode(child.variables?.['last_exit_code']),
+  );
+  next = updateVariable(next, `${prefix}.returned`, returned);
+  next = updateVariable(next, `${prefix}.result`, decodeJsonVariableValue(returned));
+  next = updateVariable(next, `${prefix}.started_at`, child.startedAt ?? '');
+  next = updateVariable(next, `${prefix}.completed_at`, child.completedAt ?? '');
+  return next;
+}
+
 /** Advance an await node: poll children and block until target(s) complete. */
 async function advanceAwaitNode(
   node: AwaitNode,
   current: SessionState,
   processSpawner?: ProcessSpawner,
+  messageStore?: MessageStore,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!processSpawner) {
     return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
   }
 
+  const namedTargets =
+    node.target === 'all' ? null : Array.isArray(node.target) ? node.target : [node.target];
   const children =
-    node.target === 'all'
+    namedTargets === null
       ? Object.values(current.spawnedChildren)
-      : [current.spawnedChildren[node.target]].filter(Boolean);
+      : namedTargets
+          .map((target) => current.spawnedChildren[target])
+          .filter(
+            (child): child is import('../domain/session-state.js').SpawnedChild => child != null,
+          );
 
   // D6: Warn when named await target doesn't match any spawned child
-  if (node.target !== 'all' && children.length === 0) {
+  if (namedTargets !== null && children.length === 0) {
     const state = {
       ...current,
       warnings: [
         ...current.warnings,
-        `Await target "${node.target}" does not match any spawned child — advancing past await.`,
+        `Await target "${namedTargets.join(', ')}" does not match any spawned child — advancing past await.`,
       ],
     };
     return { state: advanceFromPath(state, state.currentNodePath), advanced: true };
@@ -1751,38 +1828,41 @@ async function advanceAwaitNode(
   let allDone = true;
 
   for (const child of children) {
-    if (child?.status !== 'running') continue;
+    if (!child) continue;
 
-    const status = await processSpawner.poll(child.stateDir);
-    if (status.status === 'running') {
-      if (child.pid !== undefined && !isPidAlive(child.pid)) {
-        state = updateSpawnedChild(state, child.name, {
-          ...child,
-          status: 'failed',
-        });
+    let terminalChild = child;
+    if (child.status === 'running') {
+      const status = await processSpawner.poll(child.stateDir);
+      if (status.status === 'running') {
+        if (child.pid !== undefined && !isPidAlive(child.pid)) {
+          terminalChild = {
+            ...child,
+            status: 'failed',
+            completedAt: new Date().toISOString(),
+          };
+          state = updateSpawnedChild(state, child.name, terminalChild);
+          state = await importAwaitedSwarmResult(state, terminalChild, messageStore);
+          continue;
+        }
+        allDone = false;
         continue;
       }
-      allDone = false;
-      continue;
+
+      terminalChild = {
+        name: child.name,
+        pid: child.pid,
+        stateDir: child.stateDir,
+        startedAt: child.startedAt,
+        completedAt: child.completedAt ?? new Date().toISOString(),
+        returned: child.returned,
+        status: status.status,
+        variables: status.variables ?? undefined,
+      };
+      state = updateSpawnedChild(state, child.name, terminalChild);
     }
 
-    // Import child variables with name-prefix
-    const updatedChild: import('../domain/session-state.js').SpawnedChild = {
-      name: child.name,
-      pid: child.pid,
-      stateDir: child.stateDir,
-      status: status.status,
-      variables: status.variables ?? undefined,
-    };
-    let updated = updateSpawnedChild(state, child.name, updatedChild);
-
-    if (status.variables) {
-      for (const [k, v] of Object.entries(status.variables)) {
-        updated = updateVariable(updated, `${child.name}.${k}`, v);
-      }
-    }
-
-    state = updated;
+    state = importChildVariablesWithPrefix(state, terminalChild);
+    state = await importAwaitedSwarmResult(state, terminalChild, messageStore);
   }
 
   if (!allDone) {
@@ -1798,6 +1878,10 @@ async function advanceAwaitNode(
             pid: child.pid,
             stateDir: child.stateDir,
             status: 'failed',
+            startedAt: child.startedAt,
+            completedAt: new Date().toISOString(),
+            returned: child.returned,
+            variables: child.variables,
           });
         }
       }
@@ -1973,7 +2057,7 @@ async function advanceRaceNode(
       const stateDir = `.prompt-language-${spawnChild.name}`;
       const flowText = renderSpawnBody(spawnChild);
       const goal = `Race sub-task: ${spawnChild.name}`;
-      const parentVars: Record<string, string | number | boolean> = filterSpawnVariables(
+      const parentVars: Record<string, VariableValue> = filterSpawnVariables(
         state.variables,
         spawnChild.vars,
       );
@@ -1999,6 +2083,7 @@ async function advanceRaceNode(
           status: 'running',
           pid,
           stateDir,
+          startedAt: new Date().toISOString(),
         });
         childNames.push(spawnChild.name);
       }
@@ -2111,7 +2196,7 @@ async function advanceForeachSpawnNode(
     return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
   }
   const rawList = node.listCommand
-    ? String(current.variables[`_foreach_${node.id}_list`] ?? '')
+    ? stringifyVariableValue(current.variables[`_foreach_${node.id}_list`] ?? '')
     : interpolate(node.listExpression, current.variables);
   const items = splitIterable(rawList).slice(0, node.maxItems);
   let state = current;
@@ -2119,9 +2204,7 @@ async function advanceForeachSpawnNode(
     const item = items[i]!;
     const childName = `${node.variableName}_${i}`;
     const stateDir = `.prompt-language-${childName}`;
-    const parentVars: Record<string, string | number | boolean> = filterSpawnVariables(
-      state.variables,
-    );
+    const parentVars: Record<string, VariableValue> = filterSpawnVariables(state.variables);
     parentVars[node.variableName] = item;
     const flowText = renderNodesToDsl(node.body, 1).join('\n');
     const goal = `${node.variableName} item ${i}: ${item}`;
@@ -2146,6 +2229,7 @@ async function advanceForeachSpawnNode(
         status: 'running',
         pid,
         stateDir,
+        startedAt: new Date().toISOString(),
       });
     }
   }
@@ -2304,6 +2388,12 @@ function describeAuditNode(node: FlowNode): string {
       return `send "${node.target}"`;
     case 'receive':
       return `receive ${node.variableName}`;
+    case 'swarm':
+      return `swarm ${node.name}`;
+    case 'start':
+      return `start ${node.targets.join(', ')}`;
+    case 'return':
+      return `return ${node.expression}`;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -2462,7 +2552,7 @@ async function advanceSingleNode(
     case 'spawn':
       return advanceSpawnNode(node, current, processSpawner, commandRunner);
     case 'await':
-      return advanceAwaitNode(node, current, processSpawner);
+      return advanceAwaitNode(node, current, processSpawner, messageStore);
     case 'approve':
       return advanceApproveNode(node, current);
     case 'review': {
@@ -2491,6 +2581,10 @@ async function advanceSingleNode(
       return advanceSendNode(node, current, messageStore);
     case 'receive':
       return advanceReceiveNode(node, current, messageStore);
+    case 'swarm':
+    case 'start':
+    case 'return':
+      return unexpectedLoweredAwayNode(node);
     default: {
       const _exhaustive: never = node;
       return _exhaustive;

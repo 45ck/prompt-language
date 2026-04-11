@@ -18,6 +18,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { renderFlow, renderTimingReport } from '../domain/render-flow.js';
 import type { SessionState } from '../domain/session-state.js';
+import type { VariableStore } from '../domain/variable-value.js';
 import {
   resolveStateDir,
   readSessionState,
@@ -212,7 +213,7 @@ export interface FlowStatusSummary {
   status: string;
   currentNodePath: readonly number[];
   completed: boolean;
-  variables: Readonly<Record<string, string | number | boolean>>;
+  variables: VariableStore;
   iterationCount: number;
   gateCount: number;
   gatesPassing: number;

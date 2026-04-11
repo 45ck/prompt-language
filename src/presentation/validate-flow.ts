@@ -10,9 +10,11 @@ import { lintFlow } from '../domain/lint-flow.js';
 import { renderFlow } from '../domain/render-flow.js';
 import { createSessionState } from '../domain/session-state.js';
 import { formatDiagnosticReport } from './format-diagnostic-report.js';
+import { expandSwarmDocument } from '../application/lower-swarm.js';
 
 export interface ValidateFlowPreview {
   readonly complexity: number;
+  readonly expandedFlow?: string | undefined;
   readonly lintWarningCount: number;
   readonly renderedFlow: string;
   readonly report: DiagnosticReport;
@@ -31,6 +33,7 @@ export function buildValidateFlowPreview(
   options: BuildValidateFlowPreviewOptions = {},
 ): ValidateFlowPreview {
   const cwd = options.cwd ?? process.cwd();
+  const expanded = expandSwarmDocument(flowText);
   const spec = parseFlow(flowText, { basePath: cwd });
   const lintWarnings = lintFlow(spec);
   const state = createSessionState('validate-preview', spec, 'validate-preview-nonce');
@@ -58,6 +61,7 @@ export function buildValidateFlowPreview(
 
   return {
     complexity,
+    ...(expanded.loweredFlowText != null ? { expandedFlow: expanded.loweredFlowText } : {}),
     lintWarningCount: lintWarnings.length,
     renderedFlow: rendered,
     report,
@@ -66,6 +70,7 @@ export function buildValidateFlowPreview(
       `Complexity: ${complexity}/5`,
       `Lint warnings: ${lintWarnings.length}`,
       ...preflightSection,
+      ...(expanded.loweredFlowText != null ? ['', 'Expanded flow:', expanded.loweredFlowText] : []),
       '',
       rendered,
     ].join('\n'),

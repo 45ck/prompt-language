@@ -1,4 +1,27 @@
-import type { FlowNode, SpawnNode } from '../domain/flow-node.js';
+import type { AwaitNode, FlowNode, SpawnNode, SwarmRoleDefinition } from '../domain/flow-node.js';
+
+function renderAwaitTarget(target: AwaitNode['target']): string {
+  if (target === 'all') return 'all';
+  if (Array.isArray(target)) return target.join(' ');
+  return `"${target}"`;
+}
+
+function renderSpawnHeader(node: SpawnNode, pad: string): string {
+  let header = `${pad}spawn "${node.name}"`;
+  if (node.cwd != null) header += ` in "${node.cwd}"`;
+  if (node.model != null) header += ` model "${node.model}"`;
+  if (node.condition != null) header += ` if ${node.condition}`;
+  if (node.vars != null && node.vars.length > 0) header += ` with vars ${node.vars.join(', ')}`;
+  return header;
+}
+
+function renderRoleHeader(role: SwarmRoleDefinition, pad: string): string {
+  let header = `${pad}role ${role.name}`;
+  if (role.model != null) header += ` model "${role.model}"`;
+  if (role.cwd != null) header += ` in "${role.cwd}"`;
+  if (role.vars != null && role.vars.length > 0) header += ` with vars ${role.vars.join(', ')}`;
+  return header;
+}
 
 export function renderNodesToDsl(nodes: readonly FlowNode[], indent: number): string[] {
   const lines: string[] = [];
@@ -102,17 +125,14 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
       ];
     }
     case 'spawn': {
-      const spawnHeader = node.cwd
-        ? `${pad}spawn "${node.name}" in "${node.cwd}"`
-        : `${pad}spawn "${node.name}"`;
       return [
-        spawnHeader,
+        renderSpawnHeader(node, pad),
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
     }
     case 'await':
-      return [`${pad}await ${node.target === 'all' ? 'all' : `"${node.target}"`}`];
+      return [`${pad}await ${renderAwaitTarget(node.target)}`];
     case 'approve': {
       const approveTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds / 60}m` : '';
       return [`${pad}approve "${node.message}"${approveTimeout}`];
@@ -154,6 +174,25 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
       const fromPart = node.from !== undefined ? ` from "${node.from}"` : '';
       return [`${pad}receive ${node.variableName}${fromPart}`];
     }
+    case 'swarm': {
+      const roleLines = node.roles.flatMap((role) => [
+        renderRoleHeader(role, `${pad}  `),
+        ...role.body.flatMap((child) => renderNodeToDsl(child, indent + 2)),
+        `${pad}  end`,
+      ]);
+      return [
+        `${pad}swarm ${node.name}`,
+        ...roleLines,
+        `${pad}  flow:`,
+        ...node.flow.flatMap((child) => renderNodeToDsl(child, indent + 2)),
+        `${pad}  end`,
+        `${pad}end`,
+      ];
+    }
+    case 'start':
+      return [`${pad}start ${node.targets.join(', ')}`];
+    case 'return':
+      return [`${pad}return ${node.expression}`];
     default: {
       const _exhaustive: never = node;
       return _exhaustive;

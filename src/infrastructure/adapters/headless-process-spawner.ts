@@ -13,6 +13,8 @@ import type {
   SpawnResult,
 } from '../../application/ports/process-spawner.js';
 import type { PromptTurnRunner } from '../../application/ports/prompt-turn-runner.js';
+import type { VariableStore, VariableValue } from '../../domain/variable-value.js';
+import { stringifyVariableValue } from '../../domain/variable-value.js';
 import { InMemoryStateStore } from './in-memory-state-store.js';
 
 interface HeadlessChildRecord {
@@ -25,8 +27,11 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function escapeLiteral(value: string | number | boolean): string {
-  return String(value).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+function escapeLiteral(value: VariableValue): string {
+  return stringifyVariableValue(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n');
 }
 
 function buildChildFlow(input: SpawnInput): string {
@@ -49,10 +54,10 @@ function buildChildFlow(input: SpawnInput): string {
   return lines.join('\n');
 }
 
-function stringifyVariables(
-  variables: Readonly<Record<string, string | number | boolean>>,
-): Readonly<Record<string, string>> {
-  return Object.fromEntries(Object.entries(variables).map(([key, value]) => [key, String(value)]));
+function stringifyVariables(variables: VariableStore): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    Object.entries(variables).map(([key, value]) => [key, stringifyVariableValue(value)]),
+  );
 }
 
 /**

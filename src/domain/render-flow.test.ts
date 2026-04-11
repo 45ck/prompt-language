@@ -40,6 +40,12 @@ import {
   createRememberNode,
   createSendNode,
   createReceiveNode,
+  createForeachSpawnNode,
+  createRaceNode,
+  createSwarmRoleDefinition,
+  createSwarmNode,
+  createStartNode,
+  createReturnNode,
 } from './flow-node.js';
 import { updateSpawnedChild } from './session-state.js';
 
@@ -194,6 +200,37 @@ describe('renderFlow', () => {
     expect(output).toContain('catch command_failed');
     expect(output).toContain('prompt: roll back');
     expect(output).toContain('end');
+  });
+
+  it('describes swarm, start, and return nodes in flow summaries', () => {
+    const swarm = createSwarmNode(
+      'sw1',
+      'checkout_fix',
+      [
+        createSwarmRoleDefinition('role1', 'frontend', [
+          createPromptNode('p1', 'Fix the UI regression'),
+          createReturnNode('ret-role', '${summary}'),
+        ]),
+      ],
+      [createStartNode('st1', ['frontend']), createReturnNode('ret1', '${summary}')],
+    );
+    const swarmState = createSessionState('s1', createFlowSpec('test', [swarm]));
+    const startState = createSessionState(
+      's2',
+      createFlowSpec('test', [createStartNode('st2', ['frontend'])]),
+    );
+    const returnState = createSessionState(
+      's3',
+      createFlowSpec('test', [createReturnNode('ret2', '${summary}')]),
+    );
+
+    expect(renderFlowSummary({ ...swarmState, currentNodePath: [0] })).toContain(
+      'swarm checkout_fix',
+    );
+    expect(renderFlowSummary({ ...startState, currentNodePath: [0] })).toContain('start frontend');
+    expect(renderFlowSummary({ ...returnState, currentNodePath: [0] })).toContain(
+      'return ${summary}',
+    );
   });
 
   it('renders completion gate markers - pending', () => {
@@ -1490,6 +1527,34 @@ describe('renderFlowSummary — node descriptions', () => {
       { node: createRememberNode('m1', 'fact'), expected: 'remember' },
       { node: createSendNode('s1', 'parent', 'hi'), expected: 'send to "parent"' },
       { node: createReceiveNode('r1', 'msg'), expected: 'receive msg' },
+    ] as const;
+
+    for (const { node, expected } of cases) {
+      const spec = createFlowSpec('test', [node]);
+      const state = createSessionState('s1', spec);
+      const summary = renderFlowSummary(state);
+      expect(summary).toContain(expected);
+    }
+  });
+
+  it('describes retry, race, and foreach-spawn nodes', () => {
+    const cases = [
+      {
+        node: createRetryNode('re1', [createRunNode('r1', 'npm test')], 4),
+        expected: 'retry max 4',
+      },
+      {
+        node: createRaceNode('ra1', [
+          createSpawnNode('sp1', 'worker', [createPromptNode('p1', 'go')]),
+        ]),
+        expected: 'race',
+      },
+      {
+        node: createForeachSpawnNode('fs1', 'item', '${items}', [
+          createRunNode('r2', 'work ${item}'),
+        ]),
+        expected: 'foreach-spawn item',
+      },
     ] as const;
 
     for (const { node, expected } of cases) {

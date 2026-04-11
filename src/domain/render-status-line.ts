@@ -54,6 +54,10 @@ function resolveNode(nodes: readonly FlowNode[], path: readonly number[]): FlowN
     case 'send':
     case 'receive':
       return null;
+    case 'swarm':
+    case 'start':
+    case 'return':
+      return null;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -99,6 +103,9 @@ function collectAncestors(nodes: readonly FlowNode[], path: readonly number[]): 
       case 'remember':
       case 'send':
       case 'receive':
+      case 'swarm':
+      case 'start':
+      case 'return':
         currentNodes = [];
         break;
       default: {
@@ -141,7 +148,13 @@ function summarizeNode(node: FlowNode): string {
     case 'spawn':
       return `spawn "${node.name}"`;
     case 'await':
-      return `await ${node.target === 'all' ? 'all' : `"${node.target}"`}`;
+      return `await ${
+        node.target === 'all'
+          ? 'all'
+          : Array.isArray(node.target)
+            ? node.target.join(' ')
+            : `"${node.target}"`
+      }`;
     case 'approve':
       return `approve: ${truncate(node.message, 30)}`;
     case 'review':
@@ -158,6 +171,12 @@ function summarizeNode(node: FlowNode): string {
       return `send → ${node.target}`;
     case 'receive':
       return `receive ${node.variableName}`;
+    case 'swarm':
+      return `swarm ${node.name}`;
+    case 'start':
+      return `start ${node.targets.join(', ')}`;
+    case 'return':
+      return `return ${truncate(node.expression, 30)}`;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;

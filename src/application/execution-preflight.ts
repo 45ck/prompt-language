@@ -144,6 +144,17 @@ function collectProfileRequirements(nodes: readonly FlowNode[]): ProfileRequirem
           requiresMessagePassing: true,
         });
         break;
+      case 'swarm': {
+        requirements = mergeRequirements(requirements, {
+          requiresApprove: false,
+          requiresMessagePassing: true,
+        });
+        requirements = mergeRequirements(requirements, collectProfileRequirements(node.flow));
+        for (const role of node.roles) {
+          requirements = mergeRequirements(requirements, collectProfileRequirements(role.body));
+        }
+        break;
+      }
       case 'prompt':
       case 'run':
       case 'let':
@@ -151,6 +162,8 @@ function collectProfileRequirements(nodes: readonly FlowNode[]): ProfileRequirem
       case 'continue':
       case 'await':
       case 'remember':
+      case 'start':
+      case 'return':
         break;
       default: {
         const _exhaustive: never = node;

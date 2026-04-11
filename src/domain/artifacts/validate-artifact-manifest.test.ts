@@ -297,4 +297,76 @@ describe('validateArtifactManifest', () => {
       ]),
     );
   });
+
+  it('rejects malformed scalar fields and optional declaration references', () => {
+    const manifest = {
+      ...createValidManifest(),
+      manifestVersion: 0,
+      artifactSchemaVersion: 0,
+      title: '   ',
+      summary: '',
+      declarationRef: 42,
+    };
+
+    const result = validateArtifactManifest(manifest);
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'manifestVersion', code: 'expected-integer' }),
+        expect.objectContaining({ path: 'artifactSchemaVersion', code: 'expected-integer' }),
+        expect.objectContaining({ path: 'title', code: 'expected-string' }),
+        expect.objectContaining({ path: 'summary', code: 'expected-string' }),
+        expect.objectContaining({ path: 'declarationRef', code: 'expected-string' }),
+      ]),
+    );
+  });
+
+  it('rejects non-object nested records and non-array inventories', () => {
+    const manifest = {
+      ...createValidManifest(),
+      producer: 'flow',
+      origin: null,
+      content: [],
+      views: {},
+      attachments: 'attachments',
+    };
+
+    const result = validateArtifactManifest(manifest);
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'producer', code: 'expected-object' }),
+        expect.objectContaining({ path: 'origin', code: 'expected-object' }),
+        expect.objectContaining({ path: 'content', code: 'expected-object' }),
+        expect.objectContaining({ path: 'views', code: 'expected-array' }),
+        expect.objectContaining({ path: 'attachments', code: 'expected-array' }),
+      ]),
+    );
+  });
+
+  it('rejects non-object view and attachment entries', () => {
+    const manifest = {
+      ...createValidManifest(),
+      views: [null],
+      attachments: [7],
+    };
+
+    const result = validateArtifactManifest(manifest);
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: 'views[0]',
+          code: 'expected-object',
+        }),
+        expect.objectContaining({
+          path: 'attachments[0]',
+          code: 'expected-object',
+        }),
+      ]),
+    );
+  });
 });

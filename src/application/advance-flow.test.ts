@@ -34,6 +34,7 @@ import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import { CAPTURE_PENDING_SENTINEL } from './ports/capture-reader.js';
 import type { ProcessSpawner, SpawnInput } from './ports/process-spawner.js';
+import type { MessageStore } from './ports/message-store.js';
 import { RUNTIME_DIAGNOSTIC_CODES } from '../domain/diagnostic-report.js';
 
 // ── resolveCurrentNode ───────────────────────────────────────────────
@@ -957,6 +958,210 @@ describe('autoAdvanceNodes — await', () => {
     const { state: result } = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
     expect(result.variables['task-a.last_exit_code']).toBe('0');
     expect(result.variables['task-a.last_stdout']).toBe('hello');
+  });
+
+  it('imports awaited swarm JSON returns into the parent namespace', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return {
+          status: 'completed',
+          variables: {
+            __swarm_id: 'checkout_fix',
+            __swarm_role: 'frontend',
+            last_exit_code: '0',
+          },
+        };
+      },
+    };
+    const messageStore: MessageStore = {
+      async send() {},
+      async receive() {
+        return '{"summary":"ok","confidence":0.9}';
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'frontend');
+    const prompt = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'frontend', {
+      name: 'frontend',
+      status: 'running',
+      pid: 10,
+      stateDir: '.prompt-language-frontend',
+      startedAt: '2026-04-11T10:00:00.000Z',
+    });
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+      undefined,
+      undefined,
+      messageStore,
+    );
+
+    expect(capturedPrompt).toBe('done');
+    expect(result.variables['checkout_fix.frontend.status']).toBe('completed');
+    expect(result.variables['checkout_fix.frontend.exit_code']).toBe(0);
+    expect(result.variables['checkout_fix.frontend.returned']).toBe(
+      '{"summary":"ok","confidence":0.9}',
+    );
+    expect(result.variables['checkout_fix.frontend.result']).toEqual({
+      summary: 'ok',
+      confidence: 0.9,
+    });
+    expect(result.variables['checkout_fix.frontend.started_at']).toBe('2026-04-11T10:00:00.000Z');
+    expect(typeof result.variables['checkout_fix.frontend.completed_at']).toBe('string');
+  });
+
+  it('keeps awaited swarm string returns as strings when JSON parsing fails', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return {
+          status: 'completed',
+          variables: {
+            __swarm_id: 'checkout_fix',
+            __swarm_role: 'frontend',
+            last_exit_code: '0',
+          },
+        };
+      },
+    };
+    const messageStore: MessageStore = {
+      async send() {},
+      async receive() {
+        return 'done';
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'frontend');
+    const spec = createFlowSpec('test', [awaitNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'frontend', {
+      name: 'frontend',
+      status: 'running',
+      pid: 10,
+      stateDir: '.prompt-language-frontend',
+    });
+
+    const { state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+      undefined,
+      undefined,
+      messageStore,
+    );
+
+    expect(result.variables['checkout_fix.frontend.returned']).toBe('done');
+    expect(result.variables['checkout_fix.frontend.result']).toBe('done');
+  });
+
+  it('stores empty swarm result fields when a role completes without returning', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return {
+          status: 'completed',
+          variables: {
+            __swarm_id: 'checkout_fix',
+            __swarm_role: 'frontend',
+            last_exit_code: '0',
+          },
+        };
+      },
+    };
+    const messageStore: MessageStore = {
+      async send() {},
+      async receive() {
+        return undefined;
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'frontend');
+    const spec = createFlowSpec('test', [awaitNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'frontend', {
+      name: 'frontend',
+      status: 'running',
+      pid: 10,
+      stateDir: '.prompt-language-frontend',
+    });
+
+    const { state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+      undefined,
+      undefined,
+      messageStore,
+    );
+
+    expect(result.variables['checkout_fix.frontend.status']).toBe('completed');
+    expect(result.variables['checkout_fix.frontend.returned']).toBe('');
+    expect(result.variables['checkout_fix.frontend.result']).toBe('');
+  });
+
+  it('stores failed-role swarm metadata when a role fails before returning', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return {
+          status: 'failed',
+          variables: {
+            __swarm_id: 'checkout_fix',
+            __swarm_role: 'frontend',
+            last_exit_code: '17',
+          },
+        };
+      },
+    };
+    const messageStore: MessageStore = {
+      async send() {},
+      async receive() {
+        return undefined;
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'frontend');
+    const spec = createFlowSpec('test', [awaitNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'frontend', {
+      name: 'frontend',
+      status: 'running',
+      pid: 10,
+      stateDir: '.prompt-language-frontend',
+    });
+
+    const { state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+      undefined,
+      undefined,
+      messageStore,
+    );
+
+    expect(result.spawnedChildren['frontend']?.status).toBe('failed');
+    expect(result.variables['checkout_fix.frontend.status']).toBe('failed');
+    expect(result.variables['checkout_fix.frontend.exit_code']).toBe(17);
+    expect(result.variables['checkout_fix.frontend.returned']).toBe('');
+    expect(result.variables['checkout_fix.frontend.result']).toBe('');
   });
 
   it('does not advance when children are still running', async () => {

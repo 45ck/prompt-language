@@ -15,6 +15,8 @@ import type {
   ContinueNode,
   SpawnNode,
   AwaitNode,
+  StartNode,
+  ReturnNode,
 } from '../domain/flow-node.js';
 
 function parse(dsl: string): FlowSpec {
@@ -2405,5 +2407,245 @@ export gates must_pass:
     );
     // Should warn and not create a node for the gates export
     expect(spec.warnings.some((w) => w.includes('Cannot use export gates'))).toBe(true);
+  });
+});
+
+describe('parseFlow — swarm surface', () => {
+  it('lowers authored swarm syntax into ordinary runtime nodes', () => {
+    const spec = parse(`Goal: g
+
+flow:
+  swarm checkout_fix
+    role frontend model "sonnet" in "apps/web" with vars issue, files
+      prompt: Fix the UI regression
+      return ${'${summary}'}
+    end
+    role backend
+      run: npm test
+    end
+    flow:
+      start frontend, backend
+      await frontend backend
+    end
+  end`);
+
+    expect(spec.warnings).toEqual([]);
+    expect(spec.nodes).toHaveLength(6);
+    expect(spec.nodes.map((node) => node.kind)).toEqual([
+      'spawn',
+      'spawn',
+      'await',
+      'receive',
+      'await',
+      'receive',
+    ]);
+
+    const frontend = spec.nodes[0] as SpawnNode;
+    expect(frontend).toMatchObject({
+      kind: 'spawn',
+      name: 'frontend',
+      model: 'sonnet',
+      cwd: 'apps/web',
+      vars: ['issue', 'files'],
+    });
+    expect(frontend.body.map((node) => node.kind)).toEqual(['prompt', 'send']);
+    expect(frontend.body[1]).toMatchObject({
+      kind: 'send',
+      target: 'parent',
+      message: '${summary}',
+    });
+
+    expect((spec.nodes[2] as AwaitNode).target).toBe('frontend');
+    expect(spec.nodes[3]).toMatchObject({
+      kind: 'receive',
+      variableName: '__checkout_fix_frontend_returned',
+      from: 'frontend',
+      timeoutSeconds: 30,
+    });
+    expect((spec.nodes[4] as AwaitNode).target).toBe('backend');
+  });
+
+  it('warns when role is used outside a swarm block', () => {
+    const spec = parse(`Goal: g
+
+flow:
+  role frontend
+    prompt: hi
+  end`);
+
+    expect(spec.warnings).toContain('line 1: "role" is only valid inside a swarm block');
+  });
+
+  it('warns when start is used outside swarm flow', () => {
+    const spec = parse(`Goal: g
+
+flow:
+  start frontend`);
+
+    expect(spec.warnings).toContain('line 1: "start" is only valid inside swarm flow:');
+    expect((spec.nodes[0] as StartNode).targets).toEqual(['frontend']);
+  });
+
+  it('warns when return is used outside a role', () => {
+    const spec = parse(`Goal: g
+
+flow:
+  return ${'${summary}'}`);
+
+    expect(spec.warnings).toContain('line 1: "return" is only valid inside a role');
+    expect((spec.nodes[0] as ReturnNode).expression).toBe('${summary}');
+  });
+
+  it('propagates lowering warnings from authored swarm blocks', () => {
+    const spec = parse(`Goal: g
+
+flow:
+  swarm checkout_fix
+    role frontend
+      prompt: Fix the UI regression
+    end
+    flow:
+      start backend
+    end
+  end`);
+
+    expect(spec.warnings).toContain('swarm checkout_fix start references unknown role "backend"');
+    expect(spec.nodes).toEqual([]);
+  });
+
+  it('surfaces lowering warnings for malformed authored role headers', () => {
+    const spec = parse(`Goal: g
+
+flow:
+  swarm checkout_fix
+    role "frontend"
+      prompt: Fix the UI regression
+    end
+    flow:
+      start role
+    end
+  end`);
+
+    expect(spec.warnings).toEqual([
+      'Invalid swarm role header: "role "frontend""',
+      'swarm checkout_fix start references unknown role "role"',
+    ]);
+  });
+
+  it('surfaces lowering warnings for authored swarm flows with undeclared starts', () => {
+    const spec = parse(`Goal: g
+
+flow:
+  swarm checkout_fix
+    flow:
+      start frontend
+    end
+    flow:
+      start frontend
+    end
+  end`);
+
+    expect(spec.warnings).toEqual(['swarm checkout_fix start references unknown role "frontend"']);
+  });
+
+  it('surfaces lowering warnings when authored swarm blocks have no lowering flow body', () => {
+    const spec = parse(`Goal: g
+
+flow:
+  swarm checkout_fix
+    prompt: Fix the UI regression
+  end`);
+
+    expect(spec.warnings).toEqual(['swarm checkout_fix has no lowering flow body']);
+  });
+
+  it('warns on invalid start, await, and return syntax and recovers as prompt nodes', () => {
+    const spec = parse(`Goal: g
+
+flow:
+  start
+  await
+  return`);
+
+    expect(spec.warnings).toContain(
+      'line 1: Invalid start syntax: "start" — expected start <role>[, <role>...]',
+    );
+    expect(spec.warnings).toContain(
+      'line 2: Invalid await syntax: "await" — expected await all or await "name"',
+    );
+    expect(spec.warnings).toContain(
+      'line 3: Invalid return syntax: "return" — expected return <expression>',
+    );
+    expect(spec.nodes.map((node) => node.kind)).toEqual(['prompt', 'prompt', 'prompt']);
+  });
+
+  it('lowers authored swarm blocks inside use-expanded library flows', () => {
+    const libContent = `library: testing
+
+export flow parallel_fix():
+  swarm checkout_fix
+    role frontend
+      prompt: Fix the UI regression
+      return \${summary}
+    end
+    flow:
+      start frontend
+      await all
+    end
+  end
+`;
+
+    const spec = parseFlow(
+      `Goal: test
+
+import "lib.flow" as testing
+
+flow:
+  use testing.parallel_fix()
+`,
+      {
+        basePath: '/fake',
+        fileReader: (path: string) => {
+          if (path.endsWith('lib.flow')) return libContent;
+          throw new Error(`unexpected: ${path}`);
+        },
+      },
+    );
+
+    expect(spec.warnings).toEqual([]);
+    expect(spec.nodes.map((node) => node.kind)).toEqual(['spawn', 'await', 'receive']);
+  });
+});
+
+describe('parseFlow — top-level declaration recovery', () => {
+  it('warns when a rubric block is auto-closed by dedent', () => {
+    const spec = parse(`Goal: g
+
+rubric "bugfix_quality"
+  criterion correctness type boolean
+judge "impl_quality"
+  rubric: "bugfix_quality"
+end
+
+flow:
+  prompt: hi`);
+
+    expect(spec.warnings).toContain(
+      'line 3: Missing "end" for rubric "bugfix_quality" — auto-closed block',
+    );
+    expect(spec.rubrics?.[0]?.name).toBe('bugfix_quality');
+    expect(spec.judges?.[0]?.name).toBe('impl_quality');
+  });
+
+  it('warns when a judge block is auto-closed at end of file', () => {
+    const spec = parse(`Goal: g
+
+judge "impl_quality"
+  rubric: "bugfix_quality"`);
+
+    expect(spec.warnings).toContain(
+      'line 3: Missing "end" for judge "impl_quality" — auto-closed block',
+    );
+    expect(spec.judges?.[0]?.name).toBe('impl_quality');
   });
 });

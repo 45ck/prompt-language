@@ -6,6 +6,7 @@
  */
 
 import { flowSpecHash, type FlowSpec } from './flow-spec.js';
+import type { VariableValue, VariableStore } from './variable-value.js';
 
 export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
 
@@ -16,6 +17,9 @@ export interface SpawnedChild {
   readonly status: SpawnedChildStatus;
   readonly pid?: number | undefined;
   readonly stateDir: string;
+  readonly startedAt?: string | undefined;
+  readonly completedAt?: string | undefined;
+  readonly returned?: string | undefined;
   readonly variables?: Readonly<Record<string, string>> | undefined;
 }
 
@@ -50,7 +54,7 @@ export interface SessionState {
   readonly flowSpec: FlowSpec;
   readonly currentNodePath: readonly number[];
   readonly nodeProgress: Readonly<Record<string, NodeProgress>>;
-  readonly variables: Readonly<Record<string, string | number | boolean>>;
+  readonly variables: VariableStore;
   readonly gateResults: Readonly<Record<string, boolean>>;
   readonly gateDiagnostics: Readonly<Record<string, GateEvalResult>>;
   readonly status: FlowStatus;
@@ -108,7 +112,7 @@ export function advanceNode(state: SessionState, newPath: readonly number[]): Se
 export function updateVariable(
   state: SessionState,
   name: string,
-  value: string | number | boolean,
+  value: VariableValue,
 ): SessionState {
   return {
     ...state,

@@ -14,6 +14,7 @@ import type {
   SpawnResult,
   ChildStatus,
 } from '../../application/ports/process-spawner.js';
+import { stringifyVariableValue } from '../../domain/variable-value.js';
 
 export class ClaudeProcessSpawner implements ProcessSpawner {
   private readonly cwd: string;
@@ -117,7 +118,7 @@ export class ClaudeProcessSpawner implements ProcessSpawner {
     const varLines = Object.entries(input.variables)
       .map(
         ([k, v]) =>
-          `  let ${k} = "${String(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`,
+          `  let ${k} = "${stringifyVariableValue(v).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`,
       )
       .join('\n');
 

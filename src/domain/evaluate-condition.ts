@@ -1,4 +1,6 @@
 import { interpolate } from './interpolate.js';
+import type { VariableStore, VariableValue } from './variable-value.js';
+import { stringifyVariableValue } from './variable-value.js';
 
 /**
  * evaluateCondition — Pure condition evaluation against variable state.
@@ -25,10 +27,7 @@ function stripQuotes(s: string): string {
 }
 
 // H#6: Resolve an operand — variable name, ${var} reference, or quoted literal
-function resolveOperand(
-  token: string,
-  variables: Readonly<Record<string, string | number | boolean>>,
-): string | number | boolean {
+function resolveOperand(token: string, variables: VariableStore): VariableValue {
   const trimmed = token.trim();
 
   // Direct variable name
@@ -47,7 +46,7 @@ function evaluateComparison(
   lhs: string,
   op: string,
   rhs: string,
-  variables: Readonly<Record<string, string | number | boolean>>,
+  variables: VariableStore,
 ): boolean | null {
   const left = resolveOperand(lhs, variables);
   const right = resolveOperand(rhs, variables);
@@ -58,9 +57,13 @@ function evaluateComparison(
 
   switch (op) {
     case '==':
-      return bothNumeric ? numLeft === numRight : String(left) === String(right);
+      return bothNumeric
+        ? numLeft === numRight
+        : stringifyVariableValue(left) === stringifyVariableValue(right);
     case '!=':
-      return bothNumeric ? numLeft !== numRight : String(left) !== String(right);
+      return bothNumeric
+        ? numLeft !== numRight
+        : stringifyVariableValue(left) !== stringifyVariableValue(right);
     case '>':
       return bothNumeric ? numLeft > numRight : null;
     case '<':
@@ -136,10 +139,7 @@ function findRightmostOperatorOutsideParens(
  * - Unset command_failed/command_succeeded default to false before any run executes.
  * - Returns null when the variable is not present (needs external evaluation).
  */
-export function evaluateCondition(
-  condition: string,
-  variables: Readonly<Record<string, string | number | boolean>>,
-): boolean | null {
+export function evaluateCondition(condition: string, variables: VariableStore): boolean | null {
   const trimmed = interpolate(condition, variables).trim();
 
   // Strip outer parentheses: (expr) → recurse on expr
@@ -204,7 +204,7 @@ export function evaluateCondition(
     if (typeof value === 'boolean') return value;
     if (typeof value === 'number') return value !== 0;
     if (typeof value === 'string') return value.length > 0;
-    return null;
+    return true;
   }
 
   if (trimmed === 'command_failed' || trimmed === 'command_succeeded') {

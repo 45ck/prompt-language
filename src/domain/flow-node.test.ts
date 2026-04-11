@@ -14,6 +14,10 @@ import {
   createReviewNode,
   createForeachSpawnNode,
   createRaceNode,
+  createSwarmRoleDefinition,
+  createSwarmNode,
+  createStartNode,
+  createReturnNode,
   findNodeById,
 } from './flow-node.js';
 
@@ -273,6 +277,52 @@ describe('createAwaitNode', () => {
       target: 'fix-auth',
     });
   });
+
+  it('creates an await node targeting multiple roles', () => {
+    const node = createAwaitNode('aw3', ['frontend', 'backend']);
+    expect(node).toEqual({
+      kind: 'await',
+      id: 'aw3',
+      target: ['frontend', 'backend'],
+    });
+  });
+});
+
+describe('swarm AST helpers', () => {
+  it('creates a role definition with model, cwd, and vars', () => {
+    const body = [createPromptNode('p1', 'work')];
+    const role = createSwarmRoleDefinition(
+      'role1',
+      'frontend',
+      body,
+      '/tmp/ui',
+      ['issue', 'files'],
+      'sonnet',
+    );
+
+    expect(role).toEqual({
+      id: 'role1',
+      name: 'frontend',
+      body,
+      cwd: '/tmp/ui',
+      vars: ['issue', 'files'],
+      model: 'sonnet',
+    });
+  });
+
+  it('creates swarm, start, and return nodes', () => {
+    const role = createSwarmRoleDefinition('role1', 'frontend', [createPromptNode('p1', 'work')]);
+    const flow = [createStartNode('st1', ['frontend']), createReturnNode('ret1', '${summary}')];
+    const node = createSwarmNode('sw1', 'checkout_fix', [role], flow);
+
+    expect(node).toEqual({
+      kind: 'swarm',
+      id: 'sw1',
+      name: 'checkout_fix',
+      roles: [role],
+      flow,
+    });
+  });
 });
 
 describe('findNodeById', () => {
@@ -363,5 +413,52 @@ describe('findNodeById', () => {
     const spawnChild = createSpawnNode('sp1', 'worker', [inner]);
     const raceNode = createRaceNode('rc1', [spawnChild]);
     expect(findNodeById([raceNode], 'r1')).toBe(inner);
+  });
+
+  it('finds node nested in swarm role body and swarm flow', () => {
+    const roleRun = createRunNode('r-role', 'npm test');
+    const start = createStartNode('st1', ['frontend']);
+    const swarm = createSwarmNode(
+      'sw1',
+      'checkout_fix',
+      [createSwarmRoleDefinition('role1', 'frontend', [roleRun])],
+      [start],
+    );
+
+    expect(findNodeById([swarm], 'r-role')).toBe(roleRun);
+    expect(findNodeById([swarm], 'st1')).toBe(start);
+  });
+
+  it('continues searching after composite nodes miss in nested branches', () => {
+    const target = createPromptNode('target', 'found me');
+    const nodes = [
+      createWhileNode('w1', 'cond', [createPromptNode('p-miss-1', 'miss')]),
+      createReviewNode('rv1', [createPromptNode('p-miss-2', 'miss')], 2),
+      createRaceNode('rc1', [
+        createSpawnNode('sp1', 'worker', [createRunNode('r-miss-1', 'echo miss')]),
+      ]),
+      createIfNode(
+        'i1',
+        'flag',
+        [createPromptNode('p-miss-3', 'miss')],
+        [createPromptNode('p-miss-4', 'miss')],
+      ),
+      createTryNode(
+        't1',
+        [createRunNode('r-miss-2', 'echo miss')],
+        'command_failed',
+        [createPromptNode('p-miss-5', 'miss')],
+        [createPromptNode('p-miss-6', 'miss')],
+      ),
+      createSwarmNode(
+        'sw1',
+        'checkout_fix',
+        [createSwarmRoleDefinition('role1', 'frontend', [createPromptNode('p-miss-7', 'miss')])],
+        [createStartNode('st1', ['frontend'])],
+      ),
+      target,
+    ];
+
+    expect(findNodeById(nodes, 'target')).toBe(target);
   });
 });

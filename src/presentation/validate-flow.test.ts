@@ -14,6 +14,32 @@ describe('buildValidateFlowPreview', () => {
     expect(preview.output).toContain('prompt: hello');
   });
 
+  it('includes an expanded swarm flow preview when lowering occurs', () => {
+    const preview = buildValidateFlowPreview(
+      [
+        'Goal: swarm test',
+        '',
+        'flow:',
+        '  swarm checkout_fix',
+        '    role frontend model "sonnet"',
+        '      prompt: Fix the UI regression.',
+        '      return ${summary}',
+        '    end',
+        '    flow:',
+        '      start frontend',
+        '      await all',
+        '    end',
+        '  end',
+      ].join('\n'),
+    );
+
+    expect(preview.expandedFlow).toContain('spawn "frontend" model "sonnet"');
+    expect(preview.output).toContain('Expanded flow:');
+    expect(preview.output).toContain(
+      'receive __checkout_fix_frontend_returned from "frontend" timeout 30',
+    );
+  });
+
   it('includes lint warnings in the rendered warning section', () => {
     const preview = buildValidateFlowPreview(
       'Goal: test\n\nflow:\n  while tests_pass max 3\n  end\n',

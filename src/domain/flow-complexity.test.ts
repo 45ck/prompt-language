@@ -13,6 +13,10 @@ import {
   createReviewNode,
   createForeachSpawnNode,
   createRaceNode,
+  createStartNode,
+  createSwarmNode,
+  createSwarmRoleDefinition,
+  createReturnNode,
 } from './flow-node.js';
 
 describe('flowComplexityScore', () => {
@@ -140,5 +144,31 @@ describe('flowComplexityScore', () => {
     );
     // 4 cf nodes (foreach, while, if, retry), depth 4, 2 gates → score 5
     expect(flowComplexityScore(spec)).toBe(5);
+  });
+
+  it('counts swarm bodies toward depth and control-flow totals', () => {
+    const swarm = createSwarmNode(
+      'sw1',
+      'checkout_fix',
+      [
+        createSwarmRoleDefinition('role1', 'frontend', [
+          createWhileNode(
+            'w1',
+            'tests_fail',
+            [createRetryNode('re1', [createRunNode('r1', 'npm test')], 3)],
+            5,
+          ),
+          createReturnNode('ret1', '${summary}'),
+        ]),
+      ],
+      [createStartNode('st1', ['frontend'])],
+    );
+    const spec = createFlowSpec(
+      'test',
+      [swarm],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+
+    expect(flowComplexityScore(spec)).toBeGreaterThanOrEqual(4);
   });
 });

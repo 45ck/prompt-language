@@ -110,6 +110,12 @@ function collectDefinedVariables(
       case 'receive':
         defined.add(node.variableName);
         break;
+      case 'swarm':
+        collectDefinedVariables(node.flow).forEach((v) => defined.add(v));
+        node.roles.forEach((role) =>
+          collectDefinedVariables(role.body).forEach((v) => defined.add(v)),
+        );
+        break;
       case 'prompt':
       case 'run':
       case 'break':
@@ -118,6 +124,8 @@ function collectDefinedVariables(
       case 'approve':
       case 'remember':
       case 'send':
+      case 'start':
+      case 'return':
         break;
       default: {
         const _exhaustive: never = node;
@@ -276,6 +284,23 @@ function lintUnresolvedVars(
       case 'remember':
       case 'send':
       case 'receive':
+      case 'start':
+        break;
+      case 'return': {
+        for (const ref of extractVarRefs(node.expression)) {
+          if (!definedVars.has(ref) && !isAutoVariable(ref)) {
+            const suggestion = findClosestMatch(ref, definedVars);
+            const msg = suggestion
+              ? `Reference to undefined variable "\${${ref}}" — did you mean "\${${suggestion}}"?`
+              : `Reference to undefined variable "\${${ref}}"`;
+            warnings.push({ nodeId: node.id, message: msg });
+          }
+        }
+        break;
+      }
+      case 'swarm':
+        lintUnresolvedVars(node.flow, definedVars, warnings);
+        node.roles.forEach((role) => lintUnresolvedVars(role.body, definedVars, warnings));
         break;
       default: {
         const _exhaustive: never = node;
@@ -378,6 +403,14 @@ function lintVariableShadowing(
       case 'remember':
       case 'run':
       case 'send':
+      case 'start':
+      case 'return':
+        break;
+      case 'swarm':
+        lintVariableShadowing(node.flow, inheritedPlusScope(), warnings);
+        node.roles.forEach((role) =>
+          lintVariableShadowing(role.body, inheritedPlusScope(), warnings),
+        );
         break;
       default: {
         const _exhaustive: never = node;
@@ -436,6 +469,12 @@ function containsRunNode(nodes: readonly FlowNode[]): boolean {
       case 'remember':
       case 'send':
       case 'receive':
+      case 'start':
+      case 'return':
+        break;
+      case 'swarm':
+        if (containsRunNode(node.flow)) return true;
+        if (node.roles.some((role) => containsRunNode(role.body))) return true;
         break;
       default: {
         const _exhaustive: never = node;
@@ -554,12 +593,18 @@ function lintNodes(nodes: readonly FlowNode[], insideLoop: boolean, warnings: Li
         lintNodes(node.body, false, warnings);
         break;
       case 'await':
+      case 'start':
+      case 'return':
       case 'prompt':
       case 'run':
       case 'let':
       case 'remember':
       case 'send':
       case 'receive':
+        break;
+      case 'swarm':
+        lintNodes(node.flow, false, warnings);
+        node.roles.forEach((role) => lintNodes(role.body, false, warnings));
         break;
       default: {
         const _exhaustive: never = node;
@@ -646,6 +691,12 @@ function allRunsInsideConditional(nodes: readonly FlowNode[]): boolean {
         case 'remember':
         case 'send':
         case 'receive':
+        case 'start':
+        case 'return':
+          break;
+        case 'swarm':
+          walk(node.flow, insideConditional);
+          node.roles.forEach((role) => walk(role.body, insideConditional));
           break;
         default: {
           const _exhaustive: never = node;
@@ -701,6 +752,215 @@ function lintReviewJudgeReferences(
       case 'break':
       case 'continue':
       case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
+      case 'start':
+      case 'return':
+        break;
+      case 'swarm':
+        lintReviewJudgeReferences(node.flow, judgeNames, warnings);
+        node.roles.forEach((role) => lintReviewJudgeReferences(role.body, judgeNames, warnings));
+        break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
+    }
+  }
+}
+
+interface SwarmLintState {
+  readonly insideRole: boolean;
+  readonly roleName?: string | undefined;
+  readonly insideSwarmFlow: boolean;
+  readonly insideSwarm: boolean;
+}
+
+function lintSwarmSemantics(
+  nodes: readonly FlowNode[],
+  warnings: LintWarning[],
+  state: SwarmLintState = {
+    insideRole: false,
+    insideSwarmFlow: false,
+    insideSwarm: false,
+  },
+): void {
+  for (const node of nodes) {
+    switch (node.kind) {
+      case 'swarm': {
+        if (state.insideRole) {
+          const roleContext = state.roleName ? ` inside role "${state.roleName}"` : '';
+          warnings.push({
+            nodeId: node.id,
+            message: `Nested swarm "${node.name}" is not allowed in v1${roleContext}`,
+          });
+        } else if (state.insideSwarm) {
+          warnings.push({
+            nodeId: node.id,
+            message: `Nested swarm "${node.name}" is not allowed in v1`,
+          });
+        }
+
+        const roleNames = new Set<string>();
+        for (const role of node.roles) {
+          if (roleNames.has(role.name)) {
+            warnings.push({
+              nodeId: role.id,
+              message: `Duplicate role name "${role.name}" in swarm "${node.name}"`,
+            });
+          } else {
+            roleNames.add(role.name);
+          }
+
+          let returnCount = 0;
+          const stack: FlowNode[] = [...role.body];
+          while (stack.length > 0) {
+            const current = stack.pop()!;
+            switch (current.kind) {
+              case 'return':
+                returnCount += 1;
+                break;
+              case 'while':
+              case 'until':
+              case 'retry':
+              case 'foreach':
+              case 'spawn':
+              case 'review':
+              case 'foreach_spawn':
+                stack.push(...current.body);
+                break;
+              case 'if':
+                stack.push(...current.thenBranch, ...current.elseBranch);
+                break;
+              case 'try':
+                stack.push(...current.body, ...current.catchBody, ...current.finallyBody);
+                break;
+              case 'race':
+                current.children.forEach((child) => stack.push(...child.body));
+                break;
+              case 'swarm':
+                stack.push(...current.flow);
+                current.roles.forEach((nestedRole) => stack.push(...nestedRole.body));
+                break;
+              case 'prompt':
+              case 'run':
+              case 'let':
+              case 'break':
+              case 'continue':
+              case 'await':
+              case 'approve':
+              case 'remember':
+              case 'send':
+              case 'receive':
+              case 'start':
+                break;
+              default: {
+                const _exhaustive: never = current;
+                return _exhaustive;
+              }
+            }
+          }
+
+          if (returnCount > 1) {
+            warnings.push({
+              nodeId: role.id,
+              message: `Role "${role.name}" declares more than one return statement`,
+            });
+          }
+        }
+
+        lintSwarmSemantics(node.flow, warnings, {
+          insideRole: false,
+          insideSwarmFlow: true,
+          insideSwarm: true,
+        });
+        node.roles.forEach((role) =>
+          lintSwarmSemantics(role.body, warnings, {
+            insideRole: true,
+            roleName: role.name,
+            insideSwarmFlow: false,
+            insideSwarm: true,
+          }),
+        );
+
+        for (const child of node.flow) {
+          if (child.kind === 'start') {
+            for (const target of child.targets) {
+              if (!roleNames.has(target)) {
+                warnings.push({
+                  nodeId: child.id,
+                  message: `start references undeclared role "${target}" in swarm "${node.name}"`,
+                });
+              }
+            }
+          }
+
+          if (child.kind === 'await' && child.target !== 'all') {
+            const targets = Array.isArray(child.target) ? child.target : [child.target];
+            for (const target of targets) {
+              if (!roleNames.has(target)) {
+                warnings.push({
+                  nodeId: child.id,
+                  message: `await references undeclared role "${target}" in swarm "${node.name}"`,
+                });
+              }
+            }
+          }
+        }
+        break;
+      }
+      case 'start':
+        if (!state.insideSwarmFlow) {
+          warnings.push({
+            nodeId: node.id,
+            message: '"start" is only valid inside swarm flow:',
+          });
+        }
+        break;
+      case 'return':
+        if (!state.insideRole) {
+          warnings.push({
+            nodeId: node.id,
+            message: '"return" is only valid inside a role',
+          });
+        }
+        break;
+      case 'await':
+        if (Array.isArray(node.target) && !state.insideSwarmFlow) {
+          warnings.push({
+            nodeId: node.id,
+            message: 'await with multiple targets is only valid inside swarm flow:',
+          });
+        }
+        break;
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'foreach':
+      case 'spawn':
+      case 'review':
+      case 'foreach_spawn':
+        lintSwarmSemantics(node.body, warnings, state);
+        break;
+      case 'if':
+        lintSwarmSemantics(node.thenBranch, warnings, state);
+        lintSwarmSemantics(node.elseBranch, warnings, state);
+        break;
+      case 'try':
+        lintSwarmSemantics(node.body, warnings, state);
+        lintSwarmSemantics(node.catchBody, warnings, state);
+        lintSwarmSemantics(node.finallyBody, warnings, state);
+        break;
+      case 'race':
+        node.children.forEach((child) => lintSwarmSemantics(child.body, warnings, state));
+        break;
+      case 'prompt':
+      case 'run':
+      case 'let':
+      case 'break':
+      case 'continue':
       case 'approve':
       case 'remember':
       case 'send':
@@ -770,6 +1030,7 @@ export function lintFlow(spec: FlowSpec, _importRegistry?: ImportRegistry): read
   // H-DX-001: Check for unresolved variable references
   const definedVars = collectDefinedVariables(spec.nodes, spec.memoryKeys ?? []);
   lintUnresolvedVars(spec.nodes, definedVars, warnings);
+  lintSwarmSemantics(spec.nodes, warnings);
   lintEvaluationDeclarations(spec, warnings);
   lintVariableShadowing(spec.nodes, new Map(), warnings);
 

@@ -10,6 +10,9 @@
  * narrow safe unquoted subset untouched.
  */
 
+import type { VariableStore, VariableValue } from './variable-value.js';
+import { stringifyVariableValue } from './variable-value.js';
+
 /** Maximum payload size (bytes) for JSON.parse in array index resolution. */
 export const MAX_ARRAY_INDEX_PAYLOAD = 100_000;
 
@@ -17,11 +20,12 @@ export const MAX_ARRAY_INDEX_PAYLOAD = 100_000;
 const MAX_ARRAY_INDEX_ELEMENTS = 10_000;
 
 /** Resolve an array index access on a JSON-array variable value. */
-function resolveArrayIndex(value: string, indexStr: string): string | null {
-  if (value.length > MAX_ARRAY_INDEX_PAYLOAD) return null;
+function resolveArrayIndex(value: VariableValue, indexStr: string): string | null {
+  const serialized = stringifyVariableValue(value);
+  if (serialized.length > MAX_ARRAY_INDEX_PAYLOAD) return null;
   let arr: unknown;
   try {
-    arr = JSON.parse(value);
+    arr = JSON.parse(serialized);
   } catch {
     return null;
   }
@@ -34,10 +38,7 @@ function resolveArrayIndex(value: string, indexStr: string): string | null {
   return String(arr[idx]);
 }
 
-export function interpolate(
-  template: string,
-  variables: Readonly<Record<string, string | number | boolean>>,
-): string {
+export function interpolate(template: string, variables: VariableStore): string {
   // H#10: Support ${var:-default} syntax for default values.
   // H-LANG-004: Support ${var[index]} for array element access.
   // Three-branch alternation: default syntax, array index, plain variable.
@@ -56,13 +57,13 @@ export function interpolate(
       // H-LANG-004: Array index access ${var[N]}
       if (arrayName !== undefined && arrayIndex !== undefined) {
         if (!(arrayName in variables)) return match;
-        const result = resolveArrayIndex(String(variables[arrayName]), arrayIndex);
+        const result = resolveArrayIndex(variables[arrayName]!, arrayIndex);
         return result ?? match;
       }
 
       const name = nameWithDefault ?? plainName!;
       if (name in variables) {
-        return String(variables[name]);
+        return stringifyVariableValue(variables[name]!);
       }
       if (nameWithDefault !== undefined) {
         return defaultVal!;
@@ -84,10 +85,7 @@ function shellEncodeInterpolatedValue(value: string): string {
 }
 
 /** Like interpolate(), but shell-encodes substituted values for command safety. */
-export function shellInterpolate(
-  template: string,
-  variables: Readonly<Record<string, string | number | boolean>>,
-): string {
+export function shellInterpolate(template: string, variables: VariableStore): string {
   // H#10: Support ${var:-default} syntax for default values (shell-escaped)
   // H-LANG-004: Support ${var[index]} for array element access (shell-escaped)
   // Dot-notation keys (e.g. ${analysis.severity}) are supported via [\w.]+.
@@ -104,13 +102,13 @@ export function shellInterpolate(
       // H-LANG-004: Array index access ${var[N]}
       if (arrayName !== undefined && arrayIndex !== undefined) {
         if (!(arrayName in variables)) return match;
-        const result = resolveArrayIndex(String(variables[arrayName]), arrayIndex);
+        const result = resolveArrayIndex(variables[arrayName]!, arrayIndex);
         return result !== null ? shellEncodeInterpolatedValue(result) : match;
       }
 
       const name = nameWithDefault ?? plainName!;
       if (name in variables) {
-        return shellEncodeInterpolatedValue(String(variables[name]));
+        return shellEncodeInterpolatedValue(stringifyVariableValue(variables[name]!));
       }
       if (nameWithDefault !== undefined) {
         return shellEncodeInterpolatedValue(defaultVal!);

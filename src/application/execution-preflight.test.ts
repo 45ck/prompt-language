@@ -18,6 +18,9 @@ import {
   createRunNode,
   createSendNode,
   createSpawnNode,
+  createStartNode,
+  createSwarmNode,
+  createSwarmRoleDefinition,
   createTryNode,
   createUntilNode,
   createWhileNode,
@@ -336,5 +339,30 @@ describe('execution-preflight', () => {
         (diagnostic) => diagnostic.code === PROFILE_DIAGNOSTIC_CODES.unsupportedApprove,
       ),
     ).toBe(false);
+  });
+
+  it('treats authored swarm nodes as requiring message-passing support', () => {
+    const spec = createFlowSpec('test', [
+      createSwarmNode(
+        'sw1',
+        'checkout_fix',
+        [createSwarmRoleDefinition('role1', 'frontend', [createPromptNode('p1', 'Fix it')])],
+        [createStartNode('st1', ['frontend'])],
+      ),
+    ]);
+    const report = runExecutionPreflight(
+      spec,
+      { cwd: '/repo', runner: 'claude', mode: 'interactive' },
+      { probeRunnerBinary: () => true },
+    );
+
+    expect(report.status).toBe('blocked');
+    expect(report.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining<Partial<FlowDiagnostic>>({
+          code: PROFILE_DIAGNOSTIC_CODES.unsupportedParallelSemantics,
+        }),
+      ]),
+    );
   });
 });

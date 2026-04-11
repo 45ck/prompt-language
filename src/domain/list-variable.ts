@@ -1,3 +1,6 @@
+import type { VariableValue } from './variable-value.js';
+import { stringifyVariableValue } from './variable-value.js';
+
 /**
  * list-variable — Pure functions for list variable manipulation.
  *
@@ -19,16 +22,13 @@ function parseJsonArray(value: string): string[] | null {
   return null;
 }
 
-export function appendToList(
-  currentValue: string | number | boolean | undefined,
-  newItem: string,
-): string {
+export function appendToList(currentValue: VariableValue | undefined, newItem: string): string {
   let items: string[];
 
   if (currentValue === undefined) {
     items = [];
   } else {
-    const str = String(currentValue);
+    const str = stringifyVariableValue(currentValue);
     const parsed = parseJsonArray(str);
     if (parsed) {
       items = parsed;
@@ -42,9 +42,9 @@ export function appendToList(
   return JSON.stringify(items);
 }
 
-export function listLength(value: string | number | boolean | undefined): number {
+export function listLength(value: VariableValue | undefined): number {
   if (value === undefined) return 0;
-  const str = String(value);
+  const str = stringifyVariableValue(value);
   const parsed = parseJsonArray(str);
   return parsed ? parsed.length : 0;
 }

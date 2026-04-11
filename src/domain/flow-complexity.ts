@@ -36,6 +36,12 @@ function countNodes(nodes: readonly FlowNode[]): number {
           count += 1 + countNodes(child.body);
         }
         break;
+      case 'swarm':
+        count += countNodes(node.flow);
+        for (const role of node.roles) {
+          count += countNodes(role.body);
+        }
+        break;
       case 'foreach_spawn':
         count += countNodes(node.body);
         break;
@@ -49,6 +55,8 @@ function countNodes(nodes: readonly FlowNode[]): number {
       case 'remember':
       case 'send':
       case 'receive':
+      case 'start':
+      case 'return':
         break;
       default: {
         const _exhaustive: never = node;
@@ -95,6 +103,13 @@ function maxDepth(nodes: readonly FlowNode[], depth: number): number {
           max = Math.max(max, maxDepth(child.body, depth + 1));
         }
         break;
+      case 'swarm': {
+        max = Math.max(max, maxDepth(node.flow, depth + 1));
+        for (const role of node.roles) {
+          max = Math.max(max, maxDepth(role.body, depth + 1));
+        }
+        break;
+      }
       case 'foreach_spawn':
         max = Math.max(max, maxDepth(node.body, depth + 1));
         break;
@@ -108,6 +123,8 @@ function maxDepth(nodes: readonly FlowNode[], depth: number): number {
       case 'remember':
       case 'send':
       case 'receive':
+      case 'start':
+      case 'return':
         break;
       default: {
         const _exhaustive: never = node;
@@ -118,7 +135,16 @@ function maxDepth(nodes: readonly FlowNode[], depth: number): number {
   return max;
 }
 
-const CONTROL_FLOW_KINDS = new Set(['while', 'until', 'retry', 'if', 'try', 'foreach', 'spawn']);
+const CONTROL_FLOW_KINDS = new Set([
+  'while',
+  'until',
+  'retry',
+  'if',
+  'try',
+  'foreach',
+  'spawn',
+  'swarm',
+]);
 
 function countControlFlow(nodes: readonly FlowNode[]): number {
   let count = 0;
@@ -151,6 +177,12 @@ function countControlFlow(nodes: readonly FlowNode[]): number {
           count += 1 + countControlFlow(child.body);
         }
         break;
+      case 'swarm':
+        count += countControlFlow(node.flow);
+        for (const role of node.roles) {
+          count += countControlFlow(role.body);
+        }
+        break;
       case 'foreach_spawn':
         count += countControlFlow(node.body);
         break;
@@ -164,6 +196,8 @@ function countControlFlow(nodes: readonly FlowNode[]): number {
       case 'remember':
       case 'send':
       case 'receive':
+      case 'start':
+      case 'return':
         break;
       default: {
         const _exhaustive: never = node;

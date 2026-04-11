@@ -9,6 +9,11 @@ import type { FlowNode, ForeachNode, IfNode, LetNode, SpawnNode, TryNode } from 
 import type { FlowSpec } from './flow-spec.js';
 import type { SessionState } from './session-state.js';
 import { isAskCondition, extractAskQuestion } from './judge-prompt.js';
+import {
+  stringifyVariableValue,
+  type VariableStore,
+  type VariableValue,
+} from './variable-value.js';
 
 // D04-fix: Simple FNV-1a string hash — replaces node:crypto to keep domain zero-dep
 function fnv1aHash(str: string): string {
@@ -135,6 +140,9 @@ function collectNodePaths(
       case 'remember':
       case 'send':
       case 'receive':
+      case 'swarm':
+      case 'start':
+      case 'return':
         break;
       default: {
         const _exhaustive: never = node;
@@ -292,7 +300,13 @@ function renderNode(
       return renderSpawnNode(node, state, path, indentLevel, prefix, suffix);
     case 'await':
       return [
-        `${prefix}${indent}await ${node.target === 'all' ? 'all' : `"${node.target}"`}${timingAnnotation(state, node.id)}${suffix}`,
+        `${prefix}${indent}await ${
+          node.target === 'all'
+            ? 'all'
+            : Array.isArray(node.target)
+              ? node.target.join(' ')
+              : `"${node.target}"`
+        }${timingAnnotation(state, node.id)}${suffix}`,
       ];
     case 'approve': {
       const approveTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds / 60}m` : '';
@@ -375,6 +389,16 @@ function renderNode(
         `${prefix}${indent}receive ${node.variableName}${fromTag}${statusTag}${timing}${suffix}`,
       ];
     }
+    case 'swarm':
+      return [`${prefix}${indent}swarm ${node.name}${timingAnnotation(state, node.id)}${suffix}`];
+    case 'start':
+      return [
+        `${prefix}${indent}start ${node.targets.join(', ')}${timingAnnotation(state, node.id)}${suffix}`,
+      ];
+    case 'return':
+      return [
+        `${prefix}${indent}return ${node.expression}${timingAnnotation(state, node.id)}${suffix}`,
+      ];
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -529,7 +553,7 @@ function renderLetNode(
   } else if (isAwaitingCapture) {
     annotation = '  [awaiting response...]';
   } else if (resolved !== undefined) {
-    annotation = `  [= ${String(resolved)}]`;
+    annotation = `  [= ${stringifyVariableValue(resolved)}]`;
   } else {
     annotation = '';
   }
@@ -551,7 +575,10 @@ function renderForeachNode(
   const progress = progressAnnotation(state, node.id);
   const timing = timingAnnotation(state, node.id);
   const currentVal = state.variables[node.variableName];
-  const valAnnotation = currentVal !== undefined ? `  [${node.variableName}=${currentVal}]` : '';
+  const valAnnotation =
+    currentVal !== undefined
+      ? `  [${node.variableName}=${stringifyVariableValue(currentVal)}]`
+      : '';
   const foreachLabel = node.label ? `${node.label}: ` : '';
   const header = `${foreachLabel}foreach ${node.variableName} in ${node.listExpression}`;
   const lines: string[] = [
@@ -642,11 +669,7 @@ function formatGateDiagnostic(diag: {
 const HIDDEN_VARIABLES = new Set(['last_exit_code', 'last_stdout', 'last_stderr']);
 const AUTO_SUFFIX_RE = /_(index|length)$/;
 
-function isHiddenVariable(
-  key: string,
-  _value: string | number | boolean,
-  variables: Readonly<Record<string, string | number | boolean>>,
-): boolean {
+function isHiddenVariable(key: string, _value: VariableValue, variables: VariableStore): boolean {
   if (HIDDEN_VARIABLES.has(key)) return true;
   if (AUTO_SUFFIX_RE.test(key)) return true;
   // Show command_failed / command_succeeded only when command_failed is 'true'
@@ -683,7 +706,7 @@ function renderVariables(state: SessionState): string[] {
 
   const lines: string[] = ['', 'Variables:'];
   for (const [key, value] of filtered) {
-    const str = String(value);
+    const str = stringifyVariableValue(value);
     const listDisplay = typeof value === 'string' ? formatListValue(str) : null;
     const display = listDisplay ?? (str.length > 80 ? str.slice(0, 77) + '...' : str);
     lines.push(`  ${key} = ${display}`);
@@ -867,6 +890,12 @@ function compactNode(
       return [`${mark}${pad}send → ${node.target}`];
     case 'receive':
       return [`${mark}${pad}receive ${node.variableName}`];
+    case 'swarm':
+      return [`${mark}${pad}swarm ${node.name}`];
+    case 'start':
+      return [`${mark}${pad}start ${node.targets.join(', ')}`];
+    case 'return':
+      return [`${mark}${pad}return ${node.expression}`];
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -929,6 +958,14 @@ function countAllNodes(nodes: readonly FlowNode[]): number {
       case 'remember':
       case 'send':
       case 'receive':
+      case 'start':
+      case 'return':
+        break;
+      case 'swarm':
+        count += countAllNodes(node.flow);
+        for (const role of node.roles) {
+          count += countAllNodes(role.body);
+        }
         break;
       default: {
         const _exhaustive: never = node;
@@ -981,6 +1018,14 @@ function flattenNodes(nodes: readonly FlowNode[]): FlowNode[] {
       case 'remember':
       case 'send':
       case 'receive':
+      case 'start':
+      case 'return':
+        break;
+      case 'swarm':
+        result.push(...flattenNodes(node.flow));
+        for (const role of node.roles) {
+          result.push(...flattenNodes(role.body));
+        }
         break;
       default: {
         const _exhaustive: never = node;
@@ -1025,6 +1070,9 @@ function resolveNodeByPath(nodes: readonly FlowNode[], path: readonly number[]):
     case 'remember':
     case 'send':
     case 'receive':
+    case 'swarm':
+    case 'start':
+    case 'return':
       return null;
     default: {
       const _exhaustive: never = node;
@@ -1083,6 +1131,12 @@ function describeNode(node: FlowNode): string {
       return `send to "${node.target}"`;
     case 'receive':
       return `receive ${node.variableName}`;
+    case 'swarm':
+      return `swarm ${node.name}`;
+    case 'start':
+      return `start ${node.targets.join(', ')}`;
+    case 'return':
+      return `return ${node.expression}`;
   }
 }
 

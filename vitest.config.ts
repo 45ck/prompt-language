@@ -10,12 +10,14 @@ export default defineConfig({
     pool: 'forks',
     // Windows + coverage can race on coverage/.tmp writes across parallel forked files.
     fileParallelism: !isCoverageRun,
+    ...(isCoverageRun ? { maxWorkers: 1 } : {}),
     include: ['src/**/*.test.ts'],
     reporters: process.env['CI'] ? ['verbose', 'junit'] : ['default'],
     outputFile: { junit: './test-results/junit.xml' },
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',
+      reportOnFailure: true,
       reporter: ['text', 'html', 'lcov'],
       include: ['src/**/*.ts'],
       exclude: [

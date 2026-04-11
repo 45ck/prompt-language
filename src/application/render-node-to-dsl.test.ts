@@ -17,9 +17,13 @@ import {
   createRunNode,
   createSendNode,
   createSpawnNode,
+  createStartNode,
+  createSwarmNode,
+  createSwarmRoleDefinition,
   createTryNode,
   createUntilNode,
   createWhileNode,
+  createReturnNode,
 } from '../domain/flow-node.js';
 import { renderNodeToDsl, renderNodesToDsl, renderSpawnBody } from './render-node-to-dsl.js';
 
@@ -197,6 +201,54 @@ describe('render-node-to-dsl', () => {
     expect(renderNodeToDsl(awaitOne, 0)).toEqual(['await "worker"']);
     expect(renderNodeToDsl(breakNode, 1)).toEqual(['  break']);
     expect(renderNodeToDsl(continueNode, 1)).toEqual(['  continue']);
+  });
+
+  it('renders spawn metadata, multi-target await, and swarm syntax nodes', () => {
+    const spawn = createSpawnNode(
+      's-meta',
+      'worker',
+      [createPromptNode('s-meta-p', 'Child prompt')],
+      'packages/api',
+      ['summary', 'files'],
+      'sonnet',
+      'tests_fail',
+    );
+    const swarm = createSwarmNode(
+      'sw1',
+      'checkout_fix',
+      [
+        createSwarmRoleDefinition(
+          'role1',
+          'frontend',
+          [createPromptNode('role1-p', 'Fix the UI'), createReturnNode('role1-r', '${summary}')],
+          'apps/web',
+          ['summary'],
+          'sonnet',
+        ),
+      ],
+      [createStartNode('st1', ['frontend']), createAwaitNode('aw1', ['frontend', 'backend'])],
+    );
+
+    expect(renderNodeToDsl(spawn, 0)).toEqual([
+      'spawn "worker" in "packages/api" model "sonnet" if tests_fail with vars summary, files',
+      '  prompt: Child prompt',
+      'end',
+    ]);
+    expect(renderNodeToDsl(createAwaitNode('a3', ['frontend', 'backend']), 0)).toEqual([
+      'await frontend backend',
+    ]);
+    expect(renderNodeToDsl(swarm, 0)).toEqual([
+      'swarm checkout_fix',
+      '  role frontend model "sonnet" in "apps/web" with vars summary',
+      '    prompt: Fix the UI',
+      '    return ${summary}',
+      '  end',
+      '  flow:',
+      '    start frontend',
+      '    await frontend backend',
+      '  end',
+      'end',
+    ]);
   });
 
   it('renders approve and review metadata lines', () => {

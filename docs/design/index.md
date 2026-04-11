@@ -16,6 +16,7 @@ For the repo-wide docs cleanup:
 | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | [Host Extension Boundary](host-extension-boundary.md)                                                               | Host-managed skills, hooks, plugins, and MCP stay outside the core DSL                 |
 | [Multi-Agent Orchestration Boundary](multi-agent-orchestration.md)                                                  | Accepted subagent-first direction for orchestration                                    |
+| [Swarm Tooling Visibility](swarm-tooling-visibility.md)                                                             | Accepted lowered-flow preview, role-status, and failure-visibility contract for swarm  |
 | [Operator Shell Boundary](operator-shell-boundary.md)                                                               | Accepted shell-over-runtime boundary for doctor, recovery, visibility, and supervision |
 | [Hook Manager Ownership and Lifecycle](hook-manager-ownership.md)                                                   | Accepted ownership, merge, and cleanup contract for host hook install / refresh paths  |
 | [Operator Shell Lifecycle Hardening](operator-shell-lifecycle-hardening.md)                                         | Accepted lifecycle contract for `doctor`, `refresh`, uninstall safety, and diagnostics |
@@ -38,13 +39,16 @@ For the repo-wide docs cleanup:
 | [Provider Adapters Over Shared Flow IR](provider-adapters-shared-flow-ir.md)                                        | Accepted provider-adapter boundary over one shared runtime IR                          |
 | [Safe Parallelism via Worktrees, Locks, Ownership, and Merge Policy](safe-parallelism-worktrees-locks-ownership.md) | Accepted concurrency-safety boundary for isolated child execution and merge control    |
 | [Memory Governance Alignment](memory-governance-alignment.md)                                                       | Accepted alignment of vNext memory governance with the existing memory roadmap         |
+| [Retrieval Boundary and Trust Model](retrieval-boundary-and-trust-model.md)                                         | Accepted split between deterministic retrieval, grounding retrieval, and source trust  |
 | [Scoped Memory Semantics](scoped-memory-semantics.md)                                                               | Accepted scope, strict-read, TTL, invalidation, and transactional-write contract       |
 | [Markdown Knowledge Interop](markdown-knowledge-interop.md)                                                         | Accepted `knowledge:` and deterministic `section` lookup boundary                      |
 | [Memory Checkpoint, Handoff, and Compaction Boundary](memory-checkpoint-handoff-compaction.md)                      | Accepted split between runtime recovery state and durable memory                       |
+| [Wisdom Promotion Workflow](wisdom-promotion-workflow.md)                                                           | Accepted proposal, review, promote, and demote workflow for durable wisdom             |
 | [Artifact Taxonomy and Initial Built-ins](artifact-taxonomy-and-builtins.md)                                        | Accepted first-release built-in artifact cut over the broader taxonomy                 |
 | [Artifact Package, Manifest, and Renderer Contract](artifact-package-contract.md)                                   | Accepted package layout, manifest semantics, and renderer-view boundary                |
 | [Artifact Runtime Lifecycle](artifact-runtime-lifecycle.md)                                                         | Accepted emit/validate/reference/review/supersede semantics                            |
 | [Artifact Extension Boundary](artifact-extension-boundary.md)                                                       | Accepted custom-type, review-storage, and plugin-renderer boundary                     |
+| [Artifact Syntax and Review UI Rollout Gate](artifact-syntax-and-review-ui-rollout.md)                              | Accepted evidence gate for any future artifact DSL syntax or review UI claims          |
 | [Foreach Design](foreach.md)                                                                                        | Canonical foreach design and rationale                                                 |
 | [Skill / Profile / Agent / Flow File](terminology-skill-profile-agent-flow.md)                                      | Terminology boundary for the backlog track                                             |
 

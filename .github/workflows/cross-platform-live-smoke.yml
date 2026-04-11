@@ -1,0 +1,81 @@
+name: Cross-Platform Live Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      harness:
+        description: Live smoke harness to use on the self-hosted runners
+        required: true
+        default: claude
+        type: choice
+        options:
+          - claude
+          - codex
+          - gemini
+          - opencode
+          - ollama
+      model:
+        description: Optional model override passed through to the smoke harness
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  live-smoke:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            runner: '["self-hosted","Linux"]'
+          - platform: macos
+            runner: '["self-hosted","macOS"]'
+    runs-on: ${{ fromJSON(matrix.runner) }}
+    timeout-minutes: 90
+    env:
+      EVAL_HARNESS: ${{ inputs.harness }}
+      EVAL_MODEL: ${{ inputs.model }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Record host and harness preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "platform=${{ matrix.platform }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+          echo "node=$(node -v)" >> "$GITHUB_STEP_SUMMARY"
+          echo "npm=$(npm -v)" >> "$GITHUB_STEP_SUMMARY"
+          node --input-type=module -e "import { checkHarnessVersion, getHarnessLabel } from './scripts/eval/harness.mjs'; console.log(\`[live-smoke] Harness: ${getHarnessLabel()} ${checkHarnessVersion()}\`)"
+
+      - name: Repo-side tests
+        run: npm run test
+
+      - name: Repo-side ci
+        run: npm run ci
+
+      - name: Quick live smoke
+        run: npm run eval:smoke:quick
+
+      - name: Full live smoke
+        run: npm run eval:smoke
+
+      - name: Upload smoke results
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: live-smoke-${{ matrix.platform }}-${{ github.run_id }}
+          path: |
+            scripts/eval/results/
+          if-no-files-found: warn
+          retention-days: 30

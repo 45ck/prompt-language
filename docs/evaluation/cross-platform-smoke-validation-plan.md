@@ -13,6 +13,17 @@ Produce host-side smoke evidence that:
 - records pass, fail, and blocked outcomes in the repo’s existing evidence format
 - makes Linux and macOS parity claims concrete instead of implied
 
+## Repository automation path
+
+The repo now has two intentionally separate automation lanes:
+
+| Lane                                              | Purpose                                                                                    | Host expectation                                                                              |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| `.github/workflows/ci-matrix.yml`                 | Fast cross-platform regression guard via `npm run eval:smoke:ci`                           | GitHub-hosted `ubuntu`, `macos`, and `windows` runners                                        |
+| `.github/workflows/cross-platform-live-smoke.yml` | Real supported-host smoke evidence via `npm run eval:smoke:quick` and `npm run eval:smoke` | Authenticated self-hosted Linux and macOS runners with the selected harness already installed |
+
+This split is deliberate. GitHub-hosted runners are useful for repo-side cross-platform coverage, but they are not assumed to have a live authenticated Claude session. The dedicated live-smoke workflow exists so Linux/macOS evidence can be collected without pretending hosted `eval:smoke:ci` is equivalent to supported-host live smoke.
+
 ## Supported environments
 
 Use one recent Linux host and one recent macOS host. The exact distro version matters less than the host being able to run the current repo toolchain and authenticate the selected harness.
@@ -43,6 +54,8 @@ Confirm:
 - the repo worktree is at the commit under validation
 
 If `claude -p` cannot authenticate, classify the host as blocked and do not treat the run as passing evidence.
+
+If you use the repo workflow instead of an ad hoc shell session, dispatch `.github/workflows/cross-platform-live-smoke.yml` and choose the harness input that matches the runner's installed CLI.
 
 ## Required commands
 
@@ -97,16 +110,16 @@ Expected result:
 
 Capture the following for each host:
 
-| Evidence item      | Required content                                                  |
-| ------------------ | ----------------------------------------------------------------- |
-| Host identity      | OS, shell, Node version, Claude CLI version, date                 |
-| Commit identity    | exact commit SHA or exact worktree description                    |
-| Repo-side results  | `npm run test` result and `npm run ci` result                     |
-| Quick smoke result | exit code and scenario summary for `npm run eval:smoke:quick`     |
-| Full smoke result  | exit code and scenario summary for `npm run eval:smoke`           |
-| Harness artifacts  | path to the generated `scripts/eval/results/smoke-*.json` file    |
-| History summary    | captured output from `node scripts/eval/smoke-test.mjs --history` |
-| Blocker detail     | exact auth, runtime, or host-support error if the run is blocked  |
+| Evidence item      | Required content                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| Host identity      | OS, shell, Node version, Claude CLI version, date                                                        |
+| Commit identity    | exact commit SHA or exact worktree description                                                           |
+| Repo-side results  | `npm run test` result and `npm run ci` result                                                            |
+| Quick smoke result | exit code and scenario summary for `npm run eval:smoke:quick`                                            |
+| Full smoke result  | exit code and scenario summary for `npm run eval:smoke`                                                  |
+| Harness artifacts  | uploaded `live-smoke-<platform>-<run_id>` artifact or the local `scripts/eval/results/smoke-*.json` path |
+| History summary    | captured output from `node scripts/eval/smoke-test.mjs --history`                                        |
+| Blocker detail     | exact auth, runtime, or host-support error if the run is blocked                                         |
 
 At minimum, the evidence record for each host should include these fields from [Live Validation Evidence](eval-live-validation-evidence.md):
 

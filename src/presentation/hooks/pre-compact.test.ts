@@ -136,6 +136,7 @@ describe('pre-compact hook (integration)', () => {
               {
                 kind: 'let',
                 id: 'l2',
+                declarationKind: 'let',
                 variableName: 'deepVar',
                 append: false,
                 source: { type: 'prompt', text: 'Nested question?' },
@@ -175,6 +176,7 @@ describe('pre-compact hook (integration)', () => {
           {
             kind: 'let',
             id: 'l1',
+            declarationKind: 'let',
             variableName: 'answer',
             append: false,
             source: { type: 'prompt', text: 'What color?' },
@@ -214,6 +216,7 @@ describe('pre-compact hook (integration)', () => {
           {
             kind: 'let',
             id: 'l1',
+            declarationKind: 'let',
             variableName: 'answer',
             append: false,
             source: { type: 'prompt', text: 'What changed?' },

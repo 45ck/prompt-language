@@ -11,6 +11,14 @@ async function createTempDir(prefix: string): Promise<string> {
   return mkdtemp(join(tmpdir(), prefix));
 }
 
+function createClaudeCliEnv(homeDir: string): NodeJS.ProcessEnv {
+  return {
+    ...process.env,
+    HOME: homeDir,
+    USERPROFILE: homeDir,
+  };
+}
+
 async function createFakeRunner(
   directory: string,
   name: string,
@@ -193,6 +201,41 @@ describe('CLI commands', () => {
 
     expect(output).toContain('[prompt-language validate] Flow parsed successfully.');
     expect(output).toContain('prompt: hello');
+  });
+
+  it('validate makes lowered swarm execution inspectable in the text preview', async () => {
+    tempDir = await createTempDir('pl-cli-validate-swarm-');
+    const flowPath = join(tempDir, 'swarm.flow');
+    await writeFile(
+      flowPath,
+      [
+        'Goal: swarm test',
+        '',
+        'flow:',
+        '  swarm checkout_fix',
+        '    role frontend model "sonnet"',
+        '      prompt: Fix the UI regression.',
+        '      return ${summary}',
+        '    end',
+        '    flow:',
+        '      start frontend',
+        '      await all',
+        '    end',
+        '  end',
+      ].join('\n'),
+      'utf8',
+    );
+
+    const output = execFileSync('node', [CLI, 'validate', '--file', flowPath], {
+      cwd: tempDir,
+      encoding: 'utf8',
+    });
+
+    expect(output).toContain('Lowered swarm flow:');
+    expect(output).toContain('spawn "frontend" model "sonnet"');
+    expect(output).toContain('Rendered runtime flow:');
+    expect(output).toContain('spawn "frontend"');
+    expect(output).toContain('receive __checkout_fix_frontend_returned from "frontend" timeout 30');
   });
 
   it('render-workflow prints the lowered clarify flow', async () => {
@@ -721,6 +764,141 @@ describe('CLI commands', () => {
         status: 'blocked',
         diagnostics: [expect.objectContaining({ code: 'PLC-005' })],
       });
+    }
+  });
+
+  it('status reports a healthy Claude install after install', async () => {
+    tempDir = await createTempDir('pl-cli-status-install-');
+    const env = createClaudeCliEnv(tempDir);
+
+    execFileSync(process.execPath, [CLI, 'install'], {
+      cwd: ROOT,
+      env,
+      encoding: 'utf8',
+    });
+
+    const output = execFileSync(process.execPath, [CLI, 'status'], {
+      cwd: ROOT,
+      env,
+      encoding: 'utf8',
+    });
+
+    expect(output).toContain('  Installed:    yes');
+    expect(output).toContain('  Registered:   yes');
+    expect(output).not.toContain('  Issue:');
+    expect(output).not.toContain('Remediation:');
+  });
+
+  it('status diagnoses stale installed_plugins metadata for Claude installs', async () => {
+    tempDir = await createTempDir('pl-cli-status-stale-');
+    const env = createClaudeCliEnv(tempDir);
+    const pluginVersion = JSON.parse(
+      await readFile(join(ROOT, '.claude-plugin', 'plugin.json'), 'utf8'),
+    ).version as string;
+    const staleDir = join(
+      tempDir,
+      '.claude',
+      'plugins',
+      'cache',
+      'prompt-language-local',
+      'prompt-language',
+      '0.0.1',
+    );
+    const expectedDir = join(
+      tempDir,
+      '.claude',
+      'plugins',
+      'cache',
+      'prompt-language-local',
+      'prompt-language',
+      pluginVersion,
+    );
+
+    await mkdir(join(tempDir, '.claude', 'plugins'), { recursive: true });
+    await writeFile(
+      join(tempDir, '.claude', 'plugins', 'installed_plugins.json'),
+      JSON.stringify(
+        {
+          version: 2,
+          plugins: {
+            'prompt-language@prompt-language-local': [
+              {
+                scope: 'user',
+                installPath: staleDir,
+                version: '0.0.1',
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+    await writeFile(
+      join(tempDir, '.claude', 'settings.json'),
+      JSON.stringify(
+        {
+          enabledPlugins: {
+            'prompt-language@prompt-language-local': true,
+          },
+          extraKnownMarketplaces: {
+            'prompt-language-local': {
+              source: {
+                source: 'directory',
+                path: join(tempDir, '.claude', 'plugins', 'cache', 'prompt-language-local'),
+              },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+
+    const output = execFileSync(process.execPath, [CLI, 'status'], {
+      cwd: ROOT,
+      env,
+      encoding: 'utf8',
+    });
+
+    expect(output).toContain(
+      `installed_plugins.json points to ${staleDir}, but this build expects ${expectedDir}.`,
+    );
+    expect(output).toContain('installed_plugins.json records version 0.0.1');
+    expect(output).toContain(
+      `installed_plugins.json points to ${staleDir}, but that directory is missing.`,
+    );
+    expect(output).toContain('Remediation:');
+    expect(output).toContain(
+      'Run "npx @45ck/prompt-language install" to refresh the Claude install.',
+    );
+    expect(output).not.toContain('Stale:');
+  });
+
+  it('install fails with actionable diagnostics when Claude settings.json is invalid', async () => {
+    tempDir = await createTempDir('pl-cli-install-invalid-settings-');
+    await mkdir(join(tempDir, '.claude'), { recursive: true });
+    await writeFile(join(tempDir, '.claude', 'settings.json'), '{ invalid json', 'utf8');
+
+    try {
+      execFileSync(process.execPath, [CLI, 'install'], {
+        cwd: ROOT,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          HOME: tempDir,
+          USERPROFILE: tempDir,
+        },
+      });
+      expect.unreachable();
+    } catch (error) {
+      const failure = error as { status?: number; stderr?: string };
+      expect(failure.status).toBe(1);
+      expect(failure.stderr ?? '').toContain('settings.json');
+      expect(failure.stderr ?? '').toContain('contains invalid JSON');
+      expect(failure.stderr ?? '').toContain('npx @45ck/prompt-language status');
     }
   });
 });

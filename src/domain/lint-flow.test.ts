@@ -478,6 +478,18 @@ describe('H-DX-001: unresolved variable warnings', () => {
     );
     expect(lintFlow(spec)).toEqual([]);
   });
+
+  it('treats const declarations as defined variables', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'counter', { type: 'literal', value: '0' }, false, undefined, 'const'),
+        createPromptNode('p1', 'Count: ${counter}'),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).toEqual([]);
+  });
 });
 
 describe('variable shadowing warnings', () => {

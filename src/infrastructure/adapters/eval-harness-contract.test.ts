@@ -36,7 +36,11 @@ describe('eval harness contracts', () => {
     expect(source).toContain("if (HARNESS === 'gemini') {");
     expect(source).toContain("return ['gemini', '--version'];");
     expect(source).toContain('function execGemini(');
-    expect(source).toContain('const AI_CMD = parseAiCommand(process.env.AI_CMD);');
+    expect(source).toContain('const AI_CMD_CONFIG = parseAiCommand(process.env.AI_CMD);');
+    expect(source).toContain('const HARNESS_SELECTION = parseHarnessSelection(');
+    expect(source).toContain(
+      'const AI_CMD = HARNESS_SELECTION.useCustomCommand ? AI_CMD_CONFIG : null;',
+    );
     expect(source).toContain('function execTemplateCommand(');
     expect(source).toContain('if (AI_CMD) {');
   });
@@ -48,6 +52,9 @@ describe('eval harness contracts', () => {
     expect(source).toContain('runHarnessFlow');
     expect(source).toContain('function assertHarnessReady()');
     expect(source).toContain('Goal: readiness check');
+    expect(source).toContain('function isReadyFlowOutput(text)');
+    expect(source).toContain('unexpected readiness output');
+    expect(source).toContain('must execute the flow and emit an OK-style result');
     expect(source).toContain('Starting live flow smoke tests via');
   });
 
@@ -63,11 +70,13 @@ describe('eval harness contracts', () => {
     expect(source).toContain('return 1_800_000;');
   });
 
-  it('exposes npm smoke commands for the OpenCode and Ollama baselines', async () => {
+  it('exposes npm smoke commands for the Gemini, OpenCode, and Ollama baselines', async () => {
     const pkg = JSON.parse(await readFile(PACKAGE_JSON, 'utf8')) as {
       scripts?: Record<string, string>;
     };
 
+    expect(pkg.scripts?.['eval:smoke:gemini']).toContain('--harness gemini');
+    expect(pkg.scripts?.['eval:smoke:gemini:quick']).toContain('--harness gemini --quick');
     expect(pkg.scripts?.['eval:smoke:opencode']).toContain('--harness opencode');
     expect(pkg.scripts?.['eval:smoke:opencode:quick']).toContain('--harness opencode --quick');
     expect(pkg.scripts?.['eval:smoke:ollama']).toContain('--harness ollama');

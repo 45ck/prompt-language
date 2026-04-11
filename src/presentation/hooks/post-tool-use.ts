@@ -10,9 +10,14 @@
 
 import { existsSync } from 'node:fs';
 import { execSync } from 'node:child_process';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
+import { extractAllCaptureTags } from '../../infrastructure/adapters/tag-capture-reader.js';
 import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
+import { renderStatusLine } from '../../domain/render-status-line.js';
+import { colorizeStatusLine } from '../../domain/colorize-status-line.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
 import { readStdin } from './read-stdin.js';
 import type { SessionState } from '../../domain/session-state.js';
@@ -22,6 +27,8 @@ const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'
 
 // H-INT-012: Tools that trigger fast gate pre-check
 const WRITE_TOOLS = new Set(['Write', 'Edit']);
+const VARS_DIR = '.prompt-language/vars';
+const RESPONSE_TEXT_KEY = 'response_text';
 
 /**
  * H-INT-012: Evaluate fast gates (file_exists, diff_nonempty) after Write/Edit.
@@ -54,18 +61,113 @@ function evaluateFastGates(state: SessionState): void {
   }
 }
 
+function collectTaggedText(
+  value: unknown,
+  toolOutputTexts: string[],
+  responseTexts: string[],
+  currentKey?: string,
+): void {
+  if (typeof value === 'string') {
+    if (currentKey === RESPONSE_TEXT_KEY) {
+      responseTexts.push(value);
+      return;
+    }
+    toolOutputTexts.push(value);
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectTaggedText(entry, toolOutputTexts, responseTexts, currentKey);
+    }
+    return;
+  }
+
+  if (value && typeof value === 'object') {
+    for (const [key, nested] of Object.entries(value)) {
+      collectTaggedText(nested, toolOutputTexts, responseTexts, key);
+    }
+  }
+}
+
+function collectStderrText(value: unknown, stderrTexts: string[], currentKey?: string): void {
+  if (typeof value === 'string') {
+    if (currentKey === 'stderr' && value.trim() !== '') {
+      stderrTexts.push(value);
+    }
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      collectStderrText(entry, stderrTexts, currentKey);
+    }
+    return;
+  }
+
+  if (value && typeof value === 'object') {
+    for (const [key, nested] of Object.entries(value)) {
+      collectStderrText(nested, stderrTexts, key);
+    }
+  }
+}
+
+function notifyStderrProgress(state: SessionState, hookPayload: unknown): void {
+  const stderrTexts: string[] = [];
+  collectStderrText(hookPayload, stderrTexts);
+  if (stderrTexts.length === 0) return;
+
+  const statusLine = colorizeStatusLine(renderStatusLine(state));
+  process.stderr.write(`${statusLine}\n`);
+}
+
+async function persistCapturedValues(state: SessionState, hookPayload: unknown): Promise<void> {
+  const toolOutputTexts: string[] = [];
+  const responseTexts: string[] = [];
+  collectTaggedText(hookPayload, toolOutputTexts, responseTexts);
+
+  const capturesByVar = new Map<string, string>();
+  for (const text of toolOutputTexts) {
+    for (const capture of extractAllCaptureTags(text, state.captureNonce)) {
+      if (!capturesByVar.has(capture.varName)) {
+        capturesByVar.set(capture.varName, capture.value);
+      }
+    }
+  }
+
+  for (const text of responseTexts) {
+    for (const capture of extractAllCaptureTags(text, state.captureNonce)) {
+      if (!capturesByVar.has(capture.varName)) {
+        capturesByVar.set(capture.varName, capture.value);
+      }
+    }
+  }
+
+  if (capturesByVar.size === 0) return;
+
+  const varsDir = join(process.cwd(), VARS_DIR);
+  await mkdir(varsDir, { recursive: true });
+
+  for (const [varName, value] of capturesByVar) {
+    const capturePath = join(varsDir, varName);
+    if (existsSync(capturePath)) continue;
+    await writeFile(capturePath, value, 'utf-8');
+  }
+}
+
 async function main(): Promise<void> {
   // Consume stdin (required by hook protocol)
   const stdinData = await readStdin();
 
   // Parse stdin JSON once
   let toolName: string | undefined;
+  let parsedHookPayload: unknown;
   if (stdinData) {
     try {
-      const parsed: unknown = JSON.parse(stdinData);
-      if (parsed && typeof parsed === 'object') {
-        if ('tool_name' in parsed) {
-          toolName = (parsed as { tool_name: string }).tool_name;
+      parsedHookPayload = JSON.parse(stdinData);
+      if (parsedHookPayload && typeof parsedHookPayload === 'object') {
+        if ('tool_name' in parsedHookPayload) {
+          toolName = (parsedHookPayload as { tool_name: string }).tool_name;
         }
       }
     } catch {
@@ -77,6 +179,11 @@ async function main(): Promise<void> {
   const state = await stateStore.loadCurrent();
 
   if (state?.status === 'active') {
+    if (parsedHookPayload !== undefined) {
+      await persistCapturedValues(state, parsedHookPayload);
+      notifyStderrProgress(state, parsedHookPayload);
+    }
+
     // H-PERF-006: Skip render for read-only tools
     // D09-fix: Removed dead lastRenderHash (each hook is a fresh process)
     if (!toolName || !READ_ONLY_TOOLS.has(toolName)) {

@@ -56,6 +56,7 @@ describe('eval harness selection', () => {
     expect(info.harness).toBe('gemini');
     expect(info.harnessLabel).toBe('Gemini CLI');
     expect(info.commandLabel).toBe('gemini -p --yolo');
+    expect(info.flowCommandLabel).toBe('gemini -p --yolo');
   });
 
   it('supports selecting OpenCode via EVAL_HARNESS', () => {
@@ -87,5 +88,33 @@ describe('eval harness selection', () => {
     expect(info.harnessLabel).toBe('Custom AI command (gemini)');
     expect(info.commandLabel).toBe('gemini -p --yolo');
     expect(info.flowCommandLabel).toBe('gemini -p --yolo');
+  });
+
+  it('prefers an explicit --harness over AI_CMD for smoke-compatible flow runs', () => {
+    const info = readHarnessInfo({
+      args: ['--', '--harness', 'codex'],
+      env: {
+        AI_CMD: 'gemini -p --yolo',
+      },
+    });
+
+    expect(info.harness).toBe('codex');
+    expect(info.harnessLabel).toBe('Codex CLI');
+    expect(info.commandLabel).toBe('codex exec');
+    expect(info.flowCommandLabel).toBe('prompt-language ci --runner codex');
+  });
+
+  it('prefers EVAL_HARNESS over AI_CMD when the harness is selected via env', () => {
+    const info = readHarnessInfo({
+      env: {
+        EVAL_HARNESS: 'opencode',
+        AI_CMD: 'gemini -p --yolo',
+      },
+    });
+
+    expect(info.harness).toBe('opencode');
+    expect(info.harnessLabel).toBe('OpenCode CLI');
+    expect(info.commandLabel).toBe('opencode run');
+    expect(info.flowCommandLabel).toBe('prompt-language ci --runner opencode');
   });
 });

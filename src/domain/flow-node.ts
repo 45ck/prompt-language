@@ -30,9 +30,19 @@ export type FlowNodeKind =
   | 'start'
   | 'return';
 
+export type VariableDeclarationKind = 'let' | 'var' | 'const';
+
+export interface FlowNodeSource {
+  readonly line: number;
+  readonly column: number;
+  readonly source?: string | undefined;
+  readonly text?: string | undefined;
+}
+
 interface BaseNode {
   readonly kind: FlowNodeKind;
   readonly id: string;
+  readonly position?: FlowNodeSource | undefined;
 }
 
 export interface WhileNode extends BaseNode {
@@ -119,6 +129,7 @@ export type LetSource =
 
 export interface LetNode extends BaseNode {
   readonly kind: 'let';
+  readonly declarationKind: VariableDeclarationKind;
   readonly variableName: string;
   readonly source: LetSource;
   readonly append: boolean;
@@ -305,6 +316,10 @@ export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;
 export const DEFAULT_MAX_FOREACH = 50;
 
+export function withNodeSource<T extends FlowNode>(node: T, source?: FlowNodeSource): T {
+  return source == null ? node : ({ ...node, position: source } satisfies T);
+}
+
 export function createWhileNode(
   id: string,
   condition: string,
@@ -419,10 +434,11 @@ export function createLetNode(
   source: LetSource,
   append = false,
   transform?: string,
+  declarationKind: VariableDeclarationKind = 'let',
 ): LetNode {
   return transform != null
-    ? { kind: 'let', id, variableName, source, append, transform }
-    : { kind: 'let', id, variableName, source, append };
+    ? { kind: 'let', id, declarationKind, variableName, source, append, transform }
+    : { kind: 'let', id, declarationKind, variableName, source, append };
 }
 
 export function createBreakNode(id: string, label?: string): BreakNode {
@@ -611,6 +627,161 @@ export function createStartNode(id: string, targets: readonly string[]): StartNo
 
 export function createReturnNode(id: string, expression: string): ReturnNode {
   return { kind: 'return', id, expression };
+}
+
+type FlowNodeChildScope =
+  | { readonly label: string; readonly nodes: readonly FlowNode[] }
+  | {
+      readonly label: string;
+      readonly nodes: readonly FlowNode[];
+      readonly nestedPrefix: string;
+      readonly nestedNodes: readonly FlowNode[];
+    };
+
+function getChildScopes(node: FlowNode): readonly FlowNodeChildScope[] {
+  switch (node.kind) {
+    case 'while':
+    case 'until':
+    case 'retry':
+    case 'foreach':
+    case 'spawn':
+    case 'review':
+    case 'foreach_spawn':
+      return [{ label: 'body', nodes: node.body }];
+    case 'if':
+      return [
+        { label: 'then', nodes: node.thenBranch },
+        { label: 'else', nodes: node.elseBranch },
+      ];
+    case 'try':
+      return [
+        { label: 'body', nodes: node.body },
+        { label: 'catch', nodes: node.catchBody },
+        { label: 'finally', nodes: node.finallyBody },
+      ];
+    case 'race':
+      return node.children.map((child, index) => ({
+        label: `child[${index + 1}]`,
+        nodes: [child],
+        nestedPrefix: `child[${index + 1}].body`,
+        nestedNodes: child.body,
+      }));
+    case 'swarm':
+      return [
+        ...node.roles.map((role, index) => ({
+          label: `role[${index + 1}]`,
+          nodes: role.body,
+        })),
+        { label: 'flow', nodes: node.flow },
+      ];
+    case 'prompt':
+    case 'run':
+    case 'let':
+    case 'break':
+    case 'continue':
+    case 'await':
+    case 'approve':
+    case 'remember':
+    case 'send':
+    case 'receive':
+    case 'start':
+    case 'return':
+      return [];
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
+  }
+}
+
+function resolveChildPathSegment(
+  node: FlowNode,
+  index: number,
+): {
+  readonly label: string;
+  readonly node: FlowNode;
+  readonly nestedPrefix?: string | undefined;
+} | null {
+  for (const scope of getChildScopes(node)) {
+    if (index < scope.nodes.length) {
+      return {
+        label: `${scope.label}[${index + 1}]`,
+        node: scope.nodes[index]!,
+      };
+    }
+
+    index -= scope.nodes.length;
+    if ('nestedNodes' in scope) {
+      if (index < scope.nestedNodes.length) {
+        return {
+          label: `${scope.nestedPrefix}[${index + 1}]`,
+          node: scope.nestedNodes[index]!,
+        };
+      }
+
+      index -= scope.nestedNodes.length;
+    }
+  }
+
+  return null;
+}
+
+export function resolveNodeByPath(
+  nodes: readonly FlowNode[],
+  path: readonly number[],
+): FlowNode | null {
+  if (path.length === 0) return null;
+
+  let node = nodes[path[0]!] ?? null;
+  if (node == null) return null;
+  if (path.length === 1) return node;
+
+  for (let depth = 1; depth < path.length; depth += 1) {
+    const child = resolveChildPathSegment(node, path[depth]!);
+    if (child == null) {
+      return null;
+    }
+    node = child.node;
+  }
+
+  return node;
+}
+
+export function formatFlowNodeSource(source?: FlowNodeSource): string | null {
+  if (source?.line == null || source?.column == null) return null;
+
+  const location = `line ${source.line}, col ${source.column}`;
+  return source.source?.length ? `${source.source}:${location}` : location;
+}
+
+export function describeNodePosition(
+  nodes: readonly FlowNode[],
+  path: readonly number[],
+): string | null {
+  if (path.length === 0) {
+    return 'flow root';
+  }
+
+  const firstNode = nodes[path[0]!] ?? null;
+  if (firstNode == null) {
+    return `flow[${path[0]! + 1}]`;
+  }
+
+  const labels = [`flow[${path[0]! + 1}]`];
+  let node = firstNode;
+
+  for (let depth = 1; depth < path.length; depth += 1) {
+    const child = resolveChildPathSegment(node, path[depth]!);
+    if (child == null) {
+      labels.push(`[missing ${path[depth]! + 1}]`);
+      break;
+    }
+    labels.push(child.label);
+    node = child.node;
+  }
+
+  const source = formatFlowNodeSource(node.position);
+  return source == null ? labels.join(' > ') : `${labels.join(' > ')} at ${source}`;
 }
 
 /** Recursively search a flow tree for a node by its id. Early-exit on match. */

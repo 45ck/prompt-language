@@ -74,6 +74,11 @@ describe('parseFlow — prompt and run nodes', () => {
     const node = spec.nodes[0] as PromptNode;
     expect(node.kind).toBe('prompt');
     expect(node.text).toBe('inspect failures');
+    expect(node.position).toEqual({
+      line: 4,
+      column: 3,
+      text: '  prompt: inspect failures',
+    });
   });
 
   it('parses a single run node', () => {
@@ -82,6 +87,11 @@ describe('parseFlow — prompt and run nodes', () => {
     const node = spec.nodes[0] as RunNode;
     expect(node.kind).toBe('run');
     expect(node.command).toBe('pnpm test');
+    expect(node.position).toEqual({
+      line: 4,
+      column: 3,
+      text: '  run: pnpm test',
+    });
   });
 
   it('parses run node with bracket timeout', () => {
@@ -254,7 +264,11 @@ flow:
     const spec = parse(dsl);
     const node = spec.nodes[0] as WhileNode;
     expect(node.maxIterations).toBe(5);
-    expect(spec.warnings.some((w) => w.includes('Missing "max N" on while'))).toBe(true);
+    expect(
+      spec.warnings.some(
+        (w) => w.includes('line 4, col 3') && w.includes('Missing "max N" on while'),
+      ),
+    ).toBe(true);
   });
 
   it('preserves sibling nodes after a while block', () => {
@@ -567,6 +581,17 @@ describe('parseFlow — let/var statements', () => {
     const spec = parse(dsl);
     const node = spec.nodes[0] as LetNode;
     expect(node.kind).toBe('let');
+    expect(node.declarationKind).toBe('var');
+    expect(node.variableName).toBe('greeting');
+    expect(node.source).toEqual({ type: 'literal', value: 'hello' });
+  });
+
+  it('parses const declarations and preserves declaration metadata', () => {
+    const dsl = `Goal: g\n\nflow:\n  const greeting = "hello"`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.kind).toBe('let');
+    expect(node.declarationKind).toBe('const');
     expect(node.variableName).toBe('greeting');
     expect(node.source).toEqual({ type: 'literal', value: 'hello' });
   });
@@ -612,6 +637,7 @@ describe('parseFlow — let/var statements', () => {
     expect(spec.nodes).toHaveLength(1);
     const node = spec.nodes[0] as LetNode;
     expect(node.kind).toBe('let');
+    expect(node.declarationKind).toBe('let');
     expect(node.variableName).toBe('items');
     expect(node.source).toEqual({ type: 'empty_list' });
     expect(node.append).toBe(false);
@@ -643,6 +669,7 @@ describe('parseFlow — let/var statements', () => {
     const spec = parse(dsl);
     const node = spec.nodes[0] as LetNode;
     expect(node.kind).toBe('let');
+    expect(node.declarationKind).toBe('var');
     expect(node.append).toBe(true);
     expect(node.source).toEqual({ type: 'literal', value: 'apple' });
   });
@@ -2635,7 +2662,7 @@ flow:
     prompt: hi
   end`);
 
-    expect(spec.warnings).toContain('line 1: "role" is only valid inside a swarm block');
+    expect(spec.warnings).toContain('line 4, col 3: "role" is only valid inside a swarm block');
   });
 
   it('warns when start is used outside swarm flow', () => {
@@ -2644,7 +2671,7 @@ flow:
 flow:
   start frontend`);
 
-    expect(spec.warnings).toContain('line 1: "start" is only valid inside swarm flow:');
+    expect(spec.warnings).toContain('line 4, col 3: "start" is only valid inside swarm flow:');
     expect((spec.nodes[0] as StartNode).targets).toEqual(['frontend']);
   });
 
@@ -2654,7 +2681,7 @@ flow:
 flow:
   return ${'${summary}'}`);
 
-    expect(spec.warnings).toContain('line 1: "return" is only valid inside a role');
+    expect(spec.warnings).toContain('line 4, col 3: "return" is only valid inside a role');
     expect((spec.nodes[0] as ReturnNode).expression).toBe('${summary}');
   });
 
@@ -2708,7 +2735,7 @@ flow:
   end`);
 
     expect(spec.warnings).toContain(
-      'line 2: Invalid role syntax: "role "frontend"" — expected role <name> with optional model/in/with vars options',
+      'line 5, col 5: Invalid role syntax: "role "frontend"" — expected role <name> with optional model/in/with vars options',
     );
     expect(spec.nodes).toHaveLength(1);
     const swarm = spec.nodes[0] as SwarmNode;
@@ -2752,13 +2779,13 @@ flow:
   return`);
 
     expect(spec.warnings).toContain(
-      'line 1: Invalid start syntax: "start" — expected start <role>[, <role>...]',
+      'line 4, col 3: Invalid start syntax: "start" — expected start <role>[, <role>...]',
     );
     expect(spec.warnings).toContain(
-      'line 2: Invalid await syntax: "await" — expected await all or await "name"',
+      'line 5, col 3: Invalid await syntax: "await" — expected await all or await "name"',
     );
     expect(spec.warnings).toContain(
-      'line 3: Invalid return syntax: "return" — expected return <expression>',
+      'line 6, col 3: Invalid return syntax: "return" — expected return <expression>',
     );
     expect(spec.nodes.map((node) => node.kind)).toEqual(['prompt', 'prompt', 'prompt']);
   });

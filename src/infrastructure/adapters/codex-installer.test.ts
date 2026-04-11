@@ -68,6 +68,20 @@ function runCodexUninstall(fakeHome: string): void {
   });
 }
 
+function runCodexStatus(fakeHome: string): string {
+  const env: Record<string, string> = {
+    ...process.env,
+    HOME: fakeHome,
+    USERPROFILE: fakeHome,
+  } as Record<string, string>;
+  return execSync(`node "${join(ROOT, 'bin', 'cli.mjs')}" codex-status`, {
+    env,
+    stdio: 'pipe',
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+}
+
 describe('Codex installer — install verification', () => {
   let fakeHome: string;
   let version: string;
@@ -266,6 +280,83 @@ describe('Codex installer — install verification', () => {
 
     const config = await readFile(configPath, 'utf8');
     expect(config).toBe('[features]\ncodex_hooks = true # prompt-language managed: codex_hooks\n');
+  });
+
+  it('prunes stale cached Codex versions on reinstall', async () => {
+    const staleDir = codexCachePath(fakeHome, '0.0.1');
+    await mkdir(join(staleDir, '.codex-plugin'), { recursive: true });
+    await writeFile(
+      join(staleDir, '.codex-plugin', 'plugin.json'),
+      JSON.stringify({ name: 'prompt-language', version: '0.0.1' }, null, 2),
+      'utf8',
+    );
+
+    runCodexInstaller(fakeHome);
+
+    expect(await dirExists(staleDir)).toBe(false);
+    expect(await dirExists(codexCachePath(fakeHome, version))).toBe(true);
+  });
+
+  it('codex-status reports stale cached versions and mismatched registry versions', async () => {
+    const staleVersion = '0.0.1';
+    const staleDir = codexCachePath(fakeHome, staleVersion);
+    await mkdir(join(staleDir, '.codex-plugin'), { recursive: true });
+    await writeFile(
+      join(staleDir, '.codex-plugin', 'plugin.json'),
+      JSON.stringify({ name: 'prompt-language', version: staleVersion }, null, 2),
+      'utf8',
+    );
+
+    await writeFile(
+      join(fakeHome, '.codex', 'plugins', 'installed_plugins.json'),
+      JSON.stringify(
+        {
+          version: 2,
+          plugins: {
+            'prompt-language@prompt-language-local': [
+              {
+                scope: 'user',
+                installPath: staleDir,
+                version: staleVersion,
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+
+    const output = runCodexStatus(fakeHome);
+
+    expect(output).toContain(`Stale:        ${staleVersion}`);
+    expect(output).toContain(`installed_plugins.json records version ${staleVersion}`);
+    expect(output).toContain(
+      'Run "npx @45ck/prompt-language codex-install" to refresh the Codex scaffold.',
+    );
+  });
+
+  it('codex-uninstall removes the Codex cache and plugin registration', async () => {
+    runCodexUninstall(fakeHome);
+
+    expect(await dirExists(codexCachePath(fakeHome, version))).toBe(false);
+
+    const installed = JSON.parse(
+      await readFile(join(fakeHome, '.codex', 'plugins', 'installed_plugins.json'), 'utf8'),
+    ) as {
+      plugins: Record<string, unknown>;
+    };
+    expect(installed.plugins['prompt-language@prompt-language-local']).toBeUndefined();
+
+    const settings = JSON.parse(
+      await readFile(join(fakeHome, '.codex', 'settings.json'), 'utf8'),
+    ) as {
+      enabledPlugins: Record<string, boolean>;
+      extraKnownMarketplaces: Record<string, unknown>;
+    };
+    expect(settings.enabledPlugins['prompt-language@prompt-language-local']).toBeUndefined();
+    expect(settings.extraKnownMarketplaces['prompt-language-local']).toBeUndefined();
   });
 });
 

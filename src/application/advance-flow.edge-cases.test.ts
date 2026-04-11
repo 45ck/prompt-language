@@ -280,4 +280,81 @@ describe('advance-flow edge cases', () => {
     expect(result.state.currentNodePath).toEqual([1]);
     expect(maybeCompleteFlow(result.state).status).toBe('completed');
   });
+
+  it('walks a deterministic long nested flow without drifting across branch or finally boundaries', async () => {
+    let state = createState([
+      createForeachNode('files', 'file', 'alpha beta', [
+        createTryNode(
+          'file-try',
+          [
+            createIfNode(
+              'branch',
+              '${file} == "alpha"',
+              [
+                createForeachNode('alpha-phases', 'phase', 'plan apply', [
+                  createPromptNode(
+                    'alpha-step',
+                    'alpha ${file}/${phase} file_index=${file_index} phase_index=${phase_index}',
+                  ),
+                ]),
+              ],
+              [
+                createRetryNode(
+                  'beta-retry',
+                  [
+                    createForeachNode('beta-phases', 'phase', 'verify cleanup', [
+                      createPromptNode(
+                        'beta-step',
+                        'beta ${file}/${phase} file_index=${file_index} phase_index=${phase_index}',
+                      ),
+                    ]),
+                  ],
+                  2,
+                ),
+              ],
+            ),
+          ],
+          'command_failed',
+          [],
+          [createPromptNode('file-finally', 'finally ${file}')],
+        ),
+        createPromptNode('file-after', 'after ${file}'),
+      ]),
+      createPromptNode('done', 'after long nested flow'),
+    ]);
+
+    const prompts: string[] = [];
+
+    for (let index = 0; index < 9; index += 1) {
+      const result = await autoAdvanceNodes(state);
+      expect(result.kind).toBe('prompt');
+      prompts.push(result.capturedPrompt ?? '');
+      state = result.state;
+    }
+
+    expect(prompts).toEqual([
+      'alpha alpha/plan file_index=0 phase_index=0',
+      'alpha alpha/apply file_index=0 phase_index=1',
+      'finally alpha',
+      'after alpha',
+      'beta beta/verify file_index=1 phase_index=0',
+      'beta beta/cleanup file_index=1 phase_index=1',
+      'finally beta',
+      'after beta',
+      'after long nested flow',
+    ]);
+    expect(state.variables['file']).toBe('beta');
+    expect(state.variables['phase']).toBe('cleanup');
+    expect(state.nodeProgress['files']).toMatchObject({
+      iteration: 2,
+      maxIterations: 2,
+      status: 'completed',
+    });
+    expect(state.nodeProgress['beta-retry']).toMatchObject({
+      iteration: 1,
+      maxIterations: 2,
+      status: 'completed',
+    });
+    expect(maybeCompleteFlow(state).status).toBe('completed');
+  });
 });

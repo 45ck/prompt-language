@@ -6,7 +6,12 @@
 
 import { readFileSync } from 'node:fs';
 import { resolve, dirname, isAbsolute } from 'node:path';
-import type { FlowNode, SpawnNode, SwarmRoleDefinition } from '../domain/flow-node.js';
+import type {
+  FlowNode,
+  FlowNodeSource,
+  SpawnNode,
+  SwarmRoleDefinition,
+} from '../domain/flow-node.js';
 import type {
   CompletionGate,
   FlowSpec,
@@ -41,6 +46,8 @@ import {
   createStartNode,
   createReturnNode,
   DEFAULT_MAX_ITERATIONS,
+  formatFlowNodeSource,
+  withNodeSource,
 } from '../domain/flow-node.js';
 import {
   createFlowSpec,
@@ -80,7 +87,7 @@ export interface ParseFlowOptions {
 }
 
 interface ParseContext {
-  lines: readonly string[];
+  lines: readonly FlowSourceLine[];
   pos: number;
   warnings: string[];
   nodeCounter: number;
@@ -88,6 +95,7 @@ interface ParseContext {
   profiles: ContextProfileRegistry;
   usedProfiles: Set<string>;
   swarmHandling: SwarmHandling;
+  currentSource?: FlowNodeSource | undefined;
 }
 
 type ParseScope = 'flow' | 'role' | 'swarm_flow';
@@ -98,8 +106,13 @@ interface DeclarationParseResult {
 }
 
 interface PreparedFlowLines {
-  readonly lines: readonly string[];
+  readonly lines: readonly FlowSourceLine[];
   readonly warnings: readonly string[];
+}
+
+interface FlowSourceLine {
+  readonly text: string;
+  readonly source?: FlowNodeSource | undefined;
 }
 
 function nextId(ctx: ParseContext): string {
@@ -107,9 +120,39 @@ function nextId(ctx: ParseContext): string {
   return `n${ctx.nodeCounter}`;
 }
 
-// H#28: Prepend line numbers to parser warnings
+function currentSource(ctx: ParseContext): FlowNodeSource | undefined {
+  return ctx.currentSource;
+}
+
+function attachSource<T extends FlowNode>(ctx: ParseContext, node: T): T {
+  return withNodeSource(node, currentSource(ctx));
+}
+
+function formatWarningLocation(source?: FlowNodeSource): string {
+  const formatted = formatFlowNodeSource(source);
+  return formatted ?? 'line unknown';
+}
+
+function createLineSource(
+  lineNumber: number,
+  line: string,
+  source?: string,
+): FlowNodeSource | undefined {
+  const column = Math.max(1, line.search(/\S/) + 1);
+  if (!Number.isFinite(column)) {
+    return undefined;
+  }
+
+  return {
+    line: lineNumber,
+    column,
+    ...(source != null ? { source } : {}),
+    text: line,
+  };
+}
+
 function warn(ctx: ParseContext, message: string): void {
-  ctx.warnings.push(`line ${ctx.pos}: ${message}`);
+  ctx.warnings.push(`${formatWarningLocation(currentSource(ctx))}: ${message}`);
 }
 
 function currentIndent(line: string): number {
@@ -379,6 +422,7 @@ const BARE_FLOW_PATTERNS = [
   /^foreach\s+\w+\s+in\s/i,
   /^let\s+\w+\s*[+]?=/i,
   /^var\s+\w+\s*[+]?=/i,
+  /^const\s+\w+\s*[+]?=/i,
   /^retry\s+max\s+\d+/i,
   /^while\s+.+\s+max\s+\d+/i,
   /^until\s+.+\s+max\s+\d+/i,
@@ -394,27 +438,40 @@ export function detectBareFlow(input: string): boolean {
   return false;
 }
 
-/** Extract the flow: block lines. */
-function extractFlowBlock(input: string): readonly string[] {
-  const doneIdx = input.search(/\n\s*done when:/im);
-  const flowMatch = /^\s*flow:\s*\n/im.exec(input);
-  if (flowMatch) {
-    const start = flowMatch.index + flowMatch[0].length;
-    const end = doneIdx >= 0 ? doneIdx : input.length;
-    return input.slice(start, end).split('\n');
+/** Extract the flow: block lines with authored line metadata. */
+function extractFlowBlock(input: string, source?: string): readonly FlowSourceLine[] {
+  const lines = input.split('\n');
+  const flowIndex = lines.findIndex((line) => /^\s*flow:\s*$/i.test(line));
+
+  if (flowIndex >= 0) {
+    const result: FlowSourceLine[] = [];
+    for (let i = flowIndex + 1; i < lines.length; i += 1) {
+      const line = lines[i] ?? '';
+      if (/^\s*done\s+when:/i.test(line)) {
+        break;
+      }
+      result.push({
+        text: line,
+        source: createLineSource(i + 1, line, source),
+      });
+    }
+    return result;
   }
 
-  // Bare flow detection fallback
   if (!detectBareFlow(input)) return [];
-  const lines = input.split('\n');
-  const result: string[] = [];
-  for (const line of lines) {
+
+  const bareFlow: FlowSourceLine[] = [];
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i] ?? '';
     const trimmed = line.trim();
     if (!trimmed || /^Goal:/i.test(trimmed)) continue;
     if (/^\s*done\s+when:/i.test(line)) break;
-    result.push(`  ${trimmed}`);
+    bareFlow.push({
+      text: `  ${trimmed}`,
+      source: createLineSource(i + 1, line, source),
+    });
   }
-  return result;
+  return bareFlow;
 }
 
 // H-LANG-008: Extract optional "timeout N" from loop line
@@ -429,7 +486,7 @@ function stripTimeout(line: string): string {
 }
 
 function prepareSwarmLines(
-  lines: readonly string[],
+  lines: readonly FlowSourceLine[],
   swarmHandling: SwarmHandling,
   warningMapper?: (warning: string) => string,
 ): PreparedFlowLines {
@@ -437,9 +494,14 @@ function prepareSwarmLines(
     return { lines: [...lines], warnings: [] };
   }
 
-  const lowered = lowerSwarmFlowLines(lines);
+  const lowered = lowerSwarmFlowLines(lines.map((line) => line.text));
   return {
-    lines: [...lowered.lines],
+    lines: lowered.changed
+      ? lowered.lines.map((text, index) => ({
+          text,
+          source: lines[index]?.source,
+        }))
+      : [...lines],
     warnings:
       warningMapper == null
         ? [...lowered.warnings]
@@ -520,16 +582,19 @@ function parseWhileLine(
     }
     const askBody = parseBlock(ctx, baseIndent, [], scope);
     consumeEnd(ctx);
-    return createWhileNode(
-      nextId(ctx),
-      `${ASK_CONDITION_PREFIX}"${question}"`,
-      askBody,
-      askMax,
-      label,
-      timeout,
-      askOpts.groundedBy,
-      askOpts.maxRetries,
-      askOpts.profile,
+    return attachSource(
+      ctx,
+      createWhileNode(
+        nextId(ctx),
+        `${ASK_CONDITION_PREFIX}"${question}"`,
+        askBody,
+        askMax,
+        label,
+        timeout,
+        askOpts.groundedBy,
+        askOpts.maxRetries,
+        askOpts.profile,
+      ),
     );
   }
 
@@ -544,7 +609,7 @@ function parseWhileLine(
   const cond = negated ? `not ${condition}` : condition;
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return createWhileNode(nextId(ctx), cond, body, max, label, timeout);
+  return attachSource(ctx, createWhileNode(nextId(ctx), cond, body, max, label, timeout));
 }
 
 function parseUntilLine(
@@ -573,16 +638,19 @@ function parseUntilLine(
     }
     const askBody = parseBlock(ctx, baseIndent, [], scope);
     consumeEnd(ctx);
-    return createUntilNode(
-      nextId(ctx),
-      `${ASK_CONDITION_PREFIX}"${question}"`,
-      askBody,
-      askMax,
-      label,
-      timeout,
-      askOpts.groundedBy,
-      askOpts.maxRetries,
-      askOpts.profile,
+    return attachSource(
+      ctx,
+      createUntilNode(
+        nextId(ctx),
+        `${ASK_CONDITION_PREFIX}"${question}"`,
+        askBody,
+        askMax,
+        label,
+        timeout,
+        askOpts.groundedBy,
+        askOpts.maxRetries,
+        askOpts.profile,
+      ),
     );
   }
 
@@ -595,7 +663,7 @@ function parseUntilLine(
   }
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return createUntilNode(nextId(ctx), condition, body, max, label, timeout);
+  return attachSource(ctx, createUntilNode(nextId(ctx), condition, body, max, label, timeout));
 }
 
 function parseRetryLine(
@@ -612,7 +680,7 @@ function parseRetryLine(
   const backoffMs = match?.[2] ? parseInt(match[2], 10) * 1000 : undefined;
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return createRetryNode(nextId(ctx), body, max, label, timeout, backoffMs);
+  return attachSource(ctx, createRetryNode(nextId(ctx), body, max, label, timeout, backoffMs));
 }
 
 function parseIfLine(
@@ -641,7 +709,7 @@ function parseIfLine(
   let elseBranch: FlowNode[] = [];
   let nestedElseIf = false;
   if (ctx.pos < ctx.lines.length) {
-    const peekLine = ctx.lines[ctx.pos];
+    const peekLine = ctx.lines[ctx.pos]?.text;
     const peek = peekLine ? peekLine.trim() : '';
     const lower = peek.toLowerCase();
     // H-LANG-003: Handle "else if ..." and "elif ..." as nested IfNode in else branch
@@ -662,14 +730,17 @@ function parseIfLine(
   if (!nestedElseIf) {
     consumeEnd(ctx);
   }
-  return createIfNode(
-    nextId(ctx),
-    condition,
-    thenBranch,
-    elseBranch,
-    groundedBy,
-    askMaxRetries,
-    askProfile,
+  return attachSource(
+    ctx,
+    createIfNode(
+      nextId(ctx),
+      condition,
+      thenBranch,
+      elseBranch,
+      groundedBy,
+      askMaxRetries,
+      askProfile,
+    ),
   );
 }
 
@@ -680,7 +751,7 @@ function parseTryBlock(ctx: ParseContext, baseIndent: number, scope: ParseScope)
   let finallyBody: FlowNode[] = [];
 
   if (ctx.pos < ctx.lines.length) {
-    const peekLine = ctx.lines[ctx.pos];
+    const peekLine = ctx.lines[ctx.pos]?.text;
     const peek = peekLine ? peekLine.trim() : '';
     const catchMatch = /^catch(?:\s+(.+))?/i.exec(peek);
     if (catchMatch) {
@@ -692,7 +763,7 @@ function parseTryBlock(ctx: ParseContext, baseIndent: number, scope: ParseScope)
 
   // H#20: Parse optional finally block
   if (ctx.pos < ctx.lines.length) {
-    const peekLine = ctx.lines[ctx.pos];
+    const peekLine = ctx.lines[ctx.pos]?.text;
     const peek = peekLine ? peekLine.trim().toLowerCase() : '';
     if (peek === 'finally') {
       ctx.pos += 1;
@@ -701,7 +772,10 @@ function parseTryBlock(ctx: ParseContext, baseIndent: number, scope: ParseScope)
   }
 
   consumeEnd(ctx);
-  return createTryNode(nextId(ctx), body, catchCondition, catchBody, finallyBody);
+  return attachSource(
+    ctx,
+    createTryNode(nextId(ctx), body, catchCondition, catchBody, finallyBody),
+  );
 }
 
 function stripQuotes(s: string): string {
@@ -776,15 +850,18 @@ function parseSwarmBlock(ctx: ParseContext, line: string, baseIndent: number): F
   const name = match?.[1];
   if (!name) {
     warn(ctx, `Invalid swarm syntax: "${line}" — expected swarm <name>`);
-    return createPromptNode(nextId(ctx), line);
+    return attachSource(ctx, createPromptNode(nextId(ctx), line));
   }
 
+  const swarmSource = currentSource(ctx);
   const roles: SwarmRoleDefinition[] = [];
   let flow: FlowNode[] = [];
   let sawFlow = false;
 
   while (ctx.pos < ctx.lines.length) {
-    const raw = ctx.lines[ctx.pos] ?? '';
+    const lineEntry = ctx.lines[ctx.pos];
+    ctx.currentSource = lineEntry?.source;
+    const raw = lineEntry?.text ?? '';
     const cleaned = stripComment(raw);
     const trimmed = cleaned.trim();
     if (!trimmed) {
@@ -835,6 +912,7 @@ function parseSwarmBlock(ctx: ParseContext, line: string, baseIndent: number): F
     ctx.pos += 1;
   }
 
+  ctx.currentSource = swarmSource;
   if (roles.length === 0) {
     warn(ctx, `Swarm "${name}" has no roles`);
   }
@@ -843,11 +921,12 @@ function parseSwarmBlock(ctx: ParseContext, line: string, baseIndent: number): F
   }
 
   consumeEnd(ctx);
-  return createSwarmNode(nextId(ctx), name, roles, flow);
+  return attachSource(ctx, createSwarmNode(nextId(ctx), name, roles, flow));
 }
 
 function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
-  // Strip "let " or "var " prefix
+  const keyword = trimmed.slice(0, trimmed.indexOf(' ')).toLowerCase();
+  const declarationKind = keyword === 'var' || keyword === 'const' ? keyword : 'let';
   const afterKeyword = trimmed.slice(trimmed.indexOf(' ') + 1);
 
   // Detect += (append) vs = (assign) — check += first
@@ -857,14 +936,17 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
   const splitIdx = isAppend ? appendIdx : eqIdx;
 
   if (splitIdx < 0) {
-    warn(ctx, `Invalid let/var syntax: "${trimmed}" — missing "=". Try: let name = "value"`);
+    warn(
+      ctx,
+      `Invalid let/var/const syntax: "${trimmed}" — missing "=". Try: ${declarationKind} name = "value"`,
+    );
     return null;
   }
   const variableName = afterKeyword.slice(0, splitIdx).trim();
   if (!variableName) {
     warn(
       ctx,
-      `Invalid let/var syntax: "${trimmed}" — missing variable name. Try: let name = "value"`,
+      `Invalid let/var/const syntax: "${trimmed}" — missing variable name. Try: ${declarationKind} name = "value"`,
     );
     return null;
   }
@@ -872,7 +954,7 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
   if (!rhs) {
     warn(
       ctx,
-      `Invalid let/var syntax: "${trimmed}" — missing value after "=". Try: let ${variableName} = "value"`,
+      `Invalid let/var/const syntax: "${trimmed}" — missing value after "=". Try: ${declarationKind} ${variableName} = "value"`,
     );
     return null;
   }
@@ -883,7 +965,17 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
       warn(ctx, `Cannot append empty list: "${trimmed}" — use = [] to initialize`);
       return null;
     }
-    return createLetNode(nextId(ctx), variableName, { type: 'empty_list' }, false);
+    return attachSource(
+      ctx,
+      createLetNode(
+        nextId(ctx),
+        variableName,
+        { type: 'empty_list' },
+        false,
+        undefined,
+        declarationKind,
+      ),
+    );
   }
 
   // H-LANG-005: Detect pipe transform suffix on prompt/run sources
@@ -928,7 +1020,7 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
         // Multi-line: consume ctx lines until we see a `}` alone or a dedented `}`
         if (afterBrace.trim()) schemaLines.push(afterBrace.trim());
         while (ctx.pos < ctx.lines.length) {
-          const schemaLine = ctx.lines[ctx.pos] ?? '';
+          const schemaLine = ctx.lines[ctx.pos]?.text ?? '';
           ctx.pos += 1;
           const trimmedSchema = schemaLine.trim();
           if (trimmedSchema === '}' || trimmedSchema.startsWith('}')) {
@@ -958,12 +1050,12 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
     const memoryMatch = /^(?:"([^"]+)"|'([^']+)'|(\S+))$/i.exec(memoryRhs);
     if (!memoryMatch?.[1] && !memoryMatch?.[2] && !memoryMatch?.[3]) {
       warn(ctx, `Invalid memory syntax: "${trimmed}" — try: let name = memory "key"`);
-      return createPromptNode(nextId(ctx), trimmed);
+      return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
     }
     const key = (memoryMatch[1] ?? memoryMatch[2] ?? memoryMatch[3] ?? '').trim();
     if (!key) {
       warn(ctx, `Invalid memory syntax: "${trimmed}" — try: let name = memory "key"`);
-      return createPromptNode(nextId(ctx), trimmed);
+      return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
     }
     source = { type: 'memory', key };
   } else {
@@ -971,7 +1063,10 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
     source = { type: 'literal', value };
   }
 
-  return createLetNode(nextId(ctx), variableName, source, isAppend, transform);
+  return attachSource(
+    ctx,
+    createLetNode(nextId(ctx), variableName, source, isAppend, transform, declarationKind),
+  );
 }
 
 function parseForeachLine(
@@ -984,7 +1079,7 @@ function parseForeachLine(
   const match = /^foreach\s+(\w+)\s+in\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
   if (!match?.[1] || !match[2]) {
     warn(ctx, `Invalid foreach syntax: "${line}". Try: foreach item in \${list}`);
-    return createPromptNode(nextId(ctx), line);
+    return attachSource(ctx, createPromptNode(nextId(ctx), line));
   }
   const variableName = match[1];
   const rawExpr = match[2].trim();
@@ -996,11 +1091,17 @@ function parseForeachLine(
   const runMatch = /^run\s+(.+)$/i.exec(rawExpr);
   if (runMatch?.[1]) {
     const command = stripQuotes(runMatch[1].trim());
-    return createForeachNode(nextId(ctx), variableName, '', body, max, label, command);
+    return attachSource(
+      ctx,
+      createForeachNode(nextId(ctx), variableName, '', body, max, label, command),
+    );
   }
 
   const listExpression = stripQuotes(rawExpr);
-  return createForeachNode(nextId(ctx), variableName, listExpression, body, max, label);
+  return attachSource(
+    ctx,
+    createForeachNode(nextId(ctx), variableName, listExpression, body, max, label),
+  );
 }
 
 /** H-SEC-005: Extract `with vars x, y` from spawn line and return variable list. */
@@ -1067,7 +1168,10 @@ function parseSpawnBlock(
   if (cwdMatch?.[1] && cwdMatch[2]) {
     const body = parseBlock(ctx, baseIndent, [], scope);
     consumeEnd(ctx);
-    return createSpawnNode(nextId(ctx), cwdMatch[1], body, cwdMatch[2], vars, model, condition);
+    return attachSource(
+      ctx,
+      createSpawnNode(nextId(ctx), cwdMatch[1], body, cwdMatch[2], vars, model, condition),
+    );
   }
 
   const match = /^spawn\s+"([^"]+)"/i.exec(cleanLine) ?? /^spawn\s+'([^']+)'/i.exec(cleanLine);
@@ -1075,11 +1179,14 @@ function parseSpawnBlock(
   const name = match?.[1] ?? cleanLine.replace(/^spawn\s+/i, '').trim();
   if (!name) {
     warn(ctx, `Invalid spawn syntax: "${line}" — expected spawn "name"`);
-    return createPromptNode(nextId(ctx), line);
+    return attachSource(ctx, createPromptNode(nextId(ctx), line));
   }
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return createSpawnNode(nextId(ctx), name, body, undefined, vars, model, condition);
+  return attachSource(
+    ctx,
+    createSpawnNode(nextId(ctx), name, body, undefined, vars, model, condition),
+  );
 }
 
 function parseRaceBlock(
@@ -1099,7 +1206,7 @@ function parseRaceBlock(
       warn(ctx, `Only spawn nodes are allowed inside a race block; ignoring "${node.kind}" node`);
     }
   }
-  return createRaceNode(nextId(ctx), children, timeout);
+  return attachSource(ctx, createRaceNode(nextId(ctx), children, timeout));
 }
 
 function parseForeachSpawnLine(
@@ -1112,7 +1219,7 @@ function parseForeachSpawnLine(
   const match = /^foreach-spawn\s+(\w+)\s+in\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
   if (!match?.[1] || !match[2]) {
     warn(ctx, `Invalid foreach-spawn syntax: "${line}". Try: foreach-spawn item in \${list}`);
-    return createPromptNode(nextId(ctx), line);
+    return attachSource(ctx, createPromptNode(nextId(ctx), line));
   }
   const variableName = match[1];
   const rawExpr = match[2].trim();
@@ -1122,33 +1229,39 @@ function parseForeachSpawnLine(
   const runMatch = /^run\s+(.+)$/i.exec(rawExpr);
   if (runMatch?.[1]) {
     const command = stripQuotes(runMatch[1].trim());
-    return createForeachSpawnNode(nextId(ctx), variableName, '', body, max, label, command);
+    return attachSource(
+      ctx,
+      createForeachSpawnNode(nextId(ctx), variableName, '', body, max, label, command),
+    );
   }
   const listExpression = stripQuotes(rawExpr);
-  return createForeachSpawnNode(nextId(ctx), variableName, listExpression, body, max, label);
+  return attachSource(
+    ctx,
+    createForeachSpawnNode(nextId(ctx), variableName, listExpression, body, max, label),
+  );
 }
 
 function parseAwaitLine(ctx: ParseContext, line: string): FlowNode {
   const match = /^await\s+(.+)/i.exec(line);
   if (!match?.[1]) {
     warn(ctx, `Invalid await syntax: "${line}" — expected await all or await "name"`);
-    return createPromptNode(nextId(ctx), line);
+    return attachSource(ctx, createPromptNode(nextId(ctx), line));
   }
   const rawTarget = match[1].trim();
   if (rawTarget.toLowerCase() === 'all') {
-    return createAwaitNode(nextId(ctx), 'all');
+    return attachSource(ctx, createAwaitNode(nextId(ctx), 'all'));
   }
 
   const nameMatch = /^"([^"]+)"$/.exec(rawTarget) ?? /^'([^']+)'$/.exec(rawTarget);
   if (nameMatch?.[1]) {
-    return createAwaitNode(nextId(ctx), nameMatch[1]);
+    return attachSource(ctx, createAwaitNode(nextId(ctx), nameMatch[1]));
   }
 
   const identifiers = parseIdentifierList(rawTarget);
   if (identifiers.length > 1) {
-    return createAwaitNode(nextId(ctx), identifiers);
+    return attachSource(ctx, createAwaitNode(nextId(ctx), identifiers));
   }
-  return createAwaitNode(nextId(ctx), identifiers[0] ?? rawTarget);
+  return attachSource(ctx, createAwaitNode(nextId(ctx), identifiers[0] ?? rawTarget));
 }
 
 function parseStartLine(ctx: ParseContext, line: string): FlowNode {
@@ -1156,9 +1269,9 @@ function parseStartLine(ctx: ParseContext, line: string): FlowNode {
   const targets = match?.[1] ? parseIdentifierList(match[1]) : [];
   if (targets.length === 0) {
     warn(ctx, `Invalid start syntax: "${line}" — expected start <role>[, <role>...]`);
-    return createPromptNode(nextId(ctx), line);
+    return attachSource(ctx, createPromptNode(nextId(ctx), line));
   }
-  return createStartNode(nextId(ctx), targets);
+  return attachSource(ctx, createStartNode(nextId(ctx), targets));
 }
 
 function parseReturnLine(ctx: ParseContext, line: string): FlowNode {
@@ -1166,28 +1279,28 @@ function parseReturnLine(ctx: ParseContext, line: string): FlowNode {
   const expression = match?.[1]?.trim();
   if (!expression) {
     warn(ctx, `Invalid return syntax: "${line}" — expected return <expression>`);
-    return createPromptNode(nextId(ctx), line);
+    return attachSource(ctx, createPromptNode(nextId(ctx), line));
   }
-  return createReturnNode(nextId(ctx), expression);
+  return attachSource(ctx, createReturnNode(nextId(ctx), expression));
 }
 
 function parseRememberLine(ctx: ParseContext, trimmed: string): FlowNode {
   const rest = trimmed.slice('remember'.length).trim();
   if (!rest) {
     warn(ctx, 'remember node has no content — add a quoted text or key=... value=...');
-    return createRememberNode(nextId(ctx));
+    return attachSource(ctx, createRememberNode(nextId(ctx)));
   }
   // remember key = "k" value = "v"
   const kvMatch = /^key\s*=\s*["']([^"']*)["']\s+value\s*=\s*["']([^"']*)["']$/i.exec(rest);
   if (kvMatch?.[1] !== undefined && kvMatch[2] !== undefined) {
-    return createRememberNode(nextId(ctx), undefined, kvMatch[1], kvMatch[2]);
+    return attachSource(ctx, createRememberNode(nextId(ctx), undefined, kvMatch[1], kvMatch[2]));
   }
   // remember "text"
   const textMatch = /^["'](.*)["']$/.exec(rest);
   if (textMatch?.[1] !== undefined) {
-    return createRememberNode(nextId(ctx), textMatch[1]);
+    return attachSource(ctx, createRememberNode(nextId(ctx), textMatch[1]));
   }
-  return createRememberNode(nextId(ctx), rest);
+  return attachSource(ctx, createRememberNode(nextId(ctx), rest));
 }
 
 function parseSendLine(ctx: ParseContext, trimmed: string): FlowNode {
@@ -1195,44 +1308,50 @@ function parseSendLine(ctx: ParseContext, trimmed: string): FlowNode {
   const messageToTargetDoubleMatch =
     /^send\s+"([^"]*)"\s+to\s+(parent|[\w-]+|"[^"]+"|'[^']+')$/i.exec(trimmed);
   if (messageToTargetDoubleMatch?.[1] !== undefined && messageToTargetDoubleMatch[2]) {
-    return createSendNode(
-      nextId(ctx),
-      stripQuotes(messageToTargetDoubleMatch[2]),
-      messageToTargetDoubleMatch[1],
+    return attachSource(
+      ctx,
+      createSendNode(
+        nextId(ctx),
+        stripQuotes(messageToTargetDoubleMatch[2]),
+        messageToTargetDoubleMatch[1],
+      ),
     );
   }
   // send 'message' to target
   const messageToTargetSingleMatch =
     /^send\s+'([^']*)'\s+to\s+(parent|[\w-]+|"[^"]+"|'[^']+')$/i.exec(trimmed);
   if (messageToTargetSingleMatch?.[1] !== undefined && messageToTargetSingleMatch[2]) {
-    return createSendNode(
-      nextId(ctx),
-      stripQuotes(messageToTargetSingleMatch[2]),
-      messageToTargetSingleMatch[1],
+    return attachSource(
+      ctx,
+      createSendNode(
+        nextId(ctx),
+        stripQuotes(messageToTargetSingleMatch[2]),
+        messageToTargetSingleMatch[1],
+      ),
     );
   }
   // send "target" "message"
   const doubleQuoteMatch = /^send\s+"([^"]+)"\s+"([^"]*)"$/i.exec(trimmed);
   if (doubleQuoteMatch?.[1] !== undefined && doubleQuoteMatch[2] !== undefined) {
-    return createSendNode(nextId(ctx), doubleQuoteMatch[1], doubleQuoteMatch[2]);
+    return attachSource(ctx, createSendNode(nextId(ctx), doubleQuoteMatch[1], doubleQuoteMatch[2]));
   }
   // send parent "message"
   const parentMatch = /^send\s+parent\s+"([^"]*)"$/i.exec(trimmed);
   if (parentMatch?.[1] !== undefined) {
-    return createSendNode(nextId(ctx), 'parent', parentMatch[1]);
+    return attachSource(ctx, createSendNode(nextId(ctx), 'parent', parentMatch[1]));
   }
   // send parent 'message' (single quotes)
   const parentSingleMatch = /^send\s+parent\s+'([^']*)'$/i.exec(trimmed);
   if (parentSingleMatch?.[1] !== undefined) {
-    return createSendNode(nextId(ctx), 'parent', parentSingleMatch[1]);
+    return attachSource(ctx, createSendNode(nextId(ctx), 'parent', parentSingleMatch[1]));
   }
   // send 'target' 'message' (single quotes)
   const singleQuoteMatch = /^send\s+'([^']+)'\s+'([^']*)'$/i.exec(trimmed);
   if (singleQuoteMatch?.[1] !== undefined && singleQuoteMatch[2] !== undefined) {
-    return createSendNode(nextId(ctx), singleQuoteMatch[1], singleQuoteMatch[2]);
+    return attachSource(ctx, createSendNode(nextId(ctx), singleQuoteMatch[1], singleQuoteMatch[2]));
   }
   warn(ctx, `Invalid send syntax: "${trimmed}". Try: send "target" "message" or send parent "msg"`);
-  return createPromptNode(nextId(ctx), trimmed);
+  return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
 }
 
 function parseReceiveLine(ctx: ParseContext, trimmed: string): FlowNode {
@@ -1241,15 +1360,18 @@ function parseReceiveLine(ctx: ParseContext, trimmed: string): FlowNode {
       trimmed,
     );
   if (match?.[1]) {
-    return createReceiveNode(
-      nextId(ctx),
-      match[1],
-      match[2] ? stripQuotes(match[2]) : undefined,
-      match[3] ? parseInt(match[3], 10) : undefined,
+    return attachSource(
+      ctx,
+      createReceiveNode(
+        nextId(ctx),
+        match[1],
+        match[2] ? stripQuotes(match[2]) : undefined,
+        match[3] ? parseInt(match[3], 10) : undefined,
+      ),
     );
   }
   warn(ctx, `Invalid receive syntax: "${trimmed}". Try: receive msg or receive msg from "source"`);
-  return createPromptNode(nextId(ctx), trimmed);
+  return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
 }
 
 function parseApproveLine(ctx: ParseContext, trimmed: string): FlowNode {
@@ -1259,11 +1381,11 @@ function parseApproveLine(ctx: ParseContext, trimmed: string): FlowNode {
       ctx,
       `Invalid approve syntax: "${trimmed}". Try: approve "message" or approve "message" timeout 60`,
     );
-    return createPromptNode(nextId(ctx), trimmed);
+    return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
   }
   const message = (match[1] ?? match[2])!;
   const timeoutSeconds = match[3] != null ? parseInt(match[3], 10) : undefined;
-  return createApproveNode(nextId(ctx), message, timeoutSeconds);
+  return attachSource(ctx, createApproveNode(nextId(ctx), message, timeoutSeconds));
 }
 
 interface ReviewSpec {
@@ -1339,24 +1461,27 @@ function parseReviewBlock(
       ctx,
       `Invalid review syntax: "${trimmed}". Try: review max 3, review strict max 3, or review using judge "name" max 3`,
     );
-    return createPromptNode(nextId(ctx), trimmed);
+    return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
   }
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return createReviewNode(
-    nextId(ctx),
-    body,
-    spec.maxRounds,
-    spec.criteria,
-    spec.groundedBy,
-    spec.strict,
-    spec.judgeName,
+  return attachSource(
+    ctx,
+    createReviewNode(
+      nextId(ctx),
+      body,
+      spec.maxRounds,
+      spec.criteria,
+      spec.groundedBy,
+      spec.strict,
+      spec.judgeName,
+    ),
   );
 }
 
 function consumeEnd(ctx: ParseContext): void {
   if (ctx.pos < ctx.lines.length) {
-    const peekLine = ctx.lines[ctx.pos];
+    const peekLine = ctx.lines[ctx.pos]?.text;
     const peek = peekLine ? peekLine.trim().toLowerCase() : '';
     if (peek === 'end') {
       ctx.pos += 1;
@@ -1377,7 +1502,8 @@ function parseBlock(
 ): FlowNode[] {
   const nodes: FlowNode[] = [];
   while (ctx.pos < ctx.lines.length) {
-    const raw = ctx.lines[ctx.pos] ?? '';
+    const lineEntry = ctx.lines[ctx.pos] ?? { text: '' };
+    const raw = lineEntry.text;
     const cleaned = stripComment(raw);
     const trimmed = cleaned.trim();
     if (!trimmed) {
@@ -1395,6 +1521,7 @@ function parseBlock(
     if (stopKeywords.some((kw) => firstWord === kw)) break;
     if (lower === 'end') break;
     ctx.pos += 1;
+    ctx.currentSource = lineEntry.source;
     if (lower.startsWith('use ')) {
       const expanded = expandUse(trimmed, ctx);
       nodes.push(...expanded);
@@ -1449,11 +1576,17 @@ function parseLine(
       (profiledPromptMatch[1] ?? profiledPromptMatch[2] ?? '').trim(),
       'prompt node profile reference',
     );
-    return createPromptNode(nextId(ctx), profiledPromptMatch[3].trim(), profileName);
+    return attachSource(
+      ctx,
+      createPromptNode(nextId(ctx), profiledPromptMatch[3].trim(), profileName),
+    );
   }
   if (lower.startsWith('prompt:')) {
     const profiledPrompt = extractLeadingProfile(trimmed.slice(7).trim(), ctx, 'prompt node');
-    return createPromptNode(nextId(ctx), profiledPrompt.remainder, profiledPrompt.profile);
+    return attachSource(
+      ctx,
+      createPromptNode(nextId(ctx), profiledPrompt.remainder, profiledPrompt.profile),
+    );
   }
   if (lower.startsWith('run:')) {
     const runText = trimmed.slice(4).trim();
@@ -1469,25 +1602,28 @@ function parseLine(
       const timeoutSecondsRaw = timeoutMatch[2] ?? timeoutMatch[3];
       const timeoutSec = parseInt(timeoutSecondsRaw ?? '', 10);
       if (timeoutSec > 0) {
-        return createRunNode(nextId(ctx), timeoutMatch[1].trim(), timeoutSec * 1000);
+        return attachSource(
+          ctx,
+          createRunNode(nextId(ctx), timeoutMatch[1].trim(), timeoutSec * 1000),
+        );
       }
     }
-    return createRunNode(nextId(ctx), runText);
+    return attachSource(ctx, createRunNode(nextId(ctx), runText));
   }
   if (lower.startsWith('foreach ')) {
     return parseForeachLine(ctx, trimmed, indent, scope);
   }
-  if (lower.startsWith('let ') || lower.startsWith('var ')) {
+  if (lower.startsWith('let ') || lower.startsWith('var ') || lower.startsWith('const ')) {
     return parseLetLine(ctx, trimmed);
   }
   // H-LANG-011: break/continue with optional label
   if (lower === 'break' || lower.startsWith('break ')) {
     const labelArg = lower === 'break' ? undefined : trimmed.slice(6).trim() || undefined;
-    return createBreakNode(nextId(ctx), labelArg);
+    return attachSource(ctx, createBreakNode(nextId(ctx), labelArg));
   }
   if (lower === 'continue' || lower.startsWith('continue ')) {
     const labelArg = lower === 'continue' ? undefined : trimmed.slice(9).trim() || undefined;
-    return createContinueNode(nextId(ctx), labelArg);
+    return attachSource(ctx, createContinueNode(nextId(ctx), labelArg));
   }
   if (lower.startsWith('spawn ')) {
     return parseSpawnBlock(ctx, trimmed, indent, scope);
@@ -1497,11 +1633,11 @@ function parseLine(
   }
   if (lower.startsWith('role ')) {
     warn(ctx, '"role" is only valid inside a swarm block');
-    return createPromptNode(nextId(ctx), trimmed);
+    return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
   }
   if (lower === 'flow:') {
     warn(ctx, '"flow:" is only valid inside a swarm block');
-    return createPromptNode(nextId(ctx), trimmed);
+    return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
   }
   if (lower.startsWith('start ') || lower === 'start') {
     if (scope !== 'swarm_flow') {
@@ -1541,9 +1677,9 @@ function parseLine(
   }
   warn(
     ctx,
-    `Unknown keyword "${trimmed}" — treating as prompt. Valid keywords: prompt, run, let, while, until, retry, if, try, foreach, foreach-spawn, break, continue, spawn, await, race, remember, send, receive, approve, review`,
+    `Unknown keyword "${trimmed}" — treating as prompt. Valid keywords: prompt, run, let, var, const, while, until, retry, if, try, foreach, foreach-spawn, break, continue, spawn, await, race, remember, send, receive, approve, review`,
   );
-  return createPromptNode(nextId(ctx), trimmed);
+  return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
 }
 
 /** Parse the optional "memory:" section into an array of key names to prefetch. */
@@ -1696,18 +1832,18 @@ const INCLUDE_RE = /^include\s+(?:"([^"]+)"|'([^']+)')$/i;
  * Tracks included files to detect circular includes. Restricts to relative paths.
  */
 function resolveIncludes(
-  lines: readonly string[],
+  lines: readonly FlowSourceLine[],
   warnings: string[],
   basePath: string,
   seen?: Set<string>,
   fileReader?: (path: string) => string,
-): string[] {
+): FlowSourceLine[] {
   const visited = seen ?? new Set<string>();
   const reader = fileReader ?? ((p: string) => readFileSync(p, 'utf-8'));
-  const result: string[] = [];
+  const result: FlowSourceLine[] = [];
 
   for (const line of lines) {
-    const trimmed = line.trim();
+    const trimmed = line.text.trim();
     const match = INCLUDE_RE.exec(trimmed);
     if (!match) {
       result.push(line);
@@ -1731,8 +1867,11 @@ function resolveIncludes(
     visited.add(fullPath);
     try {
       const content = reader(fullPath);
-      const indent = /^(\s*)/.exec(line)?.[1] ?? '';
-      const includedLines = content.split('\n').map((l) => (l.trim() ? `${indent}${l}` : l));
+      const indent = /^(\s*)/.exec(line.text)?.[1] ?? '';
+      const includedLines = content.split('\n').map((rawLine, index) => ({
+        text: rawLine.trim() ? `${indent}${rawLine}` : rawLine,
+        source: createLineSource(index + 1, rawLine, fullPath),
+      }));
       const resolved = resolveIncludes(
         includedLines,
         warnings,
@@ -1858,7 +1997,7 @@ function expandUse(line: string, ctx: ParseContext): FlowNode[] {
   const useMatch = /^use\s+(\w+)\.(\w+)\s*\(([^)]*)\)\s*$/i.exec(line);
   if (!useMatch?.[1] || !useMatch[2]) {
     ctx.warnings.push(
-      `line ${ctx.pos}: Invalid use syntax: "${line}" — expected: use namespace.symbol(args)`,
+      `${formatWarningLocation(currentSource(ctx))}: Invalid use syntax: "${line}" — expected: use namespace.symbol(args)`,
     );
     return [];
   }
@@ -1868,12 +2007,16 @@ function expandUse(line: string, ctx: ParseContext): FlowNode[] {
 
   const libFile = ctx.registry.get(namespace);
   if (!libFile) {
-    ctx.warnings.push(`line ${ctx.pos}: Unknown namespace "${namespace}" — did you import it?`);
+    ctx.warnings.push(
+      `${formatWarningLocation(currentSource(ctx))}: Unknown namespace "${namespace}" — did you import it?`,
+    );
     return [];
   }
   const exported = libFile.exports.get(symbol);
   if (!exported) {
-    ctx.warnings.push(`line ${ctx.pos}: Unknown symbol "${symbol}" in namespace "${namespace}"`);
+    ctx.warnings.push(
+      `${formatWarningLocation(currentSource(ctx))}: Unknown symbol "${symbol}" in namespace "${namespace}"`,
+    );
     return [];
   }
 
@@ -1886,7 +2029,7 @@ function expandUse(line: string, ctx: ParseContext): FlowNode[] {
       bindings.set(param.name, param.default);
     } else {
       ctx.warnings.push(
-        `line ${ctx.pos}: Missing required argument "${param.name}" for use ${namespace}.${symbol}`,
+        `${formatWarningLocation(currentSource(ctx))}: Missing required argument "${param.name}" for use ${namespace}.${symbol}`,
       );
     }
   }
@@ -1899,16 +2042,19 @@ function expandUse(line: string, ctx: ParseContext): FlowNode[] {
       ctx,
       `prompt export ${namespace}.${symbol}`,
     );
-    return [createPromptNode(nextId(ctx), profiledPrompt.remainder, profiledPrompt.profile)];
+    return [
+      attachSource(
+        ctx,
+        createPromptNode(nextId(ctx), profiledPrompt.remainder, profiledPrompt.profile),
+      ),
+    ];
   }
 
   if (exported.kind === 'flow') {
     const preparedFlow = prepareSwarmLines(
-      expandedBody.split('\n'),
+      expandedBody.split('\n').map((text) => ({ text, source: currentSource(ctx) })),
       ctx.swarmHandling,
-      (warning) => {
-        return `line ${ctx.pos}: ${warning}`;
-      },
+      (warning) => `${formatWarningLocation(currentSource(ctx))}: ${warning}`,
     );
     const bodyLines = [...preparedFlow.lines];
     ctx.warnings.push(...preparedFlow.warnings);
@@ -1916,13 +2062,16 @@ function expandUse(line: string, ctx: ParseContext): FlowNode[] {
     const savedPos = ctx.pos;
     ctx.lines = bodyLines;
     ctx.pos = 0;
+    ctx.currentSource = undefined;
     const nodes = parseBlock(ctx, -1);
     ctx.lines = savedLines;
     ctx.pos = savedPos;
     return nodes;
   }
 
-  ctx.warnings.push(`line ${ctx.pos}: Cannot use export gates "${symbol}" as a flow node`);
+  ctx.warnings.push(
+    `${formatWarningLocation(currentSource(ctx))}: Cannot use export gates "${symbol}" as a flow node`,
+  );
   return [];
 }
 
@@ -1933,7 +2082,7 @@ interface ImportResult {
   /** Input text with import lines removed (for gate/env/goal parsing). */
   text: string;
   /** Flow lines inlined from anonymous imports, to be prepended to the extracted flow block. */
-  inlinedFlowLines: string[];
+  inlinedFlowLines: FlowSourceLine[];
   registry: LibraryRegistry;
   importedPaths: string[];
 }
@@ -1954,7 +2103,7 @@ function resolveImports(
   const registry = new Map<string, LibraryFile>();
   const importedPaths: string[] = [];
   const outputLines: string[] = [];
-  const inlinedFlowLines: string[] = [];
+  const inlinedFlowLines: FlowSourceLine[] = [];
 
   for (const line of input.split('\n')) {
     const trimmed = line.trim();
@@ -2002,9 +2151,14 @@ function resolveImports(
         if (!registry.has(ns)) registry.set(ns, lib);
       }
       importedPaths.push(...subResult.importedPaths);
-      const importedFlowLines = extractFlowBlock(subResult.text);
+      const importedFlowLines = extractFlowBlock(subResult.text, fullPath);
       inlinedFlowLines.push(...subResult.inlinedFlowLines);
-      inlinedFlowLines.push(...importedFlowLines.map((l) => `  ${l.trimStart()}`));
+      inlinedFlowLines.push(
+        ...importedFlowLines.map((line) => ({
+          text: `  ${line.text.trimStart()}`,
+          source: line.source,
+        })),
+      );
     }
   }
 
@@ -2024,7 +2178,7 @@ export function parseFlow(input: string, options: ParseFlowOptions = {}): FlowSp
   const importResult = resolveImports(input, warnings, basePath, seen, fileReader);
   const { text: resolvedText, inlinedFlowLines, registry, importedPaths } = importResult;
   const containsProfileSyntax = /\b(?:use|using)\s+profile\b/i.test(
-    `${resolvedText}\n${inlinedFlowLines.join('\n')}`,
+    `${resolvedText}\n${inlinedFlowLines.map((line) => line.text).join('\n')}`,
   );
   const profiles = containsProfileSyntax ? loadContextProfileRegistry(basePath, fileReader) : {};
   const profileSelection = extractTopLevelProfile(resolvedText, profiles);

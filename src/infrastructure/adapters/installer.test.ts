@@ -72,6 +72,33 @@ function runInstaller(fakeHome: string): void {
   });
 }
 
+function runUninstall(fakeHome: string): void {
+  const env: Record<string, string> = {
+    ...process.env,
+    HOME: fakeHome,
+    USERPROFILE: fakeHome,
+  } as Record<string, string>;
+  execSync(`node "${join(ROOT, 'bin', 'cli.mjs')}" uninstall`, {
+    env,
+    stdio: 'pipe',
+    cwd: ROOT,
+  });
+}
+
+function runStatus(fakeHome: string): string {
+  const env: Record<string, string> = {
+    ...process.env,
+    HOME: fakeHome,
+    USERPROFILE: fakeHome,
+  } as Record<string, string>;
+  return execSync(`node "${join(ROOT, 'bin', 'cli.mjs')}" status`, {
+    env,
+    stdio: 'pipe',
+    cwd: ROOT,
+    encoding: 'utf8',
+  });
+}
+
 // ---------------------------------------------------------------------------
 // install-verify tests (prompt-language-02j)
 // ---------------------------------------------------------------------------
@@ -293,5 +320,93 @@ describe('Installer — cross-platform paths', () => {
     // Plugin should still be enabled
     const enabled = settings['enabledPlugins'] as Record<string, boolean>;
     expect(enabled['prompt-language@prompt-language-local']).toBe(true);
+  });
+
+  it('prunes stale cached Claude versions on reinstall', async () => {
+    fakeHome = await createFakeHome();
+    const version = await readPluginVersion();
+    runInstaller(fakeHome);
+
+    const staleDir = cachePath(fakeHome, '0.0.1');
+    await mkdir(join(staleDir, '.claude-plugin'), { recursive: true });
+    await writeFile(
+      join(staleDir, '.claude-plugin', 'plugin.json'),
+      JSON.stringify({ name: 'prompt-language', version: '0.0.1' }, null, 2),
+      'utf8',
+    );
+
+    runInstaller(fakeHome);
+
+    expect(await dirExists(staleDir)).toBe(false);
+    expect(await dirExists(cachePath(fakeHome, version))).toBe(true);
+  });
+
+  it('status reports stale cached versions and mismatched registry versions', async () => {
+    fakeHome = await createFakeHome();
+    runInstaller(fakeHome);
+
+    const staleVersion = '0.0.1';
+    const staleDir = cachePath(fakeHome, staleVersion);
+    await mkdir(join(staleDir, '.claude-plugin'), { recursive: true });
+    await writeFile(
+      join(staleDir, '.claude-plugin', 'plugin.json'),
+      JSON.stringify({ name: 'prompt-language', version: staleVersion }, null, 2),
+      'utf8',
+    );
+
+    await writeFile(
+      join(fakeHome, '.claude', 'plugins', 'installed_plugins.json'),
+      JSON.stringify(
+        {
+          version: 2,
+          plugins: {
+            'prompt-language@prompt-language-local': [
+              {
+                scope: 'user',
+                installPath: staleDir,
+                version: staleVersion,
+              },
+            ],
+          },
+        },
+        null,
+        2,
+      ),
+      'utf8',
+    );
+
+    const output = runStatus(fakeHome);
+
+    expect(output).toContain(`Stale:        ${staleVersion}`);
+    expect(output).toContain(`installed_plugins.json records version ${staleVersion}`);
+    expect(output).toContain(
+      'Run "npx @45ck/prompt-language install" to refresh the Claude install.',
+    );
+  });
+
+  it('uninstall removes the Claude cache and plugin registration', async () => {
+    fakeHome = await createFakeHome();
+    const version = await readPluginVersion();
+    runInstaller(fakeHome);
+
+    runUninstall(fakeHome);
+
+    expect(await dirExists(cachePath(fakeHome, version))).toBe(false);
+
+    const installed = (await readJsonFile(
+      join(fakeHome, '.claude', 'plugins', 'installed_plugins.json'),
+    )) as {
+      plugins: Record<string, unknown>;
+    };
+    expect(installed.plugins['prompt-language@prompt-language-local']).toBeUndefined();
+
+    const settings = (await readJsonFile(join(fakeHome, '.claude', 'settings.json'))) as {
+      enabledPlugins: Record<string, boolean>;
+      extraKnownMarketplaces: Record<string, unknown>;
+      statusLine?: unknown;
+    };
+    expect(settings.enabledPlugins['prompt-language@prompt-language-local']).toBeUndefined();
+    expect(settings.extraKnownMarketplaces['prompt-language-local']).toBeUndefined();
+    expect(settings.statusLine).toBeUndefined();
   });
 });

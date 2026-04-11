@@ -30,6 +30,7 @@ import {
   createAwaitNode,
   createRaceNode,
   createReviewNode,
+  withNodeSource,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -937,6 +938,153 @@ describe('autoAdvanceNodes — timeout propagation', () => {
   });
 });
 
+describe('autoAdvanceNodes — resume-safe run replay suppression', () => {
+  it('skips re-executing a completed top-level run node and restores cached exit variables', async () => {
+    const runner = {
+      run: vi.fn(async () => ({ exitCode: 0, stdout: 'fresh output', stderr: '' })),
+    } satisfies CommandRunner;
+    const spec = createFlowSpec('test', [
+      createRunNode('r1', 'deploy.sh'),
+      createPromptNode('p1', 'done'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      exitCode: 0,
+      stdout: 'cached stdout',
+      stderr: 'cached stderr',
+    });
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(runner.run).not.toHaveBeenCalled();
+    expect(result.capturedPrompt).toBe('done');
+    expect(result.state.variables['last_exit_code']).toBe(0);
+    expect(result.state.variables['command_succeeded']).toBe(true);
+    expect(result.state.variables['command_failed']).toBe(false);
+    expect(result.state.variables['last_stdout']).toBe('cached stdout');
+    expect(result.state.variables['last_stderr']).toBe('cached stderr');
+  });
+
+  it('skips re-executing a completed run node inside an if branch', async () => {
+    const runner = {
+      run: vi.fn(async () => ({ exitCode: 0, stdout: 'fresh output', stderr: '' })),
+    } satisfies CommandRunner;
+    const spec = createFlowSpec('test', [
+      createIfNode('if1', 'flag', [createRunNode('r1', 'deploy.sh')]),
+      createPromptNode('p1', 'done'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      currentNodePath: [0, 0],
+      variables: { flag: true },
+    };
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      exitCode: 0,
+      stdout: 'cached stdout',
+      stderr: '',
+    });
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(runner.run).not.toHaveBeenCalled();
+    expect(result.capturedPrompt).toBe('done');
+    expect(result.state.variables['last_stdout']).toBe('cached stdout');
+  });
+
+  it('does not skip a completed run node inside a retry body', async () => {
+    const runner = {
+      run: vi.fn(async () => ({ exitCode: 0, stdout: 'fresh output', stderr: '' })),
+    } satisfies CommandRunner;
+    const spec = createFlowSpec('test', [
+      createRetryNode('retry1', [createRunNode('r1', 'deploy.sh')], 2),
+      createPromptNode('p1', 'done'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      currentNodePath: [0, 0],
+    };
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      exitCode: 0,
+      stdout: 'cached stdout',
+      stderr: '',
+    });
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(runner.run).toHaveBeenCalled();
+    expect(result.state.variables['last_stdout']).toBe('fresh output');
+  });
+
+  it('does not skip a completed run node inside a foreach body', async () => {
+    const runner = {
+      run: vi.fn(async () => ({ exitCode: 0, stdout: 'fresh output', stderr: '' })),
+    } satisfies CommandRunner;
+    const spec = createFlowSpec('test', [
+      createForeachNode('fe1', 'item', 'a', [createRunNode('r1', 'deploy.sh')], 50),
+      createPromptNode('p1', 'done'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      currentNodePath: [0, 0],
+      variables: { item: 'a' },
+    };
+    state = updateNodeProgress(state, 'fe1', {
+      iteration: 1,
+      maxIterations: 2,
+      status: 'running',
+    });
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      exitCode: 0,
+      stdout: 'cached stdout',
+      stderr: '',
+    });
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(runner.run).toHaveBeenCalled();
+    expect(result.state.variables['last_stdout']).toBe('fresh output');
+  });
+
+  it('does not skip a previously failed completed run node on resume', async () => {
+    const runner = {
+      run: vi.fn(async () => ({ exitCode: 0, stdout: 'fresh output', stderr: '' })),
+    } satisfies CommandRunner;
+    const spec = createFlowSpec('test', [
+      createRunNode('r1', 'deploy.sh'),
+      createPromptNode('p1', 'done'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      exitCode: 1,
+      stdout: 'old stdout',
+      stderr: 'old stderr',
+    });
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(runner.run).toHaveBeenCalledTimes(1);
+    expect(result.state.variables['last_stdout']).toBe('fresh output');
+  });
+});
+
 // ── spawn/await nodes ──────────────────────────────────────────────
 
 describe('resolveCurrentNode — spawn', () => {
@@ -1812,7 +1960,7 @@ describe('autoAdvanceNodes — let prompt capture', () => {
     expect(result.state.variables['_runtime_diagnostic.code']).toBe(
       RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
     );
-    expect(result.state.variables['_runtime_diagnostic.summary']).toBe(
+    expect(String(result.state.variables['_runtime_diagnostic.summary'])).toContain(
       "Capture for 'answer' fell back to empty string after 3 attempts.",
     );
     expect(result.diagnostics).toEqual([
@@ -4216,7 +4364,7 @@ describe('autoAdvanceNodes — let prompt_json capture', () => {
     expect(result.state.variables['_runtime_diagnostic.code']).toBe(
       RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
     );
-    expect(result.state.variables['_runtime_diagnostic.summary']).toBe(
+    expect(String(result.state.variables['_runtime_diagnostic.summary'])).toContain(
       "JSON capture for 'analysis' fell back to empty string after 3 attempts.",
     );
     expect(result.diagnostics).toEqual([
@@ -4413,5 +4561,71 @@ describe('autoAdvanceNodes — grounded review shell preparation', () => {
         },
       });
     }
+  });
+});
+
+describe('autoAdvanceNodes — position-aware runtime messages', () => {
+  it('includes nested source position in loop timeout warnings', async () => {
+    const loopNode = withNodeSource(
+      createWhileNode('w1', 'command_failed', [createPromptNode('p1', 'retry')], 2, undefined, 1),
+      { line: 8, column: 5, text: '    while command_failed max 2' },
+    );
+    const spec = createFlowSpec('test', [loopNode, createPromptNode('p2', 'after')]);
+    const state = {
+      ...createSessionState('s1', spec),
+      variables: { command_failed: true },
+      currentNodePath: [0, 1] as const,
+      nodeProgress: {
+        w1: {
+          iteration: 1,
+          maxIterations: 2,
+          status: 'running' as const,
+          startedAt: Date.now() - 1_500,
+          loopStartedAt: Date.now() - 1_500,
+        },
+      },
+    };
+
+    const result = await autoAdvanceNodes(state);
+
+    expect(result.state.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining("Loop 'w1' timed out after 1s")]),
+    );
+    expect(result.state.warnings.join('\n')).toContain('flow[1] at line 8, col 5');
+  });
+
+  it('includes source position in JSON capture fallback diagnostics', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const letNode = withNodeSource(
+      createLetNode('l1', 'analysis', {
+        type: 'prompt_json',
+        text: 'Analyze',
+        schema: 'severity: string',
+      }),
+      {
+        line: 14,
+        column: 5,
+        text: '    let analysis = prompt "Analyze" as json { severity: string }',
+      },
+    );
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'next')]);
+    const state = updateNodeProgress(createSessionState('s1', spec), 'l1', {
+      iteration: 3,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const result = await autoAdvanceNodes(state, undefined, captureReader);
+
+    expect(result.state.variables['_runtime_diagnostic.code']).toBe(
+      RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
+    );
+    expect(String(result.state.variables['_runtime_diagnostic.summary'])).toContain(
+      'flow[1] at line 14, col 5',
+    );
+    expect(result.diagnostics?.[0]?.summary).toContain('flow[1] at line 14, col 5');
   });
 });

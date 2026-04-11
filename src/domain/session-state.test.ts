@@ -17,6 +17,7 @@ import {
 } from './session-state.js';
 import type { SessionState, NodeProgress, SpawnedChild, GateEvalResult } from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
+import { createLetNode } from './flow-node.js';
 
 function makeState(overrides?: Partial<{ gates: boolean }>): SessionState {
   const gates = overrides?.gates
@@ -105,6 +106,33 @@ describe('updateVariable', () => {
     state = updateVariable(state, 'b', 2);
     expect(state.variables).toEqual({ a: 1, b: 2 });
   });
+
+  it('adds a soft warning when reassigning a const variable', () => {
+    const spec = createFlowSpec('goal', [
+      createLetNode('l1', 'answer', { type: 'literal', value: '1' }, false, undefined, 'const'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = updateVariable(state, 'answer', '1');
+    state = updateVariable(state, 'answer', '2');
+
+    expect(state.variables['answer']).toBe('2');
+    expect(state.warnings).toContain(
+      "Const variable 'answer' was reassigned; keeping latest value for backward compatibility.",
+    );
+  });
+
+  it('does not warn when reassigning a non-const variable', () => {
+    const spec = createFlowSpec('goal', [
+      createLetNode('l1', 'answer', { type: 'literal', value: '1' }),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = updateVariable(state, 'answer', '1');
+    state = updateVariable(state, 'answer', '2');
+
+    expect(state.warnings).not.toContain(
+      "Const variable 'answer' was reassigned; keeping latest value for backward compatibility.",
+    );
+  });
 });
 
 describe('updateNodeProgress', () => {
@@ -117,6 +145,23 @@ describe('updateNodeProgress', () => {
     };
     const next = updateNodeProgress(state, 'w1', progress);
     expect(next.nodeProgress['w1']).toEqual(progress);
+  });
+
+  it('preserves cached run-result fields on node progress', () => {
+    const state = makeState();
+    const progress: NodeProgress = {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      exitCode: 0,
+      stdout: 'stdout',
+      stderr: 'stderr',
+      timedOut: false,
+    };
+
+    const next = updateNodeProgress(state, 'r1', progress);
+
+    expect(next.nodeProgress['r1']).toEqual(progress);
   });
 
   it('does not mutate original state', () => {

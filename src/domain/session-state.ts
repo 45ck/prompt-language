@@ -6,6 +6,7 @@
  */
 
 import { flowSpecHash, type FlowSpec } from './flow-spec.js';
+import type { FlowNode } from './flow-node.js';
 import type { VariableValue, VariableStore } from './variable-value.js';
 
 export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
@@ -36,6 +37,11 @@ export interface NodeProgress {
   readonly completedAt?: number | undefined;
   // H-LANG-008: Wall-clock loop timeout tracking
   readonly loopStartedAt?: number | undefined;
+  // beads: prompt-language-ea5a — cached successful run payload for resume-safe replay suppression
+  readonly exitCode?: number | undefined;
+  readonly stdout?: string | undefined;
+  readonly stderr?: string | undefined;
+  readonly timedOut?: boolean | undefined;
 }
 
 export interface GateEvalResult {
@@ -109,15 +115,97 @@ export function advanceNode(state: SessionState, newPath: readonly number[]): Se
   return { ...state, currentNodePath: newPath };
 }
 
+function containsConstDeclaration(nodes: readonly FlowNode[], name: string): boolean {
+  for (const node of nodes) {
+    switch (node.kind) {
+      case 'let':
+        if (node.declarationKind === 'const' && node.variableName === name) {
+          return true;
+        }
+        break;
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'foreach':
+      case 'spawn':
+      case 'review':
+      case 'foreach_spawn':
+        if (containsConstDeclaration(node.body, name)) {
+          return true;
+        }
+        break;
+      case 'if':
+        if (
+          containsConstDeclaration(node.thenBranch, name) ||
+          containsConstDeclaration(node.elseBranch, name)
+        ) {
+          return true;
+        }
+        break;
+      case 'try':
+        if (
+          containsConstDeclaration(node.body, name) ||
+          containsConstDeclaration(node.catchBody, name) ||
+          containsConstDeclaration(node.finallyBody, name)
+        ) {
+          return true;
+        }
+        break;
+      case 'race':
+        if (node.children.some((child) => containsConstDeclaration(child.body, name))) {
+          return true;
+        }
+        break;
+      case 'swarm':
+        if (
+          containsConstDeclaration(node.flow, name) ||
+          node.roles.some((role) => containsConstDeclaration(role.body, name))
+        ) {
+          return true;
+        }
+        break;
+      case 'prompt':
+      case 'run':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
+      case 'start':
+      case 'return':
+        break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
+    }
+  }
+  return false;
+}
+
 export function updateVariable(
   state: SessionState,
   name: string,
   value: VariableValue,
 ): SessionState {
-  return {
+  const nextState: SessionState = {
     ...state,
     variables: { ...state.variables, [name]: value },
   };
+
+  if (
+    Object.prototype.hasOwnProperty.call(state.variables, name) &&
+    containsConstDeclaration(state.flowSpec.nodes, name)
+  ) {
+    return addWarning(
+      nextState,
+      `Const variable '${name}' was reassigned; keeping latest value for backward compatibility.`,
+    );
+  }
+
+  return nextState;
 }
 
 export function updateNodeProgress(

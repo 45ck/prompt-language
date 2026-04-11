@@ -89,6 +89,23 @@ node bin/cli.mjs eval \
 
 On this workstation, prefer hosted harnesses such as Codex or the documented [OpenCode baseline](../../docs/evaluation/opencode-gemma-plan.md). Do not install local models here just to populate eval artifacts.
 
+## Comparative Pattern Coverage
+
+The checked-in comparative runner at [`scripts/eval/comparative-eval.mjs`](../../scripts/eval/comparative-eval.mjs) now includes an additive pattern-expansion slice at `H101-H108`.
+
+| IDs    | Coverage focus                           | Deterministic oracle                                 |
+| ------ | ---------------------------------------- | ---------------------------------------------------- |
+| `H101` | approval checkpoint with timed resume    | exact checkpoint and final artifact contents         |
+| `H102` | retry with explicit backoff schedule     | exact attempt history `[1,2,4]` and success artifact |
+| `H103` | reflection artifact before repair        | `reflection.txt` shape plus passing tests            |
+| `H104` | parallel fan-out with join               | exact worker summary after `await all`               |
+| `H105` | variable pipeline handoff                | exact merged value and checksum report               |
+| `H106` | remember / memory overwrite and recall   | exact latest-value report after overwrite            |
+| `H107` | long-flow stress (`12` sequential nodes) | all `12` stage files plus exact final chain          |
+| `H108` | nested control stress                    | exact status log across foreach/try/retry/if/break   |
+
+These cases stay temp-dir scoped and avoid network calls, wall-clock timing oracles, and nondeterministic fixture generation. They exist to widen pattern/regression coverage inside the existing harness, not to create a second dataset format.
+
 ## Promotion rules
 
 When a new failure class is worth keeping:

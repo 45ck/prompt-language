@@ -6,12 +6,18 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const DEFAULT_HARNESS = 'claude';
-const HARNESS = parseHarness(process.argv, process.env.EVAL_HARNESS);
-const AI_CMD = parseAiCommand(process.env.AI_CMD);
+const AI_CMD_CONFIG = parseAiCommand(process.env.AI_CMD);
+const HARNESS_SELECTION = parseHarnessSelection(
+  process.argv,
+  process.env.EVAL_HARNESS,
+  AI_CMD_CONFIG,
+);
+const HARNESS = HARNESS_SELECTION.harness;
+const AI_CMD = HARNESS_SELECTION.useCustomCommand ? AI_CMD_CONFIG : null;
 const DEFAULT_MODEL = parseModel(process.argv, process.env.EVAL_MODEL);
 const ROOT = resolve(import.meta.dirname, '..', '..');
 
-function parseHarness(argv, envHarness) {
+function parseHarnessSelection(argv, envHarness, aiCmd) {
   const flagIndex = argv.indexOf('--harness');
   const flagValue = flagIndex >= 0 ? argv[flagIndex + 1] : null;
   const raw = (flagValue || envHarness || DEFAULT_HARNESS).toLowerCase();
@@ -22,7 +28,10 @@ function parseHarness(argv, envHarness) {
     raw === 'opencode' ||
     raw === 'ollama'
   ) {
-    return raw;
+    return {
+      harness: raw,
+      useCustomCommand: !flagValue && !envHarness && aiCmd != null,
+    };
   }
   throw new Error(
     `Unsupported harness "${raw}". Supported values: claude, codex, gemini, opencode, ollama.`,

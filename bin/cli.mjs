@@ -52,6 +52,15 @@ async function ensureDir(dir) {
   await fs.mkdir(dir, { recursive: true });
 }
 
+async function pathExists(targetPath) {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function copyDir(src, dest) {
   await ensureDir(dest);
   const entries = await fs.readdir(src, { withFileTypes: true });
@@ -79,6 +88,283 @@ async function writeJson(filePath, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
+class InstallCommandError extends Error {
+  constructor(message, actions = []) {
+    super(message);
+    this.name = 'InstallCommandError';
+    this.actions = actions;
+  }
+}
+
+async function inspectJsonFile(filePath) {
+  try {
+    const raw = await fs.readFile(filePath, 'utf8');
+    return {
+      kind: 'ok',
+      raw,
+      value: JSON.parse(raw),
+    };
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return { kind: 'missing' };
+    }
+    if (error instanceof SyntaxError) {
+      return { kind: 'invalid', error };
+    }
+    return { kind: 'error', error };
+  }
+}
+
+function formatSystemError(error) {
+  if (error?.code === 'EACCES' || error?.code === 'EPERM') {
+    return 'permission denied';
+  }
+  if (error?.code === 'ENOSPC') {
+    return 'disk is full';
+  }
+  if (error?.code === 'ENOENT') {
+    return 'path not found';
+  }
+  return error?.message ?? String(error);
+}
+
+function buildInstallCommand(commandName) {
+  return commandName === 'install'
+    ? 'npx @45ck/prompt-language install'
+    : `npx @45ck/prompt-language ${commandName}`;
+}
+
+function buildStatusCommand(commandName) {
+  return commandName === 'install'
+    ? 'npx @45ck/prompt-language status'
+    : 'npx @45ck/prompt-language codex-status';
+}
+
+function printInstallFailure(commandName, error) {
+  const installCommand = buildInstallCommand(commandName);
+  const statusCommand = buildStatusCommand(commandName);
+
+  if (error instanceof InstallCommandError) {
+    console.error(`Error: ${error.message}`);
+    if (error.actions.length > 0) {
+      console.error('Actions:');
+      for (const action of error.actions) {
+        console.error(`  - ${action}`);
+      }
+    }
+    console.error(`  - Run "${statusCommand}" after fixing the issue to verify the install state.`);
+    process.exit(1);
+  }
+
+  console.error(`Error: ${formatSystemError(error)}.`);
+  console.error('Actions:');
+  console.error(`  - Retry "${installCommand}".`);
+  console.error('  - Confirm the destination home directory is writable.');
+  console.error(`  - Run "${statusCommand}" after retrying to verify the install state.`);
+  process.exit(1);
+}
+
+async function readJsonForMutation(filePath, label, commandName) {
+  const state = await inspectJsonFile(filePath);
+
+  if (state.kind === 'missing') {
+    return null;
+  }
+
+  if (state.kind === 'invalid') {
+    throw new InstallCommandError(`${label} at ${filePath} contains invalid JSON.`, [
+      `Repair or delete ${filePath}, then rerun "${buildInstallCommand(commandName)}".`,
+    ]);
+  }
+
+  if (state.kind === 'error') {
+    throw new InstallCommandError(
+      `Could not read ${label} at ${filePath}: ${formatSystemError(state.error)}.`,
+      [
+        `Check permissions for ${filePath} and its parent directory.`,
+        `Retry "${buildInstallCommand(commandName)}" once the file is readable.`,
+      ],
+    );
+  }
+
+  return state.value;
+}
+
+async function collectInstalledVersions(installsRoot) {
+  try {
+    const entries = await fs.readdir(installsRoot, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort((left, right) => left.localeCompare(right));
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function pruneStaleInstallVersions(installsRoot, currentVersion) {
+  const versions = await collectInstalledVersions(installsRoot);
+  const staleVersions = versions.filter((version) => version !== currentVersion);
+
+  for (const version of staleVersions) {
+    await fs.rm(join(installsRoot, version), { recursive: true, force: true });
+  }
+
+  return staleVersions;
+}
+
+async function copyInstallDirectories(directories, installDir, commandName) {
+  for (const directory of directories) {
+    const src = join(ROOT, directory);
+    const dest = join(installDir, directory);
+
+    if (!(await pathExists(src))) {
+      throw new InstallCommandError(`Required install source is missing: ${src}`, [
+        directory === 'dist'
+          ? 'Run "npm run build" from the repository root before installing.'
+          : `Reinstall the package contents so ${directory}/ is present, then rerun "${buildInstallCommand(commandName)}".`,
+      ]);
+    }
+
+    try {
+      await copyDir(src, dest);
+      await fs.access(dest);
+      console.log(`  Copied ${directory}/`);
+    } catch (error) {
+      throw new InstallCommandError(
+        `Could not copy ${directory}/ to ${dest}: ${formatSystemError(error)}.`,
+        [
+          'Confirm the install destination is writable and has free space.',
+          `Delete the partial install at ${installDir} if the problem persists, then rerun "${buildInstallCommand(commandName)}".`,
+        ],
+      );
+    }
+  }
+}
+
+function readRegistryEntry(registry, pluginKey) {
+  const entry = registry?.plugins?.[pluginKey];
+  if (!Array.isArray(entry) || entry.length === 0) {
+    return null;
+  }
+
+  const [first] = entry;
+  return first && typeof first === 'object' ? first : null;
+}
+
+async function collectInstallStatus({
+  currentVersion,
+  currentInstallPath,
+  installsRoot,
+  registryPath,
+  settingsPath,
+  pluginManifestRelativePath,
+}) {
+  const installed = await pathExists(currentInstallPath);
+  const staleVersions = (await collectInstalledVersions(installsRoot)).filter(
+    (version) => version !== currentVersion,
+  );
+  const issues = [];
+
+  const registryState = await inspectJsonFile(registryPath);
+  let registered = false;
+  let registryEntry = null;
+
+  if (registryState.kind === 'invalid') {
+    issues.push(`${registryPath} contains invalid JSON.`);
+  } else if (registryState.kind === 'error') {
+    issues.push(`Could not read ${registryPath}: ${formatSystemError(registryState.error)}.`);
+  } else if (registryState.kind === 'ok') {
+    registryEntry = readRegistryEntry(registryState.value, PLUGIN_KEY);
+    registered = registryEntry != null;
+  }
+
+  const registryInstallPath =
+    registryEntry && typeof registryEntry.installPath === 'string'
+      ? registryEntry.installPath
+      : null;
+  const registryVersion =
+    registryEntry && typeof registryEntry.version === 'string' ? registryEntry.version : null;
+  const registryInstallExists = registryInstallPath ? await pathExists(registryInstallPath) : false;
+  const registryManifestPath = registryInstallPath
+    ? join(registryInstallPath, pluginManifestRelativePath)
+    : null;
+  const registryManifestState = registryManifestPath
+    ? await inspectJsonFile(registryManifestPath)
+    : { kind: 'missing' };
+
+  if (registered) {
+    if (!registryInstallPath) {
+      issues.push('installed_plugins.json is missing installPath for prompt-language.');
+    } else if (registryInstallPath !== currentInstallPath) {
+      issues.push(
+        `installed_plugins.json points to ${registryInstallPath}, but this build expects ${currentInstallPath}.`,
+      );
+    }
+
+    if (!registryVersion) {
+      issues.push('installed_plugins.json is missing the prompt-language version.');
+    } else if (registryVersion !== currentVersion) {
+      issues.push(
+        `installed_plugins.json records version ${registryVersion}, but this build is ${currentVersion}.`,
+      );
+    }
+
+    if (registryInstallPath && !registryInstallExists) {
+      issues.push(
+        `installed_plugins.json points to ${registryInstallPath}, but that directory is missing.`,
+      );
+    } else if (registryManifestState.kind === 'missing' && registryInstallPath) {
+      issues.push(
+        `Install at ${registryInstallPath} is partial: missing ${pluginManifestRelativePath}.`,
+      );
+    } else if (registryManifestState.kind === 'invalid' && registryInstallPath) {
+      issues.push(
+        `Install at ${registryInstallPath} has invalid JSON in ${pluginManifestRelativePath}.`,
+      );
+    } else if (registryManifestState.kind === 'error' && registryInstallPath) {
+      issues.push(
+        `Could not read ${registryManifestPath}: ${formatSystemError(registryManifestState.error)}.`,
+      );
+    } else if (
+      registryManifestState.kind === 'ok' &&
+      typeof registryManifestState.value?.version === 'string' &&
+      registryManifestState.value.version !== currentVersion
+    ) {
+      issues.push(
+        `Install at ${registryInstallPath} contains plugin version ${registryManifestState.value.version}, expected ${currentVersion}.`,
+      );
+    }
+  } else if (!installed) {
+    issues.push('prompt-language is not installed.');
+  }
+
+  const settingsState = await inspectJsonFile(settingsPath);
+  let enabled = false;
+  let marketplace = false;
+
+  if (settingsState.kind === 'invalid') {
+    issues.push(`${settingsPath} contains invalid JSON.`);
+  } else if (settingsState.kind === 'error') {
+    issues.push(`Could not read ${settingsPath}: ${formatSystemError(settingsState.error)}.`);
+  } else if (settingsState.kind === 'ok') {
+    enabled = !!settingsState.value?.enabledPlugins?.[PLUGIN_KEY];
+    marketplace = !!settingsState.value?.extraKnownMarketplaces?.[MARKETPLACE_NAME];
+  }
+
+  return {
+    installed,
+    registered,
+    enabled,
+    marketplace,
+    issues,
+    staleVersions,
+  };
+}
+
 async function loadCodexInstallerAdapter() {
   return import(
     pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'codex-installer.js')).href
@@ -94,188 +380,203 @@ async function loadArtifactInspection() {
 }
 
 async function install() {
-  const version = await readPluginVersion();
-  const now = new Date().toISOString();
-  const PLUGINS_DIR = pluginsDir(version);
-  console.log(`Installing prompt-language v${version}...`);
-
-  if (!existsSync(join(ROOT, 'dist'))) {
-    console.error('Error: dist/ directory not found. Run "npm run build" first.');
-    process.exit(1);
-  }
-
-  // Clean up old install location (pre-cache migration)
   try {
-    await fs.rm(OLD_LOCAL_DIR, { recursive: true, force: true });
-    await fs.rm(join(OLD_MARKETPLACE_DIR, '.claude-plugin'), { recursive: true, force: true });
-  } catch {
-    // ignore — old location may not exist
-  }
+    const version = await readPluginVersion();
+    const now = new Date().toISOString();
+    const PLUGINS_DIR = pluginsDir(version);
+    const installsRoot = join(CACHE_DIR, 'prompt-language');
+    console.log(`Installing prompt-language v${version}...`);
 
-  await ensureDir(PLUGINS_DIR);
-  for (const dir of DIRS_TO_COPY) {
-    const src = join(ROOT, dir);
-    try {
-      await fs.access(src);
-      await copyDir(src, join(PLUGINS_DIR, dir));
-      console.log(`  Copied ${dir}/`);
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        console.warn(`  Skipping ${dir}/ (not found)`);
-      } else if (error.code === 'EACCES' || error.code === 'EPERM') {
-        console.error(`  Permission denied copying ${dir}/`);
-      } else if (error.code === 'ENOSPC') {
-        console.error(`  Disk full - cannot copy ${dir}/`);
-      } else {
-        console.error(`  Error copying ${dir}/: ${error.message}`);
-      }
+    if (!existsSync(join(ROOT, 'dist'))) {
+      throw new InstallCommandError('dist/ directory not found.', [
+        'Run "npm run build" from the repository root before installing.',
+      ]);
     }
-  }
 
-  // Write marketplace catalog to cache directory for Claude Code discovery
-  const pluginJson = JSON.parse(
-    await fs.readFile(join(PLUGINS_DIR, '.claude-plugin', 'plugin.json'), 'utf8'),
-  );
-  const marketplaceCatalog = {
-    $schema: 'https://anthropic.com/claude-code/marketplace.schema.json',
-    name: MARKETPLACE_NAME,
-    description: pluginJson.description,
-    owner: pluginJson.author,
-    plugins: [
+    try {
+      await fs.rm(OLD_LOCAL_DIR, { recursive: true, force: true });
+      await fs.rm(join(OLD_MARKETPLACE_DIR, '.claude-plugin'), { recursive: true, force: true });
+    } catch {
+      // ignore — old location may not exist
+    }
+
+    await fs.rm(PLUGINS_DIR, { recursive: true, force: true });
+    await ensureDir(PLUGINS_DIR);
+    await copyInstallDirectories(DIRS_TO_COPY, PLUGINS_DIR, 'install');
+
+    const pluginJsonState = await inspectJsonFile(
+      join(PLUGINS_DIR, '.claude-plugin', 'plugin.json'),
+    );
+    if (pluginJsonState.kind !== 'ok') {
+      throw new InstallCommandError(
+        `Installed plugin manifest is unreadable at ${join(PLUGINS_DIR, '.claude-plugin', 'plugin.json')}.`,
+        ['Delete the partial install and rerun "npx @45ck/prompt-language install".'],
+      );
+    }
+
+    const pluginJson = pluginJsonState.value;
+    const marketplaceCatalog = {
+      $schema: 'https://anthropic.com/claude-code/marketplace.schema.json',
+      name: MARKETPLACE_NAME,
+      description: pluginJson.description,
+      owner: pluginJson.author,
+      plugins: [
+        {
+          name: 'prompt-language',
+          description: pluginJson.description,
+          version: pluginJson.version,
+          author: pluginJson.author,
+          source: `./prompt-language/${version}`,
+          category: 'development',
+        },
+      ],
+    };
+    await writeJson(join(CACHE_DIR, '.claude-plugin', 'marketplace.json'), marketplaceCatalog);
+    console.log('  Generated marketplace catalog');
+
+    const installed = (await readJsonForMutation(
+      INSTALLED_PLUGINS_PATH,
+      'installed_plugins.json',
+      'install',
+    )) ?? { version: 2, plugins: {} };
+    installed.plugins = installed.plugins ?? {};
+    installed.plugins[PLUGIN_KEY] = [
       {
-        name: 'prompt-language',
-        description: pluginJson.description,
-        version: pluginJson.version,
-        author: pluginJson.author,
-        source: `./prompt-language/${version}`,
-        category: 'development',
+        scope: 'user',
+        installPath: PLUGINS_DIR,
+        version,
+        installedAt: now,
+        lastUpdated: now,
       },
-    ],
-  };
-  await writeJson(join(CACHE_DIR, '.claude-plugin', 'marketplace.json'), marketplaceCatalog);
-  console.log('  Generated marketplace catalog');
+    ];
+    await writeJson(INSTALLED_PLUGINS_PATH, installed);
+    console.log('  Registered in installed_plugins.json');
 
-  // Register in installed_plugins.json
-  const installed = (await readJsonSafe(INSTALLED_PLUGINS_PATH)) ?? { version: 2, plugins: {} };
-  installed.plugins = installed.plugins ?? {};
-  installed.plugins[PLUGIN_KEY] = [
-    {
-      scope: 'user',
-      installPath: PLUGINS_DIR,
-      version,
-      installedAt: now,
-      lastUpdated: now,
-    },
-  ];
-  await writeJson(INSTALLED_PLUGINS_PATH, installed);
-  console.log('  Registered in installed_plugins.json');
+    const settings = (await readJsonForMutation(SETTINGS_PATH, 'settings.json', 'install')) ?? {};
+    settings.extraKnownMarketplaces = settings.extraKnownMarketplaces ?? {};
+    settings.extraKnownMarketplaces[MARKETPLACE_NAME] = {
+      source: {
+        source: 'directory',
+        path: CACHE_DIR,
+      },
+    };
+    settings.enabledPlugins = settings.enabledPlugins ?? {};
+    settings.enabledPlugins[PLUGIN_KEY] = true;
+    await writeJson(SETTINGS_PATH, settings);
+    console.log('  Registered marketplace in settings.json');
+    console.log('  Enabled in settings.json');
 
-  // Register marketplace + enable in settings.json
-  const settings = (await readJsonSafe(SETTINGS_PATH)) ?? {};
-  settings.extraKnownMarketplaces = settings.extraKnownMarketplaces ?? {};
-  settings.extraKnownMarketplaces[MARKETPLACE_NAME] = {
-    source: {
-      source: 'directory',
-      path: CACHE_DIR,
-    },
-  };
-  settings.enabledPlugins = settings.enabledPlugins ?? {};
-  settings.enabledPlugins[PLUGIN_KEY] = true;
-  await writeJson(SETTINGS_PATH, settings);
-  console.log('  Registered marketplace in settings.json');
-  console.log('  Enabled in settings.json');
+    await configureStatusLine(settings, PLUGINS_DIR, true);
 
-  // Auto-configure status line if not already set
-  await configureStatusLine(settings, PLUGINS_DIR, true);
+    const removedVersions = await pruneStaleInstallVersions(installsRoot, version);
+    if (removedVersions.length > 0) {
+      console.log(`  Removed stale versions: ${removedVersions.join(', ')}`);
+    }
 
-  console.log(`\nprompt-language runtime v${version} installed successfully.\n`);
-  console.log('Try it now:');
-  console.log('  claude -p "Fix the failing tests. done when: tests_pass"\n');
-  console.log('Or use a built-in skill:');
-  console.log('  /fix-and-test\n');
-  console.log('Learn more:');
-  console.log('  npx @45ck/prompt-language init    (scaffold a starter flow)');
-  console.log('  https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md');
+    console.log(`\nprompt-language runtime v${version} installed successfully.\n`);
+    console.log('Try it now:');
+    console.log('  claude -p "Fix the failing tests. done when: tests_pass"\n');
+    console.log('Or use a built-in skill:');
+    console.log('  /fix-and-test\n');
+    console.log('Learn more:');
+    console.log('  npx @45ck/prompt-language init    (scaffold a starter flow)');
+    console.log('  https://github.com/45ck/prompt-language/blob/main/docs/getting-started.md');
+  } catch (error) {
+    printInstallFailure('install', error);
+  }
 }
 
 async function installCodex() {
-  const version = await readPluginVersion();
-  const now = new Date().toISOString();
-  const PLUGINS_DIR = join(CODEX_CACHE_DIR, 'prompt-language', version);
-  console.log(`Installing prompt-language Codex scaffold v${version}...`);
-
-  if (!existsSync(join(ROOT, 'dist'))) {
-    console.error('Error: dist/ directory not found. Run "npm run build" first.');
-    process.exit(1);
-  }
-
   try {
-    await fs.rm(OLD_CODEX_LOCAL_DIR, { recursive: true, force: true });
-    await fs.rm(join(OLD_CODEX_MARKETPLACE_DIR, '.codex-plugin'), { recursive: true, force: true });
-  } catch {
-    // ignore — old location may not exist
-  }
+    const version = await readPluginVersion();
+    const now = new Date().toISOString();
+    const PLUGINS_DIR = join(CODEX_CACHE_DIR, 'prompt-language', version);
+    const installsRoot = join(CODEX_CACHE_DIR, 'prompt-language');
+    console.log(`Installing prompt-language Codex scaffold v${version}...`);
 
-  await ensureDir(PLUGINS_DIR);
-  for (const dir of DIRS_TO_COPY_CODEX) {
-    const src = join(ROOT, dir);
-    try {
-      await fs.access(src);
-      await copyDir(src, join(PLUGINS_DIR, dir));
-      console.log(`  Copied ${dir}/`);
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        console.warn(`  Skipping ${dir}/ (not found)`);
-      } else if (error.code === 'EACCES' || error.code === 'EPERM') {
-        console.error(`  Permission denied copying ${dir}/`);
-      } else if (error.code === 'ENOSPC') {
-        console.error(`  Disk full - cannot copy ${dir}/`);
-      } else {
-        console.error(`  Error copying ${dir}/: ${error.message}`);
-      }
+    if (!existsSync(join(ROOT, 'dist'))) {
+      throw new InstallCommandError('dist/ directory not found.', [
+        'Run "npm run build" from the repository root before installing.',
+      ]);
     }
+
+    try {
+      await fs.rm(OLD_CODEX_LOCAL_DIR, { recursive: true, force: true });
+      await fs.rm(join(OLD_CODEX_MARKETPLACE_DIR, '.codex-plugin'), {
+        recursive: true,
+        force: true,
+      });
+    } catch {
+      // ignore — old location may not exist
+    }
+
+    await fs.rm(PLUGINS_DIR, { recursive: true, force: true });
+    await ensureDir(PLUGINS_DIR);
+    await copyInstallDirectories(DIRS_TO_COPY_CODEX, PLUGINS_DIR, 'codex-install');
+
+    const codexPluginState = await inspectJsonFile(
+      join(PLUGINS_DIR, '.codex-plugin', 'plugin.json'),
+    );
+    if (codexPluginState.kind !== 'ok') {
+      throw new InstallCommandError(
+        `Installed Codex plugin manifest is unreadable at ${join(PLUGINS_DIR, '.codex-plugin', 'plugin.json')}.`,
+        ['Delete the partial install and rerun "npx @45ck/prompt-language codex-install".'],
+      );
+    }
+
+    const installed = (await readJsonForMutation(
+      CODEX_INSTALLED_PLUGINS_PATH,
+      'Codex installed_plugins.json',
+      'codex-install',
+    )) ?? {
+      version: 2,
+      plugins: {},
+    };
+    installed.plugins = installed.plugins ?? {};
+    installed.plugins[PLUGIN_KEY] = [
+      {
+        scope: 'user',
+        installPath: PLUGINS_DIR,
+        version,
+        installedAt: now,
+        lastUpdated: now,
+      },
+    ];
+    await writeJson(CODEX_INSTALLED_PLUGINS_PATH, installed);
+    console.log('  Registered in Codex installed_plugins.json');
+
+    const settings =
+      (await readJsonForMutation(CODEX_SETTINGS_PATH, 'Codex settings.json', 'codex-install')) ??
+      {};
+    settings.extraKnownMarketplaces = settings.extraKnownMarketplaces ?? {};
+    settings.extraKnownMarketplaces[MARKETPLACE_NAME] = {
+      source: {
+        source: 'directory',
+        path: CODEX_CACHE_DIR,
+      },
+    };
+    settings.enabledPlugins = settings.enabledPlugins ?? {};
+    settings.enabledPlugins[PLUGIN_KEY] = true;
+    await writeJson(CODEX_SETTINGS_PATH, settings);
+    console.log('  Registered marketplace in Codex settings.json');
+    console.log('  Enabled in Codex settings.json');
+
+    await enableCodexHooksConfig();
+
+    const removedVersions = await pruneStaleInstallVersions(installsRoot, version);
+    if (removedVersions.length > 0) {
+      console.log(`  Removed stale versions: ${removedVersions.join(', ')}`);
+    }
+
+    console.log(`\nprompt-language Codex scaffold v${version} installed successfully.\n`);
+    console.log('Try it now:');
+    console.log('  codex exec "Fix the failing tests. done when: tests_pass"\n');
+    console.log('Learn more:');
+    console.log('  npx @45ck/prompt-language validate    (preview a flow)');
+    console.log('  https://github.com/45ck/prompt-language/blob/main/docs/eval-parity-matrix.md');
+  } catch (error) {
+    printInstallFailure('codex-install', error);
   }
-
-  await fs.readFile(join(PLUGINS_DIR, '.codex-plugin', 'plugin.json'), 'utf8');
-  const installed = (await readJsonSafe(CODEX_INSTALLED_PLUGINS_PATH)) ?? {
-    version: 2,
-    plugins: {},
-  };
-  installed.plugins = installed.plugins ?? {};
-  installed.plugins[PLUGIN_KEY] = [
-    {
-      scope: 'user',
-      installPath: PLUGINS_DIR,
-      version,
-      installedAt: now,
-      lastUpdated: now,
-    },
-  ];
-  await writeJson(CODEX_INSTALLED_PLUGINS_PATH, installed);
-  console.log('  Registered in Codex installed_plugins.json');
-
-  const settings = (await readJsonSafe(CODEX_SETTINGS_PATH)) ?? {};
-  settings.extraKnownMarketplaces = settings.extraKnownMarketplaces ?? {};
-  settings.extraKnownMarketplaces[MARKETPLACE_NAME] = {
-    source: {
-      source: 'directory',
-      path: CODEX_CACHE_DIR,
-    },
-  };
-  settings.enabledPlugins = settings.enabledPlugins ?? {};
-  settings.enabledPlugins[PLUGIN_KEY] = true;
-  await writeJson(CODEX_SETTINGS_PATH, settings);
-  console.log('  Registered marketplace in Codex settings.json');
-  console.log('  Enabled in Codex settings.json');
-
-  await enableCodexHooksConfig();
-
-  console.log(`\nprompt-language Codex scaffold v${version} installed successfully.\n`);
-  console.log('Try it now:');
-  console.log('  codex exec "Fix the failing tests. done when: tests_pass"\n');
-  console.log('Learn more:');
-  console.log('  npx @45ck/prompt-language validate    (preview a flow)');
-  console.log('  https://github.com/45ck/prompt-language/blob/main/docs/eval-parity-matrix.md');
 }
 
 async function readFlowText(args, commandName) {
@@ -1123,68 +1424,95 @@ async function uninstallCodex() {
 async function status() {
   const version = await readPluginVersion().catch(() => 'unknown');
   const PLUGINS_DIR = pluginsDir(version);
-
-  let installed = false;
-  try {
-    await fs.access(PLUGINS_DIR);
-    installed = true;
-  } catch {
-    // not installed
-  }
-
-  const registry = await readJsonSafe(INSTALLED_PLUGINS_PATH);
-  const registered = !!registry?.plugins?.[PLUGIN_KEY];
-
-  const settings = await readJsonSafe(SETTINGS_PATH);
-  const enabled = !!settings?.enabledPlugins?.[PLUGIN_KEY];
-  const marketplace = !!settings?.extraKnownMarketplaces?.[MARKETPLACE_NAME];
+  const state = await collectInstallStatus({
+    currentVersion: version,
+    currentInstallPath: PLUGINS_DIR,
+    installsRoot: join(CACHE_DIR, 'prompt-language'),
+    registryPath: INSTALLED_PLUGINS_PATH,
+    settingsPath: SETTINGS_PATH,
+    pluginManifestRelativePath: join('.claude-plugin', 'plugin.json'),
+  });
 
   console.log(`prompt-language v${version}`);
-  console.log(`  Installed:    ${installed ? 'yes' : 'no'}${installed ? ` (${PLUGINS_DIR})` : ''}`);
-  console.log(`  Registered:   ${registered ? 'yes' : 'no'}`);
-  console.log(`  Marketplace:  ${marketplace ? 'yes' : 'no'}`);
-  console.log(`  Enabled:      ${enabled ? 'yes' : 'no'}`);
+  console.log(
+    `  Installed:    ${state.installed ? 'yes' : 'no'}${state.installed ? ` (${PLUGINS_DIR})` : ''}`,
+  );
+  console.log(`  Registered:   ${state.registered ? 'yes' : 'no'}`);
+  console.log(`  Marketplace:  ${state.marketplace ? 'yes' : 'no'}`);
+  console.log(`  Enabled:      ${state.enabled ? 'yes' : 'no'}`);
 
-  if (!installed || !registered || !enabled || !marketplace) {
-    console.log('\nRun "npx @45ck/prompt-language" to install.');
+  if (state.staleVersions.length > 0) {
+    console.log(`  Stale:        ${state.staleVersions.join(', ')}`);
+  }
+
+  for (const issue of state.issues) {
+    console.log(`  Issue:        ${issue}`);
+  }
+
+  if (
+    state.issues.length > 0 ||
+    !state.installed ||
+    !state.registered ||
+    !state.enabled ||
+    !state.marketplace
+  ) {
+    console.log('\nRemediation:');
+    console.log('  Run "npx @45ck/prompt-language install" to refresh the Claude install.');
+    if (state.staleVersions.length > 0) {
+      console.log('  The install command will prune stale cached versions automatically.');
+    }
   }
 }
 
 async function statusCodex() {
   const version = await readPluginVersion().catch(() => 'unknown');
   const PLUGINS_DIR = join(CODEX_CACHE_DIR, 'prompt-language', version);
-
-  let installed = false;
-  try {
-    await fs.access(PLUGINS_DIR);
-    installed = true;
-  } catch {
-    // not installed
-  }
-
-  const registry = await readJsonSafe(CODEX_INSTALLED_PLUGINS_PATH);
-  const registered = !!registry?.plugins?.[PLUGIN_KEY];
-
-  const settings = await readJsonSafe(CODEX_SETTINGS_PATH);
-  const enabled = !!settings?.enabledPlugins?.[PLUGIN_KEY];
-  const marketplace = !!settings?.extraKnownMarketplaces?.[MARKETPLACE_NAME];
+  const state = await collectInstallStatus({
+    currentVersion: version,
+    currentInstallPath: PLUGINS_DIR,
+    installsRoot: join(CODEX_CACHE_DIR, 'prompt-language'),
+    registryPath: CODEX_INSTALLED_PLUGINS_PATH,
+    settingsPath: CODEX_SETTINGS_PATH,
+    pluginManifestRelativePath: join('.codex-plugin', 'plugin.json'),
+  });
 
   const { inspectCodexHooksConfigFile } = await loadCodexInstallerAdapter();
   const codexHooks = await inspectCodexHooksConfigFile(CODEX_CONFIG_PATH);
 
   console.log(`prompt-language Codex scaffold v${version}`);
-  console.log(`  Installed:    ${installed ? 'yes' : 'no'}${installed ? ` (${PLUGINS_DIR})` : ''}`);
-  console.log(`  Registered:   ${registered ? 'yes' : 'no'}`);
-  console.log(`  Marketplace:  ${marketplace ? 'yes' : 'no'}`);
-  console.log(`  Enabled:      ${enabled ? 'yes' : 'no'}`);
+  console.log(
+    `  Installed:    ${state.installed ? 'yes' : 'no'}${state.installed ? ` (${PLUGINS_DIR})` : ''}`,
+  );
+  console.log(`  Registered:   ${state.registered ? 'yes' : 'no'}`);
+  console.log(`  Marketplace:  ${state.marketplace ? 'yes' : 'no'}`);
+  console.log(`  Enabled:      ${state.enabled ? 'yes' : 'no'}`);
   console.log(`  codex_hooks:  ${formatCodexHooksStatus(codexHooks)}`);
+
+  if (state.staleVersions.length > 0) {
+    console.log(`  Stale:        ${state.staleVersions.join(', ')}`);
+  }
+
+  for (const issue of state.issues) {
+    console.log(`  Issue:        ${issue}`);
+  }
 
   if (codexHooks.ownership === 'conflict') {
     console.log('  Warning: conflicting codex_hooks entries detected in config.toml');
   }
 
-  if (!installed || !registered || !enabled || !marketplace || !codexHooks.enabled) {
-    console.log('\nRun "npx @45ck/prompt-language codex-install" to install the Codex scaffold.');
+  if (
+    !state.installed ||
+    !state.registered ||
+    !state.enabled ||
+    !state.marketplace ||
+    !codexHooks.enabled ||
+    state.issues.length > 0
+  ) {
+    console.log('\nRemediation:');
+    console.log('  Run "npx @45ck/prompt-language codex-install" to refresh the Codex scaffold.');
+    if (state.staleVersions.length > 0) {
+      console.log('  The install command will prune stale cached versions automatically.');
+    }
   }
 }
 

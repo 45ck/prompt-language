@@ -2,16 +2,17 @@
 /**
  * comparative-eval.mjs — Plugin vs Vanilla Claude comparative evaluation.
  *
- * 100 hypotheses across 15 categories testing structural enforcement
- * mechanisms: gate enforcement, variable capture & fidelity, auto-execution
- * & pipelines, retry patterns, while/until loops, if/else branching,
- * try/catch recovery, foreach & lists, nested/compound control flow,
- * context management & scaling, deception resistance, phased workflows,
+ * 108 hypotheses across the core flow-control, recovery, variable, and
+ * long-horizon categories: gate enforcement, variable capture & fidelity,
+ * auto-execution & pipelines, retry patterns, while/until loops, if/else
+ * branching, try/catch recovery, foreach & lists, nested/compound control
+ * flow, context management & scaling, deception resistance, phased workflows,
  * real-world task analogues, edge cases & robustness, idempotency &
- * regression prevention.
+ * regression prevention, plus approval checkpoints, backoff schedules,
+ * reflection loops, parallel fan-out, memory recall, and long/nested stress.
  *
  * Quick mode (16 tests): H3,4,6,7,10,11,12,59,60,61,62,77,78,93,96,97
- * Full mode (100 tests): all hypotheses
+ * Full mode (108 tests): all hypotheses
  *
  * Usage:
  *   node scripts/eval/comparative-eval.mjs                    # all 100 hypotheses
@@ -9969,6 +9970,868 @@ async function testH100() {
   );
 }
 
+// ── H101: Approval Checkpoint With Timed Resume ──────────────────────
+// Tests an explicit checkpoint before finalization. The plugin flow uses an
+// approve timeout so the case remains headless/deterministic.
+
+async function testH101() {
+  console.log('\n--- H101: Approval Checkpoint With Timed Resume ---');
+
+  const token = 'APPROVAL-CHECK-2026';
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'spec.txt'), `${token}\n`);
+    await writeFile(
+      join(dir, 'read-spec.js'),
+      [
+        'const fs = require("fs");',
+        'process.stdout.write(fs.readFileSync("spec.txt", "utf-8").trim());',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'write-checkpoint.js'),
+      [
+        'const fs = require("fs");',
+        'const token = process.argv[2];',
+        'fs.writeFileSync("checkpoint.txt", `checkpoint:${token}`);',
+        'console.log("checkpoint-written");',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'write-final.js'),
+      [
+        'const fs = require("fs");',
+        'const token = process.argv[2];',
+        'fs.writeFileSync("final.txt", `approved:${token}`);',
+        'console.log("final-written");',
+      ].join('\n'),
+    );
+  }
+
+  function score(dir) {
+    const checkpoint = safeReadSync(join(dir, 'checkpoint.txt'));
+    const final = safeReadSync(join(dir, 'final.txt'));
+    const pass = checkpoint === `checkpoint:${token}` && final === `approved:${token}`;
+    return {
+      pass,
+      detail: pass
+        ? 'checkpoint and final artifacts match'
+        : `checkpoint="${checkpoint || 'missing'}" final="${final || 'missing'}"`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Run `node read-spec.js` to get the token.',
+        'Then run `node write-checkpoint.js <token>` to create checkpoint.txt.',
+        'Treat that as an approval checkpoint before continuing.',
+        'After the checkpoint, run `node write-final.js <token>` to create final.txt.',
+      ].join(' '),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: checkpoint approval before finalization',
+        '',
+        'flow:',
+        '  let token = run "node read-spec.js"',
+        '  run: node write-checkpoint.js ${token}',
+        '  approve "Checkpoint recorded. Continue after timeout." timeout 1',
+        '  run: node write-final.js ${token}',
+      ].join('\n'),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  record(
+    'H101',
+    'Approval Checkpoint With Timed Resume',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H102: Backoff Escalation Sequence ────────────────────────────────
+// A deterministic rate-limit simulator requires attempt delays 1 -> 2 -> 4.
+
+async function testH102() {
+  console.log('\n--- H102: Backoff Escalation Sequence ---');
+
+  async function setup(dir) {
+    await writeFile(
+      join(dir, 'call-api.js'),
+      [
+        'const fs = require("fs");',
+        'const delay = Number(process.argv[2]);',
+        'const expected = [1, 2, 4];',
+        'let attempts = [];',
+        'try {',
+        '  attempts = JSON.parse(fs.readFileSync("attempts.json", "utf-8"));',
+        '} catch {}',
+        'attempts.push(delay);',
+        'fs.writeFileSync("attempts.json", JSON.stringify(attempts));',
+        'const prefixOk = attempts.every((value, index) => value === expected[index]);',
+        'if (!prefixOk) {',
+        '  console.error("RATE_LIMIT wrong-backoff " + JSON.stringify(attempts));',
+        '  process.exit(1);',
+        '}',
+        'if (attempts.length < expected.length) {',
+        '  console.error("RATE_LIMIT retry-with-backoff " + delay);',
+        '  process.exit(1);',
+        '}',
+        'fs.writeFileSync("result.json", JSON.stringify({ ok: true, delay }));',
+        'console.log("SUCCESS");',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'next-delay.js'),
+      ['const delay = Number(process.argv[2]);', 'process.stdout.write(String(delay * 2));'].join(
+        '\n',
+      ),
+    );
+  }
+
+  function score(dir) {
+    const attemptsRaw = safeReadSync(join(dir, 'attempts.json'));
+    const resultRaw = safeReadSync(join(dir, 'result.json'));
+    const attempts = attemptsRaw ? JSON.parse(attemptsRaw) : [];
+    const result = resultRaw ? JSON.parse(resultRaw) : null;
+    const pass =
+      JSON.stringify(attempts) === JSON.stringify([1, 2, 4]) &&
+      result?.ok === true &&
+      result?.delay === 4;
+    return {
+      pass,
+      detail: pass
+        ? 'attempts [1,2,4] converged'
+        : `attempts=${JSON.stringify(attempts)} result=${resultRaw || 'missing'}`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Start with backoff delay 1.',
+        'Run `node call-api.js <delay>`.',
+        'If it fails with RATE_LIMIT, double the delay and retry.',
+        'Keep the exact backoff sequence 1, then 2, then 4 until result.json is created.',
+      ].join(' '),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: deterministic backoff schedule',
+        '',
+        'flow:',
+        '  let delay = "1"',
+        '  retry max 4',
+        '    run: node call-api.js ${delay}',
+        '    if command_failed',
+        '      let delay = run "node next-delay.js ${delay}"',
+        '    end',
+        '  end',
+      ].join('\n'),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  record(
+    'H102',
+    'Backoff Escalation Sequence',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H103: Reflection Artifact Before Repair ──────────────────────────
+// Adds a deterministic oracle for explicit reflection output plus a repaired app.
+
+async function testH103() {
+  console.log('\n--- H103: Reflection Artifact Before Repair ---');
+
+  const appJs = [
+    'function sum(nums) {',
+    '  return nums.reduce((acc, value) => acc - value, 0);',
+    '}',
+    '',
+    'function slugify(text) {',
+    '  return text.toLowerCase().replace(" ", "_");',
+    '}',
+    '',
+    'function clamp(value, min, max) {',
+    '  if (value < min) return max;',
+    '  if (value > max) return min;',
+    '  return value;',
+    '}',
+    '',
+    'module.exports = { sum, slugify, clamp };',
+  ].join('\n');
+
+  const testJs = [
+    'const { sum, slugify, clamp } = require("./app.js");',
+    'let f = 0;',
+    'if (sum([2, 3, 4]) !== 9) { console.error("FAIL: sum"); f++; }',
+    'if (slugify("Hello Wide World") !== "hello-wide-world") { console.error("FAIL: slugify"); f++; }',
+    'if (clamp(-1, 0, 10) !== 0) { console.error("FAIL: clamp-low"); f++; }',
+    'if (clamp(99, 0, 10) !== 10) { console.error("FAIL: clamp-high"); f++; }',
+    'if (f === 0) console.log("All tests passed");',
+    'process.exit(f > 0 ? 1 : 0);',
+  ].join('\n');
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'app.js'), appJs);
+    await writeFile(join(dir, 'test.js'), testJs);
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({ name: 'h103', scripts: { test: 'node test.js' } }),
+    );
+  }
+
+  function score(dir) {
+    const reflection = safeReadSync(join(dir, 'reflection.txt'));
+    const lines = reflection
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    const bulletCount = lines.filter((line) => line.startsWith('- ')).length;
+    const testsPass = runCmd('node test.js', dir) === 0;
+    return {
+      pass: testsPass && bulletCount === 3 && lines.length === 3,
+      detail: `tests:${testsPass ? 'PASS' : 'FAIL'} bullets:${bulletCount}/3`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Run `node test.js` to see the failures.',
+        'Write reflection.txt with exactly three bullet lines describing the root causes.',
+        'Then fix app.js using that reflection and rerun `node test.js` until it passes.',
+      ].join(' '),
+      dir,
+      LONG_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: reflect before repairing',
+        '',
+        'flow:',
+        '  let failures = run "node test.js 2>&1 || true"',
+        '  prompt: Using only this failure output, write reflection.txt with exactly three bullet lines describing the root causes: ${failures}',
+        '  prompt: Read reflection.txt and fix app.js so node test.js passes.',
+        '  run: node test.js',
+        '',
+        'done when:',
+        '  file_exists reflection.txt',
+        '  tests_pass',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  record(
+    'H103',
+    'Reflection Artifact Before Repair',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H104: Parallel Fan-Out With Awaited Summary ──────────────────────
+// Independent workers write per-module outputs, then a summarizer checks them.
+
+async function testH104() {
+  console.log('\n--- H104: Parallel Fan-Out With Awaited Summary ---');
+
+  async function setup(dir) {
+    await writeFile(
+      join(dir, 'worker.js'),
+      [
+        'const fs = require("fs");',
+        'const name = process.argv[2];',
+        'const value = name.toUpperCase() + "-done";',
+        'fs.writeFileSync(`${name}.txt`, value);',
+        'console.log(value);',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'summarize.js'),
+      [
+        'const fs = require("fs");',
+        'const names = ["alpha", "beta", "gamma"];',
+        'const values = names.map((name) => fs.readFileSync(`${name}.txt`, "utf-8").trim());',
+        'fs.writeFileSync("summary.txt", values.join("|"));',
+        'console.log("summary-ready");',
+      ].join('\n'),
+    );
+  }
+
+  function score(dir) {
+    const summary = safeReadSync(join(dir, 'summary.txt'));
+    const expected = 'ALPHA-done|BETA-done|GAMMA-done';
+    const filesOk = ['alpha.txt', 'beta.txt', 'gamma.txt'].every((file) =>
+      safeReadSync(join(dir, file)),
+    );
+    return {
+      pass: summary === expected && filesOk,
+      detail: summary === expected ? 'summary matches' : `summary="${summary || 'missing'}"`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Launch three independent workers for alpha, beta, and gamma.',
+        'Each worker should run `node worker.js <name>`.',
+        'Wait for all three worker outputs to exist, then run `node summarize.js`.',
+      ].join(' '),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: parallel worker fan-out and join',
+        '',
+        'flow:',
+        '  spawn "alpha"',
+        '    run: node worker.js alpha',
+        '  end',
+        '  spawn "beta"',
+        '    run: node worker.js beta',
+        '  end',
+        '  spawn "gamma"',
+        '    run: node worker.js gamma',
+        '  end',
+        '  await all',
+        '  run: node summarize.js',
+      ].join('\n'),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  record(
+    'H104',
+    'Parallel Fan-Out With Awaited Summary',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H105: Variable Pipeline Handoff ──────────────────────────────────
+// A short deterministic pipeline that depends on exact variable relay across steps.
+
+async function testH105() {
+  console.log('\n--- H105: Variable Pipeline Handoff ---');
+
+  const expectedMerged = 'delta-sigma::sigma-tau';
+  const expectedChecksum = createHash('md5').update(expectedMerged).digest('hex').slice(0, 10);
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'emit-raw.js'), 'process.stdout.write("delta|sigma|tau");');
+    await writeFile(
+      join(dir, 'split-left.js'),
+      [
+        'const parts = String(process.argv[2]).split("|");',
+        'process.stdout.write(parts.slice(0, 2).join("-"));',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'split-right.js'),
+      [
+        'const parts = String(process.argv[2]).split("|");',
+        'process.stdout.write(parts.slice(1).join("-"));',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'merge.js'),
+      'process.stdout.write(`${process.argv[2]}::${process.argv[3]}`);',
+    );
+    await writeFile(
+      join(dir, 'checksum.js'),
+      [
+        'const crypto = require("crypto");',
+        'process.stdout.write(crypto.createHash("md5").update(String(process.argv[2])).digest("hex").slice(0, 10));',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'write-report.js'),
+      [
+        'const fs = require("fs");',
+        'fs.writeFileSync("variable-pipeline.txt", `${process.argv[2]}\\n${process.argv[3]}`);',
+      ].join('\n'),
+    );
+  }
+
+  function score(dir) {
+    const report = safeReadSync(join(dir, 'variable-pipeline.txt'));
+    const expected = `${expectedMerged}\n${expectedChecksum}`;
+    return {
+      pass: report === expected,
+      detail: report === expected ? 'pipeline report matches' : `report="${report || 'missing'}"`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Run `node emit-raw.js` to get the raw token.',
+        'Then run `node split-left.js <raw>` and `node split-right.js <raw>`.',
+        'Merge the two results with `node merge.js <left> <right>`.',
+        'Compute the checksum with `node checksum.js <merged>`.',
+        'Finally run `node write-report.js <merged> <checksum>`.',
+      ].join(' '),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: variable pipeline handoff',
+        '',
+        'flow:',
+        '  let raw = run "node emit-raw.js"',
+        '  let left = run "node split-left.js ${raw}"',
+        '  let right = run "node split-right.js ${raw}"',
+        '  let merged = run "node merge.js ${left} ${right}"',
+        '  let checksum = run "node checksum.js ${merged}"',
+        '  run: node write-report.js ${merged} ${checksum}',
+      ].join('\n'),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  record(
+    'H105',
+    'Variable Pipeline Handoff',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H106: Memory Overwrite And Recall ────────────────────────────────
+// Tests remember/memory with a deliberate overwrite so the latest value wins.
+
+async function testH106() {
+  console.log('\n--- H106: Memory Overwrite And Recall ---');
+
+  const latestToken = 'MEM-NEW-2026';
+
+  async function setup(dir) {
+    await writeFile(join(dir, 'gen-initial.js'), 'process.stdout.write("MEM-OLD-2026");');
+    await writeFile(join(dir, 'gen-latest.js'), `process.stdout.write("${latestToken}");`);
+    await writeFile(
+      join(dir, 'distract.js'),
+      [
+        'const fs = require("fs");',
+        'const step = process.argv[2];',
+        'fs.writeFileSync(`distract-${step}.txt`, `noise-${step}`);',
+        'console.log(`noise-${step}`);',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'write-memory-report.js'),
+      [
+        'const fs = require("fs");',
+        'fs.writeFileSync("memory-report.txt", `${process.argv[2]}\\n${process.argv[3]}`);',
+      ].join('\n'),
+    );
+  }
+
+  function score(dir) {
+    const report = safeReadSync(join(dir, 'memory-report.txt')).replace(/\r\n/g, '\n');
+    const expected = `${latestToken}\nready`;
+    return {
+      pass: report === expected,
+      detail:
+        report === expected ? 'latest memory value restored' : `report="${report || 'missing'}"`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Read the initial token from `node gen-initial.js` and remember it as session.token.',
+        'Set session.status to draft.',
+        'Run `node distract.js 1` and `node distract.js 2`.',
+        'Then read the replacement token from `node gen-latest.js` and replace session.token with the latest value.',
+        'Set session.status to ready.',
+        'Finally run `node write-memory-report.js <latest-token> ready`.',
+      ].join(' '),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: overwrite remembered state and read it back',
+        '',
+        'flow:',
+        '  let token = run "node gen-initial.js"',
+        '  remember key="session.token" value="${token}"',
+        '  remember key="session.status" value="draft"',
+        '  run: node distract.js 1',
+        '  run: node distract.js 2',
+        '  let token = run "node gen-latest.js"',
+        '  remember key="session.token" value="${token}"',
+        '  remember key="session.status" value="ready"',
+        '  let restored = memory "session.token"',
+        '  let status = memory "session.status"',
+        '  run: node write-memory-report.js ${restored} ${status}',
+      ].join('\n'),
+      dir,
+      DEFAULT_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  record(
+    'H106',
+    'Memory Overwrite And Recall',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H107: Long Flow Stress (12 Sequential Nodes) ─────────────────────
+// Explicit regression/stress coverage for 10+ node chains.
+
+async function testH107() {
+  console.log('\n--- H107: Long Flow Stress (12 Sequential Nodes) ---');
+
+  const expectedFinal = Array.from({ length: 12 }, (_, index) => `S${index + 1}`).join('>');
+
+  async function setup(dir) {
+    await writeFile(
+      join(dir, 'step.js'),
+      [
+        'const fs = require("fs");',
+        'const step = Number(process.argv[2]);',
+        'const label = `S${step}`;',
+        'const value = step === 1 ? label : `${fs.readFileSync(`step${step - 1}.txt`, "utf-8").trim()}>${label}`;',
+        'fs.writeFileSync(`step${step}.txt`, value);',
+        'console.log(value);',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'finalize.js'),
+      [
+        'const fs = require("fs");',
+        'fs.writeFileSync("final.txt", fs.readFileSync("step12.txt", "utf-8").trim());',
+        'console.log("finalized");',
+      ].join('\n'),
+    );
+  }
+
+  function score(dir) {
+    const final = safeReadSync(join(dir, 'final.txt'));
+    let count = 0;
+    for (let i = 1; i <= 12; i++) {
+      if (safeReadSync(join(dir, `step${i}.txt`))) count++;
+    }
+    return {
+      pass: final === expectedFinal && count === 12,
+      detail:
+        final === expectedFinal
+          ? '12-step chain completed'
+          : `steps=${count}/12 final="${final || 'missing'}"`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Run `node step.js 1` through `node step.js 12` in exact order.',
+        'Each step depends on the previous step file, so do not skip or reorder them.',
+        'After step 12, run `node finalize.js`.',
+      ].join(' '),
+      dir,
+      LONG_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: execute a 12-node sequential flow',
+        '',
+        'flow:',
+        '  run: node step.js 1',
+        '  run: node step.js 2',
+        '  run: node step.js 3',
+        '  run: node step.js 4',
+        '  run: node step.js 5',
+        '  run: node step.js 6',
+        '  run: node step.js 7',
+        '  run: node step.js 8',
+        '  run: node step.js 9',
+        '  run: node step.js 10',
+        '  run: node step.js 11',
+        '  run: node step.js 12',
+        '  run: node finalize.js',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  record(
+    'H107',
+    'Long Flow Stress (12 Sequential Nodes)',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
+// ── H108: Nested Control Stress ──────────────────────────────────────
+// foreach -> try/catch -> retry -> if -> break with deterministic worker scripts.
+
+async function testH108() {
+  console.log('\n--- H108: Nested Control Stress ---');
+
+  async function setup(dir) {
+    await writeFile(
+      join(dir, 'primary.js'),
+      [
+        'const fs = require("fs");',
+        'const mod = process.argv[2];',
+        'if (mod === "beta") {',
+        '  console.error("PRIMARY_FAIL beta");',
+        '  process.exit(1);',
+        '}',
+        'fs.writeFileSync(`${mod}.ok`, `primary:${mod}`);',
+        'console.log(`PRIMARY_OK ${mod}`);',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'fallback.js'),
+      [
+        'const fs = require("fs");',
+        'const mod = process.argv[2];',
+        'if (mod !== "beta") {',
+        '  console.error("FALLBACK_NOT_NEEDED " + mod);',
+        '  process.exit(1);',
+        '}',
+        'fs.writeFileSync(`${mod}.ok`, `fallback:${mod}`);',
+        'console.log(`FALLBACK_OK ${mod}`);',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'append-status.js'),
+      [
+        'const fs = require("fs");',
+        'const mod = process.argv[2];',
+        'const path = process.argv[3];',
+        'fs.appendFileSync("status.log", `${mod}:${path}\\n`);',
+        'console.log(`status:${mod}:${path}`);',
+      ].join('\n'),
+    );
+    await writeFile(
+      join(dir, 'finalize-status.js'),
+      [
+        'const fs = require("fs");',
+        'const lines = fs.readFileSync("status.log", "utf-8").trim().split(/\\r?\\n/).filter(Boolean).sort();',
+        'fs.writeFileSync("final-status.txt", lines.join("\\n"));',
+        'console.log("status-finalized");',
+      ].join('\n'),
+    );
+  }
+
+  function score(dir) {
+    const status = safeReadSync(join(dir, 'final-status.txt'));
+    const expected = ['alpha:primary', 'beta:fallback', 'gamma:primary'].join('\n');
+    const okFiles = ['alpha.ok', 'beta.ok', 'gamma.ok'].every((file) =>
+      safeReadSync(join(dir, file)),
+    );
+    return {
+      pass: status === expected && okFiles,
+      detail: status === expected ? 'nested control completed' : `status="${status || 'missing'}"`,
+    };
+  }
+
+  pluginUninstall();
+  const vanillaResult = await withTempDir(async (dir) => {
+    console.log('  Running vanilla...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'For each module alpha, beta, gamma:',
+        'first try `node primary.js <module>`.',
+        'If primary fails, retry with `node fallback.js <module>` up to 2 times and stop retrying once it succeeds.',
+        'After each success, run `node append-status.js <module> <primary-or-fallback>`.',
+        'When all modules are handled, run `node finalize-status.js`.',
+      ].join(' '),
+      dir,
+      LONG_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  pluginInstall();
+  const pluginResult = await withTempDir(async (dir) => {
+    console.log('  Running plugin...');
+    await setup(dir);
+    const start = Date.now();
+    claudeRun(
+      [
+        'Goal: nested foreach recovery flow',
+        '',
+        'flow:',
+        '  foreach mod in "alpha beta gamma"',
+        '    try',
+        '      run: node primary.js ${mod}',
+        '      run: node append-status.js ${mod} primary',
+        '    catch',
+        '      retry max 2',
+        '        run: node fallback.js ${mod}',
+        '        if command_succeeded',
+        '          run: node append-status.js ${mod} fallback',
+        '          break',
+        '        end',
+        '      end',
+        '    end',
+        '  end',
+        '  run: node finalize-status.js',
+      ].join('\n'),
+      dir,
+      LONG_TIMEOUT,
+    );
+    return { ...score(dir), elapsed: (Date.now() - start) / 1000 };
+  });
+
+  record(
+    'H108',
+    'Nested Control Stress',
+    vanillaResult.detail,
+    pluginResult.detail,
+    vanillaResult.pass,
+    pluginResult.pass,
+    vanillaResult.elapsed,
+    pluginResult.elapsed,
+  );
+}
+
 // ── DESIGN: context scaling parametric test ─────────────────────────
 //
 // Tests whether the plugin's variable re-injection (via renderFlow/renderVariables)
@@ -10189,7 +11052,7 @@ function printTimingSummary(allResults) {
 // ── Main ────────────────────────────────────────────────────────────
 
 async function main() {
-  const testCount = QUICK_MODE ? 16 : 100;
+  const testCount = QUICK_MODE ? 16 : 108;
   const estMinutes = Math.round(testCount * 2 * REPEAT_COUNT);
 
   console.log(`[comparative-eval] Plugin vs Vanilla — ${testCount} Hypotheses\n`);
@@ -10345,6 +11208,14 @@ async function main() {
       // H99-H100: idempotency & regression
       [99, 'Fix Without Regression', testH99, false],
       [100, 'Additive Feature Without Breaking Existing', testH100, false],
+      [101, 'Approval Checkpoint With Timed Resume', testH101, false],
+      [102, 'Backoff Escalation Sequence', testH102, false],
+      [103, 'Reflection Artifact Before Repair', testH103, false],
+      [104, 'Parallel Fan-Out With Awaited Summary', testH104, false],
+      [105, 'Variable Pipeline Handoff', testH105, false],
+      [106, 'Memory Overwrite And Recall', testH106, false],
+      [107, 'Long Flow Stress (12 Sequential Nodes)', testH107, false],
+      [108, 'Nested Control Stress', testH108, false],
     ];
 
     for (const [num, name, fn, quickInclude] of tests) {

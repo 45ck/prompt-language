@@ -18,7 +18,10 @@ import {
   createSwarmNode,
   createStartNode,
   createReturnNode,
+  describeNodePosition,
   findNodeById,
+  resolveNodeByPath,
+  withNodeSource,
 } from './flow-node.js';
 
 describe('createWhileNode', () => {
@@ -146,6 +149,7 @@ describe('createLetNode', () => {
     expect(node).toEqual({
       kind: 'let',
       id: 'l1',
+      declarationKind: 'let',
       variableName: 'greeting',
       source: { type: 'literal', value: 'hello' },
       append: false,
@@ -157,6 +161,7 @@ describe('createLetNode', () => {
     expect(node).toEqual({
       kind: 'let',
       id: 'l2',
+      declarationKind: 'let',
       variableName: 'info',
       source: { type: 'prompt', text: 'summarize this' },
       append: false,
@@ -168,6 +173,7 @@ describe('createLetNode', () => {
     expect(node).toEqual({
       kind: 'let',
       id: 'l3',
+      declarationKind: 'let',
       variableName: 'output',
       source: { type: 'run', command: 'echo hi' },
       append: false,
@@ -179,6 +185,7 @@ describe('createLetNode', () => {
     expect(node).toEqual({
       kind: 'let',
       id: 'l4',
+      declarationKind: 'let',
       variableName: 'items',
       source: { type: 'literal', value: 'x' },
       append: true,
@@ -190,8 +197,28 @@ describe('createLetNode', () => {
     expect(node).toEqual({
       kind: 'let',
       id: 'l5',
+      declarationKind: 'let',
       variableName: 'items',
       source: { type: 'empty_list' },
+      append: false,
+    });
+  });
+
+  it('creates a const node with declaration metadata', () => {
+    const node = createLetNode(
+      'l6',
+      'answer',
+      { type: 'literal', value: '42' },
+      false,
+      undefined,
+      'const',
+    );
+    expect(node).toEqual({
+      kind: 'let',
+      id: 'l6',
+      declarationKind: 'const',
+      variableName: 'answer',
+      source: { type: 'literal', value: '42' },
       append: false,
     });
   });
@@ -460,5 +487,44 @@ describe('findNodeById', () => {
     ];
 
     expect(findNodeById(nodes, 'target')).toBe(target);
+  });
+});
+
+describe('node position helpers', () => {
+  it('resolves nested nodes by path across composite sections', () => {
+    const catchNode = createPromptNode('catch1', 'recover');
+    const raceChild = createSpawnNode('sp1', 'worker', [createRunNode('r1', 'npm test')]);
+    const nodes = [
+      withNodeSource(
+        createTryNode('t1', [], 'command_failed', [catchNode], [createPromptNode('f1', 'cleanup')]),
+        { line: 10, column: 3 },
+      ),
+      createRaceNode('rc1', [raceChild]),
+    ];
+
+    expect(resolveNodeByPath(nodes, [0, 0])).toBe(catchNode);
+    expect(resolveNodeByPath(nodes, [1, 1])).toBe(raceChild.body[0]);
+  });
+
+  it('describes nested positions with branch labels and source context', () => {
+    const elsePrompt = withNodeSource(createPromptNode('p1', 'else branch'), {
+      line: 12,
+      column: 7,
+      text: '      prompt: else branch',
+    });
+    const raceRun = withNodeSource(createRunNode('r1', 'npm test'), {
+      line: 20,
+      column: 9,
+      text: '        run: npm test',
+    });
+    const nodes = [
+      createIfNode('i1', 'flag', [createPromptNode('p0', 'then')], [elsePrompt]),
+      createRaceNode('rc1', [createSpawnNode('sp1', 'worker', [raceRun])]),
+    ];
+
+    expect(describeNodePosition(nodes, [0, 1])).toBe('flow[1] > else[1] at line 12, col 7');
+    expect(describeNodePosition(nodes, [1, 1])).toBe(
+      'flow[2] > child[1].body[1] at line 20, col 9',
+    );
   });
 });

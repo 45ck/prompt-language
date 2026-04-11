@@ -35,6 +35,8 @@
  * Usage:
  *   node scripts/eval/smoke-test.mjs          # all tests
  *   node scripts/eval/smoke-test.mjs --quick  # fast subset (no gate test)
+ *   node scripts/eval/smoke-test.mjs --harness codex
+ *   AI_CMD="gemini -p --yolo" node scripts/eval/smoke-test.mjs
  */
 
 import { execSync } from 'node:child_process';
@@ -149,6 +151,14 @@ function resolveTimeout() {
   return 120_000;
 }
 
+function formatOutputSnippet(text) {
+  return text.replace(/\s+/g, ' ').trim().slice(0, 200);
+}
+
+function isReadyFlowOutput(text) {
+  return /\bok\b/i.test(text) || /\[prompt-language CI\]\s+Flow completed\./i.test(text);
+}
+
 /** Write structured results to a JSON file. */
 async function writeResults(totalStart) {
   await mkdir(RESULTS_DIR, { recursive: true });
@@ -242,6 +252,9 @@ function assertHarnessReady() {
     if (readinessOutput.length === 0) {
       throw new Error('empty readiness output');
     }
+    if (!isReadyFlowOutput(readinessOutput)) {
+      throw new Error(`unexpected readiness output: ${formatOutputSnippet(readinessOutput)}`);
+    }
   } catch (error) {
     const output = `${error?.stdout ?? ''}\n${error?.stderr ?? ''}\n${error?.message ?? ''}`;
     if (
@@ -262,6 +275,19 @@ function assertHarnessReady() {
       console.error(
         `[smoke-test] \`${getFlowCommandLabel()}\` produced empty output for a trivial flow; smoke scenarios were not run.`,
       );
+      process.exit(2);
+    }
+    if (/unexpected readiness output:/i.test(output)) {
+      const snippet =
+        output.match(/unexpected readiness output:\s*(.+)$/im)?.[1]?.trim() ??
+        formatOutputSnippet(output);
+      console.error(
+        `[smoke-test] BLOCKED — ${getHarnessLabel()} readiness check returned unexpected output.`,
+      );
+      console.error(
+        `[smoke-test] \`${getFlowCommandLabel()}\` must execute the flow and emit an OK-style result for the readiness probe.`,
+      );
+      console.error(`[smoke-test] Readiness output: ${snippet}`);
       process.exit(2);
     }
     if (getHarnessName() === 'opencode') {

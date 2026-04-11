@@ -201,6 +201,7 @@ describe('context-adaptive recovery hooks', () => {
           {
             kind: 'let',
             id: 'l1',
+            declarationKind: 'let',
             variableName: 'answer',
             append: false,
             source: { type: 'prompt', text: 'What changed?' },
@@ -281,6 +282,7 @@ describe('context-adaptive recovery hooks', () => {
           {
             kind: 'let',
             id: 'l1',
+            declarationKind: 'let',
             variableName: 'answer',
             append: false,
             source: { type: 'prompt', text: 'What changed?' },

@@ -74,6 +74,7 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
     case 'run':
       return [`${pad}run: ${node.command.replace(/\n/g, ' ')}`];
     case 'let': {
+      const keyword = node.declarationKind;
       const op = node.append ? '+=' : '=';
       let src: string;
       switch (node.source.type) {
@@ -96,7 +97,7 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
           src = '[]';
           break;
       }
-      return [`${pad}let ${node.variableName} ${op} ${src}`];
+      return [`${pad}${keyword} ${node.variableName} ${op} ${src}`];
     }
     case 'break':
       return [`${pad}break`];

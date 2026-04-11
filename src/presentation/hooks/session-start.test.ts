@@ -179,6 +179,7 @@ describe('session-start hook (integration)', () => {
               {
                 kind: 'let',
                 id: 'l3',
+                declarationKind: 'let',
                 variableName: 'nestedAnswer',
                 append: false,
                 source: { type: 'prompt', text: 'What about ${item}?' },
@@ -215,6 +216,7 @@ describe('session-start hook (integration)', () => {
           {
             kind: 'let',
             id: 'l1',
+            declarationKind: 'let',
             variableName: 'answer',
             append: false,
             source: { type: 'prompt', text: 'What color?' },
@@ -255,6 +257,7 @@ describe('session-start hook (integration)', () => {
           {
             kind: 'let',
             id: 'l1',
+            declarationKind: 'let',
             variableName: 'answer',
             append: false,
             source: { type: 'prompt', text: 'What changed?' },

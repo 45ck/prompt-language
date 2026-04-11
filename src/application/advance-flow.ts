@@ -36,6 +36,7 @@ import type {
   SendNode,
   ReceiveNode,
 } from '../domain/flow-node.js';
+import { describeNodePosition } from '../domain/flow-node.js';
 import type { MemoryEntry } from './ports/memory-store.js';
 import type { CommandRunner, CommandResult, RunOptions } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -221,6 +222,22 @@ export function resolveCurrentNode(
       return _exhaustive;
     }
   }
+}
+
+function describeFlowPosition(
+  state: SessionState,
+  path: readonly number[] = state.currentNodePath,
+): string | null {
+  return describeNodePosition(state.flowSpec.nodes, path);
+}
+
+function withPositionContext(
+  state: SessionState,
+  message: string,
+  path: readonly number[] = state.currentNodePath,
+): string {
+  const position = describeFlowPosition(state, path);
+  return position == null ? message : `${message} (${position})`;
 }
 
 export function advancePath(path: readonly number[]): readonly number[] {
@@ -585,7 +602,14 @@ function handleLoopReentry(
     if (loopStart != null) {
       const elapsed = (Date.now() - loopStart) / 1000;
       if (elapsed >= timeoutSeconds) {
-        current = addWarning(current, `Loop '${nodeId}' timed out after ${timeoutSeconds}s.`);
+        current = addWarning(
+          current,
+          withPositionContext(
+            current,
+            `Loop '${nodeId}' timed out after ${timeoutSeconds}s.`,
+            parentPath,
+          ),
+        );
         current = updateNodeProgress(current, nodeId, {
           iteration,
           maxIterations: maxIter,
@@ -1219,7 +1243,11 @@ async function handleReviewBodyExhaustion(
         completedAt: Date.now(),
         loopStartedAt: progress?.loopStartedAt,
       });
-      const strictReason = `Review strict failed after ${round}/${parentNode.maxRounds} rounds: ${reviewResult.reason}`;
+      const strictReason = withPositionContext(
+        current,
+        `Review strict failed after ${round}/${parentNode.maxRounds} rounds: ${reviewResult.reason}`,
+        parentPath,
+      );
       return {
         kind: 'advance',
         capturedPrompt: null,
@@ -1245,7 +1273,7 @@ async function handleReviewBodyExhaustion(
         : [
             createFlowOutcome(
               FLOW_OUTCOME_CODES.reviewRejected,
-              `Review rejected: ${reviewResult.reason}`,
+              withPositionContext(current, `Review rejected: ${reviewResult.reason}`, parentPath),
             ),
           ],
     };
@@ -1555,7 +1583,10 @@ async function advanceLetPrompt(
     };
   }
 
-  const summary = `Capture for '${node.variableName}' fell back to empty string after ${progress.maxIterations} attempts.`;
+  const summary = withPositionContext(
+    current,
+    `Capture for '${node.variableName}' fell back to empty string after ${progress.maxIterations} attempts.`,
+  );
   const fallbackState = persistRuntimeDiagnostic(
     {
       ...current,
@@ -1684,7 +1715,10 @@ async function advanceLetPromptJson(
     };
   }
 
-  const summary = `JSON capture for '${node.variableName}' fell back to empty string after ${progress.maxIterations} attempts.`;
+  const summary = withPositionContext(
+    current,
+    `JSON capture for '${node.variableName}' fell back to empty string after ${progress.maxIterations} attempts.`,
+  );
   const fallbackState = persistRuntimeDiagnostic(
     {
       ...current,
@@ -1720,6 +1754,22 @@ async function advanceRunNode(
   auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   if (!commandRunner) return { kind: 'pause', state: current, capturedPrompt: null };
+  const cachedProgress = current.nodeProgress[node.id];
+  if (
+    cachedProgress?.status === 'completed' &&
+    cachedProgress.exitCode === 0 &&
+    canSkipCompletedRunOnResume(current)
+  ) {
+    let resumed = setExitVariables(
+      current,
+      cachedProgress.exitCode,
+      cachedProgress.stdout ?? '',
+      cachedProgress.stderr ?? '',
+    );
+    resumed = advanceFromPath(resumed, resumed.currentNodePath);
+    return { state: resumed, advanced: true };
+  }
+
   const prepared = prepareShellCommand(node.command, current.variables, current.flowSpec.env);
   const command = prepared.command;
   debugLog('advance', `Running node ${node.id} command`, 2);
@@ -1758,6 +1808,7 @@ async function advanceRunNode(
   }
 
   let state = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
+  state = persistRunNodeResult(state, node.id, result);
 
   if (result.exitCode !== 0) {
     const jumpTarget = findTryCatchJump(state.flowSpec.nodes, state.currentNodePath);
@@ -1771,7 +1822,10 @@ async function advanceRunNode(
         return {
           state: markFailed(
             state,
-            `Command '${command}' failed with exit code ${result.exitCode} inside try '${parentNode.id}'.`,
+            withPositionContext(
+              state,
+              `Command '${command}' failed with exit code ${result.exitCode} inside try '${parentNode.id}'.`,
+            ),
           ),
           advanced: true,
         };
@@ -2233,7 +2287,10 @@ async function advanceRaceNode(
           pid: 0,
           stateDir,
         });
-        state = addWarning(state, `Race child "${spawnChild.name}" failed to start.`);
+        state = addWarning(
+          state,
+          withPositionContext(state, `Race child "${spawnChild.name}" failed to start.`),
+        );
       } else {
         state = updateSpawnedChild(state, spawnChild.name, {
           name: spawnChild.name,
@@ -2264,7 +2321,10 @@ async function advanceRaceNode(
       const elapsed = (Date.now() - startedAt) / 1000;
       if (elapsed >= node.timeoutSeconds) {
         let state = updateVariable(current, 'race_winner', '');
-        state = addWarning(state, `Race node timed out after ${node.timeoutSeconds}s.`);
+        state = addWarning(
+          state,
+          withPositionContext(state, `Race node timed out after ${node.timeoutSeconds}s.`),
+        );
         state = advanceFromPath(state, state.currentNodePath);
         return { state, advanced: true };
       }
@@ -2329,7 +2389,13 @@ async function advanceRaceNode(
   const pollCount = (progress?.iteration ?? 0) + 1;
   if (pollCount >= MAX_AWAIT_POLLS) {
     state = updateVariable(state, 'race_winner', '');
-    state = addWarning(state, `Race timeout after ${MAX_AWAIT_POLLS} polls; no winner declared.`);
+    state = addWarning(
+      state,
+      withPositionContext(
+        state,
+        `Race timeout after ${MAX_AWAIT_POLLS} polls; no winner declared.`,
+      ),
+    );
     state = advanceFromPath(state, state.currentNodePath);
     return { state, advanced: true };
   }
@@ -2379,7 +2445,10 @@ async function advanceForeachSpawnNode(
         pid: 0,
         stateDir,
       });
-      state = addWarning(state, `foreach-spawn child "${childName}" failed to start.`);
+      state = addWarning(
+        state,
+        withPositionContext(state, `foreach-spawn child "${childName}" failed to start.`),
+      );
     } else {
       state = updateSpawnedChild(state, childName, {
         name: childName,
@@ -2577,7 +2646,56 @@ function cloneNodeProgressWithTiming(
     startedAt,
     ...(completedAt !== undefined ? { completedAt } : {}),
     ...(progress.loopStartedAt !== undefined ? { loopStartedAt: progress.loopStartedAt } : {}),
+    ...(progress.exitCode !== undefined ? { exitCode: progress.exitCode } : {}),
+    ...(progress.stdout !== undefined ? { stdout: progress.stdout } : {}),
+    ...(progress.stderr !== undefined ? { stderr: progress.stderr } : {}),
+    ...(progress.timedOut !== undefined ? { timedOut: progress.timedOut } : {}),
   };
+}
+
+function canSkipCompletedRunOnResume(state: SessionState): boolean {
+  if (state.currentNodePath.length <= 1) {
+    return true;
+  }
+
+  for (let depth = 1; depth < state.currentNodePath.length; depth += 1) {
+    const ancestor = resolveCurrentNode(
+      state.flowSpec.nodes,
+      state.currentNodePath.slice(0, depth),
+    );
+    if (ancestor?.kind !== 'if') {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function persistRunNodeResult(
+  state: SessionState,
+  nodeId: string,
+  result: CommandResult,
+): SessionState {
+  const previous = state.nodeProgress[nodeId];
+  return updateNodeProgress(state, nodeId, {
+    iteration: previous?.iteration ?? 1,
+    maxIterations: previous?.maxIterations ?? 1,
+    status: previous?.status ?? 'pending',
+    ...(previous?.branchEndOffset !== undefined
+      ? { branchEndOffset: previous.branchEndOffset }
+      : {}),
+    ...(previous?.captureFailureReason !== undefined
+      ? { captureFailureReason: previous.captureFailureReason }
+      : {}),
+    ...(previous?.askRetryCount !== undefined ? { askRetryCount: previous.askRetryCount } : {}),
+    ...(previous?.startedAt !== undefined ? { startedAt: previous.startedAt } : {}),
+    ...(previous?.completedAt !== undefined ? { completedAt: previous.completedAt } : {}),
+    ...(previous?.loopStartedAt !== undefined ? { loopStartedAt: previous.loopStartedAt } : {}),
+    exitCode: result.exitCode,
+    stdout: truncateOutput(result.stdout.trimEnd()),
+    stderr: truncateOutput(result.stderr.trimEnd()),
+    ...(result.timedOut !== undefined ? { timedOut: result.timedOut } : {}),
+  });
 }
 
 function recordNodeTiming(
@@ -2942,7 +3060,10 @@ async function advanceConditionLoop(
             if (elapsed >= node.timeoutSeconds) {
               const warnState = addWarning(
                 current,
-                `Loop '${node.id}' timed out after ${node.timeoutSeconds}s.`,
+                withPositionContext(
+                  current,
+                  `Loop '${node.id}' timed out after ${node.timeoutSeconds}s.`,
+                ),
               );
               const completedProgress = updateNodeProgress(warnState, node.id, {
                 iteration,
@@ -2964,7 +3085,10 @@ async function advanceConditionLoop(
         if (enterBody && iteration >= node.maxIterations) {
           const warnState = addWarning(
             current,
-            `Loop '${node.id}' reached max iterations (${node.maxIterations}).`,
+            withPositionContext(
+              current,
+              `Loop '${node.id}' reached max iterations (${node.maxIterations}).`,
+            ),
           );
           const completedProgress = updateNodeProgress(warnState, node.id, {
             iteration,

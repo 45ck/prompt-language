@@ -51,6 +51,8 @@ describe('render-node-to-dsl', () => {
       createLetNode('l4', 'd', { type: 'run', command: 'git status' }),
       createLetNode('l5', 'e', { type: 'memory', key: 'theme' }, true),
       createLetNode('l6', 'f', { type: 'empty_list' }),
+      createLetNode('l7', 'g', { type: 'literal', value: 'fixed' }, false, undefined, 'const'),
+      createLetNode('l8', 'h', { type: 'literal', value: 'legacy' }, false, undefined, 'var'),
     ] as const;
 
     expect(renderNodeToDsl(cases[0], 0)).toEqual(['let a = "x\\\\\\"y\\nz"']);
@@ -63,6 +65,8 @@ describe('render-node-to-dsl', () => {
     expect(renderNodeToDsl(cases[3], 0)).toEqual(['let d = run "git status"']);
     expect(renderNodeToDsl(cases[4], 0)).toEqual(['let e += memory "theme"']);
     expect(renderNodeToDsl(cases[5], 0)).toEqual(['let f = []']);
+    expect(renderNodeToDsl(cases[6], 0)).toEqual(['const g = "fixed"']);
+    expect(renderNodeToDsl(cases[7], 0)).toEqual(['var h = "legacy"']);
   });
 
   it('renders while/until/retry with nested body lines', () => {

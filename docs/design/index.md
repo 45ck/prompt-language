@@ -24,9 +24,17 @@ For the repo-wide docs cleanup:
 | [Team Supervisor Surfaces](team-supervisor-surfaces.md)                                           | Accepted shell-level status, resume, and stop surfaces over child runs                 |
 | [Operator Scaffolding Boundary](operator-scaffolding.md)                                          | Accepted boundary for repo-visible AGENTS, starter flows, and reusable libraries       |
 | [Operator Shell Rollout, Troubleshooting, and Promotion](operator-shell-rollout-and-promotion.md) | Accepted evidence and promotion contract for operator-shell work                       |
+| [Context-Adaptive Recovery Fallback](context-adaptive-recovery-fallback.md)                       | Accepted fail-closed fallback and escalation contract for compact rendering            |
+| [Fresh-Context Policy for Steps and Loops](fresh-context-policy.md)                               | Accepted default fresh-versus-threaded session boundary policy                         |
+| [Fresh-Step Bootstrap Context](fresh-step-bootstrap-context.md)                                   | Accepted bootstrap packet contract for fresh-session handoff                           |
+| [Compact-Mode Fallback Matrix](compact-mode-fallback-matrix.md)                                   | Accepted trigger matrix for fail-closed compact-to-full escalation                     |
 | [Hooks Architecture](hooks-architecture.md)                                                       | Three-hook enforcement loop and state-file model                                       |
 | [Evaluation Stack V1 Boundary](evaluation-stack-v1.md)                                            | Accepted first-slice boundary for rubrics, judges, eval tooling, and `review strict`   |
 | [Diagnostics Contract V1](diagnostics-contract-v1.md)                                             | Accepted report envelope, code ranges, and preflight boundary                          |
+| [vNext Trust Hardening](vnext-trust-hardening.md)                                                 | Accepted strict-mode, budgets, checkpoint, and restore contract for trusted execution  |
+| [Artifact Package, Manifest, and Renderer Contract](artifact-package-contract.md)                 | Accepted package layout, manifest semantics, and renderer-view boundary                |
+| [Artifact Runtime Lifecycle](artifact-runtime-lifecycle.md)                                       | Accepted emit/validate/reference/review/supersede semantics                            |
+| [Artifact Extension Boundary](artifact-extension-boundary.md)                                     | Accepted custom-type, review-storage, and plugin-renderer boundary                     |
 | [Foreach Design](foreach.md)                                                                      | Canonical foreach design and rationale                                                 |
 | [Skill / Profile / Agent / Flow File](terminology-skill-profile-agent-flow.md)                    | Terminology boundary for the backlog track                                             |
 

@@ -909,6 +909,199 @@ describe('GATE_TIMEOUT_MS env var', () => {
   });
 });
 
+describe('PROMPT_LANGUAGE_GATE_CACHE_TTL', () => {
+  const originalEnv = process.env['PROMPT_LANGUAGE_GATE_CACHE_TTL'];
+
+  afterEach(() => {
+    vi.useRealTimers();
+    if (originalEnv === undefined) {
+      delete process.env['PROMPT_LANGUAGE_GATE_CACHE_TTL'];
+    } else {
+      process.env['PROMPT_LANGUAGE_GATE_CACHE_TTL'] = originalEnv;
+    }
+    vi.resetModules();
+  });
+
+  it('skips re-evaluation for recently passed command-backed gates', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2026-04-11T00:00:00.000Z');
+    vi.setSystemTime(now);
+    delete process.env['PROMPT_LANGUAGE_GATE_CACHE_TTL'];
+    vi.resetModules();
+
+    let runCount = 0;
+    const runner: CommandRunner = {
+      run: async () => {
+        runCount += 1;
+        return { exitCode: 1, stdout: '', stderr: 'FAIL' };
+      },
+    };
+
+    const mod = await import('./evaluate-completion.js');
+    const { InMemoryStateStore } =
+      await import('../infrastructure/adapters/in-memory-state-store.js');
+    const { createSessionState } = await import('../domain/session-state.js');
+    const { createFlowSpec, createCompletionGate } = await import('../domain/flow-spec.js');
+
+    const store = new InMemoryStateStore();
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s-cache-hit', spec);
+    await store.save({
+      ...session,
+      gateResults: { tests_pass: true },
+      gateDiagnostics: {
+        tests_pass: {
+          passed: true,
+          command: 'npm test',
+          exitCode: 0,
+          gateEvaluatedAt: now.getTime(),
+        },
+      },
+    });
+
+    const result = await mod.evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(runCount).toBe(0);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('completed');
+    expect(saved?.gateDiagnostics['tests_pass']?.gateEvaluatedAt).toBe(now.getTime());
+  });
+
+  it('always re-evaluates failed gates even inside the TTL window', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2026-04-11T00:00:00.000Z');
+    vi.setSystemTime(now);
+    delete process.env['PROMPT_LANGUAGE_GATE_CACHE_TTL'];
+    vi.resetModules();
+
+    let runCount = 0;
+    const runner: CommandRunner = {
+      run: async () => {
+        runCount += 1;
+        return { exitCode: 0, stdout: 'OK', stderr: '' };
+      },
+    };
+
+    const mod = await import('./evaluate-completion.js');
+    const { InMemoryStateStore } =
+      await import('../infrastructure/adapters/in-memory-state-store.js');
+    const { createSessionState } = await import('../domain/session-state.js');
+    const { createFlowSpec, createCompletionGate } = await import('../domain/flow-spec.js');
+
+    const store = new InMemoryStateStore();
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s-cache-failed', spec);
+    await store.save({
+      ...session,
+      gateResults: { tests_pass: false },
+      gateDiagnostics: {
+        tests_pass: {
+          passed: false,
+          command: 'npm test',
+          exitCode: 1,
+          gateEvaluatedAt: now.getTime() - 1000,
+        },
+      },
+    });
+
+    const result = await mod.evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(runCount).toBe(1);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.gateDiagnostics['tests_pass']?.passed).toBe(true);
+    expect(saved?.gateDiagnostics['tests_pass']?.gateEvaluatedAt).toBe(now.getTime());
+  });
+
+  it('re-evaluates passed gates after the TTL expires', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2026-04-11T00:00:31.000Z');
+    vi.setSystemTime(now);
+    delete process.env['PROMPT_LANGUAGE_GATE_CACHE_TTL'];
+    vi.resetModules();
+
+    let runCount = 0;
+    const runner: CommandRunner = {
+      run: async () => {
+        runCount += 1;
+        return { exitCode: 0, stdout: 'OK', stderr: '' };
+      },
+    };
+
+    const mod = await import('./evaluate-completion.js');
+    const { InMemoryStateStore } =
+      await import('../infrastructure/adapters/in-memory-state-store.js');
+    const { createSessionState } = await import('../domain/session-state.js');
+    const { createFlowSpec, createCompletionGate } = await import('../domain/flow-spec.js');
+
+    const store = new InMemoryStateStore();
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s-cache-expired', spec);
+    await store.save({
+      ...session,
+      gateResults: { tests_pass: true },
+      gateDiagnostics: {
+        tests_pass: {
+          passed: true,
+          command: 'npm test',
+          exitCode: 0,
+          gateEvaluatedAt: now.getTime() - 31_000,
+        },
+      },
+    });
+
+    const result = await mod.evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(runCount).toBe(1);
+
+    const saved = await store.loadCurrent();
+    expect(saved?.gateDiagnostics['tests_pass']?.gateEvaluatedAt).toBe(now.getTime());
+  });
+
+  it('uses the configured cache TTL from the environment', async () => {
+    vi.useFakeTimers();
+    const now = new Date('2026-04-11T00:01:30.000Z');
+    vi.setSystemTime(now);
+    process.env['PROMPT_LANGUAGE_GATE_CACHE_TTL'] = '120';
+    vi.resetModules();
+
+    let runCount = 0;
+    const runner: CommandRunner = {
+      run: async () => {
+        runCount += 1;
+        return { exitCode: 1, stdout: '', stderr: 'FAIL' };
+      },
+    };
+
+    const mod = await import('./evaluate-completion.js');
+    const { InMemoryStateStore } =
+      await import('../infrastructure/adapters/in-memory-state-store.js');
+    const { createSessionState } = await import('../domain/session-state.js');
+    const { createFlowSpec, createCompletionGate } = await import('../domain/flow-spec.js');
+
+    const store = new InMemoryStateStore();
+    const spec = createFlowSpec('test', [], [createCompletionGate('tests_pass', 'npm test')]);
+    const session = createSessionState('s-cache-env', spec);
+    await store.save({
+      ...session,
+      gateResults: { tests_pass: true },
+      gateDiagnostics: {
+        tests_pass: {
+          passed: true,
+          command: 'npm test',
+          exitCode: 0,
+          gateEvaluatedAt: now.getTime() - 90_000,
+        },
+      },
+    });
+
+    const result = await mod.evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(runCount).toBe(0);
+  });
+});
+
 // ── H-INT-010: any() gate composition evaluation ─────────────────────
 
 describe('evaluateCompletion — any() gate composition (H-INT-010)', () => {

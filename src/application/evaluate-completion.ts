@@ -13,7 +13,7 @@ import {
   markFailed,
   allGatesPassing,
 } from '../domain/session-state.js';
-import type { SessionState } from '../domain/session-state.js';
+import type { GateEvalResult, SessionState } from '../domain/session-state.js';
 import { findSimilarPredicate } from '../domain/fuzzy-match.js';
 import {
   createFlowOutcome,
@@ -117,6 +117,15 @@ const GATE_TIMEOUT_MS = (() => {
   return 60_000;
 })();
 
+const GATE_CACHE_TTL_MS = (() => {
+  const envVal = process.env['PROMPT_LANGUAGE_GATE_CACHE_TTL'];
+  if (envVal) {
+    const parsedSeconds = parseInt(envVal, 10);
+    if (!isNaN(parsedSeconds) && parsedSeconds > 0) return parsedSeconds * 1000;
+  }
+  return 30_000;
+})();
+
 // H-SEC-003: Stderr truncation limit (increased from 200 to 2000)
 const STDERR_LIMIT = 2000;
 
@@ -131,6 +140,32 @@ function truncateOutput(text: string, limit: number): string {
   return trimmed.slice(0, limit) + ' [truncated]';
 }
 
+type CachedPassingGateDiagnostic = Readonly<
+  GateEvalResult & { passed: true; command: string; gateEvaluatedAt: number }
+>;
+
+function getCachedPassingGateDiagnostic(
+  state: SessionState,
+  gate: CompletionGate,
+  command: string,
+  now: number,
+): CachedPassingGateDiagnostic | undefined {
+  if (state.gateResults[gate.predicate] !== true) return undefined;
+  const diagnostic = state.gateDiagnostics[gate.predicate];
+  if (diagnostic?.passed !== true) return undefined;
+  if (diagnostic.command !== command) return undefined;
+  if (diagnostic.gateEvaluatedAt === undefined) return undefined;
+  if (now - diagnostic.gateEvaluatedAt > GATE_CACHE_TTL_MS) return undefined;
+  return {
+    passed: true,
+    command,
+    gateEvaluatedAt: diagnostic.gateEvaluatedAt,
+    ...(diagnostic.exitCode !== undefined ? { exitCode: diagnostic.exitCode } : {}),
+    ...(diagnostic.stderr !== undefined ? { stderr: diagnostic.stderr } : {}),
+    ...(diagnostic.stdout !== undefined ? { stdout: diagnostic.stdout } : {}),
+  };
+}
+
 /** Evaluate a single (non-composite) gate predicate and return whether it passed. */
 async function evaluateSingleGate(
   gate: CompletionGate,
@@ -138,20 +173,38 @@ async function evaluateSingleGate(
   runner: CommandRunner,
   timeoutMs: number,
   envOpt?: { env?: Readonly<Record<string, string>> },
-): Promise<{ passed: boolean; command?: string; result?: CommandResult }> {
+): Promise<{
+  passed: boolean;
+  command?: string;
+  result?: CommandResult;
+  cachedDiagnostic?: Readonly<{ passed: true; command: string; gateEvaluatedAt: number }>;
+  gateEvaluatedAt?: number;
+}> {
   const command = gate.command ?? resolveBuiltinCommand(gate.predicate);
   if (command) {
+    const cachedDiagnostic = getCachedPassingGateDiagnostic(state, gate, command, Date.now());
+    if (cachedDiagnostic) {
+      return {
+        passed: true,
+        command,
+        cachedDiagnostic: {
+          passed: true,
+          command,
+          gateEvaluatedAt: cachedDiagnostic.gateEvaluatedAt,
+        },
+      };
+    }
     const result = await runner.run(command, { timeoutMs, ...envOpt });
     const inverted = isInvertedPredicate(gate.predicate);
     const passed = inverted ? result.exitCode !== 0 : result.exitCode === 0;
-    return { passed, command, result };
+    return { passed, command, result, gateEvaluatedAt: Date.now() };
   }
   // H#5: Check variables as gate predicates (boolean)
   const varValue = state.variables[gate.predicate];
   if (typeof varValue === 'boolean') {
-    return { passed: varValue };
+    return { passed: varValue, gateEvaluatedAt: Date.now() };
   }
-  return { passed: false };
+  return { passed: false, gateEvaluatedAt: Date.now() };
 }
 
 // H#64: Parallel gate evaluation via Promise.all()
@@ -194,8 +247,20 @@ async function runGates(
     }
     const command = gate.command ?? resolveBuiltinCommand(gate.predicate);
     if (!command) return { gate, result: null, command: null };
+    const cachedDiagnostic = getCachedPassingGateDiagnostic(state, gate, command, Date.now());
+    if (cachedDiagnostic) {
+      return {
+        gate,
+        command,
+        cachedDiagnostic: {
+          passed: true,
+          command,
+          gateEvaluatedAt: cachedDiagnostic.gateEvaluatedAt,
+        } as const,
+      };
+    }
     const result = await runner.run(command, { timeoutMs, ...envOpt });
-    return { gate, result, command };
+    return { gate, result, command, gateEvaluatedAt: Date.now() };
   });
   const gateResults = await Promise.all(gatePromises);
 
@@ -206,23 +271,38 @@ async function runGates(
     // H-INT-010: Process any() composite gate result
     if ('anyPassed' in entry) {
       updated = updateGateResult(updated, gate.predicate, entry.anyPassed);
-      updated = updateGateDiagnostic(updated, gate.predicate, { passed: entry.anyPassed });
+      updated = updateGateDiagnostic(updated, gate.predicate, {
+        passed: entry.anyPassed,
+        gateEvaluatedAt: Date.now(),
+      });
       continue;
     }
     // H-LANG-010: Process all() composite gate result
     if ('allPassed' in entry) {
       updated = updateGateResult(updated, gate.predicate, entry.allPassed);
-      updated = updateGateDiagnostic(updated, gate.predicate, { passed: entry.allPassed });
+      updated = updateGateDiagnostic(updated, gate.predicate, {
+        passed: entry.allPassed,
+        gateEvaluatedAt: Date.now(),
+      });
       continue;
     }
     // H-LANG-010: Process N_of() composite gate result
     if ('nOfPassed' in entry) {
       updated = updateGateResult(updated, gate.predicate, entry.nOfPassed);
-      updated = updateGateDiagnostic(updated, gate.predicate, { passed: entry.nOfPassed });
+      updated = updateGateDiagnostic(updated, gate.predicate, {
+        passed: entry.nOfPassed,
+        gateEvaluatedAt: Date.now(),
+      });
       continue;
     }
 
-    const { result, command } = entry;
+    if ('cachedDiagnostic' in entry && entry.cachedDiagnostic) {
+      updated = updateGateResult(updated, gate.predicate, true);
+      updated = updateGateDiagnostic(updated, gate.predicate, entry.cachedDiagnostic);
+      continue;
+    }
+
+    const { result, command, gateEvaluatedAt } = entry;
     if (result && command) {
       // H-SEC-006: Log gate evaluation to audit trail
       if (auditLogger) {
@@ -248,18 +328,25 @@ async function runGates(
         exitCode: result.exitCode,
         ...(stderrSnippet ? { stderr: stderrSnippet } : {}),
         ...(stdoutSnippet ? { stdout: stdoutSnippet } : {}),
+        ...(gateEvaluatedAt !== undefined ? { gateEvaluatedAt } : {}),
       });
     } else {
       // H#5: Check variables as gate predicates (boolean)
       const varValue = updated.variables[gate.predicate];
       if (typeof varValue === 'boolean') {
         updated = updateGateResult(updated, gate.predicate, varValue);
-        updated = updateGateDiagnostic(updated, gate.predicate, { passed: varValue });
+        updated = updateGateDiagnostic(updated, gate.predicate, {
+          passed: varValue,
+          ...(gateEvaluatedAt !== undefined ? { gateEvaluatedAt } : {}),
+        });
       } else {
         const current = updated.gateResults[gate.predicate];
         if (current === undefined) {
           updated = updateGateResult(updated, gate.predicate, false);
-          updated = updateGateDiagnostic(updated, gate.predicate, { passed: false });
+          updated = updateGateDiagnostic(updated, gate.predicate, {
+            passed: false,
+            ...(gateEvaluatedAt !== undefined ? { gateEvaluatedAt } : {}),
+          });
           // Unknown predicate — suggest a similar known predicate if possible
           const similar = findSimilarPredicate(gate.predicate);
           if (similar) {

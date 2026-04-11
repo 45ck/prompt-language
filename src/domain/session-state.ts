@@ -40,6 +40,7 @@ export interface GateEvalResult {
   readonly exitCode?: number;
   readonly stderr?: string;
   readonly stdout?: string;
+  readonly gateEvaluatedAt?: number;
 }
 
 export interface SessionState {

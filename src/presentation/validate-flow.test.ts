@@ -34,7 +34,17 @@ describe('buildValidateFlowPreview', () => {
     );
 
     expect(preview.expandedFlow).toContain('spawn "frontend" model "sonnet"');
-    expect(preview.output).toContain('Expanded flow:');
+    expect(preview.output).toContain('Lowered swarm flow:');
+    expect(preview.output).toContain('Rendered runtime flow:');
+    expect(preview.renderedFlow).toContain('spawn "frontend"');
+    expect(preview.renderedFlow).toContain('await "frontend"');
+    expect(preview.renderedFlow).toContain('let __swarm_id = "checkout_fix"');
+    expect(preview.renderedFlow).toContain('let __swarm_role = "frontend"');
+    expect(preview.renderedFlow).toContain('let __swarm_return = ${summary}');
+    expect(preview.renderedFlow).toContain('send "parent" "${__swarm_return}"');
+    expect(preview.renderedFlow).toContain(
+      'receive __checkout_fix_frontend_returned from "frontend"',
+    );
     expect(preview.output).toContain(
       'receive __checkout_fix_frontend_returned from "frontend" timeout 30',
     );

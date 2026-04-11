@@ -751,8 +751,8 @@ describe('Error message quality — parse failure diagnostics', () => {
 
   it('warnings include line number information', () => {
     const spec = parseFlow('flow:\n  frobnicate something');
-    // The warn() function prepends "line N:" to messages
-    expect(spec.warnings.some((w) => /^line \d+:/.test(w))).toBe(true);
+    // The warning formatter now includes both line and column coordinates.
+    expect(spec.warnings.some((w) => /^line \d+, col \d+:/.test(w))).toBe(true);
   });
 
   it('warnings do not contain raw stack traces', () => {

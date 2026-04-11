@@ -224,7 +224,7 @@ describe('runFlowHeadless', () => {
     expect(result.finalState.status).toBe('completed');
     expect(result.finalState.variables['answer']).toBe('');
     expect(result.reason).toBe(
-      "PLR-005 Capture for 'answer' fell back to empty string after 3 attempts.",
+      "PLR-005 Capture for 'answer' fell back to empty string after 3 attempts. (flow[1] at line 4, col 3)",
     );
     expect(result.report.status).toBe('ok');
     expect(result.report.diagnostics).toEqual([
@@ -1116,6 +1116,99 @@ describe('runFlowHeadless', () => {
 
     expect(result.finalState.status).toBe('completed');
     await expect(readFile(join(tempDir, 'cwd.txt'), 'utf8')).resolves.toBe(tempDir);
+  });
+
+  it('executes a deterministic 10+ node nested flow end-to-end in headless mode', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-long-nested-'));
+
+    const promptRunner = new RecordingPromptRunner(async ({ cwd }) => {
+      const trace = await readFile(join(cwd, 'trace.txt'), 'utf8');
+      await writeFile(join(cwd, 'summary.txt'), trace, 'utf8');
+      return { exitCode: 0, madeProgress: true };
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: nested long flow',
+          '',
+          'flow:',
+          '  let items = "alpha beta"',
+          '  foreach item in ${items}',
+          `    run: node -e "require('node:fs').appendFileSync('trace.txt', 'enter-${'${item}'}\\n')"`,
+          '    try',
+          '      if ${item} == "alpha"',
+          '        retry max 2',
+          `          run: node -e "require('node:fs').appendFileSync('trace.txt', 'alpha-retry-${'${item}'}\\n')"`,
+          '        end',
+          '        foreach phase in "plan apply"',
+          `          run: node -e "require('node:fs').appendFileSync('trace.txt', '${'${item}'}-${'${phase}'}\\n')"`,
+          '        end',
+          '      else',
+          '        retry max 2',
+          '          foreach phase in "verify cleanup"',
+          `            run: node -e "require('node:fs').appendFileSync('trace.txt', '${'${item}'}-${'${phase}'}\\n')"`,
+          '          end',
+          '        end',
+          '      end',
+          '    finally',
+          `      run: node -e "require('node:fs').appendFileSync('trace.txt', 'finally-${'${item}'}\\n')"`,
+          '    end',
+          `    run: node -e "require('node:fs').appendFileSync('trace.txt', 'after-${'${item}'}\\n')"`,
+          '  end',
+          '  prompt: Copy trace.txt into summary.txt exactly',
+          '',
+          'done when:',
+          '  file_exists summary.txt',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new ShellCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.turns).toBe(1);
+    expect(promptRunner.prompts).toHaveLength(1);
+    await expect(readFile(join(tempDir, 'trace.txt'), 'utf8')).resolves.toBe(
+      [
+        'enter-alpha',
+        'alpha-retry-alpha',
+        'alpha-plan',
+        'alpha-apply',
+        'finally-alpha',
+        'after-alpha',
+        'enter-beta',
+        'beta-verify',
+        'beta-cleanup',
+        'finally-beta',
+        'after-beta',
+        '',
+      ].join('\n'),
+    );
+    await expect(readFile(join(tempDir, 'summary.txt'), 'utf8')).resolves.toBe(
+      [
+        'enter-alpha',
+        'alpha-retry-alpha',
+        'alpha-plan',
+        'alpha-apply',
+        'finally-alpha',
+        'after-alpha',
+        'enter-beta',
+        'beta-verify',
+        'beta-cleanup',
+        'finally-beta',
+        'after-beta',
+        '',
+      ].join('\n'),
+    );
   });
 
   it('executes only the selected if branch for prompt nodes', async () => {

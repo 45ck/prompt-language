@@ -57,6 +57,8 @@ Current repo expectations already established elsewhere:
 
 - native Windows is not the supported parity target for hooks and live smoke
 - Linux, macOS, or WSL-style supported-host runs are the expected parity path when live Claude access is required
+- historical smoke reports or quick-smoke notes do not backfill supported-host evidence for a later slice
+- a Windows docs-only pass may document the gap, but it must not silently convert the gap into a parity claim
 
 ## Blocked-host expectation
 
@@ -76,6 +78,13 @@ Required handling on a blocked host:
 - record the blocker explicitly
 - do not relabel the run as a product failure unless a scenario actually ran and the product behavior regressed
 - reroute required live validation to a supported host
+
+Required handling on an unsupported host such as native Windows:
+
+- keep the unsupported-host status explicit in the evidence note
+- record any repo-local evidence you did gather, such as test, CI, or smoke-history inspection
+- do not rewrite a stored historical smoke result as if it were a fresh host validation
+- name the supported-host rerun still required to close the gap
 
 ## Evidence fields to capture
 

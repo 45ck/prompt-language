@@ -16,7 +16,7 @@ That is the clearest place where prompt-language adds value over plain prompting
 
 - `npm run test` passes on the current worktree
 - `npm run ci` passes on the current worktree
-- `npm run eval:smoke:codex:quick` now passes `27/27` quick-smoke scenarios through the Codex headless path on this workstation
+- checked-in evaluation evidence includes a `27/27` `npm run eval:smoke:codex:quick` pass through the Codex headless path
 - the v1 eval runner is real: checked-in JSONL datasets, repeat counts, machine-readable reports, and baseline comparison all ship through `prompt-language eval`
 - review and judge plumbing is now part of the runtime surface rather than dead design text: named judges, typed review verdict capture, and strict fail-closed review behavior are implemented and tested
 
@@ -29,7 +29,7 @@ That is the clearest place where prompt-language adds value over plain prompting
 
 ## What is not fully proven yet
 
-- supported-host live smoke with Claude access in this environment: `npm run eval:smoke` is still blocked here by missing Claude auth/login
+- supported-host live smoke with Claude access in a supported host environment: `npm run eval:smoke` is still not closed out by native-Windows evidence alone
 - full Codex parity on a supported Linux/macOS/WSL host with live smoke and comparative runs
 - broad thesis claims beyond the seeded E1 dataset bank and the historical comparative eval set
 - larger orchestration-shell positioning beyond the current supervision-runtime boundary

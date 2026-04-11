@@ -7,7 +7,8 @@ It replaces the older pre-implementation gap analysis that assumed `approve`, `r
 ## Current state
 
 - The smoke suite now spans `A` through `AO`.
-- The quick Codex slice currently passes `27/27` through `npm run eval:smoke:codex:quick`.
+- Checked-in evidence records the quick Codex slice at `27/27` through `npm run eval:smoke:codex:quick`.
+- That quick-smoke result should be treated as historical evidence unless it is rerun in the current slice.
 - `npm run eval:smoke` is still required for supported-host live validation, but it is blocked on this workstation by missing Claude auth/login.
 
 ## Coverage snapshot
@@ -31,6 +32,7 @@ It replaces the older pre-implementation gap analysis that assumed `approve`, `r
 These are the remaining real gaps, not stale parser assumptions:
 
 - supported-host live smoke with Claude access is still blocked in this environment
+- native Windows can inspect smoke history and run repo-local commands, but it is not the supported parity host
 - slow full-suite smoke cases remain intentionally outside the quick Codex subset
 - parity on Linux/macOS/WSL with live smoke and comparative runs is still open
 

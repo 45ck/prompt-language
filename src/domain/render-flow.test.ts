@@ -360,6 +360,24 @@ describe('renderFlow', () => {
     expect(output).toContain('user_var = hello');
   });
 
+  it('renders visible variables in canonical key order for equivalent state', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    const stateA = {
+      ...createSessionState('s1', spec),
+      variables: { zebra: 'last', alpha: 'first', middle: 'mid' },
+    };
+    const stateB = {
+      ...createSessionState('s1', spec),
+      variables: { middle: 'mid', zebra: 'last', alpha: 'first' },
+    };
+
+    const outputA = renderFlow(stateA);
+    const outputB = renderFlow(stateB);
+
+    expect(outputA).toBe(outputB);
+    expect(outputA).toContain('Variables:\n  alpha = first\n  middle = mid\n  zebra = last');
+  });
+
   it('omits variables section when empty', () => {
     const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
     const state = createSessionState('s1', spec);
@@ -1542,6 +1560,53 @@ describe('renderStateHash', () => {
     const state1 = createSessionState('s1', spec);
     const state2 = { ...state1, gateResults: { tests_pass: true } };
     expect(renderStateHash(state1)).not.toBe(renderStateHash(state2));
+  });
+
+  it('canonicalizes equivalent gate and node-progress objects before hashing', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work'), createRunNode('r1', 'npm test')],
+      [createCompletionGate('lint_pass'), createCompletionGate('tests_pass')],
+    );
+    const base = createSessionState('s1', spec);
+    const stateA = {
+      ...base,
+      gateResults: { lint_pass: false, tests_pass: true },
+      nodeProgress: {
+        p1: {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'completed' as const,
+          startedAt: 10,
+          completedAt: 20,
+        },
+        r1: {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'running' as const,
+        },
+      },
+    };
+    const stateB = {
+      ...base,
+      gateResults: { tests_pass: true, lint_pass: false },
+      nodeProgress: {
+        r1: {
+          maxIterations: 1,
+          iteration: 1,
+          status: 'running' as const,
+        },
+        p1: {
+          completedAt: 20,
+          startedAt: 10,
+          status: 'completed' as const,
+          maxIterations: 1,
+          iteration: 1,
+        },
+      },
+    };
+
+    expect(renderStateHash(stateA)).toBe(renderStateHash(stateB));
   });
 });
 

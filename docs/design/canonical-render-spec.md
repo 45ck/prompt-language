@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted render contract for `prompt-language-0ovo.2.1`.
+Accepted render contract for `prompt-language-0ovo.2.2`.
 
 ## Scope
 
@@ -386,9 +386,9 @@ Variables:
 
 Variable order guarantee:
 
-- Variables render in the insertion order returned by `Object.entries(state.variables)`
-- The renderer does not sort variable names alphabetically
-- Hidden variables are filtered out in-place without reordering the remaining entries
+- Visible variables render in canonical ascending key order
+- Hidden variables are filtered out before canonical ordering is applied
+- Two semantically equivalent variable maps must render byte-identically even when their JS insertion order differs
 
 Hidden-variable guarantees:
 
@@ -483,6 +483,19 @@ That means:
 - no randomized ordering is permitted
 - section omission depends only on state presence and filtering rules
 - visibility rules are state-derived, not host-derived
+- visible variable ordering is canonicalized by key, not preserved from insertion order
+
+## Canonical Hashing Rules
+
+`renderStateHash(...)` must hash render-relevant state using a canonical object form.
+
+Guarantees:
+
+- Arrays preserve their original order
+- Plain object keys are sorted in ascending key order before hashing
+- Nested plain objects are canonicalized recursively before hashing
+- Semantically equivalent `nodeProgress` and `gateResults` objects must produce the same hash even when constructed with different JS insertion orders
+- Hash changes still occur when the actual render-relevant values change
 
 ## Non-Goals
 
@@ -493,9 +506,8 @@ This contract does not require:
 - column alignment beyond the explicit fixed strings above
 - width-aware wrapping
 - escaping or redacting user-provided values
-- stable ordering across differently-constructed but semantically equivalent JS objects
 
-The current contract is deterministic relative to actual object insertion order, not to a sorted semantic model.
+The current contract now treats semantically equivalent object state as canonically ordered for visible variables and render hashing.
 
 ## Current Test Mapping
 
@@ -519,7 +531,7 @@ Likely future tests that should exist if formatting changes are expected:
 
 - exact top-level section ordering with all optional sections present
 - exact blank-line count between each section
-- explicit insertion-order variable rendering
+- explicit canonical variable rendering for equivalent object insertion order
 - explicit confirmation that structural lines (`else`, `catch`, `finally`, `end`) remain unprefixed
 - prompt_json schema truncation boundary at exactly 40 characters
 

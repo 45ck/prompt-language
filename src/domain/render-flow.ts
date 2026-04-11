@@ -25,14 +25,31 @@ function fnv1aHash(str: string): string {
   return hash.toString(16).padStart(8, '0');
 }
 
+function canonicalizeForHash(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => canonicalizeForHash(item));
+  }
+
+  if (value != null && typeof value === 'object') {
+    const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right));
+    return Object.fromEntries(
+      entries.map(([key, nestedValue]) => [key, canonicalizeForHash(nestedValue)]),
+    );
+  }
+
+  return value;
+}
+
 // H-PERF-001: Compute a hash of render-relevant state to detect unchanged renders
 export function renderStateHash(state: SessionState): string {
-  const data = JSON.stringify({
-    p: state.currentNodePath,
-    n: state.nodeProgress,
-    g: state.gateResults,
-    s: state.status,
-  });
+  const data = JSON.stringify(
+    canonicalizeForHash({
+      p: state.currentNodePath,
+      n: state.nodeProgress,
+      g: state.gateResults,
+      s: state.status,
+    }),
+  );
   return fnv1aHash(data);
 }
 
@@ -728,7 +745,9 @@ function renderVariables(state: SessionState): string[] {
   const entries = Object.entries(state.variables);
   if (entries.length === 0) return [];
 
-  const filtered = entries.filter(([key, value]) => !isHiddenVariable(key, value, state.variables));
+  const filtered = entries
+    .filter(([key, value]) => !isHiddenVariable(key, value, state.variables))
+    .sort(([left], [right]) => left.localeCompare(right));
   if (filtered.length === 0) return [];
 
   const lines: string[] = ['', 'Variables:'];

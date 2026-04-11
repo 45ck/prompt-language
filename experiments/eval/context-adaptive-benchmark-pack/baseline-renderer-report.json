@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "kind": "context-adaptive-benchmark-baseline-report",
+  "generatedAt": "2026-04-11T07:45:41.1127751Z",
+  "bead": "prompt-language-0ovo.1.4",
+  "baselineCommit": "9722f75c7796c2c56cb8e8dedab6ca16bffdb41d",
+  "rendererMode": "current-full",
+  "fixtureInventoryPath": "experiments/eval/context-adaptive-benchmark-pack/fixtures.json",
+  "summary": {
+    "totalFixtures": 4,
+    "categoriesSeeded": ["gate-heavy", "long-flow", "large-output", "recovery"],
+    "baselineFamily": "current-renderer",
+    "comparisonReportsCommitted": 0,
+    "reportPurpose": "Lock the current renderer as the reference family before later compact-mode comparison beads add candidate runs."
+  },
+  "cases": [
+    {
+      "fixtureId": "ca-pack.gate-heavy.v1",
+      "category": "gate-heavy",
+      "status": "seeded-reference",
+      "currentRendererStrength": "Maximum visibility into repeated gate output and failing command details.",
+      "currentRendererRisk": "Highest prompt churn because every rerun tends to restate large validation transcripts.",
+      "comparisonReady": true
+    },
+    {
+      "fixtureId": "ca-pack.long-flow.v1",
+      "category": "long-flow",
+      "status": "seeded-reference",
+      "currentRendererStrength": "Preserves the full multi-turn thread for continuity across partial fixes.",
+      "currentRendererRisk": "Long sequential flows can accumulate non-decisive history and increase context volume turn over turn.",
+      "comparisonReady": true
+    },
+    {
+      "fixtureId": "ca-pack.large-output.v1",
+      "category": "large-output",
+      "status": "seeded-reference",
+      "currentRendererStrength": "Keeps late-arriving clues visible without summary loss.",
+      "currentRendererRisk": "Verbose output can dominate the prompt budget and obscure the next action in review.",
+      "comparisonReady": true
+    },
+    {
+      "fixtureId": "ca-pack.recovery.v1",
+      "category": "recovery",
+      "status": "seeded-reference",
+      "currentRendererStrength": "Uses the current full-history path as the safest reference for interrupted run recovery.",
+      "currentRendererRisk": "Recovery turns can inherit large checkpoint and prior-output payloads with no compact-mode filtering.",
+      "comparisonReady": true
+    }
+  ],
+  "remainingWork": [
+    "Collect telemetry-backed current-renderer measurements once the render byte and timing signals are wired end to end.",
+    "Add compact-mode candidate reports against these same fixture ids in the later comparison beads.",
+    "Publish a comparison summary note under docs/evaluation once wins, losses, ties, and regressions can be inspected."
+  ]
+}

@@ -7,6 +7,10 @@ This directory is the checked-in home for reusable evaluation datasets and human
 ```text
 experiments/eval/
   README.md
+  context-adaptive-benchmark-pack/
+    README.md
+    fixtures.json
+    baseline-renderer-report.json
   datasets/
     README.md
     e1-repeated-failures.jsonl
@@ -34,6 +38,17 @@ The seeded E1 suite uses a custom gate line (`gate fixture_tests: node test.js`)
 | Suite                                                                        | Status | Purpose                                                         | Locked evidence                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------- | ------ | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [`datasets/e1-repeated-failures.jsonl`](datasets/e1-repeated-failures.jsonl) | Seeded | Repeated failure elimination starter for E1 and v1 runner smoke | [`../results/e1-repeated-failure/v1/codex-vanilla.json`](../results/e1-repeated-failure/v1/codex-vanilla.json), [`../results/e1-repeated-failure/v1/codex-gated.json`](../results/e1-repeated-failure/v1/codex-gated.json) |
+
+## Seeded benchmark-pack references
+
+| Pack                                                                            | Status | Purpose                                                                         | Seed artifact                                                                                                                    |
+| ------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [`context-adaptive-benchmark-pack/`](context-adaptive-benchmark-pack/README.md) | Seeded | Minimal baseline pack for render-cost and recovery-sensitive context adaptation | [`context-adaptive-benchmark-pack/baseline-renderer-report.json`](context-adaptive-benchmark-pack/baseline-renderer-report.json) |
+
+This benchmark-pack seed is intentionally smaller than the runner-backed datasets
+above. It locks the fixture categories and current-renderer reference artifact
+for later context-adaptive comparison beads without claiming that compact-mode
+candidate reports already exist.
 
 The seeded E1 suite reuses the durable JS bug fixtures already maintained under `scripts/eval/fixtures/`.
 

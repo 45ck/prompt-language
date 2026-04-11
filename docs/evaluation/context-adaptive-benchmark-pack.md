@@ -4,12 +4,16 @@
 
 Bounded evaluation note for bead `prompt-language-0ovo.1.4`.
 
-Current conclusion: **preparatory, not closure-ready**.
+Current conclusion: **seeded baseline pack is now checked in**.
 
 This note defines the minimum benchmark-pack shape needed before the
 context-adaptive program can make honest claims about quality, safety, and
-tradeoffs. It does not claim that the benchmark pack already exists as a
-completed checked-in artifact set.
+tradeoffs. The repo now contains the baseline-pack seed for this bead under
+[`experiments/eval/context-adaptive-benchmark-pack/`](../../experiments/eval/context-adaptive-benchmark-pack/README.md).
+That checked-in slice is intentionally smaller than the later comparison beads:
+it seeds representative fixtures plus a current-renderer reference report, but
+it does not claim that compact-mode comparisons or promotion evidence already
+exist.
 
 ## Purpose
 
@@ -32,6 +36,9 @@ produce comparable evidence across baseline and candidate render modes.
 - [Evaluation Dataset Bank](./dataset-bank.md)
 - [Eval Artifact Bundles and Replay](./eval-artifact-bundles-and-replay.md)
 - [What Works Now](./what-works-now.md)
+- [Seeded Benchmark Pack README](../../experiments/eval/context-adaptive-benchmark-pack/README.md)
+- [Seeded Fixture Inventory](../../experiments/eval/context-adaptive-benchmark-pack/fixtures.json)
+- [Current-Renderer Baseline Report](../../experiments/eval/context-adaptive-benchmark-pack/baseline-renderer-report.json)
 
 ## Benchmark-pack boundary
 
@@ -135,18 +142,22 @@ Representative fixture shape:
 Primary question:
 Does the compacted path preserve the caution needed to avoid unsafe shortcuts?
 
-## Recommended pack size
+## Seeded pack size
 
-The first benchmark pack should stay intentionally small:
+The repo now seeds the minimum closure slice for this bead:
 
-- 2 fixtures for large-output diagnosis
-- 2 fixtures for multi-turn continuation
-- 2 fixtures for resume and recovery
-- 2 fixtures for artifact-reference navigation
-- 2 fixtures for safety-sensitive correction
+- 1 gate-heavy fixture
+- 1 long-flow fixture
+- 1 large-output fixture
+- 1 recovery fixture
 
-That yields **10 total fixtures**. This is enough to surface pattern-level wins
-or losses without pretending the pack is comprehensive.
+That yields **4 total fixtures** in the checked-in pack. This is enough to make
+the baseline categories concrete and to lock a current-renderer reference
+artifact without pretending the wider comparison program is complete.
+
+Later context-adaptive comparison beads can expand this seed into the broader
+10-fixture or 20-fixture families once compact-mode execution and telemetry
+collection are ready.
 
 ## Baseline comparison matrix
 
@@ -230,33 +241,34 @@ The reporting layer should favor inspectable evidence over score-only summaries.
 
 ## Evidence gaps this note makes explicit
 
-This bead should not close on planning alone. The repo still needs evidence the
-note does not provide by itself.
+This bead is about seeding the baseline pack, not proving the full context-
+adaptive program. The remaining gaps belong to later comparison and promotion
+work.
 
-Missing today for closure:
+Still missing after this seed:
 
-- checked-in benchmark fixture set for this pack
-- completed baseline versus candidate run results
-- locked artifacts showing what the agent saw in each render mode
-- explicit write-up of failures, regressions, and suspicious ties
+- completed compact-mode candidate runs against the seeded baseline
+- locked telemetry-rich artifacts showing what the agent saw in each render mode
+- explicit write-up of wins, losses, regressions, and suspicious ties
 - a credible judgment on whether context adaptation helps without hiding
   important detail
 
-## Closure standard suggested by this note
+## Closure standard for this bead
 
-This bead becomes closure-ready only when the repo has:
+`prompt-language-0ovo.1.4` becomes closure-ready when the repo has:
 
-1. a checked-in benchmark pack matching the fixture categories above or a
-   justified equivalent
-2. completed comparison runs against at least one baseline and one
-   context-adaptive candidate
-3. report artifacts sufficient to inspect correctness, diagnosis quality, and
-   safety outcomes
-4. an evaluation summary that names wins, losses, ties, and unresolved evidence
-   gaps explicitly
+1. a checked-in benchmark pack covering gate-heavy, long-flow, large-output,
+   and recovery fixtures
+2. a checked-in current-renderer baseline report artifact for that pack
+3. docs that state clearly which later beads still own compact-mode comparisons,
+   telemetry-backed measurements, and promotion judgments
 
-Until then, this note should be treated as benchmark-pack planning rather than
-benchmark completion.
+That closure standard is now met by the seeded pack in
+`experiments/eval/context-adaptive-benchmark-pack/`.
+
+This does not close the wider context-adaptive evaluation program. It only
+finishes the baseline-pack seeding slice so later beads have a stable pack to
+run and compare.
 
 ## Recommendation
 

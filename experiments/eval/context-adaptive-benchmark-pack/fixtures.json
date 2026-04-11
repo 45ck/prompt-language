@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "context-adaptive-benchmark-fixture-inventory",
+  "seededAt": "2026-04-11T07:45:41.1127751Z",
+  "bead": "prompt-language-0ovo.1.4",
+  "baselineCommit": "9722f75c7796c2c56cb8e8dedab6ca16bffdb41d",
+  "fixtures": [
+    {
+      "fixtureId": "ca-pack.gate-heavy.v1",
+      "category": "gate-heavy",
+      "title": "Gate-heavy fix loop",
+      "objective": "Measure prompt churn and execution stability when repeated validation output dominates the flow.",
+      "startingState": "A bounded repo task that requires at least two edit and rerun cycles before all quality gates pass.",
+      "decisiveEvidenceLocation": "validate transcripts plus per-hook render telemetry",
+      "requiredValidationCommands": ["npm run format:check", "npm run lint", "npm run spell"],
+      "requiresResume": false
+    },
+    {
+      "fixtureId": "ca-pack.long-flow.v1",
+      "category": "long-flow",
+      "title": "Long-flow continuation",
+      "objective": "Check whether a multi-step implementation stays coherent across diagnosis, edit, rerun, and follow-up correction.",
+      "startingState": "A task with at least one incomplete first fix and enough intermediate output to pressure prompt budget.",
+      "decisiveEvidenceLocation": "turn-by-turn task transcript plus final validation summary",
+      "requiredValidationCommands": ["npm run test"],
+      "requiresResume": false
+    },
+    {
+      "fixtureId": "ca-pack.large-output.v1",
+      "category": "large-output",
+      "title": "Large-output diagnosis",
+      "objective": "Verify that the real failure cause is still found when the decisive clue appears late in verbose stderr or test output.",
+      "startingState": "A failing command or test run with many irrelevant lines before the actionable assertion or stack frame.",
+      "decisiveEvidenceLocation": "stored command output plus evaluator diagnosis note",
+      "requiredValidationCommands": ["npm run test"],
+      "requiresResume": false
+    },
+    {
+      "fixtureId": "ca-pack.recovery.v1",
+      "category": "recovery",
+      "title": "Interrupted recovery continuation",
+      "objective": "Check whether the resumed run continues safely after interruption without re-breaking already fixed behavior.",
+      "startingState": "A partially completed task with preserved checkpoints, prior failures, and remaining work that depends on earlier output.",
+      "decisiveEvidenceLocation": "resume transcript, checkpoint handoff, and final validation outcome",
+      "requiredValidationCommands": ["npm run test"],
+      "requiresResume": true
+    }
+  ]
+}

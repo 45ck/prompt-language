@@ -12,7 +12,7 @@ This note is a validation contract. It is not a claim that the matrix is current
 
 ## Current checked-in execution status
 
-As of April 11, 2026 at `194d074a6f052662e99e69784beacc5ccfa95049`, the
+As of April 11, 2026 at `863eb3b0372904783cfa11d6ead2e04a9f065166`, the
 checked-in evidence supports the following status for the `prompt-language-5pej.2`
 full-run bead:
 
@@ -30,6 +30,12 @@ full-run bead:
 This means `prompt-language-5pej.2` is still materially open. The remaining
 work is execution evidence on a supported host, not a newly identified runtime
 or semantic regression.
+
+For `prompt-language-5pej.1`, this matrix bead is already satisfied at current
+`origin/main`: the matrix exists, each command row names its expected outcome
+and evidence format, and the intentionally non-mandatory rows are called out
+with reasons. The remaining open parity work belongs to the supported-host and
+full-run follow-up beads, not to the matrix-definition slice itself.
 
 ## Evidence fields
 

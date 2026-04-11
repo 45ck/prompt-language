@@ -263,6 +263,15 @@ Must prove:
 
 Presentation-only unit tests are not enough if the promoted claim is about real diagnosis.
 
+Current `HEAD` implication for `prompt-language-f7jp.5`:
+
+- the accepted design contract already exists in
+  [Operator Cockpit, Watch, and Status Snapshots](operator-cockpit-watch-status-snapshots.md)
+- the current repo still does not prove `watch --json` or a shared
+  `operator-snapshot.v1` runtime implementation
+
+Treat the bead as design-closed but rollout-open until that evidence exists.
+
 ### Workflow alias and scaffolding slices
 
 Must prove:

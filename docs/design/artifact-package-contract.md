@@ -17,7 +17,7 @@ Primary upstream references:
 - [`docs/wip/artifacts/custom-artifact-model.md`](../wip/artifacts/custom-artifact-model.md)
 - [`docs/wip/artifacts/open-questions.md`](../wip/artifacts/open-questions.md)
 
-This note resolves the package and renderer questions left open by the artifact boundary decision. It does not settle runtime lifecycle, cross-run lookup, plugin APIs, retention policy, or review-comment storage.
+This note resolves the package and renderer questions left open by the artifact boundary decision. It works with the accepted [artifact runtime lifecycle](./artifact-runtime-lifecycle.md) and [artifact extension boundary](./artifact-extension-boundary.md) notes: review-comment storage, revision scoping, large-attachment handling, and core-versus-plugin renderer ownership are now fixed there. The remaining open product-surface questions are narrower: cross-run lookup, concrete plugin APIs, retention policy, and the eventual user-facing review UI.
 
 ## Decision
 
@@ -195,8 +195,9 @@ Not fixed here:
 
 - exact allowed `status` values beyond the examples above
 - whether `artifactId` is globally unique or only unique inside a run-owned scope
-- how review comments or approvals are stored
-- whether all packages must ship the same built-in renderer set
+- concrete review UI affordances over the revision-scoped review records defined in `artifact-extension-boundary.md`
+- the exact plugin API and capability-registration mechanism for optional renderers
+- whether all packages must ship the same built-in renderer set beyond the required core-readable fallback surfaces
 
 Those remain later lifecycle or plugin-boundary decisions.
 

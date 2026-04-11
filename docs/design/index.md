@@ -32,6 +32,11 @@ For the repo-wide docs cleanup:
 | [Evaluation Stack V1 Boundary](evaluation-stack-v1.md)                                            | Accepted first-slice boundary for rubrics, judges, eval tooling, and `review strict`   |
 | [Diagnostics Contract V1](diagnostics-contract-v1.md)                                             | Accepted report envelope, code ranges, and preflight boundary                          |
 | [vNext Trust Hardening](vnext-trust-hardening.md)                                                 | Accepted strict-mode, budgets, checkpoint, and restore contract for trusted execution  |
+| [Bounded Execution Contracts](bounded-execution-contracts.md)                                     | Accepted contracts, effects, policy, and capability boundary for bounded execution     |
+| [Replayability Event Log](replayability-event-log.md)                                             | Accepted append-only ledger, replay, checkpoint, and derived-snapshot boundary         |
+| [Flow IR and Static Analysis](flow-ir-and-static-analysis.md)                                     | Accepted compile-time-rigor boundary for IR, explain, lint, simulation, and flow tests |
+| [Provider Adapters Over Shared Flow IR](provider-adapters-shared-flow-ir.md)                      | Accepted provider-adapter boundary over one shared runtime IR                          |
+| [Memory Governance Alignment](memory-governance-alignment.md)                                     | Accepted alignment of vNext memory governance with the existing memory roadmap         |
 | [Artifact Package, Manifest, and Renderer Contract](artifact-package-contract.md)                 | Accepted package layout, manifest semantics, and renderer-view boundary                |
 | [Artifact Runtime Lifecycle](artifact-runtime-lifecycle.md)                                       | Accepted emit/validate/reference/review/supersede semantics                            |
 | [Artifact Extension Boundary](artifact-extension-boundary.md)                                     | Accepted custom-type, review-storage, and plugin-renderer boundary                     |

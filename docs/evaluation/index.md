@@ -36,5 +36,6 @@ The docs in this section are paired with the checked-in dataset bank under [expe
 | [OpenCode Gemma 4 Plan](opencode-gemma-plan.md)                                     | Hosted OpenCode baseline plus bounded Gemma comparison plan         |
 | [OpenCode Minimal Gate Subset](opencode-minimal-gate-subset.md)                     | Smallest rerun plan before cheaper starter-workflow experiments     |
 | [Fresh vs Threaded Eval Suite](fresh-vs-threaded-eval-suite.md)                     | Planned eval slice for session-boundary comparisons                 |
+| [Eval/Judge vNext Alignment](eval-judge-vnext-alignment.md)                         | Maps imported vNext eval framing onto the current `5vsm` backlog    |
 | [Hypotheses v4](hypotheses-v4.md)                                                   | Research hypothesis set for later evaluation work                   |
 | [Context-Adaptive Results Template](context-adaptive-rendering-results-template.md) | Draft results template for render-mode experiments                  |

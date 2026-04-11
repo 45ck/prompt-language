@@ -97,7 +97,7 @@ function parseAdditionalContext(stdout: string): string {
 }
 
 describe('context-adaptive recovery hooks', () => {
-  it('session-start resumes from backup after interrupted state corruption and keeps the current step visible', async () => {
+  it('session-start resumes from backup after interrupted state corruption and keeps the current step visible (resume_boundary)', async () => {
     const recovered = makeActiveState({
       sessionId: 'recovered-backup',
       flowSpec: {
@@ -136,7 +136,7 @@ describe('context-adaptive recovery hooks', () => {
     expect(additionalContext).toContain('> run: npm test');
   });
 
-  it('session-start surfaces PLR-004 with recovery action when no valid snapshot remains', async () => {
+  it('session-start surfaces PLR-004 with recovery action when no valid snapshot remains (state_mismatch)', async () => {
     await writeStateFiles({
       primary: '{{broken primary',
       backup: '{{broken backup',
@@ -158,7 +158,7 @@ describe('context-adaptive recovery hooks', () => {
     );
   });
 
-  it('session-start keeps capture failure details visible on resume and re-emits the retry prompt', async () => {
+  it('session-start keeps capture failure details visible on resume and re-emits the retry prompt (capture_failure)', async () => {
     const state = makeActiveState({
       flowSpec: {
         goal: 'Capture retry flow',
@@ -201,7 +201,7 @@ describe('context-adaptive recovery hooks', () => {
     expect(additionalContext).toContain('.prompt-language/vars/answer');
   });
 
-  it('pre-compact recovers from backup and preserves compact current-step and gate visibility', async () => {
+  it('pre-compact recovers from backup and preserves compact current-step and gate visibility (compaction_boundary)', async () => {
     const recovered = makeActiveState({
       sessionId: 'compact-recovery',
       flowSpec: {
@@ -237,7 +237,7 @@ describe('context-adaptive recovery hooks', () => {
     expect(additionalContext).toContain('gates: +tests_pass -lint_pass');
   });
 
-  it('pre-compact preserves capture retry instructions when backup recovery crosses a compaction boundary', async () => {
+  it('pre-compact preserves capture retry instructions when backup recovery crosses a compaction boundary (compaction_boundary, capture_failure)', async () => {
     const recovered = makeActiveState({
       sessionId: 'compact-capture-recovery',
       flowSpec: {

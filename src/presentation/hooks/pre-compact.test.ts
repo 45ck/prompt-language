@@ -158,7 +158,7 @@ describe('pre-compact hook (integration)', () => {
     expect(parsed.additionalContext).toContain('deepVar');
   });
 
-  it('includes capture re-injection when awaiting_capture', async () => {
+  it('includes capture re-injection when awaiting_capture (capture_failure)', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     const state = {

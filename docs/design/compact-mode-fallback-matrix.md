@@ -93,6 +93,13 @@ Recovery-specific events should add the nearest evidence handle available:
 
 The matrix is only useful if runtime behavior and test names share the same vocabulary. The validation bar for this bead is therefore a mapping, not just a list of ideas.
 
+The current hook-suite evidence for this bead is intentionally narrow. The owned recovery tests
+already cover the baseline recovery scenarios for `resume_boundary`, `compaction_boundary`,
+`state_mismatch`, and `capture_failure`, and they now reference those trigger ids directly in the
+test names. Follow-on slices still own executable compact-mode escalation, broader trigger-family
+coverage such as `gate_uncertainty`, `spawn_uncertainty`, and `import_uncertainty`, and any
+runtime telemetry that emits these ids.
+
 | Scenario family                                    | Trigger IDs that must be exercised                                            | Expected outcome                                                                                 |
 | -------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | interrupted session resume                         | `resume_boundary`, `blocked_state_uncertainty`                                | Full mode is used; current node, blocked state, and recovery source remain visible               |

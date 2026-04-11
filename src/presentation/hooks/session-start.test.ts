@@ -119,7 +119,7 @@ describe('session-start hook (integration)', () => {
     expect(result.stderr).not.toContain('[PL]');
   });
 
-  it('surfaces PLR-004 when resume state cannot be recovered', async () => {
+  it('surfaces PLR-004 when resume state cannot be recovered (state_mismatch)', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     await writeFile(join(stateDir, 'session-state.json'), '{{broken json');
@@ -200,7 +200,7 @@ describe('session-start hook (integration)', () => {
     expect(parsed.additionalContext).toContain('nestedAnswer');
   });
 
-  it('re-emits capture prompt when awaiting_capture on resume', async () => {
+  it('re-emits capture prompt when awaiting_capture on resume (capture_failure)', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
     const state = {

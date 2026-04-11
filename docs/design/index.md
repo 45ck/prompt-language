@@ -12,17 +12,23 @@ For the repo-wide docs cleanup:
 
 ## Canonical design docs
 
-| Doc                                                                            | Focus                                                                                  |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- |
-| [Host Extension Boundary](host-extension-boundary.md)                          | Host-managed skills, hooks, plugins, and MCP stay outside the core DSL                 |
-| [Multi-Agent Orchestration Boundary](multi-agent-orchestration.md)             | Accepted subagent-first direction for orchestration                                    |
-| [Operator Shell Boundary](operator-shell-boundary.md)                          | Accepted shell-over-runtime boundary for doctor, recovery, visibility, and supervision |
-| [Hook Manager Ownership and Lifecycle](hook-manager-ownership.md)              | Accepted ownership, merge, and cleanup contract for host hook install / refresh paths  |
-| [Hooks Architecture](hooks-architecture.md)                                    | Three-hook enforcement loop and state-file model                                       |
-| [Evaluation Stack V1 Boundary](evaluation-stack-v1.md)                         | Accepted first-slice boundary for rubrics, judges, eval tooling, and `review strict`   |
-| [Diagnostics Contract V1](diagnostics-contract-v1.md)                          | Accepted report envelope, code ranges, and preflight boundary                          |
-| [Foreach Design](foreach.md)                                                   | Canonical foreach design and rationale                                                 |
-| [Skill / Profile / Agent / Flow File](terminology-skill-profile-agent-flow.md) | Terminology boundary for the backlog track                                             |
+| Doc                                                                                               | Focus                                                                                  |
+| ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [Host Extension Boundary](host-extension-boundary.md)                                             | Host-managed skills, hooks, plugins, and MCP stay outside the core DSL                 |
+| [Multi-Agent Orchestration Boundary](multi-agent-orchestration.md)                                | Accepted subagent-first direction for orchestration                                    |
+| [Operator Shell Boundary](operator-shell-boundary.md)                                             | Accepted shell-over-runtime boundary for doctor, recovery, visibility, and supervision |
+| [Hook Manager Ownership and Lifecycle](hook-manager-ownership.md)                                 | Accepted ownership, merge, and cleanup contract for host hook install / refresh paths  |
+| [Operator Shell Lifecycle Hardening](operator-shell-lifecycle-hardening.md)                       | Accepted lifecycle contract for `doctor`, `refresh`, uninstall safety, and diagnostics |
+| [Run-State V2 and Recovery Artifacts](run-state-v2-recovery-artifacts.md)                         | Accepted additive run-layout and recovery-artifact boundary                            |
+| [Operator Cockpit, Watch, and Status Snapshots](operator-cockpit-watch-status-snapshots.md)       | Accepted operator visibility and machine-readable snapshot contract                    |
+| [Team Supervisor Surfaces](team-supervisor-surfaces.md)                                           | Accepted shell-level status, resume, and stop surfaces over child runs                 |
+| [Operator Scaffolding Boundary](operator-scaffolding.md)                                          | Accepted boundary for repo-visible AGENTS, starter flows, and reusable libraries       |
+| [Operator Shell Rollout, Troubleshooting, and Promotion](operator-shell-rollout-and-promotion.md) | Accepted evidence and promotion contract for operator-shell work                       |
+| [Hooks Architecture](hooks-architecture.md)                                                       | Three-hook enforcement loop and state-file model                                       |
+| [Evaluation Stack V1 Boundary](evaluation-stack-v1.md)                                            | Accepted first-slice boundary for rubrics, judges, eval tooling, and `review strict`   |
+| [Diagnostics Contract V1](diagnostics-contract-v1.md)                                             | Accepted report envelope, code ranges, and preflight boundary                          |
+| [Foreach Design](foreach.md)                                                                      | Canonical foreach design and rationale                                                 |
+| [Skill / Profile / Agent / Flow File](terminology-skill-profile-agent-flow.md)                    | Terminology boundary for the backlog track                                             |
 
 ## Historical and superseded notes
 

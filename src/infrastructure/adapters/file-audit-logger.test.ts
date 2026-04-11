@@ -137,6 +137,52 @@ describe('FileAuditLogger', () => {
     expect(record['exitCode']).toBeUndefined();
   });
 
+  it('persists additive audit metadata for capture and spawn events', async () => {
+    const logger = new FileAuditLogger(tempDir);
+    logger.log({
+      timestamp: '2024-01-01T00:00:00.000Z',
+      event: 'capture',
+      command: 'capture:summary',
+      nodeId: 'let1',
+      nodeKind: 'let',
+      nodePath: '0',
+      variableName: 'summary',
+      outcome: 'retry',
+      phase: 'read',
+      retryCount: 2,
+      maxRetries: 3,
+      reason: 'capture file exists but is empty',
+    });
+    logger.log({
+      timestamp: '2024-01-01T00:00:01.000Z',
+      event: 'spawn',
+      command: 'spawn:worker',
+      nodeId: 'sp1',
+      nodeKind: 'spawn',
+      nodePath: '1',
+      childName: 'worker',
+      pid: 42,
+      outcome: 'launched',
+    });
+
+    const content = await readFile(join(tempDir, '.prompt-language', 'audit.jsonl'), 'utf-8');
+    const [captureLine, spawnLine] = content.trim().split('\n');
+    const capture = JSON.parse(captureLine!) as Record<string, unknown>;
+    const spawn = JSON.parse(spawnLine!) as Record<string, unknown>;
+
+    expect(capture['event']).toBe('capture');
+    expect(capture['variableName']).toBe('summary');
+    expect(capture['outcome']).toBe('retry');
+    expect(capture['phase']).toBe('read');
+    expect(capture['retryCount']).toBe(2);
+    expect(capture['maxRetries']).toBe(3);
+    expect(capture['reason']).toBe('capture file exists but is empty');
+    expect(spawn['event']).toBe('spawn');
+    expect(spawn['childName']).toBe('worker');
+    expect(spawn['pid']).toBe(42);
+    expect(spawn['outcome']).toBe('launched');
+  });
+
   it('accepts a custom stateDir parameter', async () => {
     const logger = new FileAuditLogger(tempDir, 'my-state');
     logger.log({

@@ -45,6 +45,16 @@ export class FileAuditLogger implements AuditLogger {
       ...(entry.nodeKind != null ? { nodeKind: entry.nodeKind } : {}),
       ...(entry.nodePath != null ? { nodePath: entry.nodePath } : {}),
       ...(entry.durationMs != null ? { durationMs: entry.durationMs } : {}),
+      ...(entry.condition != null ? { condition: entry.condition } : {}),
+      ...(entry.outcome != null ? { outcome: entry.outcome } : {}),
+      ...(entry.phase != null ? { phase: entry.phase } : {}),
+      ...(entry.variableName != null ? { variableName: entry.variableName } : {}),
+      ...(entry.retryCount != null ? { retryCount: entry.retryCount } : {}),
+      ...(entry.maxRetries != null ? { maxRetries: entry.maxRetries } : {}),
+      ...(entry.judgeName != null ? { judgeName: entry.judgeName } : {}),
+      ...(entry.childName != null ? { childName: entry.childName } : {}),
+      ...(entry.pid != null ? { pid: entry.pid } : {}),
+      ...(entry.reason != null ? { reason: entry.reason } : {}),
     };
 
     appendFileSync(this.filePath, JSON.stringify(record) + '\n', 'utf-8');

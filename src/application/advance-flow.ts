@@ -235,6 +235,106 @@ function withPositionContext(
   return withStatePosition(state, message, path);
 }
 
+function logAuditEvent(
+  auditLogger: AuditLogger | undefined,
+  entry: Omit<import('./ports/audit-logger.js').AuditEntry, 'timestamp'>,
+): void {
+  auditLogger?.log({
+    timestamp: new Date().toISOString(),
+    ...entry,
+  });
+}
+
+function logCaptureAudit(
+  auditLogger: AuditLogger | undefined,
+  state: SessionState,
+  node: LetNode,
+  outcome: string,
+  phase: string,
+  reason?: string,
+  retryCount?: number,
+  maxRetries?: number,
+): void {
+  logAuditEvent(auditLogger, {
+    event: 'capture',
+    command: `capture:${node.variableName}`,
+    nodeId: node.id,
+    nodeKind: node.kind,
+    nodePath: state.currentNodePath.join('.'),
+    variableName: node.variableName,
+    outcome,
+    phase,
+    ...(reason != null ? { reason } : {}),
+    ...(retryCount != null ? { retryCount } : {}),
+    ...(maxRetries != null ? { maxRetries } : {}),
+  });
+}
+
+function logConditionAudit(
+  auditLogger: AuditLogger | undefined,
+  state: SessionState,
+  node: { readonly id: string; readonly kind: string; readonly condition: string },
+  outcome: string,
+  phase: string,
+  reason?: string,
+): void {
+  logAuditEvent(auditLogger, {
+    event: 'condition_evaluation',
+    command: `condition:${node.condition}`,
+    nodeId: node.id,
+    nodeKind: node.kind,
+    nodePath: state.currentNodePath.join('.'),
+    condition: node.condition,
+    outcome,
+    phase,
+    ...(reason != null ? { reason } : {}),
+  });
+}
+
+function logJudgmentAudit(
+  auditLogger: AuditLogger | undefined,
+  state: SessionState,
+  parentNode: ReviewNode,
+  outcome: string,
+  phase: string,
+  reason?: string,
+  retryCount?: number,
+): void {
+  logAuditEvent(auditLogger, {
+    event: 'judgment',
+    command: `judgment:${parentNode.judgeName ?? parentNode.id}`,
+    nodeId: parentNode.id,
+    nodeKind: parentNode.kind,
+    nodePath: state.currentNodePath.join('.'),
+    judgeName: parentNode.judgeName,
+    outcome,
+    phase,
+    ...(reason != null ? { reason } : {}),
+    ...(retryCount != null ? { retryCount } : {}),
+  });
+}
+
+function logSpawnAudit(
+  auditLogger: AuditLogger | undefined,
+  state: SessionState,
+  node: SpawnNode,
+  outcome: string,
+  pid?: number,
+  reason?: string,
+): void {
+  logAuditEvent(auditLogger, {
+    event: 'spawn',
+    command: `spawn:${node.name}`,
+    nodeId: node.id,
+    nodeKind: node.kind,
+    nodePath: state.currentNodePath.join('.'),
+    childName: node.name,
+    outcome,
+    ...(pid != null ? { pid } : {}),
+    ...(reason != null ? { reason } : {}),
+  });
+}
+
 function finalizeTransitionState(before: SessionState, after: SessionState): SessionState {
   if (before === after) {
     return after;
@@ -713,6 +813,7 @@ async function handleBodyExhaustion(
   state: SessionState,
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
+  auditLogger?: AuditLogger,
 ): Promise<SessionState | AutoAdvanceResult | null> {
   const path = state.currentNodePath;
   if (path.length <= 1) return null;
@@ -837,6 +938,7 @@ async function handleBodyExhaustion(
         parentNode,
         commandRunner,
         captureReader,
+        auditLogger,
       );
     }
 
@@ -1055,6 +1157,7 @@ async function maybeRunNamedReviewJudge(
   state: SessionState,
   parentNode: ReviewNode,
   captureReader?: CaptureReader,
+  auditLogger?: AuditLogger,
 ): Promise<ReviewJudgeCaptureStep> {
   const evidence = buildReviewEvidence(parentNode, state);
   const judge = parentNode.judgeName
@@ -1064,6 +1167,14 @@ async function maybeRunNamedReviewJudge(
 
   if (judgeKind != null && judgeKind !== 'model') {
     evidence.push(`judge-kind: ${judgeKind}`);
+    logJudgmentAudit(
+      auditLogger,
+      state,
+      parentNode,
+      'failed',
+      'preflight',
+      `unsupported kind ${judgeKind}`,
+    );
     return {
       kind: 'result',
       reviewResult: createJudgeResult(
@@ -1081,6 +1192,7 @@ async function maybeRunNamedReviewJudge(
 
   if (!captureReader) {
     evidence.push('judge-runtime: no capture reader available');
+    logJudgmentAudit(auditLogger, state, parentNode, 'failed', 'preflight', 'no capture reader');
     return {
       kind: 'result',
       reviewResult: createJudgeResult(
@@ -1109,6 +1221,7 @@ async function maybeRunNamedReviewJudge(
 
   if (!isAwaiting) {
     await captureReader.clear(captureVar);
+    logJudgmentAudit(auditLogger, state, parentNode, 'prompted', 'emit');
     return {
       kind: 'prompt',
       state: updateNodeProgress(state, parentNode.id, {
@@ -1129,10 +1242,20 @@ async function maybeRunNamedReviewJudge(
     await captureReader.clear(captureVar);
     const parsed = parseReviewJudgeCapture(captured);
     if (parsed != null) {
+      logJudgmentAudit(auditLogger, state, parentNode, 'parsed', 'read');
       return { kind: 'result', reviewResult: parsed };
     }
 
     if (retryCount + 1 < DEFAULT_MAX_CAPTURE_RETRIES) {
+      logJudgmentAudit(
+        auditLogger,
+        state,
+        parentNode,
+        'retry',
+        'read',
+        'invalid judge-result JSON',
+        retryCount + 1,
+      );
       return {
         kind: 'prompt',
         state: updateNodeProgress(state, parentNode.id, {
@@ -1146,6 +1269,15 @@ async function maybeRunNamedReviewJudge(
     }
 
     evidence.push('judge-runtime: invalid judge-result JSON after retry budget exhausted');
+    logJudgmentAudit(
+      auditLogger,
+      state,
+      parentNode,
+      'failed',
+      'read',
+      'invalid judge-result JSON after retry budget exhausted',
+      retryCount + 1,
+    );
     return {
       kind: 'result',
       reviewResult: createJudgeResult(
@@ -1159,6 +1291,15 @@ async function maybeRunNamedReviewJudge(
   }
 
   if (retryCount + 1 < DEFAULT_MAX_CAPTURE_RETRIES) {
+    logJudgmentAudit(
+      auditLogger,
+      state,
+      parentNode,
+      'retry',
+      'read',
+      'capture file empty or not found',
+      retryCount + 1,
+    );
     return {
       kind: 'prompt',
       state: updateNodeProgress(state, parentNode.id, {
@@ -1172,6 +1313,15 @@ async function maybeRunNamedReviewJudge(
   }
 
   evidence.push('judge-runtime: capture file empty or missing after retry budget exhausted');
+  logJudgmentAudit(
+    auditLogger,
+    state,
+    parentNode,
+    'failed',
+    'read',
+    'capture file empty or missing after retry budget exhausted',
+    retryCount + 1,
+  );
   return {
     kind: 'result',
     reviewResult: createJudgeResult(
@@ -1276,12 +1426,13 @@ async function handleReviewBodyExhaustion(
   parentNode: ReviewNode,
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
+  auditLogger?: AuditLogger,
 ): Promise<SessionState | AutoAdvanceResult> {
   const progress = state.nodeProgress[parentNode.id];
   const round = progress?.iteration ?? 1;
 
   const reviewEvaluation = parentNode.judgeName
-    ? await maybeRunNamedReviewJudge(state, parentNode, captureReader)
+    ? await maybeRunNamedReviewJudge(state, parentNode, captureReader, auditLogger)
     : {
         kind: 'result' as const,
         reviewResult: await evaluateReviewResult(state, parentNode, commandRunner),
@@ -1436,6 +1587,7 @@ async function advanceLetNode(
   current: SessionState,
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
+  auditLogger?: AuditLogger,
   memoryStore?: MemoryStore,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   let value: string;
@@ -1453,7 +1605,7 @@ async function advanceLetNode(
       value = initEmptyList();
       break;
     case 'prompt': {
-      const result = await advanceLetPrompt(node, current, captureReader);
+      const result = await advanceLetPrompt(node, current, captureReader, auditLogger);
       if ('capturedPrompt' in result) return result;
       current = result.state;
       value = result.value;
@@ -1461,7 +1613,7 @@ async function advanceLetNode(
       break;
     }
     case 'prompt_json': {
-      const result = await advanceLetPromptJson(node, current, captureReader);
+      const result = await advanceLetPromptJson(node, current, captureReader, auditLogger);
       if ('capturedPrompt' in result) return result;
       // JSON field expansion: store root + each top-level field as flat keys
       current = result.state;
@@ -1568,6 +1720,7 @@ async function advanceLetPrompt(
   node: LetNode,
   current: SessionState,
   captureReader?: CaptureReader,
+  auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult | CapturedValueResult> {
   const progress = current.nodeProgress[node.id];
   const isAwaiting = progress?.status === 'awaiting_capture';
@@ -1592,6 +1745,7 @@ async function advanceLetPrompt(
       buildCapturePrompt(promptText, node.variableName, current.captureNonce),
       node.source.type === 'prompt' ? node.source.profile : undefined,
     );
+    logCaptureAudit(auditLogger, current, node, 'prompted', 'emit');
     return {
       kind: 'prompt' as const,
       state: updated,
@@ -1607,6 +1761,7 @@ async function advanceLetPrompt(
     if (captured && captured !== CAPTURE_PENDING_SENTINEL) {
       await captureReader.clear(node.variableName);
       debugLog('capture', `Captured value for "${node.variableName}"`, 2);
+      logCaptureAudit(auditLogger, current, node, 'captured', 'read');
       return {
         state: updateNodeProgress(current, node.id, {
           iteration: progress.iteration,
@@ -1636,6 +1791,16 @@ async function advanceLetPrompt(
 
   const iteration = progress.iteration;
   if (iteration < progress.maxIterations) {
+    logCaptureAudit(
+      auditLogger,
+      current,
+      node,
+      'retry',
+      'read',
+      failureReason,
+      iteration + 1,
+      progress.maxIterations,
+    );
     const updated = updateNodeProgress(current, node.id, {
       iteration: iteration + 1,
       maxIterations: progress.maxIterations,
@@ -1658,6 +1823,16 @@ async function advanceLetPrompt(
   const summary = withPositionContext(
     current,
     `Capture for '${node.variableName}' fell back to empty string after ${progress.maxIterations} attempts.`,
+  );
+  logCaptureAudit(
+    auditLogger,
+    current,
+    node,
+    'fallback',
+    'read',
+    summary,
+    progress.iteration,
+    progress.maxIterations,
   );
   const fallbackState = persistRuntimeDiagnostic(
     {
@@ -1694,6 +1869,7 @@ async function advanceLetPromptJson(
   node: LetNode,
   current: SessionState,
   captureReader?: CaptureReader,
+  auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult | CapturedValueResult> {
   if (node.source.type !== 'prompt_json') {
     return { state: current, value: '' };
@@ -1724,6 +1900,7 @@ async function advanceLetPromptJson(
       ),
       node.source.profile,
     );
+    logCaptureAudit(auditLogger, current, node, 'prompted', 'emit');
     return {
       kind: 'prompt' as const,
       state: updated,
@@ -1743,6 +1920,7 @@ async function advanceLetPromptJson(
     if (captured && captured !== CAPTURE_PENDING_SENTINEL) {
       await captureReader.clear(node.variableName);
       debugLog('capture', `Captured JSON value for "${node.variableName}"`, 2);
+      logCaptureAudit(auditLogger, current, node, 'captured', 'read');
       return {
         state: updateNodeProgress(current, node.id, {
           iteration: progress.iteration,
@@ -1772,6 +1950,16 @@ async function advanceLetPromptJson(
 
   const iteration = progress.iteration;
   if (iteration < progress.maxIterations) {
+    logCaptureAudit(
+      auditLogger,
+      current,
+      node,
+      'retry',
+      'read',
+      failureReason,
+      iteration + 1,
+      progress.maxIterations,
+    );
     const updated = updateNodeProgress(current, node.id, {
       iteration: iteration + 1,
       maxIterations: progress.maxIterations,
@@ -1790,6 +1978,16 @@ async function advanceLetPromptJson(
   const summary = withPositionContext(
     current,
     `JSON capture for '${node.variableName}' fell back to empty string after ${progress.maxIterations} attempts.`,
+  );
+  logCaptureAudit(
+    auditLogger,
+    current,
+    node,
+    'fallback',
+    'read',
+    summary,
+    progress.iteration,
+    progress.maxIterations,
   );
   const fallbackState = persistRuntimeDiagnostic(
     {
@@ -1941,6 +2139,7 @@ async function advanceSpawnNode(
   current: SessionState,
   processSpawner?: ProcessSpawner,
   commandRunner?: CommandRunner,
+  auditLogger?: AuditLogger,
 ): Promise<{ state: SessionState; advanced: true }> {
   // beads: prompt-language-lmep — evaluate optional condition guard before launching
   if (node.condition != null) {
@@ -1951,6 +2150,7 @@ async function advanceSpawnNode(
     );
     if (condResult === false) {
       // Condition is false: skip spawn entirely without launching
+      logSpawnAudit(auditLogger, current, node, 'skipped', undefined, 'condition evaluated false');
       return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
     }
     // condResult === null means unresolvable — proceed with spawn (fail-open)
@@ -1958,6 +2158,7 @@ async function advanceSpawnNode(
 
   if (!processSpawner) {
     // No spawner available — skip spawn and advance past it
+    logSpawnAudit(auditLogger, current, node, 'skipped', undefined, 'no process spawner');
     return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
   }
 
@@ -1982,6 +2183,7 @@ async function advanceSpawnNode(
 
   // D7: Detect failed spawn (pid=0 or undefined) and mark child as failed
   if (!pid) {
+    logSpawnAudit(auditLogger, current, node, 'failed', 0, 'could not start child process');
     let state = updateSpawnedChild(current, node.name, {
       name: node.name,
       status: 'failed',
@@ -2003,6 +2205,7 @@ async function advanceSpawnNode(
     stateDir,
     startedAt: new Date().toISOString(),
   });
+  logSpawnAudit(auditLogger, current, node, 'launched', pid);
 
   // Skip past the spawn block (don't enter body — child runs it)
   state = advanceFromPath(state, state.currentNodePath);
@@ -2211,7 +2414,12 @@ export async function autoAdvanceNodes(
     const node = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
 
     if (!node) {
-      const exhaustionResult = await handleBodyExhaustion(current, commandRunner, captureReader);
+      const exhaustionResult = await handleBodyExhaustion(
+        current,
+        commandRunner,
+        captureReader,
+        auditLogger,
+      );
       if (!exhaustionResult) break;
       if ('kind' in exhaustionResult) {
         const finalizedResult: AutoAdvanceResult = {
@@ -2866,7 +3074,7 @@ async function advanceSingleNode(
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   switch (node.kind) {
     case 'let':
-      return advanceLetNode(node, current, commandRunner, captureReader, memoryStore);
+      return advanceLetNode(node, current, commandRunner, captureReader, auditLogger, memoryStore);
     case 'run':
       return advanceRunNode(node, current, commandRunner, auditLogger);
     case 'prompt': {
@@ -2884,7 +3092,7 @@ async function advanceSingleNode(
     }
     case 'while':
     case 'until':
-      return advanceConditionLoop(node, current, commandRunner, captureReader);
+      return advanceConditionLoop(node, current, commandRunner, captureReader, auditLogger);
     case 'retry': {
       const now = Date.now();
       return {
@@ -2902,7 +3110,7 @@ async function advanceSingleNode(
       };
     }
     case 'if':
-      return advanceIfNode(node, current, commandRunner, captureReader);
+      return advanceIfNode(node, current, commandRunner, captureReader, auditLogger);
     case 'try':
       return { state: advanceNode(current, [...current.currentNodePath, 0]), advanced: true };
     case 'foreach':
@@ -2912,7 +3120,7 @@ async function advanceSingleNode(
     case 'continue':
       return advanceContinueNode(node, current);
     case 'spawn':
-      return advanceSpawnNode(node, current, processSpawner, commandRunner);
+      return advanceSpawnNode(node, current, processSpawner, commandRunner, auditLogger);
     case 'await':
       return advanceAwaitNode(node, current, processSpawner, messageStore);
     case 'approve':
@@ -3023,6 +3231,7 @@ async function advanceConditionLoop(
   current: SessionState,
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
+  auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   // AI-evaluated condition: two-phase capture (emit judge prompt, then read verdict)
   if (isAskCondition(node.condition)) {
@@ -3044,6 +3253,13 @@ async function advanceConditionLoop(
             prepareGroundingCommand(node.groundedBy, current.variables, current.flowSpec.env),
           );
           const groundingMet = groundingResult.exitCode === 0;
+          logConditionAudit(
+            auditLogger,
+            current,
+            node,
+            groundingMet ? 'true' : 'false',
+            'grounded',
+          );
           const enterBody = node.kind === 'while' ? groundingMet : !groundingMet;
           return {
             state: handleLoopReentry(
@@ -3085,6 +3301,7 @@ async function advanceConditionLoop(
         buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
         node.askProfile,
       );
+      logConditionAudit(auditLogger, current, node, 'prompted', 'ask');
       return {
         kind: 'prompt',
         state: updated,
@@ -3121,6 +3338,7 @@ async function advanceConditionLoop(
               buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
               node.askProfile,
             );
+            logConditionAudit(auditLogger, current, node, 'retry', 'ask', 'ambiguous verdict');
             return {
               kind: 'prompt',
               state: retryUpdated,
@@ -3129,8 +3347,10 @@ async function advanceConditionLoop(
             };
           }
 
+          logConditionAudit(auditLogger, current, node, 'unresolved', 'ask', 'ambiguous verdict');
           return { kind: 'pause', state: current, capturedPrompt: null };
         }
+        logConditionAudit(auditLogger, current, node, verdict ? 'true' : 'false', 'ask');
 
         const iteration = progress?.iteration ?? 0;
         const enterBody = node.kind === 'while' ? verdict : !verdict;
@@ -3220,6 +3440,7 @@ async function advanceConditionLoop(
 
     // No verdict captured yet — retry the judge prompt
     if (usesRetryBudget && retryCount >= maxRetries) {
+      logConditionAudit(auditLogger, current, node, 'unresolved', 'ask', 'retry budget exhausted');
       return { kind: 'pause', state: current, capturedPrompt: null };
     }
 
@@ -3229,6 +3450,7 @@ async function advanceConditionLoop(
         buildJudgeRetryPrompt(node.id, current.captureNonce),
         node.askProfile,
       );
+      logConditionAudit(auditLogger, current, node, 'retry', 'ask', 'capture file missing');
       return {
         kind: 'prompt',
         state: current,
@@ -3259,6 +3481,7 @@ async function advanceConditionLoop(
       buildJudgePrompt(question, node.id, current.captureNonce, retryGroundingOutput),
       node.askProfile,
     );
+    logConditionAudit(auditLogger, current, node, 'retry', 'ask', 'capture file missing');
     return {
       kind: 'prompt',
       state: retryUpdated,
@@ -3268,7 +3491,11 @@ async function advanceConditionLoop(
   }
 
   const condResult = await evaluateFlowCondition(node.condition, current.variables, commandRunner);
-  if (condResult === null) return { kind: 'pause', state: current, capturedPrompt: null };
+  if (condResult === null) {
+    logConditionAudit(auditLogger, current, node, 'unresolved', 'direct');
+    return { kind: 'pause', state: current, capturedPrompt: null };
+  }
+  logConditionAudit(auditLogger, current, node, condResult ? 'true' : 'false', 'direct');
   const enterBody = node.kind === 'while' ? condResult : !condResult;
 
   if (enterBody) {
@@ -3301,6 +3528,7 @@ async function advanceIfNode(
   current: SessionState,
   commandRunner?: CommandRunner,
   captureReader?: CaptureReader,
+  auditLogger?: AuditLogger,
 ): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
   // AI-evaluated condition: two-phase capture
   if (isAskCondition(node.condition)) {
@@ -3320,6 +3548,7 @@ async function advanceIfNode(
             prepareGroundingCommand(node.groundedBy, current.variables, current.flowSpec.env),
           );
           const verdict = groundingResult.exitCode === 0;
+          logConditionAudit(auditLogger, current, node, verdict ? 'true' : 'false', 'grounded');
           if (verdict) {
             logBranchDecision(node, 'then', 'grounded-by');
             return {
@@ -3374,6 +3603,7 @@ async function advanceIfNode(
         buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
         node.askProfile,
       );
+      logConditionAudit(auditLogger, current, node, 'prompted', 'ask');
       return {
         kind: 'prompt',
         state: updated,
@@ -3409,6 +3639,7 @@ async function advanceIfNode(
               buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
               node.askProfile,
             );
+            logConditionAudit(auditLogger, current, node, 'retry', 'ask', 'ambiguous verdict');
             return {
               kind: 'prompt',
               state: retryUpdated,
@@ -3416,8 +3647,10 @@ async function advanceIfNode(
               ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
             };
           }
+          logConditionAudit(auditLogger, current, node, 'unresolved', 'ask', 'ambiguous verdict');
           return { kind: 'pause', state: current, capturedPrompt: null };
         }
+        logConditionAudit(auditLogger, current, node, verdict ? 'true' : 'false', 'ask');
         if (verdict) {
           logBranchDecision(node, 'then', 'ask');
           return { state: enterIfBranch(current, node, 0, node.thenBranch.length), advanced: true };
@@ -3446,6 +3679,7 @@ async function advanceIfNode(
 
     // No verdict captured yet — retry the judge prompt
     if (usesRetryBudget && retryCount >= maxRetries) {
+      logConditionAudit(auditLogger, current, node, 'unresolved', 'ask', 'retry budget exhausted');
       return { kind: 'pause', state: current, capturedPrompt: null };
     }
 
@@ -3455,6 +3689,7 @@ async function advanceIfNode(
         buildJudgeRetryPrompt(node.id, current.captureNonce),
         node.askProfile,
       );
+      logConditionAudit(auditLogger, current, node, 'retry', 'ask', 'capture file missing');
       return {
         kind: 'prompt',
         state: current,
@@ -3476,6 +3711,7 @@ async function advanceIfNode(
       buildJudgePrompt(question, node.id, current.captureNonce, retryGroundingOutput),
       node.askProfile,
     );
+    logConditionAudit(auditLogger, current, node, 'retry', 'ask', 'capture file missing');
     return {
       kind: 'prompt',
       state: updateNodeProgress(current, node.id, {
@@ -3492,7 +3728,11 @@ async function advanceIfNode(
   }
 
   const condResult = await evaluateFlowCondition(node.condition, current.variables, commandRunner);
-  if (condResult === null) return { kind: 'pause', state: current, capturedPrompt: null };
+  if (condResult === null) {
+    logConditionAudit(auditLogger, current, node, 'unresolved', 'direct');
+    return { kind: 'pause', state: current, capturedPrompt: null };
+  }
+  logConditionAudit(auditLogger, current, node, condResult ? 'true' : 'false', 'direct');
 
   if (condResult) {
     logBranchDecision(node, 'then', 'condition');

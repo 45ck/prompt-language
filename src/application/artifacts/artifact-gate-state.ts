@@ -57,6 +57,7 @@ interface ArtifactStateRecord {
 }
 
 interface ApprovalStateRecord {
+  readonly stepId: string;
   readonly artifactId: string | undefined;
   readonly revisionId: string | undefined;
   readonly runId: string | undefined;
@@ -271,6 +272,7 @@ function normalizeToken(
 function evaluateArtifactGate(parsed: ParsedArtifactGate, variables: VariableStore): boolean {
   const record = readArtifactStateRecord(variables, parsed.ref);
   const resolved = hasExplicitBinding(record.artifactId, record.revisionId, record.runId);
+  const effectiveReviewState = resolveArtifactReviewState(record, variables);
   let passed = false;
 
   switch (parsed.gateName) {
@@ -286,18 +288,18 @@ function evaluateArtifactGate(parsed: ParsedArtifactGate, variables: VariableSto
     case 'artifact_reviewed':
       passed =
         resolved &&
-        (record.reviewState === 'accepted' ||
-          record.reviewState === 'rejected' ||
-          record.reviewState === 'changes_requested');
+        (effectiveReviewState === 'accepted' ||
+          effectiveReviewState === 'rejected' ||
+          effectiveReviewState === 'changes_requested');
       break;
     case 'artifact_accepted':
-      passed = resolved && record.reviewState === 'accepted';
+      passed = resolved && effectiveReviewState === 'accepted';
       break;
     case 'artifact_rejected':
-      passed = resolved && record.reviewState === 'rejected';
+      passed = resolved && effectiveReviewState === 'rejected';
       break;
     case 'artifact_changes_requested':
-      passed = resolved && record.reviewState === 'changes_requested';
+      passed = resolved && effectiveReviewState === 'changes_requested';
       break;
     case 'artifact_active':
       passed = resolved && record.revisionState === 'active';
@@ -344,11 +346,68 @@ function readArtifactStateRecord(variables: VariableStore, ref: string): Artifac
 function readApprovalStateRecord(variables: VariableStore, stepId: string): ApprovalStateRecord {
   const prefix = `_approvals.${stepId}`;
   return {
+    stepId,
     artifactId: readField(variables, prefix, ['artifactId', 'artifact_id']),
     revisionId: readField(variables, prefix, ['revisionId', 'revision_id']),
     runId: readField(variables, prefix, ['runId', 'run_id']),
     outcome: normalizeState(readField(variables, prefix, ['outcome'])),
   };
+}
+
+function resolveArtifactReviewState(
+  record: ArtifactStateRecord,
+  variables: VariableStore,
+): string | undefined {
+  if (record.reviewState !== undefined && record.reviewState !== 'unreviewed') {
+    return record.reviewState;
+  }
+
+  const artifactId = record.artifactId;
+  const revisionId = record.revisionId;
+  const runId = record.runId;
+  if (artifactId === undefined || revisionId === undefined || runId === undefined) {
+    return record.reviewState;
+  }
+
+  const approvalOutcome = findDerivedApprovalOutcome(variables, artifactId, revisionId, runId);
+  if (approvalOutcome !== undefined) {
+    return approvalOutcome;
+  }
+
+  return record.reviewState;
+}
+
+function findDerivedApprovalOutcome(
+  variables: VariableStore,
+  artifactId: string,
+  revisionId: string,
+  runId: string,
+): string | undefined {
+  const matchingOutcomes = new Set<string>();
+
+  for (const stepId of collectApprovalStepIds(variables)) {
+    const record = readApprovalStateRecord(variables, stepId);
+    const outcome = record.outcome;
+    if (
+      record.artifactId === artifactId &&
+      record.revisionId === revisionId &&
+      record.runId === runId &&
+      (outcome === 'approved' || outcome === 'rejected' || outcome === 'changes_requested')
+    ) {
+      matchingOutcomes.add(outcome);
+    }
+  }
+
+  if (matchingOutcomes.size !== 1) {
+    return undefined;
+  }
+
+  const [outcome] = matchingOutcomes;
+  if (outcome === 'approved') {
+    return 'accepted';
+  }
+
+  return outcome;
 }
 
 function readField(
@@ -443,6 +502,26 @@ function collectArtifactRefs(variables: VariableStore): readonly string[] {
   }
 
   return [...refs];
+}
+
+function collectApprovalStepIds(variables: VariableStore): readonly string[] {
+  const stepIds = new Set<string>();
+
+  for (const key of Object.keys(variables)) {
+    if (!key.startsWith('_approvals.')) {
+      continue;
+    }
+
+    const suffix = key.slice('_approvals.'.length);
+    if (suffix.length === 0) {
+      continue;
+    }
+
+    const firstDot = suffix.indexOf('.');
+    stepIds.add(firstDot === -1 ? suffix : suffix.slice(0, firstDot));
+  }
+
+  return [...stepIds];
 }
 
 function isPlainObject(

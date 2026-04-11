@@ -87,6 +87,116 @@ describe('evaluateSpecialGatePredicate', () => {
     });
   });
 
+  it('derives artifact review outcomes from one bound approval record when review state is absent', () => {
+    const approvedVariables: VariableStore = {
+      '_artifacts.deploy_plan': {
+        artifactId: 'deploy-plan',
+        revisionId: 'rev-2',
+        runId: 'run-7',
+        validationState: 'valid',
+        revisionState: 'active',
+      },
+      '_approvals.review_deploy_plan': {
+        artifactId: 'deploy-plan',
+        revisionId: 'rev-2',
+        runId: 'run-7',
+        outcome: 'approved',
+      },
+    };
+    const rejectedVariables: VariableStore = {
+      '_artifacts.deploy_plan': {
+        artifactId: 'deploy-plan',
+        revisionId: 'rev-3',
+        runId: 'run-8',
+        validationState: 'valid',
+        reviewState: 'unreviewed',
+        revisionState: 'active',
+      },
+      '_approvals.review_deploy_plan': {
+        artifactId: 'deploy-plan',
+        revisionId: 'rev-3',
+        runId: 'run-8',
+        outcome: 'rejected',
+      },
+    };
+    const changesRequestedVariables: VariableStore = {
+      '_artifacts.deploy_plan': {
+        artifactId: 'deploy-plan',
+        revisionId: 'rev-4',
+        runId: 'run-9',
+        validationState: 'valid',
+        reviewState: 'unreviewed',
+        revisionState: 'active',
+      },
+      '_approvals.review_deploy_plan': {
+        artifactId: 'deploy-plan',
+        revisionId: 'rev-4',
+        runId: 'run-9',
+        outcome: 'changes_requested',
+      },
+    };
+
+    expect(
+      evaluateSpecialGatePredicate('artifact_accepted deploy_plan', approvedVariables),
+    ).toEqual({
+      matched: true,
+      passed: true,
+    });
+    expect(
+      evaluateSpecialGatePredicate('artifact_rejected deploy_plan', rejectedVariables),
+    ).toEqual({
+      matched: true,
+      passed: true,
+    });
+    expect(
+      evaluateSpecialGatePredicate(
+        'artifact_changes_requested deploy_plan',
+        changesRequestedVariables,
+      ),
+    ).toEqual({
+      matched: true,
+      passed: true,
+    });
+  });
+
+  it('refuses to infer review state from conflicting bound approvals', () => {
+    const variables: VariableStore = {
+      '_artifacts.deploy_plan': {
+        artifactId: 'deploy-plan',
+        revisionId: 'rev-2',
+        runId: 'run-7',
+        validationState: 'valid',
+        reviewState: 'unreviewed',
+        revisionState: 'active',
+      },
+      '_approvals.review_primary': {
+        artifactId: 'deploy-plan',
+        revisionId: 'rev-2',
+        runId: 'run-7',
+        outcome: 'approved',
+      },
+      '_approvals.review_secondary': {
+        artifactId: 'deploy-plan',
+        revisionId: 'rev-2',
+        runId: 'run-7',
+        outcome: 'rejected',
+      },
+    };
+
+    expect(evaluateSpecialGatePredicate('artifact_reviewed deploy_plan', variables)).toEqual({
+      matched: true,
+      passed: false,
+    });
+    expect(evaluateSpecialGatePredicate('artifact_accepted deploy_plan', variables)).toEqual({
+      matched: true,
+      passed: false,
+    });
+    expect(evaluateSpecialGatePredicate('artifact_rejected deploy_plan', variables)).toEqual({
+      matched: true,
+      passed: false,
+    });
+  });
+
   it('requires approval outcomes to stay bound to the currently present artifact revision', () => {
     const approvedVariables: VariableStore = {
       '_artifacts.deploy_plan': {

@@ -339,4 +339,17 @@ This decision constrains the later implementation slice for `prompt-language-50m
 
 As of April 11, 2026, this repository has accepted design notes for artifact packaging, lifecycle, and extension boundaries, but not yet the implementation evidence for artifact-aware gate execution and approval coupling.
 
+What is currently shipped:
+
+- generic completion-gate evaluation for built-in predicates, custom commands, and boolean variables
+- generic validate/preflight checks for runner compatibility and ordinary gate prerequisites
+- approval flow handling through existing step state such as `approve_rejected`
+
+What is still missing for `prompt-language-50m6.7`:
+
+- artifact reference resolution from a gate predicate to one concrete artifact revision
+- gate evaluation over artifact validation, review, revision-standing, and supersession facts
+- explicit approval binding to `artifact id + revision id + run id`
+- deterministic tests for `missing`, `valid`, `invalid`, `accepted`, `rejected`, `changes_requested`, and `superseded` artifact cases
+
 This note closes the design gap for `prompt-language-50m6.7`, but it should not be read as a claim that the bead is fully implemented or ready to close without the runtime and test work described in the bead itself.

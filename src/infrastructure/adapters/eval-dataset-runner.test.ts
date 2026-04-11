@@ -7,7 +7,9 @@ import {
   buildCandidateInput,
   compareEvalReports,
   parseEvalDatasetJsonl,
+  readEvalArtifactBundle,
   readEvalReport,
+  resolveEvalRunById,
   runEvalDataset,
   runEvalDatasetFromFile,
   type EvalDatasetCase,
@@ -115,98 +117,103 @@ describe('eval-dataset-runner', () => {
   });
 
   it('runs repeats, aggregates metrics, and records baseline comparison', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'pl-eval-repeat-report-'));
     const writeReport = vi.fn().mockResolvedValue(undefined);
-    const report = await runEvalDataset(
-      [
-        {
-          id: 'case-a',
-          fixture: './fixtures/a',
-          inputType: 'prompt',
-          inputFile: 'task.txt',
-          verify: 'node test.js',
-          gates: ['tests_pass'],
-        },
-      ],
-      {
-        datasetPath: '/tmp/datasets/e1.jsonl',
-        candidate: 'gated',
-        repeat: 2,
-        outputPath: '/tmp/report.json',
-        baselineReport: {
-          schemaVersion: 1,
-          kind: 'prompt-language-eval-report',
-          generatedAt: '2026-04-10T00:00:00.000Z',
-          datasetPath: '/tmp/datasets/e1.jsonl',
-          datasetName: 'e1.jsonl',
-          harness: 'claude',
-          candidate: 'vanilla',
-          repeat: 2,
-          summary: {
-            totalRuns: 2,
-            passedRuns: 1,
-            failedRuns: 1,
-            passRate: 0.5,
-            averageDurationMs: 10,
+    try {
+      const report = await runEvalDataset(
+        [
+          {
+            id: 'case-a',
+            fixture: './fixtures/a',
+            inputType: 'prompt',
+            inputFile: 'task.txt',
+            verify: 'node test.js',
+            gates: ['tests_pass'],
           },
-          cases: [
-            {
-              caseId: 'case-a',
-              repeat: 1,
-              candidate: 'vanilla',
-              passed: false,
-              durationMs: 10,
+        ],
+        {
+          datasetPath: '/tmp/datasets/e1.jsonl',
+          candidate: 'gated',
+          repeat: 2,
+          outputPath: join(tempDir, 'report.json'),
+          baselineReport: {
+            schemaVersion: 1,
+            kind: 'prompt-language-eval-report',
+            generatedAt: '2026-04-10T00:00:00.000Z',
+            datasetPath: '/tmp/datasets/e1.jsonl',
+            datasetName: 'e1.jsonl',
+            harness: 'claude',
+            candidate: 'vanilla',
+            repeat: 2,
+            summary: {
+              totalRuns: 2,
+              passedRuns: 1,
+              failedRuns: 1,
+              passRate: 0.5,
+              averageDurationMs: 10,
             },
-            {
-              caseId: 'case-a',
-              repeat: 2,
-              candidate: 'vanilla',
-              passed: true,
-              durationMs: 10,
-            },
-          ],
+            cases: [
+              {
+                caseId: 'case-a',
+                repeat: 1,
+                candidate: 'vanilla',
+                passed: false,
+                durationMs: 10,
+              },
+              {
+                caseId: 'case-a',
+                repeat: 2,
+                candidate: 'vanilla',
+                passed: true,
+                durationMs: 10,
+              },
+            ],
+          },
         },
-      },
-      {
-        now: vi
-          .fn()
-          .mockReturnValueOnce(0)
-          .mockReturnValueOnce(20)
-          .mockReturnValueOnce(30)
-          .mockReturnValueOnce(60),
-        getHarnessName: vi.fn().mockResolvedValue('claude'),
-        prepareWorkspace: vi.fn().mockResolvedValue({
-          cwd: '/tmp/work',
-          cleanup: vi.fn().mockResolvedValue(undefined),
-        }),
-        loadInputText: vi.fn().mockResolvedValue('Fix the failing tests'),
-        runPrompt: vi.fn().mockResolvedValue('done'),
-        runFlow: vi.fn().mockResolvedValue('unused'),
-        verifyWorkspace: vi
-          .fn()
-          .mockResolvedValueOnce({ passed: true, stdout: 'ok', stderr: '' })
-          .mockResolvedValueOnce({ passed: false, stdout: '', stderr: 'failed' }),
-        writeReport,
-      },
-    );
+        {
+          now: vi
+            .fn()
+            .mockReturnValueOnce(0)
+            .mockReturnValueOnce(20)
+            .mockReturnValueOnce(30)
+            .mockReturnValueOnce(60),
+          getHarnessName: vi.fn().mockResolvedValue('claude'),
+          prepareWorkspace: vi.fn().mockResolvedValue({
+            cwd: '/tmp/work',
+            cleanup: vi.fn().mockResolvedValue(undefined),
+          }),
+          loadInputText: vi.fn().mockResolvedValue('Fix the failing tests'),
+          runPrompt: vi.fn().mockResolvedValue('done'),
+          runFlow: vi.fn().mockResolvedValue('unused'),
+          verifyWorkspace: vi
+            .fn()
+            .mockResolvedValueOnce({ passed: true, stdout: 'ok', stderr: '' })
+            .mockResolvedValueOnce({ passed: false, stdout: '', stderr: 'failed' }),
+          writeReport,
+        },
+      );
 
-    expect(report.summary).toEqual({
-      totalRuns: 2,
-      passedRuns: 1,
-      failedRuns: 1,
-      passRate: 0.5,
-      averageDurationMs: 25,
-    });
-    expect(report.comparison).toEqual({
-      baselineCandidate: 'vanilla',
-      candidatePassRate: 0.5,
-      baselinePassRate: 0.5,
-      passRateDelta: 0,
-      candidateWins: 0,
-      baselineWins: 0,
-      ties: 1,
-      winner: 'tie',
-    });
-    expect(writeReport).toHaveBeenCalledTimes(1);
+      expect(report.summary).toEqual({
+        totalRuns: 2,
+        passedRuns: 1,
+        failedRuns: 1,
+        passRate: 0.5,
+        averageDurationMs: 25,
+      });
+      expect(report.comparison).toEqual({
+        baselineCandidate: 'vanilla',
+        candidatePassRate: 0.5,
+        baselinePassRate: 0.5,
+        passRateDelta: 0,
+        candidateWins: 0,
+        baselineWins: 0,
+        ties: 1,
+        winner: 'tie',
+      });
+      expect(writeReport).toHaveBeenCalledTimes(1);
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 
   it('rejects non-positive repeat counts', async () => {
@@ -340,6 +347,34 @@ describe('eval-dataset-runner', () => {
       expect(written.summary).toEqual(report.summary);
       expect(written.cases).toEqual(report.cases);
       await expect(readEvalReport(outputPath)).resolves.toEqual(written);
+
+      const firstCase = report.cases[0];
+      expect(firstCase?.runId).toMatch(/^eval\.e1\.case-a\.claude\.gated\.r1\./);
+      expect(firstCase?.artifacts?.bundlePath).toContain('\\runs\\');
+      expect(firstCase?.artifacts?.annotationPath).toBeNull();
+
+      const bundlePath = firstCase?.artifacts?.bundlePath;
+      expect(bundlePath).toBeDefined();
+      const bundle = await readEvalArtifactBundle(bundlePath!);
+      expect(bundle.kind).toBe('prompt-language-eval-artifact-bundle');
+      expect(bundle.dataset.caseId).toBe('case-a');
+      expect(bundle.summary.verifyExitCode).toBe(0);
+      expect(bundle.replay.runId).toBe(firstCase?.runId);
+      await expect(readFile(bundle.artifacts.transcriptPath!, 'utf8')).resolves.toBe('unused');
+      await expect(readFile(bundle.artifacts.verifyStdoutPath!, 'utf8')).resolves.toBe('ok');
+
+      expect(resolveEvalRunById(report, firstCase?.runId ?? '')).toEqual({
+        runId: firstCase?.runId,
+        datasetPath: report.datasetPath,
+        datasetName: report.datasetName,
+        caseId: 'case-a',
+        candidate: 'gated',
+        harness: 'claude',
+        repeat: 1,
+        replay: firstCase?.replay,
+        artifacts: firstCase?.artifacts,
+      });
+      expect(resolveEvalRunById(report, 'missing-run-id')).toBeUndefined();
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }
@@ -479,5 +514,84 @@ describe('eval-dataset-runner', () => {
         },
       ),
     ).rejects.toThrow('Baseline dataset "e2.jsonl" does not match candidate dataset "e1.jsonl".');
+  });
+
+  it('records baseline lineage and classifies case regressions under the saved run bundle', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'pl-eval-baseline-lineage-'));
+    try {
+      const outputPath = join(tempDir, 'reports', 'candidate.json');
+      const report = await runEvalDataset(
+        [
+          {
+            id: 'case-a',
+            fixture: './fixtures/a',
+            inputType: 'prompt',
+            inputFile: 'task.txt',
+            verify: 'node test.js',
+          },
+        ],
+        {
+          datasetPath: '/tmp/datasets/e1.jsonl',
+          outputPath,
+          baselineReport: {
+            schemaVersion: 1,
+            kind: 'prompt-language-eval-report',
+            generatedAt: '2026-04-10T00:00:00.000Z',
+            datasetPath: '/tmp/datasets/e1.jsonl',
+            datasetName: 'e1.jsonl',
+            harness: 'codex',
+            candidate: 'vanilla',
+            repeat: 1,
+            summary: {
+              totalRuns: 1,
+              passedRuns: 1,
+              failedRuns: 0,
+              passRate: 1,
+              averageDurationMs: 10,
+            },
+            cases: [
+              {
+                caseId: 'case-a',
+                repeat: 1,
+                candidate: 'vanilla',
+                passed: true,
+                durationMs: 10,
+                runId: 'baseline.case-a.r1',
+              },
+            ],
+          },
+        },
+        {
+          now: vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(15),
+          getHarnessName: vi.fn().mockResolvedValue('codex'),
+          prepareWorkspace: vi.fn().mockResolvedValue({
+            cwd: '/tmp/work',
+            cleanup: vi.fn().mockResolvedValue(undefined),
+          }),
+          loadInputText: vi.fn().mockResolvedValue('Fix the failing tests'),
+          runPrompt: vi.fn().mockResolvedValue('done'),
+          runFlow: vi.fn().mockResolvedValue('unused'),
+          verifyWorkspace: vi.fn().mockResolvedValue({
+            passed: false,
+            stdout: '',
+            stderr: 'failed',
+            exitCode: 1,
+          }),
+        },
+      );
+
+      const caseResult = report.cases[0];
+      expect(caseResult?.baselineRunId).toBe('baseline.case-a.r1');
+      expect(caseResult?.regressionClassification).toBe('product_regression');
+      expect(caseResult?.verifyExitCode).toBe(1);
+
+      const bundle = await readEvalArtifactBundle(caseResult?.artifacts?.bundlePath ?? '');
+      expect(bundle.execution.regressionClassification).toBe('product_regression');
+      expect(bundle.summary.verifyExitCode).toBe(1);
+      expect(bundle.replay.mode).toBe('rerun_from_dataset');
+      await expect(readFile(bundle.artifacts.verifyStderrPath!, 'utf8')).resolves.toBe('failed');
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
   });
 });

@@ -26,6 +26,16 @@ The accepted storage and lookup model is:
 
 This design clarifies runtime behavior without claiming shipped DSL syntax, CLI commands, or review UI.
 
+## Closure evidence for `prompt-language-50m6.4`
+
+This note already satisfies the bead's acceptance criteria at the design level:
+
+- lifecycle stages with observable runtime effects are defined in the `Emit`, `Validate`, `Reference`, `Review`, and `Supersede` sections
+- cross-run versus per-run semantics are explicit: artifact ownership starts per run, durable persistence outlives the run, and cross-run use is limited to explicit read-only references to immutable emitted versions
+- the relationship to approvals, reviews, and gate evaluation is explicit in `Relationship to approve` and `Relationship to done when: and gate evaluation`, while still avoiding any claim that artifact DSL syntax or review UI is shipped
+
+That means `prompt-language-50m6.4` is materially a closed design decision even though downstream implementation beads such as `prompt-language-50m6.7` still remain open.
+
 ## Why this direction
 
 `docs/wip/artifacts/runtime-semantics.md` already settles that artifacts are explicit outputs, not logs, state, or hidden reasoning. The remaining lifecycle decision therefore needs to preserve three boundaries:

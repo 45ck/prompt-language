@@ -5,8 +5,16 @@
 Design note for bead `prompt-language-5vsm.6`.
 
 This note defines the artifact bundle and replay contract the evaluation stack
-should grow into. It is not a claim that the repo already ships bundle
-manifests, replay-by-run-id CLI support, or stored human annotation records.
+should grow into.
+
+At `HEAD`, the runner now ships a narrow implementation slice of `5vsm.6`:
+
+- per-case `runId` values in saved eval reports
+- manifest-backed per-run bundles persisted beside saved reports
+- runner-level replay metadata and baseline lineage on saved case results
+
+It does **not** yet ship replay-by-run-id CLI support, stored human annotation
+records, or deterministic checkpoint replay.
 
 ## Purpose
 
@@ -46,6 +54,12 @@ The shipped floor is narrower than the full `5vsm.6` target.
 - report-level fields such as `datasetPath`, `harness`, `candidate`, `summary`,
   per-case pass/fail, duration, verify output, and optional baseline comparison
 - live-validation evidence conventions for smoke and blocked-host classification
+- per-case `runId` values on newly written runner reports
+- per-run bundle manifests and captured verify or harness text under
+  `experiments/results/<suite>/<version>/runs/<run-id>/` when the runner saves a
+  report
+- report-case lineage fields such as `baselineRunId`, `replay`, and artifact
+  paths on newly written runner reports
 
 The seeded E1 report shape proves that the repo already stores durable suite
 reports such as:
@@ -64,12 +78,11 @@ reports such as:
 
 ### Not present yet
 
-- stable per-case `runId`
-- a checked-in artifact manifest for each case execution
-- run lookup by ID
-- replay or rerun commands that resolve from a stored run handle
-- locked baseline lineage that points from a report row back to a per-run bundle
+- replay or rerun CLI commands that resolve from a stored run handle
 - human annotation storage attached to runs or reports
+- deterministic checkpoint replay of live host sessions
+- backfilled `runId` and bundle lineage on older locked reports that predate the
+  runner slice
 
 That distinction matters. The repo should not pretend it already has full
 artifact-backed replay just because the suite report JSON exists.
@@ -169,8 +182,8 @@ should say what is absent rather than forcing every run into the same file list.
 
 ## Bundle manifest shape
 
-The repo does not ship this manifest yet, but the future shape should be close
-to the following:
+The runner now ships a manifest-backed bundle for saved reports, and the checked
+in contract should stay close to the following shape:
 
 ```json
 {
@@ -427,8 +440,10 @@ the following:
 - preserve locked baseline authority under `experiments/results/`
 - attach human annotations with provenance instead of loose notes
 
-Until then, the repo should describe bundle, replay, and annotation support as
-planned work, not as shipped capability.
+Until the remaining acceptance items land, the repo should describe only the
+runner-level bundle and lineage slice as shipped capability. Replay CLI
+surfaces, stored annotations, and deterministic checkpoint replay remain
+planned work.
 
 ## Out of scope
 

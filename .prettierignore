@@ -6,6 +6,7 @@ node_modules
 .beads
 .claude
 tmp-cov.mjs
+.tmp/**
 scripts/eval/comparative-eval-v4.mjs
 docs/research/sources
 tmp-opencode*/

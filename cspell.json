@@ -100,9 +100,12 @@
     "reports/**",
     "node_modules/**",
     ".claude/**",
+    ".tmp/**",
     "package-lock.json",
     "scripts/eval/comparative-eval-v3.mjs",
     "scripts/eval/comparative-eval-v4.mjs",
+    "experiments/full-saas-factory/**",
+    "experiments/results/**",
     "docs/showcase.md",
     "docs/research/**"
   ]

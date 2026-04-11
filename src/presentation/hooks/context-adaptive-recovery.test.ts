@@ -158,6 +158,41 @@ describe('context-adaptive recovery hooks', () => {
     );
   });
 
+  it('session-start falls back to the second-generation backup when primary and first backup are both corrupted (resume_boundary)', async () => {
+    const recovered = makeActiveState({
+      sessionId: 'recovered-second-generation',
+      flowSpec: {
+        goal: 'Recovered from second-generation backup',
+        nodes: [
+          { kind: 'prompt', id: 'p1', text: 'capture evidence' },
+          { kind: 'run', id: 'r1', command: 'npm run test -- recovery' },
+        ],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+      currentNodePath: [1],
+    });
+
+    await writeStateFiles({
+      primary: '{{broken primary',
+      backup: '{{broken backup',
+      backup2: JSON.stringify(recovered),
+    });
+
+    const result = runHook('session-start.ts', tempDir);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain('session-state.json is corrupted, trying backup');
+    expect(result.stderr).toContain('Recovered state from second-generation backup');
+    expect(result.stderr).toContain('Recovered from second-generation backup');
+    expect(result.stderr).toContain('> run: npm run test -- recovery');
+
+    const additionalContext = parseAdditionalContext(result.stdout);
+    expect(additionalContext).toContain('[prompt-language] Active flow detected');
+    expect(additionalContext).toContain('Recovered from second-generation backup');
+    expect(additionalContext).toContain('> run: npm run test -- recovery');
+  });
+
   it('session-start keeps capture failure details visible on resume and re-emits the retry prompt (capture_failure)', async () => {
     const state = makeActiveState({
       flowSpec: {
@@ -285,5 +320,44 @@ describe('context-adaptive recovery hooks', () => {
     expect(additionalContext).toContain('IMPORTANT: Capture is in progress.');
     expect(additionalContext).toContain('Variable capture');
     expect(additionalContext).toContain('.prompt-language/vars/answer');
+  });
+
+  it('pre-compact falls back to the second-generation backup and preserves the resumed step across compaction (compaction_boundary)', async () => {
+    const recovered = makeActiveState({
+      sessionId: 'compact-second-generation',
+      flowSpec: {
+        goal: 'Recovered compact flow from second-generation backup',
+        nodes: [
+          { kind: 'prompt', id: 'p1', text: 'capture logs' },
+          { kind: 'run', id: 'r1', command: 'npm run lint' },
+        ],
+        completionGates: [{ predicate: 'lint_pass' }],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+      currentNodePath: [1],
+      gateResults: { lint_pass: false },
+    });
+
+    await writeStateFiles({
+      primary: '{{broken primary',
+      backup: '{{broken backup',
+      backup2: JSON.stringify(recovered),
+    });
+
+    const result = runHook('pre-compact.ts', tempDir);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain('session-state.json is corrupted, trying backup');
+    expect(result.stderr).toContain('Recovered state from second-generation backup');
+
+    const additionalContext = parseAdditionalContext(result.stdout);
+    expect(additionalContext).toContain(
+      '[prompt-language] Active flow preserved across compaction.',
+    );
+    expect(additionalContext).toContain(
+      '[pl] Recovered compact flow from second-generation backup | active',
+    );
+    expect(additionalContext).toContain('>R: npm run lint');
+    expect(additionalContext).toContain('gates: -lint_pass');
   });
 });

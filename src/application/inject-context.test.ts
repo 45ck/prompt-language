@@ -522,6 +522,73 @@ describe('injectContext — NL meta-prompt', () => {
 });
 
 describe('injectContext — variable interpolation', () => {
+  it('injects only variables referenced by an awaiting let capture prompt', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [
+      createLetNode('l1', 'ctx', { type: 'prompt', text: 'Summarize ${repo}' }),
+      createPromptNode('p1', 'done'),
+    ]);
+    let session = createSessionState('slice-let', spec);
+    session = { ...session, variables: { repo: 'auth module', secret: 'ignore me' } };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Go', sessionId: 'slice-let' }, store);
+
+    expect(result.prompt).toContain('repo = auth module');
+    expect(result.prompt).not.toContain('secret = ignore me');
+  });
+
+  it('keeps foreach path variables needed by ancestor loop context', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [
+      createForeachNode('fe1', 'file', '${files}', [createRunNode('r1', 'echo work')]),
+    ]);
+    let session = createSessionState('slice-foreach', spec);
+    session = {
+      ...session,
+      currentNodePath: [0, 0],
+      nodeProgress: {
+        fe1: {
+          iteration: 2,
+          maxIterations: 2,
+          status: 'running',
+        },
+      },
+      variables: {
+        files: '["a.ts","b.ts"]',
+        file: 'b.ts',
+        secret: 'ignore me',
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Continue', sessionId: 'slice-foreach' }, store);
+
+    expect(result.prompt).toContain('foreach file in ${files}');
+    expect(result.prompt).toContain('[file=b.ts]');
+    expect(result.prompt).not.toContain('secret = ignore me');
+  });
+
+  it('falls back to full variable injection when the active path cannot be resolved', async () => {
+    const store = makeStore();
+    const spec = createFlowSpec('test', [createRunNode('r1', 'echo work')]);
+    let session = createSessionState('slice-fallback', spec);
+    session = {
+      ...session,
+      currentNodePath: [99],
+      variables: {
+        repo: 'auth module',
+        secret: 'keep visible on fallback',
+      },
+    };
+    await store.save(session);
+
+    const result = await injectContext({ prompt: 'Continue', sessionId: 'slice-fallback' }, store);
+
+    expect(result.prompt).toContain('repo = auth module');
+    expect(result.prompt).toContain('secret = keep visible on fallback');
+  });
+
   it('interpolates ${varName} in captured prompt text', async () => {
     const store = makeStore();
     const spec = createFlowSpec('test', [createPromptNode('p1', 'Refactor the ${name}')]);

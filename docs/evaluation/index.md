@@ -25,6 +25,7 @@ The docs in this section are paired with the checked-in dataset bank under [expe
 | [Eval Analysis](eval-analysis.md)                                                                 | Comparative A/B results, latency analysis, and differentiator taxonomy                            |
 | [Codex Parity Matrix](eval-parity-matrix.md)                                                      | Current parity bar plus checked-in execution status for tests, CI, smoke, and supported-host gaps |
 | [Codex Parity Delta Analysis](codex-parity-delta-analysis.md)                                     | Current delta classification and exact remaining full-run evidence gap                            |
+| [2026-04-11 Codex Parity Execution Evidence](2026-04-11-codex-parity-execution-evidence.md)       | Branch-local execution evidence note separating deterministic passes from environment blockers    |
 | [Live Validation Evidence](eval-live-validation-evidence.md)                                      | Required smoke evidence format and blocked-host classification                                    |
 | [Smoke Coverage Status](test-design-smoke-gaps.md)                                                | Current smoke coverage, quick-suite evidence, and remaining gaps                                  |
 | [Operator Shell Rollout and Promotion Evidence](operator-shell-rollout-and-promotion-evidence.md) | Rollout gates, blocker classes, troubleshooting, and promotion evidence for operator-shell slices |

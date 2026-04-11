@@ -24,6 +24,19 @@ Primary related notes:
 - `src/infrastructure/adapters/claude-process-spawner.ts` launches an external `claude -p` process and treats `session-state.json` in `stateDir` as the source of truth.
 - `src/infrastructure/adapters/headless-process-spawner.ts` runs the child flow in-process and keeps liveness in memory until `runFlowHeadless()` finishes.
 
+The repo also already has a second, separate runner seam for prompt turns:
+
+- `src/application/ports/prompt-turn-runner.ts`
+- `src/infrastructure/adapters/codex-prompt-turn-runner.ts`
+- `src/infrastructure/adapters/opencode-prompt-turn-runner.ts`
+- `src/infrastructure/adapters/ollama-prompt-turn-runner.ts`
+
+This bead is therefore not about inventing one universal runner concept. The missing seam is narrower:
+
+- `PromptTurnRunner` owns how one headless assistant turn is executed.
+- `ProcessSpawner` owns how a spawned child session is launched, polled, and terminated.
+- the repo has no configurable infrastructure contract that sits under `ProcessSpawner` the way prompt-turn adapters already sit under `PromptTurnRunner`.
+
 Both are forced through the same application port:
 
 ```ts
@@ -39,7 +52,9 @@ That port is correct for the runtime, but it is too low-level and too Claude-sha
 - external-process concerns and provider concerns are mixed together
 - `stateDir` polling is treated like the default lifecycle rather than one transport
 - hook entry points instantiate `ClaudeProcessSpawner` directly
+- Codex hook entry points still instantiate `ClaudeProcessSpawner` directly for child lifecycle even though Codex prompt turns already use a different runner seam
 - adding another external runner would require cloning Claude-specific logic instead of plugging into one explicit contract
+- spawned-session runner selection has no infrastructure-owned resolver or registry contract today
 
 ## Decision
 
@@ -56,6 +71,7 @@ This keeps the runtime stable while giving the adapter layer one concrete, provi
 - which transport is used to observe completion
 - which behaviors are actually supported by that runner
 - how current `ProcessSpawner` semantics are preserved during migration
+- how the repo resolves a configurable spawned-session adapter without exposing provider details above infrastructure
 
 ## Non-goals
 
@@ -66,6 +82,39 @@ This note does not propose:
 - a claim that Claude, Codex, and OpenCode already share one lifecycle model
 - a domain-layer provider concept
 - immediate changes to hook UX or flow authoring
+- merging `PromptTurnRunner` and spawned-child lifecycle into one universal runner interface
+
+## Terminology split
+
+This note uses two different runtime terms on purpose.
+
+### Prompt-turn runner
+
+Owns one headless assistant turn:
+
+- input: `cwd`, prompt text, optional model
+- output: exit code, assistant text, made-progress signal
+
+Current examples:
+
+- `CodexPromptTurnRunner`
+- `OpenCodePromptTurnRunner`
+- `OllamaPromptTurnRunner`
+
+### Spawned-session runner
+
+Owns child-flow lifecycle:
+
+- launch child execution
+- provide a completion signal that can be polled
+- optionally terminate the child
+
+Current concrete implementations hidden behind `ProcessSpawner`:
+
+- external Claude child session
+- in-process headless child session
+
+The contract in this bead is for the second category only. A future provider may support one prompt-turn adapter, one spawned-session adapter, both, or neither. The two seams must stay separately configurable.
 
 ## Current repo constraints
 
@@ -104,6 +153,7 @@ Interactive hook entry points create `ClaudeProcessSpawner(process.cwd())` direc
 - `src/presentation/hooks/user-prompt-submit.ts`
 - `src/presentation/hooks/stop.ts`
 - `src/presentation/hooks/task-completed.ts`
+- `src/presentation/hooks/codex-user-prompt-submit.ts`
 
 That default must remain behaviorally unchanged until a separate provider-selection change is made.
 
@@ -127,6 +177,13 @@ Ownership by layer:
 - `presentation`: may choose which `ProcessSpawner` implementation to instantiate, but should not know provider-specific launch details
 
 The critical rule is: **provider-specific lifecycle details stay below `ProcessSpawner`**.
+
+Additional boundary rules:
+
+- `PromptTurnRunner` and `SpawnedSessionRunner` stay separate ports with separate factories
+- `application` may know execution-profile concepts such as runner or mode preflight, but not infrastructure runner classes or adapter ids
+- `presentation` may choose a factory entry point, but should not branch on provider-specific child lifecycle mechanics
+- `domain` and persisted session state remain agnostic to which spawned-session adapter was used
 
 ## Phase-1 contract
 
@@ -209,6 +266,68 @@ export interface SpawnedSessionRunner {
 }
 ```
 
+## Configuration and resolution contract
+
+Phase 1 needs an infrastructure-owned resolver, but not a provider concept in application state.
+
+```ts
+export type SpawnedSessionRunnerId = 'claude-external' | 'headless';
+
+export interface SpawnedSessionRunnerBinding {
+  readonly id: SpawnedSessionRunnerId;
+  readonly runner: SpawnedSessionRunner;
+}
+
+export interface SpawnedSessionRunnerRegistry {
+  get(id: SpawnedSessionRunnerId): SpawnedSessionRunnerBinding;
+}
+
+export interface ProcessSpawnerFactoryInput {
+  readonly cwd: string;
+  readonly interactive: boolean;
+}
+
+export interface ProcessSpawnerFactory {
+  create(input: ProcessSpawnerFactoryInput): ProcessSpawner;
+}
+```
+
+Phase-1 resolution rules:
+
+- interactive hooks default to `claude-external`
+- headless runtime paths default to `headless`
+- the selected adapter id is infrastructure-local and must not be written into `SessionState`
+- application code receives only `ProcessSpawner`
+- future configurability may change which adapter the factory returns, but must not require `advance-flow.ts`, `inject-context.ts`, or domain types to branch on provider names
+
+This is intentionally narrower than a repo-wide "runner registry". The repo already has prompt-turn runner selection, execution preflight runner names, and binary probing. This bead only standardizes spawned-child lifecycle adapter resolution.
+
+## Non-leakage rules
+
+To keep this abstraction implementation-ready and safe from provider leakage, the following rules are part of the contract:
+
+- no new `provider`, `adapter`, or `runnerId` field is added to `SpawnInput`
+- no new `provider`, `adapter`, or `runnerId` field is added to `SessionState`, spawned-child state, or domain flow nodes
+- no application logic branches on `"claude"`, `"codex"`, `"opencode"`, or other provider strings to manage child lifecycle
+- provider-specific CLI arguments, env vars, polling files, and termination mechanics stay inside concrete `SpawnedSessionRunner` implementations
+- capability differences are surfaced as infrastructure capabilities or execution-preflight diagnostics, not as domain semantics
+- if a future adapter needs persistent identity beyond `stateDir` and `pid`, that requires a separate state-shape bead rather than being smuggled into this migration
+
+## Persistence and identity contract
+
+The repo's current persistence model is part of the design, not an accident.
+
+Phase 1 must preserve these rules:
+
+- `stateDir` remains the durable rendezvous key across parent restarts
+- `pid` remains optional runtime metadata for best-effort termination
+- runner-specific handles remain infrastructure-ephemeral
+- `RunnerBackedProcessSpawner` owns the ephemeral `stateDir -> handle` map
+- if process restart loses the ephemeral handle, `poll(stateDir)` must still degrade correctly for file-backed runners
+- in-memory runners may report `running` when a prior ephemeral handle is gone; they do not get to invent fake reconstruction semantics
+
+That last rule is important. The headless runner is allowed to be non-resumable across parent-process restart in Phase 1 because the repo does not currently persist enough identity to do better. The abstraction must document that limit rather than hide it.
+
 ## Why this contract is the right minimum
 
 ### It matches current runtime inputs
@@ -233,6 +352,15 @@ Phase 1 only needs two capture modes:
 - `memory`: headless child returns results in-process
 
 `stdout-json`, `provider-api`, and session-resume semantics can be added later if the repo actually grows those paths.
+
+### It does not collapse existing runner seams
+
+The repo already has a working prompt-turn adapter boundary. Reusing that term for spawned-child lifecycle would blur two different responsibilities:
+
+- prompt-turn execution inside `runFlowHeadless()`
+- child-session launch, poll, and terminate used by `spawn`, `await`, `race`, and parent cleanup
+
+Keeping those seams separate avoids leaking provider choice from the headless prompt engine into the generic child-lifecycle contract.
 
 ## Compatibility adapter
 
@@ -279,6 +407,7 @@ Design rules for this adapter:
 - it does not add new runtime semantics
 - it is responsible for the ephemeral `stateDir -> handle` map
 - it returns `pid: 0` for runners that do not have a real OS process, preserving current headless behavior
+- it is the only layer allowed to translate between infrastructure adapter ids/handles and the generic `ProcessSpawner` surface
 
 ## Provider mappings in this repo
 
@@ -301,6 +430,7 @@ Concrete behavior that must remain unchanged:
 - use spawn-level `cwd` when provided, otherwise instance `cwd`
 - treat unreadable or absent `session-state.json` as `running`
 - map `completed` to completed, and `failed` or `cancelled` to failed
+- keep name validation and empty-model rejection inside the Claude adapter rather than lifting those Claude-specific rules into application
 
 ### Headless runner
 
@@ -319,6 +449,19 @@ Concrete behavior that must remain unchanged:
 - key child bookkeeping by `stateDir`
 - return `pid: process.pid` through the current `ProcessSpawner` shim so `await` liveness checks remain stable
 - expose terminal variables as stringified child variables
+- remain explicitly non-resumable across parent-process restart unless a later bead changes persisted child identity
+
+## Factory and wiring rules
+
+To make the abstraction operationally real, the code change after this note should wire it through factories rather than scattered direct construction.
+
+Required rules:
+
+- interactive hooks should depend on one infrastructure `ProcessSpawnerFactory` entry point
+- that factory may return a Claude-backed spawner today, but the hook files should stop constructing `ClaudeProcessSpawner` directly
+- headless runtime assembly should choose its spawned-session adapter separately from its `PromptTurnRunner`
+- `HeadlessProcessSpawner` may remain a composition-root object in Phase 1, but its child-lifecycle behavior should be describable through `SpawnedSessionRunner`
+- no hook or application code should infer child-lifecycle transport from `runner === 'codex'` or similar checks
 
 ## Explicitly out of scope for Phase 1
 
@@ -331,6 +474,7 @@ These are valid future extensions, but they should not be bundled into the first
 - resume tokens
 - structured stdout capture
 - provider API polling
+- unifying prompt-turn runner selection and spawned-session runner selection into one global resolver
 
 Each of those changes widens semantics beyond what the runtime currently emits and would need its own evidence and tests.
 
@@ -373,6 +517,17 @@ Once the runner-backed spawners exist, hook entry points should instantiate a re
 
 That follow-up is outside this bead's file-only scope, but it is the next repo change needed to make the abstraction operationally real.
 
+### Step 6: keep prompt-turn selection separate
+
+Do not route `PromptTurnRunner` through the spawned-session factory.
+
+Instead:
+
+- headless entry points continue choosing a prompt-turn runner through their existing headless execution assembly
+- spawned-child lifecycle chooses a `SpawnedSessionRunner` through the new spawned-session factory
+
+The same provider may supply both adapters, but the contracts remain distinct.
+
 ## Required tests for the migration
 
 The code change that follows this note should add or preserve tests covering:
@@ -382,6 +537,8 @@ The code change that follows this note should add or preserve tests covering:
 - headless child execution still returns parent-visible variables
 - `RunnerBackedProcessSpawner` preserves `pid: 0` and `pid: process.pid` behavior exactly as current callers expect
 - `terminateRunningSpawnedChildren()` still works against the process-spawner surface without learning about provider concepts
+- hook-level factory wiring preserves today's default interactive behavior while removing direct `new ClaudeProcessSpawner(...)` calls from hook entry points
+- headless assembly can swap spawned-session adapters without changing prompt-turn runner tests
 
 ## Acceptance criteria
 
@@ -392,6 +549,8 @@ This bead should be considered satisfied when the note is concrete enough that a
 - `stateDir` is called out as the stable poll key for Phase 1
 - the Claude and headless mappings are described in terms of actual checked-in behavior
 - the migration path names the exact compatibility adapter needed for this repo
+- the resolution contract explains how configurable adapters are selected without adding provider fields to application or domain state
+- the note explicitly separates prompt-turn runner selection from spawned-session runner selection
 - future extensions are separated from the minimum viable migration
 
 ## Consequences
@@ -409,6 +568,7 @@ What remains intentionally unchanged:
 - domain state shape
 - default Claude behavior in interactive hooks
 - the existing Codex external-child decision
+- the existing prompt-turn runner seam used by headless Codex/OpenCode/Ollama execution
 
 ## Summary
 

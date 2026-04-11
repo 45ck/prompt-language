@@ -2,124 +2,194 @@
 
 ## Status
 
-Design-and-test note for `prompt-language-0ovo.5.1` only.
+Design-note contract for `prompt-language-0ovo.5.1` only.
 
-This file defines the compact-to-full escalation matrix for recovery-sensitive turns. It does not claim that compact mode or automatic fallback is already shipped.
+This note defines the trigger matrix that later compact-mode work must implement. It does not claim
+that automatic compact-to-full fallback is already shipped.
 
-## Scope
+## Purpose
 
-Compact mode is allowed only when the runtime can still prove exact execution position, recovery context, and operator-visible diagnostics from current state. When that proof weakens, the renderer must either:
+`prompt-language-0ovo.5` is the recovery-safe compact-rendering track. This child bead owns one
+thing only: a stable, implementation-ready matrix for deciding when compact rendering is forbidden
+and full rendering must take over.
 
-- escalate to full mode for the current turn, or
-- fail clearly when even full mode would be based on untrustworthy state
+The matrix has to be honest about current repo behavior:
 
-This note is intentionally narrower than [Context-Adaptive Recovery Fallback](context-adaptive-recovery-fallback.md). That broader note sets epic-level policy. This matrix names the concrete trigger classes, the fail-closed versus advisory split, and the minimum validation expected for each class.
+- full rendering is still the canonical execution and recovery surface
+- compact rendering exists today as a helper surface, not as the default active-turn renderer
+- the repo already proves a few recovery signals, but it does not yet have a general compact-mode
+  classifier, escalation telemetry, or a user-facing render-mode selector
+
+## Current Implementation Reality
+
+As of this note revision, the repo behaves like this:
+
+- `src/application/inject-context.ts` injects `renderFlow(...)` on active turns. That is the
+  current execution baseline.
+- `src/presentation/hooks/session-start.ts` also uses `renderFlow(...)` on resume/session start and
+  re-emits capture prompts from full state.
+- `src/application/run-flow-headless.ts` uses full rendering plus a summary, not compact rendering,
+  for the headless loop.
+- `src/presentation/hooks/pre-compact.ts` is the one shipped place that deliberately uses
+  `renderFlowCompact(...)` and `renderFlowSummary(...)` to survive host compaction.
+- `src/infrastructure/adapters/file-state-store.ts` can recover from `.bak` and `.bak2` state files
+  and emits `PLR-004` when resume state cannot be trusted.
+- Capture retry state is already surfaced through `awaiting_capture` annotations in full render and
+  preserved in the pre-compact hook. Capture fallback diagnostics use `PLR-005`.
+
+What does not exist yet:
+
+- no runtime flag or policy that requests compact mode for ordinary active turns
+- no central trigger-classification function
+- no automatic compact-to-full escalation path on active turns
+- no structured fields such as `requestedMode`, `actualMode`, `escalated`, or `triggerIds`
+- no persisted compaction event marker, gate freshness model, import-equivalence fingerprint, or
+  sticky fallback policy
+
+This means the matrix below is partly grounded by current evidence and partly a forward contract for
+the next slices.
+
+## Scope Boundary
+
+This note is intentionally narrower than
+[Context-Adaptive Recovery Fallback](context-adaptive-recovery-fallback.md).
+
+That broader note defines epic policy. This note defines the exact trigger classes, the minimum
+observable evidence expected for each, and the places where the current repo already provides part
+of that evidence.
 
 ## Decision
 
-Every turn that requests compact mode must classify trigger signals into one of two classes:
+Any future turn that requests compact rendering must classify observed signals into one of two
+classes before prompt injection:
 
-- `fail_closed`: compact mode is not allowed for the turn; runtime must use full mode or emit an explicit failure when state cannot be trusted
-- `advisory`: compact mode may continue if no `fail_closed` trigger is active, but the signal must remain observable for evaluation and operator diagnosis
+- `fail_closed`: compact rendering is forbidden for the turn; runtime must use full rendering or
+  fail explicitly if even full rendering would rely on untrustworthy state
+- `advisory`: compact rendering may continue only if no `fail_closed` trigger is active
 
-The classification rule is strict:
+Classification rules:
 
-- any single `fail_closed` trigger forces full mode
-- multiple triggers must be recorded together rather than collapsed to one winner
-- advisory signals never cancel a fail-closed trigger
-- if the runtime cannot classify a recovery-sensitive signal confidently, it must treat it as `fail_closed`
+- any single `fail_closed` trigger forces full rendering
+- multiple triggers must be preserved together, not collapsed to a single winner
+- advisory triggers never override a `fail_closed` trigger
+- if the runtime cannot classify a recovery-sensitive signal confidently, it must treat it as
+  `fail_closed`
+- `pre-compact.ts` is a special-case preservation hook, not proof that ordinary active turns are
+  safe to run compact
 
-## Fail-Closed Trigger Matrix
-
-| Trigger ID                  | Recovery-sensitive event                                                                                                                      | Required action                                                           | Why compact mode is unsafe                                                                            | Observable evidence                                                                           | Validation expectation                                                                                                      |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `resume_boundary`           | Session starts from persisted state, recovered checkpoint, backup state, or interrupted-run marker                                            | Force full mode for the turn                                              | Resume correctness depends on exact step identity and current blocked state, not a compressed summary | resumed tag, session or run id, recovery source, requested mode vs actual mode                | Resume-path tests assert full mode, preserved current-step identity, and visible recovery source                            |
-| `compaction_boundary`       | Host compaction, context rehydrate, pre-compact or post-compact boundary, or summary handoff is detected                                      | Force full mode for the turn                                              | Compact mode must not summarize a recovery summary during re-entry                                    | compaction marker, hook/event source, requested mode vs actual mode                           | Compaction tests assert fallback count increments and the compaction marker remains visible                                 |
-| `state_mismatch`            | Resume state corruption, schema/version mismatch, malformed node progress, or ambiguous current-node reconstruction                           | Force full mode if state can still be rendered; otherwise fail explicitly | When runtime shape is uncertain, compact mode can hide the mismatch instead of localizing it          | `PLR-004` or equivalent mismatch diagnostic, mismatch kind, affected file or subsystem        | Corruption tests assert either full-mode escalation with diagnostics or explicit failure, never silent compact continuation |
-| `blocked_state_uncertainty` | Pending approval, blocked checkpoint, or gate-blocked status cannot be reconstructed exactly                                                  | Force full mode for the turn                                              | Recovery-safe rendering needs the exact blocked reason and next action                                | blocked reason, gate or approval id, whether it can be retried, requested mode vs actual mode | Tests assert blocked state remains visible after resume and is not reduced to a generic summary                             |
-| `gate_uncertainty`          | Gate result is pending, stale, partially recovered, or inconsistent with current run state                                                    | Force full mode for the turn                                              | Gate trust semantics outrank prompt savings, especially after interruption                            | gate id, freshness marker, last evaluation time, diagnostic or outcome code                   | Gate-recovery tests assert stale or pending gates stay explicit and compact mode does not omit them                         |
-| `capture_failure`           | Prompt capture, capture-file retry, review-judge capture replay, or capture nonce recovery path is active                                     | Force full mode for the turn                                              | Capture recovery needs exact prompt, file path, and retry instruction visibility                      | `PLR-005` or capture retry prompt, capture target path, retry reason                          | Capture tests assert the retry prompt or file path is preserved and full mode is forced                                     |
-| `spawn_uncertainty`         | Parent is resuming around `spawn` / `await`, child topology is stale, child status disagrees with parent state, or inbox replay is incomplete | Force full mode for the turn                                              | Parent-child recovery is inspection-heavy; compact mode can hide who is blocking whom                 | child ids, await target, child statuses, topology mismatch marker                             | Spawn/await integration tests assert child and await state remain inspectable after fallback                                |
-| `import_uncertainty`        | Imported flow resolution changed, failed, or cannot be proven equivalent to the state the run started with                                    | Force full mode for the turn; fail if import identity cannot be trusted   | Compact mode must not hide topology drift or silently continue on the wrong imported graph            | import path, resolution result, fingerprint or version marker when available                  | Import recovery tests assert equivalent imports continue under full mode and non-equivalent imports fail loudly             |
-| `debug_mode`                | Runtime enters debug, inspect, validate, replay, smoke, or recovery-audit mode                                                                | Force full mode immediately                                               | In debug-oriented sessions the operator intent is evidence, not compression                           | requested command or hook mode, requested mode vs actual mode                                 | Debug-mode tests assert compact mode is bypassed entirely and operator-facing diagnostics remain verbose                    |
-| `manual_force_full`         | User, config, or runtime policy explicitly requests full mode                                                                                 | Force full mode immediately                                               | Explicit operator policy takes precedence over heuristics                                             | policy source, prior mode, actual mode                                                        | Config and CLI tests assert explicit full-mode requests always win                                                          |
-
-## Advisory Signals
-
-These signals matter for evaluation and operator diagnosis, but they do not require escalation by themselves while state remains trustworthy.
-
-| Trigger ID                 | Advisory event                                                                                   | Why it stays advisory                                                               | Observable evidence                                                       | Validation expectation                                                                  |
-| -------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `optional_artifact_gap`    | Optional run-state v2 artifacts are missing while canonical state is still coherent              | Missing convenience artifacts should not block a trustworthy turn on their own      | missing artifact path, fallback-to-canonical-state note                   | Tests assert compact mode may continue while diagnostics identify the missing artifact  |
-| `output_pressure`          | Large output, token churn, or prompt-size pressure is high but recovery state is otherwise clean | Performance pressure is not a recovery hazard by itself                             | prompt byte counts, render-mode metrics, fallback count remains unchanged | Evaluation harness tracks bytes and wall-clock without treating this as forced fallback |
-| `checkpoint_age_warning`   | Last checkpoint or recovery pointer is old, but current state still resolves cleanly             | Age alone is a warning, not proof of mismatch                                       | checkpoint timestamp, age bucket, warning diagnostic                      | Snapshot and evaluation tests assert warning visibility without forced full mode        |
-| `host_degradation_warning` | Non-fatal host or adapter degradation affects observability but not current state correctness    | Warn the operator, but do not escalate unless the degradation makes state uncertain | warning diagnostic, adapter or hook name, retry advice                    | Preflight and diagnostics tests assert warning emission without mode flip               |
-
-Advisory signals must still be counted in telemetry and evaluation output. They are not invisible.
-
-## Escalation Semantics
+## First Implementation Contract
 
 The first implementation should use turn-local escalation:
 
-1. compact mode is requested
-2. trigger classification runs before prompt injection
-3. any `fail_closed` trigger forces full mode for that turn
-4. the actual mode and trigger ids are recorded
-5. the next turn re-evaluates from fresh state
+1. a turn requests compact rendering
+2. a trigger classifier inspects current state plus host/hook context
+3. if no `fail_closed` trigger is present, compact rendering may proceed
+4. if a `fail_closed` trigger is present and state is still trustworthy, render the turn in full
+   mode
+5. if state is not trustworthy enough even for full rendering, fail explicitly with diagnostics
+6. the next turn re-evaluates from fresh state instead of inheriting silent compact eligibility
 
-If state is too corrupt to support full rendering safely, the runtime must fail explicitly instead of inventing a partial compact fallback.
+## Fail-Closed Trigger Matrix
+
+| Trigger ID                  | Recovery-sensitive event                                                                                                          | Current repo evidence                                                                                                                                              | Required first implementation behavior                                                                                                                                   | Remaining gap                                                                                                                           |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `resume_boundary`           | Session resumes from persisted state, backup state, interrupted-run state, or a recovered session snapshot                        | `inject-context.ts` emits a `[resumed from ...]` banner for resumed active flows; `session-start.ts` renders full state from persisted session data                | If compact was requested for an ordinary active turn, force full mode for that turn and record that the turn crossed a resume boundary                                   | No compact-mode request path or trigger classifier exists yet                                                                           |
+| `compaction_boundary`       | Host compaction, rehydrate, or summary handoff boundary is active                                                                 | `pre-compact.ts` already emits compact preservation context; `context-adaptive-recovery.test.ts` proves backup recovery across the pre-compact path                | Treat compaction/re-entry as recovery-sensitive. Any ordinary turn after such a boundary must fall back to full mode unless a later implementation proves safer behavior | No persisted compaction marker or post-compaction escalation logic exists today                                                         |
+| `state_mismatch`            | Resume state is corrupted, malformed, structurally incomplete, or version/schema shape is not trustworthy                         | `file-state-store.ts` recovers from backup and emits `PLR-004` when no valid state remains; `session-start.ts` and `user-prompt-submit.ts` surface that diagnostic | If state can still be rendered safely, force full mode and surface the mismatch; otherwise fail explicitly                                                               | Only the unrecoverable corruption path is explicit today. There is no finer-grained mismatch classifier for partially trustworthy state |
+| `blocked_state_uncertainty` | Pending approval, blocked checkpoint, or blocked gate state cannot be reconstructed exactly                                       | Full rendering already shows approval state and current-node position, but there is no explicit blocked-state recovery classifier                                  | Force full mode for the turn and surface the exact blocked reason and next action                                                                                        | No explicit runtime signal for “blocked state reconstructed ambiguously” exists yet                                                     |
+| `gate_uncertainty`          | Gate result is pending, stale, partially recovered, or inconsistent with current run state                                        | Full and compact renderers can show gate pass/fail/unknown, but they do not carry freshness or partial-recovery metadata                                           | Force full mode and keep gate identity, freshness, and failure reason visible                                                                                            | Gate freshness, stale detection, and trigger emission are not implemented                                                               |
+| `capture_failure`           | Prompt capture retry, capture-file recovery, review-judge retry, or capture fallback path is active                               | `render-flow.ts` renders capture retry annotations; `PLR-005` exists; `session-start.ts` and `pre-compact.ts` re-emit retry instructions                           | Force full mode for ordinary active turns whenever capture recovery is live; keep retry path and target file visible                                                     | Current compact preservation exists only in the pre-compact hook, not in a general render-mode fallback path                            |
+| `spawn_uncertainty`         | Parent is resuming around `spawn` / `await`, child status disagrees with parent state, or inbox replay/topology cannot be trusted | Renderers already show `spawn` child status and `await` target, but there is no recovery-specific topology check                                                   | Force full mode and preserve parent-child blocking relationships as inspectable state                                                                                    | No resumed spawn/await recovery classifier or topology checksum exists                                                                  |
+| `import_uncertainty`        | Imported flow resolution changed, failed, or cannot be proven equivalent to the flow identity the run started with                | No concrete recovery evidence found in the current runtime for resumed import-equivalence checks                                                                   | Force full mode for equivalent recovered imports; fail explicitly when import identity cannot be trusted                                                                 | Entire trigger family is design-only today                                                                                              |
+| `debug_mode`                | Runtime enters debug, inspect, validate, replay, smoke, or recovery-audit mode                                                    | Current debug-oriented flows naturally use verbose/full surfaces, but there is no explicit render-mode policy object                                               | Bypass compact rendering entirely for these sessions                                                                                                                     | No central render-mode policy or classifier exists                                                                                      |
+| `manual_force_full`         | User, config, CLI, or runtime policy explicitly requests full rendering                                                           | No explicit full-render policy switch exists in current code                                                                                                       | Full mode must win immediately and observably                                                                                                                            | Entire trigger family is design-only today                                                                                              |
+
+## Advisory Signals
+
+These are warning-class signals. They should remain observable, but they must not force escalation
+unless they also imply one of the fail-closed conditions above.
+
+| Trigger ID                 | Advisory event                                                                                       | Current repo evidence                                                                                                   | Required first implementation behavior                                                    | Remaining gap                              |
+| -------------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `optional_artifact_gap`    | Optional artifact bundle or convenience state file is missing while canonical state remains coherent | No compact-fallback implementation currently depends on these artifacts                                                 | Keep compact eligible, but emit a warning and evidence handle                             | Design-only today                          |
+| `output_pressure`          | Prompt-size pressure or token churn is high while recovery state is otherwise trustworthy            | `renderFlowCompact(...)` and `renderFlowSummary(...)` exist partly to reduce churn, but no policy uses them dynamically | Track as evaluation/telemetry input only; do not treat it as a recovery trigger by itself | No telemetry or policy integration exists  |
+| `checkpoint_age_warning`   | Recovery pointer or checkpoint is old but still resolves cleanly                                     | No explicit checkpoint-age signal exists in the current runtime                                                         | Emit warning only; do not force fallback solely from age                                  | Design-only today                          |
+| `host_degradation_warning` | Host or adapter degraded observability without making state untrustworthy                            | Hook warnings already exist in places, but not as compact-mode advisory signals                                         | Emit warning and operator guidance without flipping render mode                           | No advisory classification pipeline exists |
+
+Advisory signals are still expected to be visible in evaluation and diagnostics. They are not silent.
 
 ## Required Observable Fields
 
-Every fallback event should expose, at minimum:
+When automatic fallback is implemented, every escalation event should expose at least:
 
-- requested render mode
-- actual render mode
+- `requestedMode`
+- `actualMode`
 - `escalated: true`
-- trigger id array
-- current session or run identifier
+- `triggerIds`
+- session or run identifier
 - current node or blocked-state identifier when available
 
-Recovery-specific events should add the nearest evidence handle available:
+Recovery-specific events should also add the nearest available evidence handle:
 
-- checkpoint or resume source
-- compaction event marker
-- gate id and freshness data
+- resume or backup source
+- compaction marker
+- gate id plus freshness data
 - capture target path or nonce
 - child run ids or await target
-- import path and equivalence marker
+- import path plus equivalence marker
 
-## Test and Validation Note
+Current repo subset already available today:
 
-The matrix is only useful if runtime behavior and test names share the same vocabulary. The validation bar for this bead is therefore a mapping, not just a list of ideas.
+- `PLR-004` for unrecoverable resume corruption
+- `PLR-005` for capture fallback
+- stderr messages for backup recovery
+- `[resumed from ...]` on resumed active turns
+- capture retry prompt/file-path re-emission
+- compact gate pass/fail visibility in the pre-compact hook
 
-The current hook-suite evidence for this bead is intentionally narrow. The owned recovery tests
-already cover the baseline recovery scenarios for `resume_boundary`, `compaction_boundary`,
-`state_mismatch`, and `capture_failure`, and they now reference those trigger ids directly in the
-test names. Follow-on slices still own executable compact-mode escalation, broader trigger-family
-coverage such as `gate_uncertainty`, `spawn_uncertainty`, and `import_uncertainty`, and any
-runtime telemetry that emits these ids.
+Current repo fields not yet available:
 
-| Scenario family                                    | Trigger IDs that must be exercised                                            | Expected outcome                                                                                 |
-| -------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| interrupted session resume                         | `resume_boundary`, `blocked_state_uncertainty`                                | Full mode is used; current node, blocked state, and recovery source remain visible               |
-| compaction and rehydrate                           | `compaction_boundary`                                                         | Full mode is used; compaction marker survives into diagnostics or evaluation output              |
-| corrupted or mismatched state                      | `state_mismatch`                                                              | Runtime escalates to full mode if possible, otherwise fails explicitly with mismatch diagnostics |
-| gate recovery after stale or partial evidence      | `gate_uncertainty`                                                            | Full mode is used; gate identity and freshness stay visible                                      |
-| capture retry and review-judge replay              | `capture_failure`                                                             | Full mode is used; retry prompt, path, or capture target remains inspectable                     |
-| resumed spawn or await topology                    | `spawn_uncertainty`                                                           | Full mode is used; parent-child blocking relationship remains inspectable                        |
-| import drift during resumed or recovered run       | `import_uncertainty`                                                          | Full mode is used for equivalent imports; invalid imports fail clearly                           |
-| explicit debug or validation sessions              | `debug_mode`, `manual_force_full`                                             | Compact mode is skipped entirely                                                                 |
-| healthy ordinary turn                              | advisory only or no triggers                                                  | Compact mode remains allowed and no escalation is emitted                                        |
-| optional artifact gaps and non-fatal host warnings | `optional_artifact_gap`, `host_degradation_warning`, `checkpoint_age_warning` | Compact mode may continue, but warnings remain visible and measurable                            |
+- requested-versus-actual render mode
+- escalation boolean
+- trigger id arrays in runtime output
+- gate freshness metadata
+- compaction markers
+- import-equivalence evidence
+
+## Validation and Evidence Map
+
+The matrix is only useful if runtime code, diagnostics, and tests use the same vocabulary.
+
+Current evidence already in the repo:
+
+- `src/presentation/hooks/context-adaptive-recovery.test.ts` covers named recovery families for
+  `resume_boundary`, `compaction_boundary`, `state_mismatch`, and `capture_failure`
+- `src/presentation/hooks/session-start.test.ts` and
+  `src/presentation/hooks/user-prompt-submit.test.ts` prove `PLR-004` is surfaced when state is
+  unrecoverable
+- `src/domain/render-flow.test.ts` proves capture retry state remains visible in rendering
+
+Scenario families still missing executable coverage for this compact-fallback track:
+
+- `gate_uncertainty`
+- `blocked_state_uncertainty`
+- `spawn_uncertainty`
+- `import_uncertainty`
+- `debug_mode`
+- `manual_force_full`
+- advisory-only signal reporting
+- requested-versus-actual mode telemetry
 
 ## Acceptance Fit
 
-This note satisfies `prompt-language-0ovo.5.1` when it gives downstream implementation and test work one stable answer to these questions:
+This bead is satisfied at the design-note level when the note gives later implementation and test
+work one stable answer to these questions:
 
-- which recovery-sensitive events force escalation from compact to full mode
-- which signals are warnings only
-- what evidence should operators or evaluators be able to see for each trigger
-- what scenario family must prove each trigger in tests or validation runs
+- which recovery-sensitive events force compact-to-full fallback
+- which signals remain advisory only
+- what currently exists in the repo for each trigger family
+- what observable evidence the implementation must emit once fallback is real
+- which trigger families still need executable runtime and test work
 
-That is the boundary for this bead. Automatic escalation behavior and executable recovery-path coverage belong to the follow-on slices.
+That is the boundary for `prompt-language-0ovo.5.1`. This note should not be used to imply that
+compact mode or automatic fallback is already complete.

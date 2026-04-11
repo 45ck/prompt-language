@@ -113,6 +113,8 @@ describe('pre-compact hook (integration)', () => {
 
     const result = runHook('{}', tempDir);
     expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('session-state.json is corrupted, trying backup');
   });
 
   it('finds awaiting_capture let node nested inside try block', async () => {
@@ -190,6 +192,48 @@ describe('pre-compact hook (integration)', () => {
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
     expect(parsed.additionalContext).toContain('Variable capture');
     expect(parsed.additionalContext).toContain('answer');
+  });
+
+  it('keeps capture handoff instructions visible across a compaction boundary after a capture-file failure', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Capture retry compact'),
+      captureNonce: 'compact12345',
+      nodeProgress: {
+        l1: {
+          iteration: 2,
+          maxIterations: 3,
+          status: 'awaiting_capture',
+          captureFailureReason: 'capture file empty or not found',
+        },
+      },
+      flowSpec: {
+        goal: 'Capture retry compact',
+        nodes: [
+          {
+            kind: 'let',
+            id: 'l1',
+            variableName: 'answer',
+            append: false,
+            source: { type: 'prompt', text: 'What changed?' },
+          },
+        ],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain('IMPORTANT: Capture is in progress.');
+    expect(parsed.additionalContext).toContain(
+      'Variable capture for "answer" was not found. Please save your response',
+    );
+    expect(parsed.additionalContext).toContain('.prompt-language/vars/answer');
   });
 
   it('includes review judge capture re-injection when a review node is awaiting capture', async () => {

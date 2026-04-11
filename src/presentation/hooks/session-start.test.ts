@@ -235,6 +235,48 @@ describe('session-start hook (integration)', () => {
     expect(parsed.additionalContext).toContain('.prompt-language/vars/answer');
   });
 
+  it('keeps capture failure reason and retry count visible when resuming an interrupted capture', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Capture retry resume'),
+      captureNonce: 'resume12345',
+      nodeProgress: {
+        l1: {
+          iteration: 2,
+          maxIterations: 3,
+          status: 'awaiting_capture',
+          captureFailureReason: 'capture file empty or not found',
+        },
+      },
+      flowSpec: {
+        goal: 'Capture retry resume',
+        nodes: [
+          {
+            kind: 'let',
+            id: 'l1',
+            variableName: 'answer',
+            append: false,
+            source: { type: 'prompt', text: 'What changed?' },
+          },
+        ],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain(
+      '[capture failed: capture file empty or not found — retry 2/3]',
+    );
+    expect(parsed.additionalContext).toContain('Variable capture');
+    expect(parsed.additionalContext).toContain('.prompt-language/vars/answer');
+  });
+
   it('re-emits named review judge capture when a review node is awaiting capture', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });

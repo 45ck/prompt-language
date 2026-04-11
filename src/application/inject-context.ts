@@ -33,6 +33,7 @@ import { flowComplexityScore } from '../domain/flow-complexity.js';
 import { terminateRunningSpawnedChildren } from './terminate-spawned-children.js';
 import type { MemoryStore } from './ports/memory-store.js';
 import { FLOW_OUTCOME_CODES, type FlowOutcome } from '../domain/diagnostic-report.js';
+import { createInjectionContextState } from './context-variable-slice.js';
 
 const FLOW_BLOCK_RE = /^\s*flow:\s*$/m;
 
@@ -283,6 +284,10 @@ export interface InjectContextOutput {
   readonly prompt: string;
 }
 
+function renderInjectedFlow(state: SessionState): string {
+  return renderFlow(createInjectionContextState(state));
+}
+
 function hasFlowBlock(prompt: string): boolean {
   return FLOW_BLOCK_RE.test(prompt) || detectBareFlow(prompt);
 }
@@ -447,7 +452,7 @@ export async function injectContext(
       if (toSave !== hydratedExisting) {
         await stateStore.save(toSave);
       }
-      const ctx = renderFlow(toSave);
+      const ctx = renderInjectedFlow(toSave);
       const summary = renderFlowSummary(toSave);
       const resumeTag = isResumed ? `[resumed from ${summary}]\n` : '';
       const outcomeBanner = renderAutoAdvanceOutcomeBanner(result);
@@ -480,10 +485,10 @@ export async function injectContext(
           outcomeBanner ??
           deriveTerminalBanner(toSave) ??
           renderCompletionSummary(toSave);
-        const ctx = renderFlow(toSave);
+        const ctx = renderInjectedFlow(toSave);
         return { prompt: `${ctx}\n\n[${completionMsg}]\n\n${input.prompt}` };
       }
-      const ctx = renderFlow(toSave);
+      const ctx = renderInjectedFlow(toSave);
       const summary = renderFlowSummary(toSave);
       const resumeTag = isResumed ? `[resumed from ${summary}]\n` : '';
       if (result.kind === 'prompt') {
@@ -551,7 +556,7 @@ export async function injectContext(
       );
       const toSave = result.kind === 'prompt' ? result.state : maybeCompleteFlow(result.state);
       await stateStore.save(toSave);
-      const ctx = renderFlow(toSave);
+      const ctx = renderInjectedFlow(toSave);
       const summary = renderFlowSummary(toSave);
       const diagnosticBanner = renderAutoAdvanceDiagnosticBanner(result);
       const outcomeBanner = renderAutoAdvanceOutcomeBanner(result);

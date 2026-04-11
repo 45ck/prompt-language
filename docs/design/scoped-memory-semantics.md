@@ -45,6 +45,20 @@ The design keeps two boundaries intact:
 - scope remains separate from governance class such as `facts`, `policy`, `wisdom`, or `scratch`
 - durable memory remains separate from checkpoint/session state, even when `run` scope is supported
 
+### Boundary with run-state and recovery artifacts
+
+This separation is deliberate and remains in force even as the operator-shell program adds richer
+run-state and recovery artifacts around `.prompt-language/session-state.json`.
+
+- `run` scope means "durable for this run identity," not "part of the canonical runtime snapshot"
+- checkpoint, restore, recovery summaries, and per-run manifests remain execution-state concerns
+- memory may commit on checkpoint-aligned boundaries, but that timing does not make memory entries
+  into recovery artifacts or ledger records
+
+This keeps `prompt-language-b8kq.1` compatible with `prompt-language-f7jp.4`: scoped memory is a
+separate data contract that may coordinate with recovery boundaries without collapsing into the
+runtime state model.
+
 ## Scope model
 
 ### Supported scopes

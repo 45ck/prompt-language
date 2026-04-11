@@ -2,7 +2,12 @@
 
 ## Status
 
-Accepted design target for the current operator-shell recovery and observability work.
+Accepted design note for `prompt-language-f7jp.4`.
+
+At current `HEAD`, this document records the accepted additive boundary, not a claim that the
+runtime already emits the full v2 layout. The shipped runtime still centers
+`.prompt-language/session-state.json`; the v2 directories and recovery artifacts below remain the
+intended next layer on top of that compatibility surface.
 
 Relevant bead:
 
@@ -239,12 +244,35 @@ What this constrains:
 
 ## Current repository status
 
-This note records the accepted target boundary. It should not be read as a claim that the repository already emits every listed file or manifest.
+This note records the accepted boundary and the current implementation split.
 
-As of April 11, 2026:
+### Shipped at current `HEAD`
 
-- the accepted operator-shell direction already calls for richer run-state and recovery artifacts
-- the imported OMX review pack already defines the additive shape at WIP level
-- the canonical design gap is the absence of a repo-level accepted note explaining how v2 coexists with `session-state.json` and how it differs from future replay work
+- current execution, hook recovery, and MCP state reading still treat
+  `.prompt-language/session-state.json` as the live compatibility surface
+- corruption handling and resume-oriented recovery remain centered on the state-file path rather
+  than a per-run manifest tree
+- adjacent artifact work now exists for other domains, such as artifact-package manifests and eval
+  result bundles, but those surfaces are not the same thing as the `.prompt-language/runs/<run-id>/`
+  operator-shell layout defined here
 
-This document closes that design gap.
+### Still open beyond this design bead
+
+- no runtime writer currently emits `.prompt-language/active-run.json`
+- no runtime writer currently emits `.prompt-language/runs/<run-id>/manifest.json`
+- the recovery files named here, such as `recovery/latest.json`,
+  `recovery/checkpoints.jsonl`, and `recovery/debug-context.md`, are not yet a shipped runtime
+  contract
+- the child, gate, diagnostics, and artifact indexes described here are not yet wired as a
+  general operator-shell read path with documented fallback from v2 back to `session-state.json`
+
+### Verdict for `prompt-language-f7jp.4`
+
+The bead is mostly satisfied as a design/evidence milestone:
+
+- the additive layout is defined
+- compatibility boundaries are explicit
+- overlap with replay/event-log work is explicit
+
+What remains open is implementation work on top of this accepted boundary, not a missing design
+decision about whether v2 replaces `session-state.json`.

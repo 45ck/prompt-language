@@ -24,6 +24,7 @@ import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
 import { selectPreCompactMode } from './context-adaptive-mode.js';
+import { renderCompactGateStatus } from './render-compact-gate-status.js';
 
 /** Find the variable name awaiting capture, if any. */
 function findAwaitingCapturePrompt(state: SessionState): string | null {
@@ -59,7 +60,7 @@ async function main(): Promise<void> {
   debug(`PreCompact: preserving flow "${state.flowSpec.goal}"`);
 
   const summaryBlock = renderFlowSummaryBlock(state);
-  const compact = renderFlowCompact(state);
+  const compact = renderCompactGateStatus(renderFlowCompact(state), state);
   const full = renderFlow(state);
   const modeDecision = selectPreCompactMode(state, loadStatus);
   process.stderr.write(`${modeDecision.markerLine}\n`);

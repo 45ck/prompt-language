@@ -4,7 +4,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execSync } from 'node:child_process';
 
-import { inspectCodexHooksConfigFile } from './codex-installer.js';
+import {
+  disableManagedCodexHooksFile,
+  enableManagedCodexHooksFile,
+  inspectCodexHooksConfigFile,
+} from './codex-installer.js';
 
 const ROOT = join(import.meta.dirname, '..', '..', '..');
 
@@ -262,5 +266,91 @@ describe('Codex installer — install verification', () => {
 
     const config = await readFile(configPath, 'utf8');
     expect(config).toBe('[features]\ncodex_hooks = true # prompt-language managed: codex_hooks\n');
+  });
+});
+
+describe('Codex installer adapter', () => {
+  let fakeHome: string;
+
+  beforeEach(async () => {
+    fakeHome = await createFakeHome();
+  });
+
+  afterEach(async () => {
+    await rm(fakeHome, { recursive: true, force: true });
+  });
+
+  it('creates a managed codex config when the file is missing', async () => {
+    const configPath = join(fakeHome, '.codex', 'config.toml');
+
+    const result = await enableManagedCodexHooksFile(configPath);
+
+    expect(result).toMatchObject({
+      outcome: 'created',
+      changed: true,
+      snapshot: {
+        ownership: 'managed',
+        enabled: true,
+      },
+    });
+    await expect(readFile(configPath, 'utf8')).resolves.toContain(
+      'codex_hooks = true # prompt-language managed: codex_hooks',
+    );
+  });
+
+  it('preserves a user-owned codex config entry when enabling managed hooks', async () => {
+    const configPath = join(fakeHome, '.codex', 'config.toml');
+    await mkdir(join(fakeHome, '.codex'), { recursive: true });
+    await writeFile(configPath, '[features]\ncodex_hooks = false\n', 'utf8');
+
+    const result = await enableManagedCodexHooksFile(configPath);
+
+    expect(result).toMatchObject({
+      outcome: 'user-owned',
+      changed: false,
+      snapshot: {
+        ownership: 'user-owned',
+        enabled: false,
+      },
+    });
+    await expect(readFile(configPath, 'utf8')).resolves.toBe('[features]\ncodex_hooks = false\n');
+  });
+
+  it('removes a managed codex config entry when disabling managed hooks', async () => {
+    const configPath = join(fakeHome, '.codex', 'config.toml');
+    await mkdir(join(fakeHome, '.codex'), { recursive: true });
+    await writeFile(
+      configPath,
+      '# prompt-language Codex scaffold.\n# Codex hooks are experimental; opt in explicitly before using the local install.\n\n# prompt-language managed section: codex_hooks\n[features]\ncodex_hooks = true # prompt-language managed: codex_hooks\n',
+      'utf8',
+    );
+
+    const result = await disableManagedCodexHooksFile(configPath);
+
+    expect(result).toMatchObject({
+      outcome: 'removed',
+      changed: true,
+      snapshot: {
+        ownership: 'absent',
+        enabled: false,
+      },
+    });
+    await expect(readFile(configPath, 'utf8')).resolves.toBe('');
+  });
+
+  it('returns missing when disabling managed hooks without a config file', async () => {
+    const configPath = join(fakeHome, '.codex', 'config.toml');
+
+    const result = await disableManagedCodexHooksFile(configPath);
+
+    expect(result).toMatchObject({
+      outcome: 'missing',
+      changed: false,
+      raw: null,
+      snapshot: {
+        ownership: 'absent',
+        enabled: false,
+      },
+    });
   });
 });

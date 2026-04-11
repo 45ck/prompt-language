@@ -23,6 +23,7 @@ const SCAFFOLD_HEADER_LINES = [
   '# prompt-language Codex scaffold.',
   '# Codex hooks are experimental; opt in explicitly before using the local install.',
 ] as const;
+const SCAFFOLD_HEADER_SET = new Set<string>(SCAFFOLD_HEADER_LINES);
 const MANAGED_LINE = `codex_hooks = true # ${MANAGED_MARKER}`;
 const SECTION_PATTERN = /^\s*\[(.+?)\]\s*$/;
 const CODEX_HOOKS_PATTERN = /^\s*codex_hooks\s*=\s*(true|false)\s*(#.*)?$/i;
@@ -138,7 +139,7 @@ export function disableManagedCodexHooks(raw: string): CodexHooksMutation {
   }
 
   const lines = parsed.lines.filter(
-    (_, index) =>
+    (_line, index) =>
       !parsed.entries.some(
         (entry) => entry.section === 'features' && entry.managed && entry.index === index,
       ),
@@ -244,7 +245,7 @@ function ensureTrailingNewline(raw: string): string {
 
 function cleanupManagedArtifacts(lines: readonly string[]): string[] {
   const nextLines = trimLeadingEmptyLines(
-    lines.filter((line) => line !== MANAGED_SECTION_COMMENT && !SCAFFOLD_HEADER_LINES.includes(line)),
+    lines.filter((line) => line !== MANAGED_SECTION_COMMENT && !SCAFFOLD_HEADER_SET.has(line)),
   );
   return cleanupEmptyFeaturesSection(nextLines);
 }
@@ -258,7 +259,7 @@ function cleanupEmptyFeaturesSection(lines: readonly string[]): string[] {
 
   let nextSectionIndex = nextLines.length;
   for (let index = featuresIndex + 1; index < nextLines.length; index += 1) {
-    if (SECTION_PATTERN.test(nextLines[index] ?? '')) {
+    if (SECTION_PATTERN.exec(nextLines[index] ?? '') != null) {
       nextSectionIndex = index;
       break;
     }

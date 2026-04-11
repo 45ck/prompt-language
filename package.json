@@ -36,7 +36,8 @@
   ],
   "type": "module",
   "bin": {
-    "prompt-language": "./bin/cli.mjs"
+    "prompt-language": "./bin/cli.mjs",
+    "prompt-language-mcp": "./bin/mcp-server.mjs"
   },
   "engines": {
     "node": ">=22.0.0"

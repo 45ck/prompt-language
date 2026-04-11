@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { renderFlow } from '../domain/render-flow.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
+import { createRunNode } from '../domain/flow-node.js';
 import { createSessionState } from '../domain/session-state.js';
 
 interface RegisteredResource {
@@ -116,14 +118,13 @@ describe('mcp-server runtime wiring', () => {
     expect(mockStateReader.readSessionState).toHaveBeenCalledWith('/mock-state');
   });
 
-  it('returns a serialized summary from flow_status when state exists', async () => {
-    const spec = createFlowSpec('Runtime status', []);
+  it('returns the rendered flow snapshot from flow_status when state exists', async () => {
+    const spec = createFlowSpec('Runtime status', [createRunNode('run-1', 'npm test')]);
     const state = {
       ...createSessionState('session-1', spec),
       status: 'completed' as const,
-      gateResults: { tests_pass: true } as Record<string, boolean>,
       nodeProgress: {
-        r1: {
+        'run-1': {
           iteration: 1,
           maxIterations: 1,
           status: 'completed' as const,
@@ -142,14 +143,7 @@ describe('mcp-server runtime wiring', () => {
 
     const result = await statusTool!.handler({ name: '', value: '' });
     expect(result.content[0]?.type).toBe('text');
-    expect(JSON.parse(result.content[0]?.text ?? '')).toMatchObject({
-      goal: 'Runtime status',
-      status: 'completed',
-      completed: true,
-      iterationCount: 1,
-      gateCount: 0,
-      gatesPassing: 0,
-    });
+    expect(result.content[0]?.text).toBe(renderFlow(state));
   });
 
   it('serves no-session text when resources are requested without active state', async () => {
@@ -177,6 +171,73 @@ describe('mcp-server runtime wiring', () => {
     );
     expect((await auditResource!.handler(new URL('flow://audit'))).contents[0]?.text).toBe(
       'No active session',
+    );
+  });
+
+  it('serves session-backed resources when state exists', async () => {
+    const spec = createFlowSpec(
+      'Runtime resources',
+      [createRunNode('run-1', 'npm test')],
+      [{ predicate: 'tests_pass' }],
+    );
+    const state = {
+      ...createSessionState('session-1', spec),
+      variables: {
+        ...createSessionState('session-1', spec).variables,
+        review_mode: 'strict',
+        last_stdout: 'full output value',
+      },
+      gateResults: { tests_pass: false } as Record<string, boolean>,
+      gateDiagnostics: {
+        tests_pass: {
+          passed: false,
+          command: 'npm test',
+          exitCode: 1,
+          stdout: '',
+          stderr: 'FAIL',
+        },
+      },
+      nodeProgress: {
+        'run-1': {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'completed' as const,
+          startedAt: 0,
+          completedAt: 35_000,
+        },
+      },
+    };
+    mockStateReader.readSessionState.mockResolvedValue(state);
+
+    const mod = await import('./mcp-server.js');
+    mod.startMcpServer();
+
+    const stateResource = registeredResources.find((resource) => resource.name === 'flow-state');
+    const variablesResource = registeredResources.find(
+      (resource) => resource.name === 'flow-variables',
+    );
+    const gatesResource = registeredResources.find((resource) => resource.name === 'flow-gates');
+    const auditResource = registeredResources.find((resource) => resource.name === 'flow-audit');
+
+    expect(stateResource).toBeDefined();
+    expect(variablesResource).toBeDefined();
+    expect(gatesResource).toBeDefined();
+    expect(auditResource).toBeDefined();
+
+    expect((await stateResource!.handler(new URL('flow://state'))).contents[0]?.text).toBe(
+      JSON.stringify(state, null, 2),
+    );
+    expect((await variablesResource!.handler(new URL('flow://variables'))).contents[0]?.text).toBe(
+      JSON.stringify(state.variables, null, 2),
+    );
+    expect((await gatesResource!.handler(new URL('flow://gates'))).contents[0]?.text).toContain(
+      '"predicate": "tests_pass"',
+    );
+    expect((await gatesResource!.handler(new URL('flow://gates'))).contents[0]?.text).toContain(
+      '"status": "fail"',
+    );
+    expect((await auditResource!.handler(new URL('flow://audit'))).contents[0]?.text).toBe(
+      renderFlow(state),
     );
   });
 

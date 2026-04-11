@@ -8,7 +8,7 @@
  *   flow://audit     — rendered flow with status annotations
  *
  * Tools:
- *   flow_status       — structured summary of current flow
+ *   flow_status       — rendered flow status snapshot
  *   flow_reset        — deletes session-state.json
  *   flow_set_variable — sets a variable in session state
  */
@@ -104,7 +104,7 @@ function buildStatusTool(server: McpServer, stateDir: string): void {
   server.registerTool(
     'flow_status',
     {
-      description: 'Returns a structured summary of the current flow state',
+      description: 'Returns the rendered flow status snapshot for the current session',
       inputSchema: {},
     },
     async () => {
@@ -112,8 +112,7 @@ function buildStatusTool(server: McpServer, stateDir: string): void {
       if (!state) {
         return { content: [{ type: 'text' as const, text: 'No active session' }] };
       }
-      const summary = buildStatusSummary(state);
-      return { content: [{ type: 'text' as const, text: JSON.stringify(summary, null, 2) }] };
+      return { content: [{ type: 'text' as const, text: renderFlow(state) }] };
     },
   );
 }

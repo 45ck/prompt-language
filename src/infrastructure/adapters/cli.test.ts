@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, join } from 'node:path';
 
@@ -107,6 +107,78 @@ describe('CLI commands', () => {
         .map((line) => line.replace(/\\/g, '/'))
         .sort(),
     ).toEqual(['a.flow', 'nested/b.flow']);
+  });
+
+  it('artifacts list reports the checked-in sample package', () => {
+    const output = execFileSync('node', [CLI, 'artifacts', 'list'], {
+      cwd: ROOT,
+      encoding: 'utf8',
+    });
+
+    expect(output).toContain('sample-implementation-plan-v1');
+    expect(output).toContain('implementation_plan');
+  });
+
+  it('artifacts show can resolve a package by artifact id and inline a registered view', () => {
+    const output = execFileSync(
+      'node',
+      [CLI, 'artifacts', 'show', 'sample-implementation-plan-v1', '--view', 'markdown'],
+      {
+        cwd: ROOT,
+        encoding: 'utf8',
+      },
+    );
+
+    expect(output).toContain('Type: implementation_plan v1');
+    expect(output).toContain('View: markdown');
+    expect(output).toContain('# Phase 1 Artifact Package Slice');
+  });
+
+  it('artifacts validate --json succeeds for the shipped sample package', () => {
+    const output = execFileSync(
+      'node',
+      [CLI, 'artifacts', 'validate', 'sample-implementation-plan-v1', '--json'],
+      {
+        cwd: ROOT,
+        encoding: 'utf8',
+      },
+    );
+
+    expect(JSON.parse(output)).toMatchObject({
+      ok: true,
+      artifactId: 'sample-implementation-plan-v1',
+      artifactType: 'implementation_plan',
+      issues: [],
+    });
+  });
+
+  it('artifacts validate exits 2 when a registered file checksum is broken', async () => {
+    tempDir = await createTempDir('pl-cli-artifacts-validate-');
+    const copiedPackage = join(tempDir, 'artifacts', 'sample-copy');
+    await cp(join(ROOT, 'artifacts', 'samples', 'implementation-plan-v1'), copiedPackage, {
+      recursive: true,
+    });
+    await writeFile(join(copiedPackage, 'views', 'artifact.md'), '# corrupted\n', 'utf8');
+
+    try {
+      execFileSync('node', [CLI, 'artifacts', 'validate', copiedPackage, '--json'], {
+        cwd: tempDir,
+        encoding: 'utf8',
+      });
+      expect.unreachable();
+    } catch (error) {
+      const failure = error as { status?: number; stdout?: string };
+      expect(failure.status).toBe(2);
+      expect(JSON.parse(failure.stdout ?? '{}')).toMatchObject({
+        ok: false,
+        issues: expect.arrayContaining([
+          expect.objectContaining({
+            code: 'ART-003',
+            path: 'views/artifact.md',
+          }),
+        ]),
+      });
+    }
   });
 
   it('validate prints the preview output for a valid flow', async () => {

@@ -18,7 +18,7 @@
     "flowNode": "phase1.artifact-package-slice",
     "phase": "plan"
   },
-  "declarationRef": "../../../schemas/types/implementation-plan.schema.json",
+  "declarationRef": "../../schemas/types/implementation-plan.schema.json",
   "content": {
     "path": "content/source.json",
     "mediaType": "application/json",

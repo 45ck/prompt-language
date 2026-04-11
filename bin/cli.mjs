@@ -89,6 +89,10 @@ async function loadRenderWorkflow() {
   return import(pathToFileURL(join(ROOT, 'dist', 'presentation', 'render-workflow.js')).href);
 }
 
+async function loadArtifactInspection() {
+  return import(pathToFileURL(join(ROOT, 'dist', 'presentation', 'inspect-artifacts.js')).href);
+}
+
 async function install() {
   const version = await readPluginVersion();
   const now = new Date().toISOString();
@@ -814,6 +818,115 @@ async function validate() {
   }
 }
 
+function readArtifactsRoot(args, fallback = 'artifacts') {
+  return resolve(process.cwd(), readOptionValue(args, '--root') ?? fallback);
+}
+
+function requireArtifactTarget(args, flagsWithValues, usageLines) {
+  const target = readPositionalValue(args, flagsWithValues);
+  if (target) {
+    return target;
+  }
+
+  console.error('Error: No artifact target provided.');
+  for (const usageLine of usageLines) {
+    console.error(usageLine);
+  }
+  process.exit(1);
+}
+
+async function artifacts() {
+  if (!existsSync(join(ROOT, 'dist'))) {
+    console.error('Error: dist/ directory not found. Run "npm run build" first.');
+    process.exit(1);
+  }
+
+  const args = process.argv.slice(3);
+  const subcommand = args[0] ?? 'list';
+  const subArgs = args.slice(1);
+  const json = hasOption(subArgs, '--json');
+  const {
+    inspectArtifactPackage,
+    listArtifactPackages,
+    renderArtifactPackageDetails,
+    renderArtifactPackageList,
+    renderArtifactValidationResult,
+    validateArtifactPackage,
+  } = await loadArtifactInspection();
+
+  switch (subcommand) {
+    case 'list': {
+      const flagsWithValues = new Set(['--root']);
+      const rootArg = readPositionalValue(subArgs, flagsWithValues);
+      const result = await listArtifactPackages(rootArg ?? readArtifactsRoot(subArgs));
+      if (json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        console.log(renderArtifactPackageList(result));
+      }
+      return;
+    }
+    case 'show': {
+      const flagsWithValues = new Set(['--root', '--view']);
+      const target = requireArtifactTarget(subArgs, flagsWithValues, [
+        'Usage:',
+        '  npx @45ck/prompt-language artifacts show <artifact-id-or-path>',
+        '  npx @45ck/prompt-language artifacts show <artifact-id-or-path> --root .prompt-language/artifacts',
+        '  npx @45ck/prompt-language artifacts show <artifact-id-or-path> --view markdown',
+      ]);
+      const viewName = readOptionValue(subArgs, '--view');
+      const details = await inspectArtifactPackage(target, {
+        rootDir: readArtifactsRoot(subArgs),
+        ...(viewName != null ? { viewName } : {}),
+      });
+      if (json) {
+        console.log(JSON.stringify(details, null, 2));
+      } else {
+        console.log(renderArtifactPackageDetails(details));
+      }
+      return;
+    }
+    case 'validate': {
+      const flagsWithValues = new Set(['--root']);
+      const target = requireArtifactTarget(subArgs, flagsWithValues, [
+        'Usage:',
+        '  npx @45ck/prompt-language artifacts validate <artifact-id-or-path>',
+        '  npx @45ck/prompt-language artifacts validate <artifact-id-or-path> --root .prompt-language/artifacts',
+      ]);
+      const result = await validateArtifactPackage(target, {
+        rootDir: readArtifactsRoot(subArgs),
+      });
+      if (json) {
+        console.log(JSON.stringify(result, null, 2));
+      } else {
+        console.log(renderArtifactValidationResult(result));
+      }
+      if (!result.ok) {
+        process.exit(2);
+      }
+      return;
+    }
+    case '--help':
+    case '-h':
+      console.log(`Usage: npx @45ck/prompt-language artifacts <subcommand> [options]
+
+Subcommands:
+  list [root]                 List artifact packages under the given root (default: artifacts)
+  show <id-or-path>           Show manifest-backed package details
+  validate <id-or-path>       Validate manifest shape, declared files, and payload content
+
+Options:
+  --root <path>               Resolve artifact ids from this root directory
+  --view <name>               For show: inline a registered view file such as markdown or html
+  --json                      Emit machine-readable JSON`);
+      return;
+    default:
+      console.error(`Unknown artifacts subcommand: ${subcommand}`);
+      console.error('Run "npx @45ck/prompt-language artifacts --help" for usage information.');
+      process.exit(1);
+  }
+}
+
 async function runFlow() {
   if (!existsSync(join(ROOT, 'dist'))) {
     console.error('Error: dist/ directory not found. Run "npm run build" first.');
@@ -1403,6 +1516,9 @@ switch (command) {
   case 'render-workflow':
     await renderWorkflow();
     break;
+  case 'artifacts':
+    await artifacts();
+    break;
   case 'ci':
     await ci();
     break;
@@ -1436,6 +1552,7 @@ Commands:
   list         Recursively list .flow files in the current directory
   validate     Parse, lint, score, and render a flow without executing it (\`--runner ... --mode interactive|headless\`)
   render-workflow Show the lowered .flow text for a canonical workflow alias
+  artifacts    Inspect artifact packages (\`list\`, \`show\`, \`validate\`)
   ci           Run a flow headlessly (CI/CD mode, supports \`--runner codex|opencode|ollama\`)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild

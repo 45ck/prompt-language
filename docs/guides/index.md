@@ -26,5 +26,6 @@ Guides are the product-first onboarding path for the shipped runtime. They teach
 | [Getting Started](getting-started.md)     | First install, first gate, and first flow                      |
 | [Language Guide](language-guide.md)       | High-level tour of the shipped language surface                |
 | [How It Works](guide.md)                  | Runtime mechanics, hook lifecycle, variables, and gates        |
+| [Reference Flows](reference-flows.md)     | Reusable flow shapes built from shipped primitives             |
 | [Use Cases](use-cases.md)                 | Honest guidance on when the runtime helps and when it does not |
 | [Non-Node Projects](non-node-projects.md) | Python, Go, Rust, and custom runner guidance                   |

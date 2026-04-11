@@ -6,12 +6,12 @@ If a runtime capability is already documented in the [Language Reference](../../
 
 ## Active proposals
 
-| Page                                            | Focus                                                                      | Status          |
-| ----------------------------------------------- | -------------------------------------------------------------------------- | --------------- |
-| [Flow Registry](flow-registry.md)               | Canonical `.flow` registry and file-first workflow around shipped commands | Active proposal |
-| [MCP Server](mcp.md)                            | Flow-facing MCP state/resources surface, not host-extension administration | Active proposal |
-| [Workspace Orchestration](workspace.md)         | Monorepo-aware flow execution and safer parallel work                      | Active proposal |
-| [Routing and Dispatch](routing-and-dispatch.md) | Closed-world route selection vs general symbolic dispatch                  | Active proposal |
+| Page                                            | Focus                                                                         | Status          |
+| ----------------------------------------------- | ----------------------------------------------------------------------------- | --------------- |
+| [Flow Registry](flow-registry.md)               | Canonical `.flow` registry and file-first workflow around shipped commands    | Active proposal |
+| [MCP Server](mcp.md)                            | Flow-facing MCP state/resources surface, not host-extension administration    | Active proposal |
+| [Workspace Orchestration](workspace.md)         | Monorepo-aware flow execution and safer parallel work                         | Active proposal |
+| [Routing and Dispatch](routing-and-dispatch.md) | Decision note choosing `match` first while keeping dedicated `route` deferred | Decision note   |
 
 ## Shipped context
 

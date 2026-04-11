@@ -35,6 +35,7 @@ The docs in this section are paired with the checked-in dataset bank under [expe
 | [Dataset Bank](dataset-bank.md)                                                     | Seeded JSONL suites, baseline workflow, and thesis dataset path map |
 | [OpenCode Gemma 4 Plan](opencode-gemma-plan.md)                                     | Hosted OpenCode baseline plus bounded Gemma comparison plan         |
 | [OpenCode Minimal Gate Subset](opencode-minimal-gate-subset.md)                     | Smallest rerun plan before cheaper starter-workflow experiments     |
+| [Benchmark Suite and Canonical Stack](benchmark-suite-and-canonical-stack.md)       | Fixed stack and 20-task benchmark contract for factory-style evals  |
 | [Fresh vs Threaded Eval Suite](fresh-vs-threaded-eval-suite.md)                     | Planned eval slice for session-boundary comparisons                 |
 | [Swarm Equivalence and Rollout](swarm-equivalence-rollout.md)                       | QA and promotion bar for swarm parity versus hand-written flows     |
 | [Eval/Judge vNext Alignment](eval-judge-vnext-alignment.md)                         | Maps imported vNext eval framing onto the current `5vsm` backlog    |

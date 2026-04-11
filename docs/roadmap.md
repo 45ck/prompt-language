@@ -57,20 +57,20 @@ Interpret the MCP row narrowly: the tracked surface is flow state inspection/con
 
 These are substantial product improvements that are not yet fully shipped.
 
-| Feature                                                                | Status       | Notes                                                                                              | Beads issue               |
-| ---------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------- | ------------------------- |
-| Context-adaptive rendering program                                     | WIP, planned | Canonical renderer, compact mode, fallback, and eval evidence remain staged follow-up work         | `prompt-language-0ovo`    |
-| Headless OpenCode flow runner                                          | WIP, partial | `run/ci --runner opencode` exists for headless prompt turns; default Claude hook loop stays intact | `prompt-language-9uqe.15` |
-| Full harness abstraction for spawned sessions and runner resolution    | WIP, planned | Claude `spawn`/`await`, named-agent defaults, and broader runner config are still open             | `prompt-language-9uqe.4`  |
-| Language server (LSP) for editor-agnostic autocomplete and diagnostics | WIP, planned | Depends on extension groundwork                                                                    | `prompt-language-idbc`    |
-| Web playground for browser-based flow authoring and dry-run simulation | WIP, planned | Good onboarding and docs surface                                                                   | `prompt-language-528q`    |
-| Workspace-aware monorepo orchestration                                 | WIP, planned | Would build on `spawn` plus package discovery                                                      | `prompt-language-ik3n`    |
+| Feature                                                                | Status       | Notes                                                                                                                                                       | Beads issue               |
+| ---------------------------------------------------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
+| Context-adaptive rendering program                                     | WIP, planned | Planning and design notes exist, but nothing new is shipped yet; canonical renderer, compact mode, fallback, and eval evidence remain staged follow-up work | `prompt-language-0ovo`    |
+| Headless OpenCode flow runner                                          | WIP, partial | `run/ci --runner opencode` exists for headless prompt turns; default Claude hook loop stays intact                                                          | `prompt-language-9uqe.15` |
+| Full harness abstraction for spawned sessions and runner resolution    | WIP, planned | Claude `spawn`/`await`, named-agent defaults, and broader runner config are still open                                                                      | `prompt-language-9uqe.4`  |
+| Language server (LSP) for editor-agnostic autocomplete and diagnostics | WIP, planned | Depends on extension groundwork                                                                                                                             | `prompt-language-idbc`    |
+| Web playground for browser-based flow authoring and dry-run simulation | WIP, planned | Good onboarding and docs surface                                                                                                                            | `prompt-language-528q`    |
+| Workspace-aware monorepo orchestration                                 | WIP, planned | Would build on `spawn` plus package discovery                                                                                                               | `prompt-language-ik3n`    |
 
 ## WIP: exploratory orchestration ideas
 
 These are interesting, but they are a step beyond the current core runtime and should not be described like committed syntax.
 
-- Deferred spawn/session-aware compact rendering heuristics — keep out of open priorities until the core context-adaptive program and recovery-safe fallback track are validated.
+- Deferred spawn/session-aware compact rendering work — exploratory only, not shipped, and intentionally deferred until the core context-adaptive rendering program and recovery-safe fallback track are validated.
 
 ## Long-term research direction
 

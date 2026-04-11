@@ -32,9 +32,10 @@ prompt-language is **not** a chaining framework (LangChain), an optimization com
 
 ## Tracked Research Plans
 
-| Doc                                                                       | Purpose                                                                                   |
-| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [Context-Adaptive Rendering Research Plan](context-adaptive-rendering.md) | Defines hypotheses, metrics, fixtures, and rejection criteria for the render-mode program |
+| Doc                                                                                           | Purpose                                                                                   |
+| --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [Context-Adaptive Rendering Research Plan](context-adaptive-rendering.md)                     | Defines hypotheses, metrics, fixtures, and rejection criteria for the render-mode program |
+| [Claude vs Codex Lifecycle Capability Matrix](claude-vs-codex-lifecycle-capability-matrix.md) | Normalizes repo-backed lifecycle differences and the honest cross-host support boundary   |
 
 ## Sources
 

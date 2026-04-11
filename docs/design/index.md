@@ -37,6 +37,8 @@ For the repo-wide docs cleanup:
 | [Replayability Event Log](replayability-event-log.md)                                                               | Accepted append-only ledger, replay, checkpoint, and derived-snapshot boundary         |
 | [Flow IR and Static Analysis](flow-ir-and-static-analysis.md)                                                       | Accepted compile-time-rigor boundary for IR, explain, lint, simulation, and flow tests |
 | [Provider Adapters Over Shared Flow IR](provider-adapters-shared-flow-ir.md)                                        | Accepted provider-adapter boundary over one shared runtime IR                          |
+| [Host Lifecycle Boundary](host-lifecycle-boundary.md)                                                               | Accepted split between core flow semantics, narrow config, and host-specific lifecycle |
+| [MCP Flow-Facing Scope](mcp-flow-facing-scope.md)                                                                   | Accepted boundary keeping MCP tied to flow state and bounded runtime control           |
 | [Safe Parallelism via Worktrees, Locks, Ownership, and Merge Policy](safe-parallelism-worktrees-locks-ownership.md) | Accepted concurrency-safety boundary for isolated child execution and merge control    |
 | [Memory Governance Alignment](memory-governance-alignment.md)                                                       | Accepted alignment of vNext memory governance with the existing memory roadmap         |
 | [Retrieval Boundary and Trust Model](retrieval-boundary-and-trust-model.md)                                         | Accepted split between deterministic retrieval, grounding retrieval, and source trust  |

@@ -1,30 +1,49 @@
-# Routing and Dispatch (WIP)
+# Routing and Dispatch Decision Note
 
-> **WIP: not implemented yet.** This page describes a proposed dispatch layer for prompt-language, not shipped syntax.
+> **Not shipped.** This document records a design decision about a possible future dispatch feature. The syntax shown here is illustrative only and is not implemented in prompt-language today.
 
-## Goal
+## Decision Question
 
-Add a cleaner way to dispatch between predeclared flow targets when a project needs to classify work and then route execution into the right bounded path.
+When prompt-language needs bounded dispatch between predeclared flow targets, should it pursue:
 
-The motivating use case is a software-factory style repo that can choose between bounded software archetypes such as:
+- a general `match`-style construct first, or
+- a dedicated `route` construct for classification plus dispatch?
+
+## Decision
+
+Prompt-language should pursue **`match` first**, not a dedicated `route` feature.
+
+The current recommendation is:
+
+1. prove bounded routing in user space with existing primitives
+2. add a general symbolic dispatch construct if branch verbosity is the real pain
+3. revisit a dedicated `route` feature only if real usage shows that closed-world classification semantics need first-class support
+
+## Why This Decision Wins
+
+`match` is the better first move because it solves the general dispatch problem without committing the language to AI-specific routing semantics too early.
+
+The dedicated `route` idea is still plausible, but it does not yet clear the bar for a core language feature. At this stage, the evidence supports reducing branching friction first, not introducing specialized routing syntax.
+
+## Context
+
+The motivating use case is a software-factory style repo that classifies work into bounded archetypes such as:
 
 - CRM
 - helpdesk
 - booking
 - generic B2B SaaS
 
-## Problem
-
-The current runtime already has enough primitives to approximate routing:
+Today the runtime already has enough primitives to approximate this pattern:
 
 - `import` / `use` for reusable flow libraries
 - `if` for branching
-- `ask` for subjective true/false classification
-- structured JSON capture for extracting typed model output
+- structured JSON capture for typed model output
+- approval steps for low-confidence or ambiguous cases
 
-That means routing can be built in user space today, but the resulting flows become awkward once the number of branches grows.
+That means the immediate problem is not capability. The immediate problem is whether the repeated branching shape is awkward enough to justify new syntax, and if so, what the smallest correct feature is.
 
-### Current approximation
+## Current User-Space Approximation
 
 ```yaml
 import "archetypes/crm/index.flow" as crm
@@ -54,64 +73,13 @@ flow:
   end
 ```
 
-This works. The question is whether the language should expose a first-class construct for it.
+This works today. The language question is whether the next improvement should be general dispatch or specialized routing.
 
-## Scrutiny result
+## Option Comparison
 
-The idea is promising, but it is **not obviously a language feature yet**.
+### Option A: `match` first
 
-The first missing primitive may not be `route`. It may simply be a more general symbolic dispatch construct such as `match` or `switch`.
-
-### Why this matters
-
-If the main pain is ugly multi-branch selection, then a general-purpose `match` feature solves more problems than an AI-specific routing feature.
-
-If the main pain is specifically classification plus dispatch with confidence handling, closed-world labels, and route metadata, then a dedicated `route` feature may be justified.
-
-## Design principles
-
-1. **Closed world only.** Routing must choose among predeclared labels or branches. The model must not invent arbitrary file paths or dynamic imports.
-2. **Labels over paths.** Good routing targets are symbolic labels such as `crm` or `helpdesk`, not model-generated paths.
-3. **Confidence is not enough.** Confidence should be accompanied by explicit reasoning and a clear low-confidence behavior.
-4. **Inspection matters.** Routing decisions should be visible in state and artifacts so they can be evaluated later.
-5. **Generality first.** Prefer the smallest feature that solves the general dispatch problem before adding a specialized router construct.
-6. **No hidden magic.** A routing construct should remain legible as ordinary flow control, not become opaque AI behavior.
-7. **Evaluation-friendly by design.** If the feature exists, it should make route correctness measurable.
-
-## Recommendation
-
-### Stage 1 — prove the pattern in user space
-
-Build routing using existing features first:
-
-- predeclared imported archetype libraries
-- structured JSON capture for route selection
-- explicit branch logic
-- approvals for low-confidence cases
-
-This reveals where the real friction is.
-
-### Stage 2 — consider `match` first
-
-If the real problem is branch verbosity, add a general symbolic dispatch feature before adding a specialized router.
-
-### Stage 3 — add `route` only if it adds real semantics
-
-A dedicated `route` feature earns its place only if it provides more than syntax sugar, for example:
-
-- closed-world label validation
-- built-in confidence + reason capture
-- standardized low-confidence handling
-- auto-exposed route metadata
-- evaluation hooks for route correctness
-
-## Proposed layered design
-
-## Option A — `match` / `switch`
-
-This is the more general and lower-risk feature.
-
-### Example
+Illustrative shape:
 
 ```yaml
 match ${route.label}
@@ -126,152 +94,110 @@ use generic.run()
 end
 ```
 
-### Why it is attractive
+Why this is the winning direction:
 
-- solves routing and many non-routing dispatch cases
-- avoids AI-specific semantics at the language core
-- keeps route selection separate from route execution
-- has clearer boundaries and fewer surprises than a magic router
+- solves routing and non-routing symbolic dispatch with one feature
+- keeps model classification separate from execution control
+- preserves explicitness around confidence handling and approvals
+- avoids baking AI-specific behavior into the language core too early
+- has a clearer boundary: it is flow control, not hidden orchestration magic
 
-## Option B — `route`
+Limits of `match`:
 
-This is the more specialized feature.
+- it does not standardize route metadata on its own
+- it does not enforce a classification protocol by itself
+- it still relies on user-space conventions for low-confidence handling
 
-### Example shape
+Those limits are acceptable at this stage because they are exactly the semantics that still need evidence.
 
-```yaml
-import "archetypes/crm/index.flow" as crm
-import "archetypes/helpdesk/index.flow" as helpdesk
-import "archetypes/booking/index.flow" as booking
-import "archetypes/generic/index.flow" as generic
+### Option B: dedicated `route`
 
-flow:
-  route product_type using prompt "Classify docs/brief.md into exactly one declared archetype" as json {
-    "label": "crm | helpdesk | booking | generic",
-    "confidence": "number",
-    "reason": "string"
-  } into:
-    crm => use crm.run()
-    helpdesk => use helpdesk.run()
-    booking => use booking.run()
-    generic => use generic.run()
-  end
-```
-
-### Auto-set variables
-
-A first-class `route` feature should probably expose:
-
-- `route_choice`
-- `route_confidence`
-- `route_reason`
-
-### Low-confidence behavior
-
-A safe shape would support explicit fail-open or fail-closed behavior, for example:
+Illustrative shape:
 
 ```yaml
-route product_type using ... into:
+route product_type using prompt "Classify docs/brief.md into exactly one declared archetype" as json {
+  "label": "crm | helpdesk | booking | generic",
+  "confidence": "number",
+  "reason": "string"
+} into:
   crm => use crm.run()
   helpdesk => use helpdesk.run()
+  booking => use booking.run()
   generic => use generic.run()
   on low-confidence approve
 end
 ```
 
-## Why `route` is not obviously first
+Why this does not win yet:
 
-A specialized router is only worth adding if it contributes behavior that is awkward to implement correctly in user space.
+- too much of its value is still hypothetical
+- it risks being mostly syntax sugar over structured capture plus branching
+- it introduces specialized semantics before the general dispatch shape is settled
+- it narrows the design space before there is evidence that built-in route metadata and ambiguity handling are common enough to justify a dedicated construct
 
-If it only compresses a few lines of `if` statements, it is weak.
+`route` becomes worth reconsidering only if it adds real semantics that are repeatedly awkward in user space, such as:
 
-If it provides:
+- closed-world label validation
+- standardized confidence and reason capture
+- explicit ambiguity or low-confidence policies
+- automatic exposure of route artifacts for evaluation
 
-- guaranteed closed-world dispatch
-- standardized metadata
-- explicit ambiguity handling
-- better evaluation surfaces
+## Design Principles
 
-then it becomes a real feature rather than decorative sugar.
+1. **Closed world only.** Dispatch must select among predeclared symbolic targets.
+2. **Labels over paths.** The model should choose labels like `crm`, not invent file paths.
+3. **No hidden magic.** Classification and branching should remain legible.
+4. **Confidence must affect behavior.** It is not enough to record a number.
+5. **Inspection matters.** Decisions should remain visible for later evaluation.
+6. **Generality first.** Prefer the smallest feature that solves the broader problem.
 
-## Risks and failure modes
+## What This Decision Does Not Claim
+
+- It does **not** claim that `route` is a bad idea.
+- It does **not** claim that the illustrative `match` syntax is final.
+- It does **not** claim that prompt-language already ships either feature.
+- It does **not** claim that user-space routing is perfect.
+
+It only claims that the next language move, if any, should be toward general dispatch rather than dedicated routing.
+
+## Follow-Up Boundary
+
+The follow-up boundary is explicit:
+
+- near term: keep routing in user space using structured capture plus explicit branching
+- next syntax candidate: evaluate a general `match` construct
+- do not design or ship `route` unless real projects show repeated need for first-class routing semantics that `match` cannot cover cleanly
+
+That boundary matters because it prevents prompt-language from adding a specialized router before it has proved that the general dispatch problem is insufficient.
+
+## Risks if We Skip This Boundary
 
 ### 1. DSL bloat
 
-If prompt-language absorbs every useful orchestration pattern directly, it becomes a kitchen-sink DSL.
+Adding `route` too early turns one useful orchestration pattern into permanent language surface area before its necessity is established.
 
-### 2. Hidden model magic
+### 2. Hidden model behavior
 
-A router that appears to “just figure it out” can become less legible than ordinary branching unless the label set is explicit and the reasoning is captured.
+A dedicated router can look smarter than it really is unless its closed set, reasoning, and fallback behavior stay explicit.
 
-### 3. Dynamic loading and path injection
+### 3. False confidence in semantics
 
-Routing must never let the model fabricate arbitrary flow paths.
+If route confidence, ambiguity handling, or metadata conventions are weakly specified, a first-class feature can prematurely standardize the wrong behavior.
 
-### 4. Confidence theater
+### 4. Collapsing two problems into one
 
-Confidence values are useful only if they correlate with real route quality and influence behavior meaningfully.
+Classification and dispatch are related but not identical. A dedicated `route` construct risks fusing them before the boundaries are understood.
 
-### 5. Product-specific bias
+## Practical Recommendation
 
-The main motivation here comes from software-factory style repos. That is a real use case, but it may not justify core syntax unless the feature generalizes.
+For now, teams should:
 
-## Non-goals
+1. import candidate flow libraries up front
+2. capture a structured label, confidence, and reason
+3. keep the label set closed and explicit
+4. handle low-confidence cases explicitly
+5. dispatch with normal branching
 
-- Do not support arbitrary runtime-generated import paths.
-- Do not allow route targets outside the declared routing table.
-- Do not turn routing into a hidden replacement for explicit branching everywhere.
-- Do not make route confidence a meaningless number with no effect on behavior.
-- Do not assume the language should classify and build all software categories equally well.
+If that pattern keeps repeating and the real pain is mostly branch verbosity, pursue `match`.
 
-## Current workaround
-
-Today, the disciplined workaround is:
-
-1. import all candidate archetype libraries up front
-2. capture a structured route decision using `prompt ... as json`
-3. require the label to come from a closed set
-4. pause for approval when confidence is low
-5. dispatch explicitly using ordinary branching
-
-This is good enough to prototype a software-factory repo and gather evidence before changing the language.
-
-## Acceptance criteria for the proposal
-
-A routing feature should not ship unless it satisfies all of the following:
-
-- the feature is measurably more useful than ordinary structured capture plus branching
-- route targets are closed-world and declared up front
-- the model cannot invent paths or escape the declared dispatch table
-- route decisions can be inspected after the run
-- low-confidence behavior is explicit
-- the feature supports evaluation of route correctness
-- the language remains honest about what is shipped versus proposed
-
-## Suggested evaluation questions
-
-1. How often does routing logic repeat across real factory-style projects?
-2. Is the pain mostly branching syntax, or classification plus dispatch semantics?
-3. Do low-confidence routes actually correlate with wrong choices?
-4. Does a generic `match` feature remove most of the need for `route`?
-5. Do users want route metadata and ambiguity handling often enough to justify a dedicated construct?
-
-## Open questions
-
-1. Should the language add `match` first and delay `route`?
-2. Should `route` be limited to structured JSON outputs rather than boolean `ask` conditions?
-3. Should low-confidence cases default to approval, failure, or explicit fallback labels?
-4. Should route results be stored in ordinary variables or in dedicated runtime fields?
-5. Should route correctness become part of first-class eval tooling if `eval` / `judge` features land later?
-
-## Best next step
-
-Do not add `route` immediately.
-
-Instead:
-
-- prototype a router pattern in user space with today's features
-- build at least two or three real bounded-software archetype starters
-- compare whether the pain is mostly branching verbosity or true routing semantics
-- add `match` first if that solves most of the problem
-- add `route` later only if the evidence shows that closed-world classification plus dispatch deserves first-class syntax
+If later evidence shows that teams repeatedly need built-in route metadata, ambiguity policies, and evaluation hooks, reopen the case for `route` with concrete examples from real repos.

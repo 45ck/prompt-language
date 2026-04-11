@@ -31,7 +31,7 @@ The current runtime already has the core substrate for structured multi-agent ex
 - `done when:`
 - structured JSON capture
 
-So swarms do **not** require prompt-language to become something completely different. They mainly require:
+So swarms do **not** require prompt-language to become something completely different. In the accepted product boundary, they are only viable if they stay a parent-authored macro over the runtime that already exists. They mainly require:
 
 1. a first-class way to declare roles
 2. a first-class way to collect typed outputs from roles
@@ -40,6 +40,8 @@ So swarms do **not** require prompt-language to become something completely diff
 ## Design thesis
 
 `swarm` should be a **language-level orchestration macro** that compiles to the current runtime’s existing primitives.
+
+More explicitly: `swarm` v1 is syntax for structuring subagent-first orchestration, not a second execution engine and not a new agent-team runtime category.
 
 This gives four benefits:
 
@@ -71,6 +73,33 @@ Use this mental model consistently:
 - done when = final truth source
 - approve = hard human checkpoint
 
+## V1 boundary
+
+The explicit boundary for `prompt-language-1wr7.1` is:
+
+- the parent flow remains the only orchestrator
+- roles are bounded child sessions, not autonomous peers
+- all role coordination is authored in the parent-visible `flow:` block
+- data moves into roles via declared inputs and back out via explicit `return`
+- the runtime executes lowered `spawn` / `await` / `send` / `receive`, not hidden swarm-only machinery
+
+Patterns that are in scope for v1:
+
+- manager-worker
+- fan-out then synthesize
+- reviewer-after-workers
+- multi-strategy workers followed by an explicit judge
+- watchdog/observer roles that still report into the parent
+
+Patterns that are out of scope for v1:
+
+- nested swarms
+- shared mutable swarm-local state across roles
+- autonomous role creation or delegation
+- peer negotiation or peer-to-peer routing outside the parent graph
+- long-lived team memory or task-board semantics
+- any framing where prompt-language becomes an agent-team platform rather than a control plane over child sessions
+
 ## Strategic boundary
 
 The language should support **structured swarms**, not free-form agent chatter.
@@ -82,5 +111,6 @@ The moment the feature becomes:
 - hard to gate
 - hard to replay
 - hard to prove correct
+- dependent on hidden schedulers or peer autonomy
 
 it stops fitting the current product identity.

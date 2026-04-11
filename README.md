@@ -1,8 +1,8 @@
 # @45ck/prompt-language
 
-Turn Claude Code into a supervised runtime.
+Verification-first supervision runtime for existing coding agents.
 
-`prompt-language` is a control-flow runtime for Claude Code that enforces real completion gates, persistent state, and deterministic execution for bounded engineering workflows.
+`prompt-language` is a verification-first supervision runtime for existing coding agents. Today the shipped product surface centers on Claude Code: the runtime enforces real completion gates, persistent state, and deterministic execution for bounded engineering workflows.
 
 It wraps Claude Code in a persistent state machine with verification gates, deterministic control flow, and state management, so the runtime handles supervision instead of you.
 
@@ -13,16 +13,14 @@ It wraps Claude Code in a persistent state machine with verification gates, dete
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![npm downloads](https://img.shields.io/npm/dm/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 
-## Status guide
+## Choose your path
 
-Use the public docs with these boundaries:
+- **Use the product today**: this README plus [Getting Started](docs/guides/getting-started.md), the [Language Reference](docs/reference/index.md), the [CLI Reference](docs/reference/cli-reference.md), and [Troubleshooting](docs/operations/troubleshooting.md)
+- **Check shipped vs tracked status**: the [Roadmap](docs/roadmap.md) for backlog-backed status and [WIP Features](docs/wip/index.md) for proposals and active design work
+- **Review current evidence**: [What Works Now](docs/evaluation/what-works-now.md) and the broader [Evaluation](docs/evaluation/index.md) section
+- **Read the broader thesis**: [Strategy](docs/strategy/index.md) and [Research Reports](docs/research/README.md)
 
-- **Shipped today**: this README plus the [Language Reference](docs/reference/index.md)
-- **Tracked next**: the [Roadmap](docs/roadmap.md)
-- **WIP / proposed**: [WIP Features](docs/wip/index.md)
-- **Evidence and research**: [Evaluation](docs/evaluation/index.md) and [Strategy](docs/strategy/index.md)
-
-If a feature is not documented in the shipped docs, treat it as unavailable today.
+If a feature is not documented in the shipped product docs, treat it as unavailable today. Thesis and research material are secondary context, not the product contract.
 
 ## What it is
 
@@ -173,21 +171,21 @@ node bin/cli.mjs install
 
 ## CLI commands
 
-| Command                                     | What it does                               |
-| ------------------------------------------- | ------------------------------------------ |
-| `npx @45ck/prompt-language`                 | Install the runtime (default)              |
-| `npx @45ck/prompt-language codex-install`   | Install the Codex scaffold locally         |
-| `npx @45ck/prompt-language status`          | Check installation status                  |
-| `npx @45ck/prompt-language codex-status`    | Check Codex scaffold status                |
-| `npx @45ck/prompt-language uninstall`       | Remove the runtime                         |
-| `npx @45ck/prompt-language codex-uninstall` | Remove the Codex scaffold                  |
-| `npx @45ck/prompt-language init`            | Scaffold a starter flow for your project   |
-| `npx @45ck/prompt-language validate`        | Parse, lint, score, and preview a flow     |
-| `npx @45ck/prompt-language run`             | Execute a flow via Claude or OpenCode      |
-| `npx @45ck/prompt-language ci`              | Run a flow in headless mode for automation |
-| `npx @45ck/prompt-language demo`            | Print an annotated example flow            |
-| `npx @45ck/prompt-language statusline`      | Configure Claude Code status line          |
-| `npx @45ck/prompt-language watch`           | Launch live TUI flow monitor               |
+| Command                                     | What it does                                   |
+| ------------------------------------------- | ---------------------------------------------- |
+| `npx @45ck/prompt-language`                 | Install the runtime (default)                  |
+| `npx @45ck/prompt-language codex-install`   | Install the Codex scaffold locally             |
+| `npx @45ck/prompt-language status`          | Check installation status                      |
+| `npx @45ck/prompt-language codex-status`    | Check Codex scaffold status                    |
+| `npx @45ck/prompt-language uninstall`       | Remove the runtime                             |
+| `npx @45ck/prompt-language codex-uninstall` | Remove the Codex scaffold                      |
+| `npx @45ck/prompt-language init`            | Scaffold a starter flow for your project       |
+| `npx @45ck/prompt-language validate`        | Parse, lint, score, and preview a flow         |
+| `npx @45ck/prompt-language run`             | Execute a flow via Claude or a headless runner |
+| `npx @45ck/prompt-language ci`              | Run a flow in headless mode for automation     |
+| `npx @45ck/prompt-language demo`            | Print an annotated example flow                |
+| `npx @45ck/prompt-language statusline`      | Configure Claude Code status line              |
+| `npx @45ck/prompt-language watch`           | Launch live TUI flow monitor                   |
 
 ## Packaged workflows
 
@@ -523,7 +521,7 @@ Verification is where the repo has the clearest measured wins. State, variables,
 
 Full methodology, hypothesis-by-hypothesis results, and latency data: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md)**
 
-## Research direction
+## Research direction (secondary)
 
 This section is not the shipped product contract. It describes the longer-term research direction behind the project. For what is available today, rely on this README, the [Language Reference](docs/reference/index.md), and the [Roadmap](docs/roadmap.md).
 

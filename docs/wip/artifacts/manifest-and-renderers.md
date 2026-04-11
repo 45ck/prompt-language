@@ -83,11 +83,17 @@ The artifact is the package plus manifest. HTML, Markdown, DOCX, and PDF are vie
 - `attachments`
 - `views`
 
-### Review state
+### Candidate review metadata for a later design slice
+
+`prompt-language-50m6.1` does not settle where review comments, approvals, or review-state transitions live.
+
+Possible fields for a later manifest contract:
 
 - `review.comments`
 - `review.approvals`
 - `review.state`
+
+That storage boundary is intentionally deferred to `prompt-language-50m6.8`.
 
 ## Renderer idea
 

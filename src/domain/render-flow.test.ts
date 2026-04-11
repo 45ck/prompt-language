@@ -3,6 +3,7 @@ import {
   renderFlow,
   renderFlowSummary,
   renderCompletionSummary,
+  renderTimingReport,
   renderFlowCompact,
   renderStateHash,
 } from './render-flow.js';
@@ -1256,6 +1257,56 @@ describe('renderFlow — timing annotation', () => {
     const output = renderFlow(state);
     expect(output).not.toMatch(/\[\d+\.\d+s\]/);
   });
+
+  it('shows elapsed time on completed run nodes', () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'npm test')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      startedAt: Date.now() - 1800,
+      completedAt: Date.now(),
+    });
+    state = { ...state, currentNodePath: [1] };
+    const output = renderFlow(state);
+    expect(output).toContain('run: npm test [1.8s]');
+  });
+});
+
+describe('renderTimingReport', () => {
+  it('renders a slowest-first timing table', () => {
+    const spec = createFlowSpec('test', [
+      createRunNode('r1', 'npm test'),
+      createPromptNode('p1', 'done'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      startedAt: 0,
+      completedAt: 45_000,
+    });
+    state = updateNodeProgress(state, 'p1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      startedAt: 0,
+      completedAt: 2_000,
+    });
+
+    const report = renderTimingReport(state);
+    expect(report).toContain('| Duration | Node | Path |');
+    expect(report).toContain('| 45.0s | run: npm test | 0 |');
+    expect(report).toContain('| 2.0s | prompt: done | 1 |');
+    expect(report.indexOf('run: npm test')).toBeLessThan(report.indexOf('prompt: done'));
+  });
+
+  it('returns a placeholder when no node timings exist', () => {
+    const state = createSessionState('s1', createFlowSpec('test', [createPromptNode('p1', 'hi')]));
+    expect(renderTimingReport(state)).toBe('No node timing data recorded');
+  });
 });
 
 // H-DX-009: Flow completion summary
@@ -1308,6 +1359,21 @@ describe('renderCompletionSummary', () => {
     state = markCompleted(state);
     const summary = renderCompletionSummary(state);
     expect(summary).not.toContain('iterations');
+  });
+
+  it('includes a slowest-node hint when any node exceeds 30 seconds', () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'npm test')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      startedAt: 0,
+      completedAt: 45_000,
+    });
+    state = markCompleted(state);
+    const summary = renderCompletionSummary(state);
+    expect(summary).toContain('slowest node: run: npm test (45.0s)');
   });
 });
 

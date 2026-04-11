@@ -42,11 +42,12 @@ These pages are retained for rationale, migration notes, and historical context.
 
 ## Active proposal sets
 
-| Area                          | Entry point                          | Focus                                                         |
-| ----------------------------- | ------------------------------------ | ------------------------------------------------------------- |
-| Runtime and integrations      | [runtime/index.md](runtime/index.md) | Registry, MCP, workspace orchestration, and routing proposals |
-| Tooling and host integrations | [tooling/index.md](tooling/index.md) | Evals, editor tooling, imported packs, and playground work    |
-| Memory and knowledge planning | [memory/index.md](memory/index.md)   | Memory semantics, Markdown knowledge, retrieval, checkpoints  |
+| Area                          | Entry point                                | Focus                                                           |
+| ----------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
+| Runtime and integrations      | [runtime/index.md](runtime/index.md)       | Registry, MCP, workspace orchestration, and routing proposals   |
+| Tooling and host integrations | [tooling/index.md](tooling/index.md)       | Evals, editor tooling, imported packs, and playground work      |
+| Memory and knowledge planning | [memory/index.md](memory/index.md)         | Memory semantics, Markdown knowledge, retrieval, checkpoints    |
+| Artifact protocol planning    | [artifacts/README.md](artifacts/README.md) | Artifact boundaries, taxonomy, and deferred lifecycle decisions |
 
 ## Imported packs
 

@@ -2,20 +2,21 @@
 
 ## One-line position
 
-**prompt-language is a control-flow runtime for Claude Code that enforces real completion gates, persistent state, and deterministic execution for bounded engineering workflows.**
+**prompt-language is a verification-first supervision runtime for existing coding agents.**
 
 ## Short tagline options
 
 - Turn Claude Code into a supervised runtime.
-- Bounded execution for Claude Code.
+- Turn coding agents into a supervised runtime.
+- Bounded execution for existing coding agents.
 - Verification-gated control flow for coding agents.
-- Persistent state and real completion gates for Claude Code.
+- Persistent state and real completion gates for coding agents.
 
 ## Decision memo
 
 ### Decision
 
-Position `prompt-language` as an **enforcement-first control-flow runtime for Claude Code**.
+Position `prompt-language` as a **verification-first supervision runtime for existing coding agents**.
 
 Do **not** position it primarily as:
 
@@ -23,7 +24,7 @@ Do **not** position it primarily as:
 - a Markdown workflow language
 - a general LLM orchestration framework
 
-The strongest wedge is that `prompt-language` turns Claude from an ad hoc conversational coding agent into a **supervised runtime**. The runtime keeps state, decides what happens next, re-injects exact context, and blocks completion until explicit verification passes.
+The strongest wedge is that `prompt-language` turns an existing coding agent into a **supervised runtime**. The runtime keeps state, decides what happens next, re-injects exact context, and blocks completion until explicit verification passes.
 
 ### Why this is the right positioning
 
@@ -68,9 +69,9 @@ Those framings weaken the repo.
 ### Recommended README opening
 
 ```md
-**Turn Claude Code into a supervised runtime.**
+**Verification-first supervision runtime for existing coding agents.**
 
-`prompt-language` is a control-flow runtime for Claude Code that enforces real completion gates, persistent state, and deterministic execution for bounded engineering workflows.
+`prompt-language` is a verification-first supervision runtime for existing coding agents. Today the shipped product surface centers on Claude Code: the runtime enforces real completion gates, persistent state, and deterministic execution for bounded engineering workflows.
 
 Instead of the engineer manually acting as the runtime — tracking progress, restating context, rerunning checks, and rejecting premature `done` — `prompt-language` moves that supervision into code.
 ```

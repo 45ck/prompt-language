@@ -62,10 +62,96 @@ function progressAnnotation(state: SessionState, nodeId: string): string {
 // H-DX-002: Show elapsed time for completed nodes (>0.5s)
 function timingAnnotation(state: SessionState, nodeId: string): string {
   const progress = state.nodeProgress[nodeId];
-  if (!progress?.startedAt || !progress.completedAt) return '';
+  if (progress?.startedAt === undefined || progress.completedAt === undefined) return '';
   const elapsed = (progress.completedAt - progress.startedAt) / 1000;
   if (elapsed <= 0.5) return '';
   return ` [${elapsed.toFixed(1)}s]`;
+}
+
+function durationMsFromProgress(state: SessionState, nodeId: string): number | null {
+  const progress = state.nodeProgress[nodeId];
+  if (progress?.startedAt === undefined || progress.completedAt === undefined) return null;
+  return Math.max(0, progress.completedAt - progress.startedAt);
+}
+
+function formatDurationMs(durationMs: number): string {
+  return durationMs >= 1000 ? `${(durationMs / 1000).toFixed(1)}s` : `${Math.round(durationMs)}ms`;
+}
+
+function formatNodePath(path: readonly number[]): string {
+  return path.length === 0 ? 'root' : path.join('.');
+}
+
+interface NodePathEntry {
+  readonly node: FlowNode;
+  readonly path: readonly number[];
+}
+
+function collectNodePaths(
+  nodes: readonly FlowNode[],
+  basePath: readonly number[] = [],
+): NodePathEntry[] {
+  const entries: NodePathEntry[] = [];
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]!;
+    const path = [...basePath, i];
+    entries.push({ node, path });
+
+    switch (node.kind) {
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'foreach':
+      case 'foreach_spawn':
+      case 'spawn':
+      case 'review':
+        entries.push(...collectNodePaths(node.body, path));
+        break;
+      case 'if':
+        entries.push(...collectNodePaths(node.thenBranch, path));
+        entries.push(...collectNodePaths(node.elseBranch, path));
+        break;
+      case 'try':
+        entries.push(...collectNodePaths(node.body, path));
+        entries.push(...collectNodePaths(node.catchBody, path));
+        entries.push(...collectNodePaths(node.finallyBody, path));
+        break;
+      case 'race':
+        for (let childIndex = 0; childIndex < node.children.length; childIndex++) {
+          const child = node.children[childIndex]!;
+          const childPath = [...path, childIndex];
+          entries.push({ node: child, path: childPath });
+          entries.push(...collectNodePaths(child.body, childPath));
+        }
+        break;
+      case 'prompt':
+      case 'run':
+      case 'let':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
+        break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
+    }
+  }
+
+  return entries;
+}
+
+export interface TimedNodeSummary {
+  readonly nodeId: string;
+  readonly nodeKind: FlowNode['kind'];
+  readonly nodePath: string;
+  readonly description: string;
+  readonly durationMs: number;
 }
 
 function isCompletedNode(path: readonly number[], currentPath: readonly number[]): boolean {
@@ -122,11 +208,14 @@ function renderNode(
   const suffix = isCurrent ? '  <-- current' : '';
 
   switch (node.kind) {
-    case 'prompt':
-      return [`${prefix}${indent}prompt: ${node.text}${suffix}`];
+    case 'prompt': {
+      const timing = timingAnnotation(state, node.id);
+      return [`${prefix}${indent}prompt: ${node.text}${timing}${suffix}`];
+    }
     case 'run': {
       const timeoutTag = node.timeoutMs ? ` [timeout ${node.timeoutMs / 1000}s]` : '';
-      return [`${prefix}${indent}run: ${node.command}${timeoutTag}${suffix}`];
+      const timing = timingAnnotation(state, node.id);
+      return [`${prefix}${indent}run: ${node.command}${timeoutTag}${timing}${suffix}`];
     }
     case 'while': {
       const whileLabel = node.label ? `${node.label}: ` : '';
@@ -191,17 +280,19 @@ function renderNode(
     }
     case 'break': {
       const breakLabel = node.label ? ` ${node.label}` : '';
-      return [`${prefix}${indent}break${breakLabel}${suffix}`];
+      const timing = timingAnnotation(state, node.id);
+      return [`${prefix}${indent}break${breakLabel}${timing}${suffix}`];
     }
     case 'continue': {
       const continueLabel = node.label ? ` ${node.label}` : '';
-      return [`${prefix}${indent}continue${continueLabel}${suffix}`];
+      const timing = timingAnnotation(state, node.id);
+      return [`${prefix}${indent}continue${continueLabel}${timing}${suffix}`];
     }
     case 'spawn':
       return renderSpawnNode(node, state, path, indentLevel, prefix, suffix);
     case 'await':
       return [
-        `${prefix}${indent}await ${node.target === 'all' ? 'all' : `"${node.target}"`}${suffix}`,
+        `${prefix}${indent}await ${node.target === 'all' ? 'all' : `"${node.target}"`}${timingAnnotation(state, node.id)}${suffix}`,
       ];
     case 'approve': {
       const approveTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds / 60}m` : '';
@@ -212,7 +303,10 @@ function renderNode(
           : approveRejected === 'false'
             ? '  [approved]'
             : '  [pending]';
-      return [`${prefix}${indent}approve "${node.message}"${approveTimeout}${approveTag}${suffix}`];
+      const timing = timingAnnotation(state, node.id);
+      return [
+        `${prefix}${indent}approve "${node.message}"${approveTimeout}${approveTag}${timing}${suffix}`,
+      ];
     }
     case 'review': {
       const reviewProgress = state.nodeProgress[node.id];
@@ -232,7 +326,8 @@ function renderNode(
     case 'race': {
       const winner = state.variables['race_winner'];
       const raceTag = winner !== undefined && winner !== '' ? `  [winner: ${String(winner)}]` : '';
-      const raceLines = [`${prefix}${indent}race${raceTag}${suffix}`];
+      const timing = timingAnnotation(state, node.id);
+      const raceLines = [`${prefix}${indent}race${raceTag}${timing}${suffix}`];
       for (let i = 0; i < node.children.length; i++) {
         raceLines.push(...renderNode(node.children[i]!, state, [...path, i], indentLevel + 1));
       }
@@ -254,13 +349,17 @@ function renderNode(
       );
     }
     case 'remember': {
+      const timing = timingAnnotation(state, node.id);
       if (node.key !== undefined && node.value !== undefined) {
-        return [`${prefix}${indent}remember key="${node.key}" value="${node.value}"${suffix}`];
+        return [
+          `${prefix}${indent}remember key="${node.key}" value="${node.value}"${timing}${suffix}`,
+        ];
       }
-      return [`${prefix}${indent}remember "${node.text ?? ''}"${suffix}`];
+      return [`${prefix}${indent}remember "${node.text ?? ''}"${timing}${suffix}`];
     }
     case 'send': {
-      return [`${prefix}${indent}send "${node.target}" "${node.message}"${suffix}`];
+      const timing = timingAnnotation(state, node.id);
+      return [`${prefix}${indent}send "${node.target}" "${node.message}"${timing}${suffix}`];
     }
     case 'receive': {
       const progress = state.nodeProgress[node.id];
@@ -271,7 +370,10 @@ function renderNode(
             ? ' [waiting]'
             : '';
       const fromTag = node.from !== undefined ? ` from "${node.from}"` : '';
-      return [`${prefix}${indent}receive ${node.variableName}${fromTag}${statusTag}${suffix}`];
+      const timing = timingAnnotation(state, node.id);
+      return [
+        `${prefix}${indent}receive ${node.variableName}${fromTag}${statusTag}${timing}${suffix}`,
+      ];
     }
     default: {
       const _exhaustive: never = node;
@@ -318,7 +420,10 @@ function renderIfNode(
     : node.condition;
   const askRetries = node.askMaxRetries != null ? ` max-retries ${node.askMaxRetries}` : '';
   const groundedBy = node.groundedBy ? ` grounded-by "${node.groundedBy}"` : '';
-  const lines: string[] = [`${prefix}${indent}if ${ifCond}${groundedBy}${askRetries}${suffix}`];
+  const timing = timingAnnotation(state, node.id);
+  const lines: string[] = [
+    `${prefix}${indent}if ${ifCond}${groundedBy}${askRetries}${timing}${suffix}`,
+  ];
 
   for (let i = 0; i < node.thenBranch.length; i++) {
     const child = node.thenBranch[i]!;
@@ -347,7 +452,8 @@ function renderTryNode(
   suffix: string,
 ): string[] {
   const indent = '  '.repeat(indentLevel);
-  const lines: string[] = [`${prefix}${indent}try${suffix}`];
+  const timing = timingAnnotation(state, node.id);
+  const lines: string[] = [`${prefix}${indent}try${timing}${suffix}`];
 
   for (let i = 0; i < node.body.length; i++) {
     const child = node.body[i]!;
@@ -427,8 +533,9 @@ function renderLetNode(
   } else {
     annotation = '';
   }
+  const timing = timingAnnotation(state, node.id);
   return [
-    `${prefix}${indent}let ${node.variableName} ${operator} ${sourceText}${annotation}${suffix}`,
+    `${prefix}${indent}let ${node.variableName} ${operator} ${sourceText}${annotation}${timing}${suffix}`,
   ];
 }
 
@@ -471,7 +578,8 @@ function renderSpawnNode(
   const indent = '  '.repeat(indentLevel);
   const child = state.spawnedChildren[node.name];
   const statusTag = child ? `  [${child.status}]` : '';
-  const lines: string[] = [`${prefix}${indent}spawn "${node.name}"${statusTag}${suffix}`];
+  const timing = timingAnnotation(state, node.id);
+  const lines: string[] = [`${prefix}${indent}spawn "${node.name}"${statusTag}${timing}${suffix}`];
 
   for (let i = 0; i < node.body.length; i++) {
     const bodyNode = node.body[i]!;
@@ -1040,6 +1148,38 @@ function findStepIndex(nodes: readonly FlowNode[], path: readonly number[]): num
   return idx >= 0 ? idx + 1 : 0;
 }
 
+function buildTimedNodeSummaries(state: SessionState): TimedNodeSummary[] {
+  return collectNodePaths(state.flowSpec.nodes)
+    .map(({ node, path }) => {
+      const durationMs = durationMsFromProgress(state, node.id);
+      if (durationMs == null) return null;
+      return {
+        nodeId: node.id,
+        nodeKind: node.kind,
+        nodePath: formatNodePath(path),
+        description: describeNode(node),
+        durationMs,
+      } satisfies TimedNodeSummary;
+    })
+    .filter((row): row is TimedNodeSummary => row !== null)
+    .sort((a, b) => b.durationMs - a.durationMs || a.nodePath.localeCompare(b.nodePath));
+}
+
+function slowestTimedNode(state: SessionState): TimedNodeSummary | null {
+  return buildTimedNodeSummaries(state)[0] ?? null;
+}
+
+export function renderTimingReport(state: SessionState): string {
+  const rows = buildTimedNodeSummaries(state);
+  if (rows.length === 0) return 'No node timing data recorded';
+
+  const lines = ['| Duration | Node | Path |', '| --- | --- | --- |'];
+  for (const row of rows) {
+    lines.push(`| ${formatDurationMs(row.durationMs)} | ${row.description} | ${row.nodePath} |`);
+  }
+  return lines.join('\n');
+}
+
 export function renderFlowSummary(state: SessionState): string {
   const totalNodes = countAllNodes(state.flowSpec.nodes);
   const stepNum = findStepIndex(state.flowSpec.nodes, state.currentNodePath);
@@ -1093,6 +1233,11 @@ export function renderCompletionSummary(state: SessionState): string {
   if (gates.length > 0) {
     const passed = gates.filter((g) => state.gateResults[g.predicate] === true).length;
     parts.push(`gates: ${passed}/${gates.length}`);
+  }
+
+  const slowest = slowestTimedNode(state);
+  if (slowest && slowest.durationMs > 30_000) {
+    parts.push(`slowest node: ${slowest.description} (${formatDurationMs(slowest.durationMs)})`);
   }
 
   return parts.join(' | ');

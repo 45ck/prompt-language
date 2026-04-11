@@ -20,6 +20,10 @@ function makeRunner(): InMemoryCommandRunner {
   return new InMemoryCommandRunner();
 }
 
+function expectedFileExistsCommand(path: string): string {
+  return `node -e "process.exit(require('node:fs').existsSync('${path}') ? 0 : 1)"`;
+}
+
 describe('evaluateCompletion', () => {
   it('allows completion when no active flow', async () => {
     const store = makeStore();
@@ -286,10 +290,10 @@ describe('evaluateCompletion', () => {
     expect(result.gateResults['diff_nonempty']).toBe(true);
   });
 
-  it('resolves file_exists predicate to test -f command', async () => {
+  it('resolves file_exists predicate to a cross-platform command', async () => {
     const store = makeStore();
     const runner = makeRunner();
-    runner.setResult("test -f 'app.js'", { exitCode: 0, stdout: '', stderr: '' });
+    runner.setResult(expectedFileExistsCommand('app.js'), { exitCode: 0, stdout: '', stderr: '' });
 
     const spec = createFlowSpec('File gate', [], [createCompletionGate('file_exists app.js')]);
     const session = createSessionState('s-file', spec);
@@ -303,7 +307,11 @@ describe('evaluateCompletion', () => {
   it('resolves file_exists with spaces in path', async () => {
     const store = makeStore();
     const runner = makeRunner();
-    runner.setResult("test -f 'dist/my file.js'", { exitCode: 0, stdout: '', stderr: '' });
+    runner.setResult(expectedFileExistsCommand('dist/my file.js'), {
+      exitCode: 0,
+      stdout: '',
+      stderr: '',
+    });
 
     const spec = createFlowSpec(
       'File gate',
@@ -369,8 +377,8 @@ describe('resolveBuiltinCommand', () => {
     expect(resolveBuiltinCommand('diff_nonempty')).toBe('git diff --quiet');
   });
 
-  it('maps file_exists <path> to test -f with quoted path', () => {
-    expect(resolveBuiltinCommand('file_exists app.js')).toBe("test -f 'app.js'");
+  it('maps file_exists <path> to a cross-platform Node command', () => {
+    expect(resolveBuiltinCommand('file_exists app.js')).toBe(expectedFileExistsCommand('app.js'));
   });
 
   it('returns undefined for file_exists without a path', () => {
@@ -396,7 +404,9 @@ describe('resolveBuiltinCommand', () => {
   });
 
   it('allows file_exists with spaces in path', () => {
-    expect(resolveBuiltinCommand('file_exists dist/my file.js')).toBe("test -f 'dist/my file.js'");
+    expect(resolveBuiltinCommand('file_exists dist/my file.js')).toBe(
+      expectedFileExistsCommand('dist/my file.js'),
+    );
   });
 
   it('rejects absolute paths in file_exists', () => {
@@ -416,9 +426,11 @@ describe('resolveBuiltinCommand', () => {
 
   it('allows safe paths with dots, slashes, and hyphens', () => {
     expect(resolveBuiltinCommand('file_exists src/foo-bar/baz.ts')).toBe(
-      "test -f 'src/foo-bar/baz.ts'",
+      expectedFileExistsCommand('src/foo-bar/baz.ts'),
     );
-    expect(resolveBuiltinCommand('file_exists ./a/b.txt')).toBe("test -f './a/b.txt'");
+    expect(resolveBuiltinCommand('file_exists ./a/b.txt')).toBe(
+      expectedFileExistsCommand('./a/b.txt'),
+    );
   });
 
   it('returns undefined for unknown predicates', () => {
@@ -447,8 +459,10 @@ describe('resolveBuiltinCommand', () => {
     expect(resolveBuiltinCommand('not tests_pass')).toBe('npm test');
   });
 
-  it('resolves "not file_exists app.js" to test -f command', () => {
-    expect(resolveBuiltinCommand('not file_exists app.js')).toBe("test -f 'app.js'");
+  it('resolves "not file_exists app.js" to the same built-in command', () => {
+    expect(resolveBuiltinCommand('not file_exists app.js')).toBe(
+      expectedFileExistsCommand('app.js'),
+    );
   });
 });
 
@@ -971,6 +985,52 @@ describe('evaluateCompletion — any() gate composition (H-INT-010)', () => {
     expect(result.gateResults['any(tests_pass, lint_pass)']).toBe(true);
     expect(result.gateResults['lint_pass']).toBe(false);
     expect(result.blocked).toBe(true);
+  });
+
+  it('passes any() when a boolean variable sub-gate is true', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec(
+      'test',
+      [],
+      [
+        {
+          predicate: 'any(ready)',
+          any: [createCompletionGate('ready')],
+        },
+      ],
+    );
+    const session = createSessionState('s-any-var', spec);
+    await store.save({ ...session, variables: { ...session.variables, ready: true } });
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(result.gateResults['any(ready)']).toBe(true);
+    expect(runner.executedCommands).toEqual([]);
+  });
+
+  it('fails any() when a variable sub-gate is unset', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec(
+      'test',
+      [],
+      [
+        {
+          predicate: 'any(missing_check)',
+          any: [createCompletionGate('missing_check')],
+        },
+      ],
+    );
+    const session = createSessionState('s-any-missing-var', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+    expect(result.gateResults['any(missing_check)']).toBe(false);
+    expect(runner.executedCommands).toEqual([]);
   });
 });
 

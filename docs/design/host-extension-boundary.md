@@ -6,6 +6,9 @@ Accepted boundary for the current product direction.
 
 Relevant open beads:
 
+- `prompt-language-pbv5.1` - Research: Claude hooks vs Codex lifecycle surfaces
+- `prompt-language-pbv5.2` - Research: DSL syntax vs config layer vs host-only integration
+- `prompt-language-pbv5.3` - Research: native Codex hooks vs supervised runner integration
 - `prompt-language-7kau` - Decision: MCP scope should be flow-facing, not generic extension management
 - `prompt-language-9uqe.13` - Decision: profiles and agents vs direct management of skills, hooks, plugins, and MCP
 
@@ -21,6 +24,28 @@ prompt-language instead stays focused on its own first-class concepts:
 - profiles
 - agents
 - orchestration and verification around those concepts
+
+## Option comparison
+
+The product boundary is clearer if host-lifecycle work is evaluated in three buckets.
+
+| Option                                       | What it would mean                                                                                                                        | User value                                                                             | Architectural fit                                                                    | Documentation honesty                                              | Decision                                          |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------- |
+| Inline DSL syntax                            | Add prompt-language syntax for hooks, plugin lifecycle, host MCP registration, or other host events                                       | Superficially convenient, but only on hosts that expose matching lifecycle hooks       | Poor. It would couple the language to Claude/Codex/OpenCode feature mismatches       | Poor. It would imply parity that the repo does not have            | Reject                                            |
+| Prompt-language-owned config / adapter layer | Keep the DSL focused on flows, but allow prompt-language-owned config for profiles, agents, harness defaults, or flow-facing integrations | Good when the config describes prompt-language concepts rather than raw host internals | Good if it compiles to adapters and keeps host specifics behind the runtime boundary | Good, provided host-only features stay labeled as adapter concerns | Allow only for prompt-language-owned abstractions |
+| Host-specific installers and scaffolds       | Keep host lifecycle work in installers, local config, and adapter code for each host                                                      | Good enough for setup tasks like plugin install, hook wiring, or local host opt-in     | Strong. Lifecycle differences stay where they actually live                          | Strong, but fragmented across hosts                                | Current path for host lifecycle work              |
+
+## Recommendation
+
+prompt-language should not expose host lifecycle management inside the language surface.
+
+The least-confusing user-facing shape is:
+
+- DSL and reference docs describe prompt-language concepts only
+- prompt-language-owned config may later describe profiles, agents, or harness defaults
+- host-specific installers, scaffolds, and runtime adapters handle hook wiring, plugin registration, and host config mutations
+
+That means "manage Claude/Codex hooks" is not a language feature. At most, it is installer or adapter behavior.
 
 ## What stays in scope
 
@@ -53,6 +78,21 @@ MCP remains flow-facing.
 
 It can expose or control prompt-language session state, render flow progress, inspect variables, and support task-oriented integrations. It should not become a general-purpose extension administration plane for the host client.
 
+Allowed control operations are intentionally narrow:
+
+- inspect current session state and variables
+- inspect gate status and rendered flow progress
+- reset prompt-language session state
+- set prompt-language session variables when an integration genuinely needs that bridge
+
+Out of scope for MCP:
+
+- installing or enabling host plugins
+- managing host skills or slash-command bundles
+- editing host hook manifests
+- registering or supervising unrelated host MCP servers
+- acting as a generic extension-control plane for Claude, Codex, or any other client
+
 That keeps MCP aligned with the rest of the design:
 
 - prompt-language owns flow orchestration
@@ -73,6 +113,8 @@ The repo's existing architecture position already says prompt-language is a meta
 
 - `prompt-language-9uqe.13` can treat profiles and agents as prompt-language-owned abstractions
 - `prompt-language-7kau` can keep MCP focused on flow inspection and control
+- `prompt-language-pbv5.2` can reject hook syntax in the DSL while still allowing adapter/config work outside the language
+- `prompt-language-pbv5.3` can frame native Codex hooks as adapter-level experimentation rather than a language commitment
 - future harness abstraction work can target backend adapters without exposing host-extension lifecycle in the DSL
 
 ### What this constrains

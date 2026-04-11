@@ -11,6 +11,14 @@ import type { StateStore } from './ports/state-store.js';
 import { parseFlow } from './parse-flow.js';
 import { renderFlow, renderFlowSummary } from '../domain/render-flow.js';
 import { createSessionState, type SessionState } from '../domain/session-state.js';
+import {
+  createExecutionReport,
+  createFlowOutcome,
+  FLOW_OUTCOME_CODES,
+  type DiagnosticReport,
+  type FlowDiagnostic,
+  type FlowOutcome,
+} from '../domain/diagnostic-report.js';
 
 export interface RunFlowHeadlessInput {
   readonly cwd: string;
@@ -23,6 +31,7 @@ export interface RunFlowHeadlessInput {
 export interface RunFlowHeadlessOutput {
   readonly finalState: SessionState;
   readonly reason?: string | undefined;
+  readonly report: DiagnosticReport;
   readonly turns: number;
 }
 
@@ -94,6 +103,42 @@ function readMemoryValue(entry?: MemoryEntry): string {
   return entry?.value ?? entry?.text ?? '';
 }
 
+function mergeSignals(
+  current: { diagnostics: FlowDiagnostic[]; outcomes: FlowOutcome[] },
+  next?: {
+    readonly diagnostics?: readonly FlowDiagnostic[] | undefined;
+    readonly outcomes?: readonly FlowOutcome[] | undefined;
+  },
+): void {
+  if (next?.diagnostics) {
+    current.diagnostics.push(...next.diagnostics);
+  }
+  if (next?.outcomes) {
+    current.outcomes.push(...next.outcomes);
+  }
+}
+
+function createCompletedExecutionOutcome(outcomes: readonly FlowOutcome[]): readonly FlowOutcome[] {
+  return outcomes.length === 0
+    ? [createFlowOutcome(FLOW_OUTCOME_CODES.completed, 'Flow completed.')]
+    : outcomes;
+}
+
+function createBudgetExhaustedOutcome(summary: string): FlowOutcome {
+  return createFlowOutcome(FLOW_OUTCOME_CODES.budgetExhausted, summary);
+}
+
+function terminalOutcomes(
+  collected: readonly FlowOutcome[],
+  extra: readonly FlowOutcome[],
+  completed: boolean,
+): readonly FlowOutcome[] {
+  if (completed) {
+    return createCompletedExecutionOutcome(extra);
+  }
+  return [...collected, ...extra];
+}
+
 async function preloadMemoryVariables(
   state: SessionState,
   memoryStore?: MemoryStore,
@@ -130,6 +175,10 @@ export async function runFlowHeadless(
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS;
   const spec = parseFlow(input.flowText, { basePath: input.cwd });
   const commandRunner = bindCommandRunnerCwd(deps.commandRunner, input.cwd);
+  const collectedSignals: { diagnostics: FlowDiagnostic[]; outcomes: FlowOutcome[] } = {
+    diagnostics: [],
+    outcomes: [],
+  };
 
   let state = await preloadMemoryVariables(
     createSessionState(input.sessionId, spec),
@@ -139,6 +188,34 @@ export async function runFlowHeadless(
 
   let turns = 0;
   let lastRunningChildrenSnapshot: string | undefined;
+  const buildOutput = (
+    finalState: SessionState,
+    options: {
+      readonly reason?: string | undefined;
+      readonly diagnostics?: readonly FlowDiagnostic[] | undefined;
+      readonly outcomes?: readonly FlowOutcome[] | undefined;
+      readonly status?: DiagnosticReport['status'] | undefined;
+      readonly completed?: boolean | undefined;
+    } = {},
+  ): RunFlowHeadlessOutput => {
+    const diagnostics = [...collectedSignals.diagnostics, ...(options.diagnostics ?? [])];
+    const outcomes = terminalOutcomes(
+      collectedSignals.outcomes,
+      options.outcomes ?? [],
+      options.completed ?? false,
+    );
+    return {
+      finalState,
+      reason: options.reason,
+      report: createExecutionReport({
+        diagnostics,
+        outcomes,
+        reason: options.reason,
+        ...(options.status != null ? { status: options.status } : {}),
+      }),
+      turns,
+    };
+  };
 
   while (true) {
     const step = await autoAdvanceNodes(
@@ -151,36 +228,37 @@ export async function runFlowHeadless(
       deps.messageStore,
     );
 
+    mergeSignals(collectedSignals, step);
     state = step.state;
     await deps.stateStore.save(state);
 
     if (state.status === 'failed' || state.status === 'cancelled') {
-      return {
-        finalState: state,
-        reason: state.failureReason ?? `Flow ended with status "${state.status}"`,
-        turns,
-      };
+      const reason = state.failureReason ?? `Flow ended with status "${state.status}"`;
+      const hasStructuredSignals =
+        collectedSignals.diagnostics.length > 0 || collectedSignals.outcomes.length > 0;
+      return buildOutput(state, {
+        reason,
+        ...(hasStructuredSignals ? {} : { status: 'failed' as const }),
+      });
     }
 
     if (step.kind === 'pause') {
       if (hasRunningChildren(state)) {
         const snapshot = JSON.stringify(state.spawnedChildren);
         if (lastRunningChildrenSnapshot === snapshot) {
-          return {
-            finalState: state,
+          return buildOutput(state, {
             reason: 'Flow paused before reaching completion.',
-            turns,
-          };
+            status: 'failed',
+          });
         }
         lastRunningChildrenSnapshot = snapshot;
         continue;
       }
       lastRunningChildrenSnapshot = undefined;
-      return {
-        finalState: state,
+      return buildOutput(state, {
         reason: 'Flow paused before reaching completion.',
-        turns,
-      };
+        status: 'failed',
+      });
     }
 
     lastRunningChildrenSnapshot = undefined;
@@ -190,11 +268,10 @@ export async function runFlowHeadless(
       await deps.stateStore.save(state);
 
       if (state.status === 'completed') {
-        return {
-          finalState: state,
+        return buildOutput(state, {
           reason: readPersistedRuntimeDiagnosticReason(state),
-          turns,
-        };
+          completed: true,
+        });
       }
 
       const current = await deps.stateStore.loadCurrent();
@@ -212,29 +289,27 @@ export async function runFlowHeadless(
           deps.commandRunner,
           deps.auditLogger,
         );
+        mergeSignals(collectedSignals, gateResult);
         state = (await deps.stateStore.loadCurrent()) ?? state;
         if (!gateResult.blocked && state.status === 'completed') {
-          return {
-            finalState: state,
+          return buildOutput(state, {
             reason: readPersistedRuntimeDiagnosticReason(state),
-            turns,
-          };
+            completed: true,
+          });
         }
         if (gateResult.diagnostics.length > 0 || state.status === 'failed') {
-          return {
-            finalState: state,
+          return buildOutput(state, {
             reason: summarizeCompletionBlock(gateResult),
-            turns,
-          };
+          });
         }
 
         turns += 1;
         if (turns > maxTurns) {
-          return {
-            finalState: state,
-            reason: `Headless runner reached the max turn limit (${maxTurns}).`,
-            turns,
-          };
+          const summary = `Headless runner reached the max turn limit (${maxTurns}).`;
+          return buildOutput(state, {
+            reason: summary,
+            outcomes: [createBudgetExhaustedOutcome(summary)],
+          });
         }
 
         const runResult = await deps.promptTurnRunner.run({
@@ -245,26 +320,24 @@ export async function runFlowHeadless(
 
         if (runResult.exitCode !== 0) {
           const detail = summarizeAssistantText(runResult.assistantText);
-          return {
-            finalState: state,
+          return buildOutput(state, {
             reason:
               detail == null
                 ? `Prompt runner exited with code ${runResult.exitCode}.`
                 : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`,
-            turns,
-          };
+            status: 'failed',
+          });
         }
 
         if (runResult.madeProgress === false) {
           const detail = summarizeAssistantText(runResult.assistantText);
-          return {
-            finalState: state,
+          return buildOutput(state, {
             reason:
               detail == null
                 ? 'Prompt runner completed without observable workspace progress.'
                 : `Prompt runner completed without observable workspace progress. Last assistant output: ${detail}`,
-            turns,
-          };
+            status: 'failed',
+          });
         }
 
         continue;
@@ -275,20 +348,18 @@ export async function runFlowHeadless(
           commandRunner,
           deps.auditLogger,
         );
+        mergeSignals(collectedSignals, gateResult);
         state = (await deps.stateStore.loadCurrent()) ?? state;
         if (!gateResult.blocked && state.status === 'completed') {
-          return {
-            finalState: state,
+          return buildOutput(state, {
             reason: readPersistedRuntimeDiagnosticReason(state),
-            turns,
-          };
+            completed: true,
+          });
         }
         if (gateResult.diagnostics.length > 0 || state.status === 'failed') {
-          return {
-            finalState: state,
+          return buildOutput(state, {
             reason: summarizeCompletionBlock(gateResult),
-            turns,
-          };
+          });
         }
       }
       continue;
@@ -296,11 +367,11 @@ export async function runFlowHeadless(
 
     turns += 1;
     if (turns > maxTurns) {
-      return {
-        finalState: state,
-        reason: `Headless runner reached the max turn limit (${maxTurns}).`,
-        turns,
-      };
+      const summary = `Headless runner reached the max turn limit (${maxTurns}).`;
+      return buildOutput(state, {
+        reason: summary,
+        outcomes: [createBudgetExhaustedOutcome(summary)],
+      });
     }
 
     const runResult = await deps.promptTurnRunner.run({
@@ -311,14 +382,13 @@ export async function runFlowHeadless(
 
     if (runResult.exitCode !== 0) {
       const detail = summarizeAssistantText(runResult.assistantText);
-      return {
-        finalState: state,
+      return buildOutput(state, {
         reason:
           detail == null
             ? `Prompt runner exited with code ${runResult.exitCode}.`
             : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`,
-        turns,
-      };
+        status: 'failed',
+      });
     }
 
     const current = await deps.stateStore.loadCurrent();
@@ -331,6 +401,7 @@ export async function runFlowHeadless(
 
     if (current && currentNode === null && current.flowSpec.completionGates.length > 0) {
       const gateResult = await evaluateCompletion(deps.stateStore, commandRunner, deps.auditLogger);
+      mergeSignals(collectedSignals, gateResult);
       gateBlocked = gateResult.blocked;
       gateBlockedByDiagnostic = gateResult.diagnostics.length > 0;
       gateBlockReason = gateBlocked ? summarizeCompletionBlock(gateResult) : undefined;
@@ -338,38 +409,34 @@ export async function runFlowHeadless(
 
     if (runResult.madeProgress === false) {
       const detail = summarizeAssistantText(runResult.assistantText);
-      return {
-        finalState: (await deps.stateStore.loadCurrent()) ?? state,
+      return buildOutput((await deps.stateStore.loadCurrent()) ?? state, {
         reason:
           detail == null
             ? 'Prompt runner completed without observable workspace progress.'
             : `Prompt runner completed without observable workspace progress. Last assistant output: ${detail}`,
-        turns,
-      };
+        status: 'failed',
+      });
     }
 
     state = maybeCompleteFlow((await deps.stateStore.loadCurrent()) ?? state);
     await deps.stateStore.save(state);
 
     if (!gateBlocked && state.status === 'completed') {
-      return {
-        finalState: state,
+      return buildOutput(state, {
         reason: readPersistedRuntimeDiagnosticReason(state),
-        turns,
-      };
+        completed: true,
+      });
     }
 
     if (gateBlocked && currentNode === null) {
-      return {
-        finalState: state,
+      return buildOutput(state, {
         reason: gateBlockedByDiagnostic
           ? (gateBlockReason ?? 'Completion remained blocked after the final prompt turn.')
           : appendAssistantDetail(
               gateBlockReason ?? 'Completion remained blocked after the final prompt turn.',
               runResult.assistantText,
             ),
-        turns,
-      };
+      });
     }
   }
 }

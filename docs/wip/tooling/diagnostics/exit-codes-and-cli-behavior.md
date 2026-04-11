@@ -29,7 +29,7 @@
 - perform preflight/profile checks
 - execute the flow
 - classify runtime problems separately from normal outcomes
-- emit `Report` in `--json` mode
+- emit `Report` in `--json` mode on the shipped headless runner paths
 
 `run` returns:
 
@@ -38,9 +38,20 @@
 - `2` if blocked before execution
 - `3` for runtime/internal failure
 
+Current shipped boundary:
+
+- `run --runner codex|opencode|ollama --json` emits `{ status, diagnostics, outcomes, reason? }`
+- `run --runner claude --json` is still unsupported because the native Claude interactive path does not return machine-readable completion state
+
 ### `ci`
 
 `ci` should follow `run` exit-code semantics exactly so local CLI and automation behavior stay aligned.
+
+Current shipped boundary:
+
+- `ci --runner codex|opencode|ollama --json` emits the same `{ status, diagnostics, outcomes, reason? }` envelope
+- blocked preflight still exits `2`, but the blocked report is emitted as JSON when `--json` is set
+- the native Claude path still does not expose machine-readable completion state
 
 ## Human-readable output guidance
 

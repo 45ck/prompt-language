@@ -1,7 +1,7 @@
 {
   "name": "@45ck/prompt-language",
   "version": "0.3.0",
-  "description": "A control-flow runtime for Claude Code and Codex CLI that enforces verification gates, manages persistent state, and prevents premature completion.",
+  "description": "A verification-first supervision runtime for existing coding agents that enforces real completion gates, persistent state, and deterministic execution.",
   "license": "MIT",
   "author": {
     "name": "45ck",
@@ -72,6 +72,7 @@
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "spell": "cspell --no-progress --config cspell.json \"src/**/*\" \"*.md\" \"docs/**/*\"",
+    "docs:consistency": "node scripts/ci/docs-consistency.mjs",
     "knip": "knip --production",
     "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs --validate --output-type err src",
     "depgraph": "dependency-cruiser --config .dependency-cruiser.cjs --output-type mermaid src --output-to reports/dependency-graph.mmd",
@@ -110,7 +111,7 @@
     "eval:compare:v4": "npm run build && node bin/cli.mjs install && node scripts/eval/comparative-eval-v4.mjs",
     "eval:compare:v4:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/comparative-eval-v4.mjs --quick",
     "audit:high": "node scripts/ci/audit-high.mjs",
-    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run eval:e2e && npm run audit:high",
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run docs:consistency && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run eval:e2e && npm run audit:high",
     "ci:nightly": "npm run ci && npm run mutation",
     "prepare": "node scripts/prepare.mjs",
     "prepublishOnly": "npm run ci"

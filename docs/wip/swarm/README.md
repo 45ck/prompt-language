@@ -22,6 +22,8 @@ WIP note: this is an imported planning pack, not shipped syntax or committed run
 
 `swarm` should be introduced as a **declarative orchestration layer that lowers to existing prompt-language primitives**, not as a brand new autonomous runtime.
 
+This is the explicit boundary tracked by `prompt-language-1wr7.1`. The swarm pack is only in scope if it stays inside the accepted subagent-first decision in [docs/design/multi-agent-orchestration.md](../../design/multi-agent-orchestration.md).
+
 This keeps the feature aligned with the current product identity:
 
 - control-flow runtime
@@ -33,6 +35,32 @@ This keeps the feature aligned with the current product identity:
 
 **prompt language = control plane**  
 **swarm = a role-structured execution topology inside that control plane**
+
+## V1 boundary
+
+`swarm` v1 is a parent-authored macro over existing runtime behavior:
+
+- role definitions are child templates, not independent team members
+- `start` lowers to `spawn`
+- `await` lowers to parent-controlled `await` plus explicit result import
+- `return` lowers to explicit child-to-parent transport over the existing messaging model
+- final truth still lives in outer `done when:`, `review`, and `approve` gates
+
+V1 coordination patterns that fit this boundary:
+
+- manager-worker splits
+- bounded fan-out and fan-in
+- reviewer-after-workers or judge-after-workers sequences
+- observer or watchdog roles when the parent still owns ordering and completion
+
+V1 exclusions:
+
+- nested swarms
+- agent-team or peer-mesh semantics
+- shared mutable swarm scope across roles
+- autonomous delegation, work stealing, or role negotiation
+- shared task boards or team memory buses
+- any hidden scheduler or runtime that can continue coordinating outside the parent flow graph
 
 ## Recommended rollout
 

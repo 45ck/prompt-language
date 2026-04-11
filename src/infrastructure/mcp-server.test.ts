@@ -1,6 +1,5 @@
 /**
- * mcp-server tests — verifies that the MCP server module can be imported
- * and that state-reading helpers behave correctly.
+ * mcp-server tests — verifies pure formatting/state helper behavior.
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -23,6 +22,7 @@ import {
 } from './mcp-server.js';
 import { createSessionState } from '../domain/session-state.js';
 import { createFlowSpec } from '../domain/flow-spec.js';
+import { createRunNode } from '../domain/flow-node.js';
 
 let tempDir: string;
 
@@ -322,6 +322,25 @@ describe('buildStatusSummary', () => {
     const state = { ...createSessionState('s1', spec), currentNodePath: [1, 2] };
     const summary = buildStatusSummary(state);
     expect(summary.currentNodePath).toEqual([1, 2]);
+  });
+
+  it('includes timingReport after the flow completes', () => {
+    const spec = createFlowSpec('Test', [createRunNode('r1', 'npm test')]);
+    const state = {
+      ...createSessionState('s1', spec),
+      status: 'completed' as const,
+      nodeProgress: {
+        r1: {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'completed' as const,
+          startedAt: 0,
+          completedAt: 35_000,
+        },
+      },
+    };
+    const summary = buildStatusSummary(state);
+    expect(summary.timingReport).toContain('| 35.0s | run: npm test | 0 |');
   });
 });
 

@@ -15,6 +15,12 @@ Success criteria:
 - exit codes are deterministic
 - a simple run can produce an empty `diagnostics[]` and a success outcome
 
+Current status on April 11, 2026:
+
+- `validate --json` ships the shared report envelope for parse/preflight only
+- headless `run --json` / `ci --json` now ship explicit `ok | blocked | unsuccessful | failed` status with shared `diagnostics[]`, `outcomes[]`, and optional `reason`
+- the native Claude interactive path still lacks machine-readable execution reporting
+
 ## Phase 2 — reclassification
 
 Reclassify current behavior into:

@@ -135,6 +135,8 @@ Move these earlier:
 
 These should be treated as core runtime behavior, not polish.
 
+That does **not** mean they should become durable-memory semantics. It means the runtime must own them clearly enough that the memory proposal does not sprout a second restore model.
+
 ---
 
 ## 5. The retrieval stance should be more nuanced
@@ -205,6 +207,40 @@ Add a blunt rule:
 > Markdown guidance is advisory until compiled into hard gates, approvals, policies, or stateful runtime behavior.
 
 This protects the runtime's identity and prevents overclaiming what docs alone can do.
+
+## 6a. Handoff summaries are not automatically durable memory
+
+A handoff summary is useful, but it is easy to over-trust.
+
+If the runtime writes a summary such as "auth fix isolated to middleware ordering," that summary may be:
+
+- incomplete
+- stale
+- scoped only to one run
+- contradicted by later evidence
+
+### Correction
+
+Treat handoff as a restart/review artifact first:
+
+- derive it from session state and recent execution history
+- show it in status, watch, or artifacts
+- only promote parts of it into durable memory through explicit validated writes
+
+## 6b. Compaction and memory compaction must stay separate
+
+There are two different operations that can otherwise blur together:
+
+- **runtime/context compaction**: reduce active context pressure while preserving enough state to continue the current run
+- **memory curation**: expire, invalidate, merge, or prune durable memory entries over time
+
+### Correction
+
+Use different language and different mechanisms:
+
+- compaction summarizes current run context
+- TTL, invalidation, and curation manage durable memory quality
+- do not treat compaction as permission to rewrite or silently compress trusted memory
 
 ---
 
@@ -310,6 +346,24 @@ Support memory-write policies such as:
 
 This keeps durable memory closer to validated memory.
 
+## 11. The repo must not grow two checkpoint models
+
+The biggest planning risk is duplication:
+
+- memory docs talk about checkpoints, handoffs, and compaction
+- runtime/vNext docs talk about checkpoints, restore, event logs, and replay
+
+Without an explicit boundary, those strands diverge.
+
+### Correction
+
+Adopt one model:
+
+- checkpoint/restore semantics live with runtime/session-state and replay work
+- durable memory integrates through explicit read/write/promotion policies
+- handoff summaries are runtime outputs that may become artifacts
+- existing backlog should absorb the implementation, rather than opening a second checkpoint epic under memory
+
 ---
 
 ## Revised recommendation
@@ -322,14 +376,16 @@ This keeps durable memory closer to validated memory.
 4. TTL and invalidation
 5. transactional writes
 6. Markdown knowledge interop
-7. checkpoints and compaction
+7. explicit boundary docs for checkpoints, handoff, and compaction
 
 ### Add next
 
-1. filtered recall
-2. deterministic section addressing
-3. abstract retrieval surface
-4. knowledge sync/compilation
+1. checkpoint/restore implementation under runtime ownership
+2. handoff and compaction summaries in watch/status tooling
+3. filtered recall
+4. deterministic section addressing
+5. abstract retrieval surface
+6. knowledge sync/compilation
 
 ### Defer
 
@@ -337,6 +393,18 @@ This keeps durable memory closer to validated memory.
 2. blackboard memory
 3. heavy memory taxonomy
 4. casual inline judge additions
+
+## Backlog mapping
+
+The chosen model maps to backlog like this:
+
+| Concern                                   | Backlog                                        |
+| ----------------------------------------- | ---------------------------------------------- |
+| Durable memory semantics and positioning  | `prompt-language-b8kq`, `prompt-language-7g58` |
+| Strict checkpoint/restore behavior        | `prompt-language-zhog.1`                       |
+| Event log, snapshots, replay, reports     | `prompt-language-zhog.3`                       |
+| Recovery-safe compaction fallback         | `prompt-language-0ovo.5` and children          |
+| Older resume-state implementation details | `prompt-language-5syc`, `prompt-language-ea5a` |
 
 ---
 

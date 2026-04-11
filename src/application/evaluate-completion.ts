@@ -73,6 +73,10 @@ function isAbsoluteOrUnsafePath(p: string): boolean {
   return false;
 }
 
+function createFileExistsCommand(path: string): string {
+  return `node -e "process.exit(require('node:fs').existsSync('${path}') ? 0 : 1)"`;
+}
+
 /** Map a built-in predicate to the shell command that evaluates it. */
 // H#4: Support "not" prefix — recursively strip and resolve
 // H-INT-002: Environment-aware auto-detection for tests_pass/tests_fail
@@ -83,7 +87,7 @@ export function resolveBuiltinCommand(predicate: string): string | undefined {
   if (predicate.startsWith('file_exists ')) {
     const path = predicate.slice('file_exists '.length).trim();
     if (!path || !SAFE_PATH_RE.test(path) || isAbsoluteOrUnsafePath(path)) return undefined;
-    return `test -f '${path}'`;
+    return createFileExistsCommand(path);
   }
 
   // H-INT-002: For generic tests_pass/tests_fail, auto-detect the test runner

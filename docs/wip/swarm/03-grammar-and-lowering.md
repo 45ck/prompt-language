@@ -1,5 +1,22 @@
 # Grammar and Lowering
 
+## Boundary contract for v1
+
+This grammar only exists inside the accepted subagent-first boundary:
+
+- `swarm` is a declarative macro over existing `spawn` / `await` / `send` / `receive` behavior
+- the parent flow stays the sole coordinator
+- roles are child templates, not independent team actors
+- lowering must preserve an inspectable parent-authored flow graph
+
+V1 does **not** introduce:
+
+- a second scheduler or hidden swarm runtime
+- peer-to-peer coordination outside the parent flow graph
+- shared mutable swarm scope
+- autonomous delegation, task claiming, or role negotiation
+- nested swarms
+
 ## Syntax sketch
 
 ```ebnf
@@ -47,10 +64,11 @@ Validation rules:
 - each role can have at most one `return` statement
 - cyclic self-starting is disallowed in v1
 - nested `swarm` inside `role` is disallowed in v1
+- lowered execution must be equivalent to an explicit parent-authored orchestration over existing primitives
 
 ## Lowering model
 
-`swarm` is expanded before execution into ordinary runtime nodes.
+`swarm` is expanded before execution into ordinary runtime nodes. There is no swarm-specific executor after lowering.
 
 ### Lowering rule: role declaration
 
@@ -136,6 +154,8 @@ The parent alone determines:
 - whether its output is trusted
 - what to do next
 
+This is the core v1 boundary. Roles do work; they do not decide orchestration policy on behalf of the swarm runtime.
+
 ### Failure behavior
 
 V1 should not invent automatic retries or healing semantics for failed roles.
@@ -159,3 +179,14 @@ Parent should attempt:
 - compatible with current flow monitor/status model
 - compatible with existing smoke-test strategy
 - easy to render/expand in `validate`
+
+## V1 coordination patterns enabled by this lowering
+
+This lowering is sufficient for the intended v1 patterns:
+
+- manager-worker orchestration with explicit role starts and joins
+- fan-out then synthesis in the parent
+- reviewer or judge roles that run before or after worker completion
+- bounded watchdog roles that report back to the parent
+
+If a proposed pattern needs nested swarms, shared mutable role state, or autonomous peer coordination to feel natural, it is outside the v1 boundary rather than evidence that lowering is insufficient.

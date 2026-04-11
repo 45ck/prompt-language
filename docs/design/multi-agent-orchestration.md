@@ -16,6 +16,37 @@ prompt-language does **not** adopt full **agent-team semantics** in the current 
 
 This follows the architecture position paper in [docs/research/00-architecture-position.md](../research/00-architecture-position.md): prompt-language is a **meta-orchestration layer for an existing autonomous agent**, not a multi-agent platform.
 
+## Applied boundary for `swarm`
+
+This decision also governs the swarm design program tracked in `prompt-language-1wr7`.
+
+If `swarm` ships, it must ship as a **subagent-first macro** over the existing primitives:
+
+- parent-authored orchestration remains the source of truth
+- role starts lower to `spawn`
+- joins lower to `await`
+- role outputs return through explicit child-to-parent transport
+- parent gates and parent completion logic remain authoritative
+
+That means `swarm` is allowed only as syntax and lowering ergonomics for patterns the current runtime already supports in substance.
+
+### In scope for a v1 swarm surface
+
+- manager-worker orchestration
+- bounded fan-out and fan-in
+- explicit reviewer/judge follow-up after worker roles
+- observer or watchdog roles that still report to the parent flow
+
+### Out of scope for a v1 swarm surface
+
+- nested swarms
+- agent-team or peer-mesh semantics
+- shared mutable swarm scope or team memory
+- autonomous delegation, task claiming, or role negotiation
+- any hidden runtime that can continue coordinating outside the explicit parent flow graph
+
+If future swarm proposals need any of those behaviors, they are proposing a category change, not an incremental syntax feature.
+
 ## Why this boundary exists
 
 The current runtime already ships the right primitives for the product's orchestration layer:

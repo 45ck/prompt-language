@@ -7,7 +7,7 @@ export type DiagnosticPhase =
   | 'gate-eval'
   | 'render';
 export type DiagnosticSeverity = 'error' | 'warning';
-export type DiagnosticStatus = 'ok' | 'blocked';
+export type DiagnosticStatus = 'ok' | 'blocked' | 'unsuccessful' | 'failed';
 
 export interface FlowDiagnostic {
   readonly code: string;
@@ -29,6 +29,7 @@ export interface DiagnosticReport {
   readonly status: DiagnosticStatus;
   readonly diagnostics: readonly FlowDiagnostic[];
   readonly outcomes: readonly FlowOutcome[];
+  readonly reason?: string | undefined;
 }
 
 export const DIAGNOSTIC_CODE_RANGES = {
@@ -73,6 +74,80 @@ export function createDiagnosticReport(
     diagnostics,
     outcomes,
   };
+}
+
+function hasBlockingPreflightDiagnostic(diagnostics: readonly FlowDiagnostic[]): boolean {
+  return diagnostics.some(
+    (diagnostic) =>
+      diagnostic.blocksExecution && (diagnostic.kind === 'parse' || diagnostic.kind === 'profile'),
+  );
+}
+
+function hasRuntimeFailureDiagnostic(diagnostics: readonly FlowDiagnostic[]): boolean {
+  return diagnostics.some(
+    (diagnostic) =>
+      (diagnostic.kind === 'runtime' || diagnostic.kind === 'internal') &&
+      (diagnostic.blocksExecution || diagnostic.severity === 'error'),
+  );
+}
+
+function hasNegativeOutcome(outcomes: readonly FlowOutcome[]): boolean {
+  return outcomes.some((outcome) => outcome.code !== FLOW_OUTCOME_CODES.completed);
+}
+
+export function deriveExecutionReportStatus(
+  diagnostics: readonly FlowDiagnostic[],
+  outcomes: readonly FlowOutcome[],
+  fallbackStatus: DiagnosticStatus = 'ok',
+): DiagnosticStatus {
+  if (hasBlockingPreflightDiagnostic(diagnostics)) {
+    return 'blocked';
+  }
+
+  if (hasRuntimeFailureDiagnostic(diagnostics)) {
+    return 'failed';
+  }
+
+  if (hasNegativeOutcome(outcomes)) {
+    return 'unsuccessful';
+  }
+
+  return fallbackStatus;
+}
+
+export function createExecutionReport(input: {
+  readonly diagnostics?: readonly FlowDiagnostic[] | undefined;
+  readonly outcomes?: readonly FlowOutcome[] | undefined;
+  readonly reason?: string | undefined;
+  readonly status?: DiagnosticStatus | undefined;
+}): DiagnosticReport {
+  const diagnostics = input.diagnostics ?? [];
+  const outcomes = input.outcomes ?? [];
+  const report: DiagnosticReport = {
+    status:
+      input.status ??
+      deriveExecutionReportStatus(diagnostics, outcomes, diagnostics.length > 0 ? 'ok' : 'ok'),
+    diagnostics,
+    outcomes,
+  };
+
+  return input.reason == null ? report : { ...report, reason: input.reason };
+}
+
+export function deriveDiagnosticReportExitCode(
+  report: Pick<DiagnosticReport, 'status'>,
+): 0 | 1 | 2 | 3 {
+  switch (report.status) {
+    case 'blocked':
+      return 2;
+    case 'unsuccessful':
+      return 1;
+    case 'failed':
+      return 3;
+    case 'ok':
+    default:
+      return 0;
+  }
 }
 
 export function createBlockingProfileDiagnostic(

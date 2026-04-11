@@ -1,10 +1,20 @@
 # Research Reports
 
-Internal research reports synthesizing findings from 20+ external sources on prompt engineering, context engineering, agent verification, developer trust, and agentic IDE architecture. These reports inform prompt-language's design decisions and enhancement roadmap.
+Internal research reports synthesizing findings from 20+ external sources on prompt engineering, context engineering, agent verification, developer trust, and agentic IDE architecture. These reports inform prompt-language's design decisions and enhancement roadmap, but they are not the product contract.
+
+## Before you read this section
+
+| If you need...                 | Go here                              | Why                                                                     |
+| ------------------------------ | ------------------------------------ | ----------------------------------------------------------------------- |
+| To use prompt-language today   | [Guides](../guides/index.md)         | Product-first onboarding for the shipped runtime                        |
+| Exact shipped behavior         | [Reference](../reference/index.md)   | The authoritative syntax and runtime contract                           |
+| Current evidence and caveats   | [Evaluation](../evaluation/index.md) | Public evidence for what works now and where the limits still are       |
+| Near-term tracked product work | [Roadmap](../roadmap.md)             | `.beads`-backed shipped-vs-tracked status                               |
+| The longer-range thesis        | [Strategy](../strategy/index.md)     | Product positioning plus the broader bet the repo is trying to validate |
 
 ## Key insight
 
-prompt-language is **not** a chaining framework (LangChain), an optimization compiler (DSPy), or a multi-agent platform (CrewAI). It is a **meta-orchestration layer** for an existing autonomous agent (Claude Code). The DSL provides structure, sequencing, and gate enforcement — the agent provides reasoning. This distinction shapes how all external research applies to our design. See [Report 00](00-architecture-position.md) for the full argument.
+prompt-language is **not** a chaining framework (LangChain), an optimization compiler (DSPy), or a multi-agent platform (CrewAI). It is a **meta-orchestration layer** for an existing autonomous agent (Claude Code). The DSL provides structure, sequencing, and gate enforcement — the agent provides reasoning. This distinction shapes how all external research applies to our design, but it remains research framing rather than the canonical shipped feature list. See [Report 00](00-architecture-position.md) for the full argument.
 
 ## Reports
 

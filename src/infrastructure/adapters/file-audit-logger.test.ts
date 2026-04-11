@@ -115,6 +115,28 @@ describe('FileAuditLogger', () => {
     expect((record['stderr'] as string).endsWith('[truncated]')).toBe(true);
   });
 
+  it('persists node timing metadata for node_advance events', async () => {
+    const logger = new FileAuditLogger(tempDir);
+    logger.log({
+      timestamp: '2024-01-01T00:00:00.000Z',
+      event: 'node_advance',
+      command: 'run: npm test',
+      nodeId: 'r1',
+      nodeKind: 'run',
+      nodePath: '0.1',
+      durationMs: 1532,
+    });
+
+    const content = await readFile(join(tempDir, '.prompt-language', 'audit.jsonl'), 'utf-8');
+    const record = JSON.parse(content.trim()) as Record<string, unknown>;
+    expect(record['event']).toBe('node_advance');
+    expect(record['nodeId']).toBe('r1');
+    expect(record['nodeKind']).toBe('run');
+    expect(record['nodePath']).toBe('0.1');
+    expect(record['durationMs']).toBe(1532);
+    expect(record['exitCode']).toBeUndefined();
+  });
+
   it('accepts a custom stateDir parameter', async () => {
     const logger = new FileAuditLogger(tempDir, 'my-state');
     logger.log({

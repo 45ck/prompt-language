@@ -1,11 +1,15 @@
 import { defineConfig } from 'vitest/config';
 
+const isCoverageRun = process.argv.includes('--coverage');
+
 export default defineConfig({
   test: {
     environment: 'node',
     testTimeout: 15_000,
     retry: 2,
     pool: 'forks',
+    // Windows + coverage can race on coverage/.tmp writes across parallel forked files.
+    fileParallelism: !isCoverageRun,
     include: ['src/**/*.test.ts'],
     reporters: process.env['CI'] ? ['verbose', 'junit'] : ['default'],
     outputFile: { junit: './test-results/junit.xml' },

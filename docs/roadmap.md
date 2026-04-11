@@ -14,6 +14,8 @@ For feature-by-feature proposed syntax and behavior, see [WIP Features](wip/inde
 
 If a keyword or command is **not** documented in the [Language Reference](reference/index.md), treat it as **not available today**.
 
+Codex note: in this repo, "Codex support" currently means the supervised headless runner used by `run`, `ci`, `eval`, and validation/preflight. The local Codex hook scaffold exists, but it remains experimental and is not public evidence of full Claude-parity lifecycle support.
+
 ## Shipped vs tracked
 
 The runtime already ships:
@@ -48,6 +50,8 @@ These are open `.beads` items that fit the current product direction and are eas
 | -------------------------------------------------- | ----------------- | ---------------------------------------------------------- | ---------------------- |
 | Flow registry and `.flow` run/validate conventions | WIP, tracked next | Store flow files manually and invoke them with `claude -p` | `prompt-language-yd9w` |
 | MCP server exposing flow state to other AI clients | WIP, tracked next | Inspect `.prompt-language/session-state.json` directly     | `prompt-language-folr` |
+
+Interpret the MCP row narrowly: the tracked surface is flow state inspection/control, not generic host-extension management.
 
 ## WIP: platform and DX roadmap
 

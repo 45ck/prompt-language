@@ -443,18 +443,87 @@ async function evaluateExecutionPreflight(flowText, runner, mode) {
   );
 }
 
-async function printAndExitBlockedPreflight(flowText, runner, mode) {
-  const [report, { formatDiagnosticReport }] = await Promise.all([
-    evaluateExecutionPreflight(flowText, runner, mode),
+function serializeExecutionReport(report) {
+  return JSON.stringify(
+    {
+      status: report.status,
+      diagnostics: report.diagnostics,
+      outcomes: report.outcomes,
+      ...(report.reason != null ? { reason: report.reason } : {}),
+    },
+    null,
+    2,
+  );
+}
+
+async function loadDiagnosticPresentation() {
+  const [{ formatDiagnosticReport }, { deriveDiagnosticReportExitCode }] = await Promise.all([
     import(pathToFileURL(join(ROOT, 'dist', 'presentation', 'format-diagnostic-report.js')).href),
+    import(pathToFileURL(join(ROOT, 'dist', 'domain', 'diagnostic-report.js')).href),
+  ]);
+  return { formatDiagnosticReport, deriveDiagnosticReportExitCode };
+}
+
+async function printAndExitBlockedPreflight(flowText, runner, mode, options = {}) {
+  const { json = false, header = '[prompt-language preflight]' } = options;
+  const [report, { formatDiagnosticReport, deriveDiagnosticReportExitCode }] = await Promise.all([
+    evaluateExecutionPreflight(flowText, runner, mode),
+    loadDiagnosticPresentation(),
   ]);
 
   if (report.status !== 'blocked') {
     return report;
   }
 
-  console.error(formatDiagnosticReport(report));
+  if (json) {
+    console.log(serializeExecutionReport(report));
+  } else {
+    console.error(formatDiagnosticReport(report, header));
+  }
+  process.exit(deriveDiagnosticReportExitCode(report));
+}
+
+function ensureJsonSupportedForRunner(json, runner, commandName) {
+  if (!json || runner !== 'claude') {
+    return;
+  }
+
+  const report = {
+    status: 'blocked',
+    diagnostics: [
+      {
+        code: 'PLC-007',
+        kind: 'profile',
+        phase: 'session-init',
+        severity: 'error',
+        blocksExecution: true,
+        retryable: false,
+        summary: `${commandName} --json is currently supported only for headless runners (codex, opencode, ollama).`,
+        action:
+          'Use --runner codex, --runner opencode, or --runner ollama for machine-readable execution reports.',
+      },
+    ],
+    outcomes: [],
+  };
+  console.log(serializeExecutionReport(report));
   process.exit(2);
+}
+
+async function writeExecutionReport(report, options = {}) {
+  const { json = false, header = '[prompt-language report]', stdoutOnOk = false } = options;
+
+  if (json) {
+    console.log(serializeExecutionReport(report));
+    return;
+  }
+
+  const { formatDiagnosticReport } = await loadDiagnosticPresentation();
+  const text = formatDiagnosticReport(report, header);
+  if (stdoutOnOk && report.status === 'ok') {
+    console.log(text);
+    return;
+  }
+  console.error(text);
 }
 
 async function runOpenCodeFlow(flowText, model, stateDir) {
@@ -577,12 +646,7 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
     },
   );
 
-  if (result.finalState.status === 'completed') {
-    return;
-  }
-
-  const reason = result.reason ?? `Flow ended with status "${result.finalState.status}".`;
-  throw new Error(reason);
+  return result.report;
 }
 
 async function evalDataset() {
@@ -749,20 +813,46 @@ async function runFlow() {
   const args = process.argv.slice(3);
   const flowText = await readFlowText(args, 'run');
   const { runner, model, stateDir } = readRunnerOptions(args);
-  await printAndExitBlockedPreflight(flowText, runner);
+  const json = hasOption(args, '--json');
+  await printAndExitBlockedPreflight(flowText, runner, undefined, {
+    json,
+    header: '[prompt-language run]',
+  });
+  ensureJsonSupportedForRunner(json, runner, 'run');
 
   if (runner === 'codex') {
-    await runCodexFlow(flowText, model, stateDir);
+    const report = await runCodexFlow(flowText, model, stateDir);
+    if (json) {
+      console.log(serializeExecutionReport(report));
+    } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+      await writeExecutionReport(report, { header: '[prompt-language run]', stdoutOnOk: true });
+    }
+    const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+    process.exit(deriveDiagnosticReportExitCode(report));
     return;
   }
 
   if (runner === 'opencode') {
-    await runOpenCodeFlow(flowText, model, stateDir);
+    const report = await runOpenCodeFlow(flowText, model, stateDir);
+    if (json) {
+      console.log(serializeExecutionReport(report));
+    } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+      await writeExecutionReport(report, { header: '[prompt-language run]', stdoutOnOk: true });
+    }
+    const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+    process.exit(deriveDiagnosticReportExitCode(report));
     return;
   }
 
   if (runner === 'ollama') {
-    await runOllamaFlow(flowText, model, stateDir);
+    const report = await runOllamaFlow(flowText, model, stateDir);
+    if (json) {
+      console.log(serializeExecutionReport(report));
+    } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+      await writeExecutionReport(report, { header: '[prompt-language run]', stdoutOnOk: true });
+    }
+    const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+    process.exit(deriveDiagnosticReportExitCode(report));
     return;
   }
 
@@ -773,10 +863,17 @@ async function runFlow() {
     claudeArgs.push('--model', model);
   }
   claudeArgs.push(flowText);
-  execFileSync(claudeCommand, claudeArgs, {
-    stdio: 'inherit',
-    timeout: 600_000,
-  });
+  try {
+    execFileSync(claudeCommand, claudeArgs, {
+      stdio: 'inherit',
+      timeout: 600_000,
+    });
+  } catch (error) {
+    const failure = error;
+    const exitCode = typeof failure?.status === 'number' ? failure.status : 1;
+    console.error(`[prompt-language run] Claude runner exited with code ${exitCode}.`);
+    process.exit(3);
+  }
 }
 
 async function listFlows() {
@@ -1179,16 +1276,50 @@ async function ci() {
   const args = process.argv.slice(3);
   const flowText = await readFlowText(args, 'ci');
   const { runner, model, stateDir } = readRunnerOptions(args);
-  await printAndExitBlockedPreflight(flowText, runner);
+  const json = hasOption(args, '--json');
+  await printAndExitBlockedPreflight(flowText, runner, undefined, {
+    json,
+    header: '[prompt-language ci]',
+  });
+  ensureJsonSupportedForRunner(json, runner, 'ci');
 
-  console.log(`[prompt-language CI] Running flow via ${runner}...`);
+  if (!json) {
+    console.log(`[prompt-language CI] Running flow via ${runner}...`);
+  }
   try {
     if (runner === 'codex') {
-      await runCodexFlow(flowText, model, stateDir);
+      const report = await runCodexFlow(flowText, model, stateDir);
+      if (json) {
+        console.log(serializeExecutionReport(report));
+      } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+        await writeExecutionReport(report, { header: '[prompt-language ci]', stdoutOnOk: true });
+      } else {
+        console.log('[prompt-language CI] Flow completed.');
+      }
+      const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+      process.exit(deriveDiagnosticReportExitCode(report));
     } else if (runner === 'opencode') {
-      await runOpenCodeFlow(flowText, model, stateDir);
+      const report = await runOpenCodeFlow(flowText, model, stateDir);
+      if (json) {
+        console.log(serializeExecutionReport(report));
+      } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+        await writeExecutionReport(report, { header: '[prompt-language ci]', stdoutOnOk: true });
+      } else {
+        console.log('[prompt-language CI] Flow completed.');
+      }
+      const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+      process.exit(deriveDiagnosticReportExitCode(report));
     } else if (runner === 'ollama') {
-      await runOllamaFlow(flowText, model, stateDir);
+      const report = await runOllamaFlow(flowText, model, stateDir);
+      if (json) {
+        console.log(serializeExecutionReport(report));
+      } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+        await writeExecutionReport(report, { header: '[prompt-language ci]', stdoutOnOk: true });
+      } else {
+        console.log('[prompt-language CI] Flow completed.');
+      }
+      const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+      process.exit(deriveDiagnosticReportExitCode(report));
     } else if (runner === 'claude') {
       const { execFileSync } = await import('node:child_process');
       const claudeArgs = ['-p', '--dangerously-skip-permissions'];
@@ -1200,18 +1331,19 @@ async function ci() {
         stdio: 'inherit',
         timeout: 600_000, // 10 min max
       });
+      console.log('[prompt-language CI] Flow completed.');
+      process.exit(0);
     } else {
       throw new Error(
         `Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama.`,
       );
     }
-    console.log('[prompt-language CI] Flow completed.');
-    process.exit(0);
   } catch (error) {
+    const exitCode = typeof error?.status === 'number' ? error.status : 1;
     console.error(
-      `[prompt-language CI] Flow failed with exit code ${error.status ?? 1}: ${error.message ?? error}`,
+      `[prompt-language CI] Flow failed with exit code ${exitCode}: ${error.message ?? error}`,
     );
-    process.exit(error.status ?? 1);
+    process.exit(3);
   }
 }
 

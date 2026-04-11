@@ -18,7 +18,7 @@ This repo separates shipped behavior, tracked work, and exploratory material on 
 
 - The [Language Reference](reference/index.md) is the contract for shipped syntax, semantics, defaults, and CLI behavior. If a feature is not documented there, treat it as not shipped.
 - [Guides](guides/index.md) teach shipped workflows. They can link to the roadmap or WIP for context, but they should not present unshipped behavior as available now.
-- [Roadmap](roadmap.md) is the status view. Use it for shipped-versus-tracked-versus-exploratory state, not as the exact language specification.
+- [Roadmap](roadmap.md) is the status view. Use it for shipped-versus-tracked-versus-exploratory state, not as the exact language specification. The shipped list there is CI-checked against an evidence matrix.
 - [WIP Features](wip/index.md) is for proposals, imported plan packs, and design history. Content there is exploratory unless and until it is promoted into the shipped docs set.
 - [Strategy](strategy/index.md) explains the product thesis, framing, and long-term bets. It is directional, not a delivery guarantee.
 - [Research Reports](research/README.md) capture evidence and synthesis. They inform decisions but do not by themselves make a feature planned or shipped.

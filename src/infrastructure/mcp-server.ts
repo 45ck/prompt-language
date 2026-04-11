@@ -16,7 +16,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { renderFlow } from '../domain/render-flow.js';
+import { renderFlow, renderTimingReport } from '../domain/render-flow.js';
 import type { SessionState } from '../domain/session-state.js';
 import {
   resolveStateDir,
@@ -216,6 +216,7 @@ export interface FlowStatusSummary {
   iterationCount: number;
   gateCount: number;
   gatesPassing: number;
+  timingReport?: string | undefined;
 }
 
 export function buildStatusSummary(state: SessionState): FlowStatusSummary {
@@ -232,6 +233,7 @@ export function buildStatusSummary(state: SessionState): FlowStatusSummary {
     iterationCount,
     gateCount: gates.length,
     gatesPassing,
+    ...(state.status !== 'active' ? { timingReport: renderTimingReport(state) } : {}),
   };
 }
 

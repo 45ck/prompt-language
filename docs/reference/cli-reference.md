@@ -34,11 +34,30 @@ npx @45ck/prompt-language install
 
 What it does:
 
-1. Copies plugin files (dist, hooks, skills, bin) to `~/.claude/plugins/local/prompt-language/`
+1. Copies plugin files (dist, hooks, skills, commands, agents, `.claude-plugin`, bin) to `~/.claude/plugins/cache/prompt-language-local/prompt-language/<version>/`
 2. Generates a marketplace catalog (`marketplace.json`)
 3. Registers the marketplace in Claude Code settings
 4. Enables the plugin
 5. Configures the status line (if not already configured)
+
+### codex-install
+
+Install the experimental Codex scaffold into the local Codex plugin/cache directories.
+
+```bash
+npx @45ck/prompt-language codex-install
+```
+
+What it does:
+
+1. Copies the Codex-facing runtime assets (`dist`, `.codex-plugin`, `.codex`, `.agents`, `skills`, `agents`, `bin`) into the local Codex cache
+2. Registers and enables the scaffold in Codex plugin settings
+3. Writes or updates `~/.codex/config.toml` so `codex_hooks = true`
+
+Important:
+
+- this is an **experimental local scaffold**, not a claim of full Claude hook parity
+- the shipped Codex story today is still the supervised headless runner used by `run`, `ci`, and `eval`
 
 ### status
 
@@ -52,10 +71,29 @@ Example output:
 
 ```
 prompt-language v0.3.0
-  Installed:    yes (~/.claude/plugins/local/prompt-language)
+  Installed:    yes (~/.claude/plugins/cache/prompt-language-local/prompt-language/0.3.0)
   Registered:   yes
   Marketplace:  yes
   Enabled:      yes
+```
+
+### codex-status
+
+Check whether the local Codex scaffold is installed and whether `codex_hooks` is enabled.
+
+```bash
+npx @45ck/prompt-language codex-status
+```
+
+Example output:
+
+```
+prompt-language Codex scaffold v0.3.0
+  Installed:    yes
+  Registered:   yes
+  Marketplace:  yes
+  Enabled:      yes
+  codex_hooks:  yes
 ```
 
 ### uninstall
@@ -67,6 +105,14 @@ npx @45ck/prompt-language uninstall
 ```
 
 Removes plugin files, marketplace registration, and settings entries. Also removes the status line configuration if it was set by the plugin.
+
+### codex-uninstall
+
+Remove the local Codex scaffold and clean up Codex plugin settings.
+
+```bash
+npx @45ck/prompt-language codex-uninstall
+```
 
 ### init
 
@@ -91,26 +137,30 @@ claude -p "$(cat example.flow)"
 
 ### run
 
-Execute a `.flow` file or inline flow text through Claude, Codex, or OpenCode.
+Execute a `.flow` file or inline flow text through Claude or a supported headless runner.
 
 ```bash
 npx @45ck/prompt-language run --file my.flow
 npx @45ck/prompt-language run my.flow
 cat my.flow | npx @45ck/prompt-language run
 npx @45ck/prompt-language run --runner codex my.flow
+npx @45ck/prompt-language run --runner codex --json my.flow
 npx @45ck/prompt-language run --runner opencode --model opencode/gpt-5-nano my.flow
 ```
 
 Notes:
 
 1. `--runner claude` is the default.
-2. `--runner codex` and `--runner opencode` both use the headless flow runner rather than Claude's interactive hook loop.
+2. `--runner codex`, `--runner opencode`, and `--runner ollama` all use the headless flow runner rather than Claude's interactive hook loop.
 3. When `--runner codex` is selected without an explicit `--model`, prompt-language defaults to `gpt-5.2` on this workstation because the ambient Codex default may fall back to a rate-limited Spark profile.
 4. OpenCode models use the `provider/model` form, for example `opencode/gpt-5-nano`.
 5. Before execution starts, `run` performs shared preflight for runner availability and built-in gate prerequisites. A blocked preflight exits with code `2`.
 6. On this workstation, prefer hosted harness models for headless runner paths; do not install local models here just to exercise `run`.
 7. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
 8. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
+9. `run --json` is currently supported on the headless runner paths (`codex`, `opencode`, `ollama`). `run --runner claude --json` returns a blocked profile report and exits `2`.
+10. Headless `run --json` emits `{ status, diagnostics, outcomes, reason? }` and uses explicit exit codes: `0` success, `1` terminal unsuccessful outcome, `2` blocked/profile-incompatible execution, `3` failed execution.
+11. Codex support in `run` is the supervised headless path. The separate `codex-install` scaffold is experimental and should not be read as full native-lifecycle parity with Claude.
 
 ### ci
 
@@ -119,12 +169,15 @@ Run a flow in headless mode for CI or automation.
 ```bash
 npx @45ck/prompt-language ci --file my.flow
 npx @45ck/prompt-language ci --runner codex my.flow
+npx @45ck/prompt-language ci --runner codex --json my.flow
 npx @45ck/prompt-language ci --runner opencode --model opencode/gpt-5-nano my.flow
 ```
 
 This is the same headless runner path used by `run --runner codex|opencode`, so prompt quality and tool-use behavior depend on the selected model. On this workstation, `ci --runner codex` defaults to `gpt-5.2` when `--model` is omitted.
 
 `ci` also runs the shared execution preflight before starting the runner. A blocked preflight exits with code `2` instead of attempting execution.
+
+`ci --json` follows the same headless-report contract as `run --json`: `{ status, diagnostics, outcomes, reason? }` with exit codes `0`, `1`, `2`, and `3` for success, unsuccessful, blocked, and failed execution respectively. `ci --runner claude --json` returns a blocked profile report and exits `2`.
 
 ### eval
 
@@ -179,6 +232,7 @@ Notes:
 6. Headless profiles also surface warning-only UX diagnostics for interactive-only affordances such as the status line and watch mode.
 7. `validate --json` emits `{ status, diagnostics, outcomes }` plus complexity and rendered flow metadata.
 8. A blocked preflight exits with code `2`.
+9. `validate` remains preflight-only, so it never emits the `unsuccessful` or `failed` execution statuses used by headless `run` / `ci`.
 
 ### demo
 

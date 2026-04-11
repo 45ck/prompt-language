@@ -55,6 +55,11 @@ describe('HeadlessProcessSpawner', () => {
         status: 'completed',
         variables: { result: 'done' },
       } as never,
+      report: {
+        status: 'ok',
+        diagnostics: [],
+        outcomes: [],
+      },
       turns: 0,
     });
 
@@ -109,6 +114,11 @@ describe('HeadlessProcessSpawner', () => {
       finalState: {
         status: 'completed',
         variables: { result: 'done' },
+      },
+      report: {
+        status: 'ok',
+        diagnostics: [],
+        outcomes: [],
       },
       turns: 0,
     });

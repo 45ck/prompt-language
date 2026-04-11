@@ -161,6 +161,31 @@ This belongs above normal execution, not hidden inside ordinary completion seman
 
 ## The key positioning decision
 
+## Boundary decision: checkpointing is not durable memory
+
+The repo needs one clear model:
+
+- **session state** owns resumability, current execution position, pending approvals, retry progress, child status, and compaction summaries
+- **durable memory** owns curated reusable facts, procedures, and lessons with provenance
+- **handoff summaries** are restart/review aids derived from session state and recent execution history
+- **Markdown knowledge** is readable guidance, not implicit resume state
+
+That means checkpoints, restore, handoff, and compaction are runtime behaviors first. They may read from memory and may promote validated outputs into memory, but they are not just memory aliases.
+
+## Responsibility matrix
+
+| Concern                      | Default storage           | Why                                                                |
+| ---------------------------- | ------------------------- | ------------------------------------------------------------------ |
+| Current node / flow position | session state             | Must restore the exact next execution point                        |
+| Loop/retry counters          | session state             | In-flight control facts are not durable lessons                    |
+| Pending approval             | session state             | Approval state is run-specific and must fail closed                |
+| Child inbox/outbox status    | session state             | Needed for multi-agent recovery and `await` correctness            |
+| Compaction summary           | session state             | It exists to restore active context after host compaction          |
+| Handoff summary              | session state or artifact | It is a readable boundary object, not automatically trusted memory |
+| Stable procedure             | durable memory            | Reusable across runs if validated and still current                |
+| Stable project fact          | durable memory            | Reusable, inspectable, and able to be invalidated                  |
+| Policy/guidance doc          | Markdown knowledge        | Human-authored source of guidance and review context               |
+
 ### Prompt Language should not become "Markdown plus vector search"
 
 Yes, modern agent systems heavily use Markdown instruction files and Markdown knowledge bases. Yes, many systems parse, chunk, and index Markdown for retrieval.
@@ -241,6 +266,8 @@ Some memories should be written only when:
 
 This reduces fossilized bad lessons from failed or half-complete runs.
 
+This also gives checkpoints a clean role: a checkpoint may be the trigger that promotes a validated lesson, but the checkpoint itself still belongs to execution state.
+
 ### 6. Markdown knowledge interop
 
 This is important and consistent with current agent practice.
@@ -288,6 +315,8 @@ Semantic/vector-style retrieval should exist only as an adapter-backed capabilit
 Checkpointing, resumability, and handoff summaries are useful, but they should be modeled as execution-state features rather than just more long-term memory writes.
 
 Memory and checkpoints are related but not the same.
+
+The same rule applies to compaction: compaction should summarize active execution context for restart, not silently rewrite the durable memory model.
 
 ---
 
@@ -493,6 +522,13 @@ checkpoint "after_red_phase"
 handoff summary="Current failing tests isolated to auth middleware"
 ```
 
+Recommended semantics:
+
+- checkpoint captures execution/session state, with optional file snapshots where policy requires them
+- restore restores execution/session state, files, or both
+- handoff emits a readable restart/review summary
+- none of those actions implicitly commit new durable memory unless an explicit promotion policy fires
+
 ## 3. Retrieval adapters
 
 Allow optional hybrid or semantic retrieval from declared knowledge sources, but keep it behind a clear abstraction.
@@ -633,13 +669,19 @@ Ship:
 - section addressing
 - exact and filtered recall from Markdown knowledge
 
-## Phase 3 - checkpoint and handoff polish
+## Phase 3 - checkpoint and handoff runtime alignment
 
 Ship:
 
 - explicit checkpoints
 - resumable handoff summaries
 - visibility in watch/status tooling
+
+Important boundary:
+
+- these remain runtime/session-state features
+- durable memory receives only explicit promoted outputs
+- replay/event-log ownership stays with the runtime/replay backlog, not the memory DSL
 
 ## Phase 4 - retrieval adapters
 

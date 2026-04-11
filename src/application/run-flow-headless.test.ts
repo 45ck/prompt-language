@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { InMemoryCommandRunner } from '../infrastructure/adapters/in-memory-command-runner.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { FileCaptureReader } from '../infrastructure/adapters/file-capture-reader.js';
@@ -12,6 +13,7 @@ import { FileMemoryStore } from '../infrastructure/adapters/file-memory-store.js
 import { ShellCommandRunner } from '../infrastructure/adapters/shell-command-runner.js';
 import { runFlowHeadless } from './run-flow-headless.js';
 import type { PromptTurnResult, PromptTurnRunner } from './ports/prompt-turn-runner.js';
+import { FLOW_OUTCOME_CODES, RUNTIME_DIAGNOSTIC_CODES } from '../domain/diagnostic-report.js';
 import type {
   ChildStatus,
   ProcessSpawner,
@@ -55,6 +57,10 @@ class SequenceStatusProcessSpawner implements ProcessSpawner {
   }
 }
 
+function expectedFileExistsCommand(path: string): string {
+  return `node -e "process.exit(require('node:fs').existsSync('${path}') ? 0 : 1)"`;
+}
+
 describe('runFlowHeadless', () => {
   let tempDir = '';
 
@@ -67,7 +73,7 @@ describe('runFlowHeadless', () => {
   it('completes a prompt-driven flow once the gate passes', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-'));
     const commandRunner = new InMemoryCommandRunner();
-    commandRunner.setResult("test -f 'done.txt'", {
+    commandRunner.setResult(expectedFileExistsCommand('done.txt'), {
       exitCode: 0,
       stdout: '',
       stderr: '',
@@ -95,6 +101,12 @@ describe('runFlowHeadless', () => {
     );
 
     expect(result.finalState.status).toBe('completed');
+    expect(result.report.status).toBe('ok');
+    expect(result.report.outcomes).toEqual([
+      expect.objectContaining({
+        code: FLOW_OUTCOME_CODES.completed,
+      }),
+    ]);
     expect(result.turns).toBe(1);
     expect(promptRunner.prompts).toHaveLength(1);
     expect(promptRunner.prompts[0]).toContain('Create done.txt');
@@ -105,7 +117,7 @@ describe('runFlowHeadless', () => {
     await mkdir(join(tempDir, '.prompt-language', 'vars'), { recursive: true });
 
     const commandRunner = new InMemoryCommandRunner();
-    commandRunner.setResult("test -f 'answer.txt'", {
+    commandRunner.setResult(expectedFileExistsCommand('answer.txt'), {
       exitCode: 0,
       stdout: '',
       stderr: '',
@@ -172,6 +184,19 @@ describe('runFlowHeadless', () => {
     expect(result.reason).toBe(
       "PLR-005 Capture for 'answer' fell back to empty string after 3 attempts.",
     );
+    expect(result.report.status).toBe('ok');
+    expect(result.report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
+      }),
+    ]);
+    expect(result.report.outcomes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: FLOW_OUTCOME_CODES.completed,
+        }),
+      ]),
+    );
     expect(promptRunner.prompts).toHaveLength(3);
   });
 
@@ -184,7 +209,7 @@ describe('runFlowHeadless', () => {
       stdout: '',
       stderr: '',
     });
-    commandRunner.setResult("test -f 'done.txt'", {
+    commandRunner.setResult(expectedFileExistsCommand('done.txt'), {
       exitCode: 0,
       stdout: '',
       stderr: '',
@@ -262,6 +287,146 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.prompts).toHaveLength(1);
     expect(promptRunner.prompts[0]).toContain('Fix app.js so it exits 0 instead of 1.');
     expect(promptRunner.prompts[0]).toContain('done when:');
+  });
+
+  it('does not carry transient gate-failed outcomes into a later completed report', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-only-recovery-'));
+
+    const promptRunner = new RecordingPromptRunner(async ({ cwd }) => {
+      await writeFile(join(cwd, 'done.txt'), 'ok', 'utf8');
+      return { exitCode: 0, madeProgress: true };
+    });
+    const commandRunner = {
+      run: async (command: string) => {
+        if (command !== expectedFileExistsCommand('done.txt')) {
+          return { exitCode: 1, stdout: '', stderr: `unexpected command: ${command}` };
+        }
+        return {
+          exitCode: existsSync(join(tempDir, 'done.txt')) ? 0 : 1,
+          stdout: '',
+          stderr: '',
+        };
+      },
+    };
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: 'Goal: recover\n\ndone when:\n  file_exists done.txt\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.report.status).toBe('ok');
+    expect(result.report.outcomes).toEqual([
+      expect.objectContaining({
+        code: FLOW_OUTCOME_CODES.completed,
+      }),
+    ]);
+  });
+
+  it('fails gate-only flows when the prompt runner reports no observable progress', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-only-no-progress-'));
+    await writeFile(join(tempDir, 'app.js'), 'process.exit(1)\n', 'utf8');
+    await writeFile(
+      join(tempDir, 'package.json'),
+      JSON.stringify({ name: 'gate-only-no-progress-test', scripts: { test: 'node app.js' } }),
+      'utf8',
+    );
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 0,
+      assistantText: 'I inspected the failure but did not change the workspace.',
+      madeProgress: false,
+    }));
+    const commandRunner = {
+      run: async (command: string) => {
+        if (command !== 'npm test') {
+          return { exitCode: 1, stdout: '', stderr: `unexpected command: ${command}` };
+        }
+        return { exitCode: 1, stdout: '', stderr: '' };
+      },
+    };
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: 'Fix app.js so it exits 0 instead of 1.\n\ndone when:\n  tests_pass\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(1);
+    expect(result.reason).toBe(
+      'Prompt runner completed without observable workspace progress. Last assistant output: I inspected the failure but did not change the workspace.',
+    );
+    expect(result.report.status).toBe('failed');
+    expect(promptRunner.prompts).toHaveLength(1);
+  });
+
+  it('fails gate-only flows when the prompt runner exits non-zero', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-only-exit-code-'));
+    await writeFile(join(tempDir, 'app.js'), 'process.exit(1)\n', 'utf8');
+    await writeFile(
+      join(tempDir, 'package.json'),
+      JSON.stringify({ name: 'gate-only-exit-code-test', scripts: { test: 'node app.js' } }),
+      'utf8',
+    );
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 7,
+      assistantText: 'The runner aborted before applying the fix.',
+    }));
+    const commandRunner = {
+      run: async (command: string) => {
+        if (command !== 'npm test') {
+          return { exitCode: 1, stdout: '', stderr: `unexpected command: ${command}` };
+        }
+        return { exitCode: 1, stdout: '', stderr: '' };
+      },
+    };
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: 'Fix app.js so it exits 0 instead of 1.\n\ndone when:\n  tests_pass\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(1);
+    expect(result.reason).toBe(
+      'Prompt runner exited with code 7. The runner aborted before applying the fix.',
+    );
+    expect(result.report.status).toBe('failed');
+    expect(promptRunner.prompts).toHaveLength(1);
   });
 
   it('executes the final prompt before completing a multi-prompt flow', async () => {
@@ -397,6 +562,12 @@ describe('runFlowHeadless', () => {
     expect(result.finalState.status).toBe('active');
     expect(result.turns).toBe(1);
     expect(result.reason).toContain('max turn limit');
+    expect(result.report.status).toBe('unsuccessful');
+    expect(result.report.outcomes).toEqual([
+      expect.objectContaining({
+        code: FLOW_OUTCOME_CODES.budgetExhausted,
+      }),
+    ]);
     expect(promptRunner.prompts).toHaveLength(0);
   });
 
@@ -426,6 +597,37 @@ describe('runFlowHeadless', () => {
     expect(result.finalState.status).toBe('active');
     expect(result.turns).toBe(1);
     expect(result.reason).toBe('Prompt runner exited with code 42.');
+  });
+
+  it('includes assistant detail when the prompt runner exits non-zero', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-exit-code-detail-'));
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 9,
+      assistantText: 'Runner aborted after writing partial output.',
+    }));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: ['Goal: exit code', '', 'flow:', '  prompt: Create done.txt'].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(1);
+    expect(result.reason).toBe(
+      'Prompt runner exited with code 9. Runner aborted after writing partial output.',
+    );
   });
 
   it('uses the generic no-progress reason when assistant text is empty', async () => {
@@ -467,7 +669,7 @@ describe('runFlowHeadless', () => {
   it('fails cleanly when the final prompt turn leaves completion gates blocked', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-blocked-'));
     const commandRunner = new InMemoryCommandRunner();
-    commandRunner.setResult("test -f 'done.txt'", {
+    commandRunner.setResult(expectedFileExistsCommand('done.txt'), {
       exitCode: 1,
       stdout: '',
       stderr: '',
@@ -504,7 +706,57 @@ describe('runFlowHeadless', () => {
     expect(result.reason).toContain(
       'Completion gates failed: file_exists done.txt. Fix the failing checks before completing the task.',
     );
+    expect(result.report.status).toBe('unsuccessful');
+    expect(result.report.outcomes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: FLOW_OUTCOME_CODES.gateFailed,
+        }),
+      ]),
+    );
     expect(result.reason).toContain('Made a partial change');
+  });
+
+  it('omits assistant-detail suffixes when final prompt gates stay blocked and assistant text is empty', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-blocked-empty-'));
+    const commandRunner = new InMemoryCommandRunner();
+    commandRunner.setResult(expectedFileExistsCommand('done.txt'), {
+      exitCode: 1,
+      stdout: '',
+      stderr: '',
+    });
+
+    const promptRunner = new RecordingPromptRunner(async ({ cwd }) => {
+      await writeFile(join(cwd, 'notes.txt'), 'partial', 'utf8');
+      return {
+        exitCode: 0,
+        assistantText: '   \n\t   ',
+        madeProgress: true,
+      };
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText:
+          'Goal: create file\n\nflow:\n  prompt: Create done.txt\n\ndone when:\n  file_exists done.txt\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.reason).toBe(
+      'Completion gates failed: file_exists done.txt. Fix the failing checks before completing the task.',
+    );
+    expect(result.report.status).toBe('unsuccessful');
   });
 
   it('returns the classified runtime diagnostic when gate evaluation crashes', async () => {
@@ -542,6 +794,54 @@ describe('runFlowHeadless', () => {
     expect(result.finalState.status).toBe('active');
     expect(result.turns).toBe(1);
     expect(result.reason).toBe('Gate evaluation crashed: gate runner offline');
+    expect(result.report.status).toBe('failed');
+    expect(result.report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed,
+      }),
+    ]);
+  });
+
+  it('returns the classified runtime diagnostic when post-run completion evaluation crashes', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-run-only-gate-crash-'));
+
+    const crashingRunner = {
+      run: async (command: string) => {
+        if (command === 'echo ok > done.txt') {
+          return { exitCode: 0, stdout: '', stderr: '' };
+        }
+        throw new Error(`gate runner offline for ${command}`);
+      },
+    };
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText:
+          'Goal: run only\n\nflow:\n  run: echo ok > done.txt\n\ndone when:\n  file_exists done.txt\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: crashingRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: new RecordingPromptRunner(),
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('active');
+    expect(result.turns).toBe(0);
+    expect(result.reason).toBe(
+      "Gate evaluation crashed: gate runner offline for node -e \"process.exit(require('node:fs').existsSync('done.txt') ? 0 : 1)\"",
+    );
+    expect(result.report.status).toBe('failed');
+    expect(result.report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed,
+      }),
+    ]);
   });
 
   it('returns paused when spawned children are still running', async () => {

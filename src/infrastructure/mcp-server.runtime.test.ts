@@ -102,6 +102,56 @@ describe('mcp-server runtime wiring', () => {
     ]);
   });
 
+  it('returns no active session from flow_status when state is missing', async () => {
+    mockStateReader.readSessionState.mockResolvedValue(null);
+    const mod = await import('./mcp-server.js');
+    mod.startMcpServer();
+
+    const statusTool = registeredTools.find((tool) => tool.name === 'flow_status');
+    expect(statusTool).toBeDefined();
+
+    await expect(statusTool!.handler({ name: '', value: '' })).resolves.toEqual({
+      content: [{ type: 'text', text: 'No active session' }],
+    });
+    expect(mockStateReader.readSessionState).toHaveBeenCalledWith('/mock-state');
+  });
+
+  it('returns a serialized summary from flow_status when state exists', async () => {
+    const spec = createFlowSpec('Runtime status', []);
+    const state = {
+      ...createSessionState('session-1', spec),
+      status: 'completed' as const,
+      gateResults: { tests_pass: true } as Record<string, boolean>,
+      nodeProgress: {
+        r1: {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'completed' as const,
+          startedAt: 0,
+          completedAt: 35_000,
+        },
+      },
+    };
+    mockStateReader.readSessionState.mockResolvedValue(state);
+
+    const mod = await import('./mcp-server.js');
+    mod.startMcpServer();
+
+    const statusTool = registeredTools.find((tool) => tool.name === 'flow_status');
+    expect(statusTool).toBeDefined();
+
+    const result = await statusTool!.handler({ name: '', value: '' });
+    expect(result.content[0]?.type).toBe('text');
+    expect(JSON.parse(result.content[0]?.text ?? '')).toMatchObject({
+      goal: 'Runtime status',
+      status: 'completed',
+      completed: true,
+      iterationCount: 1,
+      gateCount: 0,
+      gatesPassing: 0,
+    });
+  });
+
   it('serves no-session text when resources are requested without active state', async () => {
     mockStateReader.readSessionState.mockResolvedValue(null);
     const mod = await import('./mcp-server.js');
@@ -149,6 +199,19 @@ describe('mcp-server runtime wiring', () => {
     const missingStateResult = await setVariableTool!.handler({ name: 'mode', value: 'strict' });
     expect(missingStateResult?.isError).toBe(true);
     expect(missingStateResult?.content[0]?.text).toContain('No active session');
+  });
+
+  it('deletes state and returns confirmation from flow_reset', async () => {
+    const mod = await import('./mcp-server.js');
+    mod.startMcpServer();
+
+    const resetTool = registeredTools.find((tool) => tool.name === 'flow_reset');
+    expect(resetTool).toBeDefined();
+
+    await expect(resetTool!.handler({ name: '', value: '' })).resolves.toEqual({
+      content: [{ type: 'text', text: 'Session reset. State file deleted.' }],
+    });
+    expect(mockStateReader.deleteSessionState).toHaveBeenCalledWith('/mock-state');
   });
 
   it('logs fatal error and exits when connect rejects', async () => {

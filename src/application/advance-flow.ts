@@ -1569,10 +1569,12 @@ async function advanceRunNode(
     ...(node.timeoutMs != null ? { timeoutMs: node.timeoutMs } : {}),
     ...(prepared.env != null ? { env: prepared.env } : {}),
   };
+  const runStartedAt = Date.now();
   const result = await commandRunner.run(
     command,
     Object.keys(runOptions).length > 0 ? runOptions : undefined,
   );
+  const runDurationMs = Math.max(0, Date.now() - runStartedAt);
   debugLog(
     'gate',
     `Command exit=${result.exitCode} timedOut=${String(result.timedOut ?? false)}`,
@@ -1589,6 +1591,10 @@ async function advanceRunNode(
       ...(result.timedOut ? { timedOut: true } : {}),
       stdout: result.stdout,
       stderr: result.stderr,
+      nodeId: node.id,
+      nodeKind: node.kind,
+      nodePath: current.currentNodePath.join('.'),
+      durationMs: runDurationMs,
     });
   }
 
@@ -1867,7 +1873,8 @@ export async function autoAdvanceNodes(
       continue;
     }
 
-    const result = await advanceSingleNode(
+    const nodeStartedAt = Date.now();
+    const rawResult = await advanceSingleNode(
       node,
       current,
       commandRunner,
@@ -1876,6 +1883,13 @@ export async function autoAdvanceNodes(
       auditLogger,
       memoryStore,
       messageStore,
+    );
+    const result = instrumentNodeAdvanceResult(
+      node,
+      current,
+      rawResult,
+      nodeStartedAt,
+      auditLogger,
     );
     if ('capturedPrompt' in result) {
       if (shouldContinueAutoAdvance(result)) {
@@ -2235,6 +2249,161 @@ async function advanceReceiveNode(
     completedAt: Date.now(),
   });
   return { state: advanceFromPath(s, s.currentNodePath), advanced: true };
+}
+
+function samePath(a: readonly number[], b: readonly number[]): boolean {
+  return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+function isDescendantPath(ancestor: readonly number[], descendant: readonly number[]): boolean {
+  return (
+    descendant.length > ancestor.length &&
+    ancestor.every((value, index) => value === descendant[index])
+  );
+}
+
+function describeAuditNode(node: FlowNode): string {
+  switch (node.kind) {
+    case 'prompt':
+      return `prompt: ${node.text}`;
+    case 'run':
+      return `run: ${node.command}`;
+    case 'let':
+      return `let ${node.variableName}`;
+    case 'while':
+      return `while ${node.condition}`;
+    case 'until':
+      return `until ${node.condition}`;
+    case 'retry':
+      return `retry max ${node.maxAttempts}`;
+    case 'if':
+      return `if ${node.condition}`;
+    case 'try':
+      return 'try';
+    case 'foreach':
+      return `foreach ${node.variableName}`;
+    case 'break':
+      return 'break';
+    case 'continue':
+      return 'continue';
+    case 'spawn':
+      return `spawn "${node.name}"`;
+    case 'await':
+      return `await ${node.target}`;
+    case 'approve':
+      return `approve "${node.message}"`;
+    case 'review':
+      return `review max ${node.maxRounds}`;
+    case 'race':
+      return 'race';
+    case 'foreach_spawn':
+      return `foreach-spawn ${node.variableName}`;
+    case 'remember':
+      return node.key != null ? `remember ${node.key}` : 'remember';
+    case 'send':
+      return `send "${node.target}"`;
+    case 'receive':
+      return `receive ${node.variableName}`;
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
+  }
+}
+
+function cloneNodeProgressWithTiming(
+  progress: import('../domain/session-state.js').NodeProgress,
+  startedAt: number,
+  completedAt?: number,
+): import('../domain/session-state.js').NodeProgress {
+  return {
+    iteration: progress.iteration,
+    maxIterations: progress.maxIterations,
+    status: progress.status,
+    ...(progress.branchEndOffset !== undefined
+      ? { branchEndOffset: progress.branchEndOffset }
+      : {}),
+    ...(progress.captureFailureReason !== undefined
+      ? { captureFailureReason: progress.captureFailureReason }
+      : {}),
+    ...(progress.askRetryCount !== undefined ? { askRetryCount: progress.askRetryCount } : {}),
+    startedAt,
+    ...(completedAt !== undefined ? { completedAt } : {}),
+    ...(progress.loopStartedAt !== undefined ? { loopStartedAt: progress.loopStartedAt } : {}),
+  };
+}
+
+function recordNodeTiming(
+  before: SessionState,
+  after: SessionState,
+  node: FlowNode,
+  startedAt: number,
+  finishedAt: number,
+): SessionState {
+  const previous = before.nodeProgress[node.id];
+  const next = after.nodeProgress[node.id];
+  const pathChanged = !samePath(before.currentNodePath, after.currentNodePath);
+  const enteredChild = isDescendantPath(before.currentNodePath, after.currentNodePath);
+  const completedByAdvance = pathChanged && !enteredChild;
+
+  if (!next) {
+    if (!completedByAdvance) return after;
+    return updateNodeProgress(after, node.id, {
+      iteration: previous?.iteration ?? 1,
+      maxIterations: previous?.maxIterations ?? 1,
+      status: 'completed',
+      startedAt: previous?.startedAt ?? startedAt,
+      completedAt: finishedAt,
+      ...(previous?.loopStartedAt !== undefined ? { loopStartedAt: previous.loopStartedAt } : {}),
+    });
+  }
+
+  const needsStartedAt = next.startedAt === undefined;
+  const shouldComplete =
+    next.completedAt === undefined &&
+    (next.status === 'completed' || next.status === 'failed' || completedByAdvance);
+
+  if (!needsStartedAt && !shouldComplete) return after;
+
+  const nextStatus: import('../domain/session-state.js').NodeProgress['status'] =
+    completedByAdvance && next.status !== 'awaiting_capture' && next.status !== 'failed'
+      ? 'completed'
+      : next.status;
+
+  return updateNodeProgress(
+    after,
+    node.id,
+    cloneNodeProgressWithTiming(
+      { ...next, status: nextStatus },
+      next.startedAt ?? previous?.startedAt ?? startedAt,
+      shouldComplete ? finishedAt : next.completedAt,
+    ),
+  );
+}
+
+function instrumentNodeAdvanceResult<
+  T extends AutoAdvanceResult | { state: SessionState; advanced: true },
+>(
+  node: FlowNode,
+  before: SessionState,
+  result: T,
+  startedAt: number,
+  auditLogger?: AuditLogger,
+): T {
+  const finishedAt = Date.now();
+  const state = recordNodeTiming(before, result.state, node, startedAt, finishedAt);
+
+  auditLogger?.log({
+    timestamp: new Date(finishedAt).toISOString(),
+    event: 'node_advance',
+    command: describeAuditNode(node),
+    nodeId: node.id,
+    nodeKind: node.kind,
+    nodePath: before.currentNodePath.join('.'),
+    durationMs: Math.max(0, finishedAt - startedAt),
+  });
+
+  return { ...result, state } as T;
 }
 
 /** Advance a single node by kind. Returns either an early-exit result or updated state. */

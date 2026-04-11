@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createExecutionReport,
   createFlowOutcome,
   createBlockingProfileDiagnostic,
   createDiagnosticReport,
+  deriveDiagnosticReportExitCode,
   createProfileWarningDiagnostic,
   DIAGNOSTIC_CODE_RANGES,
   FLOW_OUTCOME_CODES,
@@ -102,5 +104,101 @@ describe('diagnostic-report', () => {
     expect(diagnostic.severity).toBe('error');
     expect(diagnostic.blocksExecution).toBe(true);
     expect(diagnostic.retryable).toBe(false);
+  });
+
+  it('derives blocked execution reports from blocking preflight diagnostics', () => {
+    const report = createExecutionReport({
+      diagnostics: [
+        createBlockingProfileDiagnostic(
+          PROFILE_DIAGNOSTIC_CODES.unsupportedApprove,
+          'approve is not supported in headless mode.',
+        ),
+      ],
+    });
+
+    expect(report.status).toBe('blocked');
+    expect(deriveDiagnosticReportExitCode(report)).toBe(2);
+  });
+
+  it('derives unsuccessful execution reports from negative outcomes', () => {
+    const report = createExecutionReport({
+      outcomes: [createFlowOutcome(FLOW_OUTCOME_CODES.gateFailed, 'Completion gates failed.')],
+    });
+
+    expect(report.status).toBe('unsuccessful');
+    expect(deriveDiagnosticReportExitCode(report)).toBe(1);
+  });
+
+  it('derives failed execution reports from blocking runtime diagnostics', () => {
+    const report = createExecutionReport({
+      diagnostics: [
+        createRuntimeDiagnostic(
+          RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed,
+          'Gate evaluation crashed: network error',
+          'Fix the gate command.',
+        ),
+      ],
+      reason: 'Gate evaluation crashed: network error',
+    });
+
+    expect(report.status).toBe('failed');
+    expect(report.reason).toBe('Gate evaluation crashed: network error');
+    expect(deriveDiagnosticReportExitCode(report)).toBe(3);
+  });
+
+  it('treats internal execution errors as failed reports', () => {
+    const report = createExecutionReport({
+      diagnostics: [
+        {
+          code: 'PLI-001',
+          kind: 'internal',
+          phase: 'render',
+          severity: 'error',
+          blocksExecution: true,
+          retryable: false,
+          summary: 'Rendering crashed.',
+        },
+      ],
+    });
+
+    expect(report.status).toBe('failed');
+  });
+
+  it('returns ok exit code for successful reports', () => {
+    expect(
+      deriveDiagnosticReportExitCode({
+        status: 'ok',
+      }),
+    ).toBe(0);
+  });
+
+  it('preserves explicit fallback status when no classification signal exists yet', () => {
+    const report = createExecutionReport({
+      status: 'failed',
+      reason: 'Prompt runner completed without observable workspace progress.',
+    });
+
+    expect(report.status).toBe('failed');
+    expect(report.diagnostics).toEqual([]);
+    expect(report.outcomes).toEqual([]);
+    expect(report.reason).toContain('without observable workspace progress');
+  });
+
+  it('omits optional action fields when not provided', () => {
+    expect(
+      createBlockingProfileDiagnostic(
+        PROFILE_DIAGNOSTIC_CODES.missingRunnerBinary,
+        'runner missing',
+      ),
+    ).not.toHaveProperty('action');
+    expect(
+      createProfileWarningDiagnostic(
+        PROFILE_DIAGNOSTIC_CODES.unavailableUxSurface,
+        'Status line unavailable.',
+      ),
+    ).not.toHaveProperty('action');
+    expect(
+      createRuntimeDiagnostic(RUNTIME_DIAGNOSTIC_CODES.gateEvaluationCrashed, 'gate crashed'),
+    ).not.toHaveProperty('action');
   });
 });

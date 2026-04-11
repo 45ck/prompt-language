@@ -1,30 +1,32 @@
 # Documentation
 
-prompt-language is a control-flow runtime for Claude Code. The docs are organized so the entry surface tells you what is shipped, what is evidence, and what is only tracked or proposed.
+prompt-language is a verification-first supervision runtime for existing coding agents. This docs set keeps product docs, evidence, status, and research separate so the shipped surface is easy to find.
 
-## How to read this docs set
+## Choose your path
 
-- **Shipped today**: [guides/](guides/index.md), [reference/](reference/index.md), [examples/](examples/index.md), and [operations/](operations/index.md)
-- **Status boundary**: [roadmap.md](roadmap.md) summarizes tracked but unavailable work
-- **WIP / proposed**: [wip/](wip/index.md) holds future-facing specs, planning packs, and active design work
-- **Evidence and research**: [evaluation/](evaluation/index.md), [strategy/](strategy/index.md), and [research/](research/README.md)
+| Path     | Start here                                                      | Use it for                                                           |
+| -------- | --------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Product  | [guides/](guides/index.md), [reference/](reference/index.md)    | Learn and use the shipped runtime today                              |
+| Status   | [roadmap.md](roadmap.md), [wip/](wip/index.md)                  | Check what is tracked next, partial, or still proposed               |
+| Evidence | [evaluation/](evaluation/index.md)                              | Review measured results, QA coverage, and current caveats            |
+| Research | [strategy/](strategy/index.md), [research/](research/README.md) | Read the thesis, positioning material, and external-source syntheses |
 
-If a feature is not described in the shipped docs, treat it as unavailable today.
+If a feature is not described in the product docs, treat it as unavailable today.
 
 ## Folder map
 
-| Folder                             | Purpose                                                                       |
-| ---------------------------------- | ----------------------------------------------------------------------------- |
-| [guides/](guides/index.md)         | Tutorials, conceptual walkthroughs, and usage guidance                        |
-| [reference/](reference/index.md)   | Shipped language and runtime reference, including CLI and DSL quick refs      |
-| [design/](design/index.md)         | Architecture boundaries, canonical design docs, and superseded design history |
-| [examples/](examples/index.md)     | Worked examples and the showcase catalog                                      |
-| [evaluation/](evaluation/index.md) | Evidence, parity matrices, hypothesis sets, and QA gap analysis               |
-| [operations/](operations/index.md) | Troubleshooting and smoke/validation runbooks                                 |
-| [strategy/](strategy/index.md)     | Positioning, thesis, and long-term research direction, not shipped guarantees |
-| [research/](research/README.md)    | External research syntheses and source archive                                |
-| [wip/](wip/index.md)               | Proposed and imported future work that is not shipped today                   |
-| [roadmap.md](roadmap.md)           | Public shipped-vs-WIP boundary backed by `.beads`                             |
+| Folder                             | Purpose                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------ |
+| [guides/](guides/index.md)         | Tutorials, conceptual walkthroughs, and usage guidance                         |
+| [reference/](reference/index.md)   | Shipped language and runtime reference, including CLI and DSL quick refs       |
+| [design/](design/index.md)         | Architecture boundaries, canonical design docs, and superseded design history  |
+| [examples/](examples/index.md)     | Worked examples and the showcase catalog                                       |
+| [evaluation/](evaluation/index.md) | Evidence, parity matrices, QA coverage, and current caveats for product claims |
+| [operations/](operations/index.md) | Troubleshooting and smoke/validation runbooks                                  |
+| [strategy/](strategy/index.md)     | Product positioning and long-range thesis material, not shipped guarantees     |
+| [research/](research/README.md)    | External research syntheses and source archive that inform direction           |
+| [wip/](wip/index.md)               | Proposed and imported future work that is not shipped today                    |
+| [roadmap.md](roadmap.md)           | Public shipped-vs-WIP boundary backed by `.beads`                              |
 
 ## Start here for shipped usage
 
@@ -34,7 +36,7 @@ If a feature is not described in the shipped docs, treat it as unavailable today
 | [Language Guide](guides/language-guide.md)   | A high-level walkthrough of the runtime model and the shipped language surface         |
 | [How It Works](guides/guide.md)              | Hook lifecycle, variable state, gate trust model, and runtime mechanics                |
 
-## Shipped entry points
+## Product entry points
 
 | Area              | Entry point                                | Contents                                                              |
 | ----------------- | ------------------------------------------ | --------------------------------------------------------------------- |
@@ -43,14 +45,20 @@ If a feature is not described in the shipped docs, treat it as unavailable today
 | Operations        | [operations/index.md](operations/index.md) | Recovery paths, smoke testing, and support expectations               |
 | Design            | [design/index.md](design/index.md)         | Architecture boundaries, design decisions, and canonical design notes |
 
-## Evidence and future-facing entry points
+## Status and proposal entry points
 
-| Area            | Entry point                                | Contents                                                              |
-| --------------- | ------------------------------------------ | --------------------------------------------------------------------- |
-| Evaluation      | [evaluation/index.md](evaluation/index.md) | Comparative results, parity matrix, and QA analysis                   |
-| Strategy        | [strategy/index.md](strategy/index.md)     | Positioning, thesis, and experiment roadmap                           |
-| Future work     | [wip/index.md](wip/index.md)               | Proposed features and imported planning packs                         |
-| Status tracking | [roadmap.md](roadmap.md)                   | Public summary of tracked WIP, partial delivery, and exploratory work |
+| Area            | Entry point                  | Contents                                                          |
+| --------------- | ---------------------------- | ----------------------------------------------------------------- |
+| Status tracking | [roadmap.md](roadmap.md)     | Public summary of shipped, tracked, partial, and exploratory work |
+| Future work     | [wip/index.md](wip/index.md) | Proposed features and imported planning packs                     |
+
+## Evidence and research entry points
+
+| Area       | Entry point                                | Contents                                                             |
+| ---------- | ------------------------------------------ | -------------------------------------------------------------------- |
+| Evaluation | [evaluation/index.md](evaluation/index.md) | Comparative results, parity matrix, and QA analysis                  |
+| Strategy   | [strategy/index.md](strategy/index.md)     | Positioning, thesis, and experiment roadmap                          |
+| Research   | [research/README.md](research/README.md)   | External research reports and archived sources that inform direction |
 
 ## Research and design anchors
 

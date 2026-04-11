@@ -793,6 +793,42 @@ describe('autoAdvanceNodes — timeout propagation', () => {
     expect(receivedOptions).toHaveLength(1);
     expect(receivedOptions[0]!.timeoutMs).toBeUndefined();
   });
+
+  it('logs node timing metadata for each advanced node', async () => {
+    const logged: import('./ports/audit-logger.js').AuditEntry[] = [];
+    const auditLogger = {
+      log(entry: import('./ports/audit-logger.js').AuditEntry): void {
+        logged.push(entry);
+      },
+    };
+    const mockRunner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const spec = createFlowSpec('test', [
+      createRunNode('r1', 'npm test'),
+      createPromptNode('p1', 'done'),
+    ]);
+
+    const result = await autoAdvanceNodes(
+      createSessionState('s1', spec),
+      mockRunner,
+      undefined,
+      undefined,
+      auditLogger,
+    );
+    const nodeEntries = logged.filter((entry) => entry.event === 'node_advance');
+
+    expect(nodeEntries).toHaveLength(2);
+    expect(nodeEntries[0]?.nodeId).toBe('r1');
+    expect(nodeEntries[0]?.nodeKind).toBe('run');
+    expect(nodeEntries[0]?.nodePath).toBe('0');
+    expect(nodeEntries[0]?.durationMs).toBeGreaterThanOrEqual(0);
+    expect(nodeEntries[1]?.nodeId).toBe('p1');
+    expect(nodeEntries[1]?.nodeKind).toBe('prompt');
+    expect(nodeEntries[1]?.nodePath).toBe('1');
+    expect(result.state.nodeProgress['r1']?.completedAt).toBeDefined();
+    expect(result.state.nodeProgress['p1']?.completedAt).toBeDefined();
+  });
 });
 
 // ── spawn/await nodes ──────────────────────────────────────────────

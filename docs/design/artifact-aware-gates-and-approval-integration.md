@@ -342,14 +342,15 @@ As of April 11, 2026, this repository has accepted design notes for artifact pac
 What is currently shipped:
 
 - generic completion-gate evaluation for built-in predicates, custom commands, and boolean variables
-- generic validate/preflight checks for runner compatibility and ordinary gate prerequisites
+- variable-backed evaluation for `artifact_*` predicates and `approval_passed(...)` when runtime state includes explicit `_artifacts.<ref>` and `_approvals.<step_id>` binding records
+- validate/preflight blocking for malformed or rejected artifact-aware gate syntax such as generic `artifact_status`
 - approval flow handling through existing step state such as `approve_rejected`
 
 What is still missing for `prompt-language-50m6.7`:
 
-- artifact reference resolution from a gate predicate to one concrete artifact revision
-- gate evaluation over artifact validation, review, revision-standing, and supersession facts
-- explicit approval binding to `artifact id + revision id + run id`
-- deterministic tests for `missing`, `valid`, `invalid`, `accepted`, `rejected`, `changes_requested`, and `superseded` artifact cases
+- runtime emission of `_artifacts.<ref>` binding/state records from the artifact lifecycle itself instead of test-orchestrated/session-seeded variables
+- runtime emission of `_approvals.<step_id>` binding records from approval steps, instead of the older generic `approve_rejected` flag
+- artifact reference resolution from user-facing aliases or ids to those bound records
+- broader end-to-end coverage proving approval prompts bind to one revision and stay invalid when a newer revision supersedes it
 
 This note closes the design gap for `prompt-language-50m6.7`, but it should not be read as a claim that the bead is fully implemented or ready to close without the runtime and test work described in the bead itself.

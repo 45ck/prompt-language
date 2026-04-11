@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { appendFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -91,6 +91,7 @@ export interface EvalReplayHandle {
 
 export interface EvalCaseArtifacts {
   readonly bundlePath: string;
+  readonly candidateInputPath: string | null;
   readonly transcriptPath: string | null;
   readonly verifyStdoutPath: string | null;
   readonly verifyStderrPath: string | null;
@@ -129,6 +130,13 @@ export interface EvalArtifactBundle {
     readonly passed: boolean;
     readonly verifyExitCode: number | null;
   };
+  readonly baseline?:
+    | {
+        readonly reportPath: string;
+        readonly reportCandidate: EvalCandidate;
+        readonly runId: string | null;
+      }
+    | undefined;
   readonly replay: EvalReplayHandle;
 }
 
@@ -146,6 +154,25 @@ export interface EvalResolvedRun {
   readonly artifacts?: EvalCaseArtifacts | undefined;
 }
 
+export type EvalAnnotationKind =
+  | 'triage'
+  | 'promotion_review'
+  | 'judge_calibration'
+  | 'interesting_pass'
+  | 'blocked_run_review';
+
+export interface EvalRunAnnotation {
+  readonly annotationId: string;
+  readonly runId: string;
+  readonly author: string;
+  readonly createdAt: string;
+  readonly kind: EvalAnnotationKind;
+  readonly verdict: string;
+  readonly score?: number | undefined;
+  readonly notes?: string | undefined;
+  readonly rubricRef?: string | undefined;
+}
+
 export interface RunEvalDatasetOptions {
   readonly candidate?: EvalCandidate | undefined;
   readonly datasetPath: string;
@@ -153,6 +180,7 @@ export interface RunEvalDatasetOptions {
   readonly model?: string | undefined;
   readonly timeoutMs?: number | undefined;
   readonly baselineReport?: EvalRunReport | undefined;
+  readonly baselineReportPath?: string | undefined;
   readonly outputPath?: string | undefined;
 }
 
@@ -333,6 +361,7 @@ function buildCaseArtifacts(
   outputPath: string,
   runId: string,
   result: {
+    readonly candidateInput?: string | undefined;
     readonly harnessOutput?: string | undefined;
     readonly verifyStdout?: string | undefined;
     readonly verifyStderr?: string | undefined;
@@ -342,6 +371,10 @@ function buildCaseArtifacts(
   const runDirectory = join(dirname(resolve(outputPath)), RUNS_DIRECTORY, runId);
   return {
     bundlePath: join(runDirectory, 'manifest.json'),
+    candidateInputPath:
+      result.candidateInput != null && result.candidateInput.length > 0
+        ? join(runDirectory, 'candidate-input.txt')
+        : null,
     transcriptPath:
       result.harnessOutput != null && result.harnessOutput.length > 0
         ? join(runDirectory, 'transcript.md')
@@ -395,6 +428,7 @@ interface EvalArtifactBundleDraft {
   readonly generatedAt: string;
   readonly caseSpec: EvalDatasetCase;
   readonly result: EvalCaseResult;
+  readonly candidateInput?: string | undefined;
 }
 
 export function isEvalCandidate(value: string): value is EvalCandidate {
@@ -698,6 +732,8 @@ function createArtifactBundle(input: {
   readonly harness: string;
   readonly model?: string | undefined;
   readonly commit?: string | undefined;
+  readonly baselineReportPath?: string | undefined;
+  readonly baselineCandidate?: EvalCandidate | undefined;
   readonly draft: EvalArtifactBundleDraft;
 }): EvalArtifactBundle {
   const { caseSpec, generatedAt, result } = input.draft;
@@ -739,6 +775,15 @@ function createArtifactBundle(input: {
       passed: result.passed,
       verifyExitCode: result.verifyExitCode ?? null,
     },
+    ...(input.baselineReportPath != null && input.baselineCandidate != null
+      ? {
+          baseline: {
+            reportPath: resolve(input.baselineReportPath),
+            reportCandidate: input.baselineCandidate,
+            runId: result.baselineRunId ?? null,
+          },
+        }
+      : {}),
     replay:
       result.replay ??
       buildReplayHandle({
@@ -762,6 +807,8 @@ async function writeEvalArtifactBundles(input: {
   readonly harness: string;
   readonly model?: string | undefined;
   readonly commit?: string | undefined;
+  readonly baselineReportPath?: string | undefined;
+  readonly baselineCandidate?: EvalCandidate | undefined;
   readonly drafts: readonly EvalArtifactBundleDraft[];
 }): Promise<void> {
   for (const draft of input.drafts) {
@@ -769,6 +816,7 @@ async function writeEvalArtifactBundles(input: {
     if (artifacts == null) continue;
 
     await mkdir(dirname(artifacts.bundlePath), { recursive: true });
+    await writeArtifactContent(artifacts.candidateInputPath, draft.candidateInput);
     await writeArtifactContent(artifacts.transcriptPath, draft.result.harnessOutput);
     await writeArtifactContent(artifacts.verifyStdoutPath, draft.result.verifyStdout);
     await writeArtifactContent(artifacts.verifyStderrPath, draft.result.verifyStderr);
@@ -780,6 +828,8 @@ async function writeEvalArtifactBundles(input: {
       harness: input.harness,
       ...(input.model != null ? { model: input.model } : {}),
       ...(input.commit != null ? { commit: input.commit } : {}),
+      ...(input.baselineReportPath != null ? { baselineReportPath: input.baselineReportPath } : {}),
+      ...(input.baselineCandidate != null ? { baselineCandidate: input.baselineCandidate } : {}),
       draft,
     });
     await writeFile(artifacts.bundlePath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
@@ -818,9 +868,10 @@ export async function runEvalDataset(
         generatedAt: reportGeneratedAt,
       });
       const baselineCase = baselineCaseIndex.get(makeBaselineCaseKey(caseSpec.id, repeatIndex + 1));
+      let candidateInput: string | undefined;
       try {
         const sourceText = await resolvedDeps.loadInputText(caseSpec, workspace);
-        const candidateInput = buildCandidateInput(caseSpec, sourceText, candidate);
+        candidateInput = buildCandidateInput(caseSpec, sourceText, candidate);
         const shouldRunFlow = caseSpec.inputType === 'flow' || candidate === 'gated';
         const harnessOutput = shouldRunFlow
           ? await resolvedDeps.runFlow(candidateInput, {
@@ -859,6 +910,7 @@ export async function runEvalDataset(
           ...(options.outputPath != null
             ? {
                 artifacts: buildCaseArtifacts(options.outputPath, runId, {
+                  candidateInput,
                   harnessOutput,
                   verifyStdout: verify.stdout,
                   verifyStderr: verify.stderr,
@@ -874,6 +926,7 @@ export async function runEvalDataset(
           generatedAt: reportGeneratedAt,
           caseSpec,
           result,
+          candidateInput,
         });
       } catch (error) {
         const result: EvalCaseResult = {
@@ -902,6 +955,7 @@ export async function runEvalDataset(
           ...(options.outputPath != null
             ? {
                 artifacts: buildCaseArtifacts(options.outputPath, runId, {
+                  candidateInput,
                   error: error instanceof Error ? error.message : String(error),
                 }),
               }
@@ -913,6 +967,7 @@ export async function runEvalDataset(
           generatedAt: reportGeneratedAt,
           caseSpec,
           result,
+          candidateInput,
         });
       } finally {
         try {
@@ -960,6 +1015,12 @@ export async function runEvalDataset(
       harness,
       ...(options.model != null ? { model: options.model } : {}),
       ...(commit != null ? { commit } : {}),
+      ...(options.baselineReportPath != null
+        ? { baselineReportPath: options.baselineReportPath }
+        : {}),
+      ...(options.baselineReport != null
+        ? { baselineCandidate: options.baselineReport.candidate }
+        : {}),
       drafts: artifactBundleDrafts,
     });
   }
@@ -983,6 +1044,104 @@ export async function readEvalReport(reportPath: string): Promise<EvalRunReport>
 
 export async function readEvalArtifactBundle(bundlePath: string): Promise<EvalArtifactBundle> {
   return JSON.parse(await readFile(bundlePath, 'utf8')) as EvalArtifactBundle;
+}
+
+export async function appendEvalRunAnnotation(
+  bundlePath: string,
+  annotation: EvalRunAnnotation,
+): Promise<EvalArtifactBundle> {
+  const bundle = await readEvalArtifactBundle(bundlePath);
+  if (annotation.runId !== bundle.runId) {
+    throw new Error(
+      `Annotation run "${annotation.runId}" does not match bundle run "${bundle.runId}".`,
+    );
+  }
+
+  const annotationPath =
+    bundle.artifacts.annotationPath ?? join(dirname(resolve(bundlePath)), 'annotation.jsonl');
+  await mkdir(dirname(annotationPath), { recursive: true });
+  await appendFile(annotationPath, `${JSON.stringify(annotation)}\n`, 'utf8');
+
+  if (bundle.artifacts.annotationPath === annotationPath) {
+    return bundle;
+  }
+
+  const updatedBundle: EvalArtifactBundle = {
+    ...bundle,
+    artifacts: {
+      ...bundle.artifacts,
+      annotationPath,
+    },
+  };
+  await writeFile(bundlePath, `${JSON.stringify(updatedBundle, null, 2)}\n`, 'utf8');
+  return updatedBundle;
+}
+
+export async function readEvalRunAnnotations(
+  bundlePath: string,
+): Promise<readonly EvalRunAnnotation[]> {
+  const bundle = await readEvalArtifactBundle(bundlePath);
+  if (bundle.artifacts.annotationPath == null) return [];
+
+  const text = await readFile(bundle.artifacts.annotationPath, 'utf8');
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line) as EvalRunAnnotation);
+}
+
+async function loadEvalDatasetCaseById(
+  datasetPath: string,
+  caseId: string,
+): Promise<EvalDatasetCase> {
+  const cases = parseEvalDatasetJsonl(await readFile(datasetPath, 'utf8'));
+  const caseSpec = cases.find((candidateCase) => candidateCase.id === caseId);
+  if (caseSpec == null) {
+    throw new Error(`Dataset "${datasetPath}" does not contain eval case "${caseId}".`);
+  }
+  return caseSpec;
+}
+
+export async function replayEvalRunById(
+  reportPath: string,
+  runId: string,
+  options: Omit<
+    RunEvalDatasetOptions,
+    'baselineReport' | 'baselineReportPath' | 'candidate' | 'datasetPath' | 'repeat'
+  > = {},
+  deps?: Partial<DatasetRunnerDeps>,
+): Promise<EvalRunReport> {
+  const report = await readEvalReport(reportPath);
+  const resolvedRun = resolveEvalRunById(report, runId);
+  if (resolvedRun == null) {
+    throw new Error(`Run "${runId}" was not found in eval report "${reportPath}".`);
+  }
+  if (resolvedRun.replay?.mode === 'evidence_only') {
+    throw new Error(`Run "${runId}" cannot be replayed because it is marked "evidence_only".`);
+  }
+
+  const caseSpec = await loadEvalDatasetCaseById(resolvedRun.datasetPath, resolvedRun.caseId);
+  const bundle =
+    resolvedRun.artifacts?.bundlePath != null
+      ? await readEvalArtifactBundle(resolvedRun.artifacts.bundlePath)
+      : undefined;
+  const baselineReportPath = bundle?.baseline?.reportPath;
+  const baselineReport =
+    baselineReportPath != null ? await readEvalReport(baselineReportPath) : undefined;
+
+  return runEvalDataset(
+    [caseSpec],
+    {
+      ...options,
+      datasetPath: resolvedRun.datasetPath,
+      candidate: resolvedRun.candidate,
+      repeat: 1,
+      ...(resolvedRun.model != null ? { model: resolvedRun.model } : {}),
+      ...(baselineReport != null ? { baselineReport, baselineReportPath } : {}),
+    },
+    deps,
+  );
 }
 
 export function resolveEvalRunById(

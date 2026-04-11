@@ -1,14 +1,17 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  appendEvalRunAnnotation,
   buildCandidateInput,
   compareEvalReports,
   parseEvalDatasetJsonl,
   readEvalArtifactBundle,
   readEvalReport,
+  readEvalRunAnnotations,
+  replayEvalRunById,
   resolveEvalRunById,
   runEvalDataset,
   runEvalDatasetFromFile,
@@ -355,11 +358,17 @@ describe('eval-dataset-runner', () => {
 
       const bundlePath = firstCase?.artifacts?.bundlePath;
       expect(bundlePath).toBeDefined();
-      const bundle = await readEvalArtifactBundle(bundlePath!);
+      if (bundlePath == null) {
+        throw new Error('Expected bundlePath to be defined for persisted eval artifacts.');
+      }
+      const bundle = await readEvalArtifactBundle(bundlePath);
       expect(bundle.kind).toBe('prompt-language-eval-artifact-bundle');
       expect(bundle.dataset.caseId).toBe('case-a');
       expect(bundle.summary.verifyExitCode).toBe(0);
       expect(bundle.replay.runId).toBe(firstCase?.runId);
+      await expect(readFile(bundle.artifacts.candidateInputPath!, 'utf8')).resolves.toContain(
+        'Goal: eval case-a',
+      );
       await expect(readFile(bundle.artifacts.transcriptPath!, 'utf8')).resolves.toBe('unused');
       await expect(readFile(bundle.artifacts.verifyStdoutPath!, 'utf8')).resolves.toBe('ok');
 
@@ -520,6 +529,36 @@ describe('eval-dataset-runner', () => {
     const tempDir = await mkdtemp(join(tmpdir(), 'pl-eval-baseline-lineage-'));
     try {
       const outputPath = join(tempDir, 'reports', 'candidate.json');
+      const baselinePath = join(tempDir, 'reports', 'baseline.json');
+      await mkdir(join(tempDir, 'reports'), { recursive: true });
+      const baselineReport: EvalRunReport = {
+        schemaVersion: 1,
+        kind: 'prompt-language-eval-report',
+        generatedAt: '2026-04-10T00:00:00.000Z',
+        datasetPath: '/tmp/datasets/e1.jsonl',
+        datasetName: 'e1.jsonl',
+        harness: 'codex',
+        candidate: 'vanilla',
+        repeat: 1,
+        summary: {
+          totalRuns: 1,
+          passedRuns: 1,
+          failedRuns: 0,
+          passRate: 1,
+          averageDurationMs: 10,
+        },
+        cases: [
+          {
+            caseId: 'case-a',
+            repeat: 1,
+            candidate: 'vanilla',
+            passed: true,
+            durationMs: 10,
+            runId: 'baseline.case-a.r1',
+          },
+        ],
+      };
+      await writeFile(baselinePath, `${JSON.stringify(baselineReport, null, 2)}\n`, 'utf8');
       const report = await runEvalDataset(
         [
           {
@@ -533,33 +572,8 @@ describe('eval-dataset-runner', () => {
         {
           datasetPath: '/tmp/datasets/e1.jsonl',
           outputPath,
-          baselineReport: {
-            schemaVersion: 1,
-            kind: 'prompt-language-eval-report',
-            generatedAt: '2026-04-10T00:00:00.000Z',
-            datasetPath: '/tmp/datasets/e1.jsonl',
-            datasetName: 'e1.jsonl',
-            harness: 'codex',
-            candidate: 'vanilla',
-            repeat: 1,
-            summary: {
-              totalRuns: 1,
-              passedRuns: 1,
-              failedRuns: 0,
-              passRate: 1,
-              averageDurationMs: 10,
-            },
-            cases: [
-              {
-                caseId: 'case-a',
-                repeat: 1,
-                candidate: 'vanilla',
-                passed: true,
-                durationMs: 10,
-                runId: 'baseline.case-a.r1',
-              },
-            ],
-          },
+          baselineReport,
+          baselineReportPath: baselinePath,
         },
         {
           now: vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(15),
@@ -588,8 +602,204 @@ describe('eval-dataset-runner', () => {
       const bundle = await readEvalArtifactBundle(caseResult?.artifacts?.bundlePath ?? '');
       expect(bundle.execution.regressionClassification).toBe('product_regression');
       expect(bundle.summary.verifyExitCode).toBe(1);
+      expect(bundle.baseline).toEqual({
+        reportPath: baselinePath,
+        reportCandidate: 'vanilla',
+        runId: 'baseline.case-a.r1',
+      });
       expect(bundle.replay.mode).toBe('rerun_from_dataset');
       await expect(readFile(bundle.artifacts.verifyStderrPath!, 'utf8')).resolves.toBe('failed');
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('stores human annotations with bundle provenance', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'pl-eval-annotations-'));
+    try {
+      const outputPath = join(tempDir, 'reports', 'candidate.json');
+      const report = await runEvalDataset(
+        [
+          {
+            id: 'case-a',
+            fixture: './fixtures/a',
+            inputType: 'prompt',
+            inputFile: 'task.txt',
+            verify: 'node test.js',
+          },
+        ],
+        {
+          datasetPath: '/tmp/datasets/e1.jsonl',
+          outputPath,
+        },
+        {
+          now: vi.fn().mockReturnValueOnce(0).mockReturnValueOnce(15),
+          getHarnessName: vi.fn().mockResolvedValue('codex'),
+          prepareWorkspace: vi.fn().mockResolvedValue({
+            cwd: '/tmp/work',
+            cleanup: vi.fn().mockResolvedValue(undefined),
+          }),
+          loadInputText: vi.fn().mockResolvedValue('Fix the failing tests'),
+          runPrompt: vi.fn().mockResolvedValue('done'),
+          runFlow: vi.fn().mockResolvedValue('unused'),
+          verifyWorkspace: vi.fn().mockResolvedValue({ passed: true, stdout: 'ok', stderr: '' }),
+        },
+      );
+
+      const runId = report.cases[0]?.runId;
+      const bundlePath = report.cases[0]?.artifacts?.bundlePath;
+      expect(runId).toBeDefined();
+      expect(bundlePath).toBeDefined();
+
+      const annotation = {
+        annotationId: 'ann-1',
+        runId: runId!,
+        author: 'alice',
+        createdAt: '2026-04-11T00:00:00.000Z',
+        kind: 'promotion_review' as const,
+        verdict: 'observe_only',
+        notes: 'Useful repro, but not ready for bank insertion.',
+        rubricRef: 'promo.v1',
+      };
+
+      if (bundlePath == null) {
+        throw new Error('Expected bundlePath to be defined for persisted eval artifacts.');
+      }
+
+      const updatedBundle = await appendEvalRunAnnotation(bundlePath, annotation);
+      expect(updatedBundle.artifacts.annotationPath).toContain('annotation.jsonl');
+      await expect(readEvalRunAnnotations(bundlePath)).resolves.toEqual([annotation]);
+      await expect(readFile(updatedBundle.artifacts.annotationPath!, 'utf8')).resolves.toContain(
+        '"annotationId":"ann-1"',
+      );
+    } finally {
+      await rm(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it('replays a saved run id from a persisted report and reloads the locked baseline reference', async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), 'pl-eval-replay-by-run-id-'));
+    try {
+      const datasetPath = join(tempDir, 'datasets', 'suite.jsonl');
+      const baselinePath = join(tempDir, 'reports', 'baseline.json');
+      const outputPath = join(tempDir, 'reports', 'candidate.json');
+      const replayOutputPath = join(tempDir, 'reports', 'candidate-replay.json');
+      await mkdir(join(tempDir, 'datasets'), { recursive: true });
+      await mkdir(join(tempDir, 'reports'), { recursive: true });
+
+      await writeFile(
+        datasetPath,
+        `${JSON.stringify({
+          id: 'case-a',
+          fixture: './fixtures/a',
+          input_type: 'prompt',
+          input_file: 'task.txt',
+          verify: 'node test.js',
+        })}\n`,
+        'utf8',
+      );
+
+      const baselineReport: EvalRunReport = {
+        schemaVersion: 1,
+        kind: 'prompt-language-eval-report',
+        generatedAt: '2026-04-10T00:00:00.000Z',
+        datasetPath,
+        datasetName: 'suite.jsonl',
+        harness: 'codex',
+        candidate: 'vanilla',
+        repeat: 1,
+        summary: {
+          totalRuns: 1,
+          passedRuns: 1,
+          failedRuns: 0,
+          passRate: 1,
+          averageDurationMs: 10,
+        },
+        cases: [
+          {
+            caseId: 'case-a',
+            repeat: 1,
+            candidate: 'vanilla',
+            passed: true,
+            durationMs: 10,
+            runId: 'baseline.case-a.r1',
+          },
+        ],
+      };
+      await writeFile(baselinePath, `${JSON.stringify(baselineReport, null, 2)}\n`, 'utf8');
+
+      let tick = 0;
+      const report = await runEvalDataset(
+        [
+          {
+            id: 'case-a',
+            fixture: './fixtures/a',
+            inputType: 'prompt',
+            inputFile: 'task.txt',
+            verify: 'node test.js',
+          },
+        ],
+        {
+          datasetPath,
+          outputPath,
+          baselineReport,
+          baselineReportPath: baselinePath,
+        },
+        {
+          now: vi.fn(() => {
+            const current = tick;
+            tick += 10;
+            return current;
+          }),
+          getHarnessName: vi.fn().mockResolvedValue('codex'),
+          prepareWorkspace: vi.fn().mockResolvedValue({
+            cwd: '/tmp/work',
+            cleanup: vi.fn().mockResolvedValue(undefined),
+          }),
+          loadInputText: vi.fn().mockResolvedValue('Fix the failing tests'),
+          runPrompt: vi.fn().mockResolvedValue('done'),
+          runFlow: vi.fn().mockResolvedValue('unused'),
+          verifyWorkspace: vi.fn().mockResolvedValue({ passed: true, stdout: 'ok', stderr: '' }),
+        },
+      );
+
+      const replayed = await replayEvalRunById(
+        outputPath,
+        report.cases[0]?.runId ?? '',
+        {
+          outputPath: replayOutputPath,
+        },
+        {
+          now: vi.fn(() => {
+            const current = tick;
+            tick += 10;
+            return current;
+          }),
+          getHarnessName: vi.fn().mockResolvedValue('codex'),
+          prepareWorkspace: vi.fn().mockResolvedValue({
+            cwd: '/tmp/work',
+            cleanup: vi.fn().mockResolvedValue(undefined),
+          }),
+          loadInputText: vi.fn().mockResolvedValue('Fix the failing tests'),
+          runPrompt: vi.fn().mockResolvedValue('done'),
+          runFlow: vi.fn().mockResolvedValue('unused'),
+          verifyWorkspace: vi.fn().mockResolvedValue({ passed: true, stdout: 'ok', stderr: '' }),
+        },
+      );
+
+      expect(replayed.cases).toHaveLength(1);
+      expect(replayed.cases[0]?.caseId).toBe('case-a');
+      expect(replayed.cases[0]?.candidate).toBe('gated');
+      expect(replayed.cases[0]?.baselineRunId).toBe('baseline.case-a.r1');
+
+      const replayedBundle = await readEvalArtifactBundle(
+        replayed.cases[0]?.artifacts?.bundlePath ?? '',
+      );
+      expect(replayedBundle.baseline).toEqual({
+        reportPath: baselinePath,
+        reportCandidate: 'vanilla',
+        runId: 'baseline.case-a.r1',
+      });
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }

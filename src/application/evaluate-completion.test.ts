@@ -1365,3 +1365,147 @@ describe('evaluateCompletion — N_of() composite gate', () => {
     expect(result.blocked).toBe(true);
   });
 });
+
+describe('evaluateCompletion — artifact-aware gates', () => {
+  it('evaluates artifact and approval gates from structured runtime records', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec(
+      'artifact gates',
+      [],
+      [
+        createCompletionGate('artifact_valid deploy_plan'),
+        createCompletionGate('artifact_accepted deploy_plan'),
+        createCompletionGate('artifact_active deploy_plan'),
+        createCompletionGate('approval_passed("review_deploy_plan")'),
+      ],
+    );
+    const session = createSessionState('s-artifact-accepted', spec);
+    await store.save({
+      ...session,
+      variables: {
+        ...session.variables,
+        '_artifacts.deploy_plan': {
+          artifactId: 'deploy-plan',
+          revisionId: 'rev-2',
+          runId: 'run-7',
+          validationState: 'valid',
+          reviewState: 'accepted',
+          revisionState: 'active',
+        },
+        '_approvals.review_deploy_plan': {
+          artifactId: 'deploy-plan',
+          revisionId: 'rev-2',
+          runId: 'run-7',
+          outcome: 'approved',
+        },
+      },
+    });
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(result.gateResults).toEqual({
+      'artifact_valid deploy_plan': true,
+      'artifact_accepted deploy_plan': true,
+      'artifact_active deploy_plan': true,
+      'approval_passed("review_deploy_plan")': true,
+    });
+
+    const saved = await store.loadCurrent();
+    expect(saved?.status).toBe('completed');
+  });
+
+  it('supports flattened state records for invalid, reviewed, and superseded artifacts', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec(
+      'artifact gates',
+      [],
+      [
+        createCompletionGate('artifact_invalid(deploy_plan)'),
+        createCompletionGate('artifact_reviewed deploy_plan'),
+        createCompletionGate('artifact_changes_requested deploy_plan'),
+        createCompletionGate('artifact_superseded deploy_plan'),
+      ],
+    );
+    const session = createSessionState('s-artifact-superseded', spec);
+    await store.save({
+      ...session,
+      variables: {
+        ...session.variables,
+        '_artifacts.deploy_plan.artifact_id': 'deploy-plan',
+        '_artifacts.deploy_plan.revision_id': 'rev-3',
+        '_artifacts.deploy_plan.run_id': 'run-8',
+        '_artifacts.deploy_plan.validation_state': 'invalid',
+        '_artifacts.deploy_plan.review_state': 'changes_requested',
+        '_artifacts.deploy_plan.revision_state': 'superseded',
+      },
+    });
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(false);
+    expect(result.gateResults).toEqual({
+      'artifact_invalid(deploy_plan)': true,
+      'artifact_reviewed deploy_plan': true,
+      'artifact_changes_requested deploy_plan': true,
+      'artifact_superseded deploy_plan': true,
+    });
+  });
+
+  it('requires explicit artifact binding for approval_passed instead of generic approve state', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec(
+      'artifact gates',
+      [],
+      [createCompletionGate('approval_passed("review_deploy_plan")')],
+    );
+    const session = createSessionState('s-approval-binding', spec);
+    await store.save({
+      ...session,
+      variables: {
+        ...session.variables,
+        approve_rejected: 'false',
+        '_approvals.review_deploy_plan.outcome': 'approved',
+      },
+    });
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+    expect(result.gateResults['approval_passed("review_deploy_plan")']).toBe(false);
+  });
+
+  it('blocks malformed special gates before evaluation, including nested composite gates', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec(
+      'artifact gates',
+      [],
+      [
+        {
+          predicate: 'any(artifact_valid deploy_plan, approval_passed())',
+          any: [
+            createCompletionGate('artifact_valid deploy_plan'),
+            createCompletionGate('approval_passed()'),
+          ],
+        },
+      ],
+    );
+    const session = createSessionState('s-artifact-invalid-syntax', spec);
+    await store.save(session);
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+    expect(result.diagnostics).toEqual([
+      expect.objectContaining({
+        code: 'PLR-007',
+        summary: 'approval_passed requires exactly one approval step id.',
+      }),
+    ]);
+    expect(runner.executedCommands).toEqual([]);
+  });
+});

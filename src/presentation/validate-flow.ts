@@ -1,5 +1,9 @@
 import { parseFlow } from '../application/parse-flow.js';
-import { createDiagnosticReport, type DiagnosticReport } from '../domain/diagnostic-report.js';
+import {
+  createBlockingProfileDiagnostic,
+  createDiagnosticReport,
+  type DiagnosticReport,
+} from '../domain/diagnostic-report.js';
 import {
   runExecutionPreflight,
   type ExecutionMode,
@@ -11,6 +15,9 @@ import { renderFlow } from '../domain/render-flow.js';
 import { createSessionState } from '../domain/session-state.js';
 import { formatDiagnosticReport } from './format-diagnostic-report.js';
 import { expandSwarmDocument } from '../application/lower-swarm.js';
+import { collectSpecialGatePredicateIssues } from '../application/artifacts/artifact-gate-state.js';
+
+const UNSUPPORTED_SPECIAL_GATE_PROFILE_DIAGNOSTIC_CODE = 'PLC-009';
 
 export interface ValidateFlowPreview {
   readonly complexity: number;
@@ -55,16 +62,28 @@ export function buildValidateFlowPreview(
           },
           { probeRunnerBinary: options.probeRunnerBinary },
         );
+  const specialGateDiagnostics = collectSpecialGatePredicateIssues(spec.completionGates).map(
+    (issue) =>
+      createBlockingProfileDiagnostic(
+        UNSUPPORTED_SPECIAL_GATE_PROFILE_DIAGNOSTIC_CODE,
+        issue.summary,
+        issue.action,
+      ),
+  );
+  const mergedReport =
+    specialGateDiagnostics.length === 0
+      ? report
+      : createDiagnosticReport([...report.diagnostics, ...specialGateDiagnostics], report.outcomes);
 
   const preflightSection =
-    report.diagnostics.length > 0 ? ['', formatDiagnosticReport(report)] : [];
+    mergedReport.diagnostics.length > 0 ? ['', formatDiagnosticReport(mergedReport)] : [];
 
   return {
     complexity,
     ...(expanded.loweredFlowText != null ? { expandedFlow: expanded.loweredFlowText } : {}),
     lintWarningCount: lintWarnings.length,
     renderedFlow: rendered,
-    report,
+    report: mergedReport,
     output: [
       '[prompt-language validate] Flow parsed successfully.',
       `Complexity: ${complexity}/5`,

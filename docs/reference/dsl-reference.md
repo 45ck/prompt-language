@@ -1,6 +1,11 @@
 # DSL Reference
 
-The prompt-language DSL defines control-flow programs using thirteen primitives: `prompt`, `run`, `while`, `until`, `retry`, `if`, `try/catch`, `foreach`, `let/var`, `break`, `continue`, `spawn`, and `await`. Programs are composed by nesting these primitives. Blocks use indentation with explicit `end` keywords.
+The prompt-language DSL defines control-flow programs using a small core syntax
+(`prompt`, `run`, `while`, `until`, `retry`, `if`, `try/catch`, `foreach`,
+`let/var`, `break`, `continue`, `spawn`, and `await`) plus extended constructs
+such as `ask`, `approve`, `review`, `race`, `remember`, messaging, imports, and
+swarm-specific syntax. Programs are composed by nesting these constructs.
+Blocks use indentation with explicit `end` keywords.
 
 If you want per-feature reference pages instead of one long document, start at the [Language Reference index](index.md).
 

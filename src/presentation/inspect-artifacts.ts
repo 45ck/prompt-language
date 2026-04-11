@@ -1,12 +1,13 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
-import { basename, join, relative, resolve } from 'node:path';
+import { basename, join, posix, relative, resolve } from 'node:path';
 import { z } from 'zod';
 
 const DEFAULT_ARTIFACT_ROOT = 'artifacts';
 const MANIFEST_FILE_NAME = 'manifest.json';
 const CONTENT_FILE_PATH = 'content/source.json';
 const RELATIVE_PATH_RE = /^(content|views|exports|attachments)\/.+$/;
+const REGISTERED_PATH_PREFIXES = ['content', 'views', 'exports', 'attachments'] as const;
 const SKIPPED_DIRECTORY_NAMES = new Set([
   '.git',
   '.prompt-language',
@@ -14,6 +15,23 @@ const SKIPPED_DIRECTORY_NAMES = new Set([
   'dist',
   'node_modules',
 ]);
+
+function isSafeRegisteredRelativePath(path: string): boolean {
+  if (!RELATIVE_PATH_RE.test(path) || path.includes('\\')) {
+    return false;
+  }
+  const normalized = posix.normalize(path);
+  if (normalized !== path) {
+    return false;
+  }
+  const resolved = posix.resolve('/', path);
+  return REGISTERED_PATH_PREFIXES.some((prefix) => resolved.startsWith(`/${prefix}/`));
+}
+
+const registeredRelativePathSchema = z.string().refine(isSafeRegisteredRelativePath, {
+  message:
+    'Path must stay within the artifact package root under content/, views/, exports/, or attachments/.',
+});
 
 const artifactManifestSchema = z.strictObject({
   manifestVersion: z.number().int().min(1),
@@ -45,7 +63,7 @@ const artifactManifestSchema = z.strictObject({
     .array(
       z.strictObject({
         name: z.string().min(1),
-        path: z.string().regex(RELATIVE_PATH_RE),
+        path: registeredRelativePathSchema,
         mediaType: z.string().min(1),
         renderer: z.string().min(1),
         sha256: z.string().regex(/^[a-f0-9]{64}$/),
@@ -55,7 +73,7 @@ const artifactManifestSchema = z.strictObject({
   attachments: z.array(
     z.strictObject({
       name: z.string().min(1),
-      path: z.string().regex(RELATIVE_PATH_RE),
+      path: registeredRelativePathSchema,
       mediaType: z.string().min(1),
       role: z.string().min(1),
       sha256: z.string().regex(/^[a-f0-9]{64}$/),
@@ -217,7 +235,7 @@ export async function inspectArtifactPackage(
       mediaType: view.mediaType,
       sha256: view.sha256,
       renderer: view.renderer,
-      absolutePath: join(packageDir, view.path),
+      absolutePath: resolveRegisteredPathWithinPackage(packageDir, view.path),
       exists: false,
     }),
   );
@@ -228,7 +246,7 @@ export async function inspectArtifactPackage(
       mediaType: attachment.mediaType,
       role: attachment.role,
       sha256: attachment.sha256,
-      absolutePath: join(packageDir, attachment.path),
+      absolutePath: resolveRegisteredPathWithinPackage(packageDir, attachment.path),
       exists: false,
     }),
   );
@@ -636,7 +654,17 @@ async function validateRegisteredFile(
   issues: ArtifactValidationIssue[],
   label: string,
 ): Promise<void> {
-  const absolutePath = join(packageDir, relativePath);
+  let absolutePath: string;
+  try {
+    absolutePath = resolveRegisteredPathWithinPackage(packageDir, relativePath);
+  } catch (error) {
+    issues.push({
+      code: 'ART-001',
+      message: error instanceof Error ? error.message : String(error),
+      path: relativePath,
+    });
+    return;
+  }
   const displayPath = normalizeForDisplay(relative(process.cwd(), absolutePath));
   if (!checkedPaths.includes(displayPath)) {
     checkedPaths.push(displayPath);
@@ -728,6 +756,20 @@ async function computeFileSha256(path: string): Promise<string> {
 
 async function pathExists(path: string): Promise<boolean> {
   return (await fs.stat(path).catch(() => undefined)) != null;
+}
+
+function resolveRegisteredPathWithinPackage(packageDir: string, relativePath: string): string {
+  const absolutePath = resolve(packageDir, relativePath);
+  const relativeToPackage = normalizeForDisplay(relative(packageDir, absolutePath));
+  if (
+    relativeToPackage === '' ||
+    relativeToPackage === '.' ||
+    relativeToPackage === '..' ||
+    relativeToPackage.startsWith('../')
+  ) {
+    throw new Error(`Registered path escapes artifact package root: ${relativePath}`);
+  }
+  return absolutePath;
 }
 
 function formatZodIssues(prefix: string, issues: readonly z.ZodIssue[]): string {

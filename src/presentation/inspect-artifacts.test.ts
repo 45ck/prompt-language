@@ -140,6 +140,20 @@ describe('artifact inspection', () => {
     ).rejects.toThrow('is missing');
   });
 
+  it('rejects manifests that try to traverse outside the package via registered view paths', async () => {
+    const copied = await copySamplePackageToTemp('pl-artifact-view-traversal-');
+    tempDir = copied.tempRoot;
+    const manifestPath = join(copied.copiedPackage, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as Record<string, unknown>;
+    const views = manifest['views'] as Record<string, unknown>[];
+    views[0]!['path'] = 'views/../../outside.md';
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+
+    await expect(inspectArtifactPackage(copied.copiedPackage)).rejects.toThrow(
+      /views\.0\.path: .*package root/i,
+    );
+  });
+
   it('validates the shipped sample package successfully', async () => {
     const result = await validateArtifactPackage('sample-implementation-plan-v1', {
       rootDir: ARTIFACT_ROOT,
@@ -257,6 +271,58 @@ describe('artifact inspection', () => {
         expect.objectContaining({
           code: 'ART-002',
           path: 'views/artifact.json',
+        }),
+      ]),
+    );
+  });
+
+  it('reports path traversal in registered file paths as ART-001 manifest issues', async () => {
+    const copied = await copySamplePackageToTemp('pl-artifact-invalid-view-path-');
+    tempDir = copied.tempRoot;
+    const manifestPath = join(copied.copiedPackage, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as Record<string, unknown>;
+    const views = manifest['views'] as Record<string, unknown>[];
+    views[0]!['path'] = 'views/../../outside.md';
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = await validateArtifactPackage(copied.copiedPackage);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'ART-001',
+          path: 'views.0.path',
+        }),
+      ]),
+    );
+  });
+
+  it('reports traversal-capable attachment paths as ART-001 manifest issues', async () => {
+    const copied = await copySamplePackageToTemp('pl-artifact-invalid-attachment-path-');
+    tempDir = copied.tempRoot;
+    const manifestPath = join(copied.copiedPackage, 'manifest.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as Record<string, unknown>;
+    manifest['attachments'] = [
+      {
+        name: 'leak',
+        path: 'attachments/../../outside.txt',
+        mediaType: 'text/plain',
+        role: 'debug',
+        sha256: createHash('sha256').update('outside').digest('hex'),
+      },
+    ];
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2), 'utf8');
+
+    const result = await validateArtifactPackage(copied.copiedPackage);
+
+    expect(result.ok).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'ART-001',
+          path: 'attachments.0.path',
+          message: expect.stringContaining('package root'),
         }),
       ]),
     );

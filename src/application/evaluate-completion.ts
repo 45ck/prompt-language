@@ -28,6 +28,10 @@ import type { CommandRunner, CommandResult } from './ports/command-runner.js';
 import type { CompletionGate } from '../domain/flow-spec.js';
 import type { AuditLogger } from './ports/audit-logger.js';
 import { detectTestCommand } from './gate-prerequisites.js';
+import {
+  collectSpecialGatePredicateIssues,
+  evaluateSpecialGatePredicate,
+} from './artifacts/artifact-gate-state.js';
 
 export { detectTestCommand } from './gate-prerequisites.js';
 
@@ -133,6 +137,7 @@ const STDERR_LIMIT = 2000;
 const GATE_BACKOFF_THRESHOLD = 20;
 const GATE_HARD_STOP_THRESHOLD = 50;
 const GATE_BACKOFF_MS = 5000;
+const UNSUPPORTED_SPECIAL_GATE_DIAGNOSTIC_CODE = 'PLR-007';
 
 function truncateOutput(text: string, limit: number): string {
   const trimmed = text.trimEnd();
@@ -174,17 +179,28 @@ async function evaluateSingleGate(
   timeoutMs: number,
   envOpt?: { env?: Readonly<Record<string, string>> },
 ): Promise<{
+  recognized: boolean;
   passed: boolean;
   command?: string;
   result?: CommandResult;
   cachedDiagnostic?: Readonly<{ passed: true; command: string; gateEvaluatedAt: number }>;
   gateEvaluatedAt?: number;
 }> {
+  const specialEvaluation = evaluateSpecialGatePredicate(gate.predicate, state.variables);
+  if (specialEvaluation !== undefined) {
+    return {
+      recognized: true,
+      passed: specialEvaluation.passed,
+      gateEvaluatedAt: Date.now(),
+    };
+  }
+
   const command = gate.command ?? resolveBuiltinCommand(gate.predicate);
   if (command) {
     const cachedDiagnostic = getCachedPassingGateDiagnostic(state, gate, command, Date.now());
     if (cachedDiagnostic) {
       return {
+        recognized: true,
         passed: true,
         command,
         cachedDiagnostic: {
@@ -197,14 +213,14 @@ async function evaluateSingleGate(
     const result = await runner.run(command, { timeoutMs, ...envOpt });
     const inverted = isInvertedPredicate(gate.predicate);
     const passed = inverted ? result.exitCode !== 0 : result.exitCode === 0;
-    return { passed, command, result, gateEvaluatedAt: Date.now() };
+    return { recognized: true, passed, command, result, gateEvaluatedAt: Date.now() };
   }
   // H#5: Check variables as gate predicates (boolean)
   const varValue = state.variables[gate.predicate];
   if (typeof varValue === 'boolean') {
-    return { passed: varValue, gateEvaluatedAt: Date.now() };
+    return { recognized: true, passed: varValue, gateEvaluatedAt: Date.now() };
   }
-  return { passed: false, gateEvaluatedAt: Date.now() };
+  return { recognized: false, passed: false, gateEvaluatedAt: Date.now() };
 }
 
 // H#64: Parallel gate evaluation via Promise.all()
@@ -245,22 +261,8 @@ async function runGates(
       const nOfPassed = passCount >= gate.nOf.n;
       return { gate, nOfPassed, subResults };
     }
-    const command = gate.command ?? resolveBuiltinCommand(gate.predicate);
-    if (!command) return { gate, result: null, command: null };
-    const cachedDiagnostic = getCachedPassingGateDiagnostic(state, gate, command, Date.now());
-    if (cachedDiagnostic) {
-      return {
-        gate,
-        command,
-        cachedDiagnostic: {
-          passed: true,
-          command,
-          gateEvaluatedAt: cachedDiagnostic.gateEvaluatedAt,
-        } as const,
-      };
-    }
-    const result = await runner.run(command, { timeoutMs, ...envOpt });
-    return { gate, result, command, gateEvaluatedAt: Date.now() };
+    const singleResult = await evaluateSingleGate(gate, state, runner, timeoutMs, envOpt);
+    return { gate, ...singleResult };
   });
   const gateResults = await Promise.all(gatePromises);
 
@@ -302,7 +304,7 @@ async function runGates(
       continue;
     }
 
-    const { result, command, gateEvaluatedAt } = entry;
+    const { result, command, gateEvaluatedAt, recognized, passed } = entry;
     if (result && command) {
       // H-SEC-006: Log gate evaluation to audit trail
       if (auditLogger) {
@@ -330,6 +332,12 @@ async function runGates(
         ...(stdoutSnippet ? { stdout: stdoutSnippet } : {}),
         ...(gateEvaluatedAt !== undefined ? { gateEvaluatedAt } : {}),
       });
+    } else if (recognized) {
+      updated = updateGateResult(updated, gate.predicate, passed);
+      updated = updateGateDiagnostic(updated, gate.predicate, {
+        passed,
+        ...(gateEvaluatedAt !== undefined ? { gateEvaluatedAt } : {}),
+      });
     } else {
       // H#5: Check variables as gate predicates (boolean)
       const varValue = updated.variables[gate.predicate];
@@ -347,13 +355,15 @@ async function runGates(
             passed: false,
             ...(gateEvaluatedAt !== undefined ? { gateEvaluatedAt } : {}),
           });
-          // Unknown predicate — suggest a similar known predicate if possible
-          const similar = findSimilarPredicate(gate.predicate);
-          if (similar) {
-            updated = addWarning(
-              updated,
-              `Unknown gate predicate '${gate.predicate}' \u2014 did you mean '${similar}'?`,
-            );
+          if (!recognized) {
+            // Unknown predicate — suggest a similar known predicate if possible
+            const similar = findSimilarPredicate(gate.predicate);
+            if (similar) {
+              updated = addWarning(
+                updated,
+                `Unknown gate predicate '${gate.predicate}' \u2014 did you mean '${similar}'?`,
+              );
+            }
           }
         }
       }
@@ -405,6 +415,24 @@ export async function evaluateCompletion(
     const done = markCompleted(state);
     await stateStore.save(done);
     return createCompletionOutput({ blocked: false, reason: '', gateResults: {} });
+  }
+
+  const specialGateIssues = collectSpecialGatePredicateIssues(state.flowSpec.completionGates);
+  if (specialGateIssues.length > 0) {
+    const diagnostics = specialGateIssues.map((issue) =>
+      createRuntimeDiagnostic(
+        UNSUPPORTED_SPECIAL_GATE_DIAGNOSTIC_CODE,
+        issue.summary,
+        issue.action,
+        false,
+      ),
+    );
+    return createCompletionOutput({
+      blocked: true,
+      reason: diagnostics[0]?.summary ?? 'Unsupported artifact-aware completion gate.',
+      gateResults: state.gateResults,
+      diagnostics,
+    });
   }
 
   // H-SEC-010: Hard stop after too many consecutive gate failures

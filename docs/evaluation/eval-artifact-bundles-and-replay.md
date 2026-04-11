@@ -12,9 +12,12 @@ At `HEAD`, the runner now ships a narrow implementation slice of `5vsm.6`:
 - per-case `runId` values in saved eval reports
 - manifest-backed per-run bundles persisted beside saved reports
 - runner-level replay metadata and baseline lineage on saved case results
+- captured candidate-input snapshots inside saved run bundles
+- a persisted-report `runId` replay helper for rerunning one saved case
+- stored annotation hooks that append provenance records under one run bundle
 
-It does **not** yet ship replay-by-run-id CLI support, stored human annotation
-records, or deterministic checkpoint replay.
+It does **not** yet ship replay-by-run-id CLI support or deterministic
+checkpoint replay of live host sessions.
 
 ## Purpose
 
@@ -60,6 +63,8 @@ The shipped floor is narrower than the full `5vsm.6` target.
   report
 - report-case lineage fields such as `baselineRunId`, `replay`, and artifact
   paths on newly written runner reports
+- bundle-level task-input snapshots, locked-baseline references, and annotation
+  file hooks on newly written runner reports
 
 The seeded E1 report shape proves that the repo already stores durable suite
 reports such as:
@@ -79,7 +84,6 @@ reports such as:
 ### Not present yet
 
 - replay or rerun CLI commands that resolve from a stored run handle
-- human annotation storage attached to runs or reports
 - deterministic checkpoint replay of live host sessions
 - backfilled `runId` and bundle lineage on older locked reports that predate the
   runner slice
@@ -214,6 +218,7 @@ in contract should stay close to the following shape:
     "durationMs": 87732
   },
   "artifacts": {
+    "candidateInputPath": "runs/<run-id>/candidate-input.txt",
     "transcriptPath": "runs/<run-id>/transcript.md",
     "diffPath": "runs/<run-id>/diff.patch",
     "verifyStdoutPath": "runs/<run-id>/verify.stdout.txt",
@@ -225,6 +230,11 @@ in contract should stay close to the following shape:
     "passed": true,
     "verifyExitCode": 0,
     "changedFiles": ["app.js"]
+  },
+  "baseline": {
+    "reportPath": "experiments/results/e1/v1/codex-vanilla.json",
+    "reportCandidate": "vanilla",
+    "runId": "baseline.case-a.r1"
   },
   "replay": {
     "mode": "rerun_from_dataset",
@@ -440,10 +450,9 @@ the following:
 - preserve locked baseline authority under `experiments/results/`
 - attach human annotations with provenance instead of loose notes
 
-Until the remaining acceptance items land, the repo should describe only the
-runner-level bundle and lineage slice as shipped capability. Replay CLI
-surfaces, stored annotations, and deterministic checkpoint replay remain
-planned work.
+At `HEAD`, the runner/helper layer now covers this acceptance bar. Replay CLI
+surfaces and deterministic checkpoint replay remain follow-on work beyond this
+implementation slice.
 
 ## Out of scope
 

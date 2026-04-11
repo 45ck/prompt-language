@@ -92,6 +92,35 @@ describe('Fuzz harness — parser crash resistance', () => {
     assertNoCrash(singleNodeFlow(kind));
   });
 
+  it('swarm surface in preserve mode parses without crashing', () => {
+    assertNoCrash(`flow:
+  swarm checkout_fix
+    role frontend
+      prompt: work
+      return \${summary}
+    end
+    flow:
+      start frontend
+      await all
+    end
+  end`);
+    const spec = parseFlow(
+      `flow:
+  swarm checkout_fix
+    role frontend
+      prompt: work
+      return \${summary}
+    end
+    flow:
+      start frontend
+      await all
+    end
+  end`,
+      { swarmHandling: 'preserve' },
+    );
+    expect(spec.nodes[0]?.kind).toBe('swarm');
+  });
+
   it('deeply nested container nodes (10 levels) do not crash', () => {
     // Nest while > if > try > while > if > try > while > if > try > while
     const containers = ['while', 'if', 'try'];

@@ -1,6 +1,10 @@
 # DSL Cheatsheet
 
-Quick reference for all prompt-language primitives, variables, and gates.
+Quick reference for the most common prompt-language primitives, variables, and gates.
+
+For advanced review, judge, swarm, library, and profile-aware features, use the
+[DSL Reference](dsl-reference.md) and the per-feature pages in the
+[Language Reference index](index.md).
 
 ## Program Structure
 

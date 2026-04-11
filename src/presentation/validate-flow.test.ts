@@ -87,4 +87,56 @@ describe('buildValidateFlowPreview', () => {
     expect(preview.output).toContain('[prompt-language preflight] WARN');
     expect(preview.output).toContain('PLC-007');
   });
+
+  it('accepts supported artifact-aware completion gates in validate preview', () => {
+    const preview = buildValidateFlowPreview(
+      [
+        'Goal: test',
+        '',
+        'flow:',
+        '  prompt: hello',
+        '',
+        'done when:',
+        '  artifact_valid deploy_plan',
+        '  artifact_active deploy_plan',
+        '  approval_passed("review_deploy_plan")',
+      ].join('\n'),
+      {
+        cwd: '/repo',
+        runner: 'codex',
+        mode: 'headless',
+        probeRunnerBinary: () => true,
+      },
+    );
+
+    expect(preview.report.diagnostics.some((diagnostic) => diagnostic.code === 'PLC-009')).toBe(
+      false,
+    );
+  });
+
+  it('blocks malformed artifact-aware gate syntax during validate preview', () => {
+    const preview = buildValidateFlowPreview(
+      [
+        'Goal: test',
+        '',
+        'flow:',
+        '  prompt: hello',
+        '',
+        'done when:',
+        '  artifact_status deploy_plan',
+        '  approval_passed()',
+      ].join('\n'),
+      {
+        cwd: '/repo',
+        runner: 'codex',
+        mode: 'headless',
+        probeRunnerBinary: () => true,
+      },
+    );
+
+    expect(preview.report.status).toBe('blocked');
+    expect(preview.output).toContain('PLC-009');
+    expect(preview.output).toContain('Unsupported artifact gate');
+    expect(preview.output).toContain('approval_passed requires exactly one approval step id.');
+  });
 });

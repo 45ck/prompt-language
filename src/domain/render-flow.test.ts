@@ -970,6 +970,22 @@ describe('renderFlow — prompt-language-7b1a capture reminder', () => {
     const output = renderFlow(state);
     expect(output).not.toContain('[Capture active: write response to .prompt-language/vars/');
   });
+
+  it('does not show active-capture reminder for stale awaiting capture on a non-current node', () => {
+    const letNode = createLetNode('l1', 'tasks', { type: 'prompt', text: 'List next steps' });
+    const spec = createFlowSpec('test', [letNode, createPromptNode('p1', 'continue')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+    state = { ...state, currentNodePath: [1] };
+    const output = renderFlow(state);
+    expect(output).not.toContain(
+      '[Capture active: write response to .prompt-language/vars/tasks using Write tool]',
+    );
+  });
 });
 
 // Coverage: formatGateDiagnostic stdout fallback (H-DX-004)

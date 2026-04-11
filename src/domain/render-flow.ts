@@ -701,66 +701,12 @@ function renderWarnings(state: SessionState): string[] {
   return lines;
 }
 
-function findActiveCaptureVariable(nodes: readonly FlowNode[], state: SessionState): string | null {
-  for (const node of nodes) {
-    if (node.kind === 'let') {
-      const progress = state.nodeProgress[node.id];
-      if (progress?.status === 'awaiting_capture') return node.variableName;
-      continue;
-    }
+function findActiveCaptureVariable(state: SessionState): string | null {
+  const currentNode = resolveNodeByPath(state.flowSpec.nodes, state.currentNodePath);
+  if (currentNode?.kind !== 'let') return null;
 
-    switch (node.kind) {
-      case 'while':
-      case 'until':
-      case 'retry':
-      case 'foreach':
-      case 'foreach_spawn':
-      case 'spawn':
-      case 'review': {
-        const nested = findActiveCaptureVariable(node.body, state);
-        if (nested !== null) return nested;
-        break;
-      }
-      case 'if': {
-        const thenVar = findActiveCaptureVariable(node.thenBranch, state);
-        if (thenVar !== null) return thenVar;
-        const elseVar = findActiveCaptureVariable(node.elseBranch, state);
-        if (elseVar !== null) return elseVar;
-        break;
-      }
-      case 'try': {
-        const bodyVar = findActiveCaptureVariable(node.body, state);
-        if (bodyVar !== null) return bodyVar;
-        const catchVar = findActiveCaptureVariable(node.catchBody, state);
-        if (catchVar !== null) return catchVar;
-        const finallyVar = findActiveCaptureVariable(node.finallyBody, state);
-        if (finallyVar !== null) return finallyVar;
-        break;
-      }
-      case 'race': {
-        for (const child of node.children) {
-          const nested = findActiveCaptureVariable(child.body, state);
-          if (nested !== null) return nested;
-        }
-        break;
-      }
-      case 'prompt':
-      case 'run':
-      case 'break':
-      case 'continue':
-      case 'await':
-      case 'approve':
-      case 'remember':
-      case 'send':
-      case 'receive':
-        break;
-      default: {
-        const _exhaustive: never = node;
-        return _exhaustive;
-      }
-    }
-  }
-  return null;
+  const progress = state.nodeProgress[currentNode.id];
+  return progress?.status === 'awaiting_capture' ? currentNode.variableName : null;
 }
 
 export function renderFlow(state: SessionState): string {
@@ -786,7 +732,7 @@ export function renderFlow(state: SessionState): string {
   lines.push(...renderGates(state));
   lines.push(...renderVariables(state));
   lines.push(...renderWarnings(state));
-  const captureVarName = findActiveCaptureVariable(state.flowSpec.nodes, state);
+  const captureVarName = findActiveCaptureVariable(state);
   if (captureVarName !== null) {
     lines.push(
       '',

@@ -11,3 +11,13 @@ export { evaluateStop } from './evaluate-stop.js';
 
 export type { EvaluateCompletionOutput } from './evaluate-completion.js';
 export { evaluateCompletion } from './evaluate-completion.js';
+
+export type {
+  FlowEvalResult,
+  FlowEvalTraceStep,
+  FlowEvalVariableContext,
+} from './evaluate-flow-condition-debug.js';
+export {
+  evaluateFlowConditionWithTrace,
+  resolveFlowEvalVariables,
+} from './evaluate-flow-condition-debug.js';

@@ -220,7 +220,7 @@ describe('installed file layout contract', () => {
   });
 
   describe('commands/ directory', () => {
-    const expectedCommands = ['flow-reset.md', 'flow-status.md', 'flow-run.md'];
+    const expectedCommands = ['flow-reset.md', 'flow-status.md', 'flow-run.md', 'flow-eval.md'];
 
     it('commands/ directory exists', () => {
       expect(existsSync(join(PROJECT_ROOT, 'commands'))).toBe(true);
@@ -241,6 +241,10 @@ describe('installed file layout contract', () => {
     it('agents/flow-debug.md exists', () => {
       expect(existsSync(join(PROJECT_ROOT, 'agents', 'flow-debug.md'))).toBe(true);
     });
+  });
+
+  it('skills/flow-eval exists', () => {
+    expect(existsSync(join(PROJECT_ROOT, 'skills', 'flow-eval'))).toBe(true);
   });
 
   it('all hook command dist files exist', () => {

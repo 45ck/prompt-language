@@ -1083,6 +1083,7 @@ async function validate() {
   const flowText = await readFlowText(args, 'validate');
   const profile = readValidateProfileOptions(args);
   const json = hasOption(args, '--json');
+  const checkGates = hasOption(args, '--check-gates');
   const { buildValidateFlowPreview } = await import(
     pathToFileURL(join(ROOT, 'dist', 'presentation', 'validate-flow.js')).href
   );
@@ -1094,29 +1095,69 @@ async function validate() {
     ...profile,
     ...(profile.runner != null ? { probeRunnerBinary } : {}),
   });
+  let renderedFlow = preview.renderedFlow;
+  let report = preview.report;
+  let gateChecks = undefined;
+  let output = preview.output;
+
+  if (checkGates && preview.report.status !== 'blocked') {
+    const { parseFlow } = await import(
+      pathToFileURL(join(ROOT, 'dist', 'application', 'parse-flow.js')).href
+    );
+    const { createExecutionReport } = await import(
+      pathToFileURL(join(ROOT, 'dist', 'domain', 'diagnostic-report.js')).href
+    );
+    const { renderFlow } = await import(
+      pathToFileURL(join(ROOT, 'dist', 'domain', 'render-flow.js')).href
+    );
+    const { ShellCommandRunner } = await import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'shell-command-runner.js'))
+        .href
+    );
+    const { runDryRunGateChecks, formatDryRunGateCheckSection } = await import(
+      pathToFileURL(join(ROOT, 'dist', 'application', 'dry-run-gate-check.js')).href
+    );
+
+    const spec = parseFlow(flowText, { basePath: process.cwd() });
+    const gateCheck = await runDryRunGateChecks(spec, {
+      cwd: process.cwd(),
+      commandRunner: new ShellCommandRunner(),
+    });
+
+    gateChecks = gateCheck.entries;
+    renderedFlow = renderFlow(gateCheck.state);
+    report = createExecutionReport({
+      diagnostics: [...preview.report.diagnostics, ...gateCheck.report.diagnostics],
+      outcomes: [...preview.report.outcomes, ...gateCheck.report.outcomes],
+      reason: gateCheck.report.reason ?? preview.report.reason,
+    });
+    output = `${preview.output}\n\n${formatDryRunGateCheckSection(gateCheck)}`;
+  }
 
   if (json) {
     console.log(
       JSON.stringify(
         {
-          status: preview.report.status,
-          diagnostics: preview.report.diagnostics,
-          outcomes: preview.report.outcomes,
+          status: report.status,
+          diagnostics: report.diagnostics,
+          outcomes: report.outcomes,
           complexity: preview.complexity,
           lintWarningCount: preview.lintWarningCount,
-          renderedFlow: preview.renderedFlow,
+          renderedFlow,
+          ...(gateChecks !== undefined ? { gateChecks } : {}),
         },
         null,
         2,
       ),
     );
   } else {
-    console.log(preview.output);
+    console.log(output);
   }
 
-  if (preview.report.status === 'blocked') {
-    process.exit(2);
-  }
+  const { deriveDiagnosticReportExitCode } = await import(
+    pathToFileURL(join(ROOT, 'dist', 'domain', 'diagnostic-report.js')).href
+  );
+  process.exit(deriveDiagnosticReportExitCode(report));
 }
 
 function readArtifactsRoot(args, fallback = 'artifacts') {
@@ -1878,7 +1919,7 @@ Commands:
   eval         Run a JSONL eval dataset and optionally compare against a baseline report
   demo         Print an example flow to stdout
   list         Recursively list .flow files in the current directory
-  validate     Parse, lint, score, and render a flow without executing it (\`--runner ... --mode interactive|headless\`)
+  validate     Parse, lint, score, and render a flow without executing it (\`--runner ... --mode interactive|headless\`, \`--check-gates\`)
   render-workflow Show the lowered .flow text for a canonical workflow alias
   artifacts    Inspect artifact packages (\`list\`, \`show\`, \`validate\`)
   ci           Run a flow headlessly (CI/CD mode, supports \`--runner codex|opencode|ollama\`)

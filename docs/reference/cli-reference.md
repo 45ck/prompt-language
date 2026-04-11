@@ -284,14 +284,15 @@ Shows a continuously-updating view of the flow state, including the current node
 
 These are available inside Claude Code sessions when the plugin is installed:
 
-| Command          | Description                                                                      |
-| ---------------- | -------------------------------------------------------------------------------- |
-| `/fix-and-test`  | Retry loop: fix failing tests, re-run, repeat up to 5 times. Gate: `tests_pass`  |
-| `/tdd`           | Red-green-refactor cycle. Gate: `tests_pass` + `lint_pass`                       |
-| `/refactor`      | Incremental refactoring with test verification. Gate: `tests_pass` + `lint_pass` |
-| `/deploy-check`  | Lint, test, build pipeline. Gate: `tests_pass` + `lint_pass` + `file_exists`     |
-| `/flow:status`   | Show current flow state, active node, and gate results                           |
-| `/flow:reset`    | Reset flow and clear all session state                                           |
-| `/flow-validate` | Validate flow syntax: run `lintFlow` and show complexity score without executing |
-| `/flow-audit`    | Query `.prompt-language/audit.jsonl` — supports `--failures`, `--slow`, `--type` |
-| `/flow-vars`     | Inspect all session variables with full values, types, and list expansion        |
+| Command          | Description                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| `/fix-and-test`  | Retry loop: fix failing tests, re-run, repeat up to 5 times. Gate: `tests_pass`                  |
+| `/tdd`           | Red-green-refactor cycle. Gate: `tests_pass` + `lint_pass`                                       |
+| `/refactor`      | Incremental refactoring with test verification. Gate: `tests_pass` + `lint_pass`                 |
+| `/deploy-check`  | Lint, test, build pipeline. Gate: `tests_pass` + `lint_pass` + `file_exists`                     |
+| `/flow:status`   | Show current flow state, active node, and gate results                                           |
+| `/flow:reset`    | Reset flow and clear all session state                                                           |
+| `/flow-validate` | Validate flow syntax: run `lintFlow` and show complexity score without executing                 |
+| `/flow-audit`    | Query `.prompt-language/audit.jsonl` — supports `--failures`, `--slow`, `--type`                 |
+| `/flow-vars`     | Inspect all session variables with full values, types, and list expansion                        |
+| `/flow-eval`     | Evaluate a condition against session variables with intermediate trace + missing-variable errors |

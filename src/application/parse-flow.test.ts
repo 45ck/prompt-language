@@ -2722,14 +2722,14 @@ flow:
     expect((spec.nodes[0] as StartNode).targets).toEqual(['frontend']);
   });
 
-  it('warns when return is used outside a role', () => {
+  it('parses bare return in a normal flow body without warnings', () => {
     const spec = parse(`Goal: g
 
 flow:
-  return ${'${summary}'}`);
+  return`);
 
-    expect(spec.warnings).toContain('line 4, col 3: "return" is only valid inside a role');
-    expect((spec.nodes[0] as ReturnNode).expression).toBe('${summary}');
+    expect(spec.warnings).toEqual([]);
+    expect((spec.nodes[0] as ReturnNode).expression).toBe('');
   });
 
   it('propagates lowering warnings from authored swarm blocks', () => {
@@ -2817,13 +2817,12 @@ flow:
     expect(spec.warnings).toEqual(['swarm checkout_fix has no lowering flow body']);
   });
 
-  it('warns on invalid start, await, and return syntax and recovers as prompt nodes', () => {
+  it('warns on invalid start and await syntax and recovers as prompt nodes', () => {
     const spec = parse(`Goal: g
 
 flow:
   start
-  await
-  return`);
+  await`);
 
     expect(spec.warnings).toContain(
       'line 4, col 3: Invalid start syntax: "start" — expected start <role>[, <role>...]',
@@ -2831,10 +2830,7 @@ flow:
     expect(spec.warnings).toContain(
       'line 5, col 3: Invalid await syntax: "await" — expected await all or await "name"',
     );
-    expect(spec.warnings).toContain(
-      'line 6, col 3: Invalid return syntax: "return" — expected return <expression>',
-    );
-    expect(spec.nodes.map((node) => node.kind)).toEqual(['prompt', 'prompt', 'prompt']);
+    expect(spec.nodes.map((node) => node.kind)).toEqual(['prompt', 'prompt']);
   });
 
   it('lowers authored swarm blocks inside use-expanded library flows', () => {

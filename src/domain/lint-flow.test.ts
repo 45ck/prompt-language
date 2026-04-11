@@ -30,6 +30,7 @@ import {
   createSwarmNode,
   createStartNode,
   createReturnNode,
+  withNodeSource,
 } from './flow-node.js';
 
 describe('lintFlow', () => {
@@ -652,6 +653,27 @@ describe('variable shadowing warnings', () => {
     });
   });
 
+  it('includes the outer definition location when foreach shadows a sourced outer variable', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        withNodeSource(createLetNode('l1', 'item', { type: 'literal', value: 'outer' }), {
+          line: 3,
+          column: 5,
+          source: 'flow.prompt',
+        }),
+        createForeachNode('f1', 'item', 'a b c', [createPromptNode('p1', 'Process ${item}')], 10),
+      ],
+      [],
+    );
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'f1',
+      message:
+        'Foreach loop variable "item" shadows variable from an outer scope in top-level (outer definition at flow.prompt:line 3, col 5)',
+    });
+  });
+
   it('warns when foreach_spawn loop variable shadows outer let', () => {
     const spec = createFlowSpec(
       'test',
@@ -666,6 +688,23 @@ describe('variable shadowing warnings', () => {
       nodeId: 'fs1',
       message:
         'Foreach loop variable "job" shadows variable from an outer scope in top-level (outer definition at node "l1")',
+    });
+  });
+
+  it('falls back to the outer node id when foreach shadowing has no source location', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'item', { type: 'literal', value: 'outer' }),
+        createForeachNode('f1', 'item', 'a b c', [createPromptNode('p1', 'Process ${item}')], 10),
+      ],
+      [],
+    );
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'f1',
+      message:
+        'Foreach loop variable "item" shadows variable from an outer scope in top-level (outer definition at node "l1")',
     });
   });
 
@@ -1286,11 +1325,27 @@ describe('lintFlow — swarm validation', () => {
     });
   });
 
-  it('warns when return appears outside a role', () => {
-    const spec = createFlowSpec('test', [createReturnNode('ret1', '${summary}')], []);
+  it('does not warn when return appears in a normal flow body', () => {
+    const spec = createFlowSpec('test', [createReturnNode('ret1', '')], []);
+    expect(lintFlow(spec)).not.toContainEqual({
+      nodeId: 'ret1',
+      message: '"return" is only valid inside flow bodies or roles',
+    });
+  });
+
+  it('warns when return appears inside swarm flow', () => {
+    const spec = createFlowSpec('test', [
+      createSwarmNode(
+        'sw1',
+        'checkout_fix',
+        [createSwarmRoleDefinition('role1', 'frontend', [createPromptNode('p1', 'fix')])],
+        [createReturnNode('ret1', '')],
+      ),
+    ]);
+
     expect(lintFlow(spec)).toContainEqual({
       nodeId: 'ret1',
-      message: '"return" is only valid inside a role',
+      message: '"return" is only valid inside flow bodies or roles',
     });
   });
 

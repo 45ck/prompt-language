@@ -2856,6 +2856,29 @@ describe('injectContext — H-DX-003 dry-run mode', () => {
     expect(result.prompt).toContain('Warnings:');
     expect(result.prompt).toContain('Empty while body');
   });
+
+  it('dry-run --check-gates executes gates and reports outputs without persisting state', async () => {
+    const store = makeStore();
+    const runner: CommandRunner = {
+      async run() {
+        return {
+          exitCode: 1,
+          stdout: 'suite output',
+          stderr: 'tests failed',
+        };
+      },
+    };
+    const prompt =
+      'dry-run --check-gates\nGoal: test\nflow:\n  prompt: Work\ndone when:\n  tests_pass';
+    const result = await injectContext({ prompt, sessionId: 'dr-5' }, store, runner);
+
+    expect(result.prompt).toContain('[prompt-language dry-run]');
+    expect(result.prompt).toContain('[prompt-language gate-check] UNSUCCESSFUL');
+    expect(result.prompt).toContain('tests_pass [FAIL');
+    expect(result.prompt).toContain('stdout: suite output');
+    expect(result.prompt).toContain('stderr: tests failed');
+    expect(await store.loadCurrent()).toBeNull();
+  });
 });
 
 // ── H-REL-003: Checkpoint/Resume ──────────────────────────────────────

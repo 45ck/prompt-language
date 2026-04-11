@@ -34,6 +34,7 @@ import { terminateRunningSpawnedChildren } from './terminate-spawned-children.js
 import type { MemoryStore } from './ports/memory-store.js';
 import { FLOW_OUTCOME_CODES, type FlowOutcome } from '../domain/diagnostic-report.js';
 import { createInjectionContextState } from './context-variable-slice.js';
+import { formatDryRunGateCheckSection, runDryRunGateChecks } from './dry-run-gate-check.js';
 
 const FLOW_BLOCK_RE = /^\s*flow:\s*$/m;
 
@@ -325,16 +326,41 @@ const TRIVIAL_PROMPTS = new Set([
 ]);
 
 const DRY_RUN_RE = /\b-{0,2}dry[-\s]?run\b/i;
+const CHECK_GATES_RE = /(?:^|\s)--check-gates\b/i;
 
 export function isDryRun(prompt: string): boolean {
   return DRY_RUN_RE.test(prompt);
 }
 
+export function isCheckGatesDryRun(prompt: string): boolean {
+  return CHECK_GATES_RE.test(prompt);
+}
+
+function removeControlFlag(prompt: string, flagRe: RegExp): string {
+  const lines = prompt.split('\n').map((line) => {
+    const next = line
+      .replace(flagRe, '')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trimEnd();
+    return next.trim() === '' ? '' : next;
+  });
+
+  while (lines[0]?.trim() === '') {
+    lines.shift();
+  }
+  while (lines[lines.length - 1]?.trim() === '') {
+    lines.pop();
+  }
+
+  return lines.join('\n');
+}
+
 function removeDryRun(prompt: string): string {
-  return prompt
-    .replace(DRY_RUN_RE, '')
-    .replace(/\s{2,}/g, ' ')
-    .trim();
+  return removeControlFlag(prompt, DRY_RUN_RE);
+}
+
+function removeCheckGates(prompt: string): string {
+  return removeControlFlag(prompt, CHECK_GATES_RE);
 }
 
 async function preloadMemoryVariables(
@@ -522,19 +548,34 @@ export async function injectContext(
 
   // H-DX-003: Dry-run / parse-only mode — parse, lint, score without persisting state
   if (hasFlowBlock(input.prompt) && isDryRun(input.prompt)) {
-    const spec = parseFlow(input.prompt);
-    const session = createSessionState(input.sessionId, spec);
+    const checkGates = isCheckGatesDryRun(input.prompt);
+    const cleanedPrompt = removeCheckGates(removeDryRun(input.prompt));
+    const spec = parseFlow(cleanedPrompt);
+    let session = createSessionState(input.sessionId, spec);
+    let gateSection: string | undefined;
+    if (checkGates) {
+      const gateCheck = await runDryRunGateChecks(spec, {
+        cwd: process.cwd(),
+        commandRunner,
+        auditLogger,
+        sessionId: input.sessionId,
+      });
+      session = gateCheck.state;
+      gateSection = formatDryRunGateCheckSection(gateCheck);
+    }
     const rendered = renderFlow(session);
     const complexity = flowComplexityScore(spec);
     const warnings = lintFlow(spec);
     const lines = [`[prompt-language dry-run]`, rendered, '', `Complexity: ${complexity}/5`];
+    if (gateSection != null) {
+      lines.push('', gateSection);
+    }
     if (warnings.length > 0) {
       lines.push('Warnings:');
       for (const w of warnings) {
         lines.push(`  - ${w.message}`);
       }
     }
-    const cleanedPrompt = removeDryRun(input.prompt);
     lines.push('', cleanedPrompt);
     return { prompt: lines.join('\n') };
   }

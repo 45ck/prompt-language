@@ -7,7 +7,12 @@
  * Returns an array of lint warnings.
  */
 
-import type { FlowNode, LetNode, VariableDeclaredType } from './flow-node.js';
+import {
+  formatFlowNodeSource,
+  type FlowNode,
+  type LetNode,
+  type VariableDeclaredType,
+} from './flow-node.js';
 import type { FlowSpec } from './flow-spec.js';
 import { isAskCondition } from './judge-prompt.js';
 
@@ -500,18 +505,23 @@ function lintUnresolvedVars(
 /** Warn when declarations in nested scopes shadow outer-scope variables. */
 function lintVariableShadowing(
   nodes: readonly FlowNode[],
-  inheritedDefinitions: ReadonlyMap<string, string>,
+  inheritedDefinitions: ReadonlyMap<string, FlowNode>,
   warnings: LintWarning[],
   scopeType = 'top-level',
 ): void {
-  const definitionsInScope = new Map<string, string>();
+  const definitionsInScope = new Map<string, FlowNode>();
 
-  const inheritedPlusScope = (): Map<string, string> => {
+  const inheritedPlusScope = (): Map<string, FlowNode> => {
     const merged = new Map(inheritedDefinitions);
-    for (const [name, nodeId] of definitionsInScope) {
-      merged.set(name, nodeId);
+    for (const [name, definitionNode] of definitionsInScope) {
+      merged.set(name, definitionNode);
     }
     return merged;
+  };
+
+  const describeOuterDefinition = (node: FlowNode): string => {
+    const location = formatFlowNodeSource(node.position);
+    return location ?? `node "${node.id}"`;
   };
 
   const warnIfShadowed = (
@@ -520,14 +530,16 @@ function lintVariableShadowing(
     declarationKind: 'variable' | 'foreach',
     includeCurrentScope = false,
   ) => {
-    const outerDefinitionNodeId =
+    const outerDefinition =
       inheritedDefinitions.get(name) ??
       (includeCurrentScope ? definitionsInScope.get(name) : undefined);
-    if (outerDefinitionNodeId != null) {
+    if (outerDefinition != null) {
       const prefix = declarationKind === 'foreach' ? 'Foreach loop variable' : 'Variable';
       warnings.push({
         nodeId,
-        message: `${prefix} "${name}" shadows variable from an outer scope in ${scopeType} (outer definition at node "${outerDefinitionNodeId}")`,
+        message: `${prefix} "${name}" shadows variable from an outer scope in ${scopeType} (outer definition at ${describeOuterDefinition(
+          outerDefinition,
+        )})`,
       });
     }
   };
@@ -536,23 +548,23 @@ function lintVariableShadowing(
     switch (node.kind) {
       case 'let':
         warnIfShadowed(node.variableName, node.id, 'variable');
-        definitionsInScope.set(node.variableName, node.id);
+        definitionsInScope.set(node.variableName, node);
         break;
       case 'receive':
         warnIfShadowed(node.variableName, node.id, 'variable');
-        definitionsInScope.set(node.variableName, node.id);
+        definitionsInScope.set(node.variableName, node);
         break;
       case 'foreach': {
         warnIfShadowed(node.variableName, node.id, 'foreach', true);
         const foreachScope = inheritedPlusScope();
-        foreachScope.set(node.variableName, node.id);
+        foreachScope.set(node.variableName, node);
         lintVariableShadowing(node.body, foreachScope, warnings, 'foreach scope');
         break;
       }
       case 'foreach_spawn': {
         warnIfShadowed(node.variableName, node.id, 'foreach', true);
         const foreachScope = inheritedPlusScope();
-        foreachScope.set(node.variableName, node.id);
+        foreachScope.set(node.variableName, node);
         lintVariableShadowing(node.body, foreachScope, warnings, 'foreach-spawn scope');
         break;
       }
@@ -1341,10 +1353,10 @@ function lintSwarmSemantics(
         }
         break;
       case 'return':
-        if (!state.insideRole) {
+        if (!state.insideRole && !(!state.insideSwarm && !state.insideSwarmFlow)) {
           warnings.push({
             nodeId: node.id,
-            message: '"return" is only valid inside a role',
+            message: '"return" is only valid inside flow bodies or roles',
           });
         }
         break;

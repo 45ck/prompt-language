@@ -1,0 +1,43 @@
+# /flow-eval — Evaluate a condition with runtime variable context
+
+Evaluate a condition expression against prompt-language session variables and show exactly how it resolves.
+
+## Instructions
+
+1. Load `.prompt-language/session-state.json` if present.
+
+2. Choose variable context:
+   - If `status` is `"active"`, use `state.variables`.
+   - If `status` is not active (`completed`, `failed`, `cancelled`), still use `state.variables` as the **last session state** context.
+   - If `session-state.json` is missing, attempt fallback files in order:
+     - `.prompt-language/session-state.bak.json`
+     - `.prompt-language/session-state.bak2.json`
+
+3. Evaluate the user-supplied condition using normal flow condition semantics:
+   - `and`, `or`, `not` (with precedence and parentheses)
+   - comparison operators `==`, `!=`, `>`, `<`, `>=`, `<=`
+   - variable references via bare names and `${var}`
+
+4. Always return:
+   - interpolated condition string,
+   - final result (`true`, `false`, or unresolved `null`),
+   - intermediate evaluation trace (sub-expressions and resolved operand values),
+   - explicit undefined-variable diagnostics.
+
+5. If any variable reference is undefined, clearly list missing variable names.
+
+## Output template
+
+```
+Condition: <original>
+Interpolated: <interpolated>
+Variable source: <active_session|last_session|none>
+Result: <true|false|null>
+
+Trace:
+1) <sub-expression> => <result> (values: ...)
+2) ...
+
+Undefined variables:
+- <name>  (omit section when none)
+```

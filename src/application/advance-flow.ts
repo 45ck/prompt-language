@@ -93,7 +93,7 @@ import {
 } from '../domain/variable-value.js';
 import { resolveContextProfile } from '../domain/context-profile.js';
 
-type LoweredAwayFlowNode = Extract<FlowNode, { kind: 'swarm' | 'start' | 'return' }>;
+type LoweredAwayFlowNode = Extract<FlowNode, { kind: 'swarm' | 'start' }>;
 
 function unexpectedLoweredAwayNode(node: LoweredAwayFlowNode): never {
   throw new Error(`Flow node "${node.kind}" must be lowered before runtime execution`);
@@ -215,10 +215,10 @@ export function resolveCurrentNode(
     case 'remember':
     case 'send':
     case 'receive':
+    case 'return':
       return null;
     case 'swarm':
     case 'start':
-    case 'return':
       return unexpectedLoweredAwayNode(node);
     default: {
       const _exhaustive: never = node;
@@ -401,6 +401,7 @@ function enterIfBranch(
 const MAX_OUTPUT_LENGTH = 2000;
 
 type DebugCategory = 'advance' | 'condition' | 'gate' | 'capture';
+type BranchDecision = 'then' | 'else' | 'exit';
 
 function parseDebugLevel(value: string | undefined): 0 | 1 | 2 | 3 {
   if (!value) return 0;
@@ -415,6 +416,41 @@ function parseDebugLevel(value: string | undefined): 0 | 1 | 2 | 3 {
 function debugLog(category: DebugCategory, message: string, level: 1 | 2 | 3 = 2): void {
   if (parseDebugLevel(process.env['PROMPT_LANGUAGE_DEBUG']) < level) return;
   process.stderr.write(`[PL:${category}] ${message}\n`);
+}
+
+function progressEnabled(): boolean {
+  return process.env['PROMPT_LANGUAGE_PROGRESS'] === '1';
+}
+
+function progressLog(message: string): void {
+  if (!progressEnabled()) return;
+  process.stderr.write(`[PL:progress] ${message}\n`);
+}
+
+function summarizeCurrentStep(state: SessionState): string {
+  const current = resolveCurrentNode(state.flowSpec.nodes, state.currentNodePath);
+  return current ? describeFlowNode(current) : 'flow complete';
+}
+
+function logStepProgress(node: FlowNode, state: SessionState): void {
+  progressLog(`step ${describeFlowNode(node)} -> ${summarizeCurrentStep(state)}`);
+}
+
+function logLoopProgress(
+  loopLabel: string,
+  iteration: number,
+  maxIterations: number,
+  outcome: 'continue' | 'exit',
+): void {
+  progressLog(`loop ${loopLabel} iteration ${iteration}/${maxIterations} -> ${outcome}`);
+}
+
+function logBranchDecision(
+  node: Extract<FlowNode, { kind: 'if' }>,
+  branch: BranchDecision,
+  detail: string,
+): void {
+  progressLog(`branch if ${node.condition} -> ${branch} (${detail})`);
 }
 
 function truncateOutput(output: string): string {
@@ -639,12 +675,14 @@ function handleLoopReentry(
           completedAt: Date.now(),
           loopStartedAt: progress?.loopStartedAt,
         });
+        logLoopProgress(loopLabel, iteration, maxIter, 'exit');
         return advanceFromPath(current, parentPath);
       }
     }
   }
 
   if (shouldReLoop && iteration < maxIter) {
+    logLoopProgress(loopLabel, iteration, maxIter, 'continue');
     current = updateNodeProgress(current, nodeId, {
       iteration: iteration + 1,
       maxIterations: maxIter,
@@ -663,6 +701,7 @@ function handleLoopReentry(
     completedAt: Date.now(),
     loopStartedAt: progress?.loopStartedAt,
   });
+  logLoopProgress(loopLabel, iteration, maxIter, 'exit');
   return advanceFromPath(current, parentPath);
 }
 
@@ -763,6 +802,7 @@ async function handleBodyExhaustion(
       let current = state;
 
       if (iteration < itemCount) {
+        logLoopProgress(describeFlowNode(parentNode), iteration, itemCount, 'continue');
         const nextItem = items[iteration] ?? '';
         current = updateVariable(current, parentNode.variableName, nextItem);
         current = updateVariable(current, `${parentNode.variableName}_index`, iteration);
@@ -782,6 +822,7 @@ async function handleBodyExhaustion(
         startedAt: progress?.startedAt,
         completedAt: Date.now(),
       });
+      logLoopProgress(describeFlowNode(parentNode), iteration, itemCount, 'exit');
       current = removeVariable(current, parentNode.variableName);
       current = removeVariable(current, `${parentNode.variableName}_index`);
       current = removeVariable(current, `${parentNode.variableName}_length`);
@@ -815,10 +856,10 @@ async function handleBodyExhaustion(
     case 'remember':
     case 'send':
     case 'receive':
+    case 'return':
       return null;
     case 'swarm':
     case 'start':
-    case 'return':
       return unexpectedLoweredAwayNode(parentNode);
     default: {
       const _exhaustive: never = parentNode;
@@ -2807,6 +2848,8 @@ function instrumentNodeAdvanceResult<
     durationMs: Math.max(0, finishedAt - startedAt),
   });
 
+  logStepProgress(node, state);
+
   return { ...result, state } as T;
 }
 
@@ -2874,6 +2917,8 @@ async function advanceSingleNode(
       return advanceAwaitNode(node, current, processSpawner, messageStore);
     case 'approve':
       return advanceApproveNode(node, current);
+    case 'return':
+      return { state: markCompleted(current), advanced: true };
     case 'review': {
       const now = Date.now();
       return {
@@ -2902,7 +2947,6 @@ async function advanceSingleNode(
       return advanceReceiveNode(node, current, messageStore);
     case 'swarm':
     case 'start':
-    case 'return':
       return unexpectedLoweredAwayNode(node);
     default: {
       const _exhaustive: never = node;
@@ -3277,17 +3321,20 @@ async function advanceIfNode(
           );
           const verdict = groundingResult.exitCode === 0;
           if (verdict) {
+            logBranchDecision(node, 'then', 'grounded-by');
             return {
               state: enterIfBranch(current, node, 0, node.thenBranch.length),
               advanced: true,
             };
           }
           if (node.elseBranch.length > 0) {
+            logBranchDecision(node, 'else', 'grounded-by');
             return {
               state: enterIfBranch(current, node, node.thenBranch.length, node.elseBranch.length),
               advanced: true,
             };
           }
+          logBranchDecision(node, 'exit', 'grounded-by');
           const completed = updateNodeProgress(current, node.id, {
             iteration: 1,
             maxIterations: 1,
@@ -3372,14 +3419,17 @@ async function advanceIfNode(
           return { kind: 'pause', state: current, capturedPrompt: null };
         }
         if (verdict) {
+          logBranchDecision(node, 'then', 'ask');
           return { state: enterIfBranch(current, node, 0, node.thenBranch.length), advanced: true };
         }
         if (node.elseBranch.length > 0) {
+          logBranchDecision(node, 'else', 'ask');
           return {
             state: enterIfBranch(current, node, node.thenBranch.length, node.elseBranch.length),
             advanced: true,
           };
         }
+        logBranchDecision(node, 'exit', 'ask');
         const completed = updateNodeProgress(current, node.id, {
           iteration: 1,
           maxIterations: 1,
@@ -3445,14 +3495,17 @@ async function advanceIfNode(
   if (condResult === null) return { kind: 'pause', state: current, capturedPrompt: null };
 
   if (condResult) {
+    logBranchDecision(node, 'then', 'condition');
     return { state: enterIfBranch(current, node, 0, node.thenBranch.length), advanced: true };
   }
   if (node.elseBranch.length > 0) {
+    logBranchDecision(node, 'else', 'condition');
     return {
       state: enterIfBranch(current, node, node.thenBranch.length, node.elseBranch.length),
       advanced: true,
     };
   }
+  logBranchDecision(node, 'exit', 'condition');
   const completed = updateNodeProgress(current, node.id, {
     iteration: 1,
     maxIterations: 1,

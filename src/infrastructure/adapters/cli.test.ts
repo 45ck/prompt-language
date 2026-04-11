@@ -407,6 +407,118 @@ describe('CLI commands', () => {
     }
   });
 
+  it('validate --check-gates --json succeeds when all gate commands pass', async () => {
+    tempDir = await createTempDir('pl-cli-validate-gates-pass-');
+    const flowPath = join(tempDir, 'sample.flow');
+    await writeFile(
+      flowPath,
+      [
+        'Goal: gate pass',
+        '',
+        'flow:',
+        '  prompt: hello',
+        '',
+        'done when:',
+        `  gate smoke_ok: node -e "process.stdout.write('ok')"`,
+      ].join('\n'),
+      'utf8',
+    );
+
+    const output = execFileSync(
+      process.execPath,
+      [CLI, 'validate', '--check-gates', '--json', '--file', flowPath],
+      {
+        cwd: tempDir,
+        encoding: 'utf8',
+      },
+    );
+
+    expect(JSON.parse(output)).toMatchObject({
+      status: 'ok',
+      gateChecks: [
+        expect.objectContaining({
+          predicate: 'smoke_ok',
+          passed: true,
+          exitCode: 0,
+          stdout: 'ok',
+        }),
+      ],
+    });
+  });
+
+  it('validate --check-gates --json exits 1 when a gate command fails', async () => {
+    tempDir = await createTempDir('pl-cli-validate-gates-fail-');
+    const flowPath = join(tempDir, 'sample.flow');
+    await writeFile(
+      flowPath,
+      [
+        'Goal: gate fail',
+        '',
+        'flow:',
+        '  prompt: hello',
+        '',
+        'done when:',
+        `  gate smoke_ok: node -e "process.stderr.write('bad'); process.exit(1)"`,
+      ].join('\n'),
+      'utf8',
+    );
+
+    try {
+      execFileSync(
+        process.execPath,
+        [CLI, 'validate', '--check-gates', '--json', '--file', flowPath],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+        },
+      );
+      expect.unreachable();
+    } catch (error) {
+      const failure = error as { status?: number; stdout?: string };
+      expect(failure.status).toBe(1);
+      expect(JSON.parse(failure.stdout ?? '{}')).toMatchObject({
+        status: 'unsuccessful',
+        gateChecks: [
+          expect.objectContaining({
+            predicate: 'smoke_ok',
+            passed: false,
+            exitCode: 1,
+            stderr: 'bad',
+          }),
+        ],
+      });
+    }
+  });
+
+  it('validate --check-gates --json exits 2 when gate prerequisites are missing', async () => {
+    tempDir = await createTempDir('pl-cli-validate-gates-blocked-');
+    const flowPath = join(tempDir, 'sample.flow');
+    await writeFile(
+      flowPath,
+      'Goal: blocked\n\nflow:\n  prompt: hello\n\ndone when:\n  lint_pass\n',
+      'utf8',
+    );
+
+    try {
+      execFileSync(
+        process.execPath,
+        [CLI, 'validate', '--check-gates', '--json', '--file', flowPath],
+        {
+          cwd: tempDir,
+          encoding: 'utf8',
+        },
+      );
+      expect.unreachable();
+    } catch (error) {
+      const failure = error as { status?: number; stdout?: string };
+      expect(failure.status).toBe(2);
+      expect(JSON.parse(failure.stdout ?? '{}')).toMatchObject({
+        status: 'blocked',
+        diagnostics: [expect.objectContaining({ code: 'PLC-005' })],
+      });
+    }
+  });
+
   it('validate blocks unsupported interactive profiles for headless runners', async () => {
     tempDir = await createTempDir('pl-cli-validate-mode-blocked-');
     const flowPath = join(tempDir, 'sample.flow');

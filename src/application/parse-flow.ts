@@ -1330,14 +1330,14 @@ function parseStartLine(ctx: ParseContext, line: string): FlowNode {
   return attachSource(ctx, createStartNode(nextId(ctx), targets));
 }
 
-function parseReturnLine(ctx: ParseContext, line: string): FlowNode {
+function parseReturnLine(ctx: ParseContext, line: string, scope: ParseScope): FlowNode {
   const match = /^return\b(?:\s+(.+))?$/i.exec(line);
   const expression = match?.[1]?.trim();
-  if (!expression) {
+  if (scope === 'role' && !expression) {
     warn(ctx, `Invalid return syntax: "${line}" — expected return <expression>`);
     return attachSource(ctx, createPromptNode(nextId(ctx), line));
   }
-  return attachSource(ctx, createReturnNode(nextId(ctx), expression));
+  return attachSource(ctx, createReturnNode(nextId(ctx), expression ?? ''));
 }
 
 function parseRememberLine(ctx: ParseContext, trimmed: string): FlowNode {
@@ -1706,10 +1706,10 @@ function parseLine(
     return parseAwaitLine(ctx, trimmed);
   }
   if (lower.startsWith('return') || lower === 'return') {
-    if (scope !== 'role') {
-      warn(ctx, '"return" is only valid inside a role');
+    if (scope !== 'flow' && scope !== 'role') {
+      warn(ctx, '"return" is only valid inside flow bodies or roles');
     }
-    return parseReturnLine(ctx, trimmed);
+    return parseReturnLine(ctx, trimmed, scope);
   }
   if (lower === 'race' || lower.startsWith('race ')) {
     return parseRaceBlock(ctx, trimmed, indent, scope);

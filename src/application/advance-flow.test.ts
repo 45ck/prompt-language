@@ -30,6 +30,7 @@ import {
   createAwaitNode,
   createRaceNode,
   createReviewNode,
+  createReturnNode,
   withNodeSource,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
@@ -38,6 +39,8 @@ import { CAPTURE_PENDING_SENTINEL } from './ports/capture-reader.js';
 import type { ProcessSpawner, SpawnInput } from './ports/process-spawner.js';
 import type { MessageStore } from './ports/message-store.js';
 import { RUNTIME_DIAGNOSTIC_CODES } from '../domain/diagnostic-report.js';
+
+const ORIGINAL_DEBUG_ENV = process.env['PROMPT_LANGUAGE_DEBUG'];
 
 // ── resolveCurrentNode ───────────────────────────────────────────────
 
@@ -265,6 +268,61 @@ describe('evaluateFlowCondition', () => {
     const result = await evaluateFlowCondition('completely_unknown', {}, runner);
     expect(result).toBeNull();
   });
+
+  it('emits level-2 condition diagnostics only when debug level is 2+', async () => {
+    process.env['PROMPT_LANGUAGE_DEBUG'] = '2';
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      const runner: CommandRunner = {
+        run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+      };
+      const result = await evaluateFlowCondition('completely_unknown', {}, runner);
+      expect(result).toBeNull();
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[PL:condition] Evaluating "completely_unknown" -> "completely_unknown"\n',
+      );
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[PL:condition] No builtin command mapping for "completely_unknown"\n',
+      );
+      expect(stderrSpy).not.toHaveBeenCalledWith(
+        expect.stringContaining('[PL:gate] Running condition command:'),
+      );
+    } finally {
+      stderrSpy.mockRestore();
+      if (ORIGINAL_DEBUG_ENV === undefined) {
+        delete process.env['PROMPT_LANGUAGE_DEBUG'];
+      } else {
+        process.env['PROMPT_LANGUAGE_DEBUG'] = ORIGINAL_DEBUG_ENV;
+      }
+    }
+  });
+
+  it('emits level-3 gate diagnostics for builtin condition commands only at debug level 3', async () => {
+    process.env['PROMPT_LANGUAGE_DEBUG'] = '3';
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      const runner: CommandRunner = {
+        run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+      };
+      const result = await evaluateFlowCondition('file_exists package.json', {}, runner);
+      expect(result).toBe(true);
+      expect(stderrSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/^\[PL:gate\] Running condition command: .+\n$/),
+      );
+      expect(stderrSpy).toHaveBeenCalledWith(
+        '[PL:condition] Command exit=0 inverted=false => true\n',
+      );
+    } finally {
+      stderrSpy.mockRestore();
+      if (ORIGINAL_DEBUG_ENV === undefined) {
+        delete process.env['PROMPT_LANGUAGE_DEBUG'];
+      } else {
+        process.env['PROMPT_LANGUAGE_DEBUG'] = ORIGINAL_DEBUG_ENV;
+      }
+    }
+  });
 });
 
 // ── autoAdvanceNodes — handleBodyExhaustion paths ────────────────────
@@ -399,6 +457,111 @@ describe('autoAdvanceNodes — body exhaustion', () => {
 
     const { capturedPrompt } = await autoAdvanceNodes(state);
     expect(capturedPrompt).toBe('After try');
+  });
+});
+
+describe('autoAdvanceNodes — progress notifications', () => {
+  it('writes overall step progress to stderr when PROMPT_LANGUAGE_PROGRESS=1', async () => {
+    const original = process.env['PROMPT_LANGUAGE_PROGRESS'];
+    process.env['PROMPT_LANGUAGE_PROGRESS'] = '1';
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      const spec = createFlowSpec('test', [
+        createPromptNode('p1', 'First step'),
+        createPromptNode('p2', 'Second step'),
+      ]);
+      const state = createSessionState('s1', spec);
+
+      const result = await autoAdvanceNodes(state);
+
+      expect(result.kind).toBe('prompt');
+      expect(result.capturedPrompt).toBe('First step');
+      expect(writeSpy).toHaveBeenCalledWith('[PL:progress] step prompt -> prompt\n');
+    } finally {
+      writeSpy.mockRestore();
+      if (original === undefined) {
+        delete process.env['PROMPT_LANGUAGE_PROGRESS'];
+      } else {
+        process.env['PROMPT_LANGUAGE_PROGRESS'] = original;
+      }
+    }
+  });
+
+  it('writes loop iteration completion and branch decisions when PROMPT_LANGUAGE_PROGRESS=1', async () => {
+    const original = process.env['PROMPT_LANGUAGE_PROGRESS'];
+    process.env['PROMPT_LANGUAGE_PROGRESS'] = '1';
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      const loopSpec = createFlowSpec('test', [
+        createWhileNode('w1', 'command_failed', [createPromptNode('p1', 'Fix')], 3),
+      ]);
+      const loopState = {
+        ...createSessionState('s1', loopSpec),
+        variables: { command_failed: true },
+        currentNodePath: [0, 1],
+        nodeProgress: { w1: { iteration: 1, maxIterations: 3, status: 'running' as const } },
+      };
+
+      await autoAdvanceNodes(loopState);
+
+      const branchSpec = createFlowSpec('test', [
+        createIfNode(
+          'if1',
+          'command_succeeded',
+          [createPromptNode('p1', 'Ship it')],
+          [createPromptNode('p2', 'Stop it')],
+        ),
+      ]);
+      const branchState = {
+        ...createSessionState('s2', branchSpec),
+        variables: { command_succeeded: false },
+      };
+
+      const branchResult = await autoAdvanceNodes(branchState);
+
+      expect(branchResult.kind).toBe('prompt');
+      expect(branchResult.capturedPrompt).toBe('Stop it');
+      expect(writeSpy).toHaveBeenCalledWith(
+        expect.stringContaining(
+          '[PL:progress] loop while command_failed iteration 1/3 -> continue',
+        ),
+      );
+      expect(writeSpy).toHaveBeenCalledWith(
+        expect.stringContaining('[PL:progress] branch if command_succeeded -> else (condition)'),
+      );
+    } finally {
+      writeSpy.mockRestore();
+      if (original === undefined) {
+        delete process.env['PROMPT_LANGUAGE_PROGRESS'];
+      } else {
+        process.env['PROMPT_LANGUAGE_PROGRESS'] = original;
+      }
+    }
+  });
+
+  it('does not write progress notifications when PROMPT_LANGUAGE_PROGRESS is unset', async () => {
+    const original = process.env['PROMPT_LANGUAGE_PROGRESS'];
+    delete process.env['PROMPT_LANGUAGE_PROGRESS'];
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      const spec = createFlowSpec('test', [
+        createPromptNode('p1', 'First step'),
+        createPromptNode('p2', 'Second step'),
+      ]);
+      const state = createSessionState('s1', spec);
+
+      await autoAdvanceNodes(state);
+
+      expect(writeSpy).not.toHaveBeenCalledWith(expect.stringContaining('[PL:progress]'));
+    } finally {
+      writeSpy.mockRestore();
+      if (original !== undefined) {
+        process.env['PROMPT_LANGUAGE_PROGRESS'] = original;
+      }
+    }
   });
 });
 
@@ -789,6 +952,66 @@ describe('autoAdvanceNodes — break', () => {
 
     const { state: result } = await autoAdvanceNodes(state);
     expect(result.variables['after']).toBe('yes');
+  });
+});
+
+describe('autoAdvanceNodes — return', () => {
+  it('immediately completes the flow for a top-level return node', async () => {
+    const spec = createFlowSpec('test', [
+      createReturnNode('ret1', ''),
+      createPromptNode('p1', 'should not render'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+
+    expect(capturedPrompt).toBeNull();
+    expect(result.status).toBe('completed');
+  });
+
+  it('immediately completes the flow from inside an if branch', async () => {
+    const spec = createFlowSpec('test', [
+      createIfNode('if1', 'true', [createReturnNode('ret1', '')], [createPromptNode('p1', 'else')]),
+      createPromptNode('p2', 'after'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+
+    expect(capturedPrompt).toBeNull();
+    expect(result.status).toBe('completed');
+  });
+
+  it('immediately completes the flow from inside a try body', async () => {
+    const spec = createFlowSpec('test', [
+      createTryNode(
+        'try1',
+        [createReturnNode('ret1', '')],
+        'command_failed',
+        [createPromptNode('catch1', 'catch')],
+        [createPromptNode('finally1', 'finally')],
+      ),
+      createPromptNode('after1', 'after'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+
+    expect(capturedPrompt).toBeNull();
+    expect(result.status).toBe('completed');
+  });
+
+  it('immediately completes the flow from inside a foreach body', async () => {
+    const spec = createFlowSpec('test', [
+      createForeachNode('for1', 'item', 'one two', [createReturnNode('ret1', '')]),
+      createPromptNode('after1', 'after'),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
+
+    expect(capturedPrompt).toBeNull();
+    expect(result.status).toBe('completed');
   });
 });
 
@@ -1984,6 +2207,37 @@ describe('autoAdvanceNodes — let prompt capture', () => {
     const { capturedPrompt } = await autoAdvanceNodes(state);
     expect(capturedPrompt).toContain('Ask');
   });
+
+  it('emits level-2 capture diagnostics when a capture value is read', async () => {
+    process.env['PROMPT_LANGUAGE_DEBUG'] = '2';
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      const captureReader: CaptureReader = {
+        read: vi.fn().mockResolvedValue('blue'),
+        clear: vi.fn(),
+      };
+      const letPrompt = createLetNode('l1', 'answer', { type: 'prompt', text: 'Question' });
+      const spec = createFlowSpec('test', [letPrompt, createPromptNode('p1', 'next')]);
+      let state = createSessionState('s1', spec);
+      state = updateNodeProgress(state, 'l1', {
+        iteration: 1,
+        maxIterations: 3,
+        status: 'awaiting_capture',
+      });
+
+      const result = await autoAdvanceNodes(state, undefined, captureReader);
+      expect(result.state.variables['answer']).toBe('blue');
+      expect(stderrSpy).toHaveBeenCalledWith('[PL:capture] Captured value for "answer"\n');
+    } finally {
+      stderrSpy.mockRestore();
+      if (ORIGINAL_DEBUG_ENV === undefined) {
+        delete process.env['PROMPT_LANGUAGE_DEBUG'];
+      } else {
+        process.env['PROMPT_LANGUAGE_DEBUG'] = ORIGINAL_DEBUG_ENV;
+      }
+    }
+  });
 });
 
 // ── run node without commandRunner ──────────────────────────────────
@@ -1996,6 +2250,37 @@ describe('autoAdvanceNodes — run without commandRunner', () => {
     const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
     expect(capturedPrompt).toBeNull();
     expect(result.currentNodePath).toEqual([0]);
+  });
+});
+
+describe('autoAdvanceNodes — debug diagnostics', () => {
+  it('emits advance and gate diagnostics for run nodes at debug level 3', async () => {
+    process.env['PROMPT_LANGUAGE_DEBUG'] = '3';
+    const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      const runner: CommandRunner = {
+        run: async () => ({ exitCode: 0, stdout: 'ok', stderr: '' }),
+      };
+      const spec = createFlowSpec('test', [
+        createRunNode('r1', 'echo hi'),
+        createPromptNode('p1', 'done'),
+      ]);
+      const state = createSessionState('s1', spec);
+
+      const result = await autoAdvanceNodes(state, runner);
+      expect(result.capturedPrompt).toBe('done');
+      expect(stderrSpy).toHaveBeenCalledWith('[PL:advance] Running node r1 command\n');
+      expect(stderrSpy).toHaveBeenCalledWith('[PL:gate] Command: echo hi\n');
+      expect(stderrSpy).toHaveBeenCalledWith('[PL:gate] Command exit=0 timedOut=false\n');
+    } finally {
+      stderrSpy.mockRestore();
+      if (ORIGINAL_DEBUG_ENV === undefined) {
+        delete process.env['PROMPT_LANGUAGE_DEBUG'];
+      } else {
+        process.env['PROMPT_LANGUAGE_DEBUG'] = ORIGINAL_DEBUG_ENV;
+      }
+    }
   });
 });
 

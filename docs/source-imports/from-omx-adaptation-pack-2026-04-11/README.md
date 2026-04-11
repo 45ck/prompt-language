@@ -35,6 +35,8 @@ Those files are useful as source material, but they would create duplicate maint
 
 The pack's raw `OPSH-*` backlog was remapped into repo-native Beads instead of being copied verbatim:
 
+- canonical shell-vs-runtime boundary -> `docs/design/operator-shell-boundary.md`
+- canonical hook-manager ownership contract -> `docs/design/hook-manager-ownership.md`
 - boundary and shell-vs-runtime framing -> `prompt-language-f7jp.1`
 - `OPSH-001` and `OPSH-002` -> `prompt-language-f7jp.2`
 - `OPSH-003` -> `prompt-language-f7jp.3`

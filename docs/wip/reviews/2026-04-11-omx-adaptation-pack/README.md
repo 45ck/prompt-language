@@ -26,6 +26,8 @@ The provenance summary for this bundle lives under:
 ## How this was integrated
 
 - The full planning pack was kept under `docs/wip/reviews/2026-04-11-omx-adaptation-pack/` as imported WIP material, not promoted into shipped docs.
+- The accepted shell-vs-runtime rule from this pack was promoted into [docs/design/operator-shell-boundary.md](../../../design/operator-shell-boundary.md) so later OMX follow-up beads can depend on one canonical design note.
+- The accepted hook-manager ownership and lifecycle contract from this pack was promoted into [docs/design/hook-manager-ownership.md](../../../design/hook-manager-ownership.md) so `prompt-language-f7jp.3` has a canonical repo-native design anchor instead of only the imported WIP spec.
 - The pack's implementation backlog was remapped into the repo-native Beads program `prompt-language-f7jp` instead of copying the raw `OPSH-*` issue IDs as canonical backlog.
 - Overlap with existing work is explicit:
   - `prompt-language-f7jp.4` stays additive to `prompt-language-zhog.3` replayability work rather than replacing it.

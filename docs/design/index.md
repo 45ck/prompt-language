@@ -16,6 +16,7 @@ For the repo-wide docs cleanup:
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
 | [Host Extension Boundary](host-extension-boundary.md)                          | Host-managed skills, hooks, plugins, and MCP stay outside the core DSL               |
 | [Multi-Agent Orchestration Boundary](multi-agent-orchestration.md)             | Accepted subagent-first direction for orchestration                                  |
+| [Operator Shell Boundary](operator-shell-boundary.md)                          | Accepted shell-over-runtime boundary for doctor, recovery, visibility, and supervision |
 | [Hooks Architecture](hooks-architecture.md)                                    | Three-hook enforcement loop and state-file model                                     |
 | [Evaluation Stack V1 Boundary](evaluation-stack-v1.md)                         | Accepted first-slice boundary for rubrics, judges, eval tooling, and `review strict` |
 | [Diagnostics Contract V1](diagnostics-contract-v1.md)                          | Accepted report envelope, code ranges, and preflight boundary                        |

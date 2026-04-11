@@ -379,6 +379,78 @@ describe('renderFlow', () => {
     expect(outputA).toContain('Variables:\n  alpha = first\n  middle = mid\n  zebra = last');
   });
 
+  it('renders byte-identically for equivalent full states with different object insertion order', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work'), createRunNode('r1', 'npm test')],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+
+    const base = createSessionState('s1', spec);
+    const stateA = {
+      ...base,
+      currentNodePath: [1],
+      variables: {
+        zebra: 'last',
+        alpha: 'first',
+        middle: 'mid',
+      },
+      gateResults: {
+        tests_pass: true,
+        lint_pass: false,
+      },
+      gateDiagnostics: {
+        tests_pass: {
+          passed: true,
+          command: 'npm test',
+          exitCode: 0,
+        },
+        lint_pass: {
+          passed: false,
+          command: 'npm run lint',
+          exitCode: 1,
+          stderr: 'lint failed',
+        },
+      },
+      nodeProgress: {
+        p1: { iteration: 1, maxIterations: 1, status: 'completed' as const },
+        r1: { iteration: 1, maxIterations: 1, status: 'running' as const },
+      },
+    };
+    const stateB = {
+      ...base,
+      currentNodePath: [1],
+      variables: {
+        middle: 'mid',
+        zebra: 'last',
+        alpha: 'first',
+      },
+      gateResults: {
+        lint_pass: false,
+        tests_pass: true,
+      },
+      gateDiagnostics: {
+        lint_pass: {
+          passed: false,
+          command: 'npm run lint',
+          exitCode: 1,
+          stderr: 'lint failed',
+        },
+        tests_pass: {
+          passed: true,
+          command: 'npm test',
+          exitCode: 0,
+        },
+      },
+      nodeProgress: {
+        r1: { iteration: 1, maxIterations: 1, status: 'running' as const },
+        p1: { iteration: 1, maxIterations: 1, status: 'completed' as const },
+      },
+    };
+
+    expect(renderFlow(stateA)).toBe(renderFlow(stateB));
+  });
+
   it('omits variables section when empty', () => {
     const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
     const state = createSessionState('s1', spec);
@@ -1424,9 +1496,8 @@ describe('renderFlowSummary — helper coverage', () => {
   });
 });
 
-// H-DX-002: Timing annotation on completed loop nodes
-describe('renderFlow — timing annotation', () => {
-  it('shows elapsed time on completed loop node when > 0.5s', () => {
+describe('renderFlow — incidental timing volatility', () => {
+  it('omits elapsed time on completed loop nodes by default', () => {
     const whileNode = createWhileNode('w1', 'cond', [createRunNode('r1', 'npm test')], 3);
     const spec = createFlowSpec('test', [whileNode, createPromptNode('p2', 'done')]);
     let state = createSessionState('s1', spec);
@@ -1439,23 +1510,23 @@ describe('renderFlow — timing annotation', () => {
     });
     state = { ...state, currentNodePath: [1] };
     const output = renderFlow(state);
-    expect(output).toContain('[4.2s]');
+    expect(output).not.toMatch(/\[\d+\.\d+s\]/);
   });
 
-  it('omits timing annotation when elapsed <= 0.5s', () => {
-    const whileNode = createWhileNode('w1', 'cond', [createRunNode('r1', 'npm test')], 3);
-    const spec = createFlowSpec('test', [whileNode, createPromptNode('p2', 'done')]);
+  it('omits elapsed time on completed run nodes by default', () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'npm test')]);
     let state = createSessionState('s1', spec);
-    state = updateNodeProgress(state, 'w1', {
+    state = updateNodeProgress(state, 'r1', {
       iteration: 1,
-      maxIterations: 3,
+      maxIterations: 1,
       status: 'completed',
-      startedAt: Date.now() - 200,
+      startedAt: Date.now() - 1800,
       completedAt: Date.now(),
     });
     state = { ...state, currentNodePath: [1] };
     const output = renderFlow(state);
-    expect(output).not.toMatch(/\[\d+\.\d+s\]/);
+    expect(output).toContain('run: npm test');
+    expect(output).not.toContain('[1.8s]');
   });
 
   it('omits timing when no startedAt or completedAt', () => {
@@ -1470,21 +1541,6 @@ describe('renderFlow — timing annotation', () => {
     state = { ...state, currentNodePath: [0, 0] };
     const output = renderFlow(state);
     expect(output).not.toMatch(/\[\d+\.\d+s\]/);
-  });
-
-  it('shows elapsed time on completed run nodes', () => {
-    const spec = createFlowSpec('test', [createRunNode('r1', 'npm test')]);
-    let state = createSessionState('s1', spec);
-    state = updateNodeProgress(state, 'r1', {
-      iteration: 1,
-      maxIterations: 1,
-      status: 'completed',
-      startedAt: Date.now() - 1800,
-      completedAt: Date.now(),
-    });
-    state = { ...state, currentNodePath: [1] };
-    const output = renderFlow(state);
-    expect(output).toContain('run: npm test [1.8s]');
   });
 });
 
@@ -1640,6 +1696,50 @@ describe('renderFlowCompact', () => {
     expect(compact).toContain('[hello]');
   });
 
+  it('renders byte-identically for equivalent compact states with different object insertion order', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'first'), createRunNode('r1', 'npm test')],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+
+    const base = createSessionState('s1', spec);
+    const stateA = {
+      ...base,
+      currentNodePath: [1],
+      variables: {
+        zebra: 'last',
+        alpha: 'first',
+      },
+      gateResults: {
+        tests_pass: true,
+        lint_pass: false,
+      },
+      nodeProgress: {
+        p1: { iteration: 1, maxIterations: 1, status: 'completed' as const },
+        r1: { iteration: 1, maxIterations: 1, status: 'running' as const },
+      },
+    };
+    const stateB = {
+      ...base,
+      currentNodePath: [1],
+      variables: {
+        alpha: 'first',
+        zebra: 'last',
+      },
+      gateResults: {
+        lint_pass: false,
+        tests_pass: true,
+      },
+      nodeProgress: {
+        r1: { iteration: 1, maxIterations: 1, status: 'running' as const },
+        p1: { iteration: 1, maxIterations: 1, status: 'completed' as const },
+      },
+    };
+
+    expect(renderFlowCompact(stateA)).toBe(renderFlowCompact(stateB));
+  });
+
   it('omits inactive if branches while keeping the active branch explicit', () => {
     const ifNode = createIfNode(
       'i1',
@@ -1764,6 +1864,37 @@ describe('renderStateHash', () => {
           status: 'completed' as const,
           maxIterations: 1,
           iteration: 1,
+        },
+      },
+    };
+
+    expect(renderStateHash(stateA)).toBe(renderStateHash(stateB));
+  });
+
+  it('ignores timestamp-only node-progress churn when hashing render state', () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'npm test')]);
+    const base = createSessionState('s1', spec);
+    const stateA = {
+      ...base,
+      nodeProgress: {
+        r1: {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'completed' as const,
+          startedAt: 1_000,
+          completedAt: 2_000,
+        },
+      },
+    };
+    const stateB = {
+      ...base,
+      nodeProgress: {
+        r1: {
+          iteration: 1,
+          maxIterations: 1,
+          status: 'completed' as const,
+          startedAt: 10_000,
+          completedAt: 20_000,
         },
       },
     };

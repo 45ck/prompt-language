@@ -31,7 +31,9 @@ function canonicalizeForHash(value: unknown): unknown {
   }
 
   if (value != null && typeof value === 'object') {
-    const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right));
+    const entries = Object.entries(value)
+      .filter(([key]) => key !== 'startedAt' && key !== 'completedAt')
+      .sort(([left], [right]) => left.localeCompare(right));
     return Object.fromEntries(
       entries.map(([key, nestedValue]) => [key, canonicalizeForHash(nestedValue)]),
     );
@@ -79,15 +81,6 @@ function progressAnnotation(state: SessionState, nodeId: string): string {
   const filled = Math.min(barWidth, Math.round((done / total) * barWidth));
   const bar = '#'.repeat(filled) + '-'.repeat(barWidth - filled);
   return ` [${bar}] ${done}/${total}`;
-}
-
-// H-DX-002: Show elapsed time for completed nodes (>0.5s)
-function timingAnnotation(state: SessionState, nodeId: string): string {
-  const progress = state.nodeProgress[nodeId];
-  if (progress?.startedAt === undefined || progress.completedAt === undefined) return '';
-  const elapsed = (progress.completedAt - progress.startedAt) / 1000;
-  if (elapsed <= 0.5) return '';
-  return ` [${elapsed.toFixed(1)}s]`;
 }
 
 function durationMsFromProgress(state: SessionState, nodeId: string): number | null {
@@ -259,15 +252,13 @@ function renderNode(
 
   switch (node.kind) {
     case 'prompt': {
-      const timing = timingAnnotation(state, node.id);
       return [
-        `${prefix}${indent}prompt${formatProfileClause(node.profile)}: ${node.text}${timing}${suffix}`,
+        `${prefix}${indent}prompt${formatProfileClause(node.profile)}: ${node.text}${suffix}`,
       ];
     }
     case 'run': {
       const timeoutTag = node.timeoutMs ? ` [timeout ${node.timeoutMs / 1000}s]` : '';
-      const timing = timingAnnotation(state, node.id);
-      return [`${prefix}${indent}run: ${node.command}${timeoutTag}${timing}${suffix}`];
+      return [`${prefix}${indent}run: ${node.command}${timeoutTag}${suffix}`];
     }
     case 'while': {
       const whileLabel = node.label ? `${node.label}: ` : '';
@@ -334,13 +325,11 @@ function renderNode(
     }
     case 'break': {
       const breakLabel = node.label ? ` ${node.label}` : '';
-      const timing = timingAnnotation(state, node.id);
-      return [`${prefix}${indent}break${breakLabel}${timing}${suffix}`];
+      return [`${prefix}${indent}break${breakLabel}${suffix}`];
     }
     case 'continue': {
       const continueLabel = node.label ? ` ${node.label}` : '';
-      const timing = timingAnnotation(state, node.id);
-      return [`${prefix}${indent}continue${continueLabel}${timing}${suffix}`];
+      return [`${prefix}${indent}continue${continueLabel}${suffix}`];
     }
     case 'spawn':
       return renderSpawnNode(node, state, path, indentLevel, prefix, suffix);
@@ -352,7 +341,7 @@ function renderNode(
             : Array.isArray(node.target)
               ? node.target.join(' ')
               : `"${node.target}"`
-        }${timingAnnotation(state, node.id)}${suffix}`,
+        }${suffix}`,
       ];
     case 'approve': {
       const approveTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds / 60}m` : '';
@@ -363,10 +352,7 @@ function renderNode(
           : approveRejected === 'false'
             ? '  [approved]'
             : '  [pending]';
-      const timing = timingAnnotation(state, node.id);
-      return [
-        `${prefix}${indent}approve "${node.message}"${approveTimeout}${approveTag}${timing}${suffix}`,
-      ];
+      return [`${prefix}${indent}approve "${node.message}"${approveTimeout}${approveTag}${suffix}`];
     }
     case 'review': {
       const reviewProgress = state.nodeProgress[node.id];
@@ -386,8 +372,7 @@ function renderNode(
     case 'race': {
       const winner = state.variables['race_winner'];
       const raceTag = winner !== undefined && winner !== '' ? `  [winner: ${String(winner)}]` : '';
-      const timing = timingAnnotation(state, node.id);
-      const raceLines = [`${prefix}${indent}race${raceTag}${timing}${suffix}`];
+      const raceLines = [`${prefix}${indent}race${raceTag}${suffix}`];
       for (let i = 0; i < node.children.length; i++) {
         raceLines.push(...renderNode(node.children[i]!, state, [...path, i], indentLevel + 1));
       }
@@ -409,17 +394,13 @@ function renderNode(
       );
     }
     case 'remember': {
-      const timing = timingAnnotation(state, node.id);
       if (node.key !== undefined && node.value !== undefined) {
-        return [
-          `${prefix}${indent}remember key="${node.key}" value="${node.value}"${timing}${suffix}`,
-        ];
+        return [`${prefix}${indent}remember key="${node.key}" value="${node.value}"${suffix}`];
       }
-      return [`${prefix}${indent}remember "${node.text ?? ''}"${timing}${suffix}`];
+      return [`${prefix}${indent}remember "${node.text ?? ''}"${suffix}`];
     }
     case 'send': {
-      const timing = timingAnnotation(state, node.id);
-      return [`${prefix}${indent}send "${node.target}" "${node.message}"${timing}${suffix}`];
+      return [`${prefix}${indent}send "${node.target}" "${node.message}"${suffix}`];
     }
     case 'receive': {
       const progress = state.nodeProgress[node.id];
@@ -430,21 +411,14 @@ function renderNode(
             ? ' [waiting]'
             : '';
       const fromTag = node.from !== undefined ? ` from "${node.from}"` : '';
-      const timing = timingAnnotation(state, node.id);
-      return [
-        `${prefix}${indent}receive ${node.variableName}${fromTag}${statusTag}${timing}${suffix}`,
-      ];
+      return [`${prefix}${indent}receive ${node.variableName}${fromTag}${statusTag}${suffix}`];
     }
     case 'swarm':
-      return [`${prefix}${indent}swarm ${node.name}${timingAnnotation(state, node.id)}${suffix}`];
+      return [`${prefix}${indent}swarm ${node.name}${suffix}`];
     case 'start':
-      return [
-        `${prefix}${indent}start ${node.targets.join(', ')}${timingAnnotation(state, node.id)}${suffix}`,
-      ];
+      return [`${prefix}${indent}start ${node.targets.join(', ')}${suffix}`];
     case 'return':
-      return [
-        `${prefix}${indent}return ${node.expression}${timingAnnotation(state, node.id)}${suffix}`,
-      ];
+      return [`${prefix}${indent}return ${node.expression}${suffix}`];
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -464,8 +438,7 @@ function renderLoopNode(
 ): string[] {
   const indent = '  '.repeat(indentLevel);
   const progress = progressAnnotation(state, nodeId);
-  const timing = timingAnnotation(state, nodeId);
-  const lines: string[] = [`${prefix}${indent}${header}${progress}${timing}${suffix}`];
+  const lines: string[] = [`${prefix}${indent}${header}${progress}${suffix}`];
 
   for (let i = 0; i < body.length; i++) {
     const child = body[i]!;
@@ -490,8 +463,7 @@ function renderIfNode(
     groundedBy: node.groundedBy,
   });
   const askRetries = node.askMaxRetries != null ? ` max-retries ${node.askMaxRetries}` : '';
-  const timing = timingAnnotation(state, node.id);
-  const lines: string[] = [`${prefix}${indent}if ${ifCond}${askRetries}${timing}${suffix}`];
+  const lines: string[] = [`${prefix}${indent}if ${ifCond}${askRetries}${suffix}`];
 
   for (let i = 0; i < node.thenBranch.length; i++) {
     const child = node.thenBranch[i]!;
@@ -520,8 +492,7 @@ function renderTryNode(
   suffix: string,
 ): string[] {
   const indent = '  '.repeat(indentLevel);
-  const timing = timingAnnotation(state, node.id);
-  const lines: string[] = [`${prefix}${indent}try${timing}${suffix}`];
+  const lines: string[] = [`${prefix}${indent}try${suffix}`];
 
   for (let i = 0; i < node.body.length; i++) {
     const child = node.body[i]!;
@@ -602,9 +573,8 @@ function renderLetNode(
   } else {
     annotation = '';
   }
-  const timing = timingAnnotation(state, node.id);
   return [
-    `${prefix}${indent}${declarationKeyword} ${node.variableName} ${operator} ${sourceText}${annotation}${timing}${suffix}`,
+    `${prefix}${indent}${declarationKeyword} ${node.variableName} ${operator} ${sourceText}${annotation}${suffix}`,
   ];
 }
 
@@ -618,7 +588,6 @@ function renderForeachNode(
 ): string[] {
   const indent = '  '.repeat(indentLevel);
   const progress = progressAnnotation(state, node.id);
-  const timing = timingAnnotation(state, node.id);
   const currentVal = state.variables[node.variableName];
   const valAnnotation =
     currentVal !== undefined
@@ -626,9 +595,7 @@ function renderForeachNode(
       : '';
   const foreachLabel = node.label ? `${node.label}: ` : '';
   const header = `${foreachLabel}foreach ${node.variableName} in ${node.listExpression}`;
-  const lines: string[] = [
-    `${prefix}${indent}${header}${progress}${timing}${valAnnotation}${suffix}`,
-  ];
+  const lines: string[] = [`${prefix}${indent}${header}${progress}${valAnnotation}${suffix}`];
 
   for (let i = 0; i < node.body.length; i++) {
     const child = node.body[i]!;
@@ -650,8 +617,7 @@ function renderSpawnNode(
   const indent = '  '.repeat(indentLevel);
   const child = state.spawnedChildren[node.name];
   const statusTag = child ? `  [${child.status}]` : '';
-  const timing = timingAnnotation(state, node.id);
-  const lines: string[] = [`${prefix}${indent}spawn "${node.name}"${statusTag}${timing}${suffix}`];
+  const lines: string[] = [`${prefix}${indent}spawn "${node.name}"${statusTag}${suffix}`];
 
   for (let i = 0; i < node.body.length; i++) {
     const bodyNode = node.body[i]!;

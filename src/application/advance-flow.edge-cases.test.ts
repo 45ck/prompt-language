@@ -93,31 +93,72 @@ describe('advance-flow edge cases', () => {
     expect(result.capturedPrompt).toBe('after control node');
   });
 
-  it('tracks nested foreach indices while walking nested body paths', async () => {
-    const prompt = createPromptNode(
-      'p1',
-      'outer=${outer_index} inner=${inner_index} ${outer}/${inner}',
-    );
-    const inner = createForeachNode('fe-inner', 'inner', 'x y', [prompt]);
-    const outer = createForeachNode('fe-outer', 'outer', 'a b', [inner]);
-    const state = createState([outer]);
+  it('breaks out of a loop immediately without executing the rest of the body', async () => {
+    const state = createState([
+      createForeachNode('fe1', 'item', 'a b', [
+        createBreakNode('b1'),
+        createPromptNode('p1', 'unreachable body'),
+      ]),
+      createPromptNode('p2', 'after break'),
+    ]);
 
-    expect(resolveCurrentNode([outer], [0])).toBe(outer);
-    expect(resolveCurrentNode([outer], [0, 0])).toBe(inner);
-    expect(resolveCurrentNode([outer], [0, 0, 0])).toBe(prompt);
+    const result = await autoAdvanceNodes(state);
+
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toBe('after break');
+    expect(result.state.currentNodePath).toEqual([2]);
+  });
+
+  it('continue at the end of a loop re-enters once per item without double-executing', async () => {
+    const state = createState([
+      createForeachNode('fe1', 'item', 'alpha beta', [
+        createPromptNode('p1', 'item=${item}'),
+        createContinueNode('c1'),
+        createPromptNode('p2', 'unreachable after continue'),
+      ]),
+      createPromptNode('p3', 'after continue'),
+    ]);
 
     const first = await autoAdvanceNodes(state);
     expect(first.kind).toBe('prompt');
-    expect(first.capturedPrompt).toBe('outer=0 inner=0 a/x');
-    expect(first.state.currentNodePath).toEqual([0, 0, 1]);
+    expect(first.capturedPrompt).toBe('item=alpha');
 
     const second = await autoAdvanceNodes(first.state);
     expect(second.kind).toBe('prompt');
-    expect(second.capturedPrompt).toBe('outer=0 inner=1 a/y');
+    expect(second.capturedPrompt).toBe('item=beta');
 
     const third = await autoAdvanceNodes(second.state);
     expect(third.kind).toBe('prompt');
-    expect(third.capturedPrompt).toBe('outer=1 inner=0 b/x');
+    expect(third.capturedPrompt).toBe('after continue');
+  });
+
+  it('tracks nested foreach indices while walking three nested body paths', async () => {
+    const prompt = createPromptNode(
+      'p1',
+      'outer=${outer_index} middle=${middle_index} inner=${inner_index} ${outer}/${middle}/${inner}',
+    );
+    const inner = createForeachNode('fe-inner', 'inner', 'x y', [prompt]);
+    const middle = createForeachNode('fe-middle', 'middle', 'm1 m2', [inner]);
+    const outer = createForeachNode('fe-outer', 'outer', 'a b', [middle]);
+    const state = createState([outer]);
+
+    expect(resolveCurrentNode([outer], [0])).toBe(outer);
+    expect(resolveCurrentNode([outer], [0, 0])).toBe(middle);
+    expect(resolveCurrentNode([outer], [0, 0, 0])).toBe(inner);
+    expect(resolveCurrentNode([outer], [0, 0, 0, 0])).toBe(prompt);
+
+    const first = await autoAdvanceNodes(state);
+    expect(first.kind).toBe('prompt');
+    expect(first.capturedPrompt).toBe('outer=0 middle=0 inner=0 a/m1/x');
+    expect(first.state.currentNodePath).toEqual([0, 0, 0, 1]);
+
+    const second = await autoAdvanceNodes(first.state);
+    expect(second.kind).toBe('prompt');
+    expect(second.capturedPrompt).toBe('outer=0 middle=0 inner=1 a/m1/y');
+
+    const third = await autoAdvanceNodes(second.state);
+    expect(third.kind).toBe('prompt');
+    expect(third.capturedPrompt).toBe('outer=0 middle=1 inner=0 a/m2/x');
   });
 
   it('falls through a try body when there is no catch or finally branch', async () => {
@@ -136,6 +177,23 @@ describe('advance-flow edge cases', () => {
     expect(result.kind).toBe('prompt');
     expect(result.capturedPrompt).toBe('after try');
     expect(result.state.variables['done']).toBe('yes');
+  });
+
+  it('marks the flow failed when a try body fails with no catch or finally branch', async () => {
+    const runner: CommandRunner = {
+      run: vi.fn().mockResolvedValue({ exitCode: 1, stdout: '', stderr: 'boom' }),
+    };
+    const state = createState([
+      createTryNode('t1', [createRunNode('r1', 'explode')], 'command_failed', []),
+      createPromptNode('p2', 'after failed try'),
+    ]);
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(result.kind).toBe('advance');
+    expect(result.capturedPrompt).toBeNull();
+    expect(result.state.status).toBe('failed');
+    expect(result.state.variables['command_failed']).toBe(true);
   });
 
   it('skips an if node with no else branch when the condition is false', async () => {

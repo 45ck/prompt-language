@@ -448,6 +448,16 @@ export function findTryCatchJump(
   return null;
 }
 
+function hasEnclosingTryFinally(nodes: readonly FlowNode[], path: readonly number[]): boolean {
+  for (let depth = path.length - 1; depth >= 1; depth--) {
+    const ancestor = resolveCurrentNode(nodes, path.slice(0, depth));
+    if (ancestor?.kind === 'try' && ancestor.finallyBody.length > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Shared loop re-entry logic for while/until/retry exhaustion.
  * If shouldReLoop is true and iteration < max, re-enters the body; otherwise exits the loop.
@@ -1624,6 +1634,19 @@ async function advanceRunNode(
     const jumpTarget = findTryCatchJump(state.flowSpec.nodes, state.currentNodePath);
     if (jumpTarget) {
       return { state: advanceNode(state, jumpTarget), advanced: true };
+    }
+    if (hasEnclosingTryFinally(state.flowSpec.nodes, state.currentNodePath) === false) {
+      const parentPath = state.currentNodePath.slice(0, -1);
+      const parentNode = resolveCurrentNode(state.flowSpec.nodes, parentPath);
+      if (parentNode?.kind === 'try') {
+        return {
+          state: markFailed(
+            state,
+            `Command '${command}' failed with exit code ${result.exitCode} inside try '${parentNode.id}'.`,
+          ),
+          advanced: true,
+        };
+      }
     }
   }
 

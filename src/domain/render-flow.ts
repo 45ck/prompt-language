@@ -551,8 +551,8 @@ function renderTryNode(
   return lines;
 }
 
-// Both `let` and `var` are parsed as LetNode (they are aliases).
-// Rendering always uses `let` for consistency.
+// Variable declarations share LetNode, but render output preserves the
+// authored keyword so const/var remain visible during review.
 function renderLetNode(
   node: LetNode,
   state: SessionState,
@@ -560,6 +560,7 @@ function renderLetNode(
   prefix: string,
   suffix: string,
 ): string[] {
+  const declarationKeyword = node.declarationKind;
   const operator = node.append ? '+=' : '=';
   let sourceText: string;
   switch (node.source.type) {
@@ -603,7 +604,7 @@ function renderLetNode(
   }
   const timing = timingAnnotation(state, node.id);
   return [
-    `${prefix}${indent}let ${node.variableName} ${operator} ${sourceText}${annotation}${timing}${suffix}`,
+    `${prefix}${indent}${declarationKeyword} ${node.variableName} ${operator} ${sourceText}${annotation}${timing}${suffix}`,
   ];
 }
 
@@ -1188,7 +1189,7 @@ function describeNode(node: FlowNode): string {
     case 'run':
       return `run: ${node.command}`;
     case 'let':
-      return `let ${node.variableName}`;
+      return `${node.declarationKind} ${node.variableName}`;
     case 'while': {
       const wCond = isAskCondition(node.condition)
         ? `ask: "${extractAskQuestion(node.condition)}"`

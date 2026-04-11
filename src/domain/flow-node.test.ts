@@ -18,6 +18,7 @@ import {
   createSwarmNode,
   createStartNode,
   createReturnNode,
+  describeFlowNode,
   describeNodePosition,
   findNodeById,
   resolveNodeByPath,
@@ -491,6 +492,12 @@ describe('findNodeById', () => {
 });
 
 describe('node position helpers', () => {
+  it('describes flow nodes with human-readable labels', () => {
+    expect(describeFlowNode(createWhileNode('w1', 'tests_fail', []))).toBe('while tests_fail');
+    expect(describeFlowNode(createPromptNode('p1', 'Inspect'))).toBe('prompt');
+    expect(describeFlowNode(createSpawnNode('sp1', 'worker', []))).toBe('spawn "worker"');
+  });
+
   it('resolves nested nodes by path across composite sections', () => {
     const catchNode = createPromptNode('catch1', 'recover');
     const raceChild = createSpawnNode('sp1', 'worker', [createRunNode('r1', 'npm test')]);
@@ -522,9 +529,54 @@ describe('node position helpers', () => {
       createRaceNode('rc1', [createSpawnNode('sp1', 'worker', [raceRun])]),
     ];
 
-    expect(describeNodePosition(nodes, [0, 1])).toBe('flow[1] > else[1] at line 12, col 7');
+    expect(describeNodePosition(nodes, [0, 1])).toBe('if flag > else > prompt at line 12, col 7');
     expect(describeNodePosition(nodes, [1, 1])).toBe(
-      'flow[2] > child[1].body[1] at line 20, col 9',
+      'race > spawn "worker" > run at line 20, col 9',
+    );
+  });
+
+  it('covers root, missing-path, try-finally, and swarm role/flow labels', () => {
+    const finallyRun = withNodeSource(createRunNode('rf', 'cleanup'), {
+      line: 30,
+      column: 5,
+      text: '    run: cleanup',
+    });
+    const rolePrompt = withNodeSource(createPromptNode('rp', 'role work'), {
+      line: 40,
+      column: 7,
+      text: '      prompt: role work',
+    });
+    const flowStart = withNodeSource(createStartNode('st1', ['worker']), {
+      line: 44,
+      column: 7,
+      text: '      start worker',
+    });
+
+    const nodes = [
+      createTryNode(
+        't1',
+        [createPromptNode('pb', 'body')],
+        'command_failed',
+        [createPromptNode('pc', 'catch')],
+        [finallyRun],
+      ),
+      createSwarmNode(
+        'sw1',
+        'team',
+        [createSwarmRoleDefinition('role1', 'worker', [rolePrompt])],
+        [flowStart],
+      ),
+    ];
+
+    expect(describeNodePosition(nodes, [])).toBe('flow root');
+    expect(describeNodePosition(nodes, [9])).toBe('flow[10]');
+    expect(describeNodePosition(nodes, [0, 5])).toContain('[missing 6]');
+    expect(describeNodePosition(nodes, [0, 2])).toBe('try > finally > run at line 30, col 5');
+    expect(describeNodePosition(nodes, [1, 0])).toBe(
+      'swarm team > role worker > prompt at line 40, col 7',
+    );
+    expect(describeNodePosition(nodes, [1, 1])).toBe(
+      'swarm team > flow > start worker at line 44, col 7',
     );
   });
 });

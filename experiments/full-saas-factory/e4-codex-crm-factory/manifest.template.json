@@ -1,0 +1,26 @@
+{
+  "runId": "e4-v1-codex-YYYYMMDD-HHMM",
+  "experiment": "e4-factory",
+  "workspaceRoot": "experiments/full-saas-factory/e4-codex-crm-factory/workspace/crm-app",
+  "scope": "bounded CRM MVP",
+  "runner": "codex",
+  "model": "SET_BEFORE_RUN",
+  "candidate": "codex-alone OR codex+prompt-language",
+  "packageManager": "pnpm",
+  "phaseMode": "phased",
+  "requiredArtifacts": [
+    "docs/prd.md",
+    "docs/research/competitors.md",
+    "docs/architecture/domain-model.md",
+    "docs/api-contracts.md",
+    "docs/data-model.md",
+    "specs/domain-glossary.md",
+    "specs/invariants.md",
+    "qa-flows/crm-smoke.json",
+    "demo/crm.demo.yaml",
+    "docs/release-notes.md",
+    "docs/handover.md"
+  ],
+  "verification": ["npm run lint", "npm run typecheck", "npm run test"],
+  "evidenceRoot": "experiments/results/e4-factory/<run-id>"
+}

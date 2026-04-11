@@ -493,6 +493,21 @@ describe('renderFlow', () => {
     expect(output).toContain('let greeting = "hello"');
   });
 
+  it('renders a const node with its declaration keyword preserved', () => {
+    const constNode = createLetNode(
+      'l1',
+      'greeting',
+      { type: 'literal', value: 'hello' },
+      false,
+      undefined,
+      'const',
+    );
+    const spec = createFlowSpec('test', [constNode]);
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('const greeting = "hello"');
+  });
+
   it('renders a let node with prompt source', () => {
     const letNode = createLetNode('l1', 'info', { type: 'prompt', text: 'summarize this' });
     const spec = createFlowSpec('test', [letNode]);
@@ -1317,6 +1332,22 @@ describe('renderFlowSummary — helper coverage', () => {
     state = { ...state, currentNodePath: [0] };
     const summary = renderFlowSummary(state);
     expect(summary).toContain('"let greeting"');
+  });
+
+  it('describes const node using the original declaration keyword', () => {
+    const constNode = createLetNode(
+      'l1',
+      'greeting',
+      { type: 'literal', value: 'hi' },
+      false,
+      undefined,
+      'const',
+    );
+    const spec = createFlowSpec('test', [constNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0] };
+    const summary = renderFlowSummary(state);
+    expect(summary).toContain('"const greeting"');
   });
 
   it('describes foreach node as "foreach varName"', () => {

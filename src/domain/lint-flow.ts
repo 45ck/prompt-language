@@ -7,7 +7,7 @@
  * Returns an array of lint warnings.
  */
 
-import type { FlowNode, VariableDeclaredType } from './flow-node.js';
+import type { FlowNode, LetNode, VariableDeclaredType } from './flow-node.js';
 import type { FlowSpec } from './flow-spec.js';
 import { isAskCondition } from './judge-prompt.js';
 
@@ -232,6 +232,95 @@ function collectDeclaredTypes(nodes: readonly FlowNode[]): Map<string, VariableD
     }
   }
   return declaredTypes;
+}
+
+interface FirstVariableDeclaration {
+  readonly nodeId: string;
+  readonly declarationKind: LetNode['declarationKind'];
+}
+
+function lintConstReassignments(nodes: readonly FlowNode[], warnings: LintWarning[]): void {
+  const firstDeclarations = new Map<string, FirstVariableDeclaration>();
+
+  const warnConstWrite = (variableName: string, nodeId: string, source: string) => {
+    const declaration = firstDeclarations.get(variableName);
+    if (declaration?.declarationKind !== 'const') {
+      return;
+    }
+
+    warnings.push({
+      nodeId,
+      message: `Const variable "${variableName}" is reassigned by ${source} (original declaration at node "${declaration.nodeId}")`,
+    });
+  };
+
+  const visit = (list: readonly FlowNode[]) => {
+    for (const node of list) {
+      switch (node.kind) {
+        case 'let':
+          if (firstDeclarations.has(node.variableName)) {
+            warnConstWrite(node.variableName, node.id, `${node.declarationKind} declaration`);
+          } else {
+            firstDeclarations.set(node.variableName, {
+              nodeId: node.id,
+              declarationKind: node.declarationKind,
+            });
+          }
+          break;
+        case 'foreach':
+          warnConstWrite(node.variableName, node.id, 'foreach loop variable');
+          visit(node.body);
+          break;
+        case 'while':
+        case 'until':
+        case 'retry':
+        case 'spawn':
+        case 'review':
+          visit(node.body);
+          break;
+        case 'if':
+          visit(node.thenBranch);
+          visit(node.elseBranch);
+          break;
+        case 'try':
+          visit(node.body);
+          visit(node.catchBody);
+          visit(node.finallyBody);
+          break;
+        case 'race':
+          node.children.forEach((child) => visit(child.body));
+          break;
+        case 'foreach_spawn':
+          warnConstWrite(node.variableName, node.id, 'foreach-spawn loop variable');
+          visit(node.body);
+          break;
+        case 'receive':
+          warnConstWrite(node.variableName, node.id, 'receive node');
+          break;
+        case 'swarm':
+          visit(node.flow);
+          node.roles.forEach((role) => visit(role.body));
+          break;
+        case 'prompt':
+        case 'run':
+        case 'break':
+        case 'continue':
+        case 'await':
+        case 'approve':
+        case 'remember':
+        case 'send':
+        case 'start':
+        case 'return':
+          break;
+        default: {
+          const _exhaustive: never = node;
+          return _exhaustive;
+        }
+      }
+    }
+  };
+
+  visit(nodes);
 }
 
 /** Check if a variable name is a known auto-variable (built-in or generated suffix). */
@@ -1362,6 +1451,7 @@ export function lintFlow(spec: FlowSpec, _importRegistry?: ImportRegistry): read
   // H-DX-001: Check for unresolved variable references
   const definedVars = collectDefinedVariables(spec.nodes, spec.memoryKeys ?? []);
   const declaredTypes = collectDeclaredTypes(spec.nodes);
+  lintConstReassignments(spec.nodes, warnings);
   lintUnresolvedVars(spec.nodes, definedVars, warnings);
   lintTypedComparisonsInNodes(spec.nodes, declaredTypes, warnings);
   lintTypedComparisonsInGates(spec, declaredTypes, warnings);

@@ -11,6 +11,7 @@ experiments/
   parallel-planning/
   parallel-isolated-modules/
   full-saas-factory/
+    e4-codex-crm-factory/
   self-healing-ci/
   eval/
   results/
@@ -24,6 +25,7 @@ experiments/
 - `parallel-planning/` for plan quality and coordination experiments
 - `parallel-isolated-modules/` for isolated module/build concurrency experiments
 - `full-saas-factory/` for end-to-end product factory experiments
+  `full-saas-factory/e4-codex-crm-factory/` is the repo-local E4 CRM experiment pack
 - `self-healing-ci/` for CI repair and auto-fix experiments
 - `eval/` for shared rubrics, scoring scripts, and evaluation helpers
 - `results/` for run outputs, scores, and analysis artifacts

@@ -1,0 +1,8 @@
+library: release
+
+export flow prepare_release(pkg_mgr="pnpm"):
+  prompt: Use agent: delivery-manager. Produce CHANGELOG.md, docs/release-notes.md, docs/known-issues.md, and docs/handover.md from the implemented repo state.
+  prompt: Use agent: research-writer. Produce docs/product-summary.md and docs/demo-script.md so the demo and release message are aligned.
+  run: ${pkg_mgr} lint
+  run: ${pkg_mgr} typecheck
+  run: ${pkg_mgr} test

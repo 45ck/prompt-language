@@ -765,6 +765,170 @@ export function formatFlowNodeSource(source?: FlowNodeSource): string | null {
   return source.source?.length ? `${source.source}:${location}` : location;
 }
 
+export function describeFlowNode(node: FlowNode): string {
+  switch (node.kind) {
+    case 'while':
+      return `while ${node.condition}`;
+    case 'until':
+      return `until ${node.condition}`;
+    case 'retry':
+      return 'retry';
+    case 'if':
+      return `if ${node.condition}`;
+    case 'prompt':
+      return 'prompt';
+    case 'run':
+      return 'run';
+    case 'try':
+      return 'try';
+    case 'let':
+      return `let ${node.variableName}`;
+    case 'foreach':
+      return `foreach ${node.variableName}`;
+    case 'break':
+      return 'break';
+    case 'continue':
+      return 'continue';
+    case 'spawn':
+      return `spawn "${node.name}"`;
+    case 'await':
+      return Array.isArray(node.target)
+        ? `await ${node.target.join(', ')}`
+        : `await ${node.target}`;
+    case 'approve':
+      return 'approve';
+    case 'review':
+      return 'review';
+    case 'race':
+      return 'race';
+    case 'foreach_spawn':
+      return `foreach-spawn ${node.variableName}`;
+    case 'remember':
+      return 'remember';
+    case 'send':
+      return `send "${node.target}"`;
+    case 'receive':
+      return `receive ${node.variableName}`;
+    case 'swarm':
+      return `swarm ${node.name}`;
+    case 'start':
+      return `start ${node.targets.join(', ')}`;
+    case 'return':
+      return 'return';
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
+  }
+}
+
+function resolveBreadcrumbSegment(
+  node: FlowNode,
+  index: number,
+): {
+  readonly labels: readonly string[];
+  readonly node: FlowNode;
+} | null {
+  switch (node.kind) {
+    case 'while':
+    case 'until':
+    case 'retry':
+    case 'foreach':
+    case 'spawn':
+    case 'review':
+    case 'foreach_spawn': {
+      const child = node.body[index] ?? null;
+      return child == null ? null : { labels: [describeFlowNode(child)], node: child };
+    }
+    case 'if': {
+      const thenChild = node.thenBranch[index] ?? null;
+      if (thenChild != null) {
+        return { labels: [describeFlowNode(thenChild)], node: thenChild };
+      }
+      const elseIndex = index - node.thenBranch.length;
+      const elseChild = node.elseBranch[elseIndex] ?? null;
+      return elseChild == null
+        ? null
+        : { labels: ['else', describeFlowNode(elseChild)], node: elseChild };
+    }
+    case 'try': {
+      const bodyChild = node.body[index] ?? null;
+      if (bodyChild != null) {
+        return { labels: [describeFlowNode(bodyChild)], node: bodyChild };
+      }
+      const catchIndex = index - node.body.length;
+      const catchChild = node.catchBody[catchIndex] ?? null;
+      if (catchChild != null) {
+        return { labels: ['catch', describeFlowNode(catchChild)], node: catchChild };
+      }
+      const finallyIndex = index - node.body.length - node.catchBody.length;
+      const finallyChild = node.finallyBody[finallyIndex] ?? null;
+      return finallyChild == null
+        ? null
+        : { labels: ['finally', describeFlowNode(finallyChild)], node: finallyChild };
+    }
+    case 'race': {
+      const child = node.children[index] ?? null;
+      if (child != null) {
+        return { labels: [describeFlowNode(child)], node: child };
+      }
+      let flattenedIndex = index - node.children.length;
+      for (const spawnChild of node.children) {
+        if (flattenedIndex < spawnChild.body.length) {
+          const bodyChild = spawnChild.body[flattenedIndex] ?? null;
+          return bodyChild == null
+            ? null
+            : {
+                labels: [describeFlowNode(spawnChild), describeFlowNode(bodyChild)],
+                node: bodyChild,
+              };
+        }
+        flattenedIndex -= spawnChild.body.length;
+      }
+      return null;
+    }
+    case 'swarm': {
+      for (const role of node.roles) {
+        if (index < role.body.length) {
+          const roleChild = role.body[index] ?? null;
+          return roleChild == null
+            ? null
+            : {
+                labels: [`role ${role.name}`, describeFlowNode(roleChild)],
+                node: roleChild,
+              };
+        }
+        index -= role.body.length;
+      }
+
+      const flowChild = node.flow[index] ?? null;
+      return flowChild == null
+        ? null
+        : {
+            labels: ['flow', describeFlowNode(flowChild)],
+            node: flowChild,
+          };
+    }
+    case 'prompt':
+    case 'run':
+    case 'let':
+    case 'break':
+    case 'continue':
+    case 'await':
+    case 'approve':
+    case 'remember':
+    case 'send':
+    case 'receive':
+    case 'start':
+    case 'return':
+      return null;
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
+  }
+}
+
 export function describeNodePosition(
   nodes: readonly FlowNode[],
   path: readonly number[],
@@ -778,16 +942,16 @@ export function describeNodePosition(
     return `flow[${path[0]! + 1}]`;
   }
 
-  const labels = [`flow[${path[0]! + 1}]`];
+  const labels = [describeFlowNode(firstNode)];
   let node = firstNode;
 
   for (let depth = 1; depth < path.length; depth += 1) {
-    const child = resolveChildPathSegment(node, path[depth]!);
+    const child = resolveBreadcrumbSegment(node, path[depth]!);
     if (child == null) {
       labels.push(`[missing ${path[depth]! + 1}]`);
       break;
     }
-    labels.push(child.label);
+    labels.push(...child.labels);
     node = child.node;
   }
 

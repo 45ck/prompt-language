@@ -157,6 +157,32 @@ describe('post-tool-use hook (integration)', () => {
     );
   });
 
+  it('extracts capture tags from nested full response text fields', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(
+      join(stateDir, 'session-state.json'),
+      JSON.stringify(makeState('active', 'Capture from nested response text')),
+    );
+
+    const tag = captureTagName('11111111-1111-4111-8111-111111111111');
+    const hookInput = JSON.stringify({
+      tool_name: 'Bash',
+      tool_response: { output: 'plain tool output only' },
+      result: {
+        response: {
+          text: `nested reply <${tag} name="answer">nested response value</${tag}>`,
+        },
+      },
+    });
+
+    const result = runHook(hookInput, tempDir);
+    expect(result.exitCode).toBe(0);
+    await expect(readFile(join(stateDir, 'vars', 'answer'), 'utf-8')).resolves.toBe(
+      'nested response value',
+    );
+  });
+
   it('preserves file-write and tool-output precedence over response_text capture tags', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     const varsDir = join(stateDir, 'vars');
@@ -193,6 +219,33 @@ describe('post-tool-use hook (integration)', () => {
     await expect(readFile(join(varsDir, 'responseOnly'), 'utf-8')).resolves.toBe(
       'response only value',
     );
+  });
+
+  it('keeps tool output precedence over nested full response text capture tags', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    const varsDir = join(stateDir, 'vars');
+    await mkdir(varsDir, { recursive: true });
+    await writeFile(
+      join(stateDir, 'session-state.json'),
+      JSON.stringify(makeState('active', 'Nested capture precedence')),
+    );
+
+    const tag = captureTagName('11111111-1111-4111-8111-111111111111');
+    const hookInput = JSON.stringify({
+      tool_name: 'Bash',
+      tool_response: {
+        output: `tool <${tag} name="winner">tool output value</${tag}>`,
+      },
+      result: {
+        response: {
+          text: `reply <${tag} name="winner">response should lose</${tag}>`,
+        },
+      },
+    });
+
+    const result = runHook(hookInput, tempDir);
+    expect(result.exitCode).toBe(0);
+    await expect(readFile(join(varsDir, 'winner'), 'utf-8')).resolves.toBe('tool output value');
   });
 
   it('writes a compact progress notification when the tool payload includes stderr text', async () => {

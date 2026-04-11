@@ -30,6 +30,26 @@ const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch'
 const WRITE_TOOLS = new Set(['Write', 'Edit']);
 const VARS_DIR = '.prompt-language/vars';
 const RESPONSE_TEXT_KEY = 'response_text';
+const FULL_RESPONSE_TEXT_KEY = 'full_response_text';
+const RESPONSE_KEY = 'response';
+
+function isToolOutputPath(path: readonly string[]): boolean {
+  return path.includes('tool_response') || path.includes('tool_output');
+}
+
+function isResponseTextPath(path: readonly string[]): boolean {
+  const lastKey = path.at(-1);
+  const parentKey = path.at(-2);
+
+  return (
+    lastKey === RESPONSE_TEXT_KEY ||
+    lastKey === FULL_RESPONSE_TEXT_KEY ||
+    lastKey === RESPONSE_KEY ||
+    (lastKey === 'text' && parentKey === RESPONSE_KEY) ||
+    (lastKey === 'text' && path.includes(RESPONSE_TEXT_KEY)) ||
+    (lastKey === 'text' && path.includes(FULL_RESPONSE_TEXT_KEY))
+  );
+}
 
 /**
  * H-INT-012: Evaluate fast gates (file_exists, diff_nonempty) after Write/Edit.
@@ -66,27 +86,30 @@ function collectTaggedText(
   value: unknown,
   toolOutputTexts: string[],
   responseTexts: string[],
-  currentKey?: string,
+  path: readonly string[] = [],
 ): void {
   if (typeof value === 'string') {
-    if (currentKey === RESPONSE_TEXT_KEY) {
+    if (isToolOutputPath(path)) {
+      toolOutputTexts.push(value);
+      return;
+    }
+    if (isResponseTextPath(path)) {
       responseTexts.push(value);
       return;
     }
-    toolOutputTexts.push(value);
     return;
   }
 
   if (Array.isArray(value)) {
     for (const entry of value) {
-      collectTaggedText(entry, toolOutputTexts, responseTexts, currentKey);
+      collectTaggedText(entry, toolOutputTexts, responseTexts, path);
     }
     return;
   }
 
   if (value && typeof value === 'object') {
     for (const [key, nested] of Object.entries(value)) {
-      collectTaggedText(nested, toolOutputTexts, responseTexts, key);
+      collectTaggedText(nested, toolOutputTexts, responseTexts, [...path, key]);
     }
   }
 }

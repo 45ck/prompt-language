@@ -441,7 +441,7 @@ describe('autoAdvanceNodes — review node', () => {
     expect(result.outcomes).toEqual([
       {
         code: FLOW_OUTCOME_CODES.reviewRejected,
-        summary: 'Review rejected: Grounded review checks failed with exit code 1. (flow[1])',
+        summary: 'Review rejected: Grounded review checks failed with exit code 1. (review)',
       },
     ]);
   });
@@ -473,7 +473,7 @@ describe('autoAdvanceNodes — review node', () => {
       {
         code: FLOW_OUTCOME_CODES.reviewRejected,
         summary:
-          'Review strict failed after 2/2 rounds: Grounded review checks failed with exit code 1. (flow[1])',
+          'Review strict failed after 2/2 rounds: Grounded review checks failed with exit code 1. (review)',
       },
     ]);
   });

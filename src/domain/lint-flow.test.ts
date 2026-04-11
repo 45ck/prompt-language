@@ -82,6 +82,23 @@ describe('lintFlow', () => {
     expect(lintFlow(spec)).toEqual([]);
   });
 
+  it('warns when a const variable is reassigned later in the flow', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'answer', { type: 'literal', value: '1' }, false, undefined, 'const'),
+        createLetNode('l2', 'answer', { type: 'literal', value: '2' }),
+      ],
+      [],
+    );
+    const warnings = lintFlow(spec);
+    expect(warnings).toContainEqual({
+      nodeId: 'l2',
+      message:
+        'Const variable "answer" is reassigned by let declaration (original declaration at node "l1")',
+    });
+  });
+
   it('warns on empty if branches', () => {
     const spec = createFlowSpec('test', [createIfNode('i1', 'cond', [], [])], []);
     const warnings = lintFlow(spec);

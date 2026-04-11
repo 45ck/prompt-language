@@ -21,6 +21,7 @@ function getDefaultTimeoutMs(): number {
 const DEFAULT_TIMEOUT_MS = getDefaultTimeoutMs();
 const MAX_BUFFER_BYTES = 4 * 1024 * 1024;
 const SHELL_META_PATTERN = /(?:\|\||&&|>>|[|><;&])/;
+const WINDOWS_INTERPOLATED_ENV_NAME_RE = /^PROMPT_LANGUAGE_VAR_\d+$/;
 
 interface DirectExecution {
   readonly file: string;
@@ -32,6 +33,34 @@ function expandWindowsEnvPlaceholders(
   env: NodeJS.ProcessEnv | Readonly<Record<string, string>>,
 ): string {
   return text.replace(/%([A-Za-z_][A-Za-z0-9_]*)%/g, (_match, name: string) => env[name] ?? '');
+}
+
+function escapeWindowsCmdLiteral(value: string): string {
+  return value.replace(/["&()<>^|]/g, '^$&');
+}
+
+function hardenWindowsShellEnv(
+  env: NodeJS.ProcessEnv | Readonly<Record<string, string>>,
+): NodeJS.ProcessEnv | Readonly<Record<string, string>> {
+  if (process.platform !== 'win32') {
+    return env;
+  }
+
+  let changed = false;
+  const nextEnv: NodeJS.ProcessEnv = { ...env };
+
+  for (const [name, rawValue] of Object.entries(env)) {
+    if (rawValue === undefined || !WINDOWS_INTERPOLATED_ENV_NAME_RE.test(name)) {
+      continue;
+    }
+    const escapedValue = escapeWindowsCmdLiteral(rawValue);
+    if (escapedValue !== rawValue) {
+      nextEnv[name] = escapedValue;
+      changed = true;
+    }
+  }
+
+  return changed ? nextEnv : env;
 }
 
 function tryParseDirectExecution(command: string): DirectExecution | undefined {
@@ -109,6 +138,7 @@ export class ShellCommandRunner implements CommandRunner {
     const envOverride = options?.env ? { ...process.env, ...options.env } : process.env;
     const directExecution = tryParseDirectExecution(command);
     const shell = directExecution === undefined;
+    const shellEnv = shell ? hardenWindowsShellEnv(envOverride) : envOverride;
     const detached = process.platform !== 'win32';
 
     return await new Promise<CommandResult>((resolve) => {
@@ -123,7 +153,7 @@ export class ShellCommandRunner implements CommandRunner {
               detached,
               windowsHide: true,
               cwd: options?.cwd,
-              env: envOverride,
+              env: shellEnv,
               stdio: ['ignore', 'pipe', 'pipe'],
             })
           : spawn(directExecution.file, directArgs ?? [], {

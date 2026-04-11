@@ -133,6 +133,23 @@ describe('parseFlow — prompt and run nodes', () => {
     expect(spec.nodes[2]!.kind).toBe('prompt');
   });
 
+  it('preserves authored source positions for nested nodes', () => {
+    const spec = parse('Goal: g\n\nflow:\n  while tests_fail max 2\n    prompt: inspect\n  end');
+    const whileNode = spec.nodes[0] as WhileNode;
+    const promptNode = whileNode.body[0] as PromptNode;
+
+    expect(whileNode.position).toEqual({
+      line: 4,
+      column: 3,
+      text: '  while tests_fail max 2',
+    });
+    expect(promptNode.position).toEqual({
+      line: 5,
+      column: 5,
+      text: '    prompt: inspect',
+    });
+  });
+
   it('parses prompt node profile selection', () => {
     const spec = parseWithProfiles(
       'Goal: g\n\nflow:\n  prompt using profile "reviewer": inspect the diff',

@@ -121,9 +121,15 @@ Unit tests and CI are necessary but **not sufficient**. Smoke tests are **requir
 ### Automated smoke tests
 
 ```bash
-npm run eval:smoke        # full suite (32 tests, ~10 min)
+npm run eval:smoke        # full suite
 npm run eval:smoke:quick  # fast subset without gate/loop tests (~2 min)
+npm run eval:smoke:codex
+npm run eval:smoke:gemini
+npm run eval:smoke:opencode
+npm run eval:smoke:ollama
 ```
+
+Harness-specific smoke commands are explicit entry points for the currently supported smoke adapters. Codex, OpenCode, and Ollama flow through `prompt-language ci --runner ...`; Gemini is supported as a first-class smoke harness, but today it uses the direct CLI prompt path rather than a dedicated `ci --runner gemini` flow runner.
 
 The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 32 live `claude -p` tests in temp directories:
 
@@ -160,7 +166,7 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **AE: foreach-spawn** — parallel fan-out creates per-item files via spawned children (slow)
 - **AF: Send/receive** — child sends message to parent via `send parent`, parent captures via `receive` (slow)
 
-If smoke fails fast with a Claude auth or login blocker, that is a host limitation, not a plugin success signal. Use [docs/troubleshooting.md](docs/troubleshooting.md) for the recovery path and [docs/eval-parity-matrix.md](docs/eval-parity-matrix.md) for the current parity bar. The history report command `node scripts/eval/smoke-test.mjs --history` is for local analysis only.
+If smoke fails fast with a harness auth or login blocker, that is a host limitation, not a plugin success signal. Use [docs/troubleshooting.md](docs/troubleshooting.md) for the recovery path and [docs/eval-parity-matrix.md](docs/evaluation/eval-parity-matrix.md) for the current parity bar. The history report command `node scripts/eval/smoke-test.mjs --history` is for local analysis only.
 
 ### When to smoke test
 

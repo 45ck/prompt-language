@@ -9,16 +9,19 @@ import {
   updateGateDiagnostic,
   updateSpawnedChild,
   addWarning,
+  addWarningAtPath,
   markCompleted,
   markFailed,
+  markFailedAtPath,
   markCancelled,
   isFlowComplete,
   allGatesPassing,
   generateCaptureNonce,
+  withStatePosition,
 } from './session-state.js';
 import type { SessionState, NodeProgress, SpawnedChild, GateEvalResult } from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
-import { createLetNode } from './flow-node.js';
+import { createLetNode, createPromptNode, withNodeSource } from './flow-node.js';
 
 function makeState(overrides?: Partial<{ gates: boolean }>): SessionState {
   const gates = overrides?.gates
@@ -312,6 +315,41 @@ describe('markFailed', () => {
     const state = makeState();
     const failed = markFailed(state);
     expect(failed.failureReason).toBeUndefined();
+  });
+
+  it('appends human-readable source position when failing at a path', () => {
+    const spec = createFlowSpec('goal', [
+      withNodeSource(createPromptNode('p1', 'inspect'), { line: 4, column: 3 }),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const failed = markFailedAtPath(state, 'Prompt execution failed.');
+
+    expect(failed.failureReason).toBe('Prompt execution failed. (prompt at line 4, col 3)');
+  });
+});
+
+describe('warning/source position helpers', () => {
+  it('formats source position from the current node path', () => {
+    const spec = createFlowSpec('goal', [
+      withNodeSource(createPromptNode('p1', 'inspect'), { line: 4, column: 3 }),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    expect(withStatePosition(state, 'Need attention.')).toBe(
+      'Need attention. (prompt at line 4, col 3)',
+    );
+  });
+
+  it('appends human-readable source position to warnings', () => {
+    const spec = createFlowSpec('goal', [
+      withNodeSource(createPromptNode('p1', 'inspect'), { line: 4, column: 3 }),
+    ]);
+    const state = createSessionState('s1', spec);
+
+    const warned = addWarningAtPath(state, 'Prompt was skipped.');
+
+    expect(warned.warnings).toContain('Prompt was skipped. (prompt at line 4, col 3)');
   });
 });
 

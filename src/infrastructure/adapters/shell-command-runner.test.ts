@@ -429,6 +429,41 @@ describe('ShellCommandRunner (mocked spawn)', () => {
     }
   });
 
+  it('escapes interpolated Windows shell env values before invoking cmd.exe', async () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    let capturedOpts: Record<string, unknown> = {};
+    const child = createMockChild();
+    vi.doMock('node:child_process', () => ({
+      spawn: vi.fn((_cmd: string, opts: Record<string, unknown>) => {
+        capturedOpts = opts;
+        return child;
+      }),
+    }));
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    try {
+      const mod = await import('./shell-command-runner.js');
+      const runner = new mod.ShellCommandRunner();
+      const runPromise = runner.run('echo %PROMPT_LANGUAGE_VAR_0%', {
+        env: {
+          PROMPT_LANGUAGE_VAR_0: 'alpha & beta | (gamma) ^ "delta" < in > out',
+          SAFE_ENV: 'untouched&value',
+        },
+      });
+      child.emit('close', 0);
+      await runPromise;
+
+      expect(capturedOpts['shell']).toBe(true);
+      expect(capturedOpts['env']).toMatchObject({
+        PROMPT_LANGUAGE_VAR_0: 'alpha ^& beta ^| ^(gamma^) ^^ ^"delta^" ^< in ^> out',
+        SAFE_ENV: 'untouched&value',
+      });
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+    }
+  });
+
   it('falls back to exitCode 1 when stdout and stderr are null on error', async () => {
     const child = createMockChild();
     vi.doMock('node:child_process', () => ({
@@ -499,6 +534,38 @@ describe('ShellCommandRunner (mocked spawn)', () => {
       expect(capturedOpts['shell']).toBe(false);
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toBe('1');
+    } finally {
+      if (originalPlatform) {
+        Object.defineProperty(process, 'platform', originalPlatform);
+      }
+    }
+  });
+
+  it('preserves raw interpolated values for direct node -e placeholder expansion on win32', async () => {
+    const originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform');
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    const child = createMockChild(24601);
+    let capturedFile = '';
+    let capturedArgs: unknown[] = [];
+    vi.doMock('node:child_process', () => ({
+      spawn: vi.fn((file: string, argsOrOptions: unknown) => {
+        capturedFile = file;
+        capturedArgs = Array.isArray(argsOrOptions) ? argsOrOptions : [];
+        return child;
+      }),
+    }));
+
+    try {
+      const mod = await import('./shell-command-runner.js');
+      const runner = new mod.ShellCommandRunner();
+      const runPromise = runner.run('node -e "console.log(\'%PROMPT_LANGUAGE_VAR_0%\')"', {
+        env: { PROMPT_LANGUAGE_VAR_0: 'alpha & echo injected' },
+      });
+      child.emit('close', 0);
+      await runPromise;
+
+      expect(capturedFile).toBe(process.execPath);
+      expect(capturedArgs).toEqual(['-e', "console.log('alpha & echo injected')"]);
     } finally {
       if (originalPlatform) {
         Object.defineProperty(process, 'platform', originalPlatform);

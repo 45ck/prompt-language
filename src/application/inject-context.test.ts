@@ -450,7 +450,7 @@ describe('injectContext — NL meta-prompt', () => {
     );
 
     expect(result.prompt).toContain(
-      '[PLO-002 Review rejected: Grounded review checks failed with exit code 1. (flow[1])]',
+      '[PLO-002 Review rejected: Grounded review checks failed with exit code 1. (review)]',
     );
     expect(result.prompt).toContain('Revise and continue');
     const saved = await store.loadCurrent();
@@ -482,7 +482,7 @@ describe('injectContext — NL meta-prompt', () => {
     );
 
     expect(result.prompt).toContain(
-      '[PLO-002 Review rejected: Grounded review checks failed with exit code 1. (flow[1])]',
+      '[PLO-002 Review rejected: Grounded review checks failed with exit code 1. (review)]',
     );
     expect(result.prompt).not.toContain('Flow completed successfully.');
     const saved = await store.loadCurrent();
@@ -2337,13 +2337,13 @@ describe('injectContext — let-prompt capture', () => {
 
     expect(result.prompt).toContain('work');
     expect(result.prompt).toContain(
-      "[PLR-005 Capture for 'out' fell back to empty string after 3 attempts. (flow[1])]",
+      "[PLR-005 Capture for 'out' fell back to empty string after 3 attempts. (let out)]",
     );
     const saved = await store.loadCurrent();
     expect(saved?.variables['out']).toBe('');
     expect(saved?.variables['_runtime_diagnostic.code']).toBe('PLR-005');
     expect(saved?.variables['_runtime_diagnostic.summary']).toBe(
-      "Capture for 'out' fell back to empty string after 3 attempts. (flow[1])",
+      "Capture for 'out' fell back to empty string after 3 attempts. (let out)",
     );
     expect(saved?.warnings).toEqual(
       expect.arrayContaining([

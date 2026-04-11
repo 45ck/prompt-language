@@ -11,3 +11,6 @@ scripts/eval/results/
 .dolt/
 .beads-credential-key
 .claude/worktrees/
+
+# Beads / Dolt files (added by bd init)
+*.db

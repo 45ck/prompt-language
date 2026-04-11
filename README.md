@@ -56,7 +56,7 @@ Use the runtime in this order:
 4. Smoke-test any hook, parsing, advancement, or state-transition change with `npm run eval:smoke`
 5. Recover with `/flow:status`, `/flow:reset`, or the troubleshooting guide when state gets stuck
 
-The recovery path is documented in [Troubleshooting](docs/operations/troubleshooting.md). For runner status beyond the default Claude path, see the [Roadmap](docs/roadmap.md) and [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
+The recovery path is documented in [Troubleshooting](docs/operations/troubleshooting.md). For smoke-harness support beyond the default Claude path, see the [Roadmap](docs/roadmap.md) and [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
 
 ## The problem
 
@@ -132,7 +132,7 @@ To install the Codex scaffold locally instead:
 npx @45ck/prompt-language codex-install
 ```
 
-The default shipped runtime surface is the Claude path above. Additional runner work, including partial headless OpenCode support, is tracked in the [Roadmap](docs/roadmap.md) and measured in the [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
+The default shipped runtime surface is the Claude path above. The smoke harness also exposes first-class entry points for Codex, Gemini, OpenCode, and Ollama, but supported-host parity evidence still varies by harness and host; track that status in the [Roadmap](docs/roadmap.md) and the [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
 
 ## SDK
 

@@ -1,0 +1,37 @@
+Goal: run phase 2 of the E4 repo-local CRM factory experiment
+
+memory:
+  crm_stack
+  preferred_package_manager
+  experiment_workspace
+
+import "experiments/full-saas-factory/e4-codex-crm-factory/libraries/architecture.flow" as architecture
+import "experiments/full-saas-factory/e4-codex-crm-factory/libraries/implementation.flow" as implementation
+import "experiments/full-saas-factory/e4-codex-crm-factory/libraries/quality.flow" as quality
+
+flow:
+  remember key="crm_stack" value="Next.js + TypeScript + PostgreSQL + Prisma"
+  remember key="preferred_package_manager" value="pnpm"
+  remember key="experiment_workspace" value="experiments/full-saas-factory/e4-codex-crm-factory/workspace/crm-app"
+
+  prompt: Work only inside ${experiment_workspace}. Treat it as the target repo root for this experiment. Phase 2 covers architecture, implementation, engineering traceability docs, local verification, QA flow generation and execution, and demo generation and execution.
+
+  use architecture.synthesize_scope()
+
+  spawn "backend" with vars crm_stack, preferred_package_manager
+    use implementation.backend(pkg_mgr="${preferred_package_manager}")
+  end
+
+  spawn "frontend" with vars crm_stack, preferred_package_manager
+    use implementation.frontend(pkg_mgr="${preferred_package_manager}")
+  end
+
+  spawn "engineering-docs" with vars crm_stack
+    use architecture.write_engineering_docs()
+  end
+
+  await all
+
+  use quality.local_verification(pkg_mgr="${preferred_package_manager}")
+  use quality.manual_qa()
+  use quality.product_demo()

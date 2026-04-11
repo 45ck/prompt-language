@@ -564,6 +564,7 @@ function parseWhileLine(
   scope: ParseScope,
   label?: string,
 ): FlowNode {
+  const source = currentSource(ctx);
   const timeout = parseTimeout(line);
   const stripped = stripTimeout(line);
 
@@ -583,8 +584,7 @@ function parseWhileLine(
     }
     const askBody = parseBlock(ctx, baseIndent, [], scope);
     consumeEnd(ctx);
-    return attachSource(
-      ctx,
+    return withNodeSource(
       createWhileNode(
         nextId(ctx),
         `${ASK_CONDITION_PREFIX}"${question}"`,
@@ -596,6 +596,7 @@ function parseWhileLine(
         askOpts.maxRetries,
         askOpts.profile,
       ),
+      source,
     );
   }
 
@@ -610,7 +611,7 @@ function parseWhileLine(
   const cond = negated ? `not ${condition}` : condition;
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return attachSource(ctx, createWhileNode(nextId(ctx), cond, body, max, label, timeout));
+  return withNodeSource(createWhileNode(nextId(ctx), cond, body, max, label, timeout), source);
 }
 
 function parseUntilLine(
@@ -620,6 +621,7 @@ function parseUntilLine(
   scope: ParseScope,
   label?: string,
 ): FlowNode {
+  const source = currentSource(ctx);
   const timeout = parseTimeout(line);
   const stripped = stripTimeout(line);
 
@@ -639,8 +641,7 @@ function parseUntilLine(
     }
     const askBody = parseBlock(ctx, baseIndent, [], scope);
     consumeEnd(ctx);
-    return attachSource(
-      ctx,
+    return withNodeSource(
       createUntilNode(
         nextId(ctx),
         `${ASK_CONDITION_PREFIX}"${question}"`,
@@ -652,6 +653,7 @@ function parseUntilLine(
         askOpts.maxRetries,
         askOpts.profile,
       ),
+      source,
     );
   }
 
@@ -664,7 +666,7 @@ function parseUntilLine(
   }
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return attachSource(ctx, createUntilNode(nextId(ctx), condition, body, max, label, timeout));
+  return withNodeSource(createUntilNode(nextId(ctx), condition, body, max, label, timeout), source);
 }
 
 function parseRetryLine(
@@ -674,6 +676,7 @@ function parseRetryLine(
   scope: ParseScope,
   label?: string,
 ): FlowNode {
+  const source = currentSource(ctx);
   const timeout = parseTimeout(line);
   const stripped = stripTimeout(line);
   const match = /^retry(?:\s+max\s+(\d+))?(?:\s+backoff\s+(\d+)s)?/i.exec(stripped);
@@ -681,7 +684,7 @@ function parseRetryLine(
   const backoffMs = match?.[2] ? parseInt(match[2], 10) * 1000 : undefined;
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return attachSource(ctx, createRetryNode(nextId(ctx), body, max, label, timeout, backoffMs));
+  return withNodeSource(createRetryNode(nextId(ctx), body, max, label, timeout, backoffMs), source);
 }
 
 function parseIfLine(
@@ -690,6 +693,7 @@ function parseIfLine(
   baseIndent: number,
   scope: ParseScope,
 ): FlowNode {
+  const source = currentSource(ctx);
   // AI-evaluated condition: if ask "question" [grounded-by "cmd"]
   const askMatch = /^if\s+ask\s+["']([^"']+)["'](.*)$/i.exec(line.trim());
   let condition: string;
@@ -731,8 +735,7 @@ function parseIfLine(
   if (!nestedElseIf) {
     consumeEnd(ctx);
   }
-  return attachSource(
-    ctx,
+  return withNodeSource(
     createIfNode(
       nextId(ctx),
       condition,
@@ -742,10 +745,12 @@ function parseIfLine(
       askMaxRetries,
       askProfile,
     ),
+    source,
   );
 }
 
 function parseTryBlock(ctx: ParseContext, baseIndent: number, scope: ParseScope): FlowNode {
+  const source = currentSource(ctx);
   const body = parseBlock(ctx, baseIndent, ['catch', 'finally', 'end'], scope);
   let catchCondition = 'command_failed';
   let catchBody: FlowNode[] = [];
@@ -773,9 +778,9 @@ function parseTryBlock(ctx: ParseContext, baseIndent: number, scope: ParseScope)
   }
 
   consumeEnd(ctx);
-  return attachSource(
-    ctx,
+  return withNodeSource(
     createTryNode(nextId(ctx), body, catchCondition, catchBody, finallyBody),
+    source,
   );
 }
 
@@ -1123,6 +1128,7 @@ function parseForeachLine(
   scope: ParseScope,
   label?: string,
 ): FlowNode {
+  const source = currentSource(ctx);
   const match = /^foreach\s+(\w+)\s+in\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
   if (!match?.[1] || !match[2]) {
     warn(ctx, `Invalid foreach syntax: "${line}". Try: foreach item in \${list}`);
@@ -1138,16 +1144,16 @@ function parseForeachLine(
   const runMatch = /^run\s+(.+)$/i.exec(rawExpr);
   if (runMatch?.[1]) {
     const command = stripQuotes(runMatch[1].trim());
-    return attachSource(
-      ctx,
+    return withNodeSource(
       createForeachNode(nextId(ctx), variableName, '', body, max, label, command),
+      source,
     );
   }
 
   const listExpression = stripQuotes(rawExpr);
-  return attachSource(
-    ctx,
+  return withNodeSource(
     createForeachNode(nextId(ctx), variableName, listExpression, body, max, label),
+    source,
   );
 }
 
@@ -1195,6 +1201,7 @@ function parseSpawnBlock(
   baseIndent: number,
   scope: ParseScope,
 ): FlowNode {
+  const source = currentSource(ctx);
   // Parse in order: vars (suffix), condition (suffix), model (middle), cwd (middle), name
   // H-SEC-005: Extract optional vars allowlist before other parsing
   const vars = extractSpawnVars(line);
@@ -1215,9 +1222,9 @@ function parseSpawnBlock(
   if (cwdMatch?.[1] && cwdMatch[2]) {
     const body = parseBlock(ctx, baseIndent, [], scope);
     consumeEnd(ctx);
-    return attachSource(
-      ctx,
+    return withNodeSource(
       createSpawnNode(nextId(ctx), cwdMatch[1], body, cwdMatch[2], vars, model, condition),
+      source,
     );
   }
 
@@ -1230,9 +1237,9 @@ function parseSpawnBlock(
   }
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return attachSource(
-    ctx,
+  return withNodeSource(
     createSpawnNode(nextId(ctx), name, body, undefined, vars, model, condition),
+    source,
   );
 }
 
@@ -1242,6 +1249,7 @@ function parseRaceBlock(
   baseIndent: number,
   scope: ParseScope,
 ): FlowNode {
+  const source = currentSource(ctx);
   const timeout = parseTimeout(line);
   const rawNodes = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
@@ -1253,7 +1261,7 @@ function parseRaceBlock(
       warn(ctx, `Only spawn nodes are allowed inside a race block; ignoring "${node.kind}" node`);
     }
   }
-  return attachSource(ctx, createRaceNode(nextId(ctx), children, timeout));
+  return withNodeSource(createRaceNode(nextId(ctx), children, timeout), source);
 }
 
 function parseForeachSpawnLine(
@@ -1263,6 +1271,7 @@ function parseForeachSpawnLine(
   scope: ParseScope,
   label?: string,
 ): FlowNode {
+  const source = currentSource(ctx);
   const match = /^foreach-spawn\s+(\w+)\s+in\s+(.+?)(?:\s+max\s+(\d+))?$/i.exec(line);
   if (!match?.[1] || !match[2]) {
     warn(ctx, `Invalid foreach-spawn syntax: "${line}". Try: foreach-spawn item in \${list}`);
@@ -1276,15 +1285,15 @@ function parseForeachSpawnLine(
   const runMatch = /^run\s+(.+)$/i.exec(rawExpr);
   if (runMatch?.[1]) {
     const command = stripQuotes(runMatch[1].trim());
-    return attachSource(
-      ctx,
+    return withNodeSource(
       createForeachSpawnNode(nextId(ctx), variableName, '', body, max, label, command),
+      source,
     );
   }
   const listExpression = stripQuotes(rawExpr);
-  return attachSource(
-    ctx,
+  return withNodeSource(
     createForeachSpawnNode(nextId(ctx), variableName, listExpression, body, max, label),
+    source,
   );
 }
 
@@ -1502,6 +1511,7 @@ function parseReviewBlock(
   baseIndent: number,
   scope: ParseScope,
 ): FlowNode {
+  const source = currentSource(ctx);
   const spec = parseReviewOpenLine(trimmed);
   if (!spec) {
     warn(
@@ -1512,8 +1522,7 @@ function parseReviewBlock(
   }
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
-  return attachSource(
-    ctx,
+  return withNodeSource(
     createReviewNode(
       nextId(ctx),
       body,
@@ -1523,6 +1532,7 @@ function parseReviewBlock(
       spec.strict,
       spec.judgeName,
     ),
+    source,
   );
 }
 

@@ -58,12 +58,18 @@ async function readJson(p) {
   return JSON.parse(await fs.readFile(p, 'utf8'));
 }
 
+async function readPluginVersion() {
+  const pluginJson = await readJson(join(ROOT, '.claude-plugin', 'plugin.json'));
+  return pluginJson.version;
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 async function main() {
   console.log('Install verification test\n');
+  const version = await readPluginVersion();
 
   // 1. Create temp HOME
   const fakeHome = await fs.mkdtemp(join(tmpdir(), 'pl-install-verify-'));
@@ -85,7 +91,15 @@ async function main() {
     });
     ok('Installer ran without error');
 
-    const pluginsDir = join(fakeHome, '.claude', 'plugins', 'local', 'prompt-language');
+    const pluginsDir = join(
+      fakeHome,
+      '.claude',
+      'plugins',
+      'cache',
+      'prompt-language-local',
+      'prompt-language',
+      version,
+    );
 
     // 3. Check expected directories exist
     console.log('\nVerifying installed directories...');
@@ -127,7 +141,8 @@ async function main() {
       fakeHome,
       '.claude',
       'plugins',
-      'local',
+      'cache',
+      'prompt-language-local',
       '.claude-plugin',
       'marketplace.json',
     );
@@ -145,7 +160,7 @@ async function main() {
       }
       if (Array.isArray(catalog.plugins) && catalog.plugins.length > 0) {
         const p = catalog.plugins[0];
-        if (p.source === './prompt-language') {
+        if (p.source === `./prompt-language/${version}`) {
           ok('marketplace.json plugin source');
         } else {
           fail('marketplace.json plugin source', `got ${p.source}`);
@@ -168,6 +183,14 @@ async function main() {
         const entry = installed.plugins[key][0];
         if (entry.scope === 'user' && entry.version && entry.installPath) {
           ok('Registration has scope, version, installPath');
+          if (entry.version === version && entry.installPath === pluginsDir) {
+            ok('Registration points to the current versioned install path');
+          } else {
+            fail(
+              'Registration target',
+              `expected version ${version} at ${pluginsDir}, got version ${entry.version} at ${entry.installPath}`,
+            );
+          }
         } else {
           fail('Registration fields', 'missing scope, version, or installPath');
         }
@@ -204,7 +227,21 @@ async function main() {
       fail('settings.json', 'file not found');
     }
 
-    // 8. Verify dist/ files are functional (basic parseFlow import check)
+    // 8. status command
+    console.log('\nVerifying status command...');
+    const statusOutput = execSync(`node "${join(ROOT, 'bin', 'cli.mjs')}" status`, {
+      env,
+      stdio: 'pipe',
+      cwd: ROOT,
+      encoding: 'utf8',
+    });
+    if (statusOutput.includes('  Installed:    yes') && !statusOutput.includes('  Issue:')) {
+      ok('status reports a healthy Claude install');
+    } else {
+      fail('status command', `unexpected status output:\n${statusOutput}`);
+    }
+
+    // 9. Verify dist/ files are functional (basic parseFlow import check)
     console.log('\nVerifying dist/ files...');
     const distEntries = await fs.readdir(join(pluginsDir, 'dist'), { recursive: true });
     const jsFiles = distEntries.filter((e) => typeof e === 'string' && e.endsWith('.js'));
@@ -214,7 +251,7 @@ async function main() {
       fail('dist/ JS files', 'no .js files found');
     }
   } finally {
-    // 9. Clean up
+    // 10. Clean up
     console.log('\nCleaning up...');
     await fs.rm(fakeHome, { recursive: true, force: true });
     ok('Temp directory removed');

@@ -4640,9 +4640,9 @@ describe('autoAdvanceNodes — position-aware runtime messages', () => {
     const result = await autoAdvanceNodes(state);
 
     expect(result.state.warnings).toEqual(
-      expect.arrayContaining([expect.stringContaining("Loop 'w1' timed out after 1s")]),
+      expect.arrayContaining([expect.stringContaining('while command_failed timed out after 1s')]),
     );
-    expect(result.state.warnings.join('\n')).toContain('flow[1] at line 8, col 5');
+    expect(result.state.warnings.join('\n')).toContain('while command_failed at line 8, col 5');
   });
 
   it('includes source position in JSON capture fallback diagnostics', async () => {
@@ -4675,8 +4675,26 @@ describe('autoAdvanceNodes — position-aware runtime messages', () => {
       RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
     );
     expect(String(result.state.variables['_runtime_diagnostic.summary'])).toContain(
-      'flow[1] at line 14, col 5',
+      'let analysis at line 14, col 5',
     );
-    expect(result.diagnostics?.[0]?.summary).toContain('flow[1] at line 14, col 5');
+    expect(result.diagnostics?.[0]?.summary).toContain('let analysis at line 14, col 5');
+  });
+
+  it('includes source position in try failure reasons', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 1, stdout: '', stderr: 'boom' }),
+    };
+    const runNode = withNodeSource(createRunNode('r1', 'npm test'), {
+      line: 9,
+      column: 5,
+      text: '    run: npm test',
+    });
+    const spec = createFlowSpec('test', [createTryNode('t1', [runNode], 'command_failed', [])]);
+    const state = createSessionState('s1', spec);
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(result.state.status).toBe('failed');
+    expect(result.state.failureReason).toContain('run at line 9, col 5');
   });
 });

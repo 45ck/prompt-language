@@ -156,9 +156,15 @@ npm run test:coverage  # with coverage report
 Unit tests use mocks and in-memory stores. Smoke tests prove the plugin works end-to-end through Claude's real agent loop. They are **mandatory** before any PR.
 
 ```bash
-npm run eval:smoke        # full suite (26 tests, ~8 min)
+npm run eval:smoke        # full suite
 npm run eval:smoke:quick  # fast subset without gate/loop tests (~2 min)
+npm run eval:smoke:codex
+npm run eval:smoke:gemini
+npm run eval:smoke:opencode
+npm run eval:smoke:ollama
 ```
+
+Harness-specific smoke commands are first-class for Codex, Gemini, OpenCode, and Ollama. The Gemini harness is supported for smoke execution through its direct CLI prompt path; the dedicated `prompt-language ci --runner ...` flow runner path currently exists for Codex, OpenCode, and Ollama.
 
 See [manual smoke test instructions](docs/manual-smoke-test.md) for one-off validation.
 

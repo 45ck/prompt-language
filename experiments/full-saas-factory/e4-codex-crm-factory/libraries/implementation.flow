@@ -1,0 +1,13 @@
+library: implementation
+
+export flow backend(pkg_mgr="pnpm"):
+  prompt: Use agent: backend-engineer. Use skills: backend-persistence-skills, authentication-cryptography-skills, security-engineering-skills, design-for-testability-skills. Build the CRM backend in packages/api. Implement auth, contacts, companies, opportunities, pipeline stages, activities, tasks, notes, and dashboard aggregates. Write tests and keep contracts aligned with docs/api-contracts.md.
+  review criteria: "No speculative frameworks. Strong tests. Clear boundaries. Secure defaults. Preserve the bounded CRM scope." grounded-by "${pkg_mgr} lint && ${pkg_mgr} typecheck && ${pkg_mgr} test" max 4
+    prompt: Review the backend against the architecture docs and the current failures. Fix code, tests, migrations, and contracts directly.
+  end
+
+export flow frontend(pkg_mgr="pnpm"):
+  prompt: Use agent: web-engineer. Use skills: web-engineering-skills, hci-review-skill, software-quality-skills, design-for-testability-skills. Build the CRM frontend in apps/web. Implement sign-in, dashboard, contacts, companies, pipeline board, notes, tasks, and reporting views. Prefer accessible roles, labels, and stable automation hooks so QA and demo automation remain robust.
+  review criteria: "The UI must be usable, automation-stable, and within the approved MVP." grounded-by "${pkg_mgr} lint && ${pkg_mgr} typecheck && ${pkg_mgr} test" max 4
+    prompt: Review the frontend for UX confusion, brittle selectors, missing empty states, accessibility issues, and broken flows. Fix the product, tests, and docs directly.
+  end

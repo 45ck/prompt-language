@@ -7,6 +7,7 @@
 
 import { flowSpecHash, type FlowSpec } from './flow-spec.js';
 import type { FlowNode, LetNode, VariableDeclaredType } from './flow-node.js';
+import { describeNodePosition } from './flow-node.js';
 import type { VariableValue, VariableStore } from './variable-value.js';
 
 export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
@@ -338,12 +339,37 @@ export function addWarning(state: SessionState, warning: string): SessionState {
   return { ...state, warnings: [...state.warnings, warning] };
 }
 
+export function withStatePosition(
+  state: SessionState,
+  message: string,
+  path: readonly number[] = state.currentNodePath,
+): string {
+  const position = describeNodePosition(state.flowSpec.nodes, path);
+  return position == null ? message : `${message} (${position})`;
+}
+
+export function addWarningAtPath(
+  state: SessionState,
+  warning: string,
+  path: readonly number[] = state.currentNodePath,
+): SessionState {
+  return addWarning(state, withStatePosition(state, warning, path));
+}
+
 export function markCompleted(state: SessionState): SessionState {
   return { ...state, status: 'completed' };
 }
 
 export function markFailed(state: SessionState, reason?: string): SessionState {
   return { ...state, status: 'failed', ...(reason !== undefined && { failureReason: reason }) };
+}
+
+export function markFailedAtPath(
+  state: SessionState,
+  reason: string,
+  path: readonly number[] = state.currentNodePath,
+): SessionState {
+  return markFailed(state, withStatePosition(state, reason, path));
 }
 
 export function markCancelled(state: SessionState): SessionState {

@@ -1,0 +1,29 @@
+Goal: run phase 1 of the E4 repo-local CRM factory experiment
+
+memory:
+  crm_target_market
+  crm_stack
+  preferred_package_manager
+  experiment_workspace
+
+import "experiments/full-saas-factory/e4-codex-crm-factory/libraries/discovery.flow" as discovery
+
+flow:
+  remember key="crm_target_market" value="Newcastle and Hunter SMEs with sales and service workflows"
+  remember key="crm_stack" value="Next.js + TypeScript + PostgreSQL + Prisma"
+  remember key="preferred_package_manager" value="pnpm"
+  remember key="experiment_workspace" value="experiments/full-saas-factory/e4-codex-crm-factory/workspace/crm-app"
+
+  prompt: Work only inside ${experiment_workspace}. Treat it as the target repo root for this experiment. Phase 1 covers bootstrap, market research, and requirements only.
+
+  use discovery.bootstrap_workspace()
+
+  spawn "market-research" with vars crm_target_market, crm_stack
+    use discovery.market_research()
+  end
+
+  spawn "requirements" with vars crm_target_market, crm_stack
+    use discovery.requirements_discovery()
+  end
+
+  await all

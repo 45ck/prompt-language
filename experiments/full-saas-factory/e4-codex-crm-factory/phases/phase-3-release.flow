@@ -1,0 +1,19 @@
+Goal: run phase 3 of the E4 repo-local CRM factory experiment
+
+memory:
+  preferred_package_manager
+  experiment_workspace
+
+import "experiments/full-saas-factory/e4-codex-crm-factory/libraries/quality.flow" as quality
+import "experiments/full-saas-factory/e4-codex-crm-factory/libraries/release.flow" as release
+
+flow:
+  remember key="preferred_package_manager" value="pnpm"
+  remember key="experiment_workspace" value="experiments/full-saas-factory/e4-codex-crm-factory/workspace/crm-app"
+
+  prompt: Work only inside ${experiment_workspace}. Treat it as the target repo root for this experiment. Phase 3 covers release-prep and the final ship gates.
+
+  use release.prepare_release(pkg_mgr="${preferred_package_manager}")
+
+done when:
+  use quality.crm_ship_gates(pkg_mgr="${preferred_package_manager}")

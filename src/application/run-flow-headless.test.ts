@@ -262,7 +262,7 @@ describe('runFlowHeadless', () => {
     expect(result.finalState.status).toBe('completed');
     expect(result.finalState.variables['answer']).toBe('');
     expect(result.reason).toBe(
-      "PLR-005 Capture for 'answer' fell back to empty string after 3 attempts. (flow[1] at line 4, col 3)",
+      "PLR-005 Capture for 'answer' fell back to empty string after 3 attempts. (let answer at line 4, col 3)",
     );
     expect(result.report.status).toBe('ok');
     expect(result.report.diagnostics).toEqual([

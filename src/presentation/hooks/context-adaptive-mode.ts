@@ -16,22 +16,30 @@ export function selectPreCompactMode(
   state: SessionState,
   loadStatus: StateLoadStatus | null,
 ): ContextAdaptiveModeDecision {
-  const triggerIds = new Set<string>();
+  const triggerIds: string[] = [];
   const summaryParts: string[] = [];
+  const addTrigger = (triggerId: string): void => {
+    if (!triggerIds.includes(triggerId)) {
+      triggerIds.push(triggerId);
+    }
+  };
+
+  addTrigger('compaction_boundary');
+  summaryParts.push('hook pre-compact crossed a compaction boundary');
 
   if (loadStatus?.source === 'backup' || loadStatus?.source === 'backup2') {
-    triggerIds.add('resume_boundary');
-    triggerIds.add('state_shape_mismatch');
+    addTrigger('resume_boundary');
+    addTrigger('state_mismatch');
     summaryParts.push(`state recovered from ${loadStatus.recoveredFrom}`);
   }
 
   if (loadStatus?.source === 'checksum_sanitized') {
-    triggerIds.add('state_shape_mismatch');
+    addTrigger('state_mismatch');
     summaryParts.push('state checksum mismatch required gate-result sanitization');
   }
 
   if (state.version !== undefined && state.version !== CURRENT_STATE_VERSION) {
-    triggerIds.add('state_shape_mismatch');
+    addTrigger('state_mismatch');
     summaryParts.push(
       `state version ${state.version} differs from expected v${CURRENT_STATE_VERSION}`,
     );
@@ -40,12 +48,11 @@ export function selectPreCompactMode(
   if (
     Object.values(state.nodeProgress).some((progress) => progress.status === 'awaiting_capture')
   ) {
-    triggerIds.add('capture_recovery');
+    addTrigger('capture_failure');
     summaryParts.push('capture recovery is active');
   }
 
-  const orderedTriggerIds = [...triggerIds];
-  const escalated = orderedTriggerIds.length > 0;
+  const escalated = triggerIds.length > 0;
   const actualMode = escalated ? 'full' : 'compact';
   const summary =
     summaryParts.length > 0 ? summaryParts.join('; ') : 'no full-required trigger detected';
@@ -54,11 +61,11 @@ export function selectPreCompactMode(
     requestedMode: 'compact',
     actualMode,
     escalated,
-    triggerIds: orderedTriggerIds,
+    triggerIds,
     summary,
     markerLine:
       `[prompt-language] render-mode requested=compact actual=${actualMode} ` +
-      `escalated=${escalated} triggerIds=${orderedTriggerIds.join(',') || 'none'} ` +
+      `escalated=${escalated} triggerIds=${triggerIds.join(',') || 'none'} ` +
       `sessionId=${state.sessionId}`,
   };
 }

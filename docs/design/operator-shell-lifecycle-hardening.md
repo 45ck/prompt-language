@@ -4,6 +4,10 @@
 
 Accepted design target for the current operator-shell lifecycle milestone.
 
+This note is the closure-ready design boundary for `prompt-language-f7jp.2`. It is not a claim
+that current `HEAD` already ships standalone `doctor` and `refresh` commands with full supported
+runner parity.
+
 Relevant beads:
 
 - `prompt-language-f7jp.2` - Lifecycle hardening: doctor, refresh, uninstall safety, and diagnostics surface
@@ -146,6 +150,32 @@ Required validation direction:
 - live smoke tests for install, refresh, doctor, and uninstall flows on supported runners
 
 The [Phased Delivery Roadmap](../wip/reviews/2026-04-11-omx-adaptation-pack/plans/phased-delivery-roadmap.md) sets the promotion rule: this surface should not be described as shipped operator behavior until docs, tests, recovery story, and distinguishable implementation evidence exist together.
+
+## Current repository status
+
+At current `HEAD`, the repo already ships part of the lifecycle story:
+
+- Claude `install`, `status`, and `uninstall` manage the prompt-language cache install, plugin
+  registration, marketplace registration, enablement, and prompt-language-owned status-line
+  cleanup.
+- Codex `codex-install`, `codex-status`, and `codex-uninstall` manage the local scaffold plus the
+  prompt-language-managed `codex_hooks` entry with explicit ownership and conflict handling.
+- adapter tests already prove key uninstall-safety and ownership-preservation cases for Claude and
+  Codex host state
+
+At current `HEAD`, the repo does not yet ship the full milestone described above:
+
+- there is no standalone repo-backed `doctor` command
+- there is no explicit `refresh` command exposed as a first-class operator surface
+- there is no unified machine-readable lifecycle diagnostics contract spanning install, repair, and
+  uninstall across supported runners
+- there is not yet promotion evidence for a supported install-refresh-doctor-uninstall lifecycle
+  story across runners
+
+That means `prompt-language-f7jp.2` is effectively satisfied as a design-and-scope bead, while the
+remaining implementation and promotion work stays open in later operator-shell beads such as
+ownership/merge hardening and rollout evidence. This note defines the target boundary those later
+slices must meet; it does not say they have all shipped already.
 
 ## Explicit out-of-scope boundaries
 

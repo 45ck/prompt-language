@@ -256,6 +256,7 @@ describe('renderFlowCompact — new node kinds', () => {
     const state = createSessionState('s1', spec);
     const output = renderFlowCompact(state);
     expect(output).toContain('race');
+    expect(output).not.toContain('spawn "alpha"');
   });
 
   it('renders race winner in compact form when winner is set', () => {
@@ -275,6 +276,7 @@ describe('renderFlowCompact — new node kinds', () => {
     const output = renderFlowCompact(state);
     expect(output).toContain('foreach-spawn');
     expect(output).toContain('item');
+    expect(output).not.toContain('P: w');
   });
 
   it('renders remember in compact form', () => {
@@ -334,7 +336,9 @@ describe('renderFlowCompact — new node kinds', () => {
     const state = createSessionState('s1', spec);
     const output = renderFlowCompact(state);
     expect(output).toContain('if');
-    expect(output).toContain('else');
+    expect(output).not.toContain('else');
+    expect(output).not.toContain('P: then');
+    expect(output).not.toContain('P: else');
   });
 
   it('renders try with catch body in compact form', () => {
@@ -346,6 +350,39 @@ describe('renderFlowCompact — new node kinds', () => {
     const state = createSessionState('s1', spec);
     const output = renderFlowCompact(state);
     expect(output).toContain('try');
-    expect(output).toContain('catch');
+    expect(output).not.toContain('catch');
+    expect(output).not.toContain('R: cmd');
+    expect(output).not.toContain('P: handle');
+  });
+
+  it('shows the active race child path in compact form', () => {
+    const spawnA = createSpawnNode('s1', 'alpha', [createPromptNode('pa', 'work alpha')]);
+    const spawnB = createSpawnNode('s2', 'beta', [createRunNode('rb', 'npm test')]);
+    const raceNode = createRaceNode('r1', [spawnA, spawnB]);
+    const spec = createFlowSpec('test', [raceNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 1, 0] };
+
+    const output = renderFlowCompact(state);
+
+    expect(output).toContain('race');
+    expect(output).toContain('spawn "beta"');
+    expect(output).toContain('>  R: npm test');
+    expect(output).not.toContain('spawn "alpha"');
+    expect(output).not.toContain('work alpha');
+  });
+
+  it('shows the active foreach-spawn child path in compact form', () => {
+    const feSpawn = createForeachSpawnNode('fs1', 'item', 'a b', [
+      createPromptNode('p1', 'work item'),
+    ]);
+    const spec = createFlowSpec('test', [feSpawn]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 0] };
+
+    const output = renderFlowCompact(state);
+
+    expect(output).toContain('foreach-spawn item');
+    expect(output).toContain('> P: work item');
   });
 });

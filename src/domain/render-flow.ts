@@ -830,6 +830,18 @@ function compactNode(
   const mark = isCurrent ? '>' : isAnc ? '|' : completed ? '~' : ' ';
   const pad = ' '.repeat(depth);
 
+  const activeChildIndex = (): number | null => {
+    if (!isAnc) return null;
+    return state.currentNodePath[path.length] ?? null;
+  };
+
+  const renderActiveBody = (body: readonly FlowNode[]): string[] => {
+    const index = activeChildIndex();
+    if (index == null) return [];
+    const child = body[index];
+    return child ? compactNode(child, state, [...path, index], depth + 1) : [];
+  };
+
   switch (node.kind) {
     case 'prompt':
       return [`${mark}${pad}P: ${node.text.slice(0, 60)}`];
@@ -849,18 +861,14 @@ function compactNode(
         ? `ask: "${extractAskQuestion(node.condition)}"`
         : node.condition;
       const lines = [`${mark}${pad}${node.kind} ${compactCond} ${iter}`];
-      for (let i = 0; i < node.body.length; i++) {
-        lines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
-      }
+      lines.push(...renderActiveBody(node.body));
       return lines;
     }
     case 'retry': {
       const prog = state.nodeProgress[node.id];
       const iter = prog ? `${prog.iteration}/${prog.maxIterations}` : '';
       const lines = [`${mark}${pad}retry ${iter}`];
-      for (let i = 0; i < node.body.length; i++) {
-        lines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
-      }
+      lines.push(...renderActiveBody(node.body));
       return lines;
     }
     case 'if': {
@@ -868,28 +876,63 @@ function compactNode(
         ? `ask: "${extractAskQuestion(node.condition)}"`
         : node.condition;
       const lines = [`${mark}${pad}if ${compactIfCond}`];
-      for (let i = 0; i < node.thenBranch.length; i++) {
-        lines.push(...compactNode(node.thenBranch[i]!, state, [...path, i], depth + 1));
-      }
-      if (node.elseBranch.length > 0) {
-        lines.push(`${mark}${pad}else`);
-        const off = node.thenBranch.length;
-        for (let i = 0; i < node.elseBranch.length; i++) {
-          lines.push(...compactNode(node.elseBranch[i]!, state, [...path, off + i], depth + 1));
+      const index = activeChildIndex();
+      if (index != null) {
+        if (index < node.thenBranch.length) {
+          const child = node.thenBranch[index];
+          if (child) {
+            lines.push(...compactNode(child, state, [...path, index], depth + 1));
+          }
+        } else {
+          const elseIndex = index - node.thenBranch.length;
+          const child = node.elseBranch[elseIndex];
+          if (child) {
+            lines.push(`${mark}${pad}else`);
+            lines.push(
+              ...compactNode(
+                child,
+                state,
+                [...path, node.thenBranch.length + elseIndex],
+                depth + 1,
+              ),
+            );
+          }
         }
       }
       return lines;
     }
     case 'try': {
       const lines = [`${mark}${pad}try`];
-      for (let i = 0; i < node.body.length; i++) {
-        lines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
-      }
-      if (node.catchBody.length > 0) {
-        const off = node.body.length;
-        lines.push(`${mark}${pad}catch`);
-        for (let i = 0; i < node.catchBody.length; i++) {
-          lines.push(...compactNode(node.catchBody[i]!, state, [...path, off + i], depth + 1));
+      const index = activeChildIndex();
+      if (index != null) {
+        if (index < node.body.length) {
+          const child = node.body[index];
+          if (child) {
+            lines.push(...compactNode(child, state, [...path, index], depth + 1));
+          }
+        } else if (index < node.body.length + node.catchBody.length) {
+          const catchIndex = index - node.body.length;
+          const child = node.catchBody[catchIndex];
+          if (child) {
+            lines.push(`${mark}${pad}catch`);
+            lines.push(
+              ...compactNode(child, state, [...path, node.body.length + catchIndex], depth + 1),
+            );
+          }
+        } else {
+          const finallyIndex = index - node.body.length - node.catchBody.length;
+          const child = node.finallyBody[finallyIndex];
+          if (child) {
+            lines.push(`${mark}${pad}finally`);
+            lines.push(
+              ...compactNode(
+                child,
+                state,
+                [...path, node.body.length + node.catchBody.length + finallyIndex],
+                depth + 1,
+              ),
+            );
+          }
         }
       }
       return lines;
@@ -898,9 +941,7 @@ function compactNode(
       const prog = state.nodeProgress[node.id];
       const iter = prog ? `${prog.iteration}/${prog.maxIterations}` : '';
       const lines = [`${mark}${pad}each ${node.variableName} ${iter}`];
-      for (let i = 0; i < node.body.length; i++) {
-        lines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
-      }
+      lines.push(...renderActiveBody(node.body));
       return lines;
     }
     case 'break':
@@ -910,7 +951,9 @@ function compactNode(
     case 'spawn': {
       const child = state.spawnedChildren[node.name];
       const tag = child ? `[${child.status}]` : '';
-      return [`${mark}${pad}spawn "${node.name}" ${tag}`];
+      const lines = [`${mark}${pad}spawn "${node.name}" ${tag}`];
+      lines.push(...renderActiveBody(node.body));
+      return lines;
     }
     case 'await':
       return [`${mark}${pad}await ${node.target}`];
@@ -922,18 +965,27 @@ function compactNode(
       const rvHeader = node.strict ? 'review strict' : 'review';
       const rvJudge = node.judgeName ? ` judge="${node.judgeName}"` : '';
       const rvLines = [`${mark}${pad}${rvHeader}${rvJudge} ${rvIter}`.trimEnd()];
-      for (let i = 0; i < node.body.length; i++) {
-        rvLines.push(...compactNode(node.body[i]!, state, [...path, i], depth + 1));
-      }
+      rvLines.push(...renderActiveBody(node.body));
       return rvLines;
     }
     case 'race': {
       const winner = state.variables['race_winner'];
       const raceTag = winner !== undefined && winner !== '' ? `[winner:${winner}]` : '';
-      return [`${mark}${pad}race ${raceTag}`];
+      const lines = [`${mark}${pad}race ${raceTag}`];
+      const index = activeChildIndex();
+      if (index != null) {
+        const child = node.children[index];
+        if (child) {
+          lines.push(...compactNode(child, state, [...path, index], depth + 1));
+        }
+      }
+      return lines;
     }
-    case 'foreach_spawn':
-      return [`${mark}${pad}foreach-spawn ${node.variableName}`];
+    case 'foreach_spawn': {
+      const lines = [`${mark}${pad}foreach-spawn ${node.variableName}`];
+      lines.push(...renderActiveBody(node.body));
+      return lines;
+    }
     case 'remember':
       return [`${mark}${pad}remember`];
     case 'send':

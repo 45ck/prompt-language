@@ -1639,6 +1639,63 @@ describe('renderFlowCompact', () => {
     expect(compact).toContain('L greeting =');
     expect(compact).toContain('[hello]');
   });
+
+  it('omits inactive if branches while keeping the active branch explicit', () => {
+    const ifNode = createIfNode(
+      'i1',
+      'tests_fail',
+      [createPromptNode('p1', 'fix it')],
+      [createPromptNode('p2', 'move on')],
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 1] };
+
+    const compact = renderFlowCompact(state);
+
+    expect(compact).toContain('if tests_fail');
+    expect(compact).toContain('else');
+    expect(compact).toContain('> P: move on');
+    expect(compact).not.toContain('P: fix it');
+  });
+
+  it('omits inactive try branches while keeping the active branch explicit', () => {
+    const tryNode = createTryNode(
+      't1',
+      [createRunNode('r1', 'npm deploy')],
+      'command_failed',
+      [createPromptNode('p1', 'roll back')],
+      [createRunNode('r2', 'cleanup')],
+    );
+    const spec = createFlowSpec('test', [tryNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 2] };
+
+    const compact = renderFlowCompact(state);
+
+    expect(compact).toContain('try');
+    expect(compact).toContain('finally');
+    expect(compact).toContain('> R: cleanup');
+    expect(compact).not.toContain('R: npm deploy');
+    expect(compact).not.toContain('P: roll back');
+  });
+
+  it('keeps full render unchanged for inactive if branches', () => {
+    const ifNode = createIfNode(
+      'i1',
+      'tests_fail',
+      [createPromptNode('p1', 'fix it')],
+      [createPromptNode('p2', 'move on')],
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    const state = createSessionState('s1', spec);
+
+    const full = renderFlow(state);
+
+    expect(full).toContain('prompt: fix it');
+    expect(full).toContain('else');
+    expect(full).toContain('prompt: move on');
+  });
 });
 
 // H-PERF-001: Render state hash

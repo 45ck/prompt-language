@@ -20,6 +20,7 @@ import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
 import { formatStateLoadDiagnosticMessage } from './format-state-load-diagnostic.js';
+import { formatRenderByteMetrics, isRenderByteMetricsEnabled } from './render-byte-metrics.js';
 
 // H#100: Detect project type and suggest relevant flows
 async function suggestFlows(): Promise<string | null> {
@@ -116,11 +117,25 @@ async function main(): Promise<void> {
       captureContext = '\n\n' + capturePrompt;
     }
 
+    const additionalContextStablePrefix = '[prompt-language] Active flow detected:\n\n';
+    const additionalContext =
+      additionalContextStablePrefix +
+      rendered +
+      (versionWarning ? `\n${versionWarning}` : '') +
+      captureContext;
+    if (isRenderByteMetricsEnabled()) {
+      process.stderr.write(
+        `${formatRenderByteMetrics({
+          hook: 'session-start',
+          channel: 'additionalContext',
+          stableParts: [additionalContextStablePrefix],
+          dynamicParts: [rendered, versionWarning ? `\n${versionWarning}` : '', captureContext],
+        })}\n`,
+      );
+    }
+
     const output = JSON.stringify({
-      additionalContext:
-        `[prompt-language] Active flow detected:\n\n${rendered}` +
-        (versionWarning ? `\n${versionWarning}` : '') +
-        captureContext,
+      additionalContext,
     });
     process.stdout.write(output);
     return;

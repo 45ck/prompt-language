@@ -28,13 +28,14 @@ interface HookResult {
   stderr: string;
 }
 
-function runHook(input: string, cwd: string): HookResult {
+function runHook(input: string, cwd: string, env: NodeJS.ProcessEnv = {}): HookResult {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', 'post-tool-use.ts');
   const result = spawnSync(`npx tsx "${scriptPath}"`, {
     input,
     encoding: 'utf-8',
     cwd,
+    env: { ...process.env, ...env },
     timeout: HOOK_TEST_TIMEOUT_MS,
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: true,
@@ -90,6 +91,27 @@ describe('post-tool-use hook (integration)', () => {
     expect(result.stderr).toContain('My task');
     // Should contain ANSI codes (colorized)
     expect(result.stderr).toContain('\x1b[');
+  });
+
+  it('emits render byte metrics when the env flag is enabled', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(
+      join(stateDir, 'session-state.json'),
+      JSON.stringify(makeState('active', 'Metric tool task')),
+    );
+
+    const result = runHook('{}', tempDir, {
+      PROMPT_LANGUAGE_RENDER_BYTE_METRICS: '1',
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain(
+      '[prompt-language] render-bytes hook=post-tool-use channel=stderr',
+    );
+    expect(result.stderr).toMatch(/stable_bytes=\d+/);
+    expect(result.stderr).toMatch(/dynamic_bytes=\d+/);
+    expect(result.stderr).toMatch(/total_bytes=\d+/);
   });
 
   it('does not write to stderr when flow is completed', async () => {

@@ -22,6 +22,7 @@ import { resolveFileExistsPredicatePath } from '../../application/evaluate-compl
 import { withHookErrorRecovery } from './hook-error-handler.js';
 import { readStdin } from './read-stdin.js';
 import type { SessionState } from '../../domain/session-state.js';
+import { formatRenderByteMetrics, isRenderByteMetricsEnabled } from './render-byte-metrics.js';
 
 // H-PERF-006: Read-only tools that don't need flow re-rendering
 const READ_ONLY_TOOLS = new Set(['Read', 'Glob', 'Grep', 'WebFetch', 'WebSearch']);
@@ -212,7 +213,20 @@ async function main(): Promise<void> {
     // D09-fix: Removed dead lastRenderHash (each hook is a fresh process)
     if (!toolName || !READ_ONLY_TOOLS.has(toolName)) {
       const rendered = renderFlow(state);
-      process.stderr.write(`\n${colorizeFlow(rendered)}\n`);
+      const colored = colorizeFlow(rendered);
+      const stablePrefix = '\n';
+      const stableSuffix = '\n';
+      process.stderr.write(`${stablePrefix}${colored}${stableSuffix}`);
+      if (isRenderByteMetricsEnabled()) {
+        process.stderr.write(
+          `${formatRenderByteMetrics({
+            hook: 'post-tool-use',
+            channel: 'stderr',
+            stableParts: [stablePrefix, stableSuffix],
+            dynamicParts: [colored],
+          })}\n`,
+        );
+      }
     }
 
     // H-INT-012: Fast gate pre-check after Write/Edit tools

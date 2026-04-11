@@ -27,13 +27,14 @@ interface HookResult {
   stderr: string;
 }
 
-function runHook(input: string, cwd: string): HookResult {
+function runHook(input: string, cwd: string, env: NodeJS.ProcessEnv = {}): HookResult {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', 'session-start.ts');
   const result = spawnSync(`npx tsx "${scriptPath}"`, {
     input,
     encoding: 'utf-8',
     cwd,
+    env: { ...process.env, ...env },
     timeout: HOOK_TEST_TIMEOUT_MS,
     stdio: ['pipe', 'pipe', 'pipe'],
     shell: true,
@@ -103,6 +104,27 @@ describe('session-start hook (integration)', () => {
     const parsed = JSON.parse(result.stdout) as { additionalContext: string };
     expect(parsed.additionalContext).toContain('[prompt-language] Active flow detected');
     expect(parsed.additionalContext).toContain('Resume task');
+  });
+
+  it('emits render byte metrics when the env flag is enabled', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(
+      join(stateDir, 'session-state.json'),
+      JSON.stringify(makeState('active', 'Metric task')),
+    );
+
+    const result = runHook('{}', tempDir, {
+      PROMPT_LANGUAGE_RENDER_BYTE_METRICS: '1',
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain(
+      '[prompt-language] render-bytes hook=session-start channel=additionalContext',
+    );
+    expect(result.stderr).toMatch(/stable_bytes=\d+/);
+    expect(result.stderr).toMatch(/dynamic_bytes=\d+/);
+    expect(result.stderr).toMatch(/total_bytes=\d+/);
   });
 
   it('does not write when flow is completed', async () => {

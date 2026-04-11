@@ -25,6 +25,7 @@ import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
 import { selectPreCompactMode } from './context-adaptive-mode.js';
 import { renderCompactGateStatus } from './render-compact-gate-status.js';
+import { formatRenderByteMetrics, isRenderByteMetricsEnabled } from './render-byte-metrics.js';
 
 /** Find the variable name awaiting capture, if any. */
 function findAwaitingCapturePrompt(state: SessionState): string | null {
@@ -78,17 +79,31 @@ async function main(): Promise<void> {
     captureContext = '\n\nIMPORTANT: Capture is in progress. ' + capturePrompt;
   }
 
-  const summary =
-    `[prompt-language] Active flow preserved across compaction.\n` +
-    `${modeDecision.markerLine}\n\n` +
-    (modeDecision.escalated
-      ? `[prompt-language] Auto-escalated to full mode: ${modeDecision.summary}\n\n${summaryBlock}\n\n${full}`
-      : `${summaryBlock}\n\n${compact}`) +
-    captureContext +
+  const summaryStablePrefix = '[prompt-language] Active flow preserved across compaction.\n';
+  const summaryStableSuffix =
     '\n\n' +
     'DSL reference: nodes are prompt, run, let/var, while, until, retry, ' +
     'if/else, try/catch/finally, foreach, break, continue, spawn, await. ' +
     'Variables: ${name} interpolation. Gates: "done when:" section.';
+  const summaryBody = modeDecision.escalated
+    ? `[prompt-language] Auto-escalated to full mode: ${modeDecision.summary}\n\n${summaryBlock}\n\n${full}`
+    : `${summaryBlock}\n\n${compact}`;
+  const summary =
+    summaryStablePrefix +
+    `${modeDecision.markerLine}\n\n` +
+    summaryBody +
+    captureContext +
+    summaryStableSuffix;
+  if (isRenderByteMetricsEnabled()) {
+    process.stderr.write(
+      `${formatRenderByteMetrics({
+        hook: 'pre-compact',
+        channel: 'additionalContext',
+        stableParts: [summaryStablePrefix, summaryStableSuffix],
+        dynamicParts: [`${modeDecision.markerLine}\n\n`, summaryBody, captureContext],
+      })}\n`,
+    );
+  }
 
   const output = JSON.stringify({ additionalContext: summary });
   process.stdout.write(output);

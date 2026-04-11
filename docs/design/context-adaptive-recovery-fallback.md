@@ -46,6 +46,12 @@ This epic is split into three dependent slices:
 
 The implementation order matters. Tests are expected to validate the same trigger categories and escalation semantics defined here.
 
+For `prompt-language-0ovo.5.1`, the concrete trigger-classification matrix now lives in
+[`docs/design/compact-mode-fallback-matrix.md`](compact-mode-fallback-matrix.md). This
+document remains the broader policy note: it defines the fail-closed recovery posture, the
+follow-on implementation slices, and the evidence bar those slices must satisfy before compact
+mode can be treated as recovery-safe.
+
 ## Current repo posture
 
 What exists today:
@@ -53,6 +59,8 @@ What exists today:
 - full-state rendering is the documented recovery baseline
 - context-adaptive rendering is tracked as WIP
 - evaluation planning already expects fallback counts and recovery outcomes
+- hook-level recovery tests already prove the current baseline keeps exact-step, gate, and
+  capture-retry context visible across resume and compaction recovery paths
 
 What is not yet established as shipped behavior:
 

@@ -236,4 +236,54 @@ describe('context-adaptive recovery hooks', () => {
     expect(additionalContext).toContain('>R: npm test');
     expect(additionalContext).toContain('gates: +tests_pass -lint_pass');
   });
+
+  it('pre-compact preserves capture retry instructions when backup recovery crosses a compaction boundary', async () => {
+    const recovered = makeActiveState({
+      sessionId: 'compact-capture-recovery',
+      flowSpec: {
+        goal: 'Recovered capture flow',
+        nodes: [
+          {
+            kind: 'let',
+            id: 'l1',
+            variableName: 'answer',
+            append: false,
+            source: { type: 'prompt', text: 'What changed?' },
+          },
+        ],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+      currentNodePath: [0],
+      nodeProgress: {
+        l1: {
+          iteration: 2,
+          maxIterations: 3,
+          status: 'awaiting_capture',
+          captureFailureReason: 'capture file empty or not found',
+        },
+      },
+      captureNonce: 'capture5678',
+    });
+
+    await writeStateFiles({
+      primary: '{{broken primary',
+      backup: JSON.stringify(recovered),
+    });
+
+    const result = runHook('pre-compact.ts', tempDir);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain('session-state.json is corrupted, trying backup');
+    expect(result.stderr).toContain('Recovered state from backup file');
+
+    const additionalContext = parseAdditionalContext(result.stdout);
+    expect(additionalContext).toContain(
+      '[prompt-language] Active flow preserved across compaction.',
+    );
+    expect(additionalContext).toContain('Recovered capture flow');
+    expect(additionalContext).toContain('IMPORTANT: Capture is in progress.');
+    expect(additionalContext).toContain('Variable capture');
+    expect(additionalContext).toContain('.prompt-language/vars/answer');
+  });
 });

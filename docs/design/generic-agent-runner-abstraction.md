@@ -4,6 +4,13 @@
 
 Proposed implementation note for bead `prompt-language-9uqe.4`.
 
+At `origin/main` `a641df0`, the headless prompt-turn seam is already shipped for
+Codex and OpenCode. This bead remains open because the broader spawned-session
+runner abstraction in this note has not landed yet: there is still no shared
+`SpawnedSessionRunner` / `RunnerBackedProcessSpawner` layer, interactive hooks
+still construct `ClaudeProcessSpawner` directly, and named-agent/default-runner
+resolution still cannot compose on one shared spawned-session seam.
+
 Primary related notes:
 
 - [Host Lifecycle Boundary](host-lifecycle-boundary.md)

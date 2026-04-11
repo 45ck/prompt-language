@@ -8,6 +8,16 @@ This file defines the telemetry payload shape that render-time and turn-time
 evaluation should emit. It does not claim that the repo already records every
 field below.
 
+Byte-composition follow-on bead `prompt-language-0ovo.1.2` is still open at
+current `HEAD`. The machine-readable per-hook contract for stable vs dynamic
+render bytes now lives in `src/infrastructure/render-telemetry-schema.ts`, but
+runtime emission for `UserPromptSubmit`, `Stop`, and `TaskCompleted` is not yet
+wired.
+
+Runtime-overhead follow-on bead `prompt-language-0ovo.1.3` also remains open.
+This contract defines what should be emitted, not the benchmark evidence for
+what that instrumentation costs in the live hook paths.
+
 ## Purpose
 
 The evaluation stack needs a stable telemetry contract so render behavior can be
@@ -164,6 +174,16 @@ can include:
   during the turn.
 - `stdoutBytes`: UTF-8 byte length of stdout captured from tooling or host I/O
   during the turn.
+
+These are aggregate turn-level counters. They do not replace the per-hook byte
+composition contract for `prompt-language-0ovo.1.2`, which must distinguish:
+
+- stable bytes
+- dynamic bytes
+- variable bytes
+- command-output bytes
+
+for `UserPromptSubmit`, `Stop`, and `TaskCompleted`.
 
 ### Variable counters
 
@@ -366,3 +386,10 @@ case use:
 This bead is satisfied only at the contract level by this file. Implementation
 work is still required before telemetry can be emitted, validated, or used by
 evaluation tooling.
+
+For `prompt-language-0ovo.1.2`, the remaining gap is narrower but still real:
+the contract exists, but runtime emission and end-to-end hook coverage do not.
+
+For `prompt-language-0ovo.1.3`, the remaining gap is separate: the repo still
+needs benchmark and regression evidence for the overhead introduced by telemetry
+capture in the real hook/runtime paths.

@@ -29,21 +29,24 @@ import { renderNodeToDsl, renderNodesToDsl, renderSpawnBody } from './render-nod
 
 describe('render-node-to-dsl', () => {
   it('renders prompt and run with newline normalization', () => {
-    const prompt = createPromptNode('p1', 'line 1\nline 2');
+    const prompt = createPromptNode('p1', 'line 1\nline 2', 'reviewer');
     const run = createRunNode('r1', 'echo one\necho two');
 
-    expect(renderNodeToDsl(prompt, 1)).toEqual(['  prompt: line 1 line 2']);
+    expect(renderNodeToDsl(prompt, 1)).toEqual([
+      '  prompt using profile "reviewer": line 1 line 2',
+    ]);
     expect(renderNodeToDsl(run, 2)).toEqual(['    run: echo one echo two']);
   });
 
   it('renders let nodes for all source variants', () => {
     const cases = [
       createLetNode('l1', 'a', { type: 'literal', value: 'x\\"y\nz' }),
-      createLetNode('l2', 'b', { type: 'prompt', text: 'Answer?' }),
+      createLetNode('l2', 'b', { type: 'prompt', text: 'Answer?', profile: 'planner' }),
       createLetNode('l3', 'c', {
         type: 'prompt_json',
         text: 'Return JSON',
         schema: '{ "k": "v" }',
+        profile: 'extractor',
       }),
       createLetNode('l4', 'd', { type: 'run', command: 'git status' }),
       createLetNode('l5', 'e', { type: 'memory', key: 'theme' }, true),
@@ -51,9 +54,11 @@ describe('render-node-to-dsl', () => {
     ] as const;
 
     expect(renderNodeToDsl(cases[0], 0)).toEqual(['let a = "x\\\\\\"y\\nz"']);
-    expect(renderNodeToDsl(cases[1], 0)).toEqual(['let b = prompt "Answer?"']);
+    expect(renderNodeToDsl(cases[1], 0)).toEqual([
+      'let b = prompt using profile "planner" "Answer?"',
+    ]);
     expect(renderNodeToDsl(cases[2], 0)).toEqual([
-      'let c = prompt "Return JSON" as json {\n{ "k": "v" }\n}',
+      'let c = prompt using profile "extractor" "Return JSON" as json {\n{ "k": "v" }\n}',
     ]);
     expect(renderNodeToDsl(cases[3], 0)).toEqual(['let d = run "git status"']);
     expect(renderNodeToDsl(cases[4], 0)).toEqual(['let e += memory "theme"']);
@@ -61,12 +66,27 @@ describe('render-node-to-dsl', () => {
   });
 
   it('renders while/until/retry with nested body lines', () => {
-    const whileNode = createWhileNode('w1', 'tests_fail', [createRunNode('w1-r', 'npm test')], 3);
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"tests still fail?"',
+      [createRunNode('w1-r', 'npm test')],
+      3,
+      undefined,
+      undefined,
+      'npm test',
+      2,
+      'reviewer',
+    );
     const untilNode = createUntilNode(
       'u1',
-      'command_succeeded',
+      'ask:"ship it?"',
       [createPromptNode('u1-p', 'Fix it')],
       4,
+      undefined,
+      undefined,
+      undefined,
+      1,
+      'shipper',
     );
     const retryNode = createRetryNode(
       'rt1',
@@ -78,12 +98,12 @@ describe('render-node-to-dsl', () => {
     );
 
     expect(renderNodeToDsl(whileNode, 0)).toEqual([
-      'while tests_fail max 3',
+      'while ask "tests still fail?" using profile "reviewer" grounded-by "npm test" max-retries 2 max 3',
       '  run: npm test',
       'end',
     ]);
     expect(renderNodeToDsl(untilNode, 1)).toEqual([
-      '  until command_succeeded max 4',
+      '  until ask "ship it?" using profile "shipper" max-retries 1 max 4',
       '    prompt: Fix it',
       '  end',
     ]);

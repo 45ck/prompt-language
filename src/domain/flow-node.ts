@@ -46,6 +46,7 @@ export interface WhileNode extends BaseNode {
   readonly askMaxRetries?: number | undefined;
   /** Shell command whose stdout is included as evidence for AI condition evaluation. */
   readonly groundedBy?: string | undefined;
+  readonly askProfile?: string | undefined;
 }
 
 export interface UntilNode extends BaseNode {
@@ -59,6 +60,7 @@ export interface UntilNode extends BaseNode {
   readonly askMaxRetries?: number | undefined;
   /** Shell command whose stdout is included as evidence for AI condition evaluation. */
   readonly groundedBy?: string | undefined;
+  readonly askProfile?: string | undefined;
 }
 
 export interface RetryNode extends BaseNode {
@@ -79,11 +81,13 @@ export interface IfNode extends BaseNode {
   readonly askMaxRetries?: number | undefined;
   /** Shell command whose stdout is included as evidence for AI condition evaluation. */
   readonly groundedBy?: string | undefined;
+  readonly askProfile?: string | undefined;
 }
 
 export interface PromptNode extends BaseNode {
   readonly kind: 'prompt';
   readonly text: string;
+  readonly profile?: string | undefined;
 }
 
 export interface RunNode extends BaseNode {
@@ -101,8 +105,13 @@ export interface TryNode extends BaseNode {
 }
 
 export type LetSource =
-  | { readonly type: 'prompt'; readonly text: string }
-  | { readonly type: 'prompt_json'; readonly text: string; readonly schema: string }
+  | { readonly type: 'prompt'; readonly text: string; readonly profile?: string | undefined }
+  | {
+      readonly type: 'prompt_json';
+      readonly text: string;
+      readonly schema: string;
+      readonly profile?: string | undefined;
+    }
   | { readonly type: 'run'; readonly command: string }
   | { readonly type: 'memory'; readonly key: string }
   | { readonly type: 'literal'; readonly value: string }
@@ -305,6 +314,7 @@ export function createWhileNode(
   timeoutSeconds?: number,
   groundedBy?: string,
   askMaxRetries?: number,
+  askProfile?: string,
 ): WhileNode {
   return {
     kind: 'while',
@@ -316,6 +326,7 @@ export function createWhileNode(
     ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
     ...(askMaxRetries != null ? { askMaxRetries } : {}),
     ...(groundedBy != null ? { groundedBy } : {}),
+    ...(askProfile != null ? { askProfile } : {}),
   };
 }
 
@@ -328,6 +339,7 @@ export function createUntilNode(
   timeoutSeconds?: number,
   groundedBy?: string,
   askMaxRetries?: number,
+  askProfile?: string,
 ): UntilNode {
   return {
     kind: 'until',
@@ -339,6 +351,7 @@ export function createUntilNode(
     ...(timeoutSeconds != null ? { timeoutSeconds } : {}),
     ...(askMaxRetries != null ? { askMaxRetries } : {}),
     ...(groundedBy != null ? { groundedBy } : {}),
+    ...(askProfile != null ? { askProfile } : {}),
   };
 }
 
@@ -368,6 +381,7 @@ export function createIfNode(
   elseBranch: readonly FlowNode[] = [],
   groundedBy?: string,
   askMaxRetries?: number,
+  askProfile?: string,
 ): IfNode {
   return {
     kind: 'if',
@@ -377,11 +391,12 @@ export function createIfNode(
     elseBranch,
     ...(askMaxRetries != null ? { askMaxRetries } : {}),
     ...(groundedBy != null ? { groundedBy } : {}),
+    ...(askProfile != null ? { askProfile } : {}),
   };
 }
 
-export function createPromptNode(id: string, text: string): PromptNode {
-  return { kind: 'prompt', id, text };
+export function createPromptNode(id: string, text: string, profile?: string): PromptNode {
+  return profile != null ? { kind: 'prompt', id, text, profile } : { kind: 'prompt', id, text };
 }
 
 export function createRunNode(id: string, command: string, timeoutMs?: number): RunNode {

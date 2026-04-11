@@ -13,6 +13,7 @@ import type {
   RubricDefinition,
   JudgeDefinition,
 } from '../domain/flow-spec.js';
+import type { ContextProfileRegistry } from '../domain/context-profile.js';
 import type { LetSource } from '../domain/flow-node.js';
 import {
   createWhileNode,
@@ -49,6 +50,7 @@ import {
 } from '../domain/flow-spec.js';
 import { ASK_CONDITION_PREFIX } from '../domain/judge-prompt.js';
 import { lowerSwarmFlowLines } from './lower-swarm.js';
+import { assertKnownContextProfile, loadContextProfileRegistry } from './profile-config.js';
 
 interface LibraryParam {
   readonly name: string;
@@ -69,12 +71,23 @@ interface LibraryFile {
 
 type LibraryRegistry = ReadonlyMap<string, LibraryFile>;
 
+type SwarmHandling = 'lower' | 'preserve';
+
+export interface ParseFlowOptions {
+  readonly basePath?: string | undefined;
+  readonly fileReader?: ((path: string) => string) | undefined;
+  readonly swarmHandling?: SwarmHandling | undefined;
+}
+
 interface ParseContext {
   lines: readonly string[];
   pos: number;
   warnings: string[];
   nodeCounter: number;
   registry: LibraryRegistry;
+  profiles: ContextProfileRegistry;
+  usedProfiles: Set<string>;
+  swarmHandling: SwarmHandling;
 }
 
 type ParseScope = 'flow' | 'role' | 'swarm_flow';
@@ -82,6 +95,11 @@ type ParseScope = 'flow' | 'role' | 'swarm_flow';
 interface DeclarationParseResult {
   readonly rubrics: readonly RubricDefinition[];
   readonly judges: readonly JudgeDefinition[];
+}
+
+interface PreparedFlowLines {
+  readonly lines: readonly string[];
+  readonly warnings: readonly string[];
 }
 
 function nextId(ctx: ParseContext): string {
@@ -115,6 +133,69 @@ function stripQuotesStandalone(s: string): string {
     return s.slice(1, -1);
   }
   return s;
+}
+
+const TOP_LEVEL_PROFILE_RE = /^use\s+profile\s+(?:"([^"]+)"|'([^']+)')$/i;
+
+function extractTopLevelProfile(
+  input: string,
+  profiles: ContextProfileRegistry,
+): { text: string; defaultProfile?: string | undefined } {
+  const keptLines: string[] = [];
+  let defaultProfile: string | undefined;
+
+  for (const line of input.split('\n')) {
+    const trimmed = line.trim();
+    const match = TOP_LEVEL_PROFILE_RE.exec(trimmed);
+
+    if (match == null || currentIndent(line) > 0) {
+      keptLines.push(line);
+      continue;
+    }
+
+    const profileName = (match[1] ?? match[2] ?? '').trim();
+    if (!profileName) {
+      keptLines.push(line);
+      continue;
+    }
+
+    if (defaultProfile != null) {
+      throw new Error(
+        `Multiple flow-level profile declarations are unsupported. Keep one "use profile" line, found "${defaultProfile}" and "${profileName}".`,
+      );
+    }
+
+    assertKnownContextProfile(profiles, profileName, 'flow-level use profile');
+    defaultProfile = profileName;
+  }
+
+  return {
+    text: keptLines.join('\n'),
+    ...(defaultProfile != null ? { defaultProfile } : {}),
+  };
+}
+
+function rememberUsedProfile(ctx: ParseContext, profileName: string, source: string): string {
+  assertKnownContextProfile(ctx.profiles, profileName, source);
+  ctx.usedProfiles.add(profileName);
+  return profileName;
+}
+
+function extractLeadingProfile(
+  input: string,
+  ctx: ParseContext,
+  source: string,
+): { profile?: string | undefined; remainder: string } {
+  const match = /^using\s+profile\s+(?:"([^"]+)"|'([^']+)')\s+(.+)$/i.exec(input);
+  if (match?.[3] == null) {
+    return { remainder: input };
+  }
+
+  const profileName = rememberUsedProfile(ctx, (match[1] ?? match[2] ?? '').trim(), source);
+  return {
+    profile: profileName,
+    remainder: match[3].trim(),
+  };
 }
 
 /** Parse key=value args from a use call argument string (standalone, no ParseContext). */
@@ -347,15 +428,46 @@ function stripTimeout(line: string): string {
   return line.replace(/\s+timeout\s+\d+/i, '');
 }
 
+function prepareSwarmLines(
+  lines: readonly string[],
+  swarmHandling: SwarmHandling,
+  warningMapper?: (warning: string) => string,
+): PreparedFlowLines {
+  if (swarmHandling === 'preserve') {
+    return { lines: [...lines], warnings: [] };
+  }
+
+  const lowered = lowerSwarmFlowLines(lines);
+  return {
+    lines: [...lowered.lines],
+    warnings:
+      warningMapper == null
+        ? [...lowered.warnings]
+        : lowered.warnings.map((warning) => warningMapper(warning)),
+  };
+}
+
 interface AskConditionOptions {
   readonly groundedBy?: string | undefined;
   readonly maxRetries?: number | undefined;
+  readonly profile?: string | undefined;
 }
 
 function parseAskConditionOptions(trailing: string, ctx: ParseContext): AskConditionOptions {
   let working = trailing;
   let groundedBy: string | undefined;
   let maxRetries: number | undefined;
+  let profile: string | undefined;
+
+  const profileMatch = /\busing\s+profile\s+(?:"([^"]+)"|'([^']+)')/i.exec(working);
+  if (profileMatch) {
+    profile = rememberUsedProfile(
+      ctx,
+      (profileMatch[1] ?? profileMatch[2] ?? '').trim(),
+      'ask profile reference',
+    );
+    working = working.replace(profileMatch[0], '').trim();
+  }
 
   const groundedMatch = /\bgrounded-by\s+(?:"([^"]+)"|'([^']+)')/i.exec(working);
   if (groundedMatch) {
@@ -378,6 +490,7 @@ function parseAskConditionOptions(trailing: string, ctx: ParseContext): AskCondi
   return {
     ...(groundedBy != null ? { groundedBy } : {}),
     ...(maxRetries != null ? { maxRetries } : {}),
+    ...(profile != null ? { profile } : {}),
   };
 }
 
@@ -416,6 +529,7 @@ function parseWhileLine(
       timeout,
       askOpts.groundedBy,
       askOpts.maxRetries,
+      askOpts.profile,
     );
   }
 
@@ -468,6 +582,7 @@ function parseUntilLine(
       timeout,
       askOpts.groundedBy,
       askOpts.maxRetries,
+      askOpts.profile,
     );
   }
 
@@ -511,11 +626,13 @@ function parseIfLine(
   let condition: string;
   let groundedBy: string | undefined;
   let askMaxRetries: number | undefined;
+  let askProfile: string | undefined;
   if (askMatch) {
     condition = `${ASK_CONDITION_PREFIX}"${askMatch[1]!}"`;
     const askOpts = parseAskConditionOptions(askMatch[2] ?? '', ctx);
     groundedBy = askOpts.groundedBy;
     askMaxRetries = askOpts.maxRetries;
+    askProfile = askOpts.profile;
   } else {
     const match = /^if\s+(.+)/i.exec(line);
     condition = match?.[1] ? match[1].trim() : 'true';
@@ -545,7 +662,15 @@ function parseIfLine(
   if (!nestedElseIf) {
     consumeEnd(ctx);
   }
-  return createIfNode(nextId(ctx), condition, thenBranch, elseBranch, groundedBy, askMaxRetries);
+  return createIfNode(
+    nextId(ctx),
+    condition,
+    thenBranch,
+    elseBranch,
+    groundedBy,
+    askMaxRetries,
+    askProfile,
+  );
 }
 
 function parseTryBlock(ctx: ParseContext, baseIndent: number, scope: ParseScope): FlowNode {
@@ -611,7 +736,11 @@ function stripQuotedOption(line: string, keyword: 'model' | 'in'): string {
   return line.replace(new RegExp(`\\s+${keyword}\\s+(?:"[^"]+"|'[^']+')`, 'i'), '');
 }
 
-function parseRoleLine(ctx: ParseContext, line: string, baseIndent: number): SwarmRoleDefinition {
+function parseRoleLine(
+  ctx: ParseContext,
+  line: string,
+  baseIndent: number,
+): SwarmRoleDefinition | undefined {
   const nameMatch = /^role\s+(\w+)\b/i.exec(line);
   const name = nameMatch?.[1];
   if (!name) {
@@ -635,7 +764,11 @@ function parseRoleLine(ctx: ParseContext, line: string, baseIndent: number): Swa
 
   const body = parseBlock(ctx, baseIndent, ['end'], 'role');
   consumeEnd(ctx);
-  return createSwarmRoleDefinition(nextId(ctx), name ?? 'role', body, cwd, vars, model);
+  if (!name) {
+    return undefined;
+  }
+
+  return createSwarmRoleDefinition(nextId(ctx), name, body, cwd, vars, model);
 }
 
 function parseSwarmBlock(ctx: ParseContext, line: string, baseIndent: number): FlowNode {
@@ -677,7 +810,10 @@ function parseSwarmBlock(ctx: ParseContext, line: string, baseIndent: number): F
         continue;
       }
       ctx.pos += 1;
-      roles.push(parseRoleLine(ctx, trimmed, indent));
+      const role = parseRoleLine(ctx, trimmed, indent);
+      if (role != null) {
+        roles.push(role);
+      }
       continue;
     }
 
@@ -770,8 +906,14 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
   let source: LetSource;
 
   if (effectiveLower.startsWith('prompt ')) {
+    const profiledPrompt = extractLeadingProfile(
+      effectiveRhs.slice(7).trim(),
+      ctx,
+      `prompt source for "${variableName}"`,
+    );
+    const promptRhs = profiledPrompt.remainder;
+    const promptProfile = profiledPrompt.profile;
     // Check for `as json { ... }` suffix — may be single-line or multi-line
-    const promptRhs = effectiveRhs.slice(7).trim();
     const asJsonMatch = /^(["'][^"']*["'])\s+as\s+json\s*\{(.*)$/i.exec(promptRhs);
     if (asJsonMatch?.[1] && asJsonMatch[2] !== undefined) {
       const text = stripQuotes(asJsonMatch[1]);
@@ -797,10 +939,16 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
         }
       }
       const schema = schemaLines.join('\n').trim();
-      source = { type: 'prompt_json', text, schema };
+      source =
+        promptProfile != null
+          ? { type: 'prompt_json', text, schema, profile: promptProfile }
+          : { type: 'prompt_json', text, schema };
     } else {
       const text = stripQuotes(promptRhs);
-      source = { type: 'prompt', text };
+      source =
+        promptProfile != null
+          ? { type: 'prompt', text, profile: promptProfile }
+          : { type: 'prompt', text };
     }
   } else if (effectiveLower.startsWith('run ')) {
     const command = stripQuotes(effectiveRhs.slice(4).trim());
@@ -1293,8 +1441,19 @@ function parseLine(
   if (lower === 'try') {
     return parseTryBlock(ctx, indent, scope);
   }
+  const profiledPromptMatch =
+    /^prompt\s+using\s+profile\s+(?:"([^"]+)"|'([^']+)')\s*:\s*(.+)$/i.exec(trimmed);
+  if (profiledPromptMatch?.[3]) {
+    const profileName = rememberUsedProfile(
+      ctx,
+      (profiledPromptMatch[1] ?? profiledPromptMatch[2] ?? '').trim(),
+      'prompt node profile reference',
+    );
+    return createPromptNode(nextId(ctx), profiledPromptMatch[3].trim(), profileName);
+  }
   if (lower.startsWith('prompt:')) {
-    return createPromptNode(nextId(ctx), trimmed.slice(7).trim());
+    const profiledPrompt = extractLeadingProfile(trimmed.slice(7).trim(), ctx, 'prompt node');
+    return createPromptNode(nextId(ctx), profiledPrompt.remainder, profiledPrompt.profile);
   }
   if (lower.startsWith('run:')) {
     const runText = trimmed.slice(4).trim();
@@ -1735,13 +1894,24 @@ function expandUse(line: string, ctx: ParseContext): FlowNode[] {
   const expandedBody = substituteParams(exported.body, bindings);
 
   if (exported.kind === 'prompt') {
-    return [createPromptNode(nextId(ctx), expandedBody.trim())];
+    const profiledPrompt = extractLeadingProfile(
+      expandedBody.trim(),
+      ctx,
+      `prompt export ${namespace}.${symbol}`,
+    );
+    return [createPromptNode(nextId(ctx), profiledPrompt.remainder, profiledPrompt.profile)];
   }
 
   if (exported.kind === 'flow') {
-    const loweredFlow = lowerSwarmFlowLines(expandedBody.split('\n'));
-    ctx.warnings.push(...loweredFlow.warnings.map((warning) => `line ${ctx.pos}: ${warning}`));
-    const bodyLines = [...loweredFlow.lines];
+    const preparedFlow = prepareSwarmLines(
+      expandedBody.split('\n'),
+      ctx.swarmHandling,
+      (warning) => {
+        return `line ${ctx.pos}: ${warning}`;
+      },
+    );
+    const bodyLines = [...preparedFlow.lines];
+    ctx.warnings.push(...preparedFlow.warnings);
     const savedLines = ctx.lines;
     const savedPos = ctx.pos;
     ctx.lines = bodyLines;
@@ -1841,36 +2011,55 @@ function resolveImports(
   return { text: outputLines.join('\n'), inlinedFlowLines, registry, importedPaths };
 }
 
-export function parseFlow(
-  input: string,
-  options?: { basePath?: string; fileReader?: (path: string) => string },
-): FlowSpec {
+export function parseFlow(input: string, options: ParseFlowOptions = {}): FlowSpec {
   const warnings: string[] = [];
   const goal = parseGoal(input);
   const env = parseEnv(input);
-  const memoryKeys = parseMemoryKeys(input);
-  const basePath = options?.basePath ?? process.cwd();
-  const fileReader = options?.fileReader ?? ((p: string) => readFileSync(p, 'utf-8'));
+  const declaredMemoryKeys = parseMemoryKeys(input);
+  const basePath = options.basePath ?? process.cwd();
+  const fileReader = options.fileReader ?? ((p: string) => readFileSync(p, 'utf-8'));
+  const swarmHandling = options.swarmHandling ?? 'lower';
 
   const seen = new Set<string>();
   const importResult = resolveImports(input, warnings, basePath, seen, fileReader);
   const { text: resolvedText, inlinedFlowLines, registry, importedPaths } = importResult;
+  const containsProfileSyntax = /\b(?:use|using)\s+profile\b/i.test(
+    `${resolvedText}\n${inlinedFlowLines.join('\n')}`,
+  );
+  const profiles = containsProfileSyntax ? loadContextProfileRegistry(basePath, fileReader) : {};
+  const profileSelection = extractTopLevelProfile(resolvedText, profiles);
+  const activeDefaultProfile = profileSelection.defaultProfile;
 
-  const { rubrics, judges } = parseTopLevelDeclarations(resolvedText, warnings);
-  const gates = parseGates(resolvedText, registry, warnings);
-  const rawLines = [...inlinedFlowLines, ...extractFlowBlock(resolvedText)];
+  const { rubrics, judges } = parseTopLevelDeclarations(profileSelection.text, warnings);
+  const gates = parseGates(profileSelection.text, registry, warnings);
+  const rawLines = [...inlinedFlowLines, ...extractFlowBlock(profileSelection.text)];
   // H-INT-001: Resolve include directives (share `seen` for cross-pass cycle detection)
   const includedFlowLines = resolveIncludes(rawLines, warnings, basePath, seen, fileReader);
-  const loweredFlow = lowerSwarmFlowLines(includedFlowLines);
-  warnings.push(...loweredFlow.warnings);
+  const preparedFlow = prepareSwarmLines(includedFlowLines, swarmHandling);
+  warnings.push(...preparedFlow.warnings);
+  const usedProfiles = new Set<string>();
+  if (activeDefaultProfile != null) {
+    usedProfiles.add(activeDefaultProfile);
+  }
   const ctx: ParseContext = {
-    lines: [...loweredFlow.lines],
+    lines: [...preparedFlow.lines],
     pos: 0,
     warnings,
     nodeCounter: 0,
     registry,
+    profiles,
+    usedProfiles,
+    swarmHandling,
   };
   const nodes = parseBlock(ctx, -1);
+  const profileMemoryKeys = [...usedProfiles].flatMap(
+    (profileName) => profiles[profileName]?.memory ?? [],
+  );
+  const memoryKeys = [...new Set([...declaredMemoryKeys, ...profileMemoryKeys])];
+  const referencedProfiles =
+    usedProfiles.size > 0
+      ? Object.fromEntries([...usedProfiles].map((name) => [name, profiles[name]!]))
+      : undefined;
   return createFlowSpec(
     goal,
     nodes,
@@ -1882,5 +2071,7 @@ export function parseFlow(
     memoryKeys.length > 0 ? memoryKeys : undefined,
     rubrics.length > 0 ? rubrics : undefined,
     judges.length > 0 ? judges : undefined,
+    activeDefaultProfile,
+    referencedProfiles,
   );
 }

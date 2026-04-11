@@ -376,7 +376,7 @@ export async function runFlowHeadless(
 
     const runResult = await deps.promptTurnRunner.run({
       cwd: input.cwd,
-      model: input.model,
+      model: input.model ?? step.model,
       prompt: buildPromptEnvelope(state, step.capturedPrompt),
     });
 

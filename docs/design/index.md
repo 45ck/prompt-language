@@ -28,6 +28,7 @@ For the repo-wide docs cleanup:
 | [Context-Adaptive Recovery Fallback](context-adaptive-recovery-fallback.md)                                         | Accepted fail-closed fallback and escalation contract for compact rendering            |
 | [Fresh-Context Policy for Steps and Loops](fresh-context-policy.md)                                                 | Accepted default fresh-versus-threaded session boundary policy                         |
 | [Fresh-Step Bootstrap Context](fresh-step-bootstrap-context.md)                                                     | Accepted bootstrap packet contract for fresh-session handoff                           |
+| [Context File Sets for Prompt Turns](context-filesets-for-prompt-turns.md)                                          | Accepted deterministic file-backed context model for prompt and ask turns              |
 | [Compact-Mode Fallback Matrix](compact-mode-fallback-matrix.md)                                                     | Accepted trigger matrix for fail-closed compact-to-full escalation                     |
 | [Hooks Architecture](hooks-architecture.md)                                                                         | Three-hook enforcement loop and state-file model                                       |
 | [Evaluation Stack V1 Boundary](evaluation-stack-v1.md)                                                              | Accepted first-slice boundary for rubrics, judges, eval tooling, and `review strict`   |
@@ -51,6 +52,7 @@ For the repo-wide docs cleanup:
 | [Artifact Runtime Lifecycle](artifact-runtime-lifecycle.md)                                                         | Accepted emit/validate/reference/review/supersede semantics                            |
 | [Artifact Extension Boundary](artifact-extension-boundary.md)                                                       | Accepted custom-type, review-storage, and plugin-renderer boundary                     |
 | [Artifact Syntax and Review UI Rollout Gate](artifact-syntax-and-review-ui-rollout.md)                              | Accepted evidence gate for any future artifact DSL syntax or review UI claims          |
+| [Variable Data Structure Roadmap](variable-data-structure-roadmap.md)                                               | Accepted scalar-first store and deferred native-map direction                          |
 | [Foreach Design](foreach.md)                                                                                        | Canonical foreach design and rationale                                                 |
 | [Skill / Profile / Agent / Flow File](terminology-skill-profile-agent-flow.md)                                      | Terminology boundary for the backlog track                                             |
 

@@ -39,6 +39,7 @@ For the repo-wide docs cleanup:
 | [Flow IR and Static Analysis](flow-ir-and-static-analysis.md)                                                       | Accepted compile-time-rigor boundary for IR, explain, lint, simulation, and flow tests |
 | [Provider Adapters Over Shared Flow IR](provider-adapters-shared-flow-ir.md)                                        | Accepted provider-adapter boundary over one shared runtime IR                          |
 | [Host Lifecycle Boundary](host-lifecycle-boundary.md)                                                               | Accepted split between core flow semantics, narrow config, and host-specific lifecycle |
+| [Codex External Child-Session Decision](codex-external-child-session-decision.md)                                   | Accepted decision that headless Codex spawn/await is sufficient for the current story  |
 | [MCP Flow-Facing Scope](mcp-flow-facing-scope.md)                                                                   | Accepted boundary keeping MCP tied to flow state and bounded runtime control           |
 | [Safe Parallelism via Worktrees, Locks, Ownership, and Merge Policy](safe-parallelism-worktrees-locks-ownership.md) | Accepted concurrency-safety boundary for isolated child execution and merge control    |
 | [Memory Governance Alignment](memory-governance-alignment.md)                                                       | Accepted alignment of vNext memory governance with the existing memory roadmap         |

@@ -185,6 +185,31 @@ function renderDeclarationBlock(header: string, lines: readonly string[]): strin
   return rendered;
 }
 
+function formatProfileClause(profile?: string): string {
+  return profile != null ? ` using profile "${profile}"` : '';
+}
+
+function renderConditionDisplay(
+  condition: string,
+  options: {
+    readonly profile?: string | undefined;
+    readonly groundedBy?: string | undefined;
+  } = {},
+): string {
+  if (!isAskCondition(condition)) {
+    return condition;
+  }
+
+  let rendered = `ask "${extractAskQuestion(condition)}"`;
+  if (options.profile != null) {
+    rendered += formatProfileClause(options.profile);
+  }
+  if (options.groundedBy != null) {
+    rendered += ` grounded-by "${options.groundedBy}"`;
+  }
+  return rendered;
+}
+
 function renderDeclarations(spec: FlowSpec): string[] {
   const rendered: string[] = [];
 
@@ -218,7 +243,9 @@ function renderNode(
   switch (node.kind) {
     case 'prompt': {
       const timing = timingAnnotation(state, node.id);
-      return [`${prefix}${indent}prompt: ${node.text}${timing}${suffix}`];
+      return [
+        `${prefix}${indent}prompt${formatProfileClause(node.profile)}: ${node.text}${timing}${suffix}`,
+      ];
     }
     case 'run': {
       const timeoutTag = node.timeoutMs ? ` [timeout ${node.timeoutMs / 1000}s]` : '';
@@ -230,9 +257,10 @@ function renderNode(
       const whileTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds}` : '';
       const whileAskRetries =
         node.askMaxRetries != null ? ` max-retries ${node.askMaxRetries}` : '';
-      const whileCond = isAskCondition(node.condition)
-        ? `ask: "${extractAskQuestion(node.condition)}"`
-        : node.condition;
+      const whileCond = renderConditionDisplay(node.condition, {
+        profile: node.askProfile,
+        groundedBy: node.groundedBy,
+      });
       return renderLoopNode(
         `${whileLabel}while ${whileCond} max ${node.maxIterations}${whileAskRetries}${whileTimeout}`,
         node.body,
@@ -249,9 +277,10 @@ function renderNode(
       const untilTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds}` : '';
       const untilAskRetries =
         node.askMaxRetries != null ? ` max-retries ${node.askMaxRetries}` : '';
-      const untilCond = isAskCondition(node.condition)
-        ? `ask: "${extractAskQuestion(node.condition)}"`
-        : node.condition;
+      const untilCond = renderConditionDisplay(node.condition, {
+        profile: node.askProfile,
+        groundedBy: node.groundedBy,
+      });
       return renderLoopNode(
         `${untilLabel}until ${untilCond} max ${node.maxIterations}${untilAskRetries}${untilTimeout}`,
         node.body,
@@ -439,15 +468,13 @@ function renderIfNode(
   suffix: string,
 ): string[] {
   const indent = '  '.repeat(indentLevel);
-  const ifCond = isAskCondition(node.condition)
-    ? `ask: "${extractAskQuestion(node.condition)}"`
-    : node.condition;
+  const ifCond = renderConditionDisplay(node.condition, {
+    profile: node.askProfile,
+    groundedBy: node.groundedBy,
+  });
   const askRetries = node.askMaxRetries != null ? ` max-retries ${node.askMaxRetries}` : '';
-  const groundedBy = node.groundedBy ? ` grounded-by "${node.groundedBy}"` : '';
   const timing = timingAnnotation(state, node.id);
-  const lines: string[] = [
-    `${prefix}${indent}if ${ifCond}${groundedBy}${askRetries}${timing}${suffix}`,
-  ];
+  const lines: string[] = [`${prefix}${indent}if ${ifCond}${askRetries}${timing}${suffix}`];
 
   for (let i = 0; i < node.thenBranch.length; i++) {
     const child = node.thenBranch[i]!;
@@ -745,6 +772,9 @@ export function renderFlow(state: SessionState): string {
   const declarationLines = renderDeclarations(state.flowSpec);
   if (declarationLines.length > 0) {
     lines.push(...declarationLines, '');
+  }
+  if (state.flowSpec.defaultProfile != null) {
+    lines.push(`use profile "${state.flowSpec.defaultProfile}"`, '');
   }
 
   for (let i = 0; i < state.flowSpec.nodes.length; i++) {

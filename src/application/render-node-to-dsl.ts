@@ -1,4 +1,5 @@
 import type { AwaitNode, FlowNode, SpawnNode, SwarmRoleDefinition } from '../domain/flow-node.js';
+import { extractAskQuestion, isAskCondition } from '../domain/judge-prompt.js';
 
 function renderAwaitTarget(target: AwaitNode['target']): string {
   if (target === 'all') return 'all';
@@ -23,6 +24,35 @@ function renderRoleHeader(role: SwarmRoleDefinition, pad: string): string {
   return header;
 }
 
+function formatProfileClause(profile?: string): string {
+  return profile != null ? ` using profile "${profile}"` : '';
+}
+
+function renderConditionHeader(
+  condition: string,
+  options: {
+    readonly profile?: string | undefined;
+    readonly groundedBy?: string | undefined;
+    readonly maxRetries?: number | undefined;
+  } = {},
+): string {
+  if (!isAskCondition(condition)) {
+    return condition;
+  }
+
+  let rendered = `ask "${extractAskQuestion(condition)}"`;
+  if (options.profile != null) {
+    rendered += formatProfileClause(options.profile);
+  }
+  if (options.groundedBy != null) {
+    rendered += ` grounded-by "${options.groundedBy}"`;
+  }
+  if (options.maxRetries != null) {
+    rendered += ` max-retries ${options.maxRetries}`;
+  }
+  return rendered;
+}
+
 export function renderNodesToDsl(nodes: readonly FlowNode[], indent: number): string[] {
   const lines: string[] = [];
   for (const child of nodes) {
@@ -40,7 +70,7 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
   const pad = '  '.repeat(indent);
   switch (node.kind) {
     case 'prompt':
-      return [`${pad}prompt: ${node.text.replace(/\n/g, ' ')}`];
+      return [`${pad}prompt${formatProfileClause(node.profile)}: ${node.text.replace(/\n/g, ' ')}`];
     case 'run':
       return [`${pad}run: ${node.command.replace(/\n/g, ' ')}`];
     case 'let': {
@@ -51,10 +81,10 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
           src = `"${node.source.value.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`;
           break;
         case 'prompt':
-          src = `prompt "${node.source.text}"`;
+          src = `prompt${formatProfileClause(node.source.profile)} "${node.source.text}"`;
           break;
         case 'prompt_json':
-          src = `prompt "${node.source.text}" as json {\n${node.source.schema}\n}`;
+          src = `prompt${formatProfileClause(node.source.profile)} "${node.source.text}" as json {\n${node.source.schema}\n}`;
           break;
         case 'run':
           src = `run "${node.source.command}"`;
@@ -74,13 +104,21 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
       return [`${pad}continue`];
     case 'while':
       return [
-        `${pad}while ${node.condition} max ${node.maxIterations}`,
+        `${pad}while ${renderConditionHeader(node.condition, {
+          profile: node.askProfile,
+          groundedBy: node.groundedBy,
+          maxRetries: node.askMaxRetries,
+        })} max ${node.maxIterations}`,
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
     case 'until':
       return [
-        `${pad}until ${node.condition} max ${node.maxIterations}`,
+        `${pad}until ${renderConditionHeader(node.condition, {
+          profile: node.askProfile,
+          groundedBy: node.groundedBy,
+          maxRetries: node.askMaxRetries,
+        })} max ${node.maxIterations}`,
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
@@ -94,7 +132,11 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
     }
     case 'if':
       return [
-        `${pad}if ${node.condition}`,
+        `${pad}if ${renderConditionHeader(node.condition, {
+          profile: node.askProfile,
+          groundedBy: node.groundedBy,
+          maxRetries: node.askMaxRetries,
+        })}`,
         ...node.thenBranch.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         ...(node.elseBranch.length > 0
           ? [`${pad}else`, ...node.elseBranch.flatMap((c) => renderNodeToDsl(c, indent + 1))]

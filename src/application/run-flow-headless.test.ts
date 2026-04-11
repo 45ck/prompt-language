@@ -23,6 +23,7 @@ import type {
 
 class RecordingPromptRunner implements PromptTurnRunner {
   readonly prompts: string[] = [];
+  readonly calls: { cwd: string; prompt: string; model?: string }[] = [];
 
   constructor(
     private readonly effect?: (input: {
@@ -34,6 +35,7 @@ class RecordingPromptRunner implements PromptTurnRunner {
 
   async run(input: { cwd: string; prompt: string; model?: string }): Promise<PromptTurnResult> {
     this.prompts.push(input.prompt);
+    this.calls.push(input);
     const result = await this.effect?.(input);
     return result ?? { exitCode: 0 };
   }
@@ -151,6 +153,46 @@ describe('runFlowHeadless', () => {
     expect(result.finalState.status).toBe('completed');
     expect(result.turns).toBe(1);
     expect(promptRunner.prompts[0]).toContain('Say hello');
+  });
+
+  it('lets an explicit runner model override a profile-selected model', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-profile-model-'));
+    await writeFile(
+      join(tempDir, 'prompt-language.config.json'),
+      JSON.stringify({
+        profiles: {
+          reviewer: {
+            systemPreamble: 'Review carefully.',
+            model: 'profile-model',
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    const promptRunner = new RecordingPromptRunner();
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: 'Goal: inspect\n\nuse profile "reviewer"\n\nflow:\n  prompt: Inspect the diff\n',
+        model: 'explicit-model',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(promptRunner.calls[0]?.model).toBe('explicit-model');
+    expect(promptRunner.prompts[0]).toContain('[Internal — prompt-language context profile]');
+    expect(promptRunner.prompts[0]).toContain('Applied profiles: reviewer');
   });
 
   it('returns the persisted PLR-005 reason when capture falls back to empty string', async () => {

@@ -29,6 +29,7 @@ import {
   createSpawnNode,
   createAwaitNode,
   createRaceNode,
+  createReviewNode,
 } from '../domain/flow-node.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
@@ -397,6 +398,110 @@ describe('autoAdvanceNodes — body exhaustion', () => {
 
     const { capturedPrompt } = await autoAdvanceNodes(state);
     expect(capturedPrompt).toBe('After try');
+  });
+});
+
+describe('autoAdvanceNodes — context profiles', () => {
+  it('prepends merged profile context to prompt nodes and exposes the resolved model', async () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'Inspect the diff', 'reviewer')],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      ['repo_rules', 'style_guide'],
+      undefined,
+      undefined,
+      'default',
+      {
+        default: {
+          name: 'default',
+          systemPreamble: 'Stay concise.',
+          memory: ['repo_rules'],
+          model: 'default-model',
+        },
+        reviewer: {
+          name: 'reviewer',
+          skills: ['security-review'],
+          memory: ['style_guide'],
+          model: 'reviewer-model',
+          toolPolicy: 'read-only',
+        },
+      },
+    );
+    const state = {
+      ...createSessionState('s1', spec),
+      variables: {
+        repo_rules: 'never force-push',
+        style_guide: 'prefer tests',
+      },
+    };
+
+    const result = await autoAdvanceNodes(state);
+
+    expect(result.kind).toBe('prompt');
+    if (result.kind !== 'prompt') {
+      throw new Error('expected prompt result');
+    }
+    expect(result.model).toBe('reviewer-model');
+    expect(result.capturedPrompt).toContain('[Internal — prompt-language context profile]');
+    expect(result.capturedPrompt).toContain('Applied profiles: default, reviewer');
+    expect(result.capturedPrompt).toContain('- repo_rules: never force-push');
+    expect(result.capturedPrompt).toContain('- style_guide: prefer tests');
+    expect(result.capturedPrompt).toContain('Inspect the diff');
+  });
+
+  it('prepends profile context to ask prompts', async () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createIfNode(
+          'if1',
+          'ask:"is the fix safe?"',
+          [createPromptNode('p1', 'ship')],
+          [createPromptNode('p2', 'stop')],
+          undefined,
+          1,
+          'reviewer',
+        ),
+      ],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      ['repo_rules'],
+      undefined,
+      undefined,
+      'default',
+      {
+        default: {
+          name: 'default',
+          systemPreamble: 'Stay concise.',
+        },
+        reviewer: {
+          name: 'reviewer',
+          skills: ['release-review'],
+          model: 'reviewer-model',
+        },
+      },
+    );
+    const state = createSessionState('s1', spec);
+
+    const result = await autoAdvanceNodes(state);
+
+    expect(result.kind).toBe('prompt');
+    if (result.kind !== 'prompt') {
+      throw new Error('expected prompt result');
+    }
+    expect(result.model).toBe('reviewer-model');
+    expect(result.capturedPrompt).toContain('Applied profiles: default, reviewer');
+    expect(result.capturedPrompt).toContain(
+      'Evaluate whether the following is currently true or false',
+    );
+    expect(result.capturedPrompt).toContain('"is the fix safe?"');
   });
 });
 
@@ -4217,5 +4322,96 @@ describe('autoAdvanceNodes — if grounded-by fast path', () => {
     // Should fall through to AI judge — emits judge prompt (Phase 1)
     expect(capturedPrompt).toContain('__judge_i1__');
     expect(result.nodeProgress['i1']?.status).toBe('awaiting_capture');
+  });
+
+  it('grounded-by fast path shell-protects interpolated variables', async () => {
+    const runner: CommandRunner = {
+      run: vi.fn().mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const ifNode = createIfNode(
+      'i1',
+      'ask:"is it ready?"',
+      [createPromptNode('p1', 'then-body')],
+      [],
+      'echo ${probe}',
+    );
+    let state = createSessionState(
+      's1',
+      createFlowSpec('test', [ifNode], [], [], undefined, {
+        SAFE_ENV: '1',
+      }),
+    );
+    state = { ...state, variables: { probe: 'alpha & echo injected' } };
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(result.capturedPrompt).toBe('then-body');
+    expect(runner.run).toHaveBeenCalledTimes(1);
+    const [command, options] = vi.mocked(runner.run).mock.calls[0]!;
+    if (process.platform === 'win32') {
+      expect(command).toBe('echo %PROMPT_LANGUAGE_VAR_0%');
+      expect(options).toMatchObject({
+        env: {
+          SAFE_ENV: '1',
+          PROMPT_LANGUAGE_VAR_0: 'alpha & echo injected',
+        },
+      });
+    } else {
+      expect(command).toBe("echo 'alpha & echo injected'");
+      expect(options).toBeUndefined();
+    }
+  });
+});
+
+describe('autoAdvanceNodes — grounded review shell preparation', () => {
+  it('shell-protects grounded review commands and preserves flow env', async () => {
+    const runner: CommandRunner = {
+      run: vi.fn().mockResolvedValue({ exitCode: 0, stdout: 'review ok', stderr: '' }),
+    };
+    const reviewNode = createReviewNode(
+      'rv1',
+      [createPromptNode('p1', 'Draft')],
+      3,
+      undefined,
+      'echo ${probe}',
+    );
+    const spec = createFlowSpec(
+      'test',
+      [reviewNode, createPromptNode('p2', 'Passed')],
+      [],
+      [],
+      undefined,
+      { SAFE_ENV: '1' },
+    );
+    const state = {
+      ...createSessionState('s1', spec),
+      variables: { probe: 'alpha & echo injected' },
+      currentNodePath: [0, 1] as const,
+      nodeProgress: {
+        rv1: { iteration: 1, maxIterations: 3, status: 'running' as const },
+      },
+    };
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(result.capturedPrompt).toBe('Passed');
+    expect(runner.run).toHaveBeenCalledTimes(1);
+    const [command, options] = vi.mocked(runner.run).mock.calls[0]!;
+    if (process.platform === 'win32') {
+      expect(command).toBe('echo %PROMPT_LANGUAGE_VAR_0%');
+      expect(options).toMatchObject({
+        env: {
+          SAFE_ENV: '1',
+          PROMPT_LANGUAGE_VAR_0: 'alpha & echo injected',
+        },
+      });
+    } else {
+      expect(command).toBe("echo 'alpha & echo injected'");
+      expect(options).toMatchObject({
+        env: {
+          SAFE_ENV: '1',
+        },
+      });
+    }
   });
 });

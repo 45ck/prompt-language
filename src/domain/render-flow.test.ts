@@ -64,6 +64,44 @@ describe('renderFlow', () => {
     expect(output).toContain('prompt: do work');
   });
 
+  it('renders flow and node profile selections', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createPromptNode('p1', 'inspect', 'reviewer'),
+        createIfNode(
+          'if1',
+          'ask:"is it safe?"',
+          [createPromptNode('p2', 'ship')],
+          [createPromptNode('p3', 'stop')],
+          'npm test',
+          2,
+          'reviewer',
+        ),
+      ],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'default',
+      {
+        default: { name: 'default', systemPreamble: 'Stay concise.' },
+        reviewer: { name: 'reviewer', skills: ['security-review'] },
+      },
+    );
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    expect(output).toContain('use profile "default"');
+    expect(output).toContain('prompt using profile "reviewer": inspect');
+    expect(output).toContain(
+      'if ask "is it safe?" using profile "reviewer" grounded-by "npm test" max-retries 2',
+    );
+  });
+
   it('renders a single run node', () => {
     const spec = createFlowSpec('test', [createRunNode('r1', 'npm test')]);
     const state = createSessionState('s1', spec);
@@ -647,7 +685,7 @@ describe('renderFlow', () => {
     ]);
     const state = createSessionState('s1', spec);
     const output = renderFlow(state);
-    expect(output).toContain('while ask: "ready?" max 4 max-retries 2');
+    expect(output).toContain('while ask "ready?" grounded-by "npm test" max 4 max-retries 2');
   });
 
   it('does not render timeout annotation when no timeout', () => {

@@ -24,6 +24,16 @@ while ask "are there still failing tests?" grounded-by "npm test" max 5
 end
 ```
 
+With a context profile:
+
+```yaml
+if ask "is this safe to ship?" using profile "reviewer" grounded-by "npm test" max-retries 2
+  prompt: Ship it.
+else
+  prompt: Stop and investigate.
+end
+```
+
 Add `max-retries N` when you want the runtime to retry an ambiguous verdict before pausing:
 
 ```yaml
@@ -45,6 +55,7 @@ end
 - `ask` uses a two-turn capture mechanism similar to `let x = prompt`.
 - Claude answers `true` or `false`.
 - `grounded-by` includes command output as evidence for the judgment.
+- `using profile "name"` merges the named profile on top of the flow default profile for this ask turn only.
 - `max-retries N` caps how many times the runtime re-asks after an ambiguous or missing verdict.
 - `ask` is slower than deterministic conditions because it needs an extra turn.
 

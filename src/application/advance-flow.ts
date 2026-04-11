@@ -37,7 +37,7 @@ import type {
   ReceiveNode,
 } from '../domain/flow-node.js';
 import type { MemoryEntry } from './ports/memory-store.js';
-import type { CommandRunner } from './ports/command-runner.js';
+import type { CommandRunner, CommandResult, RunOptions } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import { CAPTURE_PENDING_SENTINEL } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
@@ -87,11 +87,91 @@ import {
   type VariableStore,
   type VariableValue,
 } from '../domain/variable-value.js';
+import { resolveContextProfile } from '../domain/context-profile.js';
 
 type LoweredAwayFlowNode = Extract<FlowNode, { kind: 'swarm' | 'start' | 'return' }>;
 
 function unexpectedLoweredAwayNode(node: LoweredAwayFlowNode): never {
   throw new Error(`Flow node "${node.kind}" must be lowered before runtime execution`);
+}
+
+interface PreparedProfilePrompt {
+  readonly prompt: string;
+  readonly model?: string | undefined;
+}
+
+function formatProfileMemoryValue(value: VariableValue | undefined): string {
+  if (value === undefined || value === '') {
+    return '(unset)';
+  }
+
+  const rendered = stringifyVariableValue(value).replace(/\s+/g, ' ').trim();
+  if (rendered.length <= 160) {
+    return rendered;
+  }
+  return rendered.slice(0, 157) + '...';
+}
+
+function buildProfileContextBlock(
+  state: SessionState,
+  profileName?: string,
+): { readonly block: string; readonly model?: string | undefined } | undefined {
+  const names = [
+    ...(state.flowSpec.defaultProfile != null ? [state.flowSpec.defaultProfile] : []),
+    ...(profileName != null ? [profileName] : []),
+  ];
+  const resolved = resolveContextProfile(state.flowSpec.profiles, names);
+  if (resolved == null) {
+    return undefined;
+  }
+
+  const lines = [
+    '[Internal — prompt-language context profile]',
+    `Applied profiles: ${resolved.appliedProfiles.join(', ')}`,
+  ];
+
+  if (resolved.systemPreambles.length > 0) {
+    lines.push('System preamble:', resolved.systemPreambles.join('\n\n'));
+  }
+  if (resolved.skills.length > 0) {
+    lines.push('Skills:', ...resolved.skills.map((skill) => `- ${skill}`));
+  }
+  if (resolved.memory.length > 0) {
+    lines.push(
+      'Memory:',
+      ...resolved.memory.map(
+        (memoryKey) => `- ${memoryKey}: ${formatProfileMemoryValue(state.variables[memoryKey])}`,
+      ),
+    );
+  }
+  if (resolved.modelHints.length > 0) {
+    lines.push('Model hints:', ...resolved.modelHints.map((hint) => `- ${hint}`));
+  }
+  if (resolved.toolPolicy != null) {
+    lines.push('Tool policy:', resolved.toolPolicy);
+  }
+  lines.push('[End context profile]');
+
+  return {
+    block: lines.join('\n'),
+    ...(resolved.model != null ? { model: resolved.model } : {}),
+  };
+}
+
+function applyContextProfileToPrompt(
+  state: SessionState,
+  prompt: string,
+  profileName?: string,
+): PreparedProfilePrompt {
+  const resolved = buildProfileContextBlock(state, profileName);
+  if (resolved == null) {
+    return { prompt };
+  }
+
+  return {
+    prompt: `${resolved.block}\n\n${prompt}`,
+    ...(resolved.model != null ? { model: resolved.model } : {}),
+  };
 }
 
 export function resolveCurrentNode(
@@ -183,6 +263,29 @@ function prepareShellCommand(
   }
   const command = shellInterpolate(template, variables);
   return baseEnv != null ? { command, env: baseEnv } : { command };
+}
+
+function prepareGroundingCommand(
+  template: string,
+  variables: VariableStore,
+  baseEnv?: Readonly<Record<string, string>>,
+): { command: string; env?: Readonly<Record<string, string>> } {
+  const prepared = prepareShellCommand(template, variables, baseEnv);
+  return {
+    command: normalizeGroundingCommand(prepared.command),
+    ...(prepared.env != null ? { env: prepared.env } : {}),
+  };
+}
+
+async function runPreparedCommand(
+  commandRunner: CommandRunner,
+  prepared: { command: string; env?: Readonly<Record<string, string>> },
+): Promise<CommandResult> {
+  const runOptions: RunOptions | undefined =
+    prepared.env != null ? { env: prepared.env } : undefined;
+  return runOptions == null
+    ? await commandRunner.run(prepared.command)
+    : await commandRunner.run(prepared.command, runOptions);
 }
 
 function advanceFromPath(state: SessionState, path: readonly number[]): SessionState {
@@ -374,12 +477,13 @@ function normalizeGroundingCommand(command: string): string {
 async function buildAskGroundingEvidence(
   groundedBy: string | undefined,
   variables: VariableStore,
+  baseEnv: Readonly<Record<string, string>> | undefined,
   commandRunner?: CommandRunner,
 ): Promise<string | undefined> {
   if (!groundedBy || !commandRunner) return undefined;
   try {
-    const command = normalizeGroundingCommand(interpolate(groundedBy, variables));
-    const result = await commandRunner.run(command);
+    const prepared = prepareGroundingCommand(groundedBy, variables, baseEnv);
+    const result = await runPreparedCommand(commandRunner, prepared);
     return result.stdout.trimEnd();
   } catch {
     return undefined;
@@ -992,8 +1096,12 @@ async function evaluateReviewResult(
   const evidence = buildReviewEvidence(parentNode, state);
 
   if (parentNode.groundedBy) {
-    const command = interpolate(parentNode.groundedBy, state.variables);
-    evidence.push(`grounded-by: ${command}`);
+    const prepared = prepareGroundingCommand(
+      parentNode.groundedBy,
+      state.variables,
+      state.flowSpec.env,
+    );
+    evidence.push(`grounded-by: ${prepared.command}`);
 
     if (!commandRunner) {
       return createJudgeResult(
@@ -1006,7 +1114,7 @@ async function evaluateReviewResult(
     }
 
     try {
-      const result = await commandRunner.run(command);
+      const result = await runPreparedCommand(commandRunner, prepared);
       evidence.push(`exit-code: ${result.exitCode}`);
       if (result.stdout.trim().length > 0) {
         evidence.push(`stdout: ${truncateReviewEvidence(result.stdout)}`);
@@ -1171,6 +1279,7 @@ export type AutoAdvanceResult =
       readonly kind: 'prompt';
       readonly state: SessionState;
       readonly capturedPrompt: string;
+      readonly model?: string | undefined;
       readonly diagnostics?: readonly FlowDiagnostic[] | undefined;
       readonly outcomes?: readonly FlowOutcome[] | undefined;
     }
@@ -1378,10 +1487,16 @@ async function advanceLetPrompt(
       node.source.type === 'prompt' ? node.source.text : '',
       current.variables,
     );
+    const profiledPrompt = applyContextProfileToPrompt(
+      current,
+      buildCapturePrompt(promptText, node.variableName, current.captureNonce),
+      node.source.type === 'prompt' ? node.source.profile : undefined,
+    );
     return {
       kind: 'prompt' as const,
       state: updated,
-      capturedPrompt: buildCapturePrompt(promptText, node.variableName, current.captureNonce),
+      capturedPrompt: profiledPrompt.prompt,
+      ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
     };
   }
 
@@ -1427,10 +1542,16 @@ async function advanceLetPrompt(
       status: 'awaiting_capture',
       captureFailureReason: failureReason,
     });
+    const profiledPrompt = applyContextProfileToPrompt(
+      current,
+      retryPrompt,
+      node.source.type === 'prompt' ? node.source.profile : undefined,
+    );
     return {
       kind: 'prompt' as const,
       state: updated,
-      capturedPrompt: retryPrompt,
+      capturedPrompt: profiledPrompt.prompt,
+      ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
     };
   }
 
@@ -1490,15 +1611,21 @@ async function advanceLetPromptJson(
       status: 'awaiting_capture',
     });
     const promptText = interpolate(node.source.text, current.variables);
-    return {
-      kind: 'prompt' as const,
-      state: updated,
-      capturedPrompt: buildJsonCapturePrompt(
+    const profiledPrompt = applyContextProfileToPrompt(
+      current,
+      buildJsonCapturePrompt(
         promptText,
         node.variableName,
         node.source.schema,
         current.captureNonce,
       ),
+      node.source.profile,
+    );
+    return {
+      kind: 'prompt' as const,
+      state: updated,
+      capturedPrompt: profiledPrompt.prompt,
+      ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
     };
   }
 
@@ -1548,10 +1675,12 @@ async function advanceLetPromptJson(
       status: 'awaiting_capture',
       captureFailureReason: failureReason,
     });
+    const profiledPrompt = applyContextProfileToPrompt(current, retryPrompt, node.source.profile);
     return {
       kind: 'prompt' as const,
       state: updated,
-      capturedPrompt: retryPrompt,
+      capturedPrompt: profiledPrompt.prompt,
+      ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
     };
   }
 
@@ -2043,11 +2172,16 @@ export async function autoAdvanceNodes(
     // If current node is a prompt, include it so the agent can act on it
     const currentNode = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
     if (currentNode?.kind === 'prompt') {
-      const capturedPrompt = interpolate(currentNode.text, current.variables);
+      const profiledPrompt = applyContextProfileToPrompt(
+        current,
+        interpolate(currentNode.text, current.variables),
+        currentNode.profile,
+      );
       return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
         kind: 'prompt',
         state: advanceFromPath(current, current.currentNodePath),
-        capturedPrompt,
+        capturedPrompt: profiledPrompt.prompt,
+        ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
       });
     }
   }
@@ -2536,11 +2670,16 @@ async function advanceSingleNode(
     case 'run':
       return advanceRunNode(node, current, commandRunner, auditLogger);
     case 'prompt': {
-      const capturedPrompt = interpolate(node.text, current.variables);
+      const profiledPrompt = applyContextProfileToPrompt(
+        current,
+        interpolate(node.text, current.variables),
+        node.profile,
+      );
       return {
         kind: 'prompt',
         state: advanceFromPath(current, current.currentNodePath),
-        capturedPrompt,
+        capturedPrompt: profiledPrompt.prompt,
+        ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
       };
     }
     case 'while':
@@ -2678,6 +2817,7 @@ async function advanceConditionLoop(
     readonly maxIterations: number;
     readonly askMaxRetries?: number | undefined;
     readonly groundedBy?: string | undefined;
+    readonly askProfile?: string | undefined;
   },
   current: SessionState,
   commandRunner?: CommandRunner,
@@ -2698,10 +2838,10 @@ async function advanceConditionLoop(
       // is explicitly enabled for the ask condition.
       if (!usesRetryBudget && node.groundedBy && commandRunner) {
         try {
-          const groundingCommand = normalizeGroundingCommand(
-            interpolate(node.groundedBy, current.variables),
+          const groundingResult = await runPreparedCommand(
+            commandRunner,
+            prepareGroundingCommand(node.groundedBy, current.variables, current.flowSpec.env),
           );
-          const groundingResult = await commandRunner.run(groundingCommand);
           const groundingMet = groundingResult.exitCode === 0;
           const enterBody = node.kind === 'while' ? groundingMet : !groundingMet;
           return {
@@ -2732,12 +2872,23 @@ async function advanceConditionLoop(
         loopStartedAt: progress?.loopStartedAt ?? now,
       });
       const groundingOutput = usesRetryBudget
-        ? await buildAskGroundingEvidence(node.groundedBy, current.variables, commandRunner)
+        ? await buildAskGroundingEvidence(
+            node.groundedBy,
+            current.variables,
+            current.flowSpec.env,
+            commandRunner,
+          )
         : undefined;
+      const profiledPrompt = applyContextProfileToPrompt(
+        current,
+        buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+        node.askProfile,
+      );
       return {
         kind: 'prompt',
         state: updated,
-        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+        capturedPrompt: profiledPrompt.prompt,
+        ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
       };
     }
 
@@ -2761,17 +2912,19 @@ async function advanceConditionLoop(
             const groundingOutput = await buildAskGroundingEvidence(
               node.groundedBy,
               current.variables,
+              current.flowSpec.env,
               commandRunner,
+            );
+            const profiledPrompt = applyContextProfileToPrompt(
+              current,
+              buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+              node.askProfile,
             );
             return {
               kind: 'prompt',
               state: retryUpdated,
-              capturedPrompt: buildJudgePrompt(
-                question,
-                node.id,
-                current.captureNonce,
-                groundingOutput,
-              ),
+              capturedPrompt: profiledPrompt.prompt,
+              ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
             };
           }
 
@@ -2864,10 +3017,16 @@ async function advanceConditionLoop(
     }
 
     if (!usesRetryBudget) {
+      const profiledPrompt = applyContextProfileToPrompt(
+        current,
+        buildJudgeRetryPrompt(node.id, current.captureNonce),
+        node.askProfile,
+      );
       return {
         kind: 'prompt',
         state: current,
-        capturedPrompt: buildJudgeRetryPrompt(node.id, current.captureNonce),
+        capturedPrompt: profiledPrompt.prompt,
+        ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
       };
     }
 
@@ -2881,17 +3040,23 @@ async function advanceConditionLoop(
       loopStartedAt: progress?.loopStartedAt,
     });
     const retryGroundingOutput = usesRetryBudget
-      ? await buildAskGroundingEvidence(node.groundedBy, current.variables, commandRunner)
+      ? await buildAskGroundingEvidence(
+          node.groundedBy,
+          current.variables,
+          current.flowSpec.env,
+          commandRunner,
+        )
       : undefined;
+    const profiledPrompt = applyContextProfileToPrompt(
+      current,
+      buildJudgePrompt(question, node.id, current.captureNonce, retryGroundingOutput),
+      node.askProfile,
+    );
     return {
       kind: 'prompt',
       state: retryUpdated,
-      capturedPrompt: buildJudgePrompt(
-        question,
-        node.id,
-        current.captureNonce,
-        retryGroundingOutput,
-      ),
+      capturedPrompt: profiledPrompt.prompt,
+      ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
     };
   }
 
@@ -2924,6 +3089,7 @@ async function advanceIfNode(
     readonly elseBranch: readonly FlowNode[];
     readonly askMaxRetries?: number | undefined;
     readonly groundedBy?: string | undefined;
+    readonly askProfile?: string | undefined;
   },
   current: SessionState,
   commandRunner?: CommandRunner,
@@ -2942,10 +3108,10 @@ async function advanceIfNode(
     if (!isAwaiting) {
       if (!usesRetryBudget && node.groundedBy && commandRunner) {
         try {
-          const groundingCommand = normalizeGroundingCommand(
-            interpolate(node.groundedBy, current.variables),
+          const groundingResult = await runPreparedCommand(
+            commandRunner,
+            prepareGroundingCommand(node.groundedBy, current.variables, current.flowSpec.env),
           );
-          const groundingResult = await commandRunner.run(groundingCommand);
           const verdict = groundingResult.exitCode === 0;
           if (verdict) {
             return {
@@ -2986,12 +3152,23 @@ async function advanceIfNode(
         startedAt: now,
       });
       const groundingOutput = usesRetryBudget
-        ? await buildAskGroundingEvidence(node.groundedBy, current.variables, commandRunner)
+        ? await buildAskGroundingEvidence(
+            node.groundedBy,
+            current.variables,
+            current.flowSpec.env,
+            commandRunner,
+          )
         : undefined;
+      const profiledPrompt = applyContextProfileToPrompt(
+        current,
+        buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+        node.askProfile,
+      );
       return {
         kind: 'prompt',
         state: updated,
-        capturedPrompt: buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+        capturedPrompt: profiledPrompt.prompt,
+        ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
       };
     }
 
@@ -3014,17 +3191,19 @@ async function advanceIfNode(
             const groundingOutput = await buildAskGroundingEvidence(
               node.groundedBy,
               current.variables,
+              current.flowSpec.env,
               commandRunner,
+            );
+            const profiledPrompt = applyContextProfileToPrompt(
+              current,
+              buildJudgePrompt(question, node.id, current.captureNonce, groundingOutput),
+              node.askProfile,
             );
             return {
               kind: 'prompt',
               state: retryUpdated,
-              capturedPrompt: buildJudgePrompt(
-                question,
-                node.id,
-                current.captureNonce,
-                groundingOutput,
-              ),
+              capturedPrompt: profiledPrompt.prompt,
+              ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
             };
           }
           return { kind: 'pause', state: current, capturedPrompt: null };
@@ -3058,16 +3237,32 @@ async function advanceIfNode(
     }
 
     if (!usesRetryBudget) {
+      const profiledPrompt = applyContextProfileToPrompt(
+        current,
+        buildJudgeRetryPrompt(node.id, current.captureNonce),
+        node.askProfile,
+      );
       return {
         kind: 'prompt',
         state: current,
-        capturedPrompt: buildJudgeRetryPrompt(node.id, current.captureNonce),
+        capturedPrompt: profiledPrompt.prompt,
+        ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
       };
     }
 
     const retryGroundingOutput = usesRetryBudget
-      ? await buildAskGroundingEvidence(node.groundedBy, current.variables, commandRunner)
+      ? await buildAskGroundingEvidence(
+          node.groundedBy,
+          current.variables,
+          current.flowSpec.env,
+          commandRunner,
+        )
       : undefined;
+    const profiledPrompt = applyContextProfileToPrompt(
+      current,
+      buildJudgePrompt(question, node.id, current.captureNonce, retryGroundingOutput),
+      node.askProfile,
+    );
     return {
       kind: 'prompt',
       state: updateNodeProgress(current, node.id, {
@@ -3078,12 +3273,8 @@ async function advanceIfNode(
         captureFailureReason: 'capture file empty or not found',
         startedAt: progress?.startedAt,
       }),
-      capturedPrompt: buildJudgePrompt(
-        question,
-        node.id,
-        current.captureNonce,
-        retryGroundingOutput,
-      ),
+      capturedPrompt: profiledPrompt.prompt,
+      ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
     };
   }
 

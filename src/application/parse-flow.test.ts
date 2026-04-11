@@ -15,12 +15,44 @@ import type {
   ContinueNode,
   SpawnNode,
   AwaitNode,
+  SwarmNode,
   StartNode,
   ReturnNode,
 } from '../domain/flow-node.js';
 
 function parse(dsl: string): FlowSpec {
   return parseFlow(dsl);
+}
+
+function parsePreservingSwarm(dsl: string): FlowSpec {
+  return parseFlow(dsl, { swarmHandling: 'preserve' });
+}
+
+function parseWithProfiles(
+  dsl: string,
+  config: string,
+  extraFiles: Readonly<Record<string, string>> = {},
+): FlowSpec {
+  return parseFlow(dsl, {
+    basePath: '/repo',
+    fileReader: (path: string) => {
+      if (
+        path.endsWith('prompt-language.config.json') ||
+        path.endsWith('.prompt-language/config.json') ||
+        path.endsWith('.prompt-language\\config.json')
+      ) {
+        return config;
+      }
+
+      if (path in extraFiles) {
+        return extraFiles[path]!;
+      }
+
+      const error = new Error(`ENOENT: ${path}`) as NodeJS.ErrnoException;
+      error.code = 'ENOENT';
+      throw error;
+    },
+  });
 }
 
 describe('parseFlow — goal', () => {
@@ -89,6 +121,95 @@ describe('parseFlow — prompt and run nodes', () => {
     expect(spec.nodes[0]!.kind).toBe('prompt');
     expect(spec.nodes[1]!.kind).toBe('run');
     expect(spec.nodes[2]!.kind).toBe('prompt');
+  });
+
+  it('parses prompt node profile selection', () => {
+    const spec = parseWithProfiles(
+      'Goal: g\n\nflow:\n  prompt using profile "reviewer": inspect the diff',
+      JSON.stringify({
+        profiles: {
+          reviewer: { systemPreamble: 'Review the code carefully.' },
+        },
+      }),
+    );
+    const node = spec.nodes[0] as PromptNode;
+    expect(node.kind).toBe('prompt');
+    expect(node.profile).toBe('reviewer');
+    expect(spec.profiles).toEqual({
+      reviewer: { name: 'reviewer', systemPreamble: 'Review the code carefully.' },
+    });
+  });
+});
+
+describe('parseFlow — context profiles', () => {
+  it('parses flow-level default profile and merges memory keys', () => {
+    const spec = parseWithProfiles(
+      [
+        'Goal: g',
+        '',
+        'use profile "default"',
+        '',
+        'memory:',
+        '  repo_rules',
+        '',
+        'flow:',
+        '  prompt: inspect',
+      ].join('\n'),
+      JSON.stringify({
+        profiles: {
+          default: {
+            systemPreamble: 'Stay concise.',
+            memory: ['style_guide', 'repo_rules'],
+          },
+        },
+      }),
+    );
+
+    expect(spec.defaultProfile).toBe('default');
+    expect(spec.memoryKeys).toEqual(['repo_rules', 'style_guide']);
+  });
+
+  it('parses profiled let prompt sources', () => {
+    const spec = parseWithProfiles(
+      'Goal: g\n\nflow:\n  let plan = prompt using profile "planner" "Draft the plan"',
+      JSON.stringify({
+        profiles: {
+          planner: { skills: ['planning'] },
+        },
+      }),
+    );
+    const node = spec.nodes[0] as LetNode;
+    expect(node.source).toEqual({ type: 'prompt', text: 'Draft the plan', profile: 'planner' });
+  });
+
+  it('parses ask profile selection', () => {
+    const spec = parseWithProfiles(
+      [
+        'Goal: g',
+        '',
+        'flow:',
+        '  while ask "is it safe?" using profile "reviewer" grounded-by "npm test" max-retries 2 max 3',
+        '    prompt: keep checking',
+        '  end',
+      ].join('\n'),
+      JSON.stringify({
+        profiles: {
+          reviewer: { systemPreamble: 'Review carefully.' },
+        },
+      }),
+    );
+    const node = spec.nodes[0] as WhileNode;
+    expect(node.askProfile).toBe('reviewer');
+    expect(node.groundedBy).toBe('npm test');
+    expect(node.askMaxRetries).toBe(2);
+  });
+
+  it('fails with actionable diagnostics for unknown profiles', () => {
+    expect(() =>
+      parseWithProfiles('Goal: g\n\nflow:\n  prompt using profile "missing": inspect', '{}'),
+    ).toThrow(
+      'Unknown profile "missing" in prompt node profile reference. Define it under "profiles" in prompt-language.config.json.',
+    );
   });
 });
 
@@ -2411,6 +2532,47 @@ export gates must_pass:
 });
 
 describe('parseFlow — swarm surface', () => {
+  it('preserves authored swarm syntax as swarm/start/return AST in preserve mode', () => {
+    const spec = parsePreservingSwarm(`Goal: g
+
+flow:
+  swarm checkout_fix
+    role frontend model "sonnet" in "apps/web" with vars issue, files
+      prompt: Fix the UI regression
+      return ${'${summary}'}
+    end
+    role backend
+      run: npm test
+    end
+    flow:
+      start frontend, backend
+      await frontend backend
+    end
+  end`);
+
+    expect(spec.warnings).toEqual([]);
+    expect(spec.nodes).toHaveLength(1);
+
+    const swarm = spec.nodes[0] as SwarmNode;
+    expect(swarm).toMatchObject({
+      kind: 'swarm',
+      name: 'checkout_fix',
+    });
+    expect(swarm.roles).toHaveLength(2);
+    expect(swarm.roles[0]).toMatchObject({
+      name: 'frontend',
+      model: 'sonnet',
+      cwd: 'apps/web',
+      vars: ['issue', 'files'],
+    });
+    expect(swarm.roles[0]?.body.map((node) => node.kind)).toEqual(['prompt', 'return']);
+    expect(swarm.roles[1]?.body.map((node) => node.kind)).toEqual(['run']);
+    expect((swarm.roles[0]?.body[1] as ReturnNode).expression).toBe('${summary}');
+    expect(swarm.flow.map((node) => node.kind)).toEqual(['start', 'await']);
+    expect((swarm.flow[0] as StartNode).targets).toEqual(['frontend', 'backend']);
+    expect((swarm.flow[1] as AwaitNode).target).toEqual(['frontend', 'backend']);
+  });
+
   it('lowers authored swarm syntax into ordinary runtime nodes', () => {
     const spec = parse(`Goal: g
 
@@ -2532,6 +2694,28 @@ flow:
     ]);
   });
 
+  it('rejects malformed authored role headers in preserve mode without creating declared roles', () => {
+    const spec = parsePreservingSwarm(`Goal: g
+
+flow:
+  swarm checkout_fix
+    role "frontend"
+      prompt: Fix the UI regression
+    end
+    flow:
+      start role
+    end
+  end`);
+
+    expect(spec.warnings).toContain(
+      'line 2: Invalid role syntax: "role "frontend"" — expected role <name> with optional model/in/with vars options',
+    );
+    expect(spec.nodes).toHaveLength(1);
+    const swarm = spec.nodes[0] as SwarmNode;
+    expect(swarm.roles).toEqual([]);
+    expect((swarm.flow[0] as StartNode).targets).toEqual(['role']);
+  });
+
   it('surfaces lowering warnings for authored swarm flows with undeclared starts', () => {
     const spec = parse(`Goal: g
 
@@ -2614,6 +2798,48 @@ flow:
 
     expect(spec.warnings).toEqual([]);
     expect(spec.nodes.map((node) => node.kind)).toEqual(['spawn', 'await', 'receive']);
+  });
+
+  it('preserves authored swarm blocks inside use-expanded library flows in preserve mode', () => {
+    const libContent = `library: testing
+
+export flow parallel_fix():
+  swarm checkout_fix
+    role frontend
+      prompt: Fix the UI regression
+      return \${summary}
+    end
+    flow:
+      start frontend
+      await all
+    end
+  end
+`;
+
+    const spec = parseFlow(
+      `Goal: test
+
+import "lib.flow" as testing
+
+flow:
+  use testing.parallel_fix()
+`,
+      {
+        basePath: '/fake',
+        fileReader: (path: string) => {
+          if (path.endsWith('lib.flow')) return libContent;
+          throw new Error(`unexpected: ${path}`);
+        },
+        swarmHandling: 'preserve',
+      },
+    );
+
+    expect(spec.warnings).toEqual([]);
+    expect(spec.nodes).toHaveLength(1);
+    const swarm = spec.nodes[0] as SwarmNode;
+    expect(swarm.kind).toBe('swarm');
+    expect(swarm.roles[0]?.body.map((node) => node.kind)).toEqual(['prompt', 'return']);
+    expect(swarm.flow.map((node) => node.kind)).toEqual(['start', 'await']);
   });
 });
 

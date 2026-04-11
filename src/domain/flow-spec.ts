@@ -6,6 +6,7 @@
 
 import type { FlowNode } from './flow-node.js';
 import { DEFAULT_MAX_ITERATIONS, DEFAULT_MAX_ATTEMPTS } from './flow-node.js';
+import type { ContextProfileRegistry } from './context-profile.js';
 
 export interface CompletionGate {
   readonly predicate: string;
@@ -43,6 +44,8 @@ export interface FlowSpec {
   readonly completionGates: readonly CompletionGate[];
   readonly defaults: FlowDefaults;
   readonly warnings: readonly string[];
+  readonly defaultProfile?: string | undefined;
+  readonly profiles?: ContextProfileRegistry | undefined;
   /** H-LANG-009: Environment variables to inject into command execution. */
   readonly env?: Readonly<Record<string, string>> | undefined;
   /** Resolved absolute file paths of all imported library files. */
@@ -62,6 +65,8 @@ export function flowSpecHash(spec: FlowSpec): string {
     nodes: spec.nodes,
     completionGates: spec.completionGates,
     defaults: spec.defaults,
+    defaultProfile: spec.defaultProfile ?? null,
+    profiles: spec.profiles ?? null,
     env: spec.env ?? null,
     imports: spec.imports ?? null,
     memoryKeys: spec.memoryKeys ?? null,
@@ -92,6 +97,8 @@ export function createFlowSpec(
   memoryKeys?: readonly string[],
   rubrics?: readonly RubricDefinition[],
   judges?: readonly JudgeDefinition[],
+  defaultProfile?: string,
+  profiles?: ContextProfileRegistry,
 ): FlowSpec {
   return {
     goal,
@@ -99,6 +106,8 @@ export function createFlowSpec(
     completionGates,
     defaults: { ...DEFAULT_FLOW_DEFAULTS, ...defaults },
     warnings,
+    ...(defaultProfile != null ? { defaultProfile } : {}),
+    ...(profiles != null && Object.keys(profiles).length > 0 ? { profiles } : {}),
     ...(env != null ? { env } : {}),
     ...(imports != null && imports.length > 0 ? { imports } : {}),
     ...(memoryKeys != null && memoryKeys.length > 0 ? { memoryKeys } : {}),

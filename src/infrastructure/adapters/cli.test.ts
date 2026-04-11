@@ -123,6 +123,37 @@ describe('CLI commands', () => {
     expect(output).toContain('prompt: hello');
   });
 
+  it('render-workflow prints the lowered clarify flow', async () => {
+    tempDir = await createTempDir('pl-cli-render-workflow-');
+
+    const output = execFileSync('node', [CLI, 'render-workflow', 'clarify'], {
+      cwd: tempDir,
+      encoding: 'utf8',
+    });
+
+    expect(output).toContain(
+      'Goal: clarify the request, record boundaries, and produce an inspectable plan draft',
+    );
+    expect(output).toContain('prompt: Clarify the task without editing files or running commands.');
+    expect(output).not.toContain('run:');
+  });
+
+  it('render-workflow exits 1 for an unknown alias', async () => {
+    tempDir = await createTempDir('pl-cli-render-workflow-bad-');
+
+    try {
+      execFileSync('node', [CLI, 'render-workflow', 'parallelize'], {
+        cwd: tempDir,
+        encoding: 'utf8',
+      });
+      expect.unreachable();
+    } catch (error) {
+      const failure = error as { status?: number; stderr?: string };
+      expect(failure.status).toBe(1);
+      expect(failure.stderr ?? '').toContain('Unknown workflow alias "parallelize"');
+    }
+  });
+
   it('validate --runner --mode --json exits 2 for approve on a headless profile', async () => {
     tempDir = await createTempDir('pl-cli-validate-mode-');
     const flowPath = join(tempDir, 'sample.flow');

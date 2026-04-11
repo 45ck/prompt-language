@@ -79,6 +79,16 @@ async function writeJson(filePath, data) {
   await fs.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
 }
 
+async function loadCodexInstallerAdapter() {
+  return import(
+    pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'codex-installer.js')).href
+  );
+}
+
+async function loadRenderWorkflow() {
+  return import(pathToFileURL(join(ROOT, 'dist', 'presentation', 'render-workflow.js')).href);
+}
+
 async function install() {
   const version = await readPluginVersion();
   const now = new Date().toISOString();
@@ -1046,105 +1056,109 @@ async function statusCodex() {
   const enabled = !!settings?.enabledPlugins?.[PLUGIN_KEY];
   const marketplace = !!settings?.extraKnownMarketplaces?.[MARKETPLACE_NAME];
 
-  let configEnabled = false;
-  try {
-    const raw = await fs.readFile(CODEX_CONFIG_PATH, 'utf8');
-    configEnabled = /codex_hooks\s*=\s*true/i.test(raw);
-  } catch {
-    // not configured
-  }
+  const { inspectCodexHooksConfigFile } = await loadCodexInstallerAdapter();
+  const codexHooks = await inspectCodexHooksConfigFile(CODEX_CONFIG_PATH);
 
   console.log(`prompt-language Codex scaffold v${version}`);
   console.log(`  Installed:    ${installed ? 'yes' : 'no'}${installed ? ` (${PLUGINS_DIR})` : ''}`);
   console.log(`  Registered:   ${registered ? 'yes' : 'no'}`);
   console.log(`  Marketplace:  ${marketplace ? 'yes' : 'no'}`);
   console.log(`  Enabled:      ${enabled ? 'yes' : 'no'}`);
-  console.log(`  codex_hooks:  ${configEnabled ? 'yes' : 'no'}`);
+  console.log(`  codex_hooks:  ${formatCodexHooksStatus(codexHooks)}`);
 
-  if (!installed || !registered || !enabled || !marketplace || !configEnabled) {
+  if (codexHooks.ownership === 'conflict') {
+    console.log('  Warning: conflicting codex_hooks entries detected in config.toml');
+  }
+
+  if (!installed || !registered || !enabled || !marketplace || !codexHooks.enabled) {
     console.log('\nRun "npx @45ck/prompt-language codex-install" to install the Codex scaffold.');
   }
 }
 
 async function enableCodexHooksConfig() {
-  try {
-    const raw = await fs.readFile(CODEX_CONFIG_PATH, 'utf8');
-    if (/codex_hooks\s*=\s*true/i.test(raw)) {
-      return;
-    }
+  const { enableManagedCodexHooksFile } = await loadCodexInstallerAdapter();
+  const result = await enableManagedCodexHooksFile(CODEX_CONFIG_PATH);
 
-    const updated = insertOrUpdateCodexHooks(raw, true);
-    await fs.writeFile(CODEX_CONFIG_PATH, updated, 'utf8');
-    console.log('  Enabled codex_hooks in config.toml');
+  if (result.outcome === 'created') {
+    console.log('  Wrote config.toml with prompt-language-managed codex_hooks');
     return;
-  } catch {
-    // create a minimal config if it does not exist
   }
 
-  await ensureDir(CODEX_DIR);
-  await fs.writeFile(
-    CODEX_CONFIG_PATH,
-    '# prompt-language Codex scaffold.\n# Codex hooks are experimental; opt in explicitly before using the local install.\n\n[features]\ncodex_hooks = true\n',
-    'utf8',
-  );
-  console.log('  Wrote config.toml with codex_hooks = true');
+  if (result.outcome === 'updated') {
+    console.log('  Enabled prompt-language-managed codex_hooks in config.toml');
+    return;
+  }
+
+  if (result.outcome === 'user-owned') {
+    console.log('  Preserved existing user-owned codex_hooks setting in config.toml');
+    return;
+  }
+
+  if (result.outcome === 'conflict') {
+    console.warn(
+      '  Detected conflicting codex_hooks entries in config.toml; leaving file unchanged',
+    );
+  }
 }
 
 async function disableCodexHooksConfig() {
-  try {
-    const raw = await fs.readFile(CODEX_CONFIG_PATH, 'utf8');
-    if (!/codex_hooks\s*=\s*true/i.test(raw)) {
-      return;
-    }
+  const { disableManagedCodexHooksFile } = await loadCodexInstallerAdapter();
+  const result = await disableManagedCodexHooksFile(CODEX_CONFIG_PATH);
 
-    const updated = insertOrUpdateCodexHooks(raw, false);
-    await fs.writeFile(CODEX_CONFIG_PATH, updated, 'utf8');
-    console.log('  Removed codex_hooks from config.toml');
-  } catch {
-    // ignore — config may not exist
+  if (result.outcome === 'removed') {
+    console.log('  Removed prompt-language-managed codex_hooks from config.toml');
+    return;
+  }
+
+  if (result.outcome === 'conflict') {
+    console.warn(
+      '  Detected conflicting codex_hooks entries in config.toml; leaving file unchanged',
+    );
+    return;
+  }
+
+  if (result.outcome === 'not-managed' && result.snapshot.ownership === 'user-owned') {
+    console.log('  Preserved existing user-owned codex_hooks setting in config.toml');
   }
 }
 
-function insertOrUpdateCodexHooks(raw, enabled) {
-  const normalized = raw.replace(/\r\n/g, '\n');
-  const lines = normalized.split('\n');
-  const featuresIndex = lines.findIndex((line) => line.trim() === '[features]');
+function formatCodexHooksStatus(snapshot) {
+  const status = snapshot.enabled ? 'yes' : 'no';
 
-  if (featuresIndex === -1) {
-    if (!enabled) {
-      return raw;
-    }
-    const prefix = normalized.trim().length > 0 ? `${normalized.trimEnd()}\n\n` : '';
-    return `${prefix}[features]\ncodex_hooks = true\n`;
+  switch (snapshot.ownership) {
+    case 'managed':
+      return `${status} (managed)`;
+    case 'user-owned':
+      return `${status} (user-owned)`;
+    case 'conflict':
+      return `${status} (conflict)`;
+    default:
+      return status;
+  }
+}
+
+async function renderWorkflow() {
+  if (!existsSync(join(ROOT, 'dist'))) {
+    console.error('Error: dist/ directory not found. Run "npm run build" first.');
+    process.exit(1);
   }
 
-  let nextSectionIndex = lines.length;
-  for (let i = featuresIndex + 1; i < lines.length; i += 1) {
-    if (lines[i].startsWith('[')) {
-      nextSectionIndex = i;
-      break;
-    }
+  const args = process.argv.slice(3);
+  const alias = args.find((arg) => arg != null && !arg.startsWith('-'));
+
+  if (alias == null || alias.length === 0) {
+    console.error('Error: Missing workflow alias.');
+    console.error('Usage: npx @45ck/prompt-language render-workflow <name>');
+    process.exit(1);
   }
 
-  const sectionLines = lines.slice(featuresIndex + 1, nextSectionIndex);
-  const codexLineIndex = sectionLines.findIndex((line) =>
-    /^\s*codex_hooks\s*=\s*true\s*$/.test(line),
-  );
-
-  if (enabled) {
-    if (codexLineIndex >= 0) {
-      return normalized.endsWith('\n') ? normalized : `${normalized}\n`;
-    }
-    lines.splice(nextSectionIndex, 0, 'codex_hooks = true');
-    return lines.join('\n').replace(/\n+$/, '\n');
+  const { renderWorkflowAlias } = await loadRenderWorkflow();
+  try {
+    process.stdout.write(renderWorkflowAlias(alias).flowText);
+  } catch (error) {
+    console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
   }
-
-  if (codexLineIndex >= 0) {
-    lines.splice(featuresIndex + 1 + codexLineIndex, 1);
-    return lines.join('\n').replace(/\n+$/, '\n');
-  }
-
-  return normalized.endsWith('\n') ? normalized : `${normalized}\n`;
 }
 
 async function configureStatusLine(settings, installDir, autoMode = false) {
@@ -1386,6 +1400,9 @@ switch (command) {
   case 'validate':
     await validate();
     break;
+  case 'render-workflow':
+    await renderWorkflow();
+    break;
   case 'ci':
     await ci();
     break;
@@ -1418,6 +1435,7 @@ Commands:
   demo         Print an example flow to stdout
   list         Recursively list .flow files in the current directory
   validate     Parse, lint, score, and render a flow without executing it (\`--runner ... --mode interactive|headless\`)
+  render-workflow Show the lowered .flow text for a canonical workflow alias
   ci           Run a flow headlessly (CI/CD mode, supports \`--runner codex|opencode|ollama\`)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild

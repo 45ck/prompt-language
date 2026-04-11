@@ -52,7 +52,7 @@ What it does:
 
 1. Copies the Codex-facing runtime assets (`dist`, `.codex-plugin`, `.codex`, `.agents`, `skills`, `agents`, `bin`) into the local Codex cache
 2. Registers and enables the scaffold in Codex plugin settings
-3. Writes or updates `~/.codex/config.toml` so `codex_hooks = true`
+3. Writes or updates `~/.codex/config.toml` with a prompt-language-managed `codex_hooks = true` entry, while leaving user-owned entries unchanged
 
 Important:
 
@@ -93,7 +93,7 @@ prompt-language Codex scaffold v0.3.0
   Registered:   yes
   Marketplace:  yes
   Enabled:      yes
-  codex_hooks:  yes
+  codex_hooks:  yes (managed)
 ```
 
 ### uninstall
@@ -134,6 +134,22 @@ Run the generated flow:
 ```bash
 claude -p "$(cat example.flow)"
 ```
+
+### render-workflow
+
+Render the lowered `.flow` text for a canonical workflow alias.
+
+```bash
+npx @45ck/prompt-language render-workflow clarify
+npx @45ck/prompt-language render-workflow clarify | npx @45ck/prompt-language validate
+```
+
+Notes:
+
+1. This is a convenience layer, not a second runtime.
+2. The command prints ordinary prompt-language flow text so the lowered artifact stays inspectable before execution.
+3. The first shipped alias is `clarify`.
+4. The shipped `clarify` alias is preview-safe and read-only; it does not imply file writes or command execution.
 
 ### run
 

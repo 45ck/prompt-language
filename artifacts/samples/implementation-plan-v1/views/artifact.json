@@ -1,0 +1,14 @@
+{
+  "artifactId": "sample-implementation-plan-v1",
+  "artifactType": "implementation_plan",
+  "title": "Phase 1 artifact package slice",
+  "status": "draft",
+  "objective": "Land the smallest repo-owned artifact slice without introducing speculative runtime or UI semantics.",
+  "workstreamTitles": [
+    "Publish package envelope schema",
+    "Define one built-in payload contract",
+    "Ship a multi-view sample package"
+  ],
+  "riskCount": 2,
+  "exitCriteriaCount": 3
+}

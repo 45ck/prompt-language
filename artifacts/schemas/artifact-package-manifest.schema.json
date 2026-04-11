@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "prompt-language artifact package manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifestVersion",
+    "artifactId",
+    "artifactType",
+    "artifactSchemaVersion",
+    "title",
+    "summary",
+    "status",
+    "createdAt",
+    "updatedAt",
+    "producer",
+    "origin",
+    "declarationRef",
+    "content",
+    "views",
+    "attachments"
+  ],
+  "properties": {
+    "manifestVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "artifactId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifactType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifactSchemaVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "active", "superseded", "archived"]
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "producer": {
+      "$ref": "#/$defs/producer"
+    },
+    "origin": {
+      "$ref": "#/$defs/origin"
+    },
+    "declarationRef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "content": {
+      "$ref": "#/$defs/content"
+    },
+    "views": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/view"
+      }
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/attachment"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "relativePath": {
+      "type": "string",
+      "pattern": "^(content|views|exports|attachments)/.+$"
+    },
+    "producer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "version"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["flow", "runtime", "host_integration", "tool"]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "origin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "flowNode", "phase"],
+      "properties": {
+        "runId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "flowNode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "content": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "mediaType", "sha256"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "const": "content/source.json"
+        },
+        "mediaType": {
+          "type": "string",
+          "const": "application/json"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "view": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "mediaType", "renderer", "sha256"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "mediaType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "renderer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path", "mediaType", "role", "sha256"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "$ref": "#/$defs/relativePath"
+        },
+        "mediaType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

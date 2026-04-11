@@ -1,0 +1,59 @@
+{
+  "objective": "Land the smallest repo-owned Phase 1 artifact slice without introducing speculative runtime or UI semantics.",
+  "scope": [
+    "publish a repo-owned manifest schema",
+    "publish one initial built-in payload schema",
+    "check in a sample package with multiple renderer views"
+  ],
+  "workstreams": [
+    {
+      "id": "ws1",
+      "title": "Publish package envelope schema",
+      "summary": "Define a repo-owned manifest schema covering identity, provenance, canonical content, views, and attachments.",
+      "status": "done"
+    },
+    {
+      "id": "ws2",
+      "title": "Define one built-in payload contract",
+      "summary": "Capture the minimum payload shape for an implementation plan so later validation and registry work have a stable example.",
+      "status": "done"
+    },
+    {
+      "id": "ws3",
+      "title": "Ship a multi-view sample package",
+      "summary": "Provide one package with canonical JSON content plus Markdown, HTML, and JSON projections.",
+      "status": "done"
+    }
+  ],
+  "risks": [
+    {
+      "id": "r1",
+      "statement": "The package fixture could drift away from the accepted contract if later edits treat one renderer as canonical.",
+      "mitigation": "Keep canonical truth in content/source.json and record every derived view explicitly in manifest.json."
+    },
+    {
+      "id": "r2",
+      "statement": "A sample package could accidentally overcommit review-storage or DSL claims that belong to later beads.",
+      "mitigation": "Keep review state out of the sample and limit this slice to layout, schema, and inspectable views."
+    }
+  ],
+  "exitCriteria": [
+    "manifest.json points at canonical content and at least three views",
+    "the package validates against repo-owned envelope and payload schemas in principle",
+    "the sample remains easy to inspect without any runtime-specific tooling"
+  ],
+  "evidence": [
+    {
+      "kind": "design_note",
+      "ref": "docs/design/artifact-package-contract.md"
+    },
+    {
+      "kind": "design_note",
+      "ref": "docs/design/artifact-runtime-lifecycle.md"
+    },
+    {
+      "kind": "design_note",
+      "ref": "docs/design/artifact-taxonomy-and-builtins.md"
+    }
+  ]
+}

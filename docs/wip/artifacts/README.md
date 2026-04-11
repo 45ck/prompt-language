@@ -71,13 +71,12 @@ This artifact program overlaps with nearby work, but it must not silently absorb
 
 ## Import boundary
 
-I kept the imported design markdown only.
+This boundary slice originally kept the imported design markdown only.
 
-I did not copy:
+For the later implementation bead `prompt-language-50m6.5`, the repo now also carries a narrow Phase 1 fixture set under [`/artifacts`](../../artifacts/README.md):
 
-- raw HTML index assets
-- schemas
-- sample artifact packages
-- example `.flow` files
+- repo-owned package and manifest schemas
+- one sample artifact package
+- multiple sample renderer views over one package
 
-Those remain implementation or fixture candidates for later beads rather than part of the boundary decision itself.
+Those fixtures are implementation artifacts, not additional accepted design. The decision source of truth remains the accepted design notes in `docs/design/`.

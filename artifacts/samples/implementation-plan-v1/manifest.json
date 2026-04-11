@@ -1,0 +1,51 @@
+{
+  "manifestVersion": 1,
+  "artifactId": "sample-implementation-plan-v1",
+  "artifactType": "implementation_plan",
+  "artifactSchemaVersion": 1,
+  "title": "Phase 1 artifact package slice",
+  "summary": "Repo-owned fixture package demonstrating the accepted artifact envelope plus Markdown, HTML, and JSON views.",
+  "status": "draft",
+  "createdAt": "2026-04-11T00:00:00Z",
+  "updatedAt": "2026-04-11T00:00:00Z",
+  "producer": {
+    "kind": "flow",
+    "name": "prompt-language-50m6.5",
+    "version": "phase1-fixture"
+  },
+  "origin": {
+    "runId": "fixture-run-2026-04-11",
+    "flowNode": "phase1.artifact-package-slice",
+    "phase": "plan"
+  },
+  "declarationRef": "../../../schemas/types/implementation-plan.schema.json",
+  "content": {
+    "path": "content/source.json",
+    "mediaType": "application/json",
+    "sha256": "82478d7accc51f5cff2aa5f6f7380facb6a0c7160eb0277e937a24c3cc8de3a0"
+  },
+  "views": [
+    {
+      "name": "markdown",
+      "path": "views/artifact.md",
+      "mediaType": "text/markdown",
+      "renderer": "core-fallback-markdown",
+      "sha256": "0dd1499bddc164d138b98fdffc9af3f9cb9666c108df8526d238585e34632caa"
+    },
+    {
+      "name": "html",
+      "path": "views/artifact.html",
+      "mediaType": "text/html",
+      "renderer": "sample-html-review",
+      "sha256": "724dac22f26f55991001151ff19019096857c6cb6053a9f13f154c406fa623f6"
+    },
+    {
+      "name": "json",
+      "path": "views/artifact.json",
+      "mediaType": "application/json",
+      "renderer": "sample-json-projection",
+      "sha256": "ec3e0848a9c4d77b0f4e112c033c72077103c3e75c20aa1ec8eadcb8bf65910a"
+    }
+  ],
+  "attachments": []
+}

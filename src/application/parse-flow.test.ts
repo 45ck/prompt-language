@@ -2667,11 +2667,11 @@ flow:
       cwd: 'apps/web',
       vars: ['issue', 'files'],
     });
-    expect(frontend.body.map((node) => node.kind)).toEqual(['prompt', 'send']);
-    expect(frontend.body[1]).toMatchObject({
+    expect(frontend.body.map((node) => node.kind)).toEqual(['let', 'let', 'prompt', 'let', 'send']);
+    expect(frontend.body[4]).toMatchObject({
       kind: 'send',
       target: 'parent',
-      message: '${summary}',
+      message: '${__swarm_return}',
     });
 
     expect((spec.nodes[2] as AwaitNode).target).toBe('frontend');

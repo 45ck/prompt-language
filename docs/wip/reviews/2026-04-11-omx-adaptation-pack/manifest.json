@@ -1,0 +1,21 @@
+{
+  "name": "prompt-language OMX adaptation pack",
+  "date": "2026-04-11",
+  "type": "imported review pack",
+  "repo_target": "docs/wip/reviews/2026-04-11-omx-adaptation-pack",
+  "recommended_read_order": [
+    "README.md",
+    "00-executive-summary.md",
+    "03-adopt-modify-reject-matrix.md",
+    "02-target-architecture.md",
+    "specs/001-operator-shell.md",
+    "specs/002-hook-manager.md",
+    "specs/003-run-state-and-recovery.md",
+    "plans/phased-delivery-roadmap.md"
+  ],
+  "patches": [
+    "patches/0001-add-omx-adaptation-review-pack.patch",
+    "patches/0002-update-review-packs-index.patch",
+    "patches/0003-add-issue-templates.patch"
+  ]
+}

@@ -1,0 +1,9 @@
+Goal: clarify the request, record boundaries, and produce an inspectable plan draft
+
+flow:
+  run: mkdir -p .prompt-language/runs/demo/plan
+  prompt: Ask only the questions needed to identify scope, non-goals, risks, and acceptance criteria. Then write a concise plan draft to `.prompt-language/runs/demo/plan/approved-plan.md`.
+  run: test -f .prompt-language/runs/demo/plan/approved-plan.md
+
+done when:
+  file_exists .prompt-language/runs/demo/plan/approved-plan.md

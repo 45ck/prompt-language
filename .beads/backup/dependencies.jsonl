@@ -274,6 +274,15 @@
 {"created_at":"2026-03-24T15:36:41Z","created_by":"45ck","depends_on_id":"prompt-language-vehg","issue_id":"prompt-language-dvdr","metadata":"{}","type":"blocks"}
 {"created_at":"2026-03-24T15:36:34Z","created_by":"45ck","depends_on_id":"prompt-language-jx9h","issue_id":"prompt-language-ec2d","metadata":"{}","type":"blocks"}
 {"created_at":"2026-03-20T18:07:13Z","created_by":"45ck","depends_on_id":"prompt-language-0so","issue_id":"prompt-language-ejp","metadata":"{}","type":"blocks"}
+{"created_at":"2026-04-11T11:42:51Z","created_by":"45ck","depends_on_id":"prompt-language-f7jp","issue_id":"prompt-language-f7jp.1","metadata":"{}","type":"parent-child"}
+{"created_at":"2026-04-11T11:42:52Z","created_by":"45ck","depends_on_id":"prompt-language-f7jp","issue_id":"prompt-language-f7jp.2","metadata":"{}","type":"parent-child"}
+{"created_at":"2026-04-11T11:42:53Z","created_by":"45ck","depends_on_id":"prompt-language-f7jp","issue_id":"prompt-language-f7jp.3","metadata":"{}","type":"parent-child"}
+{"created_at":"2026-04-11T11:42:55Z","created_by":"45ck","depends_on_id":"prompt-language-f7jp","issue_id":"prompt-language-f7jp.4","metadata":"{}","type":"parent-child"}
+{"created_at":"2026-04-11T11:42:56Z","created_by":"45ck","depends_on_id":"prompt-language-f7jp","issue_id":"prompt-language-f7jp.5","metadata":"{}","type":"parent-child"}
+{"created_at":"2026-04-11T11:42:58Z","created_by":"45ck","depends_on_id":"prompt-language-f7jp","issue_id":"prompt-language-f7jp.6","metadata":"{}","type":"parent-child"}
+{"created_at":"2026-04-11T11:42:59Z","created_by":"45ck","depends_on_id":"prompt-language-f7jp","issue_id":"prompt-language-f7jp.7","metadata":"{}","type":"parent-child"}
+{"created_at":"2026-04-11T11:43:01Z","created_by":"45ck","depends_on_id":"prompt-language-f7jp","issue_id":"prompt-language-f7jp.8","metadata":"{}","type":"parent-child"}
+{"created_at":"2026-04-11T11:43:03Z","created_by":"45ck","depends_on_id":"prompt-language-f7jp","issue_id":"prompt-language-f7jp.9","metadata":"{}","type":"parent-child"}
 {"created_at":"2026-03-24T15:36:32Z","created_by":"45ck","depends_on_id":"prompt-language-x86f","issue_id":"prompt-language-fafi","metadata":"{}","type":"blocks"}
 {"created_at":"2026-03-28T15:03:42Z","created_by":"45ck","depends_on_id":"prompt-language-7kau","issue_id":"prompt-language-folr","metadata":"{}","type":"blocks"}
 {"created_at":"2026-03-26T13:05:25Z","created_by":"45ck","depends_on_id":"prompt-language-syg2","issue_id":"prompt-language-folr","metadata":"{}","type":"blocks"}

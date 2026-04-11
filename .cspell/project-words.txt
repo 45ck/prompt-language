@@ -88,3 +88,12 @@ streetrace
 zhog
 PATHEXT
 affordances
+landable
+lowerable
+opsh
+ralplan
+rescope
+sparkshell
+submodes
+touchpoints
+workstreams

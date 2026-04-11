@@ -4,10 +4,11 @@ External or conversation-derived assessment packs that are useful for backlog sh
 
 ## Imported packs
 
-| Pack                                                       | Focus                                                                    |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [2026-04-10 review pack](2026-04-10-review-pack/README.md) | Positioning, docs trust, evaluation legibility, and next-moat follow-ups |
-| [2026-04-11 plan pack](2026-04-11-plan-pack/README.md)     | Plan-first follow-up pack for fresh context, docs integrity, and evals   |
+| Pack                                                                       | Focus                                                                    |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [2026-04-10 review pack](2026-04-10-review-pack/README.md)                 | Positioning, docs trust, evaluation legibility, and next-moat follow-ups |
+| [2026-04-11 plan pack](2026-04-11-plan-pack/README.md)                     | Plan-first follow-up pack for fresh context, docs integrity, and evals   |
+| [2026-04-11 OMX adaptation pack](2026-04-11-omx-adaptation-pack/README.md) | Operator-shell adaptation, recovery artifacts, and supervised tooling    |
 
 ## Repo-authored reviews
 

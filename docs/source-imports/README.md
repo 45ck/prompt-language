@@ -8,10 +8,11 @@ Raw extracted bundle trees are intentionally not checked in here. They create fo
 
 ## Current import sets
 
-| Folder                                                            | Purpose                                               |
-| ----------------------------------------------------------------- | ----------------------------------------------------- |
-| [from-ecosystem-pack-2026-04-11/](from-ecosystem-pack-2026-04-11) | Provenance summary for the ecosystem comparison pack  |
-| [from-hydra-reach-2026-04-11/](from-hydra-reach-2026-04-11)       | Provenance summary for prompt-language bundle imports |
+| Folder                                                                      | Purpose                                                       |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| [from-ecosystem-pack-2026-04-11/](from-ecosystem-pack-2026-04-11)           | Provenance summary for the ecosystem comparison pack          |
+| [from-hydra-reach-2026-04-11/](from-hydra-reach-2026-04-11)                 | Provenance summary for prompt-language bundle imports         |
+| [from-omx-adaptation-pack-2026-04-11/](from-omx-adaptation-pack-2026-04-11) | Provenance summary for the OMX operator-shell adaptation pack |
 
 ## How to use this area
 

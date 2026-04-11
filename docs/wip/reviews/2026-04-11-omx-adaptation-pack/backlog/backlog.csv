@@ -1,0 +1,13 @@
+id,title,priority,phase,depends_on,acceptance
+OPSH-001,Add doctor command,P0,1,,"Human + JSON diagnostics; hook, runner, and migration checks"
+OPSH-002,Add refresh semantics,P0,1,OPSH-001,Idempotent re-render; preserves user-owned hooks
+OPSH-003,Implement hook ownership model,P0,1,,Ownership metadata + uninstall-safe cleanup
+OPSH-004,Add run-state v2 layout,P0,2,OPSH-001,"runs/<run-id> with manifests, logs, gates, recovery"
+OPSH-005,Keep session-state.json compatibility,P0,2,OPSH-004,Old tooling continues to function
+OPSH-006,Upgrade watch into operator cockpit,P1,3,OPSH-004,"Current node, gates, child topology, recovery hints"
+OPSH-007,Expose machine-readable watch snapshots,P1,3,OPSH-006,JSON snapshots consumable by tools
+OPSH-008,Add workflow alias renderer,P1,4,OPSH-004,Aliases preview lowered flow before run
+OPSH-009,Add project scaffolding for AGENTS/libraries,P1,4,OPSH-008,Generates ordinary repo files under version control
+OPSH-010,Add team supervisor metadata store,P2,5,OPSH-004,Child topology persisted and resumable
+OPSH-011,Add team status/resume/stop commands,P2,5,OPSH-010,Visible lifecycle around child flows
+OPSH-012,"Write rollout, troubleshooting, and promotion docs",P1,all,OPSH-001,Docs separate shipped/tracked/imported surfaces

@@ -1,0 +1,98 @@
+[
+  {
+    "id": "OPSH-001",
+    "title": "Add doctor command",
+    "priority": "P0",
+    "phase": "1",
+    "depends_on": "",
+    "acceptance": "Human + JSON diagnostics; hook, runner, and migration checks"
+  },
+  {
+    "id": "OPSH-002",
+    "title": "Add refresh semantics",
+    "priority": "P0",
+    "phase": "1",
+    "depends_on": "OPSH-001",
+    "acceptance": "Idempotent re-render; preserves user-owned hooks"
+  },
+  {
+    "id": "OPSH-003",
+    "title": "Implement hook ownership model",
+    "priority": "P0",
+    "phase": "1",
+    "depends_on": "",
+    "acceptance": "Ownership metadata + uninstall-safe cleanup"
+  },
+  {
+    "id": "OPSH-004",
+    "title": "Add run-state v2 layout",
+    "priority": "P0",
+    "phase": "2",
+    "depends_on": "OPSH-001",
+    "acceptance": "runs/<run-id> with manifests, logs, gates, recovery"
+  },
+  {
+    "id": "OPSH-005",
+    "title": "Keep session-state.json compatibility",
+    "priority": "P0",
+    "phase": "2",
+    "depends_on": "OPSH-004",
+    "acceptance": "Old tooling continues to function"
+  },
+  {
+    "id": "OPSH-006",
+    "title": "Upgrade watch into operator cockpit",
+    "priority": "P1",
+    "phase": "3",
+    "depends_on": "OPSH-004",
+    "acceptance": "Current node, gates, child topology, recovery hints"
+  },
+  {
+    "id": "OPSH-007",
+    "title": "Expose machine-readable watch snapshots",
+    "priority": "P1",
+    "phase": "3",
+    "depends_on": "OPSH-006",
+    "acceptance": "JSON snapshots consumable by tools"
+  },
+  {
+    "id": "OPSH-008",
+    "title": "Add workflow alias renderer",
+    "priority": "P1",
+    "phase": "4",
+    "depends_on": "OPSH-004",
+    "acceptance": "Aliases preview lowered flow before run"
+  },
+  {
+    "id": "OPSH-009",
+    "title": "Add project scaffolding for AGENTS/libraries",
+    "priority": "P1",
+    "phase": "4",
+    "depends_on": "OPSH-008",
+    "acceptance": "Generates ordinary repo files under version control"
+  },
+  {
+    "id": "OPSH-010",
+    "title": "Add team supervisor metadata store",
+    "priority": "P2",
+    "phase": "5",
+    "depends_on": "OPSH-004",
+    "acceptance": "Child topology persisted and resumable"
+  },
+  {
+    "id": "OPSH-011",
+    "title": "Add team status/resume/stop commands",
+    "priority": "P2",
+    "phase": "5",
+    "depends_on": "OPSH-010",
+    "acceptance": "Visible lifecycle around child flows"
+  },
+  {
+    "id": "OPSH-012",
+    "title": "Write rollout, troubleshooting, and promotion docs",
+    "priority": "P1",
+    "phase": "all",
+    "depends_on": "OPSH-001",
+    "acceptance": "Docs separate shipped/tracked/imported surfaces"
+  }
+]

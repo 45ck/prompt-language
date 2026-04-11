@@ -1,0 +1,19 @@
+Goal: execute the approved plan with visible checkpoints and gate-backed completion
+
+flow:
+  run: mkdir -p .prompt-language/runs/demo/logs
+  prompt: Read the approved plan and carry it out in small verified steps. After each substantial step, append a short checkpoint to `.prompt-language/runs/demo/logs/checkpoints.md`.
+  run: npm test
+  if tests_fail
+    prompt: Fix the failing tests shown above without abandoning the approved plan.
+    run: npm test
+  end
+  run: npm run lint
+  if lint_fail
+    prompt: Fix the lint errors shown above.
+    run: npm run lint
+  end
+
+done when:
+  tests_pass
+  lint_pass

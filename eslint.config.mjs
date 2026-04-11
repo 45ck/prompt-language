@@ -27,6 +27,10 @@ export default tseslint.config(
       'vitest.config.ts',
       'scripts/eval/comparative-eval-v4.mjs',
       'scripts/eval/fixtures/**',
+      'experiments/full-saas-factory/**/attempts/**',
+      'experiments/full-saas-factory/**/core-proof/**',
+      'experiments/full-saas-factory/**/runtime-smoke/**',
+      'experiments/results/**',
     ],
   },
 

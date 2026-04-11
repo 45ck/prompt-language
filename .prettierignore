@@ -15,4 +15,5 @@ tmp-oc-home*/
 experiments/full-saas-factory/**/attempts/**
 experiments/full-saas-factory/**/core-proof/**
 experiments/full-saas-factory/**/runtime-smoke/**
+experiments/full-saas-factory/**/workspaces/**
 experiments/results/**

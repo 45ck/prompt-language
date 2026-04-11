@@ -11,6 +11,7 @@ import type {
   FlowNodeSource,
   SpawnNode,
   SwarmRoleDefinition,
+  VariableDeclaredType,
 } from '../domain/flow-node.js';
 import type {
   CompletionGate,
@@ -942,13 +943,50 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
     );
     return null;
   }
-  const variableName = afterKeyword.slice(0, splitIdx).trim();
-  if (!variableName) {
+  const lhs = afterKeyword.slice(0, splitIdx).trim();
+  if (!lhs) {
     warn(
       ctx,
       `Invalid let/var/const syntax: "${trimmed}" — missing variable name. Try: ${declarationKind} name = "value"`,
     );
     return null;
+  }
+  const declarationMatch =
+    /^(?<name>\w+)(?:\s*:\s*(?<declaredType>\w+))?$/i.exec(lhs)?.groups ?? null;
+  if (!declarationMatch?.['name']) {
+    warn(
+      ctx,
+      `Invalid let/var/const syntax: "${trimmed}" — invalid declaration target. Try: ${declarationKind} name = "value"`,
+    );
+    return null;
+  }
+  const variableName = declarationMatch['name'];
+  let declaredType: VariableDeclaredType | undefined;
+  const rawDeclaredType = declarationMatch['declaredType']?.trim().toLowerCase();
+  if (rawDeclaredType != null) {
+    switch (rawDeclaredType) {
+      case 'int':
+      case 'string':
+      case 'bool':
+      case 'list':
+        declaredType = rawDeclaredType;
+        break;
+      case 'number':
+        declaredType = 'int';
+        break;
+      case 'boolean':
+        declaredType = 'bool';
+        break;
+      case 'array':
+        declaredType = 'list';
+        break;
+      default:
+        warn(
+          ctx,
+          `Unknown declared type "${rawDeclaredType}" on "${variableName}" — supported types: int, string, bool, list`,
+        );
+        break;
+    }
   }
   const rhs = afterKeyword.slice(splitIdx + (isAppend ? 2 : 1)).trim();
   if (!rhs) {
@@ -974,6 +1012,7 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
         false,
         undefined,
         declarationKind,
+        declaredType,
       ),
     );
   }
@@ -1065,7 +1104,15 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
 
   return attachSource(
     ctx,
-    createLetNode(nextId(ctx), variableName, source, isAppend, transform, declarationKind),
+    createLetNode(
+      nextId(ctx),
+      variableName,
+      source,
+      isAppend,
+      transform,
+      declarationKind,
+      declaredType,
+    ),
   );
 }
 

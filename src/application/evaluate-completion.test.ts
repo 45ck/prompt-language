@@ -4,6 +4,7 @@ import {
   resolveBuiltinCommand,
   isInvertedPredicate,
   detectTestCommand,
+  resolveFileExistsPredicatePath,
 } from './evaluate-completion.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { InMemoryCommandRunner } from '../infrastructure/adapters/in-memory-command-runner.js';
@@ -463,6 +464,26 @@ describe('resolveBuiltinCommand', () => {
     expect(resolveBuiltinCommand('not file_exists app.js')).toBe(
       expectedFileExistsCommand('app.js'),
     );
+  });
+});
+
+describe('resolveFileExistsPredicatePath', () => {
+  it('returns a safe relative file_exists path', () => {
+    expect(resolveFileExistsPredicatePath('file_exists nested/output.txt')).toBe(
+      'nested/output.txt',
+    );
+  });
+
+  it('returns undefined for unsafe file_exists predicates', () => {
+    expect(resolveFileExistsPredicatePath('file_exists $(whoami)')).toBeUndefined();
+  });
+
+  it('returns undefined for absolute file_exists predicates', () => {
+    expect(resolveFileExistsPredicatePath('file_exists /tmp/output.txt')).toBeUndefined();
+  });
+
+  it('returns undefined for traversal file_exists predicates', () => {
+    expect(resolveFileExistsPredicatePath('file_exists ../secret.txt')).toBeUndefined();
   });
 });
 
@@ -1476,6 +1497,50 @@ describe('evaluateCompletion — artifact-aware gates', () => {
     const result = await evaluateCompletion(store, runner);
     expect(result.blocked).toBe(true);
     expect(result.gateResults['approval_passed("review_deploy_plan")']).toBe(false);
+  });
+
+  it('keeps approval_passed pinned to the approved artifact revision when a newer revision is active', async () => {
+    const store = makeStore();
+    const runner = makeRunner();
+
+    const spec = createFlowSpec(
+      'artifact gates',
+      [],
+      [
+        createCompletionGate('artifact_valid deploy_plan'),
+        createCompletionGate('artifact_active deploy_plan'),
+        createCompletionGate('approval_passed("review_deploy_plan")'),
+      ],
+    );
+    const session = createSessionState('s-approval-revision-mismatch', spec);
+    await store.save({
+      ...session,
+      variables: {
+        ...session.variables,
+        '_artifacts.deploy_plan': {
+          artifactId: 'deploy-plan',
+          revisionId: 'rev-3',
+          runId: 'run-7',
+          validationState: 'valid',
+          reviewState: 'unreviewed',
+          revisionState: 'active',
+        },
+        '_approvals.review_deploy_plan': {
+          artifactId: 'deploy-plan',
+          revisionId: 'rev-2',
+          runId: 'run-7',
+          outcome: 'approved',
+        },
+      },
+    });
+
+    const result = await evaluateCompletion(store, runner);
+    expect(result.blocked).toBe(true);
+    expect(result.gateResults).toEqual({
+      'artifact_valid deploy_plan': true,
+      'artifact_active deploy_plan': true,
+      'approval_passed("review_deploy_plan")': false,
+    });
   });
 
   it('blocks malformed special gates before evaluation, including nested composite gates', async () => {

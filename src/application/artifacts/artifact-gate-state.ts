@@ -313,7 +313,15 @@ function evaluateArtifactGate(parsed: ParsedArtifactGate, variables: VariableSto
 function evaluateApprovalGate(parsed: ParsedApprovalGate, variables: VariableStore): boolean {
   const record = readApprovalStateRecord(variables, parsed.stepId);
   const bound = hasExplicitBinding(record.artifactId, record.revisionId, record.runId);
-  const passed = bound && record.outcome === 'approved';
+  const passed =
+    bound &&
+    record.outcome === 'approved' &&
+    artifactBindingExists(
+      variables,
+      record.artifactId ?? '',
+      record.revisionId ?? '',
+      record.runId ?? '',
+    );
   return parsed.negated ? !passed : passed;
 }
 
@@ -369,7 +377,24 @@ function readField(
 }
 
 function normalizeState(value: string | undefined): string | undefined {
-  return value?.trim().toLowerCase();
+  const normalized = value
+    ?.trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+  if (normalized == null || normalized.length === 0) {
+    return undefined;
+  }
+
+  switch (normalized) {
+    case 'approve':
+      return 'approved';
+    case 'reject':
+      return 'rejected';
+    case 'request_changes':
+      return 'changes_requested';
+    default:
+      return normalized;
+  }
 }
 
 function hasExplicitBinding(
@@ -378,6 +403,46 @@ function hasExplicitBinding(
   runId: string | undefined,
 ): boolean {
   return artifactId !== undefined && revisionId !== undefined && runId !== undefined;
+}
+
+function artifactBindingExists(
+  variables: VariableStore,
+  artifactId: string,
+  revisionId: string,
+  runId: string,
+): boolean {
+  for (const ref of collectArtifactRefs(variables)) {
+    const record = readArtifactStateRecord(variables, ref);
+    if (
+      record.artifactId === artifactId &&
+      record.revisionId === revisionId &&
+      record.runId === runId
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function collectArtifactRefs(variables: VariableStore): readonly string[] {
+  const refs = new Set<string>();
+
+  for (const key of Object.keys(variables)) {
+    if (!key.startsWith('_artifacts.')) {
+      continue;
+    }
+
+    const suffix = key.slice('_artifacts.'.length);
+    if (suffix.length === 0) {
+      continue;
+    }
+
+    const firstDot = suffix.indexOf('.');
+    refs.add(firstDot === -1 ? suffix : suffix.slice(0, firstDot));
+  }
+
+  return [...refs];
 }
 
 function isPlainObject(

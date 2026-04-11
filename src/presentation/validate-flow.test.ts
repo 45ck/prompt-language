@@ -40,7 +40,7 @@ describe('buildValidateFlowPreview', () => {
     expect(preview.renderedFlow).toContain('await "frontend"');
     expect(preview.renderedFlow).toContain('let __swarm_id = "checkout_fix"');
     expect(preview.renderedFlow).toContain('let __swarm_role = "frontend"');
-    expect(preview.renderedFlow).toContain('let __swarm_return = ${summary}');
+    expect(preview.renderedFlow).toContain('let __swarm_return = "${summary}"');
     expect(preview.renderedFlow).toContain('send "parent" "${__swarm_return}"');
     expect(preview.renderedFlow).toContain(
       'receive __checkout_fix_frontend_returned from "frontend"',

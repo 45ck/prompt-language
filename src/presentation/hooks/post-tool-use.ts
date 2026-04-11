@@ -18,6 +18,7 @@ import { renderFlow } from '../../domain/render-flow.js';
 import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { renderStatusLine } from '../../domain/render-status-line.js';
 import { colorizeStatusLine } from '../../domain/colorize-status-line.js';
+import { resolveFileExistsPredicatePath } from '../../application/evaluate-completion.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
 import { readStdin } from './read-stdin.js';
 import type { SessionState } from '../../domain/session-state.js';
@@ -40,8 +41,8 @@ function evaluateFastGates(state: SessionState): void {
 
   const results: string[] = [];
   for (const gate of gates) {
-    if (gate.predicate.startsWith('file_exists ')) {
-      const path = gate.predicate.slice('file_exists '.length).trim();
+    const path = resolveFileExistsPredicatePath(gate.predicate);
+    if (path) {
       const passed = existsSync(path);
       results.push(`Gate progress: ${gate.predicate} [${passed ? 'PASS' : 'FAIL'}]`);
     } else if (gate.predicate === 'diff_nonempty') {

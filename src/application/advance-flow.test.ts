@@ -557,6 +557,9 @@ describe('autoAdvanceNodes — foreach', () => {
     // Third: body exhausted, no more items, advance past
     const r3 = await autoAdvanceNodes(r2.state);
     expect(r3.capturedPrompt).toBe('Done');
+    expect(r3.state.variables['x']).toBeUndefined();
+    expect(r3.state.variables['x_index']).toBeUndefined();
+    expect(r3.state.variables['x_length']).toBeUndefined();
   });
 });
 
@@ -2686,6 +2689,54 @@ describe('autoAdvanceNodes — stale-state detection', () => {
     expect(result.warnings).not.toEqual(
       expect.arrayContaining([expect.stringContaining('Flow paused')]),
     );
+  });
+});
+
+describe('autoAdvanceNodes — invariant assertions', () => {
+  it('throws in test env when a post-transition invariant is violated', async () => {
+    let state = createSessionState(
+      's1',
+      createFlowSpec('test', [createPromptNode('p1', 'Please respond')]),
+      'nonce123',
+    );
+    state = {
+      ...state,
+      variables: { ...state.variables, bad_nonce123_key: 'value' },
+    };
+
+    await expect(autoAdvanceNodes(state)).rejects.toThrow(/must not contain the capture nonce/);
+  });
+
+  it('logs in production when a post-transition invariant is violated', async () => {
+    const originalEnv = process.env['NODE_ENV'];
+    process.env['NODE_ENV'] = 'production';
+    const writeSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+
+    try {
+      let state = createSessionState(
+        's1',
+        createFlowSpec('test', [createPromptNode('p1', 'Please respond')]),
+        'nonce123',
+      );
+      state = {
+        ...state,
+        variables: { ...state.variables, bad_nonce123_key: 'value' },
+      };
+
+      const result = await autoAdvanceNodes(state);
+
+      expect(result.capturedPrompt).toBe('Please respond');
+      expect(writeSpy).toHaveBeenCalledWith(
+        expect.stringContaining('SessionState invariant violation'),
+      );
+    } finally {
+      writeSpy.mockRestore();
+      if (originalEnv === undefined) {
+        delete process.env['NODE_ENV'];
+      } else {
+        process.env['NODE_ENV'] = originalEnv;
+      }
+    }
   });
 });
 

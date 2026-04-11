@@ -596,6 +596,36 @@ describe('parseFlow — let/var statements', () => {
     expect(node.source).toEqual({ type: 'literal', value: 'hello' });
   });
 
+  it('parses typed let declarations and stores declaredType metadata', () => {
+    const dsl = `Goal: g\n\nflow:\n  let count: int = 0`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.variableName).toBe('count');
+    expect(node.declaredType).toBe('int');
+    expect(node.source).toEqual({ type: 'literal', value: '0' });
+  });
+
+  it('parses typed var/const declarations with bool and list annotations', () => {
+    const dsl = `Goal: g\n\nflow:\n  var done: bool = false\n  const items: list = []`;
+    const spec = parse(dsl);
+    const done = spec.nodes[0] as LetNode;
+    const items = spec.nodes[1] as LetNode;
+    expect(done.declarationKind).toBe('var');
+    expect(done.declaredType).toBe('bool');
+    expect(items.declarationKind).toBe('const');
+    expect(items.declaredType).toBe('list');
+    expect(items.source).toEqual({ type: 'empty_list' });
+  });
+
+  it('warns on unknown declared types and keeps parsing as an untyped declaration', () => {
+    const dsl = `Goal: g\n\nflow:\n  let status: uuid = "ready"`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.variableName).toBe('status');
+    expect(node.declaredType).toBeUndefined();
+    expect(spec.warnings.some((w) => w.includes('Unknown declared type "uuid"'))).toBe(true);
+  });
+
   it('warns on invalid syntax (missing =)', () => {
     const dsl = `Goal: g\n\nflow:\n  let x\n  prompt: work`;
     const spec = parse(dsl);

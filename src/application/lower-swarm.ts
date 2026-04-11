@@ -90,16 +90,24 @@ function formatSpawnHeader(role: SwarmRoleTemplate): string {
   return header;
 }
 
-function formatReturnTransport(expression: string): string {
+function formatLiteralAssignment(name: string, value: string): string {
+  return `let ${name} = "${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+function formatInterpolatedAssignment(name: string, expression: string): string {
   const trimmed = expression.trim();
-  if (
+  return `let ${name} = ${trimmed}`;
+}
+
+function formatReturnTransport(expression: string): string[] {
+  const trimmed = expression.trim();
+  const assignment =
     (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
     (trimmed.startsWith("'") && trimmed.endsWith("'"))
-  ) {
-    return `send parent ${trimmed}`;
-  }
+      ? `let __swarm_return = ${trimmed}`
+      : formatInterpolatedAssignment('__swarm_return', trimmed);
 
-  return `send parent "${trimmed.replace(/"/g, '\\"')}"`;
+  return [assignment, 'send parent "${__swarm_return}"'];
 }
 
 function collectNestedBlock(
@@ -256,12 +264,18 @@ function parseFlowBlock(
 function lowerAwaitTargets(
   swarmName: string,
   roleNames: readonly string[],
+  roles: ReadonlyMap<string, SwarmRoleTemplate>,
+  warnings: string[],
   baseIndentLevel: number,
 ): string[] {
   const lowered: string[] = [];
   const safeSwarm = sanitizeIdentifier(swarmName);
 
   for (const roleName of roleNames) {
+    if (!roles.has(roleName)) {
+      warnings.push(`swarm ${swarmName} await references unknown role "${roleName}"`);
+      continue;
+    }
     const safeRole = sanitizeIdentifier(roleName);
     lowered.push(indentLine(`await "${roleName}"`, baseIndentLevel));
     lowered.push(
@@ -282,7 +296,7 @@ function lowerSwarmBlock(
   warnings: string[],
 ): string[] {
   const lowered: string[] = [];
-  const startedTopLevelRoles: string[] = [];
+  const startedRoles: string[] = [];
 
   for (const line of bodyLines) {
     const trimmed = stripComment(line).trim();
@@ -302,16 +316,22 @@ function lowerSwarmBlock(
           continue;
         }
 
-        if (indentLevel === 0 && !startedTopLevelRoles.includes(roleName)) {
-          startedTopLevelRoles.push(roleName);
+        if (!startedRoles.includes(roleName)) {
+          startedRoles.push(roleName);
         }
 
         lowered.push(indentLine(formatSpawnHeader(role), indentLevel));
+        lowered.push(indentLine(formatLiteralAssignment('__swarm_id', swarmName), indentLevel + 1));
+        lowered.push(
+          indentLine(formatLiteralAssignment('__swarm_role', role.name), indentLevel + 1),
+        );
         for (const roleLine of role.bodyLines) {
           lowered.push(indentLine(roleLine, indentLevel + 1));
         }
         if (role.returnExpression != null) {
-          lowered.push(indentLine(formatReturnTransport(role.returnExpression), indentLevel + 1));
+          for (const transportLine of formatReturnTransport(role.returnExpression)) {
+            lowered.push(indentLine(transportLine, indentLevel + 1));
+          }
         }
         lowered.push(indentLine('end', indentLevel));
       }
@@ -319,13 +339,13 @@ function lowerSwarmBlock(
     }
 
     if (trimmed.toLowerCase() === 'await all') {
-      lowered.push(...lowerAwaitTargets(swarmName, startedTopLevelRoles, indentLevel));
+      lowered.push(...lowerAwaitTargets(swarmName, startedRoles, roles, warnings, indentLevel));
       continue;
     }
 
     if (trimmed.toLowerCase().startsWith('await ')) {
       const roleNames = parseIdentifierList(trimmed.slice('await '.length));
-      lowered.push(...lowerAwaitTargets(swarmName, roleNames, indentLevel));
+      lowered.push(...lowerAwaitTargets(swarmName, roleNames, roles, warnings, indentLevel));
       continue;
     }
 

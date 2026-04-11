@@ -7,7 +7,7 @@
  * Returns an array of lint warnings.
  */
 
-import type { FlowNode } from './flow-node.js';
+import type { FlowNode, VariableDeclaredType } from './flow-node.js';
 import type { FlowSpec } from './flow-spec.js';
 import { isAskCondition } from './judge-prompt.js';
 
@@ -42,6 +42,9 @@ const STATE_CHANGING_PREDICATES = new Set([
   'lint_pass',
   'lint_fail',
 ]);
+
+const COMPARISON_RE = /^(.+?)\s+(==|!=|>=|<=|>|<)\s+(.+)$/;
+const NUMERIC_COMPARISON_OPERATORS = new Set(['>', '<', '>=', '<=']);
 
 /** Levenshtein distance between two strings. */
 export function levenshtein(a: string, b: string): number {
@@ -134,6 +137,101 @@ function collectDefinedVariables(
     }
   }
   return defined;
+}
+
+function collectDeclaredTypes(nodes: readonly FlowNode[]): Map<string, VariableDeclaredType> {
+  const declaredTypes = new Map<string, VariableDeclaredType>();
+  for (const node of nodes) {
+    switch (node.kind) {
+      case 'let':
+        if (node.declaredType != null && !declaredTypes.has(node.variableName)) {
+          declaredTypes.set(node.variableName, node.declaredType);
+        }
+        break;
+      case 'foreach':
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'spawn':
+      case 'review':
+      case 'foreach_spawn':
+        collectDeclaredTypes(node.body).forEach((type, name) => {
+          if (!declaredTypes.has(name)) {
+            declaredTypes.set(name, type);
+          }
+        });
+        break;
+      case 'if':
+        collectDeclaredTypes(node.thenBranch).forEach((type, name) => {
+          if (!declaredTypes.has(name)) {
+            declaredTypes.set(name, type);
+          }
+        });
+        collectDeclaredTypes(node.elseBranch).forEach((type, name) => {
+          if (!declaredTypes.has(name)) {
+            declaredTypes.set(name, type);
+          }
+        });
+        break;
+      case 'try':
+        collectDeclaredTypes(node.body).forEach((type, name) => {
+          if (!declaredTypes.has(name)) {
+            declaredTypes.set(name, type);
+          }
+        });
+        collectDeclaredTypes(node.catchBody).forEach((type, name) => {
+          if (!declaredTypes.has(name)) {
+            declaredTypes.set(name, type);
+          }
+        });
+        collectDeclaredTypes(node.finallyBody).forEach((type, name) => {
+          if (!declaredTypes.has(name)) {
+            declaredTypes.set(name, type);
+          }
+        });
+        break;
+      case 'race':
+        node.children.forEach((child) =>
+          collectDeclaredTypes(child.body).forEach((type, name) => {
+            if (!declaredTypes.has(name)) {
+              declaredTypes.set(name, type);
+            }
+          }),
+        );
+        break;
+      case 'swarm':
+        collectDeclaredTypes(node.flow).forEach((type, name) => {
+          if (!declaredTypes.has(name)) {
+            declaredTypes.set(name, type);
+          }
+        });
+        node.roles.forEach((role) =>
+          collectDeclaredTypes(role.body).forEach((type, name) => {
+            if (!declaredTypes.has(name)) {
+              declaredTypes.set(name, type);
+            }
+          }),
+        );
+        break;
+      case 'prompt':
+      case 'run':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
+      case 'start':
+      case 'return':
+        break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
+    }
+  }
+  return declaredTypes;
 }
 
 /** Check if a variable name is a known auto-variable (built-in or generated suffix). */
@@ -315,6 +413,7 @@ function lintVariableShadowing(
   nodes: readonly FlowNode[],
   inheritedDefinitions: ReadonlyMap<string, string>,
   warnings: LintWarning[],
+  scopeType = 'top-level',
 ): void {
   const definitionsInScope = new Map<string, string>();
 
@@ -339,7 +438,7 @@ function lintVariableShadowing(
       const prefix = declarationKind === 'foreach' ? 'Foreach loop variable' : 'Variable';
       warnings.push({
         nodeId,
-        message: `${prefix} "${name}" shadows variable from an outer scope (outer definition at node "${outerDefinitionNodeId}")`,
+        message: `${prefix} "${name}" shadows variable from an outer scope in ${scopeType} (outer definition at node "${outerDefinitionNodeId}")`,
       });
     }
   };
@@ -358,40 +457,48 @@ function lintVariableShadowing(
         warnIfShadowed(node.variableName, node.id, 'foreach', true);
         const foreachScope = inheritedPlusScope();
         foreachScope.set(node.variableName, node.id);
-        lintVariableShadowing(node.body, foreachScope, warnings);
+        lintVariableShadowing(node.body, foreachScope, warnings, 'foreach scope');
         break;
       }
       case 'foreach_spawn': {
         warnIfShadowed(node.variableName, node.id, 'foreach', true);
         const foreachScope = inheritedPlusScope();
         foreachScope.set(node.variableName, node.id);
-        lintVariableShadowing(node.body, foreachScope, warnings);
+        lintVariableShadowing(node.body, foreachScope, warnings, 'foreach-spawn scope');
         break;
       }
       case 'while':
+        lintVariableShadowing(node.body, inheritedPlusScope(), warnings, 'while scope');
+        break;
       case 'until':
+        lintVariableShadowing(node.body, inheritedPlusScope(), warnings, 'until scope');
+        break;
       case 'retry':
+        lintVariableShadowing(node.body, inheritedPlusScope(), warnings, 'retry scope');
+        break;
       case 'spawn':
+        lintVariableShadowing(node.body, inheritedPlusScope(), warnings, 'spawn scope');
+        break;
       case 'review':
-        lintVariableShadowing(node.body, inheritedPlusScope(), warnings);
+        lintVariableShadowing(node.body, inheritedPlusScope(), warnings, 'review scope');
         break;
       case 'if': {
         const scope = inheritedPlusScope();
-        lintVariableShadowing(node.thenBranch, scope, warnings);
-        lintVariableShadowing(node.elseBranch, scope, warnings);
+        lintVariableShadowing(node.thenBranch, scope, warnings, 'if branch');
+        lintVariableShadowing(node.elseBranch, scope, warnings, 'else branch');
         break;
       }
       case 'try': {
         const scope = inheritedPlusScope();
-        lintVariableShadowing(node.body, scope, warnings);
-        lintVariableShadowing(node.catchBody, scope, warnings);
-        lintVariableShadowing(node.finallyBody, scope, warnings);
+        lintVariableShadowing(node.body, scope, warnings, 'try body');
+        lintVariableShadowing(node.catchBody, scope, warnings, 'catch body');
+        lintVariableShadowing(node.finallyBody, scope, warnings, 'finally body');
         break;
       }
       case 'race': {
         const scope = inheritedPlusScope();
         for (const child of node.children) {
-          lintVariableShadowing(child.body, scope, warnings);
+          lintVariableShadowing(child.body, scope, warnings, `race child "${child.name}"`);
         }
         break;
       }
@@ -407,9 +514,14 @@ function lintVariableShadowing(
       case 'return':
         break;
       case 'swarm':
-        lintVariableShadowing(node.flow, inheritedPlusScope(), warnings);
+        lintVariableShadowing(node.flow, inheritedPlusScope(), warnings, 'swarm flow');
         node.roles.forEach((role) =>
-          lintVariableShadowing(role.body, inheritedPlusScope(), warnings),
+          lintVariableShadowing(
+            role.body,
+            inheritedPlusScope(),
+            warnings,
+            `swarm role "${role.name}"`,
+          ),
         );
         break;
       default: {
@@ -491,6 +603,226 @@ function referencesStateChangingPredicate(condition: string): boolean {
     if (condition.includes(pred)) return true;
   }
   return false;
+}
+
+function stripOuterParens(condition: string): string {
+  const trimmed = condition.trim();
+  if (!trimmed.startsWith('(') || !trimmed.endsWith(')')) {
+    return trimmed;
+  }
+
+  let depth = 0;
+  for (let i = 0; i < trimmed.length; i += 1) {
+    const ch = trimmed[i];
+    if (ch === '(') depth += 1;
+    else if (ch === ')') {
+      depth -= 1;
+      if (depth === 0 && i < trimmed.length - 1) {
+        return trimmed;
+      }
+    }
+  }
+
+  return trimmed.slice(1, -1).trim();
+}
+
+function findRightmostLogicalOperator(
+  condition: string,
+): { readonly index: number; readonly length: number } | null {
+  const depths: number[] = new Array(condition.length).fill(0);
+  let depth = 0;
+  for (let i = 0; i < condition.length; i += 1) {
+    depths[i] = depth;
+    if (condition[i] === '(') depth += 1;
+    else if (condition[i] === ')') depth -= 1;
+  }
+
+  let orMatch: { index: number; length: number } | null = null;
+  let andMatch: { index: number; length: number } | null = null;
+  const re = /\s+(and|or)\s+/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(condition)) !== null) {
+    if ((depths[match.index] ?? 0) !== 0) continue;
+    if (match[1]?.toLowerCase() === 'or') {
+      orMatch = { index: match.index, length: match[0].length };
+    } else {
+      andMatch = { index: match.index, length: match[0].length };
+    }
+  }
+
+  return orMatch ?? andMatch;
+}
+
+function resolveDeclaredOperand(
+  token: string,
+  declaredTypes: ReadonlyMap<string, VariableDeclaredType>,
+): { readonly name: string; readonly declaredType: VariableDeclaredType } | null {
+  const trimmed = token.trim();
+  const directName = /^\w+$/.exec(trimmed)?.[0];
+  if (directName != null) {
+    const declaredType = declaredTypes.get(directName);
+    return declaredType != null ? { name: directName, declaredType } : null;
+  }
+
+  const interpolatedName = /^\$\{([\w.]+)\}$/.exec(trimmed)?.[1];
+  if (interpolatedName == null) {
+    return null;
+  }
+  const declaredType = declaredTypes.get(interpolatedName);
+  return declaredType != null ? { name: interpolatedName, declaredType } : null;
+}
+
+function numericComparisonTypeWarning(
+  operand: { readonly name: string; readonly declaredType: VariableDeclaredType },
+  expression: string,
+): string | null {
+  switch (operand.declaredType) {
+    case 'string':
+      return `Numeric comparison "${expression}" uses string-typed variable "${operand.name}"`;
+    case 'bool':
+      return `Numeric comparison "${expression}" uses bool-typed variable "${operand.name}"`;
+    case 'list':
+      return `Numeric comparison "${expression}" uses list-typed variable "${operand.name}"`;
+    case 'int':
+      return null;
+    default: {
+      const _exhaustive: never = operand.declaredType;
+      return _exhaustive;
+    }
+  }
+}
+
+function lintTypedComparisonExpression(
+  expression: string,
+  nodeId: string,
+  declaredTypes: ReadonlyMap<string, VariableDeclaredType>,
+  warnings: LintWarning[],
+): void {
+  const trimmed = stripOuterParens(expression);
+  if (!trimmed) return;
+
+  const logicalOperator = findRightmostLogicalOperator(trimmed);
+  if (logicalOperator != null) {
+    lintTypedComparisonExpression(
+      trimmed.slice(0, logicalOperator.index),
+      nodeId,
+      declaredTypes,
+      warnings,
+    );
+    lintTypedComparisonExpression(
+      trimmed.slice(logicalOperator.index + logicalOperator.length),
+      nodeId,
+      declaredTypes,
+      warnings,
+    );
+    return;
+  }
+
+  if (trimmed.startsWith('not ')) {
+    lintTypedComparisonExpression(trimmed.slice(4), nodeId, declaredTypes, warnings);
+    return;
+  }
+
+  const comparisonMatch = COMPARISON_RE.exec(trimmed);
+  if (!comparisonMatch?.[1] || !comparisonMatch[2] || !comparisonMatch[3]) {
+    return;
+  }
+
+  if (!NUMERIC_COMPARISON_OPERATORS.has(comparisonMatch[2])) {
+    return;
+  }
+
+  const operands = [
+    resolveDeclaredOperand(comparisonMatch[1], declaredTypes),
+    resolveDeclaredOperand(comparisonMatch[3], declaredTypes),
+  ].filter((operand): operand is NonNullable<typeof operand> => operand != null);
+
+  for (const operand of operands) {
+    const message = numericComparisonTypeWarning(operand, trimmed);
+    if (message != null) {
+      warnings.push({ nodeId, message });
+    }
+  }
+}
+
+function lintTypedComparisonsInNodes(
+  nodes: readonly FlowNode[],
+  declaredTypes: ReadonlyMap<string, VariableDeclaredType>,
+  warnings: LintWarning[],
+): void {
+  for (const node of nodes) {
+    switch (node.kind) {
+      case 'while':
+      case 'until':
+        if (!isAskCondition(node.condition)) {
+          lintTypedComparisonExpression(node.condition, node.id, declaredTypes, warnings);
+        }
+        lintTypedComparisonsInNodes(node.body, declaredTypes, warnings);
+        break;
+      case 'if':
+        if (!isAskCondition(node.condition)) {
+          lintTypedComparisonExpression(node.condition, node.id, declaredTypes, warnings);
+        }
+        lintTypedComparisonsInNodes(node.thenBranch, declaredTypes, warnings);
+        lintTypedComparisonsInNodes(node.elseBranch, declaredTypes, warnings);
+        break;
+      case 'spawn':
+        if (node.condition != null) {
+          lintTypedComparisonExpression(node.condition, node.id, declaredTypes, warnings);
+        }
+        lintTypedComparisonsInNodes(node.body, declaredTypes, warnings);
+        break;
+      case 'retry':
+      case 'foreach':
+      case 'review':
+      case 'foreach_spawn':
+        lintTypedComparisonsInNodes(node.body, declaredTypes, warnings);
+        break;
+      case 'try':
+        lintTypedComparisonsInNodes(node.body, declaredTypes, warnings);
+        lintTypedComparisonsInNodes(node.catchBody, declaredTypes, warnings);
+        lintTypedComparisonsInNodes(node.finallyBody, declaredTypes, warnings);
+        break;
+      case 'race':
+        node.children.forEach((child) =>
+          lintTypedComparisonsInNodes(child.body, declaredTypes, warnings),
+        );
+        break;
+      case 'swarm':
+        lintTypedComparisonsInNodes(node.flow, declaredTypes, warnings);
+        node.roles.forEach((role) =>
+          lintTypedComparisonsInNodes(role.body, declaredTypes, warnings),
+        );
+        break;
+      case 'prompt':
+      case 'run':
+      case 'let':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
+      case 'start':
+      case 'return':
+        break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
+    }
+  }
+}
+
+function lintTypedComparisonsInGates(
+  spec: FlowSpec,
+  declaredTypes: ReadonlyMap<string, VariableDeclaredType>,
+  warnings: LintWarning[],
+): void {
+  for (const gate of spec.completionGates) {
+    lintTypedComparisonExpression(gate.predicate, '', declaredTypes, warnings);
+  }
 }
 
 function lintNodes(nodes: readonly FlowNode[], insideLoop: boolean, warnings: LintWarning[]): void {
@@ -1029,7 +1361,10 @@ export function lintFlow(spec: FlowSpec, _importRegistry?: ImportRegistry): read
 
   // H-DX-001: Check for unresolved variable references
   const definedVars = collectDefinedVariables(spec.nodes, spec.memoryKeys ?? []);
+  const declaredTypes = collectDeclaredTypes(spec.nodes);
   lintUnresolvedVars(spec.nodes, definedVars, warnings);
+  lintTypedComparisonsInNodes(spec.nodes, declaredTypes, warnings);
+  lintTypedComparisonsInGates(spec, declaredTypes, warnings);
   lintSwarmSemantics(spec.nodes, warnings);
   lintEvaluationDeclarations(spec, warnings);
   lintVariableShadowing(spec.nodes, new Map(), warnings);

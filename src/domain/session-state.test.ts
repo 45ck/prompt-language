@@ -3,6 +3,7 @@ import {
   createSessionState,
   advanceNode,
   updateVariable,
+  removeVariable,
   updateNodeProgress,
   updateGateResult,
   updateGateDiagnostic,
@@ -39,6 +40,7 @@ describe('createSessionState', () => {
     expect(state.gateResults).toEqual({});
     expect(state.status).toBe('active');
     expect(state.warnings).toEqual(['warn1']);
+    expect(state.transitionSeq).toBe(0);
   });
 
   // H#56: Version field
@@ -132,6 +134,81 @@ describe('updateVariable', () => {
     expect(state.warnings).not.toContain(
       "Const variable 'answer' was reassigned; keeping latest value for backward compatibility.",
     );
+  });
+
+  it('does not warn when an int declaration receives an integer-shaped string', () => {
+    const spec = createFlowSpec('goal', [
+      createLetNode('l1', 'count', { type: 'literal', value: '0' }, false, undefined, 'let', 'int'),
+    ]);
+    const state = updateVariable(createSessionState('s1', spec), 'count', '42');
+
+    expect(state.warnings).not.toContain(
+      expect.stringContaining("Variable 'count' is declared as int"),
+    );
+  });
+
+  it('adds a soft warning when an int declaration receives a non-integer value', () => {
+    const spec = createFlowSpec('goal', [
+      createLetNode('l1', 'count', { type: 'literal', value: '0' }, false, undefined, 'let', 'int'),
+    ]);
+    const state = updateVariable(createSessionState('s1', spec), 'count', 'pending');
+
+    expect(state.variables['count']).toBe('pending');
+    expect(state.warnings).toContain(
+      `Variable 'count' is declared as int but received string value "pending"; keeping assigned value for backward compatibility.`,
+    );
+  });
+
+  it('accepts bool and list compatibility shapes used by the current runtime', () => {
+    const spec = createFlowSpec('goal', [
+      createLetNode(
+        'l1',
+        'done',
+        { type: 'literal', value: 'false' },
+        false,
+        undefined,
+        'let',
+        'bool',
+      ),
+      createLetNode('l2', 'items', { type: 'empty_list' }, false, undefined, 'let', 'list'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = updateVariable(state, 'done', 'true');
+    state = updateVariable(state, 'items', '["a","b"]');
+
+    expect(state.warnings).not.toContain(
+      expect.stringContaining("Variable 'done' is declared as bool"),
+    );
+    expect(state.warnings).not.toContain(
+      expect.stringContaining("Variable 'items' is declared as list"),
+    );
+  });
+
+  it('warns when a list declaration receives a scalar value', () => {
+    const spec = createFlowSpec('goal', [
+      createLetNode('l1', 'items', { type: 'empty_list' }, false, undefined, 'let', 'list'),
+    ]);
+    const state = updateVariable(createSessionState('s1', spec), 'items', 'not-a-list');
+
+    expect(state.warnings).toContain(
+      `Variable 'items' is declared as list but received string value "not-a-list"; keeping assigned value for backward compatibility.`,
+    );
+  });
+});
+
+describe('removeVariable', () => {
+  it('removes an existing variable', () => {
+    let state = makeState();
+    state = updateVariable(state, 'count', 3);
+
+    const next = removeVariable(state, 'count');
+
+    expect(next.variables['count']).toBeUndefined();
+  });
+
+  it('returns the same state when the variable is missing', () => {
+    const state = makeState();
+    expect(removeVariable(state, 'missing')).toBe(state);
   });
 });
 

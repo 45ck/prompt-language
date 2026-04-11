@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { parseFlow } from './parse-flow.js';
 import { expandSwarmDocument, lowerSwarmFlowLines } from './lower-swarm.js';
+import { renderNodesToDsl } from './render-node-to-dsl.js';
 
 describe('lowerSwarmFlowLines', () => {
   it('lowers swarm roles into spawn and receive primitives', () => {
@@ -28,12 +29,18 @@ describe('lowerSwarmFlowLines', () => {
     expect(lowered.warnings).toEqual([]);
     expect(lowered.lines).toEqual([
       '  spawn "frontend" model "sonnet" with vars summary, confidence',
+      '    let __swarm_id = "checkout_fix"',
+      '    let __swarm_role = "frontend"',
       '    prompt: Fix the UI regression.',
-      '    send parent "${summary}"',
+      '    let __swarm_return = ${summary}',
+      '    send parent "${__swarm_return}"',
       '  end',
       '  spawn "backend" in "packages/api"',
+      '    let __swarm_id = "checkout_fix"',
+      '    let __swarm_role = "backend"',
       '    prompt: Fix the API regression.',
-      '    send parent "api done"',
+      '    let __swarm_return = "api done"',
+      '    send parent "${__swarm_return}"',
       '  end',
       '  await "frontend"',
       '  receive __checkout_fix_frontend_returned from "frontend" timeout 30',
@@ -100,6 +107,36 @@ describe('lowerSwarmFlowLines', () => {
     expect(lowered.lines).toContain('  await "qa"');
   });
 
+  it('await all preserves first-start order and does not duplicate repeated starts', () => {
+    const lowered = lowerSwarmFlowLines([
+      '  swarm triage',
+      '    role worker',
+      '      prompt: Handle the task.',
+      '    end',
+      '    role reviewer',
+      '      prompt: Review the task.',
+      '    end',
+      '    flow:',
+      '      start worker, reviewer',
+      '      start worker',
+      '      await all',
+      '    end',
+      '  end',
+    ]);
+
+    expect(lowered.warnings).toEqual([]);
+    expect(lowered.lines.filter((line) => line.trimStart().startsWith('await "'))).toEqual([
+      '  await "worker"',
+      '  await "reviewer"',
+    ]);
+    expect(
+      lowered.lines.filter((line) => line.trimStart().startsWith('receive __triage_')),
+    ).toEqual([
+      '  receive __triage_worker_returned from "worker" timeout 30',
+      '  receive __triage_reviewer_returned from "reviewer" timeout 30',
+    ]);
+  });
+
   it('warns when a swarm is missing flow and closing end markers', () => {
     const lowered = lowerSwarmFlowLines([
       '  swarm broken',
@@ -162,6 +199,46 @@ describe('lowerSwarmFlowLines', () => {
     ]);
   });
 
+  it('includes nested starts in deterministic await all ordering', () => {
+    const lowered = lowerSwarmFlowLines([
+      '  swarm checkout_fix',
+      '    role frontend',
+      '      prompt: Fix the UI regression.',
+      '    end',
+      '    role backend',
+      '      prompt: Fix the API regression.',
+      '    end',
+      '    flow:',
+      '      if ui_changed',
+      '        start frontend',
+      '      end',
+      '      start backend',
+      '      await all',
+      '    end',
+      '  end',
+    ]);
+
+    expect(lowered.warnings).toEqual([]);
+    expect(lowered.lines).toEqual([
+      '  if ui_changed',
+      '    spawn "frontend"',
+      '      let __swarm_id = "checkout_fix"',
+      '      let __swarm_role = "frontend"',
+      '      prompt: Fix the UI regression.',
+      '    end',
+      '  end',
+      '  spawn "backend"',
+      '    let __swarm_id = "checkout_fix"',
+      '    let __swarm_role = "backend"',
+      '    prompt: Fix the API regression.',
+      '  end',
+      '  await "frontend"',
+      '  receive __checkout_fix_frontend_returned from "frontend" timeout 30',
+      '  await "backend"',
+      '  receive __checkout_fix_backend_returned from "backend" timeout 30',
+    ]);
+  });
+
   it('warns on malformed role headers and missing lowering flow bodies', () => {
     const lowered = lowerSwarmFlowLines([
       '  swarm checkout_fix',
@@ -196,8 +273,29 @@ describe('lowerSwarmFlowLines', () => {
     ]);
     expect(lowered.lines).toEqual([
       '  spawn "frontend"',
+      '    let __swarm_id = "checkout_fix"',
+      '    let __swarm_role = "frontend"',
       '    prompt: Fix the UI regression.',
       '  end',
+    ]);
+  });
+
+  it('warns when await references an undeclared role', () => {
+    const lowered = lowerSwarmFlowLines([
+      '  swarm checkout_fix',
+      '    role frontend',
+      '      prompt: Fix the UI regression.',
+      '    end',
+      '    flow:',
+      '      await backend',
+      '    end',
+      '  end',
+    ]);
+
+    expect(lowered.changed).toBe(true);
+    expect(lowered.lines).toEqual([]);
+    expect(lowered.warnings).toEqual([
+      'swarm checkout_fix await references unknown role "backend"',
     ]);
   });
 });
@@ -243,7 +341,13 @@ describe('swarm lowering integration', () => {
     }
 
     expect(firstSpawn.name).toBe('backend');
-    expect(firstSpawn.body.at(-1)?.kind).toBe('send');
+    expect(firstSpawn.body.map((node) => node.kind)).toEqual([
+      'let',
+      'let',
+      'prompt',
+      'let',
+      'send',
+    ]);
   });
 
   it('expands the authored document into a visible lowered flow preview', () => {
@@ -251,9 +355,44 @@ describe('swarm lowering integration', () => {
 
     expect(expanded.changed).toBe(true);
     expect(expanded.loweredFlowText).toContain('spawn "backend"');
+    expect(expanded.loweredFlowText).toContain('let __swarm_id = "checkout_fix"');
+    expect(expanded.loweredFlowText).toContain('let __swarm_return = ${summary}');
     expect(expanded.loweredFlowText).toContain(
       'receive __checkout_fix_frontend_returned from "frontend" timeout 30',
     );
+  });
+
+  it('matches the explicit hand-written runtime flow for equivalent orchestration', () => {
+    const authored = parseFlow(swarmDsl);
+    const explicit = parseFlow(
+      [
+        'Goal: swarm test',
+        '',
+        'flow:',
+        '  spawn "backend"',
+        '    let __swarm_id = "checkout_fix"',
+        '    let __swarm_role = "backend"',
+        '    prompt: Fix the API regression.',
+        '    let __swarm_return = "done"',
+        '    send parent "${__swarm_return}"',
+        '  end',
+        '  spawn "frontend" model "sonnet"',
+        '    let __swarm_id = "checkout_fix"',
+        '    let __swarm_role = "frontend"',
+        '    prompt: Fix the UI regression.',
+        '    let __swarm_return = ${summary}',
+        '    send parent "${__swarm_return}"',
+        '  end',
+        '  await "backend"',
+        '  receive __checkout_fix_backend_returned from "backend" timeout 30',
+        '  await "frontend"',
+        '  receive __checkout_fix_frontend_returned from "frontend" timeout 30',
+      ].join('\n'),
+    );
+
+    expect(authored.warnings).toEqual([]);
+    expect(explicit.warnings).toEqual([]);
+    expect(renderNodesToDsl(authored.nodes, 0)).toEqual(renderNodesToDsl(explicit.nodes, 0));
   });
 
   it('returns the original document unchanged when no flow block exists', () => {

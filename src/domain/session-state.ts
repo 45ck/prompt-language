@@ -6,7 +6,7 @@
  */
 
 import { flowSpecHash, type FlowSpec } from './flow-spec.js';
-import type { FlowNode } from './flow-node.js';
+import type { FlowNode, LetNode, VariableDeclaredType } from './flow-node.js';
 import type { VariableValue, VariableStore } from './variable-value.js';
 
 export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
@@ -70,6 +70,7 @@ export interface SessionState {
   readonly raceChildren: Readonly<Record<string, readonly string[]>>;
   readonly flowSpecHash?: string | undefined;
   readonly failureReason?: string | undefined;
+  readonly transitionSeq?: number | undefined;
   // H-SEC-004: Per-session nonce for capture tag anti-spoofing
   readonly captureNonce: string;
   // H-SEC-010: Consecutive gate failure count for rate limiting
@@ -107,6 +108,7 @@ export function createSessionState(
     spawnedChildren: {},
     raceChildren: {},
     flowSpecHash: flowSpecHash(flowSpec),
+    transitionSeq: 0,
     captureNonce: captureNonce ?? generateCaptureNonce(),
   };
 }
@@ -115,12 +117,12 @@ export function advanceNode(state: SessionState, newPath: readonly number[]): Se
   return { ...state, currentNodePath: newPath };
 }
 
-function containsConstDeclaration(nodes: readonly FlowNode[], name: string): boolean {
+function findVariableDeclaration(nodes: readonly FlowNode[], name: string): LetNode | undefined {
   for (const node of nodes) {
     switch (node.kind) {
       case 'let':
-        if (node.declarationKind === 'const' && node.variableName === name) {
-          return true;
+        if (node.variableName === name) {
+          return node;
         }
         break;
       case 'while':
@@ -130,38 +132,54 @@ function containsConstDeclaration(nodes: readonly FlowNode[], name: string): boo
       case 'spawn':
       case 'review':
       case 'foreach_spawn':
-        if (containsConstDeclaration(node.body, name)) {
-          return true;
+        {
+          const found = findVariableDeclaration(node.body, name);
+          if (found != null) {
+            return found;
+          }
         }
         break;
       case 'if':
-        if (
-          containsConstDeclaration(node.thenBranch, name) ||
-          containsConstDeclaration(node.elseBranch, name)
-        ) {
-          return true;
+        {
+          const found =
+            findVariableDeclaration(node.thenBranch, name) ??
+            findVariableDeclaration(node.elseBranch, name);
+          if (found != null) {
+            return found;
+          }
         }
         break;
       case 'try':
-        if (
-          containsConstDeclaration(node.body, name) ||
-          containsConstDeclaration(node.catchBody, name) ||
-          containsConstDeclaration(node.finallyBody, name)
-        ) {
-          return true;
+        {
+          const found =
+            findVariableDeclaration(node.body, name) ??
+            findVariableDeclaration(node.catchBody, name) ??
+            findVariableDeclaration(node.finallyBody, name);
+          if (found != null) {
+            return found;
+          }
         }
         break;
       case 'race':
-        if (node.children.some((child) => containsConstDeclaration(child.body, name))) {
-          return true;
+        {
+          const found = node.children
+            .map((child) => findVariableDeclaration(child.body, name))
+            .find((candidate) => candidate != null);
+          if (found != null) {
+            return found;
+          }
         }
         break;
       case 'swarm':
-        if (
-          containsConstDeclaration(node.flow, name) ||
-          node.roles.some((role) => containsConstDeclaration(role.body, name))
-        ) {
-          return true;
+        {
+          const found =
+            findVariableDeclaration(node.flow, name) ??
+            node.roles
+              .map((role) => findVariableDeclaration(role.body, name))
+              .find((candidate) => candidate != null);
+          if (found != null) {
+            return found;
+          }
         }
         break;
       case 'prompt':
@@ -182,7 +200,41 @@ function containsConstDeclaration(nodes: readonly FlowNode[], name: string): boo
       }
     }
   }
-  return false;
+  return undefined;
+}
+
+function matchesDeclaredType(value: VariableValue, declaredType: VariableDeclaredType): boolean {
+  switch (declaredType) {
+    case 'string':
+      return typeof value === 'string';
+    case 'int':
+      return (
+        (typeof value === 'number' && Number.isInteger(value)) ||
+        (typeof value === 'string' && /^-?\d+$/.test(value.trim()))
+      );
+    case 'bool':
+      return (
+        typeof value === 'boolean' ||
+        (typeof value === 'string' && /^(true|false)$/i.test(value.trim()))
+      );
+    case 'list':
+      if (Array.isArray(value)) return true;
+      if (typeof value !== 'string') return false;
+      try {
+        return Array.isArray(JSON.parse(value));
+      } catch {
+        return false;
+      }
+    default: {
+      const _exhaustive: never = declaredType;
+      return _exhaustive;
+    }
+  }
+}
+
+function describeValueShape(value: VariableValue): string {
+  if (Array.isArray(value)) return 'list';
+  return typeof value;
 }
 
 export function updateVariable(
@@ -190,14 +242,22 @@ export function updateVariable(
   name: string,
   value: VariableValue,
 ): SessionState {
-  const nextState: SessionState = {
+  const declaration = findVariableDeclaration(state.flowSpec.nodes, name);
+  let nextState: SessionState = {
     ...state,
     variables: { ...state.variables, [name]: value },
   };
 
+  if (declaration?.declaredType && !matchesDeclaredType(value, declaration.declaredType)) {
+    nextState = addWarning(
+      nextState,
+      `Variable '${name}' is declared as ${declaration.declaredType} but received ${describeValueShape(value)} value ${JSON.stringify(value)}; keeping assigned value for backward compatibility.`,
+    );
+  }
+
   if (
     Object.prototype.hasOwnProperty.call(state.variables, name) &&
-    containsConstDeclaration(state.flowSpec.nodes, name)
+    declaration?.declarationKind === 'const'
   ) {
     return addWarning(
       nextState,
@@ -206,6 +266,16 @@ export function updateVariable(
   }
 
   return nextState;
+}
+
+export function removeVariable(state: SessionState, name: string): SessionState {
+  if (!Object.prototype.hasOwnProperty.call(state.variables, name)) {
+    return state;
+  }
+
+  const nextVariables = { ...state.variables };
+  delete nextVariables[name];
+  return { ...state, variables: nextVariables };
 }
 
 export function updateNodeProgress(

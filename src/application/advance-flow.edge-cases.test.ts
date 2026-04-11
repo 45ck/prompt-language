@@ -343,8 +343,10 @@ describe('advance-flow edge cases', () => {
       'after beta',
       'after long nested flow',
     ]);
-    expect(state.variables['file']).toBe('beta');
-    expect(state.variables['phase']).toBe('cleanup');
+    expect(state.variables['file']).toBeUndefined();
+    expect(state.variables['phase']).toBeUndefined();
+    expect(state.variables['file_index']).toBeUndefined();
+    expect(state.variables['phase_index']).toBeUndefined();
     expect(state.nodeProgress['files']).toMatchObject({
       iteration: 2,
       maxIterations: 2,

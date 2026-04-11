@@ -31,6 +31,7 @@ export type FlowNodeKind =
   | 'return';
 
 export type VariableDeclarationKind = 'let' | 'var' | 'const';
+export type VariableDeclaredType = 'int' | 'string' | 'bool' | 'list';
 
 export interface FlowNodeSource {
   readonly line: number;
@@ -131,6 +132,7 @@ export interface LetNode extends BaseNode {
   readonly kind: 'let';
   readonly declarationKind: VariableDeclarationKind;
   readonly variableName: string;
+  readonly declaredType?: VariableDeclaredType | undefined;
   readonly source: LetSource;
   readonly append: boolean;
   readonly transform?: string;
@@ -435,10 +437,19 @@ export function createLetNode(
   append = false,
   transform?: string,
   declarationKind: VariableDeclarationKind = 'let',
+  declaredType?: VariableDeclaredType,
 ): LetNode {
-  return transform != null
-    ? { kind: 'let', id, declarationKind, variableName, source, append, transform }
-    : { kind: 'let', id, declarationKind, variableName, source, append };
+  const baseNode = {
+    kind: 'let' as const,
+    id,
+    declarationKind,
+    variableName,
+    source,
+    append,
+    ...(declaredType != null ? { declaredType } : {}),
+  };
+
+  return transform != null ? { ...baseNode, transform } : baseNode;
 }
 
 export function createBreakNode(id: string, label?: string): BreakNode {

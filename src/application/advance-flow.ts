@@ -7,6 +7,7 @@
 import {
   advanceNode,
   updateVariable,
+  removeVariable,
   updateNodeProgress,
   updateSpawnedChild,
   updateRaceChildren,
@@ -16,6 +17,7 @@ import {
   markFailed,
 } from '../domain/session-state.js';
 import type { SessionState } from '../domain/session-state.js';
+import { StateInvariantError, assertStateInvariants } from '../domain/assert-invariants.js';
 import type {
   FlowNode,
   LetNode,
@@ -238,6 +240,30 @@ function withPositionContext(
 ): string {
   const position = describeFlowPosition(state, path);
   return position == null ? message : `${message} (${position})`;
+}
+
+function finalizeTransitionState(before: SessionState, after: SessionState): SessionState {
+  if (before === after) {
+    return after;
+  }
+
+  const transitioned: SessionState = {
+    ...after,
+    transitionSeq: Math.max(after.transitionSeq ?? before.transitionSeq ?? -1, -1) + 1,
+  };
+
+  try {
+    assertStateInvariants(transitioned);
+  } catch (error) {
+    if (process.env['NODE_ENV'] === 'test') {
+      throw error;
+    }
+
+    const details = error instanceof StateInvariantError ? error.message : String(error);
+    process.stderr.write(`[prompt-language] ${details}\n`);
+  }
+
+  return transitioned;
 }
 
 export function advancePath(path: readonly number[]): readonly number[] {
@@ -761,6 +787,10 @@ async function handleBodyExhaustion(
         startedAt: progress?.startedAt,
         completedAt: Date.now(),
       });
+      current = removeVariable(current, parentNode.variableName);
+      current = removeVariable(current, `${parentNode.variableName}_index`);
+      current = removeVariable(current, `${parentNode.variableName}_length`);
+      current = removeVariable(current, `_foreach_${parentNode.id}_list`);
       return advanceFromPath(current, parentPath);
     }
 
@@ -2142,16 +2172,20 @@ export async function autoAdvanceNodes(
       const exhaustionResult = await handleBodyExhaustion(current, commandRunner, captureReader);
       if (!exhaustionResult) break;
       if ('kind' in exhaustionResult) {
-        if (shouldContinueAutoAdvance(exhaustionResult)) {
-          pendingDiagnostics.push(...(exhaustionResult.diagnostics ?? []));
-          pendingOutcomes.push(...(exhaustionResult.outcomes ?? []));
-          current = exhaustionResult.state;
+        const finalizedResult: AutoAdvanceResult = {
+          ...exhaustionResult,
+          state: finalizeTransitionState(current, exhaustionResult.state),
+        };
+        if (shouldContinueAutoAdvance(finalizedResult)) {
+          pendingDiagnostics.push(...(finalizedResult.diagnostics ?? []));
+          pendingOutcomes.push(...(finalizedResult.outcomes ?? []));
+          current = finalizedResult.state;
           advances += 1;
           continue;
         }
-        return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, exhaustionResult);
+        return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, finalizedResult);
       }
-      current = exhaustionResult;
+      current = finalizeTransitionState(current, exhaustionResult);
       if (current.status !== 'active') {
         return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
           kind: 'advance',
@@ -2182,10 +2216,14 @@ export async function autoAdvanceNodes(
       auditLogger,
     );
     if ('capturedPrompt' in result) {
-      if (shouldContinueAutoAdvance(result)) {
-        pendingDiagnostics.push(...(result.diagnostics ?? []));
-        pendingOutcomes.push(...(result.outcomes ?? []));
-        current = result.state;
+      const finalizedResult: AutoAdvanceResult = {
+        ...result,
+        state: finalizeTransitionState(current, result.state),
+      };
+      if (shouldContinueAutoAdvance(finalizedResult)) {
+        pendingDiagnostics.push(...(finalizedResult.diagnostics ?? []));
+        pendingOutcomes.push(...(finalizedResult.outcomes ?? []));
+        current = finalizedResult.state;
         advances += 1;
         if (
           current.currentNodePath.length === prevPath.length &&
@@ -2195,9 +2233,9 @@ export async function autoAdvanceNodes(
         }
         continue;
       }
-      return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, result);
+      return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, finalizedResult);
     }
-    current = result.state;
+    current = finalizeTransitionState(current, result.state);
     if (current.status !== 'active') {
       return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
         kind: 'advance',
@@ -2217,12 +2255,12 @@ export async function autoAdvanceNodes(
   }
 
   if (advances >= MAX_ADVANCES) {
-    current = {
+    const maxAdvanceState = {
       ...current,
       warnings: [...current.warnings, 'Flow paused — will continue on next interaction.'],
     };
     // H-REL-007: Try to complete the flow even after MAX_ADVANCES
-    current = maybeCompleteFlow(current);
+    current = finalizeTransitionState(current, maybeCompleteFlow(maxAdvanceState));
     // If current node is a prompt, include it so the agent can act on it
     const currentNode = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
     if (currentNode?.kind === 'prompt') {

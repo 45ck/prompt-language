@@ -41,10 +41,12 @@ export function buildValidateFlowPreview(
 ): ValidateFlowPreview {
   const cwd = options.cwd ?? process.cwd();
   const expanded = expandSwarmDocument(flowText);
-  const spec = parseFlow(flowText, { basePath: cwd });
+  const parseSource = expanded.changed ? expanded.text : flowText;
+  const spec = parseFlow(parseSource, { basePath: cwd });
   const lintWarnings = lintFlow(spec);
   const state = createSessionState('validate-preview', spec, 'validate-preview-nonce');
   const warnings = [
+    ...expanded.warnings,
     ...state.warnings,
     ...lintWarnings.map((warning) => `${warning.nodeId}: ${warning.message}`),
   ];
@@ -89,7 +91,9 @@ export function buildValidateFlowPreview(
       `Complexity: ${complexity}/5`,
       `Lint warnings: ${lintWarnings.length}`,
       ...preflightSection,
-      ...(expanded.loweredFlowText != null ? ['', 'Expanded flow:', expanded.loweredFlowText] : []),
+      ...(expanded.loweredFlowText != null
+        ? ['', 'Lowered swarm flow:', expanded.loweredFlowText, '', 'Rendered runtime flow:']
+        : []),
       '',
       rendered,
     ].join('\n'),

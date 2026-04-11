@@ -490,6 +490,88 @@ describe('H-DX-001: unresolved variable warnings', () => {
     );
     expect(lintFlow(spec)).toEqual([]);
   });
+
+  it('warns on numeric comparison against a string-typed variable', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode(
+          'l1',
+          'status',
+          { type: 'literal', value: 'ready' },
+          false,
+          undefined,
+          'let',
+          'string',
+        ),
+        createIfNode('i1', 'status > 0', [createPromptNode('p1', 'bad compare')], []),
+      ],
+      [],
+    );
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'i1',
+      message: 'Numeric comparison "status > 0" uses string-typed variable "status"',
+    });
+  });
+
+  it('warns on numeric comparison against a list-typed variable', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'items', { type: 'empty_list' }, false, undefined, 'let', 'list'),
+        createWhileNode('w1', 'items > 0', [createPromptNode('p1', 'bad compare')], 3),
+      ],
+      [],
+    );
+
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'w1',
+      message: 'Numeric comparison "items > 0" uses list-typed variable "items"',
+    });
+  });
+
+  it('does not warn on valid numeric comparison against an int-typed variable', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode(
+          'l1',
+          'count',
+          { type: 'literal', value: '0' },
+          false,
+          undefined,
+          'let',
+          'int',
+        ),
+        createIfNode('i1', 'count >= 5', [createPromptNode('p1', 'go')], []),
+      ],
+      [],
+    );
+
+    expect(lintFlow(spec)).not.toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('count >= 5'),
+      }),
+    );
+  });
+
+  it('keeps backward compatibility for untyped numeric comparisons', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'status', { type: 'literal', value: 'ready' }),
+        createIfNode('i1', 'status > 0', [createPromptNode('p1', 'legacy')], []),
+      ],
+      [],
+    );
+
+    expect(lintFlow(spec)).not.toContainEqual(
+      expect.objectContaining({
+        message: expect.stringContaining('string-typed variable "status"'),
+      }),
+    );
+  });
 });
 
 describe('variable shadowing warnings', () => {
@@ -511,7 +593,28 @@ describe('variable shadowing warnings', () => {
     expect(warnings).toContainEqual({
       nodeId: 'l2',
       message:
-        'Variable "name" shadows variable from an outer scope (outer definition at node "l1")',
+        'Variable "name" shadows variable from an outer scope in if branch (outer definition at node "l1")',
+    });
+  });
+
+  it('warns when nested let shadows outer let inside while scope', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createLetNode('l1', 'name', { type: 'literal', value: 'outer' }),
+        createWhileNode(
+          'w1',
+          'command_failed',
+          [createLetNode('l2', 'name', { type: 'literal', value: 'inner' })],
+          2,
+        ),
+      ],
+      [],
+    );
+    expect(lintFlow(spec)).toContainEqual({
+      nodeId: 'l2',
+      message:
+        'Variable "name" shadows variable from an outer scope in while scope (outer definition at node "l1")',
     });
   });
 
@@ -528,7 +631,7 @@ describe('variable shadowing warnings', () => {
     expect(warnings).toContainEqual({
       nodeId: 'f1',
       message:
-        'Foreach loop variable "item" shadows variable from an outer scope (outer definition at node "l1")',
+        'Foreach loop variable "item" shadows variable from an outer scope in top-level (outer definition at node "l1")',
     });
   });
 
@@ -545,7 +648,7 @@ describe('variable shadowing warnings', () => {
     expect(warnings).toContainEqual({
       nodeId: 'fs1',
       message:
-        'Foreach loop variable "job" shadows variable from an outer scope (outer definition at node "l1")',
+        'Foreach loop variable "job" shadows variable from an outer scope in top-level (outer definition at node "l1")',
     });
   });
 

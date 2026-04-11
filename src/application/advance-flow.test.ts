@@ -10,6 +10,7 @@ import {
 } from './advance-flow.js';
 import {
   createSessionState,
+  updateVariable,
   updateNodeProgress,
   updateSpawnedChild,
 } from '../domain/session-state.js';
@@ -1364,6 +1365,41 @@ describe('autoAdvanceNodes — spawn', () => {
     expect(result.spawnedChildren['fix-auth']?.pid).toBe(42);
     expect(spawnedInputs).toHaveLength(1);
     expect(spawnedInputs[0]!.name).toBe('fix-auth');
+  });
+
+  it('does not pass runtime exit variables into spawned children', async () => {
+    const spawnedInputs: SpawnInput[] = [];
+    const mockSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 42 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const spawn = createSpawnNode('sp1', 'worker', [createPromptNode('p1', 'inner')]);
+    const spec = createFlowSpec('test', [spawn]);
+    let state = createSessionState('s1', spec);
+    state = updateVariable(state, 'preferred_package_manager', 'npm');
+    state = updateVariable(state, 'command_failed', false);
+    state = updateVariable(state, 'command_succeeded', true);
+    state = updateVariable(state, 'last_exit_code', 0);
+    state = updateVariable(state, 'last_stdout', 'ok');
+    state = updateVariable(state, 'last_stderr', '');
+
+    await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+
+    expect(spawnedInputs).toHaveLength(1);
+    expect(spawnedInputs[0]!.variables).toMatchObject({
+      preferred_package_manager: 'npm',
+    });
+    expect(spawnedInputs[0]!.variables).not.toHaveProperty('command_failed');
+    expect(spawnedInputs[0]!.variables).not.toHaveProperty('command_succeeded');
+    expect(spawnedInputs[0]!.variables).not.toHaveProperty('last_exit_code');
+    expect(spawnedInputs[0]!.variables).not.toHaveProperty('last_stdout');
+    expect(spawnedInputs[0]!.variables).not.toHaveProperty('last_stderr');
   });
 });
 

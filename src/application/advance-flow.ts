@@ -2109,6 +2109,26 @@ async function advanceRunNode(
 
 /** H-SEC-005: Default patterns to exclude from spawn when no allowlist is set. */
 const SENSITIVE_VAR_SUFFIXES = ['_key', '_token', '_secret', '_password'];
+const SPAWN_EPHEMERAL_VARIABLES = new Set([
+  'last_exit_code',
+  'command_failed',
+  'command_succeeded',
+  'last_stdout',
+  'last_stderr',
+]);
+
+function shouldExcludeSpawnVariable(key: string): boolean {
+  if (SPAWN_EPHEMERAL_VARIABLES.has(key)) {
+    return true;
+  }
+
+  if (key.startsWith('_runtime_diagnostic.')) {
+    return true;
+  }
+
+  const lower = key.toLowerCase();
+  return SENSITIVE_VAR_SUFFIXES.some((suffix) => lower.endsWith(suffix));
+}
 
 /** H-SEC-005: Filter variables for spawn child based on allowlist or default deny. */
 function filterSpawnVariables(
@@ -2119,15 +2139,15 @@ function filterSpawnVariables(
     const allowed = new Set(allowlist);
     const result: Record<string, VariableValue> = {};
     for (const [key, value] of Object.entries(variables)) {
+      if (shouldExcludeSpawnVariable(key)) continue;
       if (allowed.has(key)) result[key] = value;
     }
     return result;
   }
-  // Default: exclude variables matching sensitive patterns
+  // Default: exclude runtime ephemera and variables matching sensitive patterns.
   const result: Record<string, VariableValue> = {};
   for (const [key, value] of Object.entries(variables)) {
-    const lower = key.toLowerCase();
-    if (SENSITIVE_VAR_SUFFIXES.some((suffix) => lower.endsWith(suffix))) continue;
+    if (shouldExcludeSpawnVariable(key)) continue;
     result[key] = value;
   }
   return result;

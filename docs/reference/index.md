@@ -19,11 +19,12 @@ The reference is the contract for shipped behavior. If a keyword or command is n
 
 ## Runtime, SDK, and CLI
 
-| Page                                          | Covers                                                             |
-| --------------------------------------------- | ------------------------------------------------------------------ |
-| [CLI Reference](cli-reference.md)             | Installation, `run`/`ci`/`eval`, validation, and utility tools     |
-| [SDK](sdk.md)                                 | Stable programmatic parse/session/advance/gate/render API          |
-| [Evals and Judges V1](evals-and-judges-v1.md) | Shipped v1 judge declarations, review integration, and eval runner |
+| Page                                                            | Covers                                                                          |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| [CLI Reference](cli-reference.md)                               | Installation, `run`/`ci`/`eval`, validation, and utility tools                  |
+| [SDK](sdk.md)                                                   | Stable programmatic parse/session/advance/gate/render API                       |
+| [Evals and Judges V1](evals-and-judges-v1.md)                   | Shipped v1 judge declarations, review integration, and eval runner              |
+| [Summary and Rendering Policy](summary-and-rendering-policy.md) | Thresholds, omission rules, and fallback conditions for summary render surfaces |
 
 ## Program structure
 
@@ -45,11 +46,12 @@ The reference is the contract for shipped behavior. If a keyword or command is n
 
 ## State and context
 
-| Page                                      | Covers                                                           |
-| ----------------------------------------- | ---------------------------------------------------------------- |
-| [let / var](let-var.md)                   | Literal values, command capture, prompt capture, JSON schema     |
-| [Runtime Variables](runtime-variables.md) | `last_exit_code`, `command_failed`, `last_stdout`, `last_stderr` |
-| [remember](remember.md)                   | Persistent memory store, `memory:` prefetch section              |
+| Page                                                | Covers                                                                       |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [let / var](let-var.md)                             | Literal values, command capture, prompt capture, JSON schema                 |
+| [Runtime Variables](runtime-variables.md)           | `last_exit_code`, `command_failed`, `last_stdout`, `last_stderr`             |
+| [remember](remember.md)                             | Persistent memory store, `memory:` prefetch section                          |
+| [Compact Context Status](compact-context-status.md) | Current product boundary: context-adaptive rendering is tracked, not shipped |
 
 ## Control flow
 

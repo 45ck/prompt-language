@@ -70,5 +70,6 @@ If a feature is not described in the product docs, treat it as unavailable today
 | [What Works Now](evaluation/what-works-now.md)                                     | Short public summary of the strongest proven surface and current caveats  |
 | [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)          | Accepted subagent-first boundary                                          |
 | [Operator Shell Boundary](design/operator-shell-boundary.md)                       | Accepted shell-over-runtime boundary for imported OMX adaptation work     |
+| [Output Summarization Policy](design/output-summarization-policy.md)               | Accepted thresholds and fail-closed policy for compact summary surfaces   |
 | [Evaluation Stack V1 Boundary](design/evaluation-stack-v1.md)                      | Accepted first implementation slice for rubrics, judges, and eval tooling |
 | [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md) | Proposed render-mode decision under evaluation                            |

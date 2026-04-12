@@ -402,9 +402,29 @@ function captureSystemSnapshot() {
   return JSON.parse(result.stdout.trim());
 }
 
-function enforcePreRunGate(snapshot) {
-  if (snapshot.codexProcesses.length > 0) {
-    throw new Error('pre-run gate failed: codex processes are already active');
+function collectProcessIds(processes) {
+  return new Set(
+    processes
+      .map((processInfo) => processInfo?.Id)
+      .filter((value) => Number.isInteger(value))
+      .map((value) => Number(value)),
+  );
+}
+
+function unexpectedProcessIds(snapshotProcesses, baselineIds) {
+  return snapshotProcesses
+    .map((processInfo) => processInfo?.Id)
+    .filter((value) => Number.isInteger(value))
+    .map((value) => Number(value))
+    .filter((value) => !baselineIds.has(value));
+}
+
+function enforcePreRunGate(snapshot, baseline) {
+  const unexpectedCodex = unexpectedProcessIds(snapshot.codexProcesses, baseline.codexProcessIds);
+  if (unexpectedCodex.length > 0) {
+    throw new Error(
+      `pre-run gate failed: unexpected codex processes are active (${unexpectedCodex.join(', ')})`,
+    );
   }
   if (snapshot.freeMemoryBytes !== null && snapshot.freeMemoryBytes < 2_000_000_000) {
     throw new Error('pre-run gate failed: free RAM is below 2 GB');
@@ -424,6 +444,12 @@ async function main() {
     `e4-b${pad(batchNumber)}-${options.scenario}-${sanitizeModel(options.model)}`;
   const batchRoot = join(BATCHES_ROOT, batchId);
   await ensureDir(batchRoot);
+  const baselineSnapshot = captureSystemSnapshot();
+  const processBaseline = {
+    codexProcessIds: collectProcessIds(baselineSnapshot.codexProcesses),
+    ollamaProcessIds: collectProcessIds(baselineSnapshot.ollamaProcesses),
+  };
+  await writeJson(join(batchRoot, 'baseline-system.json'), baselineSnapshot);
 
   const plannedOrders = DEFAULT_ORDERS.slice(0, options.pairs);
   if (plannedOrders.length !== options.pairs) {
@@ -450,6 +476,10 @@ async function main() {
         'success rate is not worse and median timeToGreenSec is at least 10% better',
       parity: 'success rates match and median timeToGreenSec is within 10%',
     },
+    processBaseline: {
+      codexProcessIds: [...processBaseline.codexProcessIds],
+      ollamaProcessIds: [...processBaseline.ollamaProcessIds],
+    },
   };
   await writeJson(join(batchRoot, 'plan.json'), plan);
 
@@ -472,7 +502,7 @@ async function main() {
     const runId = `a${pad(attemptNumber)}-${batchId}-${pairId}-${options.scenario}-${order}`;
     try {
       const snapshot = captureSystemSnapshot();
-      enforcePreRunGate(snapshot);
+      enforcePreRunGate(snapshot, processBaseline);
       await writeJson(join(batchRoot, `${pairId}-system-before.json`), snapshot);
 
       const result = runProcess(

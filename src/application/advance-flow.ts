@@ -51,6 +51,12 @@ import type { MessageStore } from './ports/message-store.js';
 import { interpolate, shellInterpolate } from '../domain/interpolate.js';
 import { evaluateCondition } from '../domain/evaluate-condition.js';
 import { resolveBuiltinCommand, isInvertedPredicate } from './evaluate-completion.js';
+import {
+  createRuntimeOutputArtifactRecord,
+  type RuntimeOutputArtifactChannel,
+  type RuntimeOutputArtifactRecord,
+  toRuntimeOutputArtifactVariableValue,
+} from '../domain/runtime-output-artifact.js';
 import { splitIterable } from '../domain/split-iterable.js';
 import { initEmptyList, appendToList, listLength } from '../domain/list-variable.js';
 import {
@@ -553,9 +559,50 @@ function logBranchDecision(
   progressLog(`branch if ${node.condition} -> ${branch} (${detail})`);
 }
 
-function truncateOutput(output: string): string {
-  if (output.length <= MAX_OUTPUT_LENGTH) return output;
-  return output.slice(0, MAX_OUTPUT_LENGTH) + '\n... (truncated)';
+function normalizeCommandOutput(output: string): string {
+  return output.trimEnd();
+}
+
+function artifactVariableName(name: 'last_stdout' | 'last_stderr'): string {
+  return `_artifacts.${name}`;
+}
+
+function storeRuntimeOutput(
+  state: SessionState,
+  variableName: 'last_stdout' | 'last_stderr',
+  output: string,
+  artifactRecord?: RuntimeOutputArtifactRecord,
+): SessionState {
+  const next = updateVariable(state, variableName, output);
+  if (artifactRecord !== undefined) {
+    return updateVariable(
+      next,
+      artifactVariableName(variableName),
+      toRuntimeOutputArtifactVariableValue(artifactRecord),
+    );
+  }
+
+  return removeVariable(next, artifactVariableName(variableName));
+}
+
+function toStoredRuntimeOutput(
+  sessionId: string,
+  nodeId: string,
+  channel: RuntimeOutputArtifactChannel,
+  output: string,
+): { readonly value: string; readonly artifact?: RuntimeOutputArtifactRecord } {
+  const normalized = normalizeCommandOutput(output);
+  if (normalized.length <= MAX_OUTPUT_LENGTH) {
+    return { value: normalized };
+  }
+
+  const artifact = createRuntimeOutputArtifactRecord({
+    channel,
+    content: normalized,
+    nodeId,
+    runId: sessionId,
+  });
+  return { value: artifact.handle, artifact };
 }
 
 function isPidAlive(pid: number): boolean {
@@ -600,15 +647,28 @@ async function terminateRaceLosers(
 /** Store the 5 standard exit variables after a command execution. */
 function setExitVariables(
   state: SessionState,
+  nodeId: string,
   exitCode: number,
   stdout: string,
   stderr: string,
+  outputArtifacts?: {
+    readonly stdout?: RuntimeOutputArtifactRecord;
+    readonly stderr?: RuntimeOutputArtifactRecord;
+  },
 ): SessionState {
   let s = updateVariable(state, 'last_exit_code', exitCode);
   s = updateVariable(s, 'command_failed', exitCode !== 0);
   s = updateVariable(s, 'command_succeeded', exitCode === 0);
-  s = updateVariable(s, 'last_stdout', truncateOutput(stdout.trimEnd()));
-  s = updateVariable(s, 'last_stderr', truncateOutput(stderr.trimEnd()));
+  const storedStdout =
+    outputArtifacts?.stdout !== undefined
+      ? { value: outputArtifacts.stdout.handle, artifact: outputArtifacts.stdout }
+      : toStoredRuntimeOutput(state.sessionId, nodeId, 'stdout', stdout);
+  const storedStderr =
+    outputArtifacts?.stderr !== undefined
+      ? { value: outputArtifacts.stderr.handle, artifact: outputArtifacts.stderr }
+      : toStoredRuntimeOutput(state.sessionId, nodeId, 'stderr', stderr);
+  s = storeRuntimeOutput(s, 'last_stdout', storedStdout.value, storedStdout.artifact);
+  s = storeRuntimeOutput(s, 'last_stderr', storedStderr.value, storedStderr.artifact);
   return s;
 }
 
@@ -1678,7 +1738,7 @@ async function advanceLetNode(
           `Variable '${node.variableName}' truncated to ${MAX_OUTPUT_LENGTH} chars.`,
         );
       }
-      current = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
+      current = setExitVariables(current, node.id, result.exitCode, result.stdout, result.stderr);
       if (result.exitCode !== 0) {
         tryCatchJump = findTryCatchJump(current.flowSpec.nodes, current.currentNodePath);
       }
@@ -2032,9 +2092,18 @@ async function advanceRunNode(
   ) {
     let resumed = setExitVariables(
       current,
+      node.id,
       cachedProgress.exitCode,
       cachedProgress.stdout ?? '',
       cachedProgress.stderr ?? '',
+      {
+        ...(cachedProgress.stdoutArtifact !== undefined
+          ? { stdout: cachedProgress.stdoutArtifact }
+          : {}),
+        ...(cachedProgress.stderrArtifact !== undefined
+          ? { stderr: cachedProgress.stderrArtifact }
+          : {}),
+      },
     );
     resumed = advanceFromPath(resumed, resumed.currentNodePath);
     return { state: resumed, advanced: true };
@@ -2077,7 +2146,7 @@ async function advanceRunNode(
     });
   }
 
-  let state = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
+  let state = setExitVariables(current, node.id, result.exitCode, result.stdout, result.stderr);
   state = persistRunNodeResult(state, node.id, result);
 
   if (result.exitCode !== 0) {
@@ -2957,6 +3026,8 @@ function cloneNodeProgressWithTiming(
     ...(progress.exitCode !== undefined ? { exitCode: progress.exitCode } : {}),
     ...(progress.stdout !== undefined ? { stdout: progress.stdout } : {}),
     ...(progress.stderr !== undefined ? { stderr: progress.stderr } : {}),
+    ...(progress.stdoutArtifact !== undefined ? { stdoutArtifact: progress.stdoutArtifact } : {}),
+    ...(progress.stderrArtifact !== undefined ? { stderrArtifact: progress.stderrArtifact } : {}),
     ...(progress.timedOut !== undefined ? { timedOut: progress.timedOut } : {}),
   };
 }
@@ -2985,6 +3056,8 @@ function persistRunNodeResult(
   result: CommandResult,
 ): SessionState {
   const previous = state.nodeProgress[nodeId];
+  const storedStdout = toStoredRuntimeOutput(state.sessionId, nodeId, 'stdout', result.stdout);
+  const storedStderr = toStoredRuntimeOutput(state.sessionId, nodeId, 'stderr', result.stderr);
   return updateNodeProgress(state, nodeId, {
     iteration: previous?.iteration ?? 1,
     maxIterations: previous?.maxIterations ?? 1,
@@ -3000,8 +3073,10 @@ function persistRunNodeResult(
     ...(previous?.completedAt !== undefined ? { completedAt: previous.completedAt } : {}),
     ...(previous?.loopStartedAt !== undefined ? { loopStartedAt: previous.loopStartedAt } : {}),
     exitCode: result.exitCode,
-    stdout: truncateOutput(result.stdout.trimEnd()),
-    stderr: truncateOutput(result.stderr.trimEnd()),
+    stdout: storedStdout.value,
+    stderr: storedStderr.value,
+    ...(storedStdout.artifact !== undefined ? { stdoutArtifact: storedStdout.artifact } : {}),
+    ...(storedStderr.artifact !== undefined ? { stderrArtifact: storedStderr.artifact } : {}),
     ...(result.timedOut !== undefined ? { timedOut: result.timedOut } : {}),
   });
 }
@@ -3792,7 +3867,7 @@ async function advanceForeachEntry(
       prepared.command,
       prepared.env != null ? { env: prepared.env } : undefined,
     );
-    current = setExitVariables(current, result.exitCode, result.stdout, result.stderr);
+    current = setExitVariables(current, node.id, result.exitCode, result.stdout, result.stderr);
     const output = result.stdout.trimEnd();
     items = splitIterable(output);
     // Store output so body-exhaustion can re-derive items without re-running cmd

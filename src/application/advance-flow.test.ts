@@ -1195,6 +1195,48 @@ describe('autoAdvanceNodes — resume-safe run replay suppression', () => {
     expect(result.state.variables['last_stderr']).toBe('cached stderr');
   });
 
+  it('skips re-executing a completed top-level run node and restores cached artifact references', async () => {
+    const runner = {
+      run: vi.fn(async () => ({ exitCode: 0, stdout: 'fresh output', stderr: '' })),
+    } satisfies CommandRunner;
+    const spec = createFlowSpec('test', [
+      createRunNode('r1', 'deploy.sh'),
+      createPromptNode('p1', 'done'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      exitCode: 0,
+      stdout: 'artifact:s1/runtime-output-r1-stdout',
+      stderr: '',
+      stdoutArtifact: {
+        artifactId: 'runtime-output-r1-stdout',
+        artifactType: 'runtime_output',
+        channel: 'stdout',
+        content: 'x'.repeat(2500),
+        handle: 'artifact:s1/runtime-output-r1-stdout',
+        mediaType: 'text/plain',
+        nodeId: 'r1',
+        runId: 's1',
+        scopedId: 's1/runtime-output-r1-stdout',
+        sizeChars: 2500,
+      },
+    });
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(runner.run).not.toHaveBeenCalled();
+    expect(result.state.variables['last_stdout']).toBe('artifact:s1/runtime-output-r1-stdout');
+    expect(result.state.variables['_artifacts.last_stdout']).toEqual(
+      expect.objectContaining({
+        artifactId: 'runtime-output-r1-stdout',
+        content: 'x'.repeat(2500),
+      }),
+    );
+  });
+
   it('skips re-executing a completed run node inside an if branch', async () => {
     const runner = {
       run: vi.fn(async () => ({ exitCode: 0, stdout: 'fresh output', stderr: '' })),
@@ -1941,7 +1983,7 @@ describe('autoAdvanceNodes — spawn failure (D7)', () => {
 // ── truncateOutput (>2000 chars) ────────────────────────────────────
 
 describe('autoAdvanceNodes — truncateOutput', () => {
-  it('truncates stdout longer than 2000 chars', async () => {
+  it('stores stdout longer than 2000 chars as an artifact reference', async () => {
     const longOutput = 'x'.repeat(2500);
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 0, stdout: longOutput, stderr: '' }),
@@ -1954,11 +1996,32 @@ describe('autoAdvanceNodes — truncateOutput', () => {
 
     const { state: result } = await autoAdvanceNodes(state, runner);
     const stdout = result.variables['last_stdout'] as string;
-    expect(stdout.length).toBeLessThan(longOutput.length);
-    expect(stdout).toContain('... (truncated)');
+    expect(stdout).toBe('artifact:s1/runtime-output-r1-stdout');
+    expect(result.variables['_artifacts.last_stdout']).toEqual(
+      expect.objectContaining({
+        artifactId: 'runtime-output-r1-stdout',
+        artifactType: 'runtime_output',
+        channel: 'stdout',
+        content: longOutput,
+        handle: 'artifact:s1/runtime-output-r1-stdout',
+        nodeId: 'r1',
+        runId: 's1',
+        scopedId: 's1/runtime-output-r1-stdout',
+        sizeChars: 2500,
+      }),
+    );
+    expect(result.nodeProgress['r1']).toEqual(
+      expect.objectContaining({
+        stdout: 'artifact:s1/runtime-output-r1-stdout',
+        stdoutArtifact: expect.objectContaining({
+          artifactId: 'runtime-output-r1-stdout',
+          content: longOutput,
+        }),
+      }),
+    );
   });
 
-  it('truncates stderr longer than 2000 chars', async () => {
+  it('stores stderr longer than 2000 chars as an artifact reference', async () => {
     const longErr = 'e'.repeat(2500);
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 1, stdout: '', stderr: longErr }),
@@ -1971,8 +2034,29 @@ describe('autoAdvanceNodes — truncateOutput', () => {
 
     const { state: result } = await autoAdvanceNodes(state, runner);
     const stderr = result.variables['last_stderr'] as string;
-    expect(stderr.length).toBeLessThan(longErr.length);
-    expect(stderr).toContain('... (truncated)');
+    expect(stderr).toBe('artifact:s1/runtime-output-r1-stderr');
+    expect(result.variables['_artifacts.last_stderr']).toEqual(
+      expect.objectContaining({
+        artifactId: 'runtime-output-r1-stderr',
+        artifactType: 'runtime_output',
+        channel: 'stderr',
+        content: longErr,
+        handle: 'artifact:s1/runtime-output-r1-stderr',
+        nodeId: 'r1',
+        runId: 's1',
+        scopedId: 's1/runtime-output-r1-stderr',
+        sizeChars: 2500,
+      }),
+    );
+    expect(result.nodeProgress['r1']).toEqual(
+      expect.objectContaining({
+        stderr: 'artifact:s1/runtime-output-r1-stderr',
+        stderrArtifact: expect.objectContaining({
+          artifactId: 'runtime-output-r1-stderr',
+          content: longErr,
+        }),
+      }),
+    );
   });
 });
 

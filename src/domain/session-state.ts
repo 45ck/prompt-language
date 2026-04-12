@@ -8,6 +8,7 @@
 import { flowSpecHash, type FlowSpec } from './flow-spec.js';
 import type { FlowNode, LetNode, VariableDeclaredType } from './flow-node.js';
 import { describeNodePosition } from './flow-node.js';
+import type { RuntimeOutputArtifactRecord } from './runtime-output-artifact.js';
 import type { VariableValue, VariableStore } from './variable-value.js';
 
 export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
@@ -42,6 +43,8 @@ export interface NodeProgress {
   readonly exitCode?: number | undefined;
   readonly stdout?: string | undefined;
   readonly stderr?: string | undefined;
+  readonly stdoutArtifact?: RuntimeOutputArtifactRecord | undefined;
+  readonly stderrArtifact?: RuntimeOutputArtifactRecord | undefined;
   readonly timedOut?: boolean | undefined;
 }
 

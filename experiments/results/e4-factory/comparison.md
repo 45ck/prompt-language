@@ -120,7 +120,7 @@ The evidence now supports five claims:
 3. The Windows/headless runtime path needed explicit fixes around state-root resolution, run-node
    timeout behavior, and Codex process launch / cleanup.
 4. After those fixes, the sequential prompt-language lane also completed successfully.
-5. The latest clean `S0` pilot pair (`A07`) under the tighter external-verification timing envelope still favors direct Codex on time-to-green for this bounded slice, while prompt-language retains the stronger governed factory-control surface and earlier first relevant workspace write.
+5. The latest clean `S0` pilot pair (`A07`) under the tighter external-verification timing envelope still favors direct Codex on time-to-green for this bounded slice, while prompt-language retains the stronger governed factory-control surface and an earlier first relevant workspace write on the secondary exploratory metric.
 
 For the deeper comparative interpretation, see [research-method.md](./research-method.md) and
 [analysis-2026-04-12.md](./analysis-2026-04-12.md).

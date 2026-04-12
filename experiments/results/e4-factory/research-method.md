@@ -96,6 +96,12 @@ For future runs, each lane should record these first-class metrics:
 
 Historical runs may backfill these as `null` when the evidence was not instrumented at the time.
 
+Interpretation rule:
+
+- `timeToGreenSec` is the preregistered primary throughput endpoint
+- `timeToFirstRelevantWriteSec` is exploratory context only and must not overturn the throughput
+  verdict by itself
+
 ## Comparative Verdicts
 
 Use one of:
@@ -176,3 +182,12 @@ Throughput superiority belongs to the batch, not to a single pair.
   - a fixed predeclared schedule on one frozen commit/model/control surface
 
 Until then, per-run timing reads are useful context only.
+
+## Pilot Discipline
+
+Pilot batches are for instrumentation and directional timing only.
+
+- do not retroactively expand a pilot batch into the primary throughput claim batch
+- if the pilot changes the harness, scoring, or admissibility rules, start a fresh predeclared batch
+- interrupted primary batches may be resumed on the same frozen commit and plan, but `plannedPairs`
+  and pair order must stay fixed

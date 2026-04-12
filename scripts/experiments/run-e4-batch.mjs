@@ -31,6 +31,12 @@ function parseArgs(argv) {
     pairs: DEFAULT_PAIRS,
     scenario: DEFAULT_SCENARIO,
     batchId: null,
+    resume: false,
+    explicit: {
+      model: false,
+      pairs: false,
+      scenario: false,
+    },
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -39,11 +45,13 @@ function parseArgs(argv) {
 
     if (current === '--model' && next !== undefined) {
       options.model = next;
+      options.explicit.model = true;
       index += 1;
       continue;
     }
     if (current === '--pairs' && next !== undefined) {
       options.pairs = parsePositiveInteger(next, '--pairs');
+      options.explicit.pairs = true;
       index += 1;
       continue;
     }
@@ -54,7 +62,12 @@ function parseArgs(argv) {
     }
     if (current === '--scenario' && next !== undefined) {
       options.scenario = next;
+      options.explicit.scenario = true;
       index += 1;
+      continue;
+    }
+    if (current === '--resume') {
+      options.resume = true;
       continue;
     }
 
@@ -97,6 +110,13 @@ async function readJson(path) {
   return JSON.parse(await readFile(path, 'utf8'));
 }
 
+async function readJsonIfExists(path, fallback) {
+  if (!existsSync(path)) {
+    return fallback;
+  }
+  return readJson(path);
+}
+
 function readGitHead() {
   return execFileSync(GIT_BIN, ['rev-parse', 'HEAD'], {
     cwd: ROOT,
@@ -117,6 +137,39 @@ function readGitStatusShort() {
 
 function sanitizeModel(model) {
   return model.replaceAll('.', '').replaceAll('-', '');
+}
+
+function requireResumeMatch(flagName, explicit, actual, expected) {
+  if (explicit && actual !== expected) {
+    throw new Error(
+      `Cannot resume batch with mismatched ${flagName}: requested "${actual}", planned "${expected}"`,
+    );
+  }
+}
+
+function validateResumeOptions(options, plan) {
+  requireResumeMatch('--model', options.explicit.model, options.model, plan.model);
+  requireResumeMatch('--scenario', options.explicit.scenario, options.scenario, plan.scenario);
+  requireResumeMatch('--pairs', options.explicit.pairs, options.pairs, plan.plannedPairs);
+}
+
+async function nextResumeBaselineNumber(batchRoot) {
+  if (!existsSync(batchRoot)) {
+    return 1;
+  }
+  const entries = await readdir(batchRoot, { withFileTypes: true });
+  let highest = 0;
+  for (const entry of entries) {
+    if (!entry.isFile()) {
+      continue;
+    }
+    const match = /^resume-(\d{2})-baseline-system\.json$/i.exec(entry.name);
+    if (!match) {
+      continue;
+    }
+    highest = Math.max(highest, Number.parseInt(match[1], 10));
+  }
+  return highest + 1;
 }
 
 async function nextBatchNumber() {
@@ -183,6 +236,37 @@ function median(values) {
     : sorted[middle];
 }
 
+function zeroOrderCounts() {
+  return { 'codex-first': 0, 'pl-first': 0 };
+}
+
+function countOrders(pairs) {
+  return pairs.reduce((counts, pair) => {
+    counts[pair.order] += 1;
+    return counts;
+  }, zeroOrderCounts());
+}
+
+function summarizeLaneMetrics(pairs, laneName) {
+  const laneMetrics = pairs.map((pair) => pair.lanes[laneName]).filter((lane) => lane !== null);
+  const successCount = laneMetrics.filter((lane) => lane.verdict === 'success').length;
+
+  return {
+    successCount,
+    successRate: pairs.length === 0 ? null : Math.round((successCount / pairs.length) * 100) / 100,
+    medianTimeToGreenSec: median(
+      laneMetrics
+        .map((lane) => lane.metrics.timeToGreenSec)
+        .filter((value) => Number.isFinite(value)),
+    ),
+    medianTimeToFirstRelevantWriteSec: median(
+      laneMetrics
+        .map((lane) => lane.metrics.timeToFirstRelevantWriteSec ?? lane.metrics.timeToFirstCodeSec)
+        .filter((value) => Number.isFinite(value)),
+    ),
+  };
+}
+
 function summarizeLane(runScorecard, laneName) {
   return runScorecard.lanes.find((lane) => lane.lane === laneName) ?? null;
 }
@@ -221,20 +305,8 @@ function determineBatchVerdict(summary) {
 
 function buildSummary(plan, completedPairs, abortedPairs) {
   const eligiblePairs = completedPairs.filter((pair) => pair.validForBatchSummary);
-  const orderCounts = completedPairs.reduce(
-    (counts, pair) => {
-      counts[pair.order] += 1;
-      return counts;
-    },
-    { 'codex-first': 0, 'pl-first': 0 },
-  );
-
-  const plLaneMetrics = eligiblePairs
-    .map((pair) => pair.lanes['pl-sequential'])
-    .filter((lane) => lane !== null);
-  const codexLaneMetrics = eligiblePairs
-    .map((pair) => pair.lanes['codex-alone'])
-    .filter((lane) => lane !== null);
+  const completedOrderCounts = countOrders(completedPairs);
+  const eligibleOrderCounts = countOrders(eligiblePairs);
 
   const summary = {
     batchId: plan.batchId,
@@ -245,65 +317,47 @@ function buildSummary(plan, completedPairs, abortedPairs) {
     completedPairs: completedPairs.length,
     eligiblePairs: eligiblePairs.length,
     abortedPairs,
-    orderCounts,
+    completedOrderCounts,
+    eligibleOrderCounts,
+    orderCounts: eligibleOrderCounts,
     claimEligibility: {
       throughputClaimEligible:
         abortedPairs.length === 0 &&
         eligiblePairs.length >= 4 &&
-        orderCounts['codex-first'] >= 2 &&
-        orderCounts['pl-first'] >= 2,
+        eligibleOrderCounts['codex-first'] >= 2 &&
+        eligibleOrderCounts['pl-first'] >= 2,
       reasons: [
         abortedPairs.length === 0 ? null : 'batch contains harness-fatal aborted pairs',
         eligiblePairs.length >= 4 ? null : 'fewer than four completed clean paired runs',
-        orderCounts['codex-first'] >= 2 ? null : 'fewer than two codex-first pairs',
-        orderCounts['pl-first'] >= 2 ? null : 'fewer than two pl-first pairs',
+        eligibleOrderCounts['codex-first'] >= 2
+          ? null
+          : 'fewer than two eligible codex-first pairs',
+        eligibleOrderCounts['pl-first'] >= 2 ? null : 'fewer than two eligible pl-first pairs',
       ].filter((reason) => reason !== null),
     },
     lanes: {
-      'pl-sequential': {
-        successCount: plLaneMetrics.filter((lane) => lane.verdict === 'success').length,
-        successRate:
-          eligiblePairs.length === 0
-            ? null
-            : Math.round(
-                (plLaneMetrics.filter((lane) => lane.verdict === 'success').length /
-                  eligiblePairs.length) *
-                  100,
-              ) / 100,
-        medianTimeToGreenSec: median(
-          plLaneMetrics
-            .map((lane) => lane.metrics.timeToGreenSec)
-            .filter((value) => Number.isFinite(value)),
+      'pl-sequential': summarizeLaneMetrics(eligiblePairs, 'pl-sequential'),
+      'codex-alone': summarizeLaneMetrics(eligiblePairs, 'codex-alone'),
+    },
+    lanesByOrder: {
+      'codex-first': {
+        'pl-sequential': summarizeLaneMetrics(
+          eligiblePairs.filter((pair) => pair.order === 'codex-first'),
+          'pl-sequential',
         ),
-        medianTimeToFirstRelevantWriteSec: median(
-          plLaneMetrics
-            .map(
-              (lane) => lane.metrics.timeToFirstRelevantWriteSec ?? lane.metrics.timeToFirstCodeSec,
-            )
-            .filter((value) => Number.isFinite(value)),
+        'codex-alone': summarizeLaneMetrics(
+          eligiblePairs.filter((pair) => pair.order === 'codex-first'),
+          'codex-alone',
         ),
       },
-      'codex-alone': {
-        successCount: codexLaneMetrics.filter((lane) => lane.verdict === 'success').length,
-        successRate:
-          eligiblePairs.length === 0
-            ? null
-            : Math.round(
-                (codexLaneMetrics.filter((lane) => lane.verdict === 'success').length /
-                  eligiblePairs.length) *
-                  100,
-              ) / 100,
-        medianTimeToGreenSec: median(
-          codexLaneMetrics
-            .map((lane) => lane.metrics.timeToGreenSec)
-            .filter((value) => Number.isFinite(value)),
+      'pl-first': {
+        'pl-sequential': summarizeLaneMetrics(
+          eligiblePairs.filter((pair) => pair.order === 'pl-first'),
+          'pl-sequential',
         ),
-        medianTimeToFirstRelevantWriteSec: median(
-          codexLaneMetrics
-            .map(
-              (lane) => lane.metrics.timeToFirstRelevantWriteSec ?? lane.metrics.timeToFirstCodeSec,
-            )
-            .filter((value) => Number.isFinite(value)),
+        'codex-alone': summarizeLaneMetrics(
+          eligiblePairs.filter((pair) => pair.order === 'pl-first'),
+          'codex-alone',
         ),
       },
     },
@@ -339,8 +393,17 @@ function renderSummaryMarkdown(plan, summary, completedPairs) {
     '',
     '## Order Balance',
     '',
-    `- codex-first pairs: ${summary.orderCounts['codex-first']}`,
-    `- pl-first pairs: ${summary.orderCounts['pl-first']}`,
+    `- completed codex-first pairs: ${summary.completedOrderCounts['codex-first']}`,
+    `- completed pl-first pairs: ${summary.completedOrderCounts['pl-first']}`,
+    `- eligible codex-first pairs: ${summary.eligibleOrderCounts['codex-first']}`,
+    `- eligible pl-first pairs: ${summary.eligibleOrderCounts['pl-first']}`,
+    '',
+    '## Lane Medians By Order',
+    '',
+    `- codex-first / prompt-language median time to green: ${summary.lanesByOrder['codex-first']['pl-sequential'].medianTimeToGreenSec ?? 'n/a'}s`,
+    `- codex-first / codex-alone median time to green: ${summary.lanesByOrder['codex-first']['codex-alone'].medianTimeToGreenSec ?? 'n/a'}s`,
+    `- pl-first / prompt-language median time to green: ${summary.lanesByOrder['pl-first']['pl-sequential'].medianTimeToGreenSec ?? 'n/a'}s`,
+    `- pl-first / codex-alone median time to green: ${summary.lanesByOrder['pl-first']['codex-alone'].medianTimeToGreenSec ?? 'n/a'}s`,
     '',
     '## Pair Links',
     '',
@@ -444,47 +507,86 @@ async function main() {
     `e4-b${pad(batchNumber)}-${options.scenario}-${sanitizeModel(options.model)}`;
   const batchRoot = join(BATCHES_ROOT, batchId);
   await ensureDir(batchRoot);
-  const baselineSnapshot = captureSystemSnapshot();
-  const processBaseline = {
-    codexProcessIds: collectProcessIds(baselineSnapshot.codexProcesses),
-    ollamaProcessIds: collectProcessIds(baselineSnapshot.ollamaProcesses),
-  };
-  await writeJson(join(batchRoot, 'baseline-system.json'), baselineSnapshot);
+  const planPath = join(batchRoot, 'plan.json');
+  const hasExistingPlan = existsSync(planPath);
 
-  const plannedOrders = DEFAULT_ORDERS.slice(0, options.pairs);
-  if (plannedOrders.length !== options.pairs) {
-    throw new Error(`No fixed order schedule is defined for ${options.pairs} pairs`);
+  let plan;
+  let processBaseline;
+  let completedPairs;
+  let abortedPairs;
+
+  if (hasExistingPlan) {
+    if (!options.resume) {
+      throw new Error(`Batch "${batchId}" already exists; use --resume or choose a new batch id`);
+    }
+
+    plan = await readJson(planPath);
+    validateResumeOptions(options, plan);
+
+    const head = readGitHead();
+    if (head !== plan.gitCommit) {
+      throw new Error(
+        `Cannot resume batch "${batchId}" on commit "${head}"; planned commit is "${plan.gitCommit}"`,
+      );
+    }
+
+    const resumeBaselineSnapshot = captureSystemSnapshot();
+    processBaseline = {
+      codexProcessIds: collectProcessIds(resumeBaselineSnapshot.codexProcesses),
+      ollamaProcessIds: collectProcessIds(resumeBaselineSnapshot.ollamaProcesses),
+    };
+    const resumeBaselineNumber = await nextResumeBaselineNumber(batchRoot);
+    await writeJson(
+      join(batchRoot, `resume-${pad(resumeBaselineNumber)}-baseline-system.json`),
+      resumeBaselineSnapshot,
+    );
+
+    completedPairs = await readJsonIfExists(join(batchRoot, 'pairs.json'), []);
+    abortedPairs = [];
+  } else {
+    const baselineSnapshot = captureSystemSnapshot();
+    processBaseline = {
+      codexProcessIds: collectProcessIds(baselineSnapshot.codexProcesses),
+      ollamaProcessIds: collectProcessIds(baselineSnapshot.ollamaProcesses),
+    };
+    await writeJson(join(batchRoot, 'baseline-system.json'), baselineSnapshot);
+
+    const plannedOrders = DEFAULT_ORDERS.slice(0, options.pairs);
+    if (plannedOrders.length !== options.pairs) {
+      throw new Error(`No fixed order schedule is defined for ${options.pairs} pairs`);
+    }
+
+    plan = {
+      batchId,
+      scenario: options.scenario,
+      model: options.model,
+      plannedPairs: options.pairs,
+      orders: plannedOrders.map((order, index) => ({ pairId: `p${pad(index + 1)}`, order })),
+      gitCommit: readGitHead(),
+      exclusionRules: [
+        'system-level contamination at the pre-run gate',
+        'harness crash before the pair runner writes a closed run pack',
+        'missing raw trace files required by results:e4',
+      ],
+      primaryEndpoint: 'median timeToGreenSec by lane across eligible clean pairs',
+      decisionRules: {
+        promptLanguageBetter:
+          'success rate is not worse and median timeToGreenSec is at least 10% better',
+        codexAloneBetter:
+          'success rate is not worse and median timeToGreenSec is at least 10% better',
+        parity: 'success rates match and median timeToGreenSec is within 10%',
+      },
+      processBaseline: {
+        codexProcessIds: [...processBaseline.codexProcessIds],
+        ollamaProcessIds: [...processBaseline.ollamaProcessIds],
+      },
+    };
+    await writeJson(planPath, plan);
+
+    completedPairs = [];
+    abortedPairs = [];
   }
 
-  const plan = {
-    batchId,
-    scenario: options.scenario,
-    model: options.model,
-    plannedPairs: options.pairs,
-    orders: plannedOrders.map((order, index) => ({ pairId: `p${pad(index + 1)}`, order })),
-    gitCommit: readGitHead(),
-    exclusionRules: [
-      'system-level contamination at the pre-run gate',
-      'harness crash before the pair runner writes a closed run pack',
-      'missing raw trace files required by results:e4',
-    ],
-    primaryEndpoint: 'median timeToGreenSec by lane across eligible clean pairs',
-    decisionRules: {
-      promptLanguageBetter:
-        'success rate is not worse and median timeToGreenSec is at least 10% better',
-      codexAloneBetter:
-        'success rate is not worse and median timeToGreenSec is at least 10% better',
-      parity: 'success rates match and median timeToGreenSec is within 10%',
-    },
-    processBaseline: {
-      codexProcessIds: [...processBaseline.codexProcessIds],
-      ollamaProcessIds: [...processBaseline.ollamaProcessIds],
-    },
-  };
-  await writeJson(join(batchRoot, 'plan.json'), plan);
-
-  const completedPairs = [];
-  const abortedPairs = [];
   let summary = buildSummary(plan, completedPairs, abortedPairs);
   await writeJson(join(batchRoot, 'pairs.json'), completedPairs);
   await writeJson(join(batchRoot, 'summary.json'), summary);
@@ -493,16 +595,25 @@ async function main() {
     renderSummaryMarkdown(plan, summary, completedPairs),
   );
 
-  for (let index = 0; index < plan.orders.length; index += 1) {
+  const completedPairIds = new Set(completedPairs.map((pair) => pair.pairId));
+  const startIndex = plan.orders.findIndex((pair) => !completedPairIds.has(pair.pairId));
+  if (startIndex === -1) {
+    console.log(`[e4:batch] ${batchId} already complete with ${completedPairs.length} pairs`);
+    return;
+  }
+
+  for (let index = startIndex; index < plan.orders.length; index += 1) {
     const pair = plan.orders[index];
     const pairId = pair.pairId;
     const order = pair.order;
     const attemptNumber = await nextAttemptNumber();
     const attemptLabel = `A${pad(attemptNumber)}`;
-    const runId = `a${pad(attemptNumber)}-${batchId}-${pairId}-${options.scenario}-${order}`;
+    const runId = `a${pad(attemptNumber)}-${batchId}-${pairId}-${plan.scenario}-${order}`;
+    const attemptSuffix = attemptLabel.toLowerCase();
     try {
       const snapshot = captureSystemSnapshot();
       enforcePreRunGate(snapshot, processBaseline);
+      await writeJson(join(batchRoot, `${pairId}-${attemptSuffix}-system-before.json`), snapshot);
       await writeJson(join(batchRoot, `${pairId}-system-before.json`), snapshot);
 
       const result = runProcess(
@@ -510,9 +621,9 @@ async function main() {
         [
           PAIR_RUNNER,
           '--model',
-          options.model,
+          plan.model,
           '--scenario',
-          options.scenario,
+          plan.scenario,
           '--order',
           order,
           '--batch-id',
@@ -530,20 +641,19 @@ async function main() {
         },
       );
 
-      await writeText(
-        join(batchRoot, `${pairId}-runner.log`),
-        [
-          `attemptLabel: ${attemptLabel}`,
-          `runId: ${runId}`,
-          `exitCode: ${result.status ?? -1}`,
-          '',
-          'stdout:',
-          result.stdout ?? '(no stdout)',
-          '',
-          'stderr:',
-          result.stderr ?? '(no stderr)',
-        ].join('\n'),
-      );
+      const runnerLog = [
+        `attemptLabel: ${attemptLabel}`,
+        `runId: ${runId}`,
+        `exitCode: ${result.status ?? -1}`,
+        '',
+        'stdout:',
+        result.stdout ?? '(no stdout)',
+        '',
+        'stderr:',
+        result.stderr ?? '(no stderr)',
+      ].join('\n');
+      await writeText(join(batchRoot, `${pairId}-${attemptSuffix}-runner.log`), runnerLog);
+      await writeText(join(batchRoot, `${pairId}-runner.log`), runnerLog);
 
       if (result.status !== 0) {
         abortedPairs.push({

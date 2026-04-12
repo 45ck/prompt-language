@@ -783,11 +783,10 @@ async function runPromptLanguageLane({
   let runReport = null;
   let mainRun = null;
   let blockedPreflight = false;
-  let startedAtMs = null;
+  let startedAtMs = Date.now();
   let endedAtMs = Date.now();
 
   if (preflight.exitCode === 0) {
-    startedAtMs = Date.now();
     mainRun = runProcess(
       process.execPath,
       [
@@ -827,9 +826,6 @@ async function runPromptLanguageLane({
   const typecheckResult = await runVerificationCommand('typecheck', workspaceRoot, laneResultsRoot);
   const testResult = await runVerificationCommand('test', workspaceRoot, laneResultsRoot);
 
-  if (startedAtMs === null) {
-    startedAtMs = Date.now();
-  }
   endedAtMs = Date.now();
   const artifacts = await existingRequiredArtifacts(workspaceRoot, requiredArtifacts);
   const systemAfter = await captureSystemSnapshot();
@@ -1175,21 +1171,6 @@ function determineComparativeVerdict(plLane, codexLane) {
     plLane.metrics.timeToGreenSec < codexLane.metrics.timeToGreenSec
       ? 'prompt-language-better'
       : 'codex-alone-better';
-
-  if (
-    plLane.metrics.timeToFirstCodeSec !== null &&
-    codexLane.metrics.timeToFirstCodeSec !== null &&
-    plLane.metrics.timeToFirstCodeSec !== codexLane.metrics.timeToFirstCodeSec
-  ) {
-    const firstCodeWinner =
-      plLane.metrics.timeToFirstCodeSec < codexLane.metrics.timeToFirstCodeSec
-        ? 'prompt-language-better'
-        : 'codex-alone-better';
-    if (firstCodeWinner !== greenWinner) {
-      return 'mixed';
-    }
-  }
-
   return greenWinner;
 }
 
@@ -1493,7 +1474,7 @@ async function writeScorecard(
           ? 'Prompt-language outperformed the direct Codex baseline in this paired run.'
           : comparativeVerdict === 'codex-alone-better'
             ? 'Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.'
-            : 'Both lanes closed the common product contract, but the paired run produced a mixed result: prompt-language reached the first relevant workspace write earlier while direct Codex reached green faster.',
+            : 'Both lanes closed the common product contract, but the paired run still produced a mixed result on the available evidence.',
     nextExperimentFocus: [
       'repeat the clean paired run to stabilize the throughput reading',
       'add interruption and resume scenarios only after several clean pairs agree',

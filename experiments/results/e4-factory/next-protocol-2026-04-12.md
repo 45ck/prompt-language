@@ -50,6 +50,12 @@ Use a fixed alternating six-pair schedule:
 
 This is the default clean throughput batch for `e4:batch`.
 
+Treat `e4-b01-s0-clean-gpt52-pilot` as a pilot only. The first claim-eligible clean throughput
+batch should start as a fresh predeclared batch with the full planned pair count frozen up front.
+
+If a primary batch is interrupted, resume it on the same `batchId` and frozen commit instead of
+changing `plannedPairs` or reusing the pilot batch as the primary evidence pack.
+
 ## Pre-Run Gate
 
 Before every pair:
@@ -99,6 +105,10 @@ Secondary:
 - `closureCompleteness`
 
 Every failure must be classified as `product`, `runtime`, `config`, or `evidence`.
+
+Only `timeToGreenSec` may drive the throughput verdict. `timeToFirstRelevantWriteSec` is retained
+as exploratory context and may explain a result, but it must not flip the primary comparative
+verdict on its own.
 
 ## Exclusion Rules
 

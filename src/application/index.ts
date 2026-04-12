@@ -13,6 +13,12 @@ export type { EvaluateCompletionOutput } from './evaluate-completion.js';
 export { evaluateCompletion } from './evaluate-completion.js';
 
 export type {
+  CompactRenderModeDecision,
+  CompactRenderTriggerId,
+} from './select-compact-render-mode.js';
+export { selectCompactRenderModeForEnvelope } from './select-compact-render-mode.js';
+
+export type {
   FlowEvalResult,
   FlowEvalTraceStep,
   FlowEvalVariableContext,

@@ -7,6 +7,7 @@ import type {
   PromptTurnResult,
   PromptTurnRunner,
 } from '../../application/ports/prompt-turn-runner.js';
+import { selectCompactRenderModeForEnvelope } from '../../application/select-compact-render-mode.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -106,15 +107,13 @@ function createSystemPrompt(): string {
 }
 
 export function simplifyPromptLanguageEnvelope(prompt: string): string {
-  const trimmed = prompt.trim();
-  if (!trimmed.startsWith('[prompt-language] Flow:')) {
+  const modeDecision = selectCompactRenderModeForEnvelope(prompt);
+  if (modeDecision.actualMode === 'full') {
     return prompt;
   }
-  if (
-    trimmed.includes('[Internal — prompt-language variable capture:') ||
-    trimmed.includes('[Internal — prompt-language JSON capture:') ||
-    trimmed.includes('[Capture active:')
-  ) {
+
+  const trimmed = prompt.trim();
+  if (!trimmed.startsWith('[prompt-language] Flow:')) {
     return prompt;
   }
 

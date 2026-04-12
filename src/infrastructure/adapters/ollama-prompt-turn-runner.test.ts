@@ -141,6 +141,56 @@ describe('simplifyPromptLanguageEnvelope', () => {
 
     expect(simplifyPromptLanguageEnvelope(original)).toBe(original);
   });
+
+  it('leaves resumed envelopes unchanged so recovery context is not compacted away', () => {
+    const original = [
+      '[prompt-language] Flow: resume flow | Status: active',
+      '',
+      '~ prompt: Rebuild the auth module.',
+      '> run: npm test  <-- current',
+      '',
+      '[resumed from [prompt-language: step 2/2 "run: npm test", vars: 1]]',
+      'Continue from the restored step.',
+      '',
+      '[prompt-language: step 2/2 "run: npm test", vars: 1]',
+    ].join('\n');
+
+    expect(simplifyPromptLanguageEnvelope(original)).toBe(original);
+  });
+
+  it('leaves pending-gate envelopes unchanged so gate uncertainty stays visible', () => {
+    const original = [
+      '[prompt-language] Flow: gated flow | Status: active',
+      '',
+      '> prompt: Keep going  <-- current',
+      '',
+      'done when:',
+      '  tests_pass  [pending]',
+      '  lint_pass  [pass]',
+      '',
+      'Continue.',
+      '',
+      '[prompt-language: step 1/1 "prompt: Keep going", vars: 0, gates: 1/2 passed]',
+    ].join('\n');
+
+    expect(simplifyPromptLanguageEnvelope(original)).toBe(original);
+  });
+
+  it('leaves resumed spawn/await envelopes unchanged so child recovery stays inspectable', () => {
+    const original = [
+      '[prompt-language] Flow: spawn flow | Status: active',
+      '',
+      '~ spawn "fix-auth"  [running]',
+      '> await all  <-- current',
+      '',
+      '[resumed from [prompt-language: step 2/3 "await all", vars: 1]]',
+      'Continue after restore.',
+      '',
+      '[prompt-language: step 2/3 "await all", vars: 1]',
+    ].join('\n');
+
+    expect(simplifyPromptLanguageEnvelope(original)).toBe(original);
+  });
 });
 
 describe('OllamaPromptTurnRunner', () => {

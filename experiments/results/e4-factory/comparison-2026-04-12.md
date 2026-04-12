@@ -4,6 +4,20 @@ Date: 2026-04-12
 
 ## Bounded CRM Core
 
+### A02: `A02-crm-http-headless`
+
+- `prompt-language` HTTP lane: failed early
+
+Meaning:
+
+- this was an early headless CRM HTTP attempt, not a clean capability comparison
+- the run failed in runtime/setup plumbing before it could produce a comparable bounded product slice
+
+Primary evidence:
+
+- [A02 outcome](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/A02-crm-http-headless/outcome.md:1)
+- [A02 postmortem](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/A02-crm-http-headless/postmortem.md:1)
+
 ### A03: `20260412-0916-a03-core-proof-prebootstrapped`
 
 - `prompt-language` multi-agent lane: success
@@ -31,11 +45,28 @@ Meaning:
 Primary evidence:
 
 - [A04 outcome](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/outcome.md:1)
+- [A04 postmortem](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/postmortem.md:1)
+
+### A05: `20260412-1047-a05-core-proof-sequential-patched`
+
+- `prompt-language` sequential lane: success
+
+Meaning:
+
+- after the runtime fixes, the sequential prompt-language lane completed the bounded CRM core slice
+- the main A04 failure mode was runner/runtime reliability, not inability to express the factory
+  slice in prompt-language
+
+Primary evidence:
+
+- [A05 outcome](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/outcome.md:1)
+- [A05 postmortem](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/postmortem.md:1)
 
 ## Current Interpretation
 
-The evidence now supports three claims:
+The evidence now supports four claims:
 
 1. `prompt-language` can successfully drive a bounded software-factory slice.
-2. The current Windows/headless runtime path is still unreliable, especially around process launch, prompt-runner failure handling, and completion reporting.
-3. A failed sequential run is not enough to disprove the factory idea, because a successful prompt-language run already exists for the same bounded slice.
+2. Early failures were dominated by runner/setup issues, not by inability to specify the product.
+3. The Windows/headless runtime path needed explicit fixes around state-root resolution, run-node timeout behavior, and Codex process launch / cleanup.
+4. After those fixes, the sequential prompt-language lane also completed successfully.

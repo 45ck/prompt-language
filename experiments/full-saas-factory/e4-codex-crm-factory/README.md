@@ -89,6 +89,20 @@ Store the evidence pack under:
 
 `experiments/results/e4-factory/<run-id>/`
 
+## Attempt Closure
+
+No E4 attempt is considered complete just because the model run ended.
+
+Close every attempt with:
+
+- `manifest.json` updated to a final `status` / `verdict`
+- `outcome.md`
+- `postmortem.md`
+- `interventions.md`
+- comparison update in `experiments/results/e4-factory/comparison.md`
+
+This applies to success, partial success, failure, and aborts.
+
 ## Minimum Success Criteria
 
 - a working repo-local CRM app exists in the workspace

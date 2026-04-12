@@ -8,6 +8,8 @@
   "candidate": "codex-alone OR codex+prompt-language",
   "packageManager": "pnpm",
   "phaseMode": "phased",
+  "status": "open",
+  "verdict": "unknown",
   "requiredArtifacts": [
     "docs/prd.md",
     "docs/research/competitors.md",
@@ -21,6 +23,19 @@
     "docs/release-notes.md",
     "docs/handover.md"
   ],
-  "verification": ["npm run lint", "npm run typecheck", "npm run test"],
+  "verificationCommands": ["npm run lint", "npm run typecheck", "npm run test"],
+  "verification": {
+    "lint": "not-run",
+    "typecheck": "not-run",
+    "test": "not-run"
+  },
+  "artifactsComplete": false,
+  "missingArtifacts": [],
+  "outcomePath": "experiments/results/e4-factory/runs/<run-id>/outcome.md",
+  "postmortemPath": "experiments/results/e4-factory/runs/<run-id>/postmortem.md",
+  "interventionsPath": "experiments/results/e4-factory/runs/<run-id>/interventions.md",
+  "comparisonPath": "experiments/results/e4-factory/comparison.md",
+  "comparisonUpdated": false,
+  "followups": [],
   "evidenceRoot": "experiments/results/e4-factory/<run-id>"
 }

@@ -146,7 +146,7 @@
     "warnings": []
   },
   "currentNodePath": [
-    5
+    9
   ],
   "nodeProgress": {
     "n1": {
@@ -183,17 +183,157 @@
       "status": "completed",
       "startedAt": 1775956095079,
       "completedAt": 1775956095079
+    },
+    "n6": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775956330590,
+      "completedAt": 1775956330590
+    },
+    "n7": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775956437064,
+      "completedAt": 1775956438294,
+      "exitCode": 0,
+      "stdout": "\n> lint\n> eslint . --max-warnings=0",
+      "stderr": ""
+    },
+    "n8": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775956438294,
+      "completedAt": 1775956439559,
+      "exitCode": 0,
+      "stdout": "\n> typecheck\n> tsc -p tsconfig.json --noEmit",
+      "stderr": ""
+    },
+    "n9": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775956439559,
+      "completedAt": 1775956440505,
+      "exitCode": 0,
+      "stdout": "\n> test\n> vitest run\n\n\n RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/20260412-1047-a05-core-proof-sequential-patched/pl-sequential\n\n\n Test Files  4 passed (4)\n      Tests  17 passed (17)\n   Start at  11:14:00\n   Duration  255ms (transform 138ms, setup 0ms, import 228ms, tests 20ms, environment 0ms)",
+      "stderr": ""
     }
   },
-  "variables": {},
-  "gateResults": {},
-  "gateDiagnostics": {},
-  "status": "active",
+  "variables": {
+    "last_exit_code": 0,
+    "command_failed": false,
+    "command_succeeded": true,
+    "last_stdout": "\n> test\n> vitest run\n\n\n RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/20260412-1047-a05-core-proof-sequential-patched/pl-sequential\n\n\n Test Files  4 passed (4)\n      Tests  17 passed (17)\n   Start at  11:14:00\n   Duration  255ms (transform 138ms, setup 0ms, import 228ms, tests 20ms, environment 0ms)",
+    "last_stderr": ""
+  },
+  "gateResults": {
+    "lint": true,
+    "typecheck": true,
+    "tests": true,
+    "file_exists .factory/project.flow": true,
+    "file_exists docs/prd.md": true,
+    "file_exists docs/acceptance-criteria.md": true,
+    "file_exists docs/architecture/domain-model.md": true,
+    "file_exists docs/api-contracts.md": true,
+    "file_exists specs/invariants.md": true,
+    "file_exists packages/domain/src/index.ts": true,
+    "file_exists packages/api/src/index.ts": true,
+    "file_exists docs/handover.md": true,
+    "file_exists docs/test-strategy.md": true
+  },
+  "gateDiagnostics": {
+    "lint": {
+      "passed": true,
+      "command": "npm run lint",
+      "exitCode": 0,
+      "stdout": "\n> lint\n> eslint . --max-warnings=0",
+      "gateEvaluatedAt": 1775956442013
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "stdout": "\n> typecheck\n> tsc -p tsconfig.json --noEmit",
+      "gateEvaluatedAt": 1775956442038
+    },
+    "tests": {
+      "passed": true,
+      "command": "npm run test",
+      "exitCode": 0,
+      "stdout": "\n> test\n> vitest run\n\n\n RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/20260412-1047-a05-core-proof-sequential-patched/pl-sequential\n\n\n Test Files  4 passed (4)\n      Tests  17 passed (17)\n   Start at  11:14:01\n   Duration  357ms (transform 373ms, setup 0ms, import 474ms, tests 28ms, environment 1ms)",
+      "gateEvaluatedAt": 1775956441673
+    },
+    "file_exists .factory/project.flow": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('.factory/project.flow') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440583
+    },
+    "file_exists docs/prd.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/prd.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440587
+    },
+    "file_exists docs/acceptance-criteria.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/acceptance-criteria.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440598
+    },
+    "file_exists docs/architecture/domain-model.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/architecture/domain-model.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440598
+    },
+    "file_exists docs/api-contracts.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/api-contracts.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440608
+    },
+    "file_exists specs/invariants.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('specs/invariants.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440622
+    },
+    "file_exists packages/domain/src/index.ts": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/domain/src/index.ts') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440621
+    },
+    "file_exists packages/api/src/index.ts": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/api/src/index.ts') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440631
+    },
+    "file_exists docs/handover.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/handover.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440633
+    },
+    "file_exists docs/test-strategy.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/test-strategy.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775956440642
+    }
+  },
+  "status": "completed",
   "warnings": [],
   "spawnedChildren": {},
   "raceChildren": {},
   "flowSpecHash": "3d7d8d41",
-  "transitionSeq": 5,
+  "transitionSeq": 9,
   "captureNonce": "742e55746ebcc2bfc09a05b4ed03f286",
-  "_checksum": "2b433af6c8d6eb28666f5d6afe1898c1a40689dd8d3de2e65c2a466825de08e9"
+  "gateFailureCount": 0,
+  "_checksum": "ae9b74fe4f4ea8bb2bd09afe881fba05d467a78799f030edcbe660ce5bb58a81"
 }

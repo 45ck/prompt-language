@@ -1,0 +1,37 @@
+{
+  "runId": "a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first",
+  "attemptLabel": "A11",
+  "scenario": "s0-clean",
+  "order": "pl-first",
+  "model": "gpt-5.2",
+  "batch": {
+    "batchId": "e4-b02-s0-clean-gpt52-primary",
+    "pairId": "p04"
+  },
+  "startedAt": "2026-04-12T08:21:21.091Z",
+  "gitCommit": "e8c9a04c75ee2d461c1ac13d0f3a00e655ee27b8",
+  "gitStatusShort": "M experiments/results/e4-factory/analysis-2026-04-12.md\n M experiments/results/e4-factory/comparison.md\n?? experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/\n?? experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/\n?? experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/\n?? experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/\n?? experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/\n?? experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/\n?? experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/",
+  "nodeVersion": "v22.22.0",
+  "npmVersion": "10.9.4",
+  "codexVersion": "codex-cli 0.120.0",
+  "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-throughput.flow",
+  "controlHash": "a22618d599648618b2e28417bad9cb9bc0aca02c67163707d8ca952fcf0dc0a4",
+  "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-core-proof.prompt.md",
+  "promptHash": "8bf69544769a8bad48a181ed24d69835c519f87f9bca5befd56623f8e6e4e26f",
+  "bootstrapSeed": {
+    "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+    "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+    "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+    "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+  },
+  "timingEnvelope": "paired-throughput-s0-external-verification",
+  "documentedHumanInterventions": 0,
+  "interventionObservationMode": "harness-parameterized",
+  "endedAt": "2026-04-12T08:59:35.234Z",
+  "comparativeVerdict": "codex-alone-better",
+  "admissibility": {
+    "class": "primary-comparison",
+    "throughputClaimEligible": false,
+    "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+  }
+}

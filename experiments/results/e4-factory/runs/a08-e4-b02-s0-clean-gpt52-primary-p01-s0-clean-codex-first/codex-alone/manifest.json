@@ -1,0 +1,75 @@
+{
+  "runId": "a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first",
+  "lane": "codex-alone",
+  "candidate": "codex-alone",
+  "model": "gpt-5.2",
+  "batch": {
+    "batchId": "e4-b02-s0-clean-gpt52-primary",
+    "pairId": "p01"
+  },
+  "timingEnvelope": "paired-throughput-s0-external-verification",
+  "status": "completed",
+  "verdict": "success",
+  "workspaceRoot": "D:\\Visual Studio Projects\\prompt-language\\experiments\\full-saas-factory\\e4-codex-crm-factory\\workspaces\\runs\\a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first\\codex-alone",
+  "resultsRoot": "D:\\Visual Studio Projects\\prompt-language\\experiments\\results\\e4-factory\\runs\\a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first\\codex-alone",
+  "promptFile": "D:\\Visual Studio Projects\\prompt-language\\experiments\\results\\e4-factory\\runs\\a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first\\codex-alone\\prompt.md",
+  "bootstrapSeed": {
+    "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+    "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+    "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+    "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+  },
+  "requiredArtifacts": [
+    "docs/prd.md",
+    "docs/acceptance-criteria.md",
+    "docs/architecture/domain-model.md",
+    "docs/api-contracts.md",
+    "specs/invariants.md",
+    "packages/domain/src/index.ts",
+    "packages/api/src/index.ts",
+    "README.md",
+    "docs/handover.md",
+    "docs/test-strategy.md"
+  ],
+  "verificationCommands": [
+    "npm run lint",
+    "npm run typecheck",
+    "npm run test"
+  ],
+  "verification": {
+    "lint": "pass",
+    "typecheck": "pass",
+    "test": "pass"
+  },
+  "artifactsComplete": true,
+  "missingArtifacts": [],
+  "outcomePath": "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/outcome.md",
+  "postmortemPath": "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/postmortem.md",
+  "interventionsPath": "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/interventions.md",
+  "scorecardPath": "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/scorecard.json",
+  "traceSummaryPath": "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/trace-summary.md",
+  "traceArtifacts": [
+    "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/events.jsonl",
+    "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/stderr.log",
+    "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/last-message.txt",
+    "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/lint.log",
+    "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/typecheck.log",
+    "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/test.log"
+  ],
+  "comparisonPath": "experiments/results/e4-factory/comparison.md",
+  "comparisonUpdated": true,
+  "metrics": {
+    "startedAt": "2026-04-12T06:29:25.013Z",
+    "endedAt": "2026-04-12T06:41:22.372Z",
+    "timeToGreenSec": 717.36,
+    "timeToFirstCodeSec": 154.33,
+    "timeToFirstRelevantWriteSec": 154.33,
+    "interventionCount": 0,
+    "restartCount": 0,
+    "runtimeFailureCount": 0,
+    "failureClass": "none",
+    "throughputMetricsComplete": true,
+    "traceCompleteness": "strong"
+  },
+  "followups": []
+}

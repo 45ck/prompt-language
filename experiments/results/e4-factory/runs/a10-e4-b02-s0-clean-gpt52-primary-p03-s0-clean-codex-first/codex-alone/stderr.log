@@ -1,0 +1,14 @@
+2026-04-12T07:55:34.642341Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.5 seconds
+Output:
+
+> typecheck
+> tsc -p tsconfig.json --noEmit
+
+packages/api/test/api.test.ts(17,26): error TS2339: Property 'entity' does not exist on type 'ApiError'.
+  Property 'entity' does not exist on type '{ type: "domain"; error: DomainError; }'.
+packages/domain/test/domain.test.ts(20,25): error TS2339: Property 'field' does not exist on type 'DomainError'.
+  Property 'field' does not exist on type '{ type: "not_allowed"; message: string; }'.
+packages/domain/test/domain.test.ts(35,25): error TS2339: Property 'field' does not exist on type 'DomainError'.
+  Property 'field' does not exist on type '{ type: "not_allowed"; message: string; }'.
+

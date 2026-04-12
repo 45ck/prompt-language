@@ -1,0 +1,61 @@
+2026-04-12T06:38:40.333282Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.6 seconds
+Output:
+
+> typecheck
+> tsc -p tsconfig.json --noEmit
+
+packages/api/test/api.test.ts(37,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Contact>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+packages/api/test/api.test.ts(103,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Opportunity>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+packages/api/test/api.test.ts(110,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Task>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+packages/domain/test/domain.test.ts(44,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Contact>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+packages/domain/test/domain.test.ts(66,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Opportunity>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+packages/domain/test/domain.test.ts(76,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Opportunity>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+packages/domain/test/domain.test.ts(105,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Company>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+
+2026-04-12T06:39:35.137240Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.2 seconds
+Output:
+
+> test
+> vitest run
+
+
+ RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone
+
+ ❯ packages/domain/test/domain.test.ts (0 test)
+ ❯ packages/api/test/api.test.ts (0 test)
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  16:39:34
+   Duration  232ms (transform 89ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/api/test/api.test.ts [ packages/api/test/api.test.ts ]
+ReferenceError: describe is not defined
+ ❯ packages/api/test/api.test.ts:22:1
+     20| }
+     21|
+     22| describe('api', () => {
+       | ^
+     23|   test('creates entities, enforces constraints, and summarizes dashboa…
+     24|     const crm = createInMemoryCrm({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/domain/test/domain.test.ts [ packages/domain/test/domain.test.ts ]
+ReferenceError: describe is not defined
+ ❯ packages/domain/test/domain.test.ts:27:1
+     25| }
+     26|
+     27| describe('domain', () => {
+       | ^
+     28|   test('creates and normalizes a contact', () => {
+     29|     const contact = createContact({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+

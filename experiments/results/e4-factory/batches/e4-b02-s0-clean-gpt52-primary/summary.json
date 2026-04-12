@@ -1,0 +1,71 @@
+{
+  "batchId": "e4-b02-s0-clean-gpt52-primary",
+  "scenario": "s0-clean",
+  "model": "gpt-5.2",
+  "frozenCommit": "e8c9a04c75ee2d461c1ac13d0f3a00e655ee27b8",
+  "plannedPairs": 4,
+  "completedPairs": 4,
+  "eligiblePairs": 4,
+  "abortedPairs": [],
+  "completedOrderCounts": {
+    "codex-first": 2,
+    "pl-first": 2
+  },
+  "eligibleOrderCounts": {
+    "codex-first": 2,
+    "pl-first": 2
+  },
+  "orderCounts": {
+    "codex-first": 2,
+    "pl-first": 2
+  },
+  "claimEligibility": {
+    "throughputClaimEligible": true,
+    "reasons": []
+  },
+  "lanes": {
+    "pl-sequential": {
+      "successCount": 4,
+      "successRate": 1,
+      "medianTimeToGreenSec": 1514.34,
+      "medianTimeToFirstRelevantWriteSec": 149.97
+    },
+    "codex-alone": {
+      "successCount": 4,
+      "successRate": 1,
+      "medianTimeToGreenSec": 719.79,
+      "medianTimeToFirstRelevantWriteSec": 222.85
+    }
+  },
+  "lanesByOrder": {
+    "codex-first": {
+      "pl-sequential": {
+        "successCount": 2,
+        "successRate": 1,
+        "medianTimeToGreenSec": 1372.77,
+        "medianTimeToFirstRelevantWriteSec": 132.15
+      },
+      "codex-alone": {
+        "successCount": 2,
+        "successRate": 1,
+        "medianTimeToGreenSec": 673.94,
+        "medianTimeToFirstRelevantWriteSec": 207.08
+      }
+    },
+    "pl-first": {
+      "pl-sequential": {
+        "successCount": 2,
+        "successRate": 1,
+        "medianTimeToGreenSec": 1683.37,
+        "medianTimeToFirstRelevantWriteSec": 167.32
+      },
+      "codex-alone": {
+        "successCount": 2,
+        "successRate": 1,
+        "medianTimeToGreenSec": 743.49,
+        "medianTimeToFirstRelevantWriteSec": 313.89
+      }
+    }
+  },
+  "comparativeVerdict": "codex-alone-better"
+}

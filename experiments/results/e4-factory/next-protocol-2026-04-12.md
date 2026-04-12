@@ -4,8 +4,8 @@ Date: `2026-04-12`
 
 ## Objective
 
-Run the next E4 comparison as a scientifically cleaner throughput batch before adding interruption
-and resume scenarios.
+Run the next E4 comparison in the area where prompt-language still has a plausible advantage:
+governed interruption, restart, and recovery. The clean throughput batch has already completed.
 
 ## Phase Split
 
@@ -21,10 +21,15 @@ direct Codex baseline.
 
 Run only clean uninterrupted pairs in this phase.
 
+Status: completed with [B02 batch summary](./batches/e4-b02-s0-clean-gpt52-primary/summary.md).
+
 ### `S1` / `S2` Recovery Batch
 
-Do not start interruption or resume scenarios until the `S0` batch finishes and the batch summary
+Start interruption or resume scenarios only after the `S0` batch finishes and the batch summary
 decides whether the clean throughput claim is eligible.
+
+Current disposition: `S0` is complete and the batch-level throughput verdict is
+`codex-alone-better`, so future E4 work should move into `S1` / `S2`.
 
 ## Frozen Variables
 

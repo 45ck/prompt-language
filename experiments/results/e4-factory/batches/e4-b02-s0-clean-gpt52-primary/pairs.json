@@ -1,0 +1,1274 @@
+[
+  {
+    "pairId": "p01",
+    "order": "codex-first",
+    "runId": "a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first",
+    "attemptLabel": "A08",
+    "scorecard": {
+      "scoreVersion": "e4-v1",
+      "runId": "a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first",
+      "batch": {
+        "batchId": "e4-b02-s0-clean-gpt52-primary",
+        "pairId": "p01"
+      },
+      "scope": "bounded-crm-core",
+      "question": "For the same bounded CRM core slice and frozen bootstrap seed, how does prompt-language compare with direct Codex?",
+      "baselineReference": "codex-alone within this run",
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+      },
+      "comparativeVerdict": "codex-alone-better",
+      "lanes": [
+        {
+          "lane": "pl-sequential",
+          "candidate": "prompt-language",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 1274.08,
+            "timeToFirstCodeSec": 133.15,
+            "timeToFirstRelevantWriteSec": 133.15,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": true,
+            "traceCompleteness": "strong"
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "overall": 13
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/pl-sequential/lint.log",
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/pl-sequential/typecheck.log",
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/pl-sequential/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+            ]
+          },
+          "notes": "Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+        },
+        {
+          "lane": "codex-alone",
+          "candidate": "codex-alone",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 717.36,
+            "timeToFirstCodeSec": 154.33,
+            "timeToFirstRelevantWriteSec": 154.33,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": true,
+            "traceCompleteness": "strong"
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "overall": 13
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/lint.log",
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/typecheck.log",
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+            ]
+          },
+          "notes": "Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+        }
+      ],
+      "comparativeSummary": "Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.",
+      "nextExperimentFocus": [
+        "repeat the clean paired run to stabilize the throughput reading",
+        "add interruption and resume scenarios only after several clean pairs agree"
+      ]
+    },
+    "runMetadata": {
+      "runId": "a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first",
+      "attemptLabel": "A08",
+      "scenario": "s0-clean",
+      "order": "codex-first",
+      "model": "gpt-5.2",
+      "batch": {
+        "batchId": "e4-b02-s0-clean-gpt52-primary",
+        "pairId": "p01"
+      },
+      "startedAt": "2026-04-12T06:29:15.179Z",
+      "gitCommit": "e8c9a04c75ee2d461c1ac13d0f3a00e655ee27b8",
+      "gitStatusShort": "?? experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/",
+      "nodeVersion": "v22.22.0",
+      "npmVersion": "10.9.4",
+      "codexVersion": "codex-cli 0.120.0",
+      "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-throughput.flow",
+      "controlHash": "a22618d599648618b2e28417bad9cb9bc0aca02c67163707d8ca952fcf0dc0a4",
+      "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-core-proof.prompt.md",
+      "promptHash": "8bf69544769a8bad48a181ed24d69835c519f87f9bca5befd56623f8e6e4e26f",
+      "bootstrapSeed": {
+        "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+        "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+        "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+        "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+      },
+      "timingEnvelope": "paired-throughput-s0-external-verification",
+      "documentedHumanInterventions": 0,
+      "interventionObservationMode": "harness-parameterized",
+      "endedAt": "2026-04-12T07:02:41.217Z",
+      "comparativeVerdict": "codex-alone-better",
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+      }
+    },
+    "validForBatchSummary": true,
+    "lanes": {
+      "pl-sequential": {
+        "lane": "pl-sequential",
+        "candidate": "prompt-language",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 1274.08,
+          "timeToFirstCodeSec": 133.15,
+          "timeToFirstRelevantWriteSec": 133.15,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": true,
+          "traceCompleteness": "strong"
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "overall": 13
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/pl-sequential/lint.log",
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/pl-sequential/typecheck.log",
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/pl-sequential/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+          ]
+        },
+        "notes": "Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+      },
+      "codex-alone": {
+        "lane": "codex-alone",
+        "candidate": "codex-alone",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 717.36,
+          "timeToFirstCodeSec": 154.33,
+          "timeToFirstRelevantWriteSec": 154.33,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": true,
+          "traceCompleteness": "strong"
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "overall": 13
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/lint.log",
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/typecheck.log",
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+          ]
+        },
+        "notes": "Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+      }
+    }
+  },
+  {
+    "pairId": "p02",
+    "order": "pl-first",
+    "runId": "a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first",
+    "attemptLabel": "A09",
+    "scorecard": {
+      "scoreVersion": "e4-v1",
+      "runId": "a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first",
+      "batch": {
+        "batchId": "e4-b02-s0-clean-gpt52-primary",
+        "pairId": "p02"
+      },
+      "scope": "bounded-crm-core",
+      "question": "For the same bounded CRM core slice and frozen bootstrap seed, how does prompt-language compare with direct Codex?",
+      "baselineReference": "codex-alone within this run",
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+      },
+      "comparativeVerdict": "codex-alone-better",
+      "lanes": [
+        {
+          "lane": "pl-sequential",
+          "candidate": "prompt-language",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 1809.51,
+            "timeToFirstCodeSec": 167.84,
+            "timeToFirstRelevantWriteSec": 167.84,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": true,
+            "traceCompleteness": "strong"
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "overall": 13
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/pl-sequential/lint.log",
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/pl-sequential/typecheck.log",
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/pl-sequential/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+            ]
+          },
+          "notes": "Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+        },
+        {
+          "lane": "codex-alone",
+          "candidate": "codex-alone",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 764.76,
+            "timeToFirstCodeSec": 441.9,
+            "timeToFirstRelevantWriteSec": 441.9,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": true,
+            "traceCompleteness": "strong"
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "overall": 13
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/codex-alone/lint.log",
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/codex-alone/typecheck.log",
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/codex-alone/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+            ]
+          },
+          "notes": "Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+        }
+      ],
+      "comparativeSummary": "Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.",
+      "nextExperimentFocus": [
+        "repeat the clean paired run to stabilize the throughput reading",
+        "add interruption and resume scenarios only after several clean pairs agree"
+      ]
+    },
+    "runMetadata": {
+      "runId": "a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first",
+      "attemptLabel": "A09",
+      "scenario": "s0-clean",
+      "order": "pl-first",
+      "model": "gpt-5.2",
+      "batch": {
+        "batchId": "e4-b02-s0-clean-gpt52-primary",
+        "pairId": "p02"
+      },
+      "startedAt": "2026-04-12T07:02:42.921Z",
+      "gitCommit": "e8c9a04c75ee2d461c1ac13d0f3a00e655ee27b8",
+      "gitStatusShort": "M experiments/results/e4-factory/analysis-2026-04-12.md\n M experiments/results/e4-factory/comparison.md\n?? experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/\n?? experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/\n?? experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/",
+      "nodeVersion": "v22.22.0",
+      "npmVersion": "10.9.4",
+      "codexVersion": "codex-cli 0.120.0",
+      "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-throughput.flow",
+      "controlHash": "a22618d599648618b2e28417bad9cb9bc0aca02c67163707d8ca952fcf0dc0a4",
+      "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-core-proof.prompt.md",
+      "promptHash": "8bf69544769a8bad48a181ed24d69835c519f87f9bca5befd56623f8e6e4e26f",
+      "bootstrapSeed": {
+        "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+        "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+        "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+        "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+      },
+      "timingEnvelope": "paired-throughput-s0-external-verification",
+      "documentedHumanInterventions": 0,
+      "interventionObservationMode": "harness-parameterized",
+      "endedAt": "2026-04-12T07:45:54.531Z",
+      "comparativeVerdict": "codex-alone-better",
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+      }
+    },
+    "validForBatchSummary": true,
+    "lanes": {
+      "pl-sequential": {
+        "lane": "pl-sequential",
+        "candidate": "prompt-language",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 1809.51,
+          "timeToFirstCodeSec": 167.84,
+          "timeToFirstRelevantWriteSec": 167.84,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": true,
+          "traceCompleteness": "strong"
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "overall": 13
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/pl-sequential/lint.log",
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/pl-sequential/typecheck.log",
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/pl-sequential/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+          ]
+        },
+        "notes": "Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+      },
+      "codex-alone": {
+        "lane": "codex-alone",
+        "candidate": "codex-alone",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 764.76,
+          "timeToFirstCodeSec": 441.9,
+          "timeToFirstRelevantWriteSec": 441.9,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": true,
+          "traceCompleteness": "strong"
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "overall": 13
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/codex-alone/lint.log",
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/codex-alone/typecheck.log",
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/codex-alone/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+          ]
+        },
+        "notes": "Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+      }
+    }
+  },
+  {
+    "pairId": "p03",
+    "order": "codex-first",
+    "runId": "a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first",
+    "attemptLabel": "A10",
+    "scorecard": {
+      "scoreVersion": "e4-v1",
+      "runId": "a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first",
+      "batch": {
+        "batchId": "e4-b02-s0-clean-gpt52-primary",
+        "pairId": "p03"
+      },
+      "scope": "bounded-crm-core",
+      "question": "For the same bounded CRM core slice and frozen bootstrap seed, how does prompt-language compare with direct Codex?",
+      "baselineReference": "codex-alone within this run",
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+      },
+      "comparativeVerdict": "codex-alone-better",
+      "lanes": [
+        {
+          "lane": "pl-sequential",
+          "candidate": "prompt-language",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 1471.46,
+            "timeToFirstCodeSec": 131.15,
+            "timeToFirstRelevantWriteSec": 131.15,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": true,
+            "traceCompleteness": "strong"
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "overall": 13
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/pl-sequential/lint.log",
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/pl-sequential/typecheck.log",
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/pl-sequential/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+            ]
+          },
+          "notes": "Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+        },
+        {
+          "lane": "codex-alone",
+          "candidate": "codex-alone",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 630.51,
+            "timeToFirstCodeSec": 259.82,
+            "timeToFirstRelevantWriteSec": 259.82,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": true,
+            "traceCompleteness": "strong"
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "overall": 13
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/codex-alone/lint.log",
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/codex-alone/typecheck.log",
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/codex-alone/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+            ]
+          },
+          "notes": "Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+        }
+      ],
+      "comparativeSummary": "Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.",
+      "nextExperimentFocus": [
+        "repeat the clean paired run to stabilize the throughput reading",
+        "add interruption and resume scenarios only after several clean pairs agree"
+      ]
+    },
+    "runMetadata": {
+      "runId": "a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first",
+      "attemptLabel": "A10",
+      "scenario": "s0-clean",
+      "order": "codex-first",
+      "model": "gpt-5.2",
+      "batch": {
+        "batchId": "e4-b02-s0-clean-gpt52-primary",
+        "pairId": "p03"
+      },
+      "startedAt": "2026-04-12T07:45:56.467Z",
+      "gitCommit": "e8c9a04c75ee2d461c1ac13d0f3a00e655ee27b8",
+      "gitStatusShort": "M experiments/results/e4-factory/analysis-2026-04-12.md\n M experiments/results/e4-factory/comparison.md\n?? experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/\n?? experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/\n?? experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/\n?? experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/\n?? experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/",
+      "nodeVersion": "v22.22.0",
+      "npmVersion": "10.9.4",
+      "codexVersion": "codex-cli 0.120.0",
+      "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-throughput.flow",
+      "controlHash": "a22618d599648618b2e28417bad9cb9bc0aca02c67163707d8ca952fcf0dc0a4",
+      "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-core-proof.prompt.md",
+      "promptHash": "8bf69544769a8bad48a181ed24d69835c519f87f9bca5befd56623f8e6e4e26f",
+      "bootstrapSeed": {
+        "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+        "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+        "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+        "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+      },
+      "timingEnvelope": "paired-throughput-s0-external-verification",
+      "documentedHumanInterventions": 0,
+      "interventionObservationMode": "harness-parameterized",
+      "endedAt": "2026-04-12T08:21:19.467Z",
+      "comparativeVerdict": "codex-alone-better",
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+      }
+    },
+    "validForBatchSummary": true,
+    "lanes": {
+      "pl-sequential": {
+        "lane": "pl-sequential",
+        "candidate": "prompt-language",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 1471.46,
+          "timeToFirstCodeSec": 131.15,
+          "timeToFirstRelevantWriteSec": 131.15,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": true,
+          "traceCompleteness": "strong"
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "overall": 13
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/pl-sequential/lint.log",
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/pl-sequential/typecheck.log",
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/pl-sequential/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+          ]
+        },
+        "notes": "Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+      },
+      "codex-alone": {
+        "lane": "codex-alone",
+        "candidate": "codex-alone",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 630.51,
+          "timeToFirstCodeSec": 259.82,
+          "timeToFirstRelevantWriteSec": 259.82,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": true,
+          "traceCompleteness": "strong"
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "overall": 13
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/codex-alone/lint.log",
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/codex-alone/typecheck.log",
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/codex-alone/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+          ]
+        },
+        "notes": "Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+      }
+    }
+  },
+  {
+    "pairId": "p04",
+    "order": "pl-first",
+    "runId": "a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first",
+    "attemptLabel": "A11",
+    "scorecard": {
+      "scoreVersion": "e4-v1",
+      "runId": "a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first",
+      "batch": {
+        "batchId": "e4-b02-s0-clean-gpt52-primary",
+        "pairId": "p04"
+      },
+      "scope": "bounded-crm-core",
+      "question": "For the same bounded CRM core slice and frozen bootstrap seed, how does prompt-language compare with direct Codex?",
+      "baselineReference": "codex-alone within this run",
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+      },
+      "comparativeVerdict": "codex-alone-better",
+      "lanes": [
+        {
+          "lane": "pl-sequential",
+          "candidate": "prompt-language",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 1557.22,
+            "timeToFirstCodeSec": 166.79,
+            "timeToFirstRelevantWriteSec": 166.79,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": true,
+            "traceCompleteness": "strong"
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "overall": 13
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/pl-sequential/lint.log",
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/pl-sequential/typecheck.log",
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/pl-sequential/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+            ]
+          },
+          "notes": "Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+        },
+        {
+          "lane": "codex-alone",
+          "candidate": "codex-alone",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 722.22,
+            "timeToFirstCodeSec": 185.88,
+            "timeToFirstRelevantWriteSec": 185.88,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": true,
+            "traceCompleteness": "strong"
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "overall": 13
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/codex-alone/lint.log",
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/codex-alone/typecheck.log",
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/codex-alone/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+            ]
+          },
+          "notes": "Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+        }
+      ],
+      "comparativeSummary": "Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.",
+      "nextExperimentFocus": [
+        "repeat the clean paired run to stabilize the throughput reading",
+        "add interruption and resume scenarios only after several clean pairs agree"
+      ]
+    },
+    "runMetadata": {
+      "runId": "a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first",
+      "attemptLabel": "A11",
+      "scenario": "s0-clean",
+      "order": "pl-first",
+      "model": "gpt-5.2",
+      "batch": {
+        "batchId": "e4-b02-s0-clean-gpt52-primary",
+        "pairId": "p04"
+      },
+      "startedAt": "2026-04-12T08:21:21.091Z",
+      "gitCommit": "e8c9a04c75ee2d461c1ac13d0f3a00e655ee27b8",
+      "gitStatusShort": "M experiments/results/e4-factory/analysis-2026-04-12.md\n M experiments/results/e4-factory/comparison.md\n?? experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/\n?? experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/\n?? experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/\n?? experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/\n?? experiments/results/e4-factory/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/\n?? experiments/results/e4-factory/runs/a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first/\n?? experiments/results/e4-factory/runs/a10-e4-b02-s0-clean-gpt52-primary-p03-s0-clean-codex-first/",
+      "nodeVersion": "v22.22.0",
+      "npmVersion": "10.9.4",
+      "codexVersion": "codex-cli 0.120.0",
+      "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-throughput.flow",
+      "controlHash": "a22618d599648618b2e28417bad9cb9bc0aca02c67163707d8ca952fcf0dc0a4",
+      "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-core-proof.prompt.md",
+      "promptHash": "8bf69544769a8bad48a181ed24d69835c519f87f9bca5befd56623f8e6e4e26f",
+      "bootstrapSeed": {
+        "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+        "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+        "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+        "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+      },
+      "timingEnvelope": "paired-throughput-s0-external-verification",
+      "documentedHumanInterventions": 0,
+      "interventionObservationMode": "harness-parameterized",
+      "endedAt": "2026-04-12T08:59:35.234Z",
+      "comparativeVerdict": "codex-alone-better",
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+      }
+    },
+    "validForBatchSummary": true,
+    "lanes": {
+      "pl-sequential": {
+        "lane": "pl-sequential",
+        "candidate": "prompt-language",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 1557.22,
+          "timeToFirstCodeSec": 166.79,
+          "timeToFirstRelevantWriteSec": 166.79,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": true,
+          "traceCompleteness": "strong"
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "overall": 13
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/pl-sequential/lint.log",
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/pl-sequential/typecheck.log",
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/pl-sequential/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+          ]
+        },
+        "notes": "Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+      },
+      "codex-alone": {
+        "lane": "codex-alone",
+        "candidate": "codex-alone",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 722.22,
+          "timeToFirstCodeSec": 185.88,
+          "timeToFirstRelevantWriteSec": 185.88,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": true,
+          "traceCompleteness": "strong"
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "overall": 13
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/codex-alone/lint.log",
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/codex-alone/typecheck.log",
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/codex-alone/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b02-s0-clean-gpt52-primary/summary.json"
+          ]
+        },
+        "notes": "Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+      }
+    }
+  }
+]

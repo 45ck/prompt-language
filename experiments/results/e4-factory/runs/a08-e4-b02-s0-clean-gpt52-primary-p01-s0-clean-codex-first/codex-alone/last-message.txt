@@ -1,0 +1,5 @@
+- Implemented pure CRM domain (contacts/companies/opportunities w/ stage transitions, tasks, notes, invariants + errors) in `packages/domain/src/index.ts:1`.
+- Implemented in-memory CRM API facade (CRUD + transitions + dashboard summary, referential integrity + email uniqueness) in `packages/api/src/index.ts:1`.
+- Added focused tests in `packages/domain/test/domain.test.ts:1` and `packages/api/test/api.test.ts:1`.
+- Wrote docs/contracts/specs: `docs/prd.md:1`, `docs/acceptance-criteria.md:1`, `docs/architecture/domain-model.md:1`, `docs/api-contracts.md:1`, `specs/invariants.md:1`, `docs/test-strategy.md:1`, `docs/handover.md:1`; updated `README.md:1`.
+- Verified passing: `npm run lint`, `npm run typecheck`, `npm run test`.

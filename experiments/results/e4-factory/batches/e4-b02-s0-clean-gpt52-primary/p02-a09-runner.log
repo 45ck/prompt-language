@@ -1,0 +1,11 @@
+attemptLabel: A09
+runId: a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first
+exitCode: 0
+
+stdout:
+[e4:pair] completed a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first
+[e4:pair] verdict=codex-alone-better prompt-language=success codex-alone=success
+
+
+stderr:
+

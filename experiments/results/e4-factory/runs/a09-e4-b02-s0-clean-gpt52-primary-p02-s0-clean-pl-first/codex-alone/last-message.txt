@@ -1,0 +1,4 @@
+- Implemented pure CRM domain slice in `packages/domain/src/index.ts:1` (entities, validation, opportunity stage transitions, dashboard summariser) + tests in `packages/domain/test/domain.test.ts:1`.
+- Implemented in-memory CRM API in `packages/api/src/index.ts:1` (reference enforcement, deterministic `Clock`/`IdGenerator`, dashboard summary) + tests in `packages/api/test/api.test.ts:1`.
+- Wrote docs/specs: `docs/prd.md:1`, `docs/acceptance-criteria.md:1`, `docs/architecture/domain-model.md:1`, `docs/api-contracts.md:1`, `specs/invariants.md:1`, `docs/test-strategy.md:1`, `docs/handover.md:1`, `README.md:1`.
+- Verified passing: `npm run lint`, `npm run typecheck`, `npm run test`.

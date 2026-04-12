@@ -1,0 +1,25 @@
+command: npm run test
+startedAt: 2026-04-12T06:41:21.396Z
+endedAt: 2026-04-12T06:41:22.371Z
+durationMs: 975
+exitCode: 0
+timedOut: false
+
+stdout:
+
+> test
+> vitest run
+
+
+ RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a08-e4-b02-s0-clean-gpt52-primary-p01-s0-clean-codex-first/codex-alone
+
+
+ Test Files  2 passed (2)
+      Tests  7 passed (7)
+   Start at  16:41:22
+   Duration  263ms (transform 117ms, setup 0ms, import 156ms, tests 17ms, environment 0ms)
+
+
+
+stderr:
+(no stderr)

@@ -1,0 +1,164 @@
+{
+  "version": 1,
+  "sessionId": "13fad70f-8d87-43bf-be9c-b1bfa584b2ec",
+  "flowSpec": {
+    "goal": "produce a bounded CRM core slice through a sequential prompt-language run with a timing envelope comparable to the direct Codex baseline",
+    "nodes": [
+      {
+        "kind": "prompt",
+        "id": "n1",
+        "text": "Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.",
+        "position": {
+          "line": 4,
+          "column": 3,
+          "text": "  prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n2",
+        "text": "Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready.",
+        "position": {
+          "line": 5,
+          "column": 3,
+          "text": "  prompt: Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n3",
+        "text": "Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services.",
+        "position": {
+          "line": 6,
+          "column": 3,
+          "text": "  prompt: Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n4",
+        "text": "Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free.",
+        "position": {
+          "line": 7,
+          "column": 3,
+          "text": "  prompt: Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n5",
+        "text": "Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package.",
+        "position": {
+          "line": 8,
+          "column": 3,
+          "text": "  prompt: Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n6",
+        "text": "Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented workspace, then use the local tooling until npm run lint, npm run typecheck, and npm run test all pass.",
+        "position": {
+          "line": 9,
+          "column": 3,
+          "text": "  prompt: Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented workspace, then use the local tooling until npm run lint, npm run typecheck, and npm run test all pass."
+        }
+      }
+    ],
+    "completionGates": [
+      {
+        "predicate": "file_exists .factory/project.flow"
+      },
+      {
+        "predicate": "file_exists docs/prd.md"
+      },
+      {
+        "predicate": "file_exists docs/acceptance-criteria.md"
+      },
+      {
+        "predicate": "file_exists docs/architecture/domain-model.md"
+      },
+      {
+        "predicate": "file_exists docs/api-contracts.md"
+      },
+      {
+        "predicate": "file_exists specs/invariants.md"
+      },
+      {
+        "predicate": "file_exists packages/domain/src/index.ts"
+      },
+      {
+        "predicate": "file_exists packages/api/src/index.ts"
+      },
+      {
+        "predicate": "file_exists docs/handover.md"
+      },
+      {
+        "predicate": "file_exists docs/test-strategy.md"
+      }
+    ],
+    "defaults": {
+      "maxIterations": 5,
+      "maxAttempts": 3
+    },
+    "warnings": []
+  },
+  "currentNodePath": [
+    6
+  ],
+  "nodeProgress": {
+    "n1": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775976085659,
+      "completedAt": 1775976085659
+    },
+    "n2": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775976232599,
+      "completedAt": 1775976232600
+    },
+    "n3": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775976493918,
+      "completedAt": 1775976493918
+    },
+    "n4": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775976600764,
+      "completedAt": 1775976600764
+    },
+    "n5": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775977015315,
+      "completedAt": 1775977015315
+    },
+    "n6": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775977228053,
+      "completedAt": 1775977228053
+    }
+  },
+  "variables": {},
+  "gateResults": {},
+  "gateDiagnostics": {},
+  "status": "active",
+  "warnings": [],
+  "spawnedChildren": {},
+  "raceChildren": {},
+  "flowSpecHash": "27d5e073",
+  "transitionSeq": 6,
+  "captureNonce": "bfa279392802e171b77e984101d2793d",
+  "_checksum": "c12a6f10d355ace3bfd681b4e8c9ecfd5e7c8d158bcfeb6ccbbafe4d8418fb68"
+}

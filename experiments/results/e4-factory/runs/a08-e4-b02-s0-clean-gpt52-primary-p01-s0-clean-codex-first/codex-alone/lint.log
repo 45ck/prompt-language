@@ -1,0 +1,16 @@
+command: npm run lint
+startedAt: 2026-04-12T06:41:19.009Z
+endedAt: 2026-04-12T06:41:20.209Z
+durationMs: 1200
+exitCode: 0
+timedOut: false
+
+stdout:
+
+> lint
+> eslint . --max-warnings=0
+
+
+
+stderr:
+(no stderr)

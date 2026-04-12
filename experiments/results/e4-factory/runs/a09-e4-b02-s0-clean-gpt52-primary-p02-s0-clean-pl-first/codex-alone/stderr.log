@@ -1,0 +1,11 @@
+2026-04-12T07:34:13.199418Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.5 seconds
+Output:
+[31;1mGet-ChildItem: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m [36;1mGet-ChildItem -Force AGENTS.md[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCannot find path 'D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a09-e4-b02-s0-clean-gpt52-primary-p02-s0-clean-pl-first\codex-alone\AGENTS.md' because it does not exist.[0m
+
+2026-04-12T07:40:10.098616Z ERROR codex_core::exec: exec error: The filename or extension is too long. (os error 206)
+2026-04-12T07:40:10.300935Z ERROR codex_core::tools::router: error=execution error: Io(Os { code: 206, kind: InvalidFilename, message: "The filename or extension is too long." })

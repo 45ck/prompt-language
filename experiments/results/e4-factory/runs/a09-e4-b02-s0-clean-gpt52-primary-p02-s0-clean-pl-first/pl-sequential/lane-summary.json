@@ -1,0 +1,31 @@
+{
+  "preflightExitCode": 0,
+  "preflightStatus": "ok",
+  "runStatus": "ok",
+  "artifactsPresent": [
+    "docs/prd.md",
+    "docs/acceptance-criteria.md",
+    "docs/architecture/domain-model.md",
+    "docs/api-contracts.md",
+    "specs/invariants.md",
+    "packages/domain/src/index.ts",
+    "packages/api/src/index.ts",
+    "README.md",
+    "docs/handover.md",
+    "docs/test-strategy.md",
+    ".factory/project.flow"
+  ],
+  "metrics": {
+    "startedAt": "2026-04-12T07:02:53.625Z",
+    "endedAt": "2026-04-12T07:33:03.134Z",
+    "timeToGreenSec": 1809.51,
+    "timeToFirstCodeSec": 167.84,
+    "timeToFirstRelevantWriteSec": 167.84,
+    "interventionCount": 0,
+    "restartCount": 0,
+    "runtimeFailureCount": 0,
+    "failureClass": "none",
+    "throughputMetricsComplete": true,
+    "traceCompleteness": "strong"
+  }
+}

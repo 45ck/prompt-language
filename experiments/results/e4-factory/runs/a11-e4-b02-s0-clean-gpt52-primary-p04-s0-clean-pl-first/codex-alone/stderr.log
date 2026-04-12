@@ -1,0 +1,17 @@
+2026-04-12T08:58:05.403507Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.5 seconds
+Output:
+
+> lint
+> eslint . --max-warnings=0
+
+
+D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first\codex-alone\packages\api\src\index.ts
+  188:12  error  'ensureTaskExists' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a11-e4-b02-s0-clean-gpt52-primary-p04-s0-clean-pl-first\codex-alone\packages\domain\src\index.ts
+  63:3  error  'fieldName' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 2 problems (2 errors, 0 warnings)
+
+

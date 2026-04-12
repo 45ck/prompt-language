@@ -1,0 +1,6 @@
+- Added scoped CRM docs/specs: `docs/prd.md:1`, `docs/acceptance-criteria.md:1`, `docs/architecture/domain-model.md:1`, `docs/api-contracts.md:1`, `specs/invariants.md:1`, `docs/test-strategy.md:1`, `docs/handover.md:1`
+- Implemented pure domain logic (validation, opportunity stage machine, task transitions, dashboard aggregation): `packages/domain/src/index.ts:1`
+- Implemented in-memory CRM API (uniqueness + referential integrity + typed `CrmError`): `packages/api/src/index.ts:1`
+- Added focused tests: `packages/domain/test/validation.test.ts:1`, `packages/domain/test/opportunity-stage.test.ts:1`, `packages/domain/test/dashboard-summary.test.ts:1`, `packages/api/test/api.test.ts:1`
+- Updated entrypoint README: `README.md:1`
+- Verified in this workspace: `npm run lint`, `npm run typecheck`, `npm run test` all pass

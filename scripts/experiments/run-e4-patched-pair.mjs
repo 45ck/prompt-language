@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import {
@@ -33,9 +33,13 @@ const ANALYSIS_PATH = join(RESULTS_ROOT, 'analysis-2026-04-12.md');
 
 const SEED_ROOT = join(BOOTSTRAP_ROOT, 'core-proof-seed');
 const PL_OVERLAY_ROOT = join(BOOTSTRAP_ROOT, 'pl-overlay');
-const GOVERNED_CONTROL_FILE = join(CONTROL_ROOT, 'core-proof-sequential.flow');
 const THROUGHPUT_CONTROL_FILE = join(CONTROL_ROOT, 'core-proof-throughput.flow');
+const S2_PRE_VERIFICATION_CONTROL_FILE = join(CONTROL_ROOT, 'core-proof-s2-pre-verification.flow');
 const PROMPT_FILE = join(CONTROL_ROOT, 'codex-alone-core-proof.prompt.md');
+const S2_PRE_VERIFICATION_PROMPT_FILE = join(
+  CONTROL_ROOT,
+  'codex-alone-s2-pre-verification.prompt.md',
+);
 
 const COMMON_REQUIRED_ARTIFACTS = [
   'docs/prd.md',
@@ -65,6 +69,28 @@ const PREPARE_TIMEOUT_MS = 10 * 60 * 1000;
 const VERIFICATION_TIMEOUT_MS = 3 * 60 * 1000;
 
 const GIT_BIN = process.platform === 'win32' ? 'git.exe' : 'git';
+const CHECKPOINT_POLL_INTERVAL_MS = 250;
+
+const SCENARIO_CONFIGS = {
+  's0-clean': {
+    kind: 'throughput',
+    controlFile: THROUGHPUT_CONTROL_FILE,
+    promptFile: PROMPT_FILE,
+    timingEnvelope: 'paired-throughput-s0-external-verification',
+    question:
+      'For the same bounded CRM core slice and frozen bootstrap seed, how does prompt-language compare with direct Codex?',
+  },
+  's2-pre-verification': {
+    kind: 'recovery',
+    controlFile: S2_PRE_VERIFICATION_CONTROL_FILE,
+    promptFile: S2_PRE_VERIFICATION_PROMPT_FILE,
+    timingEnvelope: 'paired-recovery-s2-pre-verification',
+    interruptStage: 'pre-verification',
+    interruptCheckpoint: '.factory/checkpoints/pre-verification-ready',
+    question:
+      'After a forced pre-verification stop on the same bounded CRM core slice, which lane resumes and closes more effectively from the preserved workspace state?',
+  },
+};
 
 function parseArgs(argv) {
   const options = {
@@ -145,11 +171,21 @@ function parseArgs(argv) {
     throw new Error(`--order must be codex-first or pl-first, received "${options.order}"`);
   }
 
-  if (options.scenario !== DEFAULT_SCENARIO) {
-    throw new Error(`Only scenario "${DEFAULT_SCENARIO}" is currently implemented`);
+  if (!Object.hasOwn(SCENARIO_CONFIGS, options.scenario)) {
+    throw new Error(
+      `--scenario must be one of ${Object.keys(SCENARIO_CONFIGS).join(', ')}, received "${options.scenario}"`,
+    );
   }
 
   return options;
+}
+
+function scenarioConfigFor(scenario) {
+  const config = SCENARIO_CONFIGS[scenario];
+  if (config === undefined) {
+    throw new Error(`Unknown scenario "${scenario}"`);
+  }
+  return config;
 }
 
 function parseNonNegativeInteger(value, flagName) {
@@ -324,6 +360,135 @@ function runProcess(command, args, { cwd, input, timeoutMs, env } = {}) {
   };
 }
 
+async function killProcessTree(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    return;
+  }
+
+  if (process.platform === 'win32') {
+    await new Promise((resolvePromise) => {
+      const killer = spawn('taskkill', ['/PID', String(pid), '/T', '/F'], {
+        stdio: 'ignore',
+        windowsHide: true,
+      });
+      killer.once('error', () => resolvePromise());
+      killer.once('exit', () => resolvePromise());
+    });
+    return;
+  }
+
+  try {
+    process.kill(pid, 'SIGKILL');
+  } catch {
+    // Ignore already-exited children.
+  }
+}
+
+async function runProcessWithCheckpointInterruption(
+  command,
+  args,
+  { cwd, input, timeoutMs, env, checkpointPath } = {},
+) {
+  const startedAt = Date.now();
+  const child = spawn(command, args, {
+    cwd,
+    env: {
+      ...process.env,
+      ...env,
+    },
+    stdio: ['pipe', 'pipe', 'pipe'],
+    windowsHide: true,
+  });
+
+  let stdout = '';
+  let stderr = '';
+  let interruptRequested = false;
+  let interrupted = false;
+  let timedOut = false;
+  let interruptDetectedAtMs = null;
+  let errorMessage = null;
+
+  child.stdout.setEncoding('utf8');
+  child.stderr.setEncoding('utf8');
+  child.stdout.on('data', (chunk) => {
+    stdout += chunk;
+  });
+  child.stderr.on('data', (chunk) => {
+    stderr += chunk;
+  });
+
+  if (typeof input === 'string' && child.stdin.writable) {
+    child.stdin.write(input);
+  }
+  if (child.stdin.writable) {
+    child.stdin.end();
+  }
+
+  const requestInterrupt = async (reason) => {
+    if (interruptRequested) {
+      return;
+    }
+    interruptRequested = true;
+    if (reason === 'checkpoint') {
+      interrupted = true;
+      interruptDetectedAtMs = Date.now();
+    }
+    if (reason === 'timeout') {
+      timedOut = true;
+    }
+    await killProcessTree(child.pid ?? -1);
+  };
+
+  const timeoutHandle =
+    timeoutMs === undefined
+      ? null
+      : setTimeout(() => {
+          void requestInterrupt('timeout');
+        }, timeoutMs);
+  const checkpointHandle =
+    checkpointPath === undefined
+      ? null
+      : setInterval(() => {
+          if (!interruptRequested && existsSync(checkpointPath)) {
+            void requestInterrupt('checkpoint');
+          }
+        }, CHECKPOINT_POLL_INTERVAL_MS);
+
+  const exitCode = await new Promise((resolvePromise) => {
+    child.once('error', (error) => {
+      errorMessage = error.message;
+    });
+    child.once('close', (code) => {
+      if (timeoutHandle !== null) {
+        clearTimeout(timeoutHandle);
+      }
+      if (checkpointHandle !== null) {
+        clearInterval(checkpointHandle);
+      }
+      resolvePromise(code ?? (timedOut ? 124 : interrupted ? 130 : 1));
+    });
+  });
+
+  const endedAt = Date.now();
+  return {
+    command,
+    args,
+    cwd,
+    exitCode,
+    stdout,
+    stderr,
+    durationMs: Math.max(0, endedAt - startedAt),
+    startedAt: new Date(startedAt).toISOString(),
+    endedAt: new Date(endedAt).toISOString(),
+    timedOut,
+    interrupted,
+    interruptDetectedAt:
+      interruptDetectedAtMs === null ? null : new Date(interruptDetectedAtMs).toISOString(),
+    checkpointPath,
+    error: errorMessage,
+  };
+}
+
 async function readText(path) {
   return await readFile(path, 'utf8');
 }
@@ -363,14 +528,8 @@ async function computeFileHash(path) {
     .digest('hex');
 }
 
-function controlFileForScenario(scenario) {
-  return scenario === 's0-clean' ? THROUGHPUT_CONTROL_FILE : GOVERNED_CONTROL_FILE;
-}
-
-function timingEnvelopeForScenario(scenario) {
-  return scenario === 's0-clean'
-    ? 'paired-throughput-s0-external-verification'
-    : 'paired-governed-sequential';
+function promptFileForScenario(scenario) {
+  return scenarioConfigFor(scenario).promptFile;
 }
 
 function readGitHead() {
@@ -744,6 +903,86 @@ async function materializeLaneWorkspace(preparedSeedRoot, targetWorkspaceRoot, o
   }
 }
 
+async function copyFileIfExists(source, target) {
+  if (!existsSync(source)) {
+    return;
+  }
+  await ensureDir(dirname(target));
+  await cp(source, target, { force: true });
+}
+
+async function writePromptLanguageAttemptArtifacts({
+  attemptRoot,
+  preflight,
+  mainRun,
+  stateDir,
+  checkpointPath,
+}) {
+  await ensureDir(attemptRoot);
+  if (preflight !== null) {
+    await writeText(join(attemptRoot, 'preflight.json'), safeText(preflight.stdout, '{}\n'));
+    await writeText(
+      join(attemptRoot, 'preflight-stderr.log'),
+      safeText(preflight.stderr, '(no stderr)\n'),
+    );
+  }
+  if (mainRun !== null) {
+    await writeText(join(attemptRoot, 'run-report.json'), safeText(mainRun.stdout, '{}\n'));
+    await writeText(join(attemptRoot, 'run-stderr.log'), safeText(mainRun.stderr, '(no stderr)\n'));
+    await writeJson(join(attemptRoot, 'run-metadata.json'), {
+      exitCode: mainRun.exitCode,
+      timedOut: mainRun.timedOut,
+      interrupted: mainRun.interrupted ?? false,
+      interruptDetectedAt: mainRun.interruptDetectedAt ?? null,
+      startedAt: mainRun.startedAt,
+      endedAt: mainRun.endedAt,
+      checkpointPath: checkpointPath === undefined ? null : repoRelative(checkpointPath),
+    });
+  }
+  await copyFileIfExists(
+    join(stateDir, 'session-state.json'),
+    join(attemptRoot, 'session-state.json'),
+  );
+  await copyFileIfExists(join(stateDir, 'audit.jsonl'), join(attemptRoot, 'audit.jsonl'));
+  if (checkpointPath !== undefined) {
+    await copyFileIfExists(checkpointPath, join(attemptRoot, 'checkpoint.txt'));
+  }
+}
+
+async function writeCodexAttemptArtifacts({
+  attemptRoot,
+  promptText,
+  mainRun,
+  lastMessagePath,
+  checkpointPath,
+}) {
+  await ensureDir(attemptRoot);
+  await writeText(join(attemptRoot, 'prompt.md'), promptText);
+  await writeText(join(attemptRoot, 'events.jsonl'), safeText(mainRun.stdout, '(no stdout)\n'));
+  await writeText(join(attemptRoot, 'stderr.log'), safeText(mainRun.stderr, '(no stderr)\n'));
+  if (existsSync(lastMessagePath)) {
+    const content = await readText(lastMessagePath);
+    await writeText(
+      join(attemptRoot, 'last-message.txt'),
+      content.trim().length === 0 ? '(last message empty)\n' : content,
+    );
+  } else {
+    await writeText(join(attemptRoot, 'last-message.txt'), '(last message missing)\n');
+  }
+  await writeJson(join(attemptRoot, 'run-metadata.json'), {
+    exitCode: mainRun.exitCode,
+    timedOut: mainRun.timedOut,
+    interrupted: mainRun.interrupted ?? false,
+    interruptDetectedAt: mainRun.interruptDetectedAt ?? null,
+    startedAt: mainRun.startedAt,
+    endedAt: mainRun.endedAt,
+    checkpointPath: checkpointPath === undefined ? null : repoRelative(checkpointPath),
+  });
+  if (checkpointPath !== undefined) {
+    await copyFileIfExists(checkpointPath, join(attemptRoot, 'checkpoint.txt'));
+  }
+}
+
 async function runPromptLanguageLane({
   runId,
   model,
@@ -756,10 +995,16 @@ async function runPromptLanguageLane({
   interventionCount,
   batch,
   timingEnvelope,
+  scenarioConfig,
 }) {
   await ensureDir(laneResultsRoot);
   await ensureDir(stateDir);
   const requiredArtifacts = requiredArtifactsForLane('pl-sequential');
+  const scenarioKind = scenarioConfig.kind;
+  const checkpointPath =
+    scenarioConfig.interruptCheckpoint === undefined
+      ? undefined
+      : join(workspaceRoot, scenarioConfig.interruptCheckpoint);
 
   const promptStartSnapshot = await captureSystemSnapshot();
   await writeJson(join(laneResultsRoot, 'system-before.json'), promptStartSnapshot);
@@ -783,34 +1028,71 @@ async function runPromptLanguageLane({
   let runReport = null;
   let mainRun = null;
   let blockedPreflight = false;
-  let startedAtMs = Date.now();
+  const startedAtMs = Date.now();
   let endedAtMs = Date.now();
+  let interrupted = false;
+  let interruptedAtMs = null;
+  let resumeStartedAtMs = null;
+  let effectiveRestartCount = restartCount;
 
   if (preflight.exitCode === 0) {
-    mainRun = runProcess(
-      process.execPath,
-      [
-        CLI,
-        'run',
-        '--runner',
-        'codex',
-        '--model',
-        model,
-        '--state-dir',
-        stateDir,
-        '--json',
-        '--file',
-        controlFile,
-      ],
-      {
-        cwd: workspaceRoot,
-        timeoutMs: LANE_TIMEOUT_MS,
-        env: {
-          PROMPT_LANGUAGE_CODEX_TIMEOUT_MS: String(LANE_TIMEOUT_MS),
-          PROMPT_LANGUAGE_CMD_TIMEOUT_MS: String(VERIFICATION_TIMEOUT_MS),
-        },
+    const cliArgs = [
+      CLI,
+      'run',
+      '--runner',
+      'codex',
+      '--model',
+      model,
+      '--state-dir',
+      stateDir,
+      '--json',
+      '--file',
+      controlFile,
+    ];
+    const runOptions = {
+      cwd: workspaceRoot,
+      timeoutMs: LANE_TIMEOUT_MS,
+      env: {
+        PROMPT_LANGUAGE_CODEX_TIMEOUT_MS: String(LANE_TIMEOUT_MS),
+        PROMPT_LANGUAGE_CMD_TIMEOUT_MS: String(VERIFICATION_TIMEOUT_MS),
       },
-    );
+    };
+
+    if (scenarioKind === 'recovery') {
+      const firstAttempt = await runProcessWithCheckpointInterruption(process.execPath, cliArgs, {
+        ...runOptions,
+        checkpointPath,
+      });
+      await writePromptLanguageAttemptArtifacts({
+        attemptRoot: join(laneResultsRoot, 'attempt-1'),
+        preflight,
+        mainRun: firstAttempt,
+        stateDir,
+        checkpointPath,
+      });
+      interrupted = firstAttempt.interrupted;
+      interruptedAtMs =
+        firstAttempt.interruptDetectedAt === null
+          ? null
+          : Date.parse(firstAttempt.interruptDetectedAt);
+      if (interrupted) {
+        effectiveRestartCount += 1;
+        resumeStartedAtMs = Date.now();
+        mainRun = runProcess(process.execPath, cliArgs, runOptions);
+        await writePromptLanguageAttemptArtifacts({
+          attemptRoot: join(laneResultsRoot, 'attempt-2'),
+          preflight: null,
+          mainRun,
+          stateDir,
+          checkpointPath,
+        });
+      } else {
+        mainRun = firstAttempt;
+      }
+    } else {
+      mainRun = runProcess(process.execPath, cliArgs, runOptions);
+    }
+
     await writeText(join(laneResultsRoot, 'run-report.json'), safeText(mainRun.stdout, '{}\n'));
     await writeText(
       join(laneResultsRoot, 'run-stderr.log'),
@@ -868,6 +1150,14 @@ async function runPromptLanguageLane({
   );
   const verificationPassed = Object.values(verification).every((value) => value === 'pass');
   const timeToGreenSec = verificationPassed ? roundSeconds((endedAtMs - startedAtMs) / 1000) : null;
+  const interruptToGreenSec =
+    interrupted && interruptedAtMs !== null && verificationPassed
+      ? roundSeconds((endedAtMs - interruptedAtMs) / 1000)
+      : null;
+  const resumeToGreenSec =
+    resumeStartedAtMs !== null && verificationPassed
+      ? roundSeconds((endedAtMs - resumeStartedAtMs) / 1000)
+      : null;
   const failureClass = determineFailureClass({
     runtimeFailureCount,
     blockedPreflight,
@@ -882,12 +1172,27 @@ async function runPromptLanguageLane({
     timeToFirstCodeSec: timeToFirstCodeSec,
     timeToFirstRelevantWriteSec: timeToFirstCodeSec,
     interventionCount,
-    restartCount,
+    restartCount: effectiveRestartCount,
     runtimeFailureCount,
     failureClass,
     throughputMetricsComplete:
-      timeToGreenSec !== null && timeToFirstCodeSec !== null && traceCompleteness === 'strong',
+      scenarioKind === 'throughput' &&
+      timeToGreenSec !== null &&
+      timeToFirstCodeSec !== null &&
+      traceCompleteness === 'strong',
     traceCompleteness,
+    interrupted,
+    interruptionStage: interrupted ? (scenarioConfig.interruptStage ?? 'unknown') : null,
+    interruptToGreenSec,
+    resumeToGreenSec,
+    recoveryMetricsComplete:
+      scenarioKind === 'recovery' &&
+      interrupted &&
+      interruptToGreenSec !== null &&
+      resumeToGreenSec !== null &&
+      traceCompleteness === 'strong',
+    recoveredAfterInterruption:
+      scenarioKind === 'recovery' && interrupted && closure.verdict === 'success',
   };
 
   const manifest = {
@@ -919,6 +1224,7 @@ async function runPromptLanguageLane({
     comparisonUpdated: true,
     metrics,
     followups: [],
+    scenario: scenarioKind,
   };
 
   await writeJson(join(laneResultsRoot, 'manifest.json'), manifest);
@@ -941,12 +1247,19 @@ async function runPromptLanguageLane({
     preflightStatus: parseJson(preflight.stdout)?.status ?? null,
     notes:
       closure.verdict === 'success'
-        ? 'Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed.'
+        ? scenarioKind === 'recovery'
+          ? 'Prompt-language resumed from the forced pre-verification stop and closed the bounded CRM core successfully under the frozen bootstrap seed.'
+          : 'Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed.'
         : blockedPreflight
           ? 'Prompt-language preflight blocked before execution could start.'
-          : 'Prompt-language did not close the bounded CRM core cleanly under the frozen bootstrap seed.',
+          : scenarioKind === 'recovery'
+            ? 'Prompt-language did not recover cleanly from the forced pre-verification stop under the frozen bootstrap seed.'
+            : 'Prompt-language did not close the bounded CRM core cleanly under the frozen bootstrap seed.',
     traceSummary: {
       primaryTraces: [
+        ...(scenarioKind === 'recovery'
+          ? [repoRelative(join(laneResultsRoot, 'attempt-1', 'run-report.json'))]
+          : []),
         repoRelative(join(stateDir, 'session-state.json')),
         repoRelative(join(stateDir, 'audit.jsonl')),
         repoRelative(join(laneResultsRoot, 'run-report.json')),
@@ -955,6 +1268,12 @@ async function runPromptLanguageLane({
         `preflight status: ${parseJson(preflight.stdout)?.status ?? 'unparsed'}`,
         `run status: ${runReport?.status ?? 'not-run'}`,
         `verification: lint=${verification.lint}, typecheck=${verification.typecheck}, test=${verification.test}`,
+        ...(scenarioKind === 'recovery'
+          ? [
+              `interrupted: ${metrics.interrupted}`,
+              `resume to green seconds: ${metrics.resumeToGreenSec ?? 'n/a'}`,
+            ]
+          : []),
       ],
     },
   };
@@ -970,15 +1289,22 @@ async function runCodexLane({
   interventionCount,
   batch,
   timingEnvelope,
+  promptFile,
+  scenarioConfig,
 }) {
   await ensureDir(laneResultsRoot);
   const requiredArtifacts = requiredArtifactsForLane('codex-alone');
+  const scenarioKind = scenarioConfig.kind;
+  const checkpointPath =
+    scenarioConfig.interruptCheckpoint === undefined
+      ? undefined
+      : join(workspaceRoot, scenarioConfig.interruptCheckpoint);
 
   const systemBefore = await captureSystemSnapshot();
   await writeJson(join(laneResultsRoot, 'system-before.json'), systemBefore);
 
   const initialSnapshot = await snapshotWorkspaceFiles(workspaceRoot);
-  const promptText = await readText(PROMPT_FILE);
+  const promptText = await readText(promptFile);
   await writeText(join(laneResultsRoot, 'prompt.md'), promptText);
 
   const startedAtMs = Date.now();
@@ -997,11 +1323,76 @@ async function runCodexLane({
     '-',
   ];
   const [command, ...commandArgs] = codexBinaryCommand(...codexArgs);
-  const mainRun = runProcess(command, commandArgs, {
-    cwd: workspaceRoot,
-    input: promptText,
-    timeoutMs: LANE_TIMEOUT_MS,
-  });
+  let mainRun;
+  let interrupted = false;
+  let interruptedAtMs = null;
+  let resumeStartedAtMs = null;
+  let effectiveRestartCount = restartCount;
+
+  if (scenarioKind === 'recovery') {
+    const firstAttemptRoot = join(laneResultsRoot, 'attempt-1');
+    const firstAttemptLastMessagePath = join(firstAttemptRoot, 'last-message.txt');
+    const firstAttemptArgs = [
+      'exec',
+      '--dangerously-bypass-approvals-and-sandbox',
+      '--skip-git-repo-check',
+      '--json',
+      '--output-last-message',
+      firstAttemptLastMessagePath,
+      '-C',
+      workspaceRoot,
+      '--model',
+      model,
+      '-',
+    ];
+    const [firstCommand, ...firstCommandArgs] = codexBinaryCommand(...firstAttemptArgs);
+    const firstAttempt = await runProcessWithCheckpointInterruption(
+      firstCommand,
+      firstCommandArgs,
+      {
+        cwd: workspaceRoot,
+        input: promptText,
+        timeoutMs: LANE_TIMEOUT_MS,
+        checkpointPath,
+      },
+    );
+    await writeCodexAttemptArtifacts({
+      attemptRoot: firstAttemptRoot,
+      promptText,
+      mainRun: firstAttempt,
+      lastMessagePath: firstAttemptLastMessagePath,
+      checkpointPath,
+    });
+    interrupted = firstAttempt.interrupted;
+    interruptedAtMs =
+      firstAttempt.interruptDetectedAt === null
+        ? null
+        : Date.parse(firstAttempt.interruptDetectedAt);
+    if (interrupted) {
+      effectiveRestartCount += 1;
+      resumeStartedAtMs = Date.now();
+      mainRun = runProcess(command, commandArgs, {
+        cwd: workspaceRoot,
+        input: promptText,
+        timeoutMs: LANE_TIMEOUT_MS,
+      });
+      await writeCodexAttemptArtifacts({
+        attemptRoot: join(laneResultsRoot, 'attempt-2'),
+        promptText,
+        mainRun,
+        lastMessagePath,
+        checkpointPath,
+      });
+    } else {
+      mainRun = firstAttempt;
+    }
+  } else {
+    mainRun = runProcess(command, commandArgs, {
+      cwd: workspaceRoot,
+      input: promptText,
+      timeoutMs: LANE_TIMEOUT_MS,
+    });
+  }
   await writeText(join(laneResultsRoot, 'events.jsonl'), safeText(mainRun.stdout, '(no stdout)\n'));
   await writeText(join(laneResultsRoot, 'stderr.log'), safeText(mainRun.stderr, '(no stderr)\n'));
   if (!existsSync(lastMessagePath)) {
@@ -1058,6 +1449,14 @@ async function runCodexLane({
   );
   const verificationPassed = Object.values(verification).every((value) => value === 'pass');
   const timeToGreenSec = verificationPassed ? roundSeconds((endedAtMs - startedAtMs) / 1000) : null;
+  const interruptToGreenSec =
+    interrupted && interruptedAtMs !== null && verificationPassed
+      ? roundSeconds((endedAtMs - interruptedAtMs) / 1000)
+      : null;
+  const resumeToGreenSec =
+    resumeStartedAtMs !== null && verificationPassed
+      ? roundSeconds((endedAtMs - resumeStartedAtMs) / 1000)
+      : null;
   const failureClass = determineFailureClass({
     runtimeFailureCount,
     blockedPreflight: false,
@@ -1072,12 +1471,27 @@ async function runCodexLane({
     timeToFirstCodeSec: timeToFirstCodeSec,
     timeToFirstRelevantWriteSec: timeToFirstCodeSec,
     interventionCount,
-    restartCount,
+    restartCount: effectiveRestartCount,
     runtimeFailureCount,
     failureClass,
     throughputMetricsComplete:
-      timeToGreenSec !== null && timeToFirstCodeSec !== null && traceCompleteness === 'strong',
+      scenarioKind === 'throughput' &&
+      timeToGreenSec !== null &&
+      timeToFirstCodeSec !== null &&
+      traceCompleteness === 'strong',
     traceCompleteness,
+    interrupted,
+    interruptionStage: interrupted ? (scenarioConfig.interruptStage ?? 'unknown') : null,
+    interruptToGreenSec,
+    resumeToGreenSec,
+    recoveryMetricsComplete:
+      scenarioKind === 'recovery' &&
+      interrupted &&
+      interruptToGreenSec !== null &&
+      resumeToGreenSec !== null &&
+      traceCompleteness === 'strong',
+    recoveredAfterInterruption:
+      scenarioKind === 'recovery' && interrupted && closure.verdict === 'success',
   };
 
   const manifest = {
@@ -1108,6 +1522,7 @@ async function runCodexLane({
     comparisonUpdated: true,
     metrics,
     followups: [],
+    scenario: scenarioKind,
   };
 
   await writeJson(join(laneResultsRoot, 'manifest.json'), manifest);
@@ -1127,10 +1542,17 @@ async function runCodexLane({
     runStatus: mainRun.exitCode === 0 ? 'ok' : 'failed',
     notes:
       closure.verdict === 'success'
-        ? 'Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed.'
-        : 'Direct Codex did not close the bounded CRM core cleanly under the frozen bootstrap seed.',
+        ? scenarioKind === 'recovery'
+          ? 'Direct Codex resumed from the forced pre-verification stop and closed the bounded CRM core successfully under the frozen bootstrap seed.'
+          : 'Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed.'
+        : scenarioKind === 'recovery'
+          ? 'Direct Codex did not recover cleanly from the forced pre-verification stop under the frozen bootstrap seed.'
+          : 'Direct Codex did not close the bounded CRM core cleanly under the frozen bootstrap seed.',
     traceSummary: {
       primaryTraces: [
+        ...(scenarioKind === 'recovery'
+          ? [repoRelative(join(laneResultsRoot, 'attempt-1', 'events.jsonl'))]
+          : []),
         repoRelative(join(laneResultsRoot, 'events.jsonl')),
         repoRelative(join(laneResultsRoot, 'stderr.log')),
         repoRelative(lastMessagePath),
@@ -1139,12 +1561,49 @@ async function runCodexLane({
         `main exit code: ${mainRun.exitCode}`,
         `verification: lint=${verification.lint}, typecheck=${verification.typecheck}, test=${verification.test}`,
         `artifacts complete: ${artifacts.complete}`,
+        ...(scenarioKind === 'recovery'
+          ? [
+              `interrupted: ${metrics.interrupted}`,
+              `resume to green seconds: ${metrics.resumeToGreenSec ?? 'n/a'}`,
+            ]
+          : []),
       ],
     },
   };
 }
 
-function determineComparativeVerdict(plLane, codexLane) {
+function determineComparativeVerdict(plLane, codexLane, scenarioConfig) {
+  if (scenarioConfig.kind === 'recovery') {
+    const plRecovered = plLane.metrics.recoveredAfterInterruption === true;
+    const codexRecovered = codexLane.metrics.recoveredAfterInterruption === true;
+
+    if (plRecovered && !codexRecovered) {
+      return 'prompt-language-better';
+    }
+    if (!plRecovered && codexRecovered) {
+      return 'codex-alone-better';
+    }
+    if (!plRecovered && !codexRecovered) {
+      return 'inconclusive';
+    }
+
+    if (plLane.metrics.resumeToGreenSec === null || codexLane.metrics.resumeToGreenSec === null) {
+      return 'mixed';
+    }
+
+    const faster = Math.min(plLane.metrics.resumeToGreenSec, codexLane.metrics.resumeToGreenSec);
+    const slower = Math.max(plLane.metrics.resumeToGreenSec, codexLane.metrics.resumeToGreenSec);
+    const deltaRatio = slower === 0 ? 0 : (slower - faster) / slower;
+
+    if (deltaRatio < 0.1) {
+      return 'parity';
+    }
+
+    return plLane.metrics.resumeToGreenSec < codexLane.metrics.resumeToGreenSec
+      ? 'prompt-language-better'
+      : 'codex-alone-better';
+  }
+
   const plSuccess = plLane.manifest.verdict === 'success';
   const codexSuccess = codexLane.manifest.verdict === 'success';
 
@@ -1174,7 +1633,24 @@ function determineComparativeVerdict(plLane, codexLane) {
   return greenWinner;
 }
 
-function buildAdmissibility(plLane, codexLane) {
+function buildAdmissibility(plLane, codexLane, scenarioConfig) {
+  if (scenarioConfig.kind === 'recovery') {
+    const cleanRecoveryPair =
+      plLane.metrics.interrupted === true &&
+      codexLane.metrics.interrupted === true &&
+      plLane.metrics.traceCompleteness === 'strong' &&
+      codexLane.metrics.traceCompleteness === 'strong';
+
+    return {
+      class: 'supporting-context',
+      throughputClaimEligible: false,
+      reason: cleanRecoveryPair
+        ? 'This is a trace-backed S2 governed-recovery pilot on the same bounded CRM contract, but it remains supporting context until repeated predeclared interruption/resume pairs agree.'
+        : 'This is an S2 governed-recovery attempt, but interruption timing, resume handling, or trace completeness still leaves it as supporting context only.',
+      recoveryClaimEligible: false,
+    };
+  }
+
   const cleanComparablePair =
     plLane.manifest.verdict === 'success' &&
     codexLane.manifest.verdict === 'success' &&
@@ -1262,12 +1738,40 @@ async function writeRunOutcome(
   codexLane,
   comparativeVerdict,
   admissibility,
+  scenarioConfig,
 ) {
+  const scenarioSection =
+    scenarioConfig.kind === 'recovery'
+      ? [
+          '## Governed Recovery',
+          '',
+          `- \`prompt-language\` interrupted as planned: ${plLane.metrics.interrupted}`,
+          `- \`prompt-language\` recovered after interruption: ${plLane.metrics.recoveredAfterInterruption}`,
+          `- \`prompt-language\` interrupt to green: ${plLane.metrics.interruptToGreenSec ?? 'n/a'}s`,
+          `- \`prompt-language\` resume to green: ${plLane.metrics.resumeToGreenSec ?? 'n/a'}s`,
+          `- \`codex-alone\` interrupted as planned: ${codexLane.metrics.interrupted}`,
+          `- \`codex-alone\` recovered after interruption: ${codexLane.metrics.recoveredAfterInterruption}`,
+          `- \`codex-alone\` interrupt to green: ${codexLane.metrics.interruptToGreenSec ?? 'n/a'}s`,
+          `- \`codex-alone\` resume to green: ${codexLane.metrics.resumeToGreenSec ?? 'n/a'}s`,
+          '',
+        ]
+      : [
+          '## Throughput',
+          '',
+          `- \`prompt-language\` time to green: ${plLane.metrics.timeToGreenSec ?? 'n/a'}s`,
+          `- \`prompt-language\` time to first relevant write: ${plLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
+          `- \`codex-alone\` time to green: ${codexLane.metrics.timeToGreenSec ?? 'n/a'}s`,
+          `- \`codex-alone\` time to first relevant write: ${codexLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
+          `- admissible for throughput claim: ${admissibility.throughputClaimEligible}`,
+          '',
+        ];
+
   const content = [
     '# Outcome',
     '',
     `Run: \`${runId}\``,
     `Order: \`${order}\``,
+    `Scenario: \`${scenarioConfig.kind}\``,
     '',
     '## Lane Results',
     '',
@@ -1279,14 +1783,7 @@ async function writeRunOutcome(
     `- \`prompt-language\`: lint=${plLane.verification.lint}, typecheck=${plLane.verification.typecheck}, test=${plLane.verification.test}`,
     `- \`codex-alone\`: lint=${codexLane.verification.lint}, typecheck=${codexLane.verification.typecheck}, test=${codexLane.verification.test}`,
     '',
-    '## Throughput',
-    '',
-    `- \`prompt-language\` time to green: ${plLane.metrics.timeToGreenSec ?? 'n/a'}s`,
-    `- \`prompt-language\` time to first relevant write: ${plLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
-    `- \`codex-alone\` time to green: ${codexLane.metrics.timeToGreenSec ?? 'n/a'}s`,
-    `- \`codex-alone\` time to first relevant write: ${codexLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
-    `- admissible for throughput claim: ${admissibility.throughputClaimEligible}`,
-    '',
+    ...scenarioSection,
     '## Verdict',
     '',
     `- comparative verdict: \`${comparativeVerdict}\``,
@@ -1298,7 +1795,14 @@ async function writeRunOutcome(
   await writeText(join(runRoot, 'outcome.md'), content);
 }
 
-async function writeRunPostmortem(runRoot, runId, plLane, codexLane, admissibility) {
+async function writeRunPostmortem(
+  runRoot,
+  runId,
+  plLane,
+  codexLane,
+  admissibility,
+  scenarioConfig,
+) {
   const issues = [
     ...(plLane.metrics.failureClass !== 'none'
       ? [`prompt-language failure class: ${plLane.metrics.failureClass}`]
@@ -1312,6 +1816,7 @@ async function writeRunPostmortem(runRoot, runId, plLane, codexLane, admissibili
     '# Postmortem',
     '',
     `Run: \`${runId}\``,
+    `Scenario: \`${scenarioConfig.kind}\``,
     '',
     '## What Happened',
     '',
@@ -1327,8 +1832,15 @@ async function writeRunPostmortem(runRoot, runId, plLane, codexLane, admissibili
     '',
     '## Next Actions',
     '',
-    '- replicate this paired run at least three times before making a stable superiority claim',
-    '- add interruption and resume scenarios only after clean S0 pairs accumulate',
+    ...(scenarioConfig.kind === 'recovery'
+      ? [
+          '- repeat the S2 interruption/resume pilot in both orders before making a governed-recovery claim',
+          '- keep the clean B02 throughput result separate from any recovery interpretation',
+        ]
+      : [
+          '- replicate this paired run at least three times before making a stable superiority claim',
+          '- add interruption and resume scenarios only after clean S0 pairs accumulate',
+        ]),
     '',
   ].join('\n');
 
@@ -1341,23 +1853,38 @@ async function writeRunInterventions(
   plLane,
   codexLane,
   documentedHumanInterventions,
+  scenarioConfig,
 ) {
   const content = [
     '# Interventions',
     '',
     `Run: \`${runId}\``,
+    `Scenario: \`${scenarioConfig.kind}\``,
     '',
     `- documented human interventions: ${documentedHumanInterventions}`,
     '- prompt-language restart count: ' + plLane.metrics.restartCount,
     '- codex-alone restart count: ' + codexLane.metrics.restartCount,
     '- observation mode: counts are recorded from the harness invocation inputs, not inferred after the fact',
+    ...(scenarioConfig.kind === 'recovery'
+      ? [
+          `- prompt-language interrupted as planned: ${plLane.metrics.interrupted}`,
+          `- codex-alone interrupted as planned: ${codexLane.metrics.interrupted}`,
+        ]
+      : []),
     '',
   ].join('\n');
 
   await writeText(join(runRoot, 'interventions.md'), content);
 }
 
-async function writeRunTraceSummary(runRoot, runId, plLane, codexLane, comparativeVerdict) {
+async function writeRunTraceSummary(
+  runRoot,
+  runId,
+  plLane,
+  codexLane,
+  comparativeVerdict,
+  scenarioConfig,
+) {
   const content = [
     '# Trace Summary',
     '',
@@ -1390,6 +1917,12 @@ async function writeRunTraceSummary(runRoot, runId, plLane, codexLane, comparati
     `- current comparative verdict: \`${comparativeVerdict}\``,
     `- prompt-language trace completeness: \`${plLane.metrics.traceCompleteness}\``,
     `- codex-alone trace completeness: \`${codexLane.metrics.traceCompleteness}\``,
+    ...(scenarioConfig.kind === 'recovery'
+      ? [
+          `- prompt-language resume to green: \`${plLane.metrics.resumeToGreenSec ?? 'n/a'}\``,
+          `- codex-alone resume to green: \`${codexLane.metrics.resumeToGreenSec ?? 'n/a'}\``,
+        ]
+      : []),
     '',
     '## Confounds',
     '',
@@ -1409,6 +1942,7 @@ async function writeScorecard(
   comparativeVerdict,
   admissibility,
   runMetadata,
+  scenarioConfig,
 ) {
   const plScoring = buildLaneScores(plLane, true, admissibility);
   const codexScoring = buildLaneScores(codexLane, true, admissibility);
@@ -1418,8 +1952,7 @@ async function writeScorecard(
     runId,
     batch: runMetadata.batch ?? null,
     scope: 'bounded-crm-core',
-    question:
-      'For the same bounded CRM core slice and frozen bootstrap seed, how does prompt-language compare with direct Codex?',
+    question: scenarioConfig.question,
     baselineReference: 'codex-alone within this run',
     admissibility,
     comparativeVerdict,
@@ -1475,10 +2008,16 @@ async function writeScorecard(
           : comparativeVerdict === 'codex-alone-better'
             ? 'Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.'
             : 'Both lanes closed the common product contract, but the paired run still produced a mixed result on the available evidence.',
-    nextExperimentFocus: [
-      'repeat the clean paired run to stabilize the throughput reading',
-      'add interruption and resume scenarios only after several clean pairs agree',
-    ],
+    nextExperimentFocus:
+      scenarioConfig.kind === 'recovery'
+        ? [
+            'repeat the governed S2 interruption/resume pair in both orders',
+            'promote recovery claims only after repeated trace-backed pairs agree',
+          ]
+        : [
+            'repeat the clean paired run to stabilize the throughput reading',
+            'add interruption and resume scenarios only after several clean pairs agree',
+          ],
   };
 
   await writeJson(join(runRoot, 'scorecard.json'), scorecard);
@@ -1493,6 +2032,7 @@ async function updateComparison(
   comparativeVerdict,
   admissibility,
   runMetadata,
+  scenarioConfig,
 ) {
   const text = await readText(COMPARISON_PATH);
   const batchLine =
@@ -1508,9 +2048,16 @@ async function updateComparison(
     'Meaning:',
     '',
     `- timing envelope: \`${runMetadata.timingEnvelope}\``,
+    `- scenario kind: \`${scenarioConfig.kind}\``,
     batchLine,
     `- comparative verdict: \`${comparativeVerdict}\``,
-    `- throughput admissible: ${admissibility.throughputClaimEligible}`,
+    ...(scenarioConfig.kind === 'recovery'
+      ? [
+          '- governed recovery pilot: true',
+          `- prompt-language resume to green: ${plLane.metrics.resumeToGreenSec ?? 'n/a'}s`,
+          `- codex-alone resume to green: ${codexLane.metrics.resumeToGreenSec ?? 'n/a'}s`,
+        ]
+      : [`- throughput admissible: ${admissibility.throughputClaimEligible}`]),
     '',
     'Primary evidence:',
     '',
@@ -1525,6 +2072,11 @@ async function updateComparison(
   const updatedText = text.includes(beforeInterpretation)
     ? text.replace(beforeInterpretation, `\n${runSection}${beforeInterpretation}`)
     : `${text.trim()}\n\n${runSection}`;
+
+  if (scenarioConfig.kind === 'recovery') {
+    await writeText(COMPARISON_PATH, `${updatedText.trim()}\n`);
+    return;
+  }
 
   const throughputBlock = admissibility.throughputClaimEligible
     ? [
@@ -1547,7 +2099,7 @@ async function updateComparison(
   await writeText(COMPARISON_PATH, `${finalText.trim()}\n`);
 }
 
-async function updateAnalysis(runId, attemptLabel, scorecard, runMetadata) {
+async function updateAnalysis(runId, attemptLabel, scorecard, runMetadata, scenarioConfig) {
   const existing = await readText(ANALYSIS_PATH);
   if (existing.includes(runId)) {
     return;
@@ -1561,8 +2113,15 @@ async function updateAnalysis(runId, attemptLabel, scorecard, runMetadata) {
     '',
     `Run: \`${runId}\``,
     '',
+    `- scenario kind: \`${scenarioConfig.kind}\``,
     `- comparative verdict: \`${comparativeVerdict}\``,
-    `- throughput admissible: ${admissibility.throughputClaimEligible}`,
+    ...(scenarioConfig.kind === 'recovery'
+      ? [
+          '- recovery pilot: true',
+          `- prompt-language resume to green: ${scorecard.lanes[0]?.metrics.resumeToGreenSec ?? 'n/a'}s`,
+          `- codex-alone resume to green: ${scorecard.lanes[1]?.metrics.resumeToGreenSec ?? 'n/a'}s`,
+        ]
+      : [`- throughput admissible: ${admissibility.throughputClaimEligible}`]),
     `- admissibility reason: ${admissibility.reason}`,
     `- timing envelope: \`${runMetadata.timingEnvelope}\``,
     '',
@@ -1575,8 +2134,10 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const attemptNumber = await nextAttemptNumber();
   const attemptLabel = options.attemptLabel ?? `A${String(attemptNumber).padStart(2, '0')}`;
-  const controlFile = controlFileForScenario(options.scenario);
-  const timingEnvelope = timingEnvelopeForScenario(options.scenario);
+  const scenarioConfig = scenarioConfigFor(options.scenario);
+  const controlFile = scenarioConfig.controlFile;
+  const promptFile = promptFileForScenario(options.scenario);
+  const timingEnvelope = scenarioConfig.timingEnvelope;
   const runId =
     options.runId ??
     `${formatRunTimestamp(new Date())}-a${String(attemptNumber).padStart(2, '0')}-core-proof-paired-clean`;
@@ -1589,7 +2150,7 @@ async function main() {
   const seedHash = await computeDirectoryHash(SEED_ROOT);
   const overlayHash = await computeDirectoryHash(PL_OVERLAY_ROOT);
   const controlHash = await computeFileHash(controlFile);
-  const promptHash = await computeFileHash(PROMPT_FILE);
+  const promptHash = await computeFileHash(promptFile);
   const bootstrapInfo = buildBootstrapInfo(seedHash, overlayHash);
   const batch =
     options.batchId === null
@@ -1614,7 +2175,7 @@ async function main() {
     codexVersion: readCodexVersion(),
     controlFile: repoRelative(controlFile),
     controlHash,
-    promptFile: repoRelative(PROMPT_FILE),
+    promptFile: repoRelative(promptFile),
     promptHash,
     bootstrapSeed: bootstrapInfo,
     timingEnvelope,
@@ -1674,6 +2235,7 @@ async function main() {
           interventionCount: options.documentedHumanInterventions,
           batch,
           timingEnvelope,
+          scenarioConfig,
         });
       } else {
         laneResults.codex = await runCodexLane({
@@ -1686,6 +2248,8 @@ async function main() {
           interventionCount: options.documentedHumanInterventions,
           batch,
           timingEnvelope,
+          promptFile,
+          scenarioConfig,
         });
       }
     }
@@ -1696,8 +2260,8 @@ async function main() {
       throw new Error('Both paired lanes must complete execution bookkeeping');
     }
 
-    const comparativeVerdict = determineComparativeVerdict(plLane, codexLane);
-    const admissibility = buildAdmissibility(plLane, codexLane);
+    const comparativeVerdict = determineComparativeVerdict(plLane, codexLane, scenarioConfig);
+    const admissibility = buildAdmissibility(plLane, codexLane, scenarioConfig);
 
     await writeRunOutcome(
       runRoot,
@@ -1707,16 +2271,25 @@ async function main() {
       codexLane,
       comparativeVerdict,
       admissibility,
+      scenarioConfig,
     );
-    await writeRunPostmortem(runRoot, runId, plLane, codexLane, admissibility);
+    await writeRunPostmortem(runRoot, runId, plLane, codexLane, admissibility, scenarioConfig);
     await writeRunInterventions(
       runRoot,
       runId,
       plLane,
       codexLane,
       options.documentedHumanInterventions,
+      scenarioConfig,
     );
-    await writeRunTraceSummary(runRoot, runId, plLane, codexLane, comparativeVerdict);
+    await writeRunTraceSummary(
+      runRoot,
+      runId,
+      plLane,
+      codexLane,
+      comparativeVerdict,
+      scenarioConfig,
+    );
     const scorecard = await writeScorecard(
       runRoot,
       runId,
@@ -1725,6 +2298,7 @@ async function main() {
       comparativeVerdict,
       admissibility,
       metadata,
+      scenarioConfig,
     );
 
     await updateComparison(
@@ -1735,8 +2309,9 @@ async function main() {
       comparativeVerdict,
       admissibility,
       metadata,
+      scenarioConfig,
     );
-    await updateAnalysis(runId, attemptLabel, scorecard, metadata);
+    await updateAnalysis(runId, attemptLabel, scorecard, metadata, scenarioConfig);
 
     metadata.endedAt = nowIso();
     metadata.comparativeVerdict = comparativeVerdict;

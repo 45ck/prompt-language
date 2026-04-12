@@ -1,0 +1,28 @@
+Goal: produce a bounded CRM core slice through a sequential prompt-language run that can be forcibly interrupted immediately before verification and then resumed
+
+flow:
+  prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input except for `.factory/checkpoints/pre-verification-ready`, which is reserved for the recovery harness.
+  prompt: Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready.
+  prompt: Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services.
+  prompt: Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free.
+  prompt: Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package.
+  prompt: Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented workspace, but do not start lint, typecheck, or test until the checkpoint file is created.
+  run: node -e "const fs=require('node:fs');fs.mkdirSync('.factory/checkpoints',{recursive:true});fs.writeFileSync('.factory/checkpoints/pre-verification-ready','pre-verification\\n')"
+  run: npm run lint
+  run: npm run typecheck
+  run: npm run test
+
+done when:
+  gate lint: npm run lint
+  gate typecheck: npm run typecheck
+  gate tests: npm run test
+  file_exists .factory/project.flow
+  file_exists docs/prd.md
+  file_exists docs/acceptance-criteria.md
+  file_exists docs/architecture/domain-model.md
+  file_exists docs/api-contracts.md
+  file_exists specs/invariants.md
+  file_exists packages/domain/src/index.ts
+  file_exists packages/api/src/index.ts
+  file_exists docs/handover.md
+  file_exists docs/test-strategy.md

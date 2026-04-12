@@ -109,6 +109,13 @@ describe('FileCaptureReader', () => {
         access(join(baseDir, '.prompt-language-worker', 'vars', 'tasks')),
       ).resolves.toBeUndefined();
     });
+
+    it('uses an absolute state directory when provided', async () => {
+      const absoluteStateDir = join(baseDir, 'absolute-state');
+      const customReader = new FileCaptureReader(join(baseDir, 'ignored-base'), absoluteStateDir);
+      await customReader.prime('tasks');
+      await expect(access(join(absoluteStateDir, 'vars', 'tasks'))).resolves.toBeUndefined();
+    });
   });
 
   describe('read rethrows non-ENOENT errors', () => {

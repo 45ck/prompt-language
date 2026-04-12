@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "sessionId": "336dc00f-b8ba-418d-9f55-7b683f63cf3b",
+  "flowSpec": {
+    "goal": "verify prompt-language headless spawn/await in an isolated workspace",
+    "nodes": [
+      {
+        "kind": "prompt",
+        "id": "n1",
+        "text": "Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.",
+        "position": {
+          "line": 4,
+          "column": 3,
+          "text": "  prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it."
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n2",
+        "command": "node -e \"console.log('bootstrap')\"",
+        "position": {
+          "line": 5,
+          "column": 3,
+          "text": "  run: node -e \"console.log('bootstrap')\""
+        }
+      },
+      {
+        "kind": "spawn",
+        "id": "n4",
+        "name": "planner",
+        "body": [
+          {
+            "kind": "prompt",
+            "id": "n3",
+            "text": "Create docs/plan.md with a concise CRM scope note.",
+            "position": {
+              "line": 8,
+              "column": 5,
+              "text": "    prompt: Create docs/plan.md with a concise CRM scope note."
+            }
+          }
+        ],
+        "position": {
+          "line": 7,
+          "column": 3,
+          "text": "  spawn \"planner\""
+        }
+      },
+      {
+        "kind": "spawn",
+        "id": "n6",
+        "name": "architect",
+        "body": [
+          {
+            "kind": "prompt",
+            "id": "n5",
+            "text": "Create docs/architecture.md with a concise CRM architecture note.",
+            "position": {
+              "line": 12,
+              "column": 5,
+              "text": "    prompt: Create docs/architecture.md with a concise CRM architecture note."
+            }
+          }
+        ],
+        "position": {
+          "line": 11,
+          "column": 3,
+          "text": "  spawn \"architect\""
+        }
+      },
+      {
+        "kind": "await",
+        "id": "n7",
+        "target": "all",
+        "position": {
+          "line": 15,
+          "column": 3,
+          "text": "  await all"
+        }
+      }
+    ],
+    "completionGates": [
+      {
+        "predicate": "bootstrap",
+        "command": "node -e \"console.log('bootstrap')\""
+      },
+      {
+        "predicate": "file_exists .factory/project.flow"
+      },
+      {
+        "predicate": "file_exists docs/plan.md"
+      },
+      {
+        "predicate": "file_exists docs/architecture.md"
+      }
+    ],
+    "defaults": {
+      "maxIterations": 5,
+      "maxAttempts": 3
+    },
+    "warnings": []
+  },
+  "currentNodePath": [
+    5
+  ],
+  "nodeProgress": {
+    "n1": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775947350021,
+      "completedAt": 1775947350022
+    },
+    "n2": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775947443238,
+      "completedAt": 1775947443352,
+      "exitCode": 0,
+      "stdout": "bootstrap",
+      "stderr": ""
+    },
+    "n4": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775947443352,
+      "completedAt": 1775947443355
+    },
+    "n6": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775947443356,
+      "completedAt": 1775947496443
+    },
+    "n7": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775947496443,
+      "completedAt": 1775947549750
+    }
+  },
+  "variables": {
+    "last_exit_code": 0,
+    "command_failed": false,
+    "command_succeeded": true,
+    "last_stdout": "bootstrap",
+    "last_stderr": ""
+  },
+  "gateResults": {},
+  "gateDiagnostics": {},
+  "status": "active",
+  "warnings": [],
+  "spawnedChildren": {
+    "planner": {
+      "name": "planner",
+      "pid": 2704,
+      "stateDir": ".prompt-language-planner",
+      "startedAt": "2026-04-11T22:44:03.354Z",
+      "completedAt": "2026-04-11T22:45:49.750Z",
+      "status": "completed",
+      "variables": {}
+    },
+    "architect": {
+      "name": "architect",
+      "pid": 2704,
+      "stateDir": ".prompt-language-architect",
+      "startedAt": "2026-04-11T22:44:03.356Z",
+      "completedAt": "2026-04-11T22:45:49.750Z",
+      "status": "completed",
+      "variables": {}
+    }
+  },
+  "raceChildren": {},
+  "flowSpecHash": "dbaae9eb",
+  "transitionSeq": 5,
+  "captureNonce": "47206cf7279b0682f531032b6b9f3772",
+  "_checksum": "0419e9ecce51df74a9b4be9d6290bdb14c3b3a5d089fd2ce2ae4c5b5be8feb9f"
+}

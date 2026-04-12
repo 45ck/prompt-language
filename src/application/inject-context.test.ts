@@ -1512,7 +1512,7 @@ describe('injectContext — run node stdout/stderr capture', () => {
     expect(saved?.variables['last_stderr']).toBe('some warning');
   });
 
-  it('truncates long stdout at 2000 chars', async () => {
+  it('stores long stdout as an artifact handle', async () => {
     const store = makeStore();
     const longOutput = 'x'.repeat(3000);
     const mockRunner: CommandRunner = {
@@ -1528,8 +1528,13 @@ describe('injectContext — run node stdout/stderr capture', () => {
 
     const saved = await store.loadCurrent();
     const stdout = saved?.variables['last_stdout'] as string;
-    expect(stdout.length).toBeLessThan(2100);
-    expect(stdout).toContain('... (truncated)');
+    expect(stdout).toBe('artifact:s1/runtime-output-r1-stdout');
+    expect(saved?.variables['_artifacts.last_stdout']).toEqual(
+      expect.objectContaining({
+        artifactId: 'runtime-output-r1-stdout',
+        content: longOutput,
+      }),
+    );
   });
 });
 

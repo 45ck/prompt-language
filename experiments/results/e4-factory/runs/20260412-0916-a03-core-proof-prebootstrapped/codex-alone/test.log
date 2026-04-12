@@ -1,0 +1,13 @@
+
+> test
+> vitest run
+
+
+ RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone
+
+
+ Test Files  2 passed (2)
+      Tests  6 passed (6)
+   Start at  09:55:24
+   Duration  850ms (transform 417ms, setup 0ms, import 485ms, tests 14ms, environment 0ms)
+

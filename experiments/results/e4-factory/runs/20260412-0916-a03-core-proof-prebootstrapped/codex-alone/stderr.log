@@ -1,0 +1,10 @@
+2026-04-11T23:48:16.283128Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 16.5 seconds
+Output:
+
+> typecheck
+> tsc -p tsconfig.json --noEmit
+
+packages/api/src/index.ts(363,52): error TS18048: 'filter.relatedTo' is possibly 'undefined'.
+packages/api/src/index.ts(363,96): error TS18048: 'filter.relatedTo' is possibly 'undefined'.
+

@@ -1,0 +1,192 @@
+{
+  "version": 1,
+  "sessionId": "55e14fb4-a8c4-4c08-bec1-6fdcf8a4977d",
+  "flowSpec": {
+    "goal": "produce a bounded CRM core slice through a single sequential prompt-language run",
+    "nodes": [
+      {
+        "kind": "prompt",
+        "id": "n1",
+        "text": "Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.",
+        "position": {
+          "line": 4,
+          "column": 3,
+          "text": "  prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n2",
+        "text": "Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready.",
+        "position": {
+          "line": 5,
+          "column": 3,
+          "text": "  prompt: Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n3",
+        "text": "Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services.",
+        "position": {
+          "line": 6,
+          "column": 3,
+          "text": "  prompt: Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n4",
+        "text": "Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free.",
+        "position": {
+          "line": 7,
+          "column": 3,
+          "text": "  prompt: Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n5",
+        "text": "Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package.",
+        "position": {
+          "line": 8,
+          "column": 3,
+          "text": "  prompt: Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n6",
+        "text": "Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented workspace, then fix the workspace until lint, typecheck, and test pass.",
+        "position": {
+          "line": 9,
+          "column": 3,
+          "text": "  prompt: Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented workspace, then fix the workspace until lint, typecheck, and test pass."
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n7",
+        "command": "npm run lint",
+        "position": {
+          "line": 10,
+          "column": 3,
+          "text": "  run: npm run lint"
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n8",
+        "command": "npm run typecheck",
+        "position": {
+          "line": 11,
+          "column": 3,
+          "text": "  run: npm run typecheck"
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n9",
+        "command": "npm run test",
+        "position": {
+          "line": 12,
+          "column": 3,
+          "text": "  run: npm run test"
+        }
+      }
+    ],
+    "completionGates": [
+      {
+        "predicate": "lint",
+        "command": "npm run lint"
+      },
+      {
+        "predicate": "typecheck",
+        "command": "npm run typecheck"
+      },
+      {
+        "predicate": "tests",
+        "command": "npm run test"
+      },
+      {
+        "predicate": "file_exists .factory/project.flow"
+      },
+      {
+        "predicate": "file_exists docs/prd.md"
+      },
+      {
+        "predicate": "file_exists docs/acceptance-criteria.md"
+      },
+      {
+        "predicate": "file_exists docs/architecture/domain-model.md"
+      },
+      {
+        "predicate": "file_exists docs/api-contracts.md"
+      },
+      {
+        "predicate": "file_exists specs/invariants.md"
+      },
+      {
+        "predicate": "file_exists packages/domain/src/index.ts"
+      },
+      {
+        "predicate": "file_exists packages/api/src/index.ts"
+      },
+      {
+        "predicate": "file_exists docs/handover.md"
+      },
+      {
+        "predicate": "file_exists docs/test-strategy.md"
+      }
+    ],
+    "defaults": {
+      "maxIterations": 5,
+      "maxAttempts": 3
+    },
+    "warnings": []
+  },
+  "currentNodePath": [
+    4
+  ],
+  "nodeProgress": {
+    "n1": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775954950792,
+      "completedAt": 1775954950792
+    },
+    "n2": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775955091688,
+      "completedAt": 1775955091688
+    },
+    "n3": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775955310566,
+      "completedAt": 1775955310566
+    },
+    "n4": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775955679462,
+      "completedAt": 1775955679462
+    }
+  },
+  "variables": {},
+  "gateResults": {},
+  "gateDiagnostics": {},
+  "status": "active",
+  "warnings": [],
+  "spawnedChildren": {},
+  "raceChildren": {},
+  "flowSpecHash": "3d7d8d41",
+  "transitionSeq": 4,
+  "captureNonce": "742e55746ebcc2bfc09a05b4ed03f286",
+  "_checksum": "cf73a262fddd0fccf7bdfbafb5daed6c320805d438b6f508c50b8e2b837c9d7f"
+}

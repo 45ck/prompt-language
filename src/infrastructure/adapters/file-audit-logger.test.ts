@@ -196,6 +196,20 @@ describe('FileAuditLogger', () => {
     expect(content).toContain('"hi"');
   });
 
+  it('writes to an absolute stateDir without nesting under cwd', async () => {
+    const absoluteStateDir = join(tempDir, 'absolute-state');
+    const logger = new FileAuditLogger(join(tempDir, 'ignored-base'), absoluteStateDir);
+    logger.log({
+      timestamp: '2024-01-01T00:00:00.000Z',
+      event: 'run_command',
+      command: 'pwd',
+      exitCode: 0,
+    });
+
+    const content = await readFile(join(absoluteStateDir, 'audit.jsonl'), 'utf-8');
+    expect(content).toContain('"pwd"');
+  });
+
   it('does not re-create dir on second log call (dirEnsured flag)', async () => {
     const logger = new FileAuditLogger(tempDir);
     // Two calls — second should not throw even though dir already exists

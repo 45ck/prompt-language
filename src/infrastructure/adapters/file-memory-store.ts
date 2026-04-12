@@ -14,12 +14,13 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import type { MemoryStore, MemoryEntry } from '../../application/ports/memory-store.js';
+import { resolveStateRoot } from './resolve-state-root.js';
 
 export class FileMemoryStore implements MemoryStore {
   private readonly memoryPath: string;
 
   constructor(basePath: string, stateDir = '.prompt-language') {
-    this.memoryPath = join(basePath, stateDir, 'memory.json');
+    this.memoryPath = join(resolveStateRoot(basePath, stateDir), 'memory.json');
   }
 
   async append(entry: MemoryEntry): Promise<void> {

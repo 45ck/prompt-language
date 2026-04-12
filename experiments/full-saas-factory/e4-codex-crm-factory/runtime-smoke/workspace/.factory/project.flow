@@ -1,0 +1,21 @@
+Goal: verify prompt-language headless spawn/await in an isolated workspace
+
+flow:
+  prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.
+  run: node -e "console.log('bootstrap')"
+
+  spawn "planner"
+    prompt: Create docs/plan.md with a concise CRM scope note.
+  end
+
+  spawn "architect"
+    prompt: Create docs/architecture.md with a concise CRM architecture note.
+  end
+
+  await all
+
+done when:
+  gate bootstrap: node -e "console.log('bootstrap')"
+  file_exists .factory/project.flow
+  file_exists docs/plan.md
+  file_exists docs/architecture.md

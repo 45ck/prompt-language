@@ -1,0 +1,14 @@
+{"timestamp":"2026-04-11T22:42:30.022Z","event":"node_advance","command":"prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.","nodeId":"n1","nodeKind":"prompt","nodePath":"0","durationMs":1}
+{"timestamp":"2026-04-11T22:44:03.351Z","event":"run_command","command":"node -e \"console.log('bootstrap')\"","exitCode":0,"stdout":"bootstrap","nodeId":"n2","nodeKind":"run","nodePath":"1","durationMs":112}
+{"timestamp":"2026-04-11T22:44:03.352Z","event":"node_advance","command":"run: node -e \"console.log('bootstrap')\"","nodeId":"n2","nodeKind":"run","nodePath":"1","durationMs":114}
+{"timestamp":"2026-04-11T22:44:03.354Z","event":"spawn","command":"spawn:planner","nodeId":"n4","nodeKind":"spawn","nodePath":"2","outcome":"launched","childName":"planner","pid":2704}
+{"timestamp":"2026-04-11T22:44:03.355Z","event":"node_advance","command":"prompt: Create docs/plan.md with a concise CRM scope note.","nodeId":"n1","nodeKind":"prompt","nodePath":"0","durationMs":0}
+{"timestamp":"2026-04-11T22:44:03.355Z","event":"node_advance","command":"spawn \"planner\"","nodeId":"n4","nodeKind":"spawn","nodePath":"2","durationMs":3}
+{"timestamp":"2026-04-11T22:44:03.356Z","event":"spawn","command":"spawn:architect","nodeId":"n6","nodeKind":"spawn","nodePath":"3","outcome":"launched","childName":"architect","pid":2704}
+{"timestamp":"2026-04-11T22:44:56.443Z","event":"node_advance","command":"prompt: Create docs/architecture.md with a concise CRM architecture note.","nodeId":"n1","nodeKind":"prompt","nodePath":"0","durationMs":0}
+{"timestamp":"2026-04-11T22:44:56.443Z","event":"node_advance","command":"spawn \"architect\"","nodeId":"n6","nodeKind":"spawn","nodePath":"3","durationMs":53087}
+{"timestamp":"2026-04-11T22:45:49.750Z","event":"node_advance","command":"await all","nodeId":"n7","nodeKind":"await","nodePath":"4","durationMs":53307}
+{"timestamp":"2026-04-11T22:45:49.927Z","event":"gate_evaluation","command":"node -e \"console.log('bootstrap')\"","exitCode":0,"stdout":"bootstrap"}
+{"timestamp":"2026-04-11T22:45:49.927Z","event":"gate_evaluation","command":"node -e \"process.exit(require('node:fs').existsSync('.factory/project.flow') ? 0 : 1)\"","exitCode":0}
+{"timestamp":"2026-04-11T22:45:49.928Z","event":"gate_evaluation","command":"node -e \"process.exit(require('node:fs').existsSync('docs/plan.md') ? 0 : 1)\"","exitCode":0}
+{"timestamp":"2026-04-11T22:45:49.928Z","event":"gate_evaluation","command":"node -e \"process.exit(require('node:fs').existsSync('docs/architecture.md') ? 0 : 1)\"","exitCode":0}

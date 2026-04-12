@@ -697,6 +697,8 @@ const CONDITION_IDENTIFIER_EXCLUSIONS = new Set([
   'timeout',
   'true',
 ]);
+const NESTED_INTERPOLATION_RE = /\$\{[^}]*\$\{/;
+const OPEN_INTERPOLATION_RE = /\$\{/g;
 
 function isHiddenVariable(key: string, _value: VariableValue, variables: VariableStore): boolean {
   if (HIDDEN_VARIABLES.has(key)) return true;
@@ -734,6 +736,19 @@ function extractInterpolatedVariableNames(template: string): readonly string[] {
     }
   }
   return [...names];
+}
+
+function hasUncertainInterpolationSyntax(template: string | undefined): boolean {
+  if (template == null || template.length === 0) {
+    return false;
+  }
+  if (NESTED_INTERPOLATION_RE.test(template)) {
+    return true;
+  }
+
+  const opens = template.match(OPEN_INTERPOLATION_RE)?.length ?? 0;
+  const closes = (template.match(/\}/g) ?? []).length;
+  return opens > closes;
 }
 
 function extractConditionVariableNames(condition: string): readonly string[] {
@@ -880,6 +895,89 @@ function collectNodeVariableDependencies(node: FlowNode): readonly string[] {
   return [...names];
 }
 
+function nodeHasUncertainInterpolation(node: FlowNode): boolean {
+  switch (node.kind) {
+    case 'prompt':
+      return hasUncertainInterpolationSyntax(node.text);
+    case 'run':
+      return hasUncertainInterpolationSyntax(node.command);
+    case 'while':
+    case 'until':
+      return (
+        hasUncertainInterpolationSyntax(node.condition) ||
+        hasUncertainInterpolationSyntax(node.groundedBy)
+      );
+    case 'retry':
+      return false;
+    case 'if':
+      return (
+        hasUncertainInterpolationSyntax(node.condition) ||
+        hasUncertainInterpolationSyntax(node.groundedBy)
+      );
+    case 'try':
+      return hasUncertainInterpolationSyntax(node.catchCondition);
+    case 'let':
+      if (node.source.type === 'prompt' || node.source.type === 'prompt_json') {
+        return (
+          hasUncertainInterpolationSyntax(node.source.text) ||
+          (node.source.type === 'prompt_json' &&
+            hasUncertainInterpolationSyntax(node.source.schema))
+        );
+      }
+      if (node.source.type === 'run') {
+        return hasUncertainInterpolationSyntax(node.source.command);
+      }
+      if (node.source.type === 'memory') {
+        return hasUncertainInterpolationSyntax(node.source.key);
+      }
+      return false;
+    case 'foreach':
+    case 'foreach_spawn':
+      return (
+        hasUncertainInterpolationSyntax(node.listExpression) ||
+        hasUncertainInterpolationSyntax(node.listCommand)
+      );
+    case 'break':
+    case 'continue':
+      return false;
+    case 'spawn':
+      return hasUncertainInterpolationSyntax(node.condition);
+    case 'await':
+      return false;
+    case 'approve':
+      return hasUncertainInterpolationSyntax(node.message);
+    case 'review':
+      return (
+        hasUncertainInterpolationSyntax(node.criteria) ||
+        hasUncertainInterpolationSyntax(node.groundedBy)
+      );
+    case 'race':
+      return false;
+    case 'remember':
+      return (
+        hasUncertainInterpolationSyntax(node.text) ||
+        hasUncertainInterpolationSyntax(node.key) ||
+        hasUncertainInterpolationSyntax(node.value)
+      );
+    case 'send':
+      return (
+        hasUncertainInterpolationSyntax(node.target) ||
+        hasUncertainInterpolationSyntax(node.message)
+      );
+    case 'receive':
+      return hasUncertainInterpolationSyntax(node.from);
+    case 'swarm':
+    case 'start':
+      return false;
+    case 'return':
+      return hasUncertainInterpolationSyntax(node.expression);
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
+  }
+}
+
 function collectExecutionPathNodes(
   nodes: readonly FlowNode[],
   path: readonly number[],
@@ -950,7 +1048,15 @@ function collectExecutionPathNodes(
 function collectRelevantVariableNames(state: SessionState): ReadonlySet<string> {
   const names = new Set<string>();
 
-  for (const node of collectExecutionPathNodes(state.flowSpec.nodes, state.currentNodePath)) {
+  const executionPathNodes = collectExecutionPathNodes(state.flowSpec.nodes, state.currentNodePath);
+  if (
+    executionPathNodes.some((node) => nodeHasUncertainInterpolation(node)) ||
+    state.flowSpec.completionGates.some((gate) => hasUncertainInterpolationSyntax(gate.predicate))
+  ) {
+    return new Set<string>();
+  }
+
+  for (const node of executionPathNodes) {
     for (const name of collectNodeVariableDependencies(node)) {
       names.add(name);
     }

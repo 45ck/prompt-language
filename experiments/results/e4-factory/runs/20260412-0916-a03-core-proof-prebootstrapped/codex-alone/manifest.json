@@ -1,0 +1,14 @@
+{
+  "runId": "20260412-0916-a03-core-proof-prebootstrapped",
+  "lane": "codex-alone",
+  "candidate": "codex-alone",
+  "model": "gpt-5.2",
+  "workspaceRoot": "D:\\Visual Studio Projects\\prompt-language\\experiments\\full-saas-factory\\e4-codex-crm-factory\\workspaces\\runs\\20260412-0916-a03-core-proof-prebootstrapped\\codex-alone",
+  "resultsRoot": "D:\\Visual Studio Projects\\prompt-language\\experiments\\results\\e4-factory\\runs\\20260412-0916-a03-core-proof-prebootstrapped\\codex-alone",
+  "promptFile": "D:\\Visual Studio Projects\\prompt-language\\experiments\\results\\e4-factory\\runs\\20260412-0916-a03-core-proof-prebootstrapped\\codex-alone\\prompt.md",
+  "verificationCommands": [
+    "npm run lint",
+    "npm run typecheck",
+    "npm run test"
+  ]
+}

@@ -1,0 +1,13 @@
+
+> test
+> vitest run
+
+
+ RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/20260412-0916-a03-core-proof-prebootstrapped/pl-multiagent
+
+
+ Test Files  10 passed (10)
+      Tests  21 passed (21)
+   Start at  09:54:34
+   Duration  456ms (transform 528ms, setup 0ms, import 925ms, tests 70ms, environment 2ms)
+

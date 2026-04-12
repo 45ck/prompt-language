@@ -1,0 +1,4 @@
+
+> lint
+> eslint . --max-warnings=0
+

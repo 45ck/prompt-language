@@ -37,6 +37,7 @@ export interface RunFlowHeadlessOutput {
 
 const DEFAULT_MAX_TURNS = 24;
 const MAX_ASSISTANT_TEXT_SNIPPET = 160;
+const DEFAULT_HEADLESS_COMMAND_TIMEOUT_MS = 300_000;
 
 function hasRunningChildren(state: SessionState): boolean {
   return Object.values(state.spawnedChildren).some((child) => child?.status === 'running');
@@ -48,6 +49,7 @@ function bindCommandRunnerCwd(commandRunner: CommandRunner, cwd: string): Comman
       return commandRunner.run(command, {
         ...options,
         cwd: options?.cwd ?? cwd,
+        timeoutMs: options?.timeoutMs ?? DEFAULT_HEADLESS_COMMAND_TIMEOUT_MS,
       });
     },
   };
@@ -286,7 +288,7 @@ export async function runFlowHeadless(
       ) {
         const gateResult = await evaluateCompletion(
           deps.stateStore,
-          deps.commandRunner,
+          commandRunner,
           deps.auditLogger,
         );
         mergeSignals(collectedSignals, gateResult);

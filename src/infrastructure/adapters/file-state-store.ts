@@ -21,6 +21,7 @@ import {
   RUNTIME_DIAGNOSTIC_CODES,
   type FlowDiagnostic,
 } from '../../domain/diagnostic-report.js';
+import { resolveStateRoot } from './resolve-state-root.js';
 
 const DIR_NAME = '.prompt-language';
 const FILE_NAME = 'session-state.json';
@@ -58,7 +59,7 @@ export class FileStateStore implements StateStore {
   private lastLoadStatus: StateLoadStatus | null = null;
 
   constructor(basePath: string, stateDir = DIR_NAME) {
-    this.dirPath = join(basePath, stateDir);
+    this.dirPath = resolveStateRoot(basePath, stateDir);
     this.filePath = join(this.dirPath, FILE_NAME);
     this.tempFilePath = join(this.dirPath, TEMP_FILE_NAME);
     this.lockPath = join(this.dirPath, LOCK_NAME);

@@ -75,6 +75,14 @@ describe('FileStateStore', () => {
     expect(await store.exists()).toBe(true);
   });
 
+  it('writes to an absolute stateDir without nesting under basePath', async () => {
+    const absoluteStateDir = join(tempDir, 'absolute-state');
+    const store = new FileStateStore(join(tempDir, 'ignored-base'), absoluteStateDir);
+    await store.save(createSessionState('s1', makeSpec()));
+
+    await expect(access(join(absoluteStateDir, 'session-state.json'))).resolves.toBeUndefined();
+  });
+
   it('loadCurrent returns most recently saved state', async () => {
     const store = new FileStateStore(tempDir);
     await store.save(createSessionState('s1', makeSpec()));

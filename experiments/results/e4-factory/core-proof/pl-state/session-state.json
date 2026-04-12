@@ -1,0 +1,459 @@
+{
+  "version": 1,
+  "sessionId": "9d1f5c44-123e-41aa-afc6-c16571a4f80d",
+  "flowSpec": {
+    "goal": "produce a bounded CRM core slice through prompt-language orchestration",
+    "nodes": [
+      {
+        "kind": "prompt",
+        "id": "n1",
+        "text": "Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.",
+        "position": {
+          "line": 4,
+          "column": 3,
+          "text": "  prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it."
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n2",
+        "command": "npm install",
+        "position": {
+          "line": 5,
+          "column": 3,
+          "text": "  run: npm install"
+        }
+      },
+      {
+        "kind": "spawn",
+        "id": "n4",
+        "name": "research",
+        "body": [
+          {
+            "kind": "prompt",
+            "id": "n3",
+            "text": "Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready.",
+            "position": {
+              "line": 8,
+              "column": 5,
+              "text": "    prompt: Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready."
+            }
+          }
+        ],
+        "position": {
+          "line": 7,
+          "column": 3,
+          "text": "  spawn \"research\""
+        }
+      },
+      {
+        "kind": "spawn",
+        "id": "n6",
+        "name": "architecture",
+        "body": [
+          {
+            "kind": "prompt",
+            "id": "n5",
+            "text": "Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services.",
+            "position": {
+              "line": 12,
+              "column": 5,
+              "text": "    prompt: Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services."
+            }
+          }
+        ],
+        "position": {
+          "line": 11,
+          "column": 3,
+          "text": "  spawn \"architecture\""
+        }
+      },
+      {
+        "kind": "await",
+        "id": "n7",
+        "target": "all",
+        "position": {
+          "line": 15,
+          "column": 3,
+          "text": "  await all"
+        }
+      },
+      {
+        "kind": "spawn",
+        "id": "n9",
+        "name": "domain",
+        "body": [
+          {
+            "kind": "prompt",
+            "id": "n8",
+            "text": "Build packages/domain/src/index.ts plus focused tests for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries.",
+            "position": {
+              "line": 18,
+              "column": 5,
+              "text": "    prompt: Build packages/domain/src/index.ts plus focused tests for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries."
+            }
+          }
+        ],
+        "position": {
+          "line": 17,
+          "column": 3,
+          "text": "  spawn \"domain\""
+        }
+      },
+      {
+        "kind": "spawn",
+        "id": "n11",
+        "name": "services",
+        "body": [
+          {
+            "kind": "prompt",
+            "id": "n10",
+            "text": "Build packages/api/src/index.ts plus focused tests for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries.",
+            "position": {
+              "line": 22,
+              "column": 5,
+              "text": "    prompt: Build packages/api/src/index.ts plus focused tests for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries."
+            }
+          }
+        ],
+        "position": {
+          "line": 21,
+          "column": 3,
+          "text": "  spawn \"services\""
+        }
+      },
+      {
+        "kind": "await",
+        "id": "n12",
+        "target": "all",
+        "position": {
+          "line": 25,
+          "column": 3,
+          "text": "  await all"
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n13",
+        "text": "Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented repo state.",
+        "position": {
+          "line": 27,
+          "column": 3,
+          "text": "  prompt: Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented repo state."
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n14",
+        "command": "npm run lint",
+        "position": {
+          "line": 28,
+          "column": 3,
+          "text": "  run: npm run lint"
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n15",
+        "command": "npm run typecheck",
+        "position": {
+          "line": 29,
+          "column": 3,
+          "text": "  run: npm run typecheck"
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n16",
+        "command": "npm run test",
+        "position": {
+          "line": 30,
+          "column": 3,
+          "text": "  run: npm run test"
+        }
+      }
+    ],
+    "completionGates": [
+      {
+        "predicate": "lint",
+        "command": "npm run lint"
+      },
+      {
+        "predicate": "typecheck",
+        "command": "npm run typecheck"
+      },
+      {
+        "predicate": "tests",
+        "command": "npm run test"
+      },
+      {
+        "predicate": "file_exists .factory/project.flow"
+      },
+      {
+        "predicate": "file_exists docs/prd.md"
+      },
+      {
+        "predicate": "file_exists docs/architecture/domain-model.md"
+      },
+      {
+        "predicate": "file_exists docs/api-contracts.md"
+      },
+      {
+        "predicate": "file_exists specs/invariants.md"
+      },
+      {
+        "predicate": "file_exists packages/domain/src/index.ts"
+      },
+      {
+        "predicate": "file_exists packages/api/src/index.ts"
+      },
+      {
+        "predicate": "file_exists docs/handover.md"
+      }
+    ],
+    "defaults": {
+      "maxIterations": 5,
+      "maxAttempts": 3
+    },
+    "warnings": []
+  },
+  "currentNodePath": [
+    12
+  ],
+  "nodeProgress": {
+    "n1": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775947699707,
+      "completedAt": 1775947699708
+    },
+    "n2": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775947956371,
+      "completedAt": 1775947986488,
+      "exitCode": 124,
+      "stdout": "",
+      "stderr": "timed out after 30s",
+      "timedOut": true
+    },
+    "n4": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775947986488,
+      "completedAt": 1775947986612
+    },
+    "n6": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775947986612,
+      "completedAt": 1775948309732
+    },
+    "n7": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775948309733,
+      "completedAt": 1775948585691
+    },
+    "n9": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775948585767,
+      "completedAt": 1775948585768
+    },
+    "n11": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775948585769,
+      "completedAt": 1775949185910
+    },
+    "n12": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775949185910,
+      "completedAt": 1775949545567
+    },
+    "n13": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775949545620,
+      "completedAt": 1775949545620
+    },
+    "n14": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775950130054,
+      "completedAt": 1775950131860,
+      "exitCode": 0,
+      "stdout": "\n> lint\n> eslint . --max-warnings=0",
+      "stderr": ""
+    },
+    "n15": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775950131860,
+      "completedAt": 1775950133529,
+      "exitCode": 0,
+      "stdout": "\n> typecheck\n> tsc -p tsconfig.json --noEmit",
+      "stderr": ""
+    },
+    "n16": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775950133529,
+      "completedAt": 1775950134835,
+      "exitCode": 0,
+      "stdout": "\n> test\n> vitest run\n\n\n RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/core-proof/pl\n\n\n Test Files  3 passed (3)\n      Tests  19 passed (19)\n   Start at  09:28:54\n   Duration  440ms (transform 306ms, setup 0ms, import 411ms, tests 55ms, environment 0ms)",
+      "stderr": ""
+    }
+  },
+  "variables": {
+    "last_exit_code": 0,
+    "command_failed": false,
+    "command_succeeded": true,
+    "last_stdout": "\n> test\n> vitest run\n\n\n RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/core-proof/pl\n\n\n Test Files  3 passed (3)\n      Tests  19 passed (19)\n   Start at  09:28:54\n   Duration  440ms (transform 306ms, setup 0ms, import 411ms, tests 55ms, environment 0ms)",
+    "last_stderr": ""
+  },
+  "gateResults": {
+    "lint": true,
+    "typecheck": true,
+    "tests": true,
+    "file_exists .factory/project.flow": true,
+    "file_exists docs/prd.md": true,
+    "file_exists docs/architecture/domain-model.md": true,
+    "file_exists docs/api-contracts.md": true,
+    "file_exists specs/invariants.md": true,
+    "file_exists packages/domain/src/index.ts": true,
+    "file_exists packages/api/src/index.ts": true,
+    "file_exists docs/handover.md": true
+  },
+  "gateDiagnostics": {
+    "lint": {
+      "passed": true,
+      "command": "npm run lint",
+      "exitCode": 0,
+      "stdout": "\n> lint\n> eslint . --max-warnings=0",
+      "gateEvaluatedAt": 1775950137094
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "stdout": "\n> typecheck\n> tsc -p tsconfig.json --noEmit",
+      "gateEvaluatedAt": 1775950137028
+    },
+    "tests": {
+      "passed": true,
+      "command": "npm run test",
+      "exitCode": 0,
+      "stdout": "\n> test\n> vitest run\n\n\n RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/core-proof/pl\n\n\n Test Files  3 passed (3)\n      Tests  19 passed (19)\n   Start at  09:28:56\n   Duration  428ms (transform 172ms, setup 0ms, import 293ms, tests 69ms, environment 1ms)",
+      "gateEvaluatedAt": 1775950136505
+    },
+    "file_exists .factory/project.flow": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('.factory/project.flow') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775950134989
+    },
+    "file_exists docs/prd.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/prd.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775950135012
+    },
+    "file_exists docs/architecture/domain-model.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/architecture/domain-model.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775950135006
+    },
+    "file_exists docs/api-contracts.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/api-contracts.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775950135046
+    },
+    "file_exists specs/invariants.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('specs/invariants.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775950135040
+    },
+    "file_exists packages/domain/src/index.ts": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/domain/src/index.ts') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775950135043
+    },
+    "file_exists packages/api/src/index.ts": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/api/src/index.ts') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775950135055
+    },
+    "file_exists docs/handover.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/handover.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775950135076
+    }
+  },
+  "status": "completed",
+  "warnings": [],
+  "spawnedChildren": {
+    "research": {
+      "name": "research",
+      "pid": 18324,
+      "stateDir": ".prompt-language-research",
+      "startedAt": "2026-04-11T22:53:06.490Z",
+      "completedAt": "2026-04-11T23:03:05.691Z",
+      "status": "completed",
+      "variables": {}
+    },
+    "architecture": {
+      "name": "architecture",
+      "pid": 18324,
+      "stateDir": ".prompt-language-architecture",
+      "startedAt": "2026-04-11T22:53:06.613Z",
+      "completedAt": "2026-04-11T23:03:05.691Z",
+      "status": "completed",
+      "variables": {}
+    },
+    "domain": {
+      "name": "domain",
+      "pid": 18324,
+      "stateDir": ".prompt-language-domain",
+      "startedAt": "2026-04-11T23:03:05.768Z",
+      "completedAt": "2026-04-11T23:19:05.561Z",
+      "status": "failed",
+      "variables": {}
+    },
+    "services": {
+      "name": "services",
+      "pid": 18324,
+      "stateDir": ".prompt-language-services",
+      "startedAt": "2026-04-11T23:03:05.769Z",
+      "completedAt": "2026-04-11T23:19:05.567Z",
+      "status": "completed",
+      "variables": {}
+    }
+  },
+  "raceChildren": {},
+  "flowSpecHash": "30555423",
+  "transitionSeq": 12,
+  "captureNonce": "31beeca8f83dd2b86b7c91458edba43b",
+  "gateFailureCount": 0,
+  "_checksum": "b47dd53bf954949e16a2a1deb21fa5d22fccb129fa999278d75b5f8c7a5b8996"
+}

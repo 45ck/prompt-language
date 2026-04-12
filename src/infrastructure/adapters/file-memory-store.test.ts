@@ -123,4 +123,11 @@ describe('FileMemoryStore.findByKey', () => {
       access(join(tempDir, '.prompt-language-worker', 'memory.json')),
     ).resolves.toBeUndefined();
   });
+
+  it('writes to an absolute state directory when provided', async () => {
+    const absoluteStateDir = join(tempDir, 'absolute-state');
+    const store = new FileMemoryStore(join(tempDir, 'ignored-base'), absoluteStateDir);
+    await store.append({ timestamp: '2024-01-01T00:00:00Z', key: 'color', value: 'purple' });
+    await expect(access(join(absoluteStateDir, 'memory.json'))).resolves.toBeUndefined();
+  });
 });

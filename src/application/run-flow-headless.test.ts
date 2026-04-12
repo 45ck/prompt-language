@@ -193,6 +193,45 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.prompts[0]).toContain('Say hello');
   });
 
+  it('applies a longer default timeout to headless run nodes without explicit timeout', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-run-timeout-'));
+    const receivedOptions: { cwd?: string; timeoutMs?: number }[] = [];
+    const commandRunner = {
+      run: async (_command: string, options?: { cwd?: string; timeoutMs?: number }) => {
+        receivedOptions.push(options ?? {});
+        return {
+          exitCode: 0,
+          stdout: '',
+          stderr: '',
+        };
+      },
+    };
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: 'Goal: run once\n\nflow:\n  run: echo hello\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: new RecordingPromptRunner(),
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(receivedOptions[0]).toEqual(
+      expect.objectContaining({
+        cwd: tempDir,
+        timeoutMs: 300_000,
+      }),
+    );
+  });
+
   it('lets an explicit runner model override a profile-selected model', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-profile-model-'));
     await writeFile(

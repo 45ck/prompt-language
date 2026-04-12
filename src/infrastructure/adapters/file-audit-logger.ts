@@ -5,8 +5,9 @@
  */
 
 import { appendFileSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import type { AuditLogger, AuditEntry } from '../../application/ports/audit-logger.js';
+import { resolveStateRoot } from './resolve-state-root.js';
 
 const AUDIT_TRUNCATE_LIMIT = 500;
 
@@ -23,12 +24,12 @@ export class FileAuditLogger implements AuditLogger {
   private dirEnsured = false;
 
   constructor(cwd: string, stateDir = '.prompt-language') {
-    this.filePath = join(cwd, stateDir, 'audit.jsonl');
+    this.filePath = join(resolveStateRoot(cwd, stateDir), 'audit.jsonl');
   }
 
   log(entry: AuditEntry): void {
     if (!this.dirEnsured) {
-      const dir = join(this.filePath, '..');
+      const dir = dirname(this.filePath);
       mkdirSync(dir, { recursive: true });
       this.dirEnsured = true;
     }

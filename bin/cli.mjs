@@ -2,7 +2,7 @@
 
 import { promises as fs, existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
-import { join, dirname, resolve } from 'node:path';
+import { join, dirname, isAbsolute, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -922,11 +922,14 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
 
   const cwd = process.cwd();
   const resolvedStateDir = stateDir ?? '.prompt-language';
+  const resolvedStateRoot = isAbsolute(resolvedStateDir)
+    ? resolvedStateDir
+    : join(cwd, resolvedStateDir);
   const stateStore = new FileStateStore(cwd, resolvedStateDir);
   const auditLogger = new FileAuditLogger(cwd, resolvedStateDir);
   const captureReader = new FileCaptureReader(cwd, resolvedStateDir);
   const memoryStore = new FileMemoryStore(cwd, resolvedStateDir);
-  const messageStore = new FileMessageStore(join(cwd, resolvedStateDir), {});
+  const messageStore = new FileMessageStore(resolvedStateRoot, {});
   const commandRunner = new ShellCommandRunner();
   const promptTurnRunner = new PromptTurnRunner();
   const processSpawner = new HeadlessProcessSpawner({

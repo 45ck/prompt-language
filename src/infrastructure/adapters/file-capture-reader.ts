@@ -8,22 +8,21 @@ import {
   CAPTURE_PENDING_SENTINEL,
   type CaptureReader,
 } from '../../application/ports/capture-reader.js';
+import { resolveStateRoot } from './resolve-state-root.js';
 
 const MAX_CAPTURE_LENGTH = 2000;
 const SAFE_VAR_NAME = /^\w+$/;
 
 export class FileCaptureReader implements CaptureReader {
   readonly PENDING_SENTINEL = CAPTURE_PENDING_SENTINEL;
-  private readonly basePath: string;
-  private readonly stateDir: string;
+  private readonly stateRoot: string;
 
   constructor(basePath: string, stateDir = '.prompt-language') {
-    this.basePath = basePath;
-    this.stateDir = stateDir;
+    this.stateRoot = resolveStateRoot(basePath, stateDir);
   }
 
   private buildCapturePath(varName: string): string {
-    return join(this.basePath, this.stateDir, 'vars', varName);
+    return join(this.stateRoot, 'vars', varName);
   }
 
   async read(varName: string): Promise<string | null> {
@@ -61,12 +60,12 @@ export class FileCaptureReader implements CaptureReader {
   async prime(varName: string): Promise<void> {
     if (!SAFE_VAR_NAME.test(varName)) return;
     const filePath = this.buildCapturePath(varName);
-    await mkdir(join(this.basePath, this.stateDir, 'vars'), { recursive: true });
+    await mkdir(join(this.stateRoot, 'vars'), { recursive: true });
     await writeFile(filePath, CAPTURE_PENDING_SENTINEL, 'utf-8');
   }
 
   async ensureDir(): Promise<void> {
-    await mkdir(join(this.basePath, this.stateDir, 'vars'), { recursive: true });
+    await mkdir(join(this.stateRoot, 'vars'), { recursive: true });
   }
 }
 

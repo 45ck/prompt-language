@@ -1,0 +1,11 @@
+{
+  "runId": "20260412-0916-a03-core-proof-prebootstrapped",
+  "attemptLabel": "A03",
+  "scenario": "legacy-primary-comparison",
+  "order": "legacy-unrecorded",
+  "model": "gpt-5.2",
+  "startedAt": "2026-04-12T09:16:00.000Z",
+  "gitCommit": "legacy-unrecorded",
+  "gitStatusShort": "legacy-unrecorded",
+  "legacyBackfilled": true
+}

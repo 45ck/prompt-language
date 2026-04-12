@@ -3,7 +3,17 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,12 +26,15 @@ const CONTROL_ROOT = join(FACTORY_ROOT, 'control');
 const WORKSPACES_ROOT = join(FACTORY_ROOT, 'workspaces', 'runs');
 const RESULTS_ROOT = join(ROOT, 'experiments', 'results', 'e4-factory');
 const RUNS_ROOT = join(RESULTS_ROOT, 'runs');
+const INCOMPLETE_RUNS_ROOT = join(RESULTS_ROOT, 'incomplete');
+const INCOMPLETE_WORKSPACES_ROOT = join(FACTORY_ROOT, 'workspaces', 'incomplete');
 const COMPARISON_PATH = join(RESULTS_ROOT, 'comparison.md');
 const ANALYSIS_PATH = join(RESULTS_ROOT, 'analysis-2026-04-12.md');
 
 const SEED_ROOT = join(BOOTSTRAP_ROOT, 'core-proof-seed');
 const PL_OVERLAY_ROOT = join(BOOTSTRAP_ROOT, 'pl-overlay');
-const CONTROL_FILE = join(CONTROL_ROOT, 'core-proof-sequential.flow');
+const GOVERNED_CONTROL_FILE = join(CONTROL_ROOT, 'core-proof-sequential.flow');
+const THROUGHPUT_CONTROL_FILE = join(CONTROL_ROOT, 'core-proof-throughput.flow');
 const PROMPT_FILE = join(CONTROL_ROOT, 'codex-alone-core-proof.prompt.md');
 
 const COMMON_REQUIRED_ARTIFACTS = [
@@ -59,6 +72,12 @@ function parseArgs(argv) {
     order: DEFAULT_ORDER,
     runId: null,
     scenario: DEFAULT_SCENARIO,
+    attemptLabel: null,
+    batchId: null,
+    pairId: null,
+    documentedHumanInterventions: 0,
+    plRestartCount: 0,
+    codexRestartCount: 0,
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -80,8 +99,41 @@ function parseArgs(argv) {
       index += 1;
       continue;
     }
+    if (current === '--attempt-label' && next !== undefined) {
+      options.attemptLabel = next;
+      index += 1;
+      continue;
+    }
+    if (current === '--batch-id' && next !== undefined) {
+      options.batchId = next;
+      index += 1;
+      continue;
+    }
+    if (current === '--pair-id' && next !== undefined) {
+      options.pairId = next;
+      index += 1;
+      continue;
+    }
     if (current === '--scenario' && next !== undefined) {
       options.scenario = next;
+      index += 1;
+      continue;
+    }
+    if (current === '--documented-human-interventions' && next !== undefined) {
+      options.documentedHumanInterventions = parseNonNegativeInteger(
+        next,
+        '--documented-human-interventions',
+      );
+      index += 1;
+      continue;
+    }
+    if (current === '--pl-restart-count' && next !== undefined) {
+      options.plRestartCount = parseNonNegativeInteger(next, '--pl-restart-count');
+      index += 1;
+      continue;
+    }
+    if (current === '--codex-restart-count' && next !== undefined) {
+      options.codexRestartCount = parseNonNegativeInteger(next, '--codex-restart-count');
       index += 1;
       continue;
     }
@@ -98,6 +150,14 @@ function parseArgs(argv) {
   }
 
   return options;
+}
+
+function parseNonNegativeInteger(value, flagName) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${flagName} must be a non-negative integer, received "${value}"`);
+  }
+  return parsed;
 }
 
 function nowIso() {
@@ -160,6 +220,15 @@ async function writeText(path, content) {
 
 async function writeJson(path, value) {
   await writeText(path, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+async function moveIfExists(source, target) {
+  if (!existsSync(source)) {
+    return;
+  }
+  await ensureDir(dirname(target));
+  await rm(target, { recursive: true, force: true });
+  await rename(source, target);
 }
 
 function safeText(value, fallback) {
@@ -294,6 +363,16 @@ async function computeFileHash(path) {
     .digest('hex');
 }
 
+function controlFileForScenario(scenario) {
+  return scenario === 's0-clean' ? THROUGHPUT_CONTROL_FILE : GOVERNED_CONTROL_FILE;
+}
+
+function timingEnvelopeForScenario(scenario) {
+  return scenario === 's0-clean'
+    ? 'paired-throughput-s0-external-verification'
+    : 'paired-governed-sequential';
+}
+
 function readGitHead() {
   return execFileSync(GIT_BIN, ['rev-parse', 'HEAD'], {
     cwd: ROOT,
@@ -369,8 +448,18 @@ function scoreAuditability(traceCompleteness) {
   return traceCompleteness === 'strong' ? 2 : traceCompleteness === 'mixed' ? 1 : 0;
 }
 
-function scoreExperimentalControl(paired, throughputMetricsComplete, traceCompleteness) {
-  if (paired && throughputMetricsComplete && traceCompleteness === 'strong') {
+function scoreExperimentalControl(
+  paired,
+  throughputMetricsComplete,
+  traceCompleteness,
+  admissibility,
+) {
+  if (
+    paired &&
+    throughputMetricsComplete &&
+    traceCompleteness === 'strong' &&
+    admissibility.throughputClaimEligible
+  ) {
     return 2;
   }
   if (paired) {
@@ -389,11 +478,11 @@ function scoreAutomationIntegrity(runtimeFailureCount, restartCount, interventio
   return 0;
 }
 
-function scoreRepeatabilityEvidence(paired, throughputMetricsComplete) {
-  if (paired && throughputMetricsComplete) {
-    return 1;
+function scoreRepeatabilityEvidence(admissibility) {
+  if (admissibility.throughputClaimEligible) {
+    return 2;
   }
-  return paired ? 1 : 0;
+  return 0;
 }
 
 function totalVerificationPasses(verification) {
@@ -662,6 +751,11 @@ async function runPromptLanguageLane({
   laneResultsRoot,
   stateDir,
   bootstrapInfo,
+  controlFile,
+  restartCount,
+  interventionCount,
+  batch,
+  timingEnvelope,
 }) {
   await ensureDir(laneResultsRoot);
   await ensureDir(stateDir);
@@ -671,11 +765,10 @@ async function runPromptLanguageLane({
   await writeJson(join(laneResultsRoot, 'system-before.json'), promptStartSnapshot);
 
   const initialSnapshot = await snapshotWorkspaceFiles(workspaceRoot);
-  const startedAtMs = Date.now();
 
   const preflight = runProcess(
     process.execPath,
-    [CLI, 'validate', '--runner', 'codex', '--mode', 'headless', '--json', '--file', CONTROL_FILE],
+    [CLI, 'validate', '--runner', 'codex', '--mode', 'headless', '--json', '--file', controlFile],
     {
       cwd: workspaceRoot,
       timeoutMs: PREFLIGHT_TIMEOUT_MS,
@@ -690,8 +783,11 @@ async function runPromptLanguageLane({
   let runReport = null;
   let mainRun = null;
   let blockedPreflight = false;
+  let startedAtMs = null;
+  let endedAtMs = Date.now();
 
   if (preflight.exitCode === 0) {
+    startedAtMs = Date.now();
     mainRun = runProcess(
       process.execPath,
       [
@@ -705,7 +801,7 @@ async function runPromptLanguageLane({
         stateDir,
         '--json',
         '--file',
-        CONTROL_FILE,
+        controlFile,
       ],
       {
         cwd: workspaceRoot,
@@ -722,6 +818,7 @@ async function runPromptLanguageLane({
       safeText(mainRun.stderr, '(no stderr)\n'),
     );
     runReport = parseJson(mainRun.stdout.trim());
+    endedAtMs = Date.now();
   } else {
     blockedPreflight = true;
   }
@@ -730,7 +827,10 @@ async function runPromptLanguageLane({
   const typecheckResult = await runVerificationCommand('typecheck', workspaceRoot, laneResultsRoot);
   const testResult = await runVerificationCommand('test', workspaceRoot, laneResultsRoot);
 
-  const endedAtMs = Date.now();
+  if (startedAtMs === null) {
+    startedAtMs = Date.now();
+  }
+  endedAtMs = Date.now();
   const artifacts = await existingRequiredArtifacts(workspaceRoot, requiredArtifacts);
   const systemAfter = await captureSystemSnapshot();
   await writeJson(join(laneResultsRoot, 'system-after.json'), systemAfter);
@@ -783,9 +883,10 @@ async function runPromptLanguageLane({
     startedAt: new Date(startedAtMs).toISOString(),
     endedAt: new Date(endedAtMs).toISOString(),
     timeToGreenSec,
-    timeToFirstCodeSec,
-    interventionCount: 0,
-    restartCount: 0,
+    timeToFirstCodeSec: timeToFirstCodeSec,
+    timeToFirstRelevantWriteSec: timeToFirstCodeSec,
+    interventionCount,
+    restartCount,
     runtimeFailureCount,
     failureClass,
     throughputMetricsComplete:
@@ -798,12 +899,14 @@ async function runPromptLanguageLane({
     lane: 'pl-sequential',
     candidate: 'prompt-language',
     model,
+    batch,
+    timingEnvelope,
     status: closure.status,
     verdict: closure.verdict,
     workspaceRoot,
     resultsRoot: laneResultsRoot,
     stateDir,
-    controlFile: CONTROL_FILE,
+    controlFile,
     bootstrapSeed: bootstrapInfo,
     requiredArtifacts,
     verificationCommands: VERIFICATION_COMMANDS,
@@ -861,7 +964,17 @@ async function runPromptLanguageLane({
   };
 }
 
-async function runCodexLane({ runId, model, workspaceRoot, laneResultsRoot, bootstrapInfo }) {
+async function runCodexLane({
+  runId,
+  model,
+  workspaceRoot,
+  laneResultsRoot,
+  bootstrapInfo,
+  restartCount,
+  interventionCount,
+  batch,
+  timingEnvelope,
+}) {
   await ensureDir(laneResultsRoot);
   const requiredArtifacts = requiredArtifactsForLane('codex-alone');
 
@@ -960,9 +1073,10 @@ async function runCodexLane({ runId, model, workspaceRoot, laneResultsRoot, boot
     startedAt: new Date(startedAtMs).toISOString(),
     endedAt: new Date(endedAtMs).toISOString(),
     timeToGreenSec,
-    timeToFirstCodeSec,
-    interventionCount: 0,
-    restartCount: 0,
+    timeToFirstCodeSec: timeToFirstCodeSec,
+    timeToFirstRelevantWriteSec: timeToFirstCodeSec,
+    interventionCount,
+    restartCount,
     runtimeFailureCount,
     failureClass,
     throughputMetricsComplete:
@@ -975,6 +1089,8 @@ async function runCodexLane({ runId, model, workspaceRoot, laneResultsRoot, boot
     lane: 'codex-alone',
     candidate: 'codex-alone',
     model,
+    batch,
+    timingEnvelope,
     status: closure.status,
     verdict: closure.verdict,
     workspaceRoot,
@@ -1096,7 +1212,7 @@ function buildAdmissibility(plLane, codexLane) {
   };
 }
 
-function buildLaneScores(lane, paired) {
+function buildLaneScores(lane, paired, admissibility) {
   const verificationPassCount = totalVerificationPasses(lane.verification);
   const product = scoreProductOutcome(lane.artifacts.complete, verificationPassCount);
   const scores = {
@@ -1111,16 +1227,14 @@ function buildLaneScores(lane, paired) {
       paired,
       lane.metrics.throughputMetricsComplete,
       lane.metrics.traceCompleteness,
+      admissibility,
     ),
     automationIntegrity: scoreAutomationIntegrity(
       lane.metrics.runtimeFailureCount,
       lane.metrics.restartCount,
       lane.metrics.interventionCount,
     ),
-    repeatabilityEvidence: scoreRepeatabilityEvidence(
-      paired,
-      lane.metrics.throughputMetricsComplete,
-    ),
+    repeatabilityEvidence: scoreRepeatabilityEvidence(admissibility),
   };
 
   const totals = {
@@ -1138,6 +1252,10 @@ function buildLaneScores(lane, paired) {
 function buildScoreEvidence(runId, lane) {
   const prefix = `experiments/results/e4-factory/runs/${runId}`;
   const lanePrefix = `${prefix}/${lane.manifest.lane}`;
+  const batchPrefix =
+    lane.manifest.batch === null
+      ? null
+      : `experiments/results/e4-factory/batches/${lane.manifest.batch.batchId}/summary.json`;
 
   return {
     scopeCompletion: [`${prefix}/outcome.md`],
@@ -1151,7 +1269,7 @@ function buildScoreEvidence(runId, lane) {
     auditability: [`${prefix}/trace-summary.md`],
     experimentalControl: [`${prefix}/trace-summary.md`],
     automationIntegrity: [`${prefix}/interventions.md`],
-    repeatabilityEvidence: [`${prefix}/scorecard.json`],
+    repeatabilityEvidence: [batchPrefix ?? `${prefix}/scorecard.json`],
   };
 }
 
@@ -1183,9 +1301,9 @@ async function writeRunOutcome(
     '## Throughput',
     '',
     `- \`prompt-language\` time to green: ${plLane.metrics.timeToGreenSec ?? 'n/a'}s`,
-    `- \`prompt-language\` time to first code: ${plLane.metrics.timeToFirstCodeSec ?? 'n/a'}s`,
+    `- \`prompt-language\` time to first relevant write: ${plLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
     `- \`codex-alone\` time to green: ${codexLane.metrics.timeToGreenSec ?? 'n/a'}s`,
-    `- \`codex-alone\` time to first code: ${codexLane.metrics.timeToFirstCodeSec ?? 'n/a'}s`,
+    `- \`codex-alone\` time to first relevant write: ${codexLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
     `- admissible for throughput claim: ${admissibility.throughputClaimEligible}`,
     '',
     '## Verdict',
@@ -1236,16 +1354,22 @@ async function writeRunPostmortem(runRoot, runId, plLane, codexLane, admissibili
   await writeText(join(runRoot, 'postmortem.md'), content);
 }
 
-async function writeRunInterventions(runRoot, runId, plLane, codexLane) {
+async function writeRunInterventions(
+  runRoot,
+  runId,
+  plLane,
+  codexLane,
+  documentedHumanInterventions,
+) {
   const content = [
     '# Interventions',
     '',
     `Run: \`${runId}\``,
     '',
-    '- human interventions: 0',
+    `- documented human interventions: ${documentedHumanInterventions}`,
     '- prompt-language restart count: ' + plLane.metrics.restartCount,
     '- codex-alone restart count: ' + codexLane.metrics.restartCount,
-    '- note: this pair was executed end-to-end by the paired harness without manual lane rescue',
+    '- observation mode: counts are recorded from the harness invocation inputs, not inferred after the fact',
     '',
   ].join('\n');
 
@@ -1303,13 +1427,15 @@ async function writeScorecard(
   codexLane,
   comparativeVerdict,
   admissibility,
+  runMetadata,
 ) {
-  const plScoring = buildLaneScores(plLane, true);
-  const codexScoring = buildLaneScores(codexLane, true);
+  const plScoring = buildLaneScores(plLane, true, admissibility);
+  const codexScoring = buildLaneScores(codexLane, true, admissibility);
 
   const scorecard = {
     scoreVersion: 'e4-v1',
     runId,
+    batch: runMetadata.batch ?? null,
     scope: 'bounded-crm-core',
     question:
       'For the same bounded CRM core slice and frozen bootstrap seed, how does prompt-language compare with direct Codex?',
@@ -1320,9 +1446,12 @@ async function writeScorecard(
       {
         lane: plLane.manifest.lane,
         candidate: plLane.candidate,
+        status: plLane.manifest.status,
+        verdict: plLane.manifest.verdict,
         metrics: {
           timeToGreenSec: plLane.metrics.timeToGreenSec,
           timeToFirstCodeSec: plLane.metrics.timeToFirstCodeSec,
+          timeToFirstRelevantWriteSec: plLane.metrics.timeToFirstRelevantWriteSec,
           interventionCount: plLane.metrics.interventionCount,
           restartCount: plLane.metrics.restartCount,
           runtimeFailureCount: plLane.metrics.runtimeFailureCount,
@@ -1338,9 +1467,12 @@ async function writeScorecard(
       {
         lane: codexLane.manifest.lane,
         candidate: codexLane.candidate,
+        status: codexLane.manifest.status,
+        verdict: codexLane.manifest.verdict,
         metrics: {
           timeToGreenSec: codexLane.metrics.timeToGreenSec,
           timeToFirstCodeSec: codexLane.metrics.timeToFirstCodeSec,
+          timeToFirstRelevantWriteSec: codexLane.metrics.timeToFirstRelevantWriteSec,
           interventionCount: codexLane.metrics.interventionCount,
           restartCount: codexLane.metrics.restartCount,
           runtimeFailureCount: codexLane.metrics.runtimeFailureCount,
@@ -1361,7 +1493,7 @@ async function writeScorecard(
           ? 'Prompt-language outperformed the direct Codex baseline in this paired run.'
           : comparativeVerdict === 'codex-alone-better'
             ? 'Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.'
-            : 'Both lanes closed the common product contract, but the paired run produced a mixed result: prompt-language reached first code earlier while direct Codex reached green faster.',
+            : 'Both lanes closed the common product contract, but the paired run produced a mixed result: prompt-language reached the first relevant workspace write earlier while direct Codex reached green faster.',
     nextExperimentFocus: [
       'repeat the clean paired run to stabilize the throughput reading',
       'add interruption and resume scenarios only after several clean pairs agree',
@@ -1379,8 +1511,13 @@ async function updateComparison(
   codexLane,
   comparativeVerdict,
   admissibility,
+  runMetadata,
 ) {
   const text = await readText(COMPARISON_PATH);
+  const batchLine =
+    runMetadata.batch === null
+      ? null
+      : `- batch: \`${runMetadata.batch.batchId}\`${runMetadata.batch.pairId ? ` pair \`${runMetadata.batch.pairId}\`` : ''}`;
   const runSection = [
     `### ${attemptLabel}: \`${runId}\``,
     '',
@@ -1389,7 +1526,8 @@ async function updateComparison(
     '',
     'Meaning:',
     '',
-    '- this is the first patched paired clean run driven from the frozen bootstrap seed',
+    `- timing envelope: \`${runMetadata.timingEnvelope}\``,
+    batchLine,
     `- comparative verdict: \`${comparativeVerdict}\``,
     `- throughput admissible: ${admissibility.throughputClaimEligible}`,
     '',
@@ -1411,16 +1549,16 @@ async function updateComparison(
     ? [
         'Throughput note:',
         '',
-        `- \`${attemptLabel}\` is the first paired patched run with lane-appropriate artifact contracts, explicit timings, and complete raw traces`,
+        `- \`${attemptLabel}\` is part of a counterbalanced batch with lane-appropriate artifact contracts, explicit timings, and complete raw traces`,
         `- provisional raw-throughput verdict: \`${comparativeVerdict}\``,
         '- both lanes closed the same common product contract in this run',
-        '- sample size is still `n=1`, so any superiority claim remains provisional until repeated clean pairs agree',
+        '- superiority still belongs to the batch summary, not this one pair in isolation',
       ].join('\n')
     : [
         'Throughput note:',
         '',
         '- no current run is admissible for a stable throughput-superiority claim',
-        `- \`${attemptLabel}\` is paired and timed on the same common product contract, but fixed-order execution means the raw throughput read is still provisional`,
+        `- \`${attemptLabel}\` is paired and timed on the same common product contract, but throughput claims stay provisional until the counterbalanced batch summary says otherwise`,
         '- repeat the patched clean pair before making a stronger throughput claim',
       ].join('\n');
 
@@ -1428,7 +1566,7 @@ async function updateComparison(
   await writeText(COMPARISON_PATH, `${finalText.trim()}\n`);
 }
 
-async function updateAnalysis(runId, attemptLabel, scorecard) {
+async function updateAnalysis(runId, attemptLabel, scorecard, runMetadata) {
   const existing = await readText(ANALYSIS_PATH);
   if (existing.includes(runId)) {
     return;
@@ -1445,6 +1583,7 @@ async function updateAnalysis(runId, attemptLabel, scorecard) {
     `- comparative verdict: \`${comparativeVerdict}\``,
     `- throughput admissible: ${admissibility.throughputClaimEligible}`,
     `- admissibility reason: ${admissibility.reason}`,
+    `- timing envelope: \`${runMetadata.timingEnvelope}\``,
     '',
   ].join('\n');
 
@@ -1454,7 +1593,9 @@ async function updateAnalysis(runId, attemptLabel, scorecard) {
 async function main() {
   const options = parseArgs(process.argv.slice(2));
   const attemptNumber = await nextAttemptNumber();
-  const attemptLabel = `A${String(attemptNumber).padStart(2, '0')}`;
+  const attemptLabel = options.attemptLabel ?? `A${String(attemptNumber).padStart(2, '0')}`;
+  const controlFile = controlFileForScenario(options.scenario);
+  const timingEnvelope = timingEnvelopeForScenario(options.scenario);
   const runId =
     options.runId ??
     `${formatRunTimestamp(new Date())}-a${String(attemptNumber).padStart(2, '0')}-core-proof-paired-clean`;
@@ -1466,9 +1607,16 @@ async function main() {
 
   const seedHash = await computeDirectoryHash(SEED_ROOT);
   const overlayHash = await computeDirectoryHash(PL_OVERLAY_ROOT);
-  const controlHash = await computeFileHash(CONTROL_FILE);
+  const controlHash = await computeFileHash(controlFile);
   const promptHash = await computeFileHash(PROMPT_FILE);
   const bootstrapInfo = buildBootstrapInfo(seedHash, overlayHash);
+  const batch =
+    options.batchId === null
+      ? null
+      : {
+          batchId: options.batchId,
+          pairId: options.pairId,
+        };
 
   const metadata = {
     runId,
@@ -1476,17 +1624,21 @@ async function main() {
     scenario: options.scenario,
     order: options.order,
     model: options.model,
+    batch,
     startedAt: nowIso(),
     gitCommit: readGitHead(),
     gitStatusShort: readGitStatusShort(),
     nodeVersion: process.version,
     npmVersion: readNpmVersion(),
     codexVersion: readCodexVersion(),
-    controlFile: repoRelative(CONTROL_FILE),
+    controlFile: repoRelative(controlFile),
     controlHash,
     promptFile: repoRelative(PROMPT_FILE),
     promptHash,
     bootstrapSeed: bootstrapInfo,
+    timingEnvelope,
+    documentedHumanInterventions: options.documentedHumanInterventions,
+    interventionObservationMode: 'harness-parameterized',
   };
   await writeJson(join(runRoot, 'run.json'), metadata);
 
@@ -1536,6 +1688,11 @@ async function main() {
           laneResultsRoot: lane.resultsRoot,
           stateDir: lane.stateDir,
           bootstrapInfo,
+          controlFile,
+          restartCount: options.plRestartCount,
+          interventionCount: options.documentedHumanInterventions,
+          batch,
+          timingEnvelope,
         });
       } else {
         laneResults.codex = await runCodexLane({
@@ -1544,6 +1701,10 @@ async function main() {
           workspaceRoot: lane.workspaceRoot,
           laneResultsRoot: lane.resultsRoot,
           bootstrapInfo,
+          restartCount: options.codexRestartCount,
+          interventionCount: options.documentedHumanInterventions,
+          batch,
+          timingEnvelope,
         });
       }
     }
@@ -1567,7 +1728,13 @@ async function main() {
       admissibility,
     );
     await writeRunPostmortem(runRoot, runId, plLane, codexLane, admissibility);
-    await writeRunInterventions(runRoot, runId, plLane, codexLane);
+    await writeRunInterventions(
+      runRoot,
+      runId,
+      plLane,
+      codexLane,
+      options.documentedHumanInterventions,
+    );
     await writeRunTraceSummary(runRoot, runId, plLane, codexLane, comparativeVerdict);
     const scorecard = await writeScorecard(
       runRoot,
@@ -1576,6 +1743,7 @@ async function main() {
       codexLane,
       comparativeVerdict,
       admissibility,
+      metadata,
     );
 
     await updateComparison(
@@ -1585,8 +1753,9 @@ async function main() {
       codexLane,
       comparativeVerdict,
       admissibility,
+      metadata,
     );
-    await updateAnalysis(runId, attemptLabel, scorecard);
+    await updateAnalysis(runId, attemptLabel, scorecard, metadata);
 
     metadata.endedAt = nowIso();
     metadata.comparativeVerdict = comparativeVerdict;
@@ -1600,8 +1769,16 @@ async function main() {
     );
   } catch (error) {
     if (!completed) {
-      await rm(runRoot, { recursive: true, force: true });
-      await rm(workspaceRunRoot, { recursive: true, force: true });
+      metadata.endedAt = nowIso();
+      metadata.fatalError = error instanceof Error ? error.message : String(error);
+      metadata.preservedAsIncomplete = true;
+      await writeJson(join(runRoot, 'run.json'), metadata);
+      await writeText(
+        join(runRoot, 'run-error.txt'),
+        `${error instanceof Error ? (error.stack ?? error.message) : String(error)}\n`,
+      );
+      await moveIfExists(runRoot, join(INCOMPLETE_RUNS_ROOT, runId));
+      await moveIfExists(workspaceRunRoot, join(INCOMPLETE_WORKSPACES_ROOT, runId));
     }
     throw error;
   } finally {

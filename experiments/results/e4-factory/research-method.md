@@ -76,7 +76,8 @@ Only `primary-comparison` runs may support raw throughput claims, and only when:
 - both lanes completed the same common product contract
 - throughput metrics are present for both lanes
 - the run has complete raw traces for both lanes
-- order effects have been addressed through counterbalancing or repeated clean pairs
+- the timed work envelope is comparable between lanes
+- order effects have been addressed through a predeclared counterbalanced batch
 
 If any of those are missing, the run may still be closed, but it is not admissible for throughput
 superiority claims.
@@ -86,7 +87,7 @@ superiority claims.
 For future runs, each lane should record these first-class metrics:
 
 - `timeToGreenSec`
-- `timeToFirstCodeSec`
+- `timeToFirstRelevantWriteSec`
 - `interventionCount`
 - `restartCount`
 - `runtimeFailureCount`
@@ -115,6 +116,7 @@ Treat a run as weakened when any of these apply:
 - workspace state diverges from persisted state
 - top-level evidence files are missing and secondary artifacts must be trusted instead
 - one lane is penalized for missing control artifacts that only apply to the other lane
+- one lane is timed across extra validation or gate steps that are outside the other lane's envelope
 - a single fixed-order pair is used to make a throughput-superiority claim
 - one lane is repeated after fixes while the other lane is not rerun under the same conditions
 - the sample size is too small to claim stable superiority
@@ -123,6 +125,7 @@ Treat a run as weakened when any of these apply:
 
 Every repeatable E4 run should now end with:
 
+- `run.json`
 - `outcome.md`
 - `postmortem.md`
 - `interventions.md`
@@ -160,3 +163,16 @@ At minimum:
 - prompt-language lanes should retain persisted state, audit logs, and lane-level verification logs
 - every run should include `trace-summary.md` that explains which files are authoritative and what
   they imply
+
+## Batch-Level Claims
+
+Throughput superiority belongs to the batch, not to a single pair.
+
+- per-run scorecards may remain `primary-comparison` and still have `throughputClaimEligible: false`
+- a batch becomes throughput-claim eligible only after the batch summary confirms:
+  - at least four completed clean pairs
+  - at least two pairs in each order
+  - no harness-fatal exclusions
+  - a fixed predeclared schedule on one frozen commit/model/control surface
+
+Until then, per-run timing reads are useful context only.

@@ -22,4 +22,5 @@ Current bounded-core control packs:
 
 - `core-proof-multi-agent.flow`
 - `core-proof-sequential.flow`
+- `core-proof-throughput.flow`
 - `codex-alone-core-proof.prompt.md`

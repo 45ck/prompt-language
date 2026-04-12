@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const E4_ROOT = join(ROOT, 'experiments', 'results', 'e4-factory');
 const RUNS_ROOT = join(E4_ROOT, 'runs');
+const BATCHES_ROOT = join(E4_ROOT, 'batches');
 const COMPARISON_PATH = join(E4_ROOT, 'comparison.md');
 
 const historicalAttempts = [
@@ -122,6 +123,35 @@ function assertTraceArtifactMatch(traceArtifacts, manifestPath, requiredFragment
   }
 }
 
+function validateRunMetadata(runJsonPath, expectedRunId) {
+  const runMetadata = readJson(runJsonPath);
+  for (const field of ['runId', 'attemptLabel', 'scenario', 'order', 'model', 'startedAt']) {
+    if (!(field in runMetadata)) {
+      fail(`run metadata ${runJsonPath} is missing ${field}`);
+    }
+  }
+  assertString(runMetadata.runId, 'runId', runJsonPath);
+  if (runMetadata.runId !== expectedRunId) {
+    fail(
+      `run metadata ${runJsonPath} runId mismatch: expected ${expectedRunId}, found ${runMetadata.runId}`,
+    );
+  }
+  assertString(runMetadata.attemptLabel, 'attemptLabel', runJsonPath);
+  assertString(runMetadata.scenario, 'scenario', runJsonPath);
+  assertString(runMetadata.order, 'order', runJsonPath);
+  assertString(runMetadata.model, 'model', runJsonPath);
+  assertString(runMetadata.startedAt, 'startedAt', runJsonPath);
+  if ('batch' in runMetadata && runMetadata.batch !== null) {
+    if (typeof runMetadata.batch !== 'object') {
+      fail(`run metadata ${runJsonPath} has invalid batch`);
+    }
+    assertString(runMetadata.batch.batchId, 'batch.batchId', runJsonPath);
+    if ('pairId' in runMetadata.batch && runMetadata.batch.pairId !== null) {
+      assertString(runMetadata.batch.pairId, 'batch.pairId', runJsonPath);
+    }
+  }
+}
+
 function validateScorecard(scorecardPath, expectedRunId) {
   const scorecard = readJson(scorecardPath);
 
@@ -160,6 +190,15 @@ function validateScorecard(scorecardPath, expectedRunId) {
     fail(`scorecard ${scorecardPath} has invalid admissibility.throughputClaimEligible`);
   }
   assertString(scorecard.admissibility.reason, 'admissibility.reason', scorecardPath);
+  if ('batch' in scorecard && scorecard.batch !== null) {
+    if (typeof scorecard.batch !== 'object') {
+      fail(`scorecard ${scorecardPath} has invalid batch`);
+    }
+    assertString(scorecard.batch.batchId, 'batch.batchId', scorecardPath);
+    if ('pairId' in scorecard.batch && scorecard.batch.pairId !== null) {
+      assertString(scorecard.batch.pairId, 'batch.pairId', scorecardPath);
+    }
+  }
   if (!allowedComparativeVerdicts.has(scorecard.comparativeVerdict)) {
     fail(
       `scorecard ${scorecardPath} has unsupported comparativeVerdict ${scorecard.comparativeVerdict}`,
@@ -206,11 +245,12 @@ function validateScorecard(scorecardPath, expectedRunId) {
     for (const key of [
       'timeToGreenSec',
       'timeToFirstCodeSec',
+      'timeToFirstRelevantWriteSec',
       'interventionCount',
       'restartCount',
       'runtimeFailureCount',
     ]) {
-      const value = lane.metrics[key];
+      const value = key in lane.metrics ? lane.metrics[key] : null;
       if (value !== null && (!Number.isFinite(value) || value < 0)) {
         fail(`scorecard ${scorecardPath} has invalid metrics.${key}`);
       }
@@ -377,6 +417,7 @@ assertDirectory(RUNS_ROOT, 'E4 runs root');
 assertFile(COMPARISON_PATH, 'canonical comparison');
 
 const comparisonText = readText(COMPARISON_PATH);
+let batchCount = 0;
 
 for (const attempt of historicalAttempts) {
   const attemptRoot = join(E4_ROOT, attempt.name);
@@ -401,12 +442,16 @@ if (runIds.length === 0) {
 
 for (const runId of runIds) {
   const runRoot = join(RUNS_ROOT, runId);
+  assertFile(join(runRoot, 'run.json'), `${runId}/run.json`);
   assertFile(join(runRoot, 'outcome.md'), `${runId}/outcome.md`);
   assertFile(join(runRoot, 'postmortem.md'), `${runId}/postmortem.md`);
   assertFile(join(runRoot, 'interventions.md'), `${runId}/interventions.md`);
   assertFile(join(runRoot, 'scorecard.json'), `${runId}/scorecard.json`);
   assertFile(join(runRoot, 'trace-summary.md'), `${runId}/trace-summary.md`);
-  validateScorecard(join(runRoot, 'scorecard.json'), runId);
+  validateRunMetadata(join(runRoot, 'run.json'), runId);
+  const scorecardPath = join(runRoot, 'scorecard.json');
+  validateScorecard(scorecardPath, runId);
+  const scorecard = readJson(scorecardPath);
 
   if (!comparisonText.includes(runId)) {
     fail(`comparison.md does not mention run ${runId}`);
@@ -421,11 +466,44 @@ for (const runId of runIds) {
     fail(`run ${runId} does not contain any lane manifest.json files`);
   }
 
+  if (scorecard.admissibility.class === 'primary-comparison') {
+    if (manifestPaths.length !== 2) {
+      fail(`primary comparison run ${runId} must contain exactly two lane manifests`);
+    }
+    const manifestCandidates = manifestPaths
+      .map((manifestPath) => readJson(manifestPath).candidate)
+      .sort();
+    if (manifestCandidates.join(',') !== 'codex-alone,prompt-language') {
+      fail(
+        `primary comparison run ${runId} must contain one codex-alone candidate and one prompt-language candidate`,
+      );
+    }
+    if (!Array.isArray(scorecard.lanes) || scorecard.lanes.length !== 2) {
+      fail(`primary comparison run ${runId} must contain exactly two scorecard lanes`);
+    }
+  }
+
   for (const manifestPath of manifestPaths) {
     validateManifest(runId, manifestPath);
   }
 }
 
+if (existsSync(BATCHES_ROOT)) {
+  const batchIds = readdirSync(BATCHES_ROOT, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+
+  for (const batchId of batchIds) {
+    const batchRoot = join(BATCHES_ROOT, batchId);
+    assertFile(join(batchRoot, 'plan.json'), `${batchId}/plan.json`);
+    assertFile(join(batchRoot, 'pairs.json'), `${batchId}/pairs.json`);
+    assertFile(join(batchRoot, 'summary.json'), `${batchId}/summary.json`);
+    assertFile(join(batchRoot, 'summary.md'), `${batchId}/summary.md`);
+    batchCount += 1;
+  }
+}
+
 console.log(
-  `[e4-results-closure] PASS - validated ${historicalAttempts.length} historical attempts and ${runIds.length} repeatable runs.`,
+  `[e4-results-closure] PASS - validated ${historicalAttempts.length} historical attempts, ${runIds.length} repeatable runs, and ${batchCount} batches.`,
 );

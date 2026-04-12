@@ -4,20 +4,27 @@ Date: `2026-04-12`
 
 ## Objective
 
-Run the next E4 comparison as a true patched A/B benchmark for raw throughput and governed
-completion.
+Run the next E4 comparison as a scientifically cleaner throughput batch before adding interruption
+and resume scenarios.
 
-## Primary Benchmark
+## Phase Split
 
-Use the patched sequential prompt-language lane as the primary benchmark.
+### `S0` Clean Throughput Batch
+
+Use a throughput-specific prompt-language control file so the timed work envelope is closer to the
+direct Codex baseline.
 
 - Prompt-language lane:
-  [core-proof-sequential.flow](/D:/Visual%20Studio%20Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-sequential.flow:1)
+  [core-proof-throughput.flow](/D:/Visual%20Studio%20Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-throughput.flow:1)
 - Direct Codex lane:
   [codex-alone-core-proof.prompt.md](/D:/Visual%20Studio%20Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-core-proof.prompt.md:1)
 
-Keep the multi-agent flow out of the primary throughput comparison. Use it only as a secondary
-restart/orchestration stress test.
+Run only clean uninterrupted pairs in this phase.
+
+### `S1` / `S2` Recovery Batch
+
+Do not start interruption or resume scenarios until the `S0` batch finishes and the batch summary
+decides whether the clean throughput claim is eligible.
 
 ## Frozen Variables
 
@@ -26,19 +33,34 @@ restart/orchestration stress test.
 - same machine, OS, shell, Node/npm versions, and lockfile
 - same fresh workspace bootstrap
 - same bounded scope and outcome contract
-- same verification commands: `npm run lint`, `npm run typecheck`, `npm run test`
+- same outer verification commands: `npm run lint`, `npm run typecheck`, `npm run test`
 - no runtime fixes mid-batch
+- no repo edits mid-batch
 
-## Run Structure
+## `S0` Batch Shape
 
-- run pairs serially, not concurrently
-- randomize lane order across pairs
-- capture a system snapshot before each run:
-  - free RAM
-  - active Codex processes
-  - active `ollama` processes
-  - CPU load
-- use a fresh cloned workspace for every run
+Use a fixed alternating six-pair schedule:
+
+- `P01` `codex-first`
+- `P02` `pl-first`
+- `P03` `codex-first`
+- `P04` `pl-first`
+- `P05` `codex-first`
+- `P06` `pl-first`
+
+This is the default clean throughput batch for `e4:batch`.
+
+## Pre-Run Gate
+
+Before every pair:
+
+- git worktree must be clean
+- no pre-existing Codex processes
+- free RAM must stay above the floor enforced by the batch runner
+- a system snapshot must be written before the pair starts
+
+If the pair runner crashes before writing a closed run pack, preserve the incomplete evidence and
+stop the batch.
 
 ## Mandatory Traces
 
@@ -63,61 +85,53 @@ Every run must produce `trace-summary.md` stating which trace files are authorit
 
 Primary:
 
+- `timeToGreenSec`
 - `success_to_green`
-- `time_to_green_sec`
-- `intervention_count`
-- `runtime_failure_count`
+- `interventionCount`
+- `runtimeFailureCount`
 
 Secondary:
 
-- `time_to_first_code_sec`
-- `verification_reruns`
-- `artifact_completeness`
-- `trace_completeness`
-- `orphan_process_count`
-- `closure_completeness`
+- `timeToFirstRelevantWriteSec`
+- `restartCount`
+- `artifactCompleteness`
+- `traceCompleteness`
+- `closureCompleteness`
 
 Every failure must be classified as `product`, `runtime`, `config`, or `evidence`.
 
-## Interruption Scenarios
+## Exclusion Rules
 
-- `S0 Clean`: no interruption
-- `S1 Mid-build hard stop`: interrupt after docs/specs exist and before `packages/api/src/index.ts`
-- `S2 Pre-verification hard stop`: interrupt after both code files exist and before successful
-  verification
+Exclude a pair from throughput claims if any of these apply:
 
-Resume rule:
+- pre-run gate contamination
+- harness crash before both lanes close bookkeeping
+- missing required raw trace files
+- mismatched commit/model/control surface
 
-- prompt-language resumes from persisted state with the same flow
-- direct Codex resumes from current workspace with the same frozen prompt plus one fixed resume
-  sentence
+Excluded pairs still stay on disk as evidence.
 
-## Repeat Count
+## Batch-Level Decision Rules
 
-Minimum credible batch:
+The batch may support a throughput claim only if:
 
-- `4` clean A/B pairs
-- `2` `S1` interruption A/B pairs
-- `2` `S2` interruption A/B pairs
+- at least `4` completed clean pairs remain after exclusions
+- at least `2` pairs exist in each order
+- no harness-fatal exclusions remain unresolved
 
-Total: `8` pairs / `16` runs
+Then decide:
 
-## Decision Rules
+- `prompt-language-better` only if success rate is not worse and median `timeToGreenSec` is at
+  least `10%` better
+- `codex-alone-better` by the same rule
+- `parity` if success rates match and median `timeToGreenSec` is within `10%`
+- otherwise `mixed`
 
-Claim `prompt-language` is better for raw throughput only if:
+## Recovery Phase
 
-- success rate is at least equal to direct Codex
-- median `time_to_green_sec` is at least `10%` better
-- median intervention count is not worse
-- runtime/config failures are not more frequent
+Only after `S0`:
 
-Claim parity if:
+- `S1` mid-build hard stop
+- `S2` pre-verification hard stop
 
-- success rates match
-- median `time_to_green_sec` is within `10%`
-
-Claim prompt-language is better for governed factory work if interruption runs show:
-
-- better recovery success
-- lower rescue burden
-- complete closure artifacts
+Those scenarios answer a different question: governed recovery, not raw throughput.

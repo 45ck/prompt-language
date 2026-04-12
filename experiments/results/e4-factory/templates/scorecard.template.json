@@ -1,6 +1,10 @@
 {
   "scoreVersion": "e4-v1",
   "runId": "<run-id>",
+  "batch": {
+    "batchId": "<batch-id>",
+    "pairId": "<pair-id>"
+  },
   "scope": "<bounded-scope>",
   "question": "<research-question>",
   "baselineReference": null,
@@ -17,6 +21,7 @@
       "metrics": {
         "timeToGreenSec": null,
         "timeToFirstCodeSec": null,
+        "timeToFirstRelevantWriteSec": null,
         "interventionCount": null,
         "restartCount": null,
         "runtimeFailureCount": null,

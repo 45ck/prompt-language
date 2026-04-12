@@ -100,7 +100,7 @@ The evidence now supports five claims:
 3. The Windows/headless runtime path needed explicit fixes around state-root resolution, run-node
    timeout behavior, and Codex process launch / cleanup.
 4. After those fixes, the sequential prompt-language lane also completed successfully.
-5. The first clean paired timed run (`A06`) gives a raw timing read that favors direct Codex on time-to-green for this bounded slice, while prompt-language still retains the stronger governed factory-control surface and earlier time-to-first-code.
+5. The first clean paired timed run (`A06`) gives an initial timing read that favors direct Codex on time-to-green for this bounded slice, while prompt-language still retains the stronger governed factory-control surface and earlier first relevant workspace write.
 
 For the deeper comparative interpretation, see [research-method.md](./research-method.md) and
 [analysis-2026-04-12.md](./analysis-2026-04-12.md).
@@ -108,7 +108,7 @@ For the deeper comparative interpretation, see [research-method.md](./research-m
 Throughput note:
 
 - no current run is admissible for a stable throughput-superiority claim
-- `A06` is paired and timed on the same common product contract, but fixed-order execution means the raw throughput read is still provisional
-- provisional raw timing read: `codex-alone` reached green faster, while `prompt-language` reached first code earlier
+- `A06` is paired and timed on the same common product contract, but fixed-order execution and an older asymmetric timing envelope mean the throughput read is still provisional
+- provisional raw timing read: `codex-alone` reached green faster, while `prompt-language` reached the first relevant workspace write earlier
 - both lanes closed the same common product contract in this run
 - sample size is still `n=1`, so any superiority claim remains provisional until repeated clean pairs agree

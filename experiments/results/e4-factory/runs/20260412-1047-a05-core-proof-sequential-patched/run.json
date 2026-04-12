@@ -1,0 +1,11 @@
+{
+  "runId": "20260412-1047-a05-core-proof-sequential-patched",
+  "attemptLabel": "A05",
+  "scenario": "legacy-supporting-context",
+  "order": "single-lane",
+  "model": "gpt-5.2",
+  "startedAt": "2026-04-12T10:47:00.000Z",
+  "gitCommit": "legacy-unrecorded",
+  "gitStatusShort": "legacy-unrecorded",
+  "legacyBackfilled": true
+}

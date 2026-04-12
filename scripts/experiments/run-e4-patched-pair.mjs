@@ -590,7 +590,7 @@ async function captureSystemSnapshot() {
     '  codexProcesses = $codex',
     '  ollamaProcesses = $ollama',
     '} | ConvertTo-Json -Depth 5 -Compress',
-  ].join('; ');
+  ].join('\n');
 
   const result = runProcess(
     'powershell',

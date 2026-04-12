@@ -389,7 +389,7 @@ function captureSystemSnapshot() {
     '  codexProcesses = $codex',
     '  ollamaProcesses = $ollama',
     '} | ConvertTo-Json -Depth 5 -Compress',
-  ].join('; ');
+  ].join('\n');
 
   const result = runProcess(
     'powershell',
@@ -455,59 +455,106 @@ async function main() {
 
   const completedPairs = [];
   const abortedPairs = [];
+  let summary = buildSummary(plan, completedPairs, abortedPairs);
+  await writeJson(join(batchRoot, 'pairs.json'), completedPairs);
+  await writeJson(join(batchRoot, 'summary.json'), summary);
+  await writeText(
+    join(batchRoot, 'summary.md'),
+    renderSummaryMarkdown(plan, summary, completedPairs),
+  );
 
   for (let index = 0; index < plan.orders.length; index += 1) {
     const pair = plan.orders[index];
     const pairId = pair.pairId;
     const order = pair.order;
-    const snapshot = captureSystemSnapshot();
-    enforcePreRunGate(snapshot);
-    await writeJson(join(batchRoot, `${pairId}-system-before.json`), snapshot);
-
     const attemptNumber = await nextAttemptNumber();
     const attemptLabel = `A${pad(attemptNumber)}`;
     const runId = `a${pad(attemptNumber)}-${batchId}-${pairId}-${options.scenario}-${order}`;
-    const result = runProcess(
-      process.execPath,
-      [
-        PAIR_RUNNER,
-        '--model',
-        options.model,
-        '--scenario',
-        options.scenario,
-        '--order',
-        order,
-        '--batch-id',
-        batchId,
-        '--pair-id',
+    try {
+      const snapshot = captureSystemSnapshot();
+      enforcePreRunGate(snapshot);
+      await writeJson(join(batchRoot, `${pairId}-system-before.json`), snapshot);
+
+      const result = runProcess(
+        process.execPath,
+        [
+          PAIR_RUNNER,
+          '--model',
+          options.model,
+          '--scenario',
+          options.scenario,
+          '--order',
+          order,
+          '--batch-id',
+          batchId,
+          '--pair-id',
+          pairId,
+          '--attempt-label',
+          attemptLabel,
+          '--run-id',
+          runId,
+        ],
+        {
+          cwd: ROOT,
+          timeoutMs: 2 * 60 * 60 * 1000,
+        },
+      );
+
+      await writeText(
+        join(batchRoot, `${pairId}-runner.log`),
+        [
+          `attemptLabel: ${attemptLabel}`,
+          `runId: ${runId}`,
+          `exitCode: ${result.status ?? -1}`,
+          '',
+          'stdout:',
+          result.stdout ?? '(no stdout)',
+          '',
+          'stderr:',
+          result.stderr ?? '(no stderr)',
+        ].join('\n'),
+      );
+
+      if (result.status !== 0) {
+        abortedPairs.push({
+          pairId,
+          order,
+          runId,
+          attemptLabel,
+          incompletePath: existsSync(join(INCOMPLETE_ROOT, runId))
+            ? `experiments/results/e4-factory/incomplete/${runId}`
+            : null,
+        });
+        break;
+      }
+
+      const scorecard = await readJson(join(RUNS_ROOT, runId, 'scorecard.json'));
+      const runMetadata = await readJson(join(RUNS_ROOT, runId, 'run.json'));
+      const plLane = summarizeLane(scorecard, 'pl-sequential');
+      const codexLane = summarizeLane(scorecard, 'codex-alone');
+
+      completedPairs.push({
         pairId,
-        '--attempt-label',
-        attemptLabel,
-        '--run-id',
+        order,
         runId,
-      ],
-      {
-        cwd: ROOT,
-        timeoutMs: 2 * 60 * 60 * 1000,
-      },
-    );
-
-    await writeText(
-      join(batchRoot, `${pairId}-runner.log`),
-      [
-        `attemptLabel: ${attemptLabel}`,
-        `runId: ${runId}`,
-        `exitCode: ${result.status ?? -1}`,
-        '',
-        'stdout:',
-        result.stdout ?? '(no stdout)',
-        '',
-        'stderr:',
-        result.stderr ?? '(no stderr)',
-      ].join('\n'),
-    );
-
-    if (result.status !== 0) {
+        attemptLabel,
+        scorecard,
+        runMetadata,
+        validForBatchSummary:
+          plLane !== null &&
+          codexLane !== null &&
+          scorecard.admissibility.class === 'primary-comparison' &&
+          runMetadata.gitCommit === plan.gitCommit &&
+          plLane.metrics.throughputMetricsComplete === true &&
+          codexLane.metrics.throughputMetricsComplete === true &&
+          typeof plLane.metrics.timeToGreenSec === 'number' &&
+          typeof codexLane.metrics.timeToGreenSec === 'number',
+        lanes: {
+          'pl-sequential': plLane,
+          'codex-alone': codexLane,
+        },
+      });
+    } catch (error) {
       abortedPairs.push({
         pairId,
         order,
@@ -516,38 +563,12 @@ async function main() {
         incompletePath: existsSync(join(INCOMPLETE_ROOT, runId))
           ? `experiments/results/e4-factory/incomplete/${runId}`
           : null,
+        error: error instanceof Error ? error.message : String(error),
       });
       break;
     }
 
-    const scorecard = await readJson(join(RUNS_ROOT, runId, 'scorecard.json'));
-    const runMetadata = await readJson(join(RUNS_ROOT, runId, 'run.json'));
-    const plLane = summarizeLane(scorecard, 'pl-sequential');
-    const codexLane = summarizeLane(scorecard, 'codex-alone');
-
-    completedPairs.push({
-      pairId,
-      order,
-      runId,
-      attemptLabel,
-      scorecard,
-      runMetadata,
-      validForBatchSummary:
-        plLane !== null &&
-        codexLane !== null &&
-        scorecard.admissibility.class === 'primary-comparison' &&
-        runMetadata.gitCommit === plan.gitCommit &&
-        plLane.metrics.throughputMetricsComplete === true &&
-        codexLane.metrics.throughputMetricsComplete === true &&
-        typeof plLane.metrics.timeToGreenSec === 'number' &&
-        typeof codexLane.metrics.timeToGreenSec === 'number',
-      lanes: {
-        'pl-sequential': plLane,
-        'codex-alone': codexLane,
-      },
-    });
-
-    const summary = buildSummary(plan, completedPairs, abortedPairs);
+    summary = buildSummary(plan, completedPairs, abortedPairs);
     await writeJson(join(batchRoot, 'pairs.json'), completedPairs);
     await writeJson(join(batchRoot, 'summary.json'), summary);
     await writeText(
@@ -556,7 +577,7 @@ async function main() {
     );
   }
 
-  const summary = buildSummary(plan, completedPairs, abortedPairs);
+  summary = buildSummary(plan, completedPairs, abortedPairs);
   await writeJson(join(batchRoot, 'pairs.json'), completedPairs);
   await writeJson(join(batchRoot, 'summary.json'), summary);
   await writeText(

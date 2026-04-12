@@ -679,6 +679,24 @@ function formatGateDiagnostic(diag: {
 // H-PERF-002: Internal/auto-set variables to exclude from display
 const HIDDEN_VARIABLES = new Set(['last_exit_code', 'last_stdout', 'last_stderr']);
 const AUTO_SUFFIX_RE = /_(index|length)$/;
+const INTERPOLATED_VARIABLE_RE =
+  /\$\{([\w.]+):-((?:[^}\\]|\\.)*)\}|\$\{(\w+)\[(-?\d+)\]\}|\$\{([\w.]+)\}/g;
+const BARE_IDENTIFIER_RE = /\b[A-Za-z_][\w.]*\b/g;
+const CONDITION_IDENTIFIER_EXCLUSIONS = new Set([
+  'and',
+  'ask',
+  'false',
+  'grounded',
+  'by',
+  'in',
+  'max',
+  'max_retries',
+  'not',
+  'null',
+  'or',
+  'timeout',
+  'true',
+]);
 
 function isHiddenVariable(key: string, _value: VariableValue, variables: VariableStore): boolean {
   if (HIDDEN_VARIABLES.has(key)) return true;
@@ -707,14 +725,268 @@ function formatListValue(str: string): string | null {
   }
 }
 
-// H#33: Truncate variable values >80 chars for readability
-function renderVariables(state: SessionState): string[] {
-  const entries = Object.entries(state.variables);
-  if (entries.length === 0) return [];
+function extractInterpolatedVariableNames(template: string): readonly string[] {
+  const names = new Set<string>();
+  for (const match of template.matchAll(INTERPOLATED_VARIABLE_RE)) {
+    const name = match[1] ?? match[3] ?? match[5];
+    if (name) {
+      names.add(name);
+    }
+  }
+  return [...names];
+}
 
-  const filtered = entries
+function extractConditionVariableNames(condition: string): readonly string[] {
+  const names = new Set(extractInterpolatedVariableNames(condition));
+  const inspectable = isAskCondition(condition) ? extractAskQuestion(condition) : condition;
+
+  for (const match of inspectable.matchAll(BARE_IDENTIFIER_RE)) {
+    const token = match[0];
+    if (token == null) {
+      continue;
+    }
+
+    const normalized = token.toLowerCase();
+    if (CONDITION_IDENTIFIER_EXCLUSIONS.has(normalized)) {
+      continue;
+    }
+
+    names.add(token);
+  }
+
+  return [...names];
+}
+
+function addReferencesFromString(target: Set<string>, value: string | undefined): void {
+  if (value == null || value.length === 0) {
+    return;
+  }
+
+  for (const name of extractInterpolatedVariableNames(value)) {
+    target.add(name);
+  }
+}
+
+function addConditionReferences(target: Set<string>, condition: string | undefined): void {
+  if (condition == null || condition.length === 0) {
+    return;
+  }
+
+  for (const name of extractConditionVariableNames(condition)) {
+    target.add(name);
+  }
+}
+
+function collectNodeVariableDependencies(node: FlowNode): readonly string[] {
+  const names = new Set<string>();
+
+  switch (node.kind) {
+    case 'prompt':
+      addReferencesFromString(names, node.text);
+      break;
+    case 'run':
+      addReferencesFromString(names, node.command);
+      break;
+    case 'while':
+    case 'until':
+      addConditionReferences(names, node.condition);
+      addReferencesFromString(names, node.groundedBy);
+      break;
+    case 'retry':
+      break;
+    case 'if':
+      addConditionReferences(names, node.condition);
+      addReferencesFromString(names, node.groundedBy);
+      break;
+    case 'try':
+      addConditionReferences(names, node.catchCondition);
+      break;
+    case 'let':
+      names.add(node.variableName);
+      switch (node.source.type) {
+        case 'prompt':
+          addReferencesFromString(names, node.source.text);
+          break;
+        case 'prompt_json':
+          addReferencesFromString(names, node.source.text);
+          addReferencesFromString(names, node.source.schema);
+          break;
+        case 'run':
+          addReferencesFromString(names, node.source.command);
+          break;
+        case 'memory':
+          addReferencesFromString(names, node.source.key);
+          break;
+        case 'literal':
+          break;
+        case 'empty_list':
+          break;
+      }
+      break;
+    case 'foreach':
+    case 'foreach_spawn':
+      names.add(node.variableName);
+      addConditionReferences(names, node.listExpression);
+      addReferencesFromString(names, node.listCommand);
+      break;
+    case 'break':
+    case 'continue':
+      break;
+    case 'spawn':
+      addConditionReferences(names, node.condition);
+      for (const variableName of node.vars ?? []) {
+        names.add(variableName);
+      }
+      break;
+    case 'await':
+      break;
+    case 'approve':
+      names.add('approve_rejected');
+      addReferencesFromString(names, node.message);
+      break;
+    case 'review':
+      addReferencesFromString(names, node.criteria);
+      addReferencesFromString(names, node.groundedBy);
+      break;
+    case 'race':
+      names.add('race_winner');
+      break;
+    case 'remember':
+      addReferencesFromString(names, node.text);
+      addReferencesFromString(names, node.key);
+      addReferencesFromString(names, node.value);
+      break;
+    case 'send':
+      addReferencesFromString(names, node.target);
+      addReferencesFromString(names, node.message);
+      break;
+    case 'receive':
+      names.add(node.variableName);
+      addReferencesFromString(names, node.from);
+      break;
+    case 'swarm':
+      break;
+    case 'start':
+      break;
+    case 'return':
+      addConditionReferences(names, node.expression);
+      break;
+    default: {
+      const _exhaustive: never = node;
+      return _exhaustive;
+    }
+  }
+
+  return [...names];
+}
+
+function collectExecutionPathNodes(
+  nodes: readonly FlowNode[],
+  path: readonly number[],
+): readonly FlowNode[] {
+  const chain: FlowNode[] = [];
+  let currentNodes = nodes;
+  let remainingPath = [...path];
+
+  while (remainingPath.length > 0) {
+    const index = remainingPath[0]!;
+    const node = currentNodes[index];
+    if (node == null) {
+      break;
+    }
+
+    chain.push(node);
+    remainingPath = remainingPath.slice(1);
+    if (remainingPath.length === 0) {
+      break;
+    }
+
+    switch (node.kind) {
+      case 'while':
+      case 'until':
+      case 'retry':
+      case 'foreach':
+      case 'foreach_spawn':
+      case 'review':
+      case 'spawn':
+        currentNodes = node.body;
+        break;
+      case 'if':
+        currentNodes = [...node.thenBranch, ...node.elseBranch];
+        break;
+      case 'try':
+        currentNodes = [...node.body, ...node.catchBody, ...node.finallyBody];
+        break;
+      case 'race':
+        currentNodes = node.children.flatMap((child) => [child, ...child.body]);
+        break;
+      case 'swarm':
+        currentNodes = [...node.flow];
+        break;
+      case 'prompt':
+      case 'run':
+      case 'let':
+      case 'break':
+      case 'continue':
+      case 'await':
+      case 'approve':
+      case 'remember':
+      case 'send':
+      case 'receive':
+      case 'start':
+      case 'return':
+        remainingPath = [];
+        break;
+      default: {
+        const _exhaustive: never = node;
+        return _exhaustive;
+      }
+    }
+  }
+
+  return chain;
+}
+
+function collectRelevantVariableNames(state: SessionState): ReadonlySet<string> {
+  const names = new Set<string>();
+
+  for (const node of collectExecutionPathNodes(state.flowSpec.nodes, state.currentNodePath)) {
+    for (const name of collectNodeVariableDependencies(node)) {
+      names.add(name);
+    }
+  }
+
+  for (const gate of state.flowSpec.completionGates) {
+    for (const name of extractConditionVariableNames(gate.predicate)) {
+      names.add(name);
+    }
+  }
+
+  return names;
+}
+
+function collectDisplayVariables(state: SessionState): readonly [string, VariableValue][] {
+  const entries = Object.entries(state.variables);
+  if (entries.length === 0) {
+    return [];
+  }
+
+  const visible = entries
     .filter(([key, value]) => !isHiddenVariable(key, value, state.variables))
     .sort(([left], [right]) => left.localeCompare(right));
+  if (visible.length === 0) {
+    return [];
+  }
+
+  const relevant = collectRelevantVariableNames(state);
+  const sliced = visible.filter(([key]) => relevant.has(key));
+
+  return sliced.length > 0 ? sliced : visible;
+}
+
+// H#33: Truncate variable values >80 chars for readability
+function renderVariables(state: SessionState): string[] {
+  const filtered = collectDisplayVariables(state);
   if (filtered.length === 0) return [];
 
   const lines: string[] = ['', 'Variables:'];
@@ -1034,7 +1306,7 @@ function buildFlowSummarySnapshot(state: SessionState): FlowSummarySnapshot {
     stepNum,
     status: state.status,
     totalNodes,
-    varCount: Object.keys(state.variables).length,
+    varCount: collectDisplayVariables(state).length,
   };
 }
 

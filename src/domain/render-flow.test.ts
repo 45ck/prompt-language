@@ -379,6 +379,51 @@ describe('renderFlow', () => {
     expect(outputA).toContain('Variables:\n  alpha = first\n  middle = mid\n  zebra = last');
   });
 
+  it('slices variables to those referenced by the current execution path and visible gates', () => {
+    const spec = createFlowSpec(
+      'test',
+      [
+        createPromptNode('p1', 'fix ${target_file}'),
+        createRunNode('r1', 'npm test ${target_file}'),
+      ],
+      [createCompletionGate('tests_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      currentNodePath: [1],
+      variables: {
+        target_file: 'src/app.ts',
+        tests_pass: false,
+        unrelated: 'ignore me',
+      },
+    };
+
+    const output = renderFlow(state);
+
+    expect(output).toContain('Variables:');
+    expect(output).toContain('target_file = src/app.ts');
+    expect(output).toContain('tests_pass = false');
+    expect(output).not.toContain('unrelated = ignore me');
+  });
+
+  it('falls back to all visible variables when no explicit dependencies are found', () => {
+    const spec = createFlowSpec('test', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      variables: {
+        alpha: 'first',
+        zebra: 'last',
+      },
+    };
+
+    const output = renderFlow(state);
+
+    expect(output).toContain('alpha = first');
+    expect(output).toContain('zebra = last');
+  });
+
   it('renders byte-identically for equivalent full states with different object insertion order', () => {
     const spec = createFlowSpec(
       'test',
@@ -1059,6 +1104,27 @@ describe('renderFlowSummary', () => {
     state = { ...state, variables: { a: '1', b: '2', c: '3' } };
     const summary = renderFlowSummary(state);
     expect(summary).toContain('vars: 3');
+  });
+
+  it('counts only sliced visible variables when the current path has explicit dependencies', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'inspect ${focus}'), createRunNode('r1', 'npm test ${focus}')],
+      [createCompletionGate('tests_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      currentNodePath: [1],
+      variables: {
+        focus: 'src/app.ts',
+        tests_pass: true,
+        unrelated: 'ignore me',
+      },
+    };
+
+    expect(renderFlowSummary(state)).toContain('vars: 2');
+    expect(renderFlowSummaryBlock(state)).toContain('vars: 2');
   });
 
   it('truncates long node descriptions', () => {

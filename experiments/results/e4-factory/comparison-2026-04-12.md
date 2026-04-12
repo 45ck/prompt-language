@@ -17,6 +17,7 @@ Primary evidence:
 
 - [A02 outcome](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/A02-crm-http-headless/outcome.md:1)
 - [A02 postmortem](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/A02-crm-http-headless/postmortem.md:1)
+- [A02 scorecard](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/A02-crm-http-headless/scorecard.json:1)
 
 ### A03: `20260412-0916-a03-core-proof-prebootstrapped`
 
@@ -32,6 +33,7 @@ Meaning:
 Primary evidence:
 
 - [A03 outcome](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/outcome.md:1)
+- [A03 scorecard](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/scorecard.json:1)
 
 ### A04: `20260412-1005-a04-core-proof-sequential`
 
@@ -46,6 +48,7 @@ Primary evidence:
 
 - [A04 outcome](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/outcome.md:1)
 - [A04 postmortem](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/postmortem.md:1)
+- [A04 scorecard](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/scorecard.json:1)
 
 ### A05: `20260412-1047-a05-core-proof-sequential-patched`
 
@@ -61,6 +64,7 @@ Primary evidence:
 
 - [A05 outcome](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/outcome.md:1)
 - [A05 postmortem](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/postmortem.md:1)
+- [A05 scorecard](/D:/Visual%20Studio%20Projects/prompt-language/experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/scorecard.json:1)
 
 ## Current Interpretation
 

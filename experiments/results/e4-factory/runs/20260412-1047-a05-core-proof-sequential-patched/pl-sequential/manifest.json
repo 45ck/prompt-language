@@ -24,6 +24,7 @@
   "outcomePath": "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/outcome.md",
   "postmortemPath": "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/postmortem.md",
   "interventionsPath": "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/interventions.md",
+  "scorecardPath": "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/scorecard.json",
   "comparisonPath": "experiments/results/e4-factory/comparison.md",
   "comparisonUpdated": true,
   "followups": []

@@ -7,7 +7,7 @@ This directory is the immutable control surface for repeatable E4 runs.
 - Store run evidence under `experiments/results/e4-factory/runs/<run-id>/`.
 - Do not let model runs operate directly in this directory.
 - Do not mark a run complete until its results folder has `manifest.json`, `outcome.md`,
-  `postmortem.md`, `interventions.md`, and an updated entry in
+  `postmortem.md`, `interventions.md`, `scorecard.json`, and an updated entry in
   `experiments/results/e4-factory/comparison.md`.
 - Closure is enforced by `npm run results:e4`; if that script fails, the run is not closed.
 

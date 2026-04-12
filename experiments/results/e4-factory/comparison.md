@@ -17,6 +17,7 @@ Primary evidence:
 
 - [A02 outcome](./A02-crm-http-headless/outcome.md)
 - [A02 postmortem](./A02-crm-http-headless/postmortem.md)
+- [A02 scorecard](./A02-crm-http-headless/scorecard.json)
 
 ### A03: `20260412-0916-a03-core-proof-prebootstrapped`
 
@@ -34,6 +35,7 @@ Primary evidence:
 
 - [A03 outcome](./runs/20260412-0916-a03-core-proof-prebootstrapped/outcome.md)
 - [A03 postmortem](./runs/20260412-0916-a03-core-proof-prebootstrapped/postmortem.md)
+- [A03 scorecard](./runs/20260412-0916-a03-core-proof-prebootstrapped/scorecard.json)
 
 ### A04: `20260412-1005-a04-core-proof-sequential`
 
@@ -49,6 +51,7 @@ Primary evidence:
 
 - [A04 outcome](./runs/20260412-1005-a04-core-proof-sequential/outcome.md)
 - [A04 postmortem](./runs/20260412-1005-a04-core-proof-sequential/postmortem.md)
+- [A04 scorecard](./runs/20260412-1005-a04-core-proof-sequential/scorecard.json)
 
 ### A05: `20260412-1047-a05-core-proof-sequential-patched`
 
@@ -63,6 +66,7 @@ Primary evidence:
 
 - [A05 outcome](./runs/20260412-1047-a05-core-proof-sequential-patched/outcome.md)
 - [A05 postmortem](./runs/20260412-1047-a05-core-proof-sequential-patched/postmortem.md)
+- [A05 scorecard](./runs/20260412-1047-a05-core-proof-sequential-patched/scorecard.json)
 
 ## Current Interpretation
 
@@ -74,3 +78,6 @@ The evidence now supports four claims:
 3. The Windows/headless runtime path needed explicit fixes around state-root resolution, run-node
    timeout behavior, and Codex process launch / cleanup.
 4. After those fixes, the sequential prompt-language lane also completed successfully.
+
+For the deeper comparative interpretation, see [research-method.md](./research-method.md) and
+[analysis-2026-04-12.md](./analysis-2026-04-12.md).

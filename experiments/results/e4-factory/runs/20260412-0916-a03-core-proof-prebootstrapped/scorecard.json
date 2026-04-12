@@ -1,0 +1,57 @@
+{
+  "scoreVersion": "e4-v1",
+  "runId": "20260412-0916-a03-core-proof-prebootstrapped",
+  "scope": "bounded-crm-core",
+  "question": "For the same bounded CRM core slice and verification contract, how does prompt-language compare with direct Codex?",
+  "baselineReference": "codex-alone within this run",
+  "comparativeVerdict": "mixed",
+  "lanes": [
+    {
+      "lane": "pl-multiagent",
+      "candidate": "prompt-language",
+      "scores": {
+        "scopeCompletion": 2,
+        "verification": 2,
+        "artifactCompleteness": 2,
+        "setupSimplicity": 0,
+        "auditability": 2,
+        "experimentalControl": 1,
+        "automationIntegrity": 0,
+        "repeatabilityEvidence": 1
+      },
+      "totals": {
+        "productOutcome": 6,
+        "operationalQuality": 2,
+        "researchStrength": 2,
+        "overall": 10
+      },
+      "notes": "Prompt-language completed and verified the bounded slice, but launcher/state-dir/runtime timeout issues weakened simplicity and required rerun-level intervention."
+    },
+    {
+      "lane": "codex-alone",
+      "candidate": "codex-alone",
+      "scores": {
+        "scopeCompletion": 2,
+        "verification": 2,
+        "artifactCompleteness": 2,
+        "setupSimplicity": 2,
+        "auditability": 1,
+        "experimentalControl": 2,
+        "automationIntegrity": 2,
+        "repeatabilityEvidence": 1
+      },
+      "totals": {
+        "productOutcome": 6,
+        "operationalQuality": 3,
+        "researchStrength": 5,
+        "overall": 14
+      },
+      "notes": "Direct Codex reached the same verified end state with fewer operational problems. Its evidence is weaker on persistent state and gate traceability than prompt-language."
+    }
+  ],
+  "comparativeSummary": "A03 shows product-level parity. Direct Codex was better on operational simplicity, while prompt-language was better on auditability and governed evidence.",
+  "nextExperimentFocus": [
+    "Rerun both lanes on the patched runtime to reduce prompt-language runtime confounds.",
+    "Measure intervention count and time-to-green explicitly."
+  ]
+}

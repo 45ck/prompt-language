@@ -24,6 +24,7 @@
   "outcomePath": "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/outcome.md",
   "postmortemPath": "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/postmortem.md",
   "interventionsPath": "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/interventions.md",
+  "scorecardPath": "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/scorecard.json",
   "comparisonPath": "experiments/results/e4-factory/comparison.md",
   "comparisonUpdated": true,
   "followups": []

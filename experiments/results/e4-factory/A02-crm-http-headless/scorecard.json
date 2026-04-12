@@ -1,0 +1,36 @@
+{
+  "scoreVersion": "e4-v1",
+  "runId": "A02-crm-http-headless",
+  "scope": "crm-http-headless",
+  "question": "Can prompt-language complete the bounded CRM HTTP slice cleanly enough to compare against a baseline?",
+  "baselineReference": null,
+  "comparativeVerdict": "inconclusive",
+  "lanes": [
+    {
+      "lane": "codex-plus-prompt-language",
+      "candidate": "prompt-language",
+      "scores": {
+        "scopeCompletion": 0,
+        "verification": 0,
+        "artifactCompleteness": 0,
+        "setupSimplicity": 0,
+        "auditability": 1,
+        "experimentalControl": 0,
+        "automationIntegrity": 0,
+        "repeatabilityEvidence": 0
+      },
+      "totals": {
+        "productOutcome": 0,
+        "operationalQuality": 1,
+        "researchStrength": 0,
+        "overall": 1
+      },
+      "notes": "The run failed before comparable implementation and verification. The evidence is usable enough to diagnose the runtime failure but not strong enough for a product comparison."
+    }
+  ],
+  "comparativeSummary": "A02 is a runtime-confounded failure and should not be used as a capability verdict against prompt-language.",
+  "nextExperimentFocus": [
+    "Keep this run as a historical runtime failure reference only.",
+    "Use later patched runs for product-level comparison."
+  ]
+}

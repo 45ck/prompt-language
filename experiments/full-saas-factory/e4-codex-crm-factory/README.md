@@ -99,6 +99,7 @@ Close every attempt with:
 - `outcome.md`
 - `postmortem.md`
 - `interventions.md`
+- `scorecard.json`
 - comparison update in `experiments/results/e4-factory/comparison.md`
 
 This applies to success, partial success, failure, and aborts.

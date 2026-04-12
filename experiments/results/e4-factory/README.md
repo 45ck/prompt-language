@@ -33,6 +33,7 @@ Each repeatable run must keep:
 - `outcome.md`
 - `postmortem.md`
 - `interventions.md`
+- `scorecard.json`
 - a `manifest.json`
 
 If a prompt-language lane exists, keep its persisted `pl-state/` artifacts.
@@ -45,6 +46,7 @@ Before a run is considered closed:
 - `outcome.md` exists
 - `postmortem.md` exists
 - `interventions.md` exists
+- `scorecard.json` exists
 - verification status for `lint`, `typecheck`, and `test` is recorded
 - artifact completeness is recorded
 - follow-up actions are recorded, or explicitly `none`
@@ -57,5 +59,7 @@ Use the canonical templates when adding new run docs:
 
 - [templates/outcome.template.md](./templates/outcome.template.md)
 - [templates/postmortem.template.md](./templates/postmortem.template.md)
+- [templates/scorecard.template.json](./templates/scorecard.template.json)
 
 The canonical comparison summary lives at [comparison.md](./comparison.md).
+The scoring rubric and validity rules live at [research-method.md](./research-method.md).

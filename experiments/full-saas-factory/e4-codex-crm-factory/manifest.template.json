@@ -34,6 +34,7 @@
   "outcomePath": "experiments/results/e4-factory/runs/<run-id>/outcome.md",
   "postmortemPath": "experiments/results/e4-factory/runs/<run-id>/postmortem.md",
   "interventionsPath": "experiments/results/e4-factory/runs/<run-id>/interventions.md",
+  "scorecardPath": "experiments/results/e4-factory/runs/<run-id>/scorecard.json",
   "comparisonPath": "experiments/results/e4-factory/comparison.md",
   "comparisonUpdated": false,
   "followups": [],

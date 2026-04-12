@@ -1,0 +1,36 @@
+{
+  "scoreVersion": "e4-v1",
+  "runId": "20260412-1005-a04-core-proof-sequential",
+  "scope": "bounded-crm-core",
+  "question": "Can the sequential prompt-language lane complete the bounded CRM core slice cleanly on Windows/headless execution?",
+  "baselineReference": "codex-alone@20260412-0916-a03-core-proof-prebootstrapped",
+  "comparativeVerdict": "inconclusive",
+  "lanes": [
+    {
+      "lane": "pl-sequential",
+      "candidate": "prompt-language",
+      "scores": {
+        "scopeCompletion": 1,
+        "verification": 0,
+        "artifactCompleteness": 1,
+        "setupSimplicity": 0,
+        "auditability": 2,
+        "experimentalControl": 0,
+        "automationIntegrity": 0,
+        "repeatabilityEvidence": 0
+      },
+      "totals": {
+        "productOutcome": 2,
+        "operationalQuality": 2,
+        "researchStrength": 0,
+        "overall": 4
+      },
+      "notes": "The run produced most of the bounded slice but failed before clean completion. It remains useful as a pre-fix runtime failure reference, not as a decisive capability comparison."
+    }
+  ],
+  "comparativeSummary": "A04 is informative about runner/runtime weakness, but it is too confounded to support a strong product comparison against direct Codex.",
+  "nextExperimentFocus": [
+    "Use A05 as the post-fix sequential benchmark.",
+    "Treat A04 as the justification for runtime hardening rather than as the prompt-language verdict."
+  ]
+}

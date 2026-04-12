@@ -12,13 +12,30 @@ const COMPARISON_PATH = join(E4_ROOT, 'comparison.md');
 const historicalAttempts = [
   {
     name: 'A02-crm-http-headless',
-    requiredFiles: ['outcome.md', 'postmortem.md'],
+    requiredFiles: ['outcome.md', 'postmortem.md', 'scorecard.json'],
   },
 ];
 
 const allowedStatuses = new Set(['completed', 'partial', 'failure']);
 const allowedVerdicts = new Set(['success', 'partial', 'failure']);
 const allowedVerificationStates = new Set(['pass', 'fail', 'not-run']);
+const allowedComparativeVerdicts = new Set([
+  'prompt-language-better',
+  'codex-alone-better',
+  'parity',
+  'mixed',
+  'inconclusive',
+]);
+const requiredScoreKeys = [
+  'scopeCompletion',
+  'verification',
+  'artifactCompleteness',
+  'setupSimplicity',
+  'auditability',
+  'experimentalControl',
+  'automationIntegrity',
+  'repeatabilityEvidence',
+];
 
 function fail(message) {
   console.error(`[e4-results-closure] FAIL - ${message}`);
@@ -78,6 +95,91 @@ function assertRelativeFile(pathValue, field, manifestPath) {
   assertFile(join(ROOT, pathValue), `${field} referenced by ${manifestPath}`);
 }
 
+function validateScorecard(scorecardPath, expectedRunId) {
+  const scorecard = readJson(scorecardPath);
+
+  for (const field of [
+    'scoreVersion',
+    'runId',
+    'scope',
+    'question',
+    'comparativeVerdict',
+    'lanes',
+  ]) {
+    if (!(field in scorecard)) {
+      fail(`scorecard ${scorecardPath} is missing ${field}`);
+    }
+  }
+
+  assertString(scorecard.scoreVersion, 'scoreVersion', scorecardPath);
+  assertString(scorecard.runId, 'runId', scorecardPath);
+  if (scorecard.runId !== expectedRunId) {
+    fail(
+      `scorecard ${scorecardPath} runId mismatch: expected ${expectedRunId}, found ${scorecard.runId}`,
+    );
+  }
+  assertString(scorecard.scope, 'scope', scorecardPath);
+  assertString(scorecard.question, 'question', scorecardPath);
+  if (!allowedComparativeVerdicts.has(scorecard.comparativeVerdict)) {
+    fail(
+      `scorecard ${scorecardPath} has unsupported comparativeVerdict ${scorecard.comparativeVerdict}`,
+    );
+  }
+  if (!Array.isArray(scorecard.lanes) || scorecard.lanes.length === 0) {
+    fail(`scorecard ${scorecardPath} must contain at least one lane`);
+  }
+  assertString(scorecard.comparativeSummary, 'comparativeSummary', scorecardPath);
+  if (!Array.isArray(scorecard.nextExperimentFocus)) {
+    fail(`scorecard ${scorecardPath} has invalid nextExperimentFocus`);
+  }
+
+  for (const lane of scorecard.lanes) {
+    for (const field of ['lane', 'candidate', 'scores', 'totals', 'notes']) {
+      if (!(field in lane)) {
+        fail(`scorecard ${scorecardPath} has lane missing ${field}`);
+      }
+    }
+    assertString(lane.lane, 'lane', scorecardPath);
+    assertString(lane.candidate, 'candidate', scorecardPath);
+    assertString(lane.notes, 'notes', scorecardPath);
+    if (typeof lane.scores !== 'object' || lane.scores === null) {
+      fail(`scorecard ${scorecardPath} has invalid scores object`);
+    }
+    if (typeof lane.totals !== 'object' || lane.totals === null) {
+      fail(`scorecard ${scorecardPath} has invalid totals object`);
+    }
+
+    for (const key of requiredScoreKeys) {
+      const value = lane.scores[key];
+      if (!Number.isInteger(value) || value < 0 || value > 2) {
+        fail(`scorecard ${scorecardPath} has invalid scores.${key}`);
+      }
+    }
+
+    const productOutcome =
+      lane.scores.scopeCompletion + lane.scores.verification + lane.scores.artifactCompleteness;
+    const operationalQuality = lane.scores.setupSimplicity + lane.scores.auditability;
+    const researchStrength =
+      lane.scores.experimentalControl +
+      lane.scores.automationIntegrity +
+      lane.scores.repeatabilityEvidence;
+    const overall = productOutcome + operationalQuality + researchStrength;
+
+    if (lane.totals.productOutcome !== productOutcome) {
+      fail(`scorecard ${scorecardPath} has inconsistent totals.productOutcome`);
+    }
+    if (lane.totals.operationalQuality !== operationalQuality) {
+      fail(`scorecard ${scorecardPath} has inconsistent totals.operationalQuality`);
+    }
+    if (lane.totals.researchStrength !== researchStrength) {
+      fail(`scorecard ${scorecardPath} has inconsistent totals.researchStrength`);
+    }
+    if (lane.totals.overall !== overall) {
+      fail(`scorecard ${scorecardPath} has inconsistent totals.overall`);
+    }
+  }
+}
+
 function validateManifest(runId, manifestPath) {
   const manifest = readJson(manifestPath);
 
@@ -94,6 +196,7 @@ function validateManifest(runId, manifestPath) {
     'outcomePath',
     'postmortemPath',
     'interventionsPath',
+    'scorecardPath',
     'comparisonPath',
   ]) {
     if (!(field in manifest)) {
@@ -149,6 +252,7 @@ function validateManifest(runId, manifestPath) {
   assertRelativeFile(manifest.outcomePath, 'outcomePath', manifestPath);
   assertRelativeFile(manifest.postmortemPath, 'postmortemPath', manifestPath);
   assertRelativeFile(manifest.interventionsPath, 'interventionsPath', manifestPath);
+  assertRelativeFile(manifest.scorecardPath, 'scorecardPath', manifestPath);
   assertRelativeFile(manifest.comparisonPath, 'comparisonPath', manifestPath);
 }
 
@@ -164,6 +268,7 @@ for (const attempt of historicalAttempts) {
   for (const relativePath of attempt.requiredFiles) {
     assertFile(join(attemptRoot, relativePath), `${attempt.name}/${relativePath}`);
   }
+  validateScorecard(join(attemptRoot, 'scorecard.json'), attempt.name);
   if (!comparisonText.includes(attempt.name)) {
     fail(`comparison.md does not mention historical attempt ${attempt.name}`);
   }
@@ -183,6 +288,8 @@ for (const runId of runIds) {
   assertFile(join(runRoot, 'outcome.md'), `${runId}/outcome.md`);
   assertFile(join(runRoot, 'postmortem.md'), `${runId}/postmortem.md`);
   assertFile(join(runRoot, 'interventions.md'), `${runId}/interventions.md`);
+  assertFile(join(runRoot, 'scorecard.json'), `${runId}/scorecard.json`);
+  validateScorecard(join(runRoot, 'scorecard.json'), runId);
 
   if (!comparisonText.includes(runId)) {
     fail(`comparison.md does not mention run ${runId}`);

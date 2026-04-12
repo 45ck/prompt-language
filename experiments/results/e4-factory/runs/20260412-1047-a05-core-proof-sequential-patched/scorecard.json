@@ -1,0 +1,36 @@
+{
+  "scoreVersion": "e4-v1",
+  "runId": "20260412-1047-a05-core-proof-sequential-patched",
+  "scope": "bounded-crm-core",
+  "question": "After the runtime fixes, can the sequential prompt-language lane complete the bounded CRM core slice cleanly enough to serve as a stable benchmark?",
+  "baselineReference": "codex-alone@20260412-0916-a03-core-proof-prebootstrapped",
+  "comparativeVerdict": "inconclusive",
+  "lanes": [
+    {
+      "lane": "pl-sequential",
+      "candidate": "prompt-language",
+      "scores": {
+        "scopeCompletion": 2,
+        "verification": 2,
+        "artifactCompleteness": 2,
+        "setupSimplicity": 1,
+        "auditability": 2,
+        "experimentalControl": 1,
+        "automationIntegrity": 1,
+        "repeatabilityEvidence": 2
+      },
+      "totals": {
+        "productOutcome": 6,
+        "operationalQuality": 3,
+        "researchStrength": 4,
+        "overall": 13
+      },
+      "notes": "A05 completed and verified the bounded slice after runtime fixes. The remaining weakness is evidence-path cleanliness: persisted state is authoritative, while top-level redirected report files stayed empty."
+    }
+  ],
+  "comparativeSummary": "A05 is strong evidence that prompt-language works on the bounded CRM core slice after runtime fixes, but it is not yet a same-day A/B rerun against a fresh direct Codex baseline.",
+  "nextExperimentFocus": [
+    "Repeat the A/B comparison on the patched runtime for both lanes.",
+    "Record time-to-green, intervention count, and interruption/restart behavior."
+  ]
+}

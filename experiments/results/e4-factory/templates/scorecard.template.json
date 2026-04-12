@@ -1,0 +1,33 @@
+{
+  "scoreVersion": "e4-v1",
+  "runId": "<run-id>",
+  "scope": "<bounded-scope>",
+  "question": "<research-question>",
+  "baselineReference": null,
+  "comparativeVerdict": "inconclusive",
+  "lanes": [
+    {
+      "lane": "<lane-name>",
+      "candidate": "<candidate-name>",
+      "scores": {
+        "scopeCompletion": 0,
+        "verification": 0,
+        "artifactCompleteness": 0,
+        "setupSimplicity": 0,
+        "auditability": 0,
+        "experimentalControl": 0,
+        "automationIntegrity": 0,
+        "repeatabilityEvidence": 0
+      },
+      "totals": {
+        "productOutcome": 0,
+        "operationalQuality": 0,
+        "researchStrength": 0,
+        "overall": 0
+      },
+      "notes": "<why these scores were assigned>"
+    }
+  ],
+  "comparativeSummary": "<plain-language result>",
+  "nextExperimentFocus": ["<follow-up>"]
+}

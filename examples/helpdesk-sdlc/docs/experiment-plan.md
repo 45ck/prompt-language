@@ -14,6 +14,14 @@ This plan is intentionally narrower than the full thesis run:
 - Lane B is optional and only runs if a free-model host already exists: `--runner opencode --model ollama/gemma4:e2b`
 - The plan does not claim full headless parity with Claude, because the checked-in coordinator currently contains two `approve` nodes
 
+## Maintainer execution packet
+
+To make this plan runnable without re-deriving operator steps, use the fillable run packet:
+
+- `examples/helpdesk-sdlc/docs/execution-template-checklist.md`
+
+Maintainers should copy that template into the target repo run folder and treat it as the source of truth for command logs, gate evidence, intervention counts, and closure verdict.
+
 ## Preconditions
 
 Do not run this experiment until all of the following are true:

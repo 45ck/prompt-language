@@ -68,6 +68,10 @@ Do not treat the optional lane as a substitute for the required hosted baseline.
 11. Run the optional free-model lane only if a pre-provisioned host already exists.
 12. Collect the evidence pack and write the retrospective.
 
+Use the maintainer run packet while executing:
+
+- `examples/helpdesk-sdlc/docs/execution-template-checklist.md`
+
 ## Acceptance
 
 The bead is accepted when all of the following exist in the target repo or evidence pack:

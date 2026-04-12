@@ -34,6 +34,8 @@ const allowedComparativeVerdicts = new Set([
 ]);
 const allowedFailureClasses = new Set(['none', 'runtime', 'config', 'product', 'evidence']);
 const allowedTraceCompleteness = new Set(['strong', 'mixed', 'weak']);
+const allowedOrdinalQuality = new Set(['strong', 'mixed', 'weak']);
+const allowedRecoveryQuality = new Set(['strong', 'mixed', 'weak', 'n/a']);
 const requiredScoreKeys = [
   'scopeCompletion',
   'verification',
@@ -44,6 +46,7 @@ const requiredScoreKeys = [
   'automationIntegrity',
   'repeatabilityEvidence',
 ];
+const requiredScoreKeysV2 = [...requiredScoreKeys, 'closureQuality', 'processConformance'];
 
 function fail(message) {
   console.error(`[e4-results-closure] FAIL - ${message}`);
@@ -141,6 +144,38 @@ function validateRunMetadata(runJsonPath, expectedRunId) {
   assertString(runMetadata.order, 'order', runJsonPath);
   assertString(runMetadata.model, 'model', runJsonPath);
   assertString(runMetadata.startedAt, 'startedAt', runJsonPath);
+  if (runMetadata.protocolVersion === 'e4-v2') {
+    for (const field of [
+      'endedAt',
+      'gitCommit',
+      'nodeVersion',
+      'npmVersion',
+      'codexVersion',
+      'controlFile',
+      'controlHash',
+      'promptFile',
+      'promptHash',
+    ]) {
+      if (!(field in runMetadata)) {
+        fail(`run metadata ${runJsonPath} is missing ${field}`);
+      }
+      assertString(runMetadata[field], field, runJsonPath);
+    }
+    if (typeof runMetadata.bootstrapSeed !== 'object' || runMetadata.bootstrapSeed === null) {
+      fail(`run metadata ${runJsonPath} has invalid bootstrapSeed`);
+    }
+    for (const field of ['seedHash', 'overlayHash']) {
+      assertString(runMetadata.bootstrapSeed[field], `bootstrapSeed.${field}`, runJsonPath);
+    }
+    if (typeof runMetadata.evaluationModel !== 'object' || runMetadata.evaluationModel === null) {
+      fail(`run metadata ${runJsonPath} has invalid evaluationModel`);
+    }
+    for (const field of ['claimType', 'primaryEndpoint', 'secondaryEndpoints']) {
+      if (!(field in runMetadata.evaluationModel)) {
+        fail(`run metadata ${runJsonPath} is missing evaluationModel.${field}`);
+      }
+    }
+  }
   if ('batch' in runMetadata && runMetadata.batch !== null) {
     if (typeof runMetadata.batch !== 'object') {
       fail(`run metadata ${runJsonPath} has invalid batch`);
@@ -154,6 +189,7 @@ function validateRunMetadata(runJsonPath, expectedRunId) {
 
 function validateScorecard(scorecardPath, expectedRunId) {
   const scorecard = readJson(scorecardPath);
+  const isV2 = scorecard.scoreVersion === 'e4-v2';
 
   for (const field of [
     'scoreVersion',
@@ -178,6 +214,20 @@ function validateScorecard(scorecardPath, expectedRunId) {
   }
   assertString(scorecard.scope, 'scope', scorecardPath);
   assertString(scorecard.question, 'question', scorecardPath);
+  if (isV2) {
+    if (typeof scorecard.evaluationModel !== 'object' || scorecard.evaluationModel === null) {
+      fail(`scorecard ${scorecardPath} has invalid evaluationModel`);
+    }
+    assertString(scorecard.evaluationModel.claimType, 'evaluationModel.claimType', scorecardPath);
+    assertString(
+      scorecard.evaluationModel.primaryEndpoint,
+      'evaluationModel.primaryEndpoint',
+      scorecardPath,
+    );
+    if (!Array.isArray(scorecard.evaluationModel.secondaryEndpoints)) {
+      fail(`scorecard ${scorecardPath} has invalid evaluationModel.secondaryEndpoints`);
+    }
+  }
   if (typeof scorecard.admissibility !== 'object' || scorecard.admissibility === null) {
     fail(`scorecard ${scorecardPath} has invalid admissibility object`);
   }
@@ -188,6 +238,19 @@ function validateScorecard(scorecardPath, expectedRunId) {
   }
   if (typeof scorecard.admissibility.throughputClaimEligible !== 'boolean') {
     fail(`scorecard ${scorecardPath} has invalid admissibility.throughputClaimEligible`);
+  }
+  if (isV2) {
+    if (
+      typeof scorecard.admissibility.claimEligibility !== 'object' ||
+      scorecard.admissibility.claimEligibility === null
+    ) {
+      fail(`scorecard ${scorecardPath} has invalid admissibility.claimEligibility`);
+    }
+    for (const field of ['throughput', 'factoryQuality', 'recovery']) {
+      if (typeof scorecard.admissibility.claimEligibility[field] !== 'boolean') {
+        fail(`scorecard ${scorecardPath} has invalid admissibility.claimEligibility.${field}`);
+      }
+    }
   }
   assertString(scorecard.admissibility.reason, 'admissibility.reason', scorecardPath);
   if ('batch' in scorecard && scorecard.batch !== null) {
@@ -264,8 +327,40 @@ function validateScorecard(scorecardPath, expectedRunId) {
     if (!allowedTraceCompleteness.has(lane.metrics.traceCompleteness)) {
       fail(`scorecard ${scorecardPath} has invalid metrics.traceCompleteness`);
     }
+    if (isV2) {
+      for (const key of [
+        'closureCompleteness',
+        'traceAuthority',
+        'processConformance',
+        'reuseReadiness',
+      ]) {
+        if (!allowedOrdinalQuality.has(lane.metrics[key])) {
+          fail(`scorecard ${scorecardPath} has invalid metrics.${key}`);
+        }
+      }
+      if (typeof lane.metrics.artifactContractPass !== 'boolean') {
+        fail(`scorecard ${scorecardPath} has invalid metrics.artifactContractPass`);
+      }
+      if (!allowedRecoveryQuality.has(lane.metrics.recoveryQuality)) {
+        fail(`scorecard ${scorecardPath} has invalid metrics.recoveryQuality`);
+      }
+      if (
+        !Number.isFinite(lane.metrics.verificationPassRate) ||
+        lane.metrics.verificationPassRate < 0 ||
+        lane.metrics.verificationPassRate > 1
+      ) {
+        fail(`scorecard ${scorecardPath} has invalid metrics.verificationPassRate`);
+      }
+      for (const key of ['resumeToGreenSec', 'interruptToGreenSec']) {
+        const value = lane.metrics[key];
+        if (value !== null && (!Number.isFinite(value) || value < 0)) {
+          fail(`scorecard ${scorecardPath} has invalid metrics.${key}`);
+        }
+      }
+    }
 
-    for (const key of requiredScoreKeys) {
+    const scoreKeys = isV2 ? requiredScoreKeysV2 : requiredScoreKeys;
+    for (const key of scoreKeys) {
       const value = lane.scores[key];
       if (!Number.isInteger(value) || value < 0 || value > 2) {
         fail(`scorecard ${scorecardPath} has invalid scores.${key}`);
@@ -287,7 +382,10 @@ function validateScorecard(scorecardPath, expectedRunId) {
       lane.scores.experimentalControl +
       lane.scores.automationIntegrity +
       lane.scores.repeatabilityEvidence;
-    const overall = productOutcome + operationalQuality + researchStrength;
+    const factoryQuality = isV2
+      ? Object.values(lane.factoryQuality ?? {}).reduce((sum, value) => sum + value, 0)
+      : 0;
+    const overall = productOutcome + operationalQuality + researchStrength + factoryQuality;
 
     if (lane.totals.productOutcome !== productOutcome) {
       fail(`scorecard ${scorecardPath} has inconsistent totals.productOutcome`);
@@ -297,6 +395,26 @@ function validateScorecard(scorecardPath, expectedRunId) {
     }
     if (lane.totals.researchStrength !== researchStrength) {
       fail(`scorecard ${scorecardPath} has inconsistent totals.researchStrength`);
+    }
+    if (isV2) {
+      if (typeof lane.factoryQuality !== 'object' || lane.factoryQuality === null) {
+        fail(`scorecard ${scorecardPath} has invalid factoryQuality object`);
+      }
+      for (const field of [
+        'closureQuality',
+        'processConformance',
+        'traceAuthority',
+        'reuseReadiness',
+        'claimStrength',
+      ]) {
+        const value = lane.factoryQuality[field];
+        if (!Number.isInteger(value) || value < 0 || value > 2) {
+          fail(`scorecard ${scorecardPath} has invalid factoryQuality.${field}`);
+        }
+      }
+      if (lane.totals.factoryQuality !== factoryQuality) {
+        fail(`scorecard ${scorecardPath} has inconsistent totals.factoryQuality`);
+      }
     }
     if (lane.totals.overall !== overall) {
       fail(`scorecard ${scorecardPath} has inconsistent totals.overall`);
@@ -315,6 +433,8 @@ function validateScorecard(scorecardPath, expectedRunId) {
 
 function validateManifest(runId, manifestPath) {
   const manifest = readJson(manifestPath);
+  const requiresV2Fields =
+    typeof manifest.laneSummaryPath === 'string' || manifest.scenario === 'factory-quality';
 
   for (const field of [
     'runId',
@@ -389,6 +509,9 @@ function validateManifest(runId, manifestPath) {
   assertRelativeFile(manifest.interventionsPath, 'interventionsPath', manifestPath);
   assertRelativeFile(manifest.scorecardPath, 'scorecardPath', manifestPath);
   assertRelativeFile(manifest.traceSummaryPath, 'traceSummaryPath', manifestPath);
+  if (requiresV2Fields) {
+    assertRelativeFile(manifest.laneSummaryPath, 'laneSummaryPath', manifestPath);
+  }
   assertRelativeFileArray(manifest.traceArtifacts, 'traceArtifacts', manifestPath);
   assertRelativeFile(manifest.comparisonPath, 'comparisonPath', manifestPath);
 
@@ -407,6 +530,17 @@ function validateManifest(runId, manifestPath) {
 
   if (manifest.candidate === 'prompt-language') {
     for (const requiredFragment of ['session-state.json', 'audit.jsonl']) {
+      assertTraceArtifactMatch(manifest.traceArtifacts, manifestPath, requiredFragment);
+    }
+  }
+
+  if (requiresV2Fields) {
+    for (const requiredFragment of [
+      'lane-summary.json',
+      'artifact-inventory.json',
+      'system-before.json',
+      'system-after.json',
+    ]) {
       assertTraceArtifactMatch(manifest.traceArtifacts, manifestPath, requiredFragment);
     }
   }
@@ -452,6 +586,10 @@ for (const runId of runIds) {
   const scorecardPath = join(runRoot, 'scorecard.json');
   validateScorecard(scorecardPath, runId);
   const scorecard = readJson(scorecardPath);
+  if (scorecard.scoreVersion === 'e4-v2') {
+    assertFile(join(runRoot, 'postmortem.json'), `${runId}/postmortem.json`);
+    assertFile(join(runRoot, 'interventions.json'), `${runId}/interventions.json`);
+  }
 
   if (!comparisonText.includes(runId)) {
     fail(`comparison.md does not mention run ${runId}`);

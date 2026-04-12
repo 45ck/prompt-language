@@ -10,19 +10,31 @@ The framework distinguishes:
 
 - a run that is **closed**
 - a run that is **useful context**
-- a run that is **admissible for throughput claims**
+- a run that is **admissible for a specific claim family**
 
 ## Research Questions
 
-For each bounded software-factory run, answer three questions:
+For each bounded software-factory run, answer four questions:
 
 1. Did the candidate complete the fixed product slice?
 2. How credible is the evidence behind that claim?
-3. Relative to the baseline, where is the advantage or disadvantage?
+3. What is the primary claim family for this run?
+4. Relative to the baseline, where is the advantage or disadvantage?
+
+## Claim Families
+
+Every `e4-v2` run must declare one primary claim family:
+
+- `throughput`: fastest verified completion on the fixed slice
+- `factory-quality`: strongest governed, inspectable, reusable factory behavior
+- `recovery`: strongest interruption/resume and restart behavior
+
+The claim family determines the primary endpoint and admissibility rules. A throughput archive is not
+the same thing as a factory-quality verdict.
 
 ## Rubric
 
-Each lane is scored on eight dimensions using a `0..2` ordinal scale:
+Each lane is scored on ten dimensions using a `0..2` ordinal scale:
 
 - `0`: poor / failed / missing
 - `1`: partial / mixed / usable with caveats
@@ -46,15 +58,22 @@ Each lane is scored on eight dimensions using a `0..2` ordinal scale:
 - `automationIntegrity`: how little human rescue or rerunning was required
 - `repeatabilityEvidence`: whether the result has been reproduced or independently corroborated
 
+### Factory Quality
+
+- `closureQuality`: how completely the run reached a closed, inspectable end state
+- `processConformance`: how clearly the lane followed an explicit factory process rather than
+  ad hoc improvisation
+
 ## Totals
 
-Each scorecard records three subtotal bands:
+Each scorecard records four subtotal bands:
 
 - `productOutcome`: max `6`
 - `operationalQuality`: max `4`
 - `researchStrength`: max `6`
+- `factoryQuality`: max `10`
 
-The `overall` total is the sum of those bands, max `16`.
+The `overall` total is the sum of those bands, max `26`.
 
 Interpret totals carefully:
 
@@ -64,23 +83,23 @@ Interpret totals carefully:
 
 ## Admissibility
 
-Every run must declare one admissibility class:
+Every run must declare one admissibility class and `claimEligibility` map:
 
 - `primary-comparison`: paired A/B evidence on the same scope and runtime
 - `supporting-context`: useful evidence, but not admissible for raw throughput claims
 - `historical-failure`: legacy setup/runtime evidence kept for diagnosis
 
-Only `primary-comparison` runs may support raw throughput claims, and only when:
+Only `primary-comparison` runs may support superiority claims, and only when:
 
 - both lanes ran under the same patched runtime conditions
 - both lanes completed the same common product contract
-- throughput metrics are present for both lanes
+- the primary-endpoint metrics are present for both lanes
 - the run has complete raw traces for both lanes
 - the timed work envelope is comparable between lanes
 - order effects have been addressed through a predeclared counterbalanced batch
 
-If any of those are missing, the run may still be closed, but it is not admissible for throughput
-superiority claims.
+If any of those are missing, the run may still be closed, but it is not admissible for superiority
+claims in that family.
 
 ## Required Metrics
 
@@ -93,12 +112,20 @@ For future runs, each lane should record these first-class metrics:
 - `runtimeFailureCount`
 - `failureClass`
 - `traceCompleteness`
+- `closureCompleteness`
+- `traceAuthority`
+- `artifactContractPass`
+- `processConformance`
+- `recoveryQuality`
+- `reuseReadiness`
 
 Historical runs may backfill these as `null` when the evidence was not instrumented at the time.
 
 Interpretation rule:
 
-- `timeToGreenSec` is the preregistered primary throughput endpoint
+- `timeToGreenSec` is the preregistered primary endpoint only for `throughput`
+- `factoryQualityOverall` is the preregistered primary endpoint for `factory-quality`
+- `resumeToGreenSec` plus `recoveredAfterInterruption` define the primary recovery endpoint
 - `timeToFirstRelevantWriteSec` is exploratory context only and must not overturn the throughput
   verdict by itself
 
@@ -133,7 +160,9 @@ Every repeatable E4 run should now end with:
 
 - `run.json`
 - `outcome.md`
+- `postmortem.json`
 - `postmortem.md`
+- `interventions.json`
 - `interventions.md`
 - `scorecard.json`
 - `trace-summary.md`
@@ -166,9 +195,17 @@ from the actual sessions.
 At minimum:
 
 - direct Codex lanes should retain their raw event stream plus verification logs
-- prompt-language lanes should retain persisted state, audit logs, and lane-level verification logs
+- prompt-language lanes should retain persisted state, audit logs, lane-level verification logs,
+  and lane-level machine-readable summaries
 - every run should include `trace-summary.md` that explains which files are authoritative and what
   they imply
+
+For `e4-v2`, both lanes should also retain:
+
+- `lane-summary.json`
+- `artifact-inventory.json`
+- `system-before.json`
+- `system-after.json`
 
 ## Batch-Level Claims
 

@@ -208,16 +208,31 @@ Primary evidence:
 
 ## Current Interpretation
 
-The evidence now supports six claims:
+The evidence now supports these current hypothesis-status reads:
 
 1. `prompt-language` can successfully drive a bounded software-factory slice.
-2. Early failures were dominated by runner/setup issues, not by inability to specify the software
+2. `prompt-language` is not currently better than direct Codex on the archived `S0` raw throughput
+   question.
+3. `prompt-language` still has an open, unclosed hypothesis on factory-quality and governed
+   recovery, because those are the dependent variables where it plausibly should win.
+
+The historical and current claims split is:
+
+- `S0 throughput`: answered by `B02`, currently `codex-alone-better`
+- `factory-quality`: not yet claim-eligible under the new trace-first rubric
+- `recovery`: not yet claim-eligible under repeated interrupted/resume pairs
+
+The evidence also supports these historical claims:
+
+1. Early failures were dominated by runner/setup issues, not by inability to specify the software
    slice.
-3. The Windows/headless runtime path needed explicit fixes around state-root resolution, run-node
+2. The Windows/headless runtime path needed explicit fixes around state-root resolution, run-node
    timeout behavior, and Codex process launch / cleanup.
-4. After those fixes, the sequential prompt-language lane also completed successfully.
-5. The first claim-eligible clean `S0` batch (`B02`) shows direct Codex is better on raw time-to-green for this bounded slice under the current harness, model, and verification contract.
-6. Prompt-language still retains the stronger governed factory-control surface and an earlier first relevant workspace write on the secondary exploratory metric, but that does not offset the throughput result.
+3. After those fixes, the sequential prompt-language lane also completed successfully.
+4. The first claim-eligible clean `S0` batch (`B02`) shows direct Codex is better on raw
+   time-to-green for this bounded slice under the archived throughput protocol.
+5. Prompt-language still retains the stronger governed factory-control surface, but that claim now
+   needs to be tested directly under the `factory-quality` and `recovery` protocols.
 
 For the deeper comparative interpretation, see [research-method.md](./research-method.md) and
 [analysis-2026-04-12.md](./analysis-2026-04-12.md).
@@ -226,4 +241,6 @@ Throughput note:
 
 - `B02` is now admissible for a stable clean-throughput claim under the current `S0` protocol
 - for this bounded CRM slice, the current batch-level throughput verdict is `codex-alone-better`
-- future prompt-language experiments should target governed recovery, restartability, and multi-agent control rather than assuming raw-throughput superiority
+- `B02` should now be treated as the archived throughput answer, not the whole E4 answer
+- future prompt-language experiments should target factory-quality, governed recovery,
+  restartability, and multi-agent control rather than assuming raw-throughput superiority

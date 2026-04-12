@@ -80,6 +80,14 @@ const SCENARIO_CONFIGS = {
     question:
       'For the same bounded CRM core slice and frozen bootstrap seed, how does prompt-language compare with direct Codex?',
   },
+  'factory-quality': {
+    kind: 'factory-quality',
+    controlFile: THROUGHPUT_CONTROL_FILE,
+    promptFile: PROMPT_FILE,
+    timingEnvelope: 'paired-factory-quality-s0-external-verification',
+    question:
+      'For the same bounded CRM core slice and frozen bootstrap seed, which lane behaves more like a governed, inspectable, reusable software factory?',
+  },
   's2-pre-verification': {
     kind: 'recovery',
     controlFile: S2_PRE_VERIFICATION_CONTROL_FILE,
@@ -528,8 +536,74 @@ async function computeFileHash(path) {
     .digest('hex');
 }
 
+async function buildArtifactInventory(workspaceRoot, requiredArtifacts) {
+  const inventory = [];
+
+  for (const relativePath of requiredArtifacts) {
+    const absolutePath = join(workspaceRoot, relativePath);
+    if (!existsSync(absolutePath)) {
+      inventory.push({
+        path: relativePath,
+        present: false,
+      });
+      continue;
+    }
+
+    const fileStat = await stat(absolutePath);
+    inventory.push({
+      path: relativePath,
+      present: true,
+      sizeBytes: fileStat.size,
+      sha256: await computeFileHash(absolutePath),
+    });
+  }
+
+  return inventory;
+}
+
 function promptFileForScenario(scenario) {
   return scenarioConfigFor(scenario).promptFile;
+}
+
+function evaluationModelForScenario(scenarioConfig) {
+  if (scenarioConfig.kind === 'throughput') {
+    return {
+      claimType: 'throughput',
+      primaryEndpoint: 'timeToGreenSec',
+      secondaryEndpoints: [
+        'timeToFirstRelevantWriteSec',
+        'traceCompleteness',
+        'artifactCompleteness',
+        'interventionCount',
+      ],
+    };
+  }
+
+  if (scenarioConfig.kind === 'recovery') {
+    return {
+      claimType: 'recovery',
+      primaryEndpoint: 'resumeToGreenSec',
+      secondaryEndpoints: [
+        'recoveredAfterInterruption',
+        'traceCompleteness',
+        'interventionCount',
+        'closureCompleteness',
+      ],
+    };
+  }
+
+  return {
+    claimType: 'factory-quality',
+    primaryEndpoint: 'factoryQualityOverall',
+    secondaryEndpoints: [
+      'traceCompleteness',
+      'artifactCompleteness',
+      'verificationPassRate',
+      'closureCompleteness',
+      'processConformance',
+      'interventionCount',
+    ],
+  };
 }
 
 function readGitHead() {
@@ -863,6 +937,77 @@ function determineFailureClass({
   return 'none';
 }
 
+function closureCompletenessFor(status) {
+  if (status === 'completed') {
+    return 'strong';
+  }
+  if (status === 'partial') {
+    return 'mixed';
+  }
+  return 'weak';
+}
+
+function processConformanceFor(laneName, scenarioKind, closure, traceCompleteness) {
+  if (scenarioKind === 'throughput') {
+    return laneName === 'pl-sequential' &&
+      closure.verdict === 'success' &&
+      traceCompleteness === 'strong'
+      ? 'mixed'
+      : traceCompleteness === 'strong'
+        ? 'mixed'
+        : 'weak';
+  }
+
+  if (laneName === 'pl-sequential') {
+    return closure.verdict === 'success' && traceCompleteness === 'strong' ? 'strong' : 'mixed';
+  }
+
+  return closure.verdict === 'success' && traceCompleteness === 'strong' ? 'mixed' : 'weak';
+}
+
+function reuseReadinessFor(laneName, closure, artifactsComplete) {
+  if (!artifactsComplete) {
+    return 'weak';
+  }
+  if (laneName === 'pl-sequential') {
+    return closure.verdict === 'success' ? 'strong' : 'mixed';
+  }
+  return closure.verdict === 'success' ? 'mixed' : 'weak';
+}
+
+function ordinalScore(value) {
+  if (value === true || value === 'strong') {
+    return 2;
+  }
+  if (value === 'mixed') {
+    return 1;
+  }
+  return 0;
+}
+
+function verificationPassRate(verification) {
+  return Object.values(verification).filter((value) => value === 'pass').length / 3;
+}
+
+function factoryQualityMetricsFor(lane, admissibility) {
+  return {
+    closureQuality: ordinalScore(lane.metrics.closureCompleteness),
+    processConformance: ordinalScore(lane.metrics.processConformance),
+    traceAuthority: ordinalScore(lane.metrics.traceAuthority),
+    reuseReadiness: ordinalScore(lane.metrics.reuseReadiness),
+    claimStrength:
+      admissibility.claimEligibility?.factoryQuality === true
+        ? 2
+        : admissibility.class === 'primary-comparison'
+          ? 1
+          : 0,
+  };
+}
+
+function totalFactoryQuality(factoryQualityScores) {
+  return Object.values(factoryQualityScores).reduce((sum, value) => sum + value, 0);
+}
+
 function buildBootstrapInfo(seedHash, overlayHash) {
   return {
     seedPath: repoRelative(SEED_ROOT),
@@ -1110,6 +1255,8 @@ async function runPromptLanguageLane({
 
   endedAtMs = Date.now();
   const artifacts = await existingRequiredArtifacts(workspaceRoot, requiredArtifacts);
+  const artifactInventory = await buildArtifactInventory(workspaceRoot, requiredArtifacts);
+  await writeJson(join(laneResultsRoot, 'artifact-inventory.json'), artifactInventory);
   const systemAfter = await captureSystemSnapshot();
   await writeJson(join(laneResultsRoot, 'system-after.json'), systemAfter);
 
@@ -1131,6 +1278,8 @@ async function runPromptLanguageLane({
   const traceArtifacts = [
     repoRelative(join(stateDir, 'session-state.json')),
     repoRelative(join(stateDir, 'audit.jsonl')),
+    repoRelative(join(laneResultsRoot, 'system-before.json')),
+    repoRelative(join(laneResultsRoot, 'system-after.json')),
     repoRelative(join(laneResultsRoot, 'lint.log')),
     repoRelative(join(laneResultsRoot, 'typecheck.log')),
     repoRelative(join(laneResultsRoot, 'test.log')),
@@ -1193,6 +1342,24 @@ async function runPromptLanguageLane({
       traceCompleteness === 'strong',
     recoveredAfterInterruption:
       scenarioKind === 'recovery' && interrupted && closure.verdict === 'success',
+    closureCompleteness: closureCompletenessFor(closure.status),
+    traceAuthority: traceCompleteness,
+    artifactContractPass: artifacts.complete,
+    processConformance: processConformanceFor(
+      'pl-sequential',
+      scenarioKind,
+      closure,
+      traceCompleteness,
+    ),
+    recoveryQuality:
+      scenarioKind === 'recovery'
+        ? interrupted && closure.verdict === 'success' && traceCompleteness === 'strong'
+          ? 'strong'
+          : interrupted
+            ? 'mixed'
+            : 'weak'
+        : 'n/a',
+    reuseReadiness: reuseReadinessFor('pl-sequential', closure, artifacts.complete),
   };
 
   const manifest = {
@@ -1219,6 +1386,7 @@ async function runPromptLanguageLane({
     interventionsPath: `experiments/results/e4-factory/runs/${runId}/interventions.md`,
     scorecardPath: `experiments/results/e4-factory/runs/${runId}/scorecard.json`,
     traceSummaryPath: `experiments/results/e4-factory/runs/${runId}/trace-summary.md`,
+    laneSummaryPath: `experiments/results/e4-factory/runs/${runId}/pl-sequential/lane-summary.json`,
     traceArtifacts,
     comparisonPath: 'experiments/results/e4-factory/comparison.md',
     comparisonUpdated: true,
@@ -1229,10 +1397,20 @@ async function runPromptLanguageLane({
 
   await writeJson(join(laneResultsRoot, 'manifest.json'), manifest);
   await writeJson(join(laneResultsRoot, 'lane-summary.json'), {
+    lane: 'pl-sequential',
+    candidate: 'prompt-language',
+    scenario: scenarioKind,
+    controlFile: repoRelative(controlFile),
     preflightExitCode: preflight.exitCode,
     preflightStatus: parseJson(preflight.stdout)?.status ?? null,
     runStatus: runReport?.status ?? null,
+    verification,
     artifactsPresent: artifacts.present,
+    missingArtifacts: artifacts.missing,
+    artifactInventoryPath: repoRelative(join(laneResultsRoot, 'artifact-inventory.json')),
+    systemBeforePath: repoRelative(join(laneResultsRoot, 'system-before.json')),
+    systemAfterPath: repoRelative(join(laneResultsRoot, 'system-after.json')),
+    traceArtifacts,
     metrics,
   });
 
@@ -1262,6 +1440,8 @@ async function runPromptLanguageLane({
           : []),
         repoRelative(join(stateDir, 'session-state.json')),
         repoRelative(join(stateDir, 'audit.jsonl')),
+        repoRelative(join(laneResultsRoot, 'lane-summary.json')),
+        repoRelative(join(laneResultsRoot, 'artifact-inventory.json')),
         repoRelative(join(laneResultsRoot, 'run-report.json')),
       ],
       observations: [
@@ -1410,6 +1590,8 @@ async function runCodexLane({
 
   const endedAtMs = Date.now();
   const artifacts = await existingRequiredArtifacts(workspaceRoot, requiredArtifacts);
+  const artifactInventory = await buildArtifactInventory(workspaceRoot, requiredArtifacts);
+  await writeJson(join(laneResultsRoot, 'artifact-inventory.json'), artifactInventory);
   const systemAfter = await captureSystemSnapshot();
   await writeJson(join(laneResultsRoot, 'system-after.json'), systemAfter);
 
@@ -1429,6 +1611,8 @@ async function runCodexLane({
     repoRelative(join(laneResultsRoot, 'events.jsonl')),
     repoRelative(join(laneResultsRoot, 'stderr.log')),
     repoRelative(lastMessagePath),
+    repoRelative(join(laneResultsRoot, 'system-before.json')),
+    repoRelative(join(laneResultsRoot, 'system-after.json')),
     repoRelative(join(laneResultsRoot, 'lint.log')),
     repoRelative(join(laneResultsRoot, 'typecheck.log')),
     repoRelative(join(laneResultsRoot, 'test.log')),
@@ -1492,6 +1676,24 @@ async function runCodexLane({
       traceCompleteness === 'strong',
     recoveredAfterInterruption:
       scenarioKind === 'recovery' && interrupted && closure.verdict === 'success',
+    closureCompleteness: closureCompletenessFor(closure.status),
+    traceAuthority: traceCompleteness,
+    artifactContractPass: artifacts.complete,
+    processConformance: processConformanceFor(
+      'codex-alone',
+      scenarioKind,
+      closure,
+      traceCompleteness,
+    ),
+    recoveryQuality:
+      scenarioKind === 'recovery'
+        ? interrupted && closure.verdict === 'success' && traceCompleteness === 'strong'
+          ? 'strong'
+          : interrupted
+            ? 'mixed'
+            : 'weak'
+        : 'n/a',
+    reuseReadiness: reuseReadinessFor('codex-alone', closure, artifacts.complete),
   };
 
   const manifest = {
@@ -1517,6 +1719,7 @@ async function runCodexLane({
     interventionsPath: `experiments/results/e4-factory/runs/${runId}/interventions.md`,
     scorecardPath: `experiments/results/e4-factory/runs/${runId}/scorecard.json`,
     traceSummaryPath: `experiments/results/e4-factory/runs/${runId}/trace-summary.md`,
+    laneSummaryPath: `experiments/results/e4-factory/runs/${runId}/codex-alone/lane-summary.json`,
     traceArtifacts,
     comparisonPath: 'experiments/results/e4-factory/comparison.md',
     comparisonUpdated: true,
@@ -1527,8 +1730,18 @@ async function runCodexLane({
 
   await writeJson(join(laneResultsRoot, 'manifest.json'), manifest);
   await writeJson(join(laneResultsRoot, 'lane-summary.json'), {
+    lane: 'codex-alone',
+    candidate: 'codex-alone',
+    scenario: scenarioKind,
+    promptFile: repoRelative(join(laneResultsRoot, 'prompt.md')),
     mainExitCode: mainRun.exitCode,
+    verification,
     artifactsPresent: artifacts.present,
+    missingArtifacts: artifacts.missing,
+    artifactInventoryPath: repoRelative(join(laneResultsRoot, 'artifact-inventory.json')),
+    systemBeforePath: repoRelative(join(laneResultsRoot, 'system-before.json')),
+    systemAfterPath: repoRelative(join(laneResultsRoot, 'system-after.json')),
+    traceArtifacts,
     metrics,
   });
 
@@ -1556,6 +1769,8 @@ async function runCodexLane({
         repoRelative(join(laneResultsRoot, 'events.jsonl')),
         repoRelative(join(laneResultsRoot, 'stderr.log')),
         repoRelative(lastMessagePath),
+        repoRelative(join(laneResultsRoot, 'lane-summary.json')),
+        repoRelative(join(laneResultsRoot, 'artifact-inventory.json')),
       ],
       observations: [
         `main exit code: ${mainRun.exitCode}`,
@@ -1604,6 +1819,39 @@ function determineComparativeVerdict(plLane, codexLane, scenarioConfig) {
       : 'codex-alone-better';
   }
 
+  if (scenarioConfig.kind === 'factory-quality') {
+    const plSuccess = plLane.manifest.verdict === 'success';
+    const codexSuccess = codexLane.manifest.verdict === 'success';
+
+    if (plSuccess && !codexSuccess) {
+      return 'prompt-language-better';
+    }
+    if (!plSuccess && codexSuccess) {
+      return 'codex-alone-better';
+    }
+
+    const plFactoryScore =
+      ordinalScore(plLane.metrics.traceAuthority) +
+      ordinalScore(plLane.metrics.closureCompleteness) +
+      ordinalScore(plLane.metrics.processConformance) +
+      ordinalScore(plLane.metrics.reuseReadiness) +
+      (plLane.metrics.artifactContractPass ? 2 : 0) +
+      Math.round(verificationPassRate(plLane.verification) * 2);
+    const codexFactoryScore =
+      ordinalScore(codexLane.metrics.traceAuthority) +
+      ordinalScore(codexLane.metrics.closureCompleteness) +
+      ordinalScore(codexLane.metrics.processConformance) +
+      ordinalScore(codexLane.metrics.reuseReadiness) +
+      (codexLane.metrics.artifactContractPass ? 2 : 0) +
+      Math.round(verificationPassRate(codexLane.verification) * 2);
+
+    if (Math.abs(plFactoryScore - codexFactoryScore) <= 1) {
+      return 'mixed';
+    }
+
+    return plFactoryScore > codexFactoryScore ? 'prompt-language-better' : 'codex-alone-better';
+  }
+
   const plSuccess = plLane.manifest.verdict === 'success';
   const codexSuccess = codexLane.manifest.verdict === 'success';
 
@@ -1644,10 +1892,38 @@ function buildAdmissibility(plLane, codexLane, scenarioConfig) {
     return {
       class: 'supporting-context',
       throughputClaimEligible: false,
+      claimEligibility: {
+        throughput: false,
+        factoryQuality: false,
+        recovery: false,
+      },
       reason: cleanRecoveryPair
         ? 'This is a trace-backed S2 governed-recovery pilot on the same bounded CRM contract, but it remains supporting context until repeated predeclared interruption/resume pairs agree.'
         : 'This is an S2 governed-recovery attempt, but interruption timing, resume handling, or trace completeness still leaves it as supporting context only.',
       recoveryClaimEligible: false,
+    };
+  }
+
+  if (scenarioConfig.kind === 'factory-quality') {
+    const traceComplete =
+      plLane.metrics.traceCompleteness === 'strong' &&
+      codexLane.metrics.traceCompleteness === 'strong';
+    const closureComplete =
+      plLane.metrics.closureCompleteness === 'strong' &&
+      codexLane.metrics.closureCompleteness === 'strong';
+
+    return {
+      class: 'primary-comparison',
+      throughputClaimEligible: false,
+      claimEligibility: {
+        throughput: false,
+        factoryQuality: traceComplete && closureComplete,
+        recovery: false,
+      },
+      reason:
+        traceComplete && closureComplete
+          ? 'This is a trace-first paired factory-quality run on the same common product contract with closure and lane-level evidence strong enough for a governed-factory comparison.'
+          : 'This is a paired factory-quality run, but trace completeness or closure quality is not yet strong enough for a factory-superiority claim.',
     };
   }
 
@@ -1663,6 +1939,11 @@ function buildAdmissibility(plLane, codexLane, scenarioConfig) {
   return {
     class: 'primary-comparison',
     throughputClaimEligible,
+    claimEligibility: {
+      throughput: throughputClaimEligible,
+      factoryQuality: false,
+      recovery: false,
+    },
     reason: cleanComparablePair
       ? 'This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree.'
       : 'This is a paired patched run, but at least one lane did not close the same product contract or still has missing throughput metrics / runtime confounds, so any throughput read is provisional.',
@@ -1692,18 +1973,26 @@ function buildLaneScores(lane, paired, admissibility) {
       lane.metrics.interventionCount,
     ),
     repeatabilityEvidence: scoreRepeatabilityEvidence(admissibility),
+    closureQuality: ordinalScore(lane.metrics.closureCompleteness),
+    processConformance: ordinalScore(lane.metrics.processConformance),
   };
 
+  const factoryQuality = factoryQualityMetricsFor(lane, admissibility);
   const totals = {
     productOutcome: scores.scopeCompletion + scores.verification + scores.artifactCompleteness,
     operationalQuality: scores.setupSimplicity + scores.auditability,
     researchStrength:
       scores.experimentalControl + scores.automationIntegrity + scores.repeatabilityEvidence,
+    factoryQuality: totalFactoryQuality(factoryQuality),
     overall: 0,
   };
-  totals.overall = totals.productOutcome + totals.operationalQuality + totals.researchStrength;
+  totals.overall =
+    totals.productOutcome +
+    totals.operationalQuality +
+    totals.researchStrength +
+    totals.factoryQuality;
 
-  return { scores, totals };
+  return { scores, totals, factoryQuality };
 }
 
 function buildScoreEvidence(runId, lane) {
@@ -1724,9 +2013,11 @@ function buildScoreEvidence(runId, lane) {
     artifactCompleteness: [`${prefix}/outcome.md`],
     setupSimplicity: [`${prefix}/postmortem.md`],
     auditability: [`${prefix}/trace-summary.md`],
-    experimentalControl: [`${prefix}/trace-summary.md`],
+    experimentalControl: [`${lanePrefix}/lane-summary.json`, `${prefix}/trace-summary.md`],
     automationIntegrity: [`${prefix}/interventions.md`],
     repeatabilityEvidence: [batchPrefix ?? `${prefix}/scorecard.json`],
+    closureQuality: [`${lanePrefix}/lane-summary.json`, `${prefix}/outcome.md`],
+    processConformance: [`${lanePrefix}/lane-summary.json`, `${prefix}/trace-summary.md`],
   };
 }
 
@@ -1755,16 +2046,30 @@ async function writeRunOutcome(
           `- \`codex-alone\` resume to green: ${codexLane.metrics.resumeToGreenSec ?? 'n/a'}s`,
           '',
         ]
-      : [
-          '## Throughput',
-          '',
-          `- \`prompt-language\` time to green: ${plLane.metrics.timeToGreenSec ?? 'n/a'}s`,
-          `- \`prompt-language\` time to first relevant write: ${plLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
-          `- \`codex-alone\` time to green: ${codexLane.metrics.timeToGreenSec ?? 'n/a'}s`,
-          `- \`codex-alone\` time to first relevant write: ${codexLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
-          `- admissible for throughput claim: ${admissibility.throughputClaimEligible}`,
-          '',
-        ];
+      : scenarioConfig.kind === 'factory-quality'
+        ? [
+            '## Factory Quality',
+            '',
+            `- \`prompt-language\` trace authority: ${plLane.metrics.traceAuthority}`,
+            `- \`prompt-language\` closure completeness: ${plLane.metrics.closureCompleteness}`,
+            `- \`prompt-language\` process conformance: ${plLane.metrics.processConformance}`,
+            `- \`prompt-language\` reuse readiness: ${plLane.metrics.reuseReadiness}`,
+            `- \`codex-alone\` trace authority: ${codexLane.metrics.traceAuthority}`,
+            `- \`codex-alone\` closure completeness: ${codexLane.metrics.closureCompleteness}`,
+            `- \`codex-alone\` process conformance: ${codexLane.metrics.processConformance}`,
+            `- \`codex-alone\` reuse readiness: ${codexLane.metrics.reuseReadiness}`,
+            '',
+          ]
+        : [
+            '## Throughput',
+            '',
+            `- \`prompt-language\` time to green: ${plLane.metrics.timeToGreenSec ?? 'n/a'}s`,
+            `- \`prompt-language\` time to first relevant write: ${plLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
+            `- \`codex-alone\` time to green: ${codexLane.metrics.timeToGreenSec ?? 'n/a'}s`,
+            `- \`codex-alone\` time to first relevant write: ${codexLane.metrics.timeToFirstRelevantWriteSec ?? 'n/a'}s`,
+            `- admissible for throughput claim: ${admissibility.throughputClaimEligible}`,
+            '',
+          ];
 
   const content = [
     '# Outcome',
@@ -1828,7 +2133,7 @@ async function writeRunPostmortem(
     ...(issues.length > 0
       ? issues.map((issue) => `- ${issue}`)
       : ['- no runtime or config confounds were recorded in this run']),
-    `- throughput admissibility: ${admissibility.reason}`,
+    `- primary claim admissibility: ${admissibility.reason}`,
     '',
     '## Next Actions',
     '',
@@ -1845,6 +2150,17 @@ async function writeRunPostmortem(
   ].join('\n');
 
   await writeText(join(runRoot, 'postmortem.md'), content);
+  await writeJson(join(runRoot, 'postmortem.json'), {
+    runId,
+    scenario: scenarioConfig.kind,
+    primaryClaimType: evaluationModelForScenario(scenarioConfig).claimType,
+    confounds: issues,
+    admissibilityReason: admissibility.reason,
+    promptLanguageFailureClass: plLane.metrics.failureClass,
+    codexAloneFailureClass: codexLane.metrics.failureClass,
+    rerunRecommended:
+      plLane.metrics.failureClass !== 'none' || codexLane.metrics.failureClass !== 'none',
+  });
 }
 
 async function writeRunInterventions(
@@ -1875,6 +2191,15 @@ async function writeRunInterventions(
   ].join('\n');
 
   await writeText(join(runRoot, 'interventions.md'), content);
+  await writeJson(join(runRoot, 'interventions.json'), {
+    runId,
+    scenario: scenarioConfig.kind,
+    documentedHumanInterventions,
+    promptLanguageRestartCount: plLane.metrics.restartCount,
+    codexAloneRestartCount: codexLane.metrics.restartCount,
+    promptLanguageInterrupted: plLane.metrics.interrupted ?? false,
+    codexAloneInterrupted: codexLane.metrics.interrupted ?? false,
+  });
 }
 
 async function writeRunTraceSummary(
@@ -1885,6 +2210,7 @@ async function writeRunTraceSummary(
   comparativeVerdict,
   scenarioConfig,
 ) {
+  const evaluationModel = evaluationModelForScenario(scenarioConfig);
   const content = [
     '# Trace Summary',
     '',
@@ -1915,6 +2241,8 @@ async function writeRunTraceSummary(
     '## Comparative Read',
     '',
     `- current comparative verdict: \`${comparativeVerdict}\``,
+    `- primary claim type: \`${evaluationModel.claimType}\``,
+    `- primary endpoint: \`${evaluationModel.primaryEndpoint}\``,
     `- prompt-language trace completeness: \`${plLane.metrics.traceCompleteness}\``,
     `- codex-alone trace completeness: \`${codexLane.metrics.traceCompleteness}\``,
     ...(scenarioConfig.kind === 'recovery'
@@ -1946,14 +2274,16 @@ async function writeScorecard(
 ) {
   const plScoring = buildLaneScores(plLane, true, admissibility);
   const codexScoring = buildLaneScores(codexLane, true, admissibility);
+  const evaluationModel = evaluationModelForScenario(scenarioConfig);
 
   const scorecard = {
-    scoreVersion: 'e4-v1',
+    scoreVersion: 'e4-v2',
     runId,
     batch: runMetadata.batch ?? null,
     scope: 'bounded-crm-core',
     question: scenarioConfig.question,
     baselineReference: 'codex-alone within this run',
+    evaluationModel,
     admissibility,
     comparativeVerdict,
     lanes: [
@@ -1972,8 +2302,18 @@ async function writeScorecard(
           failureClass: plLane.metrics.failureClass,
           throughputMetricsComplete: plLane.metrics.throughputMetricsComplete,
           traceCompleteness: plLane.metrics.traceCompleteness,
+          closureCompleteness: plLane.metrics.closureCompleteness,
+          traceAuthority: plLane.metrics.traceAuthority,
+          artifactContractPass: plLane.metrics.artifactContractPass,
+          processConformance: plLane.metrics.processConformance,
+          recoveryQuality: plLane.metrics.recoveryQuality,
+          reuseReadiness: plLane.metrics.reuseReadiness,
+          verificationPassRate: verificationPassRate(plLane.verification),
+          resumeToGreenSec: plLane.metrics.resumeToGreenSec ?? null,
+          interruptToGreenSec: plLane.metrics.interruptToGreenSec ?? null,
         },
         scores: plScoring.scores,
+        factoryQuality: plScoring.factoryQuality,
         totals: plScoring.totals,
         scoreEvidence: buildScoreEvidence(runId, plLane),
         notes: plLane.notes,
@@ -1993,8 +2333,18 @@ async function writeScorecard(
           failureClass: codexLane.metrics.failureClass,
           throughputMetricsComplete: codexLane.metrics.throughputMetricsComplete,
           traceCompleteness: codexLane.metrics.traceCompleteness,
+          closureCompleteness: codexLane.metrics.closureCompleteness,
+          traceAuthority: codexLane.metrics.traceAuthority,
+          artifactContractPass: codexLane.metrics.artifactContractPass,
+          processConformance: codexLane.metrics.processConformance,
+          recoveryQuality: codexLane.metrics.recoveryQuality,
+          reuseReadiness: codexLane.metrics.reuseReadiness,
+          verificationPassRate: verificationPassRate(codexLane.verification),
+          resumeToGreenSec: codexLane.metrics.resumeToGreenSec ?? null,
+          interruptToGreenSec: codexLane.metrics.interruptToGreenSec ?? null,
         },
         scores: codexScoring.scores,
+        factoryQuality: codexScoring.factoryQuality,
         totals: codexScoring.totals,
         scoreEvidence: buildScoreEvidence(runId, codexLane),
         notes: codexLane.notes,
@@ -2002,11 +2352,17 @@ async function writeScorecard(
     ],
     comparativeSummary:
       comparativeVerdict === 'parity'
-        ? 'Both lanes reached the same bounded CRM outcome with similar time-to-green in this paired run.'
+        ? evaluationModel.claimType === 'throughput'
+          ? 'Both lanes reached the same bounded CRM outcome with similar time-to-green in this paired run.'
+          : 'Both lanes reached similar quality on the primary factory claim in this paired run.'
         : comparativeVerdict === 'prompt-language-better'
-          ? 'Prompt-language outperformed the direct Codex baseline in this paired run.'
+          ? evaluationModel.claimType === 'factory-quality'
+            ? 'Prompt-language produced the stronger governed factory run in this paired comparison.'
+            : 'Prompt-language outperformed the direct Codex baseline in this paired run.'
           : comparativeVerdict === 'codex-alone-better'
-            ? 'Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.'
+            ? evaluationModel.claimType === 'factory-quality'
+              ? 'Both lanes closed the common product contract, but direct Codex still produced the stronger primary factory-quality outcome in this paired run.'
+              : 'Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.'
             : 'Both lanes closed the common product contract, but the paired run still produced a mixed result on the available evidence.',
     nextExperimentFocus:
       scenarioConfig.kind === 'recovery'
@@ -2014,10 +2370,15 @@ async function writeScorecard(
             'repeat the governed S2 interruption/resume pair in both orders',
             'promote recovery claims only after repeated trace-backed pairs agree',
           ]
-        : [
-            'repeat the clean paired run to stabilize the throughput reading',
-            'add interruption and resume scenarios only after several clean pairs agree',
-          ],
+        : scenarioConfig.kind === 'factory-quality'
+          ? [
+              'repeat the trace-first factory-quality pair in both orders',
+              'promote factory-superiority claims only after repeated trace-backed pairs agree',
+            ]
+          : [
+              'repeat the clean paired run to stabilize the throughput reading',
+              'add interruption and resume scenarios only after several clean pairs agree',
+            ],
   };
 
   await writeJson(join(runRoot, 'scorecard.json'), scorecard);
@@ -2035,6 +2396,7 @@ async function updateComparison(
   scenarioConfig,
 ) {
   const text = await readText(COMPARISON_PATH);
+  const evaluationModel = evaluationModelForScenario(scenarioConfig);
   const batchLine =
     runMetadata.batch === null
       ? null
@@ -2049,6 +2411,8 @@ async function updateComparison(
     '',
     `- timing envelope: \`${runMetadata.timingEnvelope}\``,
     `- scenario kind: \`${scenarioConfig.kind}\``,
+    `- primary claim type: \`${evaluationModel.claimType}\``,
+    `- primary endpoint: \`${evaluationModel.primaryEndpoint}\``,
     batchLine,
     `- comparative verdict: \`${comparativeVerdict}\``,
     ...(scenarioConfig.kind === 'recovery'
@@ -2057,7 +2421,13 @@ async function updateComparison(
           `- prompt-language resume to green: ${plLane.metrics.resumeToGreenSec ?? 'n/a'}s`,
           `- codex-alone resume to green: ${codexLane.metrics.resumeToGreenSec ?? 'n/a'}s`,
         ]
-      : [`- throughput admissible: ${admissibility.throughputClaimEligible}`]),
+      : scenarioConfig.kind === 'factory-quality'
+        ? [
+            `- factory-quality claim eligible: ${admissibility.claimEligibility?.factoryQuality === true}`,
+            `- prompt-language process conformance: ${plLane.metrics.processConformance}`,
+            `- codex-alone process conformance: ${codexLane.metrics.processConformance}`,
+          ]
+        : [`- throughput admissible: ${admissibility.throughputClaimEligible}`]),
     '',
     'Primary evidence:',
     '',
@@ -2073,7 +2443,7 @@ async function updateComparison(
     ? text.replace(beforeInterpretation, `\n${runSection}${beforeInterpretation}`)
     : `${text.trim()}\n\n${runSection}`;
 
-  if (scenarioConfig.kind === 'recovery') {
+  if (scenarioConfig.kind === 'recovery' || scenarioConfig.kind === 'factory-quality') {
     await writeText(COMPARISON_PATH, `${updatedText.trim()}\n`);
     return;
   }
@@ -2107,6 +2477,7 @@ async function updateAnalysis(runId, attemptLabel, scorecard, runMetadata, scena
 
   const comparativeVerdict = scorecard.comparativeVerdict;
   const admissibility = scorecard.admissibility;
+  const evaluationModel = evaluationModelForScenario(scenarioConfig);
   const note = [
     '',
     `## ${attemptLabel} Update`,
@@ -2114,6 +2485,8 @@ async function updateAnalysis(runId, attemptLabel, scorecard, runMetadata, scena
     `Run: \`${runId}\``,
     '',
     `- scenario kind: \`${scenarioConfig.kind}\``,
+    `- primary claim type: \`${evaluationModel.claimType}\``,
+    `- primary endpoint: \`${evaluationModel.primaryEndpoint}\``,
     `- comparative verdict: \`${comparativeVerdict}\``,
     ...(scenarioConfig.kind === 'recovery'
       ? [
@@ -2121,7 +2494,13 @@ async function updateAnalysis(runId, attemptLabel, scorecard, runMetadata, scena
           `- prompt-language resume to green: ${scorecard.lanes[0]?.metrics.resumeToGreenSec ?? 'n/a'}s`,
           `- codex-alone resume to green: ${scorecard.lanes[1]?.metrics.resumeToGreenSec ?? 'n/a'}s`,
         ]
-      : [`- throughput admissible: ${admissibility.throughputClaimEligible}`]),
+      : scenarioConfig.kind === 'factory-quality'
+        ? [
+            `- factory-quality claim eligible: ${admissibility.claimEligibility?.factoryQuality === true}`,
+            `- prompt-language closure completeness: ${scorecard.lanes[0]?.metrics.closureCompleteness ?? 'n/a'}`,
+            `- codex-alone closure completeness: ${scorecard.lanes[1]?.metrics.closureCompleteness ?? 'n/a'}`,
+          ]
+        : [`- throughput admissible: ${admissibility.throughputClaimEligible}`]),
     `- admissibility reason: ${admissibility.reason}`,
     `- timing envelope: \`${runMetadata.timingEnvelope}\``,
     '',
@@ -2161,6 +2540,7 @@ async function main() {
         };
 
   const metadata = {
+    protocolVersion: 'e4-v2',
     runId,
     attemptLabel,
     scenario: options.scenario,
@@ -2179,6 +2559,7 @@ async function main() {
     promptHash,
     bootstrapSeed: bootstrapInfo,
     timingEnvelope,
+    evaluationModel: evaluationModelForScenario(scenarioConfig),
     documentedHumanInterventions: options.documentedHumanInterventions,
     interventionObservationMode: 'harness-parameterized',
   };

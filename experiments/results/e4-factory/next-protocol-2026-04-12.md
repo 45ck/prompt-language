@@ -7,6 +7,11 @@ Date: `2026-04-12`
 Run the next E4 comparison in the area where prompt-language still has a plausible advantage:
 governed interruption, restart, and recovery. The clean throughput batch has already completed.
 
+Primary E4 question now:
+
+> Does prompt-language produce a more governable, inspectable, restartable software-factory run
+> than direct Codex on the same bounded slice?
+
 ## Phase Split
 
 ### `S0` Clean Throughput Batch
@@ -30,6 +35,17 @@ decides whether the clean throughput claim is eligible.
 
 Current disposition: `S0` is complete and the batch-level throughput verdict is
 `codex-alone-better`, so future E4 work should move into `S1` / `S2`.
+
+### `FQ1` Trace-First Factory Batch
+
+Before the next recovery batch, run at least one clean paired `factory-quality` attempt with:
+
+- same bounded slice and same frozen seed as `S0`
+- primary endpoint: `factoryQualityOverall`
+- secondary timing metrics retained only as context
+- full lane summaries, artifact inventories, and authoritative trace evidence for both lanes
+
+This is the new default path for proving prompt-language as a software factory.
 
 ## Frozen Variables
 
@@ -87,6 +103,8 @@ Prompt-language must retain:
 
 - `session-state.json`
 - `audit.jsonl`
+- `lane-summary.json`
+- `artifact-inventory.json`
 - lane-level verification logs or equivalent authoritative state evidence
 - start/end timestamps
 
@@ -94,7 +112,13 @@ Every run must produce `trace-summary.md` stating which trace files are authorit
 
 ## Metrics
 
-Primary:
+Primary, by claim family:
+
+- `throughput`: `timeToGreenSec`
+- `factory-quality`: `factoryQualityOverall`
+- `recovery`: `resumeToGreenSec` plus `recoveredAfterInterruption`
+
+Shared capture:
 
 - `timeToGreenSec`
 - `success_to_green`
@@ -108,12 +132,14 @@ Secondary:
 - `artifactCompleteness`
 - `traceCompleteness`
 - `closureCompleteness`
+- `processConformance`
+- `traceAuthority`
+- `reuseReadiness`
 
 Every failure must be classified as `product`, `runtime`, `config`, or `evidence`.
 
-Only `timeToGreenSec` may drive the throughput verdict. `timeToFirstRelevantWriteSec` is retained
-as exploratory context and may explain a result, but it must not flip the primary comparative
-verdict on its own.
+Only the claim family's primary endpoint may drive that claim. `timeToFirstRelevantWriteSec` is
+exploratory context only and must not flip a verdict by itself.
 
 ## Exclusion Rules
 
@@ -150,3 +176,13 @@ Only after `S0`:
 - `S2` pre-verification hard stop
 
 Those scenarios answer a different question: governed recovery, not raw throughput.
+
+## Current Recommendation
+
+Do not run another throughput batch by default.
+
+Run order:
+
+1. `FQ1` trace-first factory-quality pair
+2. `S2` pre-verification interruption/resume batch
+3. only then consider cross-slice reuse work

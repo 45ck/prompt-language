@@ -1,5 +1,5 @@
 {
-  "scoreVersion": "e4-v1",
+  "scoreVersion": "e4-v2",
   "runId": "<run-id>",
   "batch": {
     "batchId": "<batch-id>",
@@ -8,9 +8,26 @@
   "scope": "<bounded-scope>",
   "question": "<research-question>",
   "baselineReference": null,
+  "evaluationModel": {
+    "claimType": "factory-quality",
+    "primaryEndpoint": "factoryQualityOverall",
+    "secondaryEndpoints": [
+      "traceCompleteness",
+      "artifactCompleteness",
+      "verificationPassRate",
+      "closureCompleteness",
+      "processConformance",
+      "interventionCount"
+    ]
+  },
   "admissibility": {
     "class": "supporting-context",
     "throughputClaimEligible": false,
+    "claimEligibility": {
+      "throughput": false,
+      "factoryQuality": false,
+      "recovery": false
+    },
     "reason": "<why this run can or cannot support throughput claims>"
   },
   "comparativeVerdict": "inconclusive",
@@ -27,7 +44,16 @@
         "runtimeFailureCount": null,
         "failureClass": "none",
         "throughputMetricsComplete": false,
-        "traceCompleteness": "mixed"
+        "traceCompleteness": "mixed",
+        "closureCompleteness": "mixed",
+        "traceAuthority": "mixed",
+        "artifactContractPass": false,
+        "processConformance": "mixed",
+        "recoveryQuality": "n/a",
+        "reuseReadiness": "mixed",
+        "verificationPassRate": 0,
+        "resumeToGreenSec": null,
+        "interruptToGreenSec": null
       },
       "scores": {
         "scopeCompletion": 0,
@@ -37,12 +63,22 @@
         "auditability": 0,
         "experimentalControl": 0,
         "automationIntegrity": 0,
-        "repeatabilityEvidence": 0
+        "repeatabilityEvidence": 0,
+        "closureQuality": 0,
+        "processConformance": 0
+      },
+      "factoryQuality": {
+        "closureQuality": 0,
+        "processConformance": 0,
+        "traceAuthority": 0,
+        "reuseReadiness": 0,
+        "claimStrength": 0
       },
       "totals": {
         "productOutcome": 0,
         "operationalQuality": 0,
         "researchStrength": 0,
+        "factoryQuality": 0,
         "overall": 0
       },
       "scoreEvidence": {
@@ -53,7 +89,9 @@
         "auditability": ["<repo-relative evidence path>"],
         "experimentalControl": ["<repo-relative evidence path>"],
         "automationIntegrity": ["<repo-relative evidence path>"],
-        "repeatabilityEvidence": ["<repo-relative evidence path>"]
+        "repeatabilityEvidence": ["<repo-relative evidence path>"],
+        "closureQuality": ["<repo-relative evidence path>"],
+        "processConformance": ["<repo-relative evidence path>"]
       },
       "notes": "<why these scores were assigned>"
     }

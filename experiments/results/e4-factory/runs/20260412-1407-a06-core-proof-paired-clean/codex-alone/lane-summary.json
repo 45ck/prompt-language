@@ -1,0 +1,27 @@
+{
+  "mainExitCode": 0,
+  "artifactsPresent": [
+    "docs/prd.md",
+    "docs/acceptance-criteria.md",
+    "docs/architecture/domain-model.md",
+    "docs/api-contracts.md",
+    "specs/invariants.md",
+    "packages/domain/src/index.ts",
+    "packages/api/src/index.ts",
+    "README.md",
+    "docs/handover.md",
+    "docs/test-strategy.md"
+  ],
+  "metrics": {
+    "startedAt": "2026-04-12T04:07:43.992Z",
+    "endedAt": "2026-04-12T04:20:34.930Z",
+    "timeToGreenSec": 770.94,
+    "timeToFirstCodeSec": 379.81,
+    "interventionCount": 0,
+    "restartCount": 0,
+    "runtimeFailureCount": 0,
+    "failureClass": "none",
+    "throughputMetricsComplete": true,
+    "traceCompleteness": "strong"
+  }
+}

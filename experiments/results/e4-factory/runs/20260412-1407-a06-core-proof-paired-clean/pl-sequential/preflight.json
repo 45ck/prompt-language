@@ -1,0 +1,18 @@
+{
+  "status": "ok",
+  "diagnostics": [
+    {
+      "code": "PLC-007",
+      "kind": "profile",
+      "phase": "preflight",
+      "severity": "warning",
+      "blocksExecution": false,
+      "retryable": false,
+      "summary": "Interactive UX surfaces such as the status line and watch mode are unavailable for runner=codex mode=headless."
+    }
+  ],
+  "outcomes": [],
+  "complexity": 3,
+  "lintWarningCount": 0,
+  "renderedFlow": "[prompt-language] Flow: produce a bounded CRM core slice through a single sequential prompt-language run | Status: active\n\n> prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.  <-- current\n  prompt: Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready.\n  prompt: Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services.\n  prompt: Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free.\n  prompt: Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package.\n  prompt: Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented workspace, then fix the workspace until lint, typecheck, and test pass.\n  run: npm run lint\n  run: npm run typecheck\n  run: npm run test\n\ndone when:\n  lint  [pending]\n  typecheck  [pending]\n  tests  [pending]\n  file_exists .factory/project.flow  [pending]\n  file_exists docs/prd.md  [pending]\n  file_exists docs/acceptance-criteria.md  [pending]\n  file_exists docs/architecture/domain-model.md  [pending]\n  file_exists docs/api-contracts.md  [pending]\n  file_exists specs/invariants.md  [pending]\n  file_exists packages/domain/src/index.ts  [pending]\n  file_exists packages/api/src/index.ts  [pending]\n  file_exists docs/handover.md  [pending]\n  file_exists docs/test-strategy.md  [pending]"
+}

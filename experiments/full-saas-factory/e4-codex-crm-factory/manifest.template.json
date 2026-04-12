@@ -8,21 +8,30 @@
   "candidate": "codex-alone OR codex+prompt-language",
   "packageManager": "pnpm",
   "phaseMode": "phased",
+  "bootstrapSeed": {
+    "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+    "seedHash": "SET_BEFORE_RUN",
+    "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+    "overlayHash": "SET_BEFORE_RUN"
+  },
   "status": "open",
   "verdict": "unknown",
-  "requiredArtifacts": [
-    "docs/prd.md",
-    "docs/research/competitors.md",
-    "docs/architecture/domain-model.md",
-    "docs/api-contracts.md",
-    "docs/data-model.md",
-    "specs/domain-glossary.md",
-    "specs/invariants.md",
-    "qa-flows/crm-smoke.json",
-    "demo/crm.demo.yaml",
-    "docs/release-notes.md",
-    "docs/handover.md"
-  ],
+  "requiredArtifacts": {
+    "commonProductArtifacts": [
+      "docs/prd.md",
+      "docs/research/competitors.md",
+      "docs/architecture/domain-model.md",
+      "docs/api-contracts.md",
+      "docs/data-model.md",
+      "specs/domain-glossary.md",
+      "specs/invariants.md",
+      "qa-flows/crm-smoke.json",
+      "demo/crm.demo.yaml",
+      "docs/release-notes.md",
+      "docs/handover.md"
+    ],
+    "laneSpecificArtifacts": [".factory/project.flow"]
+  },
   "verificationCommands": ["npm run lint", "npm run typecheck", "npm run test"],
   "verification": {
     "lint": "not-run",
@@ -35,8 +44,27 @@
   "postmortemPath": "experiments/results/e4-factory/runs/<run-id>/postmortem.md",
   "interventionsPath": "experiments/results/e4-factory/runs/<run-id>/interventions.md",
   "scorecardPath": "experiments/results/e4-factory/runs/<run-id>/scorecard.json",
+  "traceSummaryPath": "experiments/results/e4-factory/runs/<run-id>/trace-summary.md",
+  "traceArtifacts": [
+    "experiments/results/e4-factory/runs/<run-id>/<lane>/events.jsonl",
+    "experiments/results/e4-factory/runs/<run-id>/<lane>/stderr.log",
+    "experiments/results/e4-factory/runs/<run-id>/<lane>/last-message.txt",
+    "experiments/results/e4-factory/runs/<run-id>/pl-state/session-state.json",
+    "experiments/results/e4-factory/runs/<run-id>/pl-state/audit.jsonl"
+  ],
   "comparisonPath": "experiments/results/e4-factory/comparison.md",
   "comparisonUpdated": false,
+  "metrics": {
+    "startedAt": null,
+    "endedAt": null,
+    "timeToGreenSec": null,
+    "timeToFirstCodeSec": null,
+    "interventionCount": 0,
+    "restartCount": 0,
+    "runtimeFailureCount": 0,
+    "failureClass": "none",
+    "traceCompleteness": "mixed"
+  },
   "followups": [],
   "evidenceRoot": "experiments/results/e4-factory/<run-id>"
 }

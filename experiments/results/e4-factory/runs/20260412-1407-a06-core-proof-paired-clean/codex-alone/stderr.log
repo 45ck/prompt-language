@@ -1,0 +1,58 @@
+2026-04-12T04:18:38.948938Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.6 seconds
+Output:
+
+> typecheck
+> tsc -p tsconfig.json --noEmit
+
+packages/api/test/api.test.ts(69,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Contact>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+packages/api/test/api.test.ts(92,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Opportunity>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+packages/api/test/api.test.ts(107,78): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Opportunity>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+packages/domain/test/domain.test.ts(62,7): error TS2551: Property 'toThrowErrorMatchingObject' does not exist on type 'Assertion<() => Opportunity>'. Did you mean 'toThrowErrorMatchingSnapshot'?
+
+2026-04-12T04:19:27.199250Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.3 seconds
+Output:
+
+> test
+> vitest run
+
+
+ RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/20260412-1407-a06-core-proof-paired-clean/codex-alone
+
+ ❯ packages/domain/test/domain.test.ts (0 test)
+ ❯ packages/api/test/api.test.ts (0 test)
+
+ Test Files  2 failed (2)
+      Tests  no tests
+   Start at  14:19:26
+   Duration  256ms (transform 93ms, setup 0ms, import 0ms, tests 0ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/api/test/api.test.ts [ packages/api/test/api.test.ts ]
+ReferenceError: describe is not defined
+ ❯ packages/api/test/api.test.ts:16:1
+     14| }
+     15|
+     16| describe('api', () => {
+       | ^
+     17|   const expectApiError = (fn: () => unknown, code: ApiError['code']) =…
+     18|     try {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  packages/domain/test/domain.test.ts [ packages/domain/test/domain.test.ts ]
+ReferenceError: describe is not defined
+ ❯ packages/domain/test/domain.test.ts:16:1
+     14| const t2 = new Date('2026-01-03T00:00:00.000Z');
+     15|
+     16| describe('domain', () => {
+       | ^
+     17|   const expectDomainError = (fn: () => unknown, code: DomainError['cod…
+     18|     try {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+

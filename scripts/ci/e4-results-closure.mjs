@@ -12,13 +12,18 @@ const COMPARISON_PATH = join(E4_ROOT, 'comparison.md');
 const historicalAttempts = [
   {
     name: 'A02-crm-http-headless',
-    requiredFiles: ['outcome.md', 'postmortem.md', 'scorecard.json'],
+    requiredFiles: ['outcome.md', 'postmortem.md', 'scorecard.json', 'trace-summary.md'],
   },
 ];
 
 const allowedStatuses = new Set(['completed', 'partial', 'failure']);
 const allowedVerdicts = new Set(['success', 'partial', 'failure']);
 const allowedVerificationStates = new Set(['pass', 'fail', 'not-run']);
+const allowedAdmissibilityClasses = new Set([
+  'primary-comparison',
+  'supporting-context',
+  'historical-failure',
+]);
 const allowedComparativeVerdicts = new Set([
   'prompt-language-better',
   'codex-alone-better',
@@ -26,6 +31,8 @@ const allowedComparativeVerdicts = new Set([
   'mixed',
   'inconclusive',
 ]);
+const allowedFailureClasses = new Set(['none', 'runtime', 'config', 'product', 'evidence']);
+const allowedTraceCompleteness = new Set(['strong', 'mixed', 'weak']);
 const requiredScoreKeys = [
   'scopeCompletion',
   'verification',
@@ -95,6 +102,26 @@ function assertRelativeFile(pathValue, field, manifestPath) {
   assertFile(join(ROOT, pathValue), `${field} referenced by ${manifestPath}`);
 }
 
+function assertRelativeFileArray(value, field, manifestPath) {
+  if (!Array.isArray(value) || value.length === 0) {
+    fail(`manifest ${manifestPath} has invalid ${field}`);
+  }
+  for (const entry of value) {
+    assertString(entry, `${field} entry`, manifestPath);
+    const resolvedPath = join(ROOT, entry);
+    assertFile(resolvedPath, `${field} referenced by ${manifestPath}`);
+    if (statSync(resolvedPath).size <= 0) {
+      fail(`manifest ${manifestPath} references empty ${field} artifact ${entry}`);
+    }
+  }
+}
+
+function assertTraceArtifactMatch(traceArtifacts, manifestPath, requiredFragment) {
+  if (!traceArtifacts.some((artifactPath) => artifactPath.includes(requiredFragment))) {
+    fail(`manifest ${manifestPath} must reference trace artifact containing "${requiredFragment}"`);
+  }
+}
+
 function validateScorecard(scorecardPath, expectedRunId) {
   const scorecard = readJson(scorecardPath);
 
@@ -103,6 +130,7 @@ function validateScorecard(scorecardPath, expectedRunId) {
     'runId',
     'scope',
     'question',
+    'admissibility',
     'comparativeVerdict',
     'lanes',
   ]) {
@@ -120,6 +148,18 @@ function validateScorecard(scorecardPath, expectedRunId) {
   }
   assertString(scorecard.scope, 'scope', scorecardPath);
   assertString(scorecard.question, 'question', scorecardPath);
+  if (typeof scorecard.admissibility !== 'object' || scorecard.admissibility === null) {
+    fail(`scorecard ${scorecardPath} has invalid admissibility object`);
+  }
+  if (!allowedAdmissibilityClasses.has(scorecard.admissibility.class)) {
+    fail(
+      `scorecard ${scorecardPath} has unsupported admissibility class ${scorecard.admissibility.class}`,
+    );
+  }
+  if (typeof scorecard.admissibility.throughputClaimEligible !== 'boolean') {
+    fail(`scorecard ${scorecardPath} has invalid admissibility.throughputClaimEligible`);
+  }
+  assertString(scorecard.admissibility.reason, 'admissibility.reason', scorecardPath);
   if (!allowedComparativeVerdicts.has(scorecard.comparativeVerdict)) {
     fail(
       `scorecard ${scorecardPath} has unsupported comparativeVerdict ${scorecard.comparativeVerdict}`,
@@ -134,7 +174,15 @@ function validateScorecard(scorecardPath, expectedRunId) {
   }
 
   for (const lane of scorecard.lanes) {
-    for (const field of ['lane', 'candidate', 'scores', 'totals', 'notes']) {
+    for (const field of [
+      'lane',
+      'candidate',
+      'metrics',
+      'scores',
+      'totals',
+      'scoreEvidence',
+      'notes',
+    ]) {
       if (!(field in lane)) {
         fail(`scorecard ${scorecardPath} has lane missing ${field}`);
       }
@@ -142,17 +190,53 @@ function validateScorecard(scorecardPath, expectedRunId) {
     assertString(lane.lane, 'lane', scorecardPath);
     assertString(lane.candidate, 'candidate', scorecardPath);
     assertString(lane.notes, 'notes', scorecardPath);
+    if (typeof lane.metrics !== 'object' || lane.metrics === null) {
+      fail(`scorecard ${scorecardPath} has invalid metrics object`);
+    }
     if (typeof lane.scores !== 'object' || lane.scores === null) {
       fail(`scorecard ${scorecardPath} has invalid scores object`);
     }
     if (typeof lane.totals !== 'object' || lane.totals === null) {
       fail(`scorecard ${scorecardPath} has invalid totals object`);
     }
+    if (typeof lane.scoreEvidence !== 'object' || lane.scoreEvidence === null) {
+      fail(`scorecard ${scorecardPath} has invalid scoreEvidence object`);
+    }
+
+    for (const key of [
+      'timeToGreenSec',
+      'timeToFirstCodeSec',
+      'interventionCount',
+      'restartCount',
+      'runtimeFailureCount',
+    ]) {
+      const value = lane.metrics[key];
+      if (value !== null && (!Number.isFinite(value) || value < 0)) {
+        fail(`scorecard ${scorecardPath} has invalid metrics.${key}`);
+      }
+    }
+    if (!allowedFailureClasses.has(lane.metrics.failureClass)) {
+      fail(`scorecard ${scorecardPath} has invalid metrics.failureClass`);
+    }
+    if (typeof lane.metrics.throughputMetricsComplete !== 'boolean') {
+      fail(`scorecard ${scorecardPath} has invalid metrics.throughputMetricsComplete`);
+    }
+    if (!allowedTraceCompleteness.has(lane.metrics.traceCompleteness)) {
+      fail(`scorecard ${scorecardPath} has invalid metrics.traceCompleteness`);
+    }
 
     for (const key of requiredScoreKeys) {
       const value = lane.scores[key];
       if (!Number.isInteger(value) || value < 0 || value > 2) {
         fail(`scorecard ${scorecardPath} has invalid scores.${key}`);
+      }
+      const evidenceRefs = lane.scoreEvidence[key];
+      if (!Array.isArray(evidenceRefs) || evidenceRefs.length === 0) {
+        fail(`scorecard ${scorecardPath} is missing scoreEvidence.${key}`);
+      }
+      for (const refPath of evidenceRefs) {
+        assertString(refPath, `scoreEvidence.${key} entry`, scorecardPath);
+        assertFile(join(ROOT, refPath), `scoreEvidence.${key} referenced by ${scorecardPath}`);
       }
     }
 
@@ -177,6 +261,15 @@ function validateScorecard(scorecardPath, expectedRunId) {
     if (lane.totals.overall !== overall) {
       fail(`scorecard ${scorecardPath} has inconsistent totals.overall`);
     }
+
+    if (
+      scorecard.admissibility.throughputClaimEligible &&
+      !lane.metrics.throughputMetricsComplete
+    ) {
+      fail(
+        `scorecard ${scorecardPath} marks throughputClaimEligible but lane ${lane.lane} lacks complete throughput metrics`,
+      );
+    }
   }
 }
 
@@ -197,6 +290,8 @@ function validateManifest(runId, manifestPath) {
     'postmortemPath',
     'interventionsPath',
     'scorecardPath',
+    'traceSummaryPath',
+    'traceArtifacts',
     'comparisonPath',
   ]) {
     if (!(field in manifest)) {
@@ -253,7 +348,28 @@ function validateManifest(runId, manifestPath) {
   assertRelativeFile(manifest.postmortemPath, 'postmortemPath', manifestPath);
   assertRelativeFile(manifest.interventionsPath, 'interventionsPath', manifestPath);
   assertRelativeFile(manifest.scorecardPath, 'scorecardPath', manifestPath);
+  assertRelativeFile(manifest.traceSummaryPath, 'traceSummaryPath', manifestPath);
+  assertRelativeFileArray(manifest.traceArtifacts, 'traceArtifacts', manifestPath);
   assertRelativeFile(manifest.comparisonPath, 'comparisonPath', manifestPath);
+
+  if (manifest.candidate === 'codex-alone') {
+    for (const requiredFragment of [
+      'events.jsonl',
+      'stderr.log',
+      'last-message.txt',
+      'lint.log',
+      'typecheck.log',
+      'test.log',
+    ]) {
+      assertTraceArtifactMatch(manifest.traceArtifacts, manifestPath, requiredFragment);
+    }
+  }
+
+  if (manifest.candidate === 'prompt-language') {
+    for (const requiredFragment of ['session-state.json', 'audit.jsonl']) {
+      assertTraceArtifactMatch(manifest.traceArtifacts, manifestPath, requiredFragment);
+    }
+  }
 }
 
 assertDirectory(E4_ROOT, 'E4 results root');
@@ -289,6 +405,7 @@ for (const runId of runIds) {
   assertFile(join(runRoot, 'postmortem.md'), `${runId}/postmortem.md`);
   assertFile(join(runRoot, 'interventions.md'), `${runId}/interventions.md`);
   assertFile(join(runRoot, 'scorecard.json'), `${runId}/scorecard.json`);
+  assertFile(join(runRoot, 'trace-summary.md'), `${runId}/trace-summary.md`);
   validateScorecard(join(runRoot, 'scorecard.json'), runId);
 
   if (!comparisonText.includes(runId)) {

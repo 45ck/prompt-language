@@ -44,9 +44,10 @@ The runtime now includes:
 
 - the top-level redirected `ci-report.json` / `ci-stderr.log` are still not the authoritative
   evidence path for this run because the supervisory shell command had been interrupted earlier
-- the current closure policy is documented, but not yet mechanically enforced by a dedicated check
+- a same-condition direct Codex rerun still does not exist for this patched runtime, so A05 cannot
+  support a throughput-superiority claim by itself
 
 ## Follow-ups
 
-- add the final A05 closure docs to the repo and comparison summary
-- if stronger enforcement is needed, add a small closure checker for E4 run folders
+- run the next patched paired A/B batch under the frozen protocol in `next-protocol-2026-04-12.md`
+- capture start/end timestamps, intervention counts, and time-to-green for both lanes

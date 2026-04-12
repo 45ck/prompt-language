@@ -75,6 +75,7 @@
     "spell": "cspell --no-progress --config cspell.json \"src/**/*\" \"*.md\" \"docs/**/*\"",
     "docs:consistency": "node scripts/ci/docs-consistency.mjs",
     "results:e4": "node scripts/ci/e4-results-closure.mjs",
+    "e4:pair": "node scripts/experiments/run-e4-patched-pair.mjs",
     "knip": "knip --production",
     "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs --validate --output-type err src",
     "depgraph": "dependency-cruiser --config .dependency-cruiser.cjs --output-type mermaid src --output-to reports/dependency-graph.mmd",

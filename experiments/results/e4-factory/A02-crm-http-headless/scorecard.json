@@ -4,11 +4,26 @@
   "scope": "crm-http-headless",
   "question": "Can prompt-language complete the bounded CRM HTTP slice cleanly enough to compare against a baseline?",
   "baselineReference": null,
+  "admissibility": {
+    "class": "historical-failure",
+    "throughputClaimEligible": false,
+    "reason": "A02 targets a different HTTP-only slice and failed in runtime plumbing before a comparable product result existed."
+  },
   "comparativeVerdict": "inconclusive",
   "lanes": [
     {
       "lane": "codex-plus-prompt-language",
       "candidate": "prompt-language",
+      "metrics": {
+        "timeToGreenSec": null,
+        "timeToFirstCodeSec": null,
+        "interventionCount": null,
+        "restartCount": null,
+        "runtimeFailureCount": 1,
+        "failureClass": "runtime",
+        "throughputMetricsComplete": false,
+        "traceCompleteness": "mixed"
+      },
       "scores": {
         "scopeCompletion": 0,
         "verification": 0,
@@ -24,6 +39,32 @@
         "operationalQuality": 1,
         "researchStrength": 0,
         "overall": 1
+      },
+      "scoreEvidence": {
+        "scopeCompletion": [
+          "experiments/results/e4-factory/A02-crm-http-headless/outcome.md"
+        ],
+        "verification": [
+          "experiments/results/e4-factory/A02-crm-http-headless/outcome.md"
+        ],
+        "artifactCompleteness": [
+          "experiments/results/e4-factory/A02-crm-http-headless/outcome.md"
+        ],
+        "setupSimplicity": [
+          "experiments/results/e4-factory/A02-crm-http-headless/postmortem.md"
+        ],
+        "auditability": [
+          "experiments/results/e4-factory/A02-crm-http-headless/trace-summary.md"
+        ],
+        "experimentalControl": [
+          "experiments/results/e4-factory/A02-crm-http-headless/postmortem.md"
+        ],
+        "automationIntegrity": [
+          "experiments/results/e4-factory/A02-crm-http-headless/postmortem.md"
+        ],
+        "repeatabilityEvidence": [
+          "experiments/results/e4-factory/A02-crm-http-headless/postmortem.md"
+        ]
       },
       "notes": "The run failed before comparable implementation and verification. The evidence is usable enough to diagnose the runtime failure but not strong enough for a product comparison."
     }

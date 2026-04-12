@@ -25,6 +25,11 @@
   "postmortemPath": "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/postmortem.md",
   "interventionsPath": "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/interventions.md",
   "scorecardPath": "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/scorecard.json",
+  "traceSummaryPath": "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/trace-summary.md",
+  "traceArtifacts": [
+    "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/pl-state/session-state.json",
+    "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/pl-state/audit.jsonl"
+  ],
   "comparisonPath": "experiments/results/e4-factory/comparison.md",
   "comparisonUpdated": true,
   "followups": []

@@ -1,0 +1,30 @@
+{
+  "runId": "20260412-1407-a06-core-proof-paired-clean",
+  "attemptLabel": "A06",
+  "scenario": "s0-clean",
+  "order": "codex-first",
+  "model": "gpt-5.2",
+  "startedAt": "2026-04-12T04:07:34.639Z",
+  "gitCommit": "1e12046adf7152d0d41e1469c75e72731c737bbf",
+  "gitStatusShort": "M experiments/full-saas-factory/e4-codex-crm-factory/README.md\n M experiments/full-saas-factory/e4-codex-crm-factory/control/README.md\n M experiments/full-saas-factory/e4-codex-crm-factory/manifest.template.json\n M experiments/results/e4-factory/A02-crm-http-headless/scorecard.json\n M experiments/results/e4-factory/README.md\n M experiments/results/e4-factory/analysis-2026-04-12.md\n M experiments/results/e4-factory/comparison-2026-04-12.md\n M experiments/results/e4-factory/comparison.md\n M experiments/results/e4-factory/research-method.md\n M experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/manifest.json\n M experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/pl-multiagent/manifest.json\n M experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/scorecard.json\n M experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/pl-sequential/manifest.json\n M experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/scorecard.json\n M experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/pl-sequential/manifest.json\n M experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/postmortem.md\n M experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/scorecard.json\n M experiments/results/e4-factory/templates/scorecard.template.json\n M package.json\n M scripts/ci/e4-results-closure.mjs\n?? experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/\n?? experiments/results/e4-factory/A02-crm-http-headless/trace-summary.md\n?? experiments/results/e4-factory/next-protocol-2026-04-12.md\n?? experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/trace-summary.md\n?? experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/trace-summary.md\n?? experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/trace-summary.md\n?? experiments/results/e4-factory/templates/trace-summary.template.md\n?? scripts/experiments/",
+  "nodeVersion": "v22.22.0",
+  "npmVersion": "10.9.4",
+  "codexVersion": "codex-cli 0.120.0",
+  "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-sequential.flow",
+  "controlHash": "155b371519903659370b15b38a3eeb518265c53a766ebfa686e2eadca03bea21",
+  "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-core-proof.prompt.md",
+  "promptHash": "8bf69544769a8bad48a181ed24d69835c519f87f9bca5befd56623f8e6e4e26f",
+  "bootstrapSeed": {
+    "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+    "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+    "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+    "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+  },
+  "endedAt": "2026-04-12T04:42:57.748Z",
+  "comparativeVerdict": "mixed",
+  "admissibility": {
+    "class": "primary-comparison",
+    "throughputClaimEligible": false,
+    "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+  }
+}

@@ -68,9 +68,20 @@ Primary evidence:
 
 ## Current Interpretation
 
-The evidence now supports four claims:
+The evidence now supports five claims:
 
 1. `prompt-language` can successfully drive a bounded software-factory slice.
 2. Early failures were dominated by runner/setup issues, not by inability to specify the product.
 3. The Windows/headless runtime path needed explicit fixes around state-root resolution, run-node timeout behavior, and Codex process launch / cleanup.
 4. After those fixes, the sequential prompt-language lane also completed successfully.
+5. The first clean paired timed run now shows a raw timing read that favors direct Codex on time-to-green for the bounded CRM core, while prompt-language remains stronger on governed control and closure artifacts and reached first code earlier.
+
+Throughput note:
+
+- no current run is admissible for a stable throughput-superiority claim
+- `A06` is the first paired patched run with lane-appropriate artifact contracts, explicit timings,
+  and complete raw traces, but it is still a single fixed-order pair
+- provisional raw timing read: `codex-alone` reached green faster, while `prompt-language`
+  reached first code earlier
+- sample size is still `n=1`, so the repo still needs repeated clean pairs before claiming stable
+  superiority in either direction

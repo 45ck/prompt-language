@@ -24,6 +24,15 @@
   "postmortemPath": "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/postmortem.md",
   "interventionsPath": "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/interventions.md",
   "scorecardPath": "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/scorecard.json",
+  "traceSummaryPath": "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/trace-summary.md",
+  "traceArtifacts": [
+    "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/events.jsonl",
+    "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/stderr.log",
+    "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/last-message.txt",
+    "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/lint.log",
+    "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/typecheck.log",
+    "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/test.log"
+  ],
   "comparisonPath": "experiments/results/e4-factory/comparison.md",
   "comparisonUpdated": true,
   "followups": []

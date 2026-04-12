@@ -1,0 +1,10 @@
+{
+  "timestamp": "2026-04-12T04:42:57.505Z",
+  "platform": "win32",
+  "totalMemoryBytes": null,
+  "freeMemoryBytes": null,
+  "cpuLoadPercent": null,
+  "codexProcesses": [],
+  "ollamaProcesses": [],
+  "error": "At line:1 char:498\r\n+ ... | Select-Object Id, ProcessName, WS, CPU); [pscustomobject]@{;   time ...\r\n+                                                                  ~\r\nThe hash literal was incomplete.\r\nAt line:1 char:677\r\n+ ... pu;   codexProcesses = $codex;   ollamaProcesses = $ollama; } | Conve ...\r\n+                                                                 ~\r\nUnexpected token '}' in expression or statement.\r\nAt line:1 char:679\r\n+ ... ;   codexProcesses = $codex;   ollamaProcesses = $ollama; } | Convert ...\r\n+                                                                 ~\r\nAn empty pipe element is not allowed.\r\n    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException\r\n    + FullyQualifiedErrorId : IncompleteHashLiteral\r\n \r\n"
+}

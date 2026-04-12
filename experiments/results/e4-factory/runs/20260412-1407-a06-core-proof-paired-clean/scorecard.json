@@ -1,0 +1,138 @@
+{
+  "scoreVersion": "e4-v1",
+  "runId": "20260412-1407-a06-core-proof-paired-clean",
+  "scope": "bounded-crm-core",
+  "question": "For the same bounded CRM core slice and frozen bootstrap seed, how does prompt-language compare with direct Codex?",
+  "baselineReference": "codex-alone within this run",
+  "admissibility": {
+    "class": "primary-comparison",
+    "throughputClaimEligible": false,
+    "reason": "This is a clean paired timed run on the same common product contract, but throughput superiority remains provisional until order effects are counterbalanced or repeated clean pairs agree."
+  },
+  "comparativeVerdict": "mixed",
+  "lanes": [
+    {
+      "lane": "pl-sequential",
+      "candidate": "prompt-language",
+      "metrics": {
+        "timeToGreenSec": 1342.1,
+        "timeToFirstCodeSec": 150.11,
+        "interventionCount": 0,
+        "restartCount": 0,
+        "runtimeFailureCount": 0,
+        "failureClass": "none",
+        "throughputMetricsComplete": true,
+        "traceCompleteness": "strong"
+      },
+      "scores": {
+        "scopeCompletion": 2,
+        "verification": 2,
+        "artifactCompleteness": 2,
+        "setupSimplicity": 2,
+        "auditability": 2,
+        "experimentalControl": 2,
+        "automationIntegrity": 2,
+        "repeatabilityEvidence": 1
+      },
+      "totals": {
+        "productOutcome": 6,
+        "operationalQuality": 4,
+        "researchStrength": 5,
+        "overall": 15
+      },
+      "scoreEvidence": {
+        "scopeCompletion": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/outcome.md"
+        ],
+        "verification": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/pl-sequential/lint.log",
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/pl-sequential/typecheck.log",
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/pl-sequential/test.log"
+        ],
+        "artifactCompleteness": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/outcome.md"
+        ],
+        "setupSimplicity": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/postmortem.md"
+        ],
+        "auditability": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/trace-summary.md"
+        ],
+        "experimentalControl": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/trace-summary.md"
+        ],
+        "automationIntegrity": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/interventions.md"
+        ],
+        "repeatabilityEvidence": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/scorecard.json"
+        ]
+      },
+      "notes": "Prompt-language completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+    },
+    {
+      "lane": "codex-alone",
+      "candidate": "codex-alone",
+      "metrics": {
+        "timeToGreenSec": 770.94,
+        "timeToFirstCodeSec": 379.81,
+        "interventionCount": 0,
+        "restartCount": 0,
+        "runtimeFailureCount": 0,
+        "failureClass": "none",
+        "throughputMetricsComplete": true,
+        "traceCompleteness": "strong"
+      },
+      "scores": {
+        "scopeCompletion": 2,
+        "verification": 2,
+        "artifactCompleteness": 2,
+        "setupSimplicity": 2,
+        "auditability": 2,
+        "experimentalControl": 2,
+        "automationIntegrity": 2,
+        "repeatabilityEvidence": 1
+      },
+      "totals": {
+        "productOutcome": 6,
+        "operationalQuality": 4,
+        "researchStrength": 5,
+        "overall": 15
+      },
+      "scoreEvidence": {
+        "scopeCompletion": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/outcome.md"
+        ],
+        "verification": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/codex-alone/lint.log",
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/codex-alone/typecheck.log",
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/codex-alone/test.log"
+        ],
+        "artifactCompleteness": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/outcome.md"
+        ],
+        "setupSimplicity": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/postmortem.md"
+        ],
+        "auditability": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/trace-summary.md"
+        ],
+        "experimentalControl": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/trace-summary.md"
+        ],
+        "automationIntegrity": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/interventions.md"
+        ],
+        "repeatabilityEvidence": [
+          "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/scorecard.json"
+        ]
+      },
+      "notes": "Direct Codex completed the bounded CRM core and passed all verification commands under the frozen bootstrap seed."
+    }
+  ],
+  "comparativeSummary": "Both lanes closed the common product contract, but the paired run produced a mixed result: prompt-language reached first code earlier while direct Codex reached green faster.",
+  "nextExperimentFocus": [
+    "repeat the clean paired run to stabilize the throughput reading",
+    "add interruption and resume scenarios only after several clean pairs agree"
+  ]
+}

@@ -4,11 +4,26 @@
   "scope": "bounded-crm-core",
   "question": "For the same bounded CRM core slice and verification contract, how does prompt-language compare with direct Codex?",
   "baselineReference": "codex-alone within this run",
+  "admissibility": {
+    "class": "primary-comparison",
+    "throughputClaimEligible": false,
+    "reason": "A03 is the only paired A/B run, but lane-normalized throughput timings were not captured and the prompt-language lane required rerun-level intervention."
+  },
   "comparativeVerdict": "mixed",
   "lanes": [
     {
       "lane": "pl-multiagent",
       "candidate": "prompt-language",
+      "metrics": {
+        "timeToGreenSec": null,
+        "timeToFirstCodeSec": null,
+        "interventionCount": 3,
+        "restartCount": 1,
+        "runtimeFailureCount": 1,
+        "failureClass": "runtime",
+        "throughputMetricsComplete": false,
+        "traceCompleteness": "strong"
+      },
       "scores": {
         "scopeCompletion": 2,
         "verification": 2,
@@ -25,11 +40,47 @@
         "researchStrength": 2,
         "overall": 10
       },
+      "scoreEvidence": {
+        "scopeCompletion": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/outcome.md"
+        ],
+        "verification": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/pl-state/session-state.json"
+        ],
+        "artifactCompleteness": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/outcome.md"
+        ],
+        "setupSimplicity": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/interventions.md"
+        ],
+        "auditability": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/trace-summary.md"
+        ],
+        "experimentalControl": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/trace-summary.md"
+        ],
+        "automationIntegrity": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/interventions.md"
+        ],
+        "repeatabilityEvidence": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/trace-summary.md"
+        ]
+      },
       "notes": "Prompt-language completed and verified the bounded slice, but launcher/state-dir/runtime timeout issues weakened simplicity and required rerun-level intervention."
     },
     {
       "lane": "codex-alone",
       "candidate": "codex-alone",
+      "metrics": {
+        "timeToGreenSec": null,
+        "timeToFirstCodeSec": null,
+        "interventionCount": 0,
+        "restartCount": 0,
+        "runtimeFailureCount": 0,
+        "failureClass": "none",
+        "throughputMetricsComplete": false,
+        "traceCompleteness": "strong"
+      },
       "scores": {
         "scopeCompletion": 2,
         "verification": 2,
@@ -45,6 +96,34 @@
         "operationalQuality": 3,
         "researchStrength": 5,
         "overall": 14
+      },
+      "scoreEvidence": {
+        "scopeCompletion": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/outcome.md"
+        ],
+        "verification": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/lint.log",
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/typecheck.log",
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/codex-alone/test.log"
+        ],
+        "artifactCompleteness": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/outcome.md"
+        ],
+        "setupSimplicity": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/trace-summary.md"
+        ],
+        "auditability": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/trace-summary.md"
+        ],
+        "experimentalControl": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/trace-summary.md"
+        ],
+        "automationIntegrity": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/interventions.md"
+        ],
+        "repeatabilityEvidence": [
+          "experiments/results/e4-factory/runs/20260412-0916-a03-core-proof-prebootstrapped/outcome.md"
+        ]
       },
       "notes": "Direct Codex reached the same verified end state with fewer operational problems. Its evidence is weaker on persistent state and gate traceability than prompt-language."
     }

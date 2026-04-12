@@ -4,11 +4,26 @@
   "scope": "bounded-crm-core",
   "question": "After the runtime fixes, can the sequential prompt-language lane complete the bounded CRM core slice cleanly enough to serve as a stable benchmark?",
   "baselineReference": "codex-alone@20260412-0916-a03-core-proof-prebootstrapped",
+  "admissibility": {
+    "class": "supporting-context",
+    "throughputClaimEligible": false,
+    "reason": "A05 is a strong single-lane post-fix success, but there is no same-day direct Codex rerun with complete throughput metrics."
+  },
   "comparativeVerdict": "inconclusive",
   "lanes": [
     {
       "lane": "pl-sequential",
       "candidate": "prompt-language",
+      "metrics": {
+        "timeToGreenSec": null,
+        "timeToFirstCodeSec": null,
+        "interventionCount": 0,
+        "restartCount": 0,
+        "runtimeFailureCount": 0,
+        "failureClass": "none",
+        "throughputMetricsComplete": false,
+        "traceCompleteness": "mixed"
+      },
       "scores": {
         "scopeCompletion": 2,
         "verification": 2,
@@ -17,13 +32,40 @@
         "auditability": 2,
         "experimentalControl": 1,
         "automationIntegrity": 1,
-        "repeatabilityEvidence": 2
+        "repeatabilityEvidence": 1
       },
       "totals": {
         "productOutcome": 6,
         "operationalQuality": 3,
-        "researchStrength": 4,
-        "overall": 13
+        "researchStrength": 3,
+        "overall": 12
+      },
+      "scoreEvidence": {
+        "scopeCompletion": [
+          "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/outcome.md"
+        ],
+        "verification": [
+          "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/outcome.md",
+          "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/trace-summary.md"
+        ],
+        "artifactCompleteness": [
+          "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/outcome.md"
+        ],
+        "setupSimplicity": [
+          "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/postmortem.md"
+        ],
+        "auditability": [
+          "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/trace-summary.md"
+        ],
+        "experimentalControl": [
+          "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/trace-summary.md"
+        ],
+        "automationIntegrity": [
+          "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/interventions.md"
+        ],
+        "repeatabilityEvidence": [
+          "experiments/results/e4-factory/runs/20260412-1047-a05-core-proof-sequential-patched/trace-summary.md"
+        ]
       },
       "notes": "A05 completed and verified the bounded slice after runtime fixes. The remaining weakness is evidence-path cleanliness: persisted state is authoritative, while top-level redirected report files stayed empty."
     }

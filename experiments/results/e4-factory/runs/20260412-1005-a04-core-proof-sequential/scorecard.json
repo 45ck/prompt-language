@@ -4,11 +4,26 @@
   "scope": "bounded-crm-core",
   "question": "Can the sequential prompt-language lane complete the bounded CRM core slice cleanly on Windows/headless execution?",
   "baselineReference": "codex-alone@20260412-0916-a03-core-proof-prebootstrapped",
+  "admissibility": {
+    "class": "supporting-context",
+    "throughputClaimEligible": false,
+    "reason": "A04 is a single-lane pre-fix runtime failure reference, not a paired comparison."
+  },
   "comparativeVerdict": "inconclusive",
   "lanes": [
     {
       "lane": "pl-sequential",
       "candidate": "prompt-language",
+      "metrics": {
+        "timeToGreenSec": null,
+        "timeToFirstCodeSec": null,
+        "interventionCount": 2,
+        "restartCount": 1,
+        "runtimeFailureCount": 1,
+        "failureClass": "runtime",
+        "throughputMetricsComplete": false,
+        "traceCompleteness": "mixed"
+      },
       "scores": {
         "scopeCompletion": 1,
         "verification": 0,
@@ -24,6 +39,32 @@
         "operationalQuality": 2,
         "researchStrength": 0,
         "overall": 4
+      },
+      "scoreEvidence": {
+        "scopeCompletion": [
+          "experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/outcome.md"
+        ],
+        "verification": [
+          "experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/postmortem.md"
+        ],
+        "artifactCompleteness": [
+          "experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/outcome.md"
+        ],
+        "setupSimplicity": [
+          "experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/postmortem.md"
+        ],
+        "auditability": [
+          "experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/trace-summary.md"
+        ],
+        "experimentalControl": [
+          "experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/trace-summary.md"
+        ],
+        "automationIntegrity": [
+          "experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/postmortem.md"
+        ],
+        "repeatabilityEvidence": [
+          "experiments/results/e4-factory/runs/20260412-1005-a04-core-proof-sequential/postmortem.md"
+        ]
       },
       "notes": "The run produced most of the bounded slice but failed before clean completion. It remains useful as a pre-fix runtime failure reference, not as a decisive capability comparison."
     }

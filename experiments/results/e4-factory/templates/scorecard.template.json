@@ -4,11 +4,26 @@
   "scope": "<bounded-scope>",
   "question": "<research-question>",
   "baselineReference": null,
+  "admissibility": {
+    "class": "supporting-context",
+    "throughputClaimEligible": false,
+    "reason": "<why this run can or cannot support throughput claims>"
+  },
   "comparativeVerdict": "inconclusive",
   "lanes": [
     {
       "lane": "<lane-name>",
       "candidate": "<candidate-name>",
+      "metrics": {
+        "timeToGreenSec": null,
+        "timeToFirstCodeSec": null,
+        "interventionCount": null,
+        "restartCount": null,
+        "runtimeFailureCount": null,
+        "failureClass": "none",
+        "throughputMetricsComplete": false,
+        "traceCompleteness": "mixed"
+      },
       "scores": {
         "scopeCompletion": 0,
         "verification": 0,
@@ -24,6 +39,16 @@
         "operationalQuality": 0,
         "researchStrength": 0,
         "overall": 0
+      },
+      "scoreEvidence": {
+        "scopeCompletion": ["<repo-relative evidence path>"],
+        "verification": ["<repo-relative evidence path>"],
+        "artifactCompleteness": ["<repo-relative evidence path>"],
+        "setupSimplicity": ["<repo-relative evidence path>"],
+        "auditability": ["<repo-relative evidence path>"],
+        "experimentalControl": ["<repo-relative evidence path>"],
+        "automationIntegrity": ["<repo-relative evidence path>"],
+        "repeatabilityEvidence": ["<repo-relative evidence path>"]
       },
       "notes": "<why these scores were assigned>"
     }

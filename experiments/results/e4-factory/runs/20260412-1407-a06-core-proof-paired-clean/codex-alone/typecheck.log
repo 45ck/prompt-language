@@ -1,0 +1,16 @@
+command: npm run typecheck
+startedAt: 2026-04-12T04:20:32.700Z
+endedAt: 2026-04-12T04:20:33.950Z
+durationMs: 1250
+exitCode: 0
+timedOut: false
+
+stdout:
+
+> typecheck
+> tsc -p tsconfig.json --noEmit
+
+
+
+stderr:
+(no stderr)

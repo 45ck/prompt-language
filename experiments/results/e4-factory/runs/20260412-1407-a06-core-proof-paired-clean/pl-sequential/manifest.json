@@ -1,0 +1,70 @@
+{
+  "runId": "20260412-1407-a06-core-proof-paired-clean",
+  "lane": "pl-sequential",
+  "candidate": "prompt-language",
+  "model": "gpt-5.2",
+  "status": "completed",
+  "verdict": "success",
+  "workspaceRoot": "D:\\Visual Studio Projects\\prompt-language\\experiments\\full-saas-factory\\e4-codex-crm-factory\\workspaces\\runs\\20260412-1407-a06-core-proof-paired-clean\\pl-sequential",
+  "resultsRoot": "D:\\Visual Studio Projects\\prompt-language\\experiments\\results\\e4-factory\\runs\\20260412-1407-a06-core-proof-paired-clean\\pl-sequential",
+  "stateDir": "D:\\Visual Studio Projects\\prompt-language\\experiments\\results\\e4-factory\\runs\\20260412-1407-a06-core-proof-paired-clean\\pl-state",
+  "controlFile": "D:\\Visual Studio Projects\\prompt-language\\experiments\\full-saas-factory\\e4-codex-crm-factory\\control\\core-proof-sequential.flow",
+  "bootstrapSeed": {
+    "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+    "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+    "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+    "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+  },
+  "requiredArtifacts": [
+    "docs/prd.md",
+    "docs/acceptance-criteria.md",
+    "docs/architecture/domain-model.md",
+    "docs/api-contracts.md",
+    "specs/invariants.md",
+    "packages/domain/src/index.ts",
+    "packages/api/src/index.ts",
+    "README.md",
+    "docs/handover.md",
+    "docs/test-strategy.md",
+    ".factory/project.flow"
+  ],
+  "verificationCommands": [
+    "npm run lint",
+    "npm run typecheck",
+    "npm run test"
+  ],
+  "verification": {
+    "lint": "pass",
+    "typecheck": "pass",
+    "test": "pass"
+  },
+  "artifactsComplete": true,
+  "missingArtifacts": [],
+  "outcomePath": "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/outcome.md",
+  "postmortemPath": "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/postmortem.md",
+  "interventionsPath": "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/interventions.md",
+  "scorecardPath": "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/scorecard.json",
+  "traceSummaryPath": "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/trace-summary.md",
+  "traceArtifacts": [
+    "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/pl-state/session-state.json",
+    "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/pl-state/audit.jsonl",
+    "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/pl-sequential/lint.log",
+    "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/pl-sequential/typecheck.log",
+    "experiments/results/e4-factory/runs/20260412-1407-a06-core-proof-paired-clean/pl-sequential/test.log"
+  ],
+  "comparisonPath": "experiments/results/e4-factory/comparison.md",
+  "comparisonUpdated": true,
+  "metrics": {
+    "startedAt": "2026-04-12T04:20:35.404Z",
+    "endedAt": "2026-04-12T04:42:57.504Z",
+    "timeToGreenSec": 1342.1,
+    "timeToFirstCodeSec": 150.11,
+    "interventionCount": 0,
+    "restartCount": 0,
+    "runtimeFailureCount": 0,
+    "failureClass": "none",
+    "throughputMetricsComplete": true,
+    "traceCompleteness": "strong"
+  },
+  "followups": []
+}

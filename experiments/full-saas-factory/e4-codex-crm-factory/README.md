@@ -33,6 +33,9 @@ experiments/full-saas-factory/e4-codex-crm-factory/
     phase-1-discovery.flow
     phase-2-build.flow
     phase-3-release.flow
+  bootstrap/
+    core-proof-seed/
+    pl-overlay/
   codex-alone-baseline.md
   manifest.template.json
   workspace/
@@ -82,12 +85,19 @@ Freeze these before each run:
 - model
 - package manager
 - scope
+- bootstrap seed path and hash
 - workspace root
 - run id
 
 Store the evidence pack under:
 
 `experiments/results/e4-factory/<run-id>/`
+
+Use a lane-appropriate artifact contract:
+
+- both lanes must satisfy the same common product artifacts for A/B comparison
+- prompt-language may declare additional control artifacts on top of that shared contract
+- do not mark `codex-alone` partial just because it lacks prompt-language-only control files
 
 ## Attempt Closure
 
@@ -100,6 +110,12 @@ Close every attempt with:
 - `postmortem.md`
 - `interventions.md`
 - `scorecard.json`
+- `trace-summary.md`
+- lane traces kept in the results pack
+  `codex-alone`: `events.jsonl`, `stderr.log`, `last-message.txt`, and verification logs
+  `codex+prompt-language`: persisted `session-state.json`, `audit.jsonl`, and authoritative
+  verification evidence
+- the frozen bootstrap seed and any lane-specific overlays recorded in run metadata
 - comparison update in `experiments/results/e4-factory/comparison.md`
 
 This applies to success, partial success, failure, and aborts.

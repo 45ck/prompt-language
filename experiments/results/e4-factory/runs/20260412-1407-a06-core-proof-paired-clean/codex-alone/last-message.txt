@@ -1,0 +1,15 @@
+**Implemented**
+- Pure CRM domain model + invariants in `packages/domain/src/index.ts:1` (companies, contacts, opportunities + stage transitions, tasks, notes, dashboard summary).
+- In-memory API facade in `packages/api/src/index.ts:1` with deterministic `now()`/`generateId()` injection, `ApiError`, and referential integrity checks.
+
+**Tests**
+- Domain-focused tests in `packages/domain/test/domain.test.ts:1`.
+- API workflow + error-path tests in `packages/api/test/api.test.ts:1`.
+
+**Docs**
+- `docs/prd.md:1`, `docs/acceptance-criteria.md:1`, `docs/architecture/domain-model.md:1`, `docs/api-contracts.md:1`, `specs/invariants.md:1`, `docs/test-strategy.md:1`, `docs/handover.md:1`, plus updated `README.md:1`.
+
+**Verification**
+- `npm run lint` ✅
+- `npm run typecheck` ✅
+- `npm run test` ✅

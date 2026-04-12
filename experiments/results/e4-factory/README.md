@@ -26,14 +26,16 @@ attempt folders outside `runs/` must still be backfilled with at least `outcome.
 Each repeatable run must keep:
 
 - per-lane prompts or flow control references
-- raw stdout or JSONL event logs
-- stderr logs
-- exit code files
-- verification logs for lint, typecheck, and test
+- raw lane traces
+  Codex-alone lanes: `events.jsonl`, `stderr.log`, `last-message.txt`, `lint.log`,
+  `typecheck.log`, `test.log`
+  Prompt-language lanes: `session-state.json`, `audit.jsonl`, plus verification logs when they are
+  authoritative
 - `outcome.md`
 - `postmortem.md`
 - `interventions.md`
 - `scorecard.json`
+- `trace-summary.md`
 - a `manifest.json`
 
 If a prompt-language lane exists, keep its persisted `pl-state/` artifacts.
@@ -47,8 +49,11 @@ Before a run is considered closed:
 - `postmortem.md` exists
 - `interventions.md` exists
 - `scorecard.json` exists
+- `trace-summary.md` exists
 - verification status for `lint`, `typecheck`, and `test` is recorded
-- artifact completeness is recorded
+- artifact completeness is recorded against the lane's declared artifact contract
+- paired A/B comparisons use the same common product contract for both lanes, with lane-specific
+  control artifacts tracked separately
 - follow-up actions are recorded, or explicitly `none`
 - [comparison.md](./comparison.md) is updated
 - `npm run results:e4` passes
@@ -60,6 +65,7 @@ Use the canonical templates when adding new run docs:
 - [templates/outcome.template.md](./templates/outcome.template.md)
 - [templates/postmortem.template.md](./templates/postmortem.template.md)
 - [templates/scorecard.template.json](./templates/scorecard.template.json)
+- [templates/trace-summary.template.md](./templates/trace-summary.template.md)
 
 The canonical comparison summary lives at [comparison.md](./comparison.md).
 The scoring rubric and validity rules live at [research-method.md](./research-method.md).

@@ -1,0 +1,28 @@
+{
+  "timestamp": "2026-04-12T19:29:33.6362226+10:00",
+  "totalMemoryBytes": 17041260544,
+  "freeMemoryBytes": 7843295232,
+  "cpuLoadPercent": 17,
+  "codexProcesses": [
+    {
+      "Id": 10108,
+      "ProcessName": "codex",
+      "WS": 590774272,
+      "CPU": 2387.515625
+    },
+    {
+      "Id": 14640,
+      "ProcessName": "codex",
+      "WS": 398888960,
+      "CPU": 2218.8125
+    }
+  ],
+  "ollamaProcesses": [
+    {
+      "Id": 19548,
+      "ProcessName": "ollama",
+      "WS": 22863872,
+      "CPU": 236.46875
+    }
+  ]
+}

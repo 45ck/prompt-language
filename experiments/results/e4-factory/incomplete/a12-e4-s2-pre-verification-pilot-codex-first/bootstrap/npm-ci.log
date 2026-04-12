@@ -1,0 +1,19 @@
+command: npm ci
+startedAt: 2026-04-12T09:29:24.703Z
+endedAt: 2026-04-12T09:29:26.422Z
+durationMs: 1719
+exitCode: 0
+timedOut: false
+
+stdout:
+
+added 150 packages, and audited 151 packages in 2s
+
+53 packages are looking for funding
+  run `npm fund` for details
+
+found 0 vulnerabilities
+
+
+stderr:
+(no stderr)

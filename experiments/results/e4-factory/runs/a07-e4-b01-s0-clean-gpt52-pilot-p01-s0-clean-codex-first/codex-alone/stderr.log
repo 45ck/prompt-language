@@ -1,0 +1,36 @@
+2026-04-12T05:45:03.951504Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.7 seconds
+Output:
+
+> typecheck
+> tsc -p tsconfig.json --noEmit
+
+packages/api/src/index.ts(220,21): error TS7006: Parameter 'input' implicitly has an 'any' type.
+packages/api/src/index.ts(233,18): error TS7006: Parameter 'id' implicitly has an 'any' type.
+packages/api/src/index.ts(236,21): error TS7006: Parameter 'input' implicitly has an 'any' type.
+packages/api/src/index.ts(253,18): error TS7006: Parameter 'id' implicitly has an 'any' type.
+packages/api/src/index.ts(256,25): error TS7006: Parameter 'input' implicitly has an 'any' type.
+packages/api/src/index.ts(279,22): error TS7006: Parameter 'id' implicitly has an 'any' type.
+packages/api/src/index.ts(282,34): error TS7006: Parameter 'input' implicitly has an 'any' type.
+packages/api/src/index.ts(295,18): error TS7006: Parameter 'input' implicitly has an 'any' type.
+packages/api/src/index.ts(311,15): error TS7006: Parameter 'id' implicitly has an 'any' type.
+packages/api/src/index.ts(314,20): error TS7006: Parameter 'input' implicitly has an 'any' type.
+packages/api/src/index.ts(322,18): error TS7006: Parameter 'input' implicitly has an 'any' type.
+packages/api/src/index.ts(330,15): error TS7006: Parameter 'input' implicitly has an 'any' type.
+packages/api/src/index.ts(344,15): error TS7006: Parameter 'id' implicitly has an 'any' type.
+packages/api/src/index.ts(347,27): error TS7006: Parameter 'input' implicitly has an 'any' type.
+packages/domain/src/index.ts(429,7): error TS2322: Type 'Readonly<{ prospecting: readonly string[]; qualified: readonly string[]; proposal: readonly string[]; negotiation: readonly string[]; closed_won: readonly never[]; closed_lost: readonly never[]; }>' is not assignable to type 'Readonly<Record<"prospecting" | "qualified" | "proposal" | "negotiation" | "closed_won" | "closed_lost", readonly ("prospecting" | "qualified" | "proposal" | "negotiation" | "closed_won" | "closed_lost")[]>>'.
+  Types of property 'prospecting' are incompatible.
+    Type 'readonly string[]' is not assignable to type 'readonly ("prospecting" | "qualified" | "proposal" | "negotiation" | "closed_won" | "closed_lost")[]'.
+      Type 'string' is not assignable to type '"prospecting" | "qualified" | "proposal" | "negotiation" | "closed_won" | "closed_lost"'.
+
+2026-04-12T05:45:14.737203Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.4 seconds
+Output:
+[31;1mnl: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m [36;1mnl[0m -ba packages/domain/src/index.ts | sed -n '410,470p'[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m ~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mThe term 'nl' is not recognized as a name of a cmdlet, function, script file, or executable program.[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.[0m
+

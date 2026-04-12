@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "sessionId": "ca40b4a9-bd4c-461f-8d17-2545bb25e136",
+  "flowSpec": {
+    "goal": "produce a bounded CRM core slice through a sequential prompt-language run with a timing envelope comparable to the direct Codex baseline",
+    "nodes": [
+      {
+        "kind": "prompt",
+        "id": "n1",
+        "text": "Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.",
+        "position": {
+          "line": 4,
+          "column": 3,
+          "text": "  prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n2",
+        "text": "Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready.",
+        "position": {
+          "line": 5,
+          "column": 3,
+          "text": "  prompt: Write docs/prd.md and docs/acceptance-criteria.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small and implementation-ready."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n3",
+        "text": "Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services.",
+        "position": {
+          "line": 6,
+          "column": 3,
+          "text": "  prompt: Write docs/architecture/domain-model.md, docs/api-contracts.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n4",
+        "text": "Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free.",
+        "position": {
+          "line": 7,
+          "column": 3,
+          "text": "  prompt: Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n5",
+        "text": "Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package.",
+        "position": {
+          "line": 8,
+          "column": 3,
+          "text": "  prompt: Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n6",
+        "text": "Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented workspace, then use the local tooling until npm run lint, npm run typecheck, and npm run test all pass.",
+        "position": {
+          "line": 9,
+          "column": 3,
+          "text": "  prompt: Write README.md, docs/handover.md, and docs/test-strategy.md from the implemented workspace, then use the local tooling until npm run lint, npm run typecheck, and npm run test all pass."
+        }
+      }
+    ],
+    "completionGates": [
+      {
+        "predicate": "file_exists .factory/project.flow"
+      },
+      {
+        "predicate": "file_exists docs/prd.md"
+      },
+      {
+        "predicate": "file_exists docs/acceptance-criteria.md"
+      },
+      {
+        "predicate": "file_exists docs/architecture/domain-model.md"
+      },
+      {
+        "predicate": "file_exists docs/api-contracts.md"
+      },
+      {
+        "predicate": "file_exists specs/invariants.md"
+      },
+      {
+        "predicate": "file_exists packages/domain/src/index.ts"
+      },
+      {
+        "predicate": "file_exists packages/api/src/index.ts"
+      },
+      {
+        "predicate": "file_exists docs/handover.md"
+      },
+      {
+        "predicate": "file_exists docs/test-strategy.md"
+      }
+    ],
+    "defaults": {
+      "maxIterations": 5,
+      "maxAttempts": 3
+    },
+    "warnings": []
+  },
+  "currentNodePath": [
+    6
+  ],
+  "nodeProgress": {
+    "n1": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775972876160,
+      "completedAt": 1775972876161
+    },
+    "n2": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775973025753,
+      "completedAt": 1775973025753
+    },
+    "n3": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775973258220,
+      "completedAt": 1775973258220
+    },
+    "n4": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775973334580,
+      "completedAt": 1775973334580
+    },
+    "n5": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775973920118,
+      "completedAt": 1775973920118
+    },
+    "n6": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1775974334771,
+      "completedAt": 1775974334771
+    }
+  },
+  "variables": {},
+  "gateResults": {
+    "file_exists .factory/project.flow": true,
+    "file_exists docs/prd.md": true,
+    "file_exists docs/acceptance-criteria.md": true,
+    "file_exists docs/architecture/domain-model.md": true,
+    "file_exists docs/api-contracts.md": true,
+    "file_exists specs/invariants.md": true,
+    "file_exists packages/domain/src/index.ts": true,
+    "file_exists packages/api/src/index.ts": true,
+    "file_exists docs/handover.md": true,
+    "file_exists docs/test-strategy.md": true
+  },
+  "gateDiagnostics": {
+    "file_exists .factory/project.flow": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('.factory/project.flow') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455545
+    },
+    "file_exists docs/prd.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/prd.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455547
+    },
+    "file_exists docs/acceptance-criteria.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/acceptance-criteria.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455557
+    },
+    "file_exists docs/architecture/domain-model.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/architecture/domain-model.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455563
+    },
+    "file_exists docs/api-contracts.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/api-contracts.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455565
+    },
+    "file_exists specs/invariants.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('specs/invariants.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455572
+    },
+    "file_exists packages/domain/src/index.ts": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/domain/src/index.ts') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455574
+    },
+    "file_exists packages/api/src/index.ts": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/api/src/index.ts') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455582
+    },
+    "file_exists docs/handover.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/handover.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455584
+    },
+    "file_exists docs/test-strategy.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/test-strategy.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1775974455588
+    }
+  },
+  "status": "completed",
+  "warnings": [],
+  "spawnedChildren": {},
+  "raceChildren": {},
+  "flowSpecHash": "27d5e073",
+  "transitionSeq": 6,
+  "captureNonce": "af8a0b80ee16cd2777253a6d6ddb2be9",
+  "gateFailureCount": 0,
+  "_checksum": "6585e257886d1fb33ebecc05a08c8334e952ac4446055bb6713d7ca2083e5b9e"
+}

@@ -1,0 +1,37 @@
+{
+  "batchId": "e4-b01-s0-clean-gpt52-pilot",
+  "scenario": "s0-clean",
+  "model": "gpt-5.2",
+  "frozenCommit": "c59017ac10c887302298714374b8ea339fc5b09c",
+  "plannedPairs": 1,
+  "completedPairs": 1,
+  "eligiblePairs": 1,
+  "abortedPairs": [],
+  "orderCounts": {
+    "codex-first": 1,
+    "pl-first": 0
+  },
+  "claimEligibility": {
+    "throughputClaimEligible": false,
+    "reasons": [
+      "fewer than four completed clean paired runs",
+      "fewer than two codex-first pairs",
+      "fewer than two pl-first pairs"
+    ]
+  },
+  "lanes": {
+    "pl-sequential": {
+      "successCount": 1,
+      "successRate": 1,
+      "medianTimeToGreenSec": 1582.81,
+      "medianTimeToFirstRelevantWriteSec": 132.88
+    },
+    "codex-alone": {
+      "successCount": 1,
+      "successRate": 1,
+      "medianTimeToGreenSec": 856.94,
+      "medianTimeToFirstRelevantWriteSec": 293.67
+    }
+  },
+  "comparativeVerdict": "inconclusive"
+}

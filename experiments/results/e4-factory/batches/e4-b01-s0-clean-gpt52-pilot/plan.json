@@ -1,0 +1,33 @@
+{
+  "batchId": "e4-b01-s0-clean-gpt52-pilot",
+  "scenario": "s0-clean",
+  "model": "gpt-5.2",
+  "plannedPairs": 1,
+  "orders": [
+    {
+      "pairId": "p01",
+      "order": "codex-first"
+    }
+  ],
+  "gitCommit": "c59017ac10c887302298714374b8ea339fc5b09c",
+  "exclusionRules": [
+    "system-level contamination at the pre-run gate",
+    "harness crash before the pair runner writes a closed run pack",
+    "missing raw trace files required by results:e4"
+  ],
+  "primaryEndpoint": "median timeToGreenSec by lane across eligible clean pairs",
+  "decisionRules": {
+    "promptLanguageBetter": "success rate is not worse and median timeToGreenSec is at least 10% better",
+    "codexAloneBetter": "success rate is not worse and median timeToGreenSec is at least 10% better",
+    "parity": "success rates match and median timeToGreenSec is within 10%"
+  },
+  "processBaseline": {
+    "codexProcessIds": [
+      10108,
+      14640
+    ],
+    "ollamaProcessIds": [
+      19548
+    ]
+  }
+}

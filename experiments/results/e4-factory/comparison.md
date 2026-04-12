@@ -90,6 +90,26 @@ Primary evidence:
 - [A06 scorecard](./runs/20260412-1407-a06-core-proof-paired-clean/scorecard.json)
 - [A06 trace summary](./runs/20260412-1407-a06-core-proof-paired-clean/trace-summary.md)
 
+### A07: `a07-e4-b01-s0-clean-gpt52-pilot-p01-s0-clean-codex-first`
+
+- `prompt-language` sequential lane: success
+- direct Codex lane: success
+
+Meaning:
+
+- timing envelope: `paired-throughput-s0-external-verification`
+- batch: `e4-b01-s0-clean-gpt52-pilot` pair `p01`
+- comparative verdict: `mixed`
+- throughput admissible: false
+
+Primary evidence:
+
+- [A07 outcome](./runs/a07-e4-b01-s0-clean-gpt52-pilot-p01-s0-clean-codex-first/outcome.md)
+- [A07 postmortem](./runs/a07-e4-b01-s0-clean-gpt52-pilot-p01-s0-clean-codex-first/postmortem.md)
+- [A07 scorecard](./runs/a07-e4-b01-s0-clean-gpt52-pilot-p01-s0-clean-codex-first/scorecard.json)
+- [A07 trace summary](./runs/a07-e4-b01-s0-clean-gpt52-pilot-p01-s0-clean-codex-first/trace-summary.md)
+- [A07 batch summary](./batches/e4-b01-s0-clean-gpt52-pilot/summary.md)
+
 ## Current Interpretation
 
 The evidence now supports five claims:
@@ -100,7 +120,7 @@ The evidence now supports five claims:
 3. The Windows/headless runtime path needed explicit fixes around state-root resolution, run-node
    timeout behavior, and Codex process launch / cleanup.
 4. After those fixes, the sequential prompt-language lane also completed successfully.
-5. The first clean paired timed run (`A06`) gives an initial timing read that favors direct Codex on time-to-green for this bounded slice, while prompt-language still retains the stronger governed factory-control surface and earlier first relevant workspace write.
+5. The latest clean `S0` pilot pair (`A07`) under the tighter external-verification timing envelope still favors direct Codex on time-to-green for this bounded slice, while prompt-language retains the stronger governed factory-control surface and earlier first relevant workspace write.
 
 For the deeper comparative interpretation, see [research-method.md](./research-method.md) and
 [analysis-2026-04-12.md](./analysis-2026-04-12.md).
@@ -108,7 +128,6 @@ For the deeper comparative interpretation, see [research-method.md](./research-m
 Throughput note:
 
 - no current run is admissible for a stable throughput-superiority claim
-- `A06` is paired and timed on the same common product contract, but fixed-order execution and an older asymmetric timing envelope mean the throughput read is still provisional
-- provisional raw timing read: `codex-alone` reached green faster, while `prompt-language` reached the first relevant workspace write earlier
-- both lanes closed the same common product contract in this run
-- sample size is still `n=1`, so any superiority claim remains provisional until repeated clean pairs agree
+- `A07` is paired and timed on the same common product contract, but throughput claims stay provisional until the counterbalanced batch summary says otherwise
+- the current pilot batch is `n=1`, so it is useful for instrument validation and directional timing only
+- continue the planned counterbalanced batch before making a stronger throughput claim

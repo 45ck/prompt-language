@@ -45,10 +45,15 @@
       "specs/domain-glossary.md",
       "specs/invariants.md",
       "packages/domain/src/index.ts",
+      "packages/domain/test",
       "packages/api/src/index.ts",
+      "packages/api/test",
+      "qa-flows/crm-smoke.json",
+      "demo/crm.demo.yaml",
       "README.md",
       "docs/traceability.md",
       "docs/test-strategy.md",
+      "docs/verification-summary.md",
       "docs/product-summary.md",
       "docs/demo-script.md",
       "docs/release-notes.md",
@@ -86,7 +91,30 @@
     ],
     "laneSpecificArtifacts": [".factory/project.flow"]
   },
-  "verificationCommands": ["npm run lint", "npm run typecheck", "npm run test"],
+  "verificationCommandsByScenario": {
+    "throughput": ["npm run lint", "npm run typecheck", "npm run test"],
+    "factoryQuality": [
+      "build-if-present",
+      "noslop doctor",
+      "noslop check --tier=fast",
+      "npm run lint",
+      "npm run typecheck",
+      "npm run test"
+    ],
+    "fullFactoryFlow": [
+      "build-if-present",
+      "noslop doctor",
+      "noslop check --tier=fast",
+      "noslop check --tier=slow",
+      "npm run lint",
+      "npm run typecheck",
+      "npm run test",
+      "mqm validate --flow ./qa-flows/crm-smoke.json",
+      "mqm run --flow ./qa-flows/crm-smoke.json",
+      "demo-machine validate demo/crm.demo.yaml",
+      "demo-machine run demo/crm.demo.yaml --output artifacts/demo"
+    ]
+  },
   "verification": {
     "lint": "not-run",
     "typecheck": "not-run",

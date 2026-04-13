@@ -72,10 +72,15 @@ const FACTORY_QUALITY_REQUIRED_ARTIFACTS = [
   'specs/domain-glossary.md',
   'specs/invariants.md',
   'packages/domain/src/index.ts',
+  'packages/domain/test',
   'packages/api/src/index.ts',
+  'packages/api/test',
+  'qa-flows/crm-smoke.json',
+  'demo/crm.demo.yaml',
   'README.md',
   'docs/traceability.md',
   'docs/test-strategy.md',
+  'docs/verification-summary.md',
   'docs/product-summary.md',
   'docs/demo-script.md',
   'docs/release-notes.md',
@@ -89,7 +94,29 @@ const LANE_SPECIFIC_REQUIRED_ARTIFACTS = {
   'codex-alone': [],
 };
 
-const VERIFICATION_COMMANDS = ['npm run lint', 'npm run typecheck', 'npm run test'];
+const THROUGHPUT_VERIFICATION_STEPS = [
+  { id: 'lint', label: 'npm run lint', type: 'npm-script', script: 'lint' },
+  { id: 'typecheck', label: 'npm run typecheck', type: 'npm-script', script: 'typecheck' },
+  { id: 'test', label: 'npm run test', type: 'npm-script', script: 'test' },
+];
+const FACTORY_QUALITY_VERIFICATION_STEPS = [
+  { id: 'build', label: 'build-if-present', type: 'optional-build' },
+  {
+    id: 'noslop_doctor',
+    label: 'noslop doctor',
+    type: 'binary',
+    command: 'noslop',
+    args: ['doctor'],
+  },
+  {
+    id: 'noslop_fast',
+    label: 'noslop check --tier=fast',
+    type: 'binary',
+    command: 'noslop',
+    args: ['check', '--tier=fast'],
+  },
+  ...THROUGHPUT_VERIFICATION_STEPS,
+];
 const DEFAULT_MODEL = 'gpt-5.2';
 const DEFAULT_ORDER = 'codex-first';
 const DEFAULT_SCENARIO = 's0-clean';
@@ -580,15 +607,33 @@ async function buildArtifactInventory(workspaceRoot, requiredArtifacts) {
     }
 
     const fileStat = await stat(absolutePath);
+    if (fileStat.isDirectory()) {
+      inventory.push({
+        path: relativePath,
+        present: true,
+        type: 'directory',
+        sha256: await computeDirectoryHash(absolutePath),
+      });
+      continue;
+    }
+
     inventory.push({
       path: relativePath,
       present: true,
+      type: 'file',
       sizeBytes: fileStat.size,
       sha256: await computeFileHash(absolutePath),
     });
   }
 
   return inventory;
+}
+
+function verificationStepsForScenario(scenarioKind) {
+  if (scenarioKind === 'factory-quality') {
+    return FACTORY_QUALITY_VERIFICATION_STEPS;
+  }
+  return THROUGHPUT_VERIFICATION_STEPS;
 }
 
 function promptFileForScenario(scenario) {
@@ -686,7 +731,7 @@ function parseJson(text) {
 }
 
 function scoreProductOutcome(artifactsComplete, verificationPassCount) {
-  if (artifactsComplete && verificationPassCount === 3) {
+  if (artifactsComplete && verificationPassCount >= 3) {
     return { scopeCompletion: 2, verification: 2, artifactCompleteness: 2 };
   }
 
@@ -920,9 +965,36 @@ async function runVerificationCommand(scriptName, workspaceRoot, resultsRoot) {
   return result;
 }
 
+async function runVerificationStep(step, workspaceRoot, resultsRoot) {
+  if (step.type === 'npm-script') {
+    return await runVerificationCommand(step.script, workspaceRoot, resultsRoot);
+  }
+
+  let command;
+  let args;
+  if (step.type === 'optional-build') {
+    command = process.execPath;
+    args = [
+      '-e',
+      "const fs=require('node:fs'); const {spawnSync}=require('node:child_process'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); if(!pkg.scripts?.build){console.log('No build script declared; skipping build verification.'); process.exit(0)} const result=spawnSync('npm',['run','build'],{stdio:'inherit',shell:true}); process.exit(result.status ?? 1)",
+    ];
+  } else {
+    command = step.command;
+    args = step.args;
+  }
+
+  const result = runProcess(command, args, {
+    cwd: workspaceRoot,
+    timeoutMs: VERIFICATION_TIMEOUT_MS,
+  });
+  await writeText(join(resultsRoot, `${step.id}.log`), formatCommandLog(step.label, result));
+  return result;
+}
+
 function determineLaneClosure({ artifactsComplete, verification, anyArtifactsPresent }) {
   const passCount = totalVerificationPasses(verification);
-  if (artifactsComplete && passCount === 3) {
+  const checkCount = Object.keys(verification).length;
+  if (artifactsComplete && passCount === checkCount) {
     return { status: 'completed', verdict: 'success' };
   }
   if (anyArtifactsPresent || passCount > 0) {
@@ -1020,7 +1092,11 @@ function ordinalScore(value) {
 }
 
 function verificationPassRate(verification) {
-  return Object.values(verification).filter((value) => value === 'pass').length / 3;
+  const checkCount = Object.keys(verification).length;
+  if (checkCount === 0) {
+    return 0;
+  }
+  return Object.values(verification).filter((value) => value === 'pass').length / checkCount;
 }
 
 function factoryQualityMetricsFor(lane, admissibility) {
@@ -1178,8 +1254,9 @@ async function runPromptLanguageLane({
 }) {
   await ensureDir(laneResultsRoot);
   await ensureDir(stateDir);
-  const requiredArtifacts = requiredArtifactsForLane('pl-sequential', scenarioKind);
   const scenarioKind = scenarioConfig.kind;
+  const requiredArtifacts = requiredArtifactsForLane('pl-sequential', scenarioKind);
+  const verificationSteps = verificationStepsForScenario(scenarioKind);
   const checkpointPath =
     scenarioConfig.interruptCheckpoint === undefined
       ? undefined
@@ -1283,9 +1360,13 @@ async function runPromptLanguageLane({
     blockedPreflight = true;
   }
 
-  const lintResult = await runVerificationCommand('lint', workspaceRoot, laneResultsRoot);
-  const typecheckResult = await runVerificationCommand('typecheck', workspaceRoot, laneResultsRoot);
-  const testResult = await runVerificationCommand('test', workspaceRoot, laneResultsRoot);
+  const verificationEntries = [];
+  for (const step of verificationSteps) {
+    verificationEntries.push([
+      step.id,
+      verificationState(await runVerificationStep(step, workspaceRoot, laneResultsRoot)),
+    ]);
+  }
 
   endedAtMs = Date.now();
   const artifacts = await existingRequiredArtifacts(workspaceRoot, requiredArtifacts);
@@ -1294,11 +1375,7 @@ async function runPromptLanguageLane({
   const systemAfter = await captureSystemSnapshot();
   await writeJson(join(laneResultsRoot, 'system-after.json'), systemAfter);
 
-  const verification = {
-    lint: verificationState(lintResult),
-    typecheck: verificationState(typecheckResult),
-    test: verificationState(testResult),
-  };
+  const verification = Object.fromEntries(verificationEntries);
   const closure = determineLaneClosure({
     artifactsComplete: artifacts.complete,
     verification,
@@ -1314,16 +1391,12 @@ async function runPromptLanguageLane({
     repoRelative(join(stateDir, 'audit.jsonl')),
     repoRelative(join(laneResultsRoot, 'system-before.json')),
     repoRelative(join(laneResultsRoot, 'system-after.json')),
-    repoRelative(join(laneResultsRoot, 'lint.log')),
-    repoRelative(join(laneResultsRoot, 'typecheck.log')),
-    repoRelative(join(laneResultsRoot, 'test.log')),
+    ...verificationSteps.map((step) => repoRelative(join(laneResultsRoot, `${step.id}.log`))),
   ];
   const traceCompleteness = traceCompletenessFor([
     join(stateDir, 'session-state.json'),
     join(stateDir, 'audit.jsonl'),
-    join(laneResultsRoot, 'lint.log'),
-    join(laneResultsRoot, 'typecheck.log'),
-    join(laneResultsRoot, 'test.log'),
+    ...verificationSteps.map((step) => join(laneResultsRoot, `${step.id}.log`)),
   ]);
 
   const timeToFirstCodeSec = await detectFirstRelevantWrite(
@@ -1411,7 +1484,7 @@ async function runPromptLanguageLane({
     controlFile,
     bootstrapSeed: bootstrapInfo,
     requiredArtifacts,
-    verificationCommands: VERIFICATION_COMMANDS,
+    verificationCommands: verificationSteps.map((step) => step.label),
     verification,
     artifactsComplete: artifacts.complete,
     missingArtifacts: artifacts.missing,
@@ -1481,7 +1554,9 @@ async function runPromptLanguageLane({
       observations: [
         `preflight status: ${parseJson(preflight.stdout)?.status ?? 'unparsed'}`,
         `run status: ${runReport?.status ?? 'not-run'}`,
-        `verification: lint=${verification.lint}, typecheck=${verification.typecheck}, test=${verification.test}`,
+        `verification: ${Object.entries(verification)
+          .map(([key, value]) => `${key}=${value}`)
+          .join(', ')}`,
         ...(scenarioKind === 'recovery'
           ? [
               `interrupted: ${metrics.interrupted}`,
@@ -1507,8 +1582,9 @@ async function runCodexLane({
   scenarioConfig,
 }) {
   await ensureDir(laneResultsRoot);
-  const requiredArtifacts = requiredArtifactsForLane('codex-alone', scenarioKind);
   const scenarioKind = scenarioConfig.kind;
+  const requiredArtifacts = requiredArtifactsForLane('codex-alone', scenarioKind);
+  const verificationSteps = verificationStepsForScenario(scenarioKind);
   const checkpointPath =
     scenarioConfig.interruptCheckpoint === undefined
       ? undefined
@@ -1618,9 +1694,13 @@ async function runCodexLane({
     }
   }
 
-  const lintResult = await runVerificationCommand('lint', workspaceRoot, laneResultsRoot);
-  const typecheckResult = await runVerificationCommand('typecheck', workspaceRoot, laneResultsRoot);
-  const testResult = await runVerificationCommand('test', workspaceRoot, laneResultsRoot);
+  const verificationEntries = [];
+  for (const step of verificationSteps) {
+    verificationEntries.push([
+      step.id,
+      verificationState(await runVerificationStep(step, workspaceRoot, laneResultsRoot)),
+    ]);
+  }
 
   const endedAtMs = Date.now();
   const artifacts = await existingRequiredArtifacts(workspaceRoot, requiredArtifacts);
@@ -1629,11 +1709,7 @@ async function runCodexLane({
   const systemAfter = await captureSystemSnapshot();
   await writeJson(join(laneResultsRoot, 'system-after.json'), systemAfter);
 
-  const verification = {
-    lint: verificationState(lintResult),
-    typecheck: verificationState(typecheckResult),
-    test: verificationState(testResult),
-  };
+  const verification = Object.fromEntries(verificationEntries);
   const closure = determineLaneClosure({
     artifactsComplete: artifacts.complete,
     verification,
@@ -1647,17 +1723,13 @@ async function runCodexLane({
     repoRelative(lastMessagePath),
     repoRelative(join(laneResultsRoot, 'system-before.json')),
     repoRelative(join(laneResultsRoot, 'system-after.json')),
-    repoRelative(join(laneResultsRoot, 'lint.log')),
-    repoRelative(join(laneResultsRoot, 'typecheck.log')),
-    repoRelative(join(laneResultsRoot, 'test.log')),
+    ...verificationSteps.map((step) => repoRelative(join(laneResultsRoot, `${step.id}.log`))),
   ];
   const traceCompleteness = traceCompletenessFor([
     join(laneResultsRoot, 'events.jsonl'),
     join(laneResultsRoot, 'stderr.log'),
     lastMessagePath,
-    join(laneResultsRoot, 'lint.log'),
-    join(laneResultsRoot, 'typecheck.log'),
-    join(laneResultsRoot, 'test.log'),
+    ...verificationSteps.map((step) => join(laneResultsRoot, `${step.id}.log`)),
   ]);
 
   const timeToFirstCodeSec = await detectFirstRelevantWrite(
@@ -1744,7 +1816,7 @@ async function runCodexLane({
     promptFile: join(laneResultsRoot, 'prompt.md'),
     bootstrapSeed: bootstrapInfo,
     requiredArtifacts,
-    verificationCommands: VERIFICATION_COMMANDS,
+    verificationCommands: verificationSteps.map((step) => step.label),
     verification,
     artifactsComplete: artifacts.complete,
     missingArtifacts: artifacts.missing,
@@ -1808,7 +1880,9 @@ async function runCodexLane({
       ],
       observations: [
         `main exit code: ${mainRun.exitCode}`,
-        `verification: lint=${verification.lint}, typecheck=${verification.typecheck}, test=${verification.test}`,
+        `verification: ${Object.entries(verification)
+          .map(([key, value]) => `${key}=${value}`)
+          .join(', ')}`,
         `artifacts complete: ${artifacts.complete}`,
         ...(scenarioKind === 'recovery'
           ? [
@@ -2039,11 +2113,7 @@ function buildScoreEvidence(runId, lane) {
 
   return {
     scopeCompletion: [`${prefix}/outcome.md`],
-    verification: [
-      `${lanePrefix}/lint.log`,
-      `${lanePrefix}/typecheck.log`,
-      `${lanePrefix}/test.log`,
-    ],
+    verification: Object.keys(lane.verification).map((key) => `${lanePrefix}/${key}.log`),
     artifactCompleteness: [`${prefix}/outcome.md`],
     setupSimplicity: [`${prefix}/postmortem.md`],
     auditability: [`${prefix}/trace-summary.md`],

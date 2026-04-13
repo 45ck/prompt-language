@@ -49,6 +49,18 @@ For E4, "good software" means all of the following are true:
 - the verdict distinguishes:
   `product` failure, `runtime` failure, `config` failure, and `evidence` failure
 
+For the current `factory-quality` batch, the admissible local SDLC slice is:
+
+- requirements and architecture docs
+- implemented code plus generated focused tests
+- local QA and demo specifications
+- build-if-present, `noslop doctor`, `noslop check --tier=fast`, `lint`, `typecheck`, and `test`
+- release and handover documentation grounded in the actual workspace
+
+External execution of `mqm` and `demo-machine` remains part of the broader `fullFactoryFlow`
+contract, not the local `factory-quality` pilot, because those runners are not currently installed
+on this machine.
+
 ## Execution Order
 
 1. `prompt-language-ksih.1`
@@ -67,7 +79,7 @@ For E4, "good software" means all of the following are true:
 - `prompt-language-ksih.3`: reflected in `artifact-inventory.json` and artifact-contract scoring
 - `prompt-language-ksih.4`: reflected in stronger lane summaries, trace provenance, and run metadata
 - `prompt-language-ksih.5`: reflected in closure checks for provenance, lane summaries, artifact inventory, and structured closure artifacts
-- `prompt-language-ksih.6`: reflected in the dedicated `factory-quality` control surface, richer core-proof artifact contract, and stronger SDLC/default gate enforcement in the CRM factory libraries
+- `prompt-language-ksih.6`: reflected in the dedicated `factory-quality` control surface, richer core-proof artifact contract, stronger local SDLC/default gate enforcement, and explicit separation between local factory-quality evidence and external QA/demo execution
 - `prompt-language-ksih.7` to `.8`: not yet executed in this wave
 
 ## Current Read

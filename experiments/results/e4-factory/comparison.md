@@ -222,6 +222,12 @@ The historical and current claims split is:
 - `factory-quality`: not yet claim-eligible under the new trace-first rubric
 - `recovery`: not yet claim-eligible under repeated interrupted/resume pairs
 
+The active `factory-quality` pilot contract is a local SDLC slice, not the full externally
+executed QA/demo pipeline. It requires governed requirements/design artifacts, generated tests,
+QA/demo specification files, and local verification evidence (`build` when present, `noslop
+doctor`, `noslop check --tier=fast`, `lint`, `typecheck`, `test`). External `mqm` /
+`demo-machine` execution remains reserved for the broader `fullFactoryFlow` claim.
+
 The evidence also supports these historical claims:
 
 1. Early failures were dominated by runner/setup issues, not by inability to specify the software

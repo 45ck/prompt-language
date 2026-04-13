@@ -22,19 +22,25 @@ Build a bounded CRM core slice with this exact outcome contract:
 - add focused tests under `packages/domain/test/`
 - implement `packages/api/src/index.ts`
 - add focused tests under `packages/api/test/`
+- write `qa-flows/crm-smoke.json`
+- write `demo/crm.demo.yaml`
 - write `README.md`
 - write `docs/traceability.md`
 - write `docs/test-strategy.md`
+- write `docs/verification-summary.md`
 - write `docs/product-summary.md`
 - write `docs/demo-script.md`
 - write `docs/release-notes.md`
 - write `docs/known-issues.md`
 - write `docs/handover.md`
 - write `CHANGELOG.md`
+- run build-if-present: if `package.json` has a `build` script, run `npm run build` and fix failures; otherwise note that build was skipped
+- run `noslop doctor`
+- run `noslop check --tier=fast`
 - run `npm run lint`
 - run `npm run typecheck`
 - run `npm run test`
-- leave the workspace passing all three commands
+- leave the workspace passing build-if-present, `noslop doctor`, `noslop check --tier=fast`, `npm run lint`, `npm run typecheck`, and `npm run test`
 
 Scope only the following CRM core behaviors:
 
@@ -59,5 +65,7 @@ Factory-quality requirements:
 
 - keep the docs internally consistent with the implemented code and tests
 - make `docs/traceability.md` connect the scope, artifacts, and verification
+- make `docs/verification-summary.md` report the actual outcomes of build-if-present, `noslop doctor`, `noslop check --tier=fast`, `npm run lint`, `npm run typecheck`, and `npm run test`
 - make `docs/test-strategy.md` and `docs/known-issues.md` reflect the actual workspace state, not plans
 - make release-facing docs (`docs/product-summary.md`, `docs/demo-script.md`, `docs/release-notes.md`, `CHANGELOG.md`, `docs/handover.md`) grounded in what was actually built
+- keep `qa-flows/crm-smoke.json` and `demo/crm.demo.yaml` faithful to the implemented slice even if external executors are not available in the harness environment

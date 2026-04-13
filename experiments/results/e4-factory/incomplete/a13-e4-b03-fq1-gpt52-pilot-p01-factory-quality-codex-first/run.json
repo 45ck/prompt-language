@@ -1,0 +1,46 @@
+{
+  "protocolVersion": "e4-v2",
+  "runId": "a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first",
+  "attemptLabel": "A13",
+  "scenario": "factory-quality",
+  "order": "codex-first",
+  "model": "gpt-5.2",
+  "batch": {
+    "batchId": "e4-b03-fq1-gpt52-pilot",
+    "pairId": "p01-factory-quality-codex-first"
+  },
+  "startedAt": "2026-04-13T05:52:37.651Z",
+  "gitCommit": "9300cc197a8e56b025b0d71ed4e2cf3b7b63e74f",
+  "gitStatusShort": "",
+  "nodeVersion": "v22.22.0",
+  "npmVersion": "10.9.4",
+  "codexVersion": "codex-cli 0.120.0",
+  "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-factory-quality.flow",
+  "controlHash": "237adcec3946fe068cd633630951753d72e3d08a36cd30f5d210e4d5f2475c17",
+  "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-factory-quality.prompt.md",
+  "promptHash": "f4a5fcbecd4fbc754fa36c6407fb1524fc3211b2876e2e4f3936c539ffeefeea",
+  "bootstrapSeed": {
+    "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+    "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+    "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+    "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+  },
+  "timingEnvelope": "paired-factory-quality-s0-external-verification",
+  "evaluationModel": {
+    "claimType": "factory-quality",
+    "primaryEndpoint": "factoryQualityOverall",
+    "secondaryEndpoints": [
+      "traceCompleteness",
+      "artifactCompleteness",
+      "verificationPassRate",
+      "closureCompleteness",
+      "processConformance",
+      "interventionCount"
+    ]
+  },
+  "documentedHumanInterventions": 0,
+  "interventionObservationMode": "harness-parameterized",
+  "endedAt": "2026-04-13T05:52:49.117Z",
+  "fatalError": "Cannot access 'scenarioKind' before initialization",
+  "preservedAsIncomplete": true
+}

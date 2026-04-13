@@ -1,0 +1,13 @@
+command: noslop doctor
+startedAt: 2026-04-13T06:39:20.483Z
+endedAt: 2026-04-13T06:39:20.485Z
+durationMs: 2
+exitCode: 1
+timedOut: false
+error: spawnSync noslop ENOENT
+
+stdout:
+(no stdout)
+
+stderr:
+(no stderr)

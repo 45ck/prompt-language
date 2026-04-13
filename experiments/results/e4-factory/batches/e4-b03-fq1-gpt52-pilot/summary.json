@@ -1,0 +1,43 @@
+{
+  "batchId": "e4-b03-fq1-gpt52-pilot",
+  "scenario": "factory-quality",
+  "model": "gpt-5.2",
+  "frozenCommit": "9a468afb6ecbb7680e932ca4714bc4b8b75f6e60",
+  "plannedPairs": 2,
+  "completedPairs": 1,
+  "eligiblePairs": 0,
+  "abortedPairs": [],
+  "completedOrderCounts": {
+    "codex-first": 1,
+    "pl-first": 0
+  },
+  "eligibleOrderCounts": {
+    "codex-first": 0,
+    "pl-first": 0
+  },
+  "orderCounts": {
+    "codex-first": 1,
+    "pl-first": 0
+  },
+  "claimEligibility": {
+    "factoryQualityClaimEligible": false,
+    "reasons": [
+      "A13 is confounded by a shared Windows noslop verification-path failure."
+    ]
+  },
+  "lanes": {
+    "pl-sequential": {
+      "successCount": 0,
+      "successRate": 0,
+      "medianFactoryQualityOverall": null,
+      "medianVerificationPassRate": 0.6666666666666666
+    },
+    "codex-alone": {
+      "successCount": 0,
+      "successRate": 0,
+      "medianFactoryQualityOverall": null,
+      "medianVerificationPassRate": 0.6666666666666666
+    }
+  },
+  "comparativeVerdict": "inconclusive"
+}

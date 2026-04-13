@@ -1,0 +1,33 @@
+{
+  "batchId": "e4-b03-fq1-gpt52-pilot",
+  "scenario": "factory-quality",
+  "model": "gpt-5.2",
+  "plannedPairs": 2,
+  "orders": [
+    {
+      "pairId": "p01-factory-quality-codex-first",
+      "order": "codex-first"
+    },
+    {
+      "pairId": "p02-factory-quality-pl-first",
+      "order": "pl-first"
+    }
+  ],
+  "gitCommit": "9a468afb6ecbb7680e932ca4714bc4b8b75f6e60",
+  "exclusionRules": [
+    "system-level contamination at the pre-run gate",
+    "harness crash before the pair runner writes a closed run pack",
+    "shared Windows verification-path failures that affect both lanes before clean closure",
+    "missing raw trace files required by results:e4"
+  ],
+  "primaryEndpoint": "factoryQualityOverall by lane across eligible clean pairs",
+  "decisionRules": {
+    "promptLanguageBetter": "prompt-language wins only when the paired runs are trace-complete, claim-eligible, and show stronger factoryQualityOverall without a shared confound",
+    "codexAloneBetter": "codex-alone wins only when the paired runs are trace-complete, claim-eligible, and show stronger factoryQualityOverall without a shared confound",
+    "inconclusive": "use when shared confounds, missing counterbalance, or missing claim eligibility prevent a comparative claim"
+  },
+  "processBaseline": {
+    "codexProcessIds": [],
+    "ollamaProcessIds": []
+  }
+}

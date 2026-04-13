@@ -425,6 +425,19 @@ function runProcess(command, args, { cwd, input, timeoutMs, env } = {}) {
   };
 }
 
+function withWorkspacePath(workspaceRoot, env = {}) {
+  const localBin = join(workspaceRoot, 'node_modules', '.bin');
+  const pathKey = process.platform === 'win32' ? 'Path' : 'PATH';
+  const currentPath = env[pathKey] ?? process.env[pathKey] ?? process.env.PATH ?? '';
+  return {
+    ...env,
+    [pathKey]:
+      currentPath.length > 0
+        ? `${localBin}${process.platform === 'win32' ? ';' : ':'}${currentPath}`
+        : localBin,
+  };
+}
+
 async function killProcessTree(pid) {
   if (!Number.isInteger(pid) || pid <= 0) {
     return;
@@ -957,6 +970,7 @@ async function runVerificationCommand(scriptName, workspaceRoot, resultsRoot) {
   const result = runProcess(command, args, {
     cwd: workspaceRoot,
     timeoutMs: VERIFICATION_TIMEOUT_MS,
+    env: withWorkspacePath(workspaceRoot),
   });
   await writeText(
     join(resultsRoot, `${scriptName}.log`),
@@ -979,13 +993,25 @@ async function runVerificationStep(step, workspaceRoot, resultsRoot) {
       "const fs=require('node:fs'); const {spawnSync}=require('node:child_process'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); if(!pkg.scripts?.build){console.log('No build script declared; skipping build verification.'); process.exit(0)} const result=spawnSync('npm',['run','build'],{stdio:'inherit',shell:true}); process.exit(result.status ?? 1)",
     ];
   } else {
-    command = step.command;
-    args = step.args;
+    if (process.platform === 'win32') {
+      command = 'powershell';
+      args = [
+        '-NoProfile',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        `& ${step.command} ${step.args.map(quotePowerShellArg).join(' ')}`.trim(),
+      ];
+    } else {
+      command = step.command;
+      args = step.args;
+    }
   }
 
   const result = runProcess(command, args, {
     cwd: workspaceRoot,
     timeoutMs: VERIFICATION_TIMEOUT_MS,
+    env: withWorkspacePath(workspaceRoot),
   });
   await writeText(join(resultsRoot, `${step.id}.log`), formatCommandLog(step.label, result));
   return result;
@@ -1389,6 +1415,8 @@ async function runPromptLanguageLane({
   const traceArtifacts = [
     repoRelative(join(stateDir, 'session-state.json')),
     repoRelative(join(stateDir, 'audit.jsonl')),
+    repoRelative(join(laneResultsRoot, 'lane-summary.json')),
+    repoRelative(join(laneResultsRoot, 'artifact-inventory.json')),
     repoRelative(join(laneResultsRoot, 'system-before.json')),
     repoRelative(join(laneResultsRoot, 'system-after.json')),
     ...verificationSteps.map((step) => repoRelative(join(laneResultsRoot, `${step.id}.log`))),
@@ -1721,6 +1749,8 @@ async function runCodexLane({
     repoRelative(join(laneResultsRoot, 'events.jsonl')),
     repoRelative(join(laneResultsRoot, 'stderr.log')),
     repoRelative(lastMessagePath),
+    repoRelative(join(laneResultsRoot, 'lane-summary.json')),
+    repoRelative(join(laneResultsRoot, 'artifact-inventory.json')),
     repoRelative(join(laneResultsRoot, 'system-before.json')),
     repoRelative(join(laneResultsRoot, 'system-after.json')),
     ...verificationSteps.map((step) => repoRelative(join(laneResultsRoot, `${step.id}.log`))),

@@ -1,0 +1,479 @@
+[
+  {
+    "pairId": "p01-factory-quality-codex-first",
+    "order": "codex-first",
+    "runId": "a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first",
+    "attemptLabel": "A13",
+    "scorecard": {
+      "scoreVersion": "e4-v2",
+      "runId": "a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first",
+      "batch": {
+        "batchId": "e4-b03-fq1-gpt52-pilot",
+        "pairId": "p01-factory-quality-codex-first"
+      },
+      "scope": "bounded-crm-core",
+      "question": "For the same bounded CRM core slice and frozen bootstrap seed, which lane behaves more like a governed, inspectable, reusable software factory?",
+      "baselineReference": "codex-alone within this run",
+      "evaluationModel": {
+        "claimType": "factory-quality",
+        "primaryEndpoint": "factoryQualityOverall",
+        "secondaryEndpoints": [
+          "traceCompleteness",
+          "artifactCompleteness",
+          "verificationPassRate",
+          "closureCompleteness",
+          "processConformance",
+          "interventionCount"
+        ]
+      },
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "claimEligibility": {
+          "throughput": false,
+          "factoryQuality": false,
+          "recovery": false
+        },
+        "reason": "Both lanes completed the local factory-quality artifact contract, but the shared Windows noslop verification path was confounded, so this pilot is not comparative evidence."
+      },
+      "comparativeVerdict": "inconclusive",
+      "lanes": [
+        {
+          "lane": "pl-sequential",
+          "candidate": "prompt-language",
+          "status": "partial",
+          "verdict": "partial",
+          "metrics": {
+            "timeToGreenSec": null,
+            "timeToFirstCodeSec": 1107.67,
+            "timeToFirstRelevantWriteSec": 1107.67,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": false,
+            "traceCompleteness": "strong",
+            "closureCompleteness": "mixed",
+            "traceAuthority": "strong",
+            "artifactContractPass": true,
+            "processConformance": "mixed",
+            "recoveryQuality": "n/a",
+            "reuseReadiness": "mixed",
+            "verificationPassRate": 0.6666666666666666,
+            "resumeToGreenSec": null,
+            "interruptToGreenSec": null
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0,
+            "closureQuality": 1,
+            "processConformance": 1
+          },
+          "factoryQuality": {
+            "closureQuality": 1,
+            "processConformance": 1,
+            "traceAuthority": 2,
+            "reuseReadiness": 1,
+            "claimStrength": 1
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "factoryQuality": 6,
+            "overall": 19
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/build.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/noslop_doctor.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/noslop_fast.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/lint.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/typecheck.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/lane-summary.json",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b03-fq1-gpt52-pilot/summary.json"
+            ],
+            "closureQuality": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/lane-summary.json",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+            ],
+            "processConformance": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/lane-summary.json",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+            ]
+          },
+          "notes": "Prompt-language did not close the bounded CRM core cleanly under the frozen bootstrap seed."
+        },
+        {
+          "lane": "codex-alone",
+          "candidate": "codex-alone",
+          "status": "partial",
+          "verdict": "partial",
+          "metrics": {
+            "timeToGreenSec": null,
+            "timeToFirstCodeSec": 357.05,
+            "timeToFirstRelevantWriteSec": 357.05,
+            "interventionCount": 0,
+            "restartCount": 0,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": false,
+            "traceCompleteness": "strong",
+            "closureCompleteness": "mixed",
+            "traceAuthority": "strong",
+            "artifactContractPass": true,
+            "processConformance": "weak",
+            "recoveryQuality": "n/a",
+            "reuseReadiness": "weak",
+            "verificationPassRate": 0.6666666666666666,
+            "resumeToGreenSec": null,
+            "interruptToGreenSec": null
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 2,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 2,
+            "repeatabilityEvidence": 0,
+            "closureQuality": 1,
+            "processConformance": 0
+          },
+          "factoryQuality": {
+            "closureQuality": 1,
+            "processConformance": 0,
+            "traceAuthority": 2,
+            "reuseReadiness": 0,
+            "claimStrength": 1
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 4,
+            "researchStrength": 3,
+            "factoryQuality": 4,
+            "overall": 17
+          },
+          "scoreEvidence": {
+            "scopeCompletion": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+            ],
+            "verification": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/build.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/noslop_doctor.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/noslop_fast.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/lint.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/typecheck.log",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/test.log"
+            ],
+            "artifactCompleteness": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+            ],
+            "setupSimplicity": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/postmortem.md"
+            ],
+            "auditability": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+            ],
+            "experimentalControl": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/lane-summary.json",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+            ],
+            "automationIntegrity": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/interventions.md"
+            ],
+            "repeatabilityEvidence": [
+              "experiments/results/e4-factory/batches/e4-b03-fq1-gpt52-pilot/summary.json"
+            ],
+            "closureQuality": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/lane-summary.json",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+            ],
+            "processConformance": [
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/lane-summary.json",
+              "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+            ]
+          },
+          "notes": "Direct Codex did not close the bounded CRM core cleanly under the frozen bootstrap seed."
+        }
+      ],
+      "comparativeSummary": "Both lanes completed the local factory-quality artifact contract, but this pilot is inconclusive because the shared Windows noslop verification path prevented clean comparative closure.",
+      "nextExperimentFocus": [
+        "repeat the trace-first factory-quality pair in both orders",
+        "promote factory-superiority claims only after repeated trace-backed pairs agree"
+      ]
+    },
+    "runMetadata": {
+      "protocolVersion": "e4-v2",
+      "runId": "a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first",
+      "attemptLabel": "A13",
+      "scenario": "factory-quality",
+      "order": "codex-first",
+      "model": "gpt-5.2",
+      "batch": {
+        "batchId": "e4-b03-fq1-gpt52-pilot",
+        "pairId": "p01-factory-quality-codex-first"
+      },
+      "startedAt": "2026-04-13T06:09:26.535Z",
+      "gitCommit": "9a468afb6ecbb7680e932ca4714bc4b8b75f6e60",
+      "gitStatusShort": "",
+      "nodeVersion": "v22.22.0",
+      "npmVersion": "10.9.4",
+      "codexVersion": "codex-cli 0.120.0",
+      "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-factory-quality.flow",
+      "controlHash": "8e061c6d7339bf08f3119212d38a50bc10bc4dbd05816323da27891393898329",
+      "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-factory-quality.prompt.md",
+      "promptHash": "b47d4b6949e945b49e13605b53c421fc43203a505f17364e06b7d76a47dde724",
+      "bootstrapSeed": {
+        "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+        "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+        "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+        "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+      },
+      "timingEnvelope": "paired-factory-quality-s0-external-verification",
+      "evaluationModel": {
+        "claimType": "factory-quality",
+        "primaryEndpoint": "factoryQualityOverall",
+        "secondaryEndpoints": [
+          "traceCompleteness",
+          "artifactCompleteness",
+          "verificationPassRate",
+          "closureCompleteness",
+          "processConformance",
+          "interventionCount"
+        ]
+      },
+      "documentedHumanInterventions": 0,
+      "interventionObservationMode": "harness-parameterized",
+      "endedAt": "2026-04-13T07:10:19.333Z",
+      "comparativeVerdict": "inconclusive",
+      "admissibility": {
+        "class": "primary-comparison",
+        "throughputClaimEligible": false,
+        "claimEligibility": {
+          "throughput": false,
+          "factoryQuality": false,
+          "recovery": false
+        },
+        "reason": "Both lanes completed the local factory-quality artifact contract, but the shared Windows noslop verification path was confounded, so this pilot is not comparative evidence."
+      }
+    },
+    "validForBatchSummary": false,
+    "lanes": {
+      "pl-sequential": {
+        "lane": "pl-sequential",
+        "candidate": "prompt-language",
+        "status": "partial",
+        "verdict": "partial",
+        "metrics": {
+          "timeToGreenSec": null,
+          "timeToFirstCodeSec": 1107.67,
+          "timeToFirstRelevantWriteSec": 1107.67,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": false,
+          "traceCompleteness": "strong",
+          "closureCompleteness": "mixed",
+          "traceAuthority": "strong",
+          "artifactContractPass": true,
+          "processConformance": "mixed",
+          "recoveryQuality": "n/a",
+          "reuseReadiness": "mixed",
+          "verificationPassRate": 0.6666666666666666,
+          "resumeToGreenSec": null,
+          "interruptToGreenSec": null
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0,
+          "closureQuality": 1,
+          "processConformance": 1
+        },
+        "factoryQuality": {
+          "closureQuality": 1,
+          "processConformance": 1,
+          "traceAuthority": 2,
+          "reuseReadiness": 1,
+          "claimStrength": 1
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "factoryQuality": 6,
+          "overall": 19
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/build.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/noslop_doctor.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/noslop_fast.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/lint.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/typecheck.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/lane-summary.json",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b03-fq1-gpt52-pilot/summary.json"
+          ],
+          "closureQuality": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/lane-summary.json",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+          ],
+          "processConformance": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/pl-sequential/lane-summary.json",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+          ]
+        },
+        "notes": "Prompt-language did not close the bounded CRM core cleanly under the frozen bootstrap seed."
+      },
+      "codex-alone": {
+        "lane": "codex-alone",
+        "candidate": "codex-alone",
+        "status": "partial",
+        "verdict": "partial",
+        "metrics": {
+          "timeToGreenSec": null,
+          "timeToFirstCodeSec": 357.05,
+          "timeToFirstRelevantWriteSec": 357.05,
+          "interventionCount": 0,
+          "restartCount": 0,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": false,
+          "traceCompleteness": "strong",
+          "closureCompleteness": "mixed",
+          "traceAuthority": "strong",
+          "artifactContractPass": true,
+          "processConformance": "weak",
+          "recoveryQuality": "n/a",
+          "reuseReadiness": "weak",
+          "verificationPassRate": 0.6666666666666666,
+          "resumeToGreenSec": null,
+          "interruptToGreenSec": null
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 2,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 2,
+          "repeatabilityEvidence": 0,
+          "closureQuality": 1,
+          "processConformance": 0
+        },
+        "factoryQuality": {
+          "closureQuality": 1,
+          "processConformance": 0,
+          "traceAuthority": 2,
+          "reuseReadiness": 0,
+          "claimStrength": 1
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 4,
+          "researchStrength": 3,
+          "factoryQuality": 4,
+          "overall": 17
+        },
+        "scoreEvidence": {
+          "scopeCompletion": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+          ],
+          "verification": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/build.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/noslop_doctor.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/noslop_fast.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/lint.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/typecheck.log",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/test.log"
+          ],
+          "artifactCompleteness": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+          ],
+          "setupSimplicity": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/postmortem.md"
+          ],
+          "auditability": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+          ],
+          "experimentalControl": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/lane-summary.json",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+          ],
+          "automationIntegrity": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/interventions.md"
+          ],
+          "repeatabilityEvidence": [
+            "experiments/results/e4-factory/batches/e4-b03-fq1-gpt52-pilot/summary.json"
+          ],
+          "closureQuality": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/lane-summary.json",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md"
+          ],
+          "processConformance": [
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone/lane-summary.json",
+            "experiments/results/e4-factory/runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md"
+          ]
+        },
+        "notes": "Direct Codex did not close the bounded CRM core cleanly under the frozen bootstrap seed."
+      }
+    }
+  }
+]

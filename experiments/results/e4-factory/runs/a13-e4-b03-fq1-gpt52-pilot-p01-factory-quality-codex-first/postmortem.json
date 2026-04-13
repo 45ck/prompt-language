@@ -1,0 +1,12 @@
+{
+  "runId": "a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first",
+  "scenario": "factory-quality",
+  "primaryClaimType": "factory-quality",
+  "confounds": [
+    "shared_windows_noslop_verification_path"
+  ],
+  "admissibilityReason": "Both lanes completed the local factory-quality artifact contract, but the shared Windows noslop verification path was confounded, so this pilot is not comparative evidence.",
+  "promptLanguageFailureClass": "none",
+  "codexAloneFailureClass": "none",
+  "rerunRecommended": true
+}

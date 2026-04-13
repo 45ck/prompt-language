@@ -206,6 +206,31 @@ Primary evidence:
 - [B02 batch summary](./batches/e4-b02-s0-clean-gpt52-primary/summary.md)
 - [B02 batch data](./batches/e4-b02-s0-clean-gpt52-primary/summary.json)
 
+### A13: `a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first`
+
+- `prompt-language` sequential lane: partial
+- direct Codex lane: partial
+
+Meaning:
+
+- timing envelope: `paired-factory-quality-s0-external-verification`
+- scenario kind: `factory-quality`
+- primary claim type: `factory-quality`
+- primary endpoint: `factoryQualityOverall`
+- batch: `e4-b03-fq1-gpt52-pilot` pair `p01-factory-quality-codex-first`
+- comparative verdict: `inconclusive`
+- factory-quality claim eligible: false
+- prompt-language process conformance: mixed
+- codex-alone process conformance: weak
+- shared confound: Windows `noslop` verification path failed for both lanes
+
+Primary evidence:
+
+- [A13 outcome](./runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md)
+- [A13 postmortem](./runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/postmortem.md)
+- [A13 scorecard](./runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/scorecard.json)
+- [A13 trace summary](./runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md)
+
 ## Current Interpretation
 
 The evidence now supports these current hypothesis-status reads:

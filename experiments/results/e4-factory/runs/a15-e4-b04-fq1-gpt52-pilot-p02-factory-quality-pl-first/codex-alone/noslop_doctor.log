@@ -1,0 +1,27 @@
+command: noslop doctor
+startedAt: 2026-04-13T09:15:39.901Z
+endedAt: 2026-04-13T09:15:40.182Z
+durationMs: 281
+exitCode: 0
+timedOut: false
+
+stdout:
+noslop doctor → D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\codex-alone
+  ✓ git core.hooksPath
+    core.hooksPath = .githooks
+  ✓ .githooks directory
+    .githooks/ present
+  ✓ .github/workflows/quality.yml
+    quality.yml present
+  ✓ .claude/settings.json
+    .claude/settings.json present
+  ✓ .claude/hooks directory
+    .claude/hooks/ present
+  ✓ AGENTS.md
+    AGENTS.md present
+
+All checks passed — repo is protected.
+
+
+stderr:
+(no stderr)

@@ -1,0 +1,13 @@
+command: build-if-present
+startedAt: 2026-04-13T08:55:13.794Z
+endedAt: 2026-04-13T08:55:13.843Z
+durationMs: 49
+exitCode: 0
+timedOut: false
+
+stdout:
+No build script declared; skipping build verification.
+
+
+stderr:
+(no stderr)

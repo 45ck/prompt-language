@@ -1,0 +1,217 @@
+[
+  {
+    "path": "docs/prd.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3732,
+    "sha256": "3f935066621fb029edcebbed751320ba5b12c7cf8af2ccb6931b18f4db313391"
+  },
+  {
+    "path": "docs/acceptance-criteria.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 5389,
+    "sha256": "fc1a1e2a88de35a02904b39bf64178d23bcca6cca89de68c91df79d609047125"
+  },
+  {
+    "path": "docs/personas.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1484,
+    "sha256": "4f7881a55657344fe7884bd93b4bb5b3f16e5c049ece328640608e82d7a5937b"
+  },
+  {
+    "path": "docs/use-cases.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3473,
+    "sha256": "7ae441ea3487ef50ce0f08193f27dac05d456ed52067907a8bedcea4d3a1b771"
+  },
+  {
+    "path": "docs/non-functional-requirements.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1821,
+    "sha256": "4788537641a7fe9b5deef1c3c5afc3e56983d39e80ccfad0dd17d10c1c1fd520"
+  },
+  {
+    "path": "docs/architecture/context.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1453,
+    "sha256": "ea4ec774e69dcf3c9839a45f8c88ba5aa21aad57f2cd2247f187caaa3942d319"
+  },
+  {
+    "path": "docs/architecture/container.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1334,
+    "sha256": "06086bef9e5061f5e68fdd0154de386034957a7aeb21f9d3c2d0ca2c0e7a3e1c"
+  },
+  {
+    "path": "docs/architecture/domain-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2010,
+    "sha256": "f8706f511e0b0bd4e67dad195f2d7b64eae13607f4fc7210e40eaed0e554b83a"
+  },
+  {
+    "path": "docs/architecture/sequence-contact-to-opportunity.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1554,
+    "sha256": "74d8841768db9fb5aa022e27fc77b533dcd94ae088d6e872a7da151940706c30"
+  },
+  {
+    "path": "docs/api-contracts.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3094,
+    "sha256": "6e0097ec820c87acae52319d6722c7df4c3ffb2f989a49b33c12df0a0993766a"
+  },
+  {
+    "path": "docs/data-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1217,
+    "sha256": "2526e26ffddff83aa1653b81bf953bcf21930c1cc3d6aec329eb5bc14c40ed4f"
+  },
+  {
+    "path": "docs/adr-001-stack.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 759,
+    "sha256": "7b2c9188a3ec63f189b24445ed9b60cda2dc1b099f1f7ece30d088547f0c4b4a"
+  },
+  {
+    "path": "specs/domain-glossary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1062,
+    "sha256": "2cf779598a09826c0e8f21f47f98941f28c74004d015caea509bfc5ade901a20"
+  },
+  {
+    "path": "specs/invariants.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2775,
+    "sha256": "88d52db0c077ff5c3bd198b03900a3f7646900744f8880fc6abbaef2980de1f3"
+  },
+  {
+    "path": "packages/domain/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 8926,
+    "sha256": "2c20bbda514150f48e41eb0f8072079f4e1134a47d6996acb6dee0d7f3051f16"
+  },
+  {
+    "path": "packages/domain/test",
+    "present": true,
+    "type": "directory",
+    "sha256": "759cc989ab09f6c7bab5c811fad1c3bef3528ba3a26e6e628fb83bdb1c82231d"
+  },
+  {
+    "path": "packages/api/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 4753,
+    "sha256": "d869f95271c50af6215bed50d5532c0f109bcace53086ba77e490ba7e680ee94"
+  },
+  {
+    "path": "packages/api/test",
+    "present": true,
+    "type": "directory",
+    "sha256": "dfb258ee2a7cffb214a9d0889b324bf1050e0e5f44cc5b2e3674e3751428d021"
+  },
+  {
+    "path": "qa-flows/crm-smoke.json",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 5548,
+    "sha256": "425414f63bc6b5428ceccb2afcc4e2e2fd49a58012eaed801e7436e37b166500"
+  },
+  {
+    "path": "demo/crm.demo.yaml",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2659,
+    "sha256": "f68fc8c52e0db1cd382777052eef01f3d94717d8bb5b07f6663f10b89ffca527"
+  },
+  {
+    "path": "README.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1087,
+    "sha256": "94df8d8674c92443d75dfaac32ea7d10f07d4d4135fb4b634508577d57d8f47f"
+  },
+  {
+    "path": "docs/traceability.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3117,
+    "sha256": "fadc99344193830d25ab9e1e62e80b7a7c18cdbc97461fe38ed049dc25ea9c8c"
+  },
+  {
+    "path": "docs/test-strategy.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 956,
+    "sha256": "547c0887ef1d6f36d2f310ec9d4b796c75af37cf25f3d7d83b3e1efc043a037d"
+  },
+  {
+    "path": "docs/verification-summary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 899,
+    "sha256": "bb88225b351ad280f84364a5fd0d84d6348e2d81f99490ad093ef5e3cda10cc8"
+  },
+  {
+    "path": "docs/product-summary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1606,
+    "sha256": "70021c8f88b89c63160bb773b865663a97d42ab0972d8264e91ecd0dafba2896"
+  },
+  {
+    "path": "docs/demo-script.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 926,
+    "sha256": "c87586b90b4736414cad9dcc7e3f8ab73e43dd7b8bfcbe8ffe93c657bd26799e"
+  },
+  {
+    "path": "docs/release-notes.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 565,
+    "sha256": "6e49cd2e94b57dce5feccff9c725f2c5e4db583e48b35b173f21486efd68086d"
+  },
+  {
+    "path": "docs/known-issues.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 649,
+    "sha256": "1b29ebf7cefeac39a542326b4a61250fa25e2bb209b567028b1753f28170b8c2"
+  },
+  {
+    "path": "docs/handover.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 680,
+    "sha256": "2ad2dbef60e90996911982ea70f6be2bd50a47f51c9ad73e75936483c78107d4"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 497,
+    "sha256": "f6ba6e84f3d72f3877cb15cbfb37c4f693f441d6ac85de5196d6bf60af6b022d"
+  },
+  {
+    "path": ".factory/project.flow",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1858,
+    "sha256": "155b371519903659370b15b38a3eeb518265c53a766ebfa686e2eadca03bea21"
+  }
+]

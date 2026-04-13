@@ -1,0 +1,16 @@
+Implemented a bounded CRM core slice (pure TS domain + in-memory API) and added the full required doc/artifact set.
+
+- Domain logic: `packages/domain/src/index.ts`
+- In-memory services: `packages/api/src/index.ts`
+- Tests: `packages/domain/test/domain-core.test.ts`, `packages/api/test/api-core.test.ts`
+- Docs + traceability + demo/QA flows: `docs/*`, `demo/crm.demo.yaml`, `qa-flows/crm-smoke.json`, `CHANGELOG.md`, `README.md`
+
+Verification (workspace left passing):
+- Build: skipped (no `build` script in `package.json`)
+- `noslop doctor`: PASS
+- `noslop check --tier=fast`: PASS
+- `npm run lint`: PASS
+- `npm run typecheck`: PASS
+- `npm run test`: PASS
+
+Recorded outcomes: `docs/verification-summary.md`.

@@ -1,0 +1,409 @@
+2026-04-13T07:37:26.295164Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.3 seconds
+Output:
+
+> test
+> vitest run
+
+
+ RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first/codex-alone
+
+ ❯ packages/domain/test/domain-core.test.ts (3 tests | 2 failed) 10ms
+     × validates contact email and normalizes names 7ms
+     × enforces opportunity stage transitions 1ms
+ ❯ packages/api/test/api-core.test.ts (2 tests | 1 failed) 10ms
+     × rejects invalid references 6ms
+
+ Test Files  2 failed (2)
+      Tests  3 failed | 2 passed (5)
+   Start at  17:37:25
+   Duration  254ms (transform 87ms, setup 0ms, import 119ms, tests 20ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/api/test/api-core.test.ts > api (in-memory) > rejects invalid references
+AssertionError: expected [Function] to match object { name: 'ApiError', …(1) }
+
+- Expected:
+{
+  "code": "INVALID_REFERENCE",
+  "name": "ApiError",
+}
+
++ Received:
+[Function anonymous]
+
+ ❯ packages/api/test/api-core.test.ts:85:7
+     83|         companyId: 'cmp_999' as never,
+     84|       }),
+     85|     ).toMatchObject({ name: 'ApiError', code: 'INVALID_REFERENCE' });
+       |       ^
+     86|   });
+     87| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  packages/domain/test/domain-core.test.ts > domain > validates contact email and normalizes names
+AssertionError: expected [Function] to match object { name: 'DomainError', …(1) }
+
+- Expected:
+{
+  "code": "VALIDATION_ERROR",
+  "name": "DomainError",
+}
+
++ Received:
+[Function anonymous]
+
+ ❯ packages/domain/test/domain-core.test.ts:34:7
+     32|         createdAtMs: now,
+     33|       }),
+     34|     ).toMatchObject({ name: 'DomainError', code: 'VALIDATION_ERROR' });
+       |       ^
+     35|
+     36|     const contact = createContact({
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  packages/domain/test/domain-core.test.ts > domain > enforces opportunity stage transitions
+AssertionError: expected [Function] to match object { name: 'DomainError', …(1) }
+
+- Expected:
+{
+  "code": "INVALID_STAGE_TRANSITION",
+  "name": "DomainError",
+}
+
++ Received:
+[Function anonymous]
+
+ ❯ packages/domain/test/domain-core.test.ts:65:7
+     63|     expect(() =>
+     64|       transitionOpportunityStage({ opportunity, to: 'proposal', atMs: …
+     65|     ).toMatchObject({ name: 'DomainError', code: 'INVALID_STAGE_TRANSI…
+       |       ^
+     66|
+     67|     const qualified = transitionOpportunityStage({ opportunity, to: 'q…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+2026-04-13T07:37:58.885727Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.5 seconds
+Output:
+noslop doctor → D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone
+  ✓ git core.hooksPath
+    core.hooksPath = .githooks
+  ✗ .githooks directory
+    .githooks/ missing — run: noslop init
+  ✗ .github/workflows/quality.yml
+    quality.yml missing — run: noslop init
+  ✗ .claude/settings.json
+    .claude/settings.json missing — run: noslop init
+  ✗ .claude/hooks directory
+    .claude/hooks/ missing — run: noslop init
+  ✗ AGENTS.md
+    AGENTS.md missing — run: noslop init
+
+5 check(s) failed — run: noslop init
+
+2026-04-13T07:38:35.918002Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.5 seconds
+Output:
+noslop check --tier=fast
+  ✗ format-check
+'prettier' is not recognized as an internal or external command,
+operable program or batch file.
+  ✗ lint
+Oops! Something went wrong! :(
+
+ESLint: 9.11.1
+
+TypeError: Key "rules": Key "@typescript-eslint/no-explicit-any": Could not find plugin "@typescript-eslint".
+    at throwRuleNotFoundError (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\config\rule-validator.js:66:11)
+    at RuleValidator.validate (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\config\rule-validator.js:147:17)
+    at new Config (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\config\config.js:240:27)
+    at [finalizeConfig] (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\config\flat-config-array.js:216:16)
+    at FlatConfigArray.getConfigWithStatus (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\node_modules\@eslint\config-array\dist\cjs\index.cjs:1102:55)
+    at FlatConfigArray.getConfig (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\node_modules\@eslint\config-array\dist\cjs\index.cjs:1120:15)
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\eslint\eslint-helpers.js:346:56
+    at Array.reduce (<anonymous>)
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\eslint\eslint-helpers.js:333:36
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\eslint\eslint-helpers.js:296:32
+  ✗ spell
+'cspell' is not recognized as an internal or external command,
+operable program or batch file.
+
+Some gates failed.
+
+2026-04-13T07:40:40.988511Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.5 seconds
+Output:
+noslop check --tier=fast
+  ✗ format-check
+'prettier' is not recognized as an internal or external command,
+operable program or batch file.
+  ✗ lint
+Oops! Something went wrong! :(
+
+ESLint: 9.11.1
+
+TypeError: Error while loading rule '@typescript-eslint/no-unused-expressions': Cannot read properties of undefined (reading 'allowShortCircuit')
+Occurred while linting D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone\eslint.config.mjs
+    at Object.create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone\node_modules\eslint\lib\rules\no-unused-expressions.js:85:5)
+    at create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone\node_modules\@typescript-eslint\eslint-plugin\dist\rules\no-unused-expressions.js:30:32)
+    at Object.create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone\node_modules\@typescript-eslint\utils\dist\eslint-utils\RuleCreator.js:39:20)
+    at createRuleListeners (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:943:21)
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1068:84
+    at Array.forEach (<anonymous>)
+    at runRules (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:999:34)
+    at #flatVerifyWithoutProcessors (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1914:31)
+    at Linter._verifyWithFlatConfigArrayAndWithoutProcessors (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1995:49)
+    at Linter._verifyWithFlatConfigArray (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:2084:21)
+  ✗ spell
+'cspell' is not recognized as an internal or external command,
+operable program or batch file.
+
+Some gates failed.
+
+2026-04-13T07:40:48.202167Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.3 seconds
+Output:
+
+> format:check
+> prettier --check .
+
+Checking formatting...
+[[33mwarn[39m] CHANGELOG.md
+[[33mwarn[39m] cspell.json
+[[33mwarn[39m] demo/crm.demo.yaml
+[[33mwarn[39m] docs/acceptance-criteria.md
+[[33mwarn[39m] docs/adr-001-stack.md
+[[33mwarn[39m] docs/api-contracts.md
+[[33mwarn[39m] docs/architecture/container.md
+[[33mwarn[39m] docs/architecture/context.md
+[[33mwarn[39m] docs/architecture/domain-model.md
+[[33mwarn[39m] docs/architecture/sequence-contact-to-opportunity.md
+[[33mwarn[39m] docs/data-model.md
+[[33mwarn[39m] docs/demo-script.md
+[[33mwarn[39m] docs/handover.md
+[[33mwarn[39m] docs/known-issues.md
+[[33mwarn[39m] docs/non-functional-requirements.md
+[[33mwarn[39m] docs/personas.md
+[[33mwarn[39m] docs/prd.md
+[[33mwarn[39m] docs/product-summary.md
+[[33mwarn[39m] docs/release-notes.md
+[[33mwarn[39m] docs/test-strategy.md
+[[33mwarn[39m] docs/traceability.md
+[[33mwarn[39m] docs/use-cases.md
+[[33mwarn[39m] docs/verification-summary.md
+[[33mwarn[39m] packages/api/src/index.ts
+[[33mwarn[39m] packages/domain/src/index.ts
+[[33mwarn[39m] qa-flows/crm-smoke.json
+[[33mwarn[39m] specs/domain-glossary.md
+[[33mwarn[39m] specs/invariants.md
+[[33mwarn[39m] Code style issues found in 28 files. Run Prettier with --write to fix.
+
+2026-04-13T07:41:23.633535Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.4 seconds
+Output:
+noslop check --tier=fast
+  ✗ format-check
+'prettier' is not recognized as an internal or external command,
+operable program or batch file.
+  ✗ lint
+Oops! Something went wrong! :(
+
+ESLint: 9.11.1
+
+TypeError: Error while loading rule '@typescript-eslint/no-unused-expressions': Cannot read properties of undefined (reading 'allowShortCircuit')
+Occurred while linting D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone\eslint.config.mjs
+    at Object.create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone\node_modules\eslint\lib\rules\no-unused-expressions.js:85:5)
+    at create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone\node_modules\@typescript-eslint\eslint-plugin\dist\rules\no-unused-expressions.js:30:32)
+    at Object.create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone\node_modules\@typescript-eslint\utils\dist\eslint-utils\RuleCreator.js:39:20)
+    at createRuleListeners (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:943:21)
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1068:84
+    at Array.forEach (<anonymous>)
+    at runRules (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:999:34)
+    at #flatVerifyWithoutProcessors (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1914:31)
+    at Linter._verifyWithFlatConfigArrayAndWithoutProcessors (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1995:49)
+    at Linter._verifyWithFlatConfigArray (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:2084:21)
+  ✗ spell
+'cspell' is not recognized as an internal or external command,
+operable program or batch file.
+
+Some gates failed.
+
+2026-04-13T07:42:27.559250Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.8 seconds
+Output:
+
+> spell
+> cspell --no-progress --config cspell.json "**/*"
+
+AGENTS.md:3:29 - Unknown word (noslop)
+AGENTS.md:8:1 - Unknown word (noslop)
+AGENTS.md:14:1 - Unknown word (noslop)
+AGENTS.md:21:93 - Unknown word (noslop)
+AGENTS.md:27:1 - Unknown word (noslop)
+docs/prd.md:32:4 - Unknown word (noslop)
+docs/prd.md:32:24 - Unknown word (noslop)
+docs/verification-summary.md:11:4 - Unknown word (noslop)
+docs/verification-summary.md:12:4 - Unknown word (noslop)
+README.md:17:1 - Unknown word (Prereq)
+scripts/check:2:3 - Unknown word (noslop)
+scripts/check:3:9 - Unknown word (NOSLOP)
+scripts/check:19:1 - Unknown word (esac)
+scripts/fmt:2:3 - Unknown word (noslop)
+scripts/lint:2:3 - Unknown word (noslop)
+scripts/test:2:3 - Unknown word (noslop)
+CSpell: Files checked: 46, Issues found: 16 in 8 files.
+
+2026-04-13T07:42:36.764766Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone\cspell.json:
+  "version": "0.2",
+  "language": "en",
+  "words": [],
+  "ignorePaths": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+2026-04-13T07:43:14.263127Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.5 seconds
+Output:
+noslop check --tier=fast
+  ✓ format-check
+  ✓ lint
+  ✗ spell
+CSpell: Files checked: 0, Issues found: 0 in 0 files.
+
+Some gates failed.
+
+2026-04-13T07:43:40.423501Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.4 seconds
+Output:
+noslop check --tier=fast
+  ✓ format-check
+  ✓ lint
+  ✗ spell
+CSpell: Files checked: 0, Issues found: 0 in 0 files.
+
+Some gates failed.
+
+2026-04-13T07:48:14.124968Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 5.6 seconds
+Total output lines: 94
+Output:
+warning: could not open directory 'node_modules/@eslint-community/eslint-utils/node_modules/eslint-visitor-keys/dist/': Filename too long
+warning: could not open directory 'node_modules/@eslint-community/eslint-utils/node_modules/eslint-visitor-keys/lib/': Filename too long
+warning: could not open directory 'node_modules/@typescript-eslint/eslint-plugin/dist/rules/naming-convention-utils/': Filename too long
+warning: could not open directory 'node_modules/@typescript-eslint/eslint-plugin/dist/rules/prefer-optional-chain-utils/': Filename too long
+warning: could not open directory 'node_modules/@typescript-eslint/typescript-estree/node_modules/balanced-match/dist/': Filename too long
+warning: could not open directory 'node_modules/@typescript-eslint/typescript-estree/node_modules/brace-expansion/': Filename too long
+warning: could not open directory 'node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch/dist/commonjs/': Filename too long
+warning: could not open directory 'node_modules/@typescript-eslint/typescript-estree/node_modules/minimatch/dist/esm/': Filename too long
+warning: could not open directory 'node_modules/@typescript-eslint/visitor-keys/node_modules/eslint-visitor-keys/dist/': Filename too long
+warning: could not open directory 'node_modules/@typescript-eslint/visitor-keys/node_modules/eslint-visitor-keys/lib/': Filename too long
+warning: in the working copy of '.claude/settings.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.github/workflows/guardrails.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.github/workflows/quality.yml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of '.prettierignore', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'AGENTS.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'CHANGELOG.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'cspell.cmd', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'cspell.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'demo/crm.demo.yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/acceptance-criteria.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/adr-001-stack.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/api-contracts.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/architecture/container.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/architecture/context.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/architecture/domain-model.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/architecture/sequence-contact-to-opportunity.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/data-model.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/demo-script.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/handover.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/known-issues.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/non-functional-requirements.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/personas.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/prd.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/product-summary.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/release-notes.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/test-strategy.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/traceability.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/use-cases.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'docs/verification-summary.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'eslint.cmd', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'eslint.config.mjs', LF will be replaced by CRL…1444 chars truncated…LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/esparse', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/esparse.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/esvalidate', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/esvalidate.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/js-yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/js-yaml.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/nanoid', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/nanoid.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/node-which', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/node-which.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/prettier', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/prettier.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/rolldown', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/rolldown.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/semver', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/semver.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/tsc', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/tsc.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/tsserver', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/tsserver.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/vite', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/vite.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/vitest', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/vitest.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/why-is-node-running', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/why-is-node-running.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/yaml', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.bin/yaml.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/.package-lock.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/@cspell/cspell-bundled-dicts/LICENSE', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/@cspell/cspell-bundled-dicts/README.md', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/@cspell/cspell-bundled-dicts/cspell-default.config.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/@cspell/cspell-bundled-dicts/cspell-default.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/@cspell/cspell-bundled-dicts/dist/cspell-bundled.mjs', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/@cspell/cspell-bundled-dicts/package.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/@cspell/cspell-json-reporter/LICENSE', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'node_modules/@cspell/cspell-json-reporter/README.md', LF will be replaced by CRLF the next time Git touches it
+error: open("node_modules/@cspell/cspell-json-reporter/dist/esm/CSpellJSONReporterOutput.d.ts"): Filename too long
+error: unable to index file 'node_modules/@cspell/cspell-json-reporter/dist/esm/CSpellJSONReporterOutput.d.ts'
+fatal: adding files failed
+
+2026-04-13T07:48:44.685217Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.5 seconds
+Output:
+noslop check --tier=fast
+  ✓ format-check
+  ✓ lint
+  ✗ spell
+CSpell: Files checked: 0, Issues found: 0 in 0 files.
+
+Some gates failed.
+
+2026-04-13T07:50:15.224832Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.4 seconds
+Output:
+noslop doctor → D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first\codex-alone
+  ✗ git core.hooksPath
+    core.hooksPath not set — run: noslop init
+  ✓ .githooks directory
+    .githooks/ present
+  ✓ .github/workflows/quality.yml
+    quality.yml present
+  ✓ .claude/settings.json
+    .claude/settings.json present
+  ✓ .claude/hooks directory
+    .claude/hooks/ present
+  ✓ AGENTS.md
+    AGENTS.md present
+
+1 check(s) failed — run: noslop init
+

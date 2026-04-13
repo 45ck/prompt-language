@@ -1,0 +1,8 @@
+- Implemented CRM core slice (pure TS domain + in-memory service): `packages/domain/src/index.ts`, `packages/api/src/index.ts`
+- Added focused tests: `packages/domain/test/*.test.ts`, `packages/api/test/*.test.ts`
+- Wrote required docs/specs/QA/demo artifacts (incl. traceability + verification): `docs/*`, `specs/*`, `qa-flows/crm-smoke.json`, `demo/crm.demo.yaml`, `CHANGELOG.md`, updated `README.md`
+- Ran `noslop init` to satisfy `noslop doctor` requirements (created `.githooks/`, `.github/workflows/*`, `.claude/*`, `AGENTS.md`, etc.)
+
+- build-if-present: **skipped** (no `build` script in `package.json`)
+- Passing gates: `noslop doctor`, `noslop check --tier=fast`, `npm run lint`, `npm run typecheck`, `npm run test`
+- Recorded results in `docs/verification-summary.md`

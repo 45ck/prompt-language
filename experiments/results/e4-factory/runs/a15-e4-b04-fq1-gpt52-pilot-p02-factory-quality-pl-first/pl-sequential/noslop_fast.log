@@ -1,0 +1,18 @@
+command: noslop check --tier=fast
+startedAt: 2026-04-13T08:55:14.134Z
+endedAt: 2026-04-13T08:55:18.496Z
+durationMs: 4362
+exitCode: 0
+timedOut: false
+
+stdout:
+noslop check --tier=fast
+  ✓ format-check
+  ✓ lint
+  ✓ spell
+
+All gates passed.
+
+
+stderr:
+(no stderr)

@@ -1,0 +1,41 @@
+{
+  "batchId": "e4-b04-fq1-gpt52-pilot",
+  "scenario": "factory-quality",
+  "model": "gpt-5.2",
+  "frozenCommit": "a9b38d6d82726cd803e26362d37f03f10bed1dce",
+  "plannedPairs": 2,
+  "completedPairs": 2,
+  "eligiblePairs": 2,
+  "abortedPairs": [],
+  "completedOrderCounts": {
+    "codex-first": 1,
+    "pl-first": 1
+  },
+  "eligibleOrderCounts": {
+    "codex-first": 1,
+    "pl-first": 1
+  },
+  "orderCounts": {
+    "codex-first": 1,
+    "pl-first": 1
+  },
+  "claimEligibility": {
+    "factoryQualityClaimEligible": true,
+    "reasons": []
+  },
+  "lanes": {
+    "pl-sequential": {
+      "successCount": 2,
+      "successRate": 1,
+      "medianFactoryQualityOverall": 10,
+      "medianVerificationPassRate": 1
+    },
+    "codex-alone": {
+      "successCount": 2,
+      "successRate": 1,
+      "medianFactoryQualityOverall": 8,
+      "medianVerificationPassRate": 1
+    }
+  },
+  "comparativeVerdict": "prompt-language-better"
+}

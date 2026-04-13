@@ -1,0 +1,9 @@
+{
+  "runId": "a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first",
+  "scenario": "factory-quality",
+  "documentedHumanInterventions": 0,
+  "promptLanguageRestartCount": 0,
+  "codexAloneRestartCount": 0,
+  "promptLanguageInterrupted": false,
+  "codexAloneInterrupted": false
+}

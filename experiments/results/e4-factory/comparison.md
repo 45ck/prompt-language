@@ -206,6 +206,26 @@ Primary evidence:
 - [B02 batch summary](./batches/e4-b02-s0-clean-gpt52-primary/summary.md)
 - [B02 batch data](./batches/e4-b02-s0-clean-gpt52-primary/summary.json)
 
+### B04 Batch: `e4-b04-fq1-gpt52-pilot`
+
+- completed clean pairs: `2`
+- eligible pairs: `2`
+- order balance: `1` `codex-first`, `1` `pl-first`
+- factory-quality claim eligible: `true`
+- batch verdict: `prompt-language-better`
+
+Meaning:
+
+- this is the first claim-eligible factory-quality pilot batch under the trace-first rubric
+- both lanes succeeded in both pairs and passed the shared verification contract
+- prompt-language scored stronger on `processConformance` and `reuseReadiness` in both pairs
+- the factory-quality advantage held in both order strata
+
+Primary evidence:
+
+- [B04 batch summary](./batches/e4-b04-fq1-gpt52-pilot/summary.md)
+- [B04 batch data](./batches/e4-b04-fq1-gpt52-pilot/summary.json)
+
 ### A13: `a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first`
 
 - `prompt-language` sequential lane: partial
@@ -231,6 +251,54 @@ Primary evidence:
 - [A13 scorecard](./runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/scorecard.json)
 - [A13 trace summary](./runs/a13-e4-b03-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md)
 
+### A14: `a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first`
+
+- `prompt-language` sequential lane: success
+- direct Codex lane: success
+
+Meaning:
+
+- timing envelope: `paired-factory-quality-s0-external-verification`
+- scenario kind: `factory-quality`
+- primary claim type: `factory-quality`
+- primary endpoint: `factoryQualityOverall`
+- batch: `e4-b04-fq1-gpt52-pilot` pair `p01-factory-quality-codex-first`
+- comparative verdict: `prompt-language-better`
+- factory-quality claim eligible: true
+- prompt-language process conformance: strong
+- codex-alone process conformance: mixed
+
+Primary evidence:
+
+- [A14 outcome](./runs/a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first/outcome.md)
+- [A14 postmortem](./runs/a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first/postmortem.md)
+- [A14 scorecard](./runs/a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first/scorecard.json)
+- [A14 trace summary](./runs/a14-e4-b04-fq1-gpt52-pilot-p01-factory-quality-codex-first/trace-summary.md)
+
+### A15: `a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first`
+
+- `prompt-language` sequential lane: success
+- direct Codex lane: success
+
+Meaning:
+
+- timing envelope: `paired-factory-quality-s0-external-verification`
+- scenario kind: `factory-quality`
+- primary claim type: `factory-quality`
+- primary endpoint: `factoryQualityOverall`
+- batch: `e4-b04-fq1-gpt52-pilot` pair `p02-factory-quality-pl-first`
+- comparative verdict: `prompt-language-better`
+- factory-quality claim eligible: true
+- prompt-language process conformance: strong
+- codex-alone process conformance: mixed
+
+Primary evidence:
+
+- [A15 outcome](./runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/outcome.md)
+- [A15 postmortem](./runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/postmortem.md)
+- [A15 scorecard](./runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/scorecard.json)
+- [A15 trace summary](./runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/trace-summary.md)
+
 ## Current Interpretation
 
 The evidence now supports these current hypothesis-status reads:
@@ -238,13 +306,15 @@ The evidence now supports these current hypothesis-status reads:
 1. `prompt-language` can successfully drive a bounded software-factory slice.
 2. `prompt-language` is not currently better than direct Codex on the archived `S0` raw throughput
    question.
-3. `prompt-language` still has an open, unclosed hypothesis on factory-quality and governed
-   recovery, because those are the dependent variables where it plausibly should win.
+3. `prompt-language` is better than direct Codex on governed factory-quality behavior in the
+   first clean counterbalanced pilot batch (`B04`), with `factoryQualityOverall` of 10 vs 8 in
+   both pairs.
+4. `prompt-language` still has an open, unclosed hypothesis on governed recovery.
 
 The historical and current claims split is:
 
 - `S0 throughput`: answered by `B02`, currently `codex-alone-better`
-- `factory-quality`: not yet claim-eligible under the new trace-first rubric
+- `factory-quality`: answered at pilot strength by `B04`, currently `prompt-language-better`
 - `recovery`: not yet claim-eligible under repeated interrupted/resume pairs
 
 The active `factory-quality` pilot contract is a local SDLC slice, not the full externally

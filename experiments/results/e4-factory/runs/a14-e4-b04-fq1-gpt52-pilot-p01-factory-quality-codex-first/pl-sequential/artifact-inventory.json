@@ -1,0 +1,217 @@
+[
+  {
+    "path": "docs/prd.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2968,
+    "sha256": "c39f32682752d381d8f183d46b94acc645b0c05fd7f147b12b49053cd2ef032f"
+  },
+  {
+    "path": "docs/acceptance-criteria.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 4756,
+    "sha256": "041e20d9422c45ef76606cb2843340b655dfb2426de2f5e3e13a75147674704e"
+  },
+  {
+    "path": "docs/personas.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 845,
+    "sha256": "208709b4c6a12de21882caa3ed48b79982596e8ece3e14c70df060ad6273e763"
+  },
+  {
+    "path": "docs/use-cases.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3405,
+    "sha256": "9f62564dad0085c968eb645798d218eb0c71b87dd745695fcca36a97bff1d29b"
+  },
+  {
+    "path": "docs/non-functional-requirements.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1865,
+    "sha256": "2d03074ccf48c7400a4355410ecf0e1168951861621dffc2da751705336568b0"
+  },
+  {
+    "path": "docs/architecture/context.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1452,
+    "sha256": "e12a415a48a74abce05b96f408336ee0faaca7a53e1692bd28854db15578a452"
+  },
+  {
+    "path": "docs/architecture/container.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1024,
+    "sha256": "dde819a95d47357ed512993270c7f1079b39976a3ed6a41522dcfcbb3b1483c8"
+  },
+  {
+    "path": "docs/architecture/domain-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2181,
+    "sha256": "f6150f1c8a60255a5db33bebf38e850d4ac3d5892b570a53953a096a4ffc5327"
+  },
+  {
+    "path": "docs/architecture/sequence-contact-to-opportunity.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1792,
+    "sha256": "9ad5a2226df04a5a0d6cc8c9f29fa6666d42f88d9d5967645fcd92401d37a036"
+  },
+  {
+    "path": "docs/api-contracts.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3617,
+    "sha256": "8f49837827eaaf7793fc4a8417da5e340cd5de41a171eeb500f44efe57047782"
+  },
+  {
+    "path": "docs/data-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1365,
+    "sha256": "5f3706dc2dd0e804ffce73d5e30354954caf0c6025d05e5c2bc39eea97f40668"
+  },
+  {
+    "path": "docs/adr-001-stack.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 801,
+    "sha256": "1ae0fe126d0ad8497e2709e3a5acd06b1b83342cdcb339bb50a8e719d7acb3bf"
+  },
+  {
+    "path": "specs/domain-glossary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 998,
+    "sha256": "b821d5e2f54d2635c0ae29169d44908d235c1cad465007297df308a47cffce84"
+  },
+  {
+    "path": "specs/invariants.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1636,
+    "sha256": "c54be501773a5c22ba50714bb726c23414dc00795b564f3cd8d5555129b53db1"
+  },
+  {
+    "path": "packages/domain/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 7042,
+    "sha256": "25ced8d488e4e22dd9439759244c9120bf7651f14b67340349d62b8ffbf184bd"
+  },
+  {
+    "path": "packages/domain/test",
+    "present": true,
+    "type": "directory",
+    "sha256": "ee60cdd801413ae4ebf4e21abda9d0c4db83856a4fc5f6537df0b720590c10dc"
+  },
+  {
+    "path": "packages/api/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 6795,
+    "sha256": "c1075a1342ced71b5a418a76e6319f3be2dab724097b4014f4f3cce0144add1e"
+  },
+  {
+    "path": "packages/api/test",
+    "present": true,
+    "type": "directory",
+    "sha256": "96808f25bad94da8c3d8e35dd40bd9a99e10666db8d3fbebfec0678545668697"
+  },
+  {
+    "path": "qa-flows/crm-smoke.json",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 6429,
+    "sha256": "b1494d2013a01b14b3ae61fe2f5a58b229178492dbd044e3b85fa74dd56c5543"
+  },
+  {
+    "path": "demo/crm.demo.yaml",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3522,
+    "sha256": "9452cefdcdfd05f62988b68d1afd1a38f34daeddb68339459aa42178bee9c17f"
+  },
+  {
+    "path": "README.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 566,
+    "sha256": "e10043c68cca9498e91fce92c829b05ccb6c1ccb2fc5f07554009e5259f30d43"
+  },
+  {
+    "path": "docs/traceability.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1248,
+    "sha256": "5ee6255c9550e51445ae337c5ccf276d54d10d4695e0f2bee47a03ccbc154c38"
+  },
+  {
+    "path": "docs/test-strategy.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 823,
+    "sha256": "389e2f374292c858b806d5ee5c32c3d536d137fa70c6ace96a4739f74ac32742"
+  },
+  {
+    "path": "docs/verification-summary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 780,
+    "sha256": "54bb97cfe23a72b2b058ac9aeb1b56e2f63f893583ff592cc79a8f7f44ff3d2b"
+  },
+  {
+    "path": "docs/product-summary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 756,
+    "sha256": "440f16a49e024e7167ab08130bd888a57155720837ecd6b3e8b63ca753c3d2b7"
+  },
+  {
+    "path": "docs/demo-script.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 457,
+    "sha256": "a91186a091b62d5e01f877b530337eec57ae34783e79a63cc0fbb06740f3f54e"
+  },
+  {
+    "path": "docs/release-notes.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 126,
+    "sha256": "51e9485c0df6375994fc8ffdb7aa3a485dcfbdef5d18cb937f534e4f451801a9"
+  },
+  {
+    "path": "docs/known-issues.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 339,
+    "sha256": "2a5c3e8d225b278071e00600a3ca0e99587c211dfd7fa4d3fdd9f4ccf3eea21c"
+  },
+  {
+    "path": "docs/handover.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 456,
+    "sha256": "a68ea9351fc958d8dd970a51821f98473cd33936b65c76a7b61a0af0b1f68168"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 97,
+    "sha256": "5277b7edd9cb6f74f33d960365301b8078d74ec33d64e83d81e1fbcc93bfa516"
+  },
+  {
+    "path": ".factory/project.flow",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1858,
+    "sha256": "155b371519903659370b15b38a3eeb518265c53a766ebfa686e2eadca03bea21"
+  }
+]

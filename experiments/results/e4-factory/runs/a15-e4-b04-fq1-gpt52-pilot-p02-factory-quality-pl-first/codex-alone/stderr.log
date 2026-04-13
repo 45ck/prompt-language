@@ -1,0 +1,210 @@
+2026-04-13T09:02:40.225858Z ERROR codex_core::exec: exec error: The filename or extension is too long. (os error 206)
+2026-04-13T09:02:40.359722Z ERROR codex_core::tools::router: error=execution error: Io(Os { code: 206, kind: InvalidFilename, message: "The filename or extension is too long." })
+2026-04-13T09:05:24.636566Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.4 seconds
+Output:
+Run timestamp: 2026-04-13T19:05:24.4894245+10:00
+[31;1mParentContainsErrorRecordException: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m  10 | [0m if ([36;1m$null -ne $pkg.scripts.build[0m) {[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mThe property 'build' cannot be found on this object. Verify that the property exists.[0m
+
+2026-04-13T09:05:40.096784Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 5.5 seconds
+Output:
+Run timestamp: 2026-04-13T19:05:34.8409641+10:00
+Build skipped: package.json has no build script.
+\n--- noslop doctor ---
+noslop doctor → D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\codex-alone
+  ✓ git core.hooksPath
+    core.hooksPath = .githooks
+  ✗ .githooks directory
+    .githooks/ missing — run: noslop init
+  ✗ .github/workflows/quality.yml
+    quality.yml missing — run: noslop init
+  ✗ .claude/settings.json
+    .claude/settings.json missing — run: noslop init
+  ✗ .claude/hooks directory
+    .claude/hooks/ missing — run: noslop init
+  ✗ AGENTS.md
+    AGENTS.md missing — run: noslop init
+
+5 check(s) failed — run: noslop init
+\n--- noslop check --tier=fast ---
+noslop check --tier=fast
+  ✗ format-check
+'prettier' is not recognized as an internal or external command,
+operable program or batch file.
+  ✗ lint
+Oops! Something went wrong! :(
+
+ESLint: 9.11.1
+
+TypeError: Error while loading rule '@typescript-eslint/no-unused-expressions': Cannot read properties of undefined (reading 'allowShortCircuit')
+Occurred while linting D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\codex-alone\eslint.config.mjs
+    at Object.create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\codex-alone\node_modules\eslint\lib\rules\no-unused-expressions.js:85:5)
+    at create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\codex-alone\node_modules\@typescript-eslint\eslint-plugin\dist\rules\no-unused-expressions.js:30:32)
+    at Object.create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\codex-alone\node_modules\@typescript-eslint\utils\dist\eslint-utils\RuleCreator.js:39:20)
+    at createRuleListeners (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:943:21)
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1068:84
+    at Array.forEach (<anonymous>)
+    at runRules (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:999:34)
+    at #flatVerifyWithoutProcessors (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1914:31)
+    at Linter._verifyWithFlatConfigArrayAndWithoutProcessors (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1995:49)
+    at Linter._verifyWithFlatConfigArray (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:2084:21)
+  ✗ spell
+'cspell' is not recognized as an internal or external command,
+operable program or batch file.
+
+Some gates failed.
+\n--- npm run lint ---
+
+> lint
+> eslint . --max-warnings=0
+
+\n--- npm run typecheck ---
+
+> typecheck
+> tsc -p tsconfig.json --noEmit
+
+\n--- npm run test ---
+
+> test
+> vitest run
+
+
+ RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/codex-alone
+
+ ❯ packages/domain/test/opportunity-stage.test.ts (3 tests | 2 failed) 12ms
+     × rejects moving backwards 7ms
+     × only allows won/lost from negotiation 1ms
+ ❯ packages/api/test/in-memory-crm.test.ts (3 tests | 2 failed) 13ms
+     × rejects duplicate contact email (case-insensitive) 6ms
+     × creates tasks/notes and produces a dashboard summary 2ms
+
+ Test Files  2 failed | 1 passed (3)
+      Tests  4 failed | 4 passed (8)
+   Start at  19:05:39
+   Duration  233ms (transform 100ms, setup 0ms, import 148ms, tests 29ms, environment 0ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  packages/api/test/in-memory-crm.test.ts > InMemoryCrmService > rejects duplicate contact email (case-insensitive)
+AssertionError: expected [Function] to match object { code: 'CONFLICT' }
+
+- Expected:
+{
+  "code": "CONFLICT",
+}
+
++ Received:
+[Function anonymous]
+
+ ❯ packages/api/test/in-memory-crm.test.ts:46:7
+     44|     expect(() =>
+     45|       service.createContact({ firstName: 'C', lastName: 'D', email: 'u…
+     46|     ).toMatchObject({ code: 'CONFLICT' });
+       |       ^
+     47|   });
+     48|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  packages/api/test/in-memory-crm.test.ts > InMemoryCrmService > creates tasks/notes and produces a dashboard summary
+Error: dueDate cannot be earlier than createdAt
+ ❯ newTask packages/domain/src/index.ts:273:11
+    271|   assertMaxLength(input.subject, MAX_TASK_SUBJECT_LENGTH, 'subject');
+    272|   if (input.dueDate !== undefined && input.dueDate.getTime() < input.c…
+    273|     throw new DomainError('VALIDATION_ERROR', 'dueDate cannot be earli…
+       |           ^
+    274|       field: 'dueDate',
+    275|     });
+ ❯ InMemoryCrmService.createTask packages/api/src/index.ts:184:18
+ ❯ packages/api/test/in-memory-crm.test.ts:65:26
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  packages/domain/test/opportunity-stage.test.ts > opportunity stage transitions > rejects moving backwards
+AssertionError: expected [Function] to match object { code: 'INVALID_TRANSITION' }
+
+- Expected:
+{
+  "code": "INVALID_TRANSITION",
+}
+
++ Received:
+[Function anonymous]
+
+ ❯ packages/domain/test/opportunity-stage.test.ts:49:7
+     47|     expect(() =>
+     48|       transitionOpportunityStage(opportunity, 'qualified', new Date('2…
+     49|     ).toMatchObject({ code: 'INVALID_TRANSITION' });
+       |       ^
+     50|   });
+     51|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  packages/domain/test/opportunity-stage.test.ts > opportunity stage transitions > only allows won/lost from negotiation
+AssertionError: expected [Function] to match object { code: 'INVALID_TRANSITION' }
+
+- Expected:
+{
+  "code": "INVALID_TRANSITION",
+}
+
++ Received:
+[Function anonymous]
+
+ ❯ packages/domain/test/opportunity-stage.test.ts:66:7
+     64|     expect(() =>
+     65|       transitionOpportunityStage(opportunity, 'won', new Date('2026-01…
+     66|     ).toMatchObject({ code: 'INVALID_TRANSITION' });
+       |       ^
+     67|     expect(() =>
+     68|       transitionOpportunityStage(opportunity, 'lost', new Date('2026-0…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+2026-04-13T09:10:29.234055Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.4 seconds
+Output:
+[31;1mcspell: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   5 | [0m [36;1mcspell[0m --no-progress "packages/**/*.ts" "docs/**/*.md" "specs/**/*.md …[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m ~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mThe term 'cspell' is not recognized as a name of a cmdlet, function, script file, or executable program.[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.[0m
+[31;1mInvalidOperation: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   6 | [0m [36;1m$LASTEXITCODE[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m ~~~~~~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mThe variable '$LASTEXITCODE' cannot be retrieved because it has not been set.[0m
+
+2026-04-13T09:12:59.462645Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\codex-alone\cspell.cmd:
+setlocal enabledelayedexpansion
+
+rem noslop's default TypeScript pack may invoke cspell with no args or "{src}/**/*"
+rem which matches nothing in this workspace layout. Rewrite to check actual files.
+set "needsRewrite=false"
+if "%~1"=="" set "needsRewrite=true"
+set "needsRewrite=false"
+if "%~1"=="" set "needsRewrite=true"
+for %%A in (%*) do (
+  if "%%~A"=="{src}/**/*" set "needsRewrite=true"
+)
+2026-04-13T09:14:02.852040Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\codex-alone\docs\verification-summary.md:
+# Verification Summary
+
+This file is updated after running the required quality gates:
+- build-if-present
+- `noslop doctor`
+- `noslop check --tier=fast`
+- `npm run lint`
+- `npm run typecheck`
+- `npm run test`
+
+Status: pending execution in this workspace run.

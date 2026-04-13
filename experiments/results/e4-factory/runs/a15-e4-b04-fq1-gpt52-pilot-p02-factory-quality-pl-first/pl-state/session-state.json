@@ -1,0 +1,662 @@
+{
+  "version": 1,
+  "sessionId": "5b5b2794-48e0-4bc7-94f9-771a571a1081",
+  "flowSpec": {
+    "goal": "produce a bounded CRM core slice through a sequential prompt-language run optimized for factory-quality evidence rather than raw throughput",
+    "nodes": [
+      {
+        "kind": "prompt",
+        "id": "n1",
+        "text": "Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.",
+        "position": {
+          "line": 4,
+          "column": 3,
+          "text": "  prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n2",
+        "text": "Write docs/prd.md, docs/acceptance-criteria.md, docs/personas.md, docs/use-cases.md, and docs/non-functional-requirements.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small, deterministic, and implementation-ready.",
+        "position": {
+          "line": 5,
+          "column": 3,
+          "text": "  prompt: Write docs/prd.md, docs/acceptance-criteria.md, docs/personas.md, docs/use-cases.md, and docs/non-functional-requirements.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small, deterministic, and implementation-ready."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n3",
+        "text": "Write docs/architecture/context.md, docs/architecture/container.md, docs/architecture/domain-model.md, docs/architecture/sequence-contact-to-opportunity.md, docs/api-contracts.md, docs/data-model.md, docs/adr-001-stack.md, specs/domain-glossary.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services.",
+        "position": {
+          "line": 6,
+          "column": 3,
+          "text": "  prompt: Write docs/architecture/context.md, docs/architecture/container.md, docs/architecture/domain-model.md, docs/architecture/sequence-contact-to-opportunity.md, docs/api-contracts.md, docs/data-model.md, docs/adr-001-stack.md, specs/domain-glossary.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n4",
+        "text": "Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free.",
+        "position": {
+          "line": 7,
+          "column": 3,
+          "text": "  prompt: Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n5",
+        "text": "Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package.",
+        "position": {
+          "line": 8,
+          "column": 3,
+          "text": "  prompt: Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n6",
+        "text": "Write qa-flows/crm-smoke.json and demo/crm.demo.yaml as deterministic QA and demo specifications for the implemented CRM core. Ground them in the actual workspace state.",
+        "position": {
+          "line": 9,
+          "column": 3,
+          "text": "  prompt: Write qa-flows/crm-smoke.json and demo/crm.demo.yaml as deterministic QA and demo specifications for the implemented CRM core. Ground them in the actual workspace state."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n7",
+        "text": "Write README.md, docs/traceability.md, docs/test-strategy.md, docs/verification-summary.md, docs/product-summary.md, docs/demo-script.md, docs/release-notes.md, docs/known-issues.md, docs/handover.md, and CHANGELOG.md from the implemented workspace. Then run the local verification commands and fix the workspace until build-if-present, noslop doctor, noslop check --tier=fast, npm run lint, npm run typecheck, and npm run test all pass.",
+        "position": {
+          "line": 10,
+          "column": 3,
+          "text": "  prompt: Write README.md, docs/traceability.md, docs/test-strategy.md, docs/verification-summary.md, docs/product-summary.md, docs/demo-script.md, docs/release-notes.md, docs/known-issues.md, docs/handover.md, and CHANGELOG.md from the implemented workspace. Then run the local verification commands and fix the workspace until build-if-present, noslop doctor, noslop check --tier=fast, npm run lint, npm run typecheck, and npm run test all pass."
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n8",
+        "command": "node -e \"const fs=require('node:fs'); const {spawnSync}=require('node:child_process'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); if(!pkg.scripts?.build){console.log('No build script declared; skipping build verification.'); process.exit(0)} const result=spawnSync('npm',['run','build'],{stdio:'inherit',shell:true}); process.exit(result.status ?? 1)\"",
+        "position": {
+          "line": 11,
+          "column": 3,
+          "text": "  run: node -e \"const fs=require('node:fs'); const {spawnSync}=require('node:child_process'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); if(!pkg.scripts?.build){console.log('No build script declared; skipping build verification.'); process.exit(0)} const result=spawnSync('npm',['run','build'],{stdio:'inherit',shell:true}); process.exit(result.status ?? 1)\""
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n9",
+        "command": "noslop doctor",
+        "position": {
+          "line": 12,
+          "column": 3,
+          "text": "  run: noslop doctor"
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n10",
+        "command": "noslop check --tier=fast",
+        "position": {
+          "line": 13,
+          "column": 3,
+          "text": "  run: noslop check --tier=fast"
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n11",
+        "command": "npm run lint",
+        "position": {
+          "line": 14,
+          "column": 3,
+          "text": "  run: npm run lint"
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n12",
+        "command": "npm run typecheck",
+        "position": {
+          "line": 15,
+          "column": 3,
+          "text": "  run: npm run typecheck"
+        }
+      },
+      {
+        "kind": "run",
+        "id": "n13",
+        "command": "npm run test",
+        "position": {
+          "line": 16,
+          "column": 3,
+          "text": "  run: npm run test"
+        }
+      }
+    ],
+    "completionGates": [
+      {
+        "predicate": "build_if_present",
+        "command": "node -e \"const fs=require('node:fs'); const {spawnSync}=require('node:child_process'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); if(!pkg.scripts?.build){console.log('No build script declared; skipping build gate.'); process.exit(0)} const result=spawnSync('npm',['run','build'],{stdio:'inherit',shell:true}); process.exit(result.status ?? 1)\""
+      },
+      {
+        "predicate": "noslop_doctor",
+        "command": "noslop doctor"
+      },
+      {
+        "predicate": "noslop_fast",
+        "command": "noslop check --tier=fast"
+      },
+      {
+        "predicate": "lint",
+        "command": "npm run lint"
+      },
+      {
+        "predicate": "typecheck",
+        "command": "npm run typecheck"
+      },
+      {
+        "predicate": "tests",
+        "command": "npm run test"
+      },
+      {
+        "predicate": "file_exists .factory/project.flow"
+      },
+      {
+        "predicate": "file_exists docs/prd.md"
+      },
+      {
+        "predicate": "file_exists docs/acceptance-criteria.md"
+      },
+      {
+        "predicate": "file_exists docs/personas.md"
+      },
+      {
+        "predicate": "file_exists docs/use-cases.md"
+      },
+      {
+        "predicate": "file_exists docs/non-functional-requirements.md"
+      },
+      {
+        "predicate": "file_exists docs/architecture/context.md"
+      },
+      {
+        "predicate": "file_exists docs/architecture/container.md"
+      },
+      {
+        "predicate": "file_exists docs/architecture/domain-model.md"
+      },
+      {
+        "predicate": "file_exists docs/architecture/sequence-contact-to-opportunity.md"
+      },
+      {
+        "predicate": "file_exists docs/api-contracts.md"
+      },
+      {
+        "predicate": "file_exists docs/data-model.md"
+      },
+      {
+        "predicate": "file_exists docs/adr-001-stack.md"
+      },
+      {
+        "predicate": "file_exists specs/domain-glossary.md"
+      },
+      {
+        "predicate": "file_exists specs/invariants.md"
+      },
+      {
+        "predicate": "file_exists packages/domain/src/index.ts"
+      },
+      {
+        "predicate": "file_exists packages/domain/test"
+      },
+      {
+        "predicate": "file_exists packages/api/src/index.ts"
+      },
+      {
+        "predicate": "file_exists packages/api/test"
+      },
+      {
+        "predicate": "file_exists qa-flows/crm-smoke.json"
+      },
+      {
+        "predicate": "file_exists demo/crm.demo.yaml"
+      },
+      {
+        "predicate": "file_exists README.md"
+      },
+      {
+        "predicate": "file_exists docs/traceability.md"
+      },
+      {
+        "predicate": "file_exists docs/test-strategy.md"
+      },
+      {
+        "predicate": "file_exists docs/verification-summary.md"
+      },
+      {
+        "predicate": "file_exists docs/product-summary.md"
+      },
+      {
+        "predicate": "file_exists docs/demo-script.md"
+      },
+      {
+        "predicate": "file_exists docs/release-notes.md"
+      },
+      {
+        "predicate": "file_exists docs/known-issues.md"
+      },
+      {
+        "predicate": "file_exists docs/handover.md"
+      },
+      {
+        "predicate": "file_exists CHANGELOG.md"
+      }
+    ],
+    "defaults": {
+      "maxIterations": 5,
+      "maxAttempts": 3
+    },
+    "warnings": []
+  },
+  "currentNodePath": [
+    13
+  ],
+  "nodeProgress": {
+    "n1": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776068745780,
+      "completedAt": 1776068745780
+    },
+    "n2": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776068828288,
+      "completedAt": 1776068828288
+    },
+    "n3": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776068988044,
+      "completedAt": 1776068988044
+    },
+    "n4": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776069155868,
+      "completedAt": 1776069155868
+    },
+    "n5": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776069316552,
+      "completedAt": 1776069316552
+    },
+    "n6": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776069466564,
+      "completedAt": 1776069466564
+    },
+    "n7": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776070359156,
+      "completedAt": 1776070359156
+    },
+    "n8": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776070499667,
+      "completedAt": 1776070499718,
+      "exitCode": 0,
+      "stdout": "No build script declared; skipping build verification.",
+      "stderr": ""
+    },
+    "n9": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776070499718,
+      "completedAt": 1776070499871,
+      "exitCode": 0,
+      "stdout": "noslop doctor → D:\\Visual Studio Projects\\prompt-language\\experiments\\full-saas-factory\\e4-codex-crm-factory\\workspaces\\runs\\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\\pl-sequential\n  ✓ git core.hooksPath\n    core.hooksPath = .githooks\n  ✓ .githooks directory\n    .githooks/ present\n  ✓ .github/workflows/quality.yml\n    quality.yml present\n  ✓ .claude/settings.json\n    .claude/settings.json present\n  ✓ .claude/hooks directory\n    .claude/hooks/ present\n  ✓ AGENTS.md\n    AGENTS.md present\n\nAll checks passed — repo is protected.",
+      "stderr": ""
+    },
+    "n10": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776070499871,
+      "completedAt": 1776070504102,
+      "exitCode": 0,
+      "stdout": "noslop check --tier=fast\n  ✓ format-check\n  ✓ lint\n  ✓ spell\n\nAll gates passed.",
+      "stderr": ""
+    },
+    "n11": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776070504102,
+      "completedAt": 1776070506872,
+      "exitCode": 0,
+      "stdout": "\n> lint\n> eslint . --max-warnings=0",
+      "stderr": ""
+    },
+    "n12": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776070506872,
+      "completedAt": 1776070507935,
+      "exitCode": 0,
+      "stdout": "\n> typecheck\n> tsc -p tsconfig.json --noEmit",
+      "stderr": ""
+    },
+    "n13": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776070507935,
+      "completedAt": 1776070508944,
+      "exitCode": 0,
+      "stdout": "\n> test\n> vitest run\n\n\n RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/pl-sequential\n\n\n Test Files  2 passed (2)\n      Tests  8 passed (8)\n   Start at  18:55:08\n   Duration  216ms (transform 67ms, setup 0ms, import 96ms, tests 18ms, environment 0ms)",
+      "stderr": ""
+    }
+  },
+  "variables": {
+    "last_exit_code": 0,
+    "command_failed": false,
+    "command_succeeded": true,
+    "last_stdout": "\n> test\n> vitest run\n\n\n RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/pl-sequential\n\n\n Test Files  2 passed (2)\n      Tests  8 passed (8)\n   Start at  18:55:08\n   Duration  216ms (transform 67ms, setup 0ms, import 96ms, tests 18ms, environment 0ms)",
+    "last_stderr": ""
+  },
+  "gateResults": {
+    "build_if_present": true,
+    "noslop_doctor": true,
+    "noslop_fast": true,
+    "lint": true,
+    "typecheck": true,
+    "tests": true,
+    "file_exists .factory/project.flow": true,
+    "file_exists docs/prd.md": true,
+    "file_exists docs/acceptance-criteria.md": true,
+    "file_exists docs/personas.md": true,
+    "file_exists docs/use-cases.md": true,
+    "file_exists docs/non-functional-requirements.md": true,
+    "file_exists docs/architecture/context.md": true,
+    "file_exists docs/architecture/container.md": true,
+    "file_exists docs/architecture/domain-model.md": true,
+    "file_exists docs/architecture/sequence-contact-to-opportunity.md": true,
+    "file_exists docs/api-contracts.md": true,
+    "file_exists docs/data-model.md": true,
+    "file_exists docs/adr-001-stack.md": true,
+    "file_exists specs/domain-glossary.md": true,
+    "file_exists specs/invariants.md": true,
+    "file_exists packages/domain/src/index.ts": true,
+    "file_exists packages/domain/test": true,
+    "file_exists packages/api/src/index.ts": true,
+    "file_exists packages/api/test": true,
+    "file_exists qa-flows/crm-smoke.json": true,
+    "file_exists demo/crm.demo.yaml": true,
+    "file_exists README.md": true,
+    "file_exists docs/traceability.md": true,
+    "file_exists docs/test-strategy.md": true,
+    "file_exists docs/verification-summary.md": true,
+    "file_exists docs/product-summary.md": true,
+    "file_exists docs/demo-script.md": true,
+    "file_exists docs/release-notes.md": true,
+    "file_exists docs/known-issues.md": true,
+    "file_exists docs/handover.md": true,
+    "file_exists CHANGELOG.md": true
+  },
+  "gateDiagnostics": {
+    "build_if_present": {
+      "passed": true,
+      "command": "node -e \"const fs=require('node:fs'); const {spawnSync}=require('node:child_process'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); if(!pkg.scripts?.build){console.log('No build script declared; skipping build gate.'); process.exit(0)} const result=spawnSync('npm',['run','build'],{stdio:'inherit',shell:true}); process.exit(result.status ?? 1)\"",
+      "exitCode": 0,
+      "stdout": "No build script declared; skipping build gate.",
+      "gateEvaluatedAt": 1776070509219
+    },
+    "noslop_doctor": {
+      "passed": true,
+      "command": "noslop doctor",
+      "exitCode": 0,
+      "stdout": "noslop doctor → D:\\Visual Studio Projects\\prompt-language\\experiments\\full-saas-factory\\e4-codex-crm-factory\\workspaces\\runs\\a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first\\pl-sequential\n  ✓ git core.hooksPath\n    core.hooksPath = .githooks\n  ✓ .githooks directory\n    .githooks/ present\n  ✓ .github/workflows/quality.yml\n    quality.yml present\n  ✓ .claude/settings.json\n    .claude/settings.json present\n  ✓ .claude/hooks directory\n    .claude/hooks/ present\n  ✓ AGENTS.md\n    AGENTS.md present\n\nAll checks passed — repo is protected.",
+      "gateEvaluatedAt": 1776070509261
+    },
+    "noslop_fast": {
+      "passed": true,
+      "command": "noslop check --tier=fast",
+      "exitCode": 0,
+      "stdout": "noslop check --tier=fast\n  ✓ format-check\n  ✓ lint\n  ✓ spell\n\nAll gates passed.",
+      "gateEvaluatedAt": 1776070513784
+    },
+    "lint": {
+      "passed": true,
+      "command": "npm run lint",
+      "exitCode": 0,
+      "stdout": "\n> lint\n> eslint . --max-warnings=0",
+      "gateEvaluatedAt": 1776070512364
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "npm run typecheck",
+      "exitCode": 0,
+      "stdout": "\n> typecheck\n> tsc -p tsconfig.json --noEmit",
+      "gateEvaluatedAt": 1776070510495
+    },
+    "tests": {
+      "passed": true,
+      "command": "npm run test",
+      "exitCode": 0,
+      "stdout": "\n> test\n> vitest run\n\n\n RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/pl-sequential\n\n\n Test Files  2 passed (2)\n      Tests  8 passed (8)\n   Start at  18:55:09\n   Duration  292ms (transform 79ms, setup 0ms, import 117ms, tests 22ms, environment 0ms)",
+      "gateEvaluatedAt": 1776070510213
+    },
+    "file_exists .factory/project.flow": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('.factory/project.flow') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509219
+    },
+    "file_exists docs/prd.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/prd.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509219
+    },
+    "file_exists docs/acceptance-criteria.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/acceptance-criteria.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509219
+    },
+    "file_exists docs/personas.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/personas.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists docs/use-cases.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/use-cases.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists docs/non-functional-requirements.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/non-functional-requirements.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists docs/architecture/context.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/architecture/context.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists docs/architecture/container.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/architecture/container.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists docs/architecture/domain-model.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/architecture/domain-model.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists docs/architecture/sequence-contact-to-opportunity.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/architecture/sequence-contact-to-opportunity.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists docs/api-contracts.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/api-contracts.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists docs/data-model.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/data-model.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists docs/adr-001-stack.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/adr-001-stack.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists specs/domain-glossary.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('specs/domain-glossary.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists specs/invariants.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('specs/invariants.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists packages/domain/src/index.ts": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/domain/src/index.ts') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists packages/domain/test": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/domain/test') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists packages/api/src/index.ts": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/api/src/index.ts') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists packages/api/test": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('packages/api/test') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509218
+    },
+    "file_exists qa-flows/crm-smoke.json": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('qa-flows/crm-smoke.json') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509221
+    },
+    "file_exists demo/crm.demo.yaml": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('demo/crm.demo.yaml') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509235
+    },
+    "file_exists README.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('README.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509251
+    },
+    "file_exists docs/traceability.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/traceability.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509239
+    },
+    "file_exists docs/test-strategy.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/test-strategy.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509253
+    },
+    "file_exists docs/verification-summary.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/verification-summary.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509256
+    },
+    "file_exists docs/product-summary.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/product-summary.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509263
+    },
+    "file_exists docs/demo-script.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/demo-script.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509269
+    },
+    "file_exists docs/release-notes.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/release-notes.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509274
+    },
+    "file_exists docs/known-issues.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/known-issues.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509282
+    },
+    "file_exists docs/handover.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('docs/handover.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509279
+    },
+    "file_exists CHANGELOG.md": {
+      "passed": true,
+      "command": "node -e \"process.exit(require('node:fs').existsSync('CHANGELOG.md') ? 0 : 1)\"",
+      "exitCode": 0,
+      "gateEvaluatedAt": 1776070509282
+    }
+  },
+  "status": "completed",
+  "warnings": [],
+  "spawnedChildren": {},
+  "raceChildren": {},
+  "flowSpecHash": "4fed990f",
+  "transitionSeq": 13,
+  "captureNonce": "a256185a55975ba6d216804b716a99ed",
+  "gateFailureCount": 0,
+  "_checksum": "9a2068cd02be544cb3fca9f9970c6ca281c7c7b1b807431d862ea2bd9e9ec7f5"
+}

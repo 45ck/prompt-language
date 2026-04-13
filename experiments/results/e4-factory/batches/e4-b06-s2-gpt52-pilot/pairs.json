@@ -1,0 +1,632 @@
+[
+  {
+    "pairId": "p01-s2-codex-first",
+    "order": "codex-first",
+    "runId": "20260414-0619-a18-core-proof-paired-clean",
+    "attemptLabel": "A18",
+    "scorecard": {
+      "scoreVersion": "e4-v2",
+      "runId": "20260414-0619-a18-core-proof-paired-clean",
+      "batch": {
+        "batchId": "e4-b06-s2-gpt52-pilot",
+        "pairId": "p01-s2-codex-first"
+      },
+      "scope": "bounded-crm-core",
+      "question": "After a forced pre-verification stop on the same bounded CRM core slice, which lane resumes and closes more effectively from the preserved workspace state?",
+      "baselineReference": "codex-alone within this run",
+      "evaluationModel": {
+        "claimType": "recovery",
+        "primaryEndpoint": "resumeToGreenSec",
+        "secondaryEndpoints": [
+          "recoveredAfterInterruption",
+          "traceCompleteness",
+          "interventionCount",
+          "closureCompleteness"
+        ]
+      },
+      "admissibility": {
+        "class": "supporting-context",
+        "throughputClaimEligible": false,
+        "claimEligibility": {
+          "throughput": false,
+          "factoryQuality": false,
+          "recovery": false
+        },
+        "reason": "This is a trace-backed S2 governed-recovery pilot on the same bounded CRM contract, but it remains supporting context until repeated predeclared interruption/resume pairs agree.",
+        "recoveryClaimEligible": false
+      },
+      "comparativeVerdict": "codex-alone-better",
+      "lanes": [
+        {
+          "lane": "pl-sequential",
+          "candidate": "prompt-language",
+          "status": "partial",
+          "verdict": "partial",
+          "metrics": {
+            "timeToGreenSec": null,
+            "timeToFirstCodeSec": 524.15,
+            "timeToFirstRelevantWriteSec": 524.15,
+            "interventionCount": 0,
+            "restartCount": 1,
+            "runtimeFailureCount": 0,
+            "failureClass": "product",
+            "throughputMetricsComplete": false,
+            "traceCompleteness": "strong",
+            "closureCompleteness": "mixed",
+            "traceAuthority": "strong",
+            "artifactContractPass": true,
+            "processConformance": "mixed",
+            "recoveryQuality": "mixed",
+            "reuseReadiness": "mixed",
+            "verificationPassRate": 0.6666666666666666,
+            "resumeToGreenSec": null,
+            "interruptToGreenSec": null
+          },
+          "scores": {
+            "scopeCompletion": 1,
+            "verification": 1,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 1,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 1,
+            "repeatabilityEvidence": 0,
+            "closureQuality": 1,
+            "processConformance": 1
+          },
+          "factoryQuality": {
+            "closureQuality": 1,
+            "processConformance": 1,
+            "traceAuthority": 2,
+            "reuseReadiness": 1,
+            "claimStrength": 0
+          },
+          "totals": {
+            "productOutcome": 4,
+            "operationalQuality": 3,
+            "researchStrength": 2,
+            "factoryQuality": 5,
+            "overall": 14
+          },
+          "notes": "Prompt-language did not recover cleanly from the forced pre-verification stop under the frozen bootstrap seed."
+        },
+        {
+          "lane": "codex-alone",
+          "candidate": "codex-alone",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 552.08,
+            "timeToFirstCodeSec": 177.05,
+            "timeToFirstRelevantWriteSec": 177.05,
+            "interventionCount": 0,
+            "restartCount": 1,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": false,
+            "traceCompleteness": "strong",
+            "closureCompleteness": "strong",
+            "traceAuthority": "strong",
+            "artifactContractPass": true,
+            "processConformance": "mixed",
+            "recoveryQuality": "strong",
+            "reuseReadiness": "mixed",
+            "verificationPassRate": 1,
+            "resumeToGreenSec": 189.75,
+            "interruptToGreenSec": 189.84
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 1,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 1,
+            "repeatabilityEvidence": 0,
+            "closureQuality": 2,
+            "processConformance": 1
+          },
+          "factoryQuality": {
+            "closureQuality": 2,
+            "processConformance": 1,
+            "traceAuthority": 2,
+            "reuseReadiness": 1,
+            "claimStrength": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 3,
+            "researchStrength": 2,
+            "factoryQuality": 6,
+            "overall": 17
+          },
+          "notes": "Direct Codex resumed from the forced pre-verification stop and closed the bounded CRM core successfully under the frozen bootstrap seed."
+        }
+      ],
+      "comparativeSummary": "Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.",
+      "nextExperimentFocus": [
+        "repeat the governed S2 interruption/resume pair in both orders",
+        "promote recovery claims only after repeated trace-backed pairs agree"
+      ]
+    },
+    "runMetadata": {
+      "protocolVersion": "e4-v2",
+      "runId": "20260414-0619-a18-core-proof-paired-clean",
+      "attemptLabel": "A18",
+      "scenario": "s2-pre-verification",
+      "order": "codex-first",
+      "model": "gpt-5.2",
+      "batch": {
+        "batchId": "e4-b06-s2-gpt52-pilot",
+        "pairId": "p01-s2-codex-first"
+      },
+      "startedAt": "2026-04-13T20:19:33.123Z",
+      "gitCommit": "0dcab2cfda803fbb4b52dd297aa53fe09822d0ea",
+      "gitStatusShort": "M .beads/backup/backup_state.json\n M .beads/backup/events.jsonl\n M .beads/backup/issues.jsonl\n?? experiments/results/e4-factory/runs/20260414-0619-a16-core-proof-paired-clean/\n?? experiments/results/e4-factory/runs/20260414-0619-a17-core-proof-paired-clean/",
+      "nodeVersion": "v22.22.0",
+      "npmVersion": "10.9.4",
+      "codexVersion": "codex-cli 0.120.0",
+      "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-s2-pre-verification.flow",
+      "controlHash": "7d8e873143f73e376106d56a105cc3e1028db78a6ba3babb9a87c73fc5e3a6d1",
+      "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-s2-pre-verification.prompt.md",
+      "promptHash": "5f2f4db2eedb1e2f8976c48a6530cca8edb53c346ebdead70483c979c62669e8",
+      "bootstrapSeed": {
+        "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+        "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+        "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+        "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+      },
+      "timingEnvelope": "paired-recovery-s2-pre-verification",
+      "evaluationModel": {
+        "claimType": "recovery",
+        "primaryEndpoint": "resumeToGreenSec",
+        "secondaryEndpoints": [
+          "recoveredAfterInterruption",
+          "traceCompleteness",
+          "interventionCount",
+          "closureCompleteness"
+        ]
+      },
+      "documentedHumanInterventions": 0,
+      "interventionObservationMode": "harness-parameterized",
+      "endedAt": "2026-04-13T20:53:46.426Z",
+      "comparativeVerdict": "codex-alone-better",
+      "admissibility": {
+        "class": "supporting-context",
+        "throughputClaimEligible": false,
+        "claimEligibility": {
+          "throughput": false,
+          "factoryQuality": false,
+          "recovery": false
+        },
+        "reason": "This is a trace-backed S2 governed-recovery pilot on the same bounded CRM contract, but it remains supporting context until repeated predeclared interruption/resume pairs agree.",
+        "recoveryClaimEligible": false
+      }
+    },
+    "validForBatchSummary": true,
+    "lanes": {
+      "pl-sequential": {
+        "lane": "pl-sequential",
+        "candidate": "prompt-language",
+        "status": "partial",
+        "verdict": "partial",
+        "metrics": {
+          "timeToGreenSec": null,
+          "timeToFirstCodeSec": 524.15,
+          "timeToFirstRelevantWriteSec": 524.15,
+          "interventionCount": 0,
+          "restartCount": 1,
+          "runtimeFailureCount": 0,
+          "failureClass": "product",
+          "throughputMetricsComplete": false,
+          "traceCompleteness": "strong",
+          "closureCompleteness": "mixed",
+          "traceAuthority": "strong",
+          "artifactContractPass": true,
+          "processConformance": "mixed",
+          "recoveryQuality": "mixed",
+          "reuseReadiness": "mixed",
+          "verificationPassRate": 0.6666666666666666,
+          "resumeToGreenSec": null,
+          "interruptToGreenSec": null
+        },
+        "scores": {
+          "scopeCompletion": 1,
+          "verification": 1,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 1,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 1,
+          "repeatabilityEvidence": 0,
+          "closureQuality": 1,
+          "processConformance": 1
+        },
+        "factoryQuality": {
+          "closureQuality": 1,
+          "processConformance": 1,
+          "traceAuthority": 2,
+          "reuseReadiness": 1,
+          "claimStrength": 0
+        },
+        "totals": {
+          "productOutcome": 4,
+          "operationalQuality": 3,
+          "researchStrength": 2,
+          "factoryQuality": 5,
+          "overall": 14
+        },
+        "notes": "Prompt-language did not recover cleanly from the forced pre-verification stop under the frozen bootstrap seed."
+      },
+      "codex-alone": {
+        "lane": "codex-alone",
+        "candidate": "codex-alone",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 552.08,
+          "timeToFirstCodeSec": 177.05,
+          "timeToFirstRelevantWriteSec": 177.05,
+          "interventionCount": 0,
+          "restartCount": 1,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": false,
+          "traceCompleteness": "strong",
+          "closureCompleteness": "strong",
+          "traceAuthority": "strong",
+          "artifactContractPass": true,
+          "processConformance": "mixed",
+          "recoveryQuality": "strong",
+          "reuseReadiness": "mixed",
+          "verificationPassRate": 1,
+          "resumeToGreenSec": 189.75,
+          "interruptToGreenSec": 189.84
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 1,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 1,
+          "repeatabilityEvidence": 0,
+          "closureQuality": 2,
+          "processConformance": 1
+        },
+        "factoryQuality": {
+          "closureQuality": 2,
+          "processConformance": 1,
+          "traceAuthority": 2,
+          "reuseReadiness": 1,
+          "claimStrength": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 3,
+          "researchStrength": 2,
+          "factoryQuality": 6,
+          "overall": 17
+        },
+        "notes": "Direct Codex resumed from the forced pre-verification stop and closed the bounded CRM core successfully under the frozen bootstrap seed."
+      }
+    }
+  },
+  {
+    "pairId": "p02-s2-pl-first",
+    "order": "pl-first",
+    "runId": "20260414-0619-a19-core-proof-paired-clean",
+    "attemptLabel": "A19",
+    "scorecard": {
+      "scoreVersion": "e4-v2",
+      "runId": "20260414-0619-a19-core-proof-paired-clean",
+      "batch": {
+        "batchId": "e4-b06-s2-gpt52-pilot",
+        "pairId": "p02-s2-pl-first"
+      },
+      "scope": "bounded-crm-core",
+      "question": "After a forced pre-verification stop on the same bounded CRM core slice, which lane resumes and closes more effectively from the preserved workspace state?",
+      "baselineReference": "codex-alone within this run",
+      "evaluationModel": {
+        "claimType": "recovery",
+        "primaryEndpoint": "resumeToGreenSec",
+        "secondaryEndpoints": [
+          "recoveredAfterInterruption",
+          "traceCompleteness",
+          "interventionCount",
+          "closureCompleteness"
+        ]
+      },
+      "admissibility": {
+        "class": "supporting-context",
+        "throughputClaimEligible": false,
+        "claimEligibility": {
+          "throughput": false,
+          "factoryQuality": false,
+          "recovery": false
+        },
+        "reason": "This is a trace-backed S2 governed-recovery pilot on the same bounded CRM contract, but it remains supporting context until repeated predeclared interruption/resume pairs agree.",
+        "recoveryClaimEligible": false
+      },
+      "comparativeVerdict": "codex-alone-better",
+      "lanes": [
+        {
+          "lane": "pl-sequential",
+          "candidate": "prompt-language",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 1640.95,
+            "timeToFirstCodeSec": 696.42,
+            "timeToFirstRelevantWriteSec": 696.42,
+            "interventionCount": 0,
+            "restartCount": 1,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": false,
+            "traceCompleteness": "strong",
+            "closureCompleteness": "strong",
+            "traceAuthority": "strong",
+            "artifactContractPass": true,
+            "processConformance": "strong",
+            "recoveryQuality": "strong",
+            "reuseReadiness": "strong",
+            "verificationPassRate": 1,
+            "resumeToGreenSec": 1011.81,
+            "interruptToGreenSec": 1011.91
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 1,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 1,
+            "repeatabilityEvidence": 0,
+            "closureQuality": 2,
+            "processConformance": 2
+          },
+          "factoryQuality": {
+            "closureQuality": 2,
+            "processConformance": 2,
+            "traceAuthority": 2,
+            "reuseReadiness": 2,
+            "claimStrength": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 3,
+            "researchStrength": 2,
+            "factoryQuality": 8,
+            "overall": 19
+          },
+          "notes": "Prompt-language resumed from the forced pre-verification stop and closed the bounded CRM core successfully under the frozen bootstrap seed."
+        },
+        {
+          "lane": "codex-alone",
+          "candidate": "codex-alone",
+          "status": "completed",
+          "verdict": "success",
+          "metrics": {
+            "timeToGreenSec": 529.52,
+            "timeToFirstCodeSec": 142.88,
+            "timeToFirstRelevantWriteSec": 142.88,
+            "interventionCount": 0,
+            "restartCount": 1,
+            "runtimeFailureCount": 0,
+            "failureClass": "none",
+            "throughputMetricsComplete": false,
+            "traceCompleteness": "strong",
+            "closureCompleteness": "strong",
+            "traceAuthority": "strong",
+            "artifactContractPass": true,
+            "processConformance": "mixed",
+            "recoveryQuality": "strong",
+            "reuseReadiness": "mixed",
+            "verificationPassRate": 1,
+            "resumeToGreenSec": 144.28,
+            "interruptToGreenSec": 144.43
+          },
+          "scores": {
+            "scopeCompletion": 2,
+            "verification": 2,
+            "artifactCompleteness": 2,
+            "setupSimplicity": 1,
+            "auditability": 2,
+            "experimentalControl": 1,
+            "automationIntegrity": 1,
+            "repeatabilityEvidence": 0,
+            "closureQuality": 2,
+            "processConformance": 1
+          },
+          "factoryQuality": {
+            "closureQuality": 2,
+            "processConformance": 1,
+            "traceAuthority": 2,
+            "reuseReadiness": 1,
+            "claimStrength": 0
+          },
+          "totals": {
+            "productOutcome": 6,
+            "operationalQuality": 3,
+            "researchStrength": 2,
+            "factoryQuality": 6,
+            "overall": 17
+          },
+          "notes": "Direct Codex resumed from the forced pre-verification stop and closed the bounded CRM core successfully under the frozen bootstrap seed."
+        }
+      ],
+      "comparativeSummary": "Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.",
+      "nextExperimentFocus": [
+        "repeat the governed S2 interruption/resume pair in both orders",
+        "promote recovery claims only after repeated trace-backed pairs agree"
+      ]
+    },
+    "runMetadata": {
+      "protocolVersion": "e4-v2",
+      "runId": "20260414-0619-a19-core-proof-paired-clean",
+      "attemptLabel": "A19",
+      "scenario": "s2-pre-verification",
+      "order": "pl-first",
+      "model": "gpt-5.2",
+      "batch": {
+        "batchId": "e4-b06-s2-gpt52-pilot",
+        "pairId": "p02-s2-pl-first"
+      },
+      "startedAt": "2026-04-13T20:19:34.088Z",
+      "gitCommit": "0dcab2cfda803fbb4b52dd297aa53fe09822d0ea",
+      "gitStatusShort": "M .beads/backup/backup_state.json\n M .beads/backup/events.jsonl\n M .beads/backup/issues.jsonl\n?? experiments/results/e4-factory/runs/20260414-0619-a16-core-proof-paired-clean/\n?? experiments/results/e4-factory/runs/20260414-0619-a17-core-proof-paired-clean/\n?? experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/",
+      "nodeVersion": "v22.22.0",
+      "npmVersion": "10.9.4",
+      "codexVersion": "codex-cli 0.120.0",
+      "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-s2-pre-verification.flow",
+      "controlHash": "7d8e873143f73e376106d56a105cc3e1028db78a6ba3babb9a87c73fc5e3a6d1",
+      "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-s2-pre-verification.prompt.md",
+      "promptHash": "5f2f4db2eedb1e2f8976c48a6530cca8edb53c346ebdead70483c979c62669e8",
+      "bootstrapSeed": {
+        "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+        "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+        "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+        "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+      },
+      "timingEnvelope": "paired-recovery-s2-pre-verification",
+      "evaluationModel": {
+        "claimType": "recovery",
+        "primaryEndpoint": "resumeToGreenSec",
+        "secondaryEndpoints": [
+          "recoveredAfterInterruption",
+          "traceCompleteness",
+          "interventionCount",
+          "closureCompleteness"
+        ]
+      },
+      "documentedHumanInterventions": 0,
+      "interventionObservationMode": "harness-parameterized",
+      "endedAt": "2026-04-13T20:56:06.895Z",
+      "comparativeVerdict": "codex-alone-better",
+      "admissibility": {
+        "class": "supporting-context",
+        "throughputClaimEligible": false,
+        "claimEligibility": {
+          "throughput": false,
+          "factoryQuality": false,
+          "recovery": false
+        },
+        "reason": "This is a trace-backed S2 governed-recovery pilot on the same bounded CRM contract, but it remains supporting context until repeated predeclared interruption/resume pairs agree.",
+        "recoveryClaimEligible": false
+      }
+    },
+    "validForBatchSummary": true,
+    "lanes": {
+      "pl-sequential": {
+        "lane": "pl-sequential",
+        "candidate": "prompt-language",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 1640.95,
+          "timeToFirstCodeSec": 696.42,
+          "timeToFirstRelevantWriteSec": 696.42,
+          "interventionCount": 0,
+          "restartCount": 1,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": false,
+          "traceCompleteness": "strong",
+          "closureCompleteness": "strong",
+          "traceAuthority": "strong",
+          "artifactContractPass": true,
+          "processConformance": "strong",
+          "recoveryQuality": "strong",
+          "reuseReadiness": "strong",
+          "verificationPassRate": 1,
+          "resumeToGreenSec": 1011.81,
+          "interruptToGreenSec": 1011.91
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 1,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 1,
+          "repeatabilityEvidence": 0,
+          "closureQuality": 2,
+          "processConformance": 2
+        },
+        "factoryQuality": {
+          "closureQuality": 2,
+          "processConformance": 2,
+          "traceAuthority": 2,
+          "reuseReadiness": 2,
+          "claimStrength": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 3,
+          "researchStrength": 2,
+          "factoryQuality": 8,
+          "overall": 19
+        },
+        "notes": "Prompt-language resumed from the forced pre-verification stop and closed the bounded CRM core successfully under the frozen bootstrap seed."
+      },
+      "codex-alone": {
+        "lane": "codex-alone",
+        "candidate": "codex-alone",
+        "status": "completed",
+        "verdict": "success",
+        "metrics": {
+          "timeToGreenSec": 529.52,
+          "timeToFirstCodeSec": 142.88,
+          "timeToFirstRelevantWriteSec": 142.88,
+          "interventionCount": 0,
+          "restartCount": 1,
+          "runtimeFailureCount": 0,
+          "failureClass": "none",
+          "throughputMetricsComplete": false,
+          "traceCompleteness": "strong",
+          "closureCompleteness": "strong",
+          "traceAuthority": "strong",
+          "artifactContractPass": true,
+          "processConformance": "mixed",
+          "recoveryQuality": "strong",
+          "reuseReadiness": "mixed",
+          "verificationPassRate": 1,
+          "resumeToGreenSec": 144.28,
+          "interruptToGreenSec": 144.43
+        },
+        "scores": {
+          "scopeCompletion": 2,
+          "verification": 2,
+          "artifactCompleteness": 2,
+          "setupSimplicity": 1,
+          "auditability": 2,
+          "experimentalControl": 1,
+          "automationIntegrity": 1,
+          "repeatabilityEvidence": 0,
+          "closureQuality": 2,
+          "processConformance": 1
+        },
+        "factoryQuality": {
+          "closureQuality": 2,
+          "processConformance": 1,
+          "traceAuthority": 2,
+          "reuseReadiness": 1,
+          "claimStrength": 0
+        },
+        "totals": {
+          "productOutcome": 6,
+          "operationalQuality": 3,
+          "researchStrength": 2,
+          "factoryQuality": 6,
+          "overall": 17
+        },
+        "notes": "Direct Codex resumed from the forced pre-verification stop and closed the bounded CRM core successfully under the frozen bootstrap seed."
+      }
+    }
+  }
+]

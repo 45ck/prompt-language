@@ -1,0 +1,9 @@
+{
+  "runId": "20260414-0619-a19-core-proof-paired-clean",
+  "scenario": "recovery",
+  "documentedHumanInterventions": 0,
+  "promptLanguageRestartCount": 1,
+  "codexAloneRestartCount": 1,
+  "promptLanguageInterrupted": true,
+  "codexAloneInterrupted": true
+}

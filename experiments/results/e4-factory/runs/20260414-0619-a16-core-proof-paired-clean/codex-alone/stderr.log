@@ -1,0 +1,416 @@
+2026-04-13T20:20:09.788935Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.5 seconds
+Output:
+[31;1mGet-ChildItem: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m [36;1mGet-ChildItem -Recurse -Force -Depth 5 packages/domain packages/api d[0m …[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mA positional parameter cannot be found that accepts argument 'docs'.[0m
+
+2026-04-13T20:27:45.510614Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 3 seconds
+Output:
+noslop doctor → D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone
+  ✓ git core.hooksPath
+    core.hooksPath = .githooks
+  ✗ .githooks directory
+    .githooks/ missing — run: noslop init
+  ✗ .github/workflows/quality.yml
+    quality.yml missing — run: noslop init
+  ✗ .claude/settings.json
+    .claude/settings.json missing — run: noslop init
+  ✗ .claude/hooks directory
+    .claude/hooks/ missing — run: noslop init
+  ✗ AGENTS.md
+    AGENTS.md missing — run: noslop init
+
+5 check(s) failed — run: noslop init
+
+2026-04-13T20:28:07.431731Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.5 seconds
+Output:
+noslop check --tier=fast
+  ✗ format-check
+'prettier' is not recognized as an internal or external command,
+operable program or batch file.
+  ✗ lint
+Oops! Something went wrong! :(
+
+ESLint: 9.11.1
+
+TypeError: Key "rules": Key "@typescript-eslint/no-explicit-any": Could not find plugin "@typescript-eslint".
+    at throwRuleNotFoundError (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\config\rule-validator.js:66:11)
+    at RuleValidator.validate (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\config\rule-validator.js:147:17)
+    at new Config (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\config\config.js:240:27)
+    at [finalizeConfig] (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\config\flat-config-array.js:216:16)
+    at FlatConfigArray.getConfigWithStatus (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\node_modules\@eslint\config-array\dist\cjs\index.cjs:1102:55)
+    at FlatConfigArray.getConfig (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\node_modules\@eslint\config-array\dist\cjs\index.cjs:1120:15)
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\eslint\eslint-helpers.js:346:56
+    at Array.reduce (<anonymous>)
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\eslint\eslint-helpers.js:333:36
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\eslint\eslint-helpers.js:296:32
+  ✗ spell
+'cspell' is not recognized as an internal or external command,
+operable program or batch file.
+
+Some gates failed.
+
+2026-04-13T20:31:56.394985Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 5.4 seconds
+Output:
+
+> lint
+> eslint . --max-warnings=0
+
+
+Oops! Something went wrong! :(
+
+ESLint: 9.39.4
+
+A configuration object specifies rule "@typescript-eslint/no-explicit-any", but could not find plugin "@typescript-eslint".
+
+Common causes of this problem include:
+
+1. The "@typescript-eslint" plugin is not defined in your configuration file.
+2. The "@typescript-eslint" plugin is not defined within the same configuration object in which the "@typescript-eslint/no-explicit-any" rule is applied.
+
+
+2026-04-13T20:32:28.539045Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.1 seconds
+Output:
+
+> lint
+> eslint . --max-warnings=0
+
+
+Oops! Something went wrong! :(
+
+ESLint: 9.39.4
+
+Error: Error while loading rule '@typescript-eslint/no-floating-promises': You have used a rule which requires type information, but don't have parserOptions set to generate type information for this file. See https://tseslint.com/typed-linting for enabling linting with type information.
+Parser: (unknown)
+Note: detected a parser other than @typescript-eslint/parser. Make sure the parser is configured to forward "parserOptions.project" to @typescript-eslint/parser.
+Occurred while linting D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\eslint.config.js
+    at throwError (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\@typescript-eslint\utils\dist\eslint-utils\getParserServices.js:40:11)
+    at getParserServices (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\@typescript-eslint\utils\dist\eslint-utils\getParserServices.js:23:9)
+    at create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\@typescript-eslint\eslint-plugin\dist\rules\no-floating-promises.js:106:55)
+    at Object.create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\@typescript-eslint\utils\dist\eslint-utils\RuleCreator.js:39:20)
+    at createRuleListeners (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\eslint\lib\linter\linter.js:1019:15)
+    at D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\eslint\lib\linter\linter.js:1151:7
+    at Array.forEach (<anonymous>)
+    at runRules (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\eslint\lib\linter\linter.js:1085:31)
+    at #flatVerifyWithoutProcessors (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\eslint\lib\linter\linter.js:2115:4)
+    at Linter._verifyWithFlatConfigArrayAndWithoutProcessors (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\eslint\lib\linter\linter.js:2203:43)
+
+2026-04-13T20:32:44.298480Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 3.3 seconds
+Output:
+
+> lint
+> eslint . --max-warnings=0
+
+
+D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\packages\domain\src\index.ts
+  206:41  error  Arrow function has too many lines (240). Maximum allowed is 80        max-lines-per-function
+  291:5   error  Method 'createContact' has a complexity of 12. Maximum allowed is 10  complexity
+  412:1   error  File has too many lines (411). Maximum allowed is 350                 max-lines
+
+✖ 3 problems (3 errors, 0 warnings)
+
+
+2026-04-13T20:36:09.630439Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 3 seconds
+Output:
+noslop check --tier=fast
+  ✗ format-check
+'prettier' is not recognized as an internal or external command,
+operable program or batch file.
+  ✗ lint
+Oops! Something went wrong! :(
+
+ESLint: 9.11.1
+
+TypeError: Error while loading rule '@typescript-eslint/no-unused-expressions': Cannot read properties of undefined (reading 'allowShortCircuit')
+Occurred while linting D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\vitest.config.ts
+    at Object.create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\eslint\lib\rules\no-unused-expressions.js:85:5)
+    at create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\@typescript-eslint\eslint-plugin\dist\rules\no-unused-expressions.js:30:32)
+    at Object.create (D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\node_modules\@typescript-eslint\utils\dist\eslint-utils\RuleCreator.js:39:20)
+    at createRuleListeners (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:943:21)
+    at C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1068:84
+    at Array.forEach (<anonymous>)
+    at runRules (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:999:34)
+    at #flatVerifyWithoutProcessors (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1914:31)
+    at Linter._verifyWithFlatConfigArrayAndWithoutProcessors (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:1995:49)
+    at Linter._verifyWithFlatConfigArray (C:\Users\Admin\AppData\Roaming\npm\node_modules\eslint\lib\linter\linter.js:2084:21)
+  ✗ spell
+'cspell' is not recognized as an internal or external command,
+operable program or batch file.
+
+Some gates failed.
+
+2026-04-13T20:36:50.827963Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.4 seconds
+Output:
+[31;1mprettier: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m [36;1mprettier[0m --version[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m ~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mThe term 'prettier' is not recognized as a name of a cmdlet, function, script file, or executable program.[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.[0m
+
+2026-04-13T20:37:07.048465Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.3 seconds
+Output:
+
+> format:check
+> prettier . --check
+
+Checking formatting...
+[[33mwarn[39m] .prettierrc.json
+[[33mwarn[39m] CHANGELOG.md
+[[33mwarn[39m] cspell.json
+[[33mwarn[39m] demo/crm.demo.yaml
+[[33mwarn[39m] docs/acceptance-criteria.md
+[[33mwarn[39m] docs/adr-001-stack.md
+[[33mwarn[39m] docs/api-contracts.md
+[[33mwarn[39m] docs/architecture/container.md
+[[33mwarn[39m] docs/architecture/context.md
+[[33mwarn[39m] docs/architecture/domain-model.md
+[[33mwarn[39m] docs/architecture/README.md
+[[33mwarn[39m] docs/architecture/sequence-contact-to-opportunity.md
+[[33mwarn[39m] docs/data-model.md
+[[33mwarn[39m] docs/demo-script.md
+[[33mwarn[39m] docs/handover.md
+[[33mwarn[39m] docs/known-issues.md
+[[33mwarn[39m] docs/non-functional-requirements.md
+[[33mwarn[39m] docs/personas.md
+[[33mwarn[39m] docs/prd.md
+[[33mwarn[39m] docs/product-summary.md
+[[33mwarn[39m] docs/release-notes.md
+[[33mwarn[39m] docs/test-strategy.md
+[[33mwarn[39m] docs/traceability.md
+[[33mwarn[39m] docs/use-cases.md
+[[33mwarn[39m] docs/verification-summary.md
+[[33mwarn[39m] packages/api/src/index.ts
+[[33mwarn[39m] packages/api/test/api.test.ts
+[[33mwarn[39m] packages/domain/src/brands.ts
+[[33mwarn[39m] packages/domain/src/entities.ts
+[[33mwarn[39m] packages/domain/src/errors.ts
+[[33mwarn[39m] packages/domain/src/id-generator.ts
+[[33mwarn[39m] packages/domain/src/index.ts
+[[33mwarn[39m] packages/domain/src/opportunity-stage.ts
+[[33mwarn[39m] packages/domain/src/service-types.ts
+[[33mwarn[39m] packages/domain/src/service.ts
+[[33mwarn[39m] packages/domain/src/validation.ts
+[[33mwarn[39m] packages/domain/test/domain.test.ts
+[[33mwarn[39m] qa-flows/crm-smoke.json
+[[33mwarn[39m] README.md
+[[33mwarn[39m] specs/domain-glossary.md
+[[33mwarn[39m] specs/invariants.md
+[[33mwarn[39m] Code style issues found in 41 files. Run Prettier with --write to fix.
+
+2026-04-13T20:38:11.007807Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.3 seconds
+Output:
+'prettier' is not recognized as an internal or external command,
+operable program or batch file.
+
+2026-04-13T20:40:01.777714Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 4.8 seconds
+Output:
+noslop check --tier=fast
+  ✗ format-check
+Checking formatting...
+[[33mwarn[39m] .prettierrc.json
+[[33mwarn[39m] CHANGELOG.md
+[[33mwarn[39m] cspell.json
+[[33mwarn[39m] demo/crm.demo.yaml
+[[33mwarn[39m] docs/acceptance-criteria.md
+[[33mwarn[39m] docs/adr-001-stack.md
+[[33mwarn[39m] docs/api-contracts.md
+[[33mwarn[39m] docs/architecture/container.md
+[[33mwarn[39m] docs/architecture/context.md
+[[33mwarn[39m] docs/architecture/domain-model.md
+[[33mwarn[39m] docs/architecture/README.md
+[[33mwarn[39m] docs/architecture/sequence-contact-to-opportunity.md
+[[33mwarn[39m] docs/data-model.md
+[[33mwarn[39m] docs/demo-script.md
+[[33mwarn[39m] docs/handover.md
+[[33mwarn[39m] docs/known-issues.md
+[[33mwarn[39m] docs/non-functional-requirements.md
+[[33mwarn[39m] docs/personas.md
+[[33mwarn[39m] docs/prd.md
+[[33mwarn[39m] docs/product-summary.md
+[[33mwarn[39m] docs/release-notes.md
+[[33mwarn[39m] docs/test-strategy.md
+[[33mwarn[39m] docs/traceability.md
+[[33mwarn[39m] docs/use-cases.md
+[[33mwarn[39m] docs/verification-summary.md
+[[33mwarn[39m] packages/api/src/index.ts
+[[33mwarn[39m] packages/api/test/api.test.ts
+[[33mwarn[39m] packages/domain/src/brands.ts
+[[33mwarn[39m] packages/domain/src/entities.ts
+[[33mwarn[39m] packages/domain/src/errors.ts
+[[33mwarn[39m] packages/domain/src/id-generator.ts
+[[33mwarn[39m] packages/domain/src/index.ts
+[[33mwarn[39m] packages/domain/src/opportunity-stage.ts
+[[33mwarn[39m] packages/domain/src/service-types.ts
+[[33mwarn[39m] packages/domain/src/service.ts
+[[33mwarn[39m] packages/domain/src/validation.ts
+[[33mwarn[39m] packages/domain/test/domain.test.ts
+[[33mwarn[39m] qa-flows/crm-smoke.json
+[[33mwarn[39m] README.md
+[[33mwarn[39m] specs/domain-glossary.md
+[[33mwarn[39m] specs/invariants.md
+[[33mwarn[39m] Code style issues found in 41 files. Run Prettier with --write to fix.
+  ✓ lint
+  ✗ spell
+CSpell: Files checked: 0, Issues found: 0 in 0 files.
+
+Some gates failed.
+
+2026-04-13T20:40:44.222491Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.9 seconds
+Output:
+
+> spell
+> cspell --no-progress .
+
+AGENTS.md:3:29 - Unknown word (noslop)
+AGENTS.md:8:1 - Unknown word (noslop)
+AGENTS.md:14:1 - Unknown word (noslop)
+AGENTS.md:21:93 - Unknown word (noslop)
+AGENTS.md:27:1 - Unknown word (noslop)
+cspell.cmd:2:1 - Unknown word (setlocal)
+demo/crm.demo.yaml:6:1 - Unknown word (prereqs)
+docs/acceptance-criteria.md:49:4 - Unknown word (noslop)
+docs/acceptance-criteria.md:49:24 - Unknown word (noslop)
+docs/handover.md:15:4 - Unknown word (noslop)
+docs/handover.md:16:4 - Unknown word (noslop)
+docs/prd.md:32:60 - Unknown word (noslop)
+docs/traceability.md:22:4 - Unknown word (noslop)
+docs/traceability.md:23:4 - Unknown word (noslop)
+docs/verification-summary.md:10:4 - Unknown word (noslop)
+docs/verification-summary.md:11:4 - Unknown word (noslop)
+eslint.cmd:2:1 - Unknown word (setlocal)
+eslint.config.js:4:8 - Unknown word (sonarjs)
+eslint.config.js:27:55 - Unknown word (sonarjs)
+eslint.config.js:29:47 - Unknown word (noslop)
+eslint.config.js:35:8 - Unknown word (sonarjs)
+prettier.cmd:2:1 - Unknown word (setlocal)
+scripts/check:2:3 - Unknown word (noslop)
+scripts/check:3:9 - Unknown word (NOSLOP)
+scripts/check:19:1 - Unknown word (esac)
+scripts/fmt:2:3 - Unknown word (noslop)
+scripts/lint:2:3 - Unknown word (noslop)
+scripts/test:2:3 - Unknown word (noslop)
+CSpell: Files checked: 56, Issues found: 28 in 15 files.
+
+2026-04-13T20:40:52.957739Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\cspell.json:
+  "version": "0.2",
+  "language": "en",
+  "words": [],
+  "ignorePaths": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    ".git/**",
+2026-04-13T20:41:23.554690Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 4.3 seconds
+Output:
+noslop check --tier=fast
+  ✓ format-check
+  ✓ lint
+  ✗ spell
+CSpell: Files checked: 0, Issues found: 0 in 0 files.
+
+Some gates failed.
+
+2026-04-13T20:41:40.822255Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 4.4 seconds
+Output:
+noslop check --tier=fast
+  ✓ format-check
+Checking formatting...
+All matched files use Prettier code style!
+  ✓ lint
+  ✗ spell
+CSpell: Files checked: 0, Issues found: 0 in 0 files.
+
+Some gates failed.
+
+2026-04-13T20:42:10.902593Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.4 seconds
+Output:
+[31;1mNew-Item: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m … ackages)) { [36;1mNew-Item -ItemType Junction -Path src/packages -Target pa[0m …[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCreating a junction requires an absolute path for the target.[0m
+[31;1mNew-Item: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m … rc/docs)) { [36;1mNew-Item -ItemType Junction -Path src/docs -Target docs[0m | …[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCreating a junction requires an absolute path for the target.[0m
+[31;1mNew-Item: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m … c/specs)) { [36;1mNew-Item -ItemType Junction -Path src/specs -Target specs[0m …[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCreating a junction requires an absolute path for the target.[0m
+[31;1mNew-Item: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m … rc/demo)) { [36;1mNew-Item -ItemType Junction -Path src/demo -Target demo[0m | …[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCreating a junction requires an absolute path for the target.[0m
+[31;1mNew-Item: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m … a-flows)) { [36;1mNew-Item -ItemType Junction -Path 'src/qa-flows' -Target [0m …[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCreating a junction requires an absolute path for the target.[0m
+
+2026-04-13T20:43:07.261386Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.2 seconds
+Output:
+
+> format:check
+> prettier . --check
+
+Checking formatting...
+[[33mwarn[39m] {src}/README.md
+[[33mwarn[39m] src/README.md
+[[33mwarn[39m] Code style issues found in 2 files. Run Prettier with --write to fix.
+
+2026-04-13T20:44:19.152120Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.3 seconds
+Output:
+# npm audit report
+
+minimatch  10.0.0 - 10.2.2
+Severity: high
+minimatch has a ReDoS via repeated wildcards with non-matching literal in pattern - https://github.com/advisories/GHSA-3ppc-4f35-3m26
+minimatch has ReDoS: matchOne() combinatorial backtracking via multiple non-adjacent GLOBSTAR segments - https://github.com/advisories/GHSA-7r86-cg39-jmmj
+minimatch ReDoS: nested *() extglobs generate catastrophically backtracking regular expressions - https://github.com/advisories/GHSA-23c5-xmqv-rm74
+fix available via `npm audit fix`
+node_modules/eslint-plugin-sonarjs/node_modules/minimatch
+  eslint-plugin-sonarjs  2.0.4 || 3.0.6 - 3.0.7
+  Depends on vulnerable versions of minimatch
+  node_modules/eslint-plugin-sonarjs
+
+2 high severity vulnerabilities
+
+To address all issues, run:
+  npm audit fix
+
+2026-04-13T20:45:31.692901Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a16-core-proof-paired-clean\codex-alone\docs\verification-summary.md:
+This document records the *actual* outcomes of required verification commands.
+
+> Updated during the final verification pass (see `docs/handover.md` for how to rerun).
+
+## Results (to be filled by the final gate run)
+
+- build-if-present: **TBD**
+- `noslop doctor`: **TBD**
+- `noslop check --tier=fast`: **TBD**
+- `npm run lint`: **TBD**
+- `npm run typecheck`: **TBD**
+- `npm run test`: **TBD**

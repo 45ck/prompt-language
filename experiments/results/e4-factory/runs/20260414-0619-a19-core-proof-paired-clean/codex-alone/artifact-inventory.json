@@ -1,0 +1,72 @@
+[
+  {
+    "path": "docs/prd.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1715,
+    "sha256": "4f25ee7aa1f97d91a6c6ccf14cebbef660124790b0a2eecb66409a24148b791e"
+  },
+  {
+    "path": "docs/acceptance-criteria.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1640,
+    "sha256": "162974bd1b4f8c83ef84dfe4ad3f4772c20caa289d056bff41558e92f68a5e18"
+  },
+  {
+    "path": "docs/architecture/domain-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1259,
+    "sha256": "904407ac9cfa9673041f92c3a52bf29aff9fdbffcbfbbd51ac22c48936578c28"
+  },
+  {
+    "path": "docs/api-contracts.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1795,
+    "sha256": "b1348aa5e5829462759142767332abf8089c74427d2611fcae047855981522ed"
+  },
+  {
+    "path": "specs/invariants.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1236,
+    "sha256": "c0fff022181fa5a8dfe540b768f4eb6bf3d4c16db366a689d5b365ebecc28eae"
+  },
+  {
+    "path": "packages/domain/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 13276,
+    "sha256": "9b523b459ae1b4fe4f138ff87a6a70655201ef30560cae65b1d5a685a867d914"
+  },
+  {
+    "path": "packages/api/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 7828,
+    "sha256": "5a66c1d44d42b81d54b0b06a033b9255ae5671e710ab42ec67a27eab3d03781f"
+  },
+  {
+    "path": "README.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 618,
+    "sha256": "130aaa696fa548e47a8c9dc79e333716ae9d4f05dbdc7376b2a739a6670d0b59"
+  },
+  {
+    "path": "docs/handover.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 923,
+    "sha256": "3550de25648bd8a3b9a4872714744f41815dd16fe5a853fa67db55a8ea92fc1a"
+  },
+  {
+    "path": "docs/test-strategy.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 805,
+    "sha256": "732dd57c5cdbfa082c644bbe9248b3b9dd50000786d8c1b10f48b56c9b982e71"
+  }
+]

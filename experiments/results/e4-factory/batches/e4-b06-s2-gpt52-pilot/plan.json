@@ -1,0 +1,33 @@
+{
+  "batchId": "e4-b06-s2-gpt52-pilot",
+  "scenario": "s2-pre-verification",
+  "model": "gpt-5.2",
+  "plannedPairs": 2,
+  "orders": [
+    {
+      "pairId": "p01-s2-codex-first",
+      "order": "codex-first"
+    },
+    {
+      "pairId": "p02-s2-pl-first",
+      "order": "pl-first"
+    }
+  ],
+  "gitCommit": "0dcab2cfda803fbb4b52dd297aa53fe09822d0ea",
+  "exclusionRules": [
+    "system-level contamination at the pre-run gate",
+    "harness crash before the pair runner writes a closed run pack",
+    "shared Windows verification-path failures that affect both lanes before clean closure",
+    "missing raw trace files required by results:e4"
+  ],
+  "primaryEndpoint": "resumeToGreenSec by lane across eligible recovery pairs",
+  "decisionRules": {
+    "promptLanguageBetter": "prompt-language wins only when the paired runs are trace-complete, recovery-claim-eligible, and show faster resumeToGreenSec without a shared confound",
+    "codexAloneBetter": "codex-alone wins only when the paired runs are trace-complete, recovery-claim-eligible, and show faster resumeToGreenSec without a shared confound",
+    "inconclusive": "use when shared confounds, missing counterbalance, or missing recovery claim eligibility prevent a comparative claim"
+  },
+  "processBaseline": {
+    "codexProcessIds": [],
+    "ollamaProcessIds": []
+  }
+}

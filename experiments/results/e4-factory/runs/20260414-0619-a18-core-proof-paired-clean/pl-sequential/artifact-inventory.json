@@ -1,0 +1,79 @@
+[
+  {
+    "path": "docs/prd.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 4242,
+    "sha256": "c1cc4706cc0e38c2326d3f0ce6317e0ef0201b054381f901f9a8a0e704c9f42b"
+  },
+  {
+    "path": "docs/acceptance-criteria.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 4577,
+    "sha256": "5f155356880a5a64e9143fae3d3558b61f01904f2388df27ae87a890eed63415"
+  },
+  {
+    "path": "docs/architecture/domain-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 5345,
+    "sha256": "8b7e3279e072e5b4a5ae1e7da5d7fd114860f49e8ea50500e6795d9daaf8289d"
+  },
+  {
+    "path": "docs/api-contracts.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3808,
+    "sha256": "c53248fda4913bf1508c5d81c3666d8660551c6d3ecb7450bf54f35278a21609"
+  },
+  {
+    "path": "specs/invariants.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2974,
+    "sha256": "8ab01a8d42ec3087bc03a489689a1a6cd290c5b5ae1389935d538c77d7790592"
+  },
+  {
+    "path": "packages/domain/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 4727,
+    "sha256": "149c8ca8d2986b70f60574d20c9874c21763fc7c77bd3ca1c258912dd60ce793"
+  },
+  {
+    "path": "packages/api/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 7569,
+    "sha256": "615370c39acc87ad0f787502fe3a3d7f4afe55e6358742eaef43cb50d3b5d01f"
+  },
+  {
+    "path": "README.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1059,
+    "sha256": "6b99e1de1292a5827446b96e621a4161bff7e289c88d120affc525228a3de9ce"
+  },
+  {
+    "path": "docs/handover.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2106,
+    "sha256": "5282e0c0255dc7ae4340ce5be5ac18f20999611cb6a348c3716e6aa6e8d94987"
+  },
+  {
+    "path": "docs/test-strategy.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1464,
+    "sha256": "fb4d75e81c893091305a3d6058343c8779f7ca6b6b9e4107f81e3b399058bcd3"
+  },
+  {
+    "path": ".factory/project.flow",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1858,
+    "sha256": "155b371519903659370b15b38a3eeb518265c53a766ebfa686e2eadca03bea21"
+  }
+]

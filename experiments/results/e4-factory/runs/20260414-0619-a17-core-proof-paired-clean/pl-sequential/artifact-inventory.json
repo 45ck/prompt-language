@@ -1,0 +1,217 @@
+[
+  {
+    "path": "docs/prd.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 4445,
+    "sha256": "1763d29d2fec76b7467bdf3db270da85fa571347a159f18e381bd53275d97dfc"
+  },
+  {
+    "path": "docs/acceptance-criteria.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2957,
+    "sha256": "53ffda49795318cf31f28682ce0db8cabd491a13a432ff9ef1cf8512cb9fd3b8"
+  },
+  {
+    "path": "docs/personas.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1121,
+    "sha256": "70b3947f8cf269f28593cbee5176320b8bef264c1377fc962b920de8dc459096"
+  },
+  {
+    "path": "docs/use-cases.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3493,
+    "sha256": "bfeed97453907b64dcf6458e9f9f432fba61bad4a1db0797487e1afa7d03e0a0"
+  },
+  {
+    "path": "docs/non-functional-requirements.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1642,
+    "sha256": "5d8e7c4b40f6c31ae2aa9539b3adc5a8da4f05fe953cd171203aed851b8b423f"
+  },
+  {
+    "path": "docs/architecture/context.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1157,
+    "sha256": "344c5f832b53d6b9e806f097dd4edc41a2543e85cece559363d067b8a100058d"
+  },
+  {
+    "path": "docs/architecture/container.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 982,
+    "sha256": "798292ad076de4c2a0e765899de0448bb7256e881e69f8213be92a4a214b1eb0"
+  },
+  {
+    "path": "docs/architecture/domain-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1808,
+    "sha256": "e0801590e2eda52aff56d773a7d9a27eeca8a68938f79d59aefcc89b0882425e"
+  },
+  {
+    "path": "docs/architecture/sequence-contact-to-opportunity.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1349,
+    "sha256": "b8dd97a9969798258afd5177627e40725f3ddc16c6c47ea96d63862a9bc7c997"
+  },
+  {
+    "path": "docs/api-contracts.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2922,
+    "sha256": "7225fb278d1f723fb1de11619d7b27259a949243e6dc0792a5b5b204213c43be"
+  },
+  {
+    "path": "docs/data-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1170,
+    "sha256": "8e353674b9263c73483a1fb10015157868dc49e20c499f127edb2bfa5fe404a5"
+  },
+  {
+    "path": "docs/adr-001-stack.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 990,
+    "sha256": "dc809eebd699f242374283bd8efb781b1d3c81eecdf1ce23c8fba6e449dc3378"
+  },
+  {
+    "path": "specs/domain-glossary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1069,
+    "sha256": "f99984c768c3c2c3f33c3a256823414d7ec587087583b72a0cbf2a71e21ea243"
+  },
+  {
+    "path": "specs/invariants.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1761,
+    "sha256": "eaa6c5db2d3f6b272933d06b4401ff49e782d76ad31eff3091362f301962babe"
+  },
+  {
+    "path": "packages/domain/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 7517,
+    "sha256": "3a5ea1bf3d9ed575f38411eaf40ad0ef7c6970f8516fa4eeefaf659453995890"
+  },
+  {
+    "path": "packages/domain/test",
+    "present": true,
+    "type": "directory",
+    "sha256": "8753d2b1e44262b9f6d317f3396021f14e65c077e1fbf8c9e21e40e2790b5ddd"
+  },
+  {
+    "path": "packages/api/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 6812,
+    "sha256": "ad68cab72250d672b310af3ca166b826f2f2520ae43e7bc926f98468a2c8682a"
+  },
+  {
+    "path": "packages/api/test",
+    "present": true,
+    "type": "directory",
+    "sha256": "3b12f61e39d2f192509fd849e9d6f4703a32374926e38cf953950663d402ad41"
+  },
+  {
+    "path": "qa-flows/crm-smoke.json",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 5228,
+    "sha256": "02717d30e188f592a3aafd762656587e715313e048c3332a8fa7777fc1002632"
+  },
+  {
+    "path": "demo/crm.demo.yaml",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3263,
+    "sha256": "9c2e78504636e50b070aae0ad5c2a6684b15f4158a68775c8620e1319ad6e717"
+  },
+  {
+    "path": "README.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1451,
+    "sha256": "4f3b174dc49df4bedd74e5bda7447b9b3c52bf3e352e4a2e724a526b05eae813"
+  },
+  {
+    "path": "docs/traceability.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2214,
+    "sha256": "e8c0317fa6df113462483a0d837e4cdd5a1983f92ee20ae0417cf3e07a13c35d"
+  },
+  {
+    "path": "docs/test-strategy.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1032,
+    "sha256": "ac44f792f3277157c66b8d60b4d2f74fd61f14177c81bb9aed3479377aeaf523"
+  },
+  {
+    "path": "docs/verification-summary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 847,
+    "sha256": "6997952c90b2222970d3f26d654765f1a7e3a275f3e476fc55a81571a464a588"
+  },
+  {
+    "path": "docs/product-summary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 794,
+    "sha256": "579f558dfb4b053c3d403e75549ead40c863483537fed86d812b2efa041b3b80"
+  },
+  {
+    "path": "docs/demo-script.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 887,
+    "sha256": "d69cdd2804101b11635fe06db21ca33d5bb73a26048fc1a8e34d44d8a5a642eb"
+  },
+  {
+    "path": "docs/release-notes.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 273,
+    "sha256": "d58e5a420377ed695da7f3f41c3b4eec19799ea821fe246360bfdf9c8ad76ee4"
+  },
+  {
+    "path": "docs/known-issues.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 227,
+    "sha256": "763113d18bc9f259b7fcb41273e02a50c88f77fb4d16f0b7af2d6c1c1f32248a"
+  },
+  {
+    "path": "docs/handover.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 573,
+    "sha256": "201799bb224537bebab6d12b39023eec631b1a6e807e60fdf72202ac0d3dc7aa"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 238,
+    "sha256": "532a7ce6c21997fec0fdcbedc0498ced4ae1c1dee74c5e58b60c756669a69a77"
+  },
+  {
+    "path": ".factory/project.flow",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1858,
+    "sha256": "155b371519903659370b15b38a3eeb518265c53a766ebfa686e2eadca03bea21"
+  }
+]

@@ -1,0 +1,25 @@
+command: npm run test
+startedAt: 2026-04-13T20:29:01.738Z
+endedAt: 2026-04-13T20:29:02.672Z
+durationMs: 934
+exitCode: 0
+timedOut: false
+
+stdout:
+
+> test
+> vitest run
+
+
+ RUN  v4.1.4 D:/Visual Studio Projects/prompt-language/experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/20260414-0619-a18-core-proof-paired-clean/codex-alone
+
+
+ Test Files  3 passed (3)
+      Tests  6 passed (6)
+   Start at  06:29:02
+   Duration  241ms (transform 112ms, setup 0ms, import 162ms, tests 13ms, environment 0ms)
+
+
+
+stderr:
+(no stderr)

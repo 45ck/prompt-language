@@ -1,0 +1,14 @@
+Implemented the bounded CRM core slice (contacts, companies, opportunities + stage transitions, tasks, notes, dashboard summaries) with pure TypeScript domain logic and an in-memory API.
+
+- Domain + rules: `packages/domain/src/index.ts`
+- In-memory service: `packages/api/src/index.ts`
+- Focused tests: `packages/domain/test/domain.test.ts`, `packages/api/test/api.test.ts`
+- Docs/specs/demo/QA artifacts: `docs/`, `specs/`, `qa-flows/crm-smoke.json`, `demo/crm.demo.yaml`, `CHANGELOG.md`, `README.md`
+
+Verification (recorded in `docs/verification-summary.md`):
+- build-if-present: skipped (no `build` script)
+- `noslop doctor`: PASS
+- `noslop check --tier=fast`: PASS
+- `npm run lint`: PASS
+- `npm run typecheck`: PASS
+- `npm run test`: PASS (2 files, 7 tests)

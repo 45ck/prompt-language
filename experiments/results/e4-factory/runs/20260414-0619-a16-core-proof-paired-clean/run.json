@@ -1,0 +1,55 @@
+{
+  "protocolVersion": "e4-v2",
+  "runId": "20260414-0619-a16-core-proof-paired-clean",
+  "attemptLabel": "A16",
+  "scenario": "factory-quality",
+  "order": "codex-first",
+  "model": "gpt-5.2",
+  "batch": {
+    "batchId": "e4-b05-fq1-gpt52-primary",
+    "pairId": "p01-factory-quality-codex-first"
+  },
+  "startedAt": "2026-04-13T20:19:29.773Z",
+  "gitCommit": "0dcab2cfda803fbb4b52dd297aa53fe09822d0ea",
+  "gitStatusShort": "M .beads/backup/backup_state.json\n M .beads/backup/events.jsonl\n M .beads/backup/issues.jsonl",
+  "nodeVersion": "v22.22.0",
+  "npmVersion": "10.9.4",
+  "codexVersion": "codex-cli 0.120.0",
+  "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-factory-quality.flow",
+  "controlHash": "8e061c6d7339bf08f3119212d38a50bc10bc4dbd05816323da27891393898329",
+  "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-factory-quality.prompt.md",
+  "promptHash": "b47d4b6949e945b49e13605b53c421fc43203a505f17364e06b7d76a47dde724",
+  "bootstrapSeed": {
+    "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+    "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+    "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+    "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+  },
+  "timingEnvelope": "paired-factory-quality-s0-external-verification",
+  "evaluationModel": {
+    "claimType": "factory-quality",
+    "primaryEndpoint": "factoryQualityOverall",
+    "secondaryEndpoints": [
+      "traceCompleteness",
+      "artifactCompleteness",
+      "verificationPassRate",
+      "closureCompleteness",
+      "processConformance",
+      "interventionCount"
+    ]
+  },
+  "documentedHumanInterventions": 0,
+  "interventionObservationMode": "harness-parameterized",
+  "endedAt": "2026-04-13T21:25:34.578Z",
+  "comparativeVerdict": "prompt-language-better",
+  "admissibility": {
+    "class": "primary-comparison",
+    "throughputClaimEligible": false,
+    "claimEligibility": {
+      "throughput": false,
+      "factoryQuality": true,
+      "recovery": false
+    },
+    "reason": "This is a trace-first paired factory-quality run on the same common product contract with closure and lane-level evidence strong enough for a governed-factory comparison."
+  }
+}

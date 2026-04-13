@@ -1,0 +1,9 @@
+Got the resumed run into a clean, passing state without touching `.factory/` (other than the already-existing checkpoint).
+
+- Fixed `eslint` errors:
+  - `packages/domain/src/index.ts`: made `buildDashboardSummary` safe for single-pass `Iterable`s by materializing inputs once (`Array.from(...)`) and using `.length` + reusing arrays.
+  - `packages/api/test/in-memory-api.test.ts`: changed an un-reassigned `let` to `const`.
+- Verified locally:
+  - `npm run lint` ✅
+  - `npm run typecheck` ✅
+  - `npm run test` ✅

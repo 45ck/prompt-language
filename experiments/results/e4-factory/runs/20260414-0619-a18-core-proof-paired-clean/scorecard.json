@@ -1,0 +1,220 @@
+{
+  "scoreVersion": "e4-v2",
+  "runId": "20260414-0619-a18-core-proof-paired-clean",
+  "batch": {
+    "batchId": "e4-b06-s2-gpt52-pilot",
+    "pairId": "p01-s2-codex-first"
+  },
+  "scope": "bounded-crm-core",
+  "question": "After a forced pre-verification stop on the same bounded CRM core slice, which lane resumes and closes more effectively from the preserved workspace state?",
+  "baselineReference": "codex-alone within this run",
+  "evaluationModel": {
+    "claimType": "recovery",
+    "primaryEndpoint": "resumeToGreenSec",
+    "secondaryEndpoints": [
+      "recoveredAfterInterruption",
+      "traceCompleteness",
+      "interventionCount",
+      "closureCompleteness"
+    ]
+  },
+  "admissibility": {
+    "class": "supporting-context",
+    "throughputClaimEligible": false,
+    "claimEligibility": {
+      "throughput": false,
+      "factoryQuality": false,
+      "recovery": false
+    },
+    "reason": "This is a trace-backed S2 governed-recovery pilot on the same bounded CRM contract, but it remains supporting context until repeated predeclared interruption/resume pairs agree.",
+    "recoveryClaimEligible": false
+  },
+  "comparativeVerdict": "codex-alone-better",
+  "lanes": [
+    {
+      "lane": "pl-sequential",
+      "candidate": "prompt-language",
+      "status": "partial",
+      "verdict": "partial",
+      "metrics": {
+        "timeToGreenSec": null,
+        "timeToFirstCodeSec": 524.15,
+        "timeToFirstRelevantWriteSec": 524.15,
+        "interventionCount": 0,
+        "restartCount": 1,
+        "runtimeFailureCount": 0,
+        "failureClass": "product",
+        "throughputMetricsComplete": false,
+        "traceCompleteness": "strong",
+        "closureCompleteness": "mixed",
+        "traceAuthority": "strong",
+        "artifactContractPass": true,
+        "processConformance": "mixed",
+        "recoveryQuality": "mixed",
+        "reuseReadiness": "mixed",
+        "verificationPassRate": 0.6666666666666666,
+        "resumeToGreenSec": null,
+        "interruptToGreenSec": null
+      },
+      "scores": {
+        "scopeCompletion": 1,
+        "verification": 1,
+        "artifactCompleteness": 2,
+        "setupSimplicity": 1,
+        "auditability": 2,
+        "experimentalControl": 1,
+        "automationIntegrity": 1,
+        "repeatabilityEvidence": 0,
+        "closureQuality": 1,
+        "processConformance": 1
+      },
+      "factoryQuality": {
+        "closureQuality": 1,
+        "processConformance": 1,
+        "traceAuthority": 2,
+        "reuseReadiness": 1,
+        "claimStrength": 0
+      },
+      "totals": {
+        "productOutcome": 4,
+        "operationalQuality": 3,
+        "researchStrength": 2,
+        "factoryQuality": 5,
+        "overall": 14
+      },
+      "scoreEvidence": {
+        "scopeCompletion": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/outcome.md"
+        ],
+        "verification": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/pl-sequential/lint.log",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/pl-sequential/typecheck.log",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/pl-sequential/test.log"
+        ],
+        "artifactCompleteness": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/outcome.md"
+        ],
+        "setupSimplicity": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/postmortem.md"
+        ],
+        "auditability": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/trace-summary.md"
+        ],
+        "experimentalControl": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/pl-sequential/lane-summary.json",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/trace-summary.md"
+        ],
+        "automationIntegrity": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/interventions.md"
+        ],
+        "repeatabilityEvidence": [
+          "experiments/results/e4-factory/batches/e4-b06-s2-gpt52-pilot/summary.json"
+        ],
+        "closureQuality": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/pl-sequential/lane-summary.json",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/outcome.md"
+        ],
+        "processConformance": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/pl-sequential/lane-summary.json",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/trace-summary.md"
+        ]
+      },
+      "notes": "Prompt-language did not recover cleanly from the forced pre-verification stop under the frozen bootstrap seed."
+    },
+    {
+      "lane": "codex-alone",
+      "candidate": "codex-alone",
+      "status": "completed",
+      "verdict": "success",
+      "metrics": {
+        "timeToGreenSec": 552.08,
+        "timeToFirstCodeSec": 177.05,
+        "timeToFirstRelevantWriteSec": 177.05,
+        "interventionCount": 0,
+        "restartCount": 1,
+        "runtimeFailureCount": 0,
+        "failureClass": "none",
+        "throughputMetricsComplete": false,
+        "traceCompleteness": "strong",
+        "closureCompleteness": "strong",
+        "traceAuthority": "strong",
+        "artifactContractPass": true,
+        "processConformance": "mixed",
+        "recoveryQuality": "strong",
+        "reuseReadiness": "mixed",
+        "verificationPassRate": 1,
+        "resumeToGreenSec": 189.75,
+        "interruptToGreenSec": 189.84
+      },
+      "scores": {
+        "scopeCompletion": 2,
+        "verification": 2,
+        "artifactCompleteness": 2,
+        "setupSimplicity": 1,
+        "auditability": 2,
+        "experimentalControl": 1,
+        "automationIntegrity": 1,
+        "repeatabilityEvidence": 0,
+        "closureQuality": 2,
+        "processConformance": 1
+      },
+      "factoryQuality": {
+        "closureQuality": 2,
+        "processConformance": 1,
+        "traceAuthority": 2,
+        "reuseReadiness": 1,
+        "claimStrength": 0
+      },
+      "totals": {
+        "productOutcome": 6,
+        "operationalQuality": 3,
+        "researchStrength": 2,
+        "factoryQuality": 6,
+        "overall": 17
+      },
+      "scoreEvidence": {
+        "scopeCompletion": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/outcome.md"
+        ],
+        "verification": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/codex-alone/lint.log",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/codex-alone/typecheck.log",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/codex-alone/test.log"
+        ],
+        "artifactCompleteness": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/outcome.md"
+        ],
+        "setupSimplicity": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/postmortem.md"
+        ],
+        "auditability": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/trace-summary.md"
+        ],
+        "experimentalControl": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/codex-alone/lane-summary.json",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/trace-summary.md"
+        ],
+        "automationIntegrity": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/interventions.md"
+        ],
+        "repeatabilityEvidence": [
+          "experiments/results/e4-factory/batches/e4-b06-s2-gpt52-pilot/summary.json"
+        ],
+        "closureQuality": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/codex-alone/lane-summary.json",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/outcome.md"
+        ],
+        "processConformance": [
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/codex-alone/lane-summary.json",
+          "experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/trace-summary.md"
+        ]
+      },
+      "notes": "Direct Codex resumed from the forced pre-verification stop and closed the bounded CRM core successfully under the frozen bootstrap seed."
+    }
+  ],
+  "comparativeSummary": "Both lanes closed the common product contract, but direct Codex reached time-to-green faster in this paired run.",
+  "nextExperimentFocus": [
+    "repeat the governed S2 interruption/resume pair in both orders",
+    "promote recovery claims only after repeated trace-backed pairs agree"
+  ]
+}

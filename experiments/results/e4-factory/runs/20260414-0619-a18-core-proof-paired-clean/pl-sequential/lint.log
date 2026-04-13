@@ -1,0 +1,22 @@
+command: npm run lint
+startedAt: 2026-04-13T20:53:41.585Z
+endedAt: 2026-04-13T20:53:42.716Z
+durationMs: 1131
+exitCode: 1
+timedOut: false
+
+stdout:
+
+> lint
+> eslint . --max-warnings=0
+
+
+D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a18-core-proof-paired-clean\pl-sequential\packages\api\test\in-memory-crm-service.test.ts
+  113:11  error  'opp1' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 1 problem (1 error, 0 warnings)
+
+
+
+stderr:
+(no stderr)

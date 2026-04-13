@@ -1,0 +1,10 @@
+{
+  "runId": "20260414-0619-a19-core-proof-paired-clean",
+  "scenario": "recovery",
+  "primaryClaimType": "recovery",
+  "confounds": [],
+  "admissibilityReason": "This is a trace-backed S2 governed-recovery pilot on the same bounded CRM contract, but it remains supporting context until repeated predeclared interruption/resume pairs agree.",
+  "promptLanguageFailureClass": "none",
+  "codexAloneFailureClass": "none",
+  "rerunRecommended": false
+}

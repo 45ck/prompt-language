@@ -1,0 +1,54 @@
+{
+  "protocolVersion": "e4-v2",
+  "runId": "20260414-0619-a19-core-proof-paired-clean",
+  "attemptLabel": "A19",
+  "scenario": "s2-pre-verification",
+  "order": "pl-first",
+  "model": "gpt-5.2",
+  "batch": {
+    "batchId": "e4-b06-s2-gpt52-pilot",
+    "pairId": "p02-s2-pl-first"
+  },
+  "startedAt": "2026-04-13T20:19:34.088Z",
+  "gitCommit": "0dcab2cfda803fbb4b52dd297aa53fe09822d0ea",
+  "gitStatusShort": "M .beads/backup/backup_state.json\n M .beads/backup/events.jsonl\n M .beads/backup/issues.jsonl\n?? experiments/results/e4-factory/runs/20260414-0619-a16-core-proof-paired-clean/\n?? experiments/results/e4-factory/runs/20260414-0619-a17-core-proof-paired-clean/\n?? experiments/results/e4-factory/runs/20260414-0619-a18-core-proof-paired-clean/",
+  "nodeVersion": "v22.22.0",
+  "npmVersion": "10.9.4",
+  "codexVersion": "codex-cli 0.120.0",
+  "controlFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/core-proof-s2-pre-verification.flow",
+  "controlHash": "7d8e873143f73e376106d56a105cc3e1028db78a6ba3babb9a87c73fc5e3a6d1",
+  "promptFile": "experiments/full-saas-factory/e4-codex-crm-factory/control/codex-alone-s2-pre-verification.prompt.md",
+  "promptHash": "5f2f4db2eedb1e2f8976c48a6530cca8edb53c346ebdead70483c979c62669e8",
+  "bootstrapSeed": {
+    "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+    "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+    "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+    "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+  },
+  "timingEnvelope": "paired-recovery-s2-pre-verification",
+  "evaluationModel": {
+    "claimType": "recovery",
+    "primaryEndpoint": "resumeToGreenSec",
+    "secondaryEndpoints": [
+      "recoveredAfterInterruption",
+      "traceCompleteness",
+      "interventionCount",
+      "closureCompleteness"
+    ]
+  },
+  "documentedHumanInterventions": 0,
+  "interventionObservationMode": "harness-parameterized",
+  "endedAt": "2026-04-13T20:56:06.895Z",
+  "comparativeVerdict": "codex-alone-better",
+  "admissibility": {
+    "class": "supporting-context",
+    "throughputClaimEligible": false,
+    "claimEligibility": {
+      "throughput": false,
+      "factoryQuality": false,
+      "recovery": false
+    },
+    "reason": "This is a trace-backed S2 governed-recovery pilot on the same bounded CRM contract, but it remains supporting context until repeated predeclared interruption/resume pairs agree.",
+    "recoveryClaimEligible": false
+  }
+}

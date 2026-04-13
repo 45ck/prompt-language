@@ -1,0 +1,10 @@
+{
+  "status": "ok",
+  "diagnostics": [],
+  "outcomes": [
+    {
+      "code": "PLO-005",
+      "summary": "Flow completed."
+    }
+  ]
+}

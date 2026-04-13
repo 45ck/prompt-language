@@ -1,0 +1,64 @@
+2026-04-13T20:55:22.513768Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.4 seconds
+Output:
+build-if-present: skipped (no build script)
+[31;1meoslop: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   6 | [0m [36;1meoslop[0m --version[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m ~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mThe term 'eoslop' is not recognized as a name of a cmdlet, function, script file, or executable program.[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m[31;1mCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.[0m
+
+2026-04-13T20:58:23.093174Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.6 seconds
+Output:
+noslop check --tier=fast
+  ✓ format-check
+  ✓ lint
+  ✗ spell
+CSpell: Files checked: 0, Issues found: 0 in 0 files.
+
+Some gates failed.
+
+2026-04-13T20:58:31.513914Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 1.7 seconds
+Output:
+
+> spell
+> cspell --no-progress --config cspell.json "{docs,packages,specs,qa-flows,demo}/**/*" README.md CHANGELOG.md
+
+demo/crm.demo.yaml:4:18 - Unknown word (scriptable)
+docs/acceptance-criteria.md:29:25 - Unknown word (idempotently)
+docs/non-functional-requirements.md:23:27 - Unknown word (noslop)
+docs/non-functional-requirements.md:23:47 - Unknown word (noslop)
+docs/traceability.md:22:4 - Unknown word (noslop)
+docs/traceability.md:23:4 - Unknown word (noslop)
+docs/verification-summary.md:12:4 - Unknown word (noslop)
+docs/verification-summary.md:13:4 - Unknown word (noslop)
+packages/domain/test/domain.test.ts:67:24 - Unknown word (idempotently)
+CSpell: Files checked: 30, Issues found: 9 in 6 files.
+
+2026-04-13T20:59:44.381103Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.5 seconds
+Output:
+noslop check --tier=fast
+  ✓ format-check
+  ✓ lint
+  ✗ spell
+CSpell: Files checked: 0, Issues found: 0 in 0 files.
+
+Some gates failed.
+
+2026-04-13T21:00:00.534376Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 2.5 seconds
+Output:
+noslop check --tier=fast
+  ✓ format-check
+Checking formatting...
+All matched files use Prettier code style!
+  ✓ lint
+  ✗ spell
+CSpell: Files checked: 0, Issues found: 0 in 0 files.
+
+Some gates failed.
+

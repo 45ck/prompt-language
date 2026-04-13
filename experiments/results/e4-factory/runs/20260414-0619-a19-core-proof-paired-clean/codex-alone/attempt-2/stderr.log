@@ -1,0 +1,22 @@
+2026-04-13T20:54:35.114494Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 6.6 seconds
+Output:
+
+> lint
+> eslint . --max-warnings=0
+
+
+D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a19-core-proof-paired-clean\codex-alone\packages\api\test\in-memory-api.test.ts
+  7:9  error  'nowValue' is never reassigned. Use 'const' instead  prefer-const
+
+D:\Visual Studio Projects\prompt-language\experiments\full-saas-factory\e4-codex-crm-factory\workspaces\runs\20260414-0619-a19-core-proof-paired-clean\codex-alone\packages\domain\src\index.ts
+  401:14  error  '_c' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  402:14  error  '_c' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  403:14  error  '_o' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  404:14  error  '_t' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  405:14  error  '_n' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+✖ 6 problems (6 errors, 0 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+
+

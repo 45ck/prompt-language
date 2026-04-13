@@ -1,0 +1,210 @@
+[
+  {
+    "path": "docs/prd.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1019,
+    "sha256": "d9628bcb1b9f20d9a9d0c4f7088c6ff936796321410467e08aef678ab35899ef"
+  },
+  {
+    "path": "docs/acceptance-criteria.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1259,
+    "sha256": "ef8ed2a1ff81961f8e40719ba00882779bfd7033bc3d6879c957499fcfa09182"
+  },
+  {
+    "path": "docs/personas.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 562,
+    "sha256": "2af96dbe0d3dbd1b2bd3e2638c12d446058a28ae315607be5f7bd2603b1064e1"
+  },
+  {
+    "path": "docs/use-cases.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 924,
+    "sha256": "fac3657e5ba23e08d5af328980293953f6dfc2aba0e57118387c9484c61ff44e"
+  },
+  {
+    "path": "docs/non-functional-requirements.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 699,
+    "sha256": "54bf3615c2f76740604c4a9eaecde7613d2df479d09915c4eedf604c1bb41595"
+  },
+  {
+    "path": "docs/architecture/context.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 479,
+    "sha256": "497cffd300abb2d2750fcac6ee9a23f8dd23071d6e8b68d072d7c1be94ae6e62"
+  },
+  {
+    "path": "docs/architecture/container.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 522,
+    "sha256": "ac2df88181cf5f6ea5373995a867317266dcc33d39c220c4541c655861929263"
+  },
+  {
+    "path": "docs/architecture/domain-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 766,
+    "sha256": "fff2a3290b7ff5d2c824d69218f9d5c3f31cc01bfe1dc43cdbc92bc62268e9b6"
+  },
+  {
+    "path": "docs/architecture/sequence-contact-to-opportunity.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1076,
+    "sha256": "c47e3e25c08938757f74ac83a8f780690e74e2d2a0e7bdb30ec41caf0cd7c8d0"
+  },
+  {
+    "path": "docs/api-contracts.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1569,
+    "sha256": "f3eb8bb045e85e2b8b1643d9e8c973680f9151d932d4a5aad66c0a91922ff9d0"
+  },
+  {
+    "path": "docs/data-model.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 607,
+    "sha256": "23931efbbb11dc83e3b563c7a3d67a63c79a7d51de44bcf8d6c3e9837b5ec217"
+  },
+  {
+    "path": "docs/adr-001-stack.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 531,
+    "sha256": "e464d7e5d8aad5081209e1ed097ae28c4996e5e02503a8a391c6a5991eac0af8"
+  },
+  {
+    "path": "specs/domain-glossary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 550,
+    "sha256": "28bb6e275738a9fbb8c659612fbaadd056038facdad51337377f37f4d02bb8ea"
+  },
+  {
+    "path": "specs/invariants.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1284,
+    "sha256": "bc56e370a1114ee07b8dc611cfb61a45b69155a9b072369fa0341d00dfbbdd11"
+  },
+  {
+    "path": "packages/domain/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 9811,
+    "sha256": "729420c067c9792de3d8fb3c74d912425b9864b451825a728e41fc82e569e75a"
+  },
+  {
+    "path": "packages/domain/test",
+    "present": true,
+    "type": "directory",
+    "sha256": "b3df70c28e63d6dffab6430e552958a0c8b4b664d17d6f1affdac086864342f2"
+  },
+  {
+    "path": "packages/api/src/index.ts",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 9293,
+    "sha256": "3c8a5c7a74e2fe3eb4070c2f09cf7d57d42dcfe44d089edcab40c141f880a3a1"
+  },
+  {
+    "path": "packages/api/test",
+    "present": true,
+    "type": "directory",
+    "sha256": "5c36f905cfca0aab8194d95486d007e7179302f89452e6024ab5dc36215733c4"
+  },
+  {
+    "path": "qa-flows/crm-smoke.json",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 2206,
+    "sha256": "f2058ed081bca30502a58d488c1e3405fd1e56c97de3dab632076854a670d12a"
+  },
+  {
+    "path": "demo/crm.demo.yaml",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1355,
+    "sha256": "5783bbe0265b4ce8e0771d2248bb93e8e90791567d6256e5022c1c6b875bc025"
+  },
+  {
+    "path": "README.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1412,
+    "sha256": "d56c440e612b3b6725b062f1cb2bc8785cdaf6653fbcb58f9a01b4b84d81b826"
+  },
+  {
+    "path": "docs/traceability.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 3389,
+    "sha256": "6841c5143572dc8907f2db835eb00faf3f96f175ef3e8467bb977b2758dcd836"
+  },
+  {
+    "path": "docs/test-strategy.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 540,
+    "sha256": "6173f52c94a7c437d2622219edcca9487e9915e7f2680ae824be8b307d28001e"
+  },
+  {
+    "path": "docs/verification-summary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 603,
+    "sha256": "0c1252812212962bab5b26ce04018a4887a5bc028c22e99dad6d578dbb7157f9"
+  },
+  {
+    "path": "docs/product-summary.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 892,
+    "sha256": "463d93717dff1491721f075ceaf99084378495f3192d31a5a3f2a7ed3d20a781"
+  },
+  {
+    "path": "docs/demo-script.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1091,
+    "sha256": "7e124250a10670290790e5d0df7895bf084635731507d967c3abc76533d1a103"
+  },
+  {
+    "path": "docs/release-notes.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 463,
+    "sha256": "da253da300d15ac5ea5738c588837e5b1782f3c609c48c0f94d927cb46949400"
+  },
+  {
+    "path": "docs/known-issues.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 464,
+    "sha256": "0a92a97fdcf787a6903330e2a676adde3a5b7d9597ae7358a97ca5570fdc0bb9"
+  },
+  {
+    "path": "docs/handover.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 1174,
+    "sha256": "1bce4095ecf24f7fb661b147fe56be9ed11883ace61dff65cad9feab2e02b3e5"
+  },
+  {
+    "path": "CHANGELOG.md",
+    "present": true,
+    "type": "file",
+    "sizeBytes": 202,
+    "sha256": "25aed36a2cde6f7a2276a621b14e2ef3b4fb9cb255e72443ee286db24631e5e3"
+  }
+]

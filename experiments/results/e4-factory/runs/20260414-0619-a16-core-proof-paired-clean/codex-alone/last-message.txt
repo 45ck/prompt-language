@@ -1,0 +1,5 @@
+- Implemented bounded CRM core domain + in-memory service in `packages/domain/src/index.ts:1` (exports) and `packages/domain/src/service.ts:1` (behavior), plus focused tests in `packages/domain/test/domain.test.ts:1`.
+- Implemented API wrapper returning `ApiResult<T>` in `packages/api/src/index.ts:1`, plus focused tests in `packages/api/test/api.test.ts:1`.
+- Wrote the full documentation + specs set (start at `docs/product-summary.md:1`, `docs/prd.md:1`, `docs/traceability.md:1`, `specs/invariants.md:1`) and demo/QA artifacts (`demo/crm.demo.yaml:1`, `qa-flows/crm-smoke.json:1`).
+- Ran build-if-present: **skipped** (no `build` script in `package.json:1`).
+- Verified passing gates: `noslop doctor` **PASS**, `noslop check --tier=fast` **PASS**, `npm run lint` **PASS**, `npm run typecheck` **PASS**, `npm run test` **PASS** (recorded in `docs/verification-summary.md:1`).

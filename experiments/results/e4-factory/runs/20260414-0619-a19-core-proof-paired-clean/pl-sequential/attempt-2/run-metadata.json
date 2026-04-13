@@ -1,0 +1,9 @@
+{
+  "exitCode": 0,
+  "timedOut": false,
+  "interrupted": false,
+  "interruptDetectedAt": null,
+  "startedAt": "2026-04-13T20:30:20.960Z",
+  "endedAt": "2026-04-13T20:47:08.806Z",
+  "checkpointPath": "experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/20260414-0619-a19-core-proof-paired-clean/pl-sequential/.factory/checkpoints/pre-verification-ready"
+}

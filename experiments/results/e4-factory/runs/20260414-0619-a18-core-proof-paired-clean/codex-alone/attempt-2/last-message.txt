@@ -1,0 +1,4 @@
+Fixed the resumed-run build break where `packages/api/src/index.ts` couldn’t exhaustively switch on `EntityRef.kind`.
+
+- Updated `packages/domain/src/index.ts:45` to make `EntityRef` a proper discriminated union (`CompanyRef | ContactRef | OpportunityRef`) so `assertNever(ref)` type-narrows correctly.
+- Verified locally: `npm run lint`, `npm run typecheck`, and `npm run test` all pass.

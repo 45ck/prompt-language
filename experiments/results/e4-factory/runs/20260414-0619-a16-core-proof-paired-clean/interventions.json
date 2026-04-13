@@ -1,0 +1,9 @@
+{
+  "runId": "20260414-0619-a16-core-proof-paired-clean",
+  "scenario": "factory-quality",
+  "documentedHumanInterventions": 0,
+  "promptLanguageRestartCount": 0,
+  "codexAloneRestartCount": 0,
+  "promptLanguageInterrupted": false,
+  "codexAloneInterrupted": false
+}

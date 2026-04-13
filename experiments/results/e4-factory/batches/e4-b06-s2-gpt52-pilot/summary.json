@@ -1,0 +1,46 @@
+{
+  "batchId": "e4-b06-s2-gpt52-pilot",
+  "scenario": "s2-pre-verification",
+  "model": "gpt-5.2",
+  "frozenCommit": "0dcab2cfda803fbb4b52dd297aa53fe09822d0ea",
+  "plannedPairs": 2,
+  "completedPairs": 2,
+  "eligiblePairs": 2,
+  "abortedPairs": [],
+  "completedOrderCounts": {
+    "codex-first": 1,
+    "pl-first": 1
+  },
+  "eligibleOrderCounts": {
+    "codex-first": 1,
+    "pl-first": 1
+  },
+  "orderCounts": {
+    "codex-first": 1,
+    "pl-first": 1
+  },
+  "claimEligibility": {
+    "recoveryClaimEligible": false,
+    "reasons": [
+      "admissibility class is supporting-context, not primary-comparison",
+      "pilot batch; promotion requires repeated predeclared interruption/resume pairs that agree"
+    ]
+  },
+  "lanes": {
+    "pl-sequential": {
+      "successCount": 1,
+      "partialCount": 1,
+      "successRate": 0.5,
+      "medianResumeToGreenSec": 1011.81,
+      "medianVerificationPassRate": 0.8333333333333333
+    },
+    "codex-alone": {
+      "successCount": 2,
+      "partialCount": 0,
+      "successRate": 1,
+      "medianResumeToGreenSec": 167.015,
+      "medianVerificationPassRate": 1
+    }
+  },
+  "comparativeVerdict": "codex-alone-better"
+}

@@ -1,0 +1,93 @@
+{
+  "runId": "20260414-0619-a19-core-proof-paired-clean",
+  "lane": "codex-alone",
+  "candidate": "codex-alone",
+  "model": "gpt-5.2",
+  "batch": {
+    "batchId": "e4-b06-s2-gpt52-pilot",
+    "pairId": "p02-s2-pl-first"
+  },
+  "timingEnvelope": "paired-recovery-s2-pre-verification",
+  "status": "completed",
+  "verdict": "success",
+  "workspaceRoot": "D:\\Visual Studio Projects\\prompt-language\\experiments\\full-saas-factory\\e4-codex-crm-factory\\workspaces\\runs\\20260414-0619-a19-core-proof-paired-clean\\codex-alone",
+  "resultsRoot": "D:\\Visual Studio Projects\\prompt-language\\experiments\\results\\e4-factory\\runs\\20260414-0619-a19-core-proof-paired-clean\\codex-alone",
+  "promptFile": "D:\\Visual Studio Projects\\prompt-language\\experiments\\results\\e4-factory\\runs\\20260414-0619-a19-core-proof-paired-clean\\codex-alone\\prompt.md",
+  "bootstrapSeed": {
+    "seedPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/core-proof-seed",
+    "seedHash": "1db64c154f928940e9bc12399ce2de4dd57fd7d2cb2a01821bc9b0a8d9c584fe",
+    "overlayPath": "experiments/full-saas-factory/e4-codex-crm-factory/bootstrap/pl-overlay",
+    "overlayHash": "3508be7d4616be091d3de8a533f093e2c8865793aa8360039e9e361aed7071b3"
+  },
+  "requiredArtifacts": [
+    "docs/prd.md",
+    "docs/acceptance-criteria.md",
+    "docs/architecture/domain-model.md",
+    "docs/api-contracts.md",
+    "specs/invariants.md",
+    "packages/domain/src/index.ts",
+    "packages/api/src/index.ts",
+    "README.md",
+    "docs/handover.md",
+    "docs/test-strategy.md"
+  ],
+  "verificationCommands": [
+    "npm run lint",
+    "npm run typecheck",
+    "npm run test"
+  ],
+  "verification": {
+    "lint": "pass",
+    "typecheck": "pass",
+    "test": "pass"
+  },
+  "artifactsComplete": true,
+  "missingArtifacts": [],
+  "outcomePath": "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/outcome.md",
+  "postmortemPath": "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/postmortem.md",
+  "interventionsPath": "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/interventions.md",
+  "scorecardPath": "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/scorecard.json",
+  "traceSummaryPath": "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/trace-summary.md",
+  "laneSummaryPath": "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/lane-summary.json",
+  "traceArtifacts": [
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/events.jsonl",
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/stderr.log",
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/last-message.txt",
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/lane-summary.json",
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/artifact-inventory.json",
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/system-before.json",
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/system-after.json",
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/lint.log",
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/typecheck.log",
+    "experiments/results/e4-factory/runs/20260414-0619-a19-core-proof-paired-clean/codex-alone/test.log"
+  ],
+  "comparisonPath": "experiments/results/e4-factory/comparison.md",
+  "comparisonUpdated": true,
+  "metrics": {
+    "startedAt": "2026-04-13T20:47:15.792Z",
+    "endedAt": "2026-04-13T20:56:05.312Z",
+    "timeToGreenSec": 529.52,
+    "timeToFirstCodeSec": 142.88,
+    "timeToFirstRelevantWriteSec": 142.88,
+    "interventionCount": 0,
+    "restartCount": 1,
+    "runtimeFailureCount": 0,
+    "failureClass": "none",
+    "throughputMetricsComplete": false,
+    "traceCompleteness": "strong",
+    "interrupted": true,
+    "interruptionStage": "pre-verification",
+    "interruptToGreenSec": 144.43,
+    "resumeToGreenSec": 144.28,
+    "recoveryMetricsComplete": true,
+    "recoveredAfterInterruption": true,
+    "closureCompleteness": "strong",
+    "traceAuthority": "strong",
+    "artifactContractPass": true,
+    "processConformance": "mixed",
+    "recoveryQuality": "strong",
+    "reuseReadiness": "mixed"
+  },
+  "followups": [],
+  "scenario": "recovery"
+}

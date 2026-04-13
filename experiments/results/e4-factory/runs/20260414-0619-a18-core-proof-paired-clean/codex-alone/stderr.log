@@ -1,0 +1,18 @@
+2026-04-13T20:27:16.467976Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 9.5 seconds
+Output:
+
+> typecheck
+> tsc -p tsconfig.json --noEmit
+
+packages/api/src/index.ts(232,28): error TS2345: Argument of type 'Readonly<{ kind: EntityRefKind; id: string; }>' is not assignable to parameter of type 'never'.
+
+2026-04-13T20:27:22.680095Z ERROR codex_core::tools::router: error=Exit code: 1
+Wall time: 0.4 seconds
+Output:
+[31;1mSelect-Object: [0m
+[31;1m[36;1mLine |[0m
+[31;1m[36;1m[36;1m   2 | [0m … ent packages/api/src/index.ts | Select-Object -Index [36;1m210..250[0m) -join  …[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m     | [31;1m                                                        ~~~~~~~~[0m
+[31;1m[36;1m[36;1m[0m[36;1m[0m[36;1m[31;1m[31;1m[36;1m     | [31;1mCannot bind parameter 'Index'. Cannot convert value "210..250" to type "System.Int32". Error: "The input string '210..250' was not in a correct format."[0m
+

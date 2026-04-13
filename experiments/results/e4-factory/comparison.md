@@ -299,6 +299,139 @@ Primary evidence:
 - [A15 scorecard](./runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/scorecard.json)
 - [A15 trace summary](./runs/a15-e4-b04-fq1-gpt52-pilot-p02-factory-quality-pl-first/trace-summary.md)
 
+### A16: `20260414-0619-a16-core-proof-paired-clean`
+
+- `prompt-language` sequential lane: success
+- direct Codex lane: success
+
+Meaning:
+
+- timing envelope: `paired-factory-quality-s0-external-verification`
+- scenario kind: `factory-quality`
+- primary claim type: `factory-quality`
+- primary endpoint: `factoryQualityOverall`
+- batch: `e4-b05-fq1-gpt52-primary` pair `p01-factory-quality-codex-first`
+- comparative verdict: `prompt-language-better`
+- factory-quality claim eligible: true
+- prompt-language process conformance: strong
+- codex-alone process conformance: mixed
+
+Primary evidence:
+
+- [A16 outcome](./runs/20260414-0619-a16-core-proof-paired-clean/outcome.md)
+- [A16 postmortem](./runs/20260414-0619-a16-core-proof-paired-clean/postmortem.md)
+- [A16 scorecard](./runs/20260414-0619-a16-core-proof-paired-clean/scorecard.json)
+- [A16 trace summary](./runs/20260414-0619-a16-core-proof-paired-clean/trace-summary.md)
+
+### A17: `20260414-0619-a17-core-proof-paired-clean`
+
+- `prompt-language` sequential lane: success
+- direct Codex lane: success
+
+Meaning:
+
+- timing envelope: `paired-factory-quality-s0-external-verification`
+- scenario kind: `factory-quality`
+- primary claim type: `factory-quality`
+- primary endpoint: `factoryQualityOverall`
+- batch: `e4-b05-fq1-gpt52-primary` pair `p02-factory-quality-pl-first`
+- comparative verdict: `prompt-language-better`
+- factory-quality claim eligible: true
+- prompt-language process conformance: strong
+- codex-alone process conformance: mixed
+
+Primary evidence:
+
+- [A17 outcome](./runs/20260414-0619-a17-core-proof-paired-clean/outcome.md)
+- [A17 postmortem](./runs/20260414-0619-a17-core-proof-paired-clean/postmortem.md)
+- [A17 scorecard](./runs/20260414-0619-a17-core-proof-paired-clean/scorecard.json)
+- [A17 trace summary](./runs/20260414-0619-a17-core-proof-paired-clean/trace-summary.md)
+
+### A18: `20260414-0619-a18-core-proof-paired-clean`
+
+- `prompt-language` sequential lane: partial
+- direct Codex lane: success
+
+Meaning:
+
+- timing envelope: `paired-recovery-s2-pre-verification`
+- scenario kind: `s2-pre-verification`
+- primary claim type: `recovery`
+- primary endpoint: `resumeToGreenSec`
+- batch: `e4-b06-s2-gpt52-pilot` pair `p01-s2-codex-first`
+- comparative verdict: `codex-alone-better`
+- recovery claim eligible: false
+- admissibility: supporting-context
+
+Primary evidence:
+
+- [A18 outcome](./runs/20260414-0619-a18-core-proof-paired-clean/outcome.md)
+- [A18 postmortem](./runs/20260414-0619-a18-core-proof-paired-clean/postmortem.md)
+- [A18 scorecard](./runs/20260414-0619-a18-core-proof-paired-clean/scorecard.json)
+- [A18 trace summary](./runs/20260414-0619-a18-core-proof-paired-clean/trace-summary.md)
+
+### A19: `20260414-0619-a19-core-proof-paired-clean`
+
+- `prompt-language` sequential lane: success
+- direct Codex lane: success
+
+Meaning:
+
+- timing envelope: `paired-recovery-s2-pre-verification`
+- scenario kind: `s2-pre-verification`
+- primary claim type: `recovery`
+- primary endpoint: `resumeToGreenSec`
+- batch: `e4-b06-s2-gpt52-pilot` pair `p02-s2-pl-first`
+- comparative verdict: `codex-alone-better`
+- recovery claim eligible: false
+- admissibility: supporting-context
+
+Primary evidence:
+
+- [A19 outcome](./runs/20260414-0619-a19-core-proof-paired-clean/outcome.md)
+- [A19 postmortem](./runs/20260414-0619-a19-core-proof-paired-clean/postmortem.md)
+- [A19 scorecard](./runs/20260414-0619-a19-core-proof-paired-clean/scorecard.json)
+- [A19 trace summary](./runs/20260414-0619-a19-core-proof-paired-clean/trace-summary.md)
+
+### B05 Batch: `e4-b05-fq1-gpt52-primary`
+
+- completed clean pairs: `2`
+- eligible pairs: `2`
+- order balance: `1` `codex-first`, `1` `pl-first`
+- factory-quality claim eligible: `true`
+- batch verdict: `prompt-language-better`
+
+Meaning:
+
+- this is the first primary factory-quality batch, confirming the B04 pilot result
+- prompt-language won on factory-quality in both pairs across both order strata
+- combined with B04, there are now 4 clean counterbalanced factory-quality pairs all showing prompt-language-better
+
+Primary evidence:
+
+- [B05 batch summary](./batches/e4-b05-fq1-gpt52-primary/summary.md)
+- [B05 batch data](./batches/e4-b05-fq1-gpt52-primary/summary.json)
+
+### B06 Batch: `e4-b06-s2-gpt52-pilot`
+
+- completed pairs: `2`
+- eligible pairs: `2`
+- order balance: `1` `codex-first`, `1` `pl-first`
+- recovery claim eligible: `false`
+- batch verdict: `codex-alone-better`
+
+Meaning:
+
+- this is the first S2 recovery pilot batch
+- direct Codex recovered better from pre-verification interruption in both pairs
+- prompt-language had a partial failure in the codex-first pair (A18)
+- these are supporting context, not yet claim-eligible for recovery
+
+Primary evidence:
+
+- [B06 batch summary](./batches/e4-b06-s2-gpt52-pilot/summary.md)
+- [B06 batch data](./batches/e4-b06-s2-gpt52-pilot/summary.json)
+
 ## Current Interpretation
 
 The evidence now supports these current hypothesis-status reads:
@@ -306,16 +439,17 @@ The evidence now supports these current hypothesis-status reads:
 1. `prompt-language` can successfully drive a bounded software-factory slice.
 2. `prompt-language` is not currently better than direct Codex on the archived `S0` raw throughput
    question.
-3. `prompt-language` is better than direct Codex on governed factory-quality behavior in the
-   first clean counterbalanced pilot batch (`B04`), with `factoryQualityOverall` of 10 vs 8 in
-   both pairs.
-4. `prompt-language` still has an open, unclosed hypothesis on governed recovery.
+3. `prompt-language` is better than direct Codex on governed factory-quality behavior, confirmed
+   across two batches (`B04` pilot and `B05` primary) with 4 clean counterbalanced pairs all
+   showing `prompt-language-better`.
+4. `prompt-language` is not currently better than direct Codex on S2 pre-verification recovery
+   in the first pilot batch (`B06`), with both pairs showing `codex-alone-better`.
 
 The historical and current claims split is:
 
 - `S0 throughput`: answered by `B02`, currently `codex-alone-better`
-- `factory-quality`: answered at pilot strength by `B04`, currently `prompt-language-better`
-- `recovery`: not yet claim-eligible under repeated interrupted/resume pairs
+- `factory-quality`: confirmed by `B04` + `B05`, currently `prompt-language-better` across 4/4 clean pairs
+- `recovery`: answered at pilot strength by `B06`, currently `codex-alone-better`
 
 The active `factory-quality` pilot contract is a local SDLC slice, not the full externally
 executed QA/demo pipeline. It requires governed requirements/design artifacts, generated tests,

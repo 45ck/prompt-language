@@ -35,3 +35,6 @@ flow:
   use quality.local_verification(pkg_mgr="${preferred_package_manager}")
   use quality.manual_qa()
   use quality.product_demo()
+
+done when:
+  use quality.crm_build_phase_gates(pkg_mgr="${preferred_package_manager}")

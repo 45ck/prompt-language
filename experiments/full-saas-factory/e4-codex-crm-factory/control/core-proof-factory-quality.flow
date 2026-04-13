@@ -1,0 +1,43 @@
+Goal: produce a bounded CRM core slice through a sequential prompt-language run optimized for factory-quality evidence rather than raw throughput
+
+flow:
+  prompt: Work only inside the current workspace root. Treat `.factory/` as frozen control input and do not edit it.
+  prompt: Write docs/prd.md, docs/acceptance-criteria.md, docs/personas.md, docs/use-cases.md, and docs/non-functional-requirements.md for a bounded CRM core covering contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the scope small, deterministic, and implementation-ready.
+  prompt: Write docs/architecture/context.md, docs/architecture/container.md, docs/architecture/domain-model.md, docs/architecture/sequence-contact-to-opportunity.md, docs/api-contracts.md, docs/data-model.md, docs/adr-001-stack.md, specs/domain-glossary.md, and specs/invariants.md for the same bounded CRM core. Favor pure TypeScript domain logic and in-memory application services.
+  prompt: Build packages/domain/src/index.ts plus focused tests under packages/domain/test for contacts, companies, opportunities, stage transitions, tasks, notes, and dashboard summaries. Keep the module deterministic and dependency-free.
+  prompt: Build packages/api/src/index.ts plus focused tests under packages/api/test for in-memory application services that create contacts, create opportunities, move stages, add tasks and notes, and compute dashboard summaries. Depend only on the local domain package.
+  prompt: Write README.md, docs/traceability.md, docs/test-strategy.md, docs/product-summary.md, docs/demo-script.md, docs/release-notes.md, docs/known-issues.md, docs/handover.md, and CHANGELOG.md from the implemented workspace. Then run the local verification commands and fix the workspace until npm run lint, npm run typecheck, and npm run test all pass.
+  run: npm run lint
+  run: npm run typecheck
+  run: npm run test
+
+done when:
+  gate lint: npm run lint
+  gate typecheck: npm run typecheck
+  gate tests: npm run test
+  file_exists .factory/project.flow
+  file_exists docs/prd.md
+  file_exists docs/acceptance-criteria.md
+  file_exists docs/personas.md
+  file_exists docs/use-cases.md
+  file_exists docs/non-functional-requirements.md
+  file_exists docs/architecture/context.md
+  file_exists docs/architecture/container.md
+  file_exists docs/architecture/domain-model.md
+  file_exists docs/architecture/sequence-contact-to-opportunity.md
+  file_exists docs/api-contracts.md
+  file_exists docs/data-model.md
+  file_exists docs/adr-001-stack.md
+  file_exists specs/domain-glossary.md
+  file_exists specs/invariants.md
+  file_exists packages/domain/src/index.ts
+  file_exists packages/api/src/index.ts
+  file_exists README.md
+  file_exists docs/traceability.md
+  file_exists docs/test-strategy.md
+  file_exists docs/product-summary.md
+  file_exists docs/demo-script.md
+  file_exists docs/release-notes.md
+  file_exists docs/known-issues.md
+  file_exists docs/handover.md
+  file_exists CHANGELOG.md

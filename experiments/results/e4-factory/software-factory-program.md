@@ -18,12 +18,12 @@ This note is the execution bridge between the E4 research docs and the repo-nati
 
 ## Current Status
 
-- `in_progress`: `prompt-language-ksih`, `prompt-language-ksih.1`, `prompt-language-ksih.2`, `prompt-language-ksih.3`, `prompt-language-ksih.4`, `prompt-language-ksih.5`
-- `open`: `prompt-language-ksih.6`, `prompt-language-ksih.7`, `prompt-language-ksih.8`
+- `in_progress`: `prompt-language-ksih`, `prompt-language-ksih.1`, `prompt-language-ksih.2`, `prompt-language-ksih.3`, `prompt-language-ksih.4`, `prompt-language-ksih.5`, `prompt-language-ksih.6`
+- `open`: `prompt-language-ksih.7`, `prompt-language-ksih.8`
 
-The current implementation wave covers the method, evidence, trace, artifact, and closure layers.
-The remaining open work is the SDLC-by-default flow enforcement plus the new `factory-quality`
-and `recovery` execution batches.
+The current implementation wave covers the method, evidence, trace, artifact, closure, and
+SDLC-default gate layers. The remaining open work is execution: the new `factory-quality` and
+`recovery` batches.
 
 ## Why This Exists
 
@@ -67,7 +67,8 @@ For E4, "good software" means all of the following are true:
 - `prompt-language-ksih.3`: reflected in `artifact-inventory.json` and artifact-contract scoring
 - `prompt-language-ksih.4`: reflected in stronger lane summaries, trace provenance, and run metadata
 - `prompt-language-ksih.5`: reflected in closure checks for provenance, lane summaries, artifact inventory, and structured closure artifacts
-- `prompt-language-ksih.6` to `.8`: not yet executed in this wave
+- `prompt-language-ksih.6`: reflected in the dedicated `factory-quality` control surface, richer core-proof artifact contract, and stronger SDLC/default gate enforcement in the CRM factory libraries
+- `prompt-language-ksih.7` to `.8`: not yet executed in this wave
 
 ## Current Read
 

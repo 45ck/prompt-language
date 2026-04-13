@@ -1,6 +1,7 @@
 library: quality
 
 export flow local_verification(pkg_mgr="pnpm"):
+  run: node -e "const fs=require('node:fs'); const {spawnSync}=require('node:child_process'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); if(!pkg.scripts?.build){console.log('No build script declared; skipping build verification.'); process.exit(0)} const manager=process.argv[1]; const result=spawnSync(manager,['run','build'],{stdio:'inherit',shell:true}); process.exit(result.status ?? 1)" ${pkg_mgr}
   run: ${pkg_mgr} lint
   run: ${pkg_mgr} typecheck
   run: ${pkg_mgr} test
@@ -21,16 +22,68 @@ export flow product_demo():
   run: demo-machine validate demo/crm.demo.yaml
   run: demo-machine run demo/crm.demo.yaml --output artifacts/demo
 
-export gates crm_ship_gates(pkg_mgr="pnpm"):
+export gates crm_build_phase_gates(pkg_mgr="pnpm"):
+  gate build_if_present: node -e "const fs=require('node:fs'); const {spawnSync}=require('node:child_process'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); if(!pkg.scripts?.build){console.log('No build script declared; skipping build gate.'); process.exit(0)} const manager=process.argv[1]; const result=spawnSync(manager,['run','build'],{stdio:'inherit',shell:true}); process.exit(result.status ?? 1)" ${pkg_mgr}
   gate lint: ${pkg_mgr} lint
   gate typecheck: ${pkg_mgr} typecheck
   gate tests: ${pkg_mgr} test
   gate noslop_fast: noslop check --tier=fast
   gate noslop_slow: noslop check --tier=slow
-  gate qa_reports_present: test -d qa-reports
-  gate demo_artifacts_present: test -d artifacts/demo
+  gate qa_reports_present: node -e "const fs=require('node:fs'); try { const target='qa-reports'; process.exit(fs.existsSync(target) && fs.statSync(target).isDirectory() ? 0 : 1); } catch { process.exit(1); }"
+  gate demo_artifacts_present: node -e "const fs=require('node:fs'); try { const target='artifacts/demo'; process.exit(fs.existsSync(target) && fs.statSync(target).isDirectory() ? 0 : 1); } catch { process.exit(1); }"
   file_exists docs/prd.md
+  file_exists docs/acceptance-criteria.md
+  file_exists docs/personas.md
+  file_exists docs/use-cases.md
+  file_exists docs/non-functional-requirements.md
+  file_exists docs/architecture/context.md
+  file_exists docs/architecture/container.md
   file_exists docs/architecture/domain-model.md
+  file_exists docs/architecture/sequence-contact-to-opportunity.md
   file_exists docs/api-contracts.md
+  file_exists docs/data-model.md
+  file_exists docs/adr-001-stack.md
+  file_exists specs/domain-glossary.md
+  file_exists specs/invariants.md
+  file_exists README.md
+  file_exists AGENTS.md
+  file_exists docs/traceability.md
+  file_exists docs/test-strategy.md
   file_exists qa-flows/crm-smoke.json
   file_exists demo/crm.demo.yaml
+
+export gates crm_ship_gates(pkg_mgr="pnpm"):
+  gate build_if_present: node -e "const fs=require('node:fs'); const {spawnSync}=require('node:child_process'); const pkg=JSON.parse(fs.readFileSync('package.json','utf8')); if(!pkg.scripts?.build){console.log('No build script declared; skipping build gate.'); process.exit(0)} const manager=process.argv[1]; const result=spawnSync(manager,['run','build'],{stdio:'inherit',shell:true}); process.exit(result.status ?? 1)" ${pkg_mgr}
+  gate lint: ${pkg_mgr} lint
+  gate typecheck: ${pkg_mgr} typecheck
+  gate tests: ${pkg_mgr} test
+  gate noslop_fast: noslop check --tier=fast
+  gate noslop_slow: noslop check --tier=slow
+  gate qa_reports_present: node -e "const fs=require('node:fs'); try { const target='qa-reports'; process.exit(fs.existsSync(target) && fs.statSync(target).isDirectory() ? 0 : 1); } catch { process.exit(1); }"
+  gate demo_artifacts_present: node -e "const fs=require('node:fs'); try { const target='artifacts/demo'; process.exit(fs.existsSync(target) && fs.statSync(target).isDirectory() ? 0 : 1); } catch { process.exit(1); }"
+  file_exists docs/prd.md
+  file_exists docs/acceptance-criteria.md
+  file_exists docs/personas.md
+  file_exists docs/use-cases.md
+  file_exists docs/non-functional-requirements.md
+  file_exists docs/architecture/context.md
+  file_exists docs/architecture/container.md
+  file_exists docs/architecture/domain-model.md
+  file_exists docs/architecture/sequence-contact-to-opportunity.md
+  file_exists docs/api-contracts.md
+  file_exists docs/data-model.md
+  file_exists docs/adr-001-stack.md
+  file_exists specs/domain-glossary.md
+  file_exists specs/invariants.md
+  file_exists README.md
+  file_exists AGENTS.md
+  file_exists docs/traceability.md
+  file_exists docs/test-strategy.md
+  file_exists qa-flows/crm-smoke.json
+  file_exists demo/crm.demo.yaml
+  file_exists CHANGELOG.md
+  file_exists docs/release-notes.md
+  file_exists docs/known-issues.md
+  file_exists docs/handover.md
+  file_exists docs/product-summary.md
+  file_exists docs/demo-script.md

@@ -34,14 +34,16 @@ const ANALYSIS_PATH = join(RESULTS_ROOT, 'analysis-2026-04-12.md');
 const SEED_ROOT = join(BOOTSTRAP_ROOT, 'core-proof-seed');
 const PL_OVERLAY_ROOT = join(BOOTSTRAP_ROOT, 'pl-overlay');
 const THROUGHPUT_CONTROL_FILE = join(CONTROL_ROOT, 'core-proof-throughput.flow');
+const FACTORY_QUALITY_CONTROL_FILE = join(CONTROL_ROOT, 'core-proof-factory-quality.flow');
 const S2_PRE_VERIFICATION_CONTROL_FILE = join(CONTROL_ROOT, 'core-proof-s2-pre-verification.flow');
 const PROMPT_FILE = join(CONTROL_ROOT, 'codex-alone-core-proof.prompt.md');
+const FACTORY_QUALITY_PROMPT_FILE = join(CONTROL_ROOT, 'codex-alone-factory-quality.prompt.md');
 const S2_PRE_VERIFICATION_PROMPT_FILE = join(
   CONTROL_ROOT,
   'codex-alone-s2-pre-verification.prompt.md',
 );
 
-const COMMON_REQUIRED_ARTIFACTS = [
+const THROUGHPUT_REQUIRED_ARTIFACTS = [
   'docs/prd.md',
   'docs/acceptance-criteria.md',
   'docs/architecture/domain-model.md',
@@ -52,6 +54,34 @@ const COMMON_REQUIRED_ARTIFACTS = [
   'README.md',
   'docs/handover.md',
   'docs/test-strategy.md',
+];
+
+const FACTORY_QUALITY_REQUIRED_ARTIFACTS = [
+  'docs/prd.md',
+  'docs/acceptance-criteria.md',
+  'docs/personas.md',
+  'docs/use-cases.md',
+  'docs/non-functional-requirements.md',
+  'docs/architecture/context.md',
+  'docs/architecture/container.md',
+  'docs/architecture/domain-model.md',
+  'docs/architecture/sequence-contact-to-opportunity.md',
+  'docs/api-contracts.md',
+  'docs/data-model.md',
+  'docs/adr-001-stack.md',
+  'specs/domain-glossary.md',
+  'specs/invariants.md',
+  'packages/domain/src/index.ts',
+  'packages/api/src/index.ts',
+  'README.md',
+  'docs/traceability.md',
+  'docs/test-strategy.md',
+  'docs/product-summary.md',
+  'docs/demo-script.md',
+  'docs/release-notes.md',
+  'docs/known-issues.md',
+  'docs/handover.md',
+  'CHANGELOG.md',
 ];
 
 const LANE_SPECIFIC_REQUIRED_ARTIFACTS = {
@@ -82,8 +112,8 @@ const SCENARIO_CONFIGS = {
   },
   'factory-quality': {
     kind: 'factory-quality',
-    controlFile: THROUGHPUT_CONTROL_FILE,
-    promptFile: PROMPT_FILE,
+    controlFile: FACTORY_QUALITY_CONTROL_FILE,
+    promptFile: FACTORY_QUALITY_PROMPT_FILE,
     timingEnvelope: 'paired-factory-quality-s0-external-verification',
     question:
       'For the same bounded CRM core slice and frozen bootstrap seed, which lane behaves more like a governed, inspectable, reusable software factory?',
@@ -766,8 +796,12 @@ async function detectFirstRelevantWrite(root, initialSnapshot, startedAtMs) {
   return roundSeconds((firstChangedAt - startedAtMs) / 1000);
 }
 
-function requiredArtifactsForLane(lane) {
-  return [...COMMON_REQUIRED_ARTIFACTS, ...(LANE_SPECIFIC_REQUIRED_ARTIFACTS[lane] ?? [])];
+function requiredArtifactsForLane(lane, scenarioKind) {
+  const commonArtifacts =
+    scenarioKind === 'factory-quality'
+      ? FACTORY_QUALITY_REQUIRED_ARTIFACTS
+      : THROUGHPUT_REQUIRED_ARTIFACTS;
+  return [...commonArtifacts, ...(LANE_SPECIFIC_REQUIRED_ARTIFACTS[lane] ?? [])];
 }
 
 async function existingRequiredArtifacts(workspaceRoot, requiredArtifacts) {
@@ -1144,7 +1178,7 @@ async function runPromptLanguageLane({
 }) {
   await ensureDir(laneResultsRoot);
   await ensureDir(stateDir);
-  const requiredArtifacts = requiredArtifactsForLane('pl-sequential');
+  const requiredArtifacts = requiredArtifactsForLane('pl-sequential', scenarioKind);
   const scenarioKind = scenarioConfig.kind;
   const checkpointPath =
     scenarioConfig.interruptCheckpoint === undefined
@@ -1473,7 +1507,7 @@ async function runCodexLane({
   scenarioConfig,
 }) {
   await ensureDir(laneResultsRoot);
-  const requiredArtifacts = requiredArtifactsForLane('codex-alone');
+  const requiredArtifacts = requiredArtifactsForLane('codex-alone', scenarioKind);
   const scenarioKind = scenarioConfig.kind;
   const checkpointPath =
     scenarioConfig.interruptCheckpoint === undefined

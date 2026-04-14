@@ -1,0 +1,1207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudPulse — Monitor Smarter, Respond Faster</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --primary: #2563eb;
+        --secondary: #7c3aed;
+        --accent: #10b981;
+        --dark: #1e293b;
+        --light: #f8fafc;
+        --gray-100: #f1f5f9;
+        --gray-200: #e2e8f0;
+        --gray-400: #94a3b8;
+        --gray-600: #475569;
+        --gray-800: #1e293b;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        color: var(--dark);
+        background: var(--light);
+        line-height: 1.6;
+      }
+
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .container {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ── Navigation ── */
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(248, 250, 252, 0.92);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--gray-200);
+      }
+
+      nav .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 64px;
+      }
+
+      .logo {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .logo svg {
+        flex-shrink: 0;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 32px;
+        list-style: none;
+      }
+
+      .nav-links a {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--gray-600);
+        transition: color 0.2s;
+      }
+
+      .nav-links a:hover {
+        color: var(--primary);
+      }
+
+      .nav-cta {
+        display: inline-block;
+        padding: 8px 20px;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+
+      .nav-cta:hover {
+        background: #1d4ed8;
+      }
+
+      .mobile-toggle {
+        display: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+      }
+
+      /* ── Hero ── */
+      #hero {
+        padding: 96px 0 80px;
+        text-align: center;
+        background: linear-gradient(168deg, var(--light) 0%, #eef2ff 50%, #f0fdfa 100%);
+      }
+
+      #hero h1 {
+        font-size: 3.25rem;
+        font-weight: 800;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        color: var(--dark);
+        max-width: 720px;
+        margin: 0 auto 16px;
+      }
+
+      .hero-tagline {
+        font-size: 1.25rem;
+        color: var(--gray-600);
+        max-width: 540px;
+        margin: 0 auto 40px;
+      }
+
+      .hero-actions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .btn-primary {
+        display: inline-block;
+        padding: 14px 32px;
+        background: var(--primary);
+        color: #fff;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        transition:
+          background 0.2s,
+          transform 0.15s;
+      }
+
+      .btn-primary:hover {
+        background: #1d4ed8;
+        transform: translateY(-1px);
+      }
+
+      .btn-secondary {
+        display: inline-block;
+        padding: 14px 32px;
+        background: transparent;
+        color: var(--primary);
+        border: 2px solid var(--primary);
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: background 0.2s;
+      }
+
+      .btn-secondary:hover {
+        background: rgba(37, 99, 235, 0.06);
+      }
+
+      .hero-metrics {
+        display: flex;
+        justify-content: center;
+        gap: 48px;
+        margin-top: 64px;
+      }
+
+      .hero-metrics .metric {
+        text-align: center;
+      }
+
+      .hero-metrics .metric-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--primary);
+      }
+
+      .hero-metrics .metric-label {
+        font-size: 0.85rem;
+        color: var(--gray-600);
+        margin-top: 2px;
+      }
+
+      /* ── Section Shared ── */
+      section {
+        padding: 96px 0;
+      }
+
+      .section-label {
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: var(--secondary);
+        text-align: center;
+        margin-bottom: 8px;
+      }
+
+      .section-title {
+        font-size: 2.25rem;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 12px;
+      }
+
+      .section-subtitle {
+        text-align: center;
+        color: var(--gray-600);
+        max-width: 560px;
+        margin: 0 auto 56px;
+        font-size: 1.05rem;
+      }
+
+      /* ── Features ── */
+      #features {
+        background: #fff;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+      }
+
+      .feature-card {
+        padding: 32px;
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        transition:
+          box-shadow 0.25s,
+          transform 0.2s;
+      }
+
+      .feature-card:hover {
+        box-shadow: 0 8px 30px rgba(37, 99, 235, 0.08);
+        transform: translateY(-2px);
+      }
+
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+      }
+
+      .feature-icon.blue {
+        background: rgba(37, 99, 235, 0.1);
+        color: var(--primary);
+      }
+      .feature-icon.purple {
+        background: rgba(124, 58, 237, 0.1);
+        color: var(--secondary);
+      }
+      .feature-icon.green {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent);
+      }
+
+      .feature-card h3 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin-bottom: 10px;
+      }
+
+      .feature-card p {
+        color: var(--gray-600);
+        font-size: 0.95rem;
+        line-height: 1.65;
+      }
+
+      /* ── Pricing ── */
+      #pricing {
+        background: var(--light);
+      }
+
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        align-items: start;
+      }
+
+      .pricing-card {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        padding: 40px 32px;
+        position: relative;
+        transition: box-shadow 0.25s;
+      }
+
+      .pricing-card:hover {
+        box-shadow: 0 8px 30px rgba(37, 99, 235, 0.08);
+      }
+
+      .pricing-card.featured {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 1px var(--primary);
+      }
+
+      .pricing-badge {
+        position: absolute;
+        top: -13px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--primary);
+        color: #fff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 4px 16px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .pricing-card h3 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .pricing-card .price {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--dark);
+      }
+
+      .pricing-card .price span {
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--gray-400);
+      }
+
+      .pricing-card .price-desc {
+        color: var(--gray-600);
+        font-size: 0.9rem;
+        margin-top: 4px;
+        margin-bottom: 28px;
+      }
+
+      .pricing-features {
+        list-style: none;
+        margin-bottom: 32px;
+      }
+
+      .pricing-features li {
+        padding: 8px 0;
+        font-size: 0.93rem;
+        color: var(--gray-600);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .pricing-features li svg {
+        flex-shrink: 0;
+        color: var(--accent);
+      }
+
+      .pricing-card .btn-primary {
+        display: block;
+        text-align: center;
+        width: 100%;
+      }
+
+      .pricing-card .btn-outline {
+        display: block;
+        text-align: center;
+        width: 100%;
+        padding: 14px 32px;
+        border: 2px solid var(--gray-200);
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--dark);
+        transition: border-color 0.2s;
+      }
+
+      .pricing-card .btn-outline:hover {
+        border-color: var(--primary);
+        color: var(--primary);
+      }
+
+      /* ── Testimonials ── */
+      #testimonials {
+        background: #fff;
+      }
+
+      .testimonials-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 32px;
+      }
+
+      .testimonial-card {
+        padding: 36px;
+        border-radius: 12px;
+        border: 1px solid var(--gray-200);
+        background: var(--light);
+      }
+
+      .stars {
+        display: flex;
+        gap: 2px;
+        margin-bottom: 16px;
+        color: #f59e0b;
+      }
+
+      .testimonial-card blockquote {
+        font-size: 1.05rem;
+        line-height: 1.7;
+        color: var(--gray-800);
+        margin-bottom: 24px;
+        font-style: italic;
+      }
+
+      .testimonial-author {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+
+      .author-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1rem;
+        color: #fff;
+      }
+
+      .author-info .name {
+        font-weight: 700;
+        font-size: 0.95rem;
+      }
+
+      .author-info .role {
+        font-size: 0.85rem;
+        color: var(--gray-400);
+      }
+
+      /* ── Footer ── */
+      footer {
+        background: var(--dark);
+        color: var(--gray-400);
+        padding: 64px 0 32px;
+      }
+
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 48px;
+        margin-bottom: 48px;
+      }
+
+      .footer-brand .logo {
+        color: #fff;
+        margin-bottom: 12px;
+      }
+      .footer-brand p {
+        font-size: 0.9rem;
+        line-height: 1.65;
+        max-width: 280px;
+      }
+
+      .footer-col h4 {
+        color: #fff;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 16px;
+      }
+
+      .footer-col ul {
+        list-style: none;
+      }
+      .footer-col li {
+        margin-bottom: 10px;
+      }
+      .footer-col a {
+        font-size: 0.9rem;
+        transition: color 0.2s;
+      }
+      .footer-col a:hover {
+        color: #fff;
+      }
+
+      .footer-social {
+        display: flex;
+        gap: 16px;
+        margin-top: 20px;
+      }
+      .footer-social a {
+        color: var(--gray-400);
+        transition: color 0.2s;
+      }
+      .footer-social a:hover {
+        color: #fff;
+      }
+
+      .footer-bottom {
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        padding-top: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.85rem;
+      }
+
+      .footer-bottom a {
+        transition: color 0.2s;
+      }
+      .footer-bottom a:hover {
+        color: #fff;
+      }
+
+      /* ── Mobile ── */
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+        .nav-cta.desktop {
+          display: none;
+        }
+        .mobile-toggle {
+          display: block;
+        }
+
+        #hero {
+          padding: 64px 0 56px;
+        }
+        #hero h1 {
+          font-size: 2.15rem;
+        }
+        .hero-tagline {
+          font-size: 1.05rem;
+        }
+        .hero-metrics {
+          gap: 24px;
+        }
+        .hero-metrics .metric-value {
+          font-size: 1.5rem;
+        }
+
+        section {
+          padding: 64px 0;
+        }
+        .section-title {
+          font-size: 1.75rem;
+        }
+
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+        .pricing-grid {
+          grid-template-columns: 1fr;
+          max-width: 420px;
+          margin: 0 auto;
+        }
+        .testimonials-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+          gap: 32px;
+        }
+        .footer-brand {
+          grid-column: 1 / -1;
+        }
+        .footer-bottom {
+          flex-direction: column;
+          gap: 12px;
+          text-align: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav>
+      <div class="container">
+        <a href="#hero" class="logo">
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <rect width="28" height="28" rx="6" fill="#2563EB" />
+            <path
+              d="M7 17C9 12 12 10 14 13C16 16 19 9 21 7"
+              stroke="#fff"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
+          </svg>
+          CloudPulse
+        </a>
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#testimonials">Testimonials</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+        <a href="#pricing" class="nav-cta desktop">Get Started</a>
+        <button class="mobile-toggle" aria-label="Toggle navigation">
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#1E293B"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <section id="hero">
+      <div class="container">
+        <h1>Cloud Monitoring That Keeps You Ahead</h1>
+        <p class="hero-tagline">
+          Monitor smarter, respond faster. Real-time observability for every layer of your
+          infrastructure.
+        </p>
+        <div class="hero-actions">
+          <a href="#pricing" class="btn-primary">Start Monitoring</a>
+          <a href="#features" class="btn-secondary">See How It Works</a>
+        </div>
+        <div class="hero-metrics">
+          <div class="metric">
+            <div class="metric-value">99.99%</div>
+            <div class="metric-label">Uptime SLA</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">2,400+</div>
+            <div class="metric-label">Teams trust CloudPulse</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">&lt;200ms</div>
+            <div class="metric-label">Alert latency</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features">
+      <div class="container">
+        <div class="section-label">Features</div>
+        <h2 class="section-title">Everything You Need to Stay in Control</h2>
+        <p class="section-subtitle">
+          From real-time dashboards to intelligent alerting, CloudPulse gives your team the
+          visibility to ship with confidence.
+        </p>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon blue">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+            </div>
+            <h3>Real-Time Metrics</h3>
+            <p>
+              Stream CPU, memory, network, and custom metrics with sub-second granularity.
+              Dashboards update instantly so you always see what is happening now, not five minutes
+              ago.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon purple">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+            </div>
+            <h3>Intelligent Alerting</h3>
+            <p>
+              Reduce noise with ML-driven anomaly detection that learns your baseline. Route alerts
+              to the right team via Slack, PagerDuty, or webhooks with full context attached.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon green">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+            </div>
+            <h3>Unified Dashboards</h3>
+            <p>
+              Combine infrastructure, application, and business metrics in one view. Drag-and-drop
+              widgets, share dashboards across teams, and set role-based access controls.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon purple">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <h3>Security Monitoring</h3>
+            <p>
+              Detect unauthorized access, unusual traffic patterns, and compliance drift. Correlate
+              security events across your entire stack in a single timeline.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon blue">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                />
+              </svg>
+            </div>
+            <h3>200+ Integrations</h3>
+            <p>
+              Connect to AWS, GCP, Azure, Kubernetes, Docker, databases, and more. Use our open API
+              and Terraform provider to automate your monitoring configuration.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon green">
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              >
+                <path
+                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+            </div>
+            <h3>Log Aggregation</h3>
+            <p>
+              Centralize logs from every service, search with full-text indexing, and correlate log
+              entries with metrics and traces for faster root-cause analysis.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing">
+      <div class="container">
+        <div class="section-label">Pricing</div>
+        <h2 class="section-title">Simple, Transparent Pricing</h2>
+        <p class="section-subtitle">
+          Start free and scale as your infrastructure grows. No hidden fees, no per-seat surprises.
+        </p>
+        <div class="pricing-grid">
+          <!-- Starter -->
+          <div class="pricing-card">
+            <h3>Starter</h3>
+            <div class="price">$0<span>/mo</span></div>
+            <p class="price-desc">For small teams getting started</p>
+            <ul class="pricing-features">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Up to 5 hosts
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                1-day data retention
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Basic alerting
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Community support
+              </li>
+            </ul>
+            <a href="#" class="btn-outline">Get Started Free</a>
+          </div>
+          <!-- Pro -->
+          <div class="pricing-card featured">
+            <div class="pricing-badge">Most Popular</div>
+            <h3>Pro</h3>
+            <div class="price">$49<span>/mo</span></div>
+            <p class="price-desc">For growing engineering teams</p>
+            <ul class="pricing-features">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Up to 50 hosts
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                30-day data retention
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Anomaly detection
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Slack and PagerDuty
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Priority email support
+              </li>
+            </ul>
+            <a href="#" class="btn-primary">Start Monitoring</a>
+          </div>
+          <!-- Enterprise -->
+          <div class="pricing-card">
+            <h3>Enterprise</h3>
+            <div class="price">Custom</div>
+            <p class="price-desc">For organizations at scale</p>
+            <ul class="pricing-features">
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Unlimited hosts
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                1-year data retention
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                SSO and RBAC
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Custom integrations
+              </li>
+              <li>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path
+                    d="M3 8.5L6.5 12L13 4"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+                Dedicated support engineer
+              </li>
+            </ul>
+            <a href="#" class="btn-outline">Contact Sales</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section id="testimonials">
+      <div class="container">
+        <div class="section-label">Testimonials</div>
+        <h2 class="section-title">Trusted by Engineering Teams Everywhere</h2>
+        <p class="section-subtitle">
+          See how teams use CloudPulse to reduce incidents and ship faster.
+        </p>
+        <div class="testimonials-grid">
+          <div class="testimonial-card">
+            <div class="stars">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+            </div>
+            <blockquote>
+              "CloudPulse cut our mean time to detection from 12 minutes to under 30 seconds. The
+              anomaly detection alone has prevented three major outages this quarter."
+            </blockquote>
+            <div class="testimonial-author">
+              <div class="author-avatar" style="background: var(--primary)">SR</div>
+              <div class="author-info">
+                <div class="name">Sarah Rodriguez</div>
+                <div class="role">VP of Engineering, Stackline</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card">
+            <div class="stars">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+                <path
+                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
+                />
+              </svg>
+            </div>
+            <blockquote>
+              "We migrated from three separate monitoring tools to CloudPulse. Having logs, metrics,
+              and traces in one place transformed how our on-call engineers debug production
+              issues."
+            </blockquote>
+            <div class="testimonial-author">
+              <div class="author-avatar" style="background: var(--secondary)">MK</div>
+              <div class="author-info">
+                <div class="name">Marcus Kim</div>
+                <div class="role">SRE Lead, Vortex Commerce</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="contact">
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <div class="logo">
+              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                <rect width="28" height="28" rx="6" fill="#2563EB" />
+                <path
+                  d="M7 17C9 12 12 10 14 13C16 16 19 9 21 7"
+                  stroke="#fff"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                />
+              </svg>
+              CloudPulse
+            </div>
+            <p>
+              Real-time cloud monitoring and observability for modern engineering teams. Monitor
+              smarter, respond faster.
+            </p>
+            <div class="footer-social">
+              <!-- Twitter / X -->
+              <a href="#" aria-label="Twitter">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                  />
+                </svg>
+              </a>
+              <!-- LinkedIn -->
+              <a href="#" aria-label="LinkedIn">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
+                  />
+                </svg>
+              </a>
+              <!-- GitHub -->
+              <a href="#" aria-label="GitHub">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path
+                    d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
+                  />
+                </svg>
+              </a>
+            </div>
+          </div>
+          <div class="footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#features">Features</a></li>
+              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="#">Changelog</a></li>
+              <li><a href="#">Documentation</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#">About</a></li>
+              <li><a href="#">Blog</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Contact</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Contact</h4>
+            <ul>
+              <li>hello@cloudpulse.io</li>
+              <li>San Francisco, CA</li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>&copy; 2026 CloudPulse. All rights reserved.</span>
+          <span><a href="#">Privacy</a> &middot; <a href="#">Terms</a></span>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

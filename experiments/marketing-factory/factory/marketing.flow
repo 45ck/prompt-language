@@ -1,0 +1,63 @@
+Goal: Build a complete marketing website for CloudPulse — a cloud monitoring SaaS product. Follow the brand guidelines in factory/brand-guidelines.md strictly. Output all HTML/CSS into a single index.html file.
+
+flow:
+  # Phase 1: Read brand guidelines and set up project
+  let product_name = "CloudPulse"
+  let tagline = "Monitor smarter, respond faster."
+  run: cat factory/brand-guidelines.md > /dev/null
+
+  # Phase 2: Generate each required section via foreach
+  let sections = []
+  foreach section in "hero features pricing testimonials footer navigation"
+    prompt: |
+      Generate the ${section} section for the ${product_name} marketing website.
+      Follow these rules strictly:
+      - Product name is exactly "${product_name}" (use it consistently)
+      - Tagline is "${tagline}"
+      - Use Title Case for all headings
+      - No exclamation marks in body copy
+      - Keep sentences under 20 words
+      - Use action verbs in any CTA buttons (Get, Start, Deploy, Monitor)
+      - No filler words (very, really, just, basically, actually, simply)
+      - Professional tone throughout
+
+      Section-specific requirements:
+      - hero: headline + subheadline + CTA button + responsive meta viewport
+      - features: 3+ feature cards with icons and descriptions
+      - pricing: 2+ pricing tiers with feature lists and CTA buttons
+      - testimonials: 2+ customer quotes with name and company
+      - footer: contact info + social media links (Twitter, LinkedIn, GitHub)
+      - navigation: sticky nav with links to all sections (hero, features, pricing, testimonials)
+
+      Output ONLY the HTML for this section wrapped in a semantic container.
+    let sections += prompt "Capture the ${section} section HTML you just generated. Output ONLY the raw HTML, no markdown fences."
+  end
+
+  # Phase 3: Assemble into single index.html
+  prompt: |
+    Now assemble all sections into a single, complete index.html file.
+    Requirements:
+    - Valid HTML5 with <!DOCTYPE html>
+    - Include <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    - Inline CSS in a <style> tag (no external stylesheets)
+    - CSS must include media queries for mobile (max-width: 768px)
+    - Use the color palette: primary #2563EB, secondary #7C3AED, accent #10B981, dark #1E293B, light #F8FAFC
+    - All internal navigation links must use #section-id anchors
+    - No broken image references (use CSS gradients or SVG inline instead)
+    - Sections in order: navigation, hero, features, pricing, testimonials, footer
+    - Each section must have an id attribute matching its name
+
+    Write the complete index.html file now.
+
+  # Phase 4: Validate and fix
+  run: node -e "const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); const issues=[]; if(!h.includes('<!DOCTYPE html>')) issues.push('missing doctype'); if(!h.includes('viewport')) issues.push('missing viewport'); if(!h.includes('@media')) issues.push('no media queries'); if(!h.includes('id=\"hero\"')) issues.push('missing hero id'); if(!h.includes('id=\"features\"')) issues.push('missing features id'); if(!h.includes('id=\"pricing\"')) issues.push('missing pricing id'); if(issues.length) {console.error('ISSUES:',issues.join(', ')); process.exit(1)} else {console.log('PASS: all checks clear')}"
+
+  if command_failed
+    prompt: |
+      The validation found issues with index.html. Check ${last_stderr} and fix them.
+      Make sure index.html has: DOCTYPE, viewport meta, @media queries, and section ids for hero, features, pricing.
+    run: node -e "const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); const issues=[]; if(!h.includes('<!DOCTYPE html>')) issues.push('missing doctype'); if(!h.includes('viewport')) issues.push('missing viewport'); if(!h.includes('@media')) issues.push('no media queries'); if(!h.includes('id=\"hero\"')) issues.push('missing hero id'); if(!h.includes('id=\"features\"')) issues.push('missing features id'); if(!h.includes('id=\"pricing\"')) issues.push('missing pricing id'); if(issues.length) {console.error('ISSUES:',issues.join(', ')); process.exit(1)} else {console.log('PASS: all checks clear')}"
+  end
+
+done when:
+  file_exists index.html

@@ -131,7 +131,7 @@ npm run eval:smoke:ollama
 
 Harness-specific smoke commands are explicit entry points for the currently supported smoke adapters. Codex, OpenCode, and Ollama flow through `prompt-language ci --runner ...`; Gemini is supported as a first-class smoke harness, but today it uses the direct CLI prompt path rather than a dedicated `ci --runner gemini` flow runner.
 
-The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 32 live `claude -p` tests in temp directories:
+The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 39 live `claude -p` tests in temp directories:
 
 - **A: Context file relay** — two prompts, second reads file created by first
 - **B: Context recall** — second prompt recalls a code from the first
@@ -165,6 +165,24 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **AD: Race block** — two spawns race; `race_winner` is set to first completer (slow)
 - **AE: foreach-spawn** — parallel fan-out creates per-item files via spawned children (slow)
 - **AF: Send/receive** — child sends message to parent via `send parent`, parent captures via `receive` (slow)
+- **Z1: List-length drift** — `let x = []` + foreach append writes `items_length` through each iteration
+- **Z2: Nonce propagation** — runtime UUID flows through multiple `run:` nodes and matches state
+- **Z3: Capture-gated branch** — `if coin == "HEADS"` branch selection depends on live prompt capture
+- **Z4: Interleaved state probe** — each iteration writes `${n}=${counter}` using prior iteration's capture
+- **Z5: Spawn PID fingerprint** — foreach-spawn produces distinct child PIDs, none matching harness PID (slow)
+- **Z6: Race winner** — race block populates `race_winner` consistent with state (slow)
+- **Z7: Send/receive hash** — child's send appears in parent's receive with matching sha256 (slow)
+- **AR: Retry with backoff** — `retry max 3 backoff 1s` waits >=900ms between attempts and completes (slow)
+- **AS: Composite gate** — `done when: all(file_exists a, file_exists b, file_exists c)` completes after all files appear
+- **AT: Spawn with modifiers** — conditional `if ... spawn "worker" ... end` launches child and registers in `spawnedChildren`
+- **AU: Nested try/catch/finally** — inner catch failure propagates to outer catch; `finally` still executes
+- **AV: foreach in run** — `foreach item in run "cmd"` iterates over command stdout tokens
+
+### Trace verification
+
+The Z-series tests are differential: they are constructed so a stub harness that only replays recorded outputs cannot pass them. Each one depends on live runtime state (fresh UUIDs, real child PIDs, capture-gated branches, hash-matched send/receive payloads) that only the running PL runtime can produce.
+
+Z-series runs are expected to be executed with `PL_TRACE=1` and cross-checked with `node scripts/eval/verify-trace.mjs --trace <path> --state <path> --json`. See [docs/tracing-and-provenance.md](docs/tracing-and-provenance.md) for setup and [docs/thesis-verification.md](docs/thesis-verification.md) for how this plugs into the E5 experiment.
 
 If smoke fails fast with a harness auth or login blocker, that is a host limitation, not a plugin success signal. Use [docs/troubleshooting.md](docs/troubleshooting.md) for the recovery path and [docs/eval-parity-matrix.md](docs/evaluation/eval-parity-matrix.md) for the current parity bar. The history report command `node scripts/eval/smoke-test.mjs --history` is for local analysis only.
 

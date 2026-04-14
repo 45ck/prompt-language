@@ -2057,6 +2057,61 @@ function parseListVar(value) {
   }
 }
 
+// ── Test AW: Labeled break exits outer loop ──────────────────────────
+
+async function testAWLabeledBreak() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: labeled_break',
+      '',
+      'flow:',
+      '  outer: foreach i in "1 2 3"',
+      '    foreach j in "a b c"',
+      "      run: node -e \"require('fs').writeFileSync('iter-${i}${j}.txt', 'iter-${i}${j}')\"",
+      '      if ${i} == "2"',
+      '        break outer',
+      '      end',
+      '    end',
+      '  end',
+    ].join('\n');
+
+    harnessRun(prompt, dir);
+
+    const exists = async (f) => {
+      try {
+        await access(join(dir, f));
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    const expectedFiles = ['iter-1a.txt', 'iter-1b.txt', 'iter-1c.txt', 'iter-2a.txt'];
+    const forbiddenFiles = [
+      'iter-2b.txt',
+      'iter-2c.txt',
+      'iter-3a.txt',
+      'iter-3b.txt',
+      'iter-3c.txt',
+    ];
+
+    const expectedResults = await Promise.all(expectedFiles.map(exists));
+    const forbiddenResults = await Promise.all(forbiddenFiles.map(exists));
+    const missingExpected = expectedFiles.filter((_, i) => !expectedResults[i]);
+    const presentForbidden = forbiddenFiles.filter((_, i) => forbiddenResults[i]);
+
+    const ok = missingExpected.length === 0 && presentForbidden.length === 0;
+
+    assert(
+      'AW: Labeled break exits outer loop (labeled_break)',
+      ok,
+      ok
+        ? 'break outer unwound inner foreach and terminated labeled outer loop'
+        : `missing_expected=[${missingExpected.join(',')}] forbidden_present=[${presentForbidden.join(',')}]`,
+    );
+  });
+}
+
 async function testZ1LengthDrift() {
   await withTempDir(async (dir) => {
     const prompt = [
@@ -2408,9 +2463,9 @@ async function testASCompositeGates() {
       'Goal: composite-gates',
       '',
       'flow:',
-      '  run: node -e "require(\'fs\').writeFileSync(\'a.txt\', \'A\')"',
-      '  run: node -e "require(\'fs\').writeFileSync(\'b.txt\', \'B\')"',
-      '  run: node -e "require(\'fs\').writeFileSync(\'c.txt\', \'C\')"',
+      "  run: node -e \"require('fs').writeFileSync('a.txt', 'A')\"",
+      "  run: node -e \"require('fs').writeFileSync('b.txt', 'B')\"",
+      "  run: node -e \"require('fs').writeFileSync('c.txt', 'C')\"",
       '',
       'done when:',
       '  all(file_exists a.txt, file_exists b.txt, file_exists c.txt)',
@@ -2451,7 +2506,7 @@ async function testATSpawnModifiers() {
       '  let should_spawn = "yes"',
       '  if should_spawn == "yes"',
       '    spawn "worker"',
-      '      run: node -e "require(\'fs\').writeFileSync(\'worker.txt\', \'ran\')"',
+      "      run: node -e \"require('fs').writeFileSync('worker.txt', 'ran')\"",
       '    end',
       '  end',
       '  await all',
@@ -2487,13 +2542,13 @@ async function testAUNestedTryCatchFinally() {
       '    try',
       '      run: node -e "process.exit(1)"',
       '    catch',
-      '      run: node -e "require(\'fs\').writeFileSync(\'inner-catch.txt\', \'caught\')"',
+      "      run: node -e \"require('fs').writeFileSync('inner-catch.txt', 'caught')\"",
       '      run: node -e "process.exit(2)"',
       '    end',
       '  catch',
-      '    run: node -e "require(\'fs\').writeFileSync(\'outer-catch.txt\', \'caught\')"',
+      "    run: node -e \"require('fs').writeFileSync('outer-catch.txt', 'caught')\"",
       '  finally',
-      '    run: node -e "require(\'fs\').writeFileSync(\'outer-finally.txt\', \'ran\')"',
+      "    run: node -e \"require('fs').writeFileSync('outer-finally.txt', 'ran')\"",
       '  end',
     ].join('\n');
 
@@ -2534,7 +2589,7 @@ async function testAVForeachRunSource() {
       '',
       'flow:',
       '  foreach item in run "node -e \\"process.stdout.write(\'alpha beta gamma\')\\""',
-      '    run: node -e "require(\'fs\').writeFileSync(\'${item}.txt\', \'${item}\')"',
+      "    run: node -e \"require('fs').writeFileSync('${item}.txt', '${item}')\"",
       '  end',
     ].join('\n');
 
@@ -2625,6 +2680,7 @@ async function main() {
   await timed('AO', 'Include file directive', testIncludeDirective);
   await timed('AP', 'Swarm manager-worker', testSwarmManagerWorker);
   await timed('AQ', 'Swarm reviewer-after-workers', testSwarmReviewerAfterWorkers);
+  await timed('AW', 'Labeled break exits outer loop', testAWLabeledBreak);
   await timed('Z1', 'List-length drift in foreach+append', testZ1LengthDrift);
   await timed('Z2', 'Nonce propagation across runs', testZ2NoncePropagation);
   await timed('Z3', 'Capture-gated branch', testZ3CaptureGatedBranch);

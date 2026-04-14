@@ -1,0 +1,49 @@
+Goal: build a bounded CRM MVP in ${crm_workspace} using prompt-language as the primary engineering medium
+
+memory:
+  crm_target_market
+  crm_stack
+  crm_package_manager
+  crm_workspace
+  crm_entities
+
+import "experiments/full-saas-factory/e6-pl-crm-factory/phases/discovery.flow" as discovery
+import "experiments/full-saas-factory/e6-pl-crm-factory/phases/build.flow" as build
+import "experiments/full-saas-factory/e6-pl-crm-factory/phases/release.flow" as release
+import "experiments/full-saas-factory/e6-pl-crm-factory/libraries/scaffold-project.flow" as scaffold
+import "experiments/full-saas-factory/e6-pl-crm-factory/libraries/install-dependencies.flow" as deps
+import "experiments/full-saas-factory/e6-pl-crm-factory/libraries/generate-crud-entity.flow" as crud
+import "experiments/full-saas-factory/e6-pl-crm-factory/libraries/run-acceptance.flow" as acceptance
+import "experiments/full-saas-factory/e6-pl-crm-factory/libraries/git-commit.flow" as commit
+
+flow:
+  remember key="crm_target_market" value="small-to-medium sales and service teams"
+  remember key="crm_stack" value="Next.js + TypeScript + PostgreSQL + Prisma"
+  remember key="crm_package_manager" value="pnpm"
+  remember key="crm_workspace" value="experiments/full-saas-factory/e6-pl-crm-factory/workspace/crm-app"
+  remember key="crm_entities" value="contact company opportunity"
+
+  prompt: You are operating a pure prompt-language CRM factory. Work only inside ${crm_workspace}. Treat it as the target repo root. The flow pack is the entire contract; do not invent extra phases, and do not assume any runner-specific conventions. Record non-obvious decisions as ADRs under docs/adr/.
+
+  use scaffold.bootstrap_directories()
+  use scaffold.ensure_package_manifest(pkg_mgr="${crm_package_manager}")
+  use deps.ensure_lockfile(pkg_mgr="${crm_package_manager}")
+
+  use discovery.run(target_market="${crm_target_market}", stack="${crm_stack}")
+
+  use build.run(stack="${crm_stack}")
+
+  foreach entity in "${crm_entities}"
+    use crud.generate(entity="${entity}", pkg_mgr="${crm_package_manager}")
+  end
+
+  use acceptance.local_verification(pkg_mgr="${crm_package_manager}")
+  use commit.commit_phase(phase_label="build", pkg_mgr="${crm_package_manager}")
+
+  use release.run()
+
+  use acceptance.local_verification(pkg_mgr="${crm_package_manager}")
+  use commit.commit_phase(phase_label="release", pkg_mgr="${crm_package_manager}")
+
+done when:
+  use acceptance.ship_gates(pkg_mgr="${crm_package_manager}")

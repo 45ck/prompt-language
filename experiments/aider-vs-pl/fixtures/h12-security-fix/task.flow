@@ -1,0 +1,18 @@
+Goal: Fix SQL injection vulnerabilities in the contact search API
+
+flow:
+  prompt: Review src/app.js and src/db.js. Identify all SQL queries that use string concatenation or template literals to insert user input. List them.
+  prompt: Fix all vulnerable SQL queries in src/app.js to use the parameterized queryParams() method from src/db.js instead of string concatenation. Replace every raw string-concat query with db.queryParams(sql, [param]).
+  retry max 3
+    run: node src/app.js
+    if command_failed
+      prompt: The app failed to run after the fix. Review the error and fix: ${last_stderr}
+    end
+  end
+  run: node verify.js
+  if command_failed
+    prompt: Verification failed. Fix the remaining issues: ${last_stdout}
+  end
+
+done when:
+  file_exists src/app.js

@@ -1,0 +1,18 @@
+Goal: Implement mergeDuplicates using TDD — write tests first, then implement
+
+flow:
+  prompt: Write at least 4 failing test cases in src/test.js for a mergeDuplicates(contacts) function. The function should merge contacts with the same email, keeping the most complete fields. Test cases should cover: basic merge, field priority, no-duplicates case, and multiple groups of duplicates. Do NOT implement the function yet.
+  run: node src/test.js
+  if command_succeeded
+    prompt: Tests should be FAILING at this point since mergeDuplicates is not yet implemented. Make sure the tests actually call mergeDuplicates and will fail without an implementation.
+  end
+  prompt: Now implement the mergeDuplicates function in src/contacts.js. Export it. Make the minimal implementation to pass all the tests you just wrote.
+  until command_succeeded max 5
+    run: node src/test.js
+    if command_failed
+      prompt: Tests are still failing. Fix the implementation. Error output: ${last_stdout}
+    end
+  end
+
+done when:
+  file_exists src/contacts.js

@@ -1,0 +1,16 @@
+Goal: Reproduce the empty-array crash bug, write a test, then fix it
+
+flow:
+  prompt: Read the bug report in TASK.md. Reproduce the crash by calling filterByCompany with a nonexistent company, then passing the result to getStatistics(). Confirm it crashes.
+  prompt: Write a failing test in src/test.js that demonstrates the crash: call getStatistics([]) and filterByCompany(contacts, 'Nonexistent') then getStatistics on the result.
+  run: node src/test.js
+  prompt: Now fix getStatistics() in src/contacts.js to handle empty arrays gracefully. Return sensible defaults (total 0, averageAge 0, topCompany null, youngest null, oldest null). Also fix getSummary() to handle the empty case.
+  until command_succeeded max 3
+    run: node src/test.js
+    if command_failed
+      prompt: Tests still failing. Fix the remaining issues: ${last_stdout}
+    end
+  end
+
+done when:
+  file_exists src/contacts.js

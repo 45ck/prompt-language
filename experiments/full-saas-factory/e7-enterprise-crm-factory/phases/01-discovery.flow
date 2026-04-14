@@ -10,8 +10,8 @@ export flow run(target_market="mid-market B2B sales teams", stack="Next.js 15 + 
   end
 
   spawn "requirements" with vars target_market, stack, db
-    prompt: Use agent: requirements-analyst. Use skills: problem-statement-refiner, requirements-elicitation, acceptance-criteria-writer, stakeholder-analysis, spec-writer. Produce docs/prd.md (bounded MVP: auth, contacts, companies, opportunities, pipeline management, tasks, notes, quotes, invoices, products, email templates, campaigns, dashboards, reports, RBAC, audit log), docs/use-cases.md, docs/non-functional-requirements.md (performance: <200ms p95, availability: 99.9%, data: GDPR-ready, scale: 10K contacts), and docs/acceptance-criteria.md with testable criteria per entity.
-    prompt: Use agent: delivery-manager. Use skills: sprint-goal-writer, backlog-groomer. Convert the PRD into a phased backlog in docs/backlog.md — group by entity cluster (core CRM, pipeline, communications, reporting, admin). Assign priority P0-P3 per item.
+    prompt: Use agent: requirements-analyst. Use skills: problem-statement-refiner, requirements-elicitation, acceptance-criteria-writer, stakeholder-analysis, spec-writer. Produce docs/prd.md (bounded MVP: auth, contacts, companies, leads, deals/opportunities, pipeline management, tasks, notes, quotes with line items, invoices with line items, products, contracts, support cases, email templates, campaigns, plus system features: dashboards, reports, RBAC, audit log), docs/use-cases.md, docs/non-functional-requirements.md (performance: <200ms p95, availability: 99.9%, data: GDPR-ready, scale: 10K contacts), and docs/acceptance-criteria.md with testable criteria per entity.
+    prompt: Use agent: delivery-manager. Use skills: sprint-goal-writer, backlog-groomer. Convert the PRD into a phased backlog in docs/backlog.md — group by entity cluster (core CRM, commerce, activities, communications) plus system features (pipeline config, dashboards, reports, RBAC, audit). Assign priority P0-P3 per item.
   end
 
   spawn "personas" with vars target_market

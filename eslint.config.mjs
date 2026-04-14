@@ -33,6 +33,7 @@ export default tseslint.config(
       'experiments/full-saas-factory/**/runtime-smoke/**',
       'experiments/full-saas-factory/**/workspaces/**',
       'experiments/results/**',
+      'experiments/aider-vs-pl/fixtures/**',
     ],
   },
 

@@ -1,0 +1,14 @@
+Goal: Fix N+1 query pattern in the contacts API
+
+flow:
+  let before = run "node -e \"const {getContactsWithCompanies, db} = require('./src/app'); db.resetQueryCount(); getContactsWithCompanies(); console.log(db.getQueryCount())\""
+  prompt: The getContactsWithCompanies() function in src/app.js currently uses ${before} queries due to an N+1 pattern. Refactor it to use batch loading with findByIds() or findAll() to reduce queries to at most 2-3. Also fix getContactsByIndustry() similarly.
+  retry max 3
+    run: node -e "const {getContactsWithCompanies, db} = require('./src/app'); db.resetQueryCount(); getContactsWithCompanies(); if(db.getQueryCount()>3) { console.error('Still using ' + db.getQueryCount() + ' queries'); process.exit(1); } console.log('OK: ' + db.getQueryCount() + ' queries')"
+    if command_failed
+      prompt: Still too many queries. Fix the N+1 pattern. Error: ${last_stderr}
+    end
+  end
+
+done when:
+  file_exists src/app.js

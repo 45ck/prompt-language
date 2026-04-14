@@ -27,7 +27,8 @@ project.flow
   │   │
   ├── Phase 3: Implementation ────── 3 foundation spawns → await all
   │   │                               2 parallel builds (backend API + frontend shell)
-  │   │                               foreach-spawn 5 entity clusters (18 entities total)
+  │   │                               foreach-spawn 4 entity clusters (15 business entities)
+  │   │                               5 parallel system feature modules
   │   │                               retry loops on build/test failures
   │   │                               approve checkpoint
   │   │
@@ -67,7 +68,7 @@ project.flow
 | Feature             | Where                                     | Purpose                        |
 | ------------------- | ----------------------------------------- | ------------------------------ |
 | `spawn/await`       | Every phase                               | Parallel worker execution      |
-| `foreach-spawn`     | Implementation (entity clusters)          | Parallel CRUD generation       |
+| `foreach-spawn`     | Implementation (business entity clusters) | Parallel CRUD generation       |
 | `race`              | Architecture (two design approaches)      | Competitive design exploration |
 | `review`            | Discovery, Architecture, QA, Security     | Iterative quality improvement  |
 | `approve`           | Post-discovery, post-arch, pre-release    | Human checkpoint gates         |
@@ -81,13 +82,20 @@ project.flow
 | `import/use`        | All files                                 | Library composition            |
 | `done when`         | Ship gates (37 checks)                    | Hard completion enforcement    |
 
-## CRM Entities (18)
+## CRM Business Entities (15) — CRUD-generated via foreach-spawn
 
-**Core:** contact, company, opportunity, pipeline_stage
-**Activities:** activity, task, note
-**Commerce:** deal, quote, invoice, product
+**Core:** contact, company, lead, deal
+**Commerce:** quote, invoice, product, line_item, contract
+**Activities:** activity, task, note, case
 **Communications:** email_template, campaign
-**Admin:** dashboard, report, role, permission, audit_log
+
+## System Features (NOT CRUD — specialized modules)
+
+- **Pipeline Config** — ordered enum of stages (admin-only reorder UI)
+- **Dashboard** — widget-based, rendered from live aggregate queries
+- **Reports** — query-based generation with optional saved configs
+- **RBAC** — fixed role/permission matrix (admin, manager, rep, viewer)
+- **Audit Log** — append-only logger, no update/delete
 
 ## Tech Stack
 
@@ -138,7 +146,7 @@ e7-enterprise-crm-factory/
 
 | Dimension         | E6 (Simple CRM)                   | E7 (Enterprise CRM)                            |
 | ----------------- | --------------------------------- | ---------------------------------------------- |
-| Entities          | 3 (contact, company, opportunity) | 18 (full CRM suite)                            |
+| Entities          | 3 (contact, company, opportunity) | 15 business + 5 system features                |
 | Phases            | 3 (discover, build, release)      | 6 + scaffold (full SDLC)                       |
 | Parallelism       | Simple spawn/await                | spawn, foreach-spawn, race                     |
 | Quality gates     | Basic file_exists                 | 37 gates (build + file + security)             |

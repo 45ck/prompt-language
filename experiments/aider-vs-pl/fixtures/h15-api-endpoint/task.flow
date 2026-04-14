@@ -1,0 +1,18 @@
+Goal: Add PATCH /api/contacts/:id with field-level validation and 8+ tests
+
+flow:
+  prompt: Add a patchContact(id, data) function to src/app.js that performs partial updates. Validate: name (2-100 chars), email (must have @ and . after @), phone (digits/dashes/spaces/+, 7-20 chars), company (1-200 chars or null). Return 400 for invalid fields, 404 for missing ID, 200 with updated record on success. Export the function.
+  run: node -e "const app = require('./src/app'); console.log(typeof app.patchContact || typeof app.updateContact)"
+  if command_failed
+    prompt: The patchContact function is not exported. Fix the export in src/app.js.
+  end
+  prompt: Add at least 8 test cases to src/test.js for the PATCH endpoint. Cover: valid name update, valid email update, valid phone update, invalid short name, invalid email, invalid phone, 404 missing ID, null company to clear, and partial update (only provided fields change).
+  until command_succeeded max 5
+    run: node src/test.js
+    if command_failed
+      prompt: Tests are failing. Fix the issues. Output: ${last_stdout}
+    end
+  end
+
+done when:
+  file_exists src/app.js

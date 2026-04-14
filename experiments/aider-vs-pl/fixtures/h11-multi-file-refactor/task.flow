@@ -1,0 +1,18 @@
+Goal: Rename Contact to Client across the entire codebase
+
+flow:
+  let files = run "find src -name '*.js' -type f"
+  foreach file in ${files}
+    prompt: In ${file}, rename all occurrences of "Contact" to "Client" and "contact" to "client". Update class names, variable names, and comments. If the filename contains "contact", rename the file too and update all import paths.
+  end
+  prompt: Update README.md to replace all "Contact" references with "Client".
+  prompt: Update all require/import paths to use the new filenames (e.g., ./contact -> ./client, ./contact-store -> ./client-store).
+  run: node src/app.js
+  prompt: Review the seed data in src/seed.js and rename any Contact references to Client.
+  let stale = run "grep -rn 'Contact' src/ README.md || echo 'none'"
+  if ${stale} != "none"
+    prompt: There are still stale "Contact" references. Fix them: ${stale}
+  end
+
+done when:
+  file_exists src/app.js

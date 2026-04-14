@@ -19,12 +19,12 @@ export flow run(stack="Next.js 15 + TypeScript", db="PostgreSQL + Prisma", auth=
 
   # Parallel architecture artifact generation
   spawn "domain-model" with vars stack, db
-    prompt: Use agent: system-modeler. Use skills: domain-class-modeler, use-case-modeler, sequence-diagram-builder. From docs/prd.md and the selected architecture, write docs/architecture/domain-model.md (entity relationships, aggregates, value objects), docs/architecture/sequence-diagrams.md (contact-to-opportunity, quote-to-invoice, campaign-to-dashboard flows), and specs/domain-glossary.md.
-    prompt: Use agent: system-modeler. Use skills: model-consistency-checker, state-model-builder. Write specs/invariants.md documenting business rules (e.g., opportunity must belong to a company, pipeline stages are ordered, quotes require at least one line item, invoices are immutable after sending).
+    prompt: Use agent: system-modeler. Use skills: domain-class-modeler, use-case-modeler, sequence-diagram-builder. From docs/prd.md and the selected architecture, write docs/architecture/domain-model.md (entity relationships, aggregates, value objects — distinguish 15 CRUD business entities from system features like dashboards, reports, RBAC, and audit log), docs/architecture/sequence-diagrams.md (lead-to-deal, quote-to-invoice, campaign-to-dashboard, case-resolution flows), and specs/domain-glossary.md.
+    prompt: Use agent: system-modeler. Use skills: model-consistency-checker, state-model-builder. Write specs/invariants.md documenting business rules (e.g., deal must belong to a company, leads convert to deals, pipeline stages are an ordered enum, quotes require at least one line item, invoices are immutable after sending, contracts are tied to deals, cases track resolution status, audit log is append-only).
   end
 
   spawn "api-design" with vars stack, db
-    prompt: Use agent: backend-engineer. Use skills: api-contract-writer, api-error-model-designer, schema-normalizer. Write docs/api-contracts.md (RESTful endpoints for all 18 entities — CRUD + search + bulk operations + pagination), docs/data-model.md (Prisma schema with relations, indexes, constraints), and docs/adr/adr-002-api-style.md (REST + tRPC hybrid decision).
+    prompt: Use agent: backend-engineer. Use skills: api-contract-writer, api-error-model-designer, schema-normalizer. Write docs/api-contracts.md (RESTful endpoints for all 15 CRUD business entities — CRUD + search + bulk operations + pagination — plus admin endpoints for system features: pipeline config, dashboard widgets, report queries, RBAC management, audit log read), docs/data-model.md (Prisma schema with relations, indexes, constraints), and docs/adr/adr-002-api-style.md (REST + tRPC hybrid decision).
     prompt: Use agent: backend-engineer. Write docs/architecture/database-strategy.md covering: connection pooling, migration strategy, seed data approach, multi-tenant readiness, backup strategy.
   end
 

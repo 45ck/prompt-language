@@ -2,7 +2,7 @@
 
 Living status doc for the prompt-language thesis. Single page an operator reads to know where the thesis stands and what is next. Facts only; anything not directly observable in the repo is flagged "not measured".
 
-Last synced: 2026-04-14 against `main` @ `a5bc64d`.
+Last synced: 2026-04-14 against `main` @ `0e66d34`.
 
 ## 1. Thesis status
 
@@ -40,7 +40,10 @@ Every item below is a commit on `main`.
 - Snapshot/rollback DSL primitives (PR1) — `snapshot "name"` + `rollback to "name"`, state-only, 23+ unit tests + smoke test AX.
 - Coverage lift: global statements coverage raised to 90% + CLI drift fix — commit `1a53d7b`.
 - Tracing + thesis-verification operator docs — commit `5425ab5` (`docs/tracing-and-provenance.md`, `docs/thesis-verification.md`).
-- Smoke catalog expansion — `scripts/eval/smoke-test.mjs` currently carries 48 distinct scenario IDs (A–Z, AA–AW, Z1–Z7; some IDs reused in the live-only sections). CLAUDE.md's public catalog lists 32 core + AA–AF, and Z1–Z7, AR–AV are present in the harness. Exact public list in `CLAUDE.md` has not been updated to reflect every new AR–AW/Z entry.
+- Smoke catalog expansion — `scripts/eval/smoke-test.mjs` currently carries 52 distinct scenario IDs (A–Z, AA–AX, Z1–Z7, AR–AV). CLAUDE.md catalog updated to match.
+- E5 HTTP journey probes — `app-boot.mjs` (app detection + health wait) and `documented-endpoint-probe.mjs` (HTTP request verification) shipped in `scripts/experiments/e5/` — commit `0e66d34`.
+- Cross-family reviewer design — `docs/strategy/cross-family-reviewer.md` (10-family taxonomy, lane assignment rule, reviewer prompt contract, rollout phases) and `scripts/experiments/meta/cross-family-review.mjs` (review module) — commit `0e66d34`.
+- Aider phase-2 design — `experiments/aider-vs-pl/phase2-design.md` with H11-H20 harder hypotheses, model matrix, E5 CR mapping, scoring rubric — commit `0e66d34`.
 
 Not measured / not claimed: cost, latency, or pass-rate deltas for any thesis hypothesis (H1–H6). No E5 pair has produced a `maintenanceViabilityIndex` number.
 
@@ -58,13 +61,13 @@ runs satisfy all five**:
 Any other run is **recorded** (evidence archived, trace verified at whatever
 level was possible) but **not counted toward thesis verdicts**.
 
-| Item                         | Shipped?                                        | Blocker                       |
-| ---------------------------- | ----------------------------------------------- | ----------------------------- |
-| Strict mode (1)              | yes (commit ec086e8)                            | operator must set the env var |
-| Preflight (2)                | script shipped (I2); mandatory-gate K2b pending | K2b quota-blocked             |
-| Attestation flags (3)        | designed (I3); not implemented                  | K1 quota-blocked              |
-| Cross-family reviewer (4)    | design-only (I1); no enforcement                | Implementation pending        |
-| Trusted-signers registry (5) | does not exist                                  | K1 ships this                 |
+| Item                         | Shipped?                                               | Blocker                       |
+| ---------------------------- | ------------------------------------------------------ | ----------------------------- |
+| Strict mode (1)              | yes (commit ec086e8)                                   | operator must set the env var |
+| Preflight (2)                | script shipped (I2); mandatory-gate K2b pending        | K2b quota-blocked             |
+| Attestation flags (3)        | designed (I3); not implemented                         | K1 quota-blocked              |
+| Cross-family reviewer (4)    | shipped (design doc + review module + family taxonomy) | Preflight enforcement pending |
+| Trusted-signers registry (5) | does not exist                                         | K1 ships this                 |
 
 ## 3b. Verification state of closed beads
 
@@ -89,7 +92,7 @@ outcome was verified by running the experiment. Honest audit:
 - Verifier hardening track: AP-5 external-nonce trust anchor (capstone), AP-1/2 mandatory `--state` default, AP-3 shim-binary allow-list, AP-8 `--expected-pair-count`. Ranked in `docs/security/witness-chain-attacks.md` §"Ranked patches". AP-6 already shipped in `60c5c40`.
 - Related security beads open in `.beads/issues.jsonl`: `prompt-language-oei8` ("Capture nonce 32-bit insufficient for anti-spoofing"), `prompt-language-36ot` (Fagan inspection audit of 43f3227..70873bc).
 - MF-1 re-run workstream: reproduce the live meta-run with `PL_TRACE_DIR` correctly propagated to the child `claude -p` process so `provenance.jsonl` is emitted and `verify-trace` can gate. Blocker is mechanical, not architectural.
-- E5 B01 P01 live-pair execution: orchestrator is live (`scripts/experiments/e5/run-pair.mjs`); journey suite currently returns `pending-manual-review` for HTTP journeys until `app-boot` + `documented-endpoint-probe` are plugged in per that README's §"Known limitations (v1)".
+- E5 B01 P01 live-pair execution: orchestrator is live (`scripts/experiments/e5/run-pair.mjs`); HTTP probes shipped (`app-boot.mjs` + `documented-endpoint-probe.mjs` in `scripts/experiments/e5/`). Awaiting live pair run with auth on a supported host.
 - Generic runner abstraction: `prompt-language-9uqe.4` — in_progress. Headless prompt-turn seam is shipped (OpenCode, codex, aider); spawned-session runner abstraction remains.
 - Codex parity matrix closure: `prompt-language-72a5.6` — open; blocked on supported-host smoke evidence.
 
@@ -99,8 +102,8 @@ outcome was verified by running the experiment. Honest audit:
 2. ~~**MF-1 trace-dir propagation.**~~ **RESOLVED.** `run-meta-experiment.mjs` already sets `PL_TRACE`, `PL_TRACE_DIR` in child env; `claude-process-spawner.ts` forwards them. Needs re-run confirmation.
 3. ~~**Snapshot/rollback PR1.**~~ **RESOLVED.** Runtime primitives shipped: `SnapshotNode`/`RollbackNode` in `flow-node.ts`, parser support, advance-flow handlers, `addSnapshot`/`applySnapshot` in `session-state.ts`, 23+ unit tests, smoke test AX.
 4. ~~**Verifier hardening AP-5.**~~ **RESOLVED.** External nonce anchor shipped: `writeRunNonce`/`readRunNonce`/`deleteRunNonce` in `run-meta-experiment.mjs`, `--expected-run-id`/`--freshness-window-ms` flags in `verify-trace.mjs`. **Remaining:** AP-1/2/3/8 per ranked-patch table.
-5. **Cross-family reviewer lane (META-5 operator sign-off #3).** The bootstrap envelope in `experiments/meta-factory/design/risks.md` requires this before live MF-2..MF-9 runs. Not started.
-6. **E5 journey suite HTTP probes.** `run-journey-suite.mjs` does not yet boot the app and drive HTTP. Currently returns `pending-manual-review` for HTTP journeys. Next: plug in `app-boot` + `documented-endpoint-probe`.
+5. ~~**Cross-family reviewer lane (META-5 operator sign-off #3).**~~ **PARTIALLY RESOLVED.** Design doc shipped at `docs/strategy/cross-family-reviewer.md`. Review module shipped at `scripts/experiments/meta/cross-family-review.mjs`. Family taxonomy with 10 families defined. **Remaining:** hard-fail preflight enforcement (phase 2), scorecard schema update, verifier integration.
+6. ~~**E5 journey suite HTTP probes.**~~ **RESOLVED.** `app-boot.mjs` and `documented-endpoint-probe.mjs` shipped in `scripts/experiments/e5/` (commit `0e66d34`). Journey suite can now boot apps and probe documented endpoints.
 
 ## 6. Operator checklist (next 5 concrete actions)
 
@@ -120,7 +123,7 @@ outcome was verified by running the experiment. Honest audit:
 
 3. Expand aider-vs-PL experiment: harder tasks (multi-file refactors, security fixes), more models (Claude, Codex, GPT-4.1), positioning for thesis.
 
-4. Implement E5 journey suite HTTP probes: `app-boot` + `documented-endpoint-probe` for CRM journey automation.
+4. Close cross-family reviewer loop: implement hard-fail preflight (phase 2), scorecard schema update, verify-trace `--expected-reviewer-family` flag.
 
 5. Verify the runtime quality gate on a clean tree.
    ```

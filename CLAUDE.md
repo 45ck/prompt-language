@@ -136,7 +136,7 @@ npm run eval:smoke:ollama
 
 Harness-specific smoke commands are explicit entry points for the currently supported smoke adapters. Codex, OpenCode, and Ollama flow through `prompt-language ci --runner ...`; Gemini is supported as a first-class smoke harness, but today it uses the direct CLI prompt path rather than a dedicated `ci --runner gemini` flow runner.
 
-The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 39 live `claude -p` tests in temp directories:
+The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin, and runs 52 live `claude -p` tests in temp directories:
 
 - **A: Context file relay** — two prompts, second reads file created by first
 - **B: Context recall** — second prompt recalls a code from the first
@@ -151,18 +151,18 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **K: Variable chain** — `let x = run` + `if` + `${x}` interpolation pipeline
 - **L: Retry on failure** — `retry max 3` re-runs body on command failure
 - **M: Gate-only mode** — `done when: file_exists` without a flow block
-- **N: Capture reliability** — `let x = prompt` captures non-empty response
+- **N: Capture reliability** — `let x = prompt` captures non-empty response with tag-based validation
 - **O: Until loop** — `until tests_pass max 3` iterates until condition is true
 - **P: Break exits loop** — `break` inside `while` exits the loop
 - **Q: List append** — `let x = []` + `let x += "val"` builds a list
 - **R: Custom gate** — `gate check: node verify.js` runs custom command
-- **S: Nested foreach** — `foreach` inside `foreach` processes nested lists
-- **T: List accumulation** — `let x += run` inside `foreach` builds list from command output
+- **S: Nested foreach** — `foreach` inside `foreach` processes nested lists (flaky)
+- **T: List accumulation** — `let x += run` inside `foreach` builds list from command output (flaky)
 - **U: And/or conditions** — `if a and b`, `if a or b` compound conditions
 - **V: Numeric comparison** — `if ${count} > 0` numeric condition evaluation
 - **W: Try/finally** — `try` with `finally` block always executes cleanup
 - **X: Break in nested** — `break` inside nested `if` within loop
-- **Y: Until variable** — `until` with variable-based condition
+- **Y: Until variable** — `until` with variable-based condition (flaky)
 - **Z: Multi-var interpolation** — multiple `${var}` references in single prompt
 - **AA: Approve timeout** — `approve "msg" timeout N` auto-advances without human interaction
 - **AB: Review block** — `review max 1` runs body then exits, flow advances
@@ -170,6 +170,24 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **AD: Race block** — two spawns race; `race_winner` is set to first completer (slow)
 - **AE: foreach-spawn** — parallel fan-out creates per-item files via spawned children (slow)
 - **AF: Send/receive** — child sends message to parent via `send parent`, parent captures via `receive` (slow)
+- **AG: Import anonymous flow** — anonymous flow file import and execution
+- **AH: Import namespaced library** — `import "lib.flow" as mylib` and `use mylib.greet()`
+- **AI: Continue skips iteration** — `continue` inside `foreach` skips to next iteration
+- **AJ: Remember key-value storage** — `remember key="x" value="y"` persists in memory.json
+- **AK: Grounded-by while** — `while ask "..." grounded-by 'cmd'` AI + command verification
+- **AL: Continue in while** — `continue` resets loop iteration in `until`
+- **AM: Spawn basic child** — `spawn "name"` launches child, `await "name"` blocks until completion
+- **AN: Spawn inherits parent variables** — spawned child inherits parent's variables, returns with prefix
+- **AO: Include file directive** — `include "shared.prompt"` inlines external prompt content
+- **AP: Swarm manager-worker** — `swarm delivery { role worker ... }` pattern execution
+- **AQ: Swarm reviewer-after-workers** — `swarm` with multiple roles and sequenced await
+- **AR: Retry with backoff** — `retry max 3 backoff 1s` waits >=900ms between attempts and completes (slow)
+- **AS: Composite gate** — `done when: all(file_exists a, file_exists b, file_exists c)` completes after all files appear
+- **AT: Spawn with modifiers** — conditional `if ... spawn "worker" ... end` launches child and registers in `spawnedChildren`
+- **AU: Nested try/catch/finally** — inner catch failure propagates to outer catch; `finally` still executes
+- **AV: foreach in run** — `foreach item in run "cmd"` iterates over command stdout tokens
+- **AW: Labeled break exits outer loop** — `break outer` unwinds nested loops and exits labeled ancestor
+- **AX: Snapshot + rollback (state-only)** — `snapshot "name"` + `rollback to "name"` restores variables-only
 - **Z1: List-length drift** — `let x = []` + foreach append writes `items_length` through each iteration
 - **Z2: Nonce propagation** — runtime UUID flows through multiple `run:` nodes and matches state
 - **Z3: Capture-gated branch** — `if coin == "HEADS"` branch selection depends on live prompt capture
@@ -177,11 +195,6 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **Z5: Spawn PID fingerprint** — foreach-spawn produces distinct child PIDs, none matching harness PID (slow)
 - **Z6: Race winner** — race block populates `race_winner` consistent with state (slow)
 - **Z7: Send/receive hash** — child's send appears in parent's receive with matching sha256 (slow)
-- **AR: Retry with backoff** — `retry max 3 backoff 1s` waits >=900ms between attempts and completes (slow)
-- **AS: Composite gate** — `done when: all(file_exists a, file_exists b, file_exists c)` completes after all files appear
-- **AT: Spawn with modifiers** — conditional `if ... spawn "worker" ... end` launches child and registers in `spawnedChildren`
-- **AU: Nested try/catch/finally** — inner catch failure propagates to outer catch; `finally` still executes
-- **AV: foreach in run** — `foreach item in run "cmd"` iterates over command stdout tokens
 
 ### Trace verification
 

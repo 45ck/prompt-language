@@ -34,8 +34,8 @@ flow:
   remember key="crm_auth" value="NextAuth.js with email + OAuth providers"
   remember key="crm_pkg" value="pnpm"
   remember key="crm_workspace" value="experiments/full-saas-factory/e7-enterprise-crm-factory/workspace/crm-app"
-  remember key="crm_entities" value="contact company opportunity pipeline_stage activity task note deal quote invoice product email_template campaign dashboard report role permission audit_log"
-  remember key="crm_entity_count" value="18"
+  remember key="crm_entities" value="contact company lead deal quote invoice product line_item contract case activity task note email_template campaign"
+  remember key="crm_entity_count" value="15"
 
   prompt: You are the factory orchestrator for an enterprise CRM build. Work only inside ${crm_workspace}. Follow the flow structure exactly — do not skip phases, invent extra phases, or deviate from the declared agent assignments. Record non-obvious decisions as ADRs under docs/adr/.
 

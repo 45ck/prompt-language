@@ -1,0 +1,18 @@
+Goal: Replace bare catch blocks with structured error handling
+
+flow:
+  prompt: Create custom error classes in src/errors.js: NotFoundError (404), ValidationError (400), DatabaseError (500). Each should have name, message, and statusCode properties. Export them.
+  let files_with_catch = run "grep -rn 'catch' src/ --include='*.js' -l"
+  foreach file in ${files_with_catch}
+    prompt: Review ${file} and replace every bare catch block with proper error handling. Use the custom error classes from src/errors.js. Catch blocks should either re-throw as a custom error, handle specifically, or propagate. Never silently swallow errors. Fix wrong status codes (e.g., 200 for not-found should be 404).
+  end
+  prompt: Update src/app.js handleRequest to catch custom errors and return consistent { error: string } responses with correct status codes.
+  retry max 3
+    run: node src/app.js
+    if command_failed
+      prompt: App crashed after error handling changes. Fix: ${last_stderr}
+    end
+  end
+
+done when:
+  file_exists src/errors.js

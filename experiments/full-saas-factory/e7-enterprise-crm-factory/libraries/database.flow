@@ -11,7 +11,7 @@ export flow setup_schema(pkg="pnpm"):
   run: cd packages/api && npx prisma generate
 
 export flow seed_data(pkg="pnpm"):
-  prompt: Use agent: backend-engineer. Use skills: entity-model-designer. Write packages/api/prisma/seed.ts with realistic seed data: 3 roles (admin, manager, rep), 5 users, 20 contacts, 10 companies, 15 opportunities across 5 pipeline stages, 30 activities, 20 tasks (some overdue), 15 notes, 5 deals, 3 quotes with line items, 2 invoices, 10 products, 3 email templates, 2 campaigns, and a pre-configured dashboard. Use Prisma client for seeding. Add "prisma": { "seed": "npx tsx prisma/seed.ts" } to packages/api/package.json.
+  prompt: Use agent: backend-engineer. Use skills: entity-model-designer. Write packages/api/prisma/seed.ts with realistic seed data: 3 roles (admin, manager, rep) with permission matrix, 5 users with role assignments, 20 contacts, 10 companies, 10 leads (some qualified), 15 deals across pipeline stages, 30 activities, 20 tasks (some overdue), 15 notes, 5 cases (mix of open/resolved), 3 quotes with line items, 2 invoices with line items, 10 products, 3 contracts tied to deals, 3 email templates, 2 campaigns, 6 pipeline stages in order, and sample audit log entries. Use Prisma client for seeding. Add "prisma": { "seed": "npx tsx prisma/seed.ts" } to packages/api/package.json.
   retry max 2
     run: cd packages/api && npx prisma db seed
     if command_failed

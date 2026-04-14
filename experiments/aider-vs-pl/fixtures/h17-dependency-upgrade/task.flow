@@ -1,0 +1,17 @@
+Goal: Migrate all code from config-v1 (callback API) to config-v2 (async/sync API)
+
+flow:
+  let files = run "find src -name '*.js' -not -name 'config-v1.js' -not -name 'config-v2.js'"
+  prompt: Read TASK.md for the breaking changes between config-v1 and config-v2. Then review all source files to understand current v1 usage patterns.
+  foreach file in ${files}
+    prompt: Migrate ${file} from ConfigV1 to ConfigV2. Replace require('./config-v1') with require('./config-v2'), ConfigV1 with ConfigV2, callback patterns with sync/async, getAll() with entries(). Use try/catch instead of error callbacks.
+  end
+  retry max 3
+    run: node src/app.js
+    if command_failed
+      prompt: The app failed after migration. Fix the error: ${last_stderr}
+    end
+  end
+
+done when:
+  file_exists src/app.js

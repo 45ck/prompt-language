@@ -8,7 +8,7 @@ export flow run(stack="Next.js 15 + TypeScript", db="PostgreSQL + Prisma", auth=
 
   # Foundation: shared types + database + auth (must complete before entity work)
   spawn "shared-foundation" with vars stack, db, pkg
-    prompt: Use agent: backend-engineer. Use skills: entity-model-designer, schema-normalizer. Create packages/shared/src/types/ with TypeScript interfaces for all 18 entities matching docs/data-model.md. Create packages/shared/src/validation/ with Zod schemas for each entity. Create packages/shared/src/constants/ with pipeline stage enums, permission enums, and entity status enums. Export everything from packages/shared/src/index.ts.
+    prompt: Use agent: backend-engineer. Use skills: entity-model-designer, schema-normalizer. Create packages/shared/src/types/ with TypeScript interfaces for all 15 business entities (contact, company, lead, deal, quote, invoice, product, line_item, contract, case, activity, task, note, email_template, campaign) plus system types (dashboard widget, report query, role, permission, audit log entry) matching docs/data-model.md. Create packages/shared/src/validation/ with Zod schemas for each entity. Create packages/shared/src/constants/ with pipeline stage enums, permission enums, and entity status enums. Export everything from packages/shared/src/index.ts.
     run: cd packages/shared && ${pkg} build
     retry max 2
       run: cd packages/shared && ${pkg} typecheck
@@ -19,7 +19,7 @@ export flow run(stack="Next.js 15 + TypeScript", db="PostgreSQL + Prisma", auth=
   end
 
   spawn "database-setup" with vars db, pkg
-    prompt: Use agent: backend-engineer. Use skills: entity-model-designer, repository-layer-designer, schema-normalizer. Write packages/api/prisma/schema.prisma matching docs/data-model.md exactly — all 18 entities with relations, indexes, unique constraints, enums, and cascade rules. Include created_at/updated_at/deleted_at (soft delete) on all entities.
+    prompt: Use agent: backend-engineer. Use skills: entity-model-designer, repository-layer-designer, schema-normalizer. Write packages/api/prisma/schema.prisma matching docs/data-model.md exactly — all 15 business entities plus system tables (role, permission, audit_log, pipeline_stage, dashboard_widget, saved_report) with relations, indexes, unique constraints, enums, and cascade rules. Include created_at/updated_at/deleted_at (soft delete) on all business entities. Audit log and pipeline stage tables should NOT have soft delete — audit is append-only, pipeline stages are admin-managed config.
     use database.setup_schema(pkg="${pkg}")
     use database.seed_data(pkg="${pkg}")
   end
@@ -57,21 +57,15 @@ export flow run(stack="Next.js 15 + TypeScript", db="PostgreSQL + Prisma", auth=
 
   await all
 
-  # Entity CRUD generation — parallel per entity cluster
-  let core_entities = "contact company opportunity pipeline_stage"
-  let activity_entities = "activity task note"
-  let commerce_entities = "deal quote invoice product"
+  # Entity CRUD generation — parallel per entity cluster (business entities only)
+  let core_entities = "contact company lead deal"
+  let commerce_entities = "quote invoice product line_item contract"
+  let activity_entities = "activity task note case"
   let comm_entities = "email_template campaign"
-  let admin_entities = "dashboard report role permission audit_log"
 
-  foreach-spawn cluster in "core activity commerce comms admin" max 5
+  foreach-spawn cluster in "core commerce activity comms" max 4
     if ${cluster} == "core"
       foreach entity in "${core_entities}"
-        use crud.generate_full(entity="${entity}", pkg="${pkg}")
-      end
-    end
-    if ${cluster} == "activity"
-      foreach entity in "${activity_entities}"
         use crud.generate_full(entity="${entity}", pkg="${pkg}")
       end
     end
@@ -80,21 +74,44 @@ export flow run(stack="Next.js 15 + TypeScript", db="PostgreSQL + Prisma", auth=
         use crud.generate_full(entity="${entity}", pkg="${pkg}")
       end
     end
-    if ${cluster} == "comms"
-      foreach entity in "${comm_entities}"
+    if ${cluster} == "activity"
+      foreach entity in "${activity_entities}"
         use crud.generate_full(entity="${entity}", pkg="${pkg}")
       end
     end
-    if ${cluster} == "admin"
-      foreach entity in "${admin_entities}"
+    if ${cluster} == "comms"
+      foreach entity in "${comm_entities}"
         use crud.generate_full(entity="${entity}", pkg="${pkg}")
       end
     end
   end
   await all
 
-  # Integration wiring — connect all entities to the frontend shell
-  prompt: Use agent: web-engineer. Use skills: route-and-controller-planner, form-validation-designer. Wire all entity pages into the sidebar navigation. Ensure the dashboard page shows: total contacts, total companies, total opportunities by stage (pipeline view), total revenue from invoices, overdue tasks, and recent activity feed. Verify all routes from docs/architecture/routing-map.md are implemented.
+  # System features — specialized modules (NOT generic CRUD)
+  spawn "system-pipeline-config" with vars pkg
+    prompt: Use agent: backend-engineer. Use skills: entity-model-designer. Implement pipeline stage configuration as an admin-only module. Pipeline stages are an ordered enum/config (e.g., Prospect, Qualified, Proposal, Negotiation, Closed Won, Closed Lost) — not user-created CRUD records. Create packages/api/src/modules/pipeline/pipeline-config.service.ts (read stages, reorder stages — admin only), packages/api/src/modules/pipeline/pipeline-config.routes.ts (GET /api/pipeline-stages, PUT /api/pipeline-stages/reorder — admin RBAC), and apps/web/src/app/(dashboard)/settings/pipeline/page.tsx (drag-to-reorder admin UI). Write tests.
+  end
+
+  spawn "system-dashboard" with vars pkg
+    prompt: Use agent: web-engineer. Use skills: route-and-controller-planner, client-server-responsibility-splitter. Implement the dashboard as a widget-based framework — not a CRUD entity. Create packages/api/src/modules/dashboard/dashboard.service.ts (aggregate queries: total contacts, total companies, deals by stage, revenue from invoices, overdue tasks, recent activity feed), packages/api/src/modules/dashboard/dashboard.routes.ts (GET /api/dashboard/widgets, GET /api/dashboard/stats), and apps/web/src/app/(dashboard)/page.tsx (widget grid with charts, KPI cards, activity timeline). Dashboards are rendered from live queries, not stored as editable records. Write tests.
+  end
+
+  spawn "system-reports" with vars pkg
+    prompt: Use agent: backend-engineer. Use skills: api-contract-writer, repository-layer-designer. Implement the report engine as a query-based generation module — not a CRUD entity. Create packages/api/src/modules/reports/report.service.ts (pre-defined report types: sales pipeline, revenue forecast, activity summary, contact growth — each runs an aggregate query), packages/api/src/modules/reports/report.routes.ts (GET /api/reports/:type with date range and filter params, GET /api/reports/types), and apps/web/src/app/(dashboard)/reports/page.tsx (report type selector, date range picker, table/chart output). Reports are generated on demand, not stored. Users can optionally save report configs as "saved reports". Write tests.
+  end
+
+  spawn "system-rbac" with vars pkg
+    prompt: Use agent: backend-engineer. Use skills: entity-model-designer, transaction-boundary-checker. Implement RBAC as a fixed role/permission matrix — not user-created CRUD records. Roles are a fixed set (admin, manager, rep, viewer). Permissions are computed from role, not individually editable. Create packages/api/src/modules/rbac/rbac.service.ts (check permission, list roles, assign role to user), packages/api/src/modules/rbac/rbac.middleware.ts (Express/Hono middleware for route-level permission checks), packages/api/src/modules/rbac/permission-matrix.ts (static role→permission mapping), and apps/web/src/app/(dashboard)/settings/roles/page.tsx (role assignment UI — admin only). Write tests.
+  end
+
+  spawn "system-audit" with vars pkg
+    prompt: Use agent: backend-engineer. Use skills: entity-model-designer, repository-layer-designer. Implement audit log as an append-only logger — not a CRUD entity with update/delete. Create packages/api/src/modules/audit/audit.service.ts (log entry creation with actor, action, entity type, entity ID, timestamp, diff), packages/api/src/modules/audit/audit.middleware.ts (auto-log all CUD operations on business entities), packages/api/src/modules/audit/audit.routes.ts (GET /api/audit-log with pagination and filters — read-only, admin/manager only), and apps/web/src/app/(dashboard)/settings/audit/page.tsx (searchable audit log viewer). No update or delete endpoints. Write tests.
+  end
+
+  await all
+
+  # Integration wiring — connect all entities and system features to the frontend shell
+  prompt: Use agent: web-engineer. Use skills: route-and-controller-planner, form-validation-designer. Wire all entity pages and system feature pages into the sidebar navigation. Ensure the dashboard page shows: total contacts, total companies, deals by pipeline stage, total revenue from invoices, overdue tasks, open cases, and recent activity feed. Verify all routes from docs/architecture/routing-map.md are implemented.
 
   # Full build verification
   retry max 3

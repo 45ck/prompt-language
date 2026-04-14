@@ -1,0 +1,21 @@
+Goal: Centralize scattered process.env reads into a single config module
+
+flow:
+  let envvars = run "grep -rn 'process.env' src/ --include='*.js' -l"
+  prompt: Create src/config.js that centralizes all process.env reads. Scan all files in src/ for process.env usage. The config module should read every env var, provide defaults, and export a config object.
+  foreach file in ${envvars}
+    prompt: Refactor ${file} to import from src/config.js instead of reading process.env directly. Replace all process.env.X reads with config.X imports.
+  end
+  retry max 3
+    run: node src/app.js
+    if command_failed
+      prompt: App failed after config refactor. Fix the error: ${last_stderr}
+    end
+  end
+  let remaining = run "grep -rn 'process.env' src/ --include='*.js' --ignore=config.js || echo 'none'"
+  if ${remaining} != "none"
+    prompt: Some files still read process.env directly. Fix them: ${remaining}
+  end
+
+done when:
+  file_exists src/config.js

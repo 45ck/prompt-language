@@ -1,0 +1,12 @@
+Goal: Generate API.md documentation from route definitions in src/app.js
+
+flow:
+  let routes = run "grep -n 'Route:' src/app.js"
+  prompt: Read src/app.js carefully. Extract every route definition (method, path, description, parameters, request body, response). Create API.md with comprehensive documentation for every route. Include method, path, description, request body schema (for POST/PUT), response schema, status codes, and at least one example request/response per route. Document error responses (400, 404, 409). Do NOT document routes that don't exist in the code.
+  let missing = run "node -e \"const fs=require('fs'); const doc=fs.readFileSync('API.md','utf8'); const routes=['GET /api/contacts','GET /api/contacts/:id','POST /api/contacts','PUT /api/contacts/:id','DELETE /api/contacts/:id','GET /api/contacts/search','GET /api/stats']; const missing=routes.filter(r=>{const [m,p]=r.split(' '); return !doc.includes(m)||(!doc.includes(p)&&!doc.includes(p.replace(':id','{id}')))}); if(missing.length) {console.log(missing.join('\\n')); process.exit(1)} else console.log('none')\""
+  if command_failed
+    prompt: The following routes are missing from API.md. Add documentation for them: ${last_stdout}
+  end
+
+done when:
+  file_exists API.md

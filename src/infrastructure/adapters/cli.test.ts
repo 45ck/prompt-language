@@ -668,7 +668,7 @@ describe('CLI commands', () => {
     expect(source).toContain("return runner === 'codex' ? 'gpt-5.2' : undefined;");
     expect(source).toContain("const claudeArgs = ['-p', '--dangerously-skip-permissions']");
     expect(source).toContain("readOptionValue(args, '--model')");
-    expect(source).toContain('Supported runners: claude, codex, opencode, ollama.');
+    expect(source).toContain('Supported runners: claude, codex, opencode, ollama, aider.');
   });
 
   it('eval exposes the dataset runner with harness, baseline, and report output support', async () => {

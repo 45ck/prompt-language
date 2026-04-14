@@ -589,6 +589,41 @@ describe('node position helpers', () => {
     expect(resolveNodeByPath([race], [0, 3])).toBe(body2);
   });
 
+  it('describeNodePosition — body of while/foreach/spawn/review/foreach_spawn', () => {
+    const wBody = createPromptNode('pw', 'w');
+    const feBody = createPromptNode('pf', 'f');
+    const spBody = createPromptNode('ps', 's');
+    const rvBody = createPromptNode('pr', 'r');
+    const fsBody = createPromptNode('pfs', 'fs');
+    const nodes = [
+      createWhileNode('w1', 'c', [wBody]),
+      createForeachNode('fe1', 'item', 'a b', [feBody]),
+      createSpawnNode('sp1', 'worker', [spBody]),
+      createReviewNode('rv1', [rvBody], 1),
+      createForeachSpawnNode('fs1', 'item', 'a b', [fsBody]),
+    ];
+    expect(describeNodePosition(nodes, [0, 0])).toContain('while');
+    expect(describeNodePosition(nodes, [1, 0])).toContain('foreach');
+    expect(describeNodePosition(nodes, [2, 0])).toContain('spawn');
+    expect(describeNodePosition(nodes, [3, 0])).toContain('review');
+    expect(describeNodePosition(nodes, [4, 0])).toContain('foreach-spawn');
+  });
+
+  it('describeNodePosition — race spawn and nested race body', () => {
+    const body = createRunNode('r1', 'x');
+    const spawn1 = createSpawnNode('sp1', 'a', [body]);
+    const race = createRaceNode('rc1', [spawn1]);
+    // index 0 = spawn1 itself
+    expect(describeNodePosition([race], [0, 0])).toContain('spawn');
+    // index 1 falls through to nested body
+    expect(describeNodePosition([race], [0, 1])).toContain('run');
+  });
+
+  it('describeNodePosition — out of range in race returns missing marker', () => {
+    const race = createRaceNode('rc1', [createSpawnNode('sp1', 'a', [])]);
+    expect(describeNodePosition([race], [0, 5])).toContain('[missing');
+  });
+
   it('describeNodePosition — breadcrumb across if.then, try.catch, race body, swarm role', () => {
     const thenP = createPromptNode('pt', 't');
     const catchP = createPromptNode('pc', 'c');

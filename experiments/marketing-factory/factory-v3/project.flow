@@ -1,0 +1,58 @@
+Goal: Build a marketing website for CloudPulse, a cloud monitoring SaaS platform.
+
+flow:
+  # ── Brand identity variables ──
+  let product_name = "CloudPulse"
+  let tagline = "Monitor smarter, respond faster."
+  let primary_color = "#2563EB"
+  let secondary_color = "#7C3AED"
+  let accent_color = "#10B981"
+  let dark_color = "#1E293B"
+  let light_color = "#F8FAFC"
+
+  # ── Phase 1: Brand research ──
+  prompt: |
+    You are building a marketing website for ${product_name} ("${tagline}"), a cloud monitoring
+    SaaS platform. Research what makes an effective SaaS landing page and create brand-guidelines.md
+    covering voice/tone rules, the color palette (${primary_color}, ${secondary_color},
+    ${accent_color}, ${dark_color}, ${light_color}), typography, and naming conventions.
+
+  # ── Phase 2: Content planning ──
+  prompt: |
+    Based on brand-guidelines.md, create content-brief.md planning the sections, copy, and
+    structure for the ${product_name} marketing site. Decide on features, pricing tiers,
+    testimonials, and CTAs. All content must follow the brand guidelines.
+
+  # ── Phase 3: Implementation ──
+  prompt: |
+    Build the ${product_name} website as a single self-contained index.html.
+    Read brand-guidelines.md and content-brief.md for all decisions.
+    Requirements: semantic HTML, responsive CSS with media queries, CSS custom properties
+    for colors, full SEO (meta tags, Open Graph, JSON-LD, canonical, favicon), accessibility
+    (lang, ARIA, heading hierarchy), no external dependencies, no <img> tags.
+    Include social links (twitter/linkedin/github) in the footer.
+
+  # ── Phase 4: Automated quality gates ──
+  retry max 3
+    # Structure: DOCTYPE, viewport, media queries, semantic HTML, single h1
+    run: node -e "const fs=require('fs');if(!fs.existsSync('index.html')){process.exit(1)};const h=fs.readFileSync('index.html','utf8');const i=[];if(!h.includes('<!DOCTYPE html>'))i.push('missing DOCTYPE');if(!/meta[^>]*viewport/i.test(h))i.push('missing viewport');if(!/@media/i.test(h))i.push('no media queries');if(!/<nav/i.test(h))i.push('no nav');if(!/<main/i.test(h))i.push('no main');if(!/<footer/i.test(h))i.push('no footer');if(!/<html[^>]*lang/i.test(h))i.push('no lang attr');const h1s=(h.match(/<h1/gi)||[]).length;if(h1s!==1)i.push(h1s+' h1 tags (need 1)');if(i.length){console.error('STRUCTURE:\\n'+i.join('\\n'));process.exit(1)}else console.log('STRUCTURE: PASS')"
+
+    # SEO: meta desc, OG, canonical, JSON-LD, favicon + social links in footer
+    run: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const i=[];if(!/<meta[^>]*name=[\"']description/i.test(h))i.push('no meta description');if(!/<meta[^>]*og:title/i.test(h))i.push('no og:title');if(!/<meta[^>]*og:description/i.test(h))i.push('no og:description');if(!h.includes('canonical'))i.push('no canonical');if(!h.includes('application/ld+json'))i.push('no JSON-LD');if(!/<link[^>]*rel=[\"']icon/i.test(h))i.push('no favicon');const social=/twitter|linkedin|github|x\.com/gi;const socialMatches=h.match(social)||[];if(socialMatches.length<2)i.push('need 2+ social links (twitter/linkedin/github)');if(i.length){console.error('SEO:\\n'+i.join('\\n'));process.exit(1)}else console.log('SEO: PASS')"
+
+    # Brand: fillers, exclamations, product name presence + variants, Title Case headings
+    run: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const t=h.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');const i=[];['very','really','just','basically','actually','simply','literally','quite','rather'].forEach(f=>{if(new RegExp('\\b'+f+'\\b','i').test(t))i.push('filler: '+f)});if((t.match(/[A-Za-z][^.!?]*!/g)||[]).filter(e=>!/function|var |let |const /.test(e)).length>0)i.push('exclamation marks');const wr=(t.match(/cloud\s+pulse|Cloud\s+Pulse|CLOUDPULSE/gi)||[]);if(wr.length)i.push('wrong product name variant: '+wr.join(', '));const cp=(t.match(/CloudPulse/g)||[]).length;if(cp<3)i.push('product name CloudPulse appears only '+cp+' times (need 3+)');const hdgs=h.match(/<h[1-6][^>]*>([^<]+)<\/h[1-6]>/gi)||[];const minor=new Set(['a','an','the','and','but','or','for','nor','in','on','at','to','by','of','with','is','it','as']);hdgs.forEach(hd=>{const txt=hd.replace(/<[^>]+>/g,'').trim();const words=txt.split(/\s+/);if(words.length<=1)return;const bad=words.filter((w,idx)=>{if(/^\d/.test(w))return false;if(idx>0&&minor.has(w.toLowerCase()))return false;return w.length>0&&w[0]!==w[0].toUpperCase()});if(bad.length>0)i.push('heading not Title Case: \"'+txt+'\"')});if(i.length){console.error('BRAND:\\n'+i.join('\\n'));process.exit(1)}else console.log('BRAND: PASS')"
+
+    # Color palette: only brand colors and neutral grays, reject 3-char hex
+    run: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const css=(h.match(/<style[^>]*>([\s\S]*?)<\/style>/gi)||[]).join('')+(h.match(/style=[\"']([^\"']+)[\"']/gi)||[]).join('');const colors=css.match(/#[0-9a-fA-F]{3,8}\b/g)||[];const bad=colors.filter(c=>{const x=c.slice(1).toLowerCase();if(x.length<3||x.length>6)return true;const n=x.length===3?x[0]+x[0]+x[1]+x[1]+x[2]+x[2]:x;if(n.length!==6)return true;const r=parseInt(n.slice(0,2),16),g=parseInt(n.slice(2,4),16),b=parseInt(n.slice(4,6),16);if(isNaN(r)||isNaN(g)||isNaN(b))return true;if(Math.abs(r-g)<=15&&Math.abs(g-b)<=15)return false;const hues=[[37,99,235],[124,58,237],[16,185,129],[30,41,59],[248,250,252]];return!hues.some(([hr,hg,hb])=>{const dr=Math.abs(r-hr),dg=Math.abs(g-hg),db=Math.abs(b-hb);return Math.max(dr,dg,db)<100&&(r>g===hr>hg)&&(b>g===hb>hg)})});if(bad.length>0){console.error('OFF-PALETTE:\\n'+[...new Set(bad)].join('\\n'));process.exit(1)}else console.log('COLORS: PASS')"
+
+    if command_failed
+      prompt: |
+        Quality checks failed:
+        ${last_stderr}
+        Fix every issue in index.html. Re-read brand-guidelines.md if needed.
+    end
+  end
+
+done when:
+  file_exists index.html

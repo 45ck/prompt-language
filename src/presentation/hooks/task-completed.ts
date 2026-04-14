@@ -7,7 +7,7 @@
 
 import { evaluateCompletion } from '../../application/evaluate-completion.js';
 import { terminateRunningSpawnedChildren } from '../../application/terminate-spawned-children.js';
-import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
+import { resolveProcessSpawner } from '../../infrastructure/adapters/resolve-process-spawner.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-runner.js';
 import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
@@ -29,7 +29,7 @@ async function main(): Promise<void> {
   if (current && (current.status === 'failed' || current.status === 'cancelled')) {
     const cleaned = await terminateRunningSpawnedChildren(
       current,
-      new ClaudeProcessSpawner(process.cwd()),
+      resolveProcessSpawner(process.cwd()),
     );
     if (cleaned !== current) {
       await stateStore.save(cleaned);

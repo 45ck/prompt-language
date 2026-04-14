@@ -1,7 +1,7 @@
 import { evaluateStop } from '../../application/evaluate-stop.js';
 import { terminateRunningSpawnedChildren } from '../../application/terminate-spawned-children.js';
 import { renderCompletionSummary } from '../../domain/render-flow.js';
-import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
+import { resolveProcessSpawner } from '../../infrastructure/adapters/resolve-process-spawner.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { readStdin } from './read-stdin.js';
 
@@ -36,7 +36,7 @@ export async function runStopHook(): Promise<void> {
   if (state && (state.status === 'failed' || state.status === 'cancelled')) {
     const cleaned = await terminateRunningSpawnedChildren(
       state,
-      new ClaudeProcessSpawner(process.cwd()),
+      resolveProcessSpawner(process.cwd()),
     );
     if (cleaned !== state) {
       await stateStore.save(cleaned);

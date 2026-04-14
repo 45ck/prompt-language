@@ -2070,3 +2070,295 @@ describe('renderFlow — prompt_json let node', () => {
     expect(output).toContain('let myVar =');
   });
 });
+
+// ── B2: Deterministic ordering ─────────────────────────────────────────
+describe('renderFlow — B2 deterministic ordering', () => {
+  it('renders gate diagnostics identically regardless of diagnostics insertion order', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('tests_pass'), createCompletionGate('lint_pass')],
+    );
+    const base = createSessionState('s1', spec);
+
+    const stateA = {
+      ...base,
+      gateResults: { tests_pass: false, lint_pass: false },
+      gateDiagnostics: {
+        tests_pass: { passed: false, command: 'npm test', exitCode: 1, stderr: 'fail A' },
+        lint_pass: { passed: false, command: 'npm run lint', exitCode: 2, stderr: 'fail B' },
+      },
+    };
+    const stateB = {
+      ...base,
+      gateResults: { lint_pass: false, tests_pass: false },
+      gateDiagnostics: {
+        lint_pass: { passed: false, command: 'npm run lint', exitCode: 2, stderr: 'fail B' },
+        tests_pass: { passed: false, command: 'npm test', exitCode: 1, stderr: 'fail A' },
+      },
+    };
+
+    expect(renderFlow(stateA)).toBe(renderFlow(stateB));
+  });
+
+  it('renders gates in spec declaration order, not alphabetical', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [createCompletionGate('zebra_check'), createCompletionGate('alpha_check')],
+    );
+    const state = {
+      ...createSessionState('s1', spec),
+      gateResults: { zebra_check: true, alpha_check: false },
+    };
+    const output = renderFlow(state);
+    const zebraIdx = output.indexOf('zebra_check');
+    const alphaIdx = output.indexOf('alpha_check');
+    expect(zebraIdx).toBeLessThan(alphaIdx);
+  });
+
+  it('renders warnings in insertion order (array, not sorted)', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'work')],
+      [],
+      ['Zebra warning', 'Alpha warning'],
+    );
+    const state = createSessionState('s1', spec);
+    const output = renderFlow(state);
+    const zebraIdx = output.indexOf('Zebra warning');
+    const alphaIdx = output.indexOf('Alpha warning');
+    expect(zebraIdx).toBeLessThan(alphaIdx);
+  });
+});
+
+// ── B3: Volatility removal ─────────────────────────────────────────────
+describe('renderFlow — B3 no incidental volatility', () => {
+  it('is a pure function: identical calls on same state produce identical output', () => {
+    const spec = createFlowSpec(
+      'test',
+      [createWhileNode('w1', 'not done', [createPromptNode('p1', 'fix')], 3)],
+      [createCompletionGate('tests_pass')],
+    );
+    let state = createSessionState('s1', spec);
+    state = {
+      ...state,
+      currentNodePath: [0, 0],
+      variables: { x: '1', y: '2' },
+      gateResults: { tests_pass: false },
+    };
+
+    const first = renderFlow(state);
+    const second = renderFlow(state);
+    expect(first).toBe(second);
+  });
+
+  it('does not include any timestamp or Date.now() artifacts in output', () => {
+    const spec = createFlowSpec('test', [createRunNode('r1', 'npm test')]);
+    let state = createSessionState('s1', spec);
+    state = updateNodeProgress(state, 'r1', {
+      iteration: 1,
+      maxIterations: 1,
+      status: 'completed',
+      startedAt: 1713000000000,
+      completedAt: 1713000045000,
+    });
+    const output = renderFlow(state);
+    expect(output).not.toContain('1713');
+    expect(output).not.toContain('45000');
+  });
+});
+
+// ── C1: Compact mode (current-path-only) ───────────────────────────────
+describe('renderFlowCompact — C1 edge cases', () => {
+  it('handles empty flow gracefully', () => {
+    const spec = createFlowSpec('empty', []);
+    const state = createSessionState('s1', spec);
+    const compact = renderFlowCompact(state);
+    expect(compact).toContain('[pl] empty | active');
+  });
+
+  it('handles completed flow', () => {
+    const spec = createFlowSpec('done', [createPromptNode('p1', 'work')]);
+    let state = createSessionState('s1', spec);
+    state = markCompleted(state);
+    const compact = renderFlowCompact(state);
+    expect(compact).toContain('[pl] done | completed');
+  });
+
+  it('handles failed flow with current path', () => {
+    const spec = createFlowSpec('broken', [
+      createRunNode('r1', 'npm test'),
+      createPromptNode('p1', 'fix'),
+    ]);
+    let state = createSessionState('s1', spec);
+    state = markFailed(state, 'command timed out');
+    const compact = renderFlowCompact(state);
+    expect(compact).toContain('[pl] broken | failed');
+  });
+
+  it('renders deeply nested active path without siblings', () => {
+    const innerIf = createIfNode(
+      'i1',
+      'cond',
+      [createPromptNode('p1', 'then-branch')],
+      [createRunNode('r1', 'else-cmd')],
+    );
+    const whileNode = createWhileNode('w1', 'not done', [innerIf], 3);
+    const spec = createFlowSpec('test', [whileNode]);
+    let state = createSessionState('s1', spec);
+    // Path into else branch: while[0] -> if[0] -> else child (index 1)
+    state = { ...state, currentNodePath: [0, 0, 1] };
+    const compact = renderFlowCompact(state);
+    expect(compact).toContain('else');
+    expect(compact).toContain('R: else-cmd');
+    // then-branch should NOT appear
+    expect(compact).not.toContain('P: then-branch');
+  });
+
+  it('full mode still renders all branches (backward compat)', () => {
+    const ifNode = createIfNode(
+      'i1',
+      'cond',
+      [createPromptNode('p1', 'then-path')],
+      [createPromptNode('p2', 'else-path')],
+    );
+    const spec = createFlowSpec('test', [ifNode]);
+    let state = createSessionState('s1', spec);
+    state = { ...state, currentNodePath: [0, 1] };
+    const full = renderFlow(state);
+    // Full mode must show BOTH branches
+    expect(full).toContain('prompt: then-path');
+    expect(full).toContain('prompt: else-path');
+  });
+});
+
+// ── C2: extractReferencedVariables (domain-layer variable dependency slicing) ─
+describe('extractReferencedVariables', () => {
+  it('extracts ${var} references from prompt text', () => {
+    const node = createPromptNode('p1', 'Hello ${name}, your id is ${id}');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('name');
+    expect(refs).toContain('id');
+    expect(refs).toHaveLength(2);
+  });
+
+  it('extracts ${var} references from run command', () => {
+    const node = createRunNode('r1', 'echo ${message}');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('message');
+  });
+
+  it('extracts condition variables from while node', () => {
+    const node = createWhileNode('w1', '${count} < 5', [createPromptNode('p1', 'work')], 5);
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('count');
+  });
+
+  it('extracts condition variables from if node', () => {
+    const node = createIfNode(
+      'i1',
+      'command_failed',
+      [createPromptNode('p1', 'then')],
+      [createPromptNode('p2', 'else')],
+    );
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('command_failed');
+  });
+
+  it('includes assigned variable name for let nodes', () => {
+    const node = createLetNode('l1', 'result', { type: 'literal', value: 'hello' });
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('result');
+  });
+
+  it('extracts references from let-run command', () => {
+    const node = createLetNode('l1', 'out', { type: 'run', command: 'cat ${file}' });
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('out');
+    expect(refs).toContain('file');
+  });
+
+  it('extracts references from let-prompt text', () => {
+    const node = createLetNode('l1', 'answer', { type: 'prompt', text: 'What is ${question}?' });
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('answer');
+    expect(refs).toContain('question');
+  });
+
+  it('includes variable name for foreach node', () => {
+    const node = createForeachNode('f1', 'item', '${items}', [createPromptNode('p1', 'process')]);
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('item');
+    expect(refs).toContain('items');
+  });
+
+  it('returns empty array for break node', () => {
+    const node = createBreakNode('b1');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toHaveLength(0);
+  });
+
+  it('returns empty array for continue node', () => {
+    const node = createContinueNode('c1');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toHaveLength(0);
+  });
+
+  it('returns empty array for await node', () => {
+    const node = createAwaitNode('a1', 'worker');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toHaveLength(0);
+  });
+
+  it('extracts references from spawn condition', () => {
+    const node = createSpawnNode('s1', 'worker', [createPromptNode('p1', 'task')], 'ready');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('ready');
+  });
+
+  it('does not return duplicates', () => {
+    const node = createPromptNode('p1', '${x} and ${x} again');
+    const refs = extractReferencedVariables(node);
+    const xCount = refs.filter((r) => r === 'x').length;
+    expect(xCount).toBe(1);
+  });
+
+  it('returns empty for prompt with no interpolation', () => {
+    const node = createPromptNode('p1', 'plain text without variables');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toHaveLength(0);
+  });
+
+  it('extracts approve_rejected for approve node', () => {
+    const node = createApproveNode('a1', 'Deploy?', 30);
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('approve_rejected');
+  });
+
+  it('extracts race_winner for race node', () => {
+    const node = createRaceNode('r1', []);
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('race_winner');
+  });
+
+  it('extracts references from remember node fields', () => {
+    const node = createRememberNode('rm1', '${topic}', '${detail}');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('topic');
+    expect(refs).toContain('detail');
+  });
+
+  it('extracts references from send node', () => {
+    const node = createSendNode('s1', '${target_name}', '${payload}');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('target_name');
+    expect(refs).toContain('payload');
+  });
+
+  it('extracts variable name from receive node', () => {
+    const node = createReceiveNode('r1', 'msg', 'worker');
+    const refs = extractReferencedVariables(node);
+    expect(refs).toContain('msg');
+  });
+});

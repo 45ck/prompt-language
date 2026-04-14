@@ -3,6 +3,62 @@
  *
  * Reconstructs the DSL text from FlowSpec nodes and annotates it with
  * the current execution position, loop progress, gate results, and variables.
+ *
+ * ── Canonical Render Spec (B1) ──────────────────────────────────────────
+ *
+ * Full mode (`renderFlow`) output structure (section order is fixed):
+ *
+ *   1. Header:   `[prompt-language] Flow: <goal> | Status: <status>[suffix]`
+ *                 suffix is ` | [FLOW FAILED: <reason>]` when failed with reason
+ *   2. Blank line
+ *   3. Declarations (optional): rubric/judge blocks, `use profile "..."` line
+ *   4. Node tree: every node rendered with markers and indentation
+ *   5. Gates section (optional): `done when:` header + per-gate lines
+ *   6. Variables section (optional): `Variables:` header + per-variable lines
+ *   7. Warnings section (optional): `Warnings:` header + per-warning lines
+ *   8. Capture reminder (optional): active capture file path hint
+ *
+ * Node rendering rules:
+ *   - Indentation: 2 spaces per nesting level, inside a 2-char prefix region
+ *   - Prefix markers (first 2 chars of each line):
+ *       `> ` — current node or ancestor of current node
+ *       `~ ` — completed node (before current in same scope)
+ *       `  ` — future or inactive node
+ *   - Suffix: `  <-- current` appended only to the exact current node
+ *   - Block nodes (while/until/retry/foreach/spawn/try/if/race/review):
+ *       header line + indented children + `  <indent>end`
+ *   - Loop progress: `[###--] N/M` bar appended to loop headers
+ *   - Let annotations: `[= value]`, `[awaiting response...]`, or
+ *       `[capture failed: reason — retry N/M]`
+ *
+ * Gate rendering:
+ *   - Each gate: `  <predicate>  [pass]`, `[fail]`, `[fail — detail]`, or `[pending]`
+ *   - Gates render in spec declaration order (array index, not alphabetical)
+ *
+ * Variable rendering:
+ *   - Sorted alphabetically by key (locale-aware)
+ *   - Hidden: last_exit_code, last_stdout, last_stderr, *_index, *_length,
+ *       command_failed/succeeded (unless command_failed === 'true')
+ *   - Sliced to execution-path-relevant variables when possible
+ *   - Values truncated at 80 chars; JSON arrays shown as `[N items: ...]`
+ *
+ * Compact mode (`renderFlowCompact`) output structure:
+ *   - Header: `[pl] <goal> | <status>`
+ *   - Only the active execution path is rendered (inactive branches omitted)
+ *   - Short markers: `>` current, `|` ancestor, `~` completed, ` ` other
+ *   - Abbreviated node kinds: P (prompt), R (run), L (let), etc.
+ *   - Gate summary: `gates: +pass -fail ?pending` on one line
+ *
+ * Determinism contract (B2):
+ *   - renderFlow(state) is a pure function of (FlowSpec, SessionState)
+ *   - Same logical state with different JS object insertion order produces
+ *     byte-identical output (variables sorted, gates in spec order)
+ *   - No Map/Set iteration, no Date.now(), no Math.random() in render path
+ *
+ * Volatility contract (B3):
+ *   - Timestamps (startedAt, completedAt) are NOT rendered in flow output
+ *   - renderStateHash canonicalizes and strips timestamps before hashing
+ *   - Only iteration counts and status values affect rendered output
  */
 
 import type { FlowNode, ForeachNode, IfNode, LetNode, SpawnNode, TryNode } from './flow-node.js';

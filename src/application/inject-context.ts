@@ -19,7 +19,12 @@ import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { AuditLogger } from './ports/audit-logger.js';
 import { NULL_TRACE_LOGGER, type TraceLogger } from './ports/trace-logger.js';
 import { parseFlow, parseGates, detectBareFlow } from './parse-flow.js';
-import { renderFlow, renderFlowSummary, renderCompletionSummary } from '../domain/render-flow.js';
+import {
+  renderFlow,
+  renderFlowCompact,
+  renderFlowSummary,
+  renderCompletionSummary,
+} from '../domain/render-flow.js';
 import { interpolate } from '../domain/interpolate.js';
 import {
   advanceApproveNode,
@@ -286,8 +291,15 @@ export interface InjectContextOutput {
   readonly prompt: string;
 }
 
+// C4: Experimental config flag — PL_COMPACT_RENDER=1 enables compact rendering
+// for benchmarking and manual testing. Default is full mode.
+export function isCompactRenderMode(): boolean {
+  return process.env['PL_COMPACT_RENDER'] === '1';
+}
+
 function renderInjectedFlow(state: SessionState): string {
-  return renderFlow(createInjectionContextState(state));
+  const contextState = createInjectionContextState(state);
+  return isCompactRenderMode() ? renderFlowCompact(contextState) : renderFlow(contextState);
 }
 
 function hasFlowBlock(prompt: string): boolean {

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   injectContext,
+  isCompactRenderMode,
   looksLikeNaturalLanguage,
   buildMetaPrompt,
   isTrivialPrompt,
@@ -2917,5 +2918,46 @@ describe('injectContext — checkpoint/resume', () => {
     const result = await injectContext({ prompt: 'continue', sessionId: 'same-id' }, store);
     expect(result.prompt).not.toContain('resumed from');
     expect(result.prompt).toContain('Step 2');
+  });
+});
+
+// ── C4: Experimental PL_COMPACT_RENDER config flag ────────────────────────
+describe('isCompactRenderMode', () => {
+  it('returns false by default (full mode)', () => {
+    const original = process.env['PL_COMPACT_RENDER'];
+    delete process.env['PL_COMPACT_RENDER'];
+    try {
+      expect(isCompactRenderMode()).toBe(false);
+    } finally {
+      if (original !== undefined) process.env['PL_COMPACT_RENDER'] = original;
+    }
+  });
+
+  it('returns true when PL_COMPACT_RENDER=1', () => {
+    const original = process.env['PL_COMPACT_RENDER'];
+    process.env['PL_COMPACT_RENDER'] = '1';
+    try {
+      expect(isCompactRenderMode()).toBe(true);
+    } finally {
+      if (original !== undefined) {
+        process.env['PL_COMPACT_RENDER'] = original;
+      } else {
+        delete process.env['PL_COMPACT_RENDER'];
+      }
+    }
+  });
+
+  it('returns false for PL_COMPACT_RENDER=0', () => {
+    const original = process.env['PL_COMPACT_RENDER'];
+    process.env['PL_COMPACT_RENDER'] = '0';
+    try {
+      expect(isCompactRenderMode()).toBe(false);
+    } finally {
+      if (original !== undefined) {
+        process.env['PL_COMPACT_RENDER'] = original;
+      } else {
+        delete process.env['PL_COMPACT_RENDER'];
+      }
+    }
   });
 });

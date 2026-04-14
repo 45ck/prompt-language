@@ -11,11 +11,12 @@ import { injectContext } from '../../application/inject-context.js';
 import { FileStateStore } from '../../infrastructure/adapters/file-state-store.js';
 import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-runner.js';
 import { FileCaptureReader } from '../../infrastructure/adapters/file-capture-reader.js';
-import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
+import { resolveProcessSpawner } from '../../infrastructure/adapters/resolve-process-spawner.js';
 import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
 import { FileTraceLogger } from '../../infrastructure/adapters/file-trace-logger.js';
 import { NULL_TRACE_LOGGER } from '../../application/ports/trace-logger.js';
 import { FileMemoryStore } from '../../infrastructure/adapters/file-memory-store.js';
+import { shouldEscalateToFullMode } from '../../domain/escalate-render-mode.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
 import { debug } from './debug.js';
@@ -52,7 +53,7 @@ async function main(): Promise<void> {
   const stateStore = new FileStateStore(process.cwd());
   const commandRunner = new ShellCommandRunner();
   const captureReader = new FileCaptureReader(process.cwd());
-  const processSpawner = new ClaudeProcessSpawner(process.cwd());
+  const processSpawner = resolveProcessSpawner(process.cwd());
   const auditLogger = new FileAuditLogger(process.cwd());
   const traceLogger =
     process.env['PL_TRACE'] === '1' ? new FileTraceLogger(process.cwd()) : NULL_TRACE_LOGGER;
@@ -103,6 +104,18 @@ async function main(): Promise<void> {
     if (state?.status === 'active') {
       const { renderFlow } = await import('../../domain/render-flow.js');
       const { colorizeFlow } = await import('../../domain/colorize-flow.js');
+
+      // E2: Automatic full-mode escalation when compact mode is active
+      if (process.env['PL_COMPACT_RENDER'] === '1') {
+        const escalation = shouldEscalateToFullMode(state, sessionId);
+        if (escalation.escalate) {
+          process.stderr.write(
+            `[prompt-language] Compact mode escalated to full: ${escalation.reason} [${escalation.triggerIds.join(', ')}]\n`,
+          );
+          debug(`Codex UserPromptSubmit: escalation triggers=${escalation.triggerIds.join(',')}`);
+        }
+      }
+
       process.stderr.write(`\n${colorizeFlow(renderFlow(state))}\n`);
     }
 

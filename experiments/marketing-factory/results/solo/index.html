@@ -14,23 +14,28 @@
       }
 
       :root {
-        --primary: #2563eb;
-        --secondary: #7c3aed;
-        --accent: #10b981;
-        --dark: #1e293b;
-        --light: #f8fafc;
-        --gray-100: #f1f5f9;
-        --gray-200: #e2e8f0;
-        --gray-400: #94a3b8;
-        --gray-600: #475569;
-        --gray-800: #1e293b;
+        --blue: #2563eb;
+        --purple: #7c3aed;
+        --green: #10b981;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-400: #9ca3af;
+        --gray-500: #6b7280;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
+      }
+
+      html {
+        scroll-behavior: smooth;
       }
 
       body {
         font-family:
           -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        color: var(--dark);
-        background: var(--light);
+        color: var(--gray-800);
         line-height: 1.6;
       }
 
@@ -38,24 +43,29 @@
         text-decoration: none;
         color: inherit;
       }
+      ul {
+        list-style: none;
+      }
 
       .container {
-        max-width: 1120px;
+        max-width: 1140px;
         margin: 0 auto;
         padding: 0 24px;
       }
 
-      /* ── Navigation ── */
+      /* ── Nav ── */
       nav {
-        position: sticky;
+        position: fixed;
         top: 0;
-        z-index: 100;
-        background: rgba(248, 250, 252, 0.92);
-        backdrop-filter: blur(10px);
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
         border-bottom: 1px solid var(--gray-200);
+        z-index: 1000;
       }
 
-      nav .container {
+      .nav-inner {
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -63,181 +73,182 @@
       }
 
       .logo {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: var(--primary);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
-
-      .logo svg {
-        flex-shrink: 0;
+        font-size: 1.35rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, var(--blue), var(--purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
 
       .nav-links {
         display: flex;
         gap: 32px;
-        list-style: none;
+        align-items: center;
       }
 
       .nav-links a {
-        font-size: 0.9rem;
+        font-size: 0.925rem;
         font-weight: 500;
         color: var(--gray-600);
         transition: color 0.2s;
       }
 
       .nav-links a:hover {
-        color: var(--primary);
+        color: var(--blue);
       }
 
-      .nav-cta {
+      .btn {
         display: inline-block;
-        padding: 8px 20px;
-        background: var(--primary);
-        color: #fff;
-        border-radius: 6px;
-        font-size: 0.9rem;
+        padding: 10px 22px;
+        border-radius: 8px;
         font-weight: 600;
-        transition: background 0.2s;
+        font-size: 0.925rem;
+        transition:
+          transform 0.15s,
+          box-shadow 0.15s;
+        cursor: pointer;
+        border: none;
       }
 
-      .nav-cta:hover {
-        background: #1d4ed8;
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
       }
 
-      .mobile-toggle {
+      .btn-primary {
+        background: linear-gradient(135deg, var(--blue), var(--purple));
+        color: #fff;
+      }
+
+      .btn-outline {
+        background: transparent;
+        border: 2px solid var(--blue);
+        color: var(--blue);
+      }
+
+      .btn-green {
+        background: var(--green);
+        color: #fff;
+      }
+
+      .hamburger {
         display: none;
+        flex-direction: column;
+        gap: 5px;
         background: none;
         border: none;
         cursor: pointer;
         padding: 4px;
       }
 
-      /* ── Hero ── */
-      #hero {
-        padding: 96px 0 80px;
-        text-align: center;
-        background: linear-gradient(168deg, var(--light) 0%, #eef2ff 50%, #f0fdfa 100%);
+      .hamburger span {
+        display: block;
+        width: 24px;
+        height: 2px;
+        background: var(--gray-700);
+        border-radius: 2px;
+        transition: 0.3s;
       }
 
-      #hero h1 {
+      /* ── Hero ── */
+      .hero {
+        padding: 140px 0 80px;
+        text-align: center;
+        background: linear-gradient(170deg, #eef2ff 0%, #f5f3ff 40%, #ecfdf5 100%);
+      }
+
+      .hero h1 {
         font-size: 3.25rem;
         font-weight: 800;
         line-height: 1.15;
-        letter-spacing: -0.02em;
-        color: var(--dark);
+        color: var(--gray-900);
         max-width: 720px;
         margin: 0 auto 16px;
       }
 
-      .hero-tagline {
-        font-size: 1.25rem;
-        color: var(--gray-600);
-        max-width: 540px;
-        margin: 0 auto 40px;
+      .hero h1 span {
+        background: linear-gradient(135deg, var(--blue), var(--purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
 
-      .hero-actions {
+      .hero .tagline {
+        font-size: 1.25rem;
+        color: var(--gray-500);
+        max-width: 540px;
+        margin: 0 auto 36px;
+      }
+
+      .hero-buttons {
         display: flex;
-        justify-content: center;
         gap: 16px;
+        justify-content: center;
         flex-wrap: wrap;
       }
 
-      .btn-primary {
-        display: inline-block;
-        padding: 14px 32px;
-        background: var(--primary);
-        color: #fff;
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        transition:
-          background 0.2s,
-          transform 0.15s;
-      }
-
-      .btn-primary:hover {
-        background: #1d4ed8;
-        transform: translateY(-1px);
-      }
-
-      .btn-secondary {
-        display: inline-block;
-        padding: 14px 32px;
-        background: transparent;
-        color: var(--primary);
-        border: 2px solid var(--primary);
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        transition: background 0.2s;
-      }
-
-      .btn-secondary:hover {
-        background: rgba(37, 99, 235, 0.06);
-      }
-
-      .hero-metrics {
+      .hero-stats {
         display: flex;
         justify-content: center;
-        gap: 48px;
+        gap: 56px;
         margin-top: 64px;
       }
 
-      .hero-metrics .metric {
+      .hero-stats div {
         text-align: center;
       }
 
-      .hero-metrics .metric-value {
+      .hero-stats strong {
+        display: block;
         font-size: 2rem;
         font-weight: 800;
-        color: var(--primary);
+        color: var(--gray-900);
       }
 
-      .hero-metrics .metric-label {
+      .hero-stats small {
         font-size: 0.85rem;
-        color: var(--gray-600);
-        margin-top: 2px;
+        color: var(--gray-500);
       }
 
-      /* ── Section Shared ── */
+      /* ── Section common ── */
       section {
         padding: 96px 0;
       }
 
       .section-label {
-        text-transform: uppercase;
+        display: inline-block;
         font-size: 0.8rem;
         font-weight: 700;
         letter-spacing: 0.08em;
-        color: var(--secondary);
-        text-align: center;
+        text-transform: uppercase;
+        color: var(--blue);
         margin-bottom: 8px;
       }
 
       .section-title {
         font-size: 2.25rem;
         font-weight: 800;
-        text-align: center;
+        color: var(--gray-900);
         margin-bottom: 12px;
       }
 
       .section-subtitle {
-        text-align: center;
-        color: var(--gray-600);
+        font-size: 1.1rem;
+        color: var(--gray-500);
         max-width: 560px;
-        margin: 0 auto 56px;
-        font-size: 1.05rem;
+        margin-bottom: 56px;
+      }
+
+      .text-center {
+        text-align: center;
+      }
+      .mx-auto {
+        margin-left: auto;
+        margin-right: auto;
       }
 
       /* ── Features ── */
-      #features {
-        background: #fff;
-      }
-
       .features-grid {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
@@ -245,17 +256,18 @@
       }
 
       .feature-card {
-        padding: 32px;
-        border-radius: 12px;
+        background: #fff;
         border: 1px solid var(--gray-200);
+        border-radius: 12px;
+        padding: 32px;
         transition:
-          box-shadow 0.25s,
+          box-shadow 0.2s,
           transform 0.2s;
       }
 
       .feature-card:hover {
-        box-shadow: 0 8px 30px rgba(37, 99, 235, 0.08);
-        transform: translateY(-2px);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
       }
 
       .feature-icon {
@@ -265,37 +277,27 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        margin-bottom: 20px;
-      }
-
-      .feature-icon.blue {
-        background: rgba(37, 99, 235, 0.1);
-        color: var(--primary);
-      }
-      .feature-icon.purple {
-        background: rgba(124, 58, 237, 0.1);
-        color: var(--secondary);
-      }
-      .feature-icon.green {
-        background: rgba(16, 185, 129, 0.1);
-        color: var(--accent);
+        font-size: 1.35rem;
+        margin-bottom: 16px;
+        color: #fff;
       }
 
       .feature-card h3 {
         font-size: 1.15rem;
         font-weight: 700;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
+        color: var(--gray-900);
       }
 
       .feature-card p {
-        color: var(--gray-600);
         font-size: 0.95rem;
-        line-height: 1.65;
+        color: var(--gray-500);
+        line-height: 1.6;
       }
 
       /* ── Pricing ── */
-      #pricing {
-        background: var(--light);
+      .pricing {
+        background: var(--gray-50);
       }
 
       .pricing-grid {
@@ -305,171 +307,180 @@
         align-items: start;
       }
 
-      .pricing-card {
+      .price-card {
         background: #fff;
-        border-radius: 12px;
         border: 1px solid var(--gray-200);
-        padding: 40px 32px;
+        border-radius: 16px;
+        padding: 36px;
         position: relative;
-        transition: box-shadow 0.25s;
+        transition: box-shadow 0.2s;
       }
 
-      .pricing-card:hover {
-        box-shadow: 0 8px 30px rgba(37, 99, 235, 0.08);
+      .price-card:hover {
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
       }
 
-      .pricing-card.featured {
-        border-color: var(--primary);
-        box-shadow: 0 0 0 1px var(--primary);
+      .price-card.popular {
+        border: 2px solid var(--blue);
+        box-shadow: 0 8px 32px rgba(37, 99, 235, 0.15);
       }
 
-      .pricing-badge {
+      .popular-badge {
         position: absolute;
         top: -13px;
         left: 50%;
         transform: translateX(-50%);
-        background: var(--primary);
+        background: linear-gradient(135deg, var(--blue), var(--purple));
         color: #fff;
         font-size: 0.75rem;
         font-weight: 700;
         padding: 4px 16px;
         border-radius: 20px;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
       }
 
-      .pricing-card h3 {
+      .price-card h3 {
         font-size: 1.15rem;
         font-weight: 700;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
       }
 
-      .pricing-card .price {
-        font-size: 2.5rem;
+      .price-card .price-desc {
+        font-size: 0.9rem;
+        color: var(--gray-500);
+        margin-bottom: 20px;
+      }
+
+      .price-amount {
+        font-size: 2.75rem;
         font-weight: 800;
-        color: var(--dark);
+        color: var(--gray-900);
       }
 
-      .pricing-card .price span {
+      .price-amount span {
         font-size: 1rem;
         font-weight: 500;
         color: var(--gray-400);
       }
 
-      .pricing-card .price-desc {
-        color: var(--gray-600);
-        font-size: 0.9rem;
-        margin-top: 4px;
-        margin-bottom: 28px;
+      .price-card ul {
+        margin: 24px 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
 
-      .pricing-features {
-        list-style: none;
-        margin-bottom: 32px;
-      }
-
-      .pricing-features li {
-        padding: 8px 0;
-        font-size: 0.93rem;
+      .price-card li {
+        font-size: 0.925rem;
         color: var(--gray-600);
         display: flex;
         align-items: center;
         gap: 10px;
       }
 
-      .pricing-features li svg {
-        flex-shrink: 0;
-        color: var(--accent);
+      .price-card li::before {
+        content: '\2713';
+        color: var(--green);
+        font-weight: 700;
+        font-size: 0.85rem;
       }
 
-      .pricing-card .btn-primary {
-        display: block;
-        text-align: center;
+      .price-card .btn {
         width: 100%;
-      }
-
-      .pricing-card .btn-outline {
-        display: block;
         text-align: center;
-        width: 100%;
-        padding: 14px 32px;
-        border: 2px solid var(--gray-200);
-        border-radius: 8px;
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--dark);
-        transition: border-color 0.2s;
-      }
-
-      .pricing-card .btn-outline:hover {
-        border-color: var(--primary);
-        color: var(--primary);
+        margin-top: 8px;
       }
 
       /* ── Testimonials ── */
-      #testimonials {
-        background: #fff;
-      }
-
       .testimonials-grid {
         display: grid;
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: 32px;
       }
 
       .testimonial-card {
-        padding: 36px;
-        border-radius: 12px;
+        background: #fff;
         border: 1px solid var(--gray-200);
-        background: var(--light);
+        border-radius: 12px;
+        padding: 32px;
       }
 
-      .stars {
-        display: flex;
-        gap: 2px;
+      .testimonial-card .stars {
+        color: #fbbf24;
+        font-size: 1rem;
         margin-bottom: 16px;
-        color: #f59e0b;
+        letter-spacing: 2px;
       }
 
       .testimonial-card blockquote {
-        font-size: 1.05rem;
+        font-size: 0.95rem;
+        color: var(--gray-600);
         line-height: 1.7;
-        color: var(--gray-800);
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         font-style: italic;
       }
 
       .testimonial-author {
         display: flex;
         align-items: center;
-        gap: 14px;
+        gap: 12px;
       }
 
-      .author-avatar {
-        width: 44px;
-        height: 44px;
+      .testimonial-avatar {
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: 700;
-        font-size: 1rem;
+        font-size: 0.85rem;
         color: #fff;
       }
 
-      .author-info .name {
-        font-weight: 700;
-        font-size: 0.95rem;
+      .testimonial-author strong {
+        display: block;
+        font-size: 0.9rem;
+        color: var(--gray-900);
       }
 
-      .author-info .role {
-        font-size: 0.85rem;
+      .testimonial-author small {
+        font-size: 0.8rem;
         color: var(--gray-400);
+      }
+
+      /* ── CTA ── */
+      .cta {
+        background: linear-gradient(135deg, var(--blue), var(--purple));
+        color: #fff;
+        text-align: center;
+      }
+
+      .cta h2 {
+        font-size: 2.25rem;
+        font-weight: 800;
+        margin-bottom: 12px;
+      }
+
+      .cta p {
+        font-size: 1.1rem;
+        opacity: 0.85;
+        margin-bottom: 32px;
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .cta .btn {
+        background: #fff;
+        color: var(--blue);
+        font-weight: 700;
       }
 
       /* ── Footer ── */
       footer {
-        background: var(--dark);
+        background: var(--gray-900);
         color: var(--gray-400);
         padding: 64px 0 32px;
       }
@@ -482,16 +493,44 @@
       }
 
       .footer-brand .logo {
-        color: #fff;
         margin-bottom: 12px;
+        display: inline-block;
       }
+
       .footer-brand p {
         font-size: 0.9rem;
-        line-height: 1.65;
+        line-height: 1.6;
         max-width: 280px;
       }
 
-      .footer-col h4 {
+      .social-links {
+        display: flex;
+        gap: 16px;
+        margin-top: 20px;
+      }
+
+      .social-links a {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: var(--gray-800);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--gray-400);
+        font-size: 0.85rem;
+        font-weight: 700;
+        transition:
+          background 0.2s,
+          color 0.2s;
+      }
+
+      .social-links a:hover {
+        background: var(--blue);
+        color: #fff;
+      }
+
+      footer h4 {
         color: #fff;
         font-size: 0.85rem;
         font-weight: 700;
@@ -500,177 +539,148 @@
         margin-bottom: 16px;
       }
 
-      .footer-col ul {
-        list-style: none;
-      }
-      .footer-col li {
-        margin-bottom: 10px;
-      }
-      .footer-col a {
-        font-size: 0.9rem;
-        transition: color 0.2s;
-      }
-      .footer-col a:hover {
-        color: #fff;
+      .footer-links {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
       }
 
-      .footer-social {
-        display: flex;
-        gap: 16px;
-        margin-top: 20px;
-      }
-      .footer-social a {
+      .footer-links a {
+        font-size: 0.9rem;
         color: var(--gray-400);
         transition: color 0.2s;
       }
-      .footer-social a:hover {
+
+      .footer-links a:hover {
         color: #fff;
       }
 
       .footer-bottom {
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        border-top: 1px solid var(--gray-800);
         padding-top: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        text-align: center;
         font-size: 0.85rem;
       }
 
-      .footer-bottom a {
-        transition: color 0.2s;
-      }
-      .footer-bottom a:hover {
-        color: #fff;
+      /* ── Responsive ── */
+      @media (max-width: 1024px) {
+        .features-grid,
+        .pricing-grid,
+        .testimonials-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .footer-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
       }
 
-      /* ── Mobile ── */
       @media (max-width: 768px) {
         .nav-links {
           display: none;
         }
-        .nav-cta.desktop {
-          display: none;
-        }
-        .mobile-toggle {
-          display: block;
+        .hamburger {
+          display: flex;
         }
 
-        #hero {
-          padding: 64px 0 56px;
+        .nav-links.active {
+          display: flex;
+          flex-direction: column;
+          position: absolute;
+          top: 64px;
+          left: 0;
+          right: 0;
+          background: #fff;
+          padding: 24px;
+          gap: 20px;
+          border-bottom: 1px solid var(--gray-200);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
         }
-        #hero h1 {
-          font-size: 2.15rem;
+
+        .hero h1 {
+          font-size: 2.25rem;
         }
-        .hero-tagline {
+        .hero .tagline {
           font-size: 1.05rem;
         }
-        .hero-metrics {
-          gap: 24px;
+        .hero-stats {
+          gap: 32px;
         }
-        .hero-metrics .metric-value {
+        .hero-stats strong {
           font-size: 1.5rem;
         }
 
-        section {
-          padding: 64px 0;
-        }
         .section-title {
           font-size: 1.75rem;
         }
 
-        .features-grid {
-          grid-template-columns: 1fr;
-        }
-        .pricing-grid {
-          grid-template-columns: 1fr;
-          max-width: 420px;
-          margin: 0 auto;
-        }
+        .features-grid,
+        .pricing-grid,
         .testimonials-grid {
           grid-template-columns: 1fr;
+          max-width: 480px;
+          margin-left: auto;
+          margin-right: auto;
         }
 
         .footer-grid {
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: 1fr;
           gap: 32px;
         }
-        .footer-brand {
-          grid-column: 1 / -1;
+      }
+
+      @media (max-width: 480px) {
+        .hero h1 {
+          font-size: 1.85rem;
         }
-        .footer-bottom {
+        .hero-stats {
           flex-direction: column;
-          gap: 12px;
-          text-align: center;
+          gap: 20px;
+        }
+        .hero-buttons {
+          flex-direction: column;
+          align-items: center;
         }
       }
     </style>
   </head>
   <body>
-    <!-- Navigation -->
+    <!-- Nav -->
     <nav>
-      <div class="container">
-        <a href="#hero" class="logo">
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <rect width="28" height="28" rx="6" fill="#2563EB" />
-            <path
-              d="M7 17C9 12 12 10 14 13C16 16 19 9 21 7"
-              stroke="#fff"
-              stroke-width="2.5"
-              stroke-linecap="round"
-            />
-          </svg>
-          CloudPulse
-        </a>
-        <ul class="nav-links">
+      <div class="container nav-inner">
+        <a href="#" class="logo">CloudPulse</a>
+        <ul class="nav-links" id="navLinks">
           <li><a href="#features">Features</a></li>
           <li><a href="#pricing">Pricing</a></li>
           <li><a href="#testimonials">Testimonials</a></li>
-          <li><a href="#contact">Contact</a></li>
+          <li><a href="#" class="btn btn-primary">Get Started</a></li>
         </ul>
-        <a href="#pricing" class="nav-cta desktop">Get Started</a>
-        <button class="mobile-toggle" aria-label="Toggle navigation">
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#1E293B"
-            stroke-width="2"
-            stroke-linecap="round"
-          >
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
+        <button
+          class="hamburger"
+          onclick="document.getElementById('navLinks').classList.toggle('active')"
+          aria-label="Toggle menu"
+        >
+          <span></span><span></span><span></span>
         </button>
       </div>
     </nav>
 
     <!-- Hero -->
-    <section id="hero">
+    <section class="hero">
       <div class="container">
-        <h1>Cloud Monitoring That Keeps You Ahead</h1>
-        <p class="hero-tagline">
-          Monitor smarter, respond faster. Real-time observability for every layer of your
-          infrastructure.
+        <h1>Monitor smarter,<br /><span>respond faster.</span></h1>
+        <p class="tagline">
+          Real-time cloud infrastructure monitoring with intelligent alerting, so your team spends
+          less time firefighting and more time building.
         </p>
-        <div class="hero-actions">
-          <a href="#pricing" class="btn-primary">Start Monitoring</a>
-          <a href="#features" class="btn-secondary">See How It Works</a>
+        <div class="hero-buttons">
+          <a href="#" class="btn btn-primary">Start Free Trial</a>
+          <a href="#" class="btn btn-outline">Watch Demo</a>
         </div>
-        <div class="hero-metrics">
-          <div class="metric">
-            <div class="metric-value">99.99%</div>
-            <div class="metric-label">Uptime SLA</div>
-          </div>
-          <div class="metric">
-            <div class="metric-value">2,400+</div>
-            <div class="metric-label">Teams trust CloudPulse</div>
-          </div>
-          <div class="metric">
-            <div class="metric-value">&lt;200ms</div>
-            <div class="metric-label">Alert latency</div>
-          </div>
+        <div class="hero-stats">
+          <div><strong>12K+</strong><small>Teams worldwide</small></div>
+          <div><strong>99.99%</strong><small>Uptime SLA</small></div>
+          <div><strong>150M+</strong><small>Metrics per day</small></div>
+          <div><strong>&lt;30s</strong><small>Alert latency</small></div>
         </div>
       </div>
     </section>
@@ -678,142 +688,73 @@
     <!-- Features -->
     <section id="features">
       <div class="container">
-        <div class="section-label">Features</div>
-        <h2 class="section-title">Everything You Need to Stay in Control</h2>
-        <p class="section-subtitle">
-          From real-time dashboards to intelligent alerting, CloudPulse gives your team the
-          visibility to ship with confidence.
-        </p>
+        <div class="text-center">
+          <span class="section-label">Features</span>
+          <h2 class="section-title">Everything you need to stay on top</h2>
+          <p class="section-subtitle mx-auto">
+            Powerful monitoring tools that scale with your infrastructure, from a single server to a
+            global fleet.
+          </p>
+        </div>
         <div class="features-grid">
           <div class="feature-card">
-            <div class="feature-icon blue">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              >
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-              </svg>
+            <div class="feature-icon" style="background: linear-gradient(135deg, #2563eb, #3b82f6)">
+              &#9889;
             </div>
-            <h3>Real-Time Metrics</h3>
+            <h3>Real-Time Dashboards</h3>
             <p>
-              Stream CPU, memory, network, and custom metrics with sub-second granularity.
-              Dashboards update instantly so you always see what is happening now, not five minutes
-              ago.
+              Live metrics updated every second with customizable dashboards that give you instant
+              visibility into system health.
             </p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon purple">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              >
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
+            <div class="feature-icon" style="background: linear-gradient(135deg, #7c3aed, #8b5cf6)">
+              &#128276;
             </div>
-            <h3>Intelligent Alerting</h3>
+            <h3>Smart Alerts</h3>
             <p>
-              Reduce noise with ML-driven anomaly detection that learns your baseline. Route alerts
-              to the right team via Slack, PagerDuty, or webhooks with full context attached.
+              ML-powered anomaly detection that reduces false positives by 90%. Get notified through
+              Slack, PagerDuty, or email.
             </p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon green">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              >
-                <rect x="2" y="3" width="20" height="14" rx="2" />
-                <line x1="8" y1="21" x2="16" y2="21" />
-                <line x1="12" y1="17" x2="12" y2="21" />
-              </svg>
+            <div class="feature-icon" style="background: linear-gradient(135deg, #10b981, #34d399)">
+              &#128200;
             </div>
-            <h3>Unified Dashboards</h3>
+            <h3>Auto-Scaling Insights</h3>
             <p>
-              Combine infrastructure, application, and business metrics in one view. Drag-and-drop
-              widgets, share dashboards across teams, and set role-based access controls.
+              Predictive analytics that recommend scaling actions before traffic spikes, saving you
+              money on over-provisioning.
             </p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon purple">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              >
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
+            <div class="feature-icon" style="background: linear-gradient(135deg, #f59e0b, #fbbf24)">
+              &#128274;
             </div>
             <h3>Security Monitoring</h3>
             <p>
-              Detect unauthorized access, unusual traffic patterns, and compliance drift. Correlate
-              security events across your entire stack in a single timeline.
+              Track unauthorized access attempts, certificate expirations, and compliance violations
+              in real time.
             </p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon blue">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path
-                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
-                />
-              </svg>
+            <div class="feature-icon" style="background: linear-gradient(135deg, #ef4444, #f87171)">
+              &#128268;
             </div>
-            <h3>200+ Integrations</h3>
+            <h3>250+ Integrations</h3>
             <p>
-              Connect to AWS, GCP, Azure, Kubernetes, Docker, databases, and more. Use our open API
-              and Terraform provider to automate your monitoring configuration.
+              Connect with AWS, GCP, Azure, Kubernetes, Docker, and hundreds of other services out
+              of the box.
             </p>
           </div>
           <div class="feature-card">
-            <div class="feature-icon green">
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-              >
-                <path
-                  d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-                />
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                <line x1="12" y1="22.08" x2="12" y2="12" />
-              </svg>
+            <div class="feature-icon" style="background: linear-gradient(135deg, #06b6d4, #22d3ee)">
+              &#128101;
             </div>
-            <h3>Log Aggregation</h3>
+            <h3>Team Collaboration</h3>
             <p>
-              Centralize logs from every service, search with full-text indexing, and correlate log
-              entries with metrics and traces for faster root-cause analysis.
+              Shared runbooks, incident timelines, and on-call rotation management keep your whole
+              team in sync.
             </p>
           </div>
         </div>
@@ -821,209 +762,57 @@
     </section>
 
     <!-- Pricing -->
-    <section id="pricing">
+    <section id="pricing" class="pricing">
       <div class="container">
-        <div class="section-label">Pricing</div>
-        <h2 class="section-title">Simple, Transparent Pricing</h2>
-        <p class="section-subtitle">
-          Start free and scale as your infrastructure grows. No hidden fees, no per-seat surprises.
-        </p>
+        <div class="text-center">
+          <span class="section-label">Pricing</span>
+          <h2 class="section-title">Simple, transparent pricing</h2>
+          <p class="section-subtitle mx-auto">
+            Start free. Upgrade when you're ready. No hidden fees, no surprises.
+          </p>
+        </div>
         <div class="pricing-grid">
-          <!-- Starter -->
-          <div class="pricing-card">
+          <div class="price-card">
             <h3>Starter</h3>
-            <div class="price">$0<span>/mo</span></div>
             <p class="price-desc">For small teams getting started</p>
-            <ul class="pricing-features">
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Up to 5 hosts
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                1-day data retention
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Basic alerting
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Community support
-              </li>
+            <div class="price-amount">$0<span> / month</span></div>
+            <ul>
+              <li>Up to 5 hosts</li>
+              <li>1-minute metric resolution</li>
+              <li>Email alerts</li>
+              <li>7-day data retention</li>
+              <li>Community support</li>
             </ul>
-            <a href="#" class="btn-outline">Get Started Free</a>
+            <a href="#" class="btn btn-outline">Get Started Free</a>
           </div>
-          <!-- Pro -->
-          <div class="pricing-card featured">
-            <div class="pricing-badge">Most Popular</div>
+          <div class="price-card popular">
+            <div class="popular-badge">Most Popular</div>
             <h3>Pro</h3>
-            <div class="price">$49<span>/mo</span></div>
             <p class="price-desc">For growing engineering teams</p>
-            <ul class="pricing-features">
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Up to 50 hosts
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                30-day data retention
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Anomaly detection
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Slack and PagerDuty
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Priority email support
-              </li>
+            <div class="price-amount">$29<span> / host / mo</span></div>
+            <ul>
+              <li>Unlimited hosts</li>
+              <li>10-second metric resolution</li>
+              <li>Slack, PagerDuty &amp; webhook alerts</li>
+              <li>13-month data retention</li>
+              <li>Smart anomaly detection</li>
+              <li>Priority support</li>
             </ul>
-            <a href="#" class="btn-primary">Start Monitoring</a>
+            <a href="#" class="btn btn-primary">Start Free Trial</a>
           </div>
-          <!-- Enterprise -->
-          <div class="pricing-card">
+          <div class="price-card">
             <h3>Enterprise</h3>
-            <div class="price">Custom</div>
-            <p class="price-desc">For organizations at scale</p>
-            <ul class="pricing-features">
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Unlimited hosts
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                1-year data retention
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                SSO and RBAC
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Custom integrations
-              </li>
-              <li>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M3 8.5L6.5 12L13 4"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
-                Dedicated support engineer
-              </li>
+            <p class="price-desc">For large-scale operations</p>
+            <div class="price-amount">Custom</div>
+            <ul>
+              <li>Everything in Pro</li>
+              <li>1-second metric resolution</li>
+              <li>Dedicated account manager</li>
+              <li>Custom data retention</li>
+              <li>SSO &amp; SAML</li>
+              <li>99.99% SLA guarantee</li>
             </ul>
-            <a href="#" class="btn-outline">Contact Sales</a>
+            <a href="#" class="btn btn-outline">Contact Sales</a>
           </div>
         </div>
       </div>
@@ -1032,90 +821,69 @@
     <!-- Testimonials -->
     <section id="testimonials">
       <div class="container">
-        <div class="section-label">Testimonials</div>
-        <h2 class="section-title">Trusted by Engineering Teams Everywhere</h2>
-        <p class="section-subtitle">
-          See how teams use CloudPulse to reduce incidents and ship faster.
-        </p>
+        <div class="text-center">
+          <span class="section-label">Testimonials</span>
+          <h2 class="section-title">Loved by engineering teams</h2>
+          <p class="section-subtitle mx-auto">
+            See why thousands of teams trust CloudPulse to keep their infrastructure running
+            smoothly.
+          </p>
+        </div>
         <div class="testimonials-grid">
           <div class="testimonial-card">
-            <div class="stars">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-            </div>
+            <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
             <blockquote>
-              "CloudPulse cut our mean time to detection from 12 minutes to under 30 seconds. The
-              anomaly detection alone has prevented three major outages this quarter."
+              "CloudPulse cut our incident response time by 60%. The smart alerts alone paid for the
+              entire subscription within the first month."
             </blockquote>
             <div class="testimonial-author">
-              <div class="author-avatar" style="background: var(--primary)">SR</div>
-              <div class="author-info">
-                <div class="name">Sarah Rodriguez</div>
-                <div class="role">VP of Engineering, Stackline</div>
+              <div
+                class="testimonial-avatar"
+                style="background: linear-gradient(135deg, #2563eb, #7c3aed)"
+              >
+                SR
+              </div>
+              <div>
+                <strong>Sarah Rodriguez</strong>
+                <small>VP of Engineering, Streamline</small>
               </div>
             </div>
           </div>
           <div class="testimonial-card">
-            <div class="stars">
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-                <path
-                  d="M9 1l2.47 5.01L17 6.76l-4 3.9.94 5.5L9 13.77l-4.94 2.4.94-5.5-4-3.9 5.53-.75z"
-                />
-              </svg>
-            </div>
+            <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
             <blockquote>
-              "We migrated from three separate monitoring tools to CloudPulse. Having logs, metrics,
-              and traces in one place transformed how our on-call engineers debug production
-              issues."
+              "We migrated from three different monitoring tools to CloudPulse. One dashboard, one
+              source of truth. It's exactly what we needed."
             </blockquote>
             <div class="testimonial-author">
-              <div class="author-avatar" style="background: var(--secondary)">MK</div>
-              <div class="author-info">
-                <div class="name">Marcus Kim</div>
-                <div class="role">SRE Lead, Vortex Commerce</div>
+              <div
+                class="testimonial-avatar"
+                style="background: linear-gradient(135deg, #10b981, #06b6d4)"
+              >
+                JC
+              </div>
+              <div>
+                <strong>James Chen</strong>
+                <small>CTO, NovaTech Labs</small>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card">
+            <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+            <blockquote>
+              "The Kubernetes integration is phenomenal. We can see pod-level metrics, trace
+              requests across services, and debug issues in minutes, not hours."
+            </blockquote>
+            <div class="testimonial-author">
+              <div
+                class="testimonial-avatar"
+                style="background: linear-gradient(135deg, #f59e0b, #ef4444)"
+              >
+                AP
+              </div>
+              <div>
+                <strong>Amara Patel</strong>
+                <small>SRE Lead, DataForge</small>
               </div>
             </div>
           </div>
@@ -1123,84 +891,63 @@
       </div>
     </section>
 
+    <!-- CTA -->
+    <section class="cta">
+      <div class="container">
+        <h2>Ready to monitor smarter?</h2>
+        <p>
+          Join 12,000+ teams who trust CloudPulse. Start your free 14-day trial today — no credit
+          card required.
+        </p>
+        <a href="#" class="btn">Start Free Trial</a>
+      </div>
+    </section>
+
     <!-- Footer -->
-    <footer id="contact">
+    <footer>
       <div class="container">
         <div class="footer-grid">
           <div class="footer-brand">
-            <div class="logo">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                <rect width="28" height="28" rx="6" fill="#2563EB" />
-                <path
-                  d="M7 17C9 12 12 10 14 13C16 16 19 9 21 7"
-                  stroke="#fff"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                />
-              </svg>
-              CloudPulse
-            </div>
+            <div class="logo">CloudPulse</div>
             <p>
-              Real-time cloud monitoring and observability for modern engineering teams. Monitor
-              smarter, respond faster.
+              Real-time cloud monitoring with intelligent alerting for modern engineering teams.
             </p>
-            <div class="footer-social">
-              <!-- Twitter / X -->
-              <a href="#" aria-label="Twitter">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
-                  />
-                </svg>
-              </a>
-              <!-- LinkedIn -->
-              <a href="#" aria-label="LinkedIn">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
-                  />
-                </svg>
-              </a>
-              <!-- GitHub -->
-              <a href="#" aria-label="GitHub">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <path
-                    d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"
-                  />
-                </svg>
-              </a>
+            <div class="social-links">
+              <a href="#" aria-label="Twitter">X</a>
+              <a href="#" aria-label="GitHub">GH</a>
+              <a href="#" aria-label="LinkedIn">in</a>
+              <a href="#" aria-label="YouTube">YT</a>
             </div>
           </div>
-          <div class="footer-col">
+          <div>
             <h4>Product</h4>
-            <ul>
-              <li><a href="#features">Features</a></li>
-              <li><a href="#pricing">Pricing</a></li>
+            <ul class="footer-links">
+              <li><a href="#">Features</a></li>
+              <li><a href="#">Pricing</a></li>
+              <li><a href="#">Integrations</a></li>
               <li><a href="#">Changelog</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Resources</h4>
+            <ul class="footer-links">
               <li><a href="#">Documentation</a></li>
-            </ul>
-          </div>
-          <div class="footer-col">
-            <h4>Company</h4>
-            <ul>
-              <li><a href="#">About</a></li>
+              <li><a href="#">API Reference</a></li>
               <li><a href="#">Blog</a></li>
+              <li><a href="#">Status Page</a></li>
+            </ul>
+          </div>
+          <div>
+            <h4>Company</h4>
+            <ul class="footer-links">
+              <li><a href="#">About</a></li>
               <li><a href="#">Careers</a></li>
-              <li><a href="#">Contact</a></li>
-            </ul>
-          </div>
-          <div class="footer-col">
-            <h4>Contact</h4>
-            <ul>
-              <li>hello@cloudpulse.io</li>
-              <li>San Francisco, CA</li>
+              <li><a href="#">Privacy Policy</a></li>
+              <li><a href="#">Terms of Service</a></li>
             </ul>
           </div>
         </div>
-        <div class="footer-bottom">
-          <span>&copy; 2026 CloudPulse. All rights reserved.</span>
-          <span><a href="#">Privacy</a> &middot; <a href="#">Terms</a></span>
-        </div>
+        <div class="footer-bottom">&copy; 2026 CloudPulse. All rights reserved.</div>
       </div>
     </footer>
   </body>

@@ -94,7 +94,9 @@ function writeTrace(path, entries) {
 }
 
 function runVerifier(tracePath) {
-  return spawnSync(process.execPath, [VERIFIER, '--trace', tracePath], {
+  // Hardening (AP-2): verify-trace requires --state or an explicit opt-out.
+  // Self-test does not materialize a session-state file; opt out explicitly.
+  return spawnSync(process.execPath, [VERIFIER, '--trace', tracePath, '--allow-missing-state'], {
     encoding: 'utf8',
   });
 }

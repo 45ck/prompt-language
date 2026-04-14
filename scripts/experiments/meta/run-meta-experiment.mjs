@@ -9,13 +9,17 @@
 
 import { spawn, spawnSync } from 'node:child_process';
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   readFileSync,
+  rmSync,
   writeFileSync,
   copyFileSync,
   statSync,
 } from 'node:fs';
+import { randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { dirname, join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { computeManifest } from './compute-manifest.mjs';
@@ -26,6 +30,12 @@ const __dirname = dirname(__filename);
 const REPO_ROOT = resolve(__dirname, '..', '..', '..');
 
 const DEFAULT_WALL_CLOCK_SEC = Number(process.env.META_WALL_CLOCK_SEC ?? 25 * 60);
+// Freshness window handed to verify-trace. 1 hour by default; override via
+// META_FRESHNESS_WINDOW_MS for long-running live runs. Rationale: the trace's
+// first entry must land within now() +/- window, so a replayed older trace
+// (AP-5) cannot pass verification even if its nonce somehow agreed.
+const DEFAULT_FRESHNESS_WINDOW_MS = Number(process.env.META_FRESHNESS_WINDOW_MS ?? 60 * 60 * 1000);
+const BINARY_ALLOW_LIST_PATH = resolve(__dirname, '.binary-allow-list.json');
 
 function log(...args) {
   console.error('[meta-harness]', ...args);
@@ -227,17 +237,110 @@ function copyIfExists(src, dst) {
   return false;
 }
 
-function runVerifyTrace(bundleDir) {
+function runVerifyTrace(bundleDir, { expectedRunId, expectedPairCount, freshnessWindowMs }) {
   const verify = join(REPO_ROOT, 'scripts', 'eval', 'verify-trace.mjs');
   if (!existsSync(verify)) return { ran: false, reason: 'verify-trace.mjs-missing' };
   const trace = join(bundleDir, 'provenance.jsonl');
   const state = join(bundleDir, 'session-state.json');
   if (!existsSync(trace)) return { ran: false, reason: 'no-provenance' };
-  const r = spawnSync(process.execPath, [verify, '--trace', trace, '--state', state, '--json'], {
-    encoding: 'utf8',
-  });
+
+  // Per docs/security/witness-chain-attacks.md, the verifier needs at least
+  // one input that originated outside the workspace a meta-flow can write.
+  // We supply: an externally-generated nonce (expectedRunId), a freshness
+  // window to reject replayed older traces, an expected-pair-count floor,
+  // and, when populated on the host, a pinned binary allow-list.
+  const args = [verify, '--trace', trace, '--json'];
+  if (existsSync(state)) {
+    args.push('--state', state);
+  } else {
+    // The meta-flow may legitimately finish without a session-state file.
+    // Opt out explicitly so the OK line carries (state-check-skipped)
+    // rather than silently passing.
+    args.push('--allow-missing-state');
+  }
+  if (expectedRunId) args.push('--expected-run-id', expectedRunId);
+  if (Number.isFinite(freshnessWindowMs) && freshnessWindowMs > 0) {
+    args.push('--freshness-window-ms', String(freshnessWindowMs));
+  }
+  // TODO: tighten min-entries once the harness can introspect the flow
+  // structure to derive an accurate agent-call count. For now, "at least 1"
+  // catches the fully-empty-trace attack while not rejecting legitimate
+  // runs that have not yet been instrumented end-to-end.
+  args.push('--min-entries', '1');
+  if (Number.isFinite(expectedPairCount) && expectedPairCount > 0) {
+    args.push('--expected-pair-count', String(expectedPairCount));
+  }
+  if (existsSync(BINARY_ALLOW_LIST_PATH)) {
+    args.push('--expected-binary-hashes', BINARY_ALLOW_LIST_PATH);
+  }
+
+  const r = spawnSync(process.execPath, args, { encoding: 'utf8' });
   writeFileSync(join(bundleDir, 'verify.json'), r.stdout ?? '');
-  return { ran: true, exitCode: r.status ?? -1, stderr: (r.stderr ?? '').slice(0, 1000) };
+  return {
+    ran: true,
+    exitCode: r.status ?? -1,
+    stderr: (r.stderr ?? '').slice(0, 1000),
+    argsUsed: args.slice(1), // drop the verifier path prefix
+  };
+}
+
+/**
+ * Write a single-use nonce to a path outside the meta-flow's workspace
+ * (os.tmpdir()) with the most restrictive permissions the platform honors.
+ * The harness uses the nonce as PL_RUN_ID, then reads it back and passes it
+ * to verify-trace via --expected-run-id so a replayed older trace (AP-5)
+ * fails verification.
+ */
+function writeRunNonce(runId) {
+  const nonce = randomUUID();
+  const noncePath = join(tmpdir(), `pl-meta-${runId}.nonce`);
+  writeFileSync(noncePath, nonce, { encoding: 'utf8', mode: 0o400 });
+  try {
+    chmodSync(noncePath, 0o400);
+  } catch {
+    /* POSIX chmod may fail on Windows; permissions are advisory there */
+  }
+  return { nonce, noncePath };
+}
+
+function readRunNonce(noncePath) {
+  if (!existsSync(noncePath)) return null;
+  return readFileSync(noncePath, 'utf8').trim();
+}
+
+function deleteRunNonce(noncePath) {
+  try {
+    rmSync(noncePath, { force: true });
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Estimate a lower bound for the number of agent-call pairs the flow will
+ * produce. Prompt and run nodes each produce (at most) one runtime/shim pair.
+ * This is a heuristic — some nodes skip or auto-advance without emitting a
+ * pair — so callers should treat a zero return as "omit --expected-pair-count"
+ * rather than "expect zero pairs".
+ *
+ * TODO(security-hardening): tighten once the runtime exposes a deterministic
+ * per-flow agent-call count.
+ */
+function estimatePairCount(flowSpec) {
+  if (!flowSpec || !Array.isArray(flowSpec.nodes)) return 0;
+  let n = 0;
+  const walk = (nodes) => {
+    for (const node of nodes) {
+      if (!node || typeof node !== 'object') continue;
+      if (node.kind === 'prompt' || node.kind === 'run') n += 1;
+      for (const k of Object.keys(node)) {
+        const v = node[k];
+        if (Array.isArray(v)) walk(v);
+      }
+    }
+  };
+  walk(flowSpec.nodes);
+  return n;
 }
 
 async function dryRun({ flowAbs, flowText, runId }) {
@@ -305,6 +408,25 @@ async function liveRun({ flowText, runId, wallClockSec }) {
     return summary;
   }
 
+  // AP-5: write the run nonce BEFORE launching claude. The nonce lives in
+  // os.tmpdir() — explicitly outside the workspace the meta-flow can write
+  // — and is the value we pass both to claude (as PL_RUN_ID) and to
+  // verify-trace (as --expected-run-id). A meta-flow that tampers with
+  // provenance.jsonl cannot rewrite the nonce file, so verify-trace will
+  // reject any trace whose runId fails to equal the nonce.
+  const { nonce: expectedRunId, noncePath } = writeRunNonce(runId);
+  log(`wrote run nonce to ${noncePath}`);
+
+  // Pre-estimate the expected pair count so verify-trace can reject a
+  // truncated trace (AP-8). Heuristic only — see estimatePairCount().
+  let expectedPairCount = 0;
+  try {
+    const spec = await parseFlowText(flowText);
+    expectedPairCount = estimatePairCount(spec);
+  } catch {
+    /* parse failures surface later; leave at 0 so the flag is omitted */
+  }
+
   // Stash BEFORE creating the bundle dir so the stash does not sweep it up.
   const stashLabel = `meta-${runId}`;
   const stash = gitStash(stashLabel);
@@ -316,6 +438,7 @@ async function liveRun({ flowText, runId, wallClockSec }) {
   let manifestPre = null;
   let manifestPost = null;
   let errorStr = null;
+  let nonceMismatch = false;
   try {
     manifestPre = computeManifest(REPO_ROOT);
     writeFileSync(join(bundleDir, 'manifest-pre.json'), JSON.stringify(manifestPre, null, 2));
@@ -323,7 +446,7 @@ async function liveRun({ flowText, runId, wallClockSec }) {
     liveResult = await runLive({
       flowText,
       bundleDir,
-      runId,
+      runId: expectedRunId,
       wallClockSec,
       claudeBin: preflight.auth.claudeBin,
     });
@@ -333,7 +456,20 @@ async function liveRun({ flowText, runId, wallClockSec }) {
     copyIfExists(join(wdState, 'provenance.jsonl'), join(bundleDir, 'provenance.jsonl'));
     copyIfExists(join(wdState, 'session-state.json'), join(bundleDir, 'session-state.json'));
 
-    verify = runVerifyTrace(bundleDir);
+    // Read the nonce back from the read-only tmpdir path. A mismatch here
+    // would imply an attacker with cross-directory process privileges, which
+    // is a substantially higher bar than workspace write access.
+    const nonceOnDisk = readRunNonce(noncePath);
+    if (!nonceOnDisk || nonceOnDisk !== expectedRunId) {
+      nonceMismatch = true;
+      errorStr = `run nonce at ${noncePath} did not round-trip (expected ${expectedRunId}, got ${nonceOnDisk ?? 'null'})`;
+    }
+
+    verify = runVerifyTrace(bundleDir, {
+      expectedRunId,
+      expectedPairCount,
+      freshnessWindowMs: DEFAULT_FRESHNESS_WINDOW_MS,
+    });
 
     manifestPost = computeManifest(REPO_ROOT);
     writeFileSync(join(bundleDir, 'manifest-post.json'), JSON.stringify(manifestPost, null, 2));
@@ -342,6 +478,9 @@ async function liveRun({ flowText, runId, wallClockSec }) {
   } catch (e) {
     errorStr = (e && e.stack) || String(e);
   } finally {
+    // Delete the nonce file after verification completes so a subsequent
+    // run cannot accidentally inherit it.
+    deleteRunNonce(noncePath);
     if (stash.stashed) {
       const pop = gitStashPop();
       writeFileSync(join(bundleDir, 'stash-pop.json'), JSON.stringify({ stash, pop }, null, 2));
@@ -355,17 +494,24 @@ async function liveRun({ flowText, runId, wallClockSec }) {
   const summary = {
     mode: 'live',
     runId,
+    expectedRunId,
+    noncePath,
+    expectedPairCount,
+    freshnessWindowMs: DEFAULT_FRESHNESS_WINDOW_MS,
+    binaryAllowList: existsSync(BINARY_ALLOW_LIST_PATH) ? BINARY_ALLOW_LIST_PATH : null,
     bundleDir,
     success,
-    reason: errorStr
-      ? 'harness-error'
-      : liveResult?.timedOut
-        ? 'wall-clock-timeout'
-        : ruleWeakening
-          ? 'rule-weakening-detected'
-          : !verifyOk
-            ? 'verify-trace-failed'
-            : 'ok',
+    reason: nonceMismatch
+      ? 'run-nonce-mismatch'
+      : errorStr
+        ? 'harness-error'
+        : liveResult?.timedOut
+          ? 'wall-clock-timeout'
+          : ruleWeakening
+            ? 'rule-weakening-detected'
+            : !verifyOk
+              ? 'verify-trace-failed'
+              : 'ok',
     preflight,
     live: liveResult,
     verify,

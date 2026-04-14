@@ -115,7 +115,15 @@ function writeState(path, state) {
 }
 
 function runVerifier(tracePath, extraArgs = []) {
-  return spawnSync(NODE_EXE, [VERIFIER, '--trace', tracePath, ...extraArgs], { encoding: 'utf8' });
+  // Legacy entry point used by T1–T8. They exercise chain/witness semantics
+  // that predate the AP-1/AP-2 --state mandate, so we default to
+  // --allow-missing-state here. T9+ assert the new mandatory-flag paths
+  // explicitly via a direct spawnSync that does NOT pre-supply the opt-out.
+  return spawnSync(
+    NODE_EXE,
+    [VERIFIER, '--trace', tracePath, '--allow-missing-state', ...extraArgs],
+    { encoding: 'utf8' },
+  );
 }
 
 function freshFixture(label) {
@@ -325,4 +333,169 @@ test('T8 truncated-last-line: partial JSON on final line is rejected as invalid 
   assert.notEqual(r.status, 0, 'expected non-zero exit for truncated last line');
   const out = combinedOutput(r);
   assert.match(out, /not valid JSON/i, `expected truncated-line JSON diagnostic; out=${out}`);
+});
+
+// ---------------------------------------------------------------------------
+// Hardening patches (v2) — per docs/security/witness-chain-attacks.md. Each
+// case asserts (a) non-zero exit AND (b) a specific error-class string so a
+// regression that accepts the tampered input is caught even if some OTHER
+// error fires for the wrong reason.
+// ---------------------------------------------------------------------------
+
+// --- T9: --state mandatory unless --allow-missing-state is explicit --------
+
+test('T9 state-mandatory: omitting --state without --allow-missing-state is rejected', () => {
+  const f = freshFixture('T9');
+  // Deliberately DO NOT pass --allow-missing-state or --state.
+  const r = spawnSync(NODE_EXE, [VERIFIER, '--trace', f.tracePath], { encoding: 'utf8' });
+  assert.notEqual(r.status, 0, 'expected non-zero exit when --state is omitted');
+  const out = combinedOutput(r);
+  assert.match(
+    out,
+    /--state is required|allow-missing-state/i,
+    `expected --state-required diagnostic; out=${out}`,
+  );
+});
+
+// --- T10: mismatched --expected-run-id -------------------------------------
+
+test('T10 expected-run-id: mismatched nonce is rejected', () => {
+  const f = freshFixture('T10');
+  const r = runVerifier(f.tracePath, ['--expected-run-id', 'run-not-the-one']);
+  assert.notEqual(r.status, 0, 'expected non-zero exit for runId mismatch');
+  const out = combinedOutput(r);
+  assert.match(
+    out,
+    /expected-runId-mismatch/i,
+    `expected expected-runId-mismatch diagnostic; out=${out}`,
+  );
+});
+
+// --- T11: stale timestamp outside --freshness-window-ms --------------------
+
+test('T11 freshness-window: stale first-entry timestamp is rejected', () => {
+  const f = freshFixture('T11');
+  // Rewrite the trace with an intentionally stale timestamp on entry 0.
+  // Use a fixed well-in-the-past instant; window of 1000 ms must catch it.
+  const stale = f.entries.map((e) => ({ ...e }));
+  stale[0] = { ...stale[0], timestamp: '2020-01-01T00:00:00.000Z' };
+  delete stale[0].eventHash;
+  stale[0].eventHash = hashEvent(stale[0]);
+  let prev = stale[0].eventHash;
+  for (let i = 1; i < stale.length; i += 1) {
+    stale[i] = { ...stale[i], prevEventHash: prev };
+    delete stale[i].eventHash;
+    stale[i].eventHash = hashEvent(stale[i]);
+    prev = stale[i].eventHash;
+  }
+  writeTrace(f.tracePath, stale);
+  const r = runVerifier(f.tracePath, ['--freshness-window-ms', '1000']);
+  assert.notEqual(r.status, 0, 'expected non-zero exit for stale timestamp');
+  const out = combinedOutput(r);
+  assert.match(
+    out,
+    /freshness-window-exceeded/i,
+    `expected freshness-window-exceeded diagnostic; out=${out}`,
+  );
+});
+
+// --- T12: --expected-pair-count mismatch -----------------------------------
+
+test('T12 expected-pair-count: mismatch is rejected', () => {
+  const f = freshFixture('T12');
+  // Fixture has exactly one runtime/shim pair; assert "2" expected.
+  const r = runVerifier(f.tracePath, ['--expected-pair-count', '2']);
+  assert.notEqual(r.status, 0, 'expected non-zero exit for pair-count mismatch');
+  const out = combinedOutput(r);
+  assert.match(
+    out,
+    /expected-pair-count-mismatch/i,
+    `expected expected-pair-count-mismatch diagnostic; out=${out}`,
+  );
+});
+
+// --- T13: --min-entries higher than actual ---------------------------------
+
+test('T13 min-entries: too-few entries is rejected', () => {
+  const f = freshFixture('T13');
+  // Fixture has 5 entries; demand at least 100.
+  const r = runVerifier(f.tracePath, ['--min-entries', '100']);
+  assert.notEqual(r.status, 0, 'expected non-zero exit for min-entries');
+  const out = combinedOutput(r);
+  assert.match(out, /min-entries-not-met/i, `expected min-entries-not-met diagnostic; out=${out}`);
+});
+
+// --- T14: binary hash not in allow-list ------------------------------------
+
+test('T14 binary-hash-allow-list: unknown hash is rejected', () => {
+  const f = freshFixture('T14');
+  // The fixture's shim binarySha256 is 'b'.repeat(64). Ship an allow-list
+  // whose "claude" key does NOT include that value.
+  const allowListPath = join(f.dir, 'allow-list.json');
+  writeFileSync(allowListPath, JSON.stringify({ claude: ['0'.repeat(64)] }, null, 2), 'utf8');
+  const r = runVerifier(f.tracePath, ['--expected-binary-hashes', allowListPath]);
+  assert.notEqual(r.status, 0, 'expected non-zero exit for disallowed binary hash');
+  const out = combinedOutput(r);
+  assert.match(
+    out,
+    /binary-hash-not-allowed/i,
+    `expected binary-hash-not-allowed diagnostic; out=${out}`,
+  );
+});
+
+// --- T15: regression guard — valid fixture + all new flags passes ----------
+
+test('T15 regression-guard: valid chain passes with all new flags correctly set', () => {
+  const f = freshFixture('T15');
+  // Build an allow-list that DOES contain the fixture's binarySha256.
+  const allowListPath = join(f.dir, 'allow-list.json');
+  writeFileSync(allowListPath, JSON.stringify({ claude: ['b'.repeat(64)] }, null, 2), 'utf8');
+  // freshness-window wide enough to include 2026-04-14 timestamps regardless
+  // of slight harness clock drift — 400 days in ms.
+  const wideWindow = String(400 * 24 * 60 * 60 * 1000);
+  const r = spawnSync(
+    NODE_EXE,
+    [
+      VERIFIER,
+      '--trace',
+      f.tracePath,
+      '--state',
+      f.statePath,
+      '--expected-run-id',
+      f.runId,
+      '--freshness-window-ms',
+      wideWindow,
+      '--expected-pair-count',
+      '1',
+      '--min-entries',
+      '1',
+      '--expected-binary-hashes',
+      allowListPath,
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(
+    r.status,
+    0,
+    `expected exit 0 with all hardening flags; stdout=${r.stdout} stderr=${r.stderr}`,
+  );
+  assert.match(r.stdout, /verify-trace OK/);
+  // State check was NOT skipped here.
+  assert.doesNotMatch(r.stdout, /state-check-skipped/);
+});
+
+// --- T16: --allow-missing-state emits the state-check-skipped annotation ---
+
+test('T16 allow-missing-state: OK line carries (state-check-skipped) annotation', () => {
+  const f = freshFixture('T16');
+  const r = spawnSync(NODE_EXE, [VERIFIER, '--trace', f.tracePath, '--allow-missing-state'], {
+    encoding: 'utf8',
+  });
+  assert.equal(r.status, 0, `expected exit 0; out=${combinedOutput(r)}`);
+  assert.match(r.stdout, /verify-trace OK/);
+  assert.match(
+    r.stdout,
+    /state-check-skipped/,
+    `expected (state-check-skipped) annotation; stdout=${r.stdout}`,
+  );
 });

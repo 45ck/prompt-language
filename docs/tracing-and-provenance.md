@@ -140,6 +140,58 @@ three things together:
 Runs that pass verify-trace are admissible as evidence for thesis
 claims. Runs that do not pass are discarded, not patched.
 
+## Hardening flags (v2)
+
+The verifier now exposes an external-trust-anchor surface so a meta-flow
+with workspace write access cannot pass verification by fabricating inputs
+in-place. See `docs/security/witness-chain-attacks.md` for the full
+attack-path analysis. The patches in this iteration are all inside
+`scripts/eval/verify-trace.mjs` plus harness wiring.
+
+| Flag                              | Purpose                                                                                                       | Example                                                                     |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `--state <path>`                  | **Required** by default. Cross-checks `hashState(state)` against the last `stateAfterHash` in the trace.      | `--state .prompt-language/session-state.json`                               |
+| `--allow-missing-state`           | Explicit opt-out for `--state`. Surfaced as `(state-check-skipped)` in the OK line so downstream CI can grep. | `--allow-missing-state`                                                     |
+| `--expected-run-id <id>`          | Rejects on any entry whose `runId` differs. Paired with a nonce written outside the workspace (see AP-5).     | `--expected-run-id $(cat "$NONCE_FILE")`                                    |
+| `--freshness-window-ms <N>`       | Rejects if the first entry's timestamp is outside `now() ± N`. Closes the replay-of-older-honest-run attack.  | `--freshness-window-ms 3600000`                                             |
+| `--expected-pair-count <N>`       | Rejects if the number of runtime/shim pairs differs. Closes the truncation attack.                            | `--expected-pair-count 3`                                                   |
+| `--min-entries <N>`               | Rejects if total trace entry count is below `N`. Catches the fully-empty-trace variant.                       | `--min-entries 1`                                                           |
+| `--expected-binary-hashes <file>` | JSON file mapping binary name to SHA-256 allow-list. Rejects any `shim_invocation_*` with an unpinned binary. | `--expected-binary-hashes scripts/experiments/meta/.binary-allow-list.json` |
+
+### Why this set
+
+The shared weakness across AP-1/AP-2/AP-3/AP-5/AP-8 is that every ingredient
+the verifier consumed — the JSONL, the state file, the shim binary hash,
+the `runId` — lived inside the writable workspace of the meta-flow. The
+hardening converges on one design change: the verifier must consume at
+least one input that cannot be rewritten by the meta-flow. The default
+harness now supplies three: a nonce under `os.tmpdir()`, a freshness
+window from the harness clock, and (optionally) a signed binary allow-list
+committed outside the bundle directory.
+
+### Meta-factory harness defaults
+
+`scripts/experiments/meta/run-meta-experiment.mjs` now:
+
+1. Writes a fresh UUID nonce to `os.tmpdir()/pl-meta-<runId>.nonce` with
+   mode `0400` **before** launching `claude -p`.
+2. Uses that nonce as the `PL_RUN_ID`.
+3. Reads the nonce back after the run and refuses to claim success if the
+   file changed.
+4. Invokes `verify-trace` with `--expected-run-id <nonce> --freshness-window-ms 3600000 --min-entries 1` plus `--expected-pair-count <N>` when the parsed flow has at least one prompt/run node.
+5. Passes `--expected-binary-hashes scripts/experiments/meta/.binary-allow-list.json` when the file exists. A template with an empty allow-list is checked in as `.binary-allow-list.json.template`; drop the `.template` suffix and populate once you have captured the hashes from a trusted live run.
+6. Deletes the nonce file once `verify-trace` has returned.
+
+### CI gate
+
+The `z-series-auth-check` job in
+`.github/workflows/cross-platform-live-smoke.yml` sets
+`PL_VERIFY_REQUIRE_STATE=1`. When this variable is `1` the harness does
+NOT fall back to `--allow-missing-state` — a missing `session-state.json`
+becomes a hard verify-trace failure. Other smoke jobs keep the opt-out
+behavior with the `(state-check-skipped)` annotation so day-to-day smoke
+is not disrupted.
+
 ## See also
 
 - `src/application/ports/trace-logger.ts` — TraceEntry schema.

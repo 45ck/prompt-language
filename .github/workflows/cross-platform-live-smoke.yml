@@ -138,6 +138,14 @@ jobs:
     # PL_TRACE_STRICT=1 so a missing provenance.jsonl is a hard failure.
     # Linux-only for this iteration; expand to macOS/Windows once the Linux
     # lane is stable.
+    #
+    # Hardening (per docs/security/witness-chain-attacks.md): verify-trace
+    # is invoked via scripts/eval/harness.mjs, which now passes --state
+    # when session-state.json exists in the test cwd and falls back to the
+    # explicit --allow-missing-state opt-out (surfaced as (state-check-skipped)
+    # on the OK line) otherwise. PL_VERIFY_REQUIRE_STATE=1 below turns the
+    # opt-out off for this job specifically so a green result here means
+    # the state file was actually present and hashed.
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -145,6 +153,7 @@ jobs:
       EVAL_MODEL: ${{ inputs.model }}
       PL_TRACE: '1'
       PL_TRACE_STRICT: '1'
+      PL_VERIFY_REQUIRE_STATE: '1'
       SMOKE_ONLY: 'Z1,Z2,Z3,Z4,Z5,Z6,Z7'
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1

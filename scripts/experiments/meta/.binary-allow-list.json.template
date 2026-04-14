@@ -1,0 +1,19 @@
+{
+  "_comment": "Binary SHA-256 allow-list consumed by scripts/eval/verify-trace.mjs via --expected-binary-hashes.",
+  "_howToPopulate": [
+    "On the first known-good live run, capture the binarySha256 emitted in every shim_invocation_begin",
+    "entry of experiments/meta-factory/results/<run-id>/provenance.jsonl, then rename this template to",
+    ".binary-allow-list.json (drop the .template suffix) and replace the example hashes below with the",
+    "captured values. The harness passes the file to verify-trace only when the concrete file exists,",
+    "so this template is a soft-rollout artifact — dropping it in does not break runs that do not yet",
+    "have captured hashes."
+  ],
+  "_schema": {
+    "<binary-name-without-extension>": ["<sha256-hex>", "..."]
+  },
+  "claude": [],
+  "codex": [],
+  "gemini": [],
+  "ollama": [],
+  "opencode": []
+}

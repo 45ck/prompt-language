@@ -156,6 +156,19 @@ export function verifyTraceForCwd(cwd) {
   ];
   if (existsSync(statePath)) {
     verifyArgs.push('--state', statePath);
+  } else if (process.env.PL_VERIFY_REQUIRE_STATE === '1') {
+    // CI-side authenticity gate (see .github/workflows/cross-platform-live-smoke.yml
+    // z-series-auth-check). When this flag is set, a missing session-state.json
+    // must be treated as a hard failure rather than silently opted out with
+    // --allow-missing-state. We surface the gap as the verify-trace failure
+    // message by omitting both --state and --allow-missing-state so the
+    // verifier itself exits 2 with "--state is required".
+  } else {
+    // Hardening (AP-2): verify-trace now requires --state or an explicit
+    // opt-out. In the default smoke harness a missing session-state.json is
+    // legitimate (some nodes emit provenance without materializing state).
+    // Opt out explicitly so the OK line carries (state-check-skipped).
+    verifyArgs.push('--allow-missing-state');
   }
   try {
     const raw = execFileSync('node', verifyArgs, {

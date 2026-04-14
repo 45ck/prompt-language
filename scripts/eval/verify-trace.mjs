@@ -3,33 +3,84 @@
  * verify-trace: cross-check the runtime + shim provenance chain.
  *
  * Usage:
- *   node scripts/eval/verify-trace.mjs --trace <provenance.jsonl> [--state <session-state.json>] [--flow <path>] [--json]
+ *   node scripts/eval/verify-trace.mjs --trace <provenance.jsonl> --state <session-state.json> [options]
+ *
+ * Required flags:
+ *   --trace <path>                  Provenance JSONL file to verify.
+ *   --state <path>                  Session state file. Mandatory unless
+ *                                   --allow-missing-state is explicitly passed.
+ *
+ * Hardening flags (see docs/security/witness-chain-attacks.md):
+ *   --allow-missing-state           Explicit opt-out for --state. The OK line
+ *                                   will include "(state-check-skipped)".
+ *   --expected-run-id <id>          Reject if any entry's runId differs.
+ *   --freshness-window-ms <N>       Reject if first entry's timestamp is
+ *                                   outside now() +/- N ms.
+ *   --expected-pair-count <N>       Reject if count of runtime/shim pairs != N.
+ *   --min-entries <N>               Reject if total entry count < N.
+ *   --expected-binary-hashes <file> JSON file { binaryName: [sha256, ...] }.
+ *                                   Reject shim_invocation_* entries whose
+ *                                   binarySha256 is not in the allow-list.
+ *
+ * Misc:
+ *   --flow <path>                   Informational only (reserved).
+ *   --json                          Emit machine-readable JSON result.
  *
  * Checks:
- *   a. Single runId across all entries.
+ *   a. Single runId across all entries; optionally == --expected-run-id.
  *   b. seq strictly monotonic starting from the first entry.
  *   c. prevEventHash chain unbroken; every eventHash is reproducible.
  *   d. Every agent_invocation_begin has a matching shim_invocation_begin
- *      with same pid, argv, and stdinSha256; same for _end.
- *   e. (If --state given) the last stateAfterHash in the chain equals
- *      hashState of the state file contents.
+ *      with same pid, argv, stdinSha256; same for _end. If both sides of
+ *      a pair happen to carry a binarySha256, they must agree.
+ *   e. (Default) the last stateAfterHash in the chain equals hashState of
+ *      the supplied state file contents.
+ *   f. (Optional) first entry timestamp within --freshness-window-ms.
+ *   g. (Optional) exactly --expected-pair-count runtime/shim pairs.
+ *   h. (Optional) at least --min-entries total entries.
+ *   i. (Optional) every shim binarySha256 is in --expected-binary-hashes.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, basename } from 'node:path';
 import { canonicalJSON, hashEvent, hashState, verifyChain } from './provenance-schema.mjs';
 
 function parseArgs(argv) {
-  const out = { trace: null, state: null, flow: null, json: false };
+  const out = {
+    trace: null,
+    state: null,
+    allowMissingState: false,
+    expectedRunId: null,
+    freshnessWindowMs: null,
+    expectedPairCount: null,
+    minEntries: null,
+    expectedBinaryHashes: null,
+    flow: null,
+    json: false,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--trace') out.trace = argv[++i];
     else if (a === '--state') out.state = argv[++i];
+    else if (a === '--allow-missing-state') out.allowMissingState = true;
+    else if (a === '--expected-run-id') out.expectedRunId = argv[++i];
+    else if (a === '--freshness-window-ms') out.freshnessWindowMs = Number(argv[++i]);
+    else if (a === '--expected-pair-count') out.expectedPairCount = Number(argv[++i]);
+    else if (a === '--min-entries') out.minEntries = Number(argv[++i]);
+    else if (a === '--expected-binary-hashes') out.expectedBinaryHashes = argv[++i];
     else if (a === '--flow') out.flow = argv[++i];
     else if (a === '--json') out.json = true;
     else if (a === '--help' || a === '-h') {
       process.stdout.write(
-        'Usage: verify-trace --trace <provenance.jsonl> [--state <session-state.json>] [--flow <path>] [--json]\n',
+        'Usage: verify-trace --trace <provenance.jsonl> --state <session-state.json> [options]\n' +
+          '       (pass --allow-missing-state to opt out of --state)\n' +
+          'Options:\n' +
+          '  --expected-run-id <id>\n' +
+          '  --freshness-window-ms <N>\n' +
+          '  --expected-pair-count <N>\n' +
+          '  --min-entries <N>\n' +
+          '  --expected-binary-hashes <file>\n' +
+          '  --json\n',
       );
       process.exit(0);
     }
@@ -55,7 +106,12 @@ function loadTrace(path) {
 }
 
 function pairKey(entry) {
-  // Pair runtime agent_invocation_* with shim_invocation_* by pid + argv + stdinSha256.
+  // Pair runtime agent_invocation_* with shim_invocation_* by
+  // pid + argv + stdinSha256. binarySha256 is enforced separately
+  // (AP-3) via --expected-binary-hashes plus a per-pair agreement check
+  // (checkBinaryAgreement). Including binarySha256 in pairKey unconditionally
+  // is not yet safe because the runtime-side adapter does not populate it;
+  // see the TODO noted in docs/security/witness-chain-attacks.md patch #4.
   return JSON.stringify({
     pid: entry.pid,
     argv: entry.argv || null,
@@ -117,6 +173,41 @@ function checkWitnessPairing(entries) {
   return orphans;
 }
 
+function checkBinaryAgreement(entries) {
+  // For each pair-key, if BOTH a runtime-side entry and a shim-side entry
+  // carry a binarySha256, they must agree. This closes the AP-3 gap when
+  // the runtime adapter eventually emits binarySha256, while keeping
+  // compatibility with the current runtime that does not.
+  const byKey = new Map();
+  for (const e of entries) {
+    if (
+      e.event !== 'agent_invocation_begin' &&
+      e.event !== 'agent_invocation_end' &&
+      e.event !== 'shim_invocation_begin' &&
+      e.event !== 'shim_invocation_end'
+    ) {
+      continue;
+    }
+    const key = pairKey(e);
+    const bucket = byKey.get(key) || { runtime: new Set(), shim: new Set() };
+    const side = e.event.startsWith('shim_') ? 'shim' : 'runtime';
+    if (typeof e.binarySha256 === 'string' && e.binarySha256.length > 0) {
+      bucket[side].add(e.binarySha256);
+    }
+    byKey.set(key, bucket);
+  }
+  const mismatches = [];
+  for (const [key, bucket] of byKey.entries()) {
+    if (bucket.runtime.size === 0 || bucket.shim.size === 0) continue;
+    const runtime = [...bucket.runtime];
+    const shim = [...bucket.shim];
+    if (runtime.length !== 1 || shim.length !== 1 || runtime[0] !== shim[0]) {
+      mismatches.push({ key, runtime, shim });
+    }
+  }
+  return mismatches;
+}
+
 function findLastStateAfterHash(entries) {
   for (let i = entries.length - 1; i >= 0; i -= 1) {
     const h = entries[i].stateAfterHash;
@@ -125,14 +216,71 @@ function findLastStateAfterHash(entries) {
   return null;
 }
 
+function loadBinaryAllowList(filePath) {
+  if (!existsSync(filePath)) {
+    throw new Error(`binary allow-list file not found: ${filePath}`);
+  }
+  const raw = readFileSync(filePath, 'utf8');
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`binary allow-list is not valid JSON: ${err.message}`);
+  }
+  if (parsed == null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('binary allow-list must be a JSON object mapping binary names to hash arrays');
+  }
+  const out = new Map();
+  for (const [name, hashes] of Object.entries(parsed)) {
+    if (name.startsWith('_')) continue; // allow-list may carry _comment etc.
+    if (!Array.isArray(hashes)) {
+      throw new Error(`binary allow-list entry for "${name}" must be an array of sha256 strings`);
+    }
+    out.set(name, new Set(hashes));
+  }
+  return out;
+}
+
+function shimBinaryName(entry) {
+  if (typeof entry.binaryPath === 'string' && entry.binaryPath.length > 0) {
+    const base = basename(entry.binaryPath);
+    return base.replace(/\.(exe|cmd|bat)$/i, '');
+  }
+  if (typeof entry.shimName === 'string') return entry.shimName;
+  return null;
+}
+
+function checkBinaryHashes(entries, allowList) {
+  const failures = [];
+  for (const e of entries) {
+    if (e.event !== 'shim_invocation_begin' && e.event !== 'shim_invocation_end') continue;
+    const name = shimBinaryName(e);
+    const hash = e.binarySha256;
+    if (!hash) {
+      failures.push({ seq: e.seq, name, reason: 'missing-binarySha256' });
+      continue;
+    }
+    if (!name) {
+      failures.push({ seq: e.seq, name: null, hash, reason: 'missing-binary-name' });
+      continue;
+    }
+    const allowed = allowList.get(name);
+    if (!allowed || !allowed.has(hash)) {
+      failures.push({ seq: e.seq, name, hash, reason: 'binary-hash-not-allowed' });
+    }
+  }
+  return failures;
+}
+
 function report(result, asJson) {
   if (asJson) {
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     return;
   }
   if (result.ok) {
+    const suffix = result.stateCheckSkipped ? ' (state-check-skipped)' : '';
     process.stdout.write(
-      `verify-trace OK: ${result.entryCount} entries, ${result.runtimePairs} runtime/shim pairs, runId=${result.runId}\n`,
+      `verify-trace OK: ${result.entryCount} entries, ${result.runtimePairs} runtime/shim pairs, runId=${result.runId}${suffix}\n`,
     );
     return;
   }
@@ -145,6 +293,11 @@ function report(result, asJson) {
       `  orphan: ${o.leftLabel}=${o.leftCount} vs ${o.rightLabel}=${o.rightCount} (seq~${o.sampleSeq}) key=${o.key}\n`,
     );
   }
+  for (const b of result.binaryHashFailures || []) {
+    process.stderr.write(
+      `  binary: ${b.reason} seq=${b.seq} name=${b.name ?? '?'} hash=${b.hash ?? '?'}\n`,
+    );
+  }
 }
 
 async function main() {
@@ -153,21 +306,32 @@ async function main() {
     process.stderr.write('verify-trace: --trace is required\n');
     process.exit(2);
   }
+
+  // AP-1/AP-2: --state mandatory unless explicitly opted out.
+  if (!args.state && !args.allowMissingState) {
+    process.stderr.write(
+      'verify-trace: --state is required; pass --allow-missing-state to opt out explicitly\n',
+    );
+    process.exit(2);
+  }
+
   const tracePath = resolve(args.trace);
   const result = {
     ok: true,
     entryCount: 0,
     runtimePairs: 0,
     runId: null,
+    stateCheckSkipped: false,
     errors: [],
     orphans: [],
+    binaryHashFailures: [],
   };
 
   let entries;
   try {
     entries = loadTrace(tracePath);
   } catch (err) {
-    report({ ok: false, errors: [err.message], orphans: [] }, args.json);
+    report({ ok: false, errors: [err.message], orphans: [], binaryHashFailures: [] }, args.json);
     process.exit(1);
   }
   result.entryCount = entries.length;
@@ -185,6 +349,44 @@ async function main() {
     result.runId = [...runIds][0];
   }
 
+  // AP-5: expected runId nonce
+  if (args.expectedRunId !== null) {
+    for (const e of entries) {
+      if (e.runId !== args.expectedRunId) {
+        result.ok = false;
+        result.errors.push(
+          `expected-runId-mismatch: entry seq=${e.seq} has runId=${e.runId}, expected ${args.expectedRunId}`,
+        );
+        break;
+      }
+    }
+  }
+
+  // AP-5: freshness window
+  if (
+    args.freshnessWindowMs !== null &&
+    !Number.isNaN(args.freshnessWindowMs) &&
+    entries.length > 0
+  ) {
+    const first = entries[0];
+    const ts = Date.parse(first.timestamp);
+    if (Number.isNaN(ts)) {
+      result.ok = false;
+      result.errors.push(
+        `freshness-window: first entry timestamp "${first.timestamp}" is not parseable`,
+      );
+    } else {
+      const now = Date.now();
+      const delta = Math.abs(now - ts);
+      if (delta > args.freshnessWindowMs) {
+        result.ok = false;
+        result.errors.push(
+          `freshness-window-exceeded: first entry timestamp is ${delta}ms from now (window=${args.freshnessWindowMs}ms)`,
+        );
+      }
+    }
+  }
+
   // (b, c) chain verification
   const chain = verifyChain(entries);
   if (!chain.ok) {
@@ -199,9 +401,55 @@ async function main() {
     result.errors.push(`witness pairing has ${orphans.length} orphan group(s)`);
     result.orphans = orphans;
   }
+  const binaryDisagreements = checkBinaryAgreement(entries);
+  if (binaryDisagreements.length > 0) {
+    result.ok = false;
+    result.errors.push(
+      `binary-hash-disagreement: ${binaryDisagreements.length} pair(s) with mismatched runtime vs shim binarySha256`,
+    );
+    result.binaryDisagreements = binaryDisagreements;
+  }
   result.runtimePairs = entries.filter((e) => e.event === 'agent_invocation_begin').length;
 
-  // (e) optional state cross-check
+  // AP-8: expected pair count
+  if (args.expectedPairCount !== null && !Number.isNaN(args.expectedPairCount)) {
+    if (result.runtimePairs !== args.expectedPairCount) {
+      result.ok = false;
+      result.errors.push(
+        `expected-pair-count-mismatch: trace has ${result.runtimePairs} runtime/shim pairs, expected ${args.expectedPairCount}`,
+      );
+    }
+  }
+
+  // AP-8: min entries
+  if (args.minEntries !== null && !Number.isNaN(args.minEntries)) {
+    if (result.entryCount < args.minEntries) {
+      result.ok = false;
+      result.errors.push(
+        `min-entries-not-met: trace has ${result.entryCount} entries, need at least ${args.minEntries}`,
+      );
+    }
+  }
+
+  // AP-3: binary hash allow-list
+  if (args.expectedBinaryHashes) {
+    try {
+      const allowList = loadBinaryAllowList(resolve(args.expectedBinaryHashes));
+      const failures = checkBinaryHashes(entries, allowList);
+      if (failures.length > 0) {
+        result.ok = false;
+        result.errors.push(
+          `binary-hash-not-allowed: ${failures.length} shim entr${failures.length === 1 ? 'y' : 'ies'} failed allow-list`,
+        );
+        result.binaryHashFailures = failures;
+      }
+    } catch (err) {
+      result.ok = false;
+      result.errors.push(`binary-allow-list: ${err.message}`);
+    }
+  }
+
+  // (e) state cross-check (AP-1/AP-2)
   if (args.state) {
     const statePath = resolve(args.state);
     if (!existsSync(statePath)) {
@@ -227,6 +475,8 @@ async function main() {
         result.errors.push(`cannot read/parse state file: ${err.message}`);
       }
     }
+  } else if (args.allowMissingState) {
+    result.stateCheckSkipped = true;
   }
 
   report(result, args.json);

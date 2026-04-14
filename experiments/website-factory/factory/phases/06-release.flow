@@ -1,0 +1,22 @@
+# Phase 6: Release
+# Agent: delivery-manager
+
+# Final build
+run: npm run build 2>&1
+
+if command_failed
+  retry max 3
+    prompt: You are a delivery manager. The production build failed. This is the final gate — read the errors carefully and fix them. We cannot ship a broken build.
+    run: npm run build 2>&1
+  end
+end
+
+# Generate build report
+let build_output = run "npm run build 2>&1 || true"
+
+prompt: You are a delivery manager. The website is built. Create a release summary at docs/release-notes.md including: tech stack chosen, all sections implemented, build status, lint status, QA findings summary, and any known issues. Also list the complete file tree of the project (excluding node_modules and .git).
+
+# Final verification
+run: npm run build 2>&1 || true
+
+import "libraries/acceptance.flow"

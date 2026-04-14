@@ -1,0 +1,41 @@
+# Library: Acceptance Gates
+# Final verification before declaring the project complete
+
+# Build gate
+run: cd site && npm run build 2>&1 || true
+if command_failed
+  let build_status = "FAIL"
+else
+  let build_status = "PASS"
+end
+
+# Lint gate
+run: cd site && npx eslint . --max-warnings 0 2>&1 || true
+if command_failed
+  let lint_status = "FAIL"
+else
+  let lint_status = "PASS"
+end
+
+# Structure gate — check for real project structure
+run: ls site/app/ 2>/dev/null || ls site/src/ 2>/dev/null || ls site/pages/ 2>/dev/null || echo "NO_STRUCTURE"
+if ${last_stdout} == "NO_STRUCTURE"
+  let structure_status = "FAIL"
+else
+  let structure_status = "PASS"
+end
+
+# Output gate — check for built output
+run: ls site/dist/index.html 2>/dev/null || ls site/.next/ 2>/dev/null || ls site/out/index.html 2>/dev/null || echo "NO_OUTPUT"
+if ${last_stdout} == "NO_OUTPUT"
+  let output_status = "FAIL"
+else
+  let output_status = "PASS"
+end
+
+# Content gate — check section count
+run: find site/ -name "*.tsx" -o -name "*.astro" | grep -ci "section\|hero\|feature\|pricing\|testimonial\|faq" || echo "0"
+let section_count = "${last_stdout}"
+
+# Write acceptance report
+prompt: You are a delivery manager. Write the final acceptance report to docs/acceptance-report.md. Include these gate results: Build=${build_status}, Lint=${lint_status}, Structure=${structure_status}, Output=${output_status}, Section components found=${section_count}. List any open issues or known limitations. Rate the overall project readiness as SHIP, SHIP_WITH_ISSUES, or BLOCK.

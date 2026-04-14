@@ -1,0 +1,31 @@
+# Phase 1: Discovery
+# Agents: ux-researcher, research-writer
+
+# Parallel research tracks
+spawn "persona-research"
+  prompt: You are a UX researcher. Read the product brief in brief.md. Create detailed user personas for NightOwl's target audience (knowledge workers who want better sleep). For each persona include: name, role, age, goals, frustrations, tech comfort level, and a day-in-the-life scenario. Write the personas to docs/personas.md.
+end
+
+spawn "competitor-analysis"
+  prompt: You are a UX researcher. Research the sleep tracking and productivity tool market. Identify 3-5 competitors (like Oura, Whoop, Sleep Cycle) and analyze their marketing websites. What do they do well? What gaps exist? Write your analysis to docs/competitor-analysis.md.
+end
+
+spawn "content-strategy"
+  prompt: You are a research writer. Read brief.md. Define the content strategy for the NightOwl marketing website. Determine: the key messaging hierarchy, tone of voice guidelines, section-by-section content outline with headline suggestions, and SEO keyword targets. Write to docs/content-strategy.md.
+end
+
+await all
+
+# Synthesize research into a sitemap
+let personas = run "cat docs/personas.md"
+let competitors = run "cat docs/competitor-analysis.md"
+let content = run "cat docs/content-strategy.md"
+
+prompt: You are a UX researcher. Based on the personas, competitor analysis, and content strategy documents in the docs/ folder, create a final sitemap and information architecture for the NightOwl website. Define the sections, their order, and the user flow. Write to docs/sitemap.md.
+
+# Extract section list for downstream use
+let sections = run "cat docs/sitemap.md"
+
+review max 1
+  prompt: You are a UX researcher. Review the sitemap in docs/sitemap.md for coherence with the personas and content strategy. Flag any gaps or ordering issues. If changes are needed, update docs/sitemap.md directly.
+end

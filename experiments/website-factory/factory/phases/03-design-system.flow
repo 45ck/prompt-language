@@ -1,0 +1,28 @@
+# Phase 3: Design System
+# Agent: web-engineer
+
+# Generate design tokens from brand brief
+import "libraries/design-tokens.flow"
+
+# Build base components
+let component_list = "Button,Card,Section,Badge,NavBar,Footer,PricingCard,TestimonialCard,FeatureCard,IntegrationLogo,CTABanner,FAQAccordion"
+
+foreach component in "${component_list}"
+  import "libraries/component.flow"
+end
+
+# Build layout primitives
+prompt: You are a web engineer. Read the project in the current directory. Create layout components: a Container component (max-width, padding, centering), a Grid component (responsive CSS grid wrapper), and a Stack component (vertical/horizontal flex with gap). Use the design tokens already configured. Place them in the components directory following the project's conventions.
+
+# Design system review
+review max 1
+  prompt: You are a web engineer. Review all components created so far for design consistency. Check that they all use the design tokens (not hardcoded colors/spacing), follow the same naming convention, and have consistent prop patterns. Fix any inconsistencies directly.
+end
+
+# Verify it still builds
+retry max 2
+  run: npm run build 2>&1 || true
+  if command_failed
+    prompt: The build failed after creating design system components. Read the error output in ${last_stderr} and fix the issues. Common problems are import errors, missing dependencies, or TypeScript issues.
+  end
+end

@@ -1,0 +1,4 @@
+# Library: Accessibility Audit + Fix
+# WCAG 2.1 AA compliance check
+
+prompt: You are a quality reviewer specializing in accessibility. Audit the NightOwl website in site/ for WCAG 2.1 AA compliance. Check: (1) All images have meaningful alt text, (2) Color contrast ratios meet AA standards (4.5:1 for normal text, 3:1 for large text), (3) All interactive elements are keyboard accessible, (4) Focus indicators are visible, (5) ARIA labels and roles are correctly used, (6) Heading hierarchy is logical (no skipped levels), (7) Form elements have associated labels, (8) Skip-to-content link exists, (9) Language attribute is set on html element, (10) Animations respect prefers-reduced-motion. Write detailed findings to docs/a11y-audit.md with pass/fail for each criterion.

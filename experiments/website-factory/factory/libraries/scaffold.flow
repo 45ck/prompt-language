@@ -1,0 +1,14 @@
+# Library: Project Scaffold
+# Creates the initial project structure based on architecture decision
+
+if ${framework} == "next"
+  run: npx create-next-app@latest site --typescript --tailwind --eslint --app --no-src-dir --no-import-alias --use-npm 2>&1 <<< "y" || true
+  run: cd site && npm install 2>&1 || true
+else if ${framework} == "astro"
+  run: npm create astro@latest site -- --template minimal --typescript strict --install --no-git 2>&1 || true
+  run: cd site && npx astro add tailwind -y 2>&1 || true
+else
+  run: npx create-next-app@latest site --typescript --tailwind --eslint --app --no-src-dir --use-npm 2>&1 <<< "y" || true
+end
+
+prompt: You are a web engineer. The project has been scaffolded in the site/ directory using ${framework}. Verify the project structure is correct by listing files. If anything is missing or broken, fix it. Ensure `npm run build` passes from the site/ directory.

@@ -1,0 +1,35 @@
+# Phase 4: Implementation
+# Agent: web-engineer
+
+# Read the sitemap to get section list
+let sitemap = run "cat docs/sitemap.md"
+
+# Define the core sections to build
+let section_list = "hero,features,how-it-works,testimonials,pricing,integrations,faq,cta-footer"
+
+# Build each section in parallel
+foreach_spawn section in "${section_list}"
+  import "libraries/section-builder.flow"
+end
+
+# Assemble the page
+prompt: You are a web engineer. All section components have been built. Now assemble the main landing page. Read the sitemap in docs/sitemap.md for the correct section ordering. Import all section components and compose them into the main page/route. Ensure smooth visual flow between sections with consistent spacing. The page should use the NavBar at top and Footer at bottom.
+
+# SEO pass
+import "libraries/seo.flow"
+
+# Build verification
+retry max 3
+  run: npm run build 2>&1 || true
+  if command_failed
+    prompt: Build failed. Read the error output and fix all issues. Check for missing imports, component prop mismatches, or syntax errors.
+  end
+end
+
+# Lint verification
+retry max 2
+  run: npx eslint . --max-warnings 0 2>&1 || true
+  if command_failed
+    prompt: ESLint found warnings or errors. Fix all lint issues. Do not disable rules — fix the underlying code.
+  end
+end

@@ -1,0 +1,5 @@
+# Library: Git Workflow
+# Commit helper for phase checkpoints
+
+run: cd site && git init 2>/dev/null || true
+run: cd site && git add -A && git commit -m "${commit_message}" --allow-empty 2>&1 || true

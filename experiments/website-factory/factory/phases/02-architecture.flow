@@ -1,0 +1,38 @@
+# Phase 2: Architecture
+# Agent: software-architect
+
+# Race two architecture proposals
+race
+  spawn "arch-nextjs"
+    prompt: You are a software architect. Read brief.md and docs/sitemap.md. Propose a complete technical architecture for the NightOwl marketing website using Next.js as the framework. Include: framework version, CSS approach (Tailwind vs CSS Modules vs styled-components), component library strategy, build tooling, hosting recommendation, and folder structure. Write your proposal to docs/arch-nextjs.md. Then create the ADR (Architecture Decision Record) at docs/adr-nextjs.md explaining your rationale.
+  end
+
+  spawn "arch-astro"
+    prompt: You are a software architect. Read brief.md and docs/sitemap.md. Propose a complete technical architecture for the NightOwl marketing website using Astro as the framework. Include: framework version, CSS approach, component strategy (islands architecture), build tooling, hosting recommendation, and folder structure. Write your proposal to docs/arch-astro.md. Then create the ADR at docs/adr-astro.md explaining your rationale.
+  end
+end
+
+# Evaluate and choose
+let nextjs_proposal = run "cat docs/arch-nextjs.md 2>/dev/null || echo 'No proposal'"
+let astro_proposal = run "cat docs/arch-astro.md 2>/dev/null || echo 'No proposal'"
+
+prompt: You are a software architect. Two architecture proposals exist in docs/arch-nextjs.md and docs/arch-astro.md. Evaluate both against these criteria: (1) build performance for a marketing site, (2) SEO capabilities, (3) developer experience, (4) bundle size, (5) deployment simplicity. Choose one and write your decision to docs/architecture-decision.md. Include the winning framework name on the first line as "Framework: <name>".
+
+# Extract the decision into variables
+let tech_stack = run "head -1 docs/architecture-decision.md"
+let framework_raw = run "head -1 docs/architecture-decision.md | sed 's/Framework: //'"
+
+# Normalize framework name for conditionals
+if ${framework_raw} == "Next.js"
+  let framework = "next"
+  let css_approach = "tailwind"
+else if ${framework_raw} == "Astro"
+  let framework = "astro"
+  let css_approach = "tailwind"
+else
+  let framework = "next"
+  let css_approach = "tailwind"
+end
+
+# Scaffold the project
+import "libraries/scaffold.flow"

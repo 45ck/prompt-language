@@ -1,0 +1,49 @@
+# Phase 5: Quality Assurance
+# Agents: quality-reviewer, test-designer, security-reviewer
+
+# Parallel QA tracks
+spawn "code-review"
+  prompt: You are a quality reviewer. Perform a thorough code review of the entire NightOwl website project. Check for: code smells, duplication, dead code, naming consistency, component structure quality, proper separation of concerns, and adherence to the chosen framework's best practices. Write your findings to docs/code-review.md with severity ratings (critical/major/minor) for each issue.
+end
+
+spawn "a11y-audit"
+  import "libraries/accessibility.flow"
+end
+
+spawn "security-review"
+  prompt: You are a security reviewer. Review the NightOwl website for security issues. Check for: XSS vulnerabilities in any dynamic content, insecure dependencies (run npm audit), proper CSP headers if configured, no exposed secrets or API keys, and safe external resource loading. Write findings to docs/security-review.md.
+end
+
+await all
+
+# Fix critical issues from code review
+let review_results = run "cat docs/code-review.md 2>/dev/null || echo 'No review'"
+
+try
+  prompt: You are a quality reviewer. Read docs/code-review.md. Fix all critical and major issues identified. Do not fix minor/cosmetic issues — focus on correctness and maintainability.
+catch
+  prompt: Some fixes failed to apply. Review the errors and make targeted fixes for the most critical issues only.
+finally
+  run: npm run build 2>&1 || true
+end
+
+# Fix a11y issues
+let a11y_results = run "cat docs/a11y-audit.md 2>/dev/null || echo 'No audit'"
+if ${a11y_results} != "No audit"
+  prompt: You are a web engineer. Read docs/a11y-audit.md. Fix all WCAG 2.1 AA violations. Focus on: missing alt text, color contrast, keyboard navigation, ARIA labels, heading hierarchy, and focus management.
+end
+
+# Final build + lint gate
+retry max 2
+  run: npm run build 2>&1 || true
+  if command_failed
+    prompt: Post-QA build failed. Fix the build errors introduced during QA fixes.
+  end
+end
+
+retry max 2
+  run: npx eslint . --max-warnings 0 2>&1 || true
+  if command_failed
+    prompt: Post-QA lint failed. Fix the lint errors.
+  end
+end

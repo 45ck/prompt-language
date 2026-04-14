@@ -1,0 +1,4 @@
+# Library: Design Tokens
+# Generates CSS custom properties / Tailwind config from brand guidelines
+
+prompt: You are a web engineer. Read brief.md for brand personality (dark-mode-first, modern, minimal, trustworthy). Define a complete design token system for the NightOwl website. Include: color palette (dark backgrounds, accent colors for sleep/night theme), typography scale (font families, sizes, weights, line heights), spacing scale (4px base), border radius tokens, shadow tokens, and transition tokens. Apply these as Tailwind config extensions in the site/ project. The palette should feel premium and calming — deep blues, purples, warm accents.

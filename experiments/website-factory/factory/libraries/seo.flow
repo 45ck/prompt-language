@@ -1,0 +1,4 @@
+# Library: SEO Audit + Injection
+# Ensures meta tags, structured data, and semantic HTML
+
+prompt: You are a web engineer. Perform an SEO audit of the NightOwl website in site/. Add or fix: (1) Page title and meta description optimized for "sleep tracking for knowledge workers", (2) Open Graph tags for social sharing (og:title, og:description, og:image placeholder), (3) Semantic HTML structure — proper heading hierarchy (single h1, logical h2-h6), (4) Schema.org JSON-LD structured data for a SoftwareApplication, (5) Canonical URL tag, (6) Robots meta tag. Write a brief SEO report to docs/seo-audit.md.

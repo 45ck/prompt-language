@@ -1,0 +1,15 @@
+# Library: Section Builder
+# Builds a complete page section with content
+# Expects ${section} to be set by the calling foreach_spawn
+
+# Read content strategy for this section
+let content_doc = run "cat docs/content-strategy.md 2>/dev/null || echo 'No content strategy'"
+let sitemap_doc = run "cat docs/sitemap.md 2>/dev/null || echo 'No sitemap'"
+
+prompt: You are a web engineer. Build the "${section}" section for the NightOwl marketing website. Read docs/content-strategy.md for messaging guidance and docs/sitemap.md for information architecture. Requirements: (1) Write compelling, original copy — not placeholder lorem ipsum, (2) Use the existing design system components (Button, Card, Section, Badge, etc.), (3) Make it fully responsive with mobile, tablet, and desktop layouts, (4) Include proper semantic HTML and ARIA labels, (5) Add subtle animations or transitions where appropriate (scroll-triggered fade-ins, hover states), (6) Ensure the section tells part of the NightOwl story and connects to adjacent sections. The copy should speak to knowledge workers who care about cognitive performance. Place the section component in the site/ project following framework conventions.
+
+# Verify the section renders without breaking the build
+run: cd site && npm run build 2>&1 || true
+if command_failed
+  prompt: The ${section} section broke the build. Fix the errors — likely import issues or prop mismatches with existing components.
+end

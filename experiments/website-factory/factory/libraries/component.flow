@@ -1,0 +1,5 @@
+# Library: Component Generator
+# Generates a single reusable component
+# Expects ${component} to be set by the calling foreach
+
+prompt: You are a web engineer. Create the ${component} component for the NightOwl website in the site/ project. Requirements: (1) Use TypeScript with proper prop types, (2) Use the design tokens from Tailwind config — no hardcoded colors or spacing, (3) Make it responsive (mobile-first), (4) Include proper ARIA attributes for accessibility, (5) Follow the project's component conventions. Place the component in the appropriate directory for the ${framework} framework.

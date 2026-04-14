@@ -49,14 +49,23 @@ export class ClaudeProcessSpawner implements ProcessSpawner {
     // beads: prompt-language-2j9v — pass --model when specified
     const modelArgs: string[] = input.model !== undefined ? ['--model', input.model] : [];
 
+    const childEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      PROMPT_LANGUAGE_STATE_DIR: input.stateDir,
+      PL_SPAWN_NAME: input.name,
+    };
+    // Forward trace-chain correlation env to the child so its provenance
+    // entries chain off the same runId. We copy only when the parent has them
+    // set; never fabricate.
+    if (process.env['PL_RUN_ID']) childEnv['PL_RUN_ID'] = process.env['PL_RUN_ID'];
+    if (process.env['PL_TRACE']) childEnv['PL_TRACE'] = process.env['PL_TRACE'];
+    if (process.env['PL_TRACE_DIR']) childEnv['PL_TRACE_DIR'] = process.env['PL_TRACE_DIR'];
+
     const child = spawn('claude', ['-p', '--dangerously-skip-permissions', ...modelArgs, prompt], {
       cwd: childCwd,
       stdio: 'ignore',
       detached: true,
-      env: {
-        ...process.env,
-        PROMPT_LANGUAGE_STATE_DIR: input.stateDir,
-      },
+      env: childEnv,
     });
 
     child.unref();

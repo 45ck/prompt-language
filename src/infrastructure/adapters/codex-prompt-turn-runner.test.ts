@@ -118,6 +118,80 @@ describe('CodexPromptTurnRunner', () => {
     expect(mockedRmSync).toHaveBeenCalledTimes(1);
   });
 
+  it('handles child error events by settling with exit code 1', async () => {
+    const runner = new CodexPromptTurnRunner();
+    const child = createChildProcess();
+    mockedSpawn.mockReturnValue(child);
+    mockedReadFileSync.mockImplementation(() => {
+      throw new Error('no output file');
+    });
+
+    let errorHandler: ((err: Error) => void) | undefined;
+    child.once = (event: string, handler: (...args: unknown[]) => void) => {
+      if (event === 'error') errorHandler = handler as (e: Error) => void;
+      return child;
+    };
+
+    const resultPromise = runner.run({ cwd: '/repo', prompt: 'die' });
+    // Fire stderr data + error
+    child.stderr.write('boom\n');
+    errorHandler?.(new Error('spawn-failed'));
+    const result = await resultPromise;
+    expect(result.exitCode).toBe(1);
+    expect(result.assistantText).toContain('boom');
+    expect(mockedRmSync).toHaveBeenCalled();
+  });
+
+  it('falls back to combined stdout/stderr when output file cannot be read', async () => {
+    const runner = new CodexPromptTurnRunner();
+    const child = createChildProcess();
+    mockedSpawn.mockReturnValue(child);
+    mockedReadFileSync.mockImplementation(() => {
+      throw new Error('missing');
+    });
+
+    const resultPromise = runner.run({ cwd: '/repo', prompt: 'Work' });
+    child.stdout.write('stdout-text');
+    child.stderr.write('stderr-text');
+    child.stdout.end();
+    child.stderr.end();
+    const result = await resultPromise;
+
+    expect(result.exitCode).toBe(0);
+    expect(result.assistantText).toContain('stdout-text');
+    expect(result.assistantText).toContain('stderr-text');
+  });
+
+  it('treats a timed-out child as exit code 124 with timeout message', async () => {
+    vi.useFakeTimers();
+    try {
+      const runner = new CodexPromptTurnRunner();
+      const child = createChildProcess();
+      mockedSpawn.mockReturnValue(child);
+      mockedReadFileSync.mockImplementation(() => {
+        throw new Error('missing');
+      });
+
+      let closeHandler: ((code: number | null) => void) | undefined;
+      child.once = (event: string, handler: (...args: unknown[]) => void) => {
+        if (event === 'close') closeHandler = handler as (c: number | null) => void;
+        return child;
+      };
+
+      const resultPromise = runner.run({ cwd: '/repo', prompt: 'Slow' });
+      // Advance fake time past the default timeout so the timer fires.
+      vi.advanceTimersByTime(600_001);
+      // Simulate the child closing after being killed.
+      closeHandler?.(null);
+      const result = await resultPromise;
+
+      expect(result.exitCode).toBe(124);
+      expect(result.assistantText).toContain('timed out');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('surfaces captured output when codex exits non-zero', async () => {
     const runner = new CodexPromptTurnRunner();
     const child = createChildProcess();

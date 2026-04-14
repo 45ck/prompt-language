@@ -17,6 +17,7 @@ import type { CommandRunner } from './ports/command-runner.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { AuditLogger } from './ports/audit-logger.js';
+import { NULL_TRACE_LOGGER, type TraceLogger } from './ports/trace-logger.js';
 import { parseFlow, parseGates, detectBareFlow } from './parse-flow.js';
 import { renderFlow, renderFlowSummary, renderCompletionSummary } from '../domain/render-flow.js';
 import { interpolate } from '../domain/interpolate.js';
@@ -399,6 +400,7 @@ export async function injectContext(
   processSpawner?: ProcessSpawner,
   auditLogger?: AuditLogger,
   memoryStore?: MemoryStore,
+  traceLogger: TraceLogger = NULL_TRACE_LOGGER,
 ): Promise<InjectContextOutput> {
   const existing = await stateStore.loadCurrent();
 
@@ -497,6 +499,8 @@ export async function injectContext(
         processSpawner,
         auditLogger,
         memoryStore,
+        undefined,
+        traceLogger,
       );
       const toSave = result.kind === 'prompt' ? result.state : maybeCompleteFlow(result.state);
       if (toSave !== hydratedExisting) {
@@ -594,6 +598,8 @@ export async function injectContext(
         processSpawner,
         auditLogger,
         memoryStore,
+        undefined,
+        traceLogger,
       );
       const toSave = result.kind === 'prompt' ? result.state : maybeCompleteFlow(result.state);
       await stateStore.save(toSave);

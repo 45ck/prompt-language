@@ -1,6 +1,7 @@
 import { autoAdvanceNodes, maybeCompleteFlow, resolveCurrentNode } from './advance-flow.js';
 import { evaluateCompletion, type EvaluateCompletionOutput } from './evaluate-completion.js';
 import type { AuditLogger } from './ports/audit-logger.js';
+import { NULL_TRACE_LOGGER, type TraceLogger } from './ports/trace-logger.js';
 import type { CaptureReader } from './ports/capture-reader.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { MemoryStore, MemoryEntry } from './ports/memory-store.js';
@@ -172,6 +173,7 @@ export async function runFlowHeadless(
     readonly processSpawner?: ProcessSpawner | undefined;
     readonly promptTurnRunner: PromptTurnRunner;
     readonly stateStore: StateStore;
+    readonly traceLogger?: TraceLogger | undefined;
   },
 ): Promise<RunFlowHeadlessOutput> {
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS;
@@ -228,6 +230,7 @@ export async function runFlowHeadless(
       deps.auditLogger,
       deps.memoryStore,
       deps.messageStore,
+      deps.traceLogger ?? NULL_TRACE_LOGGER,
     );
 
     mergeSignals(collectedSignals, step);

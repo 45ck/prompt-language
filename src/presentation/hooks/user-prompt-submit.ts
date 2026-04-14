@@ -13,6 +13,8 @@ import { ShellCommandRunner } from '../../infrastructure/adapters/shell-command-
 import { FileCaptureReader } from '../../infrastructure/adapters/file-capture-reader.js';
 import { ClaudeProcessSpawner } from '../../infrastructure/adapters/claude-process-spawner.js';
 import { FileAuditLogger } from '../../infrastructure/adapters/file-audit-logger.js';
+import { FileTraceLogger } from '../../infrastructure/adapters/file-trace-logger.js';
+import { NULL_TRACE_LOGGER } from '../../application/ports/trace-logger.js';
 import { FileMemoryStore } from '../../infrastructure/adapters/file-memory-store.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
@@ -52,6 +54,8 @@ async function main(): Promise<void> {
   const captureReader = new FileCaptureReader(process.cwd());
   const processSpawner = new ClaudeProcessSpawner(process.cwd());
   const auditLogger = new FileAuditLogger(process.cwd());
+  const traceLogger =
+    process.env['PL_TRACE'] === '1' ? new FileTraceLogger(process.cwd()) : NULL_TRACE_LOGGER;
   const memoryStore = new FileMemoryStore(process.cwd());
   const sessionId = randomUUID();
 
@@ -80,6 +84,7 @@ async function main(): Promise<void> {
     processSpawner,
     auditLogger,
     memoryStore,
+    traceLogger,
   );
 
   debug(`UserPromptSubmit: prompt modified=${result.prompt !== input.prompt}`);

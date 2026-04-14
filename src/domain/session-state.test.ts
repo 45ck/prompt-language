@@ -21,7 +21,17 @@ import {
 } from './session-state.js';
 import type { SessionState, NodeProgress, SpawnedChild, GateEvalResult } from './session-state.js';
 import { createFlowSpec, createCompletionGate } from './flow-spec.js';
-import { createLetNode, createPromptNode, withNodeSource } from './flow-node.js';
+import {
+  createLetNode,
+  createPromptNode,
+  withNodeSource,
+  createIfNode,
+  createTryNode,
+  createRaceNode,
+  createSpawnNode,
+  createSwarmNode,
+  createSwarmRoleDefinition,
+} from './flow-node.js';
 
 function makeState(overrides?: Partial<{ gates: boolean }>): SessionState {
   const gates = overrides?.gates
@@ -196,6 +206,80 @@ describe('updateVariable', () => {
     expect(state.warnings).toContain(
       `Variable 'items' is declared as list but received string value "not-a-list"; keeping assigned value for backward compatibility.`,
     );
+  });
+});
+
+describe('findVariableDeclaration via updateVariable — nested scopes', () => {
+  const intLet = (id: string, name: string) =>
+    createLetNode(id, name, { type: 'literal', value: '0' }, false, undefined, 'let', 'int');
+  const strLet = (id: string, name: string) =>
+    createLetNode(id, name, { type: 'literal', value: '' }, false, undefined, 'let', 'string');
+
+  it('finds declaration inside if thenBranch and validates declaredType', () => {
+    const letNode = intLet('l1', 'count');
+    const spec = createFlowSpec('goal', [createIfNode('i1', 'cond', [letNode], [])]);
+    const state = updateVariable(createSessionState('s1', spec), 'count', 'not-int');
+    expect(state.warnings.some((w) => w.includes("'count' is declared as int"))).toBe(true);
+  });
+
+  it('finds declaration inside if elseBranch', () => {
+    const letNode = intLet('l1', 'count');
+    const spec = createFlowSpec('goal', [createIfNode('i1', 'cond', [], [letNode])]);
+    const state = updateVariable(createSessionState('s1', spec), 'count', 'not-int');
+    expect(state.warnings.some((w) => w.includes("'count' is declared as int"))).toBe(true);
+  });
+
+  it('finds declaration inside try body, catchBody, or finallyBody', () => {
+    for (const position of ['body', 'catch', 'finally'] as const) {
+      const letNode = intLet('l1', 'count');
+      const tryNode =
+        position === 'body'
+          ? createTryNode('t1', [letNode], 'always', [], [])
+          : position === 'catch'
+            ? createTryNode('t1', [], 'always', [letNode], [])
+            : createTryNode('t1', [], 'always', [], [letNode]);
+      const spec = createFlowSpec('goal', [tryNode]);
+      const state = updateVariable(createSessionState('s1', spec), 'count', 'not-int');
+      expect(state.warnings.some((w) => w.includes("'count' is declared as int"))).toBe(true);
+    }
+  });
+
+  it('finds declaration inside race child spawn body', () => {
+    const letNode = intLet('l1', 'count');
+    const spawn = createSpawnNode('sp1', 'worker', [letNode]);
+    const race = createRaceNode('r1', [spawn]);
+    const spec = createFlowSpec('goal', [race]);
+    const state = updateVariable(createSessionState('s1', spec), 'count', 'not-int');
+    expect(state.warnings.some((w) => w.includes("'count' is declared as int"))).toBe(true);
+  });
+
+  it('finds declaration inside swarm flow', () => {
+    const letNode = intLet('l1', 'count');
+    const swarm = createSwarmNode('sw1', 'team', [], [letNode]);
+    const spec = createFlowSpec('goal', [swarm]);
+    const state = updateVariable(createSessionState('s1', spec), 'count', 'not-int');
+    expect(state.warnings.some((w) => w.includes("'count' is declared as int"))).toBe(true);
+  });
+
+  it('finds declaration inside swarm role body', () => {
+    const letNode = intLet('l1', 'count');
+    const role = createSwarmRoleDefinition('role1', 'alpha', [letNode]);
+    const swarm = createSwarmNode('sw1', 'team', [role], []);
+    const spec = createFlowSpec('goal', [swarm]);
+    const state = updateVariable(createSessionState('s1', spec), 'count', 'not-int');
+    expect(state.warnings.some((w) => w.includes("'count' is declared as int"))).toBe(true);
+  });
+
+  it('accepts a string declared variable with a string value (no warning)', () => {
+    const spec = createFlowSpec('goal', [strLet('l1', 'name')]);
+    const state = updateVariable(createSessionState('s1', spec), 'name', 'hello');
+    expect(state.warnings.some((w) => w.includes("'name' is declared as string"))).toBe(false);
+  });
+
+  it('warns when a string declared variable receives a non-string value', () => {
+    const spec = createFlowSpec('goal', [strLet('l1', 'name')]);
+    const state = updateVariable(createSessionState('s1', spec), 'name', 42);
+    expect(state.warnings.some((w) => w.includes("'name' is declared as string"))).toBe(true);
   });
 });
 

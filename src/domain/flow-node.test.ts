@@ -535,6 +535,79 @@ describe('node position helpers', () => {
     );
   });
 
+  it('resolveNodeByPath — while, if.then, if.else, foreach, review, swarm flow', () => {
+    const inWhile = createPromptNode('pw', 'w');
+    const inThen = createPromptNode('pt', 't');
+    const inElse = createPromptNode('pe', 'e');
+    const inForeach = createPromptNode('pf', 'f');
+    const inReview = createPromptNode('pr', 'r');
+    const inRole = createPromptNode('prole', 'rl');
+    const inFlow = createPromptNode('pflow', 'fl');
+
+    const nodes = [
+      createWhileNode('w1', 'cond', [inWhile]),
+      createIfNode('i1', 'cond', [inThen], [inElse]),
+      createForeachNode('fe1', 'item', 'a b', [inForeach]),
+      createReviewNode('rv1', [inReview], 1),
+      createSwarmNode(
+        'sw1',
+        'team',
+        [createSwarmRoleDefinition('role1', 'worker', [inRole])],
+        [inFlow],
+      ),
+    ];
+
+    expect(resolveNodeByPath(nodes, [0, 0])).toBe(inWhile);
+    expect(resolveNodeByPath(nodes, [1, 0])).toBe(inThen);
+    expect(resolveNodeByPath(nodes, [1, 1])).toBe(inElse);
+    expect(resolveNodeByPath(nodes, [2, 0])).toBe(inForeach);
+    expect(resolveNodeByPath(nodes, [3, 0])).toBe(inReview);
+    expect(resolveNodeByPath(nodes, [4, 0])).toBe(inRole);
+    expect(resolveNodeByPath(nodes, [4, 1])).toBe(inFlow);
+  });
+
+  it('resolveNodeByPath — returns null for out-of-range and terminal-node children', () => {
+    const terminal = createPromptNode('p1', 'x');
+    const w = createWhileNode('w1', 'cond', [terminal]);
+    expect(resolveNodeByPath([w], [0, 5])).toBeNull();
+    // Empty path
+    expect(resolveNodeByPath([], [])).toBeNull();
+    // Path into a terminal node (prompt has no children scopes)
+    expect(resolveNodeByPath([terminal], [0, 0])).toBeNull();
+  });
+
+  it('resolveNodeByPath — indexes through race children and their bodies', () => {
+    const body1 = createPromptNode('b1', 'one');
+    const body2 = createPromptNode('b2', 'two');
+    const spawn1 = createSpawnNode('sp1', 'a', [body1]);
+    const spawn2 = createSpawnNode('sp2', 'b', [body2]);
+    const race = createRaceNode('rc1', [spawn1, spawn2]);
+    // race child scope has one slot for the spawn, then its body as nested
+    expect(resolveNodeByPath([race], [0, 0])).toBe(spawn1);
+    expect(resolveNodeByPath([race], [0, 1])).toBe(body1);
+    expect(resolveNodeByPath([race], [0, 2])).toBe(spawn2);
+    expect(resolveNodeByPath([race], [0, 3])).toBe(body2);
+  });
+
+  it('describeNodePosition — breadcrumb across if.then, try.catch, race body, swarm role', () => {
+    const thenP = createPromptNode('pt', 't');
+    const catchP = createPromptNode('pc', 'c');
+    const raceBody = createRunNode('rbody', 'echo');
+    const roleP = createPromptNode('rp', 'role');
+
+    const nodes = [
+      createIfNode('i1', 'flag', [thenP], []),
+      createTryNode('t1', [], 'command_failed', [catchP], []),
+      createRaceNode('rc1', [createSpawnNode('sp1', 'w', [raceBody])]),
+      createSwarmNode('sw1', 'team', [createSwarmRoleDefinition('r1', 'worker', [roleP])], []),
+    ];
+
+    expect(describeNodePosition(nodes, [0, 0])).toContain('prompt');
+    expect(describeNodePosition(nodes, [1, 0])).toContain('catch');
+    expect(describeNodePosition(nodes, [2, 1])).toContain('run');
+    expect(describeNodePosition(nodes, [3, 0])).toContain('role worker');
+  });
+
   it('covers root, missing-path, try-finally, and swarm role/flow labels', () => {
     const finallyRun = withNodeSource(createRunNode('rf', 'cleanup'), {
       line: 30,

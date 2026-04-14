@@ -253,6 +253,48 @@ describe('ClaudeProcessSpawner', () => {
   });
 });
 
+describe('ClaudeProcessSpawner — trace env forwarding', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    delete process.env['PL_RUN_ID'];
+    delete process.env['PL_TRACE'];
+    delete process.env['PL_TRACE_DIR'];
+  });
+
+  it('forwards PL_RUN_ID, PL_TRACE, PL_TRACE_DIR, and sets PL_SPAWN_NAME in the child env', async () => {
+    const fakeChild = { pid: 1, unref: vi.fn() };
+    vi.mocked(mockedSpawn).mockReturnValue(fakeChild as never);
+
+    process.env['PL_RUN_ID'] = 'run-xyz';
+    process.env['PL_TRACE'] = '1';
+    process.env['PL_TRACE_DIR'] = '/trace/out';
+
+    const spawner = new ClaudeProcessSpawner('/work');
+    await spawner.spawn(makeInput({ name: 'worker-1' }));
+
+    const callArgs = vi.mocked(mockedSpawn).mock.calls[0]!;
+    const options = callArgs[2] as { env: Record<string, string> };
+    expect(options.env['PL_RUN_ID']).toBe('run-xyz');
+    expect(options.env['PL_TRACE']).toBe('1');
+    expect(options.env['PL_TRACE_DIR']).toBe('/trace/out');
+    expect(options.env['PL_SPAWN_NAME']).toBe('worker-1');
+  });
+
+  it('omits PL_RUN_ID / PL_TRACE when parent has none, but still sets PL_SPAWN_NAME', async () => {
+    const fakeChild = { pid: 1, unref: vi.fn() };
+    vi.mocked(mockedSpawn).mockReturnValue(fakeChild as never);
+
+    const spawner = new ClaudeProcessSpawner('/work');
+    await spawner.spawn(makeInput({ name: 'solo' }));
+
+    const callArgs = vi.mocked(mockedSpawn).mock.calls[0]!;
+    const options = callArgs[2] as { env: Record<string, string> };
+    expect(options.env['PL_RUN_ID']).toBeUndefined();
+    expect(options.env['PL_TRACE']).toBeUndefined();
+    expect(options.env['PL_SPAWN_NAME']).toBe('solo');
+  });
+});
+
 describe('ClaudeProcessSpawner — spawn error propagation', () => {
   beforeEach(() => {
     vi.resetAllMocks();

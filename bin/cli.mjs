@@ -692,9 +692,9 @@ function defaultModelForRunner(runner) {
 }
 
 function ensureSupportedRunner(runner) {
-  if (runner !== 'claude' && runner !== 'codex' && runner !== 'opencode' && runner !== 'ollama') {
+  if (runner !== 'claude' && runner !== 'codex' && runner !== 'opencode' && runner !== 'ollama' && runner !== 'aider') {
     console.error(
-      `Error: Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama.`,
+      `Error: Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama, aider.`,
     );
     process.exit(1);
   }
@@ -813,9 +813,9 @@ function ensureJsonSupportedForRunner(json, runner, commandName) {
         severity: 'error',
         blocksExecution: true,
         retryable: false,
-        summary: `${commandName} --json is currently supported only for headless runners (codex, opencode, ollama).`,
+        summary: `${commandName} --json is currently supported only for headless runners (codex, opencode, ollama, aider).`,
         action:
-          'Use --runner codex, --runner opencode, or --runner ollama for machine-readable execution reports.',
+          'Use --runner codex, --runner opencode, --runner ollama, or --runner aider for machine-readable execution reports.',
       },
     ],
     outcomes: [],
@@ -877,6 +877,18 @@ async function runOllamaFlow(flowText, model, stateDir) {
   );
 }
 
+async function runAiderFlow(flowText, model, stateDir) {
+  return runHeadlessFlow(
+    flowText,
+    model,
+    {
+      runnerModule: 'aider-prompt-turn-runner.js',
+      runnerExport: 'AiderPromptTurnRunner',
+    },
+    stateDir,
+  );
+}
+
 async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.prompt-language') {
   const [
     { runFlowHeadless },
@@ -885,8 +897,11 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
     { HeadlessProcessSpawner },
     { FileCaptureReader },
     { FileAuditLogger },
+    { FileTraceLogger },
+    { NULL_TRACE_LOGGER },
     { FileMemoryStore },
     { FileMessageStore },
+    { TracedPromptTurnRunner },
     runnerModule,
   ] = await Promise.all([
     import(pathToFileURL(join(ROOT, 'dist', 'application', 'run-flow-headless.js')).href),
@@ -908,10 +923,19 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-audit-logger.js')).href
     ),
     import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-trace-logger.js')).href
+    ),
+    import(pathToFileURL(join(ROOT, 'dist', 'application', 'ports', 'trace-logger.js')).href),
+    import(
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-memory-store.js')).href
     ),
     import(
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-message-store.js')).href
+    ),
+    import(
+      pathToFileURL(
+        join(ROOT, 'dist', 'infrastructure', 'adapters', 'traced-prompt-turn-runner.js'),
+      ).href
     ),
     import(
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', runnerConfig.runnerModule))
@@ -927,11 +951,19 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
     : join(cwd, resolvedStateDir);
   const stateStore = new FileStateStore(cwd, resolvedStateDir);
   const auditLogger = new FileAuditLogger(cwd, resolvedStateDir);
+  const traceLogger =
+    process.env['PL_TRACE'] === '1'
+      ? new FileTraceLogger(cwd, resolvedStateDir)
+      : NULL_TRACE_LOGGER;
   const captureReader = new FileCaptureReader(cwd, resolvedStateDir);
   const memoryStore = new FileMemoryStore(cwd, resolvedStateDir);
   const messageStore = new FileMessageStore(resolvedStateRoot, {});
   const commandRunner = new ShellCommandRunner();
-  const promptTurnRunner = new PromptTurnRunner();
+  const rawPromptTurnRunner = new PromptTurnRunner();
+  const promptTurnRunner =
+    process.env['PL_TRACE'] === '1'
+      ? new TracedPromptTurnRunner(rawPromptTurnRunner, traceLogger)
+      : rawPromptTurnRunner;
   const processSpawner = new HeadlessProcessSpawner({
     auditLogger,
     captureReader,
@@ -961,6 +993,7 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
       processSpawner,
       promptTurnRunner,
       stateStore,
+      traceLogger,
     },
   );
 
@@ -1314,6 +1347,18 @@ async function runFlow() {
 
   if (runner === 'ollama') {
     const report = await runOllamaFlow(flowText, model, stateDir);
+    if (json) {
+      console.log(serializeExecutionReport(report));
+    } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+      await writeExecutionReport(report, { header: '[prompt-language run]', stdoutOnOk: true });
+    }
+    const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+    process.exit(deriveDiagnosticReportExitCode(report));
+    return;
+  }
+
+  if (runner === 'aider') {
+    const report = await runAiderFlow(flowText, model, stateDir);
     if (json) {
       console.log(serializeExecutionReport(report));
     } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
@@ -1819,6 +1864,17 @@ async function ci() {
       }
       const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
       process.exit(deriveDiagnosticReportExitCode(report));
+    } else if (runner === 'aider') {
+      const report = await runAiderFlow(flowText, model, stateDir);
+      if (json) {
+        console.log(serializeExecutionReport(report));
+      } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+        await writeExecutionReport(report, { header: '[prompt-language ci]', stdoutOnOk: true });
+      } else {
+        console.log('[prompt-language CI] Flow completed.');
+      }
+      const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+      process.exit(deriveDiagnosticReportExitCode(report));
     } else if (runner === 'claude') {
       const { execFileSync } = await import('node:child_process');
       const claudeArgs = ['-p', '--dangerously-skip-permissions'];
@@ -1834,7 +1890,7 @@ async function ci() {
       process.exit(0);
     } else {
       throw new Error(
-        `Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama.`,
+        `Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama, aider.`,
       );
     }
   } catch (error) {
@@ -1918,14 +1974,14 @@ Commands:
   status       Show installation status
   codex-status Show Codex scaffold status
   init         Scaffold a starter flow in the current directory
-  run          Execute a .flow file or inline flow text (\`--runner claude|codex|opencode|ollama\`)
+  run          Execute a .flow file or inline flow text (\`--runner claude|codex|opencode|ollama|aider\`)
   eval         Run a JSONL eval dataset and optionally compare against a baseline report
   demo         Print an example flow to stdout
   list         Recursively list .flow files in the current directory
   validate     Parse, lint, score, and render a flow without executing it (\`--runner ... --mode interactive|headless\`, \`--check-gates\`)
   render-workflow Show the lowered .flow text for a canonical workflow alias
   artifacts    Inspect artifact packages (\`list\`, \`show\`, \`validate\`)
-  ci           Run a flow headlessly (CI/CD mode, supports \`--runner codex|opencode|ollama\`)
+  ci           Run a flow headlessly (CI/CD mode, supports \`--runner codex|opencode|ollama|aider\`)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild
 

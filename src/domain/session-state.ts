@@ -79,6 +79,10 @@ export interface SessionState {
   readonly captureNonce: string;
   // H-SEC-010: Consecutive gate failure count for rate limiting
   readonly gateFailureCount?: number | undefined;
+  /** Merkle-style content hash of this state (excluding bookkeeping fields). */
+  readonly stateHash?: string | undefined;
+  /** Content hash of the state this one transitioned from, or undefined for the initial state. */
+  readonly prevStateHash?: string | undefined;
 }
 
 /** Generate a 128-bit hex nonce using pure JS (no node:crypto — domain layer). */

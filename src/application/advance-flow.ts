@@ -46,6 +46,8 @@ import type { CaptureReader } from './ports/capture-reader.js';
 import { CAPTURE_PENDING_SENTINEL } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { AuditLogger } from './ports/audit-logger.js';
+import { NULL_TRACE_LOGGER, type TraceEntry, type TraceLogger } from './ports/trace-logger.js';
+import { hashEvent, hashState } from '../domain/state-hash.js';
 import type { MemoryStore } from './ports/memory-store.js';
 import type { MessageStore } from './ports/message-store.js';
 import { interpolate, shellInterpolate } from '../domain/interpolate.js';
@@ -341,7 +343,68 @@ function logSpawnAudit(
   });
 }
 
-function finalizeTransitionState(before: SessionState, after: SessionState): SessionState {
+interface TraceNodeContext {
+  readonly nodeId?: string | undefined;
+  readonly nodeKind?: string | undefined;
+  readonly nodePath?: string | undefined;
+}
+
+import {
+  currentRunId,
+  nextTraceSeq,
+  recordTraceEventHash,
+  resetTraceChain,
+} from './trace-chain.js';
+
+/** Test-only: reset trace-chain bookkeeping between runs. */
+export function __resetTraceChainForTests(): void {
+  resetTraceChain();
+}
+
+function emitNodeAdvanceTrace(
+  traceLogger: TraceLogger,
+  before: SessionState,
+  after: SessionState,
+  ctx: TraceNodeContext,
+): void {
+  if (traceLogger === NULL_TRACE_LOGGER) return;
+  const runId = currentRunId();
+  const { seq, prev } = nextTraceSeq(runId);
+  const partial: Record<string, unknown> = {
+    runId,
+    seq,
+    timestamp: new Date().toISOString(),
+    event: 'node_advance',
+    source: 'runtime',
+    pid: process.pid,
+  };
+  if (ctx.nodeId !== undefined) partial['nodeId'] = ctx.nodeId;
+  if (ctx.nodeKind !== undefined) partial['nodeKind'] = ctx.nodeKind;
+  if (ctx.nodePath !== undefined) partial['nodePath'] = ctx.nodePath;
+  if (before.stateHash !== undefined) partial['stateBeforeHash'] = before.stateHash;
+  if (after.stateHash !== undefined) partial['stateAfterHash'] = after.stateHash;
+  if (prev !== undefined) partial['prevEventHash'] = prev;
+  const eventHash = hashEvent(partial);
+  partial['eventHash'] = eventHash;
+  recordTraceEventHash(runId, eventHash);
+  try {
+    traceLogger.log(partial as unknown as TraceEntry);
+  } catch (error) {
+    // Tracing must never break execution.
+    if (process.env['NODE_ENV'] === 'test') {
+      process.stderr.write(
+        `[prompt-language] trace-logger failure: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+    }
+  }
+}
+
+function finalizeTransitionState(
+  before: SessionState,
+  after: SessionState,
+  traceLogger: TraceLogger = NULL_TRACE_LOGGER,
+  traceContext?: TraceNodeContext,
+): SessionState {
   if (before === after) {
     return after;
   }
@@ -349,6 +412,8 @@ function finalizeTransitionState(before: SessionState, after: SessionState): Ses
   const transitioned: SessionState = {
     ...after,
     transitionSeq: Math.max(after.transitionSeq ?? before.transitionSeq ?? -1, -1) + 1,
+    prevStateHash: before.stateHash,
+    stateHash: hashState({ ...after, stateHash: undefined, prevStateHash: before.stateHash }),
   };
 
   try {
@@ -361,6 +426,8 @@ function finalizeTransitionState(before: SessionState, after: SessionState): Ses
     const details = error instanceof StateInvariantError ? error.message : String(error);
     process.stderr.write(`[prompt-language] ${details}\n`);
   }
+
+  emitNodeAdvanceTrace(traceLogger, before, transitioned, traceContext ?? {});
 
   return transitioned;
 }
@@ -2487,6 +2554,7 @@ export async function autoAdvanceNodes(
   auditLogger?: AuditLogger,
   memoryStore?: MemoryStore,
   messageStore?: MessageStore,
+  traceLogger: TraceLogger = NULL_TRACE_LOGGER,
 ): Promise<AutoAdvanceResult> {
   const MAX_ADVANCES = 100;
   let advances = 0;
@@ -2513,7 +2581,9 @@ export async function autoAdvanceNodes(
       if ('kind' in exhaustionResult) {
         const finalizedResult: AutoAdvanceResult = {
           ...exhaustionResult,
-          state: finalizeTransitionState(current, exhaustionResult.state),
+          state: finalizeTransitionState(current, exhaustionResult.state, traceLogger, {
+            nodePath: current.currentNodePath.join('.'),
+          }),
         };
         if (shouldContinueAutoAdvance(finalizedResult)) {
           pendingDiagnostics.push(...(finalizedResult.diagnostics ?? []));
@@ -2524,7 +2594,9 @@ export async function autoAdvanceNodes(
         }
         return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, finalizedResult);
       }
-      current = finalizeTransitionState(current, exhaustionResult);
+      current = finalizeTransitionState(current, exhaustionResult, traceLogger, {
+        nodePath: current.currentNodePath.join('.'),
+      });
       if (current.status !== 'active') {
         return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
           kind: 'advance',
@@ -2557,7 +2629,11 @@ export async function autoAdvanceNodes(
     if ('capturedPrompt' in result) {
       const finalizedResult: AutoAdvanceResult = {
         ...result,
-        state: finalizeTransitionState(current, result.state),
+        state: finalizeTransitionState(current, result.state, traceLogger, {
+          nodeId: node.id,
+          nodeKind: node.kind,
+          nodePath: current.currentNodePath.join('.'),
+        }),
       };
       if (shouldContinueAutoAdvance(finalizedResult)) {
         pendingDiagnostics.push(...(finalizedResult.diagnostics ?? []));
@@ -2574,7 +2650,11 @@ export async function autoAdvanceNodes(
       }
       return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, finalizedResult);
     }
-    current = finalizeTransitionState(current, result.state);
+    current = finalizeTransitionState(current, result.state, traceLogger, {
+      nodeId: node.id,
+      nodeKind: node.kind,
+      nodePath: current.currentNodePath.join('.'),
+    });
     if (current.status !== 'active') {
       return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
         kind: 'advance',
@@ -2599,7 +2679,9 @@ export async function autoAdvanceNodes(
       warnings: [...current.warnings, 'Flow paused — will continue on next interaction.'],
     };
     // H-REL-007: Try to complete the flow even after MAX_ADVANCES
-    current = finalizeTransitionState(current, maybeCompleteFlow(maxAdvanceState));
+    current = finalizeTransitionState(current, maybeCompleteFlow(maxAdvanceState), traceLogger, {
+      nodePath: current.currentNodePath.join('.'),
+    });
     // If current node is a prompt, include it so the agent can act on it
     const currentNode = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
     if (currentNode?.kind === 'prompt') {

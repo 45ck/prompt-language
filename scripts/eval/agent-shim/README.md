@@ -29,14 +29,14 @@ If either side lies (or skips a call), the check fails.
 
 ## Environment contract
 
-| Var                  | Required                        | Meaning                                                                                                             |
-| -------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `PL_RUN_ID`          | yes (shim exits 2 if missing)   | Run id that ties shim and runtime traces together.                                                                  |
-| `PL_TRACE_DIR`       | no (default `.prompt-language`) | Directory containing `provenance.jsonl`. Relative to cwd.                                                           |
-| `PL_REAL_BIN`        | yes                             | Absolute path to the real binary to exec.                                                                           |
-| `PL_SHIM_NAME`       | no                              | Short identity (e.g. `claude`) written into the trace.                                                              |
-| `PL_REAL_BIN_<NAME>` | yes for per-name stubs          | Windows `.cmd` stubs read `PL_REAL_BIN_CLAUDE`, `PL_REAL_BIN_CODEX`, etc. and populate `PL_REAL_BIN` automatically. |
-| `PL_SHIM_TRUST_CACHE`| no (default unset)              | When set to `'1'`, re-enables the legacy mtime-keyed binary hash cache. Any other value (including unset) forces always-compute. Dev-only; see "Security: binary identity". |
+| Var                   | Required                        | Meaning                                                                                                                                                                     |
+| --------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PL_RUN_ID`           | yes (shim exits 2 if missing)   | Run id that ties shim and runtime traces together.                                                                                                                          |
+| `PL_TRACE_DIR`        | no (default `.prompt-language`) | Directory containing `provenance.jsonl`. Relative to cwd.                                                                                                                   |
+| `PL_REAL_BIN`         | yes                             | Absolute path to the real binary to exec.                                                                                                                                   |
+| `PL_SHIM_NAME`        | no                              | Short identity (e.g. `claude`) written into the trace.                                                                                                                      |
+| `PL_REAL_BIN_<NAME>`  | yes for per-name stubs          | Windows `.cmd` stubs read `PL_REAL_BIN_CLAUDE`, `PL_REAL_BIN_CODEX`, etc. and populate `PL_REAL_BIN` automatically.                                                         |
+| `PL_SHIM_TRUST_CACHE` | no (default unset)              | When set to `'1'`, re-enables the legacy mtime-keyed binary hash cache. Any other value (including unset) forces always-compute. Dev-only; see "Security: binary identity". |
 
 ## Install on Windows
 

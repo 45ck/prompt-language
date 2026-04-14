@@ -1,0 +1,7 @@
+Done.
+
+**Summary:**
+- **Gap identified:** labeled loops (`outer: foreach`) + labeled break (`break outer`) had zero smoke coverage. Keyword `labeled_break` was absent from `smoke-test.mjs`.
+- **Test authored:** `testAWLabeledBreak` in `scripts/eval/smoke-test.mjs:2062`. Uses `outer: foreach i in "1 2 3"` with inner `foreach j in "a b c"` and triggers `break outer` on i=="2". Oracle asserts exactly 4 expected files exist (`iter-1a/b/c`, `iter-2a`) and 5 forbidden files do not (`iter-2b/c`, `iter-3a/b/c`). This distinguishes labeled-break semantics from plain `break` (which would produce 5 files).
+- **Registered:** `await timed('AW', …)` added above Z1; catalog bullet added to `CLAUDE.md:180`; header comment in `smoke-test.mjs` updated.
+- **Verified:** `SMOKE_ONLY=AW node scripts/eval/smoke-test.mjs` → `PASS AW` (1/1). Fast test, well under 90s, so `AW` (not `AX`) is correct.

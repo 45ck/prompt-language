@@ -1,0 +1,62 @@
+{
+  "mode": "live",
+  "runId": "meta-1776129598770-407100",
+  "bundleDir": "C:\\Projects\\prompt-language\\experiments\\meta-factory\\results\\meta-1776129598770-407100",
+  "success": false,
+  "reason": "verify-trace-failed",
+  "preflight": {
+    "install": {
+      "pluginDir": "C:\\Users\\MQCKENC\\.claude\\plugins\\cache\\prompt-language-local\\prompt-language\\0.3.0",
+      "manifestPath": "C:\\Users\\MQCKENC\\.claude\\plugins\\installed_plugins.json",
+      "installed": true,
+      "ranInstall": false
+    },
+    "shim": {
+      "shimDir": "C:\\Projects\\prompt-language\\scripts\\eval\\agent-shim",
+      "exists": true
+    },
+    "auth": {
+      "claudeBin": "C:\\Users\\MQCKENC\\.local\\bin\\claude.exe",
+      "authenticated": true,
+      "version": "2.1.105 (Claude Code)"
+    }
+  },
+  "live": {
+    "exitCode": 0,
+    "signal": null,
+    "timedOut": false
+  },
+  "verify": {
+    "ran": false,
+    "reason": "no-provenance"
+  },
+  "diff": {
+    "added": [
+      "scripts/eval/results/smoke-2026-04-14T01-22-44-527Z.json",
+      "scripts/eval/results/smoke-2026-04-14T01-23-34-135Z.json",
+      "scripts/eval/results/smoke-2026-04-14T01-25-41-221Z.json",
+      "scripts/eval/results/smoke-2026-04-14T01-26-47-352Z.json",
+      "scripts/experiments/meta/README.md",
+      "scripts/experiments/meta/compute-manifest.mjs",
+      "scripts/experiments/meta/manifest-diff.mjs",
+      "scripts/experiments/meta/run-meta-experiment.mjs",
+      "scripts/experiments/meta/run-meta-experiment.test.mjs",
+      "src/infrastructure/adapters/aider-prompt-turn-runner.test.ts",
+      "src/infrastructure/adapters/aider-prompt-turn-runner.ts"
+    ],
+    "removed": [
+      "scripts/eval/results/smoke-2026-04-10T02-19-13-387Z.json",
+      "scripts/eval/results/smoke-2026-04-10T02-29-09-042Z.json",
+      "scripts/eval/results/smoke-2026-04-10T02-29-11-373Z.json",
+      "scripts/eval/results/smoke-2026-04-10T02-32-34-614Z.json"
+    ],
+    "changed": [
+      "scripts/eval/results/history.jsonl",
+      "scripts/eval/smoke-test.mjs",
+      "src/application/context-variable-slice.test.ts",
+      "src/domain/flow-node.test.ts"
+    ],
+    "protectedChanged": []
+  },
+  "error": null
+}

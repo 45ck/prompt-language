@@ -9,16 +9,37 @@
  */
 
 import { appendFileSync, mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import type { TraceEntry, TraceLogger } from '../../application/ports/trace-logger.js';
 import { resolveStateRoot } from './resolve-state-root.js';
+
+/**
+ * Resolve the directory that will contain `provenance.jsonl`.
+ *
+ * Precedence:
+ *   1. `PL_TRACE_DIR` absolute → use that exact directory.
+ *   2. `PL_TRACE_DIR` relative → resolve against `cwd`.
+ *   3. Otherwise → fall back to `resolveStateRoot(cwd, stateDir)` (legacy).
+ *
+ * This keeps the domain pure (env reads stay in the infrastructure adapter)
+ * and ensures every site that constructs a FileTraceLogger — hooks, CLI,
+ * decorators — honors the harness-supplied `PL_TRACE_DIR` without needing
+ * to duplicate the resolution logic.
+ */
+function resolveTraceDir(cwd: string, stateDir: string): string {
+  const envDir = process.env['PL_TRACE_DIR'];
+  if (envDir && envDir.length > 0) {
+    return isAbsolute(envDir) ? envDir : join(cwd, envDir);
+  }
+  return resolveStateRoot(cwd, stateDir);
+}
 
 export class FileTraceLogger implements TraceLogger {
   private readonly filePath: string;
   private dirEnsured = false;
 
   constructor(cwd: string, stateDir = '.prompt-language') {
-    this.filePath = join(resolveStateRoot(cwd, stateDir), 'provenance.jsonl');
+    this.filePath = join(resolveTraceDir(cwd, stateDir), 'provenance.jsonl');
   }
 
   log(entry: TraceEntry): void {

@@ -64,9 +64,13 @@ function runVerifier(tracePath) {
   // Integration tests here exercise shim-only flows without a session-state
   // file, so pass --allow-missing-state to keep the test surface focused on
   // shim/runtime pairing and chain integrity.
-  return spawnSync(NODE_EXE, [VERIFIER_PATH, '--trace', tracePath, '--allow-missing-state', '--json'], {
-    encoding: 'utf8',
-  });
+  return spawnSync(
+    NODE_EXE,
+    [VERIFIER_PATH, '--trace', tracePath, '--allow-missing-state', '--json'],
+    {
+      encoding: 'utf8',
+    },
+  );
 }
 
 function cleanup(dir) {
@@ -296,11 +300,7 @@ test('AP-4(B): default mode detects mtime-preserve swap of the real binary', () 
     assert.equal(r2.status, 0, `r2 stderr: ${r2.stderr}`);
     const sha2 = readBinarySha(tracePath);
 
-    assert.notEqual(
-      sha1,
-      sha2,
-      'default mode must rehash every invocation and detect the swap',
-    );
+    assert.notEqual(sha1, sha2, 'default mode must rehash every invocation and detect the swap');
   } finally {
     cleanup(cwd);
     clearBinaryCache();

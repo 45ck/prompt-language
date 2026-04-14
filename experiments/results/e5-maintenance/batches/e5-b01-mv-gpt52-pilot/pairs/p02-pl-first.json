@@ -1,0 +1,58 @@
+{
+  "pairId": "p02-pl-first",
+  "batchId": "e5-b01-mv-gpt52-pilot",
+  "order": ["prompt-language", "codex-alone"],
+  "stages": [
+    {
+      "stage": "factory-pl",
+      "lane": "prompt-language",
+      "workspace": "runs/<run-id>/pl-workspace",
+      "timeBudgetMin": 360,
+      "noteOnBudget": "PL budget is 3x codex budget by design; extra time is expected, not penalized"
+    },
+    {
+      "stage": "factory-codex",
+      "lane": "codex-alone",
+      "workspace": "runs/<run-id>/codex-workspace",
+      "timeBudgetMin": 120,
+      "recordedMetrics": ["wallClockSec", "interventionCount", "failureClass"]
+    },
+    {
+      "stage": "gate-family-1-2-3",
+      "appliesTo": ["codex-workspace", "pl-workspace"],
+      "harness": "scripts/experiments/e5/run-journey-suite.mjs",
+      "failureHandling": "classify pair build-failed for that lane; still hand off for family-4 on pass side"
+    },
+    {
+      "stage": "blind-handoff",
+      "strip": [
+        "*.flow",
+        "project.flow",
+        "phases/",
+        "flow-packs/",
+        "prompt-language/",
+        ".prompt-language/",
+        "trace/",
+        "factory-trace/"
+      ],
+      "strippedDiffRecordedAt": "handoff/p02-pl-first-strip.diff"
+    },
+    {
+      "stage": "maintenance-pl-tree",
+      "input": "stripped pl-workspace",
+      "suite": "harness/change-requests.md",
+      "recordedMetrics": ["changeRequestPassRate", "reworkCost", "driftDelta"]
+    },
+    {
+      "stage": "maintenance-codex-tree",
+      "input": "stripped codex-workspace",
+      "suite": "harness/change-requests.md",
+      "recordedMetrics": ["changeRequestPassRate", "reworkCost", "driftDelta"]
+    },
+    {
+      "stage": "scorecard",
+      "template": "experiments/results/e5-maintenance/templates/scorecard.template.json",
+      "output": "runs/<run-id>/scorecard.json"
+    }
+  ]
+}

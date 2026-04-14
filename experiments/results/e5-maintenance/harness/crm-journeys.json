@@ -1,0 +1,69 @@
+{
+  "version": "v1",
+  "note": "Machine-readable mirror of crm-journeys.md. If the .md file changes, update this file too and bump version. The runner refuses to proceed on version mismatch.",
+  "source": "experiments/results/e5-maintenance/harness/crm-journeys.md",
+  "journeys": [
+    {
+      "id": "J1",
+      "title": "First-run admin setup",
+      "automation": "requires-manual-review",
+      "reason": "First-run setup path is lane-specific and cannot be discovered without reading source. Must be piloted by a human."
+    },
+    {
+      "id": "J2",
+      "title": "Create and list a contact",
+      "automation": "http",
+      "reason": "Expected to be discoverable from the lane's README once a documented HTTP entrypoint exists."
+    },
+    {
+      "id": "J3",
+      "title": "Company with contacts",
+      "automation": "http",
+      "reason": "Depends on J2 documented surface."
+    },
+    {
+      "id": "J4",
+      "title": "Opportunity through the pipeline",
+      "automation": "http",
+      "reason": "Depends on pipeline-stage contract being documented."
+    },
+    {
+      "id": "J5",
+      "title": "Task with due date and completion",
+      "automation": "http",
+      "reason": "Depends on task contract being documented."
+    },
+    {
+      "id": "J6",
+      "title": "Note on a contact",
+      "automation": "http",
+      "reason": "Depends on note contract being documented."
+    },
+    {
+      "id": "J7",
+      "title": "Dashboard reporting reflects activity",
+      "automation": "requires-manual-review",
+      "reason": "Widgets are UI-only without a contracted metrics endpoint. v1 harness does not chase DOM."
+    }
+  ],
+  "persistenceProbes": [
+    {
+      "id": "P1",
+      "title": "Restart survives state",
+      "automation": "requires-manual-review",
+      "reason": "Restart hook is lane-specific. Treated as manual until a documented restart contract exists."
+    },
+    {
+      "id": "P2",
+      "title": "Transaction rollback",
+      "automation": "requires-manual-review",
+      "reason": "Requires knowledge of declared constraints; not machine-discoverable in v1."
+    },
+    {
+      "id": "P3",
+      "title": "Concurrent write",
+      "automation": "requires-manual-review",
+      "reason": "Requires concurrency harness outside v1 scope."
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "batchId": "e5-b01-mv-gpt52-pilot",
+  "program": "e5-maintenance",
+  "scope": "crm-mvp-bounded",
+  "claimType": "maintenance-viability",
+  "status": "planned",
+  "declaredBeforeRun": true,
+  "declaredAt": "2026-04-14",
+  "frozenCommit": null,
+  "factoryLanes": [
+    {
+      "lane": "codex-alone",
+      "model": "gpt-5.2",
+      "entrypoint": "experiments/full-saas-factory/e4-codex-crm-factory/codex-alone-baseline.md"
+    },
+    {
+      "lane": "prompt-language",
+      "model": "gpt-5.2",
+      "entrypoint": "experiments/full-saas-factory/e4-codex-crm-factory/project.flow",
+      "phasePack": [
+        "phases/phase-1-discovery.flow",
+        "phases/phase-2-build.flow",
+        "phases/phase-3-release.flow"
+      ]
+    }
+  ],
+  "maintenanceLane": {
+    "model": "gpt-5.2",
+    "seed": null,
+    "blinded": true,
+    "contextRule": "cold-start, no prior session, no lane identity disclosed"
+  },
+  "journeySuite": "experiments/results/e5-maintenance/harness/crm-journeys.md",
+  "changeRequestSuite": "experiments/results/e5-maintenance/harness/change-requests.md",
+  "pairs": [
+    {
+      "pairId": "p01-codex-first",
+      "order": ["codex-alone", "prompt-language"],
+      "manifest": "pairs/p01-codex-first.json"
+    },
+    {
+      "pairId": "p02-pl-first",
+      "order": ["prompt-language", "codex-alone"],
+      "manifest": "pairs/p02-pl-first.json"
+    }
+  ],
+  "promotionCriteria": {
+    "minPairsClearingGates": 2,
+    "bothLanesMustClearFamily123": true,
+    "maintenanceLaneBlindingVerified": true,
+    "confoundsChecked": [
+      "docs-only advantage",
+      "feature-count feeding maintenance advantage",
+      "maintenance model style bias"
+    ]
+  },
+  "nextBatchOnSuccess": "e5-b02-mv-gpt52-primary",
+  "notes": "Pilot batch. Two counterbalanced pairs only. Promote to primary (N=4) only if both pairs clear family 1-3 gates and blinding passes audit."
+}

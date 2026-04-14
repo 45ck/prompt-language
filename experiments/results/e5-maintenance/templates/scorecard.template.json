@@ -1,0 +1,148 @@
+{
+  "scoreVersion": "e5-v1",
+  "runId": "<run-id>",
+  "batch": {
+    "batchId": "<batch-id>",
+    "pairId": "<pair-id>"
+  },
+  "scope": "<bounded-scope>",
+  "question": "<research-question>",
+  "evaluationModel": {
+    "claimType": "maintenance-viability",
+    "primaryEndpoint": "maintenanceViabilityIndex",
+    "secondaryEndpoints": [
+      "featureCompletionRatio",
+      "journeyPassRate",
+      "runsFromCleanCheckout",
+      "changeRequestPassRate",
+      "reworkCost",
+      "driftResistance"
+    ],
+    "retiredEndpoints": [
+      "processConformance",
+      "traceAuthority",
+      "reuseReadiness",
+      "closureQuality"
+    ]
+  },
+  "blinding": {
+    "maintenanceLaneBlinded": false,
+    "strippedDirectories": [],
+    "handoffDiffArtifact": "<repo-relative path>",
+    "changeRequestsDeclaredBeforeRun": false,
+    "maintenanceLaneModel": "<model-id>",
+    "maintenanceLaneSeed": null
+  },
+  "admissibility": {
+    "class": "supporting-context",
+    "buildGatesPassed": false,
+    "claimEligibility": {
+      "maintenanceViability": false
+    },
+    "reason": "<why this pair can or cannot support a maintenance-viability claim>"
+  },
+  "comparativeVerdict": "inconclusive",
+  "lanes": [
+    {
+      "lane": "<lane-name>",
+      "candidate": "<codex-alone | prompt-language>",
+
+      "familyOne_featureCompletion": {
+        "featuresSpecified": null,
+        "featuresShipped": null,
+        "featureCompletionRatio": null,
+        "deadCodeRatio": null,
+        "evidence": {
+          "specArtifact": "<path>",
+          "journeyResults": "<path>",
+          "coverageReport": "<path>"
+        }
+      },
+
+      "familyTwo_behavioralCorrectness": {
+        "journeysDeclared": null,
+        "journeysPassed": null,
+        "journeyPassRate": null,
+        "persistenceIntegrity": {
+          "restartSurvivesState": null,
+          "transactionRollback": null,
+          "concurrentWrite": null
+        },
+        "contractViolations": null,
+        "evidence": {
+          "journeyRunLog": "<path>",
+          "persistenceProbeLog": "<path>",
+          "contractSuiteReport": "<path>"
+        }
+      },
+
+      "familyThree_deliverability": {
+        "runsFromCleanCheckout": null,
+        "buildArtifactValid": null,
+        "timeToFirstInteractionSec": null,
+        "cleanCheckoutSteps": null,
+        "humanFixupsRequired": null,
+        "evidence": {
+          "cleanCheckoutLog": "<path>",
+          "buildLog": "<path>",
+          "livenessProbeLog": "<path>"
+        }
+      },
+
+      "familyFour_maintenanceViability": {
+        "changeRequestsAttempted": null,
+        "changeRequestsPassed": null,
+        "changeRequestPassRate": null,
+        "reworkCost": {
+          "linesOfCodeTouched": null,
+          "filesModified": null,
+          "filesCreated": null,
+          "filesDeleted": null,
+          "artifactsRewritten": null,
+          "totalReworkUnits": null
+        },
+        "driftResistance": {
+          "featureCompletionRatioPreSuite": null,
+          "featureCompletionRatioPostSuite": null,
+          "driftDelta": null
+        },
+        "maintenanceViabilityIndex": null,
+        "evidence": {
+          "changeRequestRunLog": "<path>",
+          "reworkDiff": "<path>",
+          "postSuiteJourneyReport": "<path>"
+        }
+      },
+
+      "gatingStatus": {
+        "clearsFamilyOne": false,
+        "clearsFamilyTwo": false,
+        "clearsFamilyThree": false,
+        "eligibleForFamilyFour": false
+      },
+
+      "supportingContext": {
+        "timeToGreenSec": null,
+        "interventionCount": null,
+        "restartCount": null,
+        "failureClass": "none",
+        "processConformance": "not-scored",
+        "traceAuthority": "not-scored"
+      },
+
+      "notes": "<why these values were recorded>"
+    }
+  ],
+  "comparativeSummary": "<plain-language result stated against the maintenance-viability thesis>",
+  "thesisVerdict": {
+    "claim": "PL-first output is more maintainable than codex-first output under blind second-lane maintenance",
+    "decision": "unconfirmed",
+    "reason": "<why this pair supports, contradicts, or cannot speak to the claim>",
+    "confoundsConsidered": [
+      "docs-only advantage (strip-docs sensitivity check)",
+      "feature-count advantage flowing into maintenance advantage",
+      "maintenance lane model bias toward one factory lane's style"
+    ]
+  },
+  "nextExperimentFocus": ["<follow-up>"]
+}

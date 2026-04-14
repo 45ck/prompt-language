@@ -4,6 +4,25 @@ Operator documentation for the Merkle-chained execution trace and
 independent-witness shim. Covers enabling tracing, reading the output,
 running the verifier, and interpreting failures.
 
+## Status: opt-in
+
+**Tracing is NOT on by default.** A stock `npm install @45ck/prompt-language`
+install produces no `provenance.jsonl`, runs no verifier, and performs no
+witness pairing. Every feature in this document requires:
+
+- `PL_TRACE=1` — enables the runtime trace chain and shim event emission
+- `PL_TRACE_STRICT=1` — fails tests when a trace is expected but absent (M1 smoke gate)
+- `PL_TRACE_DIR=<path>` — where `provenance.jsonl` is written (optional;
+  defaults to `<cwd>/.prompt-language/`)
+
+Claim-eligible runs additionally require the G1 hardening flags
+(`--expected-run-id`, `--expected-pair-count`, `--expected-binary-hashes`)
+and, when AP-9 attestation ships, `--require-attestation` with a signer
+role in `docs/security/trusted-signers.json`.
+
+Current claim-eligibility status: **zero runs in the repo satisfy all
+gates today**. See `docs/strategy/program-status.md` §Verification state.
+
 ## Why this exists
 
 The thesis claims the PL runtime drove an evaluation run, not the harness

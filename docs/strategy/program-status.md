@@ -39,6 +39,44 @@ Every item below is a commit on `main`.
 
 Not measured / not claimed: cost, latency, or pass-rate deltas for any thesis hypothesis (H1–H6). No E5 pair has produced a `maintenanceViabilityIndex` number.
 
+## 3a. Claim-eligibility rule
+
+A run is **claim-eligible** iff ALL of the following hold. Today **zero
+runs satisfy all five**:
+
+1. `PL_TRACE=1 PL_TRACE_STRICT=1` was set for the run (strict tracing)
+2. Preflight envelope returned `overall: ready` (not `degraded`/`blocked`/`forced`)
+3. `verify-trace` exited 0 with `--require-attestation --require-role operator`
+4. Cross-family reviewer lane ran AND did not veto (factoryFamily ≠ reviewerFamily)
+5. Bundle includes `attestation.json` signed by an operator key in `docs/security/trusted-signers.json`
+
+Any other run is **recorded** (evidence archived, trace verified at whatever
+level was possible) but **not counted toward thesis verdicts**.
+
+| Item | Shipped? | Blocker |
+| --- | --- | --- |
+| Strict mode (1) | yes (commit ec086e8) | operator must set the env var |
+| Preflight (2) | script shipped (I2); mandatory-gate K2b pending | K2b quota-blocked |
+| Attestation flags (3) | designed (I3); not implemented | K1 quota-blocked |
+| Cross-family reviewer (4) | design-only (I1); no enforcement | Implementation pending |
+| Trusted-signers registry (5) | does not exist | K1 ships this |
+
+## 3b. Verification state of closed beads
+
+Beads are closed when a commit lands. That does not always mean the
+outcome was verified by running the experiment. Honest audit:
+
+| Bead | Closed on | Verification state |
+| --- | --- | --- |
+| prompt-lenh (coverage → 90) | `1a53d7b` | **Verified**: coverage test ran post-commit; 90.00% |
+| prompt-y0hv (tamper-drill nightly) | `0271483` | **Committed but not run**: 10 unit cases pass locally; nightly job has never fired (workflow pending first schedule trigger) |
+| prompt-lm0o.4 (MF-1 original live run) | `b567405` | **Run but not claim-eligible**: bundle's own `report.json` says `success: false, reason: verify-trace-failed`. Code Claude authored was reverted per harness rules. |
+| prompt-lm0o.1 (meta-factory scaffold) | `08c0c08` | **Verified**: parse-tested, dry-run works, 0 warnings |
+| prompt-lm0o.3 (DSL primitives PR1) | `c28d3c4` | **Verified**: 2745 unit tests pass including 23 new snapshot/rollback cases; no live smoke-tested |
+| prompt-axt5.4 (shared blinding regex) | open | Not started |
+| prompt-xgav.1 (F4 security review) | closed (doc-only) | **Verified**: doc shipped, no code change claimed |
+| prompt-xgav.2 through .8 (G1/G2/G3 hardening) | closed | **Verified**: T1–T18 + fuzz + shim integration tests pass; no live-run pressure |
+
 ## 4. In flight (as of this doc)
 
 "In flight" = an agent or workstream has open work, not that a human is literally watching a terminal. The specific workstream labels the operator referenced (F2, G1, G2, G3, H1, H3 and bead IDs `prompt-axt5`, `prompt-lm0o`) are not grep-findable in `.beads/issues.jsonl` in that form — the beads tracker uses `prompt-language-<slug>` IDs. The concrete in-flight items I can verify from the tracker and the ranked-patch table:

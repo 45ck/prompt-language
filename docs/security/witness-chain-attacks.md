@@ -171,3 +171,24 @@ on one design change: **the verifier must consume at least one input
 that originated outside the workspace and cannot be rewritten by the
 meta-flow** — a nonce, an expected pair count, a signed binary manifest,
 or ideally all three.
+
+## Status of the ranked patches (2026-04-14)
+
+| Rank | AP | Status | Commit |
+| --- | --- | --- | --- |
+| 1 | AP-5 (external nonce) | **Partially shipped, real fix pending**. G1 (`ec086e8`) added `--expected-run-id` but the nonce is written to `os.tmpdir()` which is readable by any same-user process. The attack "write nonce offline, pass matching runId in forged trace" still works if the attacker has read access. K2b will move the nonce to `~/.pl-meta-nonces/<64-hex-random>.nonce` with mode 0600. | `ec086e8` (partial) + K2b pending |
+| 2 | AP-1 / AP-2 (mandatory `--state`) | Shipped | `ec086e8` |
+| 3 | AP-8 (expected-pair-count + min-entries) | Shipped | `ec086e8` |
+| 4 | AP-3 (binary hash allow-list + pairKey) | Shipped; allow-list populated | `ec086e8` + J1 |
+| 5 | AP-4 (shim cache hardening) | Shipped | `2ba45ec` |
+| 6 | AP-6 (canonicalJSON dedup) | Shipped | `60c5c40` |
+| — | AP-9 (Ed25519 attestation) | **Design only**; implementation (K1) agent-quota-blocked. This is the only fix that places trust outside the workspace entirely. | `0cccfbd` (design) |
+
+## Honest claim-eligibility position
+
+Until AP-5 lands the real out-of-workspace nonce (K2b) AND AP-9 ships a
+verified attestation (K1), every "claim-eligible" run in this repo is
+locally trustable but not externally defensible. A motivated adversary
+with workspace-write access can still produce a bundle that makes
+`verify-trace OK` exit 0. That is adequate for dev confidence; it is
+not adequate for publishable thesis evidence.

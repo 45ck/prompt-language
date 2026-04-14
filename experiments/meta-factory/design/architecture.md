@@ -12,6 +12,7 @@ immediately poison the very interpreter that executes the flow, producing
 a cascade where diagnosis is impossible.
 
 **Drivers.**
+
 - Reproducibility: a run must be replayable from a fixed runtime image.
 - Debuggability: a failing run must not implicate the runtime it used.
 - Separation of subject and tool.
@@ -23,6 +24,7 @@ The flow may only write to `src/`, `scripts/eval/smoke-test.mjs`,
 and `package-lock.json` are read-only for the duration of the run.
 
 **Consequences.**
+
 - A post-run `npm run build` refreshes `dist/` only after the run is
   accepted.
 - Runtime bugs cannot be fixed mid-run; they require a separate
@@ -38,6 +40,7 @@ interleaved edits, accidental commits, and contamination of the host
 working tree.
 
 **Drivers.**
+
 - Isolation between concurrent runs.
 - Clean rollback on failure.
 - Ability to diff a single run's output without noise from others.
@@ -48,6 +51,7 @@ HEAD. All flow edits land inside that worktree. Successful runs produce
 a patch that is reviewed and cherry-picked; failed runs are deleted whole.
 
 **Consequences.**
+
 - `workspaces/` is gitignored (except `.gitkeep`).
 - `run.sh` is responsible for worktree lifecycle.
 - Disk usage grows linearly with run count; a cleanup policy is needed.
@@ -59,6 +63,7 @@ test is correct") is strong but produces silent false positives. Every
 acceptance decision must be external to the agent.
 
 **Drivers.**
+
 - Ground truth must come from deterministic, reproducible tooling.
 - Model self-assessment is an unreliable oracle for its own output.
 
@@ -68,6 +73,7 @@ Any acceptance language from the model itself is advisory only; `run.sh`
 ignores it.
 
 **Consequences.**
+
 - Meta-runs are slower (each full gate is ~10 minutes).
 - The acceptance oracle is small, auditable, and shared with the manual
   development loop.
@@ -79,6 +85,7 @@ ignores it.
 loops and retries. Without a trace, post-mortem diagnosis is infeasible.
 
 **Drivers.**
+
 - Every meta-run must produce a machine-readable execution trace.
 - Strict mode catches emission regressions early.
 - Trace contract is already defined in `docs/tracing-and-provenance.md`.
@@ -88,6 +95,7 @@ invoking `claude -p`. Post-run, it invokes `verify-trace` against the
 emitted trace. A run cannot be accepted unless `verify-trace` exits 0.
 
 **Consequences.**
+
 - Every run produces a trace archived in the evidence bundle.
 - Trace schema drift breaks meta-runs loudly; this is desirable.
 - Overhead of tracing is acceptable given run cadence.
@@ -99,6 +107,7 @@ refactor a helper in a single run has three failure modes, three
 rollback surfaces, and zero clean acceptance criteria.
 
 **Drivers.**
+
 - Single acceptance criterion per run is simpler to verify.
 - Failures are easier to localise.
 - Parallel runs can cover different targets without conflict.
@@ -108,6 +117,7 @@ M1 adds one smoke test. MF-2 adds one docstring block. MF-3 adds one
 parser rule. No combined targets.
 
 **Consequences.**
+
 - More runs are needed to cover the corpus.
 - Each run's acceptance oracle is small and unambiguous.
 - Cross-target coordination is a human responsibility, not a flow's.

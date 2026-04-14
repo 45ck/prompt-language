@@ -82,15 +82,15 @@ Adapters live in `src/infrastructure/adapters/`. Keep `fs`, `tar`, and
 
 ## 4. Error model
 
-| Primitive | Failure | Behavior |
-| --- | --- | --- |
-| `snapshot` | duplicate name | overwrite silently; warning `snapshot "<name>" overwritten` |
-| `snapshot` | file capture fails | record snapshot without `filesDigestRef`; warning |
-| `rollback` | unknown name | pause with `failureReason: "rollback: no snapshot named <name>"`. Do NOT `markFailed` — let `try`/`catch` recover |
-| `rollback` | file restore fails | advance anyway; warning recorded |
-| `diff-review` | no auto, no operator | pause (share `approve` pause infra) |
-| `diff-review` | `PL_DIFF_REVIEW_AUTO=reject` | set `diff_review_rejected="true"`; advance |
-| `self-trace-replay` | dir/file missing, parse error, invalid chain | set `replay.success="false"`, `replay.error=<msg>`, `replay.entries_count="0"`; advance |
+| Primitive           | Failure                                      | Behavior                                                                                                          |
+| ------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `snapshot`          | duplicate name                               | overwrite silently; warning `snapshot "<name>" overwritten`                                                       |
+| `snapshot`          | file capture fails                           | record snapshot without `filesDigestRef`; warning                                                                 |
+| `rollback`          | unknown name                                 | pause with `failureReason: "rollback: no snapshot named <name>"`. Do NOT `markFailed` — let `try`/`catch` recover |
+| `rollback`          | file restore fails                           | advance anyway; warning recorded                                                                                  |
+| `diff-review`       | no auto, no operator                         | pause (share `approve` pause infra)                                                                               |
+| `diff-review`       | `PL_DIFF_REVIEW_AUTO=reject`                 | set `diff_review_rejected="true"`; advance                                                                        |
+| `self-trace-replay` | dir/file missing, parse error, invalid chain | set `replay.success="false"`, `replay.error=<msg>`, `replay.entries_count="0"`; advance                           |
 
 All four auto-advance on success (except `diff-review` human pause).
 None call `markFailed()`: meta-flows must stay in control.
@@ -119,17 +119,17 @@ can correlate without being confused by hash drift.
 
 ## 7. Risks and guards
 
-| Risk | Severity | Guard |
-| --- | --- | --- |
-| Rollback resurrects `currentPath` inside a loop whose iteration counter was reset, re-running side effects | HIGH | Parser warning when `snapshot` appears inside `while`/`foreach`/`retry` |
-| Rollback while spawned children are live — children keep running, parent forgets about them | HIGH | `snapshots` deliberately excludes `spawnedChildren` |
-| Exhaustive switch update burden — 4 new kinds × many switches; TS catches it, lint/coverage may not | MED | Update every `kind: 'return'` sentinel case simultaneously |
-| `PL_SNAPSHOT_INCLUDE_FILES=1` with large `.prompt-language/` — unbounded memory/disk | MED | 10 MB cap; refuse and warn above |
-| `self-trace-replay` on a concurrently-being-written `provenance.jsonl` reads partial trailing line | MED | Tolerate trailing partial JSON; count only fully-parsed entries; never throw |
-| `snapshot` bareword collides if a user later defines variable named `snapshot` | LOW | Reserved keyword; reject as variable name |
-| `SessionState.snapshots` collides with existing serialization fixtures | LOW | Default `{}`; backwards-compatible via `createSessionState` |
-| Chain verifier duplicated between `.mjs` and `.ts` | LOW | Parity test over hand-crafted 3-entry trace |
-| Smoke test id collision with concurrent agents | LOW | Coordinate via git; use the highest unused letter |
+| Risk                                                                                                       | Severity | Guard                                                                        |
+| ---------------------------------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------------------- |
+| Rollback resurrects `currentPath` inside a loop whose iteration counter was reset, re-running side effects | HIGH     | Parser warning when `snapshot` appears inside `while`/`foreach`/`retry`      |
+| Rollback while spawned children are live — children keep running, parent forgets about them                | HIGH     | `snapshots` deliberately excludes `spawnedChildren`                          |
+| Exhaustive switch update burden — 4 new kinds × many switches; TS catches it, lint/coverage may not        | MED      | Update every `kind: 'return'` sentinel case simultaneously                   |
+| `PL_SNAPSHOT_INCLUDE_FILES=1` with large `.prompt-language/` — unbounded memory/disk                       | MED      | 10 MB cap; refuse and warn above                                             |
+| `self-trace-replay` on a concurrently-being-written `provenance.jsonl` reads partial trailing line         | MED      | Tolerate trailing partial JSON; count only fully-parsed entries; never throw |
+| `snapshot` bareword collides if a user later defines variable named `snapshot`                             | LOW      | Reserved keyword; reject as variable name                                    |
+| `SessionState.snapshots` collides with existing serialization fixtures                                     | LOW      | Default `{}`; backwards-compatible via `createSessionState`                  |
+| Chain verifier duplicated between `.mjs` and `.ts`                                                         | LOW      | Parity test over hand-crafted 3-entry trace                                  |
+| Smoke test id collision with concurrent agents                                                             | LOW      | Coordinate via git; use the highest unused letter                            |
 
 ## 8. Implementation PR split
 

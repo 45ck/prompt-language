@@ -1,4 +1,8 @@
-export { AiderPromptTurnRunner, buildAiderArgs, buildAiderEnv } from './adapters/aider-prompt-turn-runner.js';
+export {
+  AiderPromptTurnRunner,
+  buildAiderArgs,
+  buildAiderEnv,
+} from './adapters/aider-prompt-turn-runner.js';
 export { FileStateStore } from './adapters/file-state-store.js';
 export { ShellCommandRunner } from './adapters/shell-command-runner.js';
 export { HeadlessProcessSpawner } from './adapters/headless-process-spawner.js';

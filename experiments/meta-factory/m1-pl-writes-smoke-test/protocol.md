@@ -22,13 +22,13 @@ smoke harness, under full trace and catalog discipline.
 
 Acceptance is all-green-or-fail. No partial credit.
 
-| Oracle      | Check                                                          | Tooling                                                |
-|-------------|----------------------------------------------------------------|--------------------------------------------------------|
-| O1 PARSE    | `m1.flow` parses with zero warnings and zero errors.           | `parseFlow()` from `dist/application/parse-flow.js`    |
-| O2 NOVELTY  | `grep -c "<keyword>" scripts/eval/smoke-test.mjs` was 0 before the run and >=1 after. | `grep -c` pre/post               |
-| O3 RUNNABLE | `SMOKE_ONLY=AW node scripts/eval/smoke-test.mjs` (or `AX`) exits 0. | standard smoke harness                              |
-| O4 TRACED   | `verify-trace` exits 0 on the emitted trace file.              | `PL_TRACE=1 PL_TRACE_STRICT=1` + verify-trace binary    |
-| O5 CATALOG  | `CLAUDE.md` contains a new bullet `"- **AW: ..." ` or `"- **AX: ..."`. | grep for `"- **AW:"` / `"- **AX:"` in CLAUDE.md  |
+| Oracle      | Check                                                                                 | Tooling                                              |
+| ----------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| O1 PARSE    | `m1.flow` parses with zero warnings and zero errors.                                  | `parseFlow()` from `dist/application/parse-flow.js`  |
+| O2 NOVELTY  | `grep -c "<keyword>" scripts/eval/smoke-test.mjs` was 0 before the run and >=1 after. | `grep -c` pre/post                                   |
+| O3 RUNNABLE | `SMOKE_ONLY=AW node scripts/eval/smoke-test.mjs` (or `AX`) exits 0.                   | standard smoke harness                               |
+| O4 TRACED   | `verify-trace` exits 0 on the emitted trace file.                                     | `PL_TRACE=1 PL_TRACE_STRICT=1` + verify-trace binary |
+| O5 CATALOG  | `CLAUDE.md` contains a new bullet `"- **AW: ..." ` or `"- **AX: ..."`.                | grep for `"- **AW:"` / `"- **AX:"` in CLAUDE.md      |
 
 ## DSL syntax notes (adaptations from the original protocol draft)
 
@@ -87,14 +87,14 @@ Operators should extend it when new synonym classes are discovered.
 
 ## Failure semantics
 
-| Failure class            | Action                                                  |
-|--------------------------|---------------------------------------------------------|
-| O1 PARSE fails           | Halt, restore stash, mark "flow authoring regression"   |
-| O2 NOVELTY fails         | Halt, restore stash, mark "gap detection failed"        |
-| O3 RUNNABLE fails        | Halt, restore stash, mark "test authoring failed"       |
-| O4 TRACED fails          | Halt, restore stash, mark "trace contract violation"    |
-| O5 CATALOG fails         | Halt, restore stash, mark "catalog discipline failed"   |
-| Claude auth / login block| Halt, host-limitation tag, no stash needed              |
+| Failure class             | Action                                                |
+| ------------------------- | ----------------------------------------------------- |
+| O1 PARSE fails            | Halt, restore stash, mark "flow authoring regression" |
+| O2 NOVELTY fails          | Halt, restore stash, mark "gap detection failed"      |
+| O3 RUNNABLE fails         | Halt, restore stash, mark "test authoring failed"     |
+| O4 TRACED fails           | Halt, restore stash, mark "trace contract violation"  |
+| O5 CATALOG fails          | Halt, restore stash, mark "catalog discipline failed" |
+| Claude auth / login block | Halt, host-limitation tag, no stash needed            |
 
 ## Evidence bundle layout
 

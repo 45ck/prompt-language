@@ -46,7 +46,10 @@ function resolveCodexCommand() {
       stdio: ['ignore', 'pipe', 'ignore'],
       windowsHide: true,
     });
-    const shim = (r.stdout || '').split(/\r?\n/).map((l) => l.trim()).find(Boolean);
+    const shim = (r.stdout || '')
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .find(Boolean);
     if (r.status === 0 && shim) {
       const dir = dirname(shim);
       const entry = join(dir, 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
@@ -137,10 +140,7 @@ export async function runChangeRequest({
     );
   }
 
-  const pass =
-    postReport.gateStatus === 'passed' &&
-    run.exitCode === 0 &&
-    !run.timedOut;
+  const pass = postReport.gateStatus === 'passed' && run.exitCode === 0 && !run.timedOut;
 
   const result = {
     changeRequestId,

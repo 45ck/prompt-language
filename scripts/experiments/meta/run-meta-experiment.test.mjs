@@ -20,7 +20,7 @@ test('dry-run against a tiny fake flow parses and reports prerequisites', async 
 flow:
   let hello = "world"
   prompt: Say \${hello}.
-`
+`,
   );
   // Redirect stdout capture via a simple override
   const origWrite = process.stdout.write.bind(process.stdout);

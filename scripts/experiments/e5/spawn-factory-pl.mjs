@@ -15,12 +15,7 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..', '..', '..');
 const CLI = join(repoRoot, 'bin', 'cli.mjs');
-const FACTORY_ROOT = join(
-  repoRoot,
-  'experiments',
-  'full-saas-factory',
-  'e4-codex-crm-factory',
-);
+const FACTORY_ROOT = join(repoRoot, 'experiments', 'full-saas-factory', 'e4-codex-crm-factory');
 
 function resolveCodexForPL() {
   // prompt-language CLI uses --runner codex internally for agent calls; the
@@ -84,9 +79,10 @@ export async function spawnFactoryPl({
   const stateDir = join(workspace, '.prompt-language');
   const effectiveRunId =
     runId ??
-    `${new Date().toISOString().replace(/[-:T.Z]/g, '').slice(0, 12)}-${Math.random()
-      .toString(36)
-      .slice(2, 6)}`;
+    `${new Date()
+      .toISOString()
+      .replace(/[-:T.Z]/g, '')
+      .slice(0, 12)}-${Math.random().toString(36).slice(2, 6)}`;
 
   const cliArgs = [
     CLI,
@@ -104,19 +100,15 @@ export async function spawnFactoryPl({
 
   const timeoutMs = Math.floor(timeBudgetMin * 60_000);
   const startedAt = Date.now();
-  const { exitCode, stdout, stderr, timedOut } = await runWithTimeout(
-    process.execPath,
-    cliArgs,
-    {
-      cwd: workspace,
-      timeoutMs,
-      env: {
-        ...process.env,
-        PL_TRACE: '1',
-        PL_RUN_ID: effectiveRunId,
-      },
+  const { exitCode, stdout, stderr, timedOut } = await runWithTimeout(process.execPath, cliArgs, {
+    cwd: workspace,
+    timeoutMs,
+    env: {
+      ...process.env,
+      PL_TRACE: '1',
+      PL_RUN_ID: effectiveRunId,
     },
-  );
+  });
   const wallClockSec = Math.round((Date.now() - startedAt) / 1000);
 
   await writeFile(join(resultsRoot, 'run-report.json'), stdout || '{}\n');
@@ -141,10 +133,7 @@ export async function spawnFactoryPl({
     timeBudgetMin,
     budgetConsumptionIsFailure: false,
   };
-  await writeFile(
-    join(resultsRoot, 'lane-summary.json'),
-    JSON.stringify(result, null, 2),
-  );
+  await writeFile(join(resultsRoot, 'lane-summary.json'), JSON.stringify(result, null, 2));
   return result;
 }
 

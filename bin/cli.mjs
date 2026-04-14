@@ -692,7 +692,13 @@ function defaultModelForRunner(runner) {
 }
 
 function ensureSupportedRunner(runner) {
-  if (runner !== 'claude' && runner !== 'codex' && runner !== 'opencode' && runner !== 'ollama' && runner !== 'aider') {
+  if (
+    runner !== 'claude' &&
+    runner !== 'codex' &&
+    runner !== 'opencode' &&
+    runner !== 'ollama' &&
+    runner !== 'aider'
+  ) {
     console.error(
       `Error: Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama, aider.`,
     );

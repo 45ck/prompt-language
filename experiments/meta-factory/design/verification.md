@@ -10,13 +10,13 @@
 
 ## Oracle definitions
 
-| Oracle | Check                                                                  | Tooling                                |
-|--------|------------------------------------------------------------------------|----------------------------------------|
+| Oracle      | Check                                                              | Tooling                                             |
+| ----------- | ------------------------------------------------------------------ | --------------------------------------------------- |
 | O1 PARSE    | The generated `.flow` parses without errors.                       | `parseFlow()` from `dist/application/parse-flow.js` |
-| O2 NOVELTY  | The keyword was absent before the run, present after.              | `grep -c` on the pre- and post-run tree    |
-| O3 RUNNABLE | `SMOKE_ONLY=<id> node scripts/eval/smoke-test.mjs` exits 0.        | standard smoke harness                     |
-| O4 TRACED   | `verify-trace` exits 0 on the run's trace file.                    | `scripts/trace/verify-trace.*` (existing)  |
-| O5 CATALOG  | The CLAUDE.md smoke catalog contains a bullet for the new test id. | `grep` for `"- **AW:"` or `"- **AX:"` in CLAUDE.md |
+| O2 NOVELTY  | The keyword was absent before the run, present after.              | `grep -c` on the pre- and post-run tree             |
+| O3 RUNNABLE | `SMOKE_ONLY=<id> node scripts/eval/smoke-test.mjs` exits 0.        | standard smoke harness                              |
+| O4 TRACED   | `verify-trace` exits 0 on the run's trace file.                    | `scripts/trace/verify-trace.*` (existing)           |
+| O5 CATALOG  | The CLAUDE.md smoke catalog contains a bullet for the new test id. | `grep` for `"- **AW:"` or `"- **AX:"` in CLAUDE.md  |
 
 ## Threats to validity
 

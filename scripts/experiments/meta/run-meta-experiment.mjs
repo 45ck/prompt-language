@@ -18,8 +18,6 @@ import {
 } from 'node:fs';
 import { dirname, join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { tmpdir } from 'node:os';
-
 import { computeManifest } from './compute-manifest.mjs';
 import { diffManifests } from './manifest-diff.mjs';
 
@@ -30,7 +28,6 @@ const REPO_ROOT = resolve(__dirname, '..', '..', '..');
 const DEFAULT_WALL_CLOCK_SEC = Number(process.env.META_WALL_CLOCK_SEC ?? 25 * 60);
 
 function log(...args) {
-  // eslint-disable-next-line no-console
   console.error('[meta-harness]', ...args);
 }
 
@@ -157,10 +154,14 @@ function gitStash(label) {
 
 function gitStashPop() {
   const r = spawnSync('git', ['stash', 'pop'], { cwd: REPO_ROOT, encoding: 'utf8' });
-  return { status: r.status ?? -1, stdout: (r.stdout ?? '').trim(), stderr: (r.stderr ?? '').trim() };
+  return {
+    status: r.status ?? -1,
+    stdout: (r.stdout ?? '').trim(),
+    stderr: (r.stderr ?? '').trim(),
+  };
 }
 
-async function runLive({ flowAbs, flowText, bundleDir, runId, wallClockSec, claudeBin }) {
+async function runLive({ flowText, bundleDir, runId, wallClockSec, claudeBin }) {
   const traceDir = join(bundleDir, '.prompt-language');
   mkdirSync(traceDir, { recursive: true });
   const shimDir = join(REPO_ROOT, 'scripts', 'eval', 'agent-shim');
@@ -232,11 +233,9 @@ function runVerifyTrace(bundleDir) {
   const trace = join(bundleDir, 'provenance.jsonl');
   const state = join(bundleDir, 'session-state.json');
   if (!existsSync(trace)) return { ran: false, reason: 'no-provenance' };
-  const r = spawnSync(
-    process.execPath,
-    [verify, '--trace', trace, '--state', state, '--json'],
-    { encoding: 'utf8' }
-  );
+  const r = spawnSync(process.execPath, [verify, '--trace', trace, '--state', state, '--json'], {
+    encoding: 'utf8',
+  });
   writeFileSync(join(bundleDir, 'verify.json'), r.stdout ?? '');
   return { ran: true, exitCode: r.status ?? -1, stderr: (r.stderr ?? '').slice(0, 1000) };
 }
@@ -284,7 +283,7 @@ async function dryRun({ flowAbs, flowText, runId }) {
   return result;
 }
 
-async function liveRun({ flowAbs, flowText, runId, wallClockSec }) {
+async function liveRun({ flowText, runId, wallClockSec }) {
   const bundleDir = join(REPO_ROOT, 'experiments', 'meta-factory', 'results', runId);
 
   const preflight = {};
@@ -322,7 +321,6 @@ async function liveRun({ flowAbs, flowText, runId, wallClockSec }) {
     writeFileSync(join(bundleDir, 'manifest-pre.json'), JSON.stringify(manifestPre, null, 2));
 
     liveResult = await runLive({
-      flowAbs,
       flowText,
       bundleDir,
       runId,
@@ -392,7 +390,7 @@ export async function main(argv = process.argv.slice(2)) {
 
   const { abs, text } = readFlow(flowPath);
   const result = live
-    ? await liveRun({ flowAbs: abs, flowText: text, runId, wallClockSec })
+    ? await liveRun({ flowText: text, runId, wallClockSec })
     : await dryRun({ flowAbs: abs, flowText: text, runId });
 
   outJson({
@@ -414,6 +412,6 @@ if (isMain) {
     (e) => {
       log('fatal', e?.stack ?? e);
       process.exit(2);
-    }
+    },
   );
 }

@@ -8,17 +8,17 @@ acceptance oracles (per META-3).
 The order is deliberate: each entry's success de-risks the next. M1 is
 the foundation; MF-9 is the proof-of-capability ceiling.
 
-| ID   | Name                      | Target addition                                                       | Novelty grep target              | Acceptance focus                                   |
-|------|---------------------------|-----------------------------------------------------------------------|----------------------------------|----------------------------------------------------|
-| MF-1 | PL-writes-smoke-test      | One new smoke test (`AW` fast, `AX` slow) covering an uncovered DSL feature | test id + keyword in smoke-test.mjs | O1–O5 full set; `SMOKE_ONLY=AW\|AX` passes        |
-| MF-2 | PL-writes-docstring       | One JSDoc/TSDoc block on an undocumented exported symbol in `src/domain/` | symbol name + `@param`/`@returns` in source | O1 parse of doc-change flow; grep delta; `npm run ci` passes |
-| MF-3 | PL-adds-parser-rule       | One new condition operator or let-source variant in `src/application/parse-flow.ts` | new token in parser + new unit test | `npm run test` passes; grammar docs updated        |
-| MF-4 | PL-adds-gate-predicate    | One new `done when:` predicate (e.g., `all_tests_written`)            | predicate name in evaluate-completion.ts + smoke test | Smoke gate test demonstrates predicate blocks/unblocks |
-| MF-5 | PL-adds-adapter           | One new infrastructure adapter (e.g., http-state-adapter)             | adapter file + unit test + port conformance | Dependency-cruiser clean; adapter tests pass       |
-| MF-6 | PL-adds-control-flow-node | One new control-flow node kind (e.g., `switch` or `case`)             | node kind in flow-node.ts + render + advance + smoke | Full CI + targeted smoke; render round-trips       |
-| MF-7 | PL-authors-adr            | One ADR under `docs/adr/` documenting a design decision               | ADR number + title keyword        | Markdown renders; references resolve; no broken links |
-| MF-8 | PL-refactors-interpolate  | One measurable refactor in `src/domain/interpolate.ts` preserving behaviour | benchmark delta or LOC delta      | All existing tests pass; new property test added   |
-| MF-9 | PL-authors-meta-flow      | One new meta-flow file (MF-10) that itself passes O1–O5               | new flow under `experiments/meta-factory/` + passing run | MF-10 runs to green; recursive self-hosting proven |
+| ID   | Name                      | Target addition                                                                     | Novelty grep target                                      | Acceptance focus                                             |
+| ---- | ------------------------- | ----------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------ |
+| MF-1 | PL-writes-smoke-test      | One new smoke test (`AW` fast, `AX` slow) covering an uncovered DSL feature         | test id + keyword in smoke-test.mjs                      | O1–O5 full set; `SMOKE_ONLY=AW\|AX` passes                   |
+| MF-2 | PL-writes-docstring       | One JSDoc/TSDoc block on an undocumented exported symbol in `src/domain/`           | symbol name + `@param`/`@returns` in source              | O1 parse of doc-change flow; grep delta; `npm run ci` passes |
+| MF-3 | PL-adds-parser-rule       | One new condition operator or let-source variant in `src/application/parse-flow.ts` | new token in parser + new unit test                      | `npm run test` passes; grammar docs updated                  |
+| MF-4 | PL-adds-gate-predicate    | One new `done when:` predicate (e.g., `all_tests_written`)                          | predicate name in evaluate-completion.ts + smoke test    | Smoke gate test demonstrates predicate blocks/unblocks       |
+| MF-5 | PL-adds-adapter           | One new infrastructure adapter (e.g., http-state-adapter)                           | adapter file + unit test + port conformance              | Dependency-cruiser clean; adapter tests pass                 |
+| MF-6 | PL-adds-control-flow-node | One new control-flow node kind (e.g., `switch` or `case`)                           | node kind in flow-node.ts + render + advance + smoke     | Full CI + targeted smoke; render round-trips                 |
+| MF-7 | PL-authors-adr            | One ADR under `docs/adr/` documenting a design decision                             | ADR number + title keyword                               | Markdown renders; references resolve; no broken links        |
+| MF-8 | PL-refactors-interpolate  | One measurable refactor in `src/domain/interpolate.ts` preserving behaviour         | benchmark delta or LOC delta                             | All existing tests pass; new property test added             |
+| MF-9 | PL-authors-meta-flow      | One new meta-flow file (MF-10) that itself passes O1–O5                             | new flow under `experiments/meta-factory/` + passing run | MF-10 runs to green; recursive self-hosting proven           |
 
 ## Progression rationale
 

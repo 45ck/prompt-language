@@ -105,12 +105,7 @@ describe('createInjectionContextState', () => {
   });
 
   it('keeps appended variable for let += and its source interpolation', () => {
-    const letNode = createLetNode(
-      'l1',
-      'items',
-      { type: 'literal', value: 'next-${seed}' },
-      true,
-    );
+    const letNode = createLetNode('l1', 'items', { type: 'literal', value: 'next-${seed}' }, true);
     const spec = createFlowSpec('slice let-append', [letNode]);
     const state = {
       ...createSessionState('s1', spec),

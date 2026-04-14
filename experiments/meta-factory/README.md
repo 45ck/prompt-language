@@ -44,7 +44,7 @@ experiments/meta-factory/
 3. **MD-3 authoritative gate**: only `npm run ci` and `npm run eval:smoke`
    decide success; model self-assessment never ratifies acceptance.
 4. **MD-4 trace-first**: every meta-run is executed under `PL_TRACE=1
-   PL_TRACE_STRICT=1` and validated with `verify-trace`.
+PL_TRACE_STRICT=1` and validated with `verify-trace`.
 5. **MD-5 one-target-per-run**: each meta-flow targets exactly one
    concrete addition (e.g. one smoke test, one docstring block, one
    parser rule); no multi-goal runs.

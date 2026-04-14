@@ -8,28 +8,28 @@ live meta-run, and the 3 operator sign-offs required for production use.
 
 Severity legend: C (critical), H (high), M (medium), L (low).
 
-| #  | Sev | Risk                                                                 | Primary mitigation                                            |
-|----|-----|----------------------------------------------------------------------|---------------------------------------------------------------|
-| 1  | C   | Meta-run corrupts the runtime it uses                                | MD-1 frozen snapshot; `dist/` and `bin/` read-only             |
-| 2  | C   | Meta-run overwrites unrelated files in working tree                  | MD-2 per-run worktree; `run.sh` stash rollback                 |
-| 3  | C   | False-positive acceptance via model self-report                      | MD-3 external gate; model text is advisory                     |
-| 4  | H   | Trace gaps prevent post-mortem                                       | MD-4 trace-first + `verify-trace` as O4                        |
-| 5  | H   | Multi-target run produces ambiguous acceptance                       | MD-5 single target per run                                     |
-| 6  | H   | Smoke test flake masks a real failure                                | Require two consecutive green runs during bootstrap            |
-| 7  | H   | Parser warning is treated as success                                 | O1 requires warning-free parse                                 |
-| 8  | H   | Keyword collision bypasses novelty check                             | `synonyms.json` scopes grep; expand on discovery               |
-| 9  | H   | Concurrent runs corrupt shared state                                 | Per-run worktree + per-run state dir                           |
-| 10 | M   | Meta-run authors a test that passes for wrong reason                 | Review checkpoint before cherry-pick                           |
-| 11 | M   | Meta-run weakens an existing oracle while "fixing" a test            | `run.sh` diffs smoke-test.mjs; reject oracle-weakening diffs   |
-| 12 | M   | Disk pressure from accumulated worktrees                             | Cleanup policy in phase-4-ship                                 |
-| 13 | M   | Long-running flow exceeds agent context                              | Split into phases; use spawn/await for heavy subtasks          |
-| 14 | M   | Trace schema drift breaks `verify-trace`                             | Pin trace schema with snapshot; version in manifest            |
-| 15 | M   | Agent authentication failure aborts run mid-way                      | Bootstrap envelope verifies auth; stash rollback               |
-| 16 | M   | CLAUDE.md diverges from code                                         | O5 catalog check + post-merge link check                       |
-| 17 | L   | Cross-platform path bugs (Windows vs POSIX)                          | `run.sh` uses forward slashes; CI covers both                  |
-| 18 | L   | Agent edits the meta-flow itself mid-run                             | `m1.flow` is read-only for the run; flow is inlined by `run.sh` |
-| 19 | L   | Snapshot drift between documented and actual behaviour               | Snapshot manifest includes git SHA                             |
-| 20 | L   | Human reviewer rubber-stamps accepted runs                           | Require cherry-pick diff review + explicit ACK                 |
+| #   | Sev | Risk                                                      | Primary mitigation                                              |
+| --- | --- | --------------------------------------------------------- | --------------------------------------------------------------- |
+| 1   | C   | Meta-run corrupts the runtime it uses                     | MD-1 frozen snapshot; `dist/` and `bin/` read-only              |
+| 2   | C   | Meta-run overwrites unrelated files in working tree       | MD-2 per-run worktree; `run.sh` stash rollback                  |
+| 3   | C   | False-positive acceptance via model self-report           | MD-3 external gate; model text is advisory                      |
+| 4   | H   | Trace gaps prevent post-mortem                            | MD-4 trace-first + `verify-trace` as O4                         |
+| 5   | H   | Multi-target run produces ambiguous acceptance            | MD-5 single target per run                                      |
+| 6   | H   | Smoke test flake masks a real failure                     | Require two consecutive green runs during bootstrap             |
+| 7   | H   | Parser warning is treated as success                      | O1 requires warning-free parse                                  |
+| 8   | H   | Keyword collision bypasses novelty check                  | `synonyms.json` scopes grep; expand on discovery                |
+| 9   | H   | Concurrent runs corrupt shared state                      | Per-run worktree + per-run state dir                            |
+| 10  | M   | Meta-run authors a test that passes for wrong reason      | Review checkpoint before cherry-pick                            |
+| 11  | M   | Meta-run weakens an existing oracle while "fixing" a test | `run.sh` diffs smoke-test.mjs; reject oracle-weakening diffs    |
+| 12  | M   | Disk pressure from accumulated worktrees                  | Cleanup policy in phase-4-ship                                  |
+| 13  | M   | Long-running flow exceeds agent context                   | Split into phases; use spawn/await for heavy subtasks           |
+| 14  | M   | Trace schema drift breaks `verify-trace`                  | Pin trace schema with snapshot; version in manifest             |
+| 15  | M   | Agent authentication failure aborts run mid-way           | Bootstrap envelope verifies auth; stash rollback                |
+| 16  | M   | CLAUDE.md diverges from code                              | O5 catalog check + post-merge link check                        |
+| 17  | L   | Cross-platform path bugs (Windows vs POSIX)               | `run.sh` uses forward slashes; CI covers both                   |
+| 18  | L   | Agent edits the meta-flow itself mid-run                  | `m1.flow` is read-only for the run; flow is inlined by `run.sh` |
+| 19  | L   | Snapshot drift between documented and actual behaviour    | Snapshot manifest includes git SHA                              |
+| 20  | L   | Human reviewer rubber-stamps accepted runs                | Require cherry-pick diff review + explicit ACK                  |
 
 ## Bootstrap envelope (8 items)
 

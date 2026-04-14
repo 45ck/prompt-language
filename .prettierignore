@@ -18,3 +18,7 @@ experiments/full-saas-factory/**/core-proof/**
 experiments/full-saas-factory/**/runtime-smoke/**
 experiments/full-saas-factory/**/workspaces/**
 experiments/results/**
+experiments/meta-factory/results/**
+experiments/meta-factory/workspaces/**
+experiments/meta-factory/snapshots/**
+scripts/eval/agent-shim/.binary-cache.json

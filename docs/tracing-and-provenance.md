@@ -49,11 +49,11 @@ mid-chain edits detectable.
 The runtime emits the trace only when `PL_TRACE=1` is set. Related env
 vars:
 
-| Var            | Required                        | Meaning                                                                                       |
-| -------------- | ------------------------------- | --------------------------------------------------------------------------------------------- |
-| `PL_TRACE`     | yes (when tracing is wanted)    | Any truthy value enables `FileTraceLogger`. Absence falls back to `NULL_TRACE_LOGGER`.        |
-| `PL_RUN_ID`    | recommended                     | Ties shim and runtime entries to the same run. If unset the runtime generates one per flow.  |
-| `PL_TRACE_DIR` | no (default `.prompt-language`) | Override the state directory used for `provenance.jsonl`. Path is relative to the runtime cwd.|
+| Var            | Required                        | Meaning                                                                                        |
+| -------------- | ------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `PL_TRACE`     | yes (when tracing is wanted)    | Any truthy value enables `FileTraceLogger`. Absence falls back to `NULL_TRACE_LOGGER`.         |
+| `PL_RUN_ID`    | recommended                     | Ties shim and runtime entries to the same run. If unset the runtime generates one per flow.    |
+| `PL_TRACE_DIR` | no (default `.prompt-language`) | Override the state directory used for `provenance.jsonl`. Path is relative to the runtime cwd. |
 
 For shim-specific env (`PL_REAL_BIN`, `PL_REAL_BIN_<NAME>`,
 `PL_SHIM_NAME`) see [`scripts/eval/agent-shim/README.md`](../scripts/eval/agent-shim/README.md).
@@ -108,15 +108,15 @@ Exit codes: `0` pass, `1` verification failure, `2` argument error.
 
 ## Troubleshooting
 
-| Symptom                                                   | Likely cause                                                                                                        | Action                                                                                    |
-| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `orphan: agent_invocation_begin=N vs shim_invocation_begin=0` | Harness bypassed the shim. PATH is not ahead of real binaries, or the harness resolved the real binary directly. | Confirm shim directory is on PATH first and `PL_REAL_BIN_*` resolves. Rerun.             |
-| `orphan: ... shim_invocation_begin=N vs agent_invocation_begin=0` | Runtime did not observe an invocation the shim saw. Likely a side-channel spawn or a runtime path that forgot to log. | Inspect the orphan argv; fix the runtime emitter or the harness, do not edit the trace.  |
-| `entry N: prevEventHash ... does not match previous eventHash` | Chain break. Trace was appended to after an edit, a parallel writer interleaved, or a file was concatenated. | Treat the run as tampered. Re-run from clean state; investigate concurrent writers.      |
-| `entry N: eventHash ... does not match recomputed`         | Record was edited without updating its hash, or canonical JSON drifted between writer and verifier.                 | Confirm writer and verifier share canonicalization. Do not manually patch hashes.        |
-| `state hash mismatch: trace claims X, state file hashes to Y` | `session-state.json` was modified after the last trace entry, or crash happened mid-persist.                       | Compare file timestamps. If run crashed, rerun; if edited, reject as tampered.           |
-| `multiple runIds present`                                 | Two runs wrote into the same trace file without rotating.                                                           | Set `PL_RUN_ID` per run and isolate `PL_TRACE_DIR`.                                      |
-| `trace is empty`                                          | `PL_TRACE` not set, or the runtime never reached the first node.                                                    | Re-run with `PL_TRACE=1`. Check the harness log for pre-run failures.                    |
+| Symptom                                                           | Likely cause                                                                                                          | Action                                                                                  |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `orphan: agent_invocation_begin=N vs shim_invocation_begin=0`     | Harness bypassed the shim. PATH is not ahead of real binaries, or the harness resolved the real binary directly.      | Confirm shim directory is on PATH first and `PL_REAL_BIN_*` resolves. Rerun.            |
+| `orphan: ... shim_invocation_begin=N vs agent_invocation_begin=0` | Runtime did not observe an invocation the shim saw. Likely a side-channel spawn or a runtime path that forgot to log. | Inspect the orphan argv; fix the runtime emitter or the harness, do not edit the trace. |
+| `entry N: prevEventHash ... does not match previous eventHash`    | Chain break. Trace was appended to after an edit, a parallel writer interleaved, or a file was concatenated.          | Treat the run as tampered. Re-run from clean state; investigate concurrent writers.     |
+| `entry N: eventHash ... does not match recomputed`                | Record was edited without updating its hash, or canonical JSON drifted between writer and verifier.                   | Confirm writer and verifier share canonicalization. Do not manually patch hashes.       |
+| `state hash mismatch: trace claims X, state file hashes to Y`     | `session-state.json` was modified after the last trace entry, or crash happened mid-persist.                          | Compare file timestamps. If run crashed, rerun; if edited, reject as tampered.          |
+| `multiple runIds present`                                         | Two runs wrote into the same trace file without rotating.                                                             | Set `PL_RUN_ID` per run and isolate `PL_TRACE_DIR`.                                     |
+| `trace is empty`                                                  | `PL_TRACE` not set, or the runtime never reached the first node.                                                      | Re-run with `PL_TRACE=1`. Check the harness log for pre-run failures.                   |
 
 A fast-fail on agent auth or login is a host limitation, not a trace
 failure. The chain will simply be short. See

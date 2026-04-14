@@ -65,9 +65,7 @@ function resolveCodexCommand() {
   if (which.status === 0 && which.stdout.trim()) {
     return { command: which.stdout.trim(), args: [] };
   }
-  throw new Error(
-    'codex binary not found on PATH. Install codex or set CODEX_BIN.',
-  );
+  throw new Error('codex binary not found on PATH. Install codex or set CODEX_BIN.');
 }
 
 export async function spawnFactoryCodex({
@@ -108,15 +106,11 @@ export async function spawnFactoryCodex({
 
   const timeoutMs = Math.floor(timeBudgetMin * 60_000);
   const startedAt = Date.now();
-  const { exitCode, stdout, stderr, timedOut } = await runWithTimeout(
-    command,
-    codexArgs,
-    {
-      cwd: workspace,
-      input: promptText,
-      timeoutMs,
-    },
-  );
+  const { exitCode, stdout, stderr, timedOut } = await runWithTimeout(command, codexArgs, {
+    cwd: workspace,
+    input: promptText,
+    timeoutMs,
+  });
   const wallClockSec = Math.round((Date.now() - startedAt) / 1000);
 
   await writeFile(join(resultsRoot, 'events.jsonl'), stdout || '(no stdout)\n');
@@ -138,10 +132,7 @@ export async function spawnFactoryCodex({
     timedOut,
     timeBudgetMin,
   };
-  await writeFile(
-    join(resultsRoot, 'lane-summary.json'),
-    JSON.stringify(result, null, 2),
-  );
+  await writeFile(join(resultsRoot, 'lane-summary.json'), JSON.stringify(result, null, 2));
   return result;
 }
 
@@ -184,7 +175,10 @@ function runWithTimeout(command, args, { cwd, input, timeoutMs }) {
 }
 
 // CLI entry: `node spawn-factory-codex.mjs --workspace ... --timeBudgetMin 120`
-if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('spawn-factory-codex.mjs')) {
+if (
+  import.meta.url === `file://${process.argv[1]}` ||
+  process.argv[1]?.endsWith('spawn-factory-codex.mjs')
+) {
   const args = parseFlags(process.argv.slice(2));
   try {
     const out = await spawnFactoryCodex({

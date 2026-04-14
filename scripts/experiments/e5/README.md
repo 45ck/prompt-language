@@ -59,14 +59,14 @@ node scripts/experiments/e5/run-change-request.mjs  --workspace /tmp/e5-codex-st
 
 ## What's live vs stub
 
-| Stage                        | Status |
-| ---------------------------- | ------ |
-| `factory-codex`              | Live. Spawns codex; requires `codex` binary. |
-| `factory-pl`                 | Live. Spawns `bin/cli.mjs run --runner codex`; PL-slower expected, budget-consumption is not a failure. |
-| `gate-family-1-2-3`          | Live. Spawns `run-journey-suite.mjs`. Currently returns `pending-manual-review` for HTTP journeys until a contract-driven probe is added (see journey manifest). |
-| `blind-handoff`              | Live. Copies workspace to `-stripped` and removes patterns per manifest. |
-| `maintenance-*-tree`         | Live. Applies `CR-01..CR-05` sequentially via blind cold-start codex sessions; records rework + drift. |
-| `scorecard`                  | Live. Renders the template with run metadata; filling per-lane metrics from maintenance run output is a future enhancement. |
+| Stage                | Status                                                                                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `factory-codex`      | Live. Spawns codex; requires `codex` binary.                                                                                                                     |
+| `factory-pl`         | Live. Spawns `bin/cli.mjs run --runner codex`; PL-slower expected, budget-consumption is not a failure.                                                          |
+| `gate-family-1-2-3`  | Live. Spawns `run-journey-suite.mjs`. Currently returns `pending-manual-review` for HTTP journeys until a contract-driven probe is added (see journey manifest). |
+| `blind-handoff`      | Live. Copies workspace to `-stripped` and removes patterns per manifest.                                                                                         |
+| `maintenance-*-tree` | Live. Applies `CR-01..CR-05` sequentially via blind cold-start codex sessions; records rework + drift.                                                           |
+| `scorecard`          | Live. Renders the template with run metadata; filling per-lane metrics from maintenance run output is a future enhancement.                                      |
 
 ## Known limitations (v1)
 

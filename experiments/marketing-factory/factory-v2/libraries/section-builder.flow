@@ -1,0 +1,89 @@
+library: section_builder
+
+export flow generate_section(section, product_name):
+  prompt: |
+    Use agent: web-engineer. Use skills: semantic-html, responsive-design, design-token-alignment.
+
+    Read design-tokens.css and components.css for the design system.
+    Read brand-guidelines.md for voice and tone rules.
+    Read content-brief.md for copy direction and section outlines.
+
+    Generate the HTML for the "${section}" section of the ${product_name} marketing site.
+    Use CSS classes from components.css (cp-* prefix). Reference design tokens via var(--cp-*).
+    No external images — use inline SVGs for icons and CSS gradients for backgrounds.
+
+    SECTION-SPECIFIC REQUIREMENTS:
+
+    IF ${section} == "navigation":
+      - Use <nav class="cp-nav" aria-label="Main navigation">
+      - Logo: text-based "${product_name}" with inline SVG pulse icon (16x16, stroke var(--cp-accent))
+      - Links: Hero, Features, Pricing, Testimonials — using #hero, #features, #pricing, #testimonials
+      - Right side: "Get Started" button with class="cp-btn cp-btn--primary"
+      - Mobile: hamburger button at 768px, toggle nav links visibility
+      - Sticky position with backdrop-filter blur
+
+    IF ${section} == "hero":
+      - Use <section id="hero" class="cp-hero">
+      - Headline h1: "Cloud Monitoring That Works While You Sleep" (Title Case, under 10 words)
+      - Subtitle: "${product_name} delivers real-time infrastructure visibility with intelligent alerting. ${tagline}"
+      - Two CTAs: "Start Free Trial" (cp-btn--primary cp-btn--lg) and "View Demo" (cp-btn--secondary cp-btn--lg)
+      - Stats bar below: "99.9% Uptime SLA" | "< 30s Alert Latency" | "500+ Integrations"
+      - Background: gradient from var(--cp-dark) to var(--cp-secondary)
+      - All text white, stats in a 3-column grid with border-top separator
+
+    IF ${section} == "features":
+      - Use <section id="features" class="cp-section">
+      - Section title h2: "Built for Modern Infrastructure"
+      - 3 feature cards in cp-grid--3, each with class="cp-card":
+        Card 1: "Real-Time Dashboards" — inline SVG chart icon, copy about live metrics, custom dashboards, 200+ widgets
+        Card 2: "Intelligent Alerts" — inline SVG bell icon, copy about ML-powered anomaly detection, alert routing, PagerDuty/Slack integration
+        Card 3: "Deep Integrations" — inline SVG puzzle icon, copy about AWS/GCP/Azure, Kubernetes, Docker, Terraform support
+      - Each card: icon in 48px circle (bg var(--cp-primary-light)), h3 title, paragraph description
+      - Below cards: a "See All Features" link
+
+    IF ${section} == "pricing":
+      - Use <section id="pricing" class="cp-section"> with light background var(--cp-light)
+      - Section title h2: "Transparent Pricing for Every Team"
+      - 2 pricing tiers in cp-grid--2:
+        Starter ($29/mo): "For growing teams" — 10 hosts, 50 custom metrics, 5 dashboards, email alerts, 30-day retention, community support
+        Pro ($99/mo): "For scaling organizations" — Unlimited hosts, unlimited metrics, unlimited dashboards, multi-channel alerts, 1-year retention, priority support, SSO, API access
+      - Pro tier uses cp-pricing-tier--featured with "Most Popular" badge
+      - Each tier: price in var(--cp-text-4xl), feature list with checkmark SVGs, CTA button at bottom
+      - Below tiers: "Need enterprise? Contact our sales team." link
+
+    IF ${section} == "testimonials":
+      - Use <section id="testimonials" class="cp-section">
+      - Section title h2: "Trusted by Engineering Teams Worldwide"
+      - 2 testimonials, each using <blockquote class="cp-testimonial">:
+        Quote 1: "CloudPulse cut our mean time to detection from 12 minutes to under 30 seconds. The alert routing alone saved our on-call team hours each week."
+          — Sarah Chen, VP of Engineering, ScaleGrid (fintech, 200 engineers)
+        Quote 2: "We migrated from three separate monitoring tools to CloudPulse. One dashboard, one alert pipeline, one bill. Our observability costs dropped 40%."
+          — Marcus Rivera, SRE Lead, Northwind Logistics (logistics, 85 engineers)
+      - Each: left border accent, quote text italic, name bold, company in muted text
+      - Avatar placeholder: 48px circle with initials
+
+    IF ${section} == "footer":
+      - Use <footer id="footer" class="cp-footer">
+      - 4-column grid on desktop:
+        Col 1: ${product_name} logo + tagline + copyright
+        Col 2: Product links — Features, Pricing, Integrations, Changelog
+        Col 3: Company links — About, Blog, Careers, Contact
+        Col 4: Resources links — Documentation, API Reference, Status Page, Security
+      - Social icons row: Twitter/X, LinkedIn, GitHub (inline SVG icons, 20x20)
+      - Bottom bar: "2024 ${product_name}. All rights reserved." | "Privacy" | "Terms"
+      - Mobile: stack columns, center-align
+
+    Write ONLY the HTML fragment for this section. Do not include <!DOCTYPE>, <html>, <head>, or <body> tags.
+    Save to sections/${section}.html
+
+  run: node -e "const fs=require('fs');const f='sections/${section}.html';if(!fs.existsSync(f)){console.error(f+' not found');process.exit(1)}const h=fs.readFileSync(f,'utf8');if(h.length<100){console.error(f+' too short: '+h.length+' chars');process.exit(1)}console.log(f+': '+h.length+' chars OK')"
+
+  retry max 2
+    run: node -e "const fs=require('fs');const f='sections/${section}.html';const h=fs.readFileSync(f,'utf8');const issues=[];const section='${section}';if(section!=='navigation'){if(!new RegExp('id=[\"\\x27]'+section+'[\"\\x27]','i').test(h))issues.push('missing id=\"'+section+'\" attribute')}if(section==='navigation'&&!/<nav/i.test(h))issues.push('navigation must use <nav> tag');if(section==='hero'&&!/<h1/i.test(h))issues.push('hero must have <h1>');if(section==='features'&&(h.match(/<h3/gi)||[]).length<3)issues.push('features needs 3+ cards with <h3>');if(section==='pricing'&&(h.match(/\\$/g)||[]).length<2)issues.push('pricing needs 2+ price indicators');if(section==='testimonials'&&(h.match(/<blockquote/gi)||[]).length<2)issues.push('testimonials needs 2+ blockquotes');if(section==='footer'&&!/<footer/i.test(h))issues.push('footer must use <footer> tag');if(issues.length){console.error('SECTION VALIDATION FAILED ('+section+'):\\n'+issues.map(i=>'  - '+i).join('\\n'));process.exit(1)}else{console.log('SECTION '+section+': PASS')}"
+    if command_failed
+      prompt: |
+        Section "${section}" validation failed: ${last_stderr}
+        Fix the issues in sections/${section}.html. Ensure the section has the correct
+        HTML structure and required elements per the specification above.
+    end
+  end

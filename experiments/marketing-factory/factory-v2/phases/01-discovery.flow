@@ -1,0 +1,97 @@
+library: discovery
+
+export flow run(product_name, tagline):
+  # Parallel research: brand guidelines + content strategy
+  spawn "brand-researcher"
+    prompt: |
+      Use agent: brand-strategist. Use skills: brand-identity-design, competitive-analysis.
+
+      Research competitor cloud monitoring marketing sites (Datadog, New Relic, Grafana Cloud, Dynatrace).
+      Write brand-guidelines.md covering:
+
+      1. VOICE & TONE RULES
+         - Professional, confident, technically credible — never salesy or hyperbolic
+         - No exclamation marks in body copy
+         - No filler words: very, really, just, basically, actually, simply, literally, quite, rather
+         - Sentences under 20 words average
+         - Active voice preferred; passive voice only for technical descriptions
+
+      2. COLOR PALETTE
+         - Primary: #2563EB (buttons, links, active states)
+         - Secondary: #7C3AED (gradients, accent backgrounds, code blocks)
+         - Accent: #10B981 (success states, badges, status indicators)
+         - Dark: #1E293B (headings, body text, nav background)
+         - Light: #F8FAFC (page background, card surfaces)
+         - Specify contrast ratios: all text must pass WCAG AA (4.5:1 minimum)
+
+      3. TYPOGRAPHY
+         - Headings: Inter, system-ui, sans-serif — weight 700 for h1, 600 for h2-h3
+         - Body: Inter, system-ui, sans-serif — weight 400, line-height 1.6
+         - Code: "JetBrains Mono", monospace — for technical snippets
+
+      4. CTA CONVENTIONS
+         - Primary CTAs use action verbs: Get, Start, Deploy, Monitor, Launch, Discover
+         - Primary button style: bg #2563EB, text white, rounded-lg, hover darken 10%
+         - Secondary button style: border #2563EB, text #2563EB, transparent bg
+         - Never more than 2 CTAs visible simultaneously
+
+      5. PRODUCT NAME RULES
+         - Always "CloudPulse" — never "Cloud Pulse", "Cloudpulse", "CLOUDPULSE"
+         - CSS class prefix: "cp-" (e.g., cp-hero, cp-nav, cp-card)
+         - Tagline: "${tagline}"
+
+      Write the complete brand-guidelines.md file now. Product: ${product_name}.
+  end
+
+  spawn "content-strategist"
+    prompt: |
+      Use agent: content-strategist. Use skills: content-strategy, seo-keyword-research, information-architecture.
+
+      Create content-brief.md for the ${product_name} marketing site ("${tagline}").
+      Cover:
+
+      1. SITEMAP (single-page with anchor sections)
+         - Navigation (sticky top)
+         - Hero (#hero)
+         - Features (#features)
+         - Pricing (#pricing)
+         - Testimonials (#testimonials)
+         - Footer (#footer)
+
+      2. SECTION OUTLINES
+         For each section, specify:
+         - Primary headline (Title Case, under 8 words)
+         - Supporting copy direction (tone, key message, word count target)
+         - Visual elements (icons, illustrations, data viz)
+         - CTAs (text, destination)
+
+      3. COPY DIRECTION
+         - Hero: confidence + urgency without hype. Lead with the monitoring pain point.
+         - Features: concrete capabilities, not abstract benefits. Use metrics where possible.
+         - Pricing: transparent, no hidden fees messaging. Starter vs Pro positioning.
+         - Testimonials: enterprise credibility. Quote format: problem → solution → result.
+
+      4. SEO KEYWORDS (target 5-8)
+         - Primary: cloud monitoring, infrastructure monitoring
+         - Secondary: real-time alerts, uptime monitoring, DevOps observability
+         - Long-tail: cloud monitoring dashboard, server monitoring SaaS
+
+      5. CONTENT CONSTRAINTS
+         - Total page word count: 800-1200 words visible text
+         - No filler words, no exclamation marks
+         - Every heading in Title Case
+
+      Write content-brief.md now.
+  end
+
+  await all
+
+  # Quality gate: both deliverables exist
+  review max 2
+    run: node -e "const fs=require('fs');const issues=[];if(!fs.existsSync('brand-guidelines.md'))issues.push('brand-guidelines.md missing');if(!fs.existsSync('content-brief.md'))issues.push('content-brief.md missing');if(issues.length){console.error(issues.join('; '));process.exit(1)}else{console.log('Discovery deliverables present')}"
+    if command_failed
+      prompt: |
+        Discovery deliverables are missing: ${last_stderr}
+        Create the missing file(s). Refer to the brand and content requirements above.
+    end
+  end

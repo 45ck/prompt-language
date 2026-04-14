@@ -1,0 +1,113 @@
+Goal: Build a complete, brand-compliant marketing website for CloudPulse using a phased factory. Output a single index.html that passes all 30 quality checks (10 quality+a11y, 10 content+SEO, 10 brand+design).
+
+flow:
+  # ── Brand identity variables (single source of truth) ──
+  let product_name = "CloudPulse"
+  let tagline = "Monitor smarter, respond faster."
+  let primary_color = "#2563EB"
+  let secondary_color = "#7C3AED"
+  let accent_color = "#10B981"
+  let dark_color = "#1E293B"
+  let light_color = "#F8FAFC"
+
+  # ── Phase 1: Discovery — brand guidelines + content brief ──
+  prompt: |
+    Create brand-guidelines.md for ${product_name} ("${tagline}"). Include:
+
+    VOICE RULES:
+    - Professional, confident, never salesy
+    - NO exclamation marks anywhere in visible text
+    - NO filler words: very, really, just, basically, actually, simply, literally, quite, rather
+    - ALL headings must be Title Case (capitalize first letter of each major word)
+    - Sentences under 20 words each
+    - CTAs use ONLY these action verbs: Get, Start, Deploy, Monitor, Launch, Discover, Try, View, See, Contact, Explore
+    - "Log In" is NOT an action CTA — do not include login links
+    - Product name is ALWAYS "${product_name}" (one word, capital C and P)
+    - CSS classes use "cp-" prefix (never "cloudpulse" in class names)
+
+    COLOR PALETTE (ONLY these colors allowed — no red, orange, yellow, or other colors):
+    - Primary: ${primary_color} (buttons, links)
+    - Secondary: ${secondary_color} (gradients, accents)
+    - Accent: ${accent_color} (success, checkmarks)
+    - Dark: ${dark_color} (text, dark backgrounds)
+    - Light: ${light_color} (page background)
+    - White: #FFFFFF, Black: #000000 — for text only
+    - Derived shades of the above 5 are allowed (e.g. #1D4ED8 for hover)
+    - NEVER use red (#EF4444), orange (#F59E0B), yellow, or any other hue
+
+    Write brand-guidelines.md now.
+
+  prompt: |
+    Create content-brief.md for the ${product_name} marketing site.
+    Sections: navigation, hero, features (6 cards), pricing (3 tiers: Starter free, Pro $49/mo, Enterprise custom), testimonials (3 quotes with blockquote), footer.
+    All copy must follow brand-guidelines.md voice rules.
+    All headings must be Title Case. No exceptions.
+    Write content-brief.md now.
+
+  # ── Phase 2: Implementation — build the complete website ──
+  prompt: |
+    Build the complete ${product_name} marketing website as a single index.html file.
+    Read brand-guidelines.md and content-brief.md for all rules.
+
+    STRICT REQUIREMENTS:
+    1. <!DOCTYPE html>, <html lang="en">, <meta charset="UTF-8">
+    2. <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    3. <meta name="description" content="..."> (150-160 chars about ${product_name})
+    4. <meta property="og:title" content="${product_name}">
+    5. <meta property="og:description" content="...">
+    6. <link rel="canonical" href="https://cloudpulse.io">
+    7. <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='${primary_color}'/></svg>">
+    8. JSON-LD: <script type="application/ld+json"> with @type SoftwareApplication, name, applicationCategory, offers
+    9. CSS custom properties in :root for ALL colors (--cp-primary, --cp-secondary, etc.)
+    10. @media (max-width: 768px) responsive rules
+    11. Semantic HTML: <header>, <nav aria-label="Main navigation">, <main>, <section>, <footer>
+    12. Heading hierarchy: exactly 1 <h1>, then <h2> for sections, <h3> for items — never skip levels
+    13. All headings in Title Case
+    14. No <img> tags — inline SVGs and CSS gradients only
+    15. No external dependencies
+    16. No "Log In" links — only action CTAs
+    17. ONLY brand colors: ${primary_color}, ${secondary_color}, ${accent_color}, ${dark_color}, ${light_color}, #FFFFFF, #000000
+    18. No red, orange, yellow, or any off-palette color
+
+    SECTIONS (each with id attribute):
+    - <nav> sticky navigation with links to #features, #pricing, #testimonials
+    - <section id="hero"> — h1, tagline, 2 CTA buttons, stats bar
+    - <section id="features"> — h2 Title Case, 6 feature cards with h3 and SVG icons
+    - <section id="pricing"> — h2 Title Case, 3 tiers, checkmark lists, CTA buttons
+    - <section id="testimonials"> — h2 Title Case, 3 <blockquote> elements with cite
+    - <footer id="footer"> — brand info, link columns, social links, copyright 2026
+
+    Write the complete index.html file now.
+
+  # ── Phase 3: Quality Gate Loop — validate and fix ──
+  retry max 3
+    # Check 1: HTML structure
+    run: node -e "const fs=require('fs');if(!fs.existsSync('index.html')){console.error('index.html not found');process.exit(1)};const h=fs.readFileSync('index.html','utf8');const i=[];if(!h.includes('<!DOCTYPE html>'))i.push('missing DOCTYPE');if(!/meta[^>]*viewport/i.test(h))i.push('missing viewport');if(!/@media[^{]*max-width/i.test(h))i.push('no media queries');['hero','features','pricing','testimonials'].forEach(s=>{if(!new RegExp('id=[\"\\x27]'+s,'i').test(h))i.push('missing id='+s)});if(!/<nav/i.test(h))i.push('no nav');if(!/<main/i.test(h))i.push('no main');if(!/<footer/i.test(h))i.push('no footer');if(!/<html[^>]*lang/i.test(h))i.push('no lang attr');const h1s=(h.match(/<h1/gi)||[]).length;if(h1s!==1)i.push(h1s+' h1 tags (need 1)');if(i.length){console.error('STRUCTURE FAIL:\\n'+i.join('\\n'));process.exit(1)}else console.log('STRUCTURE: PASS')"
+
+    # Check 2: SEO
+    run: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const i=[];if(!/<meta[^>]*name=[\"']description/i.test(h))i.push('no meta description');if(!/<meta[^>]*og:title/i.test(h))i.push('no og:title');if(!/<meta[^>]*og:description/i.test(h))i.push('no og:description');if(!h.includes('canonical'))i.push('no canonical');if(!h.includes('application/ld+json'))i.push('no JSON-LD');if(!/<link[^>]*rel=[\"']icon/i.test(h))i.push('no favicon');if(i.length){console.error('SEO FAIL:\\n'+i.join('\\n'));process.exit(1)}else console.log('SEO: PASS')"
+
+    # Check 3: Brand voice
+    run: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const t=h.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi,'').replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/\\s+/g,' ');const i=[];['very','really','just','basically','actually','simply','literally','quite','rather'].forEach(f=>{if(new RegExp('\\\\b'+f+'\\\\b','i').test(t))i.push('filler: '+f)});if((t.match(/[A-Za-z][^.!?]*!/g)||[]).filter(e=>!/function|var |let |const /.test(e)).length>0)i.push('exclamation marks found');const wr=(t.match(/cloud\\s+pulse|Cloud\\s+Pulse|CLOUDPULSE/gi)||[]);if(wr.length)i.push('wrong product name: '+wr.join(', '));const hdgs=h.match(/<h[1-6][^>]*>([^<]+)<\\/h[1-6]>/gi)||[];const minor=new Set(['a','an','the','and','but','or','for','nor','in','on','at','to','by','of','with','is','it','as']);hdgs.forEach(hd=>{const txt=hd.replace(/<[^>]+>/g,'').trim();const words=txt.split(/\\s+/);if(words.length<=1)return;const bad=words.filter((w,idx)=>{if(/^\\d/.test(w))return false;if(idx>0&&minor.has(w.toLowerCase()))return false;return w.length>0&&w[0]!==w[0].toUpperCase()});if(bad.length>0)i.push('heading not Title Case: \"'+txt+'\"')});if(i.length){console.error('BRAND FAIL:\\n'+i.join('\\n'));process.exit(1)}else console.log('BRAND: PASS')"
+
+    # Check 4: Color palette compliance
+    run: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const ok=new Set(['2563eb','7c3aed','10b981','1e293b','f8fafc','ffffff','000000','1d4ed8','6d28d9','059669','334155','f1f5f9','e2e8f0','64748b','dbeafe','ede9fe','d1fae5','0f172a','f0f9ff','ecfdf5','cbd5e1','94a3b8','475569','0ea5e9','3b82f6','818cf8','a78bfa','34d399','6ee7b7','0284c7','1e40af','4f46e5','5b21b6','047857']);const colors=h.match(/#[0-9a-fA-F]{3,8}/g)||[];const bad=colors.filter(c=>{const hex=c.slice(1).toLowerCase();if(hex.length===3)return!ok.has(hex[0]+hex[0]+hex[1]+hex[1]+hex[2]+hex[2]);if(hex.length===6)return!ok.has(hex);return false});if(bad.length>0){const unique=[...new Set(bad)];console.error('OFF-PALETTE COLORS:\\n'+unique.join('\\n'));process.exit(1)}else console.log('COLORS: PASS')"
+
+    if command_failed
+      prompt: |
+        Quality checks failed. Here are the issues:
+        ${last_stderr}
+
+        Fix ALL issues in index.html:
+        - Replace filler words with precise language
+        - Make all headings Title Case (capitalize first letter of each major word, minor words like "to", "in", "of" can be lowercase UNLESS they are first word)
+        - Remove any exclamation marks from visible text
+        - Remove any "Log In" links — only use action CTAs
+        - Replace any off-palette colors with brand palette colors ONLY: #2563EB, #7C3AED, #10B981, #1E293B, #F8FAFC (and their shades)
+        - Add missing SEO tags (meta description, og:title, og:description, canonical, favicon, JSON-LD)
+        - Ensure proper semantic HTML with <main>, <nav>, <section>, <footer>
+    end
+  end
+
+done when:
+  file_exists index.html

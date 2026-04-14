@@ -1,0 +1,22 @@
+library: seo
+
+export flow audit():
+  run: node -e "const fs=require('fs');if(!fs.existsSync('index.html')){console.error('index.html not found');process.exit(1)}const h=fs.readFileSync('index.html','utf8');const issues=[];if(!/<meta[^>]*name=[\"']description[\"'][^>]*content=[\"'][^\"']{50,}[\"']/i.test(h))issues.push('missing or too-short meta description (need 50+ chars)');if(!/<meta[^>]*property=[\"']og:title[\"']/i.test(h))issues.push('missing og:title meta tag');if(!/<meta[^>]*property=[\"']og:description[\"']/i.test(h))issues.push('missing og:description meta tag');if(!/<link[^>]*rel=[\"']canonical[\"']/i.test(h))issues.push('missing canonical URL link');if(!/<html[^>]*lang=[\"'][a-z]{2}/i.test(h))issues.push('missing lang attribute on <html> tag');const h1s=(h.match(/<h1/gi)||[]).length;if(h1s!==1)issues.push('expected exactly 1 <h1>, found '+h1s);const headings=h.match(/<h([1-6])/gi)||[];let prevLevel=0;headings.forEach(tag=>{const level=parseInt(tag[2]);if(level>prevLevel+1&&prevLevel>0)issues.push('heading hierarchy skip: h'+prevLevel+' -> h'+level);prevLevel=level});if(!h.includes('application/ld+json'))issues.push('missing JSON-LD structured data');else{const ldMatch=h.match(/<script[^>]*type=[\"']application\\/ld\\+json[\"'][^>]*>([\\s\\S]*?)<\\/script>/i);if(ldMatch){try{const ld=JSON.parse(ldMatch[1]);if(!ld['@type'])issues.push('JSON-LD missing @type field');if(!ld.name)issues.push('JSON-LD missing name field')}catch(e){issues.push('JSON-LD is invalid JSON: '+e.message)}}}if(!/<meta[^>]*charset/i.test(h))issues.push('missing charset meta tag');if(!/<meta[^>]*viewport/i.test(h))issues.push('missing viewport meta tag');if(!/<title>[^<]+<\\/title>/i.test(h))issues.push('missing or empty <title> tag');if(issues.length){console.error('SEO AUDIT FAILED:\\n'+issues.map(i=>'  - '+i).join('\\n'));process.exit(1)}else{console.log('SEO AUDIT: PASS (all checks clear)')}"
+
+  if command_failed
+    prompt: |
+      SEO audit failed: ${last_stderr}
+
+      Fix ALL SEO issues in index.html:
+      - Add <meta name="description" content="..."> with 50-160 char description
+      - Add <meta property="og:title" content="CloudPulse">
+      - Add <meta property="og:description" content="...">
+      - Add <link rel="canonical" href="https://cloudpulse.io">
+      - Add lang="en" to <html> tag
+      - Ensure exactly one <h1> and proper heading hierarchy (h1 > h2 > h3, no skips)
+      - Add JSON-LD structured data:
+        <script type="application/ld+json">
+        {"@context":"https://schema.org","@type":"SoftwareApplication","name":"CloudPulse","applicationCategory":"BusinessApplication","operatingSystem":"Web","description":"Real-time cloud infrastructure monitoring","offers":{"@type":"AggregateOffer","lowPrice":"29","highPrice":"99","priceCurrency":"USD"}}
+        </script>
+      - Ensure <meta charset="UTF-8">, viewport meta, and <title> are present
+  end

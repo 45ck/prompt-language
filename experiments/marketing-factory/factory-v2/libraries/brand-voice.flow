@@ -1,0 +1,18 @@
+library: brand
+
+export flow check_voice(product_name):
+  run: node -e "const fs=require('fs');if(!fs.existsSync('index.html')){console.error('index.html not found');process.exit(1)}const h=fs.readFileSync('index.html','utf8');const text=h.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi,'').replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/&[a-z]+;/gi,' ').replace(/\\s+/g,' ').trim();const issues=[];const fillers=['very','really','just','basically','actually','simply','literally','quite','rather'];fillers.forEach(f=>{const re=new RegExp('\\\\b'+f+'\\\\b','gi');const m=text.match(re);if(m)issues.push('filler word \"'+f+'\" found '+m.length+' time(s)')});const excl=(text.match(/[A-Za-z][^.!?]*!/g)||[]).filter(e=>!/function|var |let |const |===|!==/.test(e));if(excl.length>0)issues.push(excl.length+' exclamation mark(s) in body copy');const wrong=(text.match(/cloud\\s+pulse|Cloud\\s+Pulse|CLOUDPULSE|cloudpulse/gi)||[]).filter(m=>m!=='CloudPulse');if(wrong.length)issues.push('wrong product name variants: '+wrong.join(', '));const cssWrong=(h.match(/cloudpulse/gi)||[]).filter(m=>m!=='CloudPulse');if(cssWrong.length)issues.push(cssWrong.length+' lowercase \"cloudpulse\" in code (use cp- prefix)');const headings=h.match(/<h[1-6][^>]*>(.*?)<\\/h[1-6]>/gi)||[];headings.forEach(heading=>{const inner=heading.replace(/<[^>]+>/g,'').trim();const words=inner.split(/\\s+/);const majorWords=words.filter((w,i)=>i===0||!/^(a|an|the|and|but|or|for|nor|at|by|in|of|on|to|up|is|it|as)$/i.test(w));const titleCaseViolations=majorWords.filter(w=>w.length>0&&w[0]!==w[0].toUpperCase());if(titleCaseViolations.length>0&&inner.length>3)issues.push('heading not Title Case: \"'+inner+'\" (words: '+titleCaseViolations.join(', ')+')')});const ctaButtons=h.match(/<(?:a|button)[^>]*class=[\"'][^\"']*cp-btn[^\"']*[\"'][^>]*>(.*?)<\\/(?:a|button)>/gi)||[];const actionVerbs=/^(Get|Start|Deploy|Monitor|Launch|Discover|Try|View|See|Contact|Learn|Explore)/i;ctaButtons.forEach(btn=>{const label=btn.replace(/<[^>]+>/g,'').trim();if(label.length>0&&!actionVerbs.test(label))issues.push('CTA missing action verb: \"'+label+'\"')});const sentences=text.split(/[.!?]+/).filter(s=>s.trim().length>10);const longSentences=sentences.filter(s=>s.trim().split(/\\s+/).length>25);if(longSentences.length>2)issues.push(longSentences.length+' sentences exceed 25 words (target: under 20 average)');if(issues.length){console.error('BRAND VOICE CHECK FAILED:\\n'+issues.map(i=>'  - '+i).join('\\n'));process.exit(1)}else{console.log('BRAND VOICE: PASS (all checks clear)')}"
+
+  if command_failed
+    prompt: |
+      Brand voice check failed: ${last_stderr}
+
+      Fix ALL brand voice issues in index.html:
+      - Replace filler words (very, really, just, basically, etc.) with precise language
+      - Remove exclamation marks from all visible text
+      - Product name must be exactly "${product_name}" everywhere
+      - CSS classes must use "cp-" prefix, not "cloudpulse"
+      - All headings must be Title Case (capitalize first letter of major words)
+      - CTA buttons must start with action verbs: Get, Start, Deploy, Monitor, Launch, Discover
+      - Keep sentences under 20 words average
+  end

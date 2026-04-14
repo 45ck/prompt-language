@@ -1,0 +1,55 @@
+library: qa
+
+import "experiments/marketing-factory/factory-v2/libraries/brand-voice.flow" as brand
+import "experiments/marketing-factory/factory-v2/libraries/seo-check.flow" as seo
+
+export flow run(product_name):
+  # Parallel QA: HTML structure + brand voice + SEO audit
+  spawn "html-validator"
+    prompt: |
+      Use agent: accessibility-engineer. Use skills: html-validation, wcag-compliance.
+
+      Read index.html and validate:
+      1. SEMANTIC HTML: proper use of <nav>, <main>, <section>, <article>, <footer>, <header>
+      2. HEADING HIERARCHY: exactly one <h1>, h2s for section titles, h3s for sub-items — no skipped levels
+      3. ARIA ATTRIBUTES: navigation has aria-label, buttons have accessible names, images have alt text
+      4. LINK TARGETS: all anchor hrefs resolve to existing ids
+      5. FORM ACCESSIBILITY: any inputs have associated labels (if forms exist)
+      6. COLOR CONTRAST: verify text colors against background meet WCAG AA (4.5:1)
+
+      Run this validation script and fix any issues found:
+
+    run: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const issues=[];const h1s=(h.match(/<h1/gi)||[]).length;if(h1s!==1)issues.push('Expected 1 <h1>, found '+h1s);if(!/<main/i.test(h))issues.push('missing <main> element');if(!/<header/i.test(h)&&!/<nav/i.test(h))issues.push('missing <header> or <nav>');const headings=h.match(/<h[1-6]/gi)||[];let prev=0;headings.forEach(tag=>{const lvl=parseInt(tag[2]);if(lvl>prev+1&&prev>0)issues.push('heading skip: h'+prev+' -> h'+lvl);prev=lvl});if(!h.includes('aria-label'))issues.push('no aria-label attributes found');if(issues.length){console.error('HTML QA FAILED:\\n'+issues.map(i=>'  - '+i).join('\\n'));process.exit(1)}else{console.log('HTML QA: PASS')}"
+    if command_failed
+      prompt: |
+        HTML structure issues found: ${last_stderr}
+        Fix all issues in index.html. Wrap sections in <main>, ensure heading hierarchy
+        is correct (h1 > h2 > h3, no skips), and add aria-label to navigation elements.
+    end
+  end
+
+  spawn "brand-checker"
+    use brand.check_voice(product_name="${product_name}")
+  end
+
+  spawn "seo-auditor"
+    use seo.audit()
+  end
+
+  await all
+
+  # Combined validation retry loop
+  retry max 2
+    run: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const text=h.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi,'').replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi,'').replace(/<[^>]+>/g,' ').replace(/\\s+/g,' ');const issues=[];const fillers=['very','really','just','basically','actually','simply','literally','quite','rather'];fillers.forEach(f=>{const re=new RegExp('\\\\b'+f+'\\\\b','gi');const m=text.match(re);if(m)issues.push('filler word \"'+f+'\" found '+m.length+'x')});const excl=(text.match(/[A-Za-z][^.!?]*!/g)||[]).filter(e=>!/function|var |let |const |===|!==/.test(e));if(excl.length>0)issues.push(excl.length+' exclamation mark(s)');const wrong=(text.match(/cloud\\s+pulse|Cloud\\s+Pulse|CLOUDPULSE/gi)||[]);if(wrong.length)issues.push('wrong product name: '+wrong.join(', '));if(!h.includes('og:title'))issues.push('missing og:title');if(!h.includes('og:description'))issues.push('missing og:description');if(!h.includes('canonical'))issues.push('missing canonical link');if(!h.includes('lang='))issues.push('missing lang attribute');if(!h.includes('application/ld+json'))issues.push('missing JSON-LD schema');if(issues.length){console.error('COMBINED QA FAILED:\\n'+issues.map(i=>'  - '+i).join('\\n'));process.exit(1)}else{console.log('COMBINED QA: PASS')}"
+    if command_failed
+      prompt: |
+        Combined quality check failed: ${last_stderr}
+
+        Fix ALL issues in index.html:
+        - Replace filler words with precise language
+        - Remove exclamation marks from visible text
+        - Ensure product name is exactly "CloudPulse" everywhere
+        - Add missing meta tags (og:title, og:description, canonical, lang)
+        - Add JSON-LD structured data for SoftwareApplication
+    end
+  end

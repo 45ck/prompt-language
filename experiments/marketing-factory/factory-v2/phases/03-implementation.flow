@@ -1,0 +1,58 @@
+library: implementation
+
+import "experiments/marketing-factory/factory-v2/libraries/section-builder.flow" as builder
+
+export flow run(product_name):
+  # Parallel section generation — each section built by a dedicated agent
+  foreach-spawn section in "navigation hero features pricing testimonials footer" max 6
+    use builder.generate_section(section="${section}", product_name="${product_name}")
+  end
+
+  await all
+
+  # Assembly: combine all sections + CSS into single index.html
+  prompt: |
+    Use agent: web-engineer. Use skills: html-assembly, responsive-design.
+
+    Read these files and combine them into a single index.html:
+    - design-tokens.css (CSS custom properties)
+    - components.css (component classes)
+    - sections/navigation.html
+    - sections/hero.html
+    - sections/features.html
+    - sections/pricing.html
+    - sections/testimonials.html
+    - sections/footer.html
+
+    ASSEMBLY RULES:
+    1. Start with <!DOCTYPE html>, <html lang="en">
+    2. <head> must include:
+       - <meta charset="UTF-8">
+       - <meta name="viewport" content="width=device-width, initial-scale=1.0">
+       - <title>${product_name} — Monitor Smarter, Respond Faster</title>
+       - <meta name="description" content="CloudPulse: Real-time cloud infrastructure monitoring with intelligent alerts and actionable dashboards.">
+       - <meta property="og:title" content="${product_name}">
+       - <meta property="og:description" content="Monitor smarter, respond faster. Real-time cloud monitoring for modern teams.">
+       - <link rel="canonical" href="https://cloudpulse.io">
+       - Inline <style> containing design-tokens.css content then components.css content
+    3. <body> sections in order: navigation, hero, features, pricing, testimonials, footer
+    4. Ensure all nav anchor links (#hero, #features, #pricing, #testimonials) match section ids
+    5. Add smooth scroll CSS: html { scroll-behavior: smooth; }
+    6. Add a JSON-LD schema for SoftwareApplication type
+    7. No external stylesheets, no <img> tags — inline SVGs and CSS gradients only
+    8. No JavaScript frameworks — vanilla JS only for mobile nav toggle
+
+    Write the complete index.html file now.
+
+  # Validate assembled HTML
+  retry max 3
+    run: node -e "const fs=require('fs');if(!fs.existsSync('index.html')){console.error('index.html not found');process.exit(1)}const h=fs.readFileSync('index.html','utf8');const issues=[];if(!h.includes('<!DOCTYPE html>'))issues.push('missing DOCTYPE');if(!/meta[^>]*viewport[^>]*width=device-width/i.test(h))issues.push('missing viewport meta');if(!/@media[^{]*max-width/i.test(h))issues.push('no mobile media queries');['hero','features','pricing','testimonials'].forEach(s=>{if(!new RegExp('id=[\"\\x27]'+s+'[\"\\x27]','i').test(h))issues.push('missing section id='+s)});if(!/<nav/i.test(h))issues.push('missing nav element');if(!/<footer/i.test(h))issues.push('missing footer element');if(!/<blockquote/i.test(h))issues.push('no blockquote in testimonials');const anchors=(h.match(/href=[\"']#([^\"']+)[\"']/g)||[]);const ids=new Set((h.match(/id=[\"']([^\"']+)[\"']/g)||[]).map(m=>m.match(/id=[\"']([^\"']+)[\"']/)[1]));const broken=anchors.filter(a=>{const t=a.match(/href=[\"']#([^\"']+)[\"']/)[1];return!ids.has(t)});if(broken.length)issues.push('broken anchor links: '+broken.join(', '));if(issues.length){console.error('HTML VALIDATION FAILED:\\n'+issues.map(i=>'  - '+i).join('\\n'));process.exit(1)}else{console.log('HTML STRUCTURE: PASS')}"
+    if command_failed
+      prompt: |
+        HTML validation failed. Fix these issues in index.html:
+        ${last_stderr}
+
+        Ensure every section has the correct id attribute, all nav anchors resolve,
+        testimonials use <blockquote>, and the page has DOCTYPE + viewport + media queries.
+    end
+  end

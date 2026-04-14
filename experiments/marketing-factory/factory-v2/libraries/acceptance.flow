@@ -1,0 +1,22 @@
+library: acceptance
+
+export flow phase_check(phase):
+  run: node -e "const phase='${phase}';const fs=require('fs');const checks={discovery:['brand-guidelines.md','content-brief.md'],design:['design-tokens.css','components.css'],implementation:['index.html'],qa:['index.html']};const files=checks[phase];if(!files){console.error('Unknown phase: '+phase);process.exit(1)}const missing=files.filter(f=>!fs.existsSync(f));if(missing.length){console.error('PHASE '+phase.toUpperCase()+' INCOMPLETE: missing '+missing.join(', '));process.exit(1)}else{console.log('PHASE '+phase.toUpperCase()+': PASS ('+files.length+' deliverable(s) verified)')}"
+
+  if command_failed
+    prompt: |
+      Phase "${phase}" acceptance check failed: ${last_stderr}
+      The required deliverable files are missing. Review the phase output and ensure
+      all expected files have been written to disk.
+  end
+
+export gates ship_gates():
+  file_exists index.html
+  file_exists brand-guidelines.md
+  file_exists content-brief.md
+  file_exists design-tokens.css
+  file_exists components.css
+  gate html_valid: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const issues=[];if(!h.includes('<!DOCTYPE html>'))issues.push('DOCTYPE');if(!/meta[^>]*viewport/i.test(h))issues.push('viewport');if(!/@media/i.test(h))issues.push('media queries');['hero','features','pricing','testimonials'].forEach(s=>{if(!new RegExp('id=[\"\\x27]'+s+'[\"\\x27]').test(h))issues.push('id='+s)});if(!/<nav/i.test(h))issues.push('nav');if(!/<footer/i.test(h))issues.push('footer');if(!/<blockquote/i.test(h))issues.push('blockquote');if(issues.length){console.error('Missing: '+issues.join(', '));process.exit(1)}"
+  gate brand_clean: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const t=h.replace(/<style[^>]*>[\\s\\S]*?<\\/style>/gi,'').replace(/<script[^>]*>[\\s\\S]*?<\\/script>/gi,'').replace(/<[^>]+>/g,' ');const issues=[];['very','really','just','basically','actually','simply','literally'].forEach(f=>{if(new RegExp('\\\\b'+f+'\\\\b','i').test(t))issues.push(f)});if(/[A-Za-z][^.!?]*!/.test(t.replace(/function|var |let |const /g,'')))issues.push('exclamation');if(/cloud\\s+pulse|CLOUDPULSE|cloudpulse/i.test(t))issues.push('product name');if(issues.length){console.error(issues.join(', '));process.exit(1)}"
+  gate seo_present: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const issues=[];if(!/og:title/i.test(h))issues.push('og:title');if(!/og:description/i.test(h))issues.push('og:description');if(!/canonical/i.test(h))issues.push('canonical');if(!/lang=/i.test(h))issues.push('lang');if(!/application\/ld\+json/i.test(h))issues.push('JSON-LD');if(issues.length){console.error('Missing: '+issues.join(', '));process.exit(1)}"
+  gate content_complete: node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');const issues=[];if((h.match(/<h3/gi)||[]).length<3)issues.push('features<3');if((h.match(/\\$/g)||[]).length<2)issues.push('prices<2');if((h.match(/<blockquote/gi)||[]).length<2)issues.push('testimonials<2');if(!/twitter|x\\.com/i.test(h)||!/linkedin/i.test(h)||!/github/i.test(h))issues.push('social links');if(issues.length){console.error(issues.join(', '));process.exit(1)}"

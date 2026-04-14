@@ -23,8 +23,9 @@ If either side lies (or skips a call), the check fails.
 - `pl-agent-shim` — Unix forwarder. Symlink `claude`, `codex`, etc. to
   this script and the shim will pick up `PL_SHIM_NAME` from the
   invocation basename.
-- `.binary-cache.json` — per-binary sha256 cache keyed by mtime
-  (generated at runtime, not checked in).
+- `.binary-cache.json` — per-binary sha256 cache keyed by mtime. Only
+  written when `PL_SHIM_TRUST_CACHE=1` is set (see "Security: binary
+  identity" below). Gitignored; never check in.
 
 ## Environment contract
 
@@ -35,6 +36,7 @@ If either side lies (or skips a call), the check fails.
 | `PL_REAL_BIN`        | yes                             | Absolute path to the real binary to exec.                                                                           |
 | `PL_SHIM_NAME`       | no                              | Short identity (e.g. `claude`) written into the trace.                                                              |
 | `PL_REAL_BIN_<NAME>` | yes for per-name stubs          | Windows `.cmd` stubs read `PL_REAL_BIN_CLAUDE`, `PL_REAL_BIN_CODEX`, etc. and populate `PL_REAL_BIN` automatically. |
+| `PL_SHIM_TRUST_CACHE`| no (default unset)              | When set to `'1'`, re-enables the legacy mtime-keyed binary hash cache. Any other value (including unset) forces always-compute. Dev-only; see "Security: binary identity". |
 
 ## Install on Windows
 
@@ -82,5 +84,42 @@ cross-check.
   so its records are hard to forge from inside the runtime.
 - It records hashes of stdin and stdout rather than their contents, so
   the trace stays small and does not capture prompts verbatim.
-- The binary hash is cached by mtime, so repeated invocations add a
-  single stat() rather than rehashing large binaries.
+
+## Security: binary identity (AP-4)
+
+The shim records `binarySha256` so the verifier and downstream witness
+chain can prove which binary actually ran. Earlier versions cached that
+hash in `.binary-cache.json` keyed on `(path, mtimeMs)` to avoid
+rehashing on every invocation. That cache is defeatable:
+
+```js
+// Attacker with write access to the real binary on the host:
+const t = fs.statSync('claude').mtime;
+fs.writeFileSync('claude', '...malicious...');
+fs.utimesSync('claude', t, t); // restore mtime
+```
+
+On the next shim invocation the cache hit returns the old honest
+SHA-256 for a now-malicious binary, and the witness chain silently
+validates a swapped binary. An attacker who can overwrite the binary
+can already do a lot, but the point of the shim trace is to produce an
+independent record that catches exactly this kind of substitution.
+
+**Default behavior (AP-4 fix):** the shim never reads or writes
+`.binary-cache.json`. Every invocation reads `PL_REAL_BIN` end-to-end
+and computes a fresh SHA-256. For a ~40 MB binary on SSD this is well
+under 100 ms, which is negligible compared to the agent call itself.
+The shim logs `[shim] binary-hash-mode: always-compute` to stderr once
+per process so operators can confirm the mode.
+
+**Opt-in (dev only):** set `PL_SHIM_TRUST_CACHE=1` to restore the
+legacy mtime-keyed cache. Use only on fully-trusted local loops where
+the binary cannot be swapped between invocations and where hashing cost
+is actually a bottleneck. In this mode the shim logs
+`[shim] binary-hash-mode: cached`. Do not set this variable on CI,
+shared runners, or any environment that participates in the
+witness-chain trust story.
+
+The cache file is gitignored. If you ever find `.binary-cache.json`
+tracked in git, delete it — a committed cache is both noise and a
+rollback hazard for this exact attack.

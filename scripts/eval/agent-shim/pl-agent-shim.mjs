@@ -59,7 +59,32 @@ function writeBinaryCache(cache) {
   }
 }
 
+let modeLogged = false;
+function logModeOnce(mode) {
+  if (modeLogged) return;
+  modeLogged = true;
+  process.stderr.write(`[shim] binary-hash-mode: ${mode}\n`);
+}
+
 function binarySha256(absPath) {
+  // AP-4: by default, always compute the hash. The previous cache keyed on
+  // (path, mtimeMs) could be defeated by an attacker who swapped the binary
+  // in place and restored the original mtime via utimes(). The cache path
+  // is retained only as an explicit opt-in for local/dev loops where the
+  // cost matters and the host is trusted.
+  const trustCache = process.env.PL_SHIM_TRUST_CACHE === '1';
+  if (!trustCache) {
+    logModeOnce('always-compute');
+    try {
+      statSync(absPath);
+    } catch (err) {
+      fail(3, `cannot stat PL_REAL_BIN (${absPath}): ${err.message}`);
+    }
+    const buf = readFileSync(absPath);
+    return createHash('sha256').update(buf).digest('hex');
+  }
+
+  logModeOnce('cached');
   const cache = readBinaryCache();
   let mtimeMs = 0;
   try {

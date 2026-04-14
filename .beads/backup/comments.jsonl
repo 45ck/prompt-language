@@ -1,0 +1,6 @@
+{"author":"45ck","created_at":"2026-04-14T03:12:58Z","id":"019d89fa-57e4-7d7a-be4e-3b1a8dc56dbb","issue_id":"prompt-lm0o.4","text":"Live MF-1 hello-meta run landed in b567405; verify-trace bug surfaced and was later fixed via 91c64ae. Re-run scheduled under new issue."}
+{"author":"45ck","created_at":"2026-04-14T03:12:59Z","id":"019d89fa-5b24-7bbf-8c1f-289a635c46f2","issue_id":"prompt-om95","text":"Blocked by claude auth availability + G1 verifier hardening flags settling (AP-1/2/3/5/8)."}
+{"author":"45ck","created_at":"2026-04-14T03:13:00Z","id":"019d89fa-5e54-71e7-b143-268f97ebd383","issue_id":"prompt-lenh","text":"Closed: coverage 89.31%-\u003e90.00% landed in 1a53d7b."}
+{"author":"45ck","created_at":"2026-04-14T03:13:01Z","id":"019d89fa-6185-7ea2-b753-79edd29d10f1","issue_id":"prompt-y0hv","text":"Closed: 10 tamper-drill cases shipped in 0271483 as integration tests (no verifier gaps found)."}
+{"author":"45ck","created_at":"2026-04-14T03:13:02Z","id":"019d89fa-64b9-77e7-a507-047bcf7e1f0f","issue_id":"prompt-lm0o.8","text":"Scaffold + M1 flow shipped in 08c0c08; P4 ran live and produced b567405."}
+{"author":"45ck","created_at":"2026-04-14T03:14:42Z","id":"019d89fb-eb82-70e7-ba7f-774f357b6de9","issue_id":"prompt-xgav.1","text":"Report shipped to docs/security/witness-chain-attacks.md; tracked here for audit, no code change expected."}

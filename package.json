@@ -83,6 +83,8 @@
     "meta:preflight": "node scripts/experiments/meta/bootstrap-envelope.mjs",
     "meta:preflight:test": "node --test scripts/experiments/meta/bootstrap-envelope.test.mjs",
     "e5:blinding:test": "node --test scripts/experiments/e5/verify-blinding.test.mjs",
+    "e5:score": "node scripts/experiments/e5/score-scorecard.mjs",
+    "e5:score:test": "node --test scripts/experiments/e5/score-scorecard.test.mjs",
     "knip": "knip --production",
     "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs --validate --output-type err src",
     "depgraph": "dependency-cruiser --config .dependency-cruiser.cjs --output-type mermaid src --output-to reports/dependency-graph.mmd",

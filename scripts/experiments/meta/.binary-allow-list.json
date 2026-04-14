@@ -1,0 +1,15 @@
+{
+  "_comment": "SHA-256 allow-list of installed agent CLI binaries on this host. Consumed by scripts/eval/verify-trace.mjs via --expected-binary-hashes. Keys are the shim's basename-without-extension (see shimBinaryName in verify-trace.mjs). Binaries not installed on this host are intentionally omitted rather than listed with empty arrays (an empty array would reject every invocation). To rotate: rerun the hash computation against the resolved PL_REAL_BIN_<NAME> path (matching scripts/eval/harness.mjs resolveRealBinary) and append the new hash; keep the prior hash until all hosts are updated.",
+  "_meta": {
+    "host": "windows-local-dev",
+    "populatedOn": "2026-04-14",
+    "presentBinaries": ["claude", "codex", "gemini", "ollama", "opencode", "aider"],
+    "intentionallyAbsent": []
+  },
+  "claude": ["dea34b5ddfac4c6aaf94b666d173c6418d4d2ee668114ad03715da3705ba8ee1"],
+  "codex": ["6ee176b43f96b2294c8e2265d599f829e161b2c2ad34cb2b8fbf5f836fd34b8c"],
+  "gemini": ["7f85245247024ac5d6fcb35a1cd57999ee986b7a45f6c80c6fd757a4d31eba2e"],
+  "ollama": ["acac8f803cc668b9f4079ee48e13f87953d1adee6852a289eabd1b67990fb11e"],
+  "opencode": ["4a6c6b7f9fb4e9ea000c579401353fe6bc917a3fdc19334b0b6e6b7ee8ebd75f"],
+  "aider": ["5aa81ce56ac62353c75d3facf976895994353e83e2a38fa25b687a481f24fcf9"]
+}

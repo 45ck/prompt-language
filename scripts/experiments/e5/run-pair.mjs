@@ -21,6 +21,7 @@ import { spawnFactoryPl } from './spawn-factory-pl.mjs';
 import { runChangeRequest } from './run-change-request.mjs';
 import { runJourneySuite } from './run-journey-suite.mjs';
 import { verifyBlinding } from './verify-blinding.mjs';
+import { scoreScorecard } from './score-scorecard.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..', '..', '..');
@@ -37,8 +38,7 @@ const STAGE_DESCRIPTIONS = {
   'factory-codex': 'Build workspace via codex-alone factory lane',
   'factory-pl': 'Build workspace via prompt-language factory lane',
   'gate-family-1-2-3': 'Run journey-suite gate against lane workspaces',
-  'blind-handoff':
-    'Strip identity artifacts, git-init baseline, and verify blinding for each lane',
+  'blind-handoff': 'Strip identity artifacts, git-init baseline, and verify blinding for each lane',
   'maintenance-codex-tree': 'Apply change requests to stripped codex workspace',
   'maintenance-pl-tree': 'Apply change requests to stripped pl workspace',
   scorecard: 'Render scorecard from template into run directory',
@@ -307,7 +307,24 @@ async function runScorecard(stage, ctx) {
   tpl.batch = { batchId: ctx.manifest.batchId, pairId: ctx.manifest.pairId };
   tpl.admissibility.class = 'pilot-scaffold';
   tpl.admissibility.reason = 'Scaffolded via run-pair.mjs; no live factory run completed yet.';
-  await writeFile(join(ctx.runDir, 'scorecard.json'), JSON.stringify(tpl, null, 2));
+  const scorecardPath = join(ctx.runDir, 'scorecard.json');
+  await writeFile(scorecardPath, JSON.stringify(tpl, null, 2));
+
+  // Final step: invoke the maintenance-viability aggregator. If the template
+  // still has null placeholders (scaffold-only path), scoring will leave the
+  // index null; this is reported in the summary file. Real runs that have
+  // populated the four families will get a computed index written back.
+  try {
+    const { scorecard: scored, lanes, pair } = scoreScorecard(tpl);
+    await writeFile(scorecardPath, JSON.stringify(scored, null, 2));
+    await writeFile(
+      join(ctx.runDir, 'scoring-summary.json'),
+      JSON.stringify({ lanes, pair }, null, 2),
+    );
+    ctx.log(`  scorecard: verdict=${pair.verdict}`);
+  } catch (err) {
+    ctx.log(`  scorecard: aggregator skipped (${err.message})`);
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -426,8 +443,7 @@ async function main() {
   log('done');
 }
 
-const invokedDirectly =
-  process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
+const invokedDirectly = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
 if (invokedDirectly) {
   await main();
 }

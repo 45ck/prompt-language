@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { delimiter, join, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 
 const DEFAULT_HARNESS = 'claude';
 const AI_CMD_CONFIG = parseAiCommand(process.env.AI_CMD);
@@ -26,7 +27,8 @@ function parseHarnessSelection(argv, envHarness, aiCmd) {
     raw === 'codex' ||
     raw === 'gemini' ||
     raw === 'opencode' ||
-    raw === 'ollama'
+    raw === 'ollama' ||
+    raw === 'aider'
   ) {
     return {
       harness: raw,
@@ -34,7 +36,7 @@ function parseHarnessSelection(argv, envHarness, aiCmd) {
     };
   }
   throw new Error(
-    `Unsupported harness "${raw}". Supported values: claude, codex, gemini, opencode, ollama.`,
+    `Unsupported harness "${raw}". Supported values: claude, codex, gemini, opencode, ollama, aider.`,
   );
 }
 
@@ -44,10 +46,169 @@ function parseModel(argv, envModel) {
   return flagValue || envModel || (HARNESS === 'codex' ? 'gpt-5.2' : undefined);
 }
 
+// ── Independent-witness shim wiring ─────────────────────────────────
+//
+// When PL_TRACE=1, the harness prepends the agent-shim directory to PATH so
+// that invocations of `claude`, `codex`, etc. by bare name are intercepted by
+// the shim, which records an independent trace alongside the runtime's.
+// Resolved absolute paths of the real binaries are exposed via
+// PL_REAL_BIN_<NAME> so the shim stubs can forward transparently.
+//
+// When PL_TRACE is unset, none of this runs and the environment is unchanged.
+
+const SHIM_DIR = resolve(import.meta.dirname, 'agent-shim');
+const SHIM_BINARIES = ['claude', 'codex', 'gemini', 'ollama', 'opencode', 'aider'];
+const TRACE_ENABLED = process.env.PL_TRACE === '1';
+let sharedRunId = null;
+const realBinCache = new Map();
+
+function toPosixPath(p) {
+  return p.replace(/\\/g, '/');
+}
+
+function resolveRealBinary(name) {
+  if (realBinCache.has(name)) return realBinCache.get(name);
+  const locator = process.platform === 'win32' ? 'where.exe' : 'which';
+  let resolved = null;
+  try {
+    const out = execFileSync(locator, [name], {
+      encoding: 'utf-8',
+      env: process.env,
+    })
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0)
+      // Skip any path under the shim directory to avoid self-loop.
+      .filter((line) => !toPosixPath(resolve(line)).startsWith(toPosixPath(SHIM_DIR)));
+    if (out.length > 0) {
+      resolved = toPosixPath(resolve(out[0]));
+    }
+  } catch {
+    resolved = null;
+  }
+  realBinCache.set(name, resolved);
+  return resolved;
+}
+
+function getSharedRunId() {
+  if (!TRACE_ENABLED) return null;
+  if (!sharedRunId) {
+    sharedRunId = process.env.PL_RUN_ID || randomUUID();
+  }
+  return sharedRunId;
+}
+
 function cleanEnv() {
   const env = { ...process.env };
   delete env.CLAUDECODE;
+
+  if (TRACE_ENABLED) {
+    // Prepend shim dir so intercepted bare-name invocations route through it.
+    const existingPath = env.PATH || env.Path || '';
+    env.PATH = `${SHIM_DIR}${delimiter}${existingPath}`;
+    if (process.platform === 'win32') {
+      env.Path = env.PATH;
+    }
+
+    env.PL_RUN_ID = getSharedRunId();
+    // PL_TRACE_DIR is left unset so the shim defaults to `${cwd}/.prompt-language`.
+
+    for (const bin of SHIM_BINARIES) {
+      const real = resolveRealBinary(bin);
+      if (real) {
+        env[`PL_REAL_BIN_${bin.toUpperCase()}`] = real;
+      }
+    }
+  }
+
   return env;
+}
+
+/**
+ * Run verify-trace against the given test cwd. Returns { ok, message, raw }.
+ *
+ * Three modes based on environment variables:
+ *  - PL_TRACE unset: tracing not requested; returns { ok: true, skipped: true }
+ *    without touching the filesystem (legacy behavior).
+ *  - PL_TRACE=1, PL_TRACE_STRICT unset/0: verify if provenance.jsonl exists,
+ *    otherwise skip silently (M1 default — tolerates partial runtime emission).
+ *  - PL_TRACE=1, PL_TRACE_STRICT=1: verify always; a missing provenance.jsonl
+ *    is treated as a hard failure (authenticity gate for Z-series).
+ */
+export function verifyTraceForCwd(cwd) {
+  if (!TRACE_ENABLED) return { ok: true, skipped: true };
+  const strict = process.env.PL_TRACE_STRICT === '1';
+  const tracePath = join(cwd, '.prompt-language', 'provenance.jsonl');
+  const statePath = join(cwd, '.prompt-language', 'session-state.json');
+  if (!existsSync(tracePath)) {
+    if (strict) {
+      preserveTraceFailure(cwd);
+      const message = `PL_TRACE_STRICT: expected .prompt-language/provenance.jsonl in ${cwd} but none was written`;
+      return { ok: false, message, raw: '', parsed: null };
+    }
+    return { ok: true, skipped: true, reason: 'no provenance.jsonl written' };
+  }
+  const verifyArgs = [
+    resolve(ROOT, 'scripts', 'eval', 'verify-trace.mjs'),
+    '--trace',
+    tracePath,
+    '--json',
+  ];
+  if (existsSync(statePath)) {
+    verifyArgs.push('--state', statePath);
+  }
+  try {
+    const raw = execFileSync('node', verifyArgs, {
+      encoding: 'utf-8',
+      env: process.env,
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    let parsed = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      /* non-JSON means non-OK path already handled in catch below */
+    }
+    return { ok: parsed?.ok !== false, raw, parsed };
+  } catch (error) {
+    const raw = (error.stdout ?? '') + (error.stderr ?? '');
+    let parsed = null;
+    try {
+      parsed = JSON.parse(error.stdout ?? '');
+    } catch {
+      /* leave parsed null */
+    }
+    const msg =
+      parsed?.errors?.join('; ') ||
+      error.stderr?.toString().trim() ||
+      error.message ||
+      'verify-trace failed';
+    // Preserve the failing temp dir for post-hoc inspection.
+    preserveTraceFailure(cwd);
+    return { ok: false, raw, parsed, message: msg };
+  }
+}
+
+function preserveTraceFailure(cwd) {
+  try {
+    const runId = getSharedRunId() || `unknown-${Date.now()}`;
+    const safeRunId = runId.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const dest = resolve(
+      ROOT,
+      'scripts',
+      'eval',
+      'results',
+      'trace-failures',
+      `${safeRunId}-${Date.now()}`,
+    );
+    mkdirSync(dest, { recursive: true });
+    const srcDir = join(cwd, '.prompt-language');
+    if (existsSync(srcDir)) {
+      cpSync(srcDir, join(dest, '.prompt-language'), { recursive: true });
+    }
+  } catch {
+    // best-effort preservation; never fail the harness on copy errors
+  }
 }
 
 function parseAiCommand(rawValue) {
@@ -112,6 +273,10 @@ function versionCommand() {
 
   if (HARNESS === 'ollama') {
     return ['ollama', '--version'];
+  }
+
+  if (HARNESS === 'aider') {
+    return ['python', '-m', 'aider', '--version'];
   }
 
   return ['claude', '--version'];
@@ -302,6 +467,48 @@ function execOllama(prompt, cwd, timeout, model, strict) {
   }
 }
 
+function execAider(prompt, cwd, timeout, model, strict) {
+  const resolvedModel = model ?? 'ollama/gemma4:31b';
+  const args = [
+    '-m',
+    'aider',
+    '--model',
+    resolvedModel,
+    '--no-auto-commits',
+    '--no-stream',
+    '--yes',
+    '--no-show-model-warnings',
+    '--map-tokens',
+    '1024',
+    '--edit-format',
+    'whole',
+    '--message',
+    prompt,
+  ];
+
+  try {
+    return execFileSync('python', args, {
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: {
+        ...cleanEnv(),
+        PYTHONUTF8: '1',
+        OLLAMA_API_BASE: 'http://127.0.0.1:11434',
+      },
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
+
 function execOpenCodeFlow(flowText, cwd, timeout, model, strict) {
   const args = [join(ROOT, 'bin', 'cli.mjs'), 'ci', '--runner', 'opencode'];
 
@@ -426,6 +633,33 @@ function execOllamaFlow(flowText, cwd, timeout, model, strict) {
     return error.stdout ?? '';
   }
 }
+function execAiderFlow(flowText, cwd, timeout, model, strict) {
+  const args = [join(ROOT, 'bin', 'cli.mjs'), 'ci', '--runner', 'aider'];
+
+  if (model) {
+    args.push('--model', model);
+  }
+
+  try {
+    return execFileSync('node', args, {
+      input: flowText,
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: cleanEnv(),
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
+
 export function getHarnessName() {
   return HARNESS;
 }
@@ -449,6 +683,10 @@ export function getHarnessLabel() {
 
   if (HARNESS === 'ollama') {
     return 'Ollama CLI';
+  }
+
+  if (HARNESS === 'aider') {
+    return 'Aider CLI';
   }
 
   return 'Claude CLI';
@@ -475,6 +713,10 @@ export function getCommandLabel() {
     return 'ollama run';
   }
 
+  if (HARNESS === 'aider') {
+    return 'python -m aider --message';
+  }
+
   return 'claude -p';
 }
 
@@ -485,7 +727,9 @@ export function getFlowCommandLabel() {
       ? 'prompt-language ci --runner opencode'
       : HARNESS === 'ollama'
         ? 'prompt-language ci --runner ollama'
-        : getCommandLabel();
+        : HARNESS === 'aider'
+          ? 'prompt-language ci --runner aider'
+          : getCommandLabel();
 }
 
 export function checkHarnessVersion(timeout = 5000) {
@@ -514,7 +758,9 @@ export function runHarnessPrompt(
         ? execOpenCode(prompt, cwd, timeout, resolvedModel, strict)
         : HARNESS === 'ollama'
           ? execOllama(prompt, cwd, timeout, resolvedModel, strict)
-          : execClaude(prompt, cwd, timeout, resolvedModel, strict);
+          : HARNESS === 'aider'
+            ? execAider(prompt, cwd, timeout, resolvedModel, strict)
+            : execClaude(prompt, cwd, timeout, resolvedModel, strict);
 }
 
 export function runHarnessFlow(
@@ -532,10 +778,12 @@ export function runHarnessFlow(
       ? execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict)
       : HARNESS === 'ollama'
         ? execOllamaFlow(flowText, cwd, timeout, resolvedModel, strict)
-        : runHarnessPrompt(flowText, {
-            cwd,
-            timeout,
-            model: resolvedModel,
-            strict,
-          });
+        : HARNESS === 'aider'
+          ? execAiderFlow(flowText, cwd, timeout, resolvedModel, strict)
+          : runHarnessPrompt(flowText, {
+              cwd,
+              timeout,
+              model: resolvedModel,
+              strict,
+            });
 }

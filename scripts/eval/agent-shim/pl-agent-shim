@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Unix forwarder for the pl-agent-shim.
+#
+# Usage: symlink claude, codex, gemini, ollama, opencode to this script, or
+# invoke it directly with PL_SHIM_NAME set. The shim identity is taken from
+# the invocation basename (argv[0]) when PL_SHIM_NAME is not provided, so
+# `ln -s pl-agent-shim claude` yields PL_SHIM_NAME=claude.
+set -e
+SELF="$0"
+DIR="$(cd "$(dirname "$SELF")" && pwd)"
+NAME="$(basename "$SELF")"
+if [ -z "${PL_SHIM_NAME:-}" ]; then
+  export PL_SHIM_NAME="$NAME"
+fi
+# Resolve PL_REAL_BIN from PL_REAL_BIN_<UPPER> if caller used the per-binary var.
+UP=$(printf '%s' "$PL_SHIM_NAME" | tr '[:lower:]-' '[:upper:]_')
+VAR="PL_REAL_BIN_${UP}"
+if [ -z "${PL_REAL_BIN:-}" ] && [ -n "${!VAR:-}" ]; then
+  export PL_REAL_BIN="${!VAR}"
+fi
+exec node "$DIR/pl-agent-shim.mjs" "$@"

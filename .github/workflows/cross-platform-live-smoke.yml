@@ -79,3 +79,108 @@ jobs:
             scripts/eval/results/
           if-no-files-found: warn
           retention-days: 30
+
+  live-smoke-traced:
+    # Separate lane that enables independent-witness tracing and cross-checks
+    # runtime vs shim traces with verify-trace. Kept off the default smoke job
+    # to avoid surprising other lanes while the harness wiring matures.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux
+            runner: '["self-hosted","Linux"]'
+          - platform: macos
+            runner: '["self-hosted","macOS"]'
+    runs-on: ${{ fromJSON(matrix.runner) }}
+    timeout-minutes: 90
+    env:
+      EVAL_HARNESS: ${{ inputs.harness }}
+      EVAL_MODEL: ${{ inputs.model }}
+      PL_TRACE: '1'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Unix shim symlinks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd scripts/eval/agent-shim
+          chmod +x pl-agent-shim || true
+          for name in claude codex gemini ollama opencode; do
+            ln -sf pl-agent-shim "$name"
+          done
+          ls -la
+
+      - name: Quick traced smoke
+        run: npm run eval:smoke:quick
+
+      - name: Upload trace artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: live-smoke-traced-${{ matrix.platform }}-${{ github.run_id }}
+          path: |
+            scripts/eval/results/
+          if-no-files-found: warn
+          retention-days: 30
+
+  z-series-auth-check:
+    # Authenticity gate: runs only the Z-series tests with PL_TRACE=1 and
+    # PL_TRACE_STRICT=1 so a missing provenance.jsonl is a hard failure.
+    # Linux-only for this iteration; expand to macOS/Windows once the Linux
+    # lane is stable.
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      EVAL_HARNESS: ${{ inputs.harness }}
+      EVAL_MODEL: ${{ inputs.model }}
+      PL_TRACE: '1'
+      PL_TRACE_STRICT: '1'
+      SMOKE_ONLY: 'Z1,Z2,Z3,Z4,Z5,Z6,Z7'
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Unix shim symlinks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd scripts/eval/agent-shim
+          chmod +x pl-agent-shim || true
+          for name in claude codex gemini ollama opencode; do
+            ln -sf pl-agent-shim "$name"
+          done
+          ls -la
+
+      - name: Strict-mode unit sanity
+        run: npm run eval:strict:test
+
+      - name: Z-series traced smoke (strict)
+        run: npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs
+
+      - name: Upload trace failure artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: z-series-auth-check-${{ github.run_id }}
+          path: |
+            scripts/eval/results/trace-failures/
+            scripts/eval/results/
+          if-no-files-found: warn
+          retention-days: 30

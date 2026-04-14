@@ -171,6 +171,9 @@ jobs:
       - name: Strict-mode unit sanity
         run: npm run eval:strict:test
 
+      - name: Tamper-drill verifier sanity
+        run: npm run eval:tamper:test
+
       - name: Z-series traced smoke (strict)
         run: npm run build && node bin/cli.mjs install && node scripts/eval/smoke-test.mjs
 

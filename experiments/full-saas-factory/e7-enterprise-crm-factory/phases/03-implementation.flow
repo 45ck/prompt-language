@@ -1,0 +1,107 @@
+library: implementation
+
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/crud-entity.flow" as crud
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/database.flow" as database
+
+export flow run(stack="Next.js 15 + TypeScript", db="PostgreSQL + Prisma", auth="NextAuth.js", pkg="pnpm", entities="contact company opportunity"):
+  prompt: Phase 3 — Implementation. Stack: ${stack}. DB: ${db}. Auth: ${auth}. Build the CRM application in apps/web/ and packages/api/. Follow docs/api-contracts.md and docs/data-model.md exactly. Do not add features beyond the PRD scope.
+
+  # Foundation: shared types + database + auth (must complete before entity work)
+  spawn "shared-foundation" with vars stack, db, pkg
+    prompt: Use agent: backend-engineer. Use skills: entity-model-designer, schema-normalizer. Create packages/shared/src/types/ with TypeScript interfaces for all 18 entities matching docs/data-model.md. Create packages/shared/src/validation/ with Zod schemas for each entity. Create packages/shared/src/constants/ with pipeline stage enums, permission enums, and entity status enums. Export everything from packages/shared/src/index.ts.
+    run: cd packages/shared && ${pkg} build
+    retry max 2
+      run: cd packages/shared && ${pkg} typecheck
+      if command_failed
+        prompt: Fix type errors in packages/shared. Check the error output and align types with docs/data-model.md.
+      end
+    end
+  end
+
+  spawn "database-setup" with vars db, pkg
+    prompt: Use agent: backend-engineer. Use skills: entity-model-designer, repository-layer-designer, schema-normalizer. Write packages/api/prisma/schema.prisma matching docs/data-model.md exactly — all 18 entities with relations, indexes, unique constraints, enums, and cascade rules. Include created_at/updated_at/deleted_at (soft delete) on all entities.
+    use database.setup_schema(pkg="${pkg}")
+    use database.seed_data(pkg="${pkg}")
+  end
+
+  spawn "auth-system" with vars auth, pkg
+    prompt: Use agent: backend-engineer. Use skills: entity-model-designer, transaction-boundary-checker. Implement auth using ${auth} in packages/api/src/auth/. Include: email/password registration with bcrypt, OAuth (Google, GitHub), session management, RBAC middleware (roles: admin, manager, rep, viewer), permission checks per entity, password reset flow, and email verification stubs. Write packages/api/src/auth/middleware.ts, packages/api/src/auth/providers.ts, packages/api/src/auth/rbac.ts.
+    retry max 3
+      run: cd packages/api && ${pkg} test -- --grep auth
+      if command_failed
+        prompt: Fix failing auth tests. Check test output and ensure RBAC, session, and provider tests pass.
+      end
+    end
+  end
+
+  await all
+
+  # Backend API layer (depends on foundation)
+  spawn "backend-api" with vars stack, db, pkg
+    prompt: Use agent: backend-engineer. Use skills: api-contract-writer, api-error-model-designer, repository-layer-designer, transaction-boundary-checker. Implement the REST API in packages/api/src/routes/ following docs/api-contracts.md. Include: standardized error responses, pagination (cursor-based), filtering, sorting, bulk operations, and request validation using Zod schemas from packages/shared. Write repository layer in packages/api/src/repositories/ with Prisma queries. Implement service layer in packages/api/src/services/ with business logic and transaction boundaries.
+    review criteria: "API must match docs/api-contracts.md. All endpoints must validate input, handle errors, enforce RBAC, and return consistent response shapes." grounded-by "cd packages/api && ${pkg} test" max 3
+      prompt: Use agent: backend-engineer. Review API implementation against the contracts. Fix missing endpoints, incorrect validation, broken error handling, or RBAC gaps.
+    end
+  end
+
+  # Frontend shell (can start parallel with backend API)
+  spawn "frontend-shell" with vars stack, pkg
+    prompt: Use agent: web-engineer. Use skills: route-and-controller-planner, client-server-responsibility-splitter, form-validation-designer, mvc-boundary-checker. Build the Next.js 15 app shell in apps/web/ following docs/architecture/frontend-architecture.md and docs/architecture/routing-map.md. Include: app router layout with sidebar navigation, auth pages (sign-in, sign-up, forgot-password), dashboard layout, shared UI components (data tables, forms, modals, toasts, pagination, search), and API client setup (React Query + fetch wrapper). Use Tailwind CSS + Radix UI primitives for accessible components.
+    retry max 2
+      run: cd apps/web && ${pkg} build
+      if command_failed
+        prompt: Fix build errors in the frontend shell. Check the error output.
+      end
+    end
+  end
+
+  await all
+
+  # Entity CRUD generation — parallel per entity cluster
+  let core_entities = "contact company opportunity pipeline_stage"
+  let activity_entities = "activity task note"
+  let commerce_entities = "deal quote invoice product"
+  let comm_entities = "email_template campaign"
+  let admin_entities = "dashboard report role permission audit_log"
+
+  foreach-spawn cluster in "core activity commerce comms admin" max 5
+    if ${cluster} == "core"
+      foreach entity in "${core_entities}"
+        use crud.generate_full(entity="${entity}", pkg="${pkg}")
+      end
+    end
+    if ${cluster} == "activity"
+      foreach entity in "${activity_entities}"
+        use crud.generate_full(entity="${entity}", pkg="${pkg}")
+      end
+    end
+    if ${cluster} == "commerce"
+      foreach entity in "${commerce_entities}"
+        use crud.generate_full(entity="${entity}", pkg="${pkg}")
+      end
+    end
+    if ${cluster} == "comms"
+      foreach entity in "${comm_entities}"
+        use crud.generate_full(entity="${entity}", pkg="${pkg}")
+      end
+    end
+    if ${cluster} == "admin"
+      foreach entity in "${admin_entities}"
+        use crud.generate_full(entity="${entity}", pkg="${pkg}")
+      end
+    end
+  end
+  await all
+
+  # Integration wiring — connect all entities to the frontend shell
+  prompt: Use agent: web-engineer. Use skills: route-and-controller-planner, form-validation-designer. Wire all entity pages into the sidebar navigation. Ensure the dashboard page shows: total contacts, total companies, total opportunities by stage (pipeline view), total revenue from invoices, overdue tasks, and recent activity feed. Verify all routes from docs/architecture/routing-map.md are implemented.
+
+  # Full build verification
+  retry max 3
+    run: ${pkg} lint
+    run: ${pkg} typecheck
+    run: ${pkg} test
+    if command_failed
+      prompt: Fix all lint, type, and test failures. Check the error output and fix each issue. Do not disable rules or skip tests.
+    end
+  end

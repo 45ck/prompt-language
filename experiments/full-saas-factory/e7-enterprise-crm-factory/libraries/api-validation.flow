@@ -1,0 +1,16 @@
+library: api_validation
+
+export flow validate_contracts(pkg="pnpm"):
+  prompt: Use agent: qa-automation-engineer. Use skills: api-test-suite-builder, integration-test-writer. Write packages/api/src/__tests__/contracts/ tests that validate every endpoint listed in docs/api-contracts.md exists and returns the documented response shape. For each entity: test GET / returns paginated list with correct fields, GET /:id returns single entity, POST / creates with validation, PUT /:id updates, DELETE /:id soft-deletes. Verify error responses match the documented error model (status code, error code, message).
+
+  retry max 2
+    run: cd packages/api && ${pkg} test -- --grep contract
+    if command_failed
+      prompt: Contract tests are failing. Check if endpoints are missing, response shapes don't match docs/api-contracts.md, or error handling is inconsistent. Fix the API implementation to match the contracts.
+    end
+  end
+
+  # Verify API contract completeness
+  let endpoint_count = run "grep -c 'endpoint' docs/api-contracts.md 2>/dev/null || echo 0"
+  let test_count = run "find packages/api/src/__tests__/contracts -name '*.test.ts' 2>/dev/null | wc -l || echo 0"
+  prompt: There are approximately ${endpoint_count} documented endpoints and ${test_count} contract test files. If there is a large gap, write the missing contract tests.

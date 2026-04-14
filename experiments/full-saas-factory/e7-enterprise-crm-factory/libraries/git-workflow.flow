@@ -1,0 +1,11 @@
+library: git
+
+export flow commit(msg="chore: update", pkg="pnpm"):
+  # Stage all changes
+  run: git add -A
+
+  # Verify there are changes to commit
+  let has_changes = run "git diff --cached --stat | wc -l"
+  if ${has_changes} > 0
+    run: git commit -m "${msg}"
+  end

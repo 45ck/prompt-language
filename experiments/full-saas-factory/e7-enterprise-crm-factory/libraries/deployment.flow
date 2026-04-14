@@ -1,0 +1,40 @@
+library: deployment
+
+export flow prepare(pkg="pnpm"):
+  prompt: Use agent: software-architect. Use skills: deployment-view-writer. Write docs/deployment/ directory with: docker-compose.yml (API + PostgreSQL + Redis for sessions), Dockerfile for packages/api (multi-stage build), Dockerfile for apps/web (Next.js standalone output), .env.example (all required environment variables with descriptions), and docs/deployment/architecture.md (deployment topology, scaling strategy, health check endpoints).
+
+  prompt: Use agent: delivery-manager. Use skills: rollback-readiness-checker. Write docs/deployment/rollback-plan.md covering: database rollback (Prisma migrate down), application rollback (Docker image tagging, blue-green switch), data rollback (backup restoration), and communication plan (who to notify, status page update).
+
+  # Verify deployment configs
+  run: test -f docker-compose.yml
+  run: test -f .env.example
+  run: test -f docs/deployment/rollback-plan.md
+
+export flow ship(pkg="pnpm"):
+  # Production build
+  run: ${pkg} build
+  run: cd apps/web && ${pkg} build
+  run: cd packages/api && ${pkg} build
+
+  # Build Docker images
+  try
+    run: docker compose build --no-cache
+  catch command_failed
+    prompt: Docker build failed. Check the Dockerfile and build output. Common issues: missing COPY targets, wrong Node version, or build-time env vars not set.
+  end
+
+  # Health check (if containers are running)
+  try
+    run: docker compose up -d
+    run: sleep 5
+    run: curl -f http://localhost:3000/api/health || exit 1
+    run: curl -f http://localhost:3001/health || exit 1
+  catch command_failed
+    prompt: Health check failed. Check container logs with docker compose logs. Fix the issue and retry.
+  finally
+    run: docker compose down
+  end
+
+export flow rollback(pkg="pnpm"):
+  prompt: Use agent: delivery-manager. Deployment failed. Follow docs/deployment/rollback-plan.md. Document the failure in docs/deployment/deployment-log.md with: timestamp, error description, root cause analysis, and remediation steps.
+  run: docker compose down || true

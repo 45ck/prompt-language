@@ -1,0 +1,27 @@
+library: database
+
+export flow setup_schema(pkg="pnpm"):
+  run: cd packages/api && npx prisma format
+  retry max 2
+    run: cd packages/api && npx prisma validate
+    if command_failed
+      prompt: Use agent: backend-engineer. Prisma schema validation failed. Check the error output and fix the schema in packages/api/prisma/schema.prisma. Common issues: missing relations, invalid field types, duplicate model names.
+    end
+  end
+  run: cd packages/api && npx prisma generate
+
+export flow seed_data(pkg="pnpm"):
+  prompt: Use agent: backend-engineer. Use skills: entity-model-designer. Write packages/api/prisma/seed.ts with realistic seed data: 3 roles (admin, manager, rep), 5 users, 20 contacts, 10 companies, 15 opportunities across 5 pipeline stages, 30 activities, 20 tasks (some overdue), 15 notes, 5 deals, 3 quotes with line items, 2 invoices, 10 products, 3 email templates, 2 campaigns, and a pre-configured dashboard. Use Prisma client for seeding. Add "prisma": { "seed": "npx tsx prisma/seed.ts" } to packages/api/package.json.
+  retry max 2
+    run: cd packages/api && npx prisma db seed
+    if command_failed
+      prompt: Seed script failed. Check the error output. Common issues: foreign key constraint violations (wrong insertion order), missing enum values, or type mismatches.
+    end
+  end
+
+export flow migrate(pkg="pnpm"):
+  try
+    run: cd packages/api && npx prisma migrate dev --name init
+  catch command_failed
+    prompt: Migration failed. Check the error output. If the database doesn't exist, create it. If there are schema conflicts, reset with prisma migrate reset.
+  end

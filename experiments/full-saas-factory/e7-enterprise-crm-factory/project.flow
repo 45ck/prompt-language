@@ -1,0 +1,93 @@
+Goal: build a production-grade enterprise CRM from discovery through deployment using prompt-language as the engineering medium
+
+memory:
+  crm_target_market
+  crm_stack
+  crm_db
+  crm_auth
+  crm_pkg
+  crm_workspace
+  crm_entities
+  crm_entity_count
+
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/phases/01-discovery.flow" as discovery
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/phases/02-architecture.flow" as architecture
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/phases/03-implementation.flow" as implementation
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/phases/04-quality-assurance.flow" as qa
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/phases/05-security.flow" as security
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/phases/06-release.flow" as release
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/scaffold.flow" as scaffold
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/dependencies.flow" as deps
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/crud-entity.flow" as crud
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/database.flow" as database
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/api-validation.flow" as api
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/security-scan.flow" as sec_scan
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/acceptance.flow" as acceptance
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/deployment.flow" as deploy
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/git-workflow.flow" as git
+
+flow:
+  # ── Bootstrap: set configuration variables ──
+  remember key="crm_target_market" value="mid-market B2B sales teams (50-500 employees) with multi-stage pipelines"
+  remember key="crm_stack" value="Next.js 15 + TypeScript + Tailwind CSS"
+  remember key="crm_db" value="PostgreSQL + Prisma ORM"
+  remember key="crm_auth" value="NextAuth.js with email + OAuth providers"
+  remember key="crm_pkg" value="pnpm"
+  remember key="crm_workspace" value="experiments/full-saas-factory/e7-enterprise-crm-factory/workspace/crm-app"
+  remember key="crm_entities" value="contact company opportunity pipeline_stage activity task note deal quote invoice product email_template campaign dashboard report role permission audit_log"
+  remember key="crm_entity_count" value="18"
+
+  prompt: You are the factory orchestrator for an enterprise CRM build. Work only inside ${crm_workspace}. Follow the flow structure exactly — do not skip phases, invent extra phases, or deviate from the declared agent assignments. Record non-obvious decisions as ADRs under docs/adr/.
+
+  # ── Phase 0: Scaffold ──
+  use scaffold.bootstrap(workspace="${crm_workspace}", pkg="${crm_pkg}")
+  use deps.install_all(pkg="${crm_pkg}")
+
+  use git.commit(msg="chore: initial scaffold and dependencies", pkg="${crm_pkg}")
+
+  # ── Phase 1: Discovery (parallel research tracks) ──
+  use discovery.run(target_market="${crm_target_market}", stack="${crm_stack}", db="${crm_db}")
+
+  use acceptance.phase_check(phase="discovery", pkg="${crm_pkg}")
+  use git.commit(msg="docs: discovery phase — PRD, personas, research", pkg="${crm_pkg}")
+
+  approve "Review discovery artifacts (docs/prd.md, docs/personas.md, docs/research/) before proceeding to architecture." timeout 120
+
+  # ── Phase 2: Architecture (race two approaches, review winner) ──
+  use architecture.run(stack="${crm_stack}", db="${crm_db}", auth="${crm_auth}")
+
+  use acceptance.phase_check(phase="architecture", pkg="${crm_pkg}")
+  use git.commit(msg="docs: architecture phase — domain model, API contracts, ADRs", pkg="${crm_pkg}")
+
+  approve "Review architecture (docs/architecture/, docs/api-contracts.md, docs/data-model.md) before implementation." timeout 120
+
+  # ── Phase 3: Implementation (parallel backend + frontend + entity generation) ──
+  use implementation.run(stack="${crm_stack}", db="${crm_db}", auth="${crm_auth}", pkg="${crm_pkg}", entities="${crm_entities}")
+
+  use acceptance.phase_check(phase="implementation", pkg="${crm_pkg}")
+  use git.commit(msg="feat: implementation phase — backend, frontend, all entities", pkg="${crm_pkg}")
+
+  approve "Review implementation (apps/web/, packages/api/, all entity CRUD) before QA." timeout 120
+
+  # ── Phase 4: Quality Assurance (parallel test suites + review loops) ──
+  use qa.run(pkg="${crm_pkg}", entities="${crm_entities}")
+
+  use acceptance.phase_check(phase="qa", pkg="${crm_pkg}")
+  use git.commit(msg="test: QA phase — unit, integration, e2e, coverage", pkg="${crm_pkg}")
+
+  # ── Phase 5: Security (threat model + audit + pentest) ──
+  use security.run(pkg="${crm_pkg}")
+
+  use acceptance.phase_check(phase="security", pkg="${crm_pkg}")
+  use git.commit(msg="security: threat model, auth audit, dependency scan", pkg="${crm_pkg}")
+
+  approve "Review security findings (docs/security/) before release." timeout 120
+
+  # ── Phase 6: Release (docs + demo + deployment readiness) ──
+  use release.run(pkg="${crm_pkg}")
+
+  use acceptance.phase_check(phase="release", pkg="${crm_pkg}")
+  use git.commit(msg="release: v1.0.0 — changelog, docs, demo, deployment", pkg="${crm_pkg}")
+
+done when:
+  use acceptance.ship_gates(pkg="${crm_pkg}")

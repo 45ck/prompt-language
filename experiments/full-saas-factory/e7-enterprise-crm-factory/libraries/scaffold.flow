@@ -1,0 +1,11 @@
+library: scaffold
+
+export flow bootstrap(workspace="workspace/crm-app", pkg="pnpm"):
+  prompt: Create the project directory structure inside ${workspace}. Create these directories: apps/web/src/ (Next.js frontend), apps/web/e2e/ (Playwright tests), apps/web/public/, packages/api/src/ (backend API), packages/api/src/routes/, packages/api/src/services/, packages/api/src/repositories/, packages/api/src/auth/, packages/api/src/middleware/, packages/api/src/__tests__/, packages/api/prisma/, packages/shared/src/types/, packages/shared/src/validation/, packages/shared/src/constants/, docs/, docs/research/, docs/architecture/, docs/security/, docs/adr/, specs/, qa-flows/, demo/, artifacts/. Do not create implementation code yet — only directories and placeholder index files.
+
+  run: cd ${workspace} && git init
+  run: cd ${workspace} && echo "node_modules/\n.next/\ndist/\n.env\n.env.local\ncoverage/\n*.log" > .gitignore
+
+  prompt: Create ${workspace}/package.json as a pnpm workspace root with workspaces ["apps/*", "packages/*"]. Create ${workspace}/pnpm-workspace.yaml. Create ${workspace}/tsconfig.json as the root TypeScript config with strict mode, paths for @crm/api, @crm/web, @crm/shared. Create ${workspace}/apps/web/package.json (Next.js 15, React 19, Tailwind CSS, Radix UI, React Query, Zustand, Vitest, Playwright). Create ${workspace}/packages/api/package.json (Express or Hono, Prisma, bcrypt, Zod, Vitest). Create ${workspace}/packages/shared/package.json (Zod, TypeScript).
+
+  prompt: Create ${workspace}/.eslintrc.json with TypeScript and React rules. Create ${workspace}/prettier.config.js. Create ${workspace}/vitest.config.ts for the workspace root. Ensure ${pkg} lint, ${pkg} typecheck, and ${pkg} test scripts are defined in the root package.json.

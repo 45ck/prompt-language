@@ -1,0 +1,45 @@
+library: architecture
+
+export flow run(stack="Next.js 15 + TypeScript", db="PostgreSQL + Prisma", auth="NextAuth.js"):
+  prompt: Phase 2 — Architecture. Stack: ${stack}. DB: ${db}. Auth: ${auth}. Produce the architectural blueprint the implementation phase needs. Stay within the PRD scope.
+
+  # Race two architecture approaches — modular monolith vs microservices-ready
+  race timeout 300
+    spawn "arch-modular"
+      prompt: Use agent: software-architect. Use skills: adr-writer, architecture-option-generator, service-decomposition-advisor. Design a modular monolith architecture for the CRM using ${stack} + ${db}. Write a proposal in docs/architecture/option-a-modular-monolith.md covering: module boundaries (core, pipeline, communications, reporting, admin), shared kernel, API layer (tRPC + REST), data model with Prisma relations, auth flow with ${auth}. Include tradeoffs.
+    end
+    spawn "arch-services"
+      prompt: Use agent: software-architect. Use skills: adr-writer, architecture-option-generator, service-decomposition-advisor. Design a microservices-ready architecture for the CRM using ${stack} + ${db}. Write a proposal in docs/architecture/option-b-services-ready.md covering: service boundaries, API gateway, shared types package, event-driven communication, data model per service. Include tradeoffs.
+    end
+  end
+  await all
+
+  # Architect picks the winner and writes final docs
+  prompt: Use agent: software-architect. Use skills: tradeoff-analysis-writer, quality-attribute-scenario-writer. Read both architecture options. For an MVP targeting mid-market B2B, select the better option and write docs/adr/adr-001-architecture-style.md documenting the decision. Then produce the authoritative architecture docs.
+
+  # Parallel architecture artifact generation
+  spawn "domain-model" with vars stack, db
+    prompt: Use agent: system-modeler. Use skills: domain-class-modeler, use-case-modeler, sequence-diagram-builder. From docs/prd.md and the selected architecture, write docs/architecture/domain-model.md (entity relationships, aggregates, value objects), docs/architecture/sequence-diagrams.md (contact-to-opportunity, quote-to-invoice, campaign-to-dashboard flows), and specs/domain-glossary.md.
+    prompt: Use agent: system-modeler. Use skills: model-consistency-checker, state-model-builder. Write specs/invariants.md documenting business rules (e.g., opportunity must belong to a company, pipeline stages are ordered, quotes require at least one line item, invoices are immutable after sending).
+  end
+
+  spawn "api-design" with vars stack, db
+    prompt: Use agent: backend-engineer. Use skills: api-contract-writer, api-error-model-designer, schema-normalizer. Write docs/api-contracts.md (RESTful endpoints for all 18 entities — CRUD + search + bulk operations + pagination), docs/data-model.md (Prisma schema with relations, indexes, constraints), and docs/adr/adr-002-api-style.md (REST + tRPC hybrid decision).
+    prompt: Use agent: backend-engineer. Write docs/architecture/database-strategy.md covering: connection pooling, migration strategy, seed data approach, multi-tenant readiness, backup strategy.
+  end
+
+  spawn "frontend-arch" with vars stack
+    prompt: Use agent: web-engineer. Use skills: route-and-controller-planner, client-server-responsibility-splitter, session-state-strategy-reviewer. Write docs/architecture/frontend-architecture.md covering: app router structure, server vs client components, state management (server state via React Query, local state via Zustand), form handling, error boundaries, and component library approach (Tailwind + Radix UI primitives).
+    prompt: Use agent: web-engineer. Write docs/architecture/routing-map.md listing every route with its layout, auth requirement, and data dependencies.
+  end
+
+  spawn "engineering-docs" with vars stack
+    prompt: Use agent: delivery-manager. Use skills: go-live-readiness-reviewer. Write README.md (project overview, setup instructions, dev workflow), AGENTS.md (agent roles and responsibilities), docs/traceability.md (maps acceptance criteria to implementation locations and test files), and docs/test-strategy.md (unit/integration/e2e approach, coverage targets, tooling).
+  end
+
+  await all
+
+  # Architecture coherence review
+  review criteria: "Architecture must be implementable by parallel backend and frontend teams. Domain model must match API contracts. Data model must match domain model. No hidden coupling between frontend and backend. Invariants must be enforceable." grounded-by "test -f docs/architecture/domain-model.md && test -f docs/api-contracts.md && test -f docs/data-model.md && test -f docs/architecture/frontend-architecture.md" max 3
+    prompt: Use agent: quality-reviewer. Use skills: maintainability-reviewer, technical-debt-auditor. Critique architecture for: overengineering, missing invariants, domain-API mismatch, unclear module boundaries, untestable designs, and frontend-backend coupling. Fix all issues directly.
+  end

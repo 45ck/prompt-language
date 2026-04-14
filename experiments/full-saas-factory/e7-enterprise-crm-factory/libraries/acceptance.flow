@@ -1,0 +1,97 @@
+library: acceptance
+
+export flow phase_check(phase="discovery", pkg="pnpm"):
+  if ${phase} == "discovery"
+    run: test -f docs/prd.md
+    run: test -f docs/acceptance-criteria.md
+    run: test -f docs/personas.md
+    run: test -f docs/use-cases.md
+    run: test -f docs/backlog.md
+    run: test -f docs/research/problem-space.md
+    run: test -f docs/research/competitors.md
+  end
+  if ${phase} == "architecture"
+    run: test -f docs/architecture/domain-model.md
+    run: test -f docs/api-contracts.md
+    run: test -f docs/data-model.md
+    run: test -f docs/architecture/frontend-architecture.md
+    run: test -f docs/architecture/routing-map.md
+    run: test -f docs/adr/adr-001-architecture-style.md
+    run: test -f docs/test-strategy.md
+    run: test -f README.md
+  end
+  if ${phase} == "implementation"
+    run: test -d packages/api/src/routes
+    run: test -d packages/api/src/services
+    run: test -d packages/api/src/repositories
+    run: test -d apps/web/src/app
+    run: test -d packages/shared/src/types
+    run: ${pkg} typecheck
+  end
+  if ${phase} == "qa"
+    run: ${pkg} test
+    run: test -f docs/traceability.md
+  end
+  if ${phase} == "security"
+    run: test -f docs/security/threat-model.md
+    run: test -f docs/security/code-audit.md
+    run: test -f docs/security/sign-off.md
+  end
+  if ${phase} == "release"
+    run: test -f CHANGELOG.md
+    run: test -f docs/release-notes.md
+    run: test -f docs/handover.md
+    run: test -f docs/product-summary.md
+    run: test -f docs/demo-script.md
+  end
+
+export gates ship_gates(pkg="pnpm"):
+  # Build gates
+  gate lint: ${pkg} lint
+  gate typecheck: ${pkg} typecheck
+  gate tests: ${pkg} test
+
+  # Discovery artifacts
+  file_exists docs/prd.md
+  file_exists docs/acceptance-criteria.md
+  file_exists docs/personas.md
+  file_exists docs/use-cases.md
+  file_exists docs/non-functional-requirements.md
+  file_exists docs/backlog.md
+
+  # Research artifacts
+  file_exists docs/research/problem-space.md
+  file_exists docs/research/competitors.md
+  file_exists docs/research/workflow-patterns.md
+
+  # Architecture artifacts
+  file_exists docs/architecture/domain-model.md
+  file_exists docs/architecture/frontend-architecture.md
+  file_exists docs/architecture/routing-map.md
+  file_exists docs/architecture/database-strategy.md
+  file_exists docs/api-contracts.md
+  file_exists docs/data-model.md
+  file_exists docs/adr/adr-001-architecture-style.md
+  file_exists specs/domain-glossary.md
+  file_exists specs/invariants.md
+
+  # Engineering docs
+  file_exists README.md
+  file_exists AGENTS.md
+  file_exists docs/traceability.md
+  file_exists docs/test-strategy.md
+
+  # Security artifacts
+  file_exists docs/security/threat-model.md
+  file_exists docs/security/auth-design-review.md
+  file_exists docs/security/code-audit.md
+  file_exists docs/security/pentest-review.md
+  file_exists docs/security/sign-off.md
+
+  # Release artifacts
+  file_exists CHANGELOG.md
+  file_exists docs/release-notes.md
+  file_exists docs/known-issues.md
+  file_exists docs/handover.md
+  file_exists docs/product-summary.md
+  file_exists docs/demo-script.md

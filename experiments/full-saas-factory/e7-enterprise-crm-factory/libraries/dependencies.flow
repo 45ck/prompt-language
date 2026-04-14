@@ -1,0 +1,18 @@
+library: dependencies
+
+export flow install_all(pkg="pnpm"):
+  try
+    run: ${pkg} install
+  catch command_failed
+    prompt: Package installation failed. Check the error output. Common fixes: clear node_modules and lockfile, fix version conflicts, or add missing peer dependencies.
+    run: rm -rf node_modules ${pkg}-lock.yaml
+    run: ${pkg} install
+  end
+
+  # Verify lockfile exists
+  run: test -f ${pkg}-lock.yaml || test -f package-lock.json || test -f yarn.lock
+
+  # Install dev tooling
+  run: ${pkg} add -D vitest @vitest/coverage-v8 @vitest/ui typescript @types/node eslint prettier
+  run: ${pkg} add -D @playwright/test
+  run: cd apps/web && npx playwright install --with-deps chromium

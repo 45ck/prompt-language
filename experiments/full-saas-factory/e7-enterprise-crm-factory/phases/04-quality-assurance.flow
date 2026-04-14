@@ -1,0 +1,53 @@
+library: qa
+
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/api-validation.flow" as api
+
+export flow run(pkg="pnpm", entities="contact company opportunity"):
+  prompt: Phase 4 — Quality Assurance. Run comprehensive test suites across unit, integration, e2e, and contract levels. Fix all failures. Do not skip or disable tests.
+
+  # Parallel test suite execution
+  spawn "unit-tests" with vars pkg
+    prompt: Use agent: qa-automation-engineer. Use skills: unit-test-writer, fixture-and-test-data-builder, test-readability-reviewer. Audit existing unit tests in packages/api/src/**/*.test.ts and apps/web/src/**/*.test.ts. Add missing tests for: edge cases (empty inputs, boundary values, null handling), error paths (invalid data, auth failures, not found), and business rules from specs/invariants.md. Target 80% statement coverage per module.
+    retry max 3
+      run: ${pkg} test -- --coverage
+      if command_failed
+        prompt: Fix failing unit tests. Do not delete or skip tests — fix the underlying code or correct the test expectation.
+      end
+    end
+  end
+
+  spawn "integration-tests" with vars pkg
+    prompt: Use agent: qa-automation-engineer. Use skills: integration-test-writer, api-test-suite-builder, fixture-and-test-data-builder. Write integration tests in packages/api/src/__tests__/integration/ covering: entity CRUD flows end-to-end through the API layer, cross-entity operations (create contact → create opportunity → create quote → create invoice), RBAC enforcement (admin can do all, rep cannot manage roles), pagination and filtering, and bulk operations. Use a test database with proper setup/teardown.
+    retry max 3
+      run: ${pkg} test:integration
+      if command_failed
+        prompt: Fix failing integration tests. Check database setup, fixtures, and API response assertions.
+      end
+    end
+  end
+
+  spawn "e2e-tests" with vars pkg
+    prompt: Use agent: qa-automation-engineer. Use skills: ui-test-scenario-writer, fixture-and-test-data-builder. Write Playwright e2e tests in apps/web/e2e/ covering the top 5 user journeys from docs/ux-test-plan.md: sign-in flow, create and edit contact, manage pipeline (drag opportunity between stages), send quote and generate invoice, and dashboard reporting. Use accessible selectors (role, label, text).
+    retry max 2
+      run: cd apps/web && ${pkg} e2e
+      if command_failed
+        prompt: Fix failing e2e tests. Check selectors, wait conditions, and test data setup.
+      end
+    end
+  end
+
+  spawn "api-contracts" with vars pkg
+    use api.validate_contracts(pkg="${pkg}")
+  end
+
+  await all
+
+  # Coverage and quality review
+  let coverage_output = run "${pkg} test -- --coverage --reporter=json-summary 2>&1 | tail -20"
+
+  review criteria: "All test suites must pass. Statement coverage must exceed 70% for packages/api and 60% for apps/web. No flaky tests. No skipped tests. Business invariants from specs/invariants.md must have corresponding test cases." grounded-by "${pkg} lint && ${pkg} typecheck && ${pkg} test" max 3
+    prompt: Use agent: test-designer. Use skills: coverage-goal-planner, testability-reviewer, equivalence-partitioning-generator. Review the test suite for: coverage gaps (uncovered business rules, missing error paths), flaky patterns (timing, order dependence), weak assertions (checking existence but not content), and missing boundary value tests. Fix all issues.
+  end
+
+  # Traceability matrix update
+  prompt: Use agent: delivery-manager. Update docs/traceability.md to map every acceptance criterion from docs/acceptance-criteria.md to its corresponding test file(s) and result status (pass/fail/pending). Flag any acceptance criterion without a corresponding test.

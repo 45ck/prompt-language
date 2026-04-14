@@ -1,0 +1,37 @@
+library: security
+
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/security-scan.flow" as scan
+
+export flow run(pkg="pnpm"):
+  prompt: Phase 5 — Security. Conduct threat modeling, auth audit, dependency scanning, and pen-test review. Security findings must be resolved before release.
+
+  # Parallel security tracks
+  spawn "threat-model" with vars pkg
+    prompt: Use agent: security-reviewer. Use skills: threat-surface-mapper, trust-boundary-identifier, secure-by-design-reviewer. Write docs/security/threat-model.md covering: trust boundaries (browser → API → database, auth provider → session store), STRIDE analysis per boundary, attack surface inventory (all API endpoints, auth flows, file uploads, search inputs), data classification (PII in contacts, financial in invoices, credentials in auth), and risk ratings (likelihood x impact).
+    prompt: Use agent: security-reviewer. Use skills: secrets-handling-checker, authn-authz-separator. Write docs/security/auth-design-review.md auditing: session management (cookie flags, expiry, rotation), RBAC implementation (permission checks at API layer, not just UI), password policy enforcement, OAuth token handling, CSRF protection, and rate limiting on auth endpoints.
+  end
+
+  spawn "code-audit" with vars pkg
+    prompt: Use agent: security-reviewer. Use skills: secure-by-design-reviewer, prompt-injection-reviewer, tool-permission-boundary-checker. Audit the codebase for OWASP Top 10 vulnerabilities. Check for: SQL injection (Prisma parameterization), XSS (React auto-escaping + CSP headers), CSRF (token validation), broken access control (RBAC bypass), security misconfiguration (default secrets, debug mode), sensitive data exposure (PII in logs, error messages), and insecure deserialization. Write findings to docs/security/code-audit.md with file:line references.
+    if command_failed
+      prompt: Fix all critical and high severity findings from the code audit. Do not suppress warnings — fix the root cause.
+    end
+  end
+
+  spawn "dependency-scan" with vars pkg
+    use scan.full_scan(pkg="${pkg}")
+  end
+
+  spawn "pentest-review" with vars pkg
+    prompt: Use agent: pentest-reviewer. Use skills: owasp-wstg-checklist-runner, api-attack-surface-mapper, report-finding-writer, input-filter-bypass-checker. Conduct a pen-test review (no live exploitation). Write docs/security/pentest-review.md covering: WSTG checklist results (authentication, authorization, session management, input validation, error handling), API attack surface (parameter pollution, mass assignment, IDOR, rate limiting), and recommended mitigations. Priority-rank all findings.
+  end
+
+  await all
+
+  # Security review gate — must resolve critical/high findings
+  review criteria: "No critical or high severity security findings may remain open. All OWASP Top 10 categories must be addressed. RBAC must be enforced at API layer. Secrets must not appear in code or logs. Dependencies must have no known critical CVEs." grounded-by "${pkg} audit --audit-level=high 2>&1; echo done" max 3
+    prompt: Use agent: security-reviewer. Review all security documents. Ensure critical and high findings from docs/security/code-audit.md and docs/security/pentest-review.md are resolved. Verify dependency audit is clean. Fix remaining issues directly in code.
+  end
+
+  # Final security sign-off
+  prompt: Use agent: security-reviewer. Write docs/security/sign-off.md confirming: threat model reviewed, code audit complete (with finding counts by severity), dependency scan clean, RBAC verified, auth design reviewed. List any accepted risks with justification.

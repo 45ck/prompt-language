@@ -1,0 +1,27 @@
+library: discovery
+
+export flow run(target_market="mid-market B2B sales teams", stack="Next.js 15 + TypeScript", db="PostgreSQL + Prisma"):
+  prompt: Phase 1 — Discovery. Target market: ${target_market}. Stack: ${stack}. Database: ${db}. Produce the documentation pack that all downstream phases depend on.
+
+  # Three parallel research tracks
+  spawn "market-research" with vars target_market, stack
+    prompt: Use agent: research-writer. Use skills: search-string-designer, evidence-strength-scorer, critical-analysis-writer. Research CRM requirements for ${target_market}. Write docs/research/problem-space.md (pain points, workflow gaps), docs/research/competitors.md (Salesforce, HubSpot, Pipedrive — feature matrix), docs/research/market-sizing.md (TAM/SAM/SOM), docs/research/workflow-patterns.md (common B2B sales workflows). Ground findings in real industry data, not speculation.
+    prompt: Use agent: research-writer. Write docs/research/adoption-notes.md summarizing differentiation opportunities, integration requirements (email, calendar, Slack), and migration blockers.
+  end
+
+  spawn "requirements" with vars target_market, stack, db
+    prompt: Use agent: requirements-analyst. Use skills: problem-statement-refiner, requirements-elicitation, acceptance-criteria-writer, stakeholder-analysis, spec-writer. Produce docs/prd.md (bounded MVP: auth, contacts, companies, opportunities, pipeline management, tasks, notes, quotes, invoices, products, email templates, campaigns, dashboards, reports, RBAC, audit log), docs/use-cases.md, docs/non-functional-requirements.md (performance: <200ms p95, availability: 99.9%, data: GDPR-ready, scale: 10K contacts), and docs/acceptance-criteria.md with testable criteria per entity.
+    prompt: Use agent: delivery-manager. Use skills: sprint-goal-writer, backlog-groomer. Convert the PRD into a phased backlog in docs/backlog.md — group by entity cluster (core CRM, pipeline, communications, reporting, admin). Assign priority P0-P3 per item.
+  end
+
+  spawn "personas" with vars target_market
+    prompt: Use agent: ux-researcher. Use skills: persona-synthesizer, task-analysis-writer, representative-task-writer. Write docs/personas.md with 4 personas: Sales Rep, Sales Manager, Account Executive, System Admin. Include goals, pain points, key tasks, and success metrics per persona.
+    prompt: Use agent: ux-researcher. Use skills: usability-test-planner. Write docs/ux-test-plan.md with usability test scenarios for the top 5 user journeys (create contact, manage pipeline, send quote, generate report, configure permissions).
+  end
+
+  await all
+
+  # Review discovery coherence
+  review criteria: "Discovery artifacts must describe a buildable, bounded CRM MVP. Personas must match stated target market. Acceptance criteria must be testable. No speculative or unbounded features. Backlog must be prioritized." grounded-by "test -f docs/prd.md && test -f docs/acceptance-criteria.md && test -f docs/personas.md && test -f docs/backlog.md" max 3
+    prompt: Use agent: quality-reviewer. Critique the discovery pack for scope creep, untestable acceptance criteria, persona-PRD misalignment, and missing non-functional requirements. Apply fixes directly.
+  end

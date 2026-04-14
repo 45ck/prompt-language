@@ -1,0 +1,39 @@
+library: release
+
+import "experiments/full-saas-factory/e7-enterprise-crm-factory/libraries/deployment.flow" as deploy
+
+export flow run(pkg="pnpm"):
+  prompt: Phase 6 — Release. Produce release artifacts, validate deployment readiness, and prepare handover documentation. All artifacts must be grounded in the actual implemented product — do not describe unbuilt features.
+
+  # Parallel release artifact generation
+  spawn "release-docs" with vars pkg
+    prompt: Use agent: delivery-manager. Use skills: go-live-readiness-reviewer, rollback-readiness-checker. Write CHANGELOG.md (grouped by phase: discovery, architecture, implementation, QA, security, release — with specific commit references where possible), docs/release-notes.md (user-facing summary of features, known limitations, and getting started guide), docs/known-issues.md (any accepted risks from security, test gaps, or scope deferrals), and docs/handover.md (setup instructions, environment variables, database setup, deployment guide, monitoring recommendations).
+  end
+
+  spawn "product-summary" with vars pkg
+    prompt: Use agent: research-writer. Use skills: critical-analysis-writer, evaluation-report-writer. Write docs/product-summary.md (executive summary: what was built, key metrics — entity count, endpoint count, test count, coverage percentage, security audit status) and docs/demo-script.md (step-by-step demo walkthrough: sign in → create company → add contacts → create opportunity → move through pipeline → send quote → generate invoice → view dashboard → manage permissions).
+  end
+
+  spawn "deployment-prep" with vars pkg
+    use deploy.prepare(pkg="${pkg}")
+  end
+
+  await all
+
+  # Go-live readiness review
+  review criteria: "Release artifacts must accurately describe the implemented product. No documentation of unbuilt features. Deployment configuration must be complete. Rollback procedure must be documented. All environment variables must be listed." grounded-by "test -f CHANGELOG.md && test -f docs/release-notes.md && test -f docs/handover.md && test -f docs/product-summary.md" max 2
+    prompt: Use agent: delivery-manager. Review all release artifacts for accuracy. Cross-check CHANGELOG against actual git history. Verify handover docs contain all required environment variables and setup steps. Fix discrepancies.
+  end
+
+  # Final approval before ship
+  approve "Release v1.0.0? Review CHANGELOG.md, docs/release-notes.md, and docs/known-issues.md." timeout 120
+
+  # Production deployment (with rollback safety)
+  try
+    use deploy.ship(pkg="${pkg}")
+  catch command_failed
+    prompt: Deployment failed. Check the error output. If the build failed, fix and retry. If infrastructure failed, document in docs/known-issues.md and prepare a manual deployment guide.
+    use deploy.rollback(pkg="${pkg}")
+  finally
+    prompt: Use agent: delivery-manager. Update docs/deployment-log.md with the deployment attempt result, timestamp, and any issues encountered.
+  end

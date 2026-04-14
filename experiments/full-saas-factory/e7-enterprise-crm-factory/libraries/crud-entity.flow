@@ -1,0 +1,14 @@
+library: crud
+
+export flow generate_full(entity="contact", pkg="pnpm"):
+  prompt: Use agent: backend-engineer. Use skills: entity-model-designer, repository-layer-designer, api-contract-writer. Generate complete CRUD for the ${entity} entity. Follow docs/api-contracts.md and docs/data-model.md. Create: packages/api/src/repositories/${entity}.repository.ts (Prisma CRUD queries with pagination, filtering, soft delete), packages/api/src/services/${entity}.service.ts (business logic, validation using Zod from packages/shared, permission checks), packages/api/src/routes/${entity}.routes.ts (REST endpoints: GET /, GET /:id, POST /, PUT /:id, PATCH /:id, DELETE /:id, plus entity-specific endpoints from the API contracts), and packages/api/src/__tests__/${entity}.test.ts (unit tests for service layer with mocked repository).
+
+  prompt: Use agent: web-engineer. Use skills: route-and-controller-planner, form-validation-designer. Generate frontend pages for ${entity}. Create: apps/web/src/app/(dashboard)/${entity}s/page.tsx (list view with data table, search, filter, pagination), apps/web/src/app/(dashboard)/${entity}s/[id]/page.tsx (detail view), apps/web/src/app/(dashboard)/${entity}s/new/page.tsx (create form with validation), apps/web/src/components/${entity}/ directory with ${entity}-form.tsx, ${entity}-table.tsx, ${entity}-detail.tsx components. Use React Query for data fetching, Zod for form validation, and accessible Radix UI form controls.
+
+  # Verify the entity builds
+  retry max 2
+    run: ${pkg} typecheck
+    if command_failed
+      prompt: Fix type errors for the ${entity} entity. Check imports, Prisma types, and shared schema alignment.
+    end
+  end

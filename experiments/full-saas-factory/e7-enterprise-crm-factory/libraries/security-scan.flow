@@ -1,0 +1,23 @@
+library: security_scan
+
+export flow full_scan(pkg="pnpm"):
+  # Dependency vulnerability scan
+  try
+    run: ${pkg} audit --audit-level=high
+  catch command_failed
+    prompt: Use agent: security-reviewer. Use skills: secrets-handling-checker. Dependency audit found high/critical vulnerabilities. Check the output. For each finding: if a patch exists, update the dependency; if no patch exists, document the accepted risk in docs/security/dependency-audit.md with CVE number, affected package, severity, and mitigation.
+    run: ${pkg} audit --audit-level=high 2>&1 > docs/security/dependency-audit-raw.txt || true
+  end
+
+  # Secret scanning
+  run: grep -r "password\|secret\|api_key\|token\|private_key" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" -l . 2>/dev/null | grep -v node_modules | grep -v ".env.example" | grep -v "*.test.*" > /tmp/secret-scan.txt || true
+  let secret_hits = run "cat /tmp/secret-scan.txt | wc -l"
+  if ${secret_hits} > 0
+    prompt: Use agent: security-reviewer. Use skills: secrets-handling-checker. Secret scan found ${secret_hits} files with potential secret references. Review /tmp/secret-scan.txt. For each hit: if it's a real secret, move it to .env and reference via process.env. If it's a test fixture or type definition, mark as false positive. Write results to docs/security/secret-scan.md.
+  end
+
+  # OWASP header check
+  prompt: Use agent: security-reviewer. Use skills: secure-by-design-reviewer. Verify security headers are configured: Content-Security-Policy, X-Content-Type-Options, X-Frame-Options, Strict-Transport-Security, Referrer-Policy. Check middleware configuration in packages/api/src/middleware/ and Next.js config in apps/web/next.config.ts. Fix any missing headers.
+
+  # Write summary
+  prompt: Use agent: security-reviewer. Write docs/security/scan-summary.md summarizing: dependency audit results (clean/findings count), secret scan results, header configuration status, and recommended follow-up actions.

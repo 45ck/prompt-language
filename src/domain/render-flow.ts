@@ -854,7 +854,17 @@ function addConditionReferences(target: Set<string>, condition: string | undefin
   }
 }
 
-function collectNodeVariableDependencies(node: FlowNode): readonly string[] {
+/**
+ * Extract variable names referenced by a single FlowNode.
+ *
+ * Returns variable names that appear in the node's text, command, condition,
+ * or other string fields via `${varName}` interpolation syntax. For container
+ * nodes (while, if, try, etc.) only the node's own fields are inspected — not
+ * the children. For `let` nodes the assigned variable name is included.
+ *
+ * Pure domain function: zero external dependencies.
+ */
+export function extractReferencedVariables(node: FlowNode): readonly string[] {
   const names = new Set<string>();
 
   switch (node.kind) {
@@ -1127,7 +1137,7 @@ function collectRelevantVariableNames(state: SessionState): ReadonlySet<string> 
   }
 
   for (const node of executionPathNodes) {
-    for (const name of collectNodeVariableDependencies(node)) {
+    for (const name of extractReferencedVariables(node)) {
       names.add(name);
     }
   }

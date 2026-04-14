@@ -173,7 +173,13 @@ function checkItem3Inventory(repoRoot, bundleDir) {
 }
 
 function checkItem4ResourceCaps() {
-  const keys = ['META_WALL_CLOCK_SEC', 'META_TOKEN_CAP', 'META_EVENT_CAP', 'PL_META_DEPTH', 'META_FS_GROWTH_MB'];
+  const keys = [
+    'META_WALL_CLOCK_SEC',
+    'META_TOKEN_CAP',
+    'META_EVENT_CAP',
+    'PL_META_DEPTH',
+    'META_FS_GROWTH_MB',
+  ];
   const missing = keys.filter((k) => !process.env[k]);
   if (missing.length === 0) {
     return item(4, 'resource caps', 'ready', 'all resource-cap envs set');
@@ -190,7 +196,12 @@ function checkItem4ResourceCaps() {
 function checkItem5AllowList(repoRoot) {
   const p = join(repoRoot, 'scripts', 'experiments', 'meta', '.binary-allow-list.json');
   if (!existsSync(p)) {
-    return item(5, 'allow-list / deny-list', 'warn', '.binary-allow-list.json absent (post-G1 artifact)');
+    return item(
+      5,
+      'allow-list / deny-list',
+      'warn',
+      '.binary-allow-list.json absent (post-G1 artifact)',
+    );
   }
   try {
     const raw = JSON.parse(readFileSync(p, 'utf8'));
@@ -227,7 +238,12 @@ function checkItem6Reviewer() {
 function checkItem7Approvals() {
   const v = process.env.PL_APPROVE_DESTRUCTIVE;
   if (!v) {
-    return item(7, 'approvals', 'warn', 'PL_APPROVE_DESTRUCTIVE unset — externally visible actions unguarded');
+    return item(
+      7,
+      'approvals',
+      'warn',
+      'PL_APPROVE_DESTRUCTIVE unset — externally visible actions unguarded',
+    );
   }
   return item(7, 'approvals', 'ready', `PL_APPROVE_DESTRUCTIVE=${v}`);
 }
@@ -267,7 +283,9 @@ export function runPreflight({ repoRoot = REPO_ROOT, bundleDir = null, env = pro
       else if (it.status === 'warn') nextActions.push(`[warn #${it.id}] ${it.name}: ${it.detail}`);
     }
     if (overall !== 'blocked') {
-      nextActions.push('[reminder #8] run `verify-trace --state --json` post-run under the pinned pre-run binary');
+      nextActions.push(
+        '[reminder #8] run `verify-trace --state --json` post-run under the pinned pre-run binary',
+      );
     }
     return { overall, items, nextActions };
   } finally {
@@ -310,5 +328,6 @@ function main() {
   process.exit(report.overall === 'blocked' ? 1 : 0);
 }
 
-const invokedDirectly = process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+const invokedDirectly =
+  process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (invokedDirectly) main();

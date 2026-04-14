@@ -1,1 +1,5 @@
-{"name":"blinding-content-leak-nested-fixture","version":"0.0.0","private":true}
+{
+  "name": "blinding-content-leak-nested-fixture",
+  "version": "0.0.0",
+  "private": true
+}

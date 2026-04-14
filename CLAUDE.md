@@ -271,6 +271,12 @@ done when:
 
 Note: `command_succeeded`/`command_failed` work as runtime variables (auto-set after each `run:` node) but are **not yet implemented as gate predicates** for `done when:`. Use `tests_pass` or `file_exists <path>` for gates.
 
+## Environment variables
+
+- `PL_TRACE=1` — Enable trace logging to `.prompt-language/trace.jsonl`.
+- `PL_COMPACT_RENDER=1` — Experimental: switch the injected flow context from full mode (`renderFlow`) to compact mode (`renderFlowCompact`). Compact mode renders only the active execution path with abbreviated markers, reducing token usage. Automatic escalation to full mode triggers on recovery-sensitive conditions (errors, retries, try/catch, gate failures). See `src/domain/escalate-render-mode.ts`.
+- `PL_GATE_TIMEOUT` — Gate command timeout in milliseconds (default: 60000).
+
 ## State file
 
 Runtime state lives in `.prompt-language/session-state.json`. Never hard-code paths; use the infrastructure adapter.

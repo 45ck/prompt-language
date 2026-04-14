@@ -1,6 +1,7 @@
 # Real PL Flow Runner Test - PASS
 
 ## Command
+
 ```bash
 PYTHONUTF8=1 OLLAMA_API_BASE=http://127.0.0.1:11434 \
   PROMPT_LANGUAGE_AIDER_TIMEOUT_MS=300000 \
@@ -8,6 +9,7 @@ PYTHONUTF8=1 OLLAMA_API_BASE=http://127.0.0.1:11434 \
 ```
 
 ## Results
+
 - Exit code: 0
 - Status: completed
 - Both gates passed (grep -q "divide", grep -q "multiply")
@@ -17,6 +19,7 @@ PYTHONUTF8=1 OLLAMA_API_BASE=http://127.0.0.1:11434 \
 - Variables tracked: last_exit_code, command_succeeded, last_stderr
 
 ## What the runtime did
+
 1. Parsed .flow DSL
 2. Called AiderPromptTurnRunner for each `prompt:` node
 3. Executed `run:` node via ShellCommandRunner
@@ -24,4 +27,5 @@ PYTHONUTF8=1 OLLAMA_API_BASE=http://127.0.0.1:11434 \
 5. Persisted session state to .prompt-language/session-state.json
 
 ## Conclusion
+
 Prompt Language successfully orchestrates aider as a harness through the real runtime.

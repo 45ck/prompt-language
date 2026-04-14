@@ -143,11 +143,15 @@ check(
 );
 
 // 10. JSON-LD schema — <script type="application/ld+json"> with valid JSON
-const ldJsonMatches = html.match(/<script\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/gi) || [];
+const ldJsonMatches =
+  html.match(/<script\s+type=["']application\/ld\+json["']>([\s\S]*?)<\/script>/gi) || [];
 let ldJsonValid = false;
 let ldJsonDetail = 'No JSON-LD schema found';
 if (ldJsonMatches.length > 0) {
-  const content = ldJsonMatches[0].replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '').trim();
+  const content = ldJsonMatches[0]
+    .replace(/<script[^>]*>/i, '')
+    .replace(/<\/script>/i, '')
+    .trim();
   try {
     JSON.parse(content);
     ldJsonValid = true;

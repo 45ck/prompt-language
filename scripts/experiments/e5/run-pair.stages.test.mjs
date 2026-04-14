@@ -102,10 +102,7 @@ test('runStages propagates handler errors', async () => {
 
 test('runStages throws on unknown stage key', async () => {
   const manifest = { stages: [{ stage: 'does-not-exist' }] };
-  await assert.rejects(
-    () => runStages(manifest, {}, {}, {}),
-    /unknown stage: does-not-exist/,
-  );
+  await assert.rejects(() => runStages(manifest, {}, {}, {}), /unknown stage: does-not-exist/);
 });
 
 test('runStages dispatches handlers in declared manifest order', async () => {
@@ -170,15 +167,8 @@ test('--plan subprocess prints stage list for each pair manifest and exits 0', a
       'pairs',
       file,
     );
-    const { code, stdout, stderr } = await runNode(
-      [runnerPath, relManifest, '--plan'],
-      repoRoot,
-    );
-    assert.equal(
-      code,
-      0,
-      `--plan should exit 0 for ${file}; stderr=${stderr} stdout=${stdout}`,
-    );
+    const { code, stdout, stderr } = await runNode([runnerPath, relManifest, '--plan'], repoRoot);
+    assert.equal(code, 0, `--plan should exit 0 for ${file}; stderr=${stderr} stdout=${stdout}`);
     assert.match(stdout, /pair:\s*\S+/, `missing pair line for ${file}`);
     assert.match(stdout, /stages:/);
     assert.match(stdout, /workspace paths/);

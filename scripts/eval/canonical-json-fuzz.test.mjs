@@ -60,7 +60,7 @@ const UNICODE_SAMPLES = [
   'control\u0001\u0002\u001f',
   'unicode: \u00e9\u00e0\u4e2d\u6587',
   'emoji: \u{1F600}\u{1F4A9}',
-  'quote\'apostrophe',
+  "quote'apostrophe",
   'slash/forward',
   '\u2028 line sep \u2029',
 ];

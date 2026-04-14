@@ -1,1 +1,5 @@
-{"name":"blinding-flow-file-fixture","version":"0.0.0","private":true}
+{
+  "name": "blinding-flow-file-fixture",
+  "version": "0.0.0",
+  "private": true
+}

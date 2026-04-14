@@ -30,18 +30,18 @@ vendor and a training lineage. The comparison axis is "would a review
 from model X about model Y's output be systematically biased by shared
 priors". Vendor + lineage is the strongest practical proxy.
 
-| Family ID    | Vendor-ish              | Representative models                                        | Lineage note                                    |
-| ------------ | ----------------------- | ------------------------------------------------------------ | ----------------------------------------------- |
-| `anthropic`  | Anthropic               | claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5         | One family across size tiers                    |
-| `openai`     | OpenAI                  | gpt-5.2, gpt-4o, gpt-4.1, o3, o4-mini                        | One family across reasoning and chat variants   |
-| `google`     | Google DeepMind         | gemini-2.5-pro, gemini-2.5-flash, gemini-1.5-pro             | One family                                      |
-| `meta-llama` | Meta (weights)          | llama-3.3-70b, llama-3.1-405b, code-llama-*                  | Lineage group, hosting-agnostic                 |
-| `qwen`       | Alibaba (weights)       | qwen2.5-coder-*, qwen3-*                                     | Lineage group                                   |
-| `deepseek`   | DeepSeek (weights)      | deepseek-v3, deepseek-r1, deepseek-coder-*                   | Lineage group                                   |
-| `mistral`    | Mistral (weights)       | mistral-large, mixtral-*, codestral                          | Lineage group                                   |
-| `gemma`      | Google open-weights     | gemma-3-*, gemma-4-*                                         | Distinct from `google` closed API (per note A)  |
-| `xai`        | xAI                     | grok-4, grok-3                                               | One family                                      |
-| `unknown`    | —                       | any model not in the table                                   | Forces operator to classify before claim-runs   |
+| Family ID    | Vendor-ish          | Representative models                                | Lineage note                                   |
+| ------------ | ------------------- | ---------------------------------------------------- | ---------------------------------------------- |
+| `anthropic`  | Anthropic           | claude-opus-4-6, claude-sonnet-4-6, claude-haiku-4-5 | One family across size tiers                   |
+| `openai`     | OpenAI              | gpt-5.2, gpt-4o, gpt-4.1, o3, o4-mini                | One family across reasoning and chat variants  |
+| `google`     | Google DeepMind     | gemini-2.5-pro, gemini-2.5-flash, gemini-1.5-pro     | One family                                     |
+| `meta-llama` | Meta (weights)      | llama-3.3-70b, llama-3.1-405b, code-llama-\*         | Lineage group, hosting-agnostic                |
+| `qwen`       | Alibaba (weights)   | qwen2.5-coder-_, qwen3-_                             | Lineage group                                  |
+| `deepseek`   | DeepSeek (weights)  | deepseek-v3, deepseek-r1, deepseek-coder-\*          | Lineage group                                  |
+| `mistral`    | Mistral (weights)   | mistral-large, mixtral-\*, codestral                 | Lineage group                                  |
+| `gemma`      | Google open-weights | gemma-3-_, gemma-4-_                                 | Distinct from `google` closed API (per note A) |
+| `xai`        | xAI                 | grok-4, grok-3                                       | One family                                     |
+| `unknown`    | —                   | any model not in the table                           | Forces operator to classify before claim-runs  |
 
 Note A: we classify `gemma` as its own family (not `google`) because
 its training corpus is published and has historically diverged from
@@ -94,18 +94,18 @@ by convention.
 Every review writes a record consumable by `verify-trace.mjs` and by
 the scorecard aggregator. Required fields:
 
-| Field                           | Source                              | Purpose                                  |
-| ------------------------------- | ----------------------------------- | ---------------------------------------- |
-| `factory.model`                 | factory runner config               | Identifier (e.g. `claude-opus-4-6`)      |
-| `factory.modelVersion`          | runner `--version` probe            | Patch-level tracking                     |
-| `factory.family`                | `model-family.ts` lookup            | The classification used for the rule     |
-| `factory.systemPromptSha256`    | hash of the assembled system prompt | Detects silent prompt drift              |
-| `reviewer.model`                | reviewer runner config              | Identifier                               |
-| `reviewer.modelVersion`         | runner `--version` probe            | —                                        |
-| `reviewer.family`               | `model-family.ts` lookup            | —                                        |
-| `reviewer.systemPromptSha256`   | hash of the reviewer system prompt  | —                                        |
-| `rulePassed`                    | `validPair(...)` result             | Explicit Boolean in the bundle           |
-| `familyTableVersion`            | committed `model-family.ts` header  | Reproducibility if taxonomy changes      |
+| Field                         | Source                              | Purpose                              |
+| ----------------------------- | ----------------------------------- | ------------------------------------ |
+| `factory.model`               | factory runner config               | Identifier (e.g. `claude-opus-4-6`)  |
+| `factory.modelVersion`        | runner `--version` probe            | Patch-level tracking                 |
+| `factory.family`              | `model-family.ts` lookup            | The classification used for the rule |
+| `factory.systemPromptSha256`  | hash of the assembled system prompt | Detects silent prompt drift          |
+| `reviewer.model`              | reviewer runner config              | Identifier                           |
+| `reviewer.modelVersion`       | runner `--version` probe            | —                                    |
+| `reviewer.family`             | `model-family.ts` lookup            | —                                    |
+| `reviewer.systemPromptSha256` | hash of the reviewer system prompt  | —                                    |
+| `rulePassed`                  | `validPair(...)` result             | Explicit Boolean in the bundle       |
+| `familyTableVersion`          | committed `model-family.ts` header  | Reproducibility if taxonomy changes  |
 
 Logging placement:
 
@@ -124,14 +124,14 @@ on matched pairs.
 
 ## 4. Non-hermetic handling
 
-| Situation                                   | Behavior                                                                                                             | Admissibility          |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| Only one provider available locally         | Run allowed; admissibility set to `developer-local`; NOT claim-eligible; scorecard flagged                           | `developer-local`      |
-| Same-family pair explicitly configured      | Preflight refuses to launch; suggests the cross-family combinations found in the operator's probed environment       | N/A (refused)          |
-| Reviewer model unknown / not in table       | Preflight refuses; operator must add the lineage classification via a one-line PR to the family table                | N/A (refused)          |
-| Cross-family pair runs and reviewer vetoes  | Claim fails. The cross-family review is the veto; METRIC-3 aggregation does not override it (see §5)                 | `claim-failed`         |
-| Cross-family pair, reviewer disagrees mildly (partial) | Claim blocked until a second cross-family reviewer from a third family adjudicates; log both reviews               | `claim-blocked`        |
-| Reviewer persistently rejects valid work    | Suspected reviewer-bias; escalate to human; track per-reviewer false-reject rate in the scorecard rollup             | open metric            |
+| Situation                                              | Behavior                                                                                                       | Admissibility     |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | ----------------- |
+| Only one provider available locally                    | Run allowed; admissibility set to `developer-local`; NOT claim-eligible; scorecard flagged                     | `developer-local` |
+| Same-family pair explicitly configured                 | Preflight refuses to launch; suggests the cross-family combinations found in the operator's probed environment | N/A (refused)     |
+| Reviewer model unknown / not in table                  | Preflight refuses; operator must add the lineage classification via a one-line PR to the family table          | N/A (refused)     |
+| Cross-family pair runs and reviewer vetoes             | Claim fails. The cross-family review is the veto; METRIC-3 aggregation does not override it (see §5)           | `claim-failed`    |
+| Cross-family pair, reviewer disagrees mildly (partial) | Claim blocked until a second cross-family reviewer from a third family adjudicates; log both reviews           | `claim-blocked`   |
+| Reviewer persistently rejects valid work               | Suspected reviewer-bias; escalate to human; track per-reviewer false-reject rate in the scorecard rollup       | open metric       |
 
 "Bias vs legitimate disagreement" is not decidable from a single run;
 it is observed across batches. The scorecard tracks
@@ -169,27 +169,27 @@ Reviewer output JSON schema (strict; verifier rejects off-schema):
   "type": "object",
   "required": ["verdict", "rationale", "risks", "reviewerModel", "reviewerFamily", "schemaVersion"],
   "properties": {
-    "schemaVersion":   { "const": "1.0.0" },
-    "verdict":         { "enum": ["pass", "partial", "fail"] },
-    "rationale":       { "type": "string", "minLength": 40, "maxLength": 4000 },
+    "schemaVersion": { "const": "1.0.0" },
+    "verdict": { "enum": ["pass", "partial", "fail"] },
+    "rationale": { "type": "string", "minLength": 40, "maxLength": 4000 },
     "risks": {
       "type": "array",
       "items": {
         "type": "object",
         "required": ["id", "severity", "summary"],
         "properties": {
-          "id":       { "type": "string", "pattern": "^R[0-9]+$" },
+          "id": { "type": "string", "pattern": "^R[0-9]+$" },
           "severity": { "enum": ["low", "medium", "high", "critical"] },
-          "summary":  { "type": "string", "minLength": 10, "maxLength": 400 },
+          "summary": { "type": "string", "minLength": 10, "maxLength": 400 },
           "evidence": { "type": "string" }
         }
       }
     },
-    "requirementsCovered":   { "type": "array", "items": { "type": "string" } },
-    "requirementsMissed":    { "type": "array", "items": { "type": "string" } },
-    "reviewerModel":         { "type": "string" },
-    "reviewerFamily":        { "type": "string" },
-    "reviewerConfidence":    { "type": "number", "minimum": 0, "maximum": 1 }
+    "requirementsCovered": { "type": "array", "items": { "type": "string" } },
+    "requirementsMissed": { "type": "array", "items": { "type": "string" } },
+    "reviewerModel": { "type": "string" },
+    "reviewerFamily": { "type": "string" },
+    "reviewerConfidence": { "type": "number", "minimum": 0, "maximum": 1 }
   },
   "additionalProperties": false
 }
@@ -206,31 +206,31 @@ proceed.
 No code in this doc; the list below enumerates the files that will
 change and what kind of change each carries.
 
-| File                                                                             | Change kind                                                                                                   |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `src/domain/model-family.ts` (new)                                               | Pure table + `familyOf(model: string): FamilyId` function; zero deps per domain rule                          |
-| `src/domain/model-family.test.ts` (new)                                          | Unit coverage for each row in §1 + `unknown` fallthrough + case-insensitivity                                 |
-| `src/application/ports/reviewer-port.ts` (new)                                   | Port interface `review(input): Promise<ReviewVerdict>`                                                        |
-| `src/infrastructure/adapters/claude-process-spawner.ts` and the four runners     | Surface `modelIdentifier` in the returned runner metadata (currently implicit); no behavioral change          |
-| `scripts/experiments/e5/run-reviewer.mjs` (new)                                  | Orchestrates the reviewer call given a workspace, requirements doc, and a chosen reviewer runner+model        |
-| `scripts/experiments/e5/run-pair.mjs`                                            | Add a `cross-family-review` stage after `gate-family-1-2-3`; preflight with the §2 rule; short-circuit on fail |
-| `scripts/experiments/meta/run-meta-experiment.mjs`                               | Add preflight entry: refuse to launch if the resolved factory family equals the resolved reviewer family      |
-| `scripts/eval/verify-trace.mjs`                                                  | Require a `reviewer.family` identifier in the evidence block when `--expected-reviewer-family` is passed      |
-| `experiments/meta-factory/design/risks.md`                                       | Flip MR-9 mitigation from "blinding discipline" to "cross-family reviewer + blinding"; bump META version      |
-| `experiments/results/e5-maintenance/templates/scorecard.template.json`           | Add `evaluationModel` and `admissibility.crossFamilyReviewer`                                                 |
-| `docs/strategy/index.md`                                                         | Add link row for this doc under "Pages"                                                                       |
+| File                                                                         | Change kind                                                                                                    |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `src/domain/model-family.ts` (new)                                           | Pure table + `familyOf(model: string): FamilyId` function; zero deps per domain rule                           |
+| `src/domain/model-family.test.ts` (new)                                      | Unit coverage for each row in §1 + `unknown` fallthrough + case-insensitivity                                  |
+| `src/application/ports/reviewer-port.ts` (new)                               | Port interface `review(input): Promise<ReviewVerdict>`                                                         |
+| `src/infrastructure/adapters/claude-process-spawner.ts` and the four runners | Surface `modelIdentifier` in the returned runner metadata (currently implicit); no behavioral change           |
+| `scripts/experiments/e5/run-reviewer.mjs` (new)                              | Orchestrates the reviewer call given a workspace, requirements doc, and a chosen reviewer runner+model         |
+| `scripts/experiments/e5/run-pair.mjs`                                        | Add a `cross-family-review` stage after `gate-family-1-2-3`; preflight with the §2 rule; short-circuit on fail |
+| `scripts/experiments/meta/run-meta-experiment.mjs`                           | Add preflight entry: refuse to launch if the resolved factory family equals the resolved reviewer family       |
+| `scripts/eval/verify-trace.mjs`                                              | Require a `reviewer.family` identifier in the evidence block when `--expected-reviewer-family` is passed       |
+| `experiments/meta-factory/design/risks.md`                                   | Flip MR-9 mitigation from "blinding discipline" to "cross-family reviewer + blinding"; bump META version       |
+| `experiments/results/e5-maintenance/templates/scorecard.template.json`       | Add `evaluationModel` and `admissibility.crossFamilyReviewer`                                                  |
+| `docs/strategy/index.md`                                                     | Add link row for this doc under "Pages"                                                                        |
 
 Out of scope for this doc: rewriting any of the above. Code lands
 under the normal bead/commit flow in phase 2 (§7).
 
 ## 7. Bootstrap and rollout
 
-| Phase | Scope                                                                                                                                     | Concrete shipping unit                                                                                              |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| 1     | This design doc + the `model-family.ts` table + a warning-only preflight (logs same-family pairs, does not fail)                          | Beads `META-5.XFR-1` (doc), `META-5.XFR-2` (table), `META-5.XFR-3` (warn preflight)                                 |
-| 2     | Hard-fail preflight; admissibility downgrades for same-family runs; scorecard schema update; verifier recognises reviewer family          | Beads `META-5.XFR-4` (preflight hard-fail), `META-5.XFR-5` (scorecard schema), `META-5.XFR-6` (verify-trace update) |
-| 3     | Scorecard aggregation refuses to flag a pair `claim-eligible` without cross-family evidence; ADR lands under `docs/adr/`                  | Beads `META-5.XFR-7` (aggregator), `META-5.XFR-8` (ADR)                                                             |
-| 4     | CI job runs the reviewer loop end-to-end using a free Gemini or Gemma model reviewing Claude-produced workspace                           | Beads `META-5.XFR-9` (CI harness), `META-5.XFR-10` (reviewer-quality baseline)                                      |
+| Phase | Scope                                                                                                                            | Concrete shipping unit                                                                                              |
+| ----- | -------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 1     | This design doc + the `model-family.ts` table + a warning-only preflight (logs same-family pairs, does not fail)                 | Beads `META-5.XFR-1` (doc), `META-5.XFR-2` (table), `META-5.XFR-3` (warn preflight)                                 |
+| 2     | Hard-fail preflight; admissibility downgrades for same-family runs; scorecard schema update; verifier recognises reviewer family | Beads `META-5.XFR-4` (preflight hard-fail), `META-5.XFR-5` (scorecard schema), `META-5.XFR-6` (verify-trace update) |
+| 3     | Scorecard aggregation refuses to flag a pair `claim-eligible` without cross-family evidence; ADR lands under `docs/adr/`         | Beads `META-5.XFR-7` (aggregator), `META-5.XFR-8` (ADR)                                                             |
+| 4     | CI job runs the reviewer loop end-to-end using a free Gemini or Gemma model reviewing Claude-produced workspace                  | Beads `META-5.XFR-9` (CI harness), `META-5.XFR-10` (reviewer-quality baseline)                                      |
 
 Phase 1 is non-breaking and can land immediately. Phase 2 is the
 breaking phase — existing single-family smoke runs must declare

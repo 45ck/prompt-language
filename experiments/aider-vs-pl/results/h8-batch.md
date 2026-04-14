@@ -1,4 +1,5 @@
 # H8: Foreach Batch Operations - PL WINS (decisive)
+
 - Solo: 4/4 files created, 0/4 spec-conformant
   - Missing export on interfaces
   - Hallucinated defaults ('Anonymous' instead of '')

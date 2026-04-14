@@ -1,1 +1,5 @@
-{"name":"blinding-clean-fixture","version":"0.0.0","private":true}
+{
+  "name": "blinding-clean-fixture",
+  "version": "0.0.0",
+  "private": true
+}

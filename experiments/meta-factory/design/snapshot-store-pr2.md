@@ -26,6 +26,7 @@ rollback can restore it. This is opt-in, narrowly scoped to the plugin's own
 ## 2. Scope
 
 In scope:
+
 - New port `SnapshotStorePort` with `capture(stateDir)` / `restore(ref, stateDir)` / optional `cleanup(ref)`.
 - New adapter `FileSnapshotStore` implementing capture via tar-gzip, restore via extract, keyed by sha256.
 - A `NullSnapshotStore` default adapter so `PL_SNAPSHOT_INCLUDE_FILES` unset means byte-for-byte PR1 behavior.
@@ -57,7 +58,7 @@ Implementation plan:
 
 - Tar-gzip the `stateDir` into a temp file at `<stateDir>/.snapshots/tmp-<pid>-<counter>.tar.gz`. Excludes `.snapshots/` itself to prevent recursive inflation.
 - Compute sha256 of the finalized gzip'd tar; rename to `<stateDir>/.snapshots/<sha256>.tar.gz`. Ref = sha256 hex.
-- Size check *before* tar'ing: walk `stateDir` (excluding `.snapshots/`), sum file byte sizes. If over cap, throw `Error("snapshot capture exceeds PL_SNAPSHOT_MAX_MB cap of <N> MB; measured <M> MB under <stateDir>")`. This avoids unbounded RAM/disk from streaming a huge tar only to reject it.
+- Size check _before_ tar'ing: walk `stateDir` (excluding `.snapshots/`), sum file byte sizes. If over cap, throw `Error("snapshot capture exceeds PL_SNAPSHOT_MAX_MB cap of <N> MB; measured <M> MB under <stateDir>")`. This avoids unbounded RAM/disk from streaming a huge tar only to reject it.
 - Restore: verify ref exists → extract into `<stateDir>/.snapshots/restore-<ref>-<pid>/` → create `<stateDir>/.snapshots/restore-in-progress` marker file pointing at that temp dir → delete every entry under `stateDir` except `.snapshots/` → move extracted entries into place → delete marker. On start, `restore()` first checks for a stale marker and completes or aborts with a clear diagnostic.
 
 Fine-grained decisions (rationale each):
@@ -73,12 +74,14 @@ Fine-grained decisions (rationale each):
 Pseudocode sketch (prose, not code):
 
 For `SnapshotNode`:
+
 1. Build the pure `StateSnapshot` per PR1.
 2. If `deps.snapshotStore != null` and `env.PL_SNAPSHOT_INCLUDE_FILES === '1'`, `await deps.snapshotStore.capture(deps.stateDir)` → `ref`. Attach `ref` as `filesDigestRef` on the snapshot.
 3. `addSnapshot(state, snapshot)`.
 4. Emit `node_advance` with `detail.filesCaptured: true` and `detail.filesDigestRef: ref` when capture ran; otherwise omit both fields (don't emit `filesCaptured: false` — absent is the PR1-compatible signal).
 
 For `RollbackNode`:
+
 1. Look up `state.snapshots[name]`. If missing, fail per PR1.
 2. Apply pure-state restore first (`applySnapshot`).
 3. If the snapshot has a `filesDigestRef` and `deps.snapshotStore != null`, `await deps.snapshotStore.restore(ref, deps.stateDir)`.

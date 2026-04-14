@@ -1,22 +1,23 @@
 # Aider + Qwen3 30B: Solo vs Prompt Language — Final Scorecard
+
 Date: 2026-04-14
 Model: qwen3-opencode:30b (30B MoE, Q4_K_M, Vulkan, ~42 tok/s)
 Hardware: AMD RX 7600 XT 16GB VRAM, Windows 11
 
 ## Results
 
-| # | Hypothesis | Solo | PL | Winner |
-|---|---|---|---|---|
-| H1 | Retry recovery | Compiled 1st try | Compiled 1st try | TIE |
-| H2 | Gate enforcement TDD | 7/10 tests | 10/10 tests (3 retries) | **PL** |
-| H3 | Decomposed vs monolithic | `any` types, 6 tests | `unknown` correct, 7 tests | **PL** |
-| H4 | Variable capture pipeline | 7/10 docs | 9/10 docs | **PL** |
-| H5 | File scoping | 0/3 after refactor | 3/3 after refactor | **PL** |
-| H6 | Conditional branching | Caught obvious error | Same + extra feature | TIE |
-| H7 | Simple edit speed | 172s avg | 317s avg | TIE |
-| H8 | Foreach batch ops | 0/4 spec-conformant | 4/4 spec-conformant | **PL** |
-| H9 | Code structure quality | Tests crash, 1/5 sep | Tests pass, 4/5 sep | **PL** |
-| H10 | Quality ceiling | - | Grade B (A on impl) | - |
+| #   | Hypothesis                | Solo                 | PL                         | Winner |
+| --- | ------------------------- | -------------------- | -------------------------- | ------ |
+| H1  | Retry recovery            | Compiled 1st try     | Compiled 1st try           | TIE    |
+| H2  | Gate enforcement TDD      | 7/10 tests           | 10/10 tests (3 retries)    | **PL** |
+| H3  | Decomposed vs monolithic  | `any` types, 6 tests | `unknown` correct, 7 tests | **PL** |
+| H4  | Variable capture pipeline | 7/10 docs            | 9/10 docs                  | **PL** |
+| H5  | File scoping              | 0/3 after refactor   | 3/3 after refactor         | **PL** |
+| H6  | Conditional branching     | Caught obvious error | Same + extra feature       | TIE    |
+| H7  | Simple edit speed         | 172s avg             | 317s avg                   | TIE    |
+| H8  | Foreach batch ops         | 0/4 spec-conformant  | 4/4 spec-conformant        | **PL** |
+| H9  | Code structure quality    | Tests crash, 1/5 sep | Tests pass, 4/5 sep        | **PL** |
+| H10 | Quality ceiling           | -                    | Grade B (A on impl)        | -      |
 
 ## Final Score: PL 6 - Solo 0 - Tie 3
 
@@ -55,6 +56,7 @@ Hardware: AMD RX 7600 XT 16GB VRAM, Windows 11
 ## Real PL Runtime Verified
 
 `prompt-language ci --runner aider` successfully executed a .flow file end-to-end:
+
 - DSL parsing → aider prompt nodes → shell run nodes → gate evaluation → session state
 - Full audit trail with timing
 - Status: completed, all gates passed

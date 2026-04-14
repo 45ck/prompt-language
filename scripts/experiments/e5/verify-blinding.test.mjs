@@ -92,11 +92,7 @@ test('fixture: clean/ passes blinding verification', async (t) => {
   const root = await materializeFixture('clean');
   t.after(() => rm(root, { recursive: true, force: true }));
   const report = await verifyBlinding(root);
-  assert.equal(
-    report.clean,
-    true,
-    `expected clean, got ${JSON.stringify(report.violations)}`,
-  );
+  assert.equal(report.clean, true, `expected clean, got ${JSON.stringify(report.violations)}`);
   assert.equal(report.violationCount, 0);
 });
 
@@ -125,7 +121,10 @@ test('fixture: content-leak-readme/ reports forbidden-content on README.md', asy
   const hit = report.violations.find(
     (v) => v.kind === 'forbidden-content' && v.path === 'README.md',
   );
-  assert.ok(hit, `expected forbidden-content on README.md, got ${JSON.stringify(report.violations)}`);
+  assert.ok(
+    hit,
+    `expected forbidden-content on README.md, got ${JSON.stringify(report.violations)}`,
+  );
   assert.match(hit.reason, /content matches/);
 });
 

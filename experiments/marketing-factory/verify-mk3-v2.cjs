@@ -175,7 +175,10 @@ for (const match of fontFamilyMatches) {
   const value = match.replace(/font-family\s*:\s*/i, '').trim();
   // Extract the primary font (first in the list, before fallbacks like sans-serif)
   const primary = value.split(',')[0].trim().replace(/["']/g, '');
-  if (primary && !/^(sans-serif|serif|monospace|cursive|fantasy|system-ui|inherit|initial)$/i.test(primary)) {
+  if (
+    primary &&
+    !/^(sans-serif|serif|monospace|cursive|fantasy|system-ui|inherit|initial)$/i.test(primary)
+  ) {
     fontFamilies.add(primary.toLowerCase());
   }
 }
@@ -206,7 +209,8 @@ function normalizeHex(hex) {
 
 function isApprovedColor(hex) {
   const norm = normalizeHex(hex);
-  if (standardColors.includes(norm) || standardColors.includes(hex.replace('#', '').toLowerCase())) return true;
+  if (standardColors.includes(norm) || standardColors.includes(hex.replace('#', '').toLowerCase()))
+    return true;
   // Check if it's from the palette or a shade variant (same hue family)
   for (const base of approvedBase) {
     if (norm === base) return true;
@@ -224,8 +228,14 @@ function isApprovedColor(hex) {
     const colorMax = Math.max(cr, cg, cb);
     const colorMin = Math.min(cr, cg, cb);
     // If the hue angle is similar (dominant/subordinate channels match)
-    const baseOrder = [br, bg, bb].map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v).map((x) => x.i);
-    const colorOrder = [cr, cg, cb].map((v, i) => ({ v, i })).sort((a, b) => b.v - a.v).map((x) => x.i);
+    const baseOrder = [br, bg, bb]
+      .map((v, i) => ({ v, i }))
+      .sort((a, b) => b.v - a.v)
+      .map((x) => x.i);
+    const colorOrder = [cr, cg, cb]
+      .map((v, i) => ({ v, i }))
+      .sort((a, b) => b.v - a.v)
+      .map((x) => x.i);
     if (baseOrder[0] === colorOrder[0] && baseOrder[2] === colorOrder[2]) {
       // Same hue family — allow as shade/tint
       if (baseMax - baseMin > 20 || colorMax - colorMin > 20) {
@@ -264,7 +274,8 @@ const buttonClasses = buttonEls
 const classTokens = buttonClasses.flatMap((c) => c.split(/\s+/));
 const btnPatterns = classTokens.filter((t) => /btn|button|cta/i.test(t));
 const uniquePrefixes = new Set(btnPatterns.map((p) => p.replace(/[-_].*/, '').toLowerCase()));
-const hasConsistentButtons = buttonEls.length === 0 || (buttonClasses.length > 0 && uniquePrefixes.size <= 2);
+const hasConsistentButtons =
+  buttonEls.length === 0 || (buttonClasses.length > 0 && uniquePrefixes.size <= 2);
 check(
   'Consistent button class',
   hasConsistentButtons,
@@ -275,7 +286,8 @@ check(
 
 // 10. CSS custom properties — uses -- CSS variables for at least colors
 const customPropDefs = allCSS.match(/--[\w-]+\s*:/g) || [];
-const customPropColorDefs = allCSS.match(/--[\w-]*(?:color|bg|text|primary|secondary|accent|brand)[\w-]*\s*:/gi) || [];
+const customPropColorDefs =
+  allCSS.match(/--[\w-]*(?:color|bg|text|primary|secondary|accent|brand)[\w-]*\s*:/gi) || [];
 const customPropUsages = allCSS.match(/var\(--[\w-]+\)/g) || [];
 const hasCustomProps = customPropDefs.length > 0 && customPropUsages.length > 0;
 check(

@@ -1,1 +1,5 @@
-{"name":"blinding-pl-trace-dir-fixture","version":"0.0.0","private":true}
+{
+  "name": "blinding-pl-trace-dir-fixture",
+  "version": "0.0.0",
+  "private": true
+}

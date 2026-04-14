@@ -7,6 +7,7 @@ import {
   renderTimingReport,
   renderFlowCompact,
   renderStateHash,
+  extractReferencedVariables,
 } from './render-flow.js';
 import {
   createSessionState,
@@ -2312,7 +2313,15 @@ describe('extractReferencedVariables', () => {
   });
 
   it('extracts references from spawn condition', () => {
-    const node = createSpawnNode('s1', 'worker', [createPromptNode('p1', 'task')], 'ready');
+    const node = createSpawnNode(
+      's1',
+      'worker',
+      [createPromptNode('p1', 'task')],
+      undefined,
+      undefined,
+      undefined,
+      'ready',
+    );
     const refs = extractReferencedVariables(node);
     expect(refs).toContain('ready');
   });

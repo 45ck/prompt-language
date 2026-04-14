@@ -1,14 +1,25 @@
 /**
  * Provenance schema for the independent-witness shim.
  *
- * Mirrors src/domain/state-hash.ts semantics exactly so shim-side records
- * and runtime-side records produce byte-identical canonical JSON and
- * equivalent SHA-256 digests. Any drift here breaks the cross-check.
+ * Canonical-JSON + hash helpers are re-exported from the compiled runtime
+ * (`dist/domain/state-hash.js`) so there is exactly one implementation of
+ * `canonicalJSON`, `sha256`, `hashEvent`, and `hashState` across the
+ * runtime and the verifier. Per F4/AP-6: if these diverged, tampered
+ * entries could pass verification. Requires `npm run build` to have run.
  */
 
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import path from 'node:path';
 
-const EXCLUDED_TOP_LEVEL_KEYS = new Set(['_checksum', 'stateHash', 'prevStateHash']);
+const here = path.dirname(fileURLToPath(import.meta.url));
+const stateHashPath = path.resolve(here, '..', '..', 'dist', 'domain', 'state-hash.js');
+const stateHashModule = await import(pathToFileURL(stateHashPath).href);
+
+export const canonicalJSON = stateHashModule.canonicalJSON;
+export const sha256 = stateHashModule.sha256;
+export const hashEvent = stateHashModule.hashEvent;
+export const hashState = stateHashModule.hashState;
 
 const ALLOWED_EVENTS = new Set([
   'shim_invocation_begin',
@@ -22,44 +33,6 @@ const ALLOWED_EVENTS = new Set([
 ]);
 
 const ALLOWED_SOURCES = new Set(['shim', 'runtime']);
-
-export function canonicalJSON(value, excludeTopLevel = false) {
-  return stringify(value, excludeTopLevel);
-}
-
-function stringify(value, excludeTopLevel) {
-  if (value === null) return 'null';
-  if (typeof value === 'boolean' || typeof value === 'number') return JSON.stringify(value);
-  if (typeof value === 'string') return JSON.stringify(value);
-  if (Array.isArray(value)) {
-    const parts = value.map((v) => stringify(v, false));
-    return `[${parts.join(',')}]`;
-  }
-  if (typeof value === 'object') {
-    const obj = value;
-    const keys = Object.keys(obj)
-      .filter((k) => obj[k] !== undefined)
-      .filter((k) => !(excludeTopLevel && EXCLUDED_TOP_LEVEL_KEYS.has(k)))
-      .sort();
-    const parts = keys.map((k) => `${JSON.stringify(k)}:${stringify(obj[k], false)}`);
-    return `{${parts.join(',')}}`;
-  }
-  return 'null';
-}
-
-export function sha256(input) {
-  return createHash('sha256').update(input, 'utf8').digest('hex');
-}
-
-export function hashState(state) {
-  return sha256(canonicalJSON(state, true));
-}
-
-export function hashEvent(entry) {
-  const rest = { ...entry };
-  delete rest.eventHash;
-  return sha256(canonicalJSON(rest));
-}
 
 export function newRunId() {
   return `run-${Date.now().toString(36)}-${randomUUID()}`;

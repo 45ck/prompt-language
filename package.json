@@ -121,6 +121,7 @@
     "eval:shim:integration": "node --test scripts/eval/agent-shim-integration.test.mjs",
     "eval:strict:test": "node --test scripts/eval/strict-mode.test.mjs",
     "eval:tamper:test": "node --test scripts/eval/tamper-drill.test.mjs",
+    "eval:canonical:fuzz": "node --test scripts/eval/canonical-json-fuzz.test.mjs",
     "eval:trace:env": "npm run build && node --test scripts/eval/trace-dir-env.test.mjs",
     "eval:verify": "npm run build && node bin/cli.mjs install && node scripts/eval/verification-eval.mjs",
     "eval:verify:repeat": "npm run build && node bin/cli.mjs install && node scripts/eval/verification-eval.mjs --repeat 3",

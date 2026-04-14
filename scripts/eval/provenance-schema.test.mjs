@@ -137,6 +137,48 @@ test('verifyChain detects runId mismatch', () => {
   assert.equal(r.ok, false);
 });
 
+test('re-exports point at the compiled runtime dist (AP-6: single source of truth)', async () => {
+  // If this import fails, `npm run build` has not been run; the verifier is
+  // expected to refuse to operate rather than silently fall back to a local
+  // duplicate implementation.
+  const { pathToFileURL, fileURLToPath } = await import('node:url');
+  const { default: path } = await import('node:path');
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const distUrl = pathToFileURL(
+    path.resolve(here, '..', '..', 'dist', 'domain', 'state-hash.js'),
+  ).href;
+  const dist = await import(distUrl);
+  assert.equal(canonicalJSON, dist.canonicalJSON, 'canonicalJSON not re-exported from dist');
+  assert.equal(sha256, dist.sha256, 'sha256 not re-exported from dist');
+  assert.equal(hashEvent, dist.hashEvent, 'hashEvent not re-exported from dist');
+  assert.equal(hashState, dist.hashState, 'hashState not re-exported from dist');
+});
+
+test('canonicalJSON agrees with an independent reference on a fuzz sample', () => {
+  // Quick embedded smoke; the full 10k sweep lives in canonical-json-fuzz.test.mjs.
+  // Hand-written oracle avoids JSON.stringify's integer-key reordering inside objects.
+  function reference(v) {
+    if (v === null) return 'null';
+    const t = typeof v;
+    if (t === 'boolean' || t === 'number' || t === 'string') return JSON.stringify(v);
+    if (Array.isArray(v)) return '[' + v.map(reference).join(',') + ']';
+    if (t === 'object') {
+      const keys = Object.keys(v)
+        .filter((k) => v[k] !== undefined)
+        .sort();
+      return '{' + keys.map((k) => `${JSON.stringify(k)}:${reference(v[k])}`).join(',') + '}';
+    }
+    return 'null';
+  }
+  const samples = [
+    { b: 1, a: 2 },
+    { nested: { z: 1, a: { y: 2, x: 3 } } },
+    [1, 'two', null, { k: 'v' }],
+    { '': 'empty', A: 1, a: 2 },
+  ];
+  for (const s of samples) assert.equal(canonicalJSON(s), reference(s));
+});
+
 test('hash-equivalence with runtime state-hash semantics (structural)', () => {
   // The same record must hash identically to what src/domain/state-hash.ts would produce.
   // We replicate the algorithm here; drift breaks witness cross-check.

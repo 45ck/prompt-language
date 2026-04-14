@@ -15,7 +15,7 @@ import { readFile, writeFile, mkdir, rm, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { join, resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnFactoryCodex } from './spawn-factory-codex.mjs';
 import { spawnFactoryPl } from './spawn-factory-pl.mjs';
 import { runChangeRequest } from './run-change-request.mjs';
@@ -27,65 +27,106 @@ const repoRoot = resolve(__dirname, '..', '..', '..');
 
 function usage() {
   console.error(
-    'Usage: node scripts/experiments/e5/run-pair.mjs <pair-manifest> [--run-id <id>] [--dry-run]',
+    'Usage: node scripts/experiments/e5/run-pair.mjs <pair-manifest> [--run-id <id>] [--dry-run] [--plan]',
   );
   process.exit(2);
 }
 
-const args = process.argv.slice(2);
-if (args.length === 0 || args[0].startsWith('--')) usage();
-
-const manifestArg = args[0];
-const flags = new Map();
-for (let i = 1; i < args.length; i += 1) {
-  const key = args[i];
-  if (!key.startsWith('--')) usage();
-  const value = i + 1 < args.length && !args[i + 1].startsWith('--') ? args[++i] : 'true';
-  flags.set(key, value);
-}
-const runId =
-  flags.get('--run-id') ??
-  `${new Date()
-    .toISOString()
-    .replace(/[-:T.Z]/g, '')
-    .slice(0, 12)}-${Math.random().toString(36).slice(2, 6)}`;
-const dryRun = flags.get('--dry-run') === 'true';
-
-const manifestPath = resolve(repoRoot, manifestArg);
-const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-const batchDir = resolve(manifestPath, '..', '..');
-const runDir = join(batchDir, 'runs', runId);
-const log = (...parts) => console.log(`[${runId}]`, ...parts);
-
-log('pair', manifest.pairId, 'batch', manifest.batchId, 'dry-run:', dryRun);
-if (!dryRun) await mkdir(runDir, { recursive: true });
-
-const stageHandlers = {
-  'factory-codex': runFactoryCodex,
-  'factory-pl': runFactoryPl,
-  'gate-family-1-2-3': runGate,
-  'blind-handoff': runBlindHandoff,
-  'maintenance-codex-tree': runMaintenance('codex-workspace'),
-  'maintenance-pl-tree': runMaintenance('pl-workspace'),
-  scorecard: runScorecard,
+// One-line description per stage kind. Used by --plan output.
+const STAGE_DESCRIPTIONS = {
+  'factory-codex': 'Build workspace via codex-alone factory lane',
+  'factory-pl': 'Build workspace via prompt-language factory lane',
+  'gate-family-1-2-3': 'Run journey-suite gate against lane workspaces',
+  'blind-handoff':
+    'Strip identity artifacts, git-init baseline, and verify blinding for each lane',
+  'maintenance-codex-tree': 'Apply change requests to stripped codex workspace',
+  'maintenance-pl-tree': 'Apply change requests to stripped pl workspace',
+  scorecard: 'Render scorecard from template into run directory',
 };
 
-for (const stage of manifest.stages) {
-  const handler = stageHandlers[stage.stage];
-  if (!handler) throw new Error(`unknown stage: ${stage.stage}`);
-  log('stage:', stage.stage);
-  if (dryRun) {
-    log('  dry-run, skipping');
-    continue;
-  }
-  await handler(stage, { runDir, runId, manifest });
+/**
+ * Return the set of stage handlers. Handlers are thin wrappers over
+ * lane/harness workers; see individual handler bodies for details.
+ *
+ * Exported so tests can enumerate handler keys and replace handlers with
+ * spies without running the orchestrator.
+ */
+export function createStageHandlers() {
+  return {
+    'factory-codex': runFactoryCodex,
+    'factory-pl': runFactoryPl,
+    'gate-family-1-2-3': runGate,
+    'blind-handoff': runBlindHandoff,
+    'maintenance-codex-tree': runMaintenance('codex-workspace'),
+    'maintenance-pl-tree': runMaintenance('pl-workspace'),
+    scorecard: runScorecard,
+  };
 }
 
-log('done');
+/**
+ * Iterate stages declared on the manifest, dispatching to the handler map.
+ * Errors from handlers propagate. Unknown stages throw.
+ *
+ * Exported so tests can drive the loop with a mock handler map.
+ */
+export async function runStages(manifest, handlers, ctx, { dryRun, log } = {}) {
+  const logFn = log ?? (() => {});
+  for (const stage of manifest.stages) {
+    const handler = handlers[stage.stage];
+    if (!handler) throw new Error(`unknown stage: ${stage.stage}`);
+    logFn('stage:', stage.stage);
+    if (dryRun) {
+      logFn('  dry-run, skipping');
+      continue;
+    }
+    await handler(stage, ctx);
+  }
+}
+
+/**
+ * Produce a --plan report without executing anything. Pure function over
+ * the manifest and a run directory; performs no IO.
+ */
+export function createPlan(manifest, runDir) {
+  const stages = manifest.stages.map((stage) => ({
+    stage: stage.stage,
+    description: STAGE_DESCRIPTIONS[stage.stage] ?? '(no description registered)',
+    known: Object.prototype.hasOwnProperty.call(STAGE_DESCRIPTIONS, stage.stage),
+  }));
+  const workspaces = [
+    join(runDir, 'codex-workspace'),
+    join(runDir, 'pl-workspace'),
+    join(runDir, 'codex-workspace-stripped'),
+    join(runDir, 'pl-workspace-stripped'),
+  ];
+  return {
+    pairId: manifest.pairId,
+    batchId: manifest.batchId,
+    runDir,
+    stages,
+    workspaces,
+  };
+}
+
+export function formatPlan(plan) {
+  const lines = [];
+  lines.push(`pair: ${plan.pairId}`);
+  lines.push(`batch: ${plan.batchId}`);
+  lines.push(`runDir: ${plan.runDir}`);
+  lines.push('stages:');
+  for (const [i, s] of plan.stages.entries()) {
+    const mark = s.known ? ' ' : '?';
+    lines.push(`  ${i + 1}. [${mark}] ${s.stage} - ${s.description}`);
+  }
+  lines.push('workspace paths (created on live run):');
+  for (const w of plan.workspaces) {
+    lines.push(`  - ${w}`);
+  }
+  return lines.join('\n');
+}
 
 // -----------------------------------------------------------------------------
-// Stage handlers. Each is a thin wrapper that delegates to the real worker
-// once it exists. Keep them explicit about what's missing until implemented.
+// Stage handlers. Each is a thin wrapper that delegates to the real worker.
 
 async function runFactoryCodex(stage, ctx) {
   const workspace = join(ctx.runDir, 'codex-workspace');
@@ -96,7 +137,7 @@ async function runFactoryCodex(stage, ctx) {
     timeBudgetMin: stage.timeBudgetMin,
     laneResultsRoot,
   });
-  log('  factory-codex:', summary.failureClass, `${summary.wallClockSec}s`);
+  ctx.log('  factory-codex:', summary.failureClass, `${summary.wallClockSec}s`);
   return summary;
 }
 
@@ -110,7 +151,7 @@ async function runFactoryPl(stage, ctx) {
     runId: ctx.runId,
     laneResultsRoot,
   });
-  log('  factory-pl:', summary.failureClass, `${summary.wallClockSec}s`);
+  ctx.log('  factory-pl:', summary.failureClass, `${summary.wallClockSec}s`);
   return summary;
 }
 
@@ -134,19 +175,19 @@ async function runBlindHandoff(stage, ctx) {
     const src = join(ctx.runDir, laneDir);
     const dst = join(ctx.runDir, `${laneDir}-stripped`);
     if (!existsSync(src)) {
-      log(`  ${laneDir}: missing, skip strip`);
+      ctx.log(`  ${laneDir}: missing, skip strip`);
       continue;
     }
     await cp(src, dst, { recursive: true });
     const stripped = await stripBlindedPaths(dst, stage.strip);
     const diffPath = join(ctx.runDir, `${laneDir}-strip.diff.json`);
     await writeFile(diffPath, JSON.stringify(stripped, null, 2));
-    log(`  ${laneDir}: stripped ${stripped.length} entries`);
+    ctx.log(`  ${laneDir}: stripped ${stripped.length} entries`);
 
     // Git-init a baseline so maintenance-lane rework is measurable via
     // `git diff --numstat HEAD` instead of returning null.
     const baselineSha = await gitInitBaseline(dst);
-    log(`  ${laneDir}: baseline commit ${baselineSha.slice(0, 10)}`);
+    ctx.log(`  ${laneDir}: baseline commit ${baselineSha.slice(0, 10)}`);
 
     // Blinding verifier: identity leaks abort the pair.
     const report = await verifyBlinding(dst);
@@ -162,7 +203,7 @@ async function runBlindHandoff(stage, ctx) {
           `See ${reportPath}\n${summary}`,
       );
     }
-    log(`  ${laneDir}: blinding clean (${report.warningCount} warnings)`);
+    ctx.log(`  ${laneDir}: blinding clean (${report.warningCount} warnings)`);
 
     handoffMeta.lanes[laneDir] = {
       strippedPath: dst,
@@ -235,12 +276,12 @@ function runMaintenance(laneDir) {
       workspace: input,
       reportPath: join(ctx.runDir, `${laneDir}-baseline-journey.json`),
     });
-    log(`  ${laneDir}: baseline gate=${baseline.gateStatus}`);
+    ctx.log(`  ${laneDir}: baseline gate=${baseline.gateStatus}`);
 
     const crs = stage.changeRequests ?? ['CR-01', 'CR-02', 'CR-03', 'CR-04', 'CR-05'];
     const results = [];
     for (const crId of crs) {
-      log(`  ${laneDir}: applying ${crId}`);
+      ctx.log(`  ${laneDir}: applying ${crId}`);
       const crResultsRoot = join(ctx.runDir, `${laneDir}-cr`, crId);
       const res = await runChangeRequest({
         workspace: input,
@@ -249,7 +290,7 @@ function runMaintenance(laneDir) {
         resultsRoot: crResultsRoot,
       });
       results.push(res);
-      log(
+      ctx.log(
         `    ${crId}: pass=${res.pass} rework=${res.reworkCost.totalReworkUnits} drift=${res.driftDelta}`,
       );
     }
@@ -337,4 +378,56 @@ function matchesAny(name, patterns) {
     if (name === p) return true;
   }
   return false;
+}
+
+// -----------------------------------------------------------------------------
+// CLI entry point. Only runs when the file is invoked directly.
+
+async function main() {
+  const args = process.argv.slice(2);
+  if (args.length === 0 || args[0].startsWith('--')) usage();
+
+  const manifestArg = args[0];
+  const flags = new Map();
+  for (let i = 1; i < args.length; i += 1) {
+    const key = args[i];
+    if (!key.startsWith('--')) usage();
+    const value = i + 1 < args.length && !args[i + 1].startsWith('--') ? args[++i] : 'true';
+    flags.set(key, value);
+  }
+  const runId =
+    flags.get('--run-id') ??
+    `${new Date()
+      .toISOString()
+      .replace(/[-:T.Z]/g, '')
+      .slice(0, 12)}-${Math.random().toString(36).slice(2, 6)}`;
+  const dryRun = flags.get('--dry-run') === 'true';
+  const planMode = flags.get('--plan') === 'true';
+
+  const manifestPath = resolve(repoRoot, manifestArg);
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  const batchDir = resolve(manifestPath, '..', '..');
+  const runDir = join(batchDir, 'runs', runId);
+
+  if (planMode) {
+    const plan = createPlan(manifest, runDir);
+    process.stdout.write(formatPlan(plan) + '\n');
+    return;
+  }
+
+  const log = (...parts) => console.log(`[${runId}]`, ...parts);
+  log('pair', manifest.pairId, 'batch', manifest.batchId, 'dry-run:', dryRun);
+  if (!dryRun) await mkdir(runDir, { recursive: true });
+
+  const handlers = createStageHandlers();
+  const ctx = { runDir, runId, manifest, log };
+  await runStages(manifest, handlers, ctx, { dryRun, log });
+
+  log('done');
+}
+
+const invokedDirectly =
+  process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
+if (invokedDirectly) {
+  await main();
 }

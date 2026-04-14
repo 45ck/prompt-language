@@ -1,0 +1,167 @@
+name: Witness-Chain Hygiene (Nightly)
+
+# Nightly defence-in-depth run for the trace-verification subsystem. Runs
+# tamper-drill, shim-integration, strict-mode, provenance schema, verify-trace
+# self-test, meta-experiment test and (when present) canonical-JSON fuzz across
+# ubuntu + windows. Opens or comments on a GitHub issue on failure so silent
+# regressions in the witness-chain cannot slip through PR review alone.
+#
+# Separate from cross-platform-live-smoke.yml because this lane does not need
+# live agent CLI auth, runs on a different cadence, and is scoped to hygiene
+# rather than behavioural smoke.
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/witness-chain-hygiene.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  hygiene:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Setup Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (dist required by provenance-schema import)
+        run: npm run build
+
+      - name: verify-trace self-test
+        id: verify_trace_self_test
+        run: node --test scripts/eval/verify-trace.self-test.mjs
+
+      - name: Provenance schema tests
+        id: provenance_schema
+        run: node --test scripts/eval/provenance-schema.test.mjs
+
+      - name: Tamper-drill test
+        id: tamper_drill
+        run: node --test scripts/eval/tamper-drill.test.mjs
+
+      - name: Agent shim integration test
+        id: shim_integration
+        run: node --test scripts/eval/agent-shim-integration.test.mjs
+
+      - name: Strict-mode test
+        id: strict_mode
+        run: node --test scripts/eval/strict-mode.test.mjs
+
+      - name: Meta-experiment test
+        id: meta_experiment
+        run: node --test scripts/experiments/meta/run-meta-experiment.test.mjs
+
+      - name: Canonical-JSON fuzz (if present)
+        id: canonical_fuzz
+        if: ${{ hashFiles('scripts/eval/canonical-json-fuzz.test.mjs') != '' }}
+        run: node --test scripts/eval/canonical-json-fuzz.test.mjs
+
+      - name: Open or update hygiene-failure issue
+        if: ${{ failure() && github.event_name == 'schedule' }}
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+        env:
+          FAILED_OS: ${{ matrix.os }}
+          FAILED_VERIFY_TRACE: ${{ steps.verify_trace_self_test.outcome }}
+          FAILED_PROVENANCE: ${{ steps.provenance_schema.outcome }}
+          FAILED_TAMPER: ${{ steps.tamper_drill.outcome }}
+          FAILED_SHIM: ${{ steps.shim_integration.outcome }}
+          FAILED_STRICT: ${{ steps.strict_mode.outcome }}
+          FAILED_META: ${{ steps.meta_experiment.outcome }}
+          FAILED_FUZZ: ${{ steps.canonical_fuzz.outcome }}
+        with:
+          script: |
+            const today = new Date().toISOString().slice(0, 10);
+            const os = process.env.FAILED_OS;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Map step outcome -> verifier subsystem implicated.
+            const stepMap = [
+              { env: 'FAILED_VERIFY_TRACE', step: 'verify-trace self-test',       subsystem: 'chain integrity' },
+              { env: 'FAILED_PROVENANCE',   step: 'provenance schema',            subsystem: 'canonical JSON / schema' },
+              { env: 'FAILED_TAMPER',       step: 'tamper-drill',                 subsystem: 'chain integrity / state hash' },
+              { env: 'FAILED_SHIM',         step: 'agent-shim-integration',       subsystem: 'witness pairing' },
+              { env: 'FAILED_STRICT',       step: 'strict-mode',                  subsystem: 'witness pairing (strict gate)' },
+              { env: 'FAILED_META',         step: 'meta-experiment',              subsystem: 'experiment harness' },
+              { env: 'FAILED_FUZZ',         step: 'canonical-JSON fuzz',          subsystem: 'canonical JSON' },
+            ];
+            const failures = stepMap.filter(s => process.env[s.env] === 'failure');
+            const failureLines = failures.length
+              ? failures.map(f => `- \`${f.step}\` — implicates **${f.subsystem}**`).join('\n')
+              : '- Unknown step (see run log)';
+
+            const titlePrefix = 'witness-chain hygiene failure';
+            const titleToday = `${titlePrefix}: ${today}`;
+            const body = [
+              `Nightly witness-chain hygiene run failed on **${os}**.`,
+              ``,
+              `Run: ${runUrl}`,
+              ``,
+              `Failed steps:`,
+              failureLines,
+              ``,
+              `If this reproduces on a clean checkout, triage as a defence-in-depth`,
+              `regression in the trace-verification subsystem before merging further`,
+              `changes to verify-trace, provenance-schema, or the agent shim.`,
+            ].join('\n');
+
+            // Guard against insufficient GITHUB_TOKEN perms — degrade to a warning.
+            let existing;
+            try {
+              existing = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                labels: 'nightly-alert,trace-verifier',
+                per_page: 50,
+              });
+            } catch (err) {
+              core.warning(`Unable to list issues (insufficient permissions?): ${err.message}`);
+              return;
+            }
+
+            const match = existing.data.find(i => i.title.startsWith(titlePrefix));
+            try {
+              if (match) {
+                const note = match.title === titleToday
+                  ? `Another failure on **${os}** today.\n\nRun: ${runUrl}\n\nFailed steps:\n${failureLines}`
+                  : `Newest failure on **${os}** (${today}); reusing prior open hygiene issue.\n\nRun: ${runUrl}\n\nFailed steps:\n${failureLines}`;
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: match.number,
+                  body: note,
+                });
+                core.notice(`Commented on existing hygiene issue #${match.number}`);
+              } else {
+                const created = await github.rest.issues.create({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: titleToday,
+                  body,
+                  labels: ['security', 'trace-verifier', 'nightly-alert'],
+                });
+                core.notice(`Opened hygiene issue #${created.data.number}`);
+              }
+            } catch (err) {
+              core.warning(`Unable to create/comment on hygiene issue (insufficient permissions?): ${err.message}`);
+            }

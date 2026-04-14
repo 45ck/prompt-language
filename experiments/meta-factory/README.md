@@ -67,6 +67,14 @@ Live meta-runs require the 8-item bootstrap envelope and 3 operator
 sign-offs listed in [design/risks.md](design/risks.md). Do not invoke
 `run.sh` without `--dry-run` until that checklist is green.
 
+### Bootstrap envelope preflight
+
+Before running a meta-experiment, run:
+  npm run meta:preflight
+to confirm the 8-item bootstrap envelope is configured. Blocked status means
+the run cannot be claim-eligible even if it succeeds. Degraded status means
+some items are operator-responsibility and unchecked.
+
 ## Status
 
 - [x] Program scaffolded

@@ -73,11 +73,17 @@ check(
   'Checks for <meta name="viewport" content="...width=device-width...">',
 );
 
-// 5. CSS media queries for mobile
+// 5. CSS media queries for mobile (accepts both min-width and max-width approaches)
+const hasMaxWidth = /@media[^{]*max-width\s*:\s*\d+px/i.test(html);
+const hasMinWidth = /@media[^{]*min-width\s*:\s*\d+px/i.test(html);
 check(
   'Mobile media queries',
-  /@media[^{]*max-width\s*:\s*\d+px/i.test(html),
-  'Checks for @media (max-width: Npx) responsive rules',
+  hasMaxWidth || hasMinWidth,
+  hasMaxWidth
+    ? 'Uses @media (max-width) responsive rules'
+    : hasMinWidth
+      ? 'Uses @media (min-width) mobile-first responsive rules'
+      : 'No @media responsive rules found',
 );
 
 // 6. No broken image references (no <img src="..." unless data: or svg)

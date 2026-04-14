@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="CloudPulse delivers real-time infrastructure monitoring with intelligent alerts. Detect anomalies, trace requests, and analyze logs in one platform."
+    />
+    <meta property="og:title" content="CloudPulse" />
+    <meta
+      property="og:description"
+      content="Monitor smarter, respond faster. Real-time infrastructure monitoring with intelligent alerts for modern engineering teams."
+    />
+    <link rel="canonical" href="https://cloudpulse.io" />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%232563EB'/></svg>"
+    />
+    <title>CloudPulse — Monitor Smarter, Respond Faster</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CloudPulse",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "offers": [
+          { "@type": "Offer", "price": "0", "priceCurrency": "USD", "name": "Starter" },
+          { "@type": "Offer", "price": "49", "priceCurrency": "USD", "name": "Pro" },
+          { "@type": "Offer", "price": "0", "priceCurrency": "USD", "name": "Enterprise" }
+        ]
+      }
+    </script>
+    <style>
+      :root {
+        --cp-primary: #2563eb;
+        --cp-primary-hover: #1d4ed8;
+        --cp-secondary: #7c3aed;
+        --cp-secondary-hover: #6d28d9;
+        --cp-accent: #10b981;
+        --cp-accent-hover: #059669;
+        --cp-dark: #1e293b;
+        --cp-dark-muted: #334155;
+        --cp-dark-subtle: #475569;
+        --cp-light: #f8fafc;
+        --cp-light-alt: #f1f5f9;
+        --cp-border: #e2e8f0;
+        --cp-muted: #64748b;
+        --cp-white: #ffffff;
+        --cp-black: #000000;
+        --cp-primary-light: #dbeafe;
+        --cp-secondary-light: #ede9fe;
+        --cp-accent-light: #d1fae5;
+        --cp-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: var(--cp-font);
+        color: var(--cp-dark);
+        background: var(--cp-light);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ── Nav ── */
+      .cp-nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: rgba(248, 250, 252, 0.95);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--cp-border);
+      }
+      .cp-nav-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .cp-logo {
+        font-size: 1.375rem;
+        font-weight: 800;
+        color: var(--cp-dark);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .cp-logo svg {
+        flex-shrink: 0;
+      }
+      .cp-nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        list-style: none;
+      }
+      .cp-nav-links a {
+        color: var(--cp-dark-muted);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.9375rem;
+        transition: color 0.2s;
+      }
+      .cp-nav-links a:hover {
+        color: var(--cp-primary);
+      }
+      .cp-nav-cta {
+        background: var(--cp-primary);
+        color: var(--cp-white);
+        padding: 8px 20px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        transition: background 0.2s;
+      }
+      .cp-nav-cta:hover {
+        background: var(--cp-primary-hover);
+      }
+
+      /* Mobile nav toggle */
+      .cp-nav-toggle {
+        display: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+      }
+      .cp-nav-toggle svg {
+        display: block;
+      }
+
+      /* ── Shared ── */
+      .cp-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .cp-section {
+        padding: 96px 0;
+      }
+      .cp-section-header {
+        text-align: center;
+        margin-bottom: 64px;
+      }
+      .cp-section-header h2 {
+        font-size: 2.25rem;
+        font-weight: 800;
+        margin-bottom: 16px;
+        color: var(--cp-dark);
+      }
+      .cp-section-header p {
+        font-size: 1.125rem;
+        color: var(--cp-muted);
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      .cp-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 28px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        cursor: pointer;
+        border: none;
+      }
+      .cp-btn-primary {
+        background: var(--cp-primary);
+        color: var(--cp-white);
+      }
+      .cp-btn-primary:hover {
+        background: var(--cp-primary-hover);
+      }
+      .cp-btn-secondary {
+        background: var(--cp-white);
+        color: var(--cp-primary);
+        border: 2px solid var(--cp-primary);
+      }
+      .cp-btn-secondary:hover {
+        background: var(--cp-primary-light);
+      }
+
+      /* ── Hero ── */
+      .cp-hero {
+        padding: 80px 0 64px;
+        background: linear-gradient(
+          135deg,
+          var(--cp-light) 0%,
+          var(--cp-primary-light) 50%,
+          var(--cp-secondary-light) 100%
+        );
+      }
+      .cp-hero-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 24px;
+        text-align: center;
+      }
+      .cp-hero h1 {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 24px;
+        background: linear-gradient(135deg, var(--cp-primary), var(--cp-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .cp-hero-sub {
+        font-size: 1.25rem;
+        color: var(--cp-dark-muted);
+        max-width: 600px;
+        margin: 0 auto 40px;
+        line-height: 1.7;
+      }
+      .cp-hero-actions {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+      .cp-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        max-width: 680px;
+        margin: 64px auto 0;
+        padding-top: 48px;
+        border-top: 1px solid var(--cp-border);
+      }
+      .cp-stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--cp-primary);
+      }
+      .cp-stat-label {
+        font-size: 0.875rem;
+        color: var(--cp-muted);
+        margin-top: 4px;
+      }
+
+      /* ── Features ── */
+      .cp-features-section {
+        background: var(--cp-white);
+      }
+      .cp-features-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+      }
+      .cp-feature-card {
+        padding: 32px;
+        border-radius: 12px;
+        border: 1px solid var(--cp-border);
+        background: var(--cp-light);
+        transition:
+          box-shadow 0.2s,
+          transform 0.2s;
+      }
+      .cp-feature-card:hover {
+        box-shadow: 0 8px 30px rgba(37, 99, 235, 0.1);
+        transform: translateY(-2px);
+      }
+      .cp-feature-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        background: var(--cp-primary-light);
+      }
+      .cp-feature-card:nth-child(2n) .cp-feature-icon {
+        background: var(--cp-secondary-light);
+      }
+      .cp-feature-card:nth-child(3n) .cp-feature-icon {
+        background: var(--cp-accent-light);
+      }
+      .cp-feature-card h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+        color: var(--cp-dark);
+      }
+      .cp-feature-card p {
+        color: var(--cp-muted);
+        font-size: 0.9375rem;
+        line-height: 1.6;
+      }
+
+      /* ── Pricing ── */
+      .cp-pricing-section {
+        background: var(--cp-light);
+      }
+      .cp-pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        align-items: start;
+      }
+      .cp-pricing-card {
+        background: var(--cp-white);
+        border-radius: 16px;
+        padding: 40px 32px;
+        border: 1px solid var(--cp-border);
+        text-align: center;
+        position: relative;
+      }
+      .cp-pricing-card.cp-popular {
+        border-color: var(--cp-primary);
+        box-shadow: 0 8px 30px rgba(37, 99, 235, 0.15);
+        transform: scale(1.02);
+      }
+      .cp-popular-badge {
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--cp-primary);
+        color: var(--cp-white);
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 4px 16px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .cp-pricing-name {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--cp-dark);
+        margin-bottom: 8px;
+      }
+      .cp-pricing-price {
+        font-size: 3rem;
+        font-weight: 800;
+        color: var(--cp-dark);
+        margin-bottom: 4px;
+      }
+      .cp-pricing-price span {
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--cp-muted);
+      }
+      .cp-pricing-desc {
+        color: var(--cp-muted);
+        font-size: 0.875rem;
+        margin-bottom: 32px;
+      }
+      .cp-pricing-features {
+        list-style: none;
+        text-align: left;
+        margin-bottom: 32px;
+      }
+      .cp-pricing-features li {
+        padding: 10px 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.9375rem;
+        color: var(--cp-dark-muted);
+        border-bottom: 1px solid var(--cp-light-alt);
+      }
+      .cp-pricing-features li:last-child {
+        border-bottom: none;
+      }
+      .cp-check {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        color: var(--cp-accent);
+      }
+      .cp-pricing-card .cp-btn {
+        width: 100%;
+      }
+
+      /* ── Testimonials ── */
+      .cp-testimonials-section {
+        background: var(--cp-white);
+      }
+      .cp-testimonials-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+      }
+      .cp-testimonial-card {
+        background: var(--cp-light);
+        border-radius: 12px;
+        padding: 32px;
+        border: 1px solid var(--cp-border);
+      }
+      .cp-testimonial-card blockquote {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: var(--cp-dark-muted);
+        margin-bottom: 24px;
+        font-style: italic;
+      }
+      .cp-testimonial-card blockquote::before {
+        content: open-quote;
+        font-size: 2rem;
+        color: var(--cp-primary);
+        display: block;
+        margin-bottom: 8px;
+        font-style: normal;
+      }
+      .cp-testimonial-author {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .cp-author-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--cp-white);
+      }
+      .cp-author-info cite {
+        display: block;
+        font-style: normal;
+        font-weight: 600;
+        color: var(--cp-dark);
+        font-size: 0.9375rem;
+      }
+      .cp-author-info span {
+        font-size: 0.8125rem;
+        color: var(--cp-muted);
+      }
+
+      /* ── Footer ── */
+      .cp-footer {
+        background: var(--cp-dark);
+        color: var(--cp-white);
+        padding: 64px 0 32px;
+      }
+      .cp-footer-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 48px;
+        margin-bottom: 48px;
+      }
+      .cp-footer-brand p {
+        color: var(--cp-muted);
+        font-size: 0.875rem;
+        margin-top: 12px;
+        line-height: 1.6;
+      }
+      .cp-footer-col h4 {
+        font-size: 0.875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 20px;
+        color: var(--cp-white);
+      }
+      .cp-footer-col ul {
+        list-style: none;
+      }
+      .cp-footer-col li {
+        margin-bottom: 12px;
+      }
+      .cp-footer-col a {
+        color: var(--cp-muted);
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: color 0.2s;
+      }
+      .cp-footer-col a:hover {
+        color: var(--cp-white);
+      }
+      .cp-footer-bottom {
+        border-top: 1px solid var(--cp-dark-muted);
+        padding-top: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .cp-footer-copy {
+        font-size: 0.8125rem;
+        color: var(--cp-muted);
+      }
+      .cp-social-links {
+        display: flex;
+        gap: 16px;
+      }
+      .cp-social-links a {
+        color: var(--cp-muted);
+        transition: color 0.2s;
+      }
+      .cp-social-links a:hover {
+        color: var(--cp-white);
+      }
+
+      /* ── Responsive ── */
+      @media (max-width: 768px) {
+        .cp-hero h1 {
+          font-size: 2.25rem;
+        }
+        .cp-hero-sub {
+          font-size: 1.0625rem;
+        }
+        .cp-stats {
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+        .cp-features-grid {
+          grid-template-columns: 1fr;
+        }
+        .cp-pricing-grid {
+          grid-template-columns: 1fr;
+          max-width: 420px;
+          margin: 0 auto;
+        }
+        .cp-pricing-card.cp-popular {
+          transform: none;
+        }
+        .cp-testimonials-grid {
+          grid-template-columns: 1fr;
+        }
+        .cp-footer-grid {
+          grid-template-columns: 1fr 1fr;
+          gap: 32px;
+        }
+        .cp-section {
+          padding: 64px 0;
+        }
+        .cp-section-header h2 {
+          font-size: 1.75rem;
+        }
+        .cp-nav-links {
+          display: none;
+        }
+        .cp-nav-toggle {
+          display: block;
+        }
+        .cp-nav-links.cp-nav-open {
+          display: flex;
+          flex-direction: column;
+          position: absolute;
+          top: 64px;
+          left: 0;
+          right: 0;
+          background: var(--cp-white);
+          padding: 24px;
+          border-bottom: 1px solid var(--cp-border);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .cp-footer-bottom {
+          flex-direction: column;
+          gap: 16px;
+          text-align: center;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .cp-hero h1 {
+          font-size: 1.875rem;
+        }
+        .cp-hero-actions {
+          flex-direction: column;
+          align-items: center;
+        }
+        .cp-footer-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <header class="cp-nav">
+      <nav class="cp-nav-inner" aria-label="Main navigation">
+        <a href="#" class="cp-logo">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <circle cx="16" cy="16" r="14" fill="var(--cp-primary)" />
+            <path
+              d="M10 18 L14 14 L18 17 L22 12"
+              stroke="#fff"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              fill="none"
+            />
+          </svg>
+          CloudPulse
+        </a>
+        <button
+          class="cp-nav-toggle"
+          aria-label="Toggle menu"
+          onclick="document.querySelector('.cp-nav-links').classList.toggle('cp-nav-open')"
+        >
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="var(--cp-dark)"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <ul class="cp-nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#testimonials">Testimonials</a></li>
+          <li><a href="#hero" class="cp-nav-cta">Get Started</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main>
+      <!-- Hero -->
+      <section id="hero" class="cp-hero">
+        <div class="cp-hero-inner">
+          <h1>Monitor Smarter, Respond Faster</h1>
+          <p class="cp-hero-sub">
+            CloudPulse delivers real-time infrastructure monitoring with intelligent alerts. Detect
+            anomalies before they become outages.
+          </p>
+          <div class="cp-hero-actions">
+            <a href="#pricing" class="cp-btn cp-btn-primary">Get Started Free</a>
+            <a href="#features" class="cp-btn cp-btn-secondary">View Live Demo</a>
+          </div>
+          <div class="cp-stats">
+            <div>
+              <div class="cp-stat-value">99.99%</div>
+              <div class="cp-stat-label">Uptime SLA</div>
+            </div>
+            <div>
+              <div class="cp-stat-value">10,000+</div>
+              <div class="cp-stat-label">Teams</div>
+            </div>
+            <div>
+              <div class="cp-stat-value">50M+</div>
+              <div class="cp-stat-label">Metrics per Day</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section id="features" class="cp-section cp-features-section">
+        <div class="cp-container">
+          <div class="cp-section-header">
+            <h2>Built for Modern Infrastructure</h2>
+            <p>Everything your team needs to monitor, debug, and optimize your stack.</p>
+          </div>
+          <div class="cp-features-grid">
+            <div class="cp-feature-card">
+              <div class="cp-feature-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--cp-primary)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M7 14l3-3 3 3 4-4" />
+                </svg>
+              </div>
+              <h3>Real-Time Dashboards</h3>
+              <p>
+                Custom dashboards that update in milliseconds. See your entire stack at a glance.
+              </p>
+            </div>
+            <div class="cp-feature-card">
+              <div class="cp-feature-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--cp-secondary)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+              </div>
+              <h3>Intelligent Alerting</h3>
+              <p>ML-powered anomaly detection reduces alert noise by 90%. Focus on what matters.</p>
+            </div>
+            <div class="cp-feature-card">
+              <div class="cp-feature-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--cp-accent)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M16 16v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3" />
+                  <rect x="10" y="3" width="11" height="11" rx="2" />
+                  <path d="M14 3v4h4" />
+                </svg>
+              </div>
+              <h3>Seamless Integrations</h3>
+              <p>Connect with AWS, Azure, GCP, Kubernetes, and 200+ services in minutes.</p>
+            </div>
+            <div class="cp-feature-card">
+              <div class="cp-feature-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--cp-primary)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M3 12h4l3-9 4 18 3-9h4" />
+                </svg>
+              </div>
+              <h3>Distributed Tracing</h3>
+              <p>Trace requests across microservices. Pinpoint bottlenecks with precision.</p>
+            </div>
+            <div class="cp-feature-card">
+              <div class="cp-feature-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--cp-secondary)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+              </div>
+              <h3>Log Analytics</h3>
+              <p>
+                Search and analyze billions of log entries. Correlate logs with metrics and traces.
+              </p>
+            </div>
+            <div class="cp-feature-card">
+              <div class="cp-feature-icon">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="var(--cp-accent)"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <h3>Security Monitoring</h3>
+              <p>Detect threats in real time. Align monitoring data with compliance frameworks.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing -->
+      <section id="pricing" class="cp-section cp-pricing-section">
+        <div class="cp-container">
+          <div class="cp-section-header">
+            <h2>Transparent Pricing for Every Team</h2>
+            <p>Start free. Scale as your infrastructure grows.</p>
+          </div>
+          <div class="cp-pricing-grid">
+            <!-- Starter -->
+            <div class="cp-pricing-card">
+              <div class="cp-pricing-name">Starter</div>
+              <div class="cp-pricing-price">Free</div>
+              <div class="cp-pricing-desc">For small teams getting started</div>
+              <ul class="cp-pricing-features">
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >5 Hosts
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >1-Day Data Retention
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >Core Metrics
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >Community Support
+                </li>
+              </ul>
+              <a href="#" class="cp-btn cp-btn-secondary">Start Free</a>
+            </div>
+            <!-- Pro -->
+            <div class="cp-pricing-card cp-popular">
+              <div class="cp-popular-badge">Most Popular</div>
+              <div class="cp-pricing-name">Pro</div>
+              <div class="cp-pricing-price">$49<span>/mo</span></div>
+              <div class="cp-pricing-desc">For growing engineering teams</div>
+              <ul class="cp-pricing-features">
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >50 Hosts
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >30-Day Data Retention
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >Advanced Analytics
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >Priority Support
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >Custom Dashboards
+                </li>
+              </ul>
+              <a href="#" class="cp-btn cp-btn-primary">Start Pro Trial</a>
+            </div>
+            <!-- Enterprise -->
+            <div class="cp-pricing-card">
+              <div class="cp-pricing-name">Enterprise</div>
+              <div class="cp-pricing-price">Custom</div>
+              <div class="cp-pricing-desc">For large-scale operations</div>
+              <ul class="cp-pricing-features">
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >Unlimited Hosts
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >13-Month Data Retention
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >Dedicated Account Manager
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >SSO and SAML
+                </li>
+                <li>
+                  <svg class="cp-check" viewBox="0 0 20 20" fill="var(--cp-accent)">
+                    <path
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    /></svg
+                  >Custom SLAs
+                </li>
+              </ul>
+              <a href="#" class="cp-btn cp-btn-secondary">Contact Sales</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials -->
+      <section id="testimonials" class="cp-section cp-testimonials-section">
+        <div class="cp-container">
+          <div class="cp-section-header">
+            <h2>Trusted by Engineering Teams Worldwide</h2>
+            <p>See how teams use CloudPulse to keep their infrastructure running.</p>
+          </div>
+          <div class="cp-testimonials-grid">
+            <div class="cp-testimonial-card">
+              <blockquote>
+                CloudPulse cut our mean time to resolution by 60%. The intelligent alerting alone
+                saved us hundreds of engineering hours.
+              </blockquote>
+              <div class="cp-testimonial-author">
+                <div class="cp-author-avatar" style="background: var(--cp-primary)">SC</div>
+                <div class="cp-author-info">
+                  <cite>Sarah Chen</cite>
+                  <span>VP of Engineering, ScaleGrid</span>
+                </div>
+              </div>
+            </div>
+            <div class="cp-testimonial-card">
+              <blockquote>
+                We migrated from three separate tools to CloudPulse. One platform for metrics, logs,
+                and traces changed everything.
+              </blockquote>
+              <div class="cp-testimonial-author">
+                <div class="cp-author-avatar" style="background: var(--cp-secondary)">MR</div>
+                <div class="cp-author-info">
+                  <cite>Marcus Rivera</cite>
+                  <span>SRE Lead, Nexova</span>
+                </div>
+              </div>
+            </div>
+            <div class="cp-testimonial-card">
+              <blockquote>
+                The onboarding took less than an hour. Our dashboards were live the same day we
+                signed up.
+              </blockquote>
+              <div class="cp-testimonial-author">
+                <div class="cp-author-avatar" style="background: var(--cp-accent)">AP</div>
+                <div class="cp-author-info">
+                  <cite>Aisha Patel</cite>
+                  <span>CTO, BrightLoop</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer id="footer" class="cp-footer">
+      <div class="cp-container">
+        <div class="cp-footer-grid">
+          <div class="cp-footer-brand">
+            <a href="#" class="cp-logo" style="color: var(--cp-white)">
+              <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <circle cx="16" cy="16" r="14" fill="var(--cp-primary)" />
+                <path
+                  d="M10 18 L14 14 L18 17 L22 12"
+                  stroke="#fff"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  fill="none"
+                />
+              </svg>
+              CloudPulse
+            </a>
+            <p>
+              Monitor smarter, respond faster. Real-time infrastructure monitoring for modern
+              engineering teams.
+            </p>
+          </div>
+          <div class="cp-footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#features">Features</a></li>
+              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="#">Integrations</a></li>
+              <li><a href="#">Documentation</a></li>
+            </ul>
+          </div>
+          <div class="cp-footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#">About</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Blog</a></li>
+              <li><a href="#">Contact</a></li>
+            </ul>
+          </div>
+          <div class="cp-footer-col">
+            <h4>Legal</h4>
+            <ul>
+              <li><a href="#">Privacy Policy</a></li>
+              <li><a href="#">Terms of Service</a></li>
+              <li><a href="#">Status Page</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="cp-footer-bottom">
+          <span class="cp-footer-copy">&copy; 2026 CloudPulse. All rights reserved.</span>
+          <div class="cp-social-links">
+            <a href="#" aria-label="GitHub">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                />
+              </svg>
+            </a>
+            <a href="#" aria-label="Twitter">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                />
+              </svg>
+            </a>
+            <a href="#" aria-label="LinkedIn">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

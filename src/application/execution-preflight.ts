@@ -11,7 +11,7 @@ import {
 } from '../domain/diagnostic-report.js';
 import { explainGatePrerequisite, type WorkspaceAccess } from './gate-prerequisites.js';
 
-export type RunnerName = 'claude' | 'codex' | 'opencode' | 'ollama';
+export type RunnerName = 'claude' | 'codex' | 'opencode' | 'ollama' | 'aider';
 export type ExecutionMode = 'interactive' | 'headless';
 
 export interface ExecutionPreflightInput {
@@ -164,6 +164,8 @@ function collectProfileRequirements(nodes: readonly FlowNode[]): ProfileRequirem
       case 'remember':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;

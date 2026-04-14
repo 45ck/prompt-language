@@ -7,6 +7,7 @@ const RUNNER_BINARIES: Readonly<Record<RunnerName, string>> = {
   codex: 'codex',
   opencode: 'opencode',
   ollama: 'ollama',
+  aider: 'python',
 };
 
 function candidateNames(binary: string, env: NodeJS.ProcessEnv): readonly string[] {

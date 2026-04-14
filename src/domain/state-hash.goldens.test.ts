@@ -20,43 +20,50 @@ import { canonicalJSON, hashEvent, hashState, sha256 } from './state-hash.js';
 
 describe('canonicalJSON goldens: string output is pinned', () => {
   // Each case: input, expected canonical string, (optional) excludeTopLevel
-  const cases: Array<{ name: string; input: unknown; expected: string; excludeTopLevel?: boolean }> =
-    [
-      { name: 'empty object', input: {}, expected: '{}' },
-      { name: 'empty array', input: [], expected: '[]' },
-      { name: 'null', input: null, expected: 'null' },
-      { name: 'zero', input: 0, expected: '0' },
-      { name: 'negative zero collapses to zero', input: -0, expected: '0' },
-      { name: 'empty string', input: '', expected: '""' },
-      { name: 'sorted keys insert-order-invariant', input: { b: 2, a: 1 }, expected: '{"a":1,"b":2}' },
-      { name: 'undefined properties dropped', input: { a: 1, b: undefined }, expected: '{"a":1}' },
-      { name: 'empty-string key preserved', input: { '': 0 }, expected: '{"":0}' },
-      {
-        name: 'numeric-looking keys sort lexicographically',
-        input: { '10': 'ten', '2': 'two', '1': 'one' },
-        expected: '{"1":"one","10":"ten","2":"two"}',
-      },
-      { name: 'ASCII case order (A before a)', input: { a: 2, A: 1 }, expected: '{"A":1,"a":2}' },
-      { name: 'newline in string value escaped', input: { k: 'a\nb' }, expected: '{"k":"a\\nb"}' },
-      { name: 'NaN encoded as null', input: Number.NaN, expected: 'null' },
-      { name: 'Infinity encoded as null', input: Number.POSITIVE_INFINITY, expected: 'null' },
-      {
-        name: 'excludeTopLevel drops _checksum/stateHash/prevStateHash at top',
-        input: { _checksum: 'x', stateHash: 'y', prevStateHash: 'z', a: 1 },
-        expected: '{"a":1}',
-        excludeTopLevel: true,
-      },
-      {
-        name: 'excludeTopLevel preserves inner stateHash (nested, not top)',
-        input: { a: { stateHash: 'keep' } },
-        expected: '{"a":{"stateHash":"keep"}}',
-        excludeTopLevel: true,
-      },
-      { name: 'function encoded as null (unsupported type)', input: () => 42, expected: 'null' },
-      { name: 'symbol encoded as null', input: Symbol('s'), expected: 'null' },
-      { name: 'array with undefined element becomes null', input: [1, undefined, 3], expected: '[1,null,3]' },
-      { name: 'deeply nested array', input: [1, [2, [3, [4]]]], expected: '[1,[2,[3,[4]]]]' },
-    ];
+  const cases: { name: string; input: unknown; expected: string; excludeTopLevel?: boolean }[] = [
+    { name: 'empty object', input: {}, expected: '{}' },
+    { name: 'empty array', input: [], expected: '[]' },
+    { name: 'null', input: null, expected: 'null' },
+    { name: 'zero', input: 0, expected: '0' },
+    { name: 'negative zero collapses to zero', input: -0, expected: '0' },
+    { name: 'empty string', input: '', expected: '""' },
+    {
+      name: 'sorted keys insert-order-invariant',
+      input: { b: 2, a: 1 },
+      expected: '{"a":1,"b":2}',
+    },
+    { name: 'undefined properties dropped', input: { a: 1, b: undefined }, expected: '{"a":1}' },
+    { name: 'empty-string key preserved', input: { '': 0 }, expected: '{"":0}' },
+    {
+      name: 'numeric-looking keys sort lexicographically',
+      input: { '10': 'ten', '2': 'two', '1': 'one' },
+      expected: '{"1":"one","10":"ten","2":"two"}',
+    },
+    { name: 'ASCII case order (A before a)', input: { a: 2, A: 1 }, expected: '{"A":1,"a":2}' },
+    { name: 'newline in string value escaped', input: { k: 'a\nb' }, expected: '{"k":"a\\nb"}' },
+    { name: 'NaN encoded as null', input: Number.NaN, expected: 'null' },
+    { name: 'Infinity encoded as null', input: Number.POSITIVE_INFINITY, expected: 'null' },
+    {
+      name: 'excludeTopLevel drops _checksum/stateHash/prevStateHash at top',
+      input: { _checksum: 'x', stateHash: 'y', prevStateHash: 'z', a: 1 },
+      expected: '{"a":1}',
+      excludeTopLevel: true,
+    },
+    {
+      name: 'excludeTopLevel preserves inner stateHash (nested, not top)',
+      input: { a: { stateHash: 'keep' } },
+      expected: '{"a":{"stateHash":"keep"}}',
+      excludeTopLevel: true,
+    },
+    { name: 'function encoded as null (unsupported type)', input: () => 42, expected: 'null' },
+    { name: 'symbol encoded as null', input: Symbol('s'), expected: 'null' },
+    {
+      name: 'array with undefined element becomes null',
+      input: [1, undefined, 3],
+      expected: '[1,null,3]',
+    },
+    { name: 'deeply nested array', input: [1, [2, [3, [4]]]], expected: '[1,[2,[3,[4]]]]' },
+  ];
 
   for (const c of cases) {
     it(`[canonical] ${c.name}`, () => {
@@ -72,7 +79,7 @@ describe('sha256 goldens: bytes-to-hex is pinned', () => {
   });
 
   // Each case: canonical string, expected sha256. If either drifts, we catch.
-  const cases: Array<{ name: string; canonical: string; expected: string }> = [
+  const cases: { name: string; canonical: string; expected: string }[] = [
     {
       name: 'empty object',
       canonical: '{}',
@@ -149,7 +156,12 @@ describe('hashState goldens: content-identity is pinned', () => {
 
   it('bookkeeping-invariant: adding _checksum/stateHash/prevStateHash at top does not change hash', () => {
     const base = { a: 1 };
-    const withBookkeeping = { a: 1, _checksum: 'anything', stateHash: 'stale', prevStateHash: null };
+    const withBookkeeping = {
+      a: 1,
+      _checksum: 'anything',
+      stateHash: 'stale',
+      prevStateHash: null,
+    };
     expect(hashState(base)).toBe(hashState(withBookkeeping));
   });
 

@@ -17,6 +17,8 @@ import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { bootApp } from './app-boot.mjs';
+import { probeJourney, discoverEndpoints } from './documented-endpoint-probe.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..', '..', '..');
@@ -46,28 +48,56 @@ export async function runJourneySuite({ workspace, reportPath } = {}) {
   const readme = await findReadme(workspace);
   const contract = await findContract(workspace);
 
+  // v2: attempt to boot the app and probe HTTP journeys if readme+contract exist
+  let appHandle = null;
+  let endpoints = {};
+  let bootError = null;
+  const httpJourneys = journeys.filter((j) => j.automation === 'http');
+
+  if (httpJourneys.length > 0 && readme) {
+    endpoints = await discoverEndpoints(workspace);
+    appHandle = await bootApp({ workspace, timeoutMs: 30_000 });
+    if (!appHandle.ok) {
+      bootError = appHandle.error ?? 'App failed to boot';
+    }
+  }
+
   const journeyResults = [];
   for (const j of journeys) {
     if (j.automation === 'http') {
-      if (!readme || !contract) {
+      if (!readme) {
         journeyResults.push({
           id: j.id,
           status: 'requires-manual-review',
           reason:
-            'No README + HTTP contract file (openapi.yaml/json or similar) discovered in the ' +
-            'workspace. The v1 runner refuses to probe by reading source — that is a family-3 ' +
-            'deliverability failure for the lane, not a journey pass.',
+            'No README discovered in the workspace. The runner refuses to probe by reading ' +
+            'source — that is a family-3 deliverability failure for the lane, not a journey pass.',
         });
         continue;
       }
-      journeyResults.push({
-        id: j.id,
-        status: 'requires-manual-review',
-        reason:
-          'v1 HTTP harness is a stub: workspace has README+contract but the runner does not ' +
-          'yet boot the app and drive the documented endpoints. Wire this up when the first ' +
-          'live factory lane produces a contract we can pin against.',
-      });
+      if (bootError) {
+        journeyResults.push({
+          id: j.id,
+          status: 'failed',
+          reason: `App boot failed: ${bootError}`,
+        });
+        continue;
+      }
+      if (appHandle?.ok) {
+        // v2: actually probe the endpoint
+        const probeResult = await probeJourney({
+          journeyId: j.id,
+          port: appHandle.port,
+          endpoints,
+        });
+        journeyResults.push(probeResult);
+      } else {
+        journeyResults.push({
+          id: j.id,
+          status: 'requires-manual-review',
+          reason: 'App not booted and no contract file found.',
+        });
+      }
     } else {
       journeyResults.push({
         id: j.id,
@@ -75,6 +105,11 @@ export async function runJourneySuite({ workspace, reportPath } = {}) {
         reason: j.reason ?? 'manual journey',
       });
     }
+  }
+
+  // Shut down the app if we booted it
+  if (appHandle?.shutdown) {
+    await appHandle.shutdown();
   }
 
   const probeResults = probes.map((p) => ({

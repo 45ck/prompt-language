@@ -2,23 +2,25 @@
 
 Living status doc for the prompt-language thesis. Single page an operator reads to know where the thesis stands and what is next. Facts only; anything not directly observable in the repo is flagged "not measured".
 
-Last synced: 2026-04-14 against `main` @ `60c5c40`.
+Last synced: 2026-04-14 against `main` @ `a5bc64d`.
 
 ## 1. Thesis status
 
 Thesis (short form): prompt-language becomes the higher-order engineering medium engineers edit first, with code as a downstream artifact the agents produce and maintain. Full statement: [`docs/strategy/thesis.md`](thesis.md).
 
-Current verdict: **inconclusive**. Design, scaffolding, and first end-to-end meta-factory invocation all exist. The only live meta-run produced no claim-eligible trace bundle (verify-trace did not run; trace dir was not produced by the child). The E5 maintenance-viability program is scaffolded and runnable in synthetic mode but has not yet produced a counter-balanced, blinded pair. The strongest shipped evidence today is the verifiable trace chain itself plus the pure-PL CRM factory (E6), not a thesis-supporting outcome.
+Current verdict: **inconclusive — but close to first live runs**. Design, scaffolding, and first end-to-end meta-factory invocation all exist. The only live meta-run produced no claim-eligible trace bundle (verify-trace did not run; trace dir was not produced by the child — **now fixed in current codebase**). The E5 maintenance-viability program is scaffolded and runnable (`--plan` verified); codex binary available on this host. The strongest shipped evidence today is the verifiable trace chain itself plus the pure-PL CRM factory (E6), the E7 enterprise CRM factory (18 entities, 6 phases, 37 gates), and the aider-vs-PL experiment (PL 6 wins, 0 losses, 3 ties).
 
 ## 2. Programs
 
-| Program | Goal | Status | Evidence | Next actionable step |
-| --- | --- | --- | --- | --- |
-| E4 factory-quality | Does PL lane score higher on factory-quality rubric? | Closed. Verdict: PL 10 vs codex 8 on rubric, but E5 treats this as circular (rubric rewards PL's own structure). | `experiments/results/e4-*` batches B01–B06 (commits `9472404`, `0dcab2c`, `9300cc1`, `42c0f78`). | N/A — archived; findings feed E5 protocol. |
-| E5 maintenance-viability | Does a second blind lane maintain PL output better than codex output? | Pilot scaffolded. Runner live, synthetic-mode only (no real pair run). | Program: `experiments/results/e5-maintenance/program.md`; scorecard template, 7 CRM journeys, 5 change requests, pair runner, blinding verifier under `scripts/experiments/e5/` (commit `4e61066`). | Run B01 pair P01 live once a supported-host Claude/codex auth is available; capture scorecard. |
-| E6 pure-PL CRM factory | Prove a CRM factory can be driven entirely by `claude -p project.flow`. | Shipped; invokable. | `experiments/full-saas-factory/` + commit `02efd45`. No downstream maintenance metric has been taken. | Feed its output into E5 B01 as one of the factory-lane sources. |
-| Meta-factory | Can PL develop PL? | M1 scaffolded + ran live once. Claude authored a smoke test; trace-gate failed because `PL_TRACE_DIR` was not populated (no `provenance.jsonl` emitted by the child). | `experiments/meta-factory/results/meta-1776129598770-407100/report.json` — `success: false, reason: verify-trace-failed, verify.reason: no-provenance`. Scaffold at commits `08c0c08`, `b567405`, `0cccfbd`. | Re-run MF-1 after propagating `PL_TRACE_DIR` / shim PATH into the child process; capture a claim-eligible bundle (O1–O5 in `experiments/meta-factory/design/verification.md`). |
-| Trace verification + witness chain | Tamper-resistant trace for meta-runs. | Dual-recorder Merkle chain shipped; verifier runs; 6 Severity ≥ 3 attack paths documented; AP-6 patched. | `39a7c75` runtime chain, `80b9ae1` witness shim + verifier + Z-series + strict mode, `0271483` tamper-drill integration test, `60c5c40` canonical-JSON dedup (AP-6). Attack report: `docs/security/witness-chain-attacks.md`. | Close AP-5 (external nonce anchor) next — named the capstone in the attack report; AP-1/2/3/8 follow per the ranked-patch table. |
+| Program                            | Goal                                                                                   | Status                                                                                                                                                                                                                                                                                                                                             | Evidence                                                                                                                                                                                                                                                                                                                                                                                                    | Next actionable step                                                                                    |
+| ---------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| E4 factory-quality                 | Does PL lane score higher on factory-quality rubric?                                   | Closed. Verdict: PL 10 vs codex 8 on rubric, but E5 treats this as circular (rubric rewards PL's own structure).                                                                                                                                                                                                                                   | `experiments/results/e4-*` batches B01–B06 (commits `9472404`, `0dcab2c`, `9300cc1`, `42c0f78`).                                                                                                                                                                                                                                                                                                            | N/A — archived; findings feed E5 protocol.                                                              |
+| E5 maintenance-viability           | Does a second blind lane maintain PL output better than codex output?                  | Pilot scaffolded. Runner live, synthetic-mode only (no real pair run).                                                                                                                                                                                                                                                                             | Program: `experiments/results/e5-maintenance/program.md`; scorecard template, 7 CRM journeys, 5 change requests, pair runner, blinding verifier under `scripts/experiments/e5/` (commit `4e61066`).                                                                                                                                                                                                         | Run B01 pair P01 live once a supported-host Claude/codex auth is available; capture scorecard.          |
+| E6 pure-PL CRM factory             | Prove a CRM factory can be driven entirely by `claude -p project.flow`.                | Shipped; invokable.                                                                                                                                                                                                                                                                                                                                | `experiments/full-saas-factory/` + commit `02efd45`. No downstream maintenance metric has been taken.                                                                                                                                                                                                                                                                                                       | Feed its output into E5 B01 as one of the factory-lane sources.                                         |
+| E7 enterprise CRM factory          | Full-SDLC factory: 18 entities, 6 phases, 37 ship gates, race/foreach-spawn/try-catch. | Shipped.                                                                                                                                                                                                                                                                                                                                           | `experiments/full-saas-factory/e7-enterprise-crm-factory/` + commit `a5bc64d`. 658 lines across 16 files.                                                                                                                                                                                                                                                                                                   | Invoke via `claude -p project.flow` in the factory dir; feed output into E5 as enhanced factory source. |
+| Meta-factory                       | Can PL develop PL?                                                                     | M1 scaffolded + ran live once. Claude authored a smoke test; trace-gate failed because `PL_TRACE_DIR` was not populated (no `provenance.jsonl` emitted by the child). **Trace-dir propagation now fixed in current codebase** — `run-meta-experiment.mjs` sets `PL_TRACE`, `PL_TRACE_DIR` in child env; `claude-process-spawner.ts` forwards them. | `experiments/meta-factory/results/meta-1776129598770-407100/report.json` — `success: false, reason: verify-trace-failed, verify.reason: no-provenance`. Scaffold at commits `08c0c08`, `b567405`, `0cccfbd`.                                                                                                                                                                                                | Re-run MF-1 live to confirm trace-dir fix; capture a claim-eligible bundle.                             |
+| Trace verification + witness chain | Tamper-resistant trace for meta-runs.                                                  | Dual-recorder Merkle chain shipped; verifier runs; 6 Severity ≥ 3 attack paths documented; AP-5 + AP-6 patched.                                                                                                                                                                                                                                    | `39a7c75` runtime chain, `80b9ae1` witness shim + verifier + Z-series + strict mode, `0271483` tamper-drill integration test, `60c5c40` canonical-JSON dedup (AP-6). **AP-5 external nonce anchor shipped**: `writeRunNonce`/`readRunNonce` in `run-meta-experiment.mjs`, `--expected-run-id`/`--freshness-window-ms` flags in `verify-trace.mjs`. Attack report: `docs/security/witness-chain-attacks.md`. | AP-1/2/3/8 follow per the ranked-patch table.                                                           |
+| Aider-vs-PL experiment             | Does PL orchestration beat solo aider with local models?                               | Complete. PL 6, Solo 0, Tie 3.                                                                                                                                                                                                                                                                                                                     | `experiments/aider-vs-pl/SCORECARD.md`. Key finding: gate loops are the killer feature. `prompt-language ci --runner aider` verified end-to-end.                                                                                                                                                                                                                                                            | Expand: harder tasks, more models, Claude/Codex comparison.                                             |
 
 ## 3. What has shipped (Q2 2026)
 
@@ -32,7 +34,10 @@ Every item below is a commit on `main`.
 - Meta-factory scaffold, M1 `PL-writes-smoke-test` flow, acceptance protocol, and synonyms — commit `08c0c08`. Design pack (`architecture.md`, `corpus.md`, `verification.md`, `risks.md`) landed in the same commit; DSL-primitives design handshake (snapshot/rollback/diff-review/self-trace-replay) followed in `0cccfbd`.
 - Meta-experiment harness with git-stash pre-flight, manifest pre/post diffing, protected-config rule-weakening guard, wall-clock cap, and stash restoration — commit `b567405` (`scripts/experiments/meta/run-meta-experiment.mjs`).
 - E5 maintenance-viability program scaffold — program doc, scorecard template, 7 journeys, 5 change requests, pair runner, journey suite, blinding verifier — commit `4e61066`.
+- E7 enterprise CRM factory — 18 entities, 6 SDLC phases, 37 ship gates, race/foreach-spawn/try-catch, 658 lines across 16 files — commit `a5bc64d`.
+- Aider-vs-PL experiment — 10 hypotheses, PL 6 wins / 0 losses / 3 ties against solo aider with Qwen3 30B local model. `prompt-language ci --runner aider` verified end-to-end.
 - Aider harness adapter for local-model agentic coding — commits `91c64ae` (feat) and `bcb33d7` (`RunnerName` + `RUNNER_BINARIES` fix).
+- Snapshot/rollback DSL primitives (PR1) — `snapshot "name"` + `rollback to "name"`, state-only, 23+ unit tests + smoke test AX.
 - Coverage lift: global statements coverage raised to 90% + CLI drift fix — commit `1a53d7b`.
 - Tracing + thesis-verification operator docs — commit `5425ab5` (`docs/tracing-and-provenance.md`, `docs/thesis-verification.md`).
 - Smoke catalog expansion — `scripts/eval/smoke-test.mjs` currently carries 48 distinct scenario IDs (A–Z, AA–AW, Z1–Z7; some IDs reused in the live-only sections). CLAUDE.md's public catalog lists 32 core + AA–AF, and Z1–Z7, AR–AV are present in the harness. Exact public list in `CLAUDE.md` has not been updated to reflect every new AR–AW/Z entry.
@@ -53,29 +58,29 @@ runs satisfy all five**:
 Any other run is **recorded** (evidence archived, trace verified at whatever
 level was possible) but **not counted toward thesis verdicts**.
 
-| Item | Shipped? | Blocker |
-| --- | --- | --- |
-| Strict mode (1) | yes (commit ec086e8) | operator must set the env var |
-| Preflight (2) | script shipped (I2); mandatory-gate K2b pending | K2b quota-blocked |
-| Attestation flags (3) | designed (I3); not implemented | K1 quota-blocked |
-| Cross-family reviewer (4) | design-only (I1); no enforcement | Implementation pending |
-| Trusted-signers registry (5) | does not exist | K1 ships this |
+| Item                         | Shipped?                                        | Blocker                       |
+| ---------------------------- | ----------------------------------------------- | ----------------------------- |
+| Strict mode (1)              | yes (commit ec086e8)                            | operator must set the env var |
+| Preflight (2)                | script shipped (I2); mandatory-gate K2b pending | K2b quota-blocked             |
+| Attestation flags (3)        | designed (I3); not implemented                  | K1 quota-blocked              |
+| Cross-family reviewer (4)    | design-only (I1); no enforcement                | Implementation pending        |
+| Trusted-signers registry (5) | does not exist                                  | K1 ships this                 |
 
 ## 3b. Verification state of closed beads
 
 Beads are closed when a commit lands. That does not always mean the
 outcome was verified by running the experiment. Honest audit:
 
-| Bead | Closed on | Verification state |
-| --- | --- | --- |
-| prompt-lenh (coverage → 90) | `1a53d7b` | **Verified**: coverage test ran post-commit; 90.00% |
-| prompt-y0hv (tamper-drill nightly) | `0271483` | **Committed but not run**: 10 unit cases pass locally; nightly job has never fired (workflow pending first schedule trigger) |
-| prompt-lm0o.4 (MF-1 original live run) | `b567405` | **Run but not claim-eligible**: bundle's own `report.json` says `success: false, reason: verify-trace-failed`. Code Claude authored was reverted per harness rules. |
-| prompt-lm0o.1 (meta-factory scaffold) | `08c0c08` | **Verified**: parse-tested, dry-run works, 0 warnings |
-| prompt-lm0o.3 (DSL primitives PR1) | `c28d3c4` | **Verified**: 2745 unit tests pass including 23 new snapshot/rollback cases; no live smoke-tested |
-| prompt-axt5.4 (shared blinding regex) | open | Not started |
-| prompt-xgav.1 (F4 security review) | closed (doc-only) | **Verified**: doc shipped, no code change claimed |
-| prompt-xgav.2 through .8 (G1/G2/G3 hardening) | closed | **Verified**: T1–T18 + fuzz + shim integration tests pass; no live-run pressure |
+| Bead                                          | Closed on         | Verification state                                                                                                                                                  |
+| --------------------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| prompt-lenh (coverage → 90)                   | `1a53d7b`         | **Verified**: coverage test ran post-commit; 90.00%                                                                                                                 |
+| prompt-y0hv (tamper-drill nightly)            | `0271483`         | **Committed but not run**: 10 unit cases pass locally; nightly job has never fired (workflow pending first schedule trigger)                                        |
+| prompt-lm0o.4 (MF-1 original live run)        | `b567405`         | **Run but not claim-eligible**: bundle's own `report.json` says `success: false, reason: verify-trace-failed`. Code Claude authored was reverted per harness rules. |
+| prompt-lm0o.1 (meta-factory scaffold)         | `08c0c08`         | **Verified**: parse-tested, dry-run works, 0 warnings                                                                                                               |
+| prompt-lm0o.3 (DSL primitives PR1)            | `c28d3c4`         | **Verified**: 2745 unit tests pass including 23 new snapshot/rollback cases; no live smoke-tested                                                                   |
+| prompt-axt5.4 (shared blinding regex)         | open              | Not started                                                                                                                                                         |
+| prompt-xgav.1 (F4 security review)            | closed (doc-only) | **Verified**: doc shipped, no code change claimed                                                                                                                   |
+| prompt-xgav.2 through .8 (G1/G2/G3 hardening) | closed            | **Verified**: T1–T18 + fuzz + shim integration tests pass; no live-run pressure                                                                                     |
 
 ## 4. In flight (as of this doc)
 
@@ -90,36 +95,32 @@ outcome was verified by running the experiment. Honest audit:
 
 ## 5. Known unknowns / blockers (by urgency)
 
-1. **Live-agent auth on a supported host.** The only blocker between the current scaffolds and a first claim-eligible E5 pair or MF-1 re-run. Native Windows `claude -p` currently exits with an org/access error for the smoke harness (bead `prompt-language-040u`).
-2. **MF-1 trace-dir propagation.** Without it, every meta-run will hit the same `verify-trace no-provenance` exit path visible in `results/meta-1776129598770-407100/report.json`.
-3. **Snapshot/rollback PR1.** The DSL-primitives handshake (`0cccfbd`) designed snapshot/rollback/diff-review/self-trace-replay but has not landed the runtime primitives. Without them, MF-N experiments cannot operate on frozen workspace snapshots.
-4. **Verifier hardening AP-1/2/3/5/8.** Until AP-5 lands an external nonce anchor, `verify-trace OK` is achievable offline by an attacker with workspace write — the precise trust-zone the meta-flow occupies.
+1. **Live-agent auth on a supported host.** The only blocker between the current scaffolds and a first claim-eligible E5 pair or MF-1 re-run. Native Windows `claude -p` currently exits with an org/access error for the smoke harness (bead `prompt-language-040u`). Codex binary is available on this host.
+2. ~~**MF-1 trace-dir propagation.**~~ **RESOLVED.** `run-meta-experiment.mjs` already sets `PL_TRACE`, `PL_TRACE_DIR` in child env; `claude-process-spawner.ts` forwards them. Needs re-run confirmation.
+3. ~~**Snapshot/rollback PR1.**~~ **RESOLVED.** Runtime primitives shipped: `SnapshotNode`/`RollbackNode` in `flow-node.ts`, parser support, advance-flow handlers, `addSnapshot`/`applySnapshot` in `session-state.ts`, 23+ unit tests, smoke test AX.
+4. ~~**Verifier hardening AP-5.**~~ **RESOLVED.** External nonce anchor shipped: `writeRunNonce`/`readRunNonce`/`deleteRunNonce` in `run-meta-experiment.mjs`, `--expected-run-id`/`--freshness-window-ms` flags in `verify-trace.mjs`. **Remaining:** AP-1/2/3/8 per ranked-patch table.
 5. **Cross-family reviewer lane (META-5 operator sign-off #3).** The bootstrap envelope in `experiments/meta-factory/design/risks.md` requires this before live MF-2..MF-9 runs. Not started.
+6. **E5 journey suite HTTP probes.** `run-journey-suite.mjs` does not yet boot the app and drive HTTP. Currently returns `pending-manual-review` for HTTP journeys. Next: plug in `app-boot` + `documented-endpoint-probe`.
 
 ## 6. Operator checklist (next 5 concrete actions)
 
-1. Re-run MF-1 live with the trace-dir fix.
+1. Re-run MF-1 live to confirm trace-dir fix produces a claim-eligible bundle.
+
    ```
    npm run experiment:meta:live -- experiments/meta-factory/m1-pl-writes-smoke-test/m1.flow
    ```
+
    Expect a populated `provenance.jsonl` and `verify.json` in the new bundle under `experiments/meta-factory/results/<run-id>/`.
 
-2. Execute the E5 B01 P01 pair end-to-end (dry-run first).
+2. Execute the E5 B01 P01 pair end-to-end (dry-run verified ✓, live run next).
+
    ```
-   node scripts/experiments/e5/run-pair.mjs experiments/results/e5-maintenance/batches/e5-b01-mv-gpt52-pilot/pairs/p01-codex-first.json --dry-run
    node scripts/experiments/e5/run-pair.mjs experiments/results/e5-maintenance/batches/e5-b01-mv-gpt52-pilot/pairs/p01-codex-first.json --run-id e5-b01-p01-live
    ```
 
-3. Land the AP-5 external-nonce anchor in `scripts/eval/verify-trace.mjs` per `docs/security/witness-chain-attacks.md` Rank 1.
-   ```
-   node scripts/eval/verify-trace.mjs --help   # confirm new --expected-run-id / --freshness-window-ms flags after the change
-   npm run ci && npm run eval:smoke
-   ```
+3. Expand aider-vs-PL experiment: harder tasks (multi-file refactors, security fixes), more models (Claude, Codex, GPT-4.1), positioning for thesis.
 
-4. Run the tamper-drill regression before/after the AP-5 change.
-   ```
-   node --test scripts/eval/verify-trace.tamper.test.mjs
-   ```
+4. Implement E5 journey suite HTTP probes: `app-boot` + `documented-endpoint-probe` for CRM journey automation.
 
 5. Verify the runtime quality gate on a clean tree.
    ```

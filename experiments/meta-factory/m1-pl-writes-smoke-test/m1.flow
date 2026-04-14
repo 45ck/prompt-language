@@ -1,0 +1,36 @@
+Goal: author a new smoke test for an untested prompt-language DSL feature and verify it passes end-to-end.
+
+flow:
+  prompt: Read scripts/eval/smoke-test.mjs, CLAUDE.md, src/domain/flow-node.ts, and src/application/parse-flow.ts. Enumerate every DSL node kind and modifier that PARSES, cross-reference against the smoke-test catalog (A through AV, Z1 through Z7, AR through AV), and list candidate features with zero smoke coverage. Exclude retry backoff, composite all/any gates, spawn modifiers, nested try/catch/finally, foreach-run-source. Return a ranked list (highest novelty value first).
+
+  let gap = prompt "From your ranked list, pick exactly one feature to cover. Respond with a single token that is a grep-safe keyword uniquely identifying the feature in smoke-test.mjs (for example race_winner or approve_timeout). No prose, just the keyword."
+
+  run: grep -c "${gap}" scripts/eval/smoke-test.mjs || true
+
+  if ${last_stdout} >= 1
+    prompt: The keyword ${gap} already appears in smoke-test.mjs. Pick a different, genuinely-uncovered feature and re-emit its keyword. If you cannot, halt and report "no gap found".
+  end
+
+  prompt: Author the new smoke test as a self-contained test function in the style of tests A through AV. It must (1) be assigned id AW if fast under 90 seconds or AX if slow at or over 90 seconds; (2) write a single .flow file under /tmp and invoke it via runHarnessFlow; (3) assert a file or variable oracle in the style of existing tests; (4) only use DSL primitives listed in flow-node.ts. Write the test case function to scripts/eval/smoke-test.mjs immediately above the Z1 test and register it in the run list.
+
+  run: npm run build
+
+  retry max 3
+    run: SMOKE_ONLY=AW node scripts/eval/smoke-test.mjs
+    if command_failed
+      prompt: The new test failed. Read the tail output above, diagnose, fix either the flow file it emits or the oracle, and resave. Do not weaken the oracle; strengthen it if ambiguous.
+    end
+  end
+
+  review max 1
+    prompt: Self-review the new test. Confirm (a) it exercises ${gap} and nothing else; (b) the oracle is specific, not just "no crash"; (c) the test cleans up its temp dir; (d) the CLAUDE.md catalog entry is accurate. If any of these fail, fix in-place.
+  end
+
+  run: grep -c "^- \*\*AW:" CLAUDE.md || true
+
+  if ${last_stdout} == "0"
+    prompt: CLAUDE.md is missing the catalog bullet for the new test. Add a bullet of the form "- **AW: <keyword>** — <one-sentence description>" under the smoke catalog section.
+  end
+
+done when:
+  tests_pass

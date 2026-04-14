@@ -1,0 +1,8 @@
+Goal: author the target artifact in the worktree
+
+memory:
+  meta_target_corpus
+  meta_workspace
+
+flow:
+  prompt: Phase 2 author stub. Produce the artifact for ${meta_target_corpus} inside ${meta_workspace}. (Full implementation deferred.)

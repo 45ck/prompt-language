@@ -1,0 +1,18 @@
+Goal: run the meta-factory self-hosting program against a frozen prompt-language runtime
+
+memory:
+  meta_runtime_snapshot
+  meta_run_id
+  meta_workspace
+  meta_target_corpus
+
+flow:
+  remember key="meta_runtime_snapshot" value="experiments/meta-factory/snapshots/current"
+  remember key="meta_run_id" value="${PL_RUN_ID}"
+  remember key="meta_workspace" value="experiments/meta-factory/workspaces/${PL_RUN_ID}"
+  remember key="meta_target_corpus" value="MF-1"
+
+  prompt: Work only inside ${meta_workspace}. Treat it as the isolated worktree for this meta-run. The frozen runtime lives at ${meta_runtime_snapshot}. Do not edit dist/, bin/, node_modules/, package.json, or package-lock.json. Edits must land in src/, scripts/eval/smoke-test.mjs, docs/, or CLAUDE.md only. Phase flows are scaffolded under experiments/meta-factory/phases/; for MF-1 use experiments/meta-factory/m1-pl-writes-smoke-test/m1.flow directly.
+
+done when:
+  tests_pass

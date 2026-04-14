@@ -1,0 +1,8 @@
+Goal: run the five acceptance oracles O1..O5
+
+memory:
+  meta_target_corpus
+  meta_workspace
+
+flow:
+  prompt: Phase 3 verify stub. Evaluate O1 PARSE, O2 NOVELTY, O3 RUNNABLE, O4 TRACED, O5 CATALOG for ${meta_target_corpus}. (Full implementation deferred.)

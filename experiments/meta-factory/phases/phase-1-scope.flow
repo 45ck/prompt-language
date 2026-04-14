@@ -1,0 +1,8 @@
+Goal: scope the meta-run by identifying exactly one concrete target
+
+memory:
+  meta_target_corpus
+  meta_workspace
+
+flow:
+  prompt: Phase 1 scope stub. Identify one target for corpus entry ${meta_target_corpus} in ${meta_workspace}. Emit the target keyword and nothing else. (Full implementation deferred.)

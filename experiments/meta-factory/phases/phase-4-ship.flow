@@ -1,0 +1,8 @@
+Goal: archive the evidence bundle and emit the cherry-pick candidate
+
+memory:
+  meta_run_id
+  meta_workspace
+
+flow:
+  prompt: Phase 4 ship stub. Archive evidence for ${meta_run_id} from ${meta_workspace}. (Full implementation deferred.)

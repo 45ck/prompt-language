@@ -92,7 +92,9 @@
     "AIDD",
     "LMQL",
     "deadbeefdeadbeefdeadbeefdeadbeef",
-    "taskkill"
+    "taskkill",
+    "bareword",
+    "bypassable"
   ],
   "ignorePaths": [
     "dist/**",

@@ -236,6 +236,10 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
       return [`${pad}start ${node.targets.join(', ')}`];
     case 'return':
       return [`${pad}return ${node.expression}`];
+    case 'snapshot':
+      return [`${pad}snapshot "${node.name}"`];
+    case 'rollback':
+      return [`${pad}rollback to "${node.name}"`];
     default: {
       const _exhaustive: never = node;
       return _exhaustive;

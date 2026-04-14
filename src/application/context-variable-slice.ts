@@ -159,6 +159,8 @@ function collectNodeVariables(
     case 'swarm':
     case 'start':
     case 'return':
+    case 'snapshot':
+    case 'rollback':
       return false;
     default: {
       const _exhaustive: never = node;

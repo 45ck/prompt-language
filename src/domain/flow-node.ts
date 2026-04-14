@@ -28,7 +28,9 @@ export type FlowNodeKind =
   | 'receive'
   | 'swarm'
   | 'start'
-  | 'return';
+  | 'return'
+  | 'snapshot'
+  | 'rollback';
 
 export type VariableDeclarationKind = 'let' | 'var' | 'const';
 export type VariableDeclaredType = 'int' | 'string' | 'bool' | 'list';
@@ -289,6 +291,25 @@ export interface ReturnNode extends BaseNode {
   readonly expression: string;
 }
 
+/**
+ * SnapshotNode — captures a named state checkpoint of variables, currentPath,
+ * and iteration counters. State-only in PR1 (no file capture).
+ */
+export interface SnapshotNode extends BaseNode {
+  readonly kind: 'snapshot';
+  readonly name: string;
+}
+
+/**
+ * RollbackNode — restores the variables, currentPath, and iteration counters
+ * from a previously captured snapshot by name. Missing snapshots pause the
+ * flow (not fail) so a surrounding try/catch can recover.
+ */
+export interface RollbackNode extends BaseNode {
+  readonly kind: 'rollback';
+  readonly name: string;
+}
+
 export type FlowNode =
   | WhileNode
   | UntilNode
@@ -312,7 +333,9 @@ export type FlowNode =
   | ReceiveNode
   | SwarmNode
   | StartNode
-  | ReturnNode;
+  | ReturnNode
+  | SnapshotNode
+  | RollbackNode;
 
 export const DEFAULT_MAX_ITERATIONS = 5;
 export const DEFAULT_MAX_ATTEMPTS = 3;
@@ -640,6 +663,14 @@ export function createReturnNode(id: string, expression: string): ReturnNode {
   return { kind: 'return', id, expression };
 }
 
+export function createSnapshotNode(id: string, name: string): SnapshotNode {
+  return { kind: 'snapshot', id, name };
+}
+
+export function createRollbackNode(id: string, name: string): RollbackNode {
+  return { kind: 'rollback', id, name };
+}
+
 type FlowNodeChildScope =
   | { readonly label: string; readonly nodes: readonly FlowNode[] }
   | {
@@ -697,6 +728,8 @@ function getChildScopes(node: FlowNode): readonly FlowNodeChildScope[] {
     case 'receive':
     case 'start':
     case 'return':
+    case 'snapshot':
+    case 'rollback':
       return [];
     default: {
       const _exhaustive: never = node;
@@ -815,6 +848,10 @@ export function describeFlowNode(node: FlowNode): string {
       return `start ${node.targets.join(', ')}`;
     case 'return':
       return 'return';
+    case 'snapshot':
+      return `snapshot "${node.name}"`;
+    case 'rollback':
+      return `rollback to "${node.name}"`;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -921,6 +958,8 @@ function resolveBreadcrumbSegment(
     case 'receive':
     case 'start':
     case 'return':
+    case 'snapshot':
+    case 'rollback':
       return null;
     default: {
       const _exhaustive: never = node;
@@ -1018,6 +1057,8 @@ export function findNodeById(nodes: readonly FlowNode[], id: string): FlowNode |
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;

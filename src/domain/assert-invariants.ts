@@ -31,6 +31,8 @@ function flattenChildNodes(node: FlowNode): readonly FlowNode[] | null {
     case 'receive':
     case 'start':
     case 'return':
+    case 'snapshot':
+    case 'rollback':
       return null;
     default: {
       const _exhaustive: never = node;

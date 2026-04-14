@@ -21,6 +21,7 @@ function makeState() {
     status: 'active',
     warnings: [],
     spawnedChildren: {},
+    snapshots: {},
     raceChildren: {},
     captureNonce: 'test-nonce-00000000',
   } as const;

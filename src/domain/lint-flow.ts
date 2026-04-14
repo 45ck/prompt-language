@@ -134,6 +134,8 @@ function collectDefinedVariables(
       case 'send':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;
@@ -229,6 +231,8 @@ function collectDeclaredTypes(nodes: readonly FlowNode[]): Map<string, VariableD
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;
@@ -316,6 +320,8 @@ function lintConstReassignments(nodes: readonly FlowNode[], warnings: LintWarnin
         case 'send':
         case 'start':
         case 'return':
+        case 'snapshot':
+        case 'rollback':
           break;
         default: {
           const _exhaustive: never = node;
@@ -477,6 +483,8 @@ function lintUnresolvedVars(
       case 'send':
       case 'receive':
       case 'start':
+      case 'snapshot':
+      case 'rollback':
         break;
       case 'return': {
         for (const ref of extractVarRefs(node.expression)) {
@@ -613,6 +621,8 @@ function lintVariableShadowing(
       case 'send':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       case 'swarm':
         lintVariableShadowing(node.flow, inheritedPlusScope(), warnings, 'swarm flow');
@@ -684,6 +694,8 @@ function containsRunNode(nodes: readonly FlowNode[]): boolean {
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       case 'swarm':
         if (containsRunNode(node.flow)) return true;
@@ -907,6 +919,8 @@ function lintTypedComparisonsInNodes(
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;
@@ -1034,6 +1048,8 @@ function lintNodes(nodes: readonly FlowNode[], insideLoop: boolean, warnings: Li
       case 'remember':
       case 'send':
       case 'receive':
+      case 'snapshot':
+      case 'rollback':
         break;
       case 'swarm':
         lintNodes(node.flow, false, warnings);
@@ -1126,6 +1142,8 @@ function allRunsInsideConditional(nodes: readonly FlowNode[]): boolean {
         case 'receive':
         case 'start':
         case 'return':
+        case 'snapshot':
+        case 'rollback':
           break;
         case 'swarm':
           walk(node.flow, insideConditional);
@@ -1191,6 +1209,8 @@ function lintReviewJudgeReferences(
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       case 'swarm':
         lintReviewJudgeReferences(node.flow, judgeNames, warnings);
@@ -1288,6 +1308,8 @@ function lintSwarmSemantics(
               case 'send':
               case 'receive':
               case 'start':
+              case 'snapshot':
+              case 'rollback':
                 break;
               default: {
                 const _exhaustive: never = current;
@@ -1398,6 +1420,8 @@ function lintSwarmSemantics(
       case 'remember':
       case 'send':
       case 'receive':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;

@@ -57,6 +57,8 @@ function countNodes(nodes: readonly FlowNode[]): number {
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;
@@ -125,6 +127,8 @@ function maxDepth(nodes: readonly FlowNode[], depth: number): number {
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;
@@ -198,6 +202,8 @@ function countControlFlow(nodes: readonly FlowNode[]): number {
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;

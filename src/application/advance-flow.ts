@@ -12,11 +12,14 @@ import {
   updateSpawnedChild,
   updateRaceChildren,
   addWarning,
+  addSnapshot,
+  applySnapshot,
   markCompleted,
   allGatesPassing,
   markFailed,
   withStatePosition,
 } from '../domain/session-state.js';
+import type { StateSnapshot } from '../domain/session-state.js';
 import type { SessionState } from '../domain/session-state.js';
 import { StateInvariantError, assertStateInvariants } from '../domain/assert-invariants.js';
 import type {
@@ -38,6 +41,8 @@ import type {
   RememberNode,
   SendNode,
   ReceiveNode,
+  SnapshotNode,
+  RollbackNode,
 } from '../domain/flow-node.js';
 import { describeFlowNode } from '../domain/flow-node.js';
 import type { MemoryEntry } from './ports/memory-store.js';
@@ -224,6 +229,8 @@ export function resolveCurrentNode(
     case 'send':
     case 'receive':
     case 'return':
+    case 'snapshot':
+    case 'rollback':
       return null;
     case 'swarm':
     case 'start':
@@ -347,6 +354,7 @@ interface TraceNodeContext {
   readonly nodeId?: string | undefined;
   readonly nodeKind?: string | undefined;
   readonly nodePath?: string | undefined;
+  readonly detail?: Readonly<Record<string, unknown>> | undefined;
 }
 
 import {
@@ -381,6 +389,7 @@ function emitNodeAdvanceTrace(
   if (ctx.nodeId !== undefined) partial['nodeId'] = ctx.nodeId;
   if (ctx.nodeKind !== undefined) partial['nodeKind'] = ctx.nodeKind;
   if (ctx.nodePath !== undefined) partial['nodePath'] = ctx.nodePath;
+  if (ctx.detail !== undefined) partial['detail'] = ctx.detail;
   if (before.stateHash !== undefined) partial['stateBeforeHash'] = before.stateHash;
   if (after.stateHash !== undefined) partial['stateAfterHash'] = after.stateHash;
   if (prev !== undefined) partial['prevEventHash'] = prev;
@@ -1086,6 +1095,8 @@ async function handleBodyExhaustion(
     case 'send':
     case 'receive':
     case 'return':
+    case 'snapshot':
+    case 'rollback':
       return null;
     case 'swarm':
     case 'start':
@@ -1667,6 +1678,7 @@ export type AutoAdvanceResult =
       readonly capturedPrompt: null;
       readonly diagnostics?: readonly FlowDiagnostic[] | undefined;
       readonly outcomes?: readonly FlowOutcome[] | undefined;
+      readonly traceDetail?: Readonly<Record<string, unknown>> | undefined;
     }
   | {
       readonly kind: 'pause';
@@ -2654,6 +2666,9 @@ export async function autoAdvanceNodes(
       nodeId: node.id,
       nodeKind: node.kind,
       nodePath: current.currentNodePath.join('.'),
+      ...('traceDetail' in result && result.traceDetail !== undefined
+        ? { detail: result.traceDetail }
+        : {}),
     });
     if (current.status !== 'active') {
       return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
@@ -3079,6 +3094,10 @@ function describeAuditNode(node: FlowNode): string {
       return `start ${node.targets.join(', ')}`;
     case 'return':
       return `return ${node.expression}`;
+    case 'snapshot':
+      return `snapshot "${node.name}"`;
+    case 'rollback':
+      return `rollback to "${node.name}"`;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -3248,7 +3267,10 @@ async function advanceSingleNode(
   auditLogger?: AuditLogger,
   memoryStore?: MemoryStore,
   messageStore?: MessageStore,
-): Promise<AutoAdvanceResult | { state: SessionState; advanced: true }> {
+): Promise<
+  | AutoAdvanceResult
+  | { state: SessionState; advanced: true; traceDetail?: Readonly<Record<string, unknown>> }
+> {
   switch (node.kind) {
     case 'let':
       return advanceLetNode(node, current, commandRunner, captureReader, auditLogger, memoryStore);
@@ -3330,6 +3352,10 @@ async function advanceSingleNode(
       return advanceSendNode(node, current, messageStore);
     case 'receive':
       return advanceReceiveNode(node, current, messageStore);
+    case 'snapshot':
+      return advanceSnapshotNode(node, current);
+    case 'rollback':
+      return advanceRollbackNode(node, current);
     case 'swarm':
     case 'start':
       return unexpectedLoweredAwayNode(node);
@@ -3338,6 +3364,67 @@ async function advanceSingleNode(
       return _exhaustive;
     }
   }
+}
+
+/**
+ * Capture a named snapshot of the current variables, path, and iteration
+ * counters, then advance past the node. Duplicate names overwrite silently
+ * with a warning (handled by addSnapshot).
+ */
+function advanceSnapshotNode(
+  node: SnapshotNode,
+  current: SessionState,
+): { state: SessionState; advanced: true } {
+  const iterations: Record<string, number> = {};
+  for (const [nodeId, progress] of Object.entries(current.nodeProgress)) {
+    iterations[nodeId] = progress.iteration;
+  }
+
+  const stateHash =
+    current.stateHash ?? hashState({ ...current, stateHash: undefined, prevStateHash: undefined });
+
+  const snapshot: StateSnapshot = {
+    name: node.name,
+    createdAt: new Date().toISOString(),
+    stateHash,
+    variables: { ...current.variables },
+    currentPath: [...current.currentNodePath],
+    iterations,
+  };
+
+  const withSnapshot = addSnapshot(current, snapshot);
+  return { state: advanceFromPath(withSnapshot, current.currentNodePath), advanced: true };
+}
+
+/**
+ * Restore a previously captured snapshot. Missing snapshots pause instead of
+ * failing so a surrounding try/catch can recover. spawnedChildren, status
+ * flags, warnings, and the trace sequence are preserved (see applySnapshot).
+ */
+function advanceRollbackNode(
+  node: RollbackNode,
+  current: SessionState,
+):
+  | AutoAdvanceResult
+  | {
+      state: SessionState;
+      advanced: true;
+      traceDetail?: Readonly<Record<string, unknown>>;
+    } {
+  const snapshot = current.snapshots[node.name];
+  const restored = applySnapshot(current, node.name);
+  if (restored == null || snapshot == null) {
+    const warned = addWarning(current, `rollback: no snapshot named "${node.name}"`);
+    return { kind: 'pause', state: warned, capturedPrompt: null };
+  }
+  return {
+    state: restored,
+    advanced: true,
+    traceDetail: {
+      rolledBackTo: node.name,
+      restoredStateHash: snapshot.stateHash,
+    },
+  };
 }
 
 // H#15: Break exits the nearest enclosing loop (while/until/retry/foreach).

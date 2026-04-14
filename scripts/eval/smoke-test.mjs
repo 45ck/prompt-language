@@ -2616,6 +2616,48 @@ async function testAVForeachRunSource() {
   });
 }
 
+async function testAXSnapshotRollback() {
+  await withTempDir(async (dir) => {
+    // PR1: snapshot + rollback restore variables state-only.
+    const prompt = [
+      'Goal: snapshot + rollback acceptance',
+      '',
+      'flow:',
+      '  let x = "before"',
+      '  snapshot "cp"',
+      '  let x = "after"',
+      '  rollback to "cp"',
+      "  run: node -e \"require('fs').writeFileSync('x.txt', '${x}')\"",
+    ].join('\n');
+
+    harnessRun(prompt, dir);
+
+    let xValue = '';
+    try {
+      xValue = (await readFile(join(dir, 'x.txt'), 'utf-8')).trim();
+    } catch {
+      xValue = '';
+    }
+
+    let stateVar = '';
+    let snapHash = '';
+    try {
+      const stateRaw = await readFile(join(dir, '.prompt-language', 'session-state.json'), 'utf-8');
+      const state = JSON.parse(stateRaw);
+      stateVar = state?.variables?.x ?? '';
+      snapHash = state?.snapshots?.cp?.stateHash ?? '';
+    } catch {
+      // state file optional in some runner modes
+    }
+
+    assert(
+      'AX: snapshot + rollback state-only',
+      xValue === 'before' && (stateVar === '' || stateVar === 'before') && snapHash !== '',
+      `x.txt="${xValue}" state.variables.x="${stateVar}" snapshot.stateHash="${snapHash}"`,
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -2689,6 +2731,7 @@ async function main() {
   await timed('AT', 'Spawn with modifiers', testATSpawnModifiers);
   await timed('AU', 'Nested try/catch/finally', testAUNestedTryCatchFinally);
   await timed('AV', 'foreach item in run "cmd"', testAVForeachRunSource);
+  await timed('AX', 'Snapshot + rollback (state-only)', testAXSnapshotRollback);
 
   if (!QUICK_MODE) {
     await timed('D', 'Gate evaluation', testGateEvaluation);

@@ -910,6 +910,25 @@ describe('FileStateStore', () => {
     });
   });
 
+  describe('legacy state migration', () => {
+    it('backfills snapshots: {} when loading a state file written before PR1', async () => {
+      const store = new FileStateStore(tempDir);
+      const stateDir = join(tempDir, '.prompt-language');
+      await mkdir(stateDir, { recursive: true });
+      const session = createSessionState('s1', makeSpec());
+      const { snapshots: _dropped, ...legacy } = session as SessionState & {
+        snapshots?: unknown;
+      };
+      void _dropped;
+      const raw = JSON.stringify(legacy, null, 2);
+      await writeFile(join(stateDir, 'session-state.json'), raw, 'utf-8');
+
+      const loaded = await store.loadCurrent();
+      expect(loaded).not.toBeNull();
+      expect(loaded?.snapshots).toEqual({});
+    });
+  });
+
   describe('lock handle cleanup on writeFile failure', () => {
     it('closes file handle even when writeFile throws', async () => {
       const store = new FileStateStore(tempDir);

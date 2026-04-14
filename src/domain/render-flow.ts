@@ -153,6 +153,8 @@ function collectNodePaths(
       case 'swarm':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;
@@ -419,6 +421,10 @@ function renderNode(
       return [`${prefix}${indent}start ${node.targets.join(', ')}${suffix}`];
     case 'return':
       return [`${prefix}${indent}return ${node.expression}${suffix}`];
+    case 'snapshot':
+      return [`${prefix}${indent}snapshot "${node.name}"${suffix}`];
+    case 'rollback':
+      return [`${prefix}${indent}rollback to "${node.name}"${suffix}`];
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -886,6 +892,9 @@ function collectNodeVariableDependencies(node: FlowNode): readonly string[] {
     case 'return':
       addConditionReferences(names, node.expression);
       break;
+    case 'snapshot':
+    case 'rollback':
+      break;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -971,6 +980,9 @@ function nodeHasUncertainInterpolation(node: FlowNode): boolean {
       return false;
     case 'return':
       return hasUncertainInterpolationSyntax(node.expression);
+    case 'snapshot':
+    case 'rollback':
+      return false;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -1033,6 +1045,8 @@ function collectExecutionPathNodes(
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         remainingPath = [];
         break;
       default: {
@@ -1342,6 +1356,10 @@ function compactNode(
       return [`${mark}${pad}start ${node.targets.join(', ')}`];
     case 'return':
       return [`${mark}${pad}return ${node.expression}`];
+    case 'snapshot':
+      return [`${mark}${pad}snapshot "${node.name}"`];
+    case 'rollback':
+      return [`${mark}${pad}rollback to "${node.name}"`];
     default: {
       const _exhaustive: never = node;
       return _exhaustive;
@@ -1457,6 +1475,8 @@ function countAllNodes(nodes: readonly FlowNode[]): number {
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       case 'swarm':
         count += countAllNodes(node.flow);
@@ -1517,6 +1537,8 @@ function flattenNodes(nodes: readonly FlowNode[]): FlowNode[] {
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       case 'swarm':
         result.push(...flattenNodes(node.flow));
@@ -1570,6 +1592,8 @@ function resolveNodeByPath(nodes: readonly FlowNode[], path: readonly number[]):
     case 'swarm':
     case 'start':
     case 'return':
+    case 'snapshot':
+    case 'rollback':
       return null;
     default: {
       const _exhaustive: never = node;
@@ -1634,6 +1658,10 @@ function describeNode(node: FlowNode): string {
       return `start ${node.targets.join(', ')}`;
     case 'return':
       return `return ${node.expression}`;
+    case 'snapshot':
+      return `snapshot "${node.name}"`;
+    case 'rollback':
+      return `rollback to "${node.name}"`;
   }
 }
 

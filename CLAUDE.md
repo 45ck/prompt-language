@@ -83,6 +83,11 @@ Variables are interpolated via `${varName}` in prompt/run text. Unknown variable
 - Render: `renderSpawnNode()` in `render-flow.ts` shows `[running]`/`[completed]`/`[failed]` status tags
 - State: `spawnedChildren` record in `SessionState` tracks name, status, pid, stateDir, and imported variables
 
+### Self-hosting primitives (PR1)
+
+- `snapshot "name"` captures a state-only checkpoint (variables, currentPath, iteration counters) into `SessionState.snapshots[name]`. Duplicate names overwrite with a warning. No file capture in PR1.
+- `rollback to "name"` restores only those three fields; `spawnedChildren`, `completed`/`failed` status, `warnings`, and the trace/transition sequence are preserved so the hash chain stays monotonic. A missing snapshot pauses the flow (not `markFailed`) so a surrounding `try`/`catch` can recover.
+
 ### Security note
 
 `interpolate()` performs raw substitution — use `shellInterpolate()` for `run:` commands. It wraps substituted values in single-quotes to prevent shell injection.

@@ -46,6 +46,8 @@ import {
   createSwarmNode,
   createStartNode,
   createReturnNode,
+  createSnapshotNode,
+  createRollbackNode,
   DEFAULT_MAX_ITERATIONS,
   formatFlowNodeSource,
   withNodeSource,
@@ -1430,6 +1432,45 @@ function parseReceiveLine(ctx: ParseContext, trimmed: string): FlowNode {
   return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
 }
 
+const SNAPSHOT_BAREWORD_RE = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+
+function parseSnapshotLine(ctx: ParseContext, trimmed: string): FlowNode {
+  const rest = trimmed.slice('snapshot'.length).trim();
+  if (!rest) {
+    warn(ctx, 'snapshot requires a name — try: snapshot "checkpoint"');
+    return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
+  }
+  const quoted = /^(?:"([^"]+)"|'([^']+)')$/.exec(rest);
+  if (quoted) {
+    const name = (quoted[1] ?? quoted[2])!;
+    return attachSource(ctx, createSnapshotNode(nextId(ctx), name));
+  }
+  if (SNAPSHOT_BAREWORD_RE.test(rest)) {
+    warn(ctx, `snapshot name "${rest}" should be quoted — try: snapshot "${rest}"`);
+    return attachSource(ctx, createSnapshotNode(nextId(ctx), rest));
+  }
+  warn(ctx, `Invalid snapshot syntax: "${trimmed}". Try: snapshot "name"`);
+  return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
+}
+
+function parseRollbackLine(ctx: ParseContext, trimmed: string): FlowNode {
+  const rest = trimmed.slice('rollback'.length).trim();
+  if (!rest) {
+    warn(ctx, 'rollback requires a target — try: rollback to "checkpoint"');
+    return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
+  }
+  const withTo = /^to\s+(?:"([^"]+)"|'([^']+)'|([A-Za-z_][A-Za-z0-9_-]*))$/.exec(rest);
+  if (withTo) {
+    const name = (withTo[1] ?? withTo[2] ?? withTo[3])!;
+    if (withTo[3] != null) {
+      warn(ctx, `rollback target "${name}" should be quoted — try: rollback to "${name}"`);
+    }
+    return attachSource(ctx, createRollbackNode(nextId(ctx), name));
+  }
+  warn(ctx, `Invalid rollback syntax: "${trimmed}". Try: rollback to "name"`);
+  return attachSource(ctx, createPromptNode(nextId(ctx), trimmed));
+}
+
 function parseApproveLine(ctx: ParseContext, trimmed: string): FlowNode {
   const match = /^approve\s+(?:"([^"]+)"|'([^']+)')(?:\s+timeout\s+(\d+))?$/i.exec(trimmed);
   if (!match) {
@@ -1728,6 +1769,12 @@ function parseLine(
   }
   if (lower.startsWith('approve ')) {
     return parseApproveLine(ctx, trimmed);
+  }
+  if (lower === 'snapshot' || lower.startsWith('snapshot ')) {
+    return parseSnapshotLine(ctx, trimmed);
+  }
+  if (lower === 'rollback' || lower.startsWith('rollback ')) {
+    return parseRollbackLine(ctx, trimmed);
   }
   if (lower.startsWith('review ') || lower === 'review') {
     return parseReviewBlock(ctx, trimmed, indent, scope);

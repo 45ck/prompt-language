@@ -195,7 +195,10 @@ export class FileStateStore implements StateStore {
 
   /** Parse raw JSON into SessionState, handling checksum verification. */
   private parseStateJson(raw: string): SessionState {
-    const parsed = JSON.parse(raw) as SessionState & { _checksum?: string };
+    const parsedRaw = JSON.parse(raw) as Record<string, unknown>;
+    const parsed = migrateLoadedState(parsedRaw) as unknown as SessionState & {
+      _checksum?: string;
+    };
 
     // H-SEC-002: Verify state file integrity
     const storedChecksum = parsed._checksum;
@@ -380,6 +383,15 @@ export class FileStateStore implements StateStore {
 }
 
 /** Validate that parsed JSON has the minimum required SessionState structure. */
+/** Backfill newly-added optional record fields for legacy state files. */
+function migrateLoadedState<T extends Record<string, unknown>>(parsed: T): T {
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  if (!('snapshots' in parsed) || parsed['snapshots'] == null) {
+    return { ...parsed, snapshots: {} } as T;
+  }
+  return parsed;
+}
+
 function isStateStructureValid(state: unknown): state is SessionState {
   if (typeof state !== 'object' || state === null) return false;
   const s = state as Record<string, unknown>;

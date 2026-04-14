@@ -15,6 +15,22 @@ export type FlowStatus = 'active' | 'completed' | 'failed' | 'cancelled';
 
 export type SpawnedChildStatus = 'running' | 'completed' | 'failed';
 
+/**
+ * StateSnapshot — captured named checkpoint of the restorable subset of state.
+ * Deliberately excludes spawnedChildren, completed/failed status, warnings,
+ * and trace/transition sequence numbers to preserve trace monotonicity and
+ * avoid orphaning live child processes on rollback.
+ */
+export interface StateSnapshot {
+  readonly name: string;
+  readonly createdAt: string;
+  readonly stateHash: string;
+  readonly variables: VariableStore;
+  readonly currentPath: readonly number[];
+  readonly iterations: Readonly<Record<string, number>>;
+  readonly filesDigestRef?: string | undefined;
+}
+
 export interface SpawnedChild {
   readonly name: string;
   readonly status: SpawnedChildStatus;
@@ -70,6 +86,8 @@ export interface SessionState {
   readonly status: FlowStatus;
   readonly warnings: readonly string[];
   readonly spawnedChildren: Readonly<Record<string, SpawnedChild>>;
+  /** Named state checkpoints captured by `snapshot "name"`. */
+  readonly snapshots: Readonly<Record<string, StateSnapshot>>;
   /** Maps race node id → names of spawn children belonging to that race. */
   readonly raceChildren: Readonly<Record<string, readonly string[]>>;
   readonly flowSpecHash?: string | undefined;
@@ -114,6 +132,7 @@ export function createSessionState(
     status: 'active',
     warnings: [...flowSpec.warnings],
     spawnedChildren: {},
+    snapshots: {},
     raceChildren: {},
     flowSpecHash: flowSpecHash(flowSpec),
     transitionSeq: 0,
@@ -201,6 +220,8 @@ function findVariableDeclaration(nodes: readonly FlowNode[], name: string): LetN
       case 'receive':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         break;
       default: {
         const _exhaustive: never = node;
@@ -338,6 +359,47 @@ export function updateRaceChildren(
   return {
     ...state,
     raceChildren: { ...state.raceChildren, [raceNodeId]: childNames },
+  };
+}
+
+/**
+ * Add or overwrite a named state snapshot. Duplicate name emits a warning but
+ * keeps the latest snapshot (last-write-wins).
+ */
+export function addSnapshot(state: SessionState, snapshot: StateSnapshot): SessionState {
+  const existed = Object.prototype.hasOwnProperty.call(state.snapshots, snapshot.name);
+  const next: SessionState = {
+    ...state,
+    snapshots: { ...state.snapshots, [snapshot.name]: snapshot },
+  };
+  return existed ? addWarning(next, `snapshot "${snapshot.name}" overwritten`) : next;
+}
+
+/**
+ * Restore a previously captured snapshot's variables, currentPath, and
+ * iteration counters. Preserves spawnedChildren, status flags, warnings, and
+ * the trace/transition sequence so the hash chain stays monotonic.
+ * Returns null if the named snapshot does not exist.
+ */
+export function applySnapshot(state: SessionState, name: string): SessionState | null {
+  const snapshot = state.snapshots[name];
+  if (snapshot == null) return null;
+
+  const restoredProgress: Record<string, NodeProgress> = {};
+  for (const [nodeId, progress] of Object.entries(state.nodeProgress)) {
+    const restoredIter = snapshot.iterations[nodeId];
+    if (restoredIter == null) {
+      restoredProgress[nodeId] = progress;
+    } else {
+      restoredProgress[nodeId] = { ...progress, iteration: restoredIter };
+    }
+  }
+
+  return {
+    ...state,
+    variables: { ...snapshot.variables },
+    currentNodePath: [...snapshot.currentPath],
+    nodeProgress: restoredProgress,
   };
 }
 

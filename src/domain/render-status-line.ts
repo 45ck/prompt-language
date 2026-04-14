@@ -57,6 +57,8 @@ function resolveNode(nodes: readonly FlowNode[], path: readonly number[]): FlowN
     case 'swarm':
     case 'start':
     case 'return':
+    case 'snapshot':
+    case 'rollback':
       return null;
     default: {
       const _exhaustive: never = node;
@@ -106,6 +108,8 @@ function collectAncestors(nodes: readonly FlowNode[], path: readonly number[]): 
       case 'swarm':
       case 'start':
       case 'return':
+      case 'snapshot':
+      case 'rollback':
         currentNodes = [];
         break;
       default: {
@@ -177,6 +181,10 @@ function summarizeNode(node: FlowNode): string {
       return `start ${node.targets.join(', ')}`;
     case 'return':
       return `return ${truncate(node.expression, 30)}`;
+    case 'snapshot':
+      return `snapshot "${node.name}"`;
+    case 'rollback':
+      return `rollback to "${node.name}"`;
     default: {
       const _exhaustive: never = node;
       return _exhaustive;

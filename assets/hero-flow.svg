@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="520" viewBox="0 0 720 520">
+  <defs>
+    <style>
+      .bg { fill: #0d1117; }
+      .chrome { fill: #161b22; }
+      .border { fill: #30363d; }
+      .dot-red { fill: #ff5f56; }
+      .dot-yellow { fill: #ffbd2e; }
+      .dot-green { fill: #27c93f; }
+      .title-text { fill: #8b949e; font-family: -apple-system, 'Segoe UI', monospace; font-size: 13px; }
+      .line-num { fill: #484f58; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .comment { fill: #8b949e; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .keyword { fill: #ff7b72; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .directive { fill: #d29922; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .variable { fill: #79c0ff; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .string { fill: #a5d6ff; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .plain { fill: #e6edf3; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .constant { fill: #d2a8ff; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .gate { fill: #7ee787; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+    </style>
+  </defs>
+
+  <!-- Window frame -->
+  <rect class="bg" width="720" height="520" rx="10" ry="10"/>
+  <rect class="border" x="0" y="0" width="720" height="520" rx="10" ry="10" fill-opacity="0"/>
+  <rect class="chrome" x="1" y="1" width="718" height="38" rx="10" ry="10"/>
+  <rect class="chrome" x="1" y="20" width="718" height="19"/>
+
+  <!-- Traffic light dots -->
+  <circle class="dot-red" cx="20" cy="20" r="6"/>
+  <circle class="dot-yellow" cx="40" cy="20" r="6"/>
+  <circle class="dot-green" cx="60" cy="20" r="6"/>
+
+  <!-- Title bar -->
+  <text class="title-text" x="360" y="24" text-anchor="middle">deploy.flow</text>
+
+  <!-- Code lines - y starts at 62, 22px line height -->
+  <!-- Line 1: comment -->
+  <text class="line-num" x="20" y="62"> 1</text>
+  <text class="comment" x="52" y="62"># Deploy a feature</text>
+
+  <!-- Line 2: flow: -->
+  <text class="line-num" x="20" y="84"> 2</text>
+  <text class="directive" x="52" y="84">flow:</text>
+
+  <!-- Line 3: let spec = prompt -->
+  <text class="line-num" x="20" y="106"> 3</text>
+  <text y="106"><tspan class="keyword" x="72">let</tspan><tspan class="plain"> spec </tspan><tspan class="keyword">= prompt</tspan><tspan class="string"> "Write a spec for: </tspan><tspan class="variable">${goal}</tspan><tspan class="string">"</tspan></text>
+
+  <!-- Line 4: let files = run -->
+  <text class="line-num" x="20" y="128"> 4</text>
+  <text y="128"><tspan class="keyword" x="72">let</tspan><tspan class="plain"> files </tspan><tspan class="keyword">= run</tspan><tspan class="string"> "git diff --name-only -- '*.ts'"</tspan></text>
+
+  <!-- Line 5: blank -->
+  <text class="line-num" x="20" y="150"> 5</text>
+
+  <!-- Line 6: foreach -->
+  <text class="line-num" x="20" y="172"> 6</text>
+  <text y="172"><tspan class="keyword" x="72">foreach</tspan><tspan class="plain"> file </tspan><tspan class="keyword">in</tspan><tspan class="plain"> </tspan><tspan class="variable">${files}</tspan></text>
+
+  <!-- Line 7: retry max 3 -->
+  <text class="line-num" x="20" y="194"> 7</text>
+  <text y="194"><tspan class="keyword" x="92">retry</tspan><tspan class="keyword"> max</tspan><tspan class="constant"> 3</tspan></text>
+
+  <!-- Line 8: prompt: Implement... -->
+  <text class="line-num" x="20" y="216"> 8</text>
+  <text y="216"><tspan class="directive" x="112">prompt:</tspan><tspan class="string"> Implement the spec in </tspan><tspan class="variable">${file}</tspan><tspan class="string">.</tspan></text>
+
+  <!-- Line 9: run: npm test -->
+  <text class="line-num" x="20" y="238"> 9</text>
+  <text y="238"><tspan class="directive" x="112">run:</tspan><tspan class="string"> npm test -- </tspan><tspan class="variable">${file}</tspan></text>
+
+  <!-- Line 10: end -->
+  <text class="line-num" x="20" y="260">10</text>
+  <text class="keyword" x="92" y="260">end</text>
+
+  <!-- Line 11: end -->
+  <text class="line-num" x="20" y="282">11</text>
+  <text class="keyword" x="72" y="282">end</text>
+
+  <!-- Line 12: blank -->
+  <text class="line-num" x="20" y="304">12</text>
+
+  <!-- Line 13: spawn "review" -->
+  <text class="line-num" x="20" y="326">13</text>
+  <text y="326"><tspan class="keyword" x="72">spawn</tspan><tspan class="string"> "review"</tspan></text>
+
+  <!-- Line 14: prompt: Review... -->
+  <text class="line-num" x="20" y="348">14</text>
+  <text y="348"><tspan class="directive" x="92">prompt:</tspan><tspan class="string"> Review all changes against: </tspan><tspan class="variable">${spec}</tspan></text>
+
+  <!-- Line 15: end -->
+  <text class="line-num" x="20" y="370">15</text>
+  <text class="keyword" x="72" y="370">end</text>
+
+  <!-- Line 16: await -->
+  <text class="line-num" x="20" y="392">16</text>
+  <text y="392"><tspan class="keyword" x="72">await</tspan><tspan class="string"> "review"</tspan><tspan class="keyword"> timeout</tspan><tspan class="constant"> 120</tspan></text>
+
+  <!-- Line 17: blank -->
+  <text class="line-num" x="20" y="414">17</text>
+
+  <!-- Line 18: done when: -->
+  <text class="line-num" x="20" y="436">18</text>
+  <text class="directive" x="52" y="436">done when:</text>
+
+  <!-- Line 19: all(tests_pass, lint_pass) -->
+  <text class="line-num" x="20" y="458">19</text>
+  <text y="458"><tspan class="gate" x="72">all</tspan><tspan class="plain">(</tspan><tspan class="gate">tests_pass</tspan><tspan class="plain">, </tspan><tspan class="gate">lint_pass</tspan><tspan class="plain">)</tspan></text>
+
+  <!-- Subtle border -->
+  <rect x="0.5" y="0.5" width="719" height="519" rx="10" ry="10" fill="none" stroke="#30363d" stroke-width="1"/>
+</svg>

@@ -2301,6 +2301,18 @@ function filterSpawnVariables(
   return result;
 }
 
+/** Resolve model for a spawn node: node.model > agent.model > profile.model. */
+function resolveSpawnModel(
+  node: SpawnNode,
+  state: SessionState,
+  profileModel?: string,
+): { model: string } | Record<string, never> {
+  const agentModel =
+    node.agentRef != null ? state.flowSpec.agents?.[node.agentRef]?.model : undefined;
+  const resolved = node.model ?? agentModel ?? profileModel;
+  return resolved != null ? { model: resolved } : {};
+}
+
 /** Advance a spawn node: launch child process, record in spawnedChildren, skip body. */
 async function advanceSpawnNode(
   node: SpawnNode,

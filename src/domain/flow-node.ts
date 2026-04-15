@@ -186,6 +186,7 @@ export type AwaitTarget = string | 'all' | readonly string[];
 export interface AwaitNode extends BaseNode {
   readonly kind: 'await';
   readonly target: AwaitTarget;
+  readonly timeoutSeconds?: number | undefined;
 }
 
 /**
@@ -533,8 +534,14 @@ export function createSpawnNode(
   };
 }
 
-export function createAwaitNode(id: string, target: AwaitTarget): AwaitNode {
-  return { kind: 'await', id, target };
+export function createAwaitNode(
+  id: string,
+  target: AwaitTarget,
+  timeoutSeconds?: number,
+): AwaitNode {
+  return timeoutSeconds != null
+    ? { kind: 'await', id, target, timeoutSeconds }
+    : { kind: 'await', id, target };
 }
 
 export function createApproveNode(

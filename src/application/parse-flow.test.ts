@@ -1172,6 +1172,29 @@ describe('parseFlow — await nodes', () => {
     // Falls back to a prompt node
     expect(spec.nodes[0]!.kind).toBe('prompt');
   });
+
+  it('parses await with timeout', () => {
+    const spec = parse('Goal: t\n\nflow:\n  await "worker" timeout 300');
+    const node = spec.nodes[0] as AwaitNode;
+    expect(node.kind).toBe('await');
+    expect(node.target).toBe('worker');
+    expect(node.timeoutSeconds).toBe(300);
+  });
+
+  it('parses await all with timeout', () => {
+    const spec = parse('Goal: t\n\nflow:\n  await all timeout 60');
+    const node = spec.nodes[0] as AwaitNode;
+    expect(node.kind).toBe('await');
+    expect(node.target).toBe('all');
+    expect(node.timeoutSeconds).toBe(60);
+  });
+
+  it('parses await without timeout — no timeoutSeconds field', () => {
+    const spec = parse('Goal: t\n\nflow:\n  await "worker"');
+    const node = spec.nodes[0] as AwaitNode;
+    expect(node.kind).toBe('await');
+    expect(node.timeoutSeconds).toBeUndefined();
+  });
 });
 
 describe('detectBareFlow', () => {

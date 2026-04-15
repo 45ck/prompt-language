@@ -1364,9 +1364,10 @@ function parseAwaitLine(ctx: ParseContext, line: string): FlowNode {
   // Extract optional timeout suffix: `await "name" timeout 300`
   let timeoutSeconds: number | undefined;
   const timeoutMatch = /\s+timeout\s+(\d+)\s*$/i.exec(rawTarget);
-  if (timeoutMatch?.[1]) {
-    timeoutSeconds = parseInt(timeoutMatch[1], 10);
-    rawTarget = rawTarget.slice(0, timeoutMatch.index).trim();
+  const timeoutStr = timeoutMatch?.[1];
+  if (timeoutStr != null) {
+    timeoutSeconds = parseInt(timeoutStr, 10);
+    rawTarget = rawTarget.slice(0, timeoutMatch!.index).trim();
   }
 
   if (rawTarget.toLowerCase() === 'all') {

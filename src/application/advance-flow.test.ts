@@ -1924,6 +1924,228 @@ describe('autoAdvanceNodes — await', () => {
     expect(result.variables['checkout_fix.frontend.result']).toBe('');
   });
 
+  it('includes .error metadata from last_stderr when a swarm role fails', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return {
+          status: 'failed',
+          variables: {
+            __swarm_id: 'deploy',
+            __swarm_role: 'backend',
+            last_exit_code: '1',
+            last_stderr: 'Error: connection refused',
+          },
+        };
+      },
+    };
+    const messageStore: MessageStore = {
+      async send() {},
+      async receive() {
+        return undefined;
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'backend');
+    const spec = createFlowSpec('test', [awaitNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'backend', {
+      name: 'backend',
+      status: 'running',
+      pid: 20,
+      stateDir: '.prompt-language-backend',
+    });
+
+    const { state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+      undefined,
+      undefined,
+      messageStore,
+    );
+
+    expect(result.variables['deploy.backend.status']).toBe('failed');
+    expect(result.variables['deploy.backend.error']).toBe('Error: connection refused');
+  });
+
+  it('does not set .error for successfully completed swarm roles', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return {
+          status: 'completed',
+          variables: {
+            __swarm_id: 'deploy',
+            __swarm_role: 'backend',
+            last_exit_code: '0',
+            last_stderr: 'some warnings',
+          },
+        };
+      },
+    };
+    const messageStore: MessageStore = {
+      async send() {},
+      async receive() {
+        return 'ok';
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'backend');
+    const spec = createFlowSpec('test', [awaitNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'backend', {
+      name: 'backend',
+      status: 'running',
+      pid: 20,
+      stateDir: '.prompt-language-backend',
+    });
+
+    const { state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+      undefined,
+      undefined,
+      messageStore,
+    );
+
+    expect(result.variables['deploy.backend.status']).toBe('completed');
+    expect(result.variables['deploy.backend.error']).toBeUndefined();
+  });
+
+  it('filters __swarm_* internal variables from child prefix import', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return {
+          status: 'completed',
+          variables: {
+            __swarm_id: 'checkout_fix',
+            __swarm_role: 'frontend',
+            __swarm_return: '{"ok":true}',
+            last_exit_code: '0',
+            user_var: 'hello',
+          },
+        };
+      },
+    };
+    const messageStore: MessageStore = {
+      async send() {},
+      async receive() {
+        return '{"ok":true}';
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'frontend');
+    const spec = createFlowSpec('test', [awaitNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'frontend', {
+      name: 'frontend',
+      status: 'running',
+      pid: 10,
+      stateDir: '.prompt-language-frontend',
+    });
+
+    const { state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+      undefined,
+      undefined,
+      messageStore,
+    );
+
+    // User variables imported with child prefix
+    expect(result.variables['frontend.user_var']).toBe('hello');
+    // Internal transport variables NOT imported with child prefix
+    expect(result.variables['frontend.__swarm_id']).toBeUndefined();
+    expect(result.variables['frontend.__swarm_role']).toBeUndefined();
+    expect(result.variables['frontend.__swarm_return']).toBeUndefined();
+    // Structured namespace still works
+    expect(result.variables['checkout_fix.frontend.result']).toEqual({ ok: true });
+  });
+
+  it('imports multiple swarm roles under correct namespaces on await all', async () => {
+    let pollIndex = 0;
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        pollIndex++;
+        if (pollIndex === 1) {
+          return {
+            status: 'completed',
+            variables: {
+              __swarm_id: 'deploy',
+              __swarm_role: 'frontend',
+              last_exit_code: '0',
+            },
+          };
+        }
+        return {
+          status: 'completed',
+          variables: {
+            __swarm_id: 'deploy',
+            __swarm_role: 'backend',
+            last_exit_code: '0',
+          },
+        };
+      },
+    };
+    const messageStore: MessageStore = {
+      async send() {},
+      async receive(from) {
+        return from === 'frontend' ? '"ui ready"' : '{"api":"v2"}';
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'all');
+    const spec = createFlowSpec('test', [awaitNode, createPromptNode('p1', 'done')]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'frontend', {
+      name: 'frontend',
+      status: 'running',
+      pid: 10,
+      stateDir: '.prompt-language-frontend',
+    });
+    state = updateSpawnedChild(state, 'backend', {
+      name: 'backend',
+      status: 'running',
+      pid: 11,
+      stateDir: '.prompt-language-backend',
+    });
+
+    const { state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      mockSpawner,
+      undefined,
+      undefined,
+      messageStore,
+    );
+
+    // Frontend role namespace
+    expect(result.variables['deploy.frontend.status']).toBe('completed');
+    expect(result.variables['deploy.frontend.returned']).toBe('"ui ready"');
+    expect(result.variables['deploy.frontend.result']).toBe('ui ready');
+    // Backend role namespace
+    expect(result.variables['deploy.backend.status']).toBe('completed');
+    expect(result.variables['deploy.backend.returned']).toBe('{"api":"v2"}');
+    expect(result.variables['deploy.backend.result']).toEqual({ api: 'v2' });
+  });
+
   it('does not advance when children are still running', async () => {
     const mockSpawner: ProcessSpawner = {
       async spawn() {

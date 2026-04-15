@@ -2461,6 +2461,9 @@ function parseExitCode(raw: string | undefined): string | number {
   return /^-?\d+$/.test(trimmed) ? Number(trimmed) : trimmed;
 }
 
+/** Internal swarm transport variables that should not leak into the parent namespace. */
+const SWARM_INTERNAL_VARIABLES = new Set(['__swarm_id', '__swarm_role', '__swarm_return']);
+
 function importChildVariablesWithPrefix(
   state: SessionState,
   child: import('../domain/session-state.js').SpawnedChild,
@@ -2469,6 +2472,7 @@ function importChildVariablesWithPrefix(
   if (!child.variables) return next;
 
   for (const [key, value] of Object.entries(child.variables)) {
+    if (SWARM_INTERNAL_VARIABLES.has(key)) continue;
     next = updateVariable(next, `${child.name}.${key}`, value);
   }
 
@@ -2501,6 +2505,13 @@ async function importAwaitedSwarmResult(
   next = updateVariable(next, `${prefix}.result`, decodeJsonVariableValue(returned));
   next = updateVariable(next, `${prefix}.started_at`, child.startedAt ?? '');
   next = updateVariable(next, `${prefix}.completed_at`, child.completedAt ?? '');
+
+  // Include error context for failed roles (last_stderr from child, truncated)
+  if (child.status === 'failed') {
+    const errorContext = child.variables?.['last_stderr']?.slice(0, 2000) ?? '';
+    next = updateVariable(next, `${prefix}.error`, errorContext);
+  }
+
   return next;
 }
 

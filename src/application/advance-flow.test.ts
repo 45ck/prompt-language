@@ -3047,6 +3047,68 @@ describe('autoAdvanceNodes — await edge cases', () => {
     expect(capturedPrompt).toBe('done');
     expect(pollFn).not.toHaveBeenCalled();
   });
+
+  it('await with timeoutSeconds marks running children as failed when elapsed time exceeds timeout', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'slow-child', 1);
+    const prompt = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'slow-child', {
+      name: 'slow-child',
+      status: 'running',
+      pid: 42,
+      stateDir: '.prompt-language-slow-child',
+    });
+    // Simulate that await started 2 seconds ago (timeout is 1s)
+    state = {
+      ...state,
+      nodeProgress: {
+        ...state.nodeProgress,
+        aw1: { iteration: 1, maxIterations: 150, status: 'running', startedAt: Date.now() - 2000 },
+      },
+    };
+
+    const result = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(result.state.spawnedChildren['slow-child']?.status).toBe('failed');
+    expect(result.state.warnings.some((w) => w.includes('Await timeout after 1s'))).toBe(true);
+    expect(result.capturedPrompt).toBe('done');
+  });
+
+  it('await without timeoutSeconds does not time out early', async () => {
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'worker');
+    const prompt = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'worker', {
+      name: 'worker',
+      status: 'running',
+      pid: 42,
+      stateDir: '.prompt-language-worker',
+    });
+
+    const result = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    // Should pause (not advance) since child is still running and no timeout
+    expect(result.capturedPrompt).toBeNull();
+    expect(result.state.spawnedChildren['worker']?.status).toBe('running');
+  });
 });
 
 // ── body exhaustion inside spawn ────────────────────────────────────
@@ -4231,6 +4293,87 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
     const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
     expect(run).toHaveBeenCalledWith('type counter.txt');
     expect(capturedPrompt).toBe('increment');
+
+    platformSpy.mockRestore();
+  });
+
+  it('normalizes grep grounding commands to findstr on Windows', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const run = vi.fn(async () => ({ exitCode: 0, stdout: 'match', stderr: '' }));
+    const runner: CommandRunner = { run };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"found pattern?"',
+      [createPromptNode('p1', 'work')],
+      3,
+      undefined,
+      undefined,
+      'grep "error" log.txt',
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(run).toHaveBeenCalledWith('findstr "error" log.txt');
+    expect(capturedPrompt).toBe('work');
+
+    platformSpy.mockRestore();
+  });
+
+  it('normalizes test -f grounding commands on Windows', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const run = vi.fn(async () => ({ exitCode: 0, stdout: '', stderr: '' }));
+    const runner: CommandRunner = { run };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"file exists?"',
+      [createPromptNode('p1', 'work')],
+      3,
+      undefined,
+      undefined,
+      'test -f config.json',
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(run).toHaveBeenCalledWith('if exist config.json (exit /b 0) else (exit /b 1)');
+    expect(capturedPrompt).toBe('work');
+
+    platformSpy.mockRestore();
+  });
+
+  it('normalizes ls grounding commands to dir on Windows', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const run = vi.fn(async () => ({ exitCode: 0, stdout: 'files', stderr: '' }));
+    const runner: CommandRunner = { run };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"directory listed?"',
+      [createPromptNode('p1', 'work')],
+      3,
+      undefined,
+      undefined,
+      'ls /tmp/data',
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(run).toHaveBeenCalledWith('dir /tmp/data');
+    expect(capturedPrompt).toBe('work');
 
     platformSpy.mockRestore();
   });

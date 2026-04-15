@@ -800,6 +800,22 @@ function normalizeGroundingCommand(command: string): string {
     return `type${catMatch[1]}`;
   }
 
+  const grepMatch = /^\s*grep(\s+.+)$/i.exec(command);
+  if (grepMatch?.[1]) {
+    return `findstr${grepMatch[1]}`;
+  }
+
+  const testFMatch = /^\s*test\s+-f\s+(.+)$/i.exec(command);
+  if (testFMatch?.[1]) {
+    const filePath = testFMatch[1].trim();
+    return `if exist ${filePath} (exit /b 0) else (exit /b 1)`;
+  }
+
+  const lsMatch = /^\s*ls(\s+.+)$/i.exec(command);
+  if (lsMatch?.[1]) {
+    return `dir${lsMatch[1]}`;
+  }
+
   return command;
 }
 
@@ -1922,8 +1938,10 @@ async function advanceLetPrompt(
       await captureReader.clear(node.variableName);
       debugLog('capture', `Captured value for "${node.variableName}"`, 2);
       logCaptureAudit(auditLogger, current, node, 'captured', 'read');
+      let successState = updateVariable(current, 'capture_failed', 'false');
+      successState = updateVariable(successState, 'capture_diagnostic', '');
       return {
-        state: updateNodeProgress(current, node.id, {
+        state: updateNodeProgress(successState, node.id, {
           iteration: progress.iteration,
           maxIterations: progress.maxIterations,
           status: 'completed',
@@ -1994,7 +2012,7 @@ async function advanceLetPrompt(
     progress.iteration,
     progress.maxIterations,
   );
-  const fallbackState = persistRuntimeDiagnostic(
+  let fallbackState = persistRuntimeDiagnostic(
     {
       ...current,
       warnings: [...current.warnings, summary],
@@ -2002,6 +2020,8 @@ async function advanceLetPrompt(
     RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
     summary,
   );
+  fallbackState = updateVariable(fallbackState, 'capture_failed', 'true');
+  fallbackState = updateVariable(fallbackState, 'capture_diagnostic', summary);
   return {
     state: updateNodeProgress(fallbackState, node.id, {
       iteration: progress.iteration,
@@ -2081,8 +2101,10 @@ async function advanceLetPromptJson(
       await captureReader.clear(node.variableName);
       debugLog('capture', `Captured JSON value for "${node.variableName}"`, 2);
       logCaptureAudit(auditLogger, current, node, 'captured', 'read');
+      let successState = updateVariable(current, 'capture_failed', 'false');
+      successState = updateVariable(successState, 'capture_diagnostic', '');
       return {
-        state: updateNodeProgress(current, node.id, {
+        state: updateNodeProgress(successState, node.id, {
           iteration: progress.iteration,
           maxIterations: progress.maxIterations,
           status: 'completed',
@@ -2149,7 +2171,7 @@ async function advanceLetPromptJson(
     progress.iteration,
     progress.maxIterations,
   );
-  const fallbackState = persistRuntimeDiagnostic(
+  let fallbackState = persistRuntimeDiagnostic(
     {
       ...current,
       warnings: [...current.warnings, summary],
@@ -2157,6 +2179,8 @@ async function advanceLetPromptJson(
     RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
     summary,
   );
+  fallbackState = updateVariable(fallbackState, 'capture_failed', 'true');
+  fallbackState = updateVariable(fallbackState, 'capture_diagnostic', summary);
   return {
     state: updateNodeProgress(fallbackState, node.id, {
       iteration: progress.iteration,
@@ -2559,8 +2583,15 @@ async function advanceAwaitNode(
     // D2: Track poll count via nodeProgress — timeout after MAX_AWAIT_POLLS
     const progress = state.nodeProgress[node.id];
     const pollCount = (progress?.iteration ?? 0) + 1;
+    const startedAt = progress?.startedAt ?? Date.now();
 
-    if (pollCount >= MAX_AWAIT_POLLS) {
+    // Check user-specified timeout (seconds) before poll-count timeout
+    const timedOut =
+      node.timeoutSeconds != null &&
+      node.timeoutSeconds > 0 &&
+      Date.now() - startedAt >= node.timeoutSeconds * 1000;
+
+    if (timedOut || pollCount >= MAX_AWAIT_POLLS) {
       for (const child of children) {
         if (child?.status === 'running') {
           state = updateSpawnedChild(state, child.name, {
@@ -2575,12 +2606,12 @@ async function advanceAwaitNode(
           });
         }
       }
+      const reason = timedOut
+        ? `Await timeout after ${node.timeoutSeconds}s; marked remaining children as failed.`
+        : `Await timeout after ${MAX_AWAIT_POLLS} polls; marked remaining children as failed.`;
       state = {
         ...state,
-        warnings: [
-          ...state.warnings,
-          `Await timeout after ${MAX_AWAIT_POLLS} polls; marked remaining children as failed.`,
-        ],
+        warnings: [...state.warnings, reason],
       };
       return { state: advanceFromPath(state, state.currentNodePath), advanced: true };
     }
@@ -2589,7 +2620,7 @@ async function advanceAwaitNode(
       iteration: pollCount,
       maxIterations: MAX_AWAIT_POLLS,
       status: 'running',
-      startedAt: state.nodeProgress[node.id]?.startedAt ?? Date.now(),
+      startedAt,
     });
 
     await new Promise((resolve) => setTimeout(resolve, computePollInterval(pollCount)));

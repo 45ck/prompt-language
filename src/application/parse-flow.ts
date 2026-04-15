@@ -1359,21 +1359,33 @@ function parseAwaitLine(ctx: ParseContext, line: string): FlowNode {
     warn(ctx, `Invalid await syntax: "${line}" — expected await all or await "name"`);
     return attachSource(ctx, createPromptNode(nextId(ctx), line));
   }
-  const rawTarget = match[1].trim();
+  let rawTarget = match[1].trim();
+
+  // Extract optional timeout suffix: `await "name" timeout 300`
+  let timeoutSeconds: number | undefined;
+  const timeoutMatch = /\s+timeout\s+(\d+)\s*$/i.exec(rawTarget);
+  if (timeoutMatch?.[1]) {
+    timeoutSeconds = parseInt(timeoutMatch[1], 10);
+    rawTarget = rawTarget.slice(0, timeoutMatch.index).trim();
+  }
+
   if (rawTarget.toLowerCase() === 'all') {
-    return attachSource(ctx, createAwaitNode(nextId(ctx), 'all'));
+    return attachSource(ctx, createAwaitNode(nextId(ctx), 'all', timeoutSeconds));
   }
 
   const nameMatch = /^"([^"]+)"$/.exec(rawTarget) ?? /^'([^']+)'$/.exec(rawTarget);
   if (nameMatch?.[1]) {
-    return attachSource(ctx, createAwaitNode(nextId(ctx), nameMatch[1]));
+    return attachSource(ctx, createAwaitNode(nextId(ctx), nameMatch[1], timeoutSeconds));
   }
 
   const identifiers = parseIdentifierList(rawTarget);
   if (identifiers.length > 1) {
-    return attachSource(ctx, createAwaitNode(nextId(ctx), identifiers));
+    return attachSource(ctx, createAwaitNode(nextId(ctx), identifiers, timeoutSeconds));
   }
-  return attachSource(ctx, createAwaitNode(nextId(ctx), identifiers[0] ?? rawTarget));
+  return attachSource(
+    ctx,
+    createAwaitNode(nextId(ctx), identifiers[0] ?? rawTarget, timeoutSeconds),
+  );
 }
 
 function parseStartLine(ctx: ParseContext, line: string): FlowNode {

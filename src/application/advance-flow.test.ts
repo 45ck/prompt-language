@@ -2512,6 +2512,10 @@ describe('autoAdvanceNodes — let prompt capture', () => {
     expect(String(result.state.variables['_runtime_diagnostic.summary'])).toContain(
       "Capture for 'answer' fell back to empty string after 3 attempts.",
     );
+    expect(result.state.variables['capture_failed']).toBe('true');
+    expect(result.state.variables['capture_diagnostic']).toContain(
+      "Capture for 'answer' fell back to empty string after 3 attempts.",
+    );
     expect(result.diagnostics).toEqual([
       expect.objectContaining({
         code: RUNTIME_DIAGNOSTIC_CODES.captureRetryFallback,
@@ -2520,6 +2524,29 @@ describe('autoAdvanceNodes — let prompt capture', () => {
       }),
     ]);
     expect(result.capturedPrompt).toBe('next');
+  });
+
+  it('resets capture_failed to false on successful capture', async () => {
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue('hello world'),
+      clear: vi.fn(),
+    };
+    const letPrompt = createLetNode('l1', 'answer', { type: 'prompt', text: 'Question' });
+    const spec = createFlowSpec('test', [letPrompt, createPromptNode('p1', 'next')]);
+    let state = createSessionState('s1', spec);
+    // Simulate a previous capture failure
+    state = updateVariable(state, 'capture_failed', 'true');
+    state = updateVariable(state, 'capture_diagnostic', 'previous failure');
+    state = updateNodeProgress(state, 'l1', {
+      iteration: 1,
+      maxIterations: 3,
+      status: 'awaiting_capture',
+    });
+
+    const result = await autoAdvanceNodes(state, undefined, captureReader);
+    expect(result.state.variables['answer']).toBe('hello world');
+    expect(result.state.variables['capture_failed']).toBe('false');
+    expect(result.state.variables['capture_diagnostic']).toBe('');
   });
 
   it('let prompt without captureReader emits prompt then stalls on retry', async () => {
@@ -3065,7 +3092,7 @@ describe('autoAdvanceNodes — await edge cases', () => {
     state = updateSpawnedChild(state, 'slow-child', {
       name: 'slow-child',
       status: 'running',
-      pid: 42,
+      pid: undefined,
       stateDir: '.prompt-language-slow-child',
     });
     // Simulate that await started 2 seconds ago (timeout is 1s)
@@ -3100,7 +3127,7 @@ describe('autoAdvanceNodes — await edge cases', () => {
     state = updateSpawnedChild(state, 'worker', {
       name: 'worker',
       status: 'running',
-      pid: 42,
+      pid: undefined,
       stateDir: '.prompt-language-worker',
     });
 

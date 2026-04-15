@@ -598,7 +598,7 @@ describe('autoAdvanceNodes — race node', () => {
 
   it('poll limit: times out after MAX_AWAIT_POLLS when children keep running', async () => {
     const spawner: ProcessSpawner = {
-      spawn: vi.fn().mockResolvedValue({ pid: 42 }),
+      spawn: vi.fn().mockResolvedValue({ pid: process.pid }),
       poll: vi.fn().mockResolvedValue({ status: 'running' }),
     };
     const spawnA = createSpawnNode('s1', 'alpha', [createPromptNode('pa', 'work')]);
@@ -610,7 +610,7 @@ describe('autoAdvanceNodes — race node', () => {
     state = updateSpawnedChild(state, 'alpha', {
       name: 'alpha',
       status: 'running',
-      pid: 42,
+      pid: process.pid,
       stateDir: '.prompt-language-alpha',
     });
     state = updateNodeProgress(state, 'r1', {

@@ -47,7 +47,7 @@ class SequenceStatusProcessSpawner implements ProcessSpawner {
   constructor(private readonly statuses: readonly ChildStatus[]) {}
 
   async spawn(_input: SpawnInput): Promise<SpawnResult> {
-    return { pid: 1234 };
+    return { pid: process.pid };
   }
 
   async poll(_stateDir: string): Promise<ChildStatus> {

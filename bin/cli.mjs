@@ -12,27 +12,35 @@ const ROOT = join(__dirname, '..');
 const MARKETPLACE_NAME = 'prompt-language-local';
 const PLUGIN_KEY = `prompt-language@${MARKETPLACE_NAME}`;
 const CLAUDE_DIR = join(homedir(), '.claude');
-const CACHE_DIR = join(CLAUDE_DIR, 'plugins', 'cache', MARKETPLACE_NAME);
+// Plugin files live under plugins/installed/ to avoid conflicting with
+// Claude Code's marketplace cache at plugins/cache/<marketplace-name>.
+const INSTALL_DIR = join(CLAUDE_DIR, 'plugins', 'installed', 'prompt-language');
 // PLUGINS_DIR is set dynamically per version in install() — see pluginsDir()
 const INSTALLED_PLUGINS_PATH = join(CLAUDE_DIR, 'plugins', 'installed_plugins.json');
 const SETTINGS_PATH = join(CLAUDE_DIR, 'settings.json');
 const CODEX_DIR = join(homedir(), '.codex');
-const CODEX_CACHE_DIR = join(CODEX_DIR, 'plugins', 'cache', MARKETPLACE_NAME);
+const CODEX_INSTALL_DIR = join(CODEX_DIR, 'plugins', 'installed', 'prompt-language');
 const CODEX_INSTALLED_PLUGINS_PATH = join(CODEX_DIR, 'plugins', 'installed_plugins.json');
 const CODEX_SETTINGS_PATH = join(CODEX_DIR, 'settings.json');
 const CODEX_CONFIG_PATH = join(CODEX_DIR, 'config.toml');
 
-// Old install location (pre-cache migration) — cleaned up during install/uninstall
+// Old install locations — cleaned up during install/uninstall
 const OLD_LOCAL_DIR = join(CLAUDE_DIR, 'plugins', 'local', 'prompt-language');
 const OLD_MARKETPLACE_DIR = join(CLAUDE_DIR, 'plugins', 'local');
+const OLD_CACHE_DIR = join(CLAUDE_DIR, 'plugins', 'cache', MARKETPLACE_NAME);
 const OLD_CODEX_LOCAL_DIR = join(CODEX_DIR, 'plugins', 'local', 'prompt-language');
 const OLD_CODEX_MARKETPLACE_DIR = join(CODEX_DIR, 'plugins', 'local');
+const OLD_CODEX_INSTALL_DIR = join(CODEX_DIR, 'plugins', 'cache', MARKETPLACE_NAME);
 
 function pluginsDir(version) {
-  return join(CACHE_DIR, 'prompt-language', version);
+  return join(INSTALL_DIR, version);
 }
 
 const DIRS_TO_COPY = ['dist', 'hooks', 'skills', 'commands', 'agents', '.claude-plugin', 'bin'];
+
+// Runtime dependencies required by hook entry points (resolved via ESM import chain).
+// These are copied into the plugin cache's node_modules/ so hooks work outside the repo.
+const RUNTIME_DEPS = ['zod'];
 const DIRS_TO_COPY_CODEX = [
   'dist',
   'skills',
@@ -194,7 +202,7 @@ async function collectInstalledVersions(installsRoot) {
   try {
     const entries = await fs.readdir(installsRoot, { withFileTypes: true });
     return entries
-      .filter((entry) => entry.isDirectory())
+      .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
       .map((entry) => entry.name)
       .sort((left, right) => left.localeCompare(right));
   } catch (error) {
@@ -261,6 +269,7 @@ async function collectInstallStatus({
   installsRoot,
   registryPath,
   settingsPath,
+  knownMarketplacesPath,
   pluginManifestRelativePath,
 }) {
   const installed = await pathExists(currentInstallPath);
@@ -355,6 +364,14 @@ async function collectInstallStatus({
     marketplace = !!settingsState.value?.extraKnownMarketplaces?.[MARKETPLACE_NAME];
   }
 
+  // Also check known_marketplaces.json (the primary registry since the install path migration)
+  if (!marketplace && knownMarketplacesPath) {
+    const knownState = await inspectJsonFile(knownMarketplacesPath);
+    if (knownState.kind === 'ok') {
+      marketplace = !!knownState.value?.[MARKETPLACE_NAME];
+    }
+  }
+
   return {
     installed,
     registered,
@@ -384,7 +401,7 @@ async function install() {
     const version = await readPluginVersion();
     const now = new Date().toISOString();
     const PLUGINS_DIR = pluginsDir(version);
-    const installsRoot = join(CACHE_DIR, 'prompt-language');
+    const installsRoot = INSTALL_DIR;
     console.log(`Installing prompt-language v${version}...`);
 
     if (!existsSync(join(ROOT, 'dist'))) {
@@ -396,6 +413,8 @@ async function install() {
     try {
       await fs.rm(OLD_LOCAL_DIR, { recursive: true, force: true });
       await fs.rm(join(OLD_MARKETPLACE_DIR, '.claude-plugin'), { recursive: true, force: true });
+      // Remove old cache-based install that conflicted with Claude Code's marketplace cache
+      await fs.rm(OLD_CACHE_DIR, { recursive: true, force: true });
     } catch {
       // ignore — old location may not exist
     }
@@ -403,6 +422,16 @@ async function install() {
     await fs.rm(PLUGINS_DIR, { recursive: true, force: true });
     await ensureDir(PLUGINS_DIR);
     await copyInstallDirectories(DIRS_TO_COPY, PLUGINS_DIR, 'install');
+
+    // Copy runtime dependencies required by hooks (e.g., zod for profile-config validation)
+    for (const dep of RUNTIME_DEPS) {
+      const depSrc = join(ROOT, 'node_modules', dep);
+      const depDest = join(PLUGINS_DIR, 'node_modules', dep);
+      if (await pathExists(depSrc)) {
+        await copyDir(depSrc, depDest);
+        console.log(`  Copied node_modules/${dep}/`);
+      }
+    }
 
     const pluginJsonState = await inspectJsonFile(
       join(PLUGINS_DIR, '.claude-plugin', 'plugin.json'),
@@ -426,12 +455,13 @@ async function install() {
           description: pluginJson.description,
           version: pluginJson.version,
           author: pluginJson.author,
-          source: `./prompt-language/${version}`,
+          source: `./${version}`,
           category: 'development',
         },
       ],
     };
-    await writeJson(join(CACHE_DIR, '.claude-plugin', 'marketplace.json'), marketplaceCatalog);
+    const marketplaceJsonPath = join(INSTALL_DIR, 'marketplace.json');
+    await writeJson(marketplaceJsonPath, marketplaceCatalog);
     console.log('  Generated marketplace catalog');
 
     const installed = (await readJsonForMutation(
@@ -453,18 +483,38 @@ async function install() {
     console.log('  Registered in installed_plugins.json');
 
     const settings = (await readJsonForMutation(SETTINGS_PATH, 'settings.json', 'install')) ?? {};
-    settings.extraKnownMarketplaces = settings.extraKnownMarketplaces ?? {};
-    settings.extraKnownMarketplaces[MARKETPLACE_NAME] = {
-      source: {
-        source: 'directory',
-        path: CACHE_DIR,
-      },
-    };
+    // Remove stale marketplace entries that conflict with Claude Code's cache mechanism.
+    // The plugin is discovered through installed_plugins.json + known_marketplaces.json.
+    if (settings.extraKnownMarketplaces?.[MARKETPLACE_NAME]) {
+      delete settings.extraKnownMarketplaces[MARKETPLACE_NAME];
+    }
     settings.enabledPlugins = settings.enabledPlugins ?? {};
     settings.enabledPlugins[PLUGIN_KEY] = true;
     await writeJson(SETTINGS_PATH, settings);
     console.log('  Registered marketplace in settings.json');
     console.log('  Enabled in settings.json');
+
+    // Write marketplace.json into INSTALL_DIR/.claude-plugin/ so Claude Code can
+    // discover the plugin. This mimics the structure of git-cloned marketplaces
+    // (e.g. devglobe at plugins/marketplaces/devglobe/.claude-plugin/marketplace.json).
+    await writeJson(join(INSTALL_DIR, '.claude-plugin', 'marketplace.json'), marketplaceCatalog);
+    console.log('  Written marketplace catalog to install dir');
+
+    // Update known_marketplaces.json — the ACTUAL registry Claude Code reads on startup.
+    const knownMarketplacesPath = join(CLAUDE_DIR, 'plugins', 'known_marketplaces.json');
+    const knownMarketplaces =
+      (await readJsonForMutation(knownMarketplacesPath, 'known_marketplaces.json', 'install')) ??
+      {};
+    knownMarketplaces[MARKETPLACE_NAME] = {
+      source: {
+        source: 'directory',
+        path: INSTALL_DIR,
+      },
+      installLocation: INSTALL_DIR,
+      lastUpdated: now,
+    };
+    await writeJson(knownMarketplacesPath, knownMarketplaces);
+    console.log('  Updated known_marketplaces.json');
 
     await configureStatusLine(settings, PLUGINS_DIR, true);
 
@@ -490,8 +540,8 @@ async function installCodex() {
   try {
     const version = await readPluginVersion();
     const now = new Date().toISOString();
-    const PLUGINS_DIR = join(CODEX_CACHE_DIR, 'prompt-language', version);
-    const installsRoot = join(CODEX_CACHE_DIR, 'prompt-language');
+    const PLUGINS_DIR = join(CODEX_INSTALL_DIR, version);
+    const installsRoot = CODEX_INSTALL_DIR;
     console.log(`Installing prompt-language Codex scaffold v${version}...`);
 
     if (!existsSync(join(ROOT, 'dist'))) {
@@ -506,6 +556,8 @@ async function installCodex() {
         recursive: true,
         force: true,
       });
+      // Remove old cache-based install that conflicted with Codex's marketplace cache
+      await fs.rm(OLD_CODEX_INSTALL_DIR, { recursive: true, force: true });
     } catch {
       // ignore — old location may not exist
     }
@@ -552,7 +604,7 @@ async function installCodex() {
     settings.extraKnownMarketplaces[MARKETPLACE_NAME] = {
       source: {
         source: 'directory',
-        path: CODEX_CACHE_DIR,
+        path: CODEX_INSTALL_DIR,
       },
     };
     settings.enabledPlugins = settings.enabledPlugins ?? {};
@@ -1425,12 +1477,19 @@ async function listFlows() {
 async function uninstall() {
   console.log('Uninstalling prompt-language...');
 
-  // Remove cache directory (current install location)
+  // Remove install directory (current location)
   try {
-    await fs.rm(CACHE_DIR, { recursive: true, force: true });
-    console.log(`  Removed ${CACHE_DIR}`);
+    await fs.rm(INSTALL_DIR, { recursive: true, force: true });
+    console.log(`  Removed ${INSTALL_DIR}`);
   } catch {
-    console.log('  Cache directory not found (already removed)');
+    console.log('  Install directory not found (already removed)');
+  }
+
+  // Remove old cache directory (pre-installed migration)
+  try {
+    await fs.rm(OLD_CACHE_DIR, { recursive: true, force: true });
+  } catch {
+    // ignore
   }
 
   // Remove old local directory (pre-cache migration)
@@ -1469,6 +1528,15 @@ async function uninstall() {
     console.log('  Removed from settings.json');
   }
 
+  // Clean up known_marketplaces.json
+  const knownMarketplacesPath = join(CLAUDE_DIR, 'plugins', 'known_marketplaces.json');
+  const knownMarketplaces = await readJsonSafe(knownMarketplacesPath);
+  if (knownMarketplaces?.[MARKETPLACE_NAME]) {
+    delete knownMarketplaces[MARKETPLACE_NAME];
+    await writeJson(knownMarketplacesPath, knownMarketplaces);
+    console.log('  Removed from known_marketplaces.json');
+  }
+
   console.log('\nprompt-language runtime uninstalled successfully.');
 }
 
@@ -1476,8 +1544,8 @@ async function uninstallCodex() {
   console.log('Uninstalling prompt-language Codex scaffold...');
 
   try {
-    await fs.rm(CODEX_CACHE_DIR, { recursive: true, force: true });
-    console.log(`  Removed ${CODEX_CACHE_DIR}`);
+    await fs.rm(CODEX_INSTALL_DIR, { recursive: true, force: true });
+    console.log(`  Removed ${CODEX_INSTALL_DIR}`);
   } catch {
     console.log('  Cache directory not found (already removed)');
   }
@@ -1485,6 +1553,7 @@ async function uninstallCodex() {
   try {
     await fs.rm(OLD_CODEX_LOCAL_DIR, { recursive: true, force: true });
     await fs.rm(join(OLD_CODEX_MARKETPLACE_DIR, '.codex-plugin'), { recursive: true, force: true });
+    await fs.rm(OLD_CODEX_INSTALL_DIR, { recursive: true, force: true });
   } catch {
     // ignore — old location may not exist
   }
@@ -1522,9 +1591,10 @@ async function status() {
   const state = await collectInstallStatus({
     currentVersion: version,
     currentInstallPath: PLUGINS_DIR,
-    installsRoot: join(CACHE_DIR, 'prompt-language'),
+    installsRoot: INSTALL_DIR,
     registryPath: INSTALLED_PLUGINS_PATH,
     settingsPath: SETTINGS_PATH,
+    knownMarketplacesPath: join(CLAUDE_DIR, 'plugins', 'known_marketplaces.json'),
     pluginManifestRelativePath: join('.claude-plugin', 'plugin.json'),
   });
 
@@ -1561,11 +1631,11 @@ async function status() {
 
 async function statusCodex() {
   const version = await readPluginVersion().catch(() => 'unknown');
-  const PLUGINS_DIR = join(CODEX_CACHE_DIR, 'prompt-language', version);
+  const PLUGINS_DIR = join(CODEX_INSTALL_DIR, version);
   const state = await collectInstallStatus({
     currentVersion: version,
     currentInstallPath: PLUGINS_DIR,
-    installsRoot: join(CODEX_CACHE_DIR, 'prompt-language'),
+    installsRoot: CODEX_INSTALL_DIR,
     registryPath: CODEX_INSTALLED_PLUGINS_PATH,
     settingsPath: CODEX_SETTINGS_PATH,
     pluginManifestRelativePath: join('.codex-plugin', 'plugin.json'),

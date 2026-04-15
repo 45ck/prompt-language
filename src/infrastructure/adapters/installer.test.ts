@@ -15,30 +15,19 @@ async function readPluginVersion(): Promise<string> {
   return (JSON.parse(raw) as { version: string }).version;
 }
 
-/** Cache-based install path: .claude/plugins/cache/prompt-language-local/prompt-language/{version} */
+/** Install path: .claude/plugins/installed/prompt-language/{version} */
 function cachePath(home: string, version: string): string {
-  return join(
-    home,
-    '.claude',
-    'plugins',
-    'cache',
-    'prompt-language-local',
-    'prompt-language',
-    version,
-  );
+  return join(home, '.claude', 'plugins', 'installed', 'prompt-language', version);
 }
 
-/** Marketplace catalog path: .claude/plugins/cache/prompt-language-local/.claude-plugin/marketplace.json */
+/** Install root: .claude/plugins/installed/prompt-language */
+function installRoot(home: string): string {
+  return join(home, '.claude', 'plugins', 'installed', 'prompt-language');
+}
+
+/** Marketplace catalog path: .claude/plugins/installed/prompt-language/.claude-plugin/marketplace.json */
 function marketplacePath(home: string): string {
-  return join(
-    home,
-    '.claude',
-    'plugins',
-    'cache',
-    'prompt-language-local',
-    '.claude-plugin',
-    'marketplace.json',
-  );
+  return join(installRoot(home), '.claude-plugin', 'marketplace.json');
 }
 
 async function createFakeHome(): Promise<string> {
@@ -155,7 +144,7 @@ describe('Installer — install verification', () => {
 
     const entry = plugins[0];
     expect(entry).toHaveProperty('name', 'prompt-language');
-    expect(entry).toHaveProperty('source', `./prompt-language/${version}`);
+    expect(entry).toHaveProperty('source', `./${version}`);
     expect(entry).toHaveProperty('version');
   });
 
@@ -177,23 +166,28 @@ describe('Installer — install verification', () => {
     expect(entries[0]).toHaveProperty('version');
   });
 
-  it('settings.json has marketplace registered and plugin enabled', async () => {
+  it('settings.json has plugin enabled and known_marketplaces.json registered', async () => {
     const settingsPath = join(fakeHome, '.claude', 'settings.json');
     const settings = (await readJsonFile(settingsPath)) as Record<string, unknown>;
 
-    // Marketplace registered
-    const marketplaces = settings['extraKnownMarketplaces'] as Record<string, unknown>;
-    expect(marketplaces).toHaveProperty('prompt-language-local');
+    // Plugin enabled in settings
+    const enabled = settings['enabledPlugins'] as Record<string, boolean>;
+    expect(enabled['prompt-language@prompt-language-local']).toBe(true);
 
-    const mp = marketplaces['prompt-language-local'] as Record<string, unknown>;
+    // extraKnownMarketplaces should NOT be set (installer removes stale entries)
+    expect(settings['extraKnownMarketplaces']?.['prompt-language-local' as never]).toBeUndefined();
+
+    // Marketplace registered in known_marketplaces.json
+    const knownPath = join(fakeHome, '.claude', 'plugins', 'known_marketplaces.json');
+    const known = (await readJsonFile(knownPath)) as Record<string, unknown>;
+    expect(known).toHaveProperty('prompt-language-local');
+
+    const mp = known['prompt-language-local'] as Record<string, unknown>;
+    expect(mp).toHaveProperty('installLocation');
     expect(mp).toHaveProperty('source');
     const source = mp['source'] as Record<string, unknown>;
     expect(source).toHaveProperty('source', 'directory');
     expect(source).toHaveProperty('path');
-
-    // Plugin enabled
-    const enabled = settings['enabledPlugins'] as Record<string, boolean>;
-    expect(enabled['prompt-language@prompt-language-local']).toBe(true);
   });
 
   it('DIRS_TO_COPY includes all required directories', () => {
@@ -327,7 +321,8 @@ describe('Installer — cross-platform paths', () => {
     const version = await readPluginVersion();
     runInstaller(fakeHome);
 
-    const staleDir = cachePath(fakeHome, '0.0.1');
+    // Create a stale version directory inside the install root
+    const staleDir = join(installRoot(fakeHome), '0.0.1');
     await mkdir(join(staleDir, '.claude-plugin'), { recursive: true });
     await writeFile(
       join(staleDir, '.claude-plugin', 'plugin.json'),
@@ -346,7 +341,7 @@ describe('Installer — cross-platform paths', () => {
     runInstaller(fakeHome);
 
     const staleVersion = '0.0.1';
-    const staleDir = cachePath(fakeHome, staleVersion);
+    const staleDir = join(installRoot(fakeHome), staleVersion);
     await mkdir(join(staleDir, '.claude-plugin'), { recursive: true });
     await writeFile(
       join(staleDir, '.claude-plugin', 'plugin.json'),
@@ -402,11 +397,9 @@ describe('Installer — cross-platform paths', () => {
 
     const settings = (await readJsonFile(join(fakeHome, '.claude', 'settings.json'))) as {
       enabledPlugins: Record<string, boolean>;
-      extraKnownMarketplaces: Record<string, unknown>;
       statusLine?: unknown;
     };
     expect(settings.enabledPlugins['prompt-language@prompt-language-local']).toBeUndefined();
-    expect(settings.extraKnownMarketplaces['prompt-language-local']).toBeUndefined();
     expect(settings.statusLine).toBeUndefined();
   });
 });

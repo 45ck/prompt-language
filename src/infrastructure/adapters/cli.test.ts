@@ -907,21 +907,12 @@ describe('CLI commands', () => {
     const pluginVersion = JSON.parse(
       await readFile(join(ROOT, '.claude-plugin', 'plugin.json'), 'utf8'),
     ).version as string;
-    const staleDir = join(
-      tempDir,
-      '.claude',
-      'plugins',
-      'cache',
-      'prompt-language-local',
-      'prompt-language',
-      '0.0.1',
-    );
+    const staleDir = join(tempDir, '.claude', 'plugins', 'installed', 'prompt-language', '0.0.1');
     const expectedDir = join(
       tempDir,
       '.claude',
       'plugins',
-      'cache',
-      'prompt-language-local',
+      'installed',
       'prompt-language',
       pluginVersion,
     );

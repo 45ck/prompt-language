@@ -18,15 +18,7 @@ async function readPluginVersion(): Promise<string> {
 }
 
 function codexCachePath(home: string, version: string): string {
-  return join(
-    home,
-    '.codex',
-    'plugins',
-    'cache',
-    'prompt-language-local',
-    'prompt-language',
-    version,
-  );
+  return join(home, '.codex', 'plugins', 'installed', 'prompt-language', version);
 }
 
 async function createFakeHome(): Promise<string> {

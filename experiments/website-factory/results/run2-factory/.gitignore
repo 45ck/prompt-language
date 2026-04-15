@@ -1,0 +1,7 @@
+site/node_modules/
+site/.next/
+site/.turbo/
+dist/
+phases/
+libraries/
+*.js.nft.json

@@ -1,0 +1,43 @@
+Goal: Build a production-quality marketing website for NightOwl (sleep tracking for knowledge workers) using a structured multi-phase process with specialized agents.
+
+memory:
+  project_name
+  tech_stack
+  framework
+  css_approach
+  sections
+
+flow:
+  # Phase 0: Load the product brief
+  let brief = run "cat brief.md"
+  remember key="project_name" value="nightowl"
+
+  # Phase 1: Discovery — UX research + content strategy
+  import "phases/01-discovery.flow"
+  approve "Review discovery outputs (personas, content strategy, sitemap) before proceeding to architecture."
+
+  # Phase 2: Architecture — Tech stack decision via competitive evaluation
+  import "phases/02-architecture.flow"
+  remember key="tech_stack" value="${tech_stack}"
+  remember key="framework" value="${framework}"
+  remember key="css_approach" value="${css_approach}"
+  approve "Review architecture decision (${framework} + ${css_approach}) before proceeding to design system."
+
+  # Phase 3: Design System — Tokens, components, base styles
+  import "phases/03-design-system.flow"
+  approve "Review design system (tokens + base components) before implementation."
+
+  # Phase 4: Implementation — Build all sections
+  import "phases/04-implementation.flow"
+
+  # Phase 5: Quality Assurance — Lint, test, a11y, security
+  import "phases/05-quality-assurance.flow"
+  approve "Review QA results before release."
+
+  # Phase 6: Release — Final checks and build
+  import "phases/06-release.flow"
+
+  prompt: Summarize everything that was built. List the final file structure, tech decisions made, and key metrics (build status, lint warnings, a11y score).
+
+done when:
+  file_exists "dist/index.html"

@@ -1,0 +1,1432 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudPulse — Cloud Monitoring for Modern Engineering Teams</title>
+    <meta
+      name="description"
+      content="Real-time cloud monitoring with intelligent alerting, incident timelines, and 200+ integrations. Start your free 14-day trial."
+    />
+    <link rel="canonical" href="https://cloudpulse.io" />
+
+    <!-- Open Graph -->
+    <meta
+      property="og:title"
+      content="CloudPulse — Cloud Monitoring for Modern Engineering Teams"
+    />
+    <meta
+      property="og:description"
+      content="Real-time cloud monitoring with intelligent alerting, incident timelines, and 200+ integrations. Start your free 14-day trial."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://cloudpulse.io" />
+    <meta property="og:site_name" content="CloudPulse" />
+
+    <!-- Favicon (inline SVG pulse icon) -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%232563EB'/><polyline points='6,16 11,16 14,8 18,24 21,16 26,16' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/></svg>"
+    />
+
+    <!-- JSON-LD -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "CloudPulse",
+        "url": "https://cloudpulse.io",
+        "description": "Real-time cloud monitoring with intelligent alerting, incident timelines, and 200+ integrations.",
+        "logo": "https://cloudpulse.io/logo.svg"
+      }
+    </script>
+
+    <style>
+      /* ===== CSS Custom Properties (Brand Guidelines) ===== */
+      :root {
+        --color-primary: #2563eb;
+        --color-secondary: #7c3aed;
+        --color-accent: #10b981;
+        --color-dark: #1e293b;
+        --color-light: #f8fafc;
+        --color-gray: #64748b;
+        --color-border: #e2e8f0;
+        --gradient-primary: linear-gradient(135deg, #2563eb, #7c3aed);
+        --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
+        --max-width: 1200px;
+        --radius: 12px;
+      }
+
+      /* ===== Reset ===== */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      /* ===== Base ===== */
+      html {
+        scroll-behavior: smooth;
+        font-size: 16px;
+      }
+      body {
+        font-family: var(--font-sans);
+        color: var(--color-dark);
+        background: var(--color-light);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* ===== Skip Link (Accessibility) ===== */
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 1rem;
+        background: var(--color-primary);
+        color: #fff;
+        padding: 0.5rem 1rem;
+        border-radius: 0 0 var(--radius) var(--radius);
+        z-index: 1000;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .skip-link:focus {
+        top: 0;
+      }
+
+      /* ===== Focus Visible ===== */
+      :focus-visible {
+        outline: 3px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+
+      /* ===== Typography ===== */
+      h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      h2 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+      h4 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        line-height: 1.2;
+      }
+      p {
+        margin-bottom: 1rem;
+      }
+      a {
+        color: var(--color-primary);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+
+      /* ===== Layout ===== */
+      .container {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 0 1.5rem;
+      }
+      section {
+        padding: 5rem 0;
+      }
+      .section-title {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+      .section-title h2 {
+        margin-bottom: 0.5rem;
+      }
+
+      /* ===== Buttons ===== */
+      .btn {
+        display: inline-block;
+        padding: 0.875rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        font-family: var(--font-sans);
+        cursor: pointer;
+        border: none;
+        transition:
+          transform 0.15s ease,
+          box-shadow 0.15s ease;
+        text-decoration: none;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        text-decoration: none;
+      }
+      .btn-primary {
+        background: var(--gradient-primary);
+        color: #fff;
+      }
+      .btn-secondary {
+        background: transparent;
+        color: var(--color-primary);
+        border: 2px solid var(--color-primary);
+      }
+      .btn-secondary:hover {
+        background: var(--color-primary);
+        color: #fff;
+      }
+
+      /* ===== Navigation ===== */
+      .navbar {
+        position: sticky;
+        top: 0;
+        background: rgba(248, 250, 252, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid var(--color-border);
+        z-index: 100;
+        padding: 1rem 0;
+      }
+      .navbar .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 1.375rem;
+        font-weight: 700;
+        color: var(--color-dark);
+        text-decoration: none;
+      }
+      .logo svg {
+        width: 32px;
+        height: 32px;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        list-style: none;
+      }
+      .nav-links a {
+        color: var(--color-dark);
+        font-weight: 500;
+        font-size: 0.95rem;
+      }
+      .nav-links a:hover {
+        color: var(--color-primary);
+        text-decoration: none;
+      }
+      .nav-cta .btn {
+        padding: 0.625rem 1.5rem;
+        font-size: 0.9rem;
+      }
+      .nav-toggle {
+        display: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 0.5rem;
+      }
+      .nav-toggle span {
+        display: block;
+        width: 24px;
+        height: 2px;
+        background: var(--color-dark);
+        margin: 5px 0;
+        transition: 0.3s;
+      }
+
+      /* ===== Hero ===== */
+      .hero {
+        padding: 6rem 0 5rem;
+        text-align: center;
+        background: linear-gradient(180deg, var(--color-light) 0%, #eef2ff 100%);
+      }
+      .hero h1 {
+        margin-bottom: 1.5rem;
+      }
+      .hero .subheadline {
+        font-size: 1.25rem;
+        color: var(--color-gray);
+        max-width: 680px;
+        margin: 0 auto 2.5rem;
+        line-height: 1.7;
+      }
+      .hero-ctas {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 3rem;
+      }
+      .hero-ctas .link-secondary {
+        color: var(--color-primary);
+        font-weight: 600;
+      }
+      .social-proof {
+        font-size: 0.95rem;
+        color: var(--color-gray);
+        margin-bottom: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+      .social-proof .dot {
+        width: 8px;
+        height: 8px;
+        background: var(--color-accent);
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .metrics-row {
+        display: flex;
+        justify-content: center;
+        gap: 3rem;
+        flex-wrap: wrap;
+      }
+      .metric {
+        text-align: center;
+      }
+      .metric .value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--color-primary);
+        font-family: var(--font-mono);
+      }
+      .metric .label {
+        font-size: 0.875rem;
+        color: var(--color-gray);
+        margin-top: 0.25rem;
+      }
+
+      /* ===== Features ===== */
+      .features {
+        background: #fff;
+      }
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+      }
+      .feature-card {
+        background: var(--color-light);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        padding: 2rem;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.2s ease;
+      }
+      .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(30, 41, 59, 0.08);
+      }
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.25rem;
+      }
+      .feature-icon svg {
+        width: 24px;
+        height: 24px;
+      }
+      .feature-card h3 {
+        margin-bottom: 0.75rem;
+      }
+      .feature-card p {
+        color: var(--color-gray);
+        margin-bottom: 0;
+        font-size: 0.95rem;
+      }
+
+      /* ===== How It Works ===== */
+      .how-it-works {
+        background: var(--color-light);
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        counter-reset: step;
+      }
+      .step {
+        text-align: center;
+        padding: 2rem;
+        position: relative;
+      }
+      .step-number {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--gradient-primary);
+        color: #fff;
+        font-size: 1.5rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+      }
+      .step h3 {
+        margin-bottom: 0.75rem;
+      }
+      .step p {
+        color: var(--color-gray);
+        font-size: 0.95rem;
+        margin-bottom: 0;
+      }
+
+      /* ===== Pricing ===== */
+      .pricing {
+        background: #fff;
+      }
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+        align-items: start;
+      }
+      .pricing-card {
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        padding: 2.5rem 2rem;
+        text-align: center;
+        background: var(--color-light);
+        transition: transform 0.2s ease;
+      }
+      .pricing-card:hover {
+        transform: translateY(-4px);
+      }
+      .pricing-card.featured {
+        border: 2px solid var(--color-primary);
+        position: relative;
+        background: #fff;
+        box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12);
+      }
+      .pricing-badge {
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--gradient-primary);
+        color: #fff;
+        padding: 0.25rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+      }
+      .pricing-card h3 {
+        margin-bottom: 0.5rem;
+      }
+      .pricing-price {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 1rem 0 0.25rem;
+        color: var(--color-dark);
+      }
+      .pricing-price span {
+        font-size: 1rem;
+        font-weight: 400;
+        color: var(--color-gray);
+      }
+      .pricing-features {
+        list-style: none;
+        margin: 1.5rem 0 2rem;
+        text-align: left;
+      }
+      .pricing-features li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--color-border);
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .pricing-features li::before {
+        content: '';
+        width: 18px;
+        height: 18px;
+        min-width: 18px;
+        background: var(--color-accent);
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: center;
+      }
+      .pricing-card .btn {
+        width: 100%;
+        text-align: center;
+      }
+
+      /* ===== Testimonials ===== */
+      .testimonials {
+        background: var(--color-light);
+      }
+      .testimonials-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+      }
+      .testimonial-card {
+        background: #fff;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        padding: 2rem;
+      }
+      .testimonial-card blockquote {
+        font-size: 1.05rem;
+        line-height: 1.7;
+        color: var(--color-dark);
+        margin-bottom: 1.5rem;
+        font-style: italic;
+      }
+      .testimonial-card blockquote::before {
+        content: '\201C';
+        font-size: 2rem;
+        color: var(--color-primary);
+        line-height: 0;
+        vertical-align: -0.4em;
+        margin-right: 0.1em;
+      }
+      .testimonial-author {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .author-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--gradient-primary);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+      .author-info .name {
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      .author-info .role {
+        font-size: 0.85rem;
+        color: var(--color-gray);
+      }
+
+      /* ===== FAQ ===== */
+      .faq {
+        background: #fff;
+      }
+      .faq-list {
+        max-width: 768px;
+        margin: 0 auto;
+      }
+      .faq-item {
+        border-bottom: 1px solid var(--color-border);
+      }
+      .faq-question {
+        width: 100%;
+        background: none;
+        border: none;
+        padding: 1.25rem 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+        font-family: var(--font-sans);
+        color: var(--color-dark);
+        cursor: pointer;
+        text-align: left;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+      }
+      .faq-question:hover {
+        color: var(--color-primary);
+      }
+      .faq-icon {
+        width: 24px;
+        height: 24px;
+        min-width: 24px;
+        transition: transform 0.25s ease;
+      }
+      .faq-item.active .faq-icon {
+        transform: rotate(45deg);
+      }
+      .faq-answer {
+        max-height: 0;
+        overflow: hidden;
+        transition:
+          max-height 0.3s ease,
+          padding 0.3s ease;
+      }
+      .faq-item.active .faq-answer {
+        max-height: 200px;
+      }
+      .faq-answer p {
+        padding: 0 0 1.25rem;
+        color: var(--color-gray);
+        font-size: 0.95rem;
+        line-height: 1.7;
+        margin-bottom: 0;
+      }
+
+      /* ===== CTA Banner ===== */
+      .cta-banner {
+        background: var(--gradient-primary);
+        color: #fff;
+        text-align: center;
+        padding: 5rem 0;
+      }
+      .cta-banner h2 {
+        color: #fff;
+        margin-bottom: 1rem;
+      }
+      .cta-banner p {
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 1.15rem;
+        margin-bottom: 2rem;
+      }
+      .cta-banner .btn {
+        background: #fff;
+        color: var(--color-primary);
+      }
+      .cta-banner .btn:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+      }
+
+      /* ===== Footer ===== */
+      .footer {
+        background: var(--color-dark);
+        color: #cbd5e1;
+        padding: 4rem 0 2rem;
+      }
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 2fr repeat(4, 1fr);
+        gap: 2rem;
+        margin-bottom: 3rem;
+      }
+      .footer-brand .logo {
+        color: #fff;
+        margin-bottom: 0.75rem;
+      }
+      .footer-brand .logo svg circle {
+        fill: var(--color-primary);
+      }
+      .footer-brand p {
+        font-size: 0.9rem;
+        color: #94a3b8;
+        max-width: 260px;
+      }
+      .footer-col h4 {
+        color: #fff;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 1rem;
+      }
+      .footer-col ul {
+        list-style: none;
+      }
+      .footer-col li {
+        margin-bottom: 0.5rem;
+      }
+      .footer-col a {
+        color: #94a3b8;
+        font-size: 0.9rem;
+      }
+      .footer-col a:hover {
+        color: #fff;
+        text-decoration: none;
+      }
+      .footer-bottom {
+        border-top: 1px solid #334155;
+        padding-top: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      .footer-bottom p {
+        font-size: 0.85rem;
+        color: #64748b;
+        margin-bottom: 0;
+      }
+      .social-links {
+        display: flex;
+        gap: 1rem;
+      }
+      .social-links a {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: #334155;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #94a3b8;
+        transition: background 0.2s;
+      }
+      .social-links a:hover {
+        background: var(--color-primary);
+        color: #fff;
+      }
+      .social-links svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* ===== Reduced Motion ===== */
+      @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+
+      /* ===== Responsive: Tablet ===== */
+      @media (max-width: 960px) {
+        .features-grid,
+        .pricing-grid,
+        .testimonials-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .steps {
+          grid-template-columns: 1fr;
+          max-width: 480px;
+          margin: 0 auto;
+        }
+        .footer-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      /* ===== Responsive: Mobile ===== */
+      @media (max-width: 640px) {
+        h1 {
+          font-size: 2.25rem;
+        }
+        h2 {
+          font-size: 1.75rem;
+        }
+        section {
+          padding: 3rem 0;
+        }
+        .hero {
+          padding: 4rem 0 3rem;
+        }
+        .hero .subheadline {
+          font-size: 1.1rem;
+        }
+        .metrics-row {
+          gap: 1.5rem;
+        }
+        .metric .value {
+          font-size: 1.5rem;
+        }
+        .features-grid,
+        .pricing-grid,
+        .testimonials-grid {
+          grid-template-columns: 1fr;
+        }
+        .footer-grid {
+          grid-template-columns: 1fr;
+        }
+
+        /* Mobile nav */
+        .nav-toggle {
+          display: block;
+        }
+        .nav-links {
+          display: none;
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: var(--color-light);
+          flex-direction: column;
+          padding: 1.5rem;
+          gap: 1rem;
+          border-bottom: 1px solid var(--color-border);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .nav-links.open {
+          display: flex;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Skip to content (accessibility) -->
+    <a href="#main" class="skip-link">Skip to main content</a>
+
+    <!-- Navigation -->
+    <nav class="navbar" aria-label="Main navigation">
+      <div class="container">
+        <a href="#" class="logo" aria-label="CloudPulse home">
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="14" fill="#2563EB" />
+            <polyline
+              points="6,16 11,16 14,8 18,24 21,16 26,16"
+              fill="none"
+              stroke="white"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          CloudPulse
+        </a>
+        <button
+          class="nav-toggle"
+          aria-label="Toggle navigation menu"
+          aria-expanded="false"
+          onclick="
+            document.querySelector('.nav-links').classList.toggle('open');
+            this.setAttribute(
+              'aria-expanded',
+              this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true',
+            );
+          "
+        >
+          <span></span><span></span><span></span>
+        </button>
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#testimonials">Testimonials</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li class="nav-cta"><a href="#hero" class="btn btn-primary">Start Free Trial</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero" id="hero">
+        <div class="container">
+          <h1>Monitor smarter, respond faster.</h1>
+          <p class="subheadline">
+            CloudPulse gives your engineering team real-time visibility into every service, metric,
+            and alert — so you fix issues before users notice.
+          </p>
+          <div class="hero-ctas">
+            <a href="#pricing" class="btn btn-primary">Start Your Free 14-Day Trial</a>
+            <a href="#features" class="link-secondary">See How It Works &darr;</a>
+          </div>
+          <p class="social-proof">
+            <span class="dot" aria-hidden="true"></span> Trusted by 2,000+ engineering teams
+            worldwide
+          </p>
+          <div class="metrics-row">
+            <div class="metric">
+              <div class="value">99.9%</div>
+              <div class="label">Uptime SLA</div>
+            </div>
+            <div class="metric">
+              <div class="value">&lt;2s</div>
+              <div class="label">Alert Latency</div>
+            </div>
+            <div class="metric">
+              <div class="value">500M+</div>
+              <div class="label">Metrics Processed Daily</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="features" id="features">
+        <div class="container">
+          <div class="section-title">
+            <h2>Everything you need to stay ahead of incidents</h2>
+          </div>
+          <div class="features-grid">
+            <!-- Real-Time Dashboards -->
+            <div class="feature-card">
+              <div class="feature-icon" style="background: #eff6ff" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#2563EB"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M3 9h18" />
+                  <path d="M9 21V9" />
+                </svg>
+              </div>
+              <h3>Real-Time Dashboards</h3>
+              <p>
+                Visualize every metric across all your services in one unified dashboard. Custom
+                layouts, live data, zero lag.
+              </p>
+            </div>
+            <!-- Intelligent Alerting -->
+            <div class="feature-card">
+              <div class="feature-icon" style="background: #f5f3ff" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#7C3AED"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+              </div>
+              <h3>Intelligent Alerting</h3>
+              <p>
+                ML-powered anomaly detection cuts through noise. Get alerted on what matters,
+                silence what doesn't.
+              </p>
+            </div>
+            <!-- Incident Timeline -->
+            <div class="feature-card">
+              <div class="feature-icon" style="background: #ecfdf5" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#10B981"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </div>
+              <h3>Incident Timeline</h3>
+              <p>
+                Trace every incident from first signal to resolution. Automatic root-cause
+                correlation saves hours of debugging.
+              </p>
+            </div>
+            <!-- Infrastructure Mapping -->
+            <div class="feature-card">
+              <div class="feature-icon" style="background: #eff6ff" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#2563EB"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="2" y="2" width="8" height="8" rx="1" />
+                  <rect x="14" y="2" width="8" height="8" rx="1" />
+                  <rect x="8" y="14" width="8" height="8" rx="1" />
+                  <path d="M6 10v2a2 2 0 0 0 2 2h0" />
+                  <path d="M18 10v2a2 2 0 0 1-2 2h0" />
+                </svg>
+              </div>
+              <h3>Infrastructure Mapping</h3>
+              <p>
+                Auto-discover your topology. See dependencies, traffic flow, and bottlenecks at a
+                glance.
+              </p>
+            </div>
+            <!-- Log Aggregation -->
+            <div class="feature-card">
+              <div class="feature-icon" style="background: #f5f3ff" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#7C3AED"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                </svg>
+              </div>
+              <h3>Log Aggregation</h3>
+              <p>
+                Search, filter, and correlate logs across every service. Full-text search returns
+                results in milliseconds.
+              </p>
+            </div>
+            <!-- Team Collaboration -->
+            <div class="feature-card">
+              <div class="feature-icon" style="background: #ecfdf5" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#10B981"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <h3>Team Collaboration</h3>
+              <p>
+                Shared runbooks, on-call rotations, and Slack/Teams integration keep your whole team
+                in sync.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="how-it-works" id="how-it-works">
+        <div class="container">
+          <div class="section-title">
+            <h2>Up and running in 5 minutes</h2>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <div class="step-number" aria-hidden="true">1</div>
+              <h3>Install the Agent</h3>
+              <p>
+                One command deploys our lightweight agent. Supports AWS, GCP, Azure, Kubernetes, and
+                bare metal.
+              </p>
+            </div>
+            <div class="step">
+              <div class="step-number" aria-hidden="true">2</div>
+              <h3>Connect Your Stack</h3>
+              <p>
+                200+ integrations out of the box. Datadog, PagerDuty, Terraform, GitHub Actions — we
+                play nice with your tools.
+              </p>
+            </div>
+            <div class="step">
+              <div class="step-number" aria-hidden="true">3</div>
+              <h3>Start Monitoring</h3>
+              <p>
+                Dashboards auto-populate. Alerts configure themselves based on your baseline. You're
+                live.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing -->
+      <section class="pricing" id="pricing">
+        <div class="container">
+          <div class="section-title">
+            <h2>Simple pricing that scales with you</h2>
+          </div>
+          <div class="pricing-grid">
+            <!-- Starter -->
+            <div class="pricing-card">
+              <h3>Starter</h3>
+              <div class="pricing-price">Free</div>
+              <ul class="pricing-features">
+                <li>Up to 5 hosts</li>
+                <li>1-day data retention</li>
+                <li>3 dashboards</li>
+                <li>Community support</li>
+              </ul>
+              <a href="#" class="btn btn-secondary">Get Started Free</a>
+            </div>
+            <!-- Pro (featured) -->
+            <div class="pricing-card featured">
+              <span class="pricing-badge">Most Popular</span>
+              <h3>Pro</h3>
+              <div class="pricing-price">$29<span>/host/mo</span></div>
+              <ul class="pricing-features">
+                <li>Unlimited hosts</li>
+                <li>30-day data retention</li>
+                <li>Unlimited dashboards</li>
+                <li>Anomaly detection</li>
+                <li>Slack &amp; Teams integration</li>
+                <li>Priority email support</li>
+              </ul>
+              <a href="#" class="btn btn-primary">Start Free Trial</a>
+            </div>
+            <!-- Enterprise -->
+            <div class="pricing-card">
+              <h3>Enterprise</h3>
+              <div class="pricing-price">Custom</div>
+              <ul class="pricing-features">
+                <li>Everything in Pro</li>
+                <li>365-day data retention</li>
+                <li>SSO &amp; SAML</li>
+                <li>Dedicated account manager</li>
+                <li>Custom SLA (99.99%)</li>
+                <li>On-premises deployment</li>
+              </ul>
+              <a href="#" class="btn btn-secondary">Contact Sales</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials -->
+      <section class="testimonials" id="testimonials">
+        <div class="container">
+          <div class="section-title">
+            <h2>Trusted by teams who ship fast</h2>
+          </div>
+          <div class="testimonials-grid">
+            <div class="testimonial-card">
+              <blockquote>
+                CloudPulse cut our MTTR by 68%. The anomaly detection alone paid for itself in the
+                first month.
+              </blockquote>
+              <div class="testimonial-author">
+                <div class="author-avatar" aria-hidden="true">SC</div>
+                <div class="author-info">
+                  <div class="name">Sarah Chen</div>
+                  <div class="role">VP Engineering, Shipfast</div>
+                </div>
+              </div>
+            </div>
+            <div class="testimonial-card">
+              <blockquote>
+                We migrated from three different monitoring tools to CloudPulse. Simpler, faster,
+                and half the cost.
+              </blockquote>
+              <div class="testimonial-author">
+                <div class="author-avatar" aria-hidden="true">MR</div>
+                <div class="author-info">
+                  <div class="name">Marcus Rivera</div>
+                  <div class="role">SRE Lead, Stackline</div>
+                </div>
+              </div>
+            </div>
+            <div class="testimonial-card">
+              <blockquote>
+                The incident timeline feature is a game-changer. We went from 45-minute war rooms to
+                10-minute fixes.
+              </blockquote>
+              <div class="testimonial-author">
+                <div class="author-avatar" aria-hidden="true">PS</div>
+                <div class="author-info">
+                  <div class="name">Priya Sharma</div>
+                  <div class="role">CTO, Launchpad</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="faq" id="faq">
+        <div class="container">
+          <div class="section-title">
+            <h2>Frequently asked questions</h2>
+          </div>
+          <div class="faq-list" role="list">
+            <div class="faq-item" role="listitem">
+              <button
+                class="faq-question"
+                aria-expanded="false"
+                onclick="
+                  this.parentElement.classList.toggle('active');
+                  this.setAttribute(
+                    'aria-expanded',
+                    this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true',
+                  );
+                "
+              >
+                How long is the free trial?
+                <svg
+                  class="faq-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+              <div class="faq-answer" role="region">
+                <p>14 days, full Pro features, no credit card required.</p>
+              </div>
+            </div>
+            <div class="faq-item" role="listitem">
+              <button
+                class="faq-question"
+                aria-expanded="false"
+                onclick="
+                  this.parentElement.classList.toggle('active');
+                  this.setAttribute(
+                    'aria-expanded',
+                    this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true',
+                  );
+                "
+              >
+                What integrations do you support?
+                <svg
+                  class="faq-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+              <div class="faq-answer" role="region">
+                <p>
+                  200+ out of the box, including AWS, GCP, Azure, Kubernetes, Datadog, PagerDuty,
+                  Slack, Teams, GitHub Actions, Terraform, and more. See our integrations page for
+                  the full list.
+                </p>
+              </div>
+            </div>
+            <div class="faq-item" role="listitem">
+              <button
+                class="faq-question"
+                aria-expanded="false"
+                onclick="
+                  this.parentElement.classList.toggle('active');
+                  this.setAttribute(
+                    'aria-expanded',
+                    this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true',
+                  );
+                "
+              >
+                Is my data secure?
+                <svg
+                  class="faq-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+              <div class="faq-answer" role="region">
+                <p>
+                  Yes. SOC 2 Type II certified, TLS 1.3 in transit, AES-256 at rest. Your data never
+                  leaves your chosen region.
+                </p>
+              </div>
+            </div>
+            <div class="faq-item" role="listitem">
+              <button
+                class="faq-question"
+                aria-expanded="false"
+                onclick="
+                  this.parentElement.classList.toggle('active');
+                  this.setAttribute(
+                    'aria-expanded',
+                    this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true',
+                  );
+                "
+              >
+                Can I self-host CloudPulse?
+                <svg
+                  class="faq-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+              <div class="faq-answer" role="region">
+                <p>
+                  Enterprise plans include an on-premises deployment option. Contact sales for
+                  details.
+                </p>
+              </div>
+            </div>
+            <div class="faq-item" role="listitem">
+              <button
+                class="faq-question"
+                aria-expanded="false"
+                onclick="
+                  this.parentElement.classList.toggle('active');
+                  this.setAttribute(
+                    'aria-expanded',
+                    this.getAttribute('aria-expanded') === 'true' ? 'false' : 'true',
+                  );
+                "
+              >
+                How does anomaly detection work?
+                <svg
+                  class="faq-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+              <div class="faq-answer" role="region">
+                <p>
+                  Our ML models learn your baseline metrics over 7 days, then flag statistically
+                  significant deviations. No manual threshold setting required.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Banner -->
+      <section class="cta-banner">
+        <div class="container">
+          <h2>Ready to monitor smarter?</h2>
+          <p>
+            Join 2,000+ engineering teams already using CloudPulse. Start your free 14-day trial
+            today.
+          </p>
+          <a href="#pricing" class="btn">Start Your Free Trial</a>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-brand">
+            <a href="#" class="logo" aria-label="CloudPulse home">
+              <svg viewBox="0 0 32 32" aria-hidden="true">
+                <circle cx="16" cy="16" r="14" fill="#2563EB" />
+                <polyline
+                  points="6,16 11,16 14,8 18,24 21,16 26,16"
+                  fill="none"
+                  stroke="white"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              CloudPulse
+            </a>
+            <p>
+              Monitor smarter, respond faster. Real-time cloud monitoring for modern engineering
+              teams.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#features">Features</a></li>
+              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="#">Integrations</a></li>
+              <li><a href="#">Changelog</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#">About</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Blog</a></li>
+              <li><a href="#">Press</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Resources</h4>
+            <ul>
+              <li><a href="#">Documentation</a></li>
+              <li><a href="#">API Reference</a></li>
+              <li><a href="#">Status Page</a></li>
+              <li><a href="#">Community</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Legal</h4>
+            <ul>
+              <li><a href="#">Privacy Policy</a></li>
+              <li><a href="#">Terms of Service</a></li>
+              <li><a href="#">Security</a></li>
+              <li><a href="#">GDPR</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p>&copy; 2026 CloudPulse, Inc. All rights reserved.</p>
+          <div class="social-links">
+            <a href="#" aria-label="GitHub">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"
+                />
+              </svg>
+            </a>
+            <a href="#" aria-label="Twitter">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                />
+              </svg>
+            </a>
+            <a href="#" aria-label="LinkedIn">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.064 2.064 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"
+                />
+              </svg>
+            </a>
+            <a href="#" aria-label="Discord">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -1,0 +1,8 @@
+{"timestamp":"2026-04-15T04:05:58.127Z","event":"node_advance","command":"let product_name","nodeId":"n1","nodeKind":"let","nodePath":"0","durationMs":1}
+{"timestamp":"2026-04-15T04:05:58.129Z","event":"node_advance","command":"let tagline","nodeId":"n2","nodeKind":"let","nodePath":"1","durationMs":0}
+{"timestamp":"2026-04-15T04:05:58.131Z","event":"node_advance","command":"let primary_color","nodeId":"n3","nodeKind":"let","nodePath":"2","durationMs":1}
+{"timestamp":"2026-04-15T04:05:58.131Z","event":"node_advance","command":"let secondary_color","nodeId":"n4","nodeKind":"let","nodePath":"3","durationMs":0}
+{"timestamp":"2026-04-15T04:05:58.132Z","event":"node_advance","command":"let accent_color","nodeId":"n5","nodeKind":"let","nodePath":"4","durationMs":0}
+{"timestamp":"2026-04-15T04:05:58.134Z","event":"node_advance","command":"let dark_color","nodeId":"n6","nodeKind":"let","nodePath":"5","durationMs":0}
+{"timestamp":"2026-04-15T04:05:58.134Z","event":"node_advance","command":"let light_color","nodeId":"n7","nodeKind":"let","nodePath":"6","durationMs":0}
+{"timestamp":"2026-04-15T04:05:58.135Z","event":"node_advance","command":"prompt: |","nodeId":"n8","nodeKind":"prompt","nodePath":"7","durationMs":0}

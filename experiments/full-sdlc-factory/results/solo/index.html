@@ -1,0 +1,1769 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudPulse — Cloud Monitoring That Scales With You</title>
+    <meta
+      name="description"
+      content="CloudPulse provides real-time cloud monitoring, intelligent alerting, and unified dashboards across AWS, Azure, and GCP."
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --blue-600: #2563eb;
+        --blue-700: #1d4ed8;
+        --blue-800: #1e40af;
+        --blue-50: #eff6ff;
+        --gray-50: #f9fafb;
+        --gray-100: #f3f4f6;
+        --gray-200: #e5e7eb;
+        --gray-300: #d1d5db;
+        --gray-500: #6b7280;
+        --gray-600: #4b5563;
+        --gray-700: #374151;
+        --gray-800: #1f2937;
+        --gray-900: #111827;
+        --white: #ffffff;
+        --green-500: #22c55e;
+        --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        --radius: 8px;
+        --radius-lg: 12px;
+        --max-w: 1200px;
+        --transition: 150ms ease;
+      }
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 80px;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        color: var(--gray-800);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      ul {
+        list-style: none;
+      }
+      img {
+        max-width: 100%;
+        display: block;
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
+        border: none;
+        background: none;
+      }
+      h1,
+      h2,
+      h3,
+      h4 {
+        line-height: 1.2;
+      }
+
+      /* Skip link */
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 16px;
+        background: var(--blue-600);
+        color: var(--white);
+        padding: 8px 16px;
+        border-radius: var(--radius);
+        z-index: 1000;
+        font-weight: 600;
+      }
+      .skip-link:focus {
+        top: 16px;
+      }
+
+      /* Container */
+      .container {
+        max-width: var(--max-w);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Nav */
+      .nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--gray-200);
+        transition: box-shadow var(--transition);
+      }
+      .nav.scrolled {
+        box-shadow: var(--shadow-md);
+      }
+      .nav__inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 72px;
+        max-width: var(--max-w);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      .nav__logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--gray-900);
+      }
+      .nav__logo svg {
+        flex-shrink: 0;
+      }
+      .nav__links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav__links a {
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--gray-600);
+        transition: color var(--transition);
+      }
+      .nav__links a:hover,
+      .nav__links a:focus-visible {
+        color: var(--blue-600);
+      }
+      .nav__cta {
+        background: var(--blue-600);
+        color: var(--white);
+        padding: 10px 20px;
+        border-radius: var(--radius);
+        font-weight: 600;
+        font-size: 0.9375rem;
+        transition: background var(--transition);
+      }
+      .nav__cta:hover,
+      .nav__cta:focus-visible {
+        background: var(--blue-700);
+      }
+      .nav__toggle {
+        display: none;
+        flex-direction: column;
+        gap: 5px;
+        padding: 4px;
+      }
+      .nav__toggle span {
+        display: block;
+        width: 24px;
+        height: 2px;
+        background: var(--gray-700);
+        border-radius: 2px;
+        transition:
+          transform var(--transition),
+          opacity var(--transition);
+      }
+
+      /* Hero */
+      .hero {
+        padding: 140px 0 80px;
+        background: linear-gradient(135deg, var(--blue-50) 0%, var(--white) 60%);
+        text-align: center;
+      }
+      .hero__badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 24px;
+      }
+      .hero__badge span {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: var(--green-500);
+        border-radius: 50%;
+      }
+      .hero h1 {
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        font-weight: 800;
+        color: var(--gray-900);
+        max-width: 780px;
+        margin: 0 auto 20px;
+      }
+      .hero h1 em {
+        font-style: normal;
+        color: var(--blue-600);
+      }
+      .hero p {
+        font-size: clamp(1rem, 2vw, 1.25rem);
+        color: var(--gray-600);
+        max-width: 600px;
+        margin: 0 auto 36px;
+      }
+      .hero__actions {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 14px 28px;
+        border-radius: var(--radius);
+        font-weight: 600;
+        font-size: 1rem;
+        transition:
+          background var(--transition),
+          box-shadow var(--transition);
+      }
+      .btn--primary {
+        background: var(--blue-600);
+        color: var(--white);
+      }
+      .btn--primary:hover,
+      .btn--primary:focus-visible {
+        background: var(--blue-700);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+      }
+      .btn--secondary {
+        background: var(--white);
+        color: var(--gray-700);
+        border: 1px solid var(--gray-300);
+      }
+      .btn--secondary:hover,
+      .btn--secondary:focus-visible {
+        background: var(--gray-50);
+        border-color: var(--gray-400);
+      }
+      .hero__stats {
+        display: flex;
+        justify-content: center;
+        gap: 48px;
+        margin-top: 56px;
+        flex-wrap: wrap;
+      }
+      .hero__stat {
+        text-align: center;
+      }
+      .hero__stat strong {
+        display: block;
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: var(--gray-900);
+      }
+      .hero__stat span {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+      }
+
+      /* Section shared */
+      .section {
+        padding: 96px 0;
+      }
+      .section--alt {
+        background: var(--gray-50);
+      }
+      .section__header {
+        text-align: center;
+        max-width: 640px;
+        margin: 0 auto 56px;
+      }
+      .section__label {
+        display: inline-block;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--blue-600);
+        margin-bottom: 12px;
+      }
+      .section__title {
+        font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+        font-weight: 800;
+        color: var(--gray-900);
+        margin-bottom: 16px;
+      }
+      .section__desc {
+        font-size: 1.0625rem;
+        color: var(--gray-500);
+      }
+
+      /* Features */
+      .features__grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .feature-card {
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        transition:
+          box-shadow var(--transition),
+          transform var(--transition);
+      }
+      .feature-card:hover {
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+      }
+      .feature-card__icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius);
+        background: var(--blue-50);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        color: var(--blue-600);
+      }
+      .feature-card h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 8px;
+      }
+      .feature-card p {
+        font-size: 0.9375rem;
+        color: var(--gray-500);
+        line-height: 1.6;
+      }
+
+      /* Pricing */
+      .pricing__grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+      .price-card {
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        padding: 36px;
+        position: relative;
+      }
+      .price-card--featured {
+        border-color: var(--blue-600);
+        box-shadow: var(--shadow-lg);
+      }
+      .price-card__badge {
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--blue-600);
+        color: var(--white);
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 4px 16px;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .price-card h3 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 4px;
+      }
+      .price-card__desc {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+        margin-bottom: 20px;
+      }
+      .price-card__price {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--gray-900);
+        margin-bottom: 4px;
+      }
+      .price-card__price span {
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--gray-500);
+      }
+      .price-card__period {
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+        margin-bottom: 28px;
+      }
+      .price-card__features {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 28px;
+      }
+      .price-card__features li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 0.9375rem;
+        color: var(--gray-700);
+      }
+      .price-card__features li svg {
+        flex-shrink: 0;
+        margin-top: 3px;
+        color: var(--blue-600);
+      }
+      .price-card .btn {
+        width: 100%;
+        text-align: center;
+      }
+
+      /* Testimonials */
+      .testimonials__grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .testimonial-card {
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+      }
+      .testimonial-card__stars {
+        display: flex;
+        gap: 2px;
+        margin-bottom: 16px;
+        color: #fbbf24;
+      }
+      .testimonial-card blockquote {
+        font-size: 1rem;
+        color: var(--gray-700);
+        line-height: 1.7;
+        flex: 1;
+        margin-bottom: 20px;
+      }
+      .testimonial-card__author {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-top: 1px solid var(--gray-100);
+        padding-top: 20px;
+      }
+      .testimonial-card__avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: var(--blue-50);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: var(--blue-600);
+        font-size: 0.875rem;
+        flex-shrink: 0;
+      }
+      .testimonial-card__name {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: var(--gray-900);
+      }
+      .testimonial-card__role {
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+      }
+
+      /* Integrations */
+      .integrations__logos {
+        display: flex;
+        justify-content: center;
+        gap: 48px;
+        flex-wrap: wrap;
+        margin-bottom: 40px;
+      }
+      .integration-logo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+      .integration-logo__icon {
+        width: 80px;
+        height: 80px;
+        border-radius: var(--radius-lg);
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: box-shadow var(--transition);
+      }
+      .integration-logo__icon:hover {
+        box-shadow: var(--shadow-md);
+      }
+      .integration-logo span {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-700);
+      }
+      .integrations__text {
+        text-align: center;
+        font-size: 1rem;
+        color: var(--gray-500);
+        max-width: 560px;
+        margin: 0 auto;
+      }
+
+      /* FAQ */
+      .faq__list {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .faq__item {
+        border-bottom: 1px solid var(--gray-200);
+      }
+      .faq__item:first-child {
+        border-top: 1px solid var(--gray-200);
+      }
+      .faq__question {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 0;
+        font-size: 1.0625rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        text-align: left;
+        background: none;
+        cursor: pointer;
+        gap: 16px;
+      }
+      .faq__question:hover {
+        color: var(--blue-600);
+      }
+      .faq__question svg {
+        flex-shrink: 0;
+        transition: transform 0.2s ease;
+        color: var(--gray-500);
+      }
+      .faq__question[aria-expanded='true'] svg {
+        transform: rotate(180deg);
+      }
+      .faq__answer {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+      .faq__answer p {
+        padding: 0 0 20px;
+        font-size: 0.9375rem;
+        color: var(--gray-600);
+        line-height: 1.7;
+      }
+
+      /* CTA Banner */
+      .cta-banner {
+        padding: 96px 0;
+        background: linear-gradient(135deg, var(--blue-600) 0%, var(--blue-800) 100%);
+        text-align: center;
+        color: var(--white);
+      }
+      .cta-banner h2 {
+        font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+        font-weight: 800;
+        margin-bottom: 16px;
+      }
+      .cta-banner p {
+        font-size: 1.0625rem;
+        opacity: 0.85;
+        max-width: 540px;
+        margin: 0 auto 36px;
+      }
+      .cta-banner .btn--white {
+        background: var(--white);
+        color: var(--blue-700);
+        padding: 14px 32px;
+        font-weight: 700;
+      }
+      .cta-banner .btn--white:hover,
+      .cta-banner .btn--white:focus-visible {
+        background: var(--blue-50);
+      }
+
+      /* Footer */
+      .footer {
+        background: var(--gray-900);
+        color: var(--gray-300);
+        padding: 64px 0 32px;
+      }
+      .footer__grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 48px;
+        margin-bottom: 48px;
+      }
+      .footer__brand p {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+        margin-top: 12px;
+        max-width: 280px;
+        line-height: 1.6;
+      }
+      .footer__col h4 {
+        font-size: 0.8125rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--gray-400);
+        margin-bottom: 16px;
+      }
+      .footer__col ul {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .footer__col a {
+        font-size: 0.875rem;
+        color: var(--gray-400);
+        transition: color var(--transition);
+      }
+      .footer__col a:hover,
+      .footer__col a:focus-visible {
+        color: var(--white);
+      }
+      .footer__bottom {
+        border-top: 1px solid var(--gray-800);
+        padding-top: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .footer__social {
+        display: flex;
+        gap: 16px;
+      }
+      .footer__social a {
+        color: var(--gray-500);
+        transition: color var(--transition);
+      }
+      .footer__social a:hover,
+      .footer__social a:focus-visible {
+        color: var(--white);
+      }
+
+      /* Focus visible */
+      :focus-visible {
+        outline: 2px solid var(--blue-600);
+        outline-offset: 2px;
+      }
+
+      /* Responsive */
+      @media (max-width: 1024px) {
+        .features__grid,
+        .pricing__grid,
+        .testimonials__grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .footer__grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      @media (max-width: 768px) {
+        .nav__links,
+        .nav__cta {
+          display: none;
+        }
+        .nav__toggle {
+          display: flex;
+        }
+        .nav.open .nav__links {
+          display: flex;
+          flex-direction: column;
+          position: absolute;
+          top: 72px;
+          left: 0;
+          right: 0;
+          background: var(--white);
+          padding: 24px;
+          border-bottom: 1px solid var(--gray-200);
+          box-shadow: var(--shadow-lg);
+          gap: 16px;
+        }
+        .nav.open .nav__cta {
+          display: inline-flex;
+          position: absolute;
+          top: calc(72px + 200px);
+          left: 24px;
+          right: 24px;
+        }
+        .nav.open .nav__links a {
+          font-size: 1.0625rem;
+        }
+        .nav__toggle[aria-expanded='true'] span:nth-child(1) {
+          transform: translateY(7px) rotate(45deg);
+        }
+        .nav__toggle[aria-expanded='true'] span:nth-child(2) {
+          opacity: 0;
+        }
+        .nav__toggle[aria-expanded='true'] span:nth-child(3) {
+          transform: translateY(-7px) rotate(-45deg);
+        }
+        .features__grid,
+        .pricing__grid,
+        .testimonials__grid {
+          grid-template-columns: 1fr;
+        }
+        .hero__stats {
+          gap: 32px;
+        }
+        .footer__grid {
+          grid-template-columns: 1fr;
+        }
+        .integrations__logos {
+          gap: 32px;
+        }
+        .section {
+          padding: 64px 0;
+        }
+        .hero {
+          padding: 110px 0 60px;
+        }
+      }
+
+      /* Reduced motion */
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0s !important;
+          animation-duration: 0s !important;
+        }
+      }
+
+      /* High contrast */
+      @media (forced-colors: active) {
+        .btn,
+        .nav__cta,
+        .price-card__badge {
+          border: 1px solid ButtonText;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
+
+    <!-- Navigation -->
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+      <div class="nav__inner">
+        <a href="#" class="nav__logo" aria-label="CloudPulse home">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect width="32" height="32" rx="8" fill="#2563EB" />
+            <path
+              d="M10 20a5 5 0 0 1-.5-9.96A7 7 0 0 1 23 12h.5a4.5 4.5 0 0 1 .22 9H10z"
+              fill="#fff"
+            />
+            <circle cx="16" cy="14" r="2" fill="#2563EB" />
+            <path d="M16 16v4" stroke="#2563EB" stroke-width="2" stroke-linecap="round" />
+          </svg>
+          CloudPulse
+        </a>
+        <div class="nav__links" id="nav-menu">
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#testimonials">Testimonials</a>
+          <a href="#integrations">Integrations</a>
+          <a href="#faq">FAQ</a>
+        </div>
+        <a href="#cta" class="nav__cta">Start Free Trial</a>
+        <button
+          class="nav__toggle"
+          id="nav-toggle"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+          aria-label="Toggle navigation menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </nav>
+
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="container">
+          <div class="hero__badge">
+            <span aria-hidden="true"></span> Now with AI-powered anomaly detection
+          </div>
+          <h1>Monitor your <em>entire cloud</em> from a single pane of glass</h1>
+          <p>
+            Real-time observability, intelligent alerting, and unified dashboards across every cloud
+            provider. Trusted by 2,000+ engineering teams.
+          </p>
+          <div class="hero__actions">
+            <a href="#cta" class="btn btn--primary">Start Free Trial</a>
+            <a href="#features" class="btn btn--secondary">See How It Works</a>
+          </div>
+          <div class="hero__stats" aria-label="Key statistics">
+            <div class="hero__stat"><strong>99.99%</strong><span>Uptime SLA</span></div>
+            <div class="hero__stat"><strong>2,000+</strong><span>Teams</span></div>
+            <div class="hero__stat"><strong>&lt;30s</strong><span>Alert Latency</span></div>
+            <div class="hero__stat"><strong>50M+</strong><span>Metrics/Day</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="section" id="features">
+        <div class="container">
+          <header class="section__header">
+            <span class="section__label">Features</span>
+            <h2 class="section__title">Everything you need to keep your cloud healthy</h2>
+            <p class="section__desc">
+              Powerful tools designed for modern infrastructure teams, from startup to enterprise.
+            </p>
+          </header>
+          <div class="features__grid">
+            <article class="feature-card">
+              <div class="feature-card__icon" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+              </div>
+              <h3>Real-Time Monitoring</h3>
+              <p>
+                Track metrics, logs, and traces in real time with sub-second granularity. Instantly
+                surface performance regressions across your entire stack.
+              </p>
+            </article>
+            <article class="feature-card">
+              <div class="feature-card__icon" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+              </div>
+              <h3>Intelligent Alerting</h3>
+              <p>
+                AI-powered anomaly detection with smart deduplication. Route alerts to the right
+                team via Slack, PagerDuty, or custom webhooks.
+              </p>
+            </article>
+            <article class="feature-card">
+              <div class="feature-card__icon" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
+              </div>
+              <h3>Custom Dashboards</h3>
+              <p>
+                Build beautiful, shareable dashboards with drag-and-drop widgets. Combine metrics
+                from any source into a unified operational view.
+              </p>
+            </article>
+            <article class="feature-card">
+              <div class="feature-card__icon" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M12 2a10 10 0 1 0 10 10H12V2z" />
+                  <path d="M20.66 7A10 10 0 0 0 14 2.05V10h8a10 10 0 0 0-1.34-3z" />
+                </svg>
+              </div>
+              <h3>Multi-Cloud Support</h3>
+              <p>
+                First-class integrations with AWS, Azure, and GCP. Correlate data across providers
+                and eliminate monitoring silos.
+              </p>
+            </article>
+            <article class="feature-card">
+              <div class="feature-card__icon" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <h3>Team Collaboration</h3>
+              <p>
+                Shared notebooks, incident timelines, and role-based access. Keep your entire team
+                aligned during outages and deployments.
+              </p>
+            </article>
+            <article class="feature-card">
+              <div class="feature-card__icon" aria-hidden="true">
+                <svg
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+              </div>
+              <h3>API Access</h3>
+              <p>
+                Full REST and GraphQL APIs for automation, custom integrations, and data export.
+                Build on top of CloudPulse with comprehensive SDKs.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing -->
+      <section class="section section--alt" id="pricing">
+        <div class="container">
+          <header class="section__header">
+            <span class="section__label">Pricing</span>
+            <h2 class="section__title">Simple, transparent pricing</h2>
+            <p class="section__desc">
+              Start free, scale as you grow. No hidden fees, no surprises.
+            </p>
+          </header>
+          <div class="pricing__grid">
+            <article class="price-card">
+              <h3>Starter</h3>
+              <p class="price-card__desc">For small teams getting started</p>
+              <div class="price-card__price">$49<span>/mo</span></div>
+              <p class="price-card__period">per 10 hosts, billed annually</p>
+              <ul class="price-card__features" role="list">
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >Up to 50 hosts
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >Real-time monitoring
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >5 custom dashboards
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >Email &amp; Slack alerts
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >7-day data retention
+                </li>
+              </ul>
+              <a href="#cta" class="btn btn--secondary">Get Started</a>
+            </article>
+            <article class="price-card price-card--featured">
+              <div class="price-card__badge">Most Popular</div>
+              <h3>Pro</h3>
+              <p class="price-card__desc">For growing engineering teams</p>
+              <div class="price-card__price">$149<span>/mo</span></div>
+              <p class="price-card__period">per 10 hosts, billed annually</p>
+              <ul class="price-card__features" role="list">
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >Unlimited hosts
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >AI anomaly detection
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >Unlimited dashboards
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >Multi-cloud support
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >30-day data retention
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >REST &amp; GraphQL API
+                </li>
+              </ul>
+              <a href="#cta" class="btn btn--primary">Start Free Trial</a>
+            </article>
+            <article class="price-card">
+              <h3>Enterprise</h3>
+              <p class="price-card__desc">For large-scale operations</p>
+              <div class="price-card__price">Custom</div>
+              <p class="price-card__period">tailored to your infrastructure</p>
+              <ul class="price-card__features" role="list">
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >Everything in Pro
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >SSO &amp; SAML
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >Dedicated account manager
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >Custom data retention
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >99.99% uptime SLA
+                </li>
+                <li>
+                  <svg
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="4 8.5 7 11.5 12.5 5" /></svg
+                  >On-premise deployment
+                </li>
+              </ul>
+              <a href="#cta" class="btn btn--secondary">Contact Sales</a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials -->
+      <section class="section" id="testimonials">
+        <div class="container">
+          <header class="section__header">
+            <span class="section__label">Testimonials</span>
+            <h2 class="section__title">Loved by engineering teams worldwide</h2>
+            <p class="section__desc">
+              See why thousands of teams trust CloudPulse for their cloud monitoring.
+            </p>
+          </header>
+          <div class="testimonials__grid">
+            <article class="testimonial-card">
+              <div class="testimonial-card__stars" aria-label="5 out of 5 stars">
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+              </div>
+              <blockquote>
+                &ldquo;CloudPulse cut our mean time to detection by 73%. The unified dashboard
+                across AWS and GCP means we finally have one source of truth for our entire
+                infrastructure.&rdquo;
+              </blockquote>
+              <div class="testimonial-card__author">
+                <div class="testimonial-card__avatar" aria-hidden="true">SR</div>
+                <div>
+                  <div class="testimonial-card__name">Sarah Rodriguez</div>
+                  <div class="testimonial-card__role">VP of Engineering, Finova</div>
+                </div>
+              </div>
+            </article>
+            <article class="testimonial-card">
+              <div class="testimonial-card__stars" aria-label="5 out of 5 stars">
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+              </div>
+              <blockquote>
+                &ldquo;The alerting intelligence is remarkable. We went from 200+ daily noise alerts
+                to under 15 actionable ones. Our on-call engineers finally get to sleep through the
+                night.&rdquo;
+              </blockquote>
+              <div class="testimonial-card__author">
+                <div class="testimonial-card__avatar" aria-hidden="true">MK</div>
+                <div>
+                  <div class="testimonial-card__name">Marcus Kim</div>
+                  <div class="testimonial-card__role">SRE Lead, Streamline Health</div>
+                </div>
+              </div>
+            </article>
+            <article class="testimonial-card">
+              <div class="testimonial-card__stars" aria-label="5 out of 5 stars">
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+                <svg width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M9 1.5l2.1 4.3 4.7.7-3.4 3.3.8 4.7L9 12.2 4.8 14.5l.8-4.7L2.2 6.5l4.7-.7z"
+                  />
+                </svg>
+              </div>
+              <blockquote>
+                &ldquo;We evaluated five monitoring platforms before choosing CloudPulse. The API is
+                best-in-class, and the team collaboration features made it an easy decision for our
+                40-person platform team.&rdquo;
+              </blockquote>
+              <div class="testimonial-card__author">
+                <div class="testimonial-card__avatar" aria-hidden="true">AP</div>
+                <div>
+                  <div class="testimonial-card__name">Aisha Patel</div>
+                  <div class="testimonial-card__role">CTO, NexGen Logistics</div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Integrations -->
+      <section class="section section--alt" id="integrations">
+        <div class="container">
+          <header class="section__header">
+            <span class="section__label">Integrations</span>
+            <h2 class="section__title">Works with every major cloud provider</h2>
+            <p class="section__desc">Native integrations that deploy in minutes, not days.</p>
+          </header>
+          <div class="integrations__logos">
+            <div class="integration-logo">
+              <div class="integration-logo__icon" aria-hidden="true">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                  <path
+                    d="M15.6 28.8l-2.4 2.6.8.4 2.4-2.8-.8-.2zm-4.2-3.4l-1 1 4.4 4.2 1-1-4.4-4.2zm12.2 3.4l-.8.2 2.4 2.8.8-.4-2.4-2.6zm4.2-3.4l-4.4 4.2 1 1 4.4-4.2-1-1z"
+                    fill="#F90"
+                  />
+                  <path
+                    d="M20 8c-6.6 0-12 4.5-12 10 0 3.2 1.8 6.2 4.8 8.2l-.6 3.4 3.8-1.8c1.3.4 2.6.6 4 .6 6.6 0 12-4.5 12-10S26.6 8 20 8z"
+                    fill="#F90"
+                  />
+                  <path
+                    d="M20 10c-5.5 0-10 3.8-10 8.4 0 2.8 1.6 5.2 4 6.8l.4.2-.4 2 2.2-1 .4.1c1.1.3 2.2.5 3.4.5 5.5 0 10-3.8 10-8.4 0-4.8-4.5-8.6-10-8.6z"
+                    fill="#252F3E"
+                  />
+                  <text
+                    x="13"
+                    y="22"
+                    font-family="Arial,sans-serif"
+                    font-size="7"
+                    font-weight="700"
+                    fill="#F90"
+                  >
+                    aws
+                  </text>
+                </svg>
+              </div>
+              <span>Amazon Web Services</span>
+            </div>
+            <div class="integration-logo">
+              <div class="integration-logo__icon" aria-hidden="true">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                  <rect x="4" y="10" width="14" height="14" rx="1" fill="#0078D4" />
+                  <rect x="20" y="10" width="14" height="14" rx="1" fill="#0078D4" opacity=".7" />
+                  <rect x="4" y="26" width="14" height="4" rx="1" fill="#0078D4" opacity=".5" />
+                  <rect x="20" y="26" width="14" height="4" rx="1" fill="#0078D4" opacity=".3" />
+                  <text x="6" y="36" font-family="Arial,sans-serif" font-size="5" fill="#0078D4">
+                    Azure
+                  </text>
+                </svg>
+              </div>
+              <span>Microsoft Azure</span>
+            </div>
+            <div class="integration-logo">
+              <div class="integration-logo__icon" aria-hidden="true">
+                <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                  <circle cx="20" cy="16" r="4" fill="#EA4335" />
+                  <circle cx="14" cy="24" r="4" fill="#4285F4" />
+                  <circle cx="26" cy="24" r="4" fill="#34A853" />
+                  <path d="M20 20l-6 4M20 20l6 4M20 12v8" stroke="#FBBC04" stroke-width="1.5" />
+                  <text x="7" y="36" font-family="Arial,sans-serif" font-size="5" fill="#5F6368">
+                    Google Cloud
+                  </text>
+                </svg>
+              </div>
+              <span>Google Cloud Platform</span>
+            </div>
+          </div>
+          <p class="integrations__text">
+            Plus 50+ additional integrations including Kubernetes, Docker, Terraform, Datadog
+            migration, and more. Set up in under 5 minutes with our guided installer.
+          </p>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section class="section" id="faq">
+        <div class="container">
+          <header class="section__header">
+            <span class="section__label">FAQ</span>
+            <h2 class="section__title">Frequently asked questions</h2>
+            <p class="section__desc">Everything you need to know about CloudPulse.</p>
+          </header>
+          <div class="faq__list" role="list">
+            <div class="faq__item" role="listitem">
+              <button class="faq__question" aria-expanded="false" aria-controls="faq-1">
+                How long does it take to set up CloudPulse?
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 8 10 12 14 8" />
+                </svg>
+              </button>
+              <div class="faq__answer" id="faq-1" role="region">
+                <p>
+                  Most teams are up and running in under 5 minutes. Install our lightweight agent,
+                  connect your cloud provider credentials, and you'll start seeing metrics
+                  immediately. No complex configuration required.
+                </p>
+              </div>
+            </div>
+            <div class="faq__item" role="listitem">
+              <button class="faq__question" aria-expanded="false" aria-controls="faq-2">
+                Can I monitor multiple cloud providers simultaneously?
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 8 10 12 14 8" />
+                </svg>
+              </button>
+              <div class="faq__answer" id="faq-2" role="region">
+                <p>
+                  Absolutely. CloudPulse natively supports AWS, Azure, and GCP with unified
+                  dashboards that correlate data across providers. You can also monitor hybrid and
+                  on-premise infrastructure alongside your cloud resources.
+                </p>
+              </div>
+            </div>
+            <div class="faq__item" role="listitem">
+              <button class="faq__question" aria-expanded="false" aria-controls="faq-3">
+                What happens when I exceed my plan's host limit?
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 8 10 12 14 8" />
+                </svg>
+              </button>
+              <div class="faq__answer" id="faq-3" role="region">
+                <p>
+                  We'll never cut off your monitoring. If you exceed your host limit, we'll notify
+                  you and continue collecting data. You can upgrade your plan at any time, and we
+                  offer flexible per-host pricing for overages.
+                </p>
+              </div>
+            </div>
+            <div class="faq__item" role="listitem">
+              <button class="faq__question" aria-expanded="false" aria-controls="faq-4">
+                Is my data secure with CloudPulse?
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 8 10 12 14 8" />
+                </svg>
+              </button>
+              <div class="faq__answer" id="faq-4" role="region">
+                <p>
+                  Security is our top priority. All data is encrypted in transit (TLS 1.3) and at
+                  rest (AES-256). We are SOC 2 Type II certified, GDPR compliant, and undergo
+                  regular third-party penetration testing. Enterprise plans include dedicated
+                  tenancy options.
+                </p>
+              </div>
+            </div>
+            <div class="faq__item" role="listitem">
+              <button class="faq__question" aria-expanded="false" aria-controls="faq-5">
+                Do you offer a free trial?
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="6 8 10 12 14 8" />
+                </svg>
+              </button>
+              <div class="faq__answer" id="faq-5" role="region">
+                <p>
+                  Yes! Every plan comes with a 14-day free trial with full access to all features.
+                  No credit card required. At the end of your trial, you can choose the plan that
+                  fits your needs or continue with our free tier for up to 5 hosts.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Banner -->
+      <section class="cta-banner" id="cta">
+        <div class="container">
+          <h2>Start monitoring in under 5 minutes</h2>
+          <p>
+            Join 2,000+ engineering teams who trust CloudPulse. Free 14-day trial, no credit card
+            required.
+          </p>
+          <a href="#" class="btn btn--white" role="button">Start Your Free Trial</a>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+      <div class="container">
+        <div class="footer__grid">
+          <div class="footer__brand">
+            <a href="#" class="nav__logo" aria-label="CloudPulse home" style="color: var(--white)">
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect width="32" height="32" rx="8" fill="#2563EB" />
+                <path
+                  d="M10 20a5 5 0 0 1-.5-9.96A7 7 0 0 1 23 12h.5a4.5 4.5 0 0 1 .22 9H10z"
+                  fill="#fff"
+                />
+                <circle cx="16" cy="14" r="2" fill="#2563EB" />
+                <path d="M16 16v4" stroke="#2563EB" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              CloudPulse
+            </a>
+            <p>Real-time cloud monitoring and observability for modern infrastructure teams.</p>
+          </div>
+          <div class="footer__col">
+            <h4>Product</h4>
+            <ul role="list">
+              <li><a href="#features">Features</a></li>
+              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="#integrations">Integrations</a></li>
+              <li><a href="#">Changelog</a></li>
+              <li><a href="#">Documentation</a></li>
+            </ul>
+          </div>
+          <div class="footer__col">
+            <h4>Company</h4>
+            <ul role="list">
+              <li><a href="#">About</a></li>
+              <li><a href="#">Blog</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Contact</a></li>
+              <li><a href="#">Partners</a></li>
+            </ul>
+          </div>
+          <div class="footer__col">
+            <h4>Legal</h4>
+            <ul role="list">
+              <li><a href="#">Privacy Policy</a></li>
+              <li><a href="#">Terms of Service</a></li>
+              <li><a href="#">Cookie Policy</a></li>
+              <li><a href="#">Security</a></li>
+              <li><a href="#">GDPR</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer__bottom">
+          <span>&copy; 2026 CloudPulse, Inc. All rights reserved.</span>
+          <div class="footer__social">
+            <a href="#" aria-label="CloudPulse on Twitter">
+              <svg width="20" height="20" fill="currentColor">
+                <path
+                  d="M18.9 5.3c-.7.3-1.4.5-2.1.6.8-.5 1.3-1.2 1.6-2-.7.4-1.5.7-2.3.9a3.6 3.6 0 0 0-6.2 3.3A10.3 10.3 0 0 1 2.4 4.3a3.6 3.6 0 0 0 1.1 4.8c-.6 0-1.2-.2-1.7-.5a3.6 3.6 0 0 0 2.9 3.6c-.5.1-1.1.2-1.7.1a3.6 3.6 0 0 0 3.4 2.5A7.3 7.3 0 0 1 1 16.4a10.3 10.3 0 0 0 5.5 1.6c6.6 0 10.2-5.5 10.2-10.2v-.5c.7-.5 1.3-1.1 1.8-1.9z"
+                />
+              </svg>
+            </a>
+            <a href="#" aria-label="CloudPulse on GitHub">
+              <svg width="20" height="20" fill="currentColor">
+                <path
+                  d="M10 2a8 8 0 0 0-2.5 15.6c.4.1.5-.2.5-.4v-1.5c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.8 1.2.8.7 1.2 1.9.9 2.3.7.1-.5.3-.9.5-1-1.8-.2-3.6-.9-3.6-4 0-.9.3-1.6.8-2.1-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.5 7.5 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.4 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.6 4 .3.3.6.8.6 1.5v2.2c0 .2.1.5.5.4A8 8 0 0 0 10 2z"
+                />
+              </svg>
+            </a>
+            <a href="#" aria-label="CloudPulse on LinkedIn">
+              <svg width="20" height="20" fill="currentColor">
+                <path
+                  d="M4.5 7.5h-3v10h3v-10zm-1.5-1a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm13.5 5c0-2.5-1.5-3.5-3-3.5-1.4 0-2.1.8-2.5 1.3V7.5h-3v10h3V12c0-1 .5-2 1.7-2s1.8.8 1.8 2v5.5h3v-5z"
+                />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      (function () {
+        'use strict';
+
+        // Mobile nav toggle
+        var toggle = document.getElementById('nav-toggle');
+        var nav = document.querySelector('.nav');
+        toggle.addEventListener('click', function () {
+          var expanded = toggle.getAttribute('aria-expanded') === 'true';
+          toggle.setAttribute('aria-expanded', String(!expanded));
+          nav.classList.toggle('open');
+        });
+
+        // Close mobile nav on link click
+        document.querySelectorAll('#nav-menu a').forEach(function (link) {
+          link.addEventListener('click', function () {
+            toggle.setAttribute('aria-expanded', 'false');
+            nav.classList.remove('open');
+          });
+        });
+
+        // Nav shadow on scroll
+        var scrolled = false;
+        window.addEventListener(
+          'scroll',
+          function () {
+            if (window.scrollY > 10 && !scrolled) {
+              scrolled = true;
+              nav.classList.add('scrolled');
+            } else if (window.scrollY <= 10 && scrolled) {
+              scrolled = false;
+              nav.classList.remove('scrolled');
+            }
+          },
+          { passive: true },
+        );
+
+        // FAQ accordion
+        document.querySelectorAll('.faq__question').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var expanded = btn.getAttribute('aria-expanded') === 'true';
+            // Close all
+            document.querySelectorAll('.faq__question').forEach(function (b) {
+              b.setAttribute('aria-expanded', 'false');
+              var ans = document.getElementById(b.getAttribute('aria-controls'));
+              if (ans) ans.style.maxHeight = null;
+            });
+            // Toggle current
+            if (!expanded) {
+              btn.setAttribute('aria-expanded', 'true');
+              var answer = document.getElementById(btn.getAttribute('aria-controls'));
+              if (answer) answer.style.maxHeight = answer.scrollHeight + 'px';
+            }
+          });
+        });
+
+        // Close mobile nav on Escape
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && nav.classList.contains('open')) {
+            toggle.setAttribute('aria-expanded', 'false');
+            nav.classList.remove('open');
+            toggle.focus();
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>

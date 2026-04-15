@@ -1,0 +1,2400 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="CloudPulse — Real-time cloud infrastructure monitoring for AWS, Azure, and GCP. Intelligent alerting, custom dashboards, and multi-cloud visibility for modern engineering teams."
+    />
+    <title>CloudPulse — Cloud Monitoring Made Simple</title>
+    <style>
+      /* ============================================================
+       CSS Custom Properties
+       ============================================================ */
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1d4ed8;
+        --primary-light: #dbeafe;
+        --primary-xlight: #eff6ff;
+        --secondary: #1e40af;
+        --accent: #10b981;
+        --accent-dark: #059669;
+        --amber: #f59e0b;
+        --gray-900: #111827;
+        --gray-800: #1f2937;
+        --gray-700: #374151;
+        --gray-600: #4b5563;
+        --gray-500: #6b7280;
+        --gray-400: #9ca3af;
+        --gray-300: #d1d5db;
+        --gray-200: #e5e7eb;
+        --gray-100: #f3f4f6;
+        --gray-50: #f9fafb;
+        --white: #ffffff;
+        --max-w: 1200px;
+        --radius-sm: 6px;
+        --radius: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+        --shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.04);
+        --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.1), 0 4px 8px rgba(0, 0, 0, 0.05);
+        --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.12), 0 8px 16px rgba(0, 0, 0, 0.06);
+        --shadow-blue: 0 8px 24px rgba(37, 99, 235, 0.28);
+        --t: 0.2s ease;
+      }
+
+      /* ============================================================
+       Reset and Base
+       ============================================================ */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html {
+        scroll-behavior: smooth;
+        font-size: 16px;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        color: var(--gray-700);
+        background: var(--white);
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: var(--primary);
+        text-decoration: none;
+        transition: color var(--t);
+      }
+      a:hover {
+        color: var(--primary-dark);
+      }
+      a:focus-visible,
+      button:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid var(--primary);
+        outline-offset: 3px;
+      }
+      ul {
+        list-style: none;
+      }
+
+      /* ============================================================
+       Skip Link
+       ============================================================ */
+      .skip-link {
+        position: absolute;
+        top: -120%;
+        left: 16px;
+        z-index: 9999;
+        background: var(--primary);
+        color: var(--white);
+        padding: 10px 20px;
+        border-radius: var(--radius);
+        font-weight: 700;
+        font-size: 0.9375rem;
+        transition: top 0.15s ease;
+      }
+      .skip-link:focus {
+        top: 12px;
+        color: var(--white);
+      }
+
+      /* ============================================================
+       Layout
+       ============================================================ */
+      .container {
+        max-width: var(--max-w);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      @media (min-width: 768px) {
+        .container {
+          padding: 0 40px;
+        }
+      }
+      @media (min-width: 1024px) {
+        .container {
+          padding: 0 56px;
+        }
+      }
+
+      .section {
+        padding: 80px 0;
+      }
+      @media (max-width: 767px) {
+        .section {
+          padding: 56px 0;
+        }
+      }
+
+      .section-bg-alt {
+        background: var(--gray-50);
+      }
+      .section-bg-blue {
+        background: linear-gradient(180deg, var(--white) 0%, var(--primary-xlight) 100%);
+      }
+
+      .section-label {
+        display: inline-block;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--primary);
+        background: var(--primary-xlight);
+        padding: 4px 12px;
+        border-radius: 20px;
+        margin-bottom: 14px;
+      }
+
+      .section-header {
+        text-align: center;
+        margin-bottom: 56px;
+      }
+      .section-header h2 {
+        font-size: clamp(1.75rem, 3.5vw, 2.375rem);
+        font-weight: 800;
+        color: var(--gray-900);
+        line-height: 1.2;
+        letter-spacing: -0.025em;
+        margin-bottom: 16px;
+      }
+      .section-header p {
+        font-size: 1.0625rem;
+        color: var(--gray-500);
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      /* ============================================================
+       Buttons
+       ============================================================ */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 13px 28px;
+        border-radius: var(--radius);
+        font-size: 1rem;
+        font-weight: 600;
+        border: 2px solid transparent;
+        cursor: pointer;
+        transition: all var(--t);
+        text-decoration: none;
+        line-height: 1.4;
+        white-space: nowrap;
+      }
+      .btn-lg {
+        padding: 15px 34px;
+        font-size: 1.0625rem;
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: var(--white);
+        border-color: var(--primary);
+      }
+      .btn-primary:hover {
+        background: var(--primary-dark);
+        border-color: var(--primary-dark);
+        color: var(--white);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-blue);
+      }
+
+      .btn-outline {
+        background: transparent;
+        color: var(--primary);
+        border-color: var(--primary);
+      }
+      .btn-outline:hover {
+        background: var(--primary);
+        color: var(--white);
+        transform: translateY(-1px);
+      }
+
+      .btn-ghost-white {
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--white);
+        border-color: rgba(255, 255, 255, 0.45);
+      }
+      .btn-ghost-white:hover {
+        background: rgba(255, 255, 255, 0.22);
+        color: var(--white);
+        transform: translateY(-1px);
+      }
+
+      .btn-white {
+        background: var(--white);
+        color: var(--primary);
+        border-color: var(--white);
+      }
+      .btn-white:hover {
+        background: var(--primary-xlight);
+        color: var(--primary-dark);
+        transform: translateY(-1px);
+      }
+
+      .btn-dark {
+        background: var(--gray-900);
+        color: var(--white);
+        border-color: var(--gray-900);
+      }
+      .btn-dark:hover {
+        background: var(--gray-800);
+        color: var(--white);
+        transform: translateY(-1px);
+      }
+
+      /* ============================================================
+       Navigation
+       ============================================================ */
+      .navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.97);
+        border-bottom: 1px solid var(--gray-200);
+        backdrop-filter: blur(8px);
+        transition: box-shadow var(--t);
+      }
+      .navbar.scrolled {
+        box-shadow: var(--shadow);
+      }
+
+      .navbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 68px;
+      }
+
+      .navbar-logo {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-size: 1.3125rem;
+        font-weight: 800;
+        color: var(--gray-900);
+        letter-spacing: -0.03em;
+        text-decoration: none;
+      }
+      .navbar-logo:hover {
+        color: var(--gray-900);
+      }
+      .navbar-logo .logo-word {
+        color: var(--primary);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-links a {
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: var(--gray-600);
+        transition: color var(--t);
+      }
+      .nav-links a:hover {
+        color: var(--primary);
+      }
+
+      .nav-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .nav-actions .btn {
+        padding: 9px 20px;
+        font-size: 0.9375rem;
+      }
+
+      .nav-hamburger {
+        display: none;
+        flex-direction: column;
+        gap: 5px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: var(--radius-sm);
+      }
+      .nav-hamburger span {
+        display: block;
+        width: 22px;
+        height: 2px;
+        background: var(--gray-700);
+        border-radius: 2px;
+        transition: all 0.25s ease;
+      }
+      .nav-hamburger[aria-expanded='true'] span:nth-child(1) {
+        transform: rotate(45deg) translate(5px, 5px);
+      }
+      .nav-hamburger[aria-expanded='true'] span:nth-child(2) {
+        opacity: 0;
+        width: 0;
+      }
+      .nav-hamburger[aria-expanded='true'] span:nth-child(3) {
+        transform: rotate(-45deg) translate(5px, -5px);
+      }
+
+      .nav-mobile-menu {
+        display: none;
+        position: absolute;
+        top: 68px;
+        left: 0;
+        right: 0;
+        background: var(--white);
+        border-bottom: 1px solid var(--gray-200);
+        box-shadow: var(--shadow-lg);
+        padding: 20px 24px 24px;
+      }
+      .nav-mobile-menu.open {
+        display: block;
+      }
+      .nav-mobile-menu .nav-links {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+        margin-bottom: 16px;
+      }
+      .nav-mobile-menu .nav-links a {
+        display: block;
+        width: 100%;
+        padding: 10px 0;
+        font-size: 1rem;
+        border-bottom: 1px solid var(--gray-100);
+      }
+      .nav-mobile-menu .nav-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .nav-mobile-menu .nav-actions .btn {
+        text-align: center;
+        width: 100%;
+      }
+
+      @media (max-width: 767px) {
+        .nav-links,
+        .nav-actions {
+          display: none;
+        }
+        .nav-hamburger {
+          display: flex;
+        }
+      }
+
+      /* ============================================================
+       Hero Section
+       ============================================================ */
+      .hero {
+        min-height: 88vh;
+        display: flex;
+        align-items: center;
+        padding-top: 100px;
+        padding-bottom: 64px;
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 45%, #3b82f6 100%);
+        color: var(--white);
+        overflow: hidden;
+        position: relative;
+      }
+      .hero::before {
+        content: '';
+        position: absolute;
+        top: -80px;
+        right: -80px;
+        width: 480px;
+        height: 480px;
+        background: radial-gradient(circle, rgba(255, 255, 255, 0.06) 0%, transparent 70%);
+        border-radius: 50%;
+        pointer-events: none;
+      }
+
+      .hero-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 64px;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        color: var(--white);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 20px;
+        margin-bottom: 20px;
+      }
+      .hero-badge::before {
+        content: '';
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background: var(--accent);
+        border-radius: 50%;
+      }
+
+      .hero h1 {
+        font-size: clamp(2rem, 4.5vw, 3.25rem);
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -0.035em;
+        color: var(--white);
+        margin-bottom: 20px;
+      }
+
+      .hero-sub {
+        font-size: 1.125rem;
+        color: rgba(255, 255, 255, 0.85);
+        line-height: 1.7;
+        margin-bottom: 32px;
+        max-width: 520px;
+      }
+
+      .hero-ctas {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin-bottom: 36px;
+      }
+
+      .hero-trust {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .hero-trust-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.8125rem;
+        color: rgba(255, 255, 255, 0.75);
+        font-weight: 500;
+      }
+      .hero-trust-item::before {
+        content: '';
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 16px;
+        height: 16px;
+        background: var(--accent);
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      /* Dashboard illustration */
+      .dashboard-mockup {
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: var(--radius-lg);
+        padding: 20px;
+      }
+      .dash-titlebar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 16px;
+      }
+      .dash-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+      }
+      .dash-dot.red {
+        background: #ef4444;
+      }
+      .dash-dot.amber {
+        background: #f59e0b;
+      }
+      .dash-dot.green {
+        background: #10b981;
+      }
+      .dash-title {
+        margin-left: 6px;
+        font-size: 0.8125rem;
+        color: rgba(255, 255, 255, 0.7);
+        font-weight: 600;
+      }
+
+      .dash-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+        margin-bottom: 14px;
+      }
+      .dash-stat-box {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: var(--radius-sm);
+        padding: 10px 12px;
+        text-align: center;
+      }
+      .dash-stat-box .val {
+        font-size: 1.125rem;
+        font-weight: 800;
+        color: var(--white);
+        line-height: 1;
+      }
+      .dash-stat-box .lbl {
+        font-size: 0.625rem;
+        color: rgba(255, 255, 255, 0.55);
+        margin-top: 3px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .dash-chart {
+        background: rgba(255, 255, 255, 0.07);
+        border-radius: var(--radius-sm);
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .dash-chart-label {
+        font-size: 0.6875rem;
+        color: rgba(255, 255, 255, 0.5);
+        margin-bottom: 8px;
+      }
+      .dash-bars {
+        display: flex;
+        align-items: flex-end;
+        gap: 5px;
+        height: 52px;
+      }
+      .dash-bar {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 3px 3px 0 0;
+      }
+      .dash-bar.hi {
+        background: var(--accent);
+      }
+
+      .dash-alerts {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .dash-alert-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255, 255, 255, 0.07);
+        border-radius: var(--radius-sm);
+        padding: 7px 10px;
+        font-size: 0.6875rem;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      .dash-alert-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .dash-alert-dot.ok {
+        background: var(--accent);
+      }
+      .dash-alert-dot.warn {
+        background: var(--amber);
+      }
+
+      @media (max-width: 767px) {
+        .hero-layout {
+          grid-template-columns: 1fr;
+          gap: 40px;
+        }
+        .hero-visual {
+          display: none;
+        }
+        .hero {
+          min-height: 80vh;
+          padding-top: 88px;
+        }
+      }
+
+      /* ============================================================
+       Metrics Strip
+       ============================================================ */
+      .metrics-strip {
+        background: var(--white);
+        border-bottom: 1px solid var(--gray-200);
+        padding: 22px 0;
+      }
+      .metrics-row {
+        display: flex;
+        justify-content: center;
+        gap: 56px;
+        flex-wrap: wrap;
+      }
+      .metric-item {
+        text-align: center;
+      }
+      .metric-val {
+        font-size: 1.875rem;
+        font-weight: 900;
+        color: var(--primary);
+        letter-spacing: -0.03em;
+        line-height: 1;
+      }
+      .metric-lbl {
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+        margin-top: 3px;
+      }
+
+      /* ============================================================
+       Features Section
+       ============================================================ */
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      @media (max-width: 1023px) {
+        .features-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 639px) {
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .feature-card {
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-md);
+        padding: 32px;
+        transition: all 0.25s ease;
+      }
+      .feature-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary-light);
+      }
+
+      .feature-icon-wrap {
+        width: 50px;
+        height: 50px;
+        background: var(--primary-xlight);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 18px;
+        color: var(--primary);
+      }
+      .feature-icon-wrap svg {
+        width: 26px;
+        height: 26px;
+      }
+
+      .feature-card h3 {
+        font-size: 1.0625rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 10px;
+        line-height: 1.3;
+      }
+      .feature-card p {
+        font-size: 0.9375rem;
+        color: var(--gray-500);
+        line-height: 1.65;
+      }
+
+      /* ============================================================
+       Pricing Section
+       ============================================================ */
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+      @media (max-width: 1023px) {
+        .pricing-grid {
+          grid-template-columns: 1fr;
+          max-width: 420px;
+          margin: 0 auto;
+        }
+      }
+
+      .pricing-card {
+        background: var(--white);
+        border: 2px solid var(--gray-200);
+        border-radius: var(--radius-lg);
+        padding: 36px 32px 32px;
+        position: relative;
+        transition: all var(--t);
+      }
+      .pricing-card:hover {
+        box-shadow: var(--shadow-xl);
+        transform: translateY(-4px);
+      }
+
+      .pricing-card.featured {
+        border-color: #2563eb;
+        box-shadow: var(--shadow-blue);
+      }
+      .pricing-card.featured:hover {
+        transform: translateY(-6px);
+      }
+
+      .pricing-badge-wrap {
+        position: absolute;
+        top: -15px;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+      }
+      .pricing-badge {
+        background: var(--primary);
+        color: var(--white);
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 4px 14px;
+        border-radius: 20px;
+      }
+
+      .pricing-tier-name {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 6px;
+      }
+      .pricing-price {
+        font-size: 2.75rem;
+        font-weight: 900;
+        color: var(--gray-900);
+        letter-spacing: -0.04em;
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+      .pricing-price sup {
+        font-size: 1.25rem;
+        vertical-align: super;
+      }
+      .pricing-cadence {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+        margin-bottom: 12px;
+      }
+      .pricing-desc {
+        font-size: 0.9rem;
+        color: var(--gray-500);
+        margin-bottom: 22px;
+        line-height: 1.5;
+      }
+      .pricing-divider {
+        border: none;
+        border-top: 1px solid var(--gray-200);
+        margin-bottom: 20px;
+      }
+
+      .pricing-features-list {
+        margin-bottom: 28px;
+      }
+      .pricing-features-list li {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 6px 0;
+        font-size: 0.9rem;
+        color: var(--gray-700);
+      }
+      .pricing-check {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 18px;
+        height: 18px;
+        background: #dcfce7;
+        border-radius: 50%;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
+      .pricing-check svg {
+        width: 10px;
+        height: 10px;
+      }
+
+      .pricing-card .btn {
+        width: 100%;
+        text-align: center;
+      }
+
+      /* ============================================================
+       Testimonials Section
+       ============================================================ */
+      .testimonials-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      @media (max-width: 1023px) {
+        .testimonials-grid {
+          grid-template-columns: 1fr;
+          max-width: 520px;
+          margin: 0 auto;
+        }
+      }
+
+      .testimonial-card {
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        border-left: 4px solid var(--primary);
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+        padding: 28px;
+        transition: box-shadow var(--t);
+      }
+      .testimonial-card:hover {
+        box-shadow: var(--shadow-lg);
+      }
+
+      .stars {
+        color: var(--amber);
+        font-size: 0.875rem;
+        letter-spacing: 2px;
+        margin-bottom: 14px;
+      }
+      .testimonial-quote {
+        font-size: 0.9375rem;
+        line-height: 1.7;
+        color: var(--gray-700);
+        font-style: italic;
+        margin-bottom: 20px;
+      }
+      .testimonial-author {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+      }
+      .testimonial-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #2563eb, #1e40af);
+        color: var(--white);
+        font-weight: 700;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+      }
+      .testimonial-name {
+        font-weight: 700;
+        color: var(--gray-900);
+        font-size: 0.9rem;
+      }
+      .testimonial-role {
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+        margin-top: 2px;
+      }
+
+      /* ============================================================
+       Integrations Section
+       ============================================================ */
+      .integrations-main {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        max-width: 860px;
+        margin: 0 auto 48px;
+      }
+      @media (max-width: 767px) {
+        .integrations-main {
+          grid-template-columns: 1fr;
+          max-width: 360px;
+        }
+      }
+
+      .integration-card {
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius-md);
+        padding: 28px 24px;
+        text-align: center;
+        transition: all var(--t);
+      }
+      .integration-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary-light);
+      }
+
+      .integration-badge {
+        width: 68px;
+        height: 68px;
+        border-radius: 16px;
+        margin: 0 auto 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.8125rem;
+        letter-spacing: 0.02em;
+      }
+      .badge-aws {
+        background: #ff9900;
+        color: var(--white);
+      }
+      .badge-azure {
+        background: #0078d4;
+        color: var(--white);
+      }
+      .badge-gcp {
+        background: #4285f4;
+        color: var(--white);
+      }
+
+      .integration-card h3 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--gray-900);
+        margin-bottom: 8px;
+      }
+      .integration-card p {
+        font-size: 0.875rem;
+        color: var(--gray-500);
+        line-height: 1.6;
+      }
+
+      .integration-secondary {
+        text-align: center;
+      }
+      .integration-secondary p {
+        font-size: 0.9375rem;
+        color: var(--gray-500);
+        margin-bottom: 16px;
+      }
+      .integration-tags {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .int-tag {
+        display: inline-block;
+        background: var(--gray-100);
+        color: var(--gray-700);
+        font-size: 0.8125rem;
+        font-weight: 500;
+        padding: 6px 14px;
+        border-radius: 20px;
+        border: 1px solid var(--gray-200);
+      }
+      .integration-cta {
+        text-align: center;
+        margin-top: 32px;
+      }
+      .integration-cta p {
+        font-size: 0.9375rem;
+        color: var(--gray-600);
+      }
+      .integration-cta a {
+        color: var(--primary);
+        font-weight: 600;
+      }
+
+      /* ============================================================
+       FAQ — Native details/summary accordion
+       ============================================================ */
+      .faq-stack {
+        max-width: 760px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .faq-stack details {
+        background: var(--white);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: border-color var(--t);
+      }
+      .faq-stack details[open] {
+        border-color: var(--primary-light);
+        background: var(--primary-xlight);
+      }
+
+      .faq-stack summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        cursor: pointer;
+        list-style: none;
+        -webkit-appearance: none;
+        gap: 16px;
+      }
+      .faq-stack summary::-webkit-details-marker {
+        display: none;
+      }
+      .faq-stack summary::after {
+        content: '';
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563EB' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        transition: transform 0.25s ease;
+      }
+      .faq-stack details[open] summary::after {
+        transform: rotate(180deg);
+      }
+
+      .faq-answer {
+        padding: 0 24px 22px;
+        font-size: 0.9375rem;
+        color: var(--gray-600);
+        line-height: 1.7;
+      }
+
+      /* ============================================================
+       Footer CTA Banner
+       ============================================================ */
+      .footer-cta {
+        background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #3b82f6 100%);
+        padding: 80px 0;
+        text-align: center;
+        color: var(--white);
+      }
+      .footer-cta h2 {
+        font-size: clamp(1.75rem, 3vw, 2.25rem);
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-bottom: 14px;
+      }
+      .footer-cta p {
+        font-size: 1.0625rem;
+        opacity: 0.88;
+        max-width: 480px;
+        margin: 0 auto 28px;
+      }
+      .footer-cta-btns {
+        display: flex;
+        gap: 14px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      /* ============================================================
+       Footer
+       ============================================================ */
+      footer {
+        background: var(--gray-900);
+        padding: 56px 0 0;
+      }
+
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 48px;
+        padding-bottom: 48px;
+      }
+      @media (max-width: 1023px) {
+        .footer-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 32px;
+        }
+      }
+      @media (max-width: 639px) {
+        .footer-grid {
+          grid-template-columns: 1fr;
+          gap: 24px;
+        }
+      }
+
+      .footer-logo-mark {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.1875rem;
+        font-weight: 800;
+        color: var(--white);
+        letter-spacing: -0.025em;
+        margin-bottom: 14px;
+        text-decoration: none;
+      }
+      .footer-logo-mark .lw {
+        color: #93c5fd;
+      }
+      .footer-desc {
+        font-size: 0.875rem;
+        color: var(--gray-400);
+        line-height: 1.7;
+        max-width: 300px;
+      }
+
+      .footer-col h4 {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--white);
+        margin-bottom: 16px;
+      }
+      .footer-col ul li {
+        margin-bottom: 10px;
+      }
+      .footer-col ul li a {
+        font-size: 0.875rem;
+        color: var(--gray-400);
+        transition: color var(--t);
+      }
+      .footer-col ul li a:hover {
+        color: var(--white);
+      }
+
+      .footer-bar {
+        border-top: 1px solid var(--gray-800);
+        padding: 20px 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .footer-copyright {
+        font-size: 0.8125rem;
+        color: var(--gray-500);
+      }
+      .footer-socials {
+        display: flex;
+        gap: 16px;
+      }
+      .footer-socials a {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--gray-400);
+        transition: color var(--t);
+      }
+      .footer-socials a:hover {
+        color: var(--white);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Accessibility: Skip to main content -->
+    <a href="#main" class="skip-link">Skip to main content</a>
+
+    <!-- ============================================================
+       Navigation Bar
+       ============================================================ -->
+    <header>
+      <nav class="navbar" aria-label="Main navigation" id="navbar">
+        <div class="container">
+          <div class="navbar-inner">
+            <a href="#" class="navbar-logo" aria-label="CloudPulse — Go to homepage">
+              <svg
+                width="30"
+                height="30"
+                viewBox="0 0 30 30"
+                fill="none"
+                role="img"
+                alt="CloudPulse icon"
+              >
+                <circle cx="15" cy="15" r="15" fill="#2563EB" />
+                <path
+                  d="M8 19c0-3.87 3.13-7 7-7s7 3.13 7 7"
+                  stroke="#fff"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                />
+                <circle cx="15" cy="12" r="2.2" fill="#10B981" />
+                <line
+                  x1="15"
+                  y1="14.2"
+                  x2="15"
+                  y2="19"
+                  stroke="#10B981"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+              Cloud<span class="logo-word">Pulse</span>
+            </a>
+
+            <!-- Desktop navigation links -->
+            <ul class="nav-links" role="list">
+              <li><a href="#features">Features</a></li>
+              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="#testimonials">Testimonials</a></li>
+              <li><a href="#integrations">Integrations</a></li>
+              <li><a href="#faq">FAQ</a></li>
+            </ul>
+
+            <div class="nav-actions">
+              <a href="#pricing" class="btn btn-outline">Log In</a>
+              <a href="#pricing" class="btn btn-primary">Get Started Free</a>
+            </div>
+
+            <!-- Hamburger toggle (mobile only) -->
+            <button
+              class="nav-hamburger"
+              aria-label="Toggle navigation menu"
+              aria-expanded="false"
+              aria-controls="mobile-menu"
+              id="hamburger-btn"
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Mobile dropdown menu -->
+        <div id="mobile-menu" class="nav-mobile-menu" aria-hidden="true">
+          <ul class="nav-links" role="list">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="#testimonials">Testimonials</a></li>
+            <li><a href="#integrations">Integrations</a></li>
+            <li><a href="#faq">FAQ</a></li>
+          </ul>
+          <div class="nav-actions">
+            <a href="#pricing" class="btn btn-outline">Log In</a>
+            <a href="#pricing" class="btn btn-primary">Get Started Free</a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <!-- ============================================================
+       MAIN CONTENT
+       ============================================================ -->
+    <main id="main">
+      <!-- ============================================================
+         Hero Section
+         ============================================================ -->
+      <section class="hero" aria-labelledby="hero-heading">
+        <div class="container">
+          <div class="hero-layout">
+            <!-- Left: copy -->
+            <div class="hero-copy">
+              <div class="hero-badge">Now with AI-powered anomaly detection</div>
+              <h1 id="hero-heading">
+                Monitor Every Corner of Your Cloud Infrastructure&#8202;&#8202;— In Real Time
+              </h1>
+              <p class="hero-sub">
+                CloudPulse gives engineering teams unified visibility across AWS, Azure, and GCP.
+                Catch incidents before users do with intelligent alerting, beautiful dashboards, and
+                sub-second metric pipelines — all in one platform built for modern cloud teams.
+              </p>
+              <div class="hero-ctas">
+                <a href="#pricing" class="btn btn-white btn-lg">Start Free Trial</a>
+                <a href="#features" class="btn btn-ghost-white btn-lg">Watch Demo</a>
+              </div>
+              <div class="hero-trust">
+                <span class="hero-trust-item">No credit card required</span>
+                <span class="hero-trust-item">14-day free trial</span>
+                <span class="hero-trust-item">Cancel anytime</span>
+              </div>
+            </div>
+
+            <!-- Right: Dashboard illustration (aria-hidden, decorative) -->
+            <div class="hero-visual" aria-hidden="true">
+              <div class="dashboard-mockup">
+                <div class="dash-titlebar">
+                  <div class="dash-dot red"></div>
+                  <div class="dash-dot amber"></div>
+                  <div class="dash-dot green"></div>
+                  <span class="dash-title">CloudPulse — Production Overview</span>
+                </div>
+                <div class="dash-stats">
+                  <div class="dash-stat-box">
+                    <div class="val">99.98%</div>
+                    <div class="lbl">Uptime</div>
+                  </div>
+                  <div class="dash-stat-box">
+                    <div class="val">142ms</div>
+                    <div class="lbl">P99 Latency</div>
+                  </div>
+                  <div class="dash-stat-box">
+                    <div class="val">4.2K</div>
+                    <div class="lbl">Req/s</div>
+                  </div>
+                </div>
+                <div class="dash-chart">
+                  <div class="dash-chart-label">CPU Utilization — Last 24h</div>
+                  <div class="dash-bars">
+                    <div class="dash-bar" style="height: 38%"></div>
+                    <div class="dash-bar" style="height: 52%"></div>
+                    <div class="dash-bar" style="height: 44%"></div>
+                    <div class="dash-bar" style="height: 61%"></div>
+                    <div class="dash-bar" style="height: 55%"></div>
+                    <div class="dash-bar" style="height: 48%"></div>
+                    <div class="dash-bar" style="height: 72%"></div>
+                    <div class="dash-bar hi" style="height: 88%"></div>
+                    <div class="dash-bar" style="height: 65%"></div>
+                    <div class="dash-bar" style="height: 54%"></div>
+                    <div class="dash-bar" style="height: 47%"></div>
+                    <div class="dash-bar" style="height: 58%"></div>
+                  </div>
+                </div>
+                <div class="dash-alerts">
+                  <div class="dash-alert-row">
+                    <div class="dash-alert-dot ok"></div>
+                    <span>us-east-1 EKS cluster — all nodes healthy</span>
+                  </div>
+                  <div class="dash-alert-row">
+                    <div class="dash-alert-dot warn"></div>
+                    <span>RDS replica lag 420ms — above threshold</span>
+                  </div>
+                  <div class="dash-alert-row">
+                    <div class="dash-alert-dot ok"></div>
+                    <span>Azure AKS node pool — 6/6 nodes ready</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+         Metrics Strip
+         ============================================================ -->
+      <div class="metrics-strip" role="region" aria-label="CloudPulse platform metrics">
+        <div class="container">
+          <div class="metrics-row">
+            <div class="metric-item">
+              <div class="metric-val">10,000+</div>
+              <div class="metric-lbl">Engineering teams</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-val">50M+</div>
+              <div class="metric-lbl">Metrics ingested daily</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-val">99.99%</div>
+              <div class="metric-lbl">Platform uptime SLA</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-val">&lt;30s</div>
+              <div class="metric-lbl">Mean alert latency</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-val">120+</div>
+              <div class="metric-lbl">Cloud service integrations</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================
+         Features Section
+         ============================================================ -->
+      <section id="features" class="section section-bg-alt" aria-labelledby="features-heading">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-label">Features</span>
+            <h2 id="features-heading">Everything You Need to Monitor Your Infrastructure</h2>
+            <p>
+              A complete observability platform purpose-built for modern cloud teams. Real-time
+              metrics, intelligent alerting, and powerful dashboards — all without the operational
+              complexity.
+            </p>
+          </div>
+
+          <div class="features-grid">
+            <!-- Card 1: Real-Time Monitoring -->
+            <article class="feature-card">
+              <div class="feature-icon-wrap" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+              </div>
+              <h3>Real-Time Monitoring</h3>
+              <p>
+                Continuous streaming telemetry from every connected cloud service, with sub-second
+                latency data pipelines delivering live CPU, memory, network throughput, and disk I/O
+                metrics directly to your dashboards. Never miss a spike, dip, or anomaly across your
+                entire fleet. Supports StatsD, OpenTelemetry, Prometheus scraping, and our native
+                lightweight agent — all in one place.
+              </p>
+            </article>
+
+            <!-- Card 2: Intelligent Alerting -->
+            <article class="feature-card">
+              <div class="feature-icon-wrap" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                </svg>
+              </div>
+              <h3>Intelligent Alerting</h3>
+              <p>
+                Machine-learning anomaly detection combined with fully configurable threshold-based
+                rules. Route alerts to Slack, PagerDuty, Opsgenie, email, or any webhook endpoint.
+                Define escalation policies, on-call rotations, and suppression windows to eliminate
+                noise and alert fatigue. The right person is notified with the right context — every
+                time, without exception.
+              </p>
+            </article>
+
+            <!-- Card 3: Custom Dashboards -->
+            <article class="feature-card">
+              <div class="feature-icon-wrap" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
+              </div>
+              <h3>Custom Dashboards</h3>
+              <p>
+                Drag-and-drop dashboard builder with over 50 widget types: time-series charts, heat
+                maps, topology graphs, SLO burn-rate indicators, log panels, and more. Share
+                dashboards across teams, set granular view permissions, or embed them in your
+                internal portals via the embed API. Version-control dashboards as JSON and deploy
+                them through Terraform and CI/CD pipelines.
+              </p>
+            </article>
+
+            <!-- Card 4: Multi-Cloud Support -->
+            <article class="feature-card">
+              <div class="feature-icon-wrap" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z" />
+                </svg>
+              </div>
+              <h3>Multi-Cloud Support</h3>
+              <p>
+                Native integrations with Amazon Web Services, Microsoft Azure, and Google Cloud
+                Platform. CloudPulse normalizes metrics from disparate providers into a single
+                unified data model, enabling true cross-cloud performance comparison, consolidated
+                cost visibility, and side-by-side analysis. Hybrid and on-premise environments are
+                also fully supported via the agent and OpenTelemetry collector.
+              </p>
+            </article>
+
+            <!-- Card 5: Team Collaboration -->
+            <article class="feature-card">
+              <div class="feature-icon-wrap" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </div>
+              <h3>Team Collaboration</h3>
+              <p>
+                Role-based access control, shared annotation timelines, and a built-in incident
+                war-room experience for coordinating real-time response across your team. Invite
+                unlimited read-only viewers on all paid plans. Manage permissions at the
+                organization, project, or individual dashboard level. Integrate with Jira and GitHub
+                Issues for automatic ticket creation when critical alerts fire.
+              </p>
+            </article>
+
+            <!-- Card 6: API Access -->
+            <article class="feature-card">
+              <div class="feature-icon-wrap" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="16 18 22 12 16 6" />
+                  <polyline points="8 6 2 12 8 18" />
+                </svg>
+              </div>
+              <h3>API Access</h3>
+              <p>
+                A fully documented REST and GraphQL API with official SDKs for Python, Node.js, Go,
+                and Ruby. Automate dashboard provisioning, manage alert rules programmatically, and
+                pipe metrics into your own data warehouse or BI tooling. Our Terraform provider lets
+                you treat your entire monitoring configuration as code — checked into version
+                control and deployed through any standard CI/CD pipeline.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+         Pricing Section
+         ============================================================ -->
+      <section id="pricing" class="section" aria-labelledby="pricing-heading">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-label">Pricing</span>
+            <h2 id="pricing-heading">Simple, Transparent Pricing</h2>
+            <p>
+              Start with a full-featured 14-day free trial — no credit card required. Choose the
+              plan that fits your team today and scale without surprises tomorrow.
+            </p>
+          </div>
+
+          <div class="pricing-grid">
+            <!-- Starter -->
+            <div class="pricing-card" role="region" aria-labelledby="tier-starter">
+              <h3 class="pricing-tier-name" id="tier-starter">Starter</h3>
+              <div class="pricing-price"><sup>$</sup>29</div>
+              <div class="pricing-cadence">per workspace / month</div>
+              <p class="pricing-desc">
+                Ideal for small teams and solo practitioners monitoring a focused set of services.
+              </p>
+              <hr class="pricing-divider" />
+              <ul class="pricing-features-list">
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Up to 5 monitored hosts
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  7-day metrics retention
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  10 alert rules
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Email notifications only
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  5 custom dashboards
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Community support
+                </li>
+              </ul>
+              <a href="#" class="btn btn-outline">Start Free Trial</a>
+            </div>
+
+            <!-- Pro (Featured) -->
+            <div class="pricing-card featured" role="region" aria-labelledby="tier-pro">
+              <div class="pricing-badge-wrap">
+                <span class="pricing-badge">Most Popular</span>
+              </div>
+              <h3 class="pricing-tier-name" id="tier-pro">Pro</h3>
+              <div class="pricing-price"><sup>$</sup>99</div>
+              <div class="pricing-cadence">per workspace / month</div>
+              <p class="pricing-desc">
+                Built for growing engineering teams that need advanced alerting, collaboration, and
+                multi-cloud visibility.
+              </p>
+              <hr class="pricing-divider" />
+              <ul class="pricing-features-list">
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Up to 50 monitored hosts
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  90-day metrics retention
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Unlimited alert rules
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Slack, PagerDuty &amp; webhook alerts
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Unlimited custom dashboards
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  ML anomaly detection
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Team collaboration features
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Priority email &amp; chat support
+                </li>
+              </ul>
+              <a href="#" class="btn btn-primary">Start Free Trial</a>
+            </div>
+
+            <!-- Enterprise -->
+            <div class="pricing-card" role="region" aria-labelledby="tier-enterprise">
+              <h3 class="pricing-tier-name" id="tier-enterprise">Enterprise</h3>
+              <div class="pricing-price" style="font-size: 2rem">Custom</div>
+              <div class="pricing-cadence">tailored to your scale</div>
+              <p class="pricing-desc">
+                For large organizations requiring unlimited scale, SSO, dedicated support, and
+                compliance guarantees.
+              </p>
+              <hr class="pricing-divider" />
+              <ul class="pricing-features-list">
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Unlimited monitored hosts
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Unlimited metrics retention
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Custom data ingestion pipelines
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  SSO / SAML integration
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  SLA-backed 99.99% uptime guarantee
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  Dedicated customer success manager
+                </li>
+                <li>
+                  <span class="pricing-check" aria-hidden="true">
+                    <svg
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="#059669"
+                      stroke-width="2.5"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <polyline points="2 6 5 9 10 3" />
+                    </svg>
+                  </span>
+                  SOC 2 Type II audit reports on request
+                </li>
+              </ul>
+              <a href="#" class="btn btn-dark">Contact Sales</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+         Testimonials Section
+         ============================================================ -->
+      <section
+        id="testimonials"
+        class="section section-bg-blue"
+        aria-labelledby="testimonials-heading"
+      >
+        <div class="container">
+          <div class="section-header">
+            <span class="section-label">Testimonials</span>
+            <h2 id="testimonials-heading">Trusted by Engineering Teams Worldwide</h2>
+            <p>
+              Thousands of DevOps, SRE, and platform engineering teams rely on CloudPulse every day
+              to keep their production infrastructure healthy and their on-call teams sane.
+            </p>
+          </div>
+
+          <div class="testimonials-grid">
+            <blockquote class="testimonial-card">
+              <div class="stars" aria-label="5 out of 5 stars">
+                &#9733;&#9733;&#9733;&#9733;&#9733;
+              </div>
+              <p class="testimonial-quote">
+                "CloudPulse completely transformed how our team responds to incidents. Before, we
+                were piecing together alerts from three different tools. Now we have a single pane
+                of glass for all our AWS and Azure workloads. Our mean time to resolution dropped by
+                60 percent in the first month alone."
+              </p>
+              <div class="testimonial-author">
+                <div class="testimonial-avatar" aria-label="Sarah Chen">SC</div>
+                <div>
+                  <div class="testimonial-name">Sarah Chen</div>
+                  <div class="testimonial-role">Senior DevOps Engineer, Apex Systems</div>
+                </div>
+              </div>
+            </blockquote>
+
+            <blockquote class="testimonial-card">
+              <div class="stars" aria-label="5 out of 5 stars">
+                &#9733;&#9733;&#9733;&#9733;&#9733;
+              </div>
+              <p class="testimonial-quote">
+                "The multi-cloud normalization is genuinely impressive. We run a hybrid environment
+                spanning GCP and AWS, and CloudPulse is the first monitoring tool that has made it
+                feel coherent. The custom dashboard builder is powerful enough for our most
+                demanding engineers yet intuitive enough for the entire on-call rotation to use
+                without training."
+              </p>
+              <div class="testimonial-author">
+                <div class="testimonial-avatar" aria-label="Marcus Webb">MW</div>
+                <div>
+                  <div class="testimonial-name">Marcus Webb</div>
+                  <div class="testimonial-role">VP of Infrastructure, Orbital Finance</div>
+                </div>
+              </div>
+            </blockquote>
+
+            <blockquote class="testimonial-card">
+              <div class="stars" aria-label="5 out of 5 stars">
+                &#9733;&#9733;&#9733;&#9733;&#9733;
+              </div>
+              <p class="testimonial-quote">
+                "We evaluated six monitoring platforms before choosing CloudPulse. The API access
+                and Terraform provider sealed the deal — we can provision the entire monitoring
+                stack as code. The support team is also exceptional; they responded to our
+                integration questions within hours, not days. Highly recommend to any platform
+                team."
+              </p>
+              <div class="testimonial-author">
+                <div class="testimonial-avatar" aria-label="Priya Nair">PN</div>
+                <div>
+                  <div class="testimonial-name">Priya Nair</div>
+                  <div class="testimonial-role">Platform Engineering Lead, Stackwell Inc.</div>
+                </div>
+              </div>
+            </blockquote>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+         Integrations Section
+         ============================================================ -->
+      <section id="integrations" class="section" aria-labelledby="integrations-heading">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-label">Integrations</span>
+            <h2 id="integrations-heading">Connects to Your Entire Cloud Stack</h2>
+            <p>
+              CloudPulse normalizes data from every major cloud provider into a single unified
+              model. Connect once, monitor everything — without switching tools or context.
+            </p>
+          </div>
+
+          <!-- Main 3 cloud providers -->
+          <div class="integrations-main">
+            <div class="integration-card">
+              <div class="integration-badge badge-aws" role="img" aria-label="Amazon Web Services">
+                AWS
+              </div>
+              <h3>Amazon Web Services</h3>
+              <p>
+                CloudPulse ingests CloudWatch metrics, VPC flow logs, Lambda telemetry, ECS and EKS
+                cluster health, RDS Performance Insights, and over 40 additional AWS services.
+                Connect via a read-only IAM role in under five minutes with zero configuration.
+              </p>
+            </div>
+
+            <div class="integration-card">
+              <div class="integration-badge badge-azure" role="img" aria-label="Microsoft Azure">
+                Azure
+              </div>
+              <h3>Microsoft Azure</h3>
+              <p>
+                Monitor Azure Virtual Machines, App Service, Azure Kubernetes Service, SQL Database,
+                Cosmos DB, Azure Functions, and the full suite of Azure Monitor metrics and
+                diagnostics. Authenticate via a service principal with Reader role on your
+                subscription.
+              </p>
+            </div>
+
+            <div class="integration-card">
+              <div
+                class="integration-badge badge-gcp"
+                role="img"
+                aria-label="Google Cloud Platform"
+              >
+                GCP
+              </div>
+              <h3>Google Cloud Platform</h3>
+              <p>
+                Pull metrics from Compute Engine, Google Kubernetes Engine, Cloud SQL, Cloud Run,
+                Cloud Functions, BigQuery, and the full Google Cloud operations suite. Uses a
+                dedicated service account with Monitoring Viewer permissions for secure, read-only
+                access.
+              </p>
+            </div>
+          </div>
+
+          <!-- Secondary integrations -->
+          <div class="integration-secondary">
+            <p>Also integrates natively with your broader engineering stack:</p>
+            <div class="integration-tags">
+              <span class="int-tag">Prometheus</span>
+              <span class="int-tag">Grafana</span>
+              <span class="int-tag">Datadog Import</span>
+              <span class="int-tag">OpenTelemetry</span>
+              <span class="int-tag">Terraform</span>
+              <span class="int-tag">Kubernetes</span>
+              <span class="int-tag">Docker</span>
+              <span class="int-tag">PagerDuty</span>
+              <span class="int-tag">Opsgenie</span>
+              <span class="int-tag">Slack</span>
+              <span class="int-tag">Jira</span>
+              <span class="int-tag">GitHub</span>
+            </div>
+          </div>
+
+          <div class="integration-cta">
+            <p>
+              Don't see your stack?
+              <a href="#pricing"
+                >All 120+ integrations are included on every paid plan — no add-ons needed.</a
+              >
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+         FAQ Section — Native details/summary accordion (no JS required)
+         ============================================================ -->
+      <section id="faq" class="section section-bg-alt" aria-labelledby="faq-heading">
+        <div class="container">
+          <div class="section-header">
+            <span class="section-label">FAQ</span>
+            <h2 id="faq-heading">Frequently Asked Questions</h2>
+            <p>
+              Everything you need to know before getting started. Can't find your answer? Reach out
+              to our team — we respond within one business hour on weekdays.
+            </p>
+          </div>
+
+          <div class="faq-stack">
+            <details>
+              <summary>How does the 14-day free trial work?</summary>
+              <div class="faq-answer">
+                When you sign up, your workspace is automatically placed on the Pro plan for 14 days
+                with no credit card required. You have full access to every Pro feature — including
+                unlimited alert rules, custom dashboards, Slack and PagerDuty notifications, and ML
+                anomaly detection. At the end of the trial period you can choose any paid plan or
+                continue on the free community tier. Your dashboards, alert rules, and historical
+                data are preserved regardless of which plan you select.
+              </div>
+            </details>
+
+            <details>
+              <summary>Which cloud providers does CloudPulse support?</summary>
+              <div class="faq-answer">
+                CloudPulse natively integrates with Amazon Web Services, Microsoft Azure, and Google
+                Cloud Platform. We support over 120 individual services across these three
+                providers, including compute, storage, managed databases, serverless functions, and
+                container orchestration platforms. Hybrid and on-premise environments are supported
+                via our OpenTelemetry-compatible agent. New service integrations are shipped on a
+                monthly release cadence, and you can request integrations directly from the product
+                roadmap portal.
+              </div>
+            </details>
+
+            <details>
+              <summary>How is pricing calculated for large environments?</summary>
+              <div class="faq-answer">
+                Pricing is based on the number of monitored hosts — virtual machines, container
+                nodes, or bare-metal servers — within your workspace. Serverless functions and
+                managed services such as S3, Blob Storage, and Cloud SQL do not count toward your
+                host limit. Enterprise customers receive custom volume pricing negotiated directly
+                with our sales team, typically with significant discounts for larger fleet sizes.
+                All plans include unlimited metrics ingestion resolution and unlimited team members
+                at no additional charge.
+              </div>
+            </details>
+
+            <details>
+              <summary>Is CloudPulse SOC 2 Type II certified?</summary>
+              <div class="faq-answer">
+                Yes. CloudPulse has maintained SOC 2 Type II certification since 2024. Our
+                infrastructure is hosted exclusively in ISO 27001-certified data centers. All data
+                in transit is encrypted with TLS 1.3, and all data at rest is encrypted with
+                AES-256. We are also GDPR compliant and offer EU data residency for European
+                customers. Enterprise customers may request a copy of our latest audit report and
+                penetration test summary under NDA by contacting their dedicated account manager.
+              </div>
+            </details>
+
+            <details>
+              <summary>Can I export my data if I decide to leave?</summary>
+              <div class="faq-answer">
+                Absolutely. You own your data, full stop. CloudPulse provides a complete data export
+                API and a self-service export tool in workspace settings that allows you to download
+                all metrics, alert history, dashboard configurations, and annotation data in JSON or
+                CSV format at any time — including during a free trial. We will never hold your data
+                hostage or impose exit fees. After account closure your data is retained for 90 days
+                before permanent deletion, giving you ample time to complete any data migrations.
+              </div>
+            </details>
+
+            <details>
+              <summary>
+                What monitoring agent do I need to install, and how resource-intensive is it?
+              </summary>
+              <div class="faq-answer">
+                The CloudPulse Agent is a single statically-compiled binary, available for Linux
+                (amd64, arm64), Windows Server, and macOS. It consumes less than 50 MB of RAM and
+                under 1% CPU at rest on standard instances. The agent supports autodiscovery of
+                running processes, containers, and system metrics with zero configuration required
+                out of the box. You can also use our fully agentless mode for cloud-provider metrics
+                by connecting via read-only API credentials — meaning no software installation is
+                needed at all for cloud-native environments.
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================
+         Footer CTA Banner
+         ============================================================ -->
+      <section class="footer-cta" aria-labelledby="footer-cta-heading">
+        <div class="container">
+          <h2 id="footer-cta-heading">Ready to Take Control of Your Cloud?</h2>
+          <p>
+            Join over 10,000 engineering teams who trust CloudPulse for real-time visibility into
+            their production infrastructure. Start your free trial today.
+          </p>
+          <div class="footer-cta-btns">
+            <a href="#pricing" class="btn btn-white btn-lg">Start Free Trial</a>
+            <a href="#" class="btn btn-ghost-white btn-lg">Book a Demo</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============================================================
+       Footer
+       ============================================================ -->
+    <footer role="contentinfo">
+      <div class="container">
+        <div class="footer-grid">
+          <!-- Brand column -->
+          <div>
+            <a href="#" class="footer-logo-mark" aria-label="CloudPulse home">
+              <svg width="26" height="26" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+                <circle cx="15" cy="15" r="15" fill="#2563EB" />
+                <path
+                  d="M8 19c0-3.87 3.13-7 7-7s7 3.13 7 7"
+                  stroke="#fff"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                />
+                <circle cx="15" cy="12" r="2.2" fill="#10B981" />
+                <line
+                  x1="15"
+                  y1="14.2"
+                  x2="15"
+                  y2="19"
+                  stroke="#10B981"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+              Cloud<span class="lw">Pulse</span>
+            </a>
+            <p class="footer-desc">
+              Real-time cloud infrastructure monitoring for modern engineering teams. See
+              everything, miss nothing — across AWS, Azure, and GCP.
+            </p>
+          </div>
+
+          <!-- Product -->
+          <div class="footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#features">Features</a></li>
+              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="#integrations">Integrations</a></li>
+              <li><a href="#">Changelog</a></li>
+              <li><a href="#">Status Page</a></li>
+            </ul>
+          </div>
+
+          <!-- Company -->
+          <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#">About Us</a></li>
+              <li><a href="#">Blog</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Press</a></li>
+              <li><a href="#">Contact</a></li>
+            </ul>
+          </div>
+
+          <!-- Resources and Legal -->
+          <div class="footer-col">
+            <h4>Resources &amp; Legal</h4>
+            <ul>
+              <li><a href="#">Documentation</a></li>
+              <li><a href="#">API Reference</a></li>
+              <li><a href="#">Privacy Policy</a></li>
+              <li><a href="#">Terms of Service</a></li>
+              <li><a href="#">Security &amp; GDPR</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Footer bottom bar -->
+        <div class="footer-bar">
+          <p class="footer-copyright">&copy; 2026 CloudPulse, Inc. All rights reserved.</p>
+          <div class="footer-socials" aria-label="Social media links">
+            <a href="#" aria-label="CloudPulse on Twitter / X">Twitter</a>
+            <a href="#" aria-label="CloudPulse on LinkedIn">LinkedIn</a>
+            <a href="#" aria-label="CloudPulse on GitHub">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ============================================================
+       JavaScript — Nav hamburger toggle and scroll effect
+       ============================================================ -->
+    <script>
+      (function () {
+        'use strict';
+
+        /* ---- Hamburger menu ---- */
+        var btn = document.getElementById('hamburger-btn');
+        var menu = document.getElementById('mobile-menu');
+
+        function closeMenu() {
+          btn.setAttribute('aria-expanded', 'false');
+          menu.classList.remove('open');
+          menu.setAttribute('aria-hidden', 'true');
+        }
+
+        btn.addEventListener('click', function () {
+          var isExpanded = btn.getAttribute('aria-expanded') === 'true';
+          if (isExpanded) {
+            closeMenu();
+          } else {
+            btn.setAttribute('aria-expanded', 'true');
+            menu.classList.add('open');
+            menu.setAttribute('aria-hidden', 'false');
+          }
+        });
+
+        /* Close when any in-menu link is clicked */
+        var menuLinks = menu.querySelectorAll('a');
+        for (var i = 0; i < menuLinks.length; i++) {
+          menuLinks[i].addEventListener('click', closeMenu);
+        }
+
+        /* Close on Escape key */
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && btn.getAttribute('aria-expanded') === 'true') {
+            closeMenu();
+            btn.focus();
+          }
+        });
+
+        /* ---- Navbar scroll shadow ---- */
+        var navbar = document.getElementById('navbar');
+        window.addEventListener(
+          'scroll',
+          function () {
+            if (window.scrollY > 8) {
+              navbar.classList.add('scrolled');
+            } else {
+              navbar.classList.remove('scrolled');
+            }
+          },
+          { passive: true },
+        );
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1354 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudPulse — Cloud Monitoring &amp; Intelligent Alerting</title>
+    <meta
+      name="description"
+      content="Real-time cloud monitoring with ML-powered alerting. Detect anomalies before outages. Free tier available. Trusted by 2,000+ teams."
+    />
+    <meta name="theme-color" content="#2563EB" />
+    <link rel="canonical" href="https://cloudpulse.io/" />
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CloudPulse — Cloud Monitoring &amp; Intelligent Alerting" />
+    <meta
+      property="og:description"
+      content="Real-time cloud monitoring with ML-powered alerting. Detect anomalies before outages. Free tier available."
+    />
+    <meta property="og:url" content="https://cloudpulse.io/" />
+    <meta property="og:site_name" content="CloudPulse" />
+    <meta property="og:image" content="https://cloudpulse.io/og-image.png" />
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="CloudPulse — Cloud Monitoring &amp; Intelligent Alerting" />
+    <meta
+      name="twitter:description"
+      content="Real-time cloud monitoring with ML-powered alerting. Detect anomalies before outages."
+    />
+    <meta name="twitter:image" content="https://cloudpulse.io/og-image.png" />
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "CloudPulse",
+        "url": "https://cloudpulse.io",
+        "logo": "https://cloudpulse.io/logo.svg",
+        "description": "Real-time cloud monitoring with ML-powered alerting.",
+        "sameAs": []
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CloudPulse",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "offers": [
+          { "@type": "Offer", "name": "Starter", "price": "0", "priceCurrency": "USD" },
+          {
+            "@type": "Offer",
+            "name": "Pro",
+            "price": "9",
+            "priceCurrency": "USD",
+            "priceSpecification": {
+              "@type": "UnitPriceSpecification",
+              "price": "9",
+              "priceCurrency": "USD",
+              "referenceQuantity": {
+                "@type": "QuantitativeValue",
+                "value": "1",
+                "unitText": "host/month"
+              }
+            }
+          },
+          {
+            "@type": "Offer",
+            "name": "Enterprise",
+            "price": "0",
+            "priceCurrency": "USD",
+            "description": "Custom pricing"
+          }
+        ]
+      }
+    </script>
+    <style>
+      /* ===== RESET & BASE ===== */
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      :root {
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --secondary: #7c3aed;
+        --secondary-hover: #6d28d9;
+        --accent: #10b981;
+        --accent-hover: #059669;
+        --bg: #f8fafc;
+        --bg-alt: #f1f5f9;
+        --surface: #ffffff;
+        --surface-alt: #f8fafc;
+        --text: #1e293b;
+        --text-secondary: #64748b;
+        --text-muted: #94a3b8;
+        --border: #e2e8f0;
+        --shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+        --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+        --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        --radius: 8px;
+        --radius-lg: 12px;
+        --radius-xl: 16px;
+        --font:
+          system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+          sans-serif;
+        --nav-h: 64px;
+        --max-w: 1200px;
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --bg-alt: #1e293b;
+          --surface: #1e293b;
+          --surface-alt: #334155;
+          --text: #f1f5f9;
+          --text-secondary: #94a3b8;
+          --text-muted: #64748b;
+          --border: #334155;
+          --shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+          --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.25), 0 2px 4px rgba(0, 0, 0, 0.2);
+          --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.3), 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+      }
+
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: calc(var(--nav-h) + 16px);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+      body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+      a:hover {
+        text-decoration: underline;
+      }
+      img {
+        max-width: 100%;
+        display: block;
+      }
+      button {
+        font-family: inherit;
+        cursor: pointer;
+      }
+      ul {
+        list-style: none;
+      }
+
+      /* Skip link */
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 16px;
+        background: var(--primary);
+        color: #fff;
+        padding: 8px 16px;
+        border-radius: var(--radius);
+        z-index: 1000;
+        font-weight: 600;
+      }
+      .skip-link:focus {
+        top: 8px;
+      }
+
+      /* Container */
+      .container {
+        width: 100%;
+        max-width: var(--max-w);
+        margin: 0 auto;
+        padding: 0 20px;
+      }
+
+      /* ===== BUTTONS ===== */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 12px 24px;
+        border-radius: var(--radius);
+        font-weight: 600;
+        font-size: 1rem;
+        border: 2px solid transparent;
+        transition:
+          background 0.2s,
+          color 0.2s,
+          border-color 0.2s,
+          transform 0.15s,
+          box-shadow 0.2s;
+        white-space: nowrap;
+      }
+      .btn:hover {
+        text-decoration: none;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+      }
+      .btn:active {
+        transform: translateY(0);
+      }
+      .btn:focus-visible {
+        outline: 3px solid var(--primary);
+        outline-offset: 2px;
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+      }
+      .btn-primary:hover {
+        background: var(--primary-hover);
+        border-color: var(--primary-hover);
+      }
+      .btn-outline {
+        background: transparent;
+        color: var(--primary);
+        border-color: var(--primary);
+      }
+      .btn-outline:hover {
+        background: var(--primary);
+        color: #fff;
+      }
+      .btn-accent {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+      }
+      .btn-accent:hover {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+      }
+      .btn-secondary {
+        background: var(--secondary);
+        color: #fff;
+        border-color: var(--secondary);
+      }
+      .btn-secondary:hover {
+        background: var(--secondary-hover);
+        border-color: var(--secondary-hover);
+      }
+      .btn-sm {
+        padding: 8px 16px;
+        font-size: 0.875rem;
+      }
+      .btn-lg {
+        padding: 16px 32px;
+        font-size: 1.125rem;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .btn {
+          transition: none;
+        }
+      }
+
+      /* ===== NAV ===== */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        height: var(--nav-h);
+        backdrop-filter: blur(8px);
+      }
+      @supports (backdrop-filter: blur(8px)) {
+        .nav {
+          background: color-mix(in srgb, var(--surface) 85%, transparent);
+        }
+      }
+      .nav .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 100%;
+      }
+      .nav-logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .nav-logo:hover {
+        text-decoration: none;
+      }
+      .nav-logo svg {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+      }
+      .nav-links a {
+        color: var(--text-secondary);
+        font-weight: 500;
+        font-size: 0.9375rem;
+        transition: color 0.15s;
+      }
+      .nav-links a:hover {
+        color: var(--primary);
+        text-decoration: none;
+      }
+      .nav-cta {
+        margin-left: 8px;
+      }
+      .nav-toggle {
+        display: none;
+        background: none;
+        border: none;
+        color: var(--text);
+        padding: 8px;
+      }
+      .nav-toggle:focus-visible {
+        outline: 3px solid var(--primary);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+      .nav-toggle svg {
+        width: 24px;
+        height: 24px;
+        display: block;
+      }
+
+      @media (max-width: 768px) {
+        .nav-links {
+          position: fixed;
+          top: var(--nav-h);
+          left: 0;
+          right: 0;
+          bottom: 0;
+          flex-direction: column;
+          gap: 0;
+          background: var(--surface);
+          padding: 16px;
+          transform: translateX(100%);
+          transition: transform 0.3s ease;
+          overflow-y: auto;
+        }
+        .nav-links.open {
+          transform: translateX(0);
+        }
+        .nav-links a {
+          font-size: 1.125rem;
+          padding: 12px 0;
+          width: 100%;
+          border-bottom: 1px solid var(--border);
+        }
+        .nav-cta {
+          margin: 16px 0 0;
+          width: 100%;
+        }
+        .nav-cta .btn {
+          width: 100%;
+        }
+        .nav-toggle {
+          display: block;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nav-links {
+            transition: none;
+          }
+        }
+      }
+
+      /* ===== HERO ===== */
+      .hero {
+        padding: 80px 0 64px;
+        text-align: center;
+        background: linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 100%);
+      }
+      .hero h1 {
+        font-size: clamp(2rem, 5vw, 3.5rem);
+        font-weight: 800;
+        line-height: 1.15;
+        margin-bottom: 16px;
+        letter-spacing: -0.02em;
+      }
+      .hero h1 .gradient {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .hero p {
+        font-size: clamp(1.05rem, 2vw, 1.25rem);
+        color: var(--text-secondary);
+        max-width: 640px;
+        margin: 0 auto 32px;
+      }
+      .hero-ctas {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 56px;
+      }
+      .hero-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .hero-metric {
+        text-align: center;
+      }
+      .hero-metric .value {
+        font-size: clamp(1.5rem, 3vw, 2rem);
+        font-weight: 800;
+        color: var(--primary);
+      }
+      .hero-metric .label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+      @media (max-width: 480px) {
+        .hero-metrics {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+      }
+
+      /* ===== SECTIONS ===== */
+      .section {
+        padding: 80px 0;
+      }
+      .section-alt {
+        background: var(--bg-alt);
+      }
+      .section-header {
+        text-align: center;
+        margin-bottom: 48px;
+      }
+      .section-header h2 {
+        font-size: clamp(1.5rem, 3vw, 2.25rem);
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+      .section-header p {
+        color: var(--text-secondary);
+        max-width: 560px;
+        margin: 0 auto;
+        font-size: 1.05rem;
+      }
+
+      /* ===== FEATURES ===== */
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .feature-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+      .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .feature-card {
+          transition: none;
+        }
+        .feature-card:hover {
+          transform: none;
+        }
+      }
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+        font-size: 1.5rem;
+      }
+      .feature-icon-1 {
+        background: #dbeafe;
+        color: var(--primary);
+      }
+      .feature-icon-2 {
+        background: #ede9fe;
+        color: var(--secondary);
+      }
+      .feature-icon-3 {
+        background: #d1fae5;
+        color: var(--accent);
+      }
+      .feature-icon-4 {
+        background: #fef3c7;
+        color: #d97706;
+      }
+      .feature-icon-5 {
+        background: #fee2e2;
+        color: #dc2626;
+      }
+      .feature-icon-6 {
+        background: #e0e7ff;
+        color: #4f46e5;
+      }
+      @media (prefers-color-scheme: dark) {
+        .feature-icon-1 {
+          background: #1e3a5f;
+          color: #60a5fa;
+        }
+        .feature-icon-2 {
+          background: #3b1f6e;
+          color: #a78bfa;
+        }
+        .feature-icon-3 {
+          background: #064e3b;
+          color: #34d399;
+        }
+        .feature-icon-4 {
+          background: #78350f;
+          color: #fbbf24;
+        }
+        .feature-icon-5 {
+          background: #7f1d1d;
+          color: #f87171;
+        }
+        .feature-icon-6 {
+          background: #312e81;
+          color: #818cf8;
+        }
+      }
+      .feature-card h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+      .feature-card p {
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+        line-height: 1.6;
+      }
+      @media (max-width: 768px) {
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (min-width: 769px) and (max-width: 1024px) {
+        .features-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      /* ===== PRICING ===== */
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+      .pricing-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 32px;
+        text-align: center;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+        position: relative;
+      }
+      .pricing-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .pricing-card {
+          transition: none;
+        }
+        .pricing-card:hover {
+          transform: none;
+        }
+      }
+      .pricing-featured {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 1px var(--primary);
+      }
+      .pricing-badge {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--primary);
+        color: #fff;
+        padding: 4px 16px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .pricing-card h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+      .pricing-price {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin: 16px 0 4px;
+      }
+      .pricing-price span {
+        font-size: 0.875rem;
+        font-weight: 400;
+        color: var(--text-secondary);
+      }
+      .pricing-desc {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin-bottom: 24px;
+      }
+      .pricing-features {
+        text-align: left;
+        margin-bottom: 24px;
+      }
+      .pricing-features li {
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 0.9375rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .pricing-features li::before {
+        content: '✓';
+        color: var(--accent);
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .pricing-card .btn {
+        width: 100%;
+      }
+      @media (max-width: 768px) {
+        .pricing-grid {
+          grid-template-columns: 1fr;
+          max-width: 400px;
+          margin: 0 auto;
+        }
+      }
+
+      /* ===== TESTIMONIALS ===== */
+      .testimonials-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+      .testimonial-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        padding: 32px;
+        display: flex;
+        flex-direction: column;
+      }
+      .testimonial-stars {
+        color: #fbbf24;
+        font-size: 1.125rem;
+        margin-bottom: 12px;
+        letter-spacing: 2px;
+      }
+      .testimonial-quote {
+        font-size: 1rem;
+        line-height: 1.7;
+        color: var(--text);
+        flex: 1;
+        margin-bottom: 20px;
+      }
+      .testimonial-author {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-top: 1px solid var(--border);
+        padding-top: 16px;
+      }
+      .testimonial-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.875rem;
+        flex-shrink: 0;
+      }
+      .testimonial-name {
+        font-weight: 600;
+        font-size: 0.875rem;
+      }
+      .testimonial-role {
+        color: var(--text-secondary);
+        font-size: 0.8125rem;
+      }
+      @media (max-width: 768px) {
+        .testimonials-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ===== FAQ ===== */
+      .faq-list {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .faq-item {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-lg);
+        margin-bottom: 12px;
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .faq-question {
+        width: 100%;
+        background: none;
+        border: none;
+        text-align: left;
+        padding: 20px 24px;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      .faq-question:hover {
+        background: var(--bg-alt);
+      }
+      .faq-question:focus-visible {
+        outline: 3px solid var(--primary);
+        outline-offset: -3px;
+        border-radius: var(--radius-lg);
+      }
+      .faq-chevron {
+        width: 20px;
+        height: 20px;
+        flex-shrink: 0;
+        transition: transform 0.2s;
+        color: var(--text-secondary);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .faq-chevron {
+          transition: none;
+        }
+      }
+      .faq-item[open] .faq-chevron {
+        transform: rotate(180deg);
+      }
+      .faq-answer {
+        padding: 0 24px 20px;
+        color: var(--text-secondary);
+        line-height: 1.7;
+        font-size: 0.9375rem;
+      }
+
+      /* ===== FOOTER ===== */
+      .footer {
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        padding: 64px 0 24px;
+      }
+      .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 32px;
+        margin-bottom: 48px;
+      }
+      .footer-col h4 {
+        font-size: 0.875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text);
+        margin-bottom: 16px;
+      }
+      .footer-col a {
+        display: block;
+        color: var(--text-secondary);
+        font-size: 0.9375rem;
+        padding: 4px 0;
+        transition: color 0.15s;
+      }
+      .footer-col a:hover {
+        color: var(--primary);
+        text-decoration: none;
+      }
+      .footer-bottom {
+        border-top: 1px solid var(--border);
+        padding-top: 24px;
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.8125rem;
+      }
+      @media (max-width: 768px) {
+        .footer-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 480px) {
+        .footer-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ===== ANIMATIONS ===== */
+      .fade-up {
+        opacity: 0;
+        transform: translateY(24px);
+        transition:
+          opacity 0.6s ease,
+          transform 0.6s ease;
+      }
+      .fade-up.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .fade-up {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Skip Link -->
+    <a href="#main" class="skip-link">Skip to main content</a>
+
+    <!-- Navigation -->
+    <nav class="nav" role="navigation" aria-label="Main navigation">
+      <div class="container">
+        <a href="#" class="nav-logo" aria-label="CloudPulse home">
+          <svg
+            viewBox="0 0 28 28"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
+          >
+            <rect width="28" height="28" rx="6" fill="#2563EB" />
+            <path
+              d="M6 16.5 C6 16.5 8.5 11 11 14 C13.5 17 14 10 16.5 13 C19 16 22 11 22 11"
+              stroke="white"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+          CloudPulse
+        </a>
+        <button
+          class="nav-toggle"
+          aria-expanded="false"
+          aria-controls="nav-menu"
+          aria-label="Toggle navigation menu"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <div class="nav-links" id="nav-menu" role="menubar">
+          <a href="#features" role="menuitem">Features</a>
+          <a href="#pricing" role="menuitem">Pricing</a>
+          <a href="#testimonials" role="menuitem">Testimonials</a>
+          <a href="#faq" role="menuitem">FAQ</a>
+          <span class="nav-cta">
+            <a href="#pricing" class="btn btn-primary btn-sm" role="menuitem">Start Free Trial</a>
+          </span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="main">
+      <!-- Hero -->
+      <section class="hero" aria-labelledby="hero-heading">
+        <div class="container">
+          <h1 id="hero-heading">
+            Monitor Smarter,<br /><span class="gradient">Respond Faster</span>
+          </h1>
+          <p>
+            Real-time cloud monitoring with intelligent alerting. Detect anomalies before they
+            become outages.
+          </p>
+          <div class="hero-ctas">
+            <a href="#pricing" class="btn btn-primary btn-lg">Start Free Trial</a>
+            <a href="#features" class="btn btn-outline btn-lg">See How It Works</a>
+          </div>
+          <div class="hero-metrics" role="list">
+            <div class="hero-metric fade-up" role="listitem">
+              <div class="value">99.99%</div>
+              <div class="label">Uptime SLA</div>
+            </div>
+            <div class="hero-metric fade-up" role="listitem">
+              <div class="value">500M+</div>
+              <div class="label">Events/Day Processed</div>
+            </div>
+            <div class="hero-metric fade-up" role="listitem">
+              <div class="value">2,000+</div>
+              <div class="label">Teams Trust CloudPulse</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section id="features" class="section section-alt" aria-labelledby="features-heading">
+        <div class="container">
+          <div class="section-header">
+            <h2 id="features-heading">Everything You Need To Stay In Control</h2>
+            <p>
+              Powerful monitoring tools that give your team complete visibility across your entire
+              cloud stack.
+            </p>
+          </div>
+          <div class="features-grid">
+            <article class="feature-card fade-up">
+              <div class="feature-icon feature-icon-1" aria-hidden="true">&#x1F4CA;</div>
+              <h3>Real-Time Dashboards</h3>
+              <p>
+                Live metrics across all your cloud providers in one unified view. Customize layouts
+                to match your workflow.
+              </p>
+            </article>
+            <article class="feature-card fade-up">
+              <div class="feature-icon feature-icon-2" aria-hidden="true">&#x1F514;</div>
+              <h3>Intelligent Alerting</h3>
+              <p>
+                ML-powered alerts that reduce noise by 90% and surface real issues. No more false
+                positives waking your team.
+              </p>
+            </article>
+            <article class="feature-card fade-up">
+              <div class="feature-icon feature-icon-3" aria-hidden="true">&#x1F5FA;</div>
+              <h3>Infrastructure Mapping</h3>
+              <p>
+                Auto-discovered topology maps of your entire cloud environment. See dependencies at
+                a glance.
+              </p>
+            </article>
+            <article class="feature-card fade-up">
+              <div class="feature-icon feature-icon-4" aria-hidden="true">&#x1F4DD;</div>
+              <h3>Log Aggregation</h3>
+              <p>
+                Centralized logging with full-text search across all services. Find the needle in
+                the haystack, fast.
+              </p>
+            </article>
+            <article class="feature-card fade-up">
+              <div class="feature-icon feature-icon-5" aria-hidden="true">&#x1F6A8;</div>
+              <h3>Incident Management</h3>
+              <p>
+                Automated runbooks and escalation policies to resolve issues fast. Cut mean time to
+                resolution dramatically.
+              </p>
+            </article>
+            <article class="feature-card fade-up">
+              <div class="feature-icon feature-icon-6" aria-hidden="true">&#x1F4B0;</div>
+              <h3>Cost Optimization</h3>
+              <p>
+                Identify underutilized resources and reduce cloud spend by up to 35%. Pay only for
+                what you actually use.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing -->
+      <section id="pricing" class="section" aria-labelledby="pricing-heading">
+        <div class="container">
+          <div class="section-header">
+            <h2 id="pricing-heading">Simple, Transparent Pricing</h2>
+            <p>Start free, scale as you grow. No hidden fees, no surprises.</p>
+          </div>
+          <div class="pricing-grid">
+            <!-- Starter -->
+            <div class="pricing-card fade-up">
+              <h3>Starter</h3>
+              <div class="pricing-price">Free</div>
+              <div class="pricing-desc">For small teams getting started</div>
+              <ul class="pricing-features">
+                <li>Up to 5 hosts</li>
+                <li>24-hour data retention</li>
+                <li>Basic alerting</li>
+                <li>10 integrations</li>
+                <li>Community support</li>
+              </ul>
+              <a href="#" class="btn btn-outline">Get Started</a>
+            </div>
+            <!-- Pro -->
+            <div class="pricing-card pricing-featured fade-up">
+              <div class="pricing-badge">Most Popular</div>
+              <h3>Pro</h3>
+              <div class="pricing-price">$9<span>/host/mo</span></div>
+              <div class="pricing-desc">For growing teams that need more</div>
+              <ul class="pricing-features">
+                <li>Unlimited hosts</li>
+                <li>15-month data retention</li>
+                <li>Advanced + ML alerting</li>
+                <li>200+ integrations</li>
+                <li>Priority email support</li>
+              </ul>
+              <a href="#" class="btn btn-primary">Start Free Trial</a>
+            </div>
+            <!-- Enterprise -->
+            <div class="pricing-card fade-up">
+              <h3>Enterprise</h3>
+              <div class="pricing-price">Custom</div>
+              <div class="pricing-desc">For organizations with advanced needs</div>
+              <ul class="pricing-features">
+                <li>Unlimited hosts</li>
+                <li>Custom data retention</li>
+                <li>Advanced + ML alerting</li>
+                <li>200+ & custom integrations</li>
+                <li>Dedicated CSM + SSO/SAML</li>
+              </ul>
+              <a href="#" class="btn btn-secondary">Contact Sales</a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials -->
+      <section id="testimonials" class="section section-alt" aria-labelledby="testimonials-heading">
+        <div class="container">
+          <div class="section-header">
+            <h2 id="testimonials-heading">Trusted By Engineering Teams Everywhere</h2>
+            <p>See why 2,000+ teams rely on CloudPulse to keep their systems running smoothly.</p>
+          </div>
+          <div class="testimonials-grid">
+            <blockquote class="testimonial-card fade-up">
+              <div class="testimonial-stars" aria-label="5 out of 5 stars">★★★★★</div>
+              <p class="testimonial-quote">
+                "CloudPulse cut our mean time to detection by 74%. The intelligent alerting alone is
+                worth the price."
+              </p>
+              <footer class="testimonial-author">
+                <div class="testimonial-avatar" aria-hidden="true">SC</div>
+                <div>
+                  <div class="testimonial-name">Sarah Chen</div>
+                  <div class="testimonial-role">VP Engineering, Shipfast</div>
+                </div>
+              </footer>
+            </blockquote>
+            <blockquote class="testimonial-card fade-up">
+              <div class="testimonial-stars" aria-label="5 out of 5 stars">★★★★★</div>
+              <p class="testimonial-quote">
+                "We went from 200+ daily alert noise to fewer than 10 actionable incidents. Game
+                changer for on-call."
+              </p>
+              <footer class="testimonial-author">
+                <div
+                  class="testimonial-avatar"
+                  aria-hidden="true"
+                  style="background: var(--secondary)"
+                >
+                  MJ
+                </div>
+                <div>
+                  <div class="testimonial-name">Marcus Johnson</div>
+                  <div class="testimonial-role">SRE Lead, Stackbuild</div>
+                </div>
+              </footer>
+            </blockquote>
+            <blockquote class="testimonial-card fade-up">
+              <div class="testimonial-stars" aria-label="5 out of 5 stars">★★★★★</div>
+              <p class="testimonial-quote">
+                "The infrastructure mapping gave us visibility we never had. We found orphaned
+                resources saving us $14k/month."
+              </p>
+              <footer class="testimonial-author">
+                <div
+                  class="testimonial-avatar"
+                  aria-hidden="true"
+                  style="background: var(--accent)"
+                >
+                  PP
+                </div>
+                <div>
+                  <div class="testimonial-name">Priya Patel</div>
+                  <div class="testimonial-role">CTO, Launchpad</div>
+                </div>
+              </footer>
+            </blockquote>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section id="faq" class="section" aria-labelledby="faq-heading">
+        <div class="container">
+          <div class="section-header">
+            <h2 id="faq-heading">Frequently Asked Questions</h2>
+            <p>Got questions? We have answers.</p>
+          </div>
+          <div class="faq-list">
+            <details class="faq-item">
+              <summary class="faq-question">
+                How does CloudPulse integrate with my existing tools?
+                <svg class="faq-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </summary>
+              <div class="faq-answer">
+                <p>
+                  CloudPulse offers 200+ native integrations including AWS, GCP, Azure, Kubernetes,
+                  Datadog, PagerDuty, Slack, and more. Setup takes under 5 minutes with our guided
+                  onboarding.
+                </p>
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary class="faq-question">
+                Is there a free tier?
+                <svg class="faq-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </summary>
+              <div class="faq-answer">
+                <p>
+                  Yes — our Starter plan is free forever for up to 5 hosts with 24-hour data
+                  retention. No credit card required.
+                </p>
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary class="faq-question">
+                How does intelligent alerting work?
+                <svg class="faq-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </summary>
+              <div class="faq-answer">
+                <p>
+                  Our ML models learn your system's normal behavior patterns and only alert on true
+                  anomalies. This reduces alert fatigue by up to 90% compared to static threshold
+                  alerting.
+                </p>
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary class="faq-question">
+                What kind of support do you offer?
+                <svg class="faq-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </summary>
+              <div class="faq-answer">
+                <p>
+                  Starter gets community support. Pro includes priority email with &lt; 4 hour
+                  response time. Enterprise gets a dedicated Customer Success Manager and 24/7 phone
+                  support.
+                </p>
+              </div>
+            </details>
+            <details class="faq-item">
+              <summary class="faq-question">
+                Can I try Pro features before committing?
+                <svg class="faq-chevron" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path
+                    fill-rule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                    clip-rule="evenodd"
+                  />
+                </svg>
+              </summary>
+              <div class="faq-answer">
+                <p>
+                  Absolutely. Every new account gets a 14-day free trial of Pro features. No credit
+                  card required to start.
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+      <div class="container">
+        <div class="footer-grid">
+          <div class="footer-col">
+            <h4>Product</h4>
+            <a href="#features">Features</a>
+            <a href="#pricing">Pricing</a>
+            <a href="#">Integrations</a>
+            <a href="#">Changelog</a>
+            <a href="#">Status</a>
+          </div>
+          <div class="footer-col">
+            <h4>Resources</h4>
+            <a href="#">Documentation</a>
+            <a href="#">API Reference</a>
+            <a href="#">Blog</a>
+            <a href="#">Community</a>
+          </div>
+          <div class="footer-col">
+            <h4>Company</h4>
+            <a href="#">About</a>
+            <a href="#">Careers</a>
+            <a href="#">Press</a>
+            <a href="#">Contact</a>
+          </div>
+          <div class="footer-col">
+            <h4>Legal</h4>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Security</a>
+            <a href="#">GDPR</a>
+          </div>
+        </div>
+        <div class="footer-bottom">&copy; 2026 CloudPulse, Inc. All rights reserved.</div>
+      </div>
+    </footer>
+
+    <script>
+      /* === Mobile nav toggle === */
+      (function () {
+        var toggle = document.querySelector('.nav-toggle');
+        var menu = document.getElementById('nav-menu');
+        if (!toggle || !menu) return;
+        toggle.addEventListener('click', function () {
+          var open = menu.classList.toggle('open');
+          toggle.setAttribute('aria-expanded', String(open));
+        });
+        /* Close menu on link click */
+        menu.querySelectorAll('a').forEach(function (link) {
+          link.addEventListener('click', function () {
+            menu.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+          });
+        });
+        /* Close on Escape */
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && menu.classList.contains('open')) {
+            menu.classList.remove('open');
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.focus();
+          }
+        });
+      })();
+
+      /* === Scroll-based fade-in animation === */
+      (function () {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        var els = document.querySelectorAll('.fade-up');
+        if (!els.length) return;
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+                observer.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0.15, rootMargin: '0px 0px -40px 0px' },
+        );
+        els.forEach(function (el) {
+          observer.observe(el);
+        });
+      })();
+
+      /* === Active nav link highlighting === */
+      (function () {
+        var sections = document.querySelectorAll('section[id]');
+        var links = document.querySelectorAll('.nav-links a[href^="#"]');
+        if (!sections.length || !links.length) return;
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (entry.isIntersecting) {
+                var id = entry.target.getAttribute('id');
+                links.forEach(function (link) {
+                  if (link.getAttribute('href') === '#' + id) {
+                    link.style.color = 'var(--primary)';
+                  } else if (!link.classList.contains('btn')) {
+                    link.style.color = '';
+                  }
+                });
+              }
+            });
+          },
+          { threshold: 0.3, rootMargin: '-64px 0px -50% 0px' },
+        );
+        sections.forEach(function (s) {
+          observer.observe(s);
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,66 @@
+# CloudPulse Component Design Document
+
+## Overall Page Structure
+- Max-width container: 1200px, centered
+- Section padding: 80px vertical (desktop), 56px (mobile)
+- CSS custom properties for all brand tokens
+- Mobile-first responsive with breakpoints at 640px, 768px, 1024px
+
+## Navigation
+- Fixed position, glassmorphism background (rgba white + backdrop-filter blur)
+- Height: 68px, flex layout with logo left, links center, CTAs right
+- Logo: SVG icon + "CloudPulse" wordmark, font-weight 800
+- Links: 0.9375rem, font-weight 500, color gray-600, hover primary
+- Mobile: hamburger toggle with aria-expanded, dropdown menu panel
+- Scroll shadow effect on scroll
+
+## Hero Section
+- Full-width gradient background (#1E3A8A to #2563EB to #3B82F6)
+- Two-column grid: copy left, dashboard illustration right
+- H1: clamp(2rem, 4.5vw, 3.25rem), weight 900, white
+- Subtitle: 1.125rem, white at 85% opacity
+- Two CTA buttons: primary (white) + secondary (ghost white outline)
+- Trust indicators below CTAs
+- Dashboard mockup: semi-transparent card with stats, bar chart, alert rows
+
+## Features Section
+- 3-column grid (2-col at 1024px, 1-col at 640px)
+- Cards: white background, 1px gray-200 border, 12px radius, 32px padding
+- Hover: translateY(-3px), shadow-lg, primary-light border
+- Icon: 50x50px box with primary-xlight background, SVG stroke icon
+- H3: 1.0625rem weight 700, P: 0.9375rem gray-500
+
+## Pricing Section
+- 3-column grid (1-col at 1024px)
+- Cards: white, 2px border, 16px radius, 36px padding
+- Featured card: primary border color, blue shadow
+- Badge: absolute positioned, primary background, uppercase
+- Price: 2.75rem weight 900
+- Feature list: checkmark circles (green) + text
+
+## Testimonials Section
+- 3-column grid (1-col at 1024px)
+- Blockquote cards with 4px left border in primary color
+- Stars: amber color, 5-star rating
+- Quote: italic, 0.9375rem
+- Author: avatar circle (gradient blue) with initials + name/role
+
+## Integrations Section
+- 3-column grid for main providers (1-col at 768px)
+- Cards: white, border, 12px radius, centered content
+- Provider badges: 68x68px colored squares (AWS orange, Azure blue, GCP blue)
+- Secondary: flex-wrap tag pills for additional integrations
+
+## FAQ Section
+- Native details/summary accordion (no JS needed)
+- Max-width 760px centered
+- Details: white background, gray-200 border, 8px radius
+- Open state: primary-light border, primary-xlight background
+- Summary: flex between, 1rem weight 600, chevron icon via CSS pseudo-element
+- Chevron rotates 180deg on open
+
+## Footer
+- CTA banner: gradient background matching hero, centered H2 + buttons
+- Footer: gray-900 background, 4-column grid
+- Links: gray-400, hover white
+- Bottom bar: border-top, copyright + social links

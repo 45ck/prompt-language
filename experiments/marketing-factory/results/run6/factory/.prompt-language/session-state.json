@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "sessionId": "ee66aae1-a131-4018-bdb3-55f4249c2ab8",
+  "flowSpec": {
+    "goal": "Build a marketing website for CloudPulse (cloud monitoring SaaS).",
+    "nodes": [
+      {
+        "kind": "let",
+        "id": "n1",
+        "declarationKind": "let",
+        "variableName": "product_name",
+        "source": {
+          "type": "literal",
+          "value": "CloudPulse"
+        },
+        "append": false,
+        "position": {
+          "line": 4,
+          "column": 3,
+          "text": "  let product_name = \"CloudPulse\""
+        }
+      },
+      {
+        "kind": "let",
+        "id": "n2",
+        "declarationKind": "let",
+        "variableName": "tagline",
+        "source": {
+          "type": "literal",
+          "value": "Monitor smarter, respond faster."
+        },
+        "append": false,
+        "position": {
+          "line": 5,
+          "column": 3,
+          "text": "  let tagline = \"Monitor smarter, respond faster.\""
+        }
+      },
+      {
+        "kind": "let",
+        "id": "n3",
+        "declarationKind": "let",
+        "variableName": "primary_color",
+        "source": {
+          "type": "literal",
+          "value": ""
+        },
+        "append": false,
+        "position": {
+          "line": 6,
+          "column": 3,
+          "text": "  let primary_color = \"#2563EB\""
+        }
+      },
+      {
+        "kind": "let",
+        "id": "n4",
+        "declarationKind": "let",
+        "variableName": "secondary_color",
+        "source": {
+          "type": "literal",
+          "value": ""
+        },
+        "append": false,
+        "position": {
+          "line": 7,
+          "column": 3,
+          "text": "  let secondary_color = \"#7C3AED\""
+        }
+      },
+      {
+        "kind": "let",
+        "id": "n5",
+        "declarationKind": "let",
+        "variableName": "accent_color",
+        "source": {
+          "type": "literal",
+          "value": ""
+        },
+        "append": false,
+        "position": {
+          "line": 8,
+          "column": 3,
+          "text": "  let accent_color = \"#10B981\""
+        }
+      },
+      {
+        "kind": "let",
+        "id": "n6",
+        "declarationKind": "let",
+        "variableName": "brand_font",
+        "source": {
+          "type": "literal",
+          "value": "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif"
+        },
+        "append": false,
+        "position": {
+          "line": 9,
+          "column": 3,
+          "text": "  let brand_font = \"-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif\""
+        }
+      },
+      {
+        "kind": "let",
+        "id": "n7",
+        "declarationKind": "let",
+        "variableName": "target_audience",
+        "source": {
+          "type": "literal",
+          "value": "Engineering teams and DevOps professionals"
+        },
+        "append": false,
+        "position": {
+          "line": 10,
+          "column": 3,
+          "text": "  let target_audience = \"Engineering teams and DevOps professionals\""
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n8",
+        "text": "You are a brand strategist. Write comprehensive brand guidelines for \\. Include voice and tone, color palette (primary: \\, secondary: \\, accent: \\), typography (\\), and naming conventions. Save to brand-guidelines.md.",
+        "position": {
+          "line": 11,
+          "column": 3,
+          "text": "  prompt: You are a brand strategist. Write comprehensive brand guidelines for \\. Include voice and tone, color palette (primary: \\, secondary: \\, accent: \\), typography (\\), and naming conventions. Save to brand-guidelines.md."
+        }
+      },
+      {
+        "kind": "prompt",
+        "id": "n9",
+        "text": "You are a content strategist. Write a detailed content brief for the \\ marketing website. Include all sections (hero, features, pricing, testimonials, FAQ, footer), exact copy for each section, SEO metadata, and accessibility requirements. Reference the brand guidelines. Save to content-brief.md.",
+        "position": {
+          "line": 12,
+          "column": 3,
+          "text": "  prompt: You are a content strategist. Write a detailed content brief for the \\ marketing website. Include all sections (hero, features, pricing, testimonials, FAQ, footer), exact copy for each section, SEO metadata, and accessibility requirements. Reference the brand guidelines. Save to content-brief.md."
+        }
+      },
+      {
+        "kind": "retry",
+        "id": "n12",
+        "maxAttempts": 3,
+        "body": [
+          {
+            "kind": "prompt",
+            "id": "n10",
+            "text": "You are an expert frontend developer. Build a complete, production-quality single-page marketing website for \\ in a single index.html file. Follow the content brief in content-brief.md exactly. Follow the brand guidelines in brand-guidelines.md exactly. Requirements - all CSS inline or in style tag, all JS inline or in script tag, responsive design, dark mode support, smooth scroll navigation, animated elements, proper semantic HTML5, WCAG 2.1 AA accessible, SEO optimized with meta tags and JSON-LD. The file must be >15KB with all 8 sections.",
+            "position": {
+              "line": 14,
+              "column": 5,
+              "text": "    prompt: You are an expert frontend developer. Build a complete, production-quality single-page marketing website for \\ in a single index.html file. Follow the content brief in content-brief.md exactly. Follow the brand guidelines in brand-guidelines.md exactly. Requirements - all CSS inline or in style tag, all JS inline or in script tag, responsive design, dark mode support, smooth scroll navigation, animated elements, proper semantic HTML5, WCAG 2.1 AA accessible, SEO optimized with meta tags and JSON-LD. The file must be >15KB with all 8 sections."
+            }
+          },
+          {
+            "kind": "run",
+            "id": "n11",
+            "command": "node -e \"const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); const checks = [{name:'file_size',pass:h.length>15000},{name:'has_nav',pass:h.includes('<nav')},{name:'has_hero',pass:/hero/i.test(h)},{name:'has_features',pass:/features/i.test(h)},{name:'has_pricing',pass:/pricing/i.test(h)},{name:'has_testimonials',pass:/testimonial/i.test(h)},{name:'has_faq',pass:/faq/i.test(h)},{name:'has_footer',pass:h.includes('<footer')},{name:'has_responsive',pass:h.includes('@media')},{name:'has_json_ld',pass:h.includes('application/ld+json')},{name:'valid_html',pass:h.includes('</html>')},{name:'has_meta_desc',pass:h.includes('meta') && h.includes('description')},{name:'brand_color',pass:h.includes('",
+            "position": {
+              "line": 15,
+              "column": 5,
+              "text": "    run: node -e \"const fs=require('fs'); const h=fs.readFileSync('index.html','utf8'); const checks = [{name:'file_size',pass:h.length>15000},{name:'has_nav',pass:h.includes('<nav')},{name:'has_hero',pass:/hero/i.test(h)},{name:'has_features',pass:/features/i.test(h)},{name:'has_pricing',pass:/pricing/i.test(h)},{name:'has_testimonials',pass:/testimonial/i.test(h)},{name:'has_faq',pass:/faq/i.test(h)},{name:'has_footer',pass:h.includes('<footer')},{name:'has_responsive',pass:h.includes('@media')},{name:'has_json_ld',pass:h.includes('application/ld+json')},{name:'valid_html',pass:h.includes('</html>')},{name:'has_meta_desc',pass:h.includes('meta') && h.includes('description')},{name:'brand_color',pass:h.includes('#2563EB') || h.includes('#2563eb')},{name:'product_name',pass:h.includes('CloudPulse')},{name:'has_cta',pass:/start.*trial|get.*started|sign.*up/i.test(h)}]; const failures=checks.filter(c=>\\!c.pass); if(failures.length>0){console.error('FAILURES:',failures.map(f=>f.name).join(', ')); process.exit(1);} console.log('All',checks.length,'checks passed');\""
+            }
+          }
+        ],
+        "position": {
+          "line": 13,
+          "column": 3,
+          "text": "  retry max 3"
+        }
+      }
+    ],
+    "completionGates": [
+      {
+        "predicate": "file_exists index.html"
+      },
+      {
+        "predicate": "html_valid",
+        "command": "node -e \"const h=require('fs').readFileSync('index.html','utf8'); process.exit(h.includes('</html>') && h.length>15000 ? 0 : 1)\""
+      },
+      {
+        "predicate": "brand_check",
+        "command": "node -e \"const h=require('fs').readFileSync('index.html','utf8'); process.exit(h.includes('CloudPulse') && (h.includes('#2563EB')||h.includes('#2563eb')) ? 0 : 1)\""
+      }
+    ],
+    "defaults": {
+      "maxIterations": 5,
+      "maxAttempts": 3
+    },
+    "warnings": []
+  },
+  "currentNodePath": [
+    8
+  ],
+  "nodeProgress": {
+    "n1": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776228695296,
+      "completedAt": 1776228695297
+    },
+    "n2": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776228695299,
+      "completedAt": 1776228695299
+    },
+    "n3": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776228695300,
+      "completedAt": 1776228695300
+    },
+    "n4": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776228695301,
+      "completedAt": 1776228695301
+    },
+    "n5": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776228695301,
+      "completedAt": 1776228695301
+    },
+    "n6": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776228695302,
+      "completedAt": 1776228695302
+    },
+    "n7": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776228695303,
+      "completedAt": 1776228695303
+    },
+    "n8": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776228695303,
+      "completedAt": 1776228695303
+    }
+  },
+  "variables": {
+    "product_name": "CloudPulse",
+    "tagline": "Monitor smarter, respond faster.",
+    "primary_color": "",
+    "secondary_color": "",
+    "accent_color": "",
+    "brand_font": "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif",
+    "target_audience": "Engineering teams and DevOps professionals"
+  },
+  "gateResults": {},
+  "gateDiagnostics": {},
+  "status": "active",
+  "warnings": [],
+  "spawnedChildren": {},
+  "snapshots": {},
+  "raceChildren": {},
+  "flowSpecHash": "67580386",
+  "transitionSeq": 8,
+  "captureNonce": "0ff4e794a98740752fde8f1324868145",
+  "prevStateHash": "752b225be11b4f10012f844f68f32be55e543687aa398847e105128b35891141",
+  "stateHash": "cc73461b7fcd22425e18a3daa5287bb155a8fe0ebeeacc46bce1a790ce9476ba",
+  "_checksum": "236057102f6ec0c8f49ba3547df9f4e14da90fb51cc388fe1f550a3760c15039"
+}

@@ -1,0 +1,1518 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudPulse — Monitor Smarter, Respond Faster | Cloud Monitoring for DevOps</title>
+    <meta
+      name="description"
+      content="CloudPulse is the cloud monitoring platform built for engineering teams and DevOps professionals. Real-time alerts, intelligent dashboards, and seamless integrations. Start your free trial today."
+    />
+    <meta
+      name="keywords"
+      content="cloud monitoring, DevOps monitoring, infrastructure monitoring, real-time alerts, cloud observability, SaaS monitoring"
+    />
+    <meta property="og:title" content="CloudPulse — Monitor Smarter, Respond Faster" />
+    <meta
+      property="og:description"
+      content="Real-time cloud monitoring for engineering teams. Start free."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#2563EB" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CloudPulse",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "Cloud monitoring platform for engineering teams and DevOps professionals.",
+        "offers": {
+          "@type": "AggregateOffer",
+          "lowPrice": "0",
+          "highPrice": "99",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --primary: #2563eb;
+        --secondary: #7c3aed;
+        --accent: #10b981;
+        --white: #ffffff;
+        --light-gray: #f8fafc;
+        --medium-gray: #64748b;
+        --dark-gray: #1e293b;
+        --near-black: #0f172a;
+        --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        --max-width: 1200px;
+        --radius-card: 12px;
+        --radius-btn: 8px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f172a;
+          --surface: #1e293b;
+          --text: #f1f5f9;
+          --text-secondary: #94a3b8;
+          --border: #334155;
+        }
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #ffffff;
+          --surface: #f8fafc;
+          --text: #1e293b;
+          --text-secondary: #64748b;
+          --border: #e2e8f0;
+        }
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        .fade-up,
+        .fade-in {
+          opacity: 1 !important;
+          transform: none !important;
+          transition: none !important;
+        }
+        .hero-orb {
+          animation: none !important;
+        }
+      }
+
+      body {
+        font-family: var(--font);
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        font-size: 1.125rem;
+        overflow-x: hidden;
+      }
+
+      a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+
+      a:focus-visible,
+      button:focus-visible,
+      input:focus-visible {
+        outline: 3px solid var(--primary);
+        outline-offset: 2px;
+      }
+
+      .skip-link {
+        position: absolute;
+        top: -100%;
+        left: 16px;
+        background: var(--primary);
+        color: var(--white);
+        padding: 8px 16px;
+        border-radius: var(--radius-btn);
+        z-index: 10000;
+        font-weight: 600;
+      }
+
+      .skip-link:focus {
+        top: 16px;
+      }
+
+      .container {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ===== NAV ===== */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+        transition: background 0.3s;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        nav {
+          background: rgba(15, 23, 42, 0.85);
+        }
+      }
+
+      .nav-inner {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 72px;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.35rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1rem;
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        list-style: none;
+      }
+
+      .nav-links a {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        font-weight: 500;
+        transition: color 0.2s;
+      }
+
+      .nav-links a:hover,
+      .nav-links a.active {
+        color: var(--primary);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 24px;
+        border-radius: var(--radius-btn);
+        font-size: 1rem;
+        font-weight: 600;
+        font-family: var(--font);
+        cursor: pointer;
+        border: none;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s,
+          opacity 0.2s;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      }
+
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: var(--white);
+      }
+
+      .btn-secondary {
+        background: transparent;
+        color: var(--primary);
+        border: 2px solid var(--primary);
+      }
+
+      .btn-nav {
+        padding: 8px 20px;
+        font-size: 0.9rem;
+      }
+
+      .hamburger {
+        display: none;
+        flex-direction: column;
+        gap: 5px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+      }
+
+      .hamburger span {
+        display: block;
+        width: 24px;
+        height: 2px;
+        background: var(--text);
+        border-radius: 2px;
+        transition:
+          transform 0.3s,
+          opacity 0.3s;
+      }
+
+      .mobile-menu {
+        display: none;
+        position: fixed;
+        top: 72px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--bg);
+        z-index: 999;
+        padding: 24px;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .mobile-menu.open {
+        display: flex;
+      }
+
+      .mobile-menu a {
+        font-size: 1.25rem;
+        font-weight: 500;
+        color: var(--text);
+        padding: 12px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+        .hamburger {
+          display: flex;
+        }
+      }
+
+      /* ===== HERO ===== */
+      .hero {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+        background: linear-gradient(
+          135deg,
+          var(--near-black) 0%,
+          #1a1a3e 50%,
+          var(--near-black) 100%
+        );
+        color: var(--white);
+        padding: 120px 24px 80px;
+      }
+
+      .hero-orb {
+        position: absolute;
+        width: 500px;
+        height: 500px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(37, 99, 235, 0.35) 0%,
+          rgba(124, 58, 237, 0.2) 40%,
+          transparent 70%
+        );
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        animation: pulse-orb 4s ease-in-out infinite;
+        pointer-events: none;
+      }
+
+      @keyframes pulse-orb {
+        0%,
+        100% {
+          transform: translate(-50%, -50%) scale(1);
+          opacity: 0.6;
+        }
+        50% {
+          transform: translate(-50%, -50%) scale(1.15);
+          opacity: 1;
+        }
+      }
+
+      .hero-content {
+        position: relative;
+        z-index: 1;
+        max-width: 720px;
+      }
+
+      .hero-badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50px;
+        padding: 6px 16px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-bottom: 24px;
+        color: var(--accent);
+      }
+
+      .hero h1 {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1.1;
+        margin-bottom: 20px;
+      }
+
+      .hero p {
+        font-size: 1.2rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 36px;
+        line-height: 1.6;
+      }
+
+      .hero-buttons {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .btn-hero-secondary {
+        background: rgba(255, 255, 255, 0.1);
+        color: var(--white);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+
+      @media (max-width: 768px) {
+        .hero h1 {
+          font-size: 2.5rem;
+        }
+        .hero p {
+          font-size: 1.05rem;
+        }
+        .hero-orb {
+          width: 300px;
+          height: 300px;
+        }
+      }
+
+      /* ===== SOCIAL PROOF ===== */
+      .social-proof {
+        padding: 48px 24px;
+        background: var(--surface);
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .social-proof-inner {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        text-align: center;
+      }
+
+      .social-proof-label {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+        font-weight: 600;
+      }
+
+      .logo-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 48px;
+        flex-wrap: wrap;
+        opacity: 0.5;
+      }
+
+      .logo-row span {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        letter-spacing: 0.02em;
+      }
+
+      /* ===== SECTIONS COMMON ===== */
+      section {
+        padding: 80px 24px;
+      }
+
+      .section-header {
+        text-align: center;
+        max-width: 600px;
+        margin: 0 auto 56px;
+      }
+
+      .overline {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: var(--primary);
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .section-header h2 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 12px;
+        color: var(--text);
+      }
+
+      .section-header p {
+        color: var(--text-secondary);
+        font-size: 1.05rem;
+      }
+
+      @media (max-width: 768px) {
+        section {
+          padding: 48px 24px;
+        }
+        .section-header h2 {
+          font-size: 1.75rem;
+        }
+      }
+
+      /* ===== FEATURES ===== */
+      .features-grid {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+
+      .feature-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        padding: 32px;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+
+      .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+      }
+
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(124, 58, 237, 0.1));
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-bottom: 16px;
+      }
+
+      .feature-card h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+        color: var(--text);
+      }
+
+      .feature-card p {
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+
+      @media (max-width: 768px) {
+        .features-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (min-width: 769px) and (max-width: 1024px) {
+        .features-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      /* ===== STATS ===== */
+      .stats {
+        background: var(--near-black);
+        color: var(--white);
+        padding: 64px 24px;
+      }
+
+      .stats-grid {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 32px;
+        text-align: center;
+      }
+
+      .stat-item h3 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 4px;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .stat-item p {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.7);
+      }
+
+      @media (max-width: 768px) {
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 24px;
+        }
+        .stat-item h3 {
+          font-size: 2rem;
+        }
+      }
+
+      /* ===== PRICING ===== */
+      .pricing-grid {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+
+      .pricing-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        padding: 36px 32px;
+        text-align: center;
+        position: relative;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+      }
+
+      .pricing-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+      }
+
+      .pricing-card.popular {
+        border: 2px solid transparent;
+        background-image:
+          linear-gradient(var(--surface), var(--surface)),
+          linear-gradient(135deg, var(--primary), var(--secondary));
+        background-origin: border-box;
+        background-clip: padding-box, border-box;
+        transform: scale(1.04);
+      }
+
+      .pricing-card.popular:hover {
+        transform: scale(1.04) translateY(-4px);
+      }
+
+      .popular-badge {
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: var(--white);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 4px 16px;
+        border-radius: 50px;
+      }
+
+      .pricing-card h3 {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+        color: var(--text);
+      }
+
+      .price {
+        font-size: 3rem;
+        font-weight: 800;
+        color: var(--text);
+        line-height: 1;
+        margin-bottom: 4px;
+      }
+
+      .price-period {
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        margin-bottom: 24px;
+      }
+
+      .pricing-features {
+        list-style: none;
+        text-align: left;
+        margin-bottom: 28px;
+      }
+
+      .pricing-features li {
+        padding: 8px 0;
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .pricing-features li::before {
+        content: '✓';
+        color: var(--accent);
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      .pricing-card .btn {
+        width: 100%;
+      }
+
+      @media (max-width: 768px) {
+        .pricing-grid {
+          grid-template-columns: 1fr;
+          max-width: 400px;
+        }
+        .pricing-card.popular {
+          transform: none;
+        }
+        .pricing-card.popular:hover {
+          transform: translateY(-4px);
+        }
+      }
+
+      /* ===== TESTIMONIALS ===== */
+      .testimonials {
+        background: var(--surface);
+      }
+
+      .testimonials-grid {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 24px;
+      }
+
+      .testimonial-card {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-card);
+        padding: 32px;
+      }
+
+      .testimonial-quote {
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--text);
+        margin-bottom: 20px;
+        font-style: italic;
+        position: relative;
+      }
+
+      .testimonial-quote::before {
+        content: '\201C';
+        font-size: 3rem;
+        color: var(--primary);
+        position: absolute;
+        top: -16px;
+        left: -4px;
+        line-height: 1;
+        opacity: 0.3;
+      }
+
+      .testimonial-author {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--white);
+        font-weight: 700;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+      }
+
+      .testimonial-name {
+        font-weight: 600;
+        font-size: 0.95rem;
+        color: var(--text);
+      }
+
+      .testimonial-title {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+      }
+
+      @media (max-width: 768px) {
+        .testimonials-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ===== FAQ ===== */
+      .faq-list {
+        max-width: 720px;
+        margin: 0 auto;
+      }
+
+      .faq-item {
+        border-bottom: 1px solid var(--border);
+      }
+
+      .faq-question {
+        width: 100%;
+        background: none;
+        border: none;
+        padding: 20px 0;
+        text-align: left;
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: var(--text);
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        font-family: var(--font);
+      }
+
+      .faq-question:hover {
+        color: var(--primary);
+      }
+
+      .faq-icon {
+        font-size: 1.25rem;
+        transition: transform 0.3s;
+        flex-shrink: 0;
+        color: var(--primary);
+      }
+
+      .faq-item.open .faq-icon {
+        transform: rotate(45deg);
+      }
+
+      .faq-answer {
+        max-height: 0;
+        overflow: hidden;
+        transition:
+          max-height 0.3s ease,
+          padding 0.3s ease;
+      }
+
+      .faq-item.open .faq-answer {
+        max-height: 300px;
+      }
+
+      .faq-answer p {
+        padding: 0 0 20px;
+        color: var(--text-secondary);
+        font-size: 0.95rem;
+        line-height: 1.6;
+      }
+
+      /* ===== CTA BANNER ===== */
+      .cta-banner {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: var(--white);
+        text-align: center;
+        padding: 80px 24px;
+      }
+
+      .cta-banner h2 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        margin-bottom: 12px;
+      }
+
+      .cta-banner p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 32px;
+      }
+
+      .cta-banner .btn {
+        background: var(--white);
+        color: var(--primary);
+        font-weight: 700;
+      }
+
+      @media (max-width: 768px) {
+        .cta-banner h2 {
+          font-size: 1.75rem;
+        }
+      }
+
+      /* ===== FOOTER ===== */
+      footer {
+        background: var(--near-black);
+        color: rgba(255, 255, 255, 0.8);
+        padding: 64px 24px 32px;
+      }
+
+      .footer-grid {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: 2fr repeat(4, 1fr);
+        gap: 40px;
+        margin-bottom: 48px;
+      }
+
+      .footer-brand p {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.5);
+        margin-top: 12px;
+        line-height: 1.5;
+      }
+
+      .footer-col h4 {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: rgba(255, 255, 255, 0.5);
+        margin-bottom: 16px;
+        font-weight: 600;
+      }
+
+      .footer-col ul {
+        list-style: none;
+      }
+
+      .footer-col li {
+        margin-bottom: 8px;
+      }
+
+      .footer-col a {
+        color: rgba(255, 255, 255, 0.7);
+        font-size: 0.9rem;
+        transition: color 0.2s;
+      }
+
+      .footer-col a:hover {
+        color: var(--white);
+      }
+
+      .footer-bottom {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding-top: 24px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+
+      .footer-bottom p {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.4);
+      }
+
+      .footer-social {
+        display: flex;
+        gap: 20px;
+      }
+
+      .footer-social a {
+        color: rgba(255, 255, 255, 0.5);
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .footer-social a:hover {
+        color: var(--white);
+      }
+
+      @media (max-width: 768px) {
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+        .footer-brand {
+          grid-column: 1 / -1;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .footer-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* ===== ANIMATIONS ===== */
+      .fade-up {
+        opacity: 0;
+        transform: translateY(24px);
+        transition:
+          opacity 0.6s ease,
+          transform 0.6s ease;
+      }
+
+      .fade-up.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    </style>
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
+
+    <!-- NAV -->
+    <nav aria-label="Main navigation">
+      <div class="nav-inner">
+        <a href="#" class="logo" aria-label="CloudPulse home">
+          <div class="logo-icon" aria-hidden="true">◆</div>
+          CloudPulse
+        </a>
+        <ul class="nav-links" role="list">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#testimonials">Testimonials</a></li>
+          <li><a href="#faq">FAQ</a></li>
+          <li><a href="#pricing" class="btn btn-primary btn-nav">Start Free Trial</a></li>
+        </ul>
+        <button
+          class="hamburger"
+          aria-label="Open menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu" id="mobile-menu" role="navigation" aria-label="Mobile navigation">
+      <a href="#features" class="mobile-link">Features</a>
+      <a href="#pricing" class="mobile-link">Pricing</a>
+      <a href="#testimonials" class="mobile-link">Testimonials</a>
+      <a href="#faq" class="mobile-link">FAQ</a>
+      <a href="#pricing" class="btn btn-primary" style="text-align: center; margin-top: 8px"
+        >Start Free Trial</a
+      >
+    </div>
+
+    <main id="main-content">
+      <!-- HERO -->
+      <section class="hero" id="hero" aria-labelledby="hero-heading">
+        <div class="hero-orb" aria-hidden="true"></div>
+        <div class="hero-content fade-up">
+          <span class="hero-badge">Trusted by 2,000+ engineering teams</span>
+          <h1 id="hero-heading">Monitor smarter, respond faster.</h1>
+          <p>
+            CloudPulse gives your engineering team real-time visibility into every layer of your
+            cloud infrastructure. Detect anomalies before they become outages.
+          </p>
+          <div class="hero-buttons">
+            <a href="#pricing" class="btn btn-primary">Get Started Free</a>
+            <a href="#features" class="btn btn-hero-secondary">See How It Works</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- SOCIAL PROOF -->
+      <section class="social-proof" aria-label="Trusted companies">
+        <div class="social-proof-inner">
+          <p class="social-proof-label">Trusted by teams at</p>
+          <div class="logo-row" aria-label="Partner logos">
+            <span>Stripe</span>
+            <span>Vercel</span>
+            <span>Datadog</span>
+            <span>Shopify</span>
+            <span>Twilio</span>
+            <span>HashiCorp</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEATURES -->
+      <section id="features" aria-labelledby="features-heading">
+        <div class="section-header fade-up">
+          <p class="overline">Features</p>
+          <h2 id="features-heading">Everything you need to keep your systems running.</h2>
+          <p>From real-time metrics to intelligent alerting, CloudPulse has you covered.</p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card fade-up">
+            <div class="feature-icon" aria-hidden="true">📊</div>
+            <h3>Real-Time Dashboards</h3>
+            <p>
+              Visualize your entire infrastructure in real time. Custom dashboards that update in
+              milliseconds, not minutes.
+            </p>
+          </div>
+          <div class="feature-card fade-up">
+            <div class="feature-icon" aria-hidden="true">🔔</div>
+            <h3>Intelligent Alerts</h3>
+            <p>
+              Reduce alert fatigue with ML-powered anomaly detection. Get notified about what
+              matters, when it matters.
+            </p>
+          </div>
+          <div class="feature-card fade-up">
+            <div class="feature-icon" aria-hidden="true">☁️</div>
+            <h3>Multi-Cloud Support</h3>
+            <p>
+              AWS, Azure, GCP — monitor all your cloud providers from a single pane of glass. No
+              silos, no blind spots.
+            </p>
+          </div>
+          <div class="feature-card fade-up">
+            <div class="feature-icon" aria-hidden="true">📋</div>
+            <h3>Log Aggregation</h3>
+            <p>
+              Search and analyze billions of log lines in seconds. Correlate logs with metrics for
+              faster root-cause analysis.
+            </p>
+          </div>
+          <div class="feature-card fade-up">
+            <div class="feature-icon" aria-hidden="true">✅</div>
+            <h3>Uptime Monitoring</h3>
+            <p>
+              Monitor endpoints from 30+ global locations. Get instant alerts when your services go
+              down, with detailed incident timelines.
+            </p>
+          </div>
+          <div class="feature-card fade-up">
+            <div class="feature-icon" aria-hidden="true">👥</div>
+            <h3>Team Collaboration</h3>
+            <p>
+              Share dashboards, annotate incidents, and coordinate responses. Built for teams, not
+              individuals.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- STATS -->
+      <section class="stats" aria-label="Key metrics">
+        <div class="stats-grid">
+          <div class="stat-item fade-up">
+            <h3 aria-label="99.99 percent uptime SLA">
+              <span class="counter" data-target="99.99">0</span>%
+            </h3>
+            <p>Uptime SLA</p>
+          </div>
+          <div class="stat-item fade-up">
+            <h3 aria-label="500 million plus events per day">
+              <span class="counter" data-target="500">0</span>M+
+            </h3>
+            <p>Events/Day Processed</p>
+          </div>
+          <div class="stat-item fade-up">
+            <h3 aria-label="150 plus integrations">
+              <span class="counter" data-target="150">0</span>+
+            </h3>
+            <p>Integrations</p>
+          </div>
+          <div class="stat-item fade-up">
+            <h3 aria-label="Under 30 seconds alert latency">
+              &lt; <span class="counter" data-target="30">0</span>s
+            </h3>
+            <p>Alert Latency</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- PRICING -->
+      <section id="pricing" aria-labelledby="pricing-heading">
+        <div class="section-header fade-up">
+          <p class="overline">Pricing</p>
+          <h2 id="pricing-heading">Simple, transparent pricing.</h2>
+          <p>No hidden fees. No surprises. Start free and scale as you grow.</p>
+        </div>
+        <div class="pricing-grid">
+          <div class="pricing-card fade-up">
+            <h3>Starter</h3>
+            <div class="price">Free</div>
+            <p class="price-period">Forever</p>
+            <ul class="pricing-features" role="list">
+              <li>Up to 5 hosts</li>
+              <li>1-day data retention</li>
+              <li>Basic dashboards</li>
+              <li>Email alerts</li>
+              <li>Community support</li>
+            </ul>
+            <a href="#" class="btn btn-secondary">Get Started Free</a>
+          </div>
+          <div class="pricing-card popular fade-up">
+            <span class="popular-badge">Most Popular</span>
+            <h3>Pro</h3>
+            <div class="price">$49</div>
+            <p class="price-period">per month</p>
+            <ul class="pricing-features" role="list">
+              <li>Up to 50 hosts</li>
+              <li>30-day data retention</li>
+              <li>Custom dashboards</li>
+              <li>Multi-channel alerts (Slack, PagerDuty, email)</li>
+              <li>Priority support</li>
+              <li>API access</li>
+            </ul>
+            <a href="#" class="btn btn-primary">Start Free Trial</a>
+          </div>
+          <div class="pricing-card fade-up">
+            <h3>Enterprise</h3>
+            <div class="price">$99</div>
+            <p class="price-period">per month</p>
+            <ul class="pricing-features" role="list">
+              <li>Unlimited hosts</li>
+              <li>1-year data retention</li>
+              <li>Advanced analytics &amp; ML</li>
+              <li>SSO &amp; RBAC</li>
+              <li>Dedicated account manager</li>
+              <li>Custom SLA</li>
+            </ul>
+            <a href="#" class="btn btn-secondary">Contact Sales</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- TESTIMONIALS -->
+      <section id="testimonials" class="testimonials" aria-labelledby="testimonials-heading">
+        <div class="section-header fade-up">
+          <p class="overline">Testimonials</p>
+          <h2 id="testimonials-heading">Loved by engineering teams worldwide.</h2>
+        </div>
+        <div class="testimonials-grid">
+          <div class="testimonial-card fade-up">
+            <blockquote class="testimonial-quote">
+              CloudPulse cut our incident response time by 60%. The intelligent alerting alone is
+              worth the price of admission.
+            </blockquote>
+            <div class="testimonial-author">
+              <div class="avatar" aria-hidden="true">SC</div>
+              <div>
+                <div class="testimonial-name">Sarah Chen</div>
+                <div class="testimonial-title">VP of Engineering, ScaleGrid</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card fade-up">
+            <blockquote class="testimonial-quote">
+              We migrated from three different monitoring tools to CloudPulse. One dashboard, full
+              visibility, half the cost.
+            </blockquote>
+            <div class="testimonial-author">
+              <div class="avatar" aria-hidden="true">MR</div>
+              <div>
+                <div class="testimonial-name">Marcus Rodriguez</div>
+                <div class="testimonial-title">SRE Lead, NovaPay</div>
+              </div>
+            </div>
+          </div>
+          <div class="testimonial-card fade-up">
+            <blockquote class="testimonial-quote">
+              The multi-cloud support is a game changer. We monitor AWS and GCP side by side without
+              any context switching.
+            </blockquote>
+            <div class="testimonial-author">
+              <div class="avatar" aria-hidden="true">AP</div>
+              <div>
+                <div class="testimonial-name">Aisha Patel</div>
+                <div class="testimonial-title">DevOps Manager, CloudKitchens</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ -->
+      <section id="faq" aria-labelledby="faq-heading">
+        <div class="section-header fade-up">
+          <p class="overline">FAQ</p>
+          <h2 id="faq-heading">Frequently asked questions.</h2>
+        </div>
+        <div class="faq-list">
+          <div class="faq-item fade-up">
+            <button class="faq-question" aria-expanded="false">
+              <span>How does the free trial work?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>
+                Sign up with your email and start monitoring up to 5 hosts immediately. No credit
+                card required. Your trial includes full access to Pro features for 14 days.
+              </p>
+            </div>
+          </div>
+          <div class="faq-item fade-up">
+            <button class="faq-question" aria-expanded="false">
+              <span>Can I switch plans later?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>
+                Absolutely. Upgrade or downgrade at any time from your account settings. Changes
+                take effect immediately, and we prorate your billing.
+              </p>
+            </div>
+          </div>
+          <div class="faq-item fade-up">
+            <button class="faq-question" aria-expanded="false">
+              <span>What integrations do you support?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>
+                CloudPulse integrates with 150+ tools including Slack, PagerDuty, Jira, GitHub, AWS,
+                Azure, GCP, Datadog, and more. Check our integrations page for the full list.
+              </p>
+            </div>
+          </div>
+          <div class="faq-item fade-up">
+            <button class="faq-question" aria-expanded="false">
+              <span>Is my data secure?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>
+                Yes. CloudPulse is SOC 2 Type II certified. All data is encrypted at rest (AES-256)
+                and in transit (TLS 1.3). We offer data residency options for EU customers.
+              </p>
+            </div>
+          </div>
+          <div class="faq-item fade-up">
+            <button class="faq-question" aria-expanded="false">
+              <span>Do you offer on-premise deployment?</span>
+              <span class="faq-icon" aria-hidden="true">+</span>
+            </button>
+            <div class="faq-answer" role="region">
+              <p>
+                Our Enterprise plan includes hybrid deployment options. Contact our sales team to
+                discuss your specific requirements.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA BANNER -->
+      <section class="cta-banner" aria-labelledby="cta-heading">
+        <h2 id="cta-heading">Ready to monitor smarter?</h2>
+        <p>Join 2,000+ teams who trust CloudPulse to keep their systems running.</p>
+        <a href="#pricing" class="btn">Start Your Free Trial</a>
+      </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer aria-label="Site footer">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <div class="logo" style="color: white">
+            <div class="logo-icon" aria-hidden="true">◆</div>
+            CloudPulse
+          </div>
+          <p>
+            Monitor smarter, respond faster. The cloud monitoring platform built for modern
+            engineering teams.
+          </p>
+        </div>
+        <div class="footer-col">
+          <h4>Product</h4>
+          <ul role="list">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#pricing">Pricing</a></li>
+            <li><a href="#">Integrations</a></li>
+            <li><a href="#">Changelog</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Company</h4>
+          <ul role="list">
+            <li><a href="#">About</a></li>
+            <li><a href="#">Blog</a></li>
+            <li><a href="#">Careers</a></li>
+            <li><a href="#">Contact</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Resources</h4>
+          <ul role="list">
+            <li><a href="#">Documentation</a></li>
+            <li><a href="#">API Reference</a></li>
+            <li><a href="#">Status Page</a></li>
+            <li><a href="#">Community</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <ul role="list">
+            <li><a href="#">Privacy Policy</a></li>
+            <li><a href="#">Terms of Service</a></li>
+            <li><a href="#">Cookie Policy</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 CloudPulse. All rights reserved.</p>
+        <div class="footer-social">
+          <a href="#" aria-label="Twitter">Twitter</a>
+          <a href="#" aria-label="GitHub">GitHub</a>
+          <a href="#" aria-label="LinkedIn">LinkedIn</a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // Mobile menu toggle
+      const hamburger = document.querySelector('.hamburger');
+      const mobileMenu = document.querySelector('.mobile-menu');
+
+      hamburger.addEventListener('click', () => {
+        const isOpen = mobileMenu.classList.toggle('open');
+        hamburger.setAttribute('aria-expanded', isOpen);
+      });
+
+      // Close mobile menu on link click
+      document.querySelectorAll('.mobile-link').forEach((link) => {
+        link.addEventListener('click', () => {
+          mobileMenu.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', 'false');
+        });
+      });
+
+      // FAQ accordion
+      document.querySelectorAll('.faq-question').forEach((button) => {
+        button.addEventListener('click', () => {
+          const item = button.parentElement;
+          const isOpen = item.classList.contains('open');
+
+          // Close all items
+          document.querySelectorAll('.faq-item').forEach((i) => {
+            i.classList.remove('open');
+            i.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+          });
+
+          // Toggle clicked item
+          if (!isOpen) {
+            item.classList.add('open');
+            button.setAttribute('aria-expanded', 'true');
+          }
+        });
+      });
+
+      // Intersection Observer for fade-up animations
+      const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -40px 0px',
+      };
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+
+      document.querySelectorAll('.fade-up').forEach((el) => observer.observe(el));
+
+      // Counter animation for stats
+      const counterObserver = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              const counter = entry.target;
+              const target = parseFloat(counter.dataset.target);
+              const isDecimal = target % 1 !== 0;
+              const duration = 1500;
+              const startTime = performance.now();
+
+              const animate = (currentTime) => {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const current = target * eased;
+
+                counter.textContent = isDecimal ? current.toFixed(2) : Math.floor(current);
+
+                if (progress < 1) {
+                  requestAnimationFrame(animate);
+                } else {
+                  counter.textContent = isDecimal ? target.toFixed(2) : target;
+                }
+              };
+
+              requestAnimationFrame(animate);
+              counterObserver.unobserve(counter);
+            }
+          });
+        },
+        { threshold: 0.5 },
+      );
+
+      document.querySelectorAll('.counter').forEach((el) => counterObserver.observe(el));
+
+      // Active nav link highlight on scroll
+      const sections = document.querySelectorAll('section[id]');
+      const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+
+      window.addEventListener(
+        'scroll',
+        () => {
+          let current = '';
+          sections.forEach((section) => {
+            const top = section.offsetTop - 100;
+            if (window.scrollY >= top) {
+              current = section.getAttribute('id');
+            }
+          });
+          navLinks.forEach((link) => {
+            link.classList.remove('active');
+            if (link.getAttribute('href') === '#' + current) {
+              link.classList.add('active');
+            }
+          });
+        },
+        { passive: true },
+      );
+    </script>
+  </body>
+</html>

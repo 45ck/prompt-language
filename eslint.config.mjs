@@ -36,6 +36,7 @@ export default tseslint.config(
       'experiments/aider-vs-pl/fixtures/**',
       'experiments/marketing-factory/results/**',
       'experiments/website-factory/results/**',
+      'experiments/full-sdlc-factory/results/**',
     ],
   },
 

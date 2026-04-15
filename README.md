@@ -134,6 +134,46 @@ flow:
 
 `try/catch/finally` works like you'd expect. If any `run` in the body fails, execution jumps to `catch`. `finally` always runs.
 
+### Digital factory with named agents
+
+```
+agents:
+  architect:
+    model: "opus"
+    skills: "system-design", "adr-writing"
+  builder:
+    model: "sonnet"
+    skills: "backend-engineer", "unit-test-writer"
+  reviewer:
+    model: "opus"
+    skills: "code-review", "security-review"
+
+flow:
+  let spec = prompt "Write a technical spec for: ${goal}"
+
+  spawn "designer" as architect using profile "senior-dev"
+    prompt: Design the architecture based on: ${spec}
+  end
+  await "designer" timeout 120
+
+  foreach component in ${designer.components}
+    spawn "impl-${item}" as builder
+      prompt: Implement ${item} following ${designer.architecture}
+    end
+  end
+  await all timeout 300
+
+  spawn "review" as reviewer
+    prompt: Review all code changes for quality and security.
+  end
+  await "review" timeout 120
+
+done when:
+  all(tests_pass, lint_pass)
+```
+
+Named agents define reusable roles with model, skills, and profile bindings. `spawn "name" as agentRef` creates a child with that configuration. Skills are injected as structured directives into the agent's context. `await` has configurable timeouts so crashed children don't block the factory.
+
 ## Feature overview
 
 | Category          | Features                                                                                                  |
@@ -142,6 +182,7 @@ flow:
 | **Variables**     | `let x = "literal"`, `let x = run "cmd"`, `let x = prompt "..."`, `${x}` interpolation, lists, arithmetic |
 | **Verification**  | `tests_pass`, `lint_pass`, `file_exists`, custom `gate name: command`, `all()`/`any()` composition        |
 | **Parallelism**   | `spawn`/`await`, `race`, `foreach-spawn`, `send`/`receive` messaging                                      |
+| **Agents**        | Named `agents:` definitions, `spawn as` agent refs, skill directives, `using profile`, await `timeout`    |
 | **AI conditions** | `ask "question" grounded-by "command"` for subjective evaluation                                          |
 | **Composition**   | `import`, named libraries, `include`, `export flow/prompt/gates`                                          |
 | **Resilience**    | Persistent state, compaction survival, `snapshot`/`rollback`, `remember`/`memory`                         |

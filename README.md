@@ -18,50 +18,48 @@ A verification-first supervision runtime for coding agents. It wraps Claude Code
 npx @45ck/prompt-language
 ```
 
-Requires [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) and Node.js >= 22.
+Requires [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) and Node.js >= 22. Also works with [Codex CLI](https://github.com/openai/codex), [Gemini CLI](https://github.com/google-gemini/gemini-cli), and other harnesses via `npx @45ck/prompt-language run --runner <name>`.
 
 ## Example
 
 ```
 agents:
-  builder:
-    model: "sonnet"
-    skills: "backend-engineer"
   reviewer:
     model: "opus"
     skills: "code-review", "security-review"
 
 flow:
-  let spec = prompt "Write a technical spec for: ${goal}"
-  let files = run "git diff --name-only -- '*.ts'"
+  let spec = prompt "Write a detailed technical spec for: ${goal}"
+  let tasks = prompt "Break this spec into numbered implementation tasks: ${spec}"
 
-  foreach file in ${files}
-    retry max 3
-      prompt: Implement the spec changes in ${file}.
-      run: npm test -- ${file}
-      if command_failed
-        prompt: Fix the failing tests in ${file}.
+  while ask "Are there remaining tasks or unresolved review findings?" grounded-by "npm test" max 10
+    foreach task in ${tasks}
+      retry max 3
+        prompt: Implement ${task}. Follow the spec: ${spec}
+        run: npm test
+        if command_failed
+          prompt: Fix the failing tests for ${task}.
+        end
       end
     end
-  end
 
-  spawn "review" as reviewer
-    prompt: Review all changes against the spec: ${spec}
-  end
-  await "review" timeout 120
+    spawn "review" as reviewer
+      prompt: Review all changes against the spec. List any gaps, bugs, or missing edge cases as numbered tasks.
+    end
+    await "review" timeout 120
 
-  try
-    run: npm run build
-  catch
-    prompt: The build failed. Fix the build errors.
-    run: npm run build
+    if ${review.findings} != "none"
+      let tasks = prompt "Convert these review findings into implementation tasks: ${review.findings}"
+    end
   end
 
 done when:
   all(tests_pass, lint_pass)
 ```
 
-This flow captures a spec, loops over changed files, retries each until tests pass, spawns a parallel review agent, and gates completion on real test and lint results. Every node except `prompt` executes deterministically.
+The outer `while ask` loop keeps iterating as long as there are unresolved tasks or review findings. Each iteration implements tasks with retry, then spawns a reviewer -- if the reviewer finds problems, those become the new task list and the loop continues. The flow only exits when the AI judges there's nothing left _and_ real `tests_pass` + `lint_pass` gates confirm it.
+
+Invoke this as a skill from your preferred harness -- Claude Code, Codex CLI, Gemini CLI -- or run it headless in CI with `npx @45ck/prompt-language ci`.
 
 More examples: [docs/examples](docs/examples/index.md) | DSL cheatsheet: [docs/reference/dsl-cheatsheet.md](docs/reference/dsl-cheatsheet.md)
 

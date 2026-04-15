@@ -17,7 +17,9 @@ Requires [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) 
 npx @45ck/prompt-language
 ```
 
-## Hello World
+## What it does
+
+You write a short flow. The runtime executes it deterministically -- loops, branches, variable capture, and verification gates all happen without AI involvement. The AI only runs when it hits a `prompt` node. **~85% of execution is deterministic; ~15% is AI.**
 
 ```
 Goal: fix the auth module
@@ -35,55 +37,55 @@ done when:
   lint_pass
 ```
 
-The runtime blocks completion until `npm test` and `npm run lint` actually pass. Claude cannot self-report "done" -- the gates enforce it.
+Claude cannot self-report "done." The gates run `npm test` and `npm run lint` and block until they pass.
 
-## What you get
+## Examples
 
-- **Verification gates** -- block completion until real checks pass (`tests_pass`, `lint_pass`, `file_exists`, custom gates)
-- **Persistent state** -- session state survives across turns; resumable loops, long-running flows
-- **Deterministic control flow** -- `if`, `while`, `until`, `retry`, `foreach`, `try/catch/finally`, `break`, `continue`
-- **Variable capture** -- `let version = run "node -v"`, `let analysis = prompt "Summarize"`, interpolation via `${var}`
-- **Parallel execution** -- `spawn`/`await` fan-out, `race`, `foreach-spawn`, inter-process `send`/`receive`
-- **Reuse and composition** -- `import`, named libraries, `export flow/prompt/gates`
-- **AI-evaluated conditions** -- `ask "is the code clean?" grounded-by "npm run lint"`
-- **Memory** -- `remember` key-value storage, `memory:` prefetch
-- **Packaged workflows** -- `/fix-and-test`, `/tdd`, `/refactor`, `/deploy-check`
-- **Monitoring** -- status line, `watch` TUI, flow validation and linting
-- **SDK** -- programmatic `parseFlow`, `advanceFlow`, `evaluateGates`, `renderFlow`
-
-## Quick examples
-
-### Enforce completion with gates
+### Capture variables, loop over them
 
 ```
-Goal: fix the test failures
-
-done when:
-  tests_pass
-  lint_pass
-  file_exists dist/index.js
-```
-
-### Carry exact context through a workflow
-
-```
-Goal: fix all changed TypeScript files
-
 flow:
   let files = run "git diff --name-only -- '*.ts'"
   foreach file in ${files}
-    prompt: Fix issues in ${file} without changing behavior.
+    prompt: Fix lint issues in ${file}. Do not change behavior.
+    run: npx eslint ${file} --fix
+  end
+
+done when:
+  lint_pass
+```
+
+`let x = run "cmd"` captures stdout into a variable. `foreach` splits it into items and loops. All deterministic -- the AI only sees the `prompt` node.
+
+### Full SDLC in a flow
+
+```
+flow:
+  let requirements = prompt "Write detailed requirements for the login page."
+  let design = prompt "Design the component architecture based on: ${requirements}"
+  let tasks = prompt "Break the design into numbered tasks: ${design}"
+
+  foreach task in ${tasks}
+    prompt: Implement ${task}. Follow the design in ${design}.
+  end
+
+  retry max 3
+    run: npm test
+    if command_failed
+      prompt: Fix the failing tests.
+    end
   end
 
 done when:
   tests_pass
+  file_exists src/pages/login.tsx
 ```
 
-### Fan out parallel work
+Each phase feeds into the next via `${variables}`. The `foreach` loop implements tasks one by one. The `retry` loop fixes tests until green. Gates enforce the result.
+
+### Parallel fan-out with spawn/await
 
 ```
-Goal: fix frontend and backend regressions
-
 flow:
   spawn "frontend"
     prompt: Fix the React component tests.
@@ -93,9 +95,57 @@ flow:
   end
   await all
 
+  if ${frontend.test_result} contains "FAIL"
+    prompt: The frontend still has failures. Fix them.
+  end
+
 done when:
   tests_pass
 ```
+
+`spawn` launches parallel child processes. `await all` blocks until they finish. Child variables import with a prefix (`frontend.var_name`).
+
+### AI-evaluated conditions with grounding
+
+```
+flow:
+  until ask "Is the code production-ready?" grounded-by "npm run lint && npm test" max 3
+    prompt: Improve the code quality. Focus on error handling and edge cases.
+  end
+```
+
+`ask` lets the AI evaluate a subjective condition, but `grounded-by` runs a real command first so the judgment is informed by actual test/lint output.
+
+### Error recovery with try/catch
+
+```
+flow:
+  try
+    run: npm run migrate
+    run: npm run seed
+    prompt: Verify the database schema matches the models.
+  catch
+    prompt: Migration failed. Read the error and fix the migration files.
+    run: npm run migrate:rollback
+  finally
+    run: npm run db:status
+  end
+```
+
+`try/catch/finally` works like you'd expect. If any `run` in the body fails, execution jumps to `catch`. `finally` always runs.
+
+## Feature overview
+
+| Category          | Features                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------- |
+| **Control flow**  | `if`/`else if`/`else`, `while`, `until`, `retry`, `foreach`, `try`/`catch`/`finally`, `break`, `continue` |
+| **Variables**     | `let x = "literal"`, `let x = run "cmd"`, `let x = prompt "..."`, `${x}` interpolation, lists, arithmetic |
+| **Verification**  | `tests_pass`, `lint_pass`, `file_exists`, custom `gate name: command`, `all()`/`any()` composition        |
+| **Parallelism**   | `spawn`/`await`, `race`, `foreach-spawn`, `send`/`receive` messaging                                      |
+| **AI conditions** | `ask "question" grounded-by "command"` for subjective evaluation                                          |
+| **Composition**   | `import`, named libraries, `include`, `export flow/prompt/gates`                                          |
+| **Resilience**    | Persistent state, compaction survival, `snapshot`/`rollback`, `remember`/`memory`                         |
+| **Tooling**       | CLI validation, dry-run, `watch` TUI, VS Code syntax highlighting                                         |
 
 ## CLI commands
 

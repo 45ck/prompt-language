@@ -1,9 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('./claude-process-spawner.js', () => {
+vi.mock('./claude-session-runner.js', () => {
   return {
-    ClaudeProcessSpawner: class MockClaudeProcessSpawner {
-      __type = 'claude';
+    ClaudeSessionRunner: class MockClaudeSessionRunner {
+      __type = 'claude-runner';
       cwd: string;
       constructor(cwd: string) {
         this.cwd = cwd;
@@ -12,10 +12,10 @@ vi.mock('./claude-process-spawner.js', () => {
   };
 });
 
-vi.mock('./cli-process-spawner.js', () => {
+vi.mock('./cli-session-runner.js', () => {
   return {
-    CliProcessSpawner: class MockCliProcessSpawner {
-      __type = 'cli';
+    CliSessionRunner: class MockCliSessionRunner {
+      __type = 'cli-runner';
       cwd: string;
       runner: string;
       cliPath: string;
@@ -23,6 +23,18 @@ vi.mock('./cli-process-spawner.js', () => {
         this.cwd = cwd;
         this.runner = runner;
         this.cliPath = cliPath;
+      }
+    },
+  };
+});
+
+vi.mock('./runner-backed-process-spawner.js', () => {
+  return {
+    RunnerBackedProcessSpawner: class MockRunnerBackedProcessSpawner {
+      __type = 'runner-backed';
+      runner: unknown;
+      constructor(runner: unknown) {
+        this.runner = runner;
       }
     },
   };
@@ -38,38 +50,48 @@ describe('resolveProcessSpawner', () => {
     vi.restoreAllMocks();
   });
 
-  it('returns ClaudeProcessSpawner when PL_SPAWN_RUNNER is unset', () => {
+  it('returns RunnerBackedProcessSpawner wrapping ClaudeSessionRunner when PL_SPAWN_RUNNER is unset', () => {
     process.env = { ...originalEnv };
     delete process.env['PL_SPAWN_RUNNER'];
-    const spawner = resolveProcessSpawner('/repo') as unknown as { __type: string };
-    expect(spawner.__type).toBe('claude');
+    const spawner = resolveProcessSpawner('/repo') as unknown as {
+      __type: string;
+      runner: { __type: string };
+    };
+    expect(spawner.__type).toBe('runner-backed');
+    expect(spawner.runner.__type).toBe('claude-runner');
   });
 
-  it('returns ClaudeProcessSpawner when PL_SPAWN_RUNNER is "claude"', () => {
+  it('returns RunnerBackedProcessSpawner wrapping ClaudeSessionRunner when PL_SPAWN_RUNNER is "claude"', () => {
     process.env = { ...originalEnv, PL_SPAWN_RUNNER: 'claude' };
-    const spawner = resolveProcessSpawner('/repo') as unknown as { __type: string };
-    expect(spawner.__type).toBe('claude');
+    const spawner = resolveProcessSpawner('/repo') as unknown as {
+      __type: string;
+      runner: { __type: string };
+    };
+    expect(spawner.__type).toBe('runner-backed');
+    expect(spawner.runner.__type).toBe('claude-runner');
   });
 
-  it('returns CliProcessSpawner when PL_SPAWN_RUNNER is "codex"', () => {
+  it('returns RunnerBackedProcessSpawner wrapping CliSessionRunner when PL_SPAWN_RUNNER is "codex"', () => {
     process.env = { ...originalEnv, PL_SPAWN_RUNNER: 'codex' };
     const spawner = resolveProcessSpawner('/repo') as unknown as {
       __type: string;
-      runner: string;
+      runner: { __type: string; runner: string };
     };
-    expect(spawner.__type).toBe('cli');
-    expect(spawner.runner).toBe('codex');
+    expect(spawner.__type).toBe('runner-backed');
+    expect(spawner.runner.__type).toBe('cli-runner');
+    expect(spawner.runner.runner).toBe('codex');
   });
 
-  it('returns CliProcessSpawner for each supported runner', () => {
+  it('returns CliSessionRunner for each supported runner', () => {
     for (const runner of ['opencode', 'ollama', 'aider']) {
       process.env = { ...originalEnv, PL_SPAWN_RUNNER: runner };
       const spawner = resolveProcessSpawner('/repo') as unknown as {
         __type: string;
-        runner: string;
+        runner: { __type: string; runner: string };
       };
-      expect(spawner.__type).toBe('cli');
-      expect(spawner.runner).toBe(runner);
+      expect(spawner.__type).toBe('runner-backed');
+      expect(spawner.runner.__type).toBe('cli-runner');
+      expect(spawner.runner.runner).toBe(runner);
     }
   });
 
@@ -77,17 +99,22 @@ describe('resolveProcessSpawner', () => {
     process.env = { ...originalEnv, PL_SPAWN_RUNNER: 'Codex' };
     const spawner = resolveProcessSpawner('/repo') as unknown as {
       __type: string;
-      runner: string;
+      runner: { __type: string; runner: string };
     };
-    expect(spawner.__type).toBe('cli');
-    expect(spawner.runner).toBe('codex');
+    expect(spawner.__type).toBe('runner-backed');
+    expect(spawner.runner.__type).toBe('cli-runner');
+    expect(spawner.runner.runner).toBe('codex');
   });
 
-  it('falls back to ClaudeProcessSpawner for unknown runners', () => {
+  it('falls back to ClaudeSessionRunner for unknown runners', () => {
     const stderrSpy = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
     process.env = { ...originalEnv, PL_SPAWN_RUNNER: 'unknown-runner' };
-    const spawner = resolveProcessSpawner('/repo') as unknown as { __type: string };
-    expect(spawner.__type).toBe('claude');
+    const spawner = resolveProcessSpawner('/repo') as unknown as {
+      __type: string;
+      runner: { __type: string };
+    };
+    expect(spawner.__type).toBe('runner-backed');
+    expect(spawner.runner.__type).toBe('claude-runner');
     expect(stderrSpy).toHaveBeenCalledWith(
       expect.stringContaining('Unknown PL_SPAWN_RUNNER="unknown-runner"'),
     );
@@ -97,19 +124,21 @@ describe('resolveProcessSpawner', () => {
     process.env = { ...originalEnv, PL_SPAWN_RUNNER: 'codex', PL_CLI_PATH: '/custom/cli.mjs' };
     const spawner = resolveProcessSpawner('/repo') as unknown as {
       __type: string;
-      cliPath: string;
+      runner: { __type: string; cliPath: string };
     };
-    expect(spawner.__type).toBe('cli');
-    expect(spawner.cliPath).toBe('/custom/cli.mjs');
+    expect(spawner.__type).toBe('runner-backed');
+    expect(spawner.runner.__type).toBe('cli-runner');
+    expect(spawner.runner.cliPath).toBe('/custom/cli.mjs');
   });
 
   it('trims whitespace from runner name', () => {
     process.env = { ...originalEnv, PL_SPAWN_RUNNER: '  codex  ' };
     const spawner = resolveProcessSpawner('/repo') as unknown as {
       __type: string;
-      runner: string;
+      runner: { __type: string; runner: string };
     };
-    expect(spawner.__type).toBe('cli');
-    expect(spawner.runner).toBe('codex');
+    expect(spawner.__type).toBe('runner-backed');
+    expect(spawner.runner.__type).toBe('cli-runner');
+    expect(spawner.runner.runner).toBe('codex');
   });
 });

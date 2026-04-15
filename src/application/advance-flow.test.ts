@@ -1522,6 +1522,82 @@ describe('autoAdvanceNodes — spawn', () => {
     expect(spawnedInputs[0]!.variables).not.toHaveProperty('last_stdout');
     expect(spawnedInputs[0]!.variables).not.toHaveProperty('last_stderr');
   });
+
+  it('prepends profile context to spawn goal when profileName is set (fgch)', async () => {
+    const spawnedInputs: SpawnInput[] = [];
+    const mockSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 42 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+    const spawn = createSpawnNode(
+      'sp1', 'worker', [createPromptNode('p1', 'inner')],
+      undefined, undefined, undefined, undefined, 'reviewer',
+    );
+    const prompt = createPromptNode('p2', 'after spawn');
+    const spec = createFlowSpec('test', [spawn, prompt], [], [], undefined, undefined,
+      undefined, undefined, undefined, undefined, undefined,
+      { reviewer: { name: 'reviewer', systemPreamble: 'Review carefully.' } },
+    );
+    const state = createSessionState('s1', spec);
+    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(capturedPrompt).toBe('after spawn');
+    expect(spawnedInputs).toHaveLength(1);
+    expect(spawnedInputs[0]!.goal).toContain('Review carefully.');
+    expect(spawnedInputs[0]!.goal).toContain('Sub-task: worker');
+  });
+
+  it('uses profile model when spawn has no explicit model (fgch)', async () => {
+    const spawnedInputs: SpawnInput[] = [];
+    const mockSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 42 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+    const spawn = createSpawnNode(
+      'sp1', 'worker', [createPromptNode('p1', 'inner')],
+      undefined, undefined, undefined, undefined, 'coder',
+    );
+    const spec = createFlowSpec('test', [spawn], [], [], undefined, undefined,
+      undefined, undefined, undefined, undefined, undefined,
+      { coder: { name: 'coder', systemPreamble: 'Code well.', model: 'gpt-5' } },
+    );
+    const state = createSessionState('s1', spec);
+    await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(spawnedInputs[0]!.model).toBe('gpt-5');
+  });
+
+  it('node model overrides profile model (fgch)', async () => {
+    const spawnedInputs: SpawnInput[] = [];
+    const mockSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 42 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+    const spawn = createSpawnNode(
+      'sp1', 'worker', [createPromptNode('p1', 'inner')],
+      undefined, undefined, 'explicit-model', undefined, 'coder',
+    );
+    const spec = createFlowSpec('test', [spawn], [], [], undefined, undefined,
+      undefined, undefined, undefined, undefined, undefined,
+      { coder: { name: 'coder', systemPreamble: 'Code well.', model: 'gpt-5' } },
+    );
+    const state = createSessionState('s1', spec);
+    await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(spawnedInputs[0]!.model).toBe('explicit-model');
+  });
 });
 
 describe('autoAdvanceNodes — await', () => {

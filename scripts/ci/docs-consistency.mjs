@@ -290,9 +290,9 @@ const boundaryAssertions = [
   {
     path: 'README.md',
     snippets: [
-      'Choose your path',
-      'If a feature is not documented in the shipped product docs, treat it as unavailable today.',
-      '`npx @45ck/prompt-language run`             | Execute a flow via Claude or a headless runner |',
+      'verification-first supervision runtime for coding agents',
+      '~85% of execution is deterministic; ~15% is AI',
+      '`npx @45ck/prompt-language run`       | Execute a flow via Claude or headless runner |',
     ],
   },
   {

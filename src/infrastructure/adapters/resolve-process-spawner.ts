@@ -2,16 +2,21 @@
  * resolveProcessSpawner — factory that creates the appropriate ProcessSpawner
  * based on the PL_SPAWN_RUNNER environment variable.
  *
- * Defaults to ClaudeProcessSpawner when PL_SPAWN_RUNNER is unset or "claude".
- * For other runners (codex, opencode, ollama, aider), creates a CliProcessSpawner
+ * Internally delegates to SpawnedSessionRunner implementations wrapped in
+ * RunnerBackedProcessSpawner. Application code continues to depend only
+ * on ProcessSpawner.
+ *
+ * Defaults to ClaudeSessionRunner when PL_SPAWN_RUNNER is unset or "claude".
+ * For other runners (codex, opencode, ollama, aider), creates a CliSessionRunner
  * that delegates to `prompt-language run --runner <name>`.
  */
 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ProcessSpawner } from '../../application/ports/process-spawner.js';
-import { ClaudeProcessSpawner } from './claude-process-spawner.js';
-import { CliProcessSpawner } from './cli-process-spawner.js';
+import { ClaudeSessionRunner } from './claude-session-runner.js';
+import { CliSessionRunner } from './cli-session-runner.js';
+import { RunnerBackedProcessSpawner } from './runner-backed-process-spawner.js';
 
 const SUPPORTED_RUNNERS = new Set(['claude', 'codex', 'opencode', 'ollama', 'aider']);
 
@@ -34,15 +39,15 @@ export function resolveProcessSpawner(cwd: string): ProcessSpawner {
   const runner = process.env['PL_SPAWN_RUNNER']?.trim().toLowerCase();
 
   if (!runner || runner === 'claude') {
-    return new ClaudeProcessSpawner(cwd);
+    return new RunnerBackedProcessSpawner(new ClaudeSessionRunner(cwd));
   }
 
   if (!SUPPORTED_RUNNERS.has(runner)) {
     process.stderr.write(
       `[prompt-language] WARNING: Unknown PL_SPAWN_RUNNER="${runner}", falling back to claude.\n`,
     );
-    return new ClaudeProcessSpawner(cwd);
+    return new RunnerBackedProcessSpawner(new ClaudeSessionRunner(cwd));
   }
 
-  return new CliProcessSpawner(cwd, runner, resolveCliPath());
+  return new RunnerBackedProcessSpawner(new CliSessionRunner(cwd, runner, resolveCliPath()));
 }

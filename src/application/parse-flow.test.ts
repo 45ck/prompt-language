@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parseFlow, parseGates, detectBareFlow, parseLibraryFile } from './parse-flow.js';
+import {
+  parseFlow,
+  parseGates,
+  detectBareFlow,
+  parseLibraryFile,
+  parseAgents,
+} from './parse-flow.js';
 import type { FlowSpec } from '../domain/flow-spec.js';
 import type {
   WhileNode,
@@ -1511,6 +1517,99 @@ flow:
   });
 });
 
+// ── beads: prompt-language-fgch — Spawn with profile ──────────────────
+
+describe('parseFlow — spawn using profile (fgch)', () => {
+  const config = JSON.stringify({
+    profiles: {
+      reviewer: { systemPreamble: 'Review carefully.' },
+      coder: { systemPreamble: 'Code well.', model: 'gpt-5' },
+    },
+  });
+
+  it('parses spawn with using profile "name"', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker" using profile "reviewer"
+    prompt: Do work
+  end`;
+    const spec = parseWithProfiles(dsl, config);
+    expect(spec.nodes).toHaveLength(1);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.kind).toBe('spawn');
+    expect(node.name).toBe('worker');
+    expect(node.profileName).toBe('reviewer');
+  });
+
+  it('parses spawn without profile (no profileName)', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker"
+    prompt: Do work
+  end`;
+    const spec = parseWithProfiles(dsl, config);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.profileName).toBeUndefined();
+  });
+
+  it('parses spawn with profile and cwd', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker" in "/tmp" using profile "coder"
+    prompt: Do work
+  end`;
+    const spec = parseWithProfiles(dsl, config);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.name).toBe('worker');
+    expect(node.cwd).toBe('/tmp');
+    expect(node.profileName).toBe('coder');
+  });
+
+  it('parses spawn with profile and vars', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker" using profile "reviewer" with vars x
+    prompt: Do work
+  end`;
+    const spec = parseWithProfiles(dsl, config);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.name).toBe('worker');
+    expect(node.profileName).toBe('reviewer');
+    expect(node.vars).toEqual(['x']);
+  });
+
+  it('parses spawn with profile, model, and condition', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker" using profile "reviewer" model "gpt-4" if command_succeeded
+    prompt: Do work
+  end`;
+    const spec = parseWithProfiles(dsl, config);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.name).toBe('worker');
+    expect(node.profileName).toBe('reviewer');
+    expect(node.model).toBe('gpt-4');
+    expect(node.condition).toBe('command_succeeded');
+  });
+
+  it('parses spawn with single-quoted profile', () => {
+    const dsl = `Goal: test
+
+flow:
+  spawn "worker" using profile 'reviewer'
+    prompt: Do work
+  end`;
+    const spec = parseWithProfiles(dsl, config);
+    const node = spec.nodes[0] as SpawnNode;
+    expect(node.profileName).toBe('reviewer');
+  });
+});
+
 // ── H-INT-010: any() gate composition ─────────────────────────────────
 
 describe('parseGates — any() composition (H-INT-010)', () => {
@@ -2943,5 +3042,170 @@ judge "impl_quality"
       'line 3: Missing "end" for judge "impl_quality" — auto-closed block',
     );
     expect(spec.judges?.[0]?.name).toBe('impl_quality');
+  });
+});
+
+describe('parseAgents', () => {
+  it('parses agents section with model and profile', () => {
+    const warnings: string[] = [];
+    const agents = parseAgents(
+      `agents:
+  code-reviewer:
+    model: "opus"
+    profile: "security-expert"
+
+  implementer:
+    model: "sonnet"
+`,
+      warnings,
+    );
+    expect(warnings).toEqual([]);
+    expect(agents).toEqual({
+      'code-reviewer': {
+        name: 'code-reviewer',
+        model: 'opus',
+        profile: 'security-expert',
+      },
+      implementer: {
+        name: 'implementer',
+        model: 'sonnet',
+      },
+    });
+  });
+
+  it('parses agents with skills list', () => {
+    const warnings: string[] = [];
+    const agents = parseAgents(
+      `agents:
+  worker:
+    model: "sonnet"
+    skills: "lint", "test"
+`,
+      warnings,
+    );
+    expect(warnings).toEqual([]);
+    expect(agents?.['worker']?.skills).toEqual(['lint', 'test']);
+  });
+
+  it('returns undefined for empty agents section', () => {
+    const warnings: string[] = [];
+    const agents = parseAgents('no agents section here', warnings);
+    expect(agents).toBeUndefined();
+  });
+
+  it('returns undefined for agents with no entries', () => {
+    const warnings: string[] = [];
+    const agents = parseAgents(
+      `agents:
+
+flow:
+  prompt: hello`,
+      warnings,
+    );
+    expect(agents).toBeUndefined();
+  });
+
+  it('warns on unknown property', () => {
+    const warnings: string[] = [];
+    parseAgents(
+      `agents:
+  worker:
+    badprop: "value"
+`,
+      warnings,
+    );
+    expect(warnings).toEqual([
+      'agents.worker: unknown property "badprop: "value"" — expected model, profile, or skills',
+    ]);
+  });
+
+  it('warns on malformed agent name line', () => {
+    const warnings: string[] = [];
+    parseAgents(
+      `agents:
+  not a valid line
+`,
+      warnings,
+    );
+    expect(warnings.length).toBe(1);
+    expect(warnings[0]).toContain('unexpected line');
+  });
+
+  it('stops at flow: section boundary', () => {
+    const warnings: string[] = [];
+    const agents = parseAgents(
+      `agents:
+  worker:
+    model: "opus"
+
+flow:
+  prompt: hello`,
+      warnings,
+    );
+    expect(warnings).toEqual([]);
+    expect(agents?.['worker']?.model).toBe('opus');
+  });
+});
+
+describe('agents in parseFlow', () => {
+  it('parses agents section and attaches to FlowSpec', () => {
+    const spec = parse(`Goal: test
+
+agents:
+  reviewer:
+    model: "opus"
+    profile: "sec"
+
+flow:
+  prompt: do work`);
+    expect(spec.agents).toBeDefined();
+    expect(spec.agents?.['reviewer']?.model).toBe('opus');
+    expect(spec.agents?.['reviewer']?.profile).toBe('sec');
+  });
+
+  it('parses spawn as agent-name', () => {
+    const spec = parse(`Goal: test
+
+agents:
+  reviewer:
+    model: "opus"
+
+flow:
+  spawn "worker" as reviewer
+    prompt: review code
+  end`);
+    const spawnNode = spec.nodes[0] as SpawnNode;
+    expect(spawnNode.kind).toBe('spawn');
+    expect(spawnNode.name).toBe('worker');
+    expect(spawnNode.agentRef).toBe('reviewer');
+  });
+
+  it('parses spawn as agent-name with model override', () => {
+    const spec = parse(`Goal: test
+
+agents:
+  reviewer:
+    model: "opus"
+
+flow:
+  spawn "worker" as reviewer model "haiku"
+    prompt: review code
+  end`);
+    const spawnNode = spec.nodes[0] as SpawnNode;
+    expect(spawnNode.kind).toBe('spawn');
+    expect(spawnNode.agentRef).toBe('reviewer');
+    expect(spawnNode.model).toBe('haiku');
+  });
+
+  it('spawn without as has no agentRef', () => {
+    const spec = parse(`Goal: test
+
+flow:
+  spawn "worker"
+    prompt: do work
+  end`);
+    const spawnNode = spec.nodes[0] as SpawnNode;
+    expect(spawnNode.kind).toBe('spawn');
+    expect(spawnNode.agentRef).toBeUndefined();
   });
 });

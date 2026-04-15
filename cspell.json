@@ -122,7 +122,8 @@
     "workstream",
     "xgav",
     "fgch",
-    "yvda"
+    "yvda",
+    "badprop"
   ],
   "ignorePaths": [
     "dist/**",

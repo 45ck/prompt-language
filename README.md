@@ -589,6 +589,7 @@ Shows the full flow state updating in real time — useful for watching long-run
 ### Evidence and research
 
 - **[Evaluation Results](docs/evaluation/eval-analysis.md)** — A/B methodology and results
+- **[Experiments](experiments/README.md)** — Controlled experiments comparing PL factory vs solo prompting
 - **[Thesis](docs/strategy/thesis.md)** — long-term research thesis
 - **[Thesis Roadmap](docs/strategy/thesis-roadmap.md)** — experiments to prove or disprove the thesis
 - **[Use Cases](docs/guides/use-cases.md)** — where the runtime helps and where it does not

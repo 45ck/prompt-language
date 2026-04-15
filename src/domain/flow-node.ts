@@ -175,6 +175,10 @@ export interface SpawnNode extends BaseNode {
   readonly model?: string | undefined;
   /** beads: prompt-language-lmep — condition guard; spawn is skipped when false. */
   readonly condition?: string | undefined;
+  /** beads: prompt-language-fgch — context profile to bind to the child session. */
+  readonly profileName?: string | undefined;
+  /** Named agent reference from the `agents:` section — resolved at spawn time. */
+  readonly agentRef?: string | undefined;
 }
 
 export type AwaitTarget = string | 'all' | readonly string[];
@@ -512,6 +516,8 @@ export function createSpawnNode(
   vars?: readonly string[],
   model?: string,
   condition?: string,
+  profileName?: string,
+  agentRef?: string,
 ): SpawnNode {
   return {
     kind: 'spawn',
@@ -522,6 +528,8 @@ export function createSpawnNode(
     ...(vars != null ? { vars } : {}),
     ...(model != null ? { model } : {}),
     ...(condition != null ? { condition } : {}),
+    ...(profileName != null ? { profileName } : {}),
+    ...(agentRef != null ? { agentRef } : {}),
   };
 }
 

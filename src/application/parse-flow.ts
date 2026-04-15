@@ -59,6 +59,8 @@ import {
   createJudgeDefinition,
 } from '../domain/flow-spec.js';
 import { ASK_CONDITION_PREFIX } from '../domain/judge-prompt.js';
+import type { AgentDefinition, AgentRegistry } from '../domain/agent-definition.js';
+import { createAgentDefinition } from '../domain/agent-definition.js';
 import { lowerSwarmFlowLines } from './lower-swarm.js';
 import { assertKnownContextProfile, loadContextProfileRegistry } from './profile-config.js';
 
@@ -450,7 +452,7 @@ function extractFlowBlock(input: string, source?: string): readonly FlowSourceLi
     const result: FlowSourceLine[] = [];
     for (let i = flowIndex + 1; i < lines.length; i += 1) {
       const line = lines[i] ?? '';
-      if (/^\s*done\s+when:/i.test(line)) {
+      if (/^\s*done\s+when:/i.test(line) || /^\s*agents:\s*$/i.test(line)) {
         break;
       }
       result.push({
@@ -468,7 +470,7 @@ function extractFlowBlock(input: string, source?: string): readonly FlowSourceLi
     const line = lines[i] ?? '';
     const trimmed = line.trim();
     if (!trimmed || /^Goal:/i.test(trimmed)) continue;
-    if (/^\s*done\s+when:/i.test(line)) break;
+    if (/^\s*done\s+when:/i.test(line) || /^\s*agents:\s*$/i.test(line)) break;
     bareFlow.push({
       text: `  ${trimmed}`,
       source: createLineSource(i + 1, line, source),
@@ -1197,6 +1199,30 @@ function stripModelSuffix(line: string): string {
   return line.replace(/\s+model\s+(?:"[^"]*"|'[^']*')/i, '');
 }
 
+/** Extract optional `as <agentName>` from spawn line. */
+function extractSpawnAgent(line: string): string | undefined {
+  const agentMatch = /\bas\s+([\w-]+)/i.exec(line);
+  return agentMatch?.[1] ?? undefined;
+}
+
+/** Strip `as <agentName>` from spawn line. */
+function stripAgentSuffix(line: string): string {
+  return line.replace(/\s+as\s+[\w-]+/i, '');
+}
+
+/** beads: prompt-language-fgch — Extract optional `using profile "name"` from spawn line. */
+function extractSpawnProfile(ctx: ParseContext, line: string): string | undefined {
+  const profileMatch = /\busing\s+profile\s+(?:"([^"]+)"|'([^']+)')/i.exec(line);
+  const name = profileMatch?.[1] ?? profileMatch?.[2] ?? undefined;
+  if (name == null) return undefined;
+  return rememberUsedProfile(ctx, name, 'spawn profile reference');
+}
+
+/** beads: prompt-language-fgch — Strip `using profile "name"` from spawn line. */
+function stripProfileSuffix(line: string): string {
+  return line.replace(/\s+using\s+profile\s+(?:"[^"]*"|'[^']*')/i, '');
+}
+
 function parseSpawnBlock(
   ctx: ParseContext,
   line: string,
@@ -1204,7 +1230,7 @@ function parseSpawnBlock(
   scope: ParseScope,
 ): FlowNode {
   const source = currentSource(ctx);
-  // Parse in order: vars (suffix), condition (suffix), model (middle), cwd (middle), name
+  // Parse in order: vars (suffix), condition (suffix), profile (middle), model (middle), cwd (middle), name
   // H-SEC-005: Extract optional vars allowlist before other parsing
   const vars = extractSpawnVars(line);
   let cleanLine = stripVarsSuffix(line);
@@ -1212,6 +1238,14 @@ function parseSpawnBlock(
   // beads: prompt-language-lmep — extract optional `if <condition>` suffix
   const condition = extractSpawnCondition(cleanLine);
   cleanLine = stripConditionSuffix(cleanLine);
+
+  // beads: prompt-language-fgch — extract optional `using profile "name"`
+  const profileName = extractSpawnProfile(ctx, cleanLine);
+  cleanLine = stripProfileSuffix(cleanLine);
+
+  // Extract optional `as <agentName>` for named agent reference
+  const agentRef = extractSpawnAgent(cleanLine);
+  cleanLine = stripAgentSuffix(cleanLine);
 
   // beads: prompt-language-2j9v — extract optional `model "name"`
   const model = extractSpawnModel(cleanLine);
@@ -1225,7 +1259,17 @@ function parseSpawnBlock(
     const body = parseBlock(ctx, baseIndent, [], scope);
     consumeEnd(ctx);
     return withNodeSource(
-      createSpawnNode(nextId(ctx), cwdMatch[1], body, cwdMatch[2], vars, model, condition),
+      createSpawnNode(
+        nextId(ctx),
+        cwdMatch[1],
+        body,
+        cwdMatch[2],
+        vars,
+        model,
+        condition,
+        profileName,
+        agentRef,
+      ),
       source,
     );
   }
@@ -1240,7 +1284,17 @@ function parseSpawnBlock(
   const body = parseBlock(ctx, baseIndent, [], scope);
   consumeEnd(ctx);
   return withNodeSource(
-    createSpawnNode(nextId(ctx), name, body, undefined, vars, model, condition),
+    createSpawnNode(
+      nextId(ctx),
+      name,
+      body,
+      undefined,
+      vars,
+      model,
+      condition,
+      profileName,
+      agentRef,
+    ),
     source,
   );
 }
@@ -1789,14 +1843,14 @@ function parseLine(
 /** Parse the optional "memory:" section into an array of key names to prefetch. */
 export function parseMemoryKeys(input: string): readonly string[] {
   const match =
-    /^memory:\s*\n([\s\S]*?)(?=\n\s*(?:env:|flow:|done when:))/im.exec(input) ??
+    /^memory:\s*\n([\s\S]*?)(?=\n\s*(?:env:|flow:|done when:|agents:))/im.exec(input) ??
     /^memory:\s*\n([\s\S]+)/im.exec(input);
   if (!match?.[1]) return [];
   const keys: string[] = [];
   for (const line of match[1].split('\n')) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    if (/^(?:env|flow|done when):/i.test(trimmed)) break;
+    if (/^(?:env|flow|done when|agents):/i.test(trimmed)) break;
     if (/^\w+$/.test(trimmed)) keys.push(trimmed);
   }
   return keys;
@@ -1806,7 +1860,7 @@ export function parseMemoryKeys(input: string): readonly string[] {
 export function parseEnv(input: string): Readonly<Record<string, string>> | undefined {
   // Try matching env: followed by flow: or done when: section
   const match =
-    /^env:\s*\n([\s\S]*?)(?=\n\s*(?:flow:|done when:))/im.exec(input) ??
+    /^env:\s*\n([\s\S]*?)(?=\n\s*(?:flow:|done when:|agents:))/im.exec(input) ??
     /^env:\s*\n([\s\S]+)/im.exec(input);
   if (!match?.[1]) return undefined;
   const env: Record<string, string> = {};
@@ -1822,7 +1876,91 @@ export function parseEnv(input: string): Readonly<Record<string, string>> | unde
   return Object.keys(env).length > 0 ? env : undefined;
 }
 
-const TOP_LEVEL_SECTION_RE = /^(?:goal:|memory:|env:|flow:|done when:|import\b)/i;
+/** Parse the "agents:" section into named agent definitions. */
+export function parseAgents(input: string, warnings: string[]): AgentRegistry | undefined {
+  const match =
+    /^agents:\s*\n([\s\S]*?)(?=\n\s*(?:flow:|done when:|memory:|env:))/im.exec(input) ??
+    /^agents:\s*\n([\s\S]+)/im.exec(input);
+  if (!match?.[1]) return undefined;
+
+  const agents: Record<string, AgentDefinition> = {};
+  const lines = match[1].split('\n');
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i] ?? '';
+    const trimmed = line.trim();
+    if (!trimmed) {
+      i += 1;
+      continue;
+    }
+    // Stop at next top-level section
+    if (/^(?:flow|done when|memory|env|agents):/i.test(trimmed)) break;
+
+    // Agent name line: "agent-name:" (with 2-space indent or bare)
+    const nameMatch = /^([\w-]+):\s*$/i.exec(trimmed);
+    if (!nameMatch?.[1]) {
+      warnings.push(`agents: unexpected line "${trimmed}" — expected "agent-name:"`);
+      i += 1;
+      continue;
+    }
+
+    const agentName = nameMatch[1];
+    let model: string | undefined;
+    let profile: string | undefined;
+    let skills: string[] | undefined;
+
+    // Parse indented properties under agent name
+    i += 1;
+    while (i < lines.length) {
+      const propLine = lines[i] ?? '';
+      const propTrimmed = propLine.trim();
+      if (!propTrimmed) {
+        i += 1;
+        continue;
+      }
+      // If indentation is at agent level or less, break out
+      const propIndent = currentIndent(propLine);
+      const nameIndent = currentIndent(line);
+      if (propIndent <= nameIndent && propTrimmed) break;
+
+      const modelMatch = /^model:\s*(?:"([^"]+)"|'([^']+)'|(\S+))\s*$/i.exec(propTrimmed);
+      if (modelMatch) {
+        model = modelMatch[1] ?? modelMatch[2] ?? modelMatch[3];
+        i += 1;
+        continue;
+      }
+
+      const profileMatch = /^profile:\s*(?:"([^"]+)"|'([^']+)'|(\S+))\s*$/i.exec(propTrimmed);
+      if (profileMatch) {
+        profile = profileMatch[1] ?? profileMatch[2] ?? profileMatch[3];
+        i += 1;
+        continue;
+      }
+
+      const skillsMatch = /^skills:\s*(.+)$/i.exec(propTrimmed);
+      if (skillsMatch?.[1]) {
+        skills = skillsMatch[1]
+          .split(',')
+          .map((s) => s.trim().replace(/^["']|["']$/g, ''))
+          .filter(Boolean);
+        i += 1;
+        continue;
+      }
+
+      warnings.push(
+        `agents.${agentName}: unknown property "${propTrimmed}" — expected model, profile, or skills`,
+      );
+      i += 1;
+    }
+
+    agents[agentName] = createAgentDefinition(agentName, model, profile, skills);
+  }
+
+  return Object.keys(agents).length > 0 ? agents : undefined;
+}
+
+const TOP_LEVEL_SECTION_RE = /^(?:goal:|memory:|env:|flow:|done when:|agents:|import\b)/i;
 
 function trimTrailingBlankLines(lines: string[]): void {
   while (lines.length > 0 && !(lines[lines.length - 1] ?? '').trim()) {
@@ -2290,6 +2428,7 @@ export function parseFlow(input: string, options: ParseFlowOptions = {}): FlowSp
 
   const { rubrics, judges } = parseTopLevelDeclarations(profileSelection.text, warnings);
   const gates = parseGates(profileSelection.text, registry, warnings);
+  const agents = parseAgents(profileSelection.text, warnings);
   const rawLines = [...inlinedFlowLines, ...extractFlowBlock(profileSelection.text)];
   // H-INT-001: Resolve include directives (share `seen` for cross-pass cycle detection)
   const includedFlowLines = resolveIncludes(rawLines, warnings, basePath, seen, fileReader);
@@ -2331,5 +2470,6 @@ export function parseFlow(input: string, options: ParseFlowOptions = {}): FlowSp
     judges.length > 0 ? judges : undefined,
     activeDefaultProfile,
     referencedProfiles,
+    agents,
   );
 }

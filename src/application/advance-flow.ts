@@ -2750,9 +2750,16 @@ export async function autoAdvanceNodes(
       break;
     }
 
-    // Oscillation detection: track recent path signatures and detect repeating cycles
-    const pathSig = current.currentNodePath.join('.');
-    recentPaths.push(pathSig);
+    // Oscillation detection: track (path + iteration snapshot) to detect cycles without
+    // forward progress. Legitimate loops advance iteration counters, so including
+    // nodeProgress avoids false positives on valid while/foreach re-entries.
+    const progressSig = Object.entries(current.nodeProgress)
+      .filter(([, v]) => v?.status === 'running')
+      .map(([k, v]) => `${k}:${v?.iteration ?? 0}`)
+      .sort()
+      .join(',');
+    const cycleSig = `${current.currentNodePath.join('.')}|${progressSig}`;
+    recentPaths.push(cycleSig);
     if (recentPaths.length > OSCILLATION_WINDOW) {
       recentPaths.shift();
     }
@@ -2766,7 +2773,7 @@ export async function autoAdvanceNodes(
         ...current,
         warnings: [
           ...current.warnings,
-          `Flow paused — path oscillation detected at [${pathSig}] after ${advances} advances.`,
+          `Flow paused — path oscillation detected at [${current.currentNodePath.join('.')}] after ${advances} advances.`,
         ],
       };
       break;
@@ -3502,8 +3509,15 @@ function advanceRollbackNode(
     const warned = addWarning(current, `rollback: no snapshot named "${node.name}"`);
     return { kind: 'pause', state: warned, capturedPrompt: null };
   }
+  // Restore variables and iteration counters from snapshot, but advance past
+  // the rollback node itself so execution continues forward (not back into a
+  // snapshot→rollback infinite loop).
+  const advanced = advanceFromPath(
+    { ...restored, currentNodePath: [...current.currentNodePath] },
+    current.currentNodePath,
+  );
   return {
-    state: restored,
+    state: advanced,
     advanced: true,
     traceDetail: {
       rolledBackTo: node.name,

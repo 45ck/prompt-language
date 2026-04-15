@@ -7,6 +7,7 @@
 import type { FlowNode } from './flow-node.js';
 import { DEFAULT_MAX_ITERATIONS, DEFAULT_MAX_ATTEMPTS } from './flow-node.js';
 import type { ContextProfileRegistry } from './context-profile.js';
+import type { AgentRegistry } from './agent-definition.js';
 
 export interface CompletionGate {
   readonly predicate: string;
@@ -56,6 +57,8 @@ export interface FlowSpec {
   readonly rubrics?: readonly RubricDefinition[] | undefined;
   /** Named reusable judges. */
   readonly judges?: readonly JudgeDefinition[] | undefined;
+  /** Named agent definitions for spawn references. */
+  readonly agents?: AgentRegistry | undefined;
 }
 
 /** Pure JS hash of a FlowSpec for stale-state detection. */
@@ -72,6 +75,7 @@ export function flowSpecHash(spec: FlowSpec): string {
     memoryKeys: spec.memoryKeys ?? null,
     rubrics: spec.rubrics ?? null,
     judges: spec.judges ?? null,
+    agents: spec.agents ?? null,
   });
   let hash = 0x811c9dc5;
   for (let i = 0; i < payload.length; i++) {
@@ -99,6 +103,7 @@ export function createFlowSpec(
   judges?: readonly JudgeDefinition[],
   defaultProfile?: string,
   profiles?: ContextProfileRegistry,
+  agents?: AgentRegistry,
 ): FlowSpec {
   return {
     goal,
@@ -113,6 +118,7 @@ export function createFlowSpec(
     ...(memoryKeys != null && memoryKeys.length > 0 ? { memoryKeys } : {}),
     ...(rubrics != null && rubrics.length > 0 ? { rubrics } : {}),
     ...(judges != null && judges.length > 0 ? { judges } : {}),
+    ...(agents != null && Object.keys(agents).length > 0 ? { agents } : {}),
   };
 }
 

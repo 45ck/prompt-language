@@ -1535,12 +1535,28 @@ describe('autoAdvanceNodes — spawn', () => {
       },
     };
     const spawn = createSpawnNode(
-      'sp1', 'worker', [createPromptNode('p1', 'inner')],
-      undefined, undefined, undefined, undefined, 'reviewer',
+      'sp1',
+      'worker',
+      [createPromptNode('p1', 'inner')],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'reviewer',
     );
     const prompt = createPromptNode('p2', 'after spawn');
-    const spec = createFlowSpec('test', [spawn, prompt], [], [], undefined, undefined,
-      undefined, undefined, undefined, undefined, undefined,
+    const spec = createFlowSpec(
+      'test',
+      [spawn, prompt],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
       { reviewer: { name: 'reviewer', systemPreamble: 'Review carefully.' } },
     );
     const state = createSessionState('s1', spec);
@@ -1563,11 +1579,27 @@ describe('autoAdvanceNodes — spawn', () => {
       },
     };
     const spawn = createSpawnNode(
-      'sp1', 'worker', [createPromptNode('p1', 'inner')],
-      undefined, undefined, undefined, undefined, 'coder',
+      'sp1',
+      'worker',
+      [createPromptNode('p1', 'inner')],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'coder',
     );
-    const spec = createFlowSpec('test', [spawn], [], [], undefined, undefined,
-      undefined, undefined, undefined, undefined, undefined,
+    const spec = createFlowSpec(
+      'test',
+      [spawn],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
       { coder: { name: 'coder', systemPreamble: 'Code well.', model: 'gpt-5' } },
     );
     const state = createSessionState('s1', spec);
@@ -1587,11 +1619,27 @@ describe('autoAdvanceNodes — spawn', () => {
       },
     };
     const spawn = createSpawnNode(
-      'sp1', 'worker', [createPromptNode('p1', 'inner')],
-      undefined, undefined, 'explicit-model', undefined, 'coder',
+      'sp1',
+      'worker',
+      [createPromptNode('p1', 'inner')],
+      undefined,
+      undefined,
+      'explicit-model',
+      undefined,
+      'coder',
     );
-    const spec = createFlowSpec('test', [spawn], [], [], undefined, undefined,
-      undefined, undefined, undefined, undefined, undefined,
+    const spec = createFlowSpec(
+      'test',
+      [spawn],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
       { coder: { name: 'coder', systemPreamble: 'Code well.', model: 'gpt-5' } },
     );
     const state = createSessionState('s1', spec);

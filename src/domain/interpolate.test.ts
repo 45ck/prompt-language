@@ -152,6 +152,63 @@ describe('shellEscapeValue', () => {
   it('handles empty string', () => {
     expect(shellEscapeValue('')).toBe("''");
   });
+
+  it('handles embedded newlines', () => {
+    expect(shellEscapeValue('line1\nline2')).toBe("'line1\nline2'");
+  });
+
+  it('handles embedded tabs', () => {
+    expect(shellEscapeValue('col1\tcol2')).toBe("'col1\tcol2'");
+  });
+
+  it('handles backslashes', () => {
+    expect(shellEscapeValue('path\\to\\file')).toBe("'path\\to\\file'");
+  });
+
+  it('handles dollar signs', () => {
+    expect(shellEscapeValue('$HOME')).toBe("'$HOME'");
+  });
+
+  it('handles double quotes', () => {
+    expect(shellEscapeValue('say "hi"')).toBe('\'say "hi"\'');
+  });
+
+  it('handles glob characters', () => {
+    expect(shellEscapeValue('*.js')).toBe("'*.js'");
+  });
+
+  it('handles pipe and ampersand', () => {
+    expect(shellEscapeValue('a | b && c')).toBe("'a | b && c'");
+  });
+
+  it('handles value that is only a single quote', () => {
+    expect(shellEscapeValue("'")).toBe("''\\'''");
+  });
+
+  it('handles multiple single quotes', () => {
+    expect(shellEscapeValue("it's a 'test'")).toBe("'it'\\''s a '\\''test'\\'''");
+  });
+
+  it('handles mixed hostile characters', () => {
+    const hostile = "line1\nit's $HOME; `rm -rf /` && echo $(whoami)";
+    const escaped = shellEscapeValue(hostile);
+    // Must start and end with single quotes (after final segment)
+    expect(escaped.startsWith("'")).toBe(true);
+    // Must contain the escaped single quote pattern
+    expect(escaped).toContain("'\\''");
+  });
+
+  it('handles carriage return and newline (Windows line ending)', () => {
+    expect(shellEscapeValue('line1\r\nline2')).toBe("'line1\r\nline2'");
+  });
+
+  it('handles exclamation marks', () => {
+    expect(shellEscapeValue('hello!')).toBe("'hello!'");
+  });
+
+  it('handles hash/pound sign', () => {
+    expect(shellEscapeValue('# comment')).toBe("'# comment'");
+  });
 });
 
 describe('shellInterpolate', () => {
@@ -186,6 +243,57 @@ describe('shellInterpolate', () => {
 
   it('leaves array access as-is when variable not set', () => {
     expect(shellInterpolate('echo ${items[0]}', {})).toBe('echo ${items[0]}');
+  });
+
+  it('escapes values with embedded newlines', () => {
+    const result = shellInterpolate('echo ${x}', { x: 'line1\nline2' });
+    expect(result).toBe("echo 'line1\nline2'");
+  });
+
+  it('escapes values with single quotes', () => {
+    const result = shellInterpolate('echo ${x}', { x: "it's" });
+    expect(result).toBe("echo 'it'\\''s'");
+  });
+
+  it('escapes values with backslashes', () => {
+    const result = shellInterpolate('echo ${x}', { x: 'path\\to\\file' });
+    expect(result).toBe("echo 'path\\to\\file'");
+  });
+
+  it('escapes values with dollar signs', () => {
+    const result = shellInterpolate('echo ${x}', { x: '$HOME' });
+    expect(result).toBe("echo '$HOME'");
+  });
+
+  it('escapes values with backticks', () => {
+    const result = shellInterpolate('echo ${x}', { x: '`whoami`' });
+    expect(result).toBe("echo '`whoami`'");
+  });
+
+  it('escapes values with double quotes', () => {
+    const result = shellInterpolate('echo ${x}', { x: 'say "hi"' });
+    expect(result).toBe('echo \'say "hi"\'');
+  });
+
+  it('escapes values with mixed hostile characters', () => {
+    const hostile = "it's $HOME; `rm`\nnewline";
+    const result = shellInterpolate('echo ${x}', { x: hostile });
+    // Single quotes neutralize all but single-quote; those are escaped
+    expect(result).toContain("'\\''");
+    expect(result).toContain('$HOME');
+    expect(result).toContain('`rm`');
+  });
+
+  it('escapes default values with hostile characters', () => {
+    const result = shellInterpolate("echo ${x:-it's dangerous}", {});
+    expect(result).toBe("echo 'it'\\''s dangerous'");
+  });
+
+  it('escapes array elements with hostile characters', () => {
+    const result = shellInterpolate('echo ${items[0]}', {
+      items: '["hello world; rm -rf /"]',
+    });
+    expect(result).toBe("echo 'hello world; rm -rf /'");
   });
 });
 

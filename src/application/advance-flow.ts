@@ -105,6 +105,7 @@ import {
   type VariableValue,
 } from '../domain/variable-value.js';
 import { resolveContextProfile } from '../domain/context-profile.js';
+import { parseSkillEntry, buildSkillDirectiveBlock } from '../domain/skill-directive.js';
 
 type LoweredAwayFlowNode = Extract<FlowNode, { kind: 'swarm' | 'start' }>;
 
@@ -151,7 +152,11 @@ function buildProfileContextBlock(
     lines.push('System preamble:', resolved.systemPreambles.join('\n\n'));
   }
   if (resolved.skills.length > 0) {
-    lines.push('Skills:', ...resolved.skills.map((skill) => `- ${skill}`));
+    const directives = resolved.skills.map(parseSkillEntry);
+    const directiveBlock = buildSkillDirectiveBlock(directives);
+    if (directiveBlock) {
+      lines.push(directiveBlock);
+    }
   }
   if (resolved.memory.length > 0) {
     lines.push(
@@ -173,6 +178,23 @@ function buildProfileContextBlock(
     block: lines.join('\n'),
     ...(resolved.model != null ? { model: resolved.model } : {}),
   };
+}
+
+/**
+ * Resolve agent-level skills into a directive block for child spawn prompts.
+ * Returns undefined if no agent or no skills are defined.
+ */
+function resolveAgentSkillDirectives(state: SessionState, agentRef?: string): string | undefined {
+  if (agentRef == null || state.flowSpec.agents == null) {
+    return undefined;
+  }
+  const agent = state.flowSpec.agents[agentRef];
+  if (agent?.skills == null || agent.skills.length === 0) {
+    return undefined;
+  }
+  const directives = agent.skills.map(parseSkillEntry);
+  const block = buildSkillDirectiveBlock(directives);
+  return block || undefined;
 }
 
 function applyContextProfileToPrompt(
@@ -681,8 +703,7 @@ function toStoredRuntimeOutput(
   return { value: artifact.handle, artifact };
 }
 
-function isPidAlive(pid: number): boolean {
-  if (process.platform === 'win32') return true;
+export function isPidAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
@@ -2344,7 +2365,14 @@ async function advanceSpawnNode(
 
   const stateDir = `.prompt-language-${node.name}`;
   const flowText = renderSpawnBody(node);
-  const goal = `Sub-task: ${node.name}`;
+  // beads: prompt-language-fgch — prepend profile context block to child goal
+  const profileResolved =
+    node.profileName != null ? buildProfileContextBlock(current, node.profileName) : undefined;
+  // beads: prompt-language-yvda — resolve agent-level skills into directives for child prompt
+  const agentSkillBlock = resolveAgentSkillDirectives(current, node.agentRef);
+  const baseGoal = `Sub-task: ${node.name}`;
+  const goalParts = [profileResolved?.block, agentSkillBlock, baseGoal].filter(Boolean);
+  const goal = goalParts.join('\n\n');
   // H-SEC-005: Filter variables based on allowlist
   const parentVars: Record<string, VariableValue> = filterSpawnVariables(
     current.variables,
@@ -2358,7 +2386,8 @@ async function advanceSpawnNode(
     variables: parentVars,
     stateDir,
     ...(node.cwd != null ? { cwd: node.cwd } : {}),
-    ...(node.model != null ? { model: node.model } : {}),
+    // Model priority: node.model > agent.model > profile.model (last-writer-wins)
+    ...resolveSpawnModel(node, current, profileResolved?.model),
   });
 
   // D7: Detect failed spawn (pid=0 or undefined) and mark child as failed
@@ -2581,16 +2610,32 @@ export async function autoAdvanceNodes(
   traceLogger: TraceLogger = NULL_TRACE_LOGGER,
 ): Promise<AutoAdvanceResult> {
   const MAX_ADVANCES = 100;
+  const MAX_WALL_CLOCK_MS = 30_000;
+  const OSCILLATION_WINDOW = 6;
   let advances = 0;
   let current = state;
   const pendingDiagnostics: FlowDiagnostic[] = [];
   const pendingOutcomes: FlowOutcome[] = [];
+  const loopStartTime = Date.now();
+  const recentPaths: string[] = [];
 
   if (current.status !== 'active') {
     return { kind: 'advance', state: current, capturedPrompt: null };
   }
 
   while (advances < MAX_ADVANCES) {
+    // Wall-clock safety: bail if the advance loop has been running too long
+    if (Date.now() - loopStartTime > MAX_WALL_CLOCK_MS) {
+      current = {
+        ...current,
+        warnings: [
+          ...current.warnings,
+          `Flow paused — auto-advance wall-clock timeout (${MAX_WALL_CLOCK_MS / 1000}s) after ${advances} advances.`,
+        ],
+      };
+      break;
+    }
+
     const prevPath = current.currentNodePath;
     const node = resolveCurrentNode(current.flowSpec.nodes, current.currentNodePath);
 
@@ -2614,6 +2659,8 @@ export async function autoAdvanceNodes(
           pendingOutcomes.push(...(finalizedResult.outcomes ?? []));
           current = finalizedResult.state;
           advances += 1;
+          recentPaths.push(current.currentNodePath.join('.'));
+          if (recentPaths.length > OSCILLATION_WINDOW) recentPaths.shift();
           continue;
         }
         return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, finalizedResult);
@@ -2629,6 +2676,8 @@ export async function autoAdvanceNodes(
         });
       }
       advances += 1;
+      recentPaths.push(current.currentNodePath.join('.'));
+      if (recentPaths.length > OSCILLATION_WINDOW) recentPaths.shift();
       continue;
     }
 
@@ -2670,6 +2719,8 @@ export async function autoAdvanceNodes(
         ) {
           break;
         }
+        recentPaths.push(current.currentNodePath.join('.'));
+        if (recentPaths.length > OSCILLATION_WINDOW) recentPaths.shift();
         continue;
       }
       return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, finalizedResult);
@@ -2696,6 +2747,28 @@ export async function autoAdvanceNodes(
       current.currentNodePath.length === prevPath.length &&
       current.currentNodePath.every((v, i) => v === prevPath[i])
     ) {
+      break;
+    }
+
+    // Oscillation detection: track recent path signatures and detect repeating cycles
+    const pathSig = current.currentNodePath.join('.');
+    recentPaths.push(pathSig);
+    if (recentPaths.length > OSCILLATION_WINDOW) {
+      recentPaths.shift();
+    }
+    if (
+      recentPaths.length === OSCILLATION_WINDOW &&
+      recentPaths[0] === recentPaths[OSCILLATION_WINDOW / 2] &&
+      recentPaths[1] === recentPaths[OSCILLATION_WINDOW / 2 + 1] &&
+      recentPaths[2] === recentPaths[OSCILLATION_WINDOW / 2 + 2]
+    ) {
+      current = {
+        ...current,
+        warnings: [
+          ...current.warnings,
+          `Flow paused — path oscillation detected at [${pathSig}] after ${advances} advances.`,
+        ],
+      };
       break;
     }
   }

@@ -7,6 +7,7 @@ import {
   autoAdvanceNodes,
   maybeCompleteFlow,
   MAX_AWAIT_POLLS,
+  isPidAlive,
 } from './advance-flow.js';
 import {
   createSessionState,
@@ -618,6 +619,39 @@ describe('autoAdvanceNodes — context profiles', () => {
     expect(result.capturedPrompt).toContain('Inspect the diff');
   });
 
+  it('renders profile skills as directive-style invocation instructions', async () => {
+    const specWithDefault = createFlowSpec(
+      'test',
+      [createPromptNode('p1', 'Review the code', 'review')],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      {
+        review: {
+          name: 'review',
+          skills: ['/code-review', 'optional:/lint'],
+        },
+      },
+    );
+    const stateWithProfile = createSessionState('s2', specWithDefault);
+    const result = await autoAdvanceNodes(stateWithProfile);
+
+    expect(result.kind).toBe('prompt');
+    if (result.kind !== 'prompt') throw new Error('expected prompt');
+    expect(result.capturedPrompt).toContain('[Skill invocation directives]');
+    expect(result.capturedPrompt).toContain('You MUST invoke');
+    expect(result.capturedPrompt).toContain('  - /code-review');
+    expect(result.capturedPrompt).toContain('You SHOULD invoke');
+    expect(result.capturedPrompt).toContain('  - /lint');
+    expect(result.capturedPrompt).toContain('[End skill directives]');
+  });
+
   it('prepends profile context to ask prompts', async () => {
     const spec = createFlowSpec(
       'test',
@@ -904,6 +938,51 @@ describe('autoAdvanceNodes — safety limits', () => {
     );
     expect(result.currentNodePath).toEqual([100]);
   });
+
+  it('detects path oscillation in a tight loop', async () => {
+    // A while loop with always-true condition and a single let body creates a cycle:
+    // [0] -> [0,0] -> exhaustion re-entry -> [0] -> [0,0] -> ...
+    // Oscillation detection should catch this before MAX_ADVANCES.
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: 'true', stderr: '' }),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'tests_pass',
+      [createLetNode('l1', 'counter', { type: 'literal', value: 'tick' })],
+      200,
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('Flow paused')]),
+    );
+  });
+
+  it('wall-clock timeout stops slow command chains', async () => {
+    const runner: CommandRunner = {
+      run: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5_000));
+        return { exitCode: 0, stdout: 'ok', stderr: '' };
+      },
+    };
+    const nodes = Array.from({ length: 50 }, (_, i) =>
+      createLetNode(`l${i}`, `v${i}`, { type: 'run', command: `echo ${i}` }),
+    );
+    const spec = createFlowSpec('test', nodes);
+    const state = createSessionState('s1', spec);
+
+    const start = Date.now();
+    const { state: result } = await autoAdvanceNodes(state, runner);
+    const elapsed = Date.now() - start;
+
+    expect(elapsed).toBeLessThan(40_000);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('wall-clock timeout')]),
+    );
+  }, 45_000);
 });
 
 // ── H#15: Break node advancement ─────────────────────────────────────
@@ -5101,5 +5180,16 @@ describe('autoAdvanceNodes — position-aware runtime messages', () => {
 
     expect(result.state.status).toBe('failed');
     expect(result.state.failureReason).toContain('run at line 9, col 5');
+  });
+});
+
+describe('isPidAlive', () => {
+  it('returns true for the current process', () => {
+    expect(isPidAlive(process.pid)).toBe(true);
+  });
+
+  it('returns false for a non-existent PID', () => {
+    // PID 2147483647 is unlikely to exist on any platform
+    expect(isPidAlive(2147483647)).toBe(false);
   });
 });

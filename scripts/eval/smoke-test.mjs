@@ -35,6 +35,7 @@
  *   AR: Retry with backoff (slow)       AS: Composite all(...) gate
  *   AT: Spawn with modifiers            AU: Nested try/catch/finally
  *   AV: foreach item in run "cmd"
+ *   AY: Agent+skills spawn (slow)     AZ: Profile-bound spawn (slow)
  *
  * Usage:
  *   node scripts/eval/smoke-test.mjs          # all tests
@@ -2658,6 +2659,88 @@ async function testAXSnapshotRollback() {
   });
 }
 
+// ── Test AY: Agent definition with skills spawn ──────────────────────
+
+async function testAYAgentSkillsSpawn() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test agent definition with skills',
+      '',
+      'agents:',
+      '  file-creator:',
+      '    model: "sonnet"',
+      '    skills: "file-management"',
+      '',
+      'flow:',
+      '  spawn "worker" as file-creator',
+      '    run: echo agent-with-skills > agent-output.txt',
+      '  end',
+      '  await "worker" timeout 60',
+      '  run: echo ${worker.returned:-done} > final.txt',
+    ].join('\n');
+
+    harnessRun(prompt, dir);
+
+    let agentOutput = '';
+    let finalOutput = '';
+    try {
+      agentOutput = (await readFile(join(dir, 'agent-output.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+    try {
+      finalOutput = (await readFile(join(dir, 'final.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    const state = await readSessionState(dir);
+    const children = state?.spawnedChildren ?? {};
+    const hasWorker = Object.prototype.hasOwnProperty.call(children, 'worker');
+
+    assert(
+      'AY: Agent+skills spawn',
+      agentOutput === 'agent-with-skills' && hasWorker,
+      `agent-output="${agentOutput}" final="${finalOutput}" hasWorker=${hasWorker}`,
+    );
+  });
+}
+
+// ── Test AZ: Profile-bound spawn ─────────────────────────────────────
+
+async function testAZProfileBoundSpawn() {
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: test profile binding on spawn',
+      '',
+      'flow:',
+      '  spawn "reviewer" using profile "default"',
+      '    run: echo profile-bound > profile-output.txt',
+      '  end',
+      '  await "reviewer" timeout 60',
+    ].join('\n');
+
+    harnessRun(prompt, dir);
+
+    let profileOutput = '';
+    try {
+      profileOutput = (await readFile(join(dir, 'profile-output.txt'), 'utf-8')).trim();
+    } catch {
+      /* file not created */
+    }
+
+    const state = await readSessionState(dir);
+    const children = state?.spawnedChildren ?? {};
+    const hasReviewer = Object.prototype.hasOwnProperty.call(children, 'reviewer');
+
+    assert(
+      'AZ: Profile-bound spawn',
+      profileOutput === 'profile-bound' && hasReviewer,
+      `profile-output="${profileOutput}" hasReviewer=${hasReviewer}`,
+    );
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
@@ -2753,6 +2836,8 @@ async function main() {
     await timed('Z6', 'Race-winner single-run oracle', testZ6RaceWinnerVariance);
     await timed('Z7', 'send/receive content hash', testZ7SendReceiveHash);
     await timed('AR', 'Retry with backoff', testARRetryBackoff);
+    await timed('AY', 'Agent+skills spawn', testAYAgentSkillsSpawn);
+    await timed('AZ', 'Profile-bound spawn', testAZProfileBoundSpawn);
   } else {
     console.log('  SKIP  D: Gate evaluation (--quick mode)');
     console.log('  SKIP  J: While loop (--quick mode)');
@@ -2773,6 +2858,8 @@ async function main() {
     console.log('  SKIP  Z6: Race-winner single-run oracle (--quick mode)');
     console.log('  SKIP  Z7: send/receive content hash (--quick mode)');
     console.log('  SKIP  AR: Retry with backoff (--quick mode)');
+    console.log('  SKIP  AY: Agent+skills spawn (--quick mode)');
+    console.log('  SKIP  AZ: Profile-bound spawn (--quick mode)');
   }
 
   console.log(`\n[smoke-test] Summary: ${passed}/${passed + failed} passed`);

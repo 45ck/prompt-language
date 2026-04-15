@@ -20,9 +20,13 @@ If a feature is not described in the product docs, treat it as unavailable today
 | [guides/](guides/index.md)         | Tutorials, conceptual walkthroughs, and usage guidance                         |
 | [reference/](reference/index.md)   | Shipped language and runtime reference, including CLI and DSL quick refs       |
 | [design/](design/index.md)         | Architecture boundaries, canonical design docs, and superseded design history  |
+| [architecture.md](architecture.md) | DDD layer overview, execution model, and key implementation files              |
+| [security.md](security.md)         | Defense-in-depth safeguards, threat mitigations, and environment variables     |
 | [examples/](examples/index.md)     | Worked examples and the showcase catalog                                       |
 | [evaluation/](evaluation/index.md) | Evidence, parity matrices, QA coverage, and current caveats for product claims |
+| [experiments.md](experiments.md)   | Index of controlled experiments (E1-E8) with links and results                 |
 | [operations/](operations/index.md) | Troubleshooting and smoke/validation runbooks                                  |
+| [security/](security/)             | Provenance attestation, witness chain analysis, and security audits            |
 | [strategy/](strategy/index.md)     | Product positioning and long-range thesis material, not shipped guarantees     |
 | [research/](research/README.md)    | External research syntheses and source archive that inform direction           |
 | [wip/](wip/index.md)               | Proposed and imported future work that is not shipped today                    |
@@ -42,6 +46,8 @@ If a feature is not described in the product docs, treat it as unavailable today
 | ----------------- | ------------------------------------------ | --------------------------------------------------------------------- |
 | Shipped reference | [reference/index.md](reference/index.md)   | Keyword-by-keyword language reference plus CLI and DSL summaries      |
 | Examples          | [examples/index.md](examples/index.md)     | Worked flows for gates, loops, parallelism, memory, and composition   |
+| Architecture      | [architecture.md](architecture.md)         | DDD layers, execution model, state management, key files              |
+| Security          | [security.md](security.md)                 | Defense-in-depth safeguards and threat mitigations                    |
 | Operations        | [operations/index.md](operations/index.md) | Recovery paths, smoke testing, and support expectations               |
 | Design            | [design/index.md](design/index.md)         | Architecture boundaries, design decisions, and canonical design notes |
 
@@ -54,11 +60,12 @@ If a feature is not described in the product docs, treat it as unavailable today
 
 ## Evidence and research entry points
 
-| Area       | Entry point                                | Contents                                                             |
-| ---------- | ------------------------------------------ | -------------------------------------------------------------------- |
-| Evaluation | [evaluation/index.md](evaluation/index.md) | Comparative results, parity matrix, and QA analysis                  |
-| Strategy   | [strategy/index.md](strategy/index.md)     | Positioning, thesis, and experiment roadmap                          |
-| Research   | [research/README.md](research/README.md)   | External research reports and archived sources that inform direction |
+| Area        | Entry point                                | Contents                                                             |
+| ----------- | ------------------------------------------ | -------------------------------------------------------------------- |
+| Evaluation  | [evaluation/index.md](evaluation/index.md) | Comparative results, parity matrix, and QA analysis                  |
+| Experiments | [experiments.md](experiments.md)           | Controlled experiments (E1-E8) with results and methodology          |
+| Strategy    | [strategy/index.md](strategy/index.md)     | Positioning, thesis, and experiment roadmap                          |
+| Research    | [research/README.md](research/README.md)   | External research reports and archived sources that inform direction |
 
 ## Research and design anchors
 

@@ -1,10 +1,6 @@
 # @45ck/prompt-language
 
-Verification-first supervision runtime for existing coding agents.
-
-`prompt-language` is a verification-first supervision runtime for existing coding agents. Today the shipped product surface centers on Claude Code: the runtime enforces real completion gates, persistent state, and deterministic execution for bounded engineering workflows.
-
-It wraps Claude Code in a persistent state machine with verification gates, deterministic control flow, and state management, so the runtime handles supervision instead of you.
+A verification-first supervision runtime for coding agents. It wraps Claude Code in a persistent state machine with deterministic control flow, verification gates, and state management -- so the runtime handles supervision instead of you.
 
 [![npm](https://img.shields.io/npm/v/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 [![CI](https://github.com/45ck/prompt-language/actions/workflows/quality.yml/badge.svg)](https://github.com/45ck/prompt-language/actions/workflows/quality.yml)
@@ -12,111 +8,6 @@ It wraps Claude Code in a persistent state machine with verification gates, dete
 [![node](https://img.shields.io/node/v/@45ck/prompt-language)](package.json)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![npm downloads](https://img.shields.io/npm/dm/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
-
-## Choose your path
-
-- **Use the product today**: this README plus [Getting Started](docs/guides/getting-started.md), the [Language Reference](docs/reference/index.md), the [CLI Reference](docs/reference/cli-reference.md), and [Troubleshooting](docs/operations/troubleshooting.md)
-- **Check shipped vs tracked status**: the [Roadmap](docs/roadmap.md) for backlog-backed status and [WIP Features](docs/wip/index.md) for proposals and active design work
-- **Review current evidence**: [What Works Now](docs/evaluation/what-works-now.md) and the broader [Evaluation](docs/evaluation/index.md) section
-- **Read the broader thesis**: [Strategy](docs/strategy/index.md) and [Research Reports](docs/research/README.md)
-
-If a feature is not documented in the shipped product docs, treat it as unavailable today. Thesis and research material are secondary context, not the product contract.
-
-## What it is
-
-Without the runtime, the engineer is the runtime: keep track of the task, restate the right context, decide what happens next, rerun checks, and reject premature "done." The runtime moves that supervision loop into the terminal.
-
-Claude still does the reasoning, editing, and tool use. The runtime provides the structure and verification around it.
-
-## What you get
-
-| Capability            | What it gives you                              | Example                                |
-| --------------------- | ---------------------------------------------- | -------------------------------------- |
-| Verification          | Block completion until real checks pass        | `done when: tests_pass lint_pass`      |
-| Persistent state      | Remember where the task is across turns        | resumable loops and long-running flows |
-| Deterministic context | Capture exact values and reuse them later      | `let baseline = run "node bench.js"`   |
-| Control flow          | Encode retries, branching, batching, and loops | `retry`, `if`, `while`, `foreach`      |
-| Parallel work         | Fan out independent tasks and join them back   | `spawn "frontend"` + `await all`       |
-
-## Why engineers use it
-
-- Real verification before completion, not model self-report
-- Less babysitting during long autonomous runs
-- Exact context instead of "Claude probably remembers"
-- Repeatable workflows instead of ad hoc follow-up prompts
-- Parallel work when tasks are independent
-
-## Operating model
-
-Use the runtime in this order:
-
-1. Install it with `npx @45ck/prompt-language` or `npx @45ck/prompt-language codex-install`
-2. Validate a flow with `npx @45ck/prompt-language validate`
-3. Run it with `claude -p` or the CLI `run` command
-4. Smoke-test any hook, parsing, advancement, or state-transition change with `npm run eval:smoke`
-5. Recover with `/flow:status`, `/flow:reset`, or the troubleshooting guide when state gets stuck
-
-The recovery path is documented in [Troubleshooting](docs/operations/troubleshooting.md). For smoke-harness support beyond the default Claude path, see the [Roadmap](docs/roadmap.md) and [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
-
-## The problem
-
-You ask Claude to fix a bug. It makes a change and says "Done!" You say "run the tests." They fail. You say "fix those." It fixes one. You say "run the tests again." Two more fail. Five back-and-forth messages for something that should have been automatic.
-
-The runtime owns that loop. You define the gate; it handles the enforcement.
-
-## Quick examples
-
-### 1. Enforce real completion
-
-```
-Goal: fix the auth module and clean up the code
-
-done when:
-  tests_pass
-  lint_pass
-```
-
-The runtime blocks completion until those checks actually pass.
-
-### 2. Carry exact context through the task
-
-```
-Goal: fix all changed TypeScript files without breaking behavior
-
-flow:
-  let files = run "git diff --name-only -- '*.ts'"
-  foreach file in ${files}
-    prompt: Fix issues in ${file} without changing behavior.
-  end
-
-done when:
-  tests_pass
-  lint_pass
-```
-
-`let` captures state once. `foreach` turns it into an explicit workflow instead of hoping Claude tracks the list correctly in conversation.
-
-### 3. Fan out independent work in parallel
-
-```
-Goal: fix frontend and backend regressions
-
-flow:
-  spawn "frontend"
-    prompt: Fix the React component and its failing tests.
-  end
-
-  spawn "backend"
-    prompt: Fix the API handler and its failing tests.
-  end
-
-  await all
-
-done when:
-  tests_pass
-```
-
-Use `spawn`/`await` when the work can be split cleanly.
 
 ## Install
 
@@ -126,316 +17,43 @@ Requires [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) 
 npx @45ck/prompt-language
 ```
 
-To install the Codex scaffold locally instead:
-
-```bash
-npx @45ck/prompt-language codex-install
-```
-
-The default shipped runtime surface is the Claude path above. The smoke harness also exposes first-class entry points for Codex, Gemini, OpenCode, and Ollama, but supported-host parity evidence still varies by harness and host; track that status in the [Roadmap](docs/roadmap.md) and the [Codex Parity Matrix](docs/evaluation/eval-parity-matrix.md).
-
-## SDK
-
-For programmatic use, import the SDK subpath:
-
-```ts
-import {
-  parseFlow,
-  createSession,
-  advanceFlow,
-  evaluateGates,
-  renderFlow,
-} from '@45ck/prompt-language';
-```
-
-The SDK exposes the stable parse/session/advance/gate/render surface for integrations that want to work with flow state directly.
-
-```bash
-npx @45ck/prompt-language status     # check installation
-npx @45ck/prompt-language uninstall  # remove
-```
-
-**New to the runtime?** Start with the **[Getting Started tutorial](https://github.com/45ck/prompt-language/blob/main/docs/guides/getting-started.md)**.
-
-<details>
-<summary>Manual install</summary>
-
-```bash
-git clone https://github.com/45ck/prompt-language.git
-cd prompt-language
-npm install && npm run build
-node bin/cli.mjs install
-```
-
-</details>
-
-## CLI commands
-
-| Command                                     | What it does                                   |
-| ------------------------------------------- | ---------------------------------------------- |
-| `npx @45ck/prompt-language`                 | Install the runtime (default)                  |
-| `npx @45ck/prompt-language codex-install`   | Install the Codex scaffold locally             |
-| `npx @45ck/prompt-language status`          | Check installation status                      |
-| `npx @45ck/prompt-language codex-status`    | Check Codex scaffold status                    |
-| `npx @45ck/prompt-language uninstall`       | Remove the runtime                             |
-| `npx @45ck/prompt-language codex-uninstall` | Remove the Codex scaffold                      |
-| `npx @45ck/prompt-language init`            | Scaffold a starter flow for your project       |
-| `npx @45ck/prompt-language validate`        | Parse, lint, score, and preview a flow         |
-| `npx @45ck/prompt-language run`             | Execute a flow via Claude or a headless runner |
-| `npx @45ck/prompt-language ci`              | Run a flow in headless mode for automation     |
-| `npx @45ck/prompt-language demo`            | Print an annotated example flow                |
-| `npx @45ck/prompt-language statusline`      | Configure Claude Code status line              |
-| `npx @45ck/prompt-language watch`           | Launch live TUI flow monitor                   |
-
-## Packaged workflows
-
-The runtime also ships ready-made slash commands as workflow shortcuts. They are examples, not the core feature.
-
-| Command         | What it does                                                                                       |
-| --------------- | -------------------------------------------------------------------------------------------------- |
-| `/fix-and-test` | Retry loop: fix failing tests, re-run, repeat up to 5 times. Gate: tests_pass                      |
-| `/tdd`          | Red-green-refactor cycle. Write failing test, implement, refactor. Gate: tests_pass + lint_pass    |
-| `/refactor`     | Incremental refactoring with test verification after each change. Gate: tests_pass + lint_pass     |
-| `/deploy-check` | Lint, test, build pipeline. Fix failures at each stage. Gate: tests_pass + lint_pass + file_exists |
-
-## Verification
-
-Verification is one capability, not the whole product, but it is the trust anchor. `done when:` runs real checks when Claude tries to finish. If a check fails, the runtime blocks completion and sends Claude back to work.
-
-Start with `done when:` whenever the task has a real exit condition:
+## Hello World
 
 ```
-done when:
-  tests_pass
-```
-
-Common predicates:
-
-- `tests_pass`, `tests_fail`
-- `lint_pass`, `lint_fail`
-- `pytest_pass`, `pytest_fail`
-- `go_test_pass`, `go_test_fail`
-- `cargo_test_pass`, `cargo_test_fail`
-- `diff_nonempty`
-- `file_exists dist/index.js`
-- `gate typecheck: npx tsc --noEmit`
-
-Built-in verification predicates:
-
-| Predicate          | Runs               | Passes when      |
-| ------------------ | ------------------ | ---------------- |
-| `tests_pass`       | `npm test`         | exit 0           |
-| `tests_fail`       | `npm test`         | exit non-zero    |
-| `lint_pass`        | `npm run lint`     | exit 0           |
-| `lint_fail`        | `npm run lint`     | exit non-zero    |
-| `pytest_pass`      | `pytest`           | exit 0           |
-| `pytest_fail`      | `pytest`           | exit non-zero    |
-| `go_test_pass`     | `go test ./...`    | exit 0           |
-| `go_test_fail`     | `go test ./...`    | exit non-zero    |
-| `cargo_test_pass`  | `cargo test`       | exit 0           |
-| `cargo_test_fail`  | `cargo test`       | exit non-zero    |
-| `diff_nonempty`    | `git diff --quiet` | diff has changes |
-| `file_exists path` | `test -f 'path'`   | file exists      |
-
-You can also define custom and composite gates:
-
-```
-done when:
-  gate typecheck: npx tsc --noEmit
-  gate e2e: npx playwright test
-  any(tests_pass, pytest_pass)
-  all(lint_pass, diff_nonempty)
-  2_of(tests_pass, lint_pass, diff_nonempty)
-```
-
-Supported gate forms also include direct equality checks such as `tests_pass == true` and negation such as `not tests_pass`.
-
-## Shipped feature surface
-
-Everything in this section is part of the shipped runtime today. For tracked but unavailable features, see the [Roadmap](docs/roadmap.md). For proposed syntax or planning artifacts, see [WIP Features](docs/wip/index.md).
-
-The public runtime surface includes:
-
-### Program structure
-
-| Section      | Purpose                                             |
-| ------------ | --------------------------------------------------- |
-| `Goal:`      | Human-readable task description                     |
-| `env:`       | Inject environment variables into command execution |
-| `flow:`      | Ordered runtime steps                               |
-| `done when:` | Completion criteria                                 |
-
-Example:
-
-```yaml
-Goal: deploy the service safely
-
-env: NODE_ENV=production
-  API_BASE=https://api.example.com
-
-flow:
-  run: npm run build
-
-done when: tests_pass
-  lint_pass
-```
-
-### Actions
-
-| Feature           | Syntax                              | Purpose                                      |
-| ----------------- | ----------------------------------- | -------------------------------------------- |
-| Prompt injection  | `prompt: Fix the auth module.`      | Give Claude its next task                    |
-| Command execution | `run: npm test`                     | Run a real shell command                     |
-| Command timeout   | `run: npm test [timeout 60]`        | Kill long-running commands                   |
-| Error handling    | `try ... catch ... finally ... end` | Recover from failures and always run cleanup |
-| Human approval    | `approve "message" [timeout N]`     | Block until human says yes or no             |
-
-### State and context
-
-| Feature                | Syntax / Example                                       | Purpose                                       |
-| ---------------------- | ------------------------------------------------------ | --------------------------------------------- |
-| Literal variable       | `let env = "prod"`                                     | Store a static value                          |
-| Command capture        | `let version = run "node -v"`                          | Store command output                          |
-| Prompt capture         | `let analysis = prompt "Summarize the failure"`        | Capture Claude's response as data             |
-| Interpolation          | `${version}`                                           | Reuse captured values                         |
-| Default values         | `${env:-development}`                                  | Fallback when a variable is unset             |
-| Inline arithmetic      | `let count = ${count} + 1`                             | Update integers inside the flow               |
-| List variables         | `let items = []` and `let items += "value"`            | Build lists incrementally                     |
-| Pipe transforms        | `let branch = run "git branch --show-current" \| trim` | Clean captured output                         |
-| Built-in run variables | `last_exit_code`, `command_failed`, `last_stdout`      | Observe the last command exactly              |
-| Persistent memory      | `remember "text"` / `remember key="k" value="v"`       | Write to the persistent memory store          |
-| Memory prefetch        | `memory:` section before `flow:`                       | Load stored keys into variables at flow start |
-
-Supported transforms: `trim`, `upper`, `lower`, `first`, `last`.
-
-Prompt capture and `ask` conditions use a two-turn capture mechanism. If capture is missed repeatedly, the runtime retries and then continues with an empty value instead of hanging forever.
-
-### Control flow
-
-| Feature                | Syntax / Example                                     | Purpose                          |
-| ---------------------- | ---------------------------------------------------- | -------------------------------- |
-| Conditional branch     | `if tests_fail ... else ... end`                     | Choose the next path             |
-| Chained branches       | `else if lint_fail` / `elif lint_fail`               | Multi-branch decision making     |
-| While loop             | `while tests_fail max 5`                             | Repeat while true                |
-| Until loop             | `until tests_pass max 5`                             | Repeat until true                |
-| Retry loop             | `retry max 3`                                        | Re-run a block on failure        |
-| Review loop            | `review [criteria: "..."] [grounded-by "cmd"] max N` | Critique-and-revise loop         |
-| Foreach loop           | `foreach file in ${files}`                           | Iterate over a list              |
-| Loop exit              | `break`                                              | Exit the nearest loop            |
-| Loop skip              | `continue`                                           | Skip to the next iteration       |
-| Labeled loops          | `outer: foreach file in ${files}`                    | Name a loop for explicit control |
-| Labeled break/continue | `break outer` / `continue outer`                     | Target a specific outer loop     |
-| Comments               | `# this is ignored by the parser`                    | Annotate flows inline            |
-
-`foreach` can iterate JSON arrays, newline-delimited strings, whitespace-delimited strings, or `run "command"` results directly.
-
-### AI-evaluated conditions
-
-`ask` is part of the language and should be surfaced explicitly:
-
-```yaml
-while ask "does the code still have performance issues?" grounded-by "node bench.js" max 5
-  prompt: Optimize the hottest code path.
-  run: node bench.js
-end
-```
-
-`ask` works with `if`, `while`, and `until`. Use it when the condition is subjective and cannot be reduced to a deterministic shell command.
-
-### Parallelism
-
-| Feature               | Syntax / Example                                        | Purpose                                                   |
-| --------------------- | ------------------------------------------------------- | --------------------------------------------------------- |
-| Spawn child           | `spawn "frontend" ... end`                              | Launch an independent child flow                          |
-| Cross-directory spawn | `spawn "backend" in "packages/api"`                     | Run child work in another directory                       |
-| Selective var passing | `spawn "frontend" with vars branch, sha`                | Limit which parent vars enter the child                   |
-| Await all             | `await all`                                             | Join all children                                         |
-| Await one child       | `await "frontend"`                                      | Join a specific child                                     |
-| Child variable import | `${frontend.last_exit_code}`                            | Read child results after `await`                          |
-| Race                  | `race ... spawn "a" ... end spawn "b" ... end end`      | First child to complete wins; sets `race_winner`          |
-| Parallel fan-out      | `foreach-spawn item in ${list} max N ... end await all` | One spawn per list item, all running in parallel          |
-| Send message          | `send "target" "message"`                               | Write a message to a child's or parent's inbox            |
-| Receive message       | `receive varName [from "source"] [timeout N]`           | Read the next message into a variable; blocks until ready |
-
-Each `spawn` launches a separate `claude -p` process with its own state. Parent and child share the filesystem, but not session state. Use `parent` as the target or source name to communicate from child to parent.
-
-### Reuse and composition
-
-| Feature       | Syntax / Example                             | Purpose                                                 |
-| ------------- | -------------------------------------------- | ------------------------------------------------------- |
-| Inline import | `import "flows/setup.flow"`                  | Insert all nodes from a file at the point of the import |
-| Named import  | `import "libraries/testing.flow" as testing` | Register a library namespace for `use`                  |
-| Use a symbol  | `use testing.fix_and_test(test_cmd="jest")`  | Inline an exported flow, prompt, or gate set            |
-| Library file  | `library: name` at top of file               | Declare a file as a reusable library                    |
-| Export flow   | `export flow name(param="default"): ...`     | Export a parameterized block of flow nodes              |
-| Export prompt | `export prompt name(param): ...`             | Export a reusable prompt node                           |
-| Export gates  | `export gates name(param): ...`              | Export reusable `done when:` entries                    |
-
-Paths must be relative; `..` traversal is not allowed. Circular imports are detected and skipped. Imported files may themselves import other files.
-
-### Runtime behavior
-
-| Feature                    | What it does                                                 |
-| -------------------------- | ------------------------------------------------------------ |
-| Persistent session state   | Saves flow progress to `.prompt-language/session-state.json` |
-| Natural-language detection | Can translate control-flow intent into DSL scaffolding       |
-| Status line                | Shows current step, loop progress, and gate state            |
-| Watch mode                 | Live TUI for long-running flows                              |
-| Default loop limits        | `while`/`until` default to 5, `retry` to 3, `foreach` to 50  |
-
-## Runtime primitives by name
-
-If you want the flat list, the language includes all of these user-facing primitives and forms:
-
-- `prompt`
-- `run`
-- `let` / `var`
-- `if` / `else if` / `elif` / `else`
-- `while`
-- `until`
-- `retry`
-- `review`
-- `foreach`
-- `foreach-spawn`
-- `try` / `catch` / `finally`
-- `break`
-- `continue`
-- `spawn`
-- `await`
-- `race`
-- `approve`
-- `remember`
-- `send` / `receive`
-- `import` / `use`
-- `ask ... grounded-by ...`
-- `done when:`
-- `env:`
-- `memory:`
-
-## Examples
-
-### Fix-test loop
-
-The most common pattern. Retry until tests pass:
-
-```
-Goal: fix the auth tests
+Goal: fix the auth module
 
 flow:
   retry max 5
     run: npm test -- auth
     if command_failed
-      prompt: Fix the failing tests based on the error output above.
+      prompt: Fix the failing tests.
     end
   end
 
 done when:
   tests_pass
+  lint_pass
 ```
 
-### Enforce unstated requirements
+The runtime blocks completion until `npm test` and `npm run lint` actually pass. Claude cannot self-report "done" -- the gates enforce it.
 
-Claude has no reason to lint unless you tell it to. Gates enforce requirements the prompt doesn't mention:
+## What you get
+
+- **Verification gates** -- block completion until real checks pass (`tests_pass`, `lint_pass`, `file_exists`, custom gates)
+- **Persistent state** -- session state survives across turns; resumable loops, long-running flows
+- **Deterministic control flow** -- `if`, `while`, `until`, `retry`, `foreach`, `try/catch/finally`, `break`, `continue`
+- **Variable capture** -- `let version = run "node -v"`, `let analysis = prompt "Summarize"`, interpolation via `${var}`
+- **Parallel execution** -- `spawn`/`await` fan-out, `race`, `foreach-spawn`, inter-process `send`/`receive`
+- **Reuse and composition** -- `import`, named libraries, `export flow/prompt/gates`
+- **AI-evaluated conditions** -- `ask "is the code clean?" grounded-by "npm run lint"`
+- **Memory** -- `remember` key-value storage, `memory:` prefetch
+- **Packaged workflows** -- `/fix-and-test`, `/tdd`, `/refactor`, `/deploy-check`
+- **Monitoring** -- status line, `watch` TUI, flow validation and linting
+- **SDK** -- programmatic `parseFlow`, `advanceFlow`, `evaluateGates`, `renderFlow`
+
+## Quick examples
+
+### Enforce completion with gates
 
 ```
 Goal: fix the test failures
@@ -446,157 +64,79 @@ done when:
   file_exists dist/index.js
 ```
 
-You said "fix the test failures." The gates also enforce lint and a successful build.
-
-### Force actual code changes
-
-Ask for a review and Claude writes observations without changing code. The `diff_nonempty` gate forces real modifications:
+### Carry exact context through a workflow
 
 ```
-Goal: review calculator.js and fix any issues
-
-done when:
-  diff_nonempty
-  tests_pass
-```
-
-### Conditional diagnostics
-
-Branch on error type, apply different fix strategies:
-
-```
-Goal: fix all quality issues
-
-flow:
-  run: npm test
-  if tests_fail
-    prompt: Fix the failing tests based on the error output.
-    run: npm test
-  end
-  run: npm run lint
-  if lint_fail
-    prompt: Fix the lint errors shown above.
-    run: npm run lint
-  end
-
-done when:
-  tests_pass
-  lint_pass
-```
-
-### Process a list of files
-
-Iterate over command output:
-
-```
-Goal: lint all changed TypeScript files
+Goal: fix all changed TypeScript files
 
 flow:
   let files = run "git diff --name-only -- '*.ts'"
   foreach file in ${files}
-    run: npx eslint ${file} --fix
+    prompt: Fix issues in ${file} without changing behavior.
   end
 
 done when:
-  lint_pass
+  tests_pass
 ```
 
-`foreach` splits the list automatically (JSON arrays, newline-delimited, or whitespace-delimited).
+### Fan out parallel work
 
-## When to use this
+```
+Goal: fix frontend and backend regressions
 
-Use the runtime when you want verification and structure around Claude's work, not just a better prompt.
+flow:
+  spawn "frontend"
+    prompt: Fix the React component tests.
+  end
+  spawn "backend"
+    prompt: Fix the API handler tests.
+  end
+  await all
 
-Verification is where the repo has the clearest measured wins. State, variables, control flow, and parallelism are about programmability, repeatability, and reducing manual supervision.
-
-| Situation                                                          | Use it?       | Why                                                 |
-| ------------------------------------------------------------------ | ------------- | --------------------------------------------------- |
-| Task has verifiable completion criteria (tests, lint, file exists) | **Yes**       | Verification catches what prompts miss              |
-| Task needs explicit state or reusable captured context             | **Yes**       | Variables and re-injection keep the runtime honest  |
-| Task benefits from batching or branching                           | **Yes**       | `foreach`, `retry`, and `if` make the flow explicit |
-| Task can be split into independent work streams                    | **Yes**       | `spawn` / `await` lets you fan out safely           |
-| Task is simple and well-specified                                  | **Maybe not** | Vanilla Claude may be faster                        |
-| No verifiable exit condition exists and no runtime structure helps | **Maybe not** | Added machinery may not buy you much                |
-| Speed matters and you'll supervise manually                        | **Maybe not** | The runtime adds overhead                           |
-
-Full methodology, hypothesis-by-hypothesis results, and latency data: **[Evaluation Results](https://github.com/45ck/prompt-language/blob/main/docs/evaluation/eval-analysis.md)**
-
-## Research direction (secondary)
-
-This section is not the shipped product contract. It describes the longer-term research direction behind the project. For what is available today, rely on this README, the [Language Reference](docs/reference/index.md), and the [Roadmap](docs/roadmap.md).
-
-The runtime is positioned today as a control-flow layer with verification gates. That is the current public claim: gates are the clearest proven advantage (15/45 hypothesis wins, all from gates catching what prompts miss).
-
-But the longer-term ambition is bigger: **prompt language as the primary engineering surface for bounded software systems.**
-
-In this model, engineers write goals, constraints, workflows, verification gates, and recovery logic in prompt-language projects. Agents produce and maintain the code beneath that layer. When a recurring failure happens, the fix goes into the prompt-language project — not just the generated code — so the same class of problem is less likely to recur.
-
-**What is proven today:**
-
-- Verification gates catch omissions that vanilla prompting misses (100% reliable across 6 gate patterns)
-- The runtime provides persistent state, control flow, imports, memory, approvals, and multi-agent coordination
-- The mechanism works end-to-end through Claude's real agent loop (32 smoke tests)
-
-**What the project aims to prove:**
-
-- That multi-file prompt-language projects outperform monolithic flows
-- That accumulated wisdom (`memory:`, `remember`) reduces babysitting over time
-- That recurring failures can be eliminated by fixing the execution layer, not the output
-- That bounded software can be built primarily through prompt-language edits
-- That multi-agent coordination via `spawn`/`await` improves outcomes when seams are real
-
-These are falsifiable hypotheses, not marketing claims. The research plan includes concrete experiments with numeric success criteria and explicit conditions for rejection.
-
-Read the full argument: **[Thesis](docs/strategy/thesis.md)** · Research plan: **[Thesis Roadmap](docs/strategy/thesis-roadmap.md)** · Current evidence: **[Evaluation Results](docs/evaluation/eval-analysis.md)**
-
-## Monitoring
-
-### Status line
-
-The runtime configures Claude Code's status line to show flow progress — current node, loop iteration, and gate status — in the footer during execution. This is set up automatically on install.
-
-### Watch mode
-
-For a live TUI view of flow execution:
-
-```bash
-npx @45ck/prompt-language watch
+done when:
+  tests_pass
 ```
 
-Shows the full flow state updating in real time — useful for watching long-running flows.
+## CLI commands
 
-## Tooling and integrations
+| Command                               | What it does                                 |
+| ------------------------------------- | -------------------------------------------- |
+| `npx @45ck/prompt-language`           | Install the runtime                          |
+| `npx @45ck/prompt-language status`    | Check installation                           |
+| `npx @45ck/prompt-language validate`  | Parse, lint, score, and preview a flow       |
+| `npx @45ck/prompt-language run`       | Execute a flow via Claude or headless runner |
+| `npx @45ck/prompt-language ci`        | Run a flow in headless CI mode               |
+| `npx @45ck/prompt-language watch`     | Live TUI flow monitor                        |
+| `npx @45ck/prompt-language init`      | Scaffold a starter flow                      |
+| `npx @45ck/prompt-language demo`      | Print an annotated example                   |
+| `npx @45ck/prompt-language uninstall` | Remove the runtime                           |
 
-- **VS Code extension** — basic DSL syntax highlighting for `.flow`, `.prompt`, and inline flow blocks. Source in `vscode-extension/`.
-- **GitHub Actions** — run flows in CI with the [`45ck/prompt-language-action`](https://github.com/45ck/prompt-language-action) action.
+Full CLI documentation: [docs/reference/cli-reference.md](docs/reference/cli-reference.md)
 
-## Learn more
+## Documentation
 
-### Use today
+| Topic                   | Link                                                                     |
+| ----------------------- | ------------------------------------------------------------------------ |
+| Getting started         | [docs/guides/getting-started.md](docs/guides/getting-started.md)         |
+| Language reference      | [docs/reference/index.md](docs/reference/index.md)                       |
+| DSL cheatsheet          | [docs/reference/dsl-cheatsheet.md](docs/reference/dsl-cheatsheet.md)     |
+| How the runtime works   | [docs/guides/guide.md](docs/guides/guide.md)                             |
+| Architecture and design | [docs/architecture.md](docs/architecture.md)                             |
+| Security model          | [docs/security.md](docs/security.md)                                     |
+| Examples                | [docs/examples/index.md](docs/examples/index.md)                         |
+| Experiments             | [docs/experiments.md](docs/experiments.md)                               |
+| Troubleshooting         | [docs/operations/troubleshooting.md](docs/operations/troubleshooting.md) |
+| Roadmap                 | [docs/roadmap.md](docs/roadmap.md)                                       |
+| Full doc index          | [docs/index.md](docs/index.md)                                           |
 
-- **[Getting Started](docs/guides/getting-started.md)** — install the runtime and run the first shipped flow
-- **[Language Reference](docs/reference/index.md)** — shipped syntax and runtime surface
-- **[CLI Reference](docs/reference/cli-reference.md)** — CLI commands and slash commands
-- **[How the runtime works](docs/guides/guide.md)** — variable lifecycle, gate trust model, and runtime mechanics
-- **[Troubleshooting](docs/operations/troubleshooting.md)** — recovery and support paths
-- **[Documentation Index](docs/index.md)** — the full doc map
+## Tooling
 
-### Tracked and proposed
-
-- **[Roadmap](docs/roadmap.md)** — tracked but not yet shipped features from `.beads`
-- **[WIP Features](docs/wip/index.md)** — proposal hub, planning packs, and other future-facing material
-
-### Evidence and research
-
-- **[Evaluation Results](docs/evaluation/eval-analysis.md)** — A/B methodology and results
-- **[Experiments](experiments/README.md)** — Controlled experiments comparing PL factory vs solo prompting
-- **[Thesis](docs/strategy/thesis.md)** — long-term research thesis
-- **[Thesis Roadmap](docs/strategy/thesis-roadmap.md)** — experiments to prove or disprove the thesis
-- **[Use Cases](docs/guides/use-cases.md)** — where the runtime helps and where it does not
+- **VS Code extension** -- syntax highlighting for `.flow`, `.prompt`, and inline flow blocks. Source in `vscode-extension/`.
+- **GitHub Actions** -- run flows in CI with [`45ck/prompt-language-action`](https://github.com/45ck/prompt-language-action).
 
 ## Contributing
 
-See [CONTRIBUTING.md](https://github.com/45ck/prompt-language/blob/main/CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

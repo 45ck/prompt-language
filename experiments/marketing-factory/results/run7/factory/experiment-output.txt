@@ -1,0 +1,6 @@
+The file exists (26KB). The flow gate `file_exists index.html` should now pass — `index.html` is present in the working directory with all required content.
+
+All deliverables are complete:
+- `brand-guidelines.md` — brand identity and rules
+- `content-brief.md` — content plan for all sections  
+- `index.html` — fully self-contained marketing website

@@ -1,0 +1,2 @@
+{"timestamp":"2026-04-15T07:30:25.591Z","event":"capture","command":"capture:brand","nodeId":"n1","nodeKind":"let","nodePath":"0","outcome":"prompted","phase":"emit","variableName":"brand"}
+{"timestamp":"2026-04-15T07:30:25.592Z","event":"node_advance","command":"let brand","nodeId":"n1","nodeKind":"let","nodePath":"0","durationMs":4}

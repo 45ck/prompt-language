@@ -1,0 +1,1527 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="CloudPulse - Real-time cloud infrastructure monitoring and visibility. Monitor your entire cloud environment with confidence."
+    />
+    <meta
+      name="keywords"
+      content="cloud monitoring, SaaS, infrastructure visibility, real-time alerts, multi-cloud"
+    />
+    <meta name="theme-color" content="#2563EB" />
+    <meta property="og:title" content="CloudPulse - Cloud Infrastructure Monitoring" />
+    <meta
+      property="og:description"
+      content="Real-time visibility into your entire cloud infrastructure"
+    />
+    <meta property="og:type" content="website" />
+    <title>CloudPulse - Cloud Monitoring Made Simple</title>
+    <style>
+      /* Reset and base styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+        overflow-x: hidden;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        line-height: 1.6;
+        color: #475569;
+        background-color: #ffffff;
+        overflow-x: hidden;
+      }
+
+      /* CSS Variables for brand colors */
+      :root {
+        --primary: #2563eb;
+        --primary-dark: #1e40af;
+        --accent: #10b981;
+        --dark: #0f172a;
+        --neutral-50: #f8fafc;
+        --neutral-100: #f1f5f9;
+        --neutral-200: #e2e8f0;
+        --neutral-400: #94a3b8;
+        --neutral-600: #475569;
+        --neutral-900: #0f172a;
+      }
+
+      /* Typography */
+      h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--dark);
+        line-height: 1.2;
+        margin-bottom: 1rem;
+      }
+
+      h2 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--dark);
+        line-height: 1.2;
+        margin-bottom: 1.5rem;
+      }
+
+      h3 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 1rem;
+      }
+
+      h4 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 0.75rem;
+      }
+
+      p {
+        margin-bottom: 1rem;
+        color: var(--neutral-600);
+      }
+
+      /* Links and focus */
+      a {
+        color: var(--primary);
+        text-decoration: none;
+        transition: color 200ms ease;
+      }
+
+      a:hover {
+        color: var(--primary-dark);
+      }
+
+      a:focus,
+      button:focus {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
+      }
+
+      /* Buttons */
+      .btn {
+        padding: 0.75rem 2rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        transition: all 200ms ease;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+      }
+
+      .btn-primary {
+        background-color: var(--primary);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: var(--primary-dark);
+      }
+
+      .btn-primary:active {
+        background-color: #1e3a8a;
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        color: var(--primary);
+        border: 2px solid var(--primary);
+      }
+
+      .btn-secondary:hover {
+        background-color: var(--neutral-100);
+      }
+
+      .btn-ghost {
+        background-color: transparent;
+        color: var(--primary);
+        padding: 0.5rem 1rem;
+        text-decoration: underline;
+      }
+
+      .btn-ghost:hover {
+        color: var(--primary-dark);
+      }
+
+      /* Container and layout */
+      .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 2rem;
+      }
+
+      .grid {
+        display: grid;
+        gap: 2rem;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+      }
+
+      /* Header and Navigation */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background-color: white;
+        border-bottom: 1px solid var(--neutral-200);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+      }
+
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 0;
+        max-width: 1280px;
+        margin: 0 auto;
+        padding-left: 2rem;
+        padding-right: 2rem;
+      }
+
+      .logo {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+        background-color: var(--primary);
+        border-radius: 0.375rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1.25rem;
+      }
+
+      nav {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+      }
+
+      nav a {
+        color: var(--neutral-600);
+        font-weight: 500;
+        transition: color 200ms ease;
+      }
+
+      nav a:hover,
+      nav a.active {
+        color: var(--primary);
+      }
+
+      .hamburger {
+        display: none;
+        flex-direction: column;
+        cursor: pointer;
+        gap: 0.375rem;
+        background: none;
+        border: none;
+      }
+
+      .hamburger span {
+        width: 24px;
+        height: 2px;
+        background-color: var(--dark);
+        transition: all 200ms ease;
+      }
+
+      .hamburger.active span:nth-child(1) {
+        transform: rotate(45deg) translate(8px, 8px);
+      }
+
+      .hamburger.active span:nth-child(2) {
+        opacity: 0;
+      }
+
+      .hamburger.active span:nth-child(3) {
+        transform: rotate(-45deg) translate(7px, -7px);
+      }
+
+      /* Mobile Navigation */
+      @media (max-width: 768px) {
+        .hamburger {
+          display: flex;
+        }
+
+        nav {
+          position: absolute;
+          top: 65px;
+          left: 0;
+          right: 0;
+          flex-direction: column;
+          background-color: white;
+          gap: 0;
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 300ms ease;
+          border-bottom: 1px solid var(--neutral-200);
+        }
+
+        nav.active {
+          max-height: 400px;
+        }
+
+        nav a {
+          padding: 1rem 2rem;
+          border-bottom: 1px solid var(--neutral-100);
+          display: block;
+        }
+
+        .nav-cta {
+          display: none !important;
+        }
+      }
+
+      /* Hero Section */
+      .hero {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        padding: 4rem 2rem;
+      }
+
+      .hero-content {
+        max-width: 1000px;
+        text-align: center;
+      }
+
+      .hero h1 {
+        font-size: 3.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .hero p {
+        font-size: 1.25rem;
+        color: var(--neutral-600);
+        margin-bottom: 2rem;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .hero-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      @media (max-width: 768px) {
+        .hero {
+          min-height: auto;
+          padding: 3rem 1rem;
+        }
+
+        .hero h1 {
+          font-size: 2rem;
+        }
+
+        .hero-buttons {
+          flex-direction: column;
+        }
+
+        .btn {
+          width: 100%;
+        }
+      }
+
+      /* Section Styles */
+      section {
+        padding: 6rem 2rem;
+      }
+
+      section.light {
+        background-color: #f8fafc;
+      }
+
+      section.dark {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+        color: white;
+      }
+
+      section.dark h2,
+      section.dark h3 {
+        color: white;
+      }
+
+      section.dark p {
+        color: rgba(255, 255, 255, 0.85);
+      }
+
+      /* Feature Cards */
+      .feature-card {
+        padding: 2rem;
+        border: 1px solid var(--neutral-200);
+        border-radius: 0.5rem;
+        background-color: white;
+        transition: all 200ms ease;
+        text-align: center;
+      }
+
+      .feature-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        transform: translateY(-4px);
+      }
+
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto 1rem;
+        background-color: var(--primary);
+        border-radius: 0.375rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+      }
+
+      .feature-card h3 {
+        margin-bottom: 0.75rem;
+      }
+
+      .feature-card p {
+        margin-bottom: 1rem;
+      }
+
+      /* Timeline */
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        position: relative;
+      }
+
+      .timeline-step {
+        text-align: center;
+        padding: 2rem;
+      }
+
+      .step-number {
+        width: 48px;
+        height: 48px;
+        background-color: var(--primary);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 auto 1rem;
+      }
+
+      .timeline-step h3 {
+        margin-bottom: 0.75rem;
+      }
+
+      @media (max-width: 768px) {
+        section {
+          padding: 3rem 1rem;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        h2 {
+          font-size: 1.75rem;
+        }
+
+        .grid-2,
+        .grid-3 {
+          grid-template-columns: 1fr;
+        }
+
+        .pricing-card.featured {
+          transform: none;
+        }
+
+        .container {
+          padding: 0 1rem;
+        }
+
+        .integration-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .trust-badges {
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .footer-content {
+          grid-template-columns: 1fr;
+        }
+
+        .footer-bottom {
+          flex-direction: column;
+          text-align: center;
+          gap: 0.5rem;
+        }
+      }
+
+      /* Benefits List */
+      .benefits-list {
+        display: grid;
+        gap: 1rem;
+        margin: 2rem 0;
+      }
+
+      .benefit-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 0;
+      }
+
+      .benefit-check {
+        color: var(--accent);
+        font-size: 1.5rem;
+        flex-shrink: 0;
+      }
+
+      /* Testimonial Cards */
+      .testimonial-card {
+        padding: 2rem;
+        border-left: 4px solid var(--primary);
+        border-radius: 0.5rem;
+        background-color: white;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+      }
+
+      .stars {
+        color: #f59e0b;
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+      }
+
+      .testimonial-text {
+        font-style: italic;
+        margin-bottom: 1rem;
+        color: var(--dark);
+        line-height: 1.6;
+      }
+
+      .testimonial-author {
+        font-weight: 600;
+        color: var(--dark);
+        font-size: 0.875rem;
+      }
+
+      .testimonial-title {
+        font-size: 0.75rem;
+        color: var(--neutral-400);
+      }
+
+      /* Trust Indicators */
+      .trust-badges {
+        display: flex;
+        gap: 2rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin: 2rem 0;
+      }
+
+      .badge {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        background-color: white;
+        border: 1px solid var(--neutral-200);
+        border-radius: 0.5rem;
+        font-weight: 500;
+        color: var(--dark);
+      }
+
+      .badge-icon {
+        font-size: 1.5rem;
+      }
+
+      /* Pricing Cards */
+      .pricing-card {
+        padding: 2rem;
+        border: 1px solid var(--neutral-200);
+        border-radius: 0.75rem;
+        text-align: center;
+        transition: all 200ms ease;
+      }
+
+      .pricing-card.featured {
+        border-color: var(--primary);
+        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        transform: scaleY(1.05);
+      }
+
+      .pricing-badge {
+        display: inline-block;
+        background-color: var(--accent);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+
+      .pricing-name {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--dark);
+        margin-bottom: 1rem;
+      }
+
+      .pricing-price {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: var(--primary);
+        margin-bottom: 0.5rem;
+      }
+
+      .pricing-period {
+        color: var(--neutral-400);
+        font-size: 0.875rem;
+        margin-bottom: 2rem;
+      }
+
+      .pricing-features {
+        text-align: left;
+        list-style: none;
+        margin: 2rem 0;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid var(--neutral-200);
+      }
+
+      .pricing-features li {
+        padding: 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--neutral-600);
+      }
+
+      .pricing-features li::before {
+        content: '✓';
+        color: var(--accent);
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      /* Contact Form */
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--dark);
+      }
+
+      input[type='email'],
+      input[type='text'],
+      textarea {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid var(--neutral-200);
+        border-radius: 0.375rem;
+        font-family: inherit;
+        font-size: 1rem;
+        transition: border-color 200ms ease;
+      }
+
+      input[type='email']:focus,
+      input[type='text']:focus,
+      textarea:focus {
+        border-color: var(--primary);
+        outline: none;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 120px;
+      }
+
+      /* Footer */
+      footer {
+        background-color: var(--dark);
+        color: white;
+        padding: 4rem 2rem 2rem;
+      }
+
+      .footer-content {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+        padding-bottom: 2rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .footer-section h3 {
+        color: white;
+        margin-bottom: 1rem;
+        font-size: 1rem;
+      }
+
+      .footer-section a {
+        color: rgba(255, 255, 255, 0.7);
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+
+      .footer-section a:hover {
+        color: white;
+      }
+
+      .footer-bottom {
+        max-width: 1280px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.875rem;
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .social-links {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+
+      .social-links a {
+        display: inline-block;
+        width: 32px;
+        height: 32px;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 200ms ease;
+      }
+
+      .social-links a:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+
+      /* CTA Section */
+      .cta-section {
+        text-align: center;
+      }
+
+      .cta-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 2rem;
+      }
+
+      section.dark .btn {
+        margin: 0 0.5rem;
+      }
+
+      /* Utility classes */
+      .text-center {
+        text-align: center;
+      }
+
+      .mt-2 {
+        margin-top: 2rem;
+      }
+
+      .mb-2 {
+        margin-bottom: 2rem;
+      }
+
+      .max-width-600 {
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* Loading and success states */
+      .form-message {
+        display: none;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+
+      .form-message.success {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: var(--accent);
+        display: block;
+      }
+
+      .form-message.error {
+        background-color: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        display: block;
+      }
+
+      /* FAQ Accordion */
+      .faq-list {
+        max-width: 800px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .faq-list details {
+        border: 1px solid var(--neutral-200);
+        border-radius: 0.5rem;
+        background: white;
+        overflow: hidden;
+        transition: border-color 200ms ease;
+      }
+
+      .faq-list details[open] {
+        border-color: var(--primary);
+      }
+
+      .faq-list summary {
+        padding: 1.25rem 1.5rem;
+        cursor: pointer;
+        font-weight: 600;
+        color: var(--dark);
+        font-size: 1.1rem;
+        list-style: none;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .faq-list summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .faq-list summary::after {
+        content: '+';
+        font-size: 1.5rem;
+        color: var(--primary);
+        flex-shrink: 0;
+        transition: transform 200ms ease;
+      }
+
+      .faq-list details[open] summary::after {
+        content: '−';
+      }
+
+      .faq-list summary:hover {
+        background-color: var(--neutral-50);
+      }
+
+      .faq-answer {
+        padding: 0 1.5rem 1.25rem;
+        color: var(--neutral-600);
+        line-height: 1.7;
+      }
+
+      /* Integrations */
+      .integration-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+      }
+
+      .integration-card {
+        padding: 2rem;
+        border: 1px solid var(--neutral-200);
+        border-radius: 0.75rem;
+        background: white;
+        text-align: center;
+        transition: all 200ms ease;
+      }
+
+      .integration-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+        transform: translateY(-4px);
+      }
+
+      .integration-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+      }
+
+      .integration-badge {
+        display: inline-block;
+        background-color: rgba(16, 185, 129, 0.1);
+        color: var(--accent);
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-top: 0.5rem;
+      }
+
+      /* Skip to main content link */
+      .skip-link {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: var(--primary);
+        color: white;
+        padding: 0.5rem 1rem;
+        text-decoration: none;
+        z-index: 100;
+      }
+
+      .skip-link:focus {
+        top: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to main content</a>
+
+    <!-- Header and Navigation -->
+    <header role="banner">
+      <div class="header-content">
+        <div class="logo">
+          <div class="logo-icon">CP</div>
+          <span>CloudPulse</span>
+        </div>
+        <nav aria-label="Main navigation" id="nav-menu">
+          <a href="#features" class="nav-link">Features</a>
+          <a href="#pricing" class="nav-link">Pricing</a>
+          <a href="#testimonials" class="nav-link">Testimonials</a>
+          <a href="#integrations" class="nav-link">Integrations</a>
+          <a href="#faq" class="nav-link">FAQ</a>
+        </nav>
+        <button class="hamburger" aria-label="Toggle navigation" id="hamburger">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <div class="nav-cta" style="display: flex; gap: 1rem">
+          <button
+            class="btn btn-secondary"
+            onclick="document.getElementById('email-form').scrollIntoView({ behavior: 'smooth' })"
+          >
+            Sign In
+          </button>
+          <button class="btn btn-primary" onclick="document.getElementById('trial-email').focus()">
+            Start Free Trial
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Hero Section -->
+      <section class="hero" id="hero">
+        <div class="hero-content">
+          <h1>Real-Time Cloud Infrastructure Visibility</h1>
+          <p>
+            Monitor your entire cloud environment in real-time. Get instant alerts, comprehensive
+            insights, and complete peace of mind.
+          </p>
+          <div class="hero-buttons">
+            <button
+              class="btn btn-primary"
+              onclick="document.getElementById('trial-email').focus()"
+            >
+              Start Free Trial
+            </button>
+            <button class="btn btn-secondary" onclick="alert('Demo scheduling coming soon!')">
+              View Demo
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features Section -->
+      <section id="features">
+        <div class="container">
+          <h2 class="text-center">Powerful Features Built for Cloud Teams</h2>
+          <p class="text-center max-width-600">
+            CloudPulse provides comprehensive monitoring across all major cloud providers with
+            intelligent alerting and real-time insights.
+          </p>
+          <div class="grid grid-3 mt-2">
+            <div class="feature-card">
+              <div class="feature-icon">🔍</div>
+              <h3>Real-time Monitoring</h3>
+              <p>
+                Monitor your infrastructure 24/7 with instant visibility into all your cloud
+                resources and their performance metrics.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">☁️</div>
+              <h3>Multi-Cloud Support</h3>
+              <p>
+                Monitor AWS, Azure, Google Cloud, and more from a single unified dashboard. No more
+                context switching.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🔔</div>
+              <h3>Intelligent Alerts</h3>
+              <p>
+                Smart alerting that learns your environment and only notifies you about issues that
+                matter.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">📊</div>
+              <h3>Advanced Analytics</h3>
+              <p>
+                Dive deep into performance data with customizable dashboards and comprehensive
+                reporting.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">⚡</div>
+              <h3>Easy Integration</h3>
+              <p>
+                Deploy in minutes with our one-click setup. Start monitoring without complex
+                configuration.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🛡️</div>
+              <h3>99.9% Uptime SLA</h3>
+              <p>Enterprise-grade reliability with guaranteed uptime and 24/7 technical support.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="light" id="how-it-works">
+        <div class="container">
+          <h2 class="text-center">How CloudPulse Works</h2>
+          <div class="timeline mt-2">
+            <div class="timeline-step">
+              <div class="step-number">1</div>
+              <h3>Deploy Agent</h3>
+              <p>Install the CloudPulse agent on your infrastructure in just a few minutes.</p>
+            </div>
+            <div class="timeline-step">
+              <div class="step-number">2</div>
+              <h3>Get Real-Time Data</h3>
+              <p>Start collecting comprehensive metrics and performance data instantly.</p>
+            </div>
+            <div class="timeline-step">
+              <div class="step-number">3</div>
+              <h3>Optimize Operations</h3>
+              <p>Use insights to make data-driven decisions and optimize your cloud environment.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Benefits Section -->
+      <section class="dark">
+        <div class="container">
+          <h2 class="text-center">Why Teams Choose CloudPulse</h2>
+          <div class="max-width-600">
+            <div class="benefits-list">
+              <div class="benefit-item">
+                <span class="benefit-check">✓</span>
+                <span>Complete visibility into your entire cloud infrastructure</span>
+              </div>
+              <div class="benefit-item">
+                <span class="benefit-check">✓</span>
+                <span>Reduce MTTR with intelligent, actionable alerts</span>
+              </div>
+              <div class="benefit-item">
+                <span class="benefit-check">✓</span>
+                <span>Optimize cloud costs with detailed usage analytics</span>
+              </div>
+              <div class="benefit-item">
+                <span class="benefit-check">✓</span>
+                <span>Enterprise-grade security and compliance features</span>
+              </div>
+            </div>
+            <div class="cta-buttons">
+              <button
+                class="btn btn-primary"
+                onclick="document.getElementById('trial-email').focus()"
+              >
+                Get Started Free
+              </button>
+              <button
+                class="btn btn-secondary"
+                style="border-color: white; color: white"
+                onclick="alert('Contact us at hello@cloudpulse.io')"
+              >
+                Contact Sales
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Trust Indicators -->
+      <section id="trust">
+        <div class="container">
+          <h2 class="text-center mb-2">Trusted by Industry Leaders</h2>
+          <div class="trust-badges">
+            <div class="badge">
+              <span class="badge-icon">✓</span>
+              <span>SOC 2 Compliant</span>
+            </div>
+            <div class="badge">
+              <span class="badge-icon">⚡</span>
+              <span>99.9% Uptime SLA</span>
+            </div>
+            <div class="badge">
+              <span class="badge-icon">🌍</span>
+              <span>Monitor 10,000+ Instances</span>
+            </div>
+            <div class="badge">
+              <span class="badge-icon">🎯</span>
+              <span>24/7 Support</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials -->
+      <section class="light" id="testimonials">
+        <div class="container">
+          <h2 class="text-center mb-2">What Our Customers Say</h2>
+          <div class="grid grid-3 mt-2">
+            <div class="testimonial-card">
+              <div class="stars">★★★★★</div>
+              <p class="testimonial-text">
+                "CloudPulse gave us complete visibility into our multi-cloud infrastructure. It's
+                been a game-changer for our operations team."
+              </p>
+              <div class="testimonial-author">Sarah Chen</div>
+              <div class="testimonial-title">DevOps Lead, TechCorp</div>
+            </div>
+            <div class="testimonial-card">
+              <div class="stars">★★★★★</div>
+              <p class="testimonial-text">
+                "The alerting system caught an infrastructure issue before it impacted our
+                customers. Worth every penny of the subscription."
+              </p>
+              <div class="testimonial-author">Marcus Johnson</div>
+              <div class="testimonial-title">Infrastructure Manager, CloudFirst</div>
+            </div>
+            <div class="testimonial-card">
+              <div class="stars">★★★★★</div>
+              <p class="testimonial-text">
+                "Integration was seamless. Within 24 hours, we had comprehensive monitoring across
+                all our cloud regions."
+              </p>
+              <div class="testimonial-author">Emma Rodriguez</div>
+              <div class="testimonial-title">Cloud Architect, DataStream Inc</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing Section -->
+      <section id="pricing">
+        <div class="container">
+          <h2 class="text-center mb-2">Simple, Transparent Pricing</h2>
+          <p class="text-center max-width-600">
+            Choose the plan that fits your infrastructure monitoring needs. Always pay for what you
+            use.
+          </p>
+          <div class="grid grid-3 mt-2">
+            <div class="pricing-card">
+              <div class="pricing-name">Starter</div>
+              <div class="pricing-price">$99</div>
+              <div class="pricing-period">per month</div>
+              <ul class="pricing-features">
+                <li>Up to 1,000 resources</li>
+                <li>Email alerts</li>
+                <li>7-day retention</li>
+                <li>Basic support</li>
+              </ul>
+              <button
+                class="btn btn-secondary"
+                onclick="document.getElementById('trial-email').focus()"
+              >
+                Start Free Trial
+              </button>
+            </div>
+            <div class="pricing-card featured">
+              <div class="pricing-badge">Most Popular</div>
+              <div class="pricing-name">Pro</div>
+              <div class="pricing-price">$299</div>
+              <div class="pricing-period">per month</div>
+              <ul class="pricing-features">
+                <li>Up to 10,000 resources</li>
+                <li>Multi-channel alerts</li>
+                <li>30-day retention</li>
+                <li>Priority support</li>
+                <li>Custom dashboards</li>
+              </ul>
+              <button class="btn btn-primary">Start Free Trial</button>
+            </div>
+            <div class="pricing-card">
+              <div class="pricing-name">Enterprise</div>
+              <div class="pricing-price">Custom</div>
+              <div class="pricing-period">contact for pricing</div>
+              <ul class="pricing-features">
+                <li>Unlimited resources</li>
+                <li>Advanced alerting</li>
+                <li>Unlimited retention</li>
+                <li>Dedicated support</li>
+                <li>SLA guarantee</li>
+              </ul>
+              <button
+                class="btn btn-secondary"
+                onclick="alert('Contact sales at hello@cloudpulse.io')"
+              >
+                Contact Sales
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Integrations Section -->
+      <section id="integrations" class="light">
+        <div class="container">
+          <h2 class="text-center mb-2">Seamless Cloud Integrations</h2>
+          <p class="text-center max-width-600">
+            Connect CloudPulse with the cloud platforms you already use. Get unified monitoring
+            across your entire infrastructure.
+          </p>
+          <div class="integration-grid mt-2">
+            <div class="integration-card">
+              <div class="integration-icon" role="img" aria-label="Amazon Web Services">☁️</div>
+              <h3>Amazon Web Services</h3>
+              <p>
+                Full integration with AWS services including EC2, S3, Lambda, RDS, CloudWatch, and
+                more. Monitor all your AWS resources from a single dashboard with real-time metrics
+                and intelligent alerting.
+              </p>
+              <span class="integration-badge">Fully Supported</span>
+            </div>
+            <div class="integration-card">
+              <div class="integration-icon" role="img" aria-label="Microsoft Azure">🔷</div>
+              <h3>Microsoft Azure</h3>
+              <p>
+                Deep integration with Azure services including Virtual Machines, App Services, Azure
+                SQL, Functions, and Azure Monitor. Get comprehensive visibility into your Azure
+                environment.
+              </p>
+              <span class="integration-badge">Fully Supported</span>
+            </div>
+            <div class="integration-card">
+              <div class="integration-icon" role="img" aria-label="Google Cloud Platform">🔵</div>
+              <h3>Google Cloud Platform</h3>
+              <p>
+                Complete GCP integration covering Compute Engine, Cloud Functions, BigQuery, Cloud
+                SQL, and Stackdriver. Monitor your Google Cloud infrastructure with precision and
+                confidence.
+              </p>
+              <span class="integration-badge">Fully Supported</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FAQ Section -->
+      <section id="faq">
+        <div class="container">
+          <h2 class="text-center mb-2">Frequently Asked Questions</h2>
+          <p class="text-center max-width-600">
+            Find answers to common questions about CloudPulse and our cloud monitoring platform.
+          </p>
+          <div class="faq-list mt-2">
+            <details>
+              <summary>What cloud providers does CloudPulse support?</summary>
+              <div class="faq-answer">
+                <p>
+                  CloudPulse supports all major cloud providers including Amazon Web Services (AWS),
+                  Microsoft Azure, and Google Cloud Platform (GCP). We also support hybrid and
+                  multi-cloud environments, giving you unified visibility across your entire
+                  infrastructure regardless of where your resources are hosted.
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary>How quickly can I get started with CloudPulse?</summary>
+              <div class="faq-answer">
+                <p>
+                  You can get started with CloudPulse in just a few minutes. Our guided setup wizard
+                  walks you through connecting your cloud accounts, and our lightweight agent begins
+                  collecting metrics immediately. Most teams have full monitoring running within 15
+                  minutes of signing up.
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary>Is there a free trial available?</summary>
+              <div class="faq-answer">
+                <p>
+                  Yes! We offer a 14-day free trial with full access to all Pro features. No credit
+                  card is required to start your trial. You can monitor up to 1,000 resources during
+                  the trial period and upgrade to a paid plan at any time.
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary>How does CloudPulse handle data security and compliance?</summary>
+              <div class="faq-answer">
+                <p>
+                  Security is our top priority. CloudPulse is SOC 2 Type II certified and GDPR
+                  compliant. All data is encrypted in transit (TLS 1.3) and at rest (AES-256). We
+                  never store your actual application data — only monitoring metrics and metadata.
+                  Our infrastructure is hosted in multiple regions with automatic failover.
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary>Can I customize alerts and notification channels?</summary>
+              <div class="faq-answer">
+                <p>
+                  Absolutely. CloudPulse supports multiple notification channels including email,
+                  Slack, PagerDuty, Microsoft Teams, and webhooks. You can create custom alert rules
+                  based on thresholds, anomaly detection, or complex conditions. Our intelligent
+                  alerting system also learns your environment patterns to reduce false positives.
+                </p>
+              </div>
+            </details>
+            <details>
+              <summary>What kind of support does CloudPulse offer?</summary>
+              <div class="faq-answer">
+                <p>
+                  We offer tiered support based on your plan. Starter plans include email support
+                  with 24-hour response times. Pro plans get priority support with 4-hour response
+                  times and access to our dedicated support engineers. Enterprise plans include a
+                  dedicated account manager, 24/7 phone support, and custom SLA agreements.
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <!-- Final CTA Section -->
+      <section class="dark">
+        <div class="container cta-section">
+          <h2>Ready to Gain Real-Time Visibility?</h2>
+          <p>
+            Join thousands of teams already monitoring their cloud infrastructure with CloudPulse.
+            Start your free trial today.
+          </p>
+          <div class="cta-buttons">
+            <button
+              class="btn btn-primary"
+              style="background-color: white; color: var(--primary)"
+              onclick="document.getElementById('trial-email').focus()"
+            >
+              Start Free Trial
+            </button>
+            <button
+              class="btn btn-secondary"
+              style="border-color: white; color: white"
+              onclick="alert('Demo scheduling coming soon!')"
+            >
+              Schedule Demo
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Email Signup / Contact Section -->
+      <section id="contact" class="light">
+        <div class="container max-width-600">
+          <h2 class="text-center">Get Started in Minutes</h2>
+          <form id="email-form" onsubmit="handleFormSubmit(event)">
+            <div class="form-message" id="form-message"></div>
+            <div class="form-group">
+              <label for="trial-email">Email Address</label>
+              <input
+                type="email"
+                id="trial-email"
+                name="email"
+                required
+                aria-label="Email address for trial signup"
+                placeholder="you@company.com"
+              />
+            </div>
+            <div class="form-group">
+              <label for="company-name">Company Name</label>
+              <input type="text" id="company-name" name="company" placeholder="Your company" />
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%">
+              Start My Free Trial
+            </button>
+          </form>
+          <p
+            style="
+              text-align: center;
+              margin-top: 1rem;
+              font-size: 0.875rem;
+              color: var(--neutral-400);
+            "
+          >
+            No credit card required. Get started immediately.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer role="contentinfo">
+      <div class="footer-content">
+        <div class="footer-section">
+          <div class="logo" style="margin-bottom: 1rem">
+            <div class="logo-icon" style="background-color: var(--primary)">CP</div>
+            <span>CloudPulse</span>
+          </div>
+          <p style="color: rgba(255, 255, 255, 0.7); font-size: 0.875rem">
+            Real-time cloud infrastructure visibility for modern teams.
+          </p>
+          <div class="social-links">
+            <a href="#" aria-label="LinkedIn">in</a>
+            <a href="#" aria-label="Twitter">𝕏</a>
+            <a href="#" aria-label="GitHub">⚙</a>
+          </div>
+        </div>
+        <div class="footer-section">
+          <h3>Product</h3>
+          <a href="#features">Features</a>
+          <a href="#pricing">Pricing</a>
+          <a href="#">Integrations</a>
+          <a href="#">API Docs</a>
+        </div>
+        <div class="footer-section">
+          <h3>Company</h3>
+          <a href="#">About</a>
+          <a href="#">Blog</a>
+          <a href="#">Careers</a>
+          <a href="#">Press</a>
+        </div>
+        <div class="footer-section">
+          <h3>Legal</h3>
+          <a href="#">Privacy Policy</a>
+          <a href="#">Terms of Service</a>
+          <a href="#">Security</a>
+          <a href="#contact">Contact</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 CloudPulse. All rights reserved.</p>
+        <p>Made with care for cloud engineers</p>
+      </div>
+    </footer>
+
+    <script>
+      // Mobile menu toggle
+      const hamburger = document.getElementById('hamburger');
+      const navMenu = document.getElementById('nav-menu');
+
+      hamburger.addEventListener('click', () => {
+        hamburger.classList.toggle('active');
+        navMenu.classList.toggle('active');
+      });
+
+      // Close menu when clicking on a link
+      document.querySelectorAll('.nav-link').forEach((link) => {
+        link.addEventListener('click', () => {
+          hamburger.classList.remove('active');
+          navMenu.classList.remove('active');
+        });
+      });
+
+      // Update active nav link based on scroll position
+      function updateActiveNav() {
+        const sections = document.querySelectorAll('section[id]');
+        const scrollPosition = window.scrollY + 100;
+
+        sections.forEach((section) => {
+          const sectionTop = section.offsetTop;
+          const sectionBottom = sectionTop + section.offsetHeight;
+          const link = document.querySelector(`a[href="#${section.id}"]`);
+
+          if (scrollPosition >= sectionTop && scrollPosition < sectionBottom && link) {
+            document.querySelectorAll('.nav-link').forEach((l) => l.classList.remove('active'));
+            link.classList.add('active');
+          }
+        });
+      }
+
+      window.addEventListener('scroll', updateActiveNav);
+      updateActiveNav();
+
+      // Form submission handler
+      function handleFormSubmit(event) {
+        event.preventDefault();
+
+        const email = document.getElementById('trial-email').value;
+        const company = document.getElementById('company-name').value;
+        const formMessage = document.getElementById('form-message');
+
+        // Validate email
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          formMessage.textContent = 'Please enter a valid email address';
+          formMessage.className = 'form-message error';
+          return;
+        }
+
+        // Simulate form submission
+        const form = event.target;
+        const originalText = form.querySelector('button').textContent;
+        form.querySelector('button').textContent = 'Submitting...';
+        form.querySelector('button').disabled = true;
+
+        // Simulate API call
+        setTimeout(() => {
+          formMessage.textContent = 'Success! Check your email to start your free trial.';
+          formMessage.className = 'form-message success';
+          form.reset();
+          form.querySelector('button').textContent = originalText;
+          form.querySelector('button').disabled = false;
+        }, 1500);
+      }
+
+      // Scroll to top when clicking logo
+      document.querySelector('.logo').addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    </script>
+  </body>
+</html>

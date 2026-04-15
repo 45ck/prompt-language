@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CloudPulse — Monitor Smarter, Respond Faster</title>
+    <meta
+      name="description"
+      content="CloudPulse provides full-stack cloud monitoring with intelligent alerting, real-time dashboards, and root cause analysis. Trusted by 10,000+ engineering teams."
+    />
+    <meta property="og:title" content="CloudPulse — Monitor Smarter, Respond Faster" />
+    <meta
+      property="og:description"
+      content="Full-stack cloud monitoring with intelligent alerting, real-time dashboards, and root cause analysis for modern engineering teams."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://cloudpulse.io" />
+    <link rel="canonical" href="https://cloudpulse.io" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%232563EB'/><circle cx='16' cy='16' r='6' fill='%2310B981'/></svg>"
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "CloudPulse",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Cloud",
+        "description": "Full-stack cloud monitoring platform with intelligent alerting, real-time dashboards, and root cause analysis.",
+        "offers": {
+          "@type": "AggregateOffer",
+          "lowPrice": "49",
+          "highPrice": "149",
+          "priceCurrency": "USD"
+        }
+      }
+    </script>
+    <style>
+      :root {
+        --primary: #2563eb;
+        --secondary: #7c3aed;
+        --accent: #10b981;
+        --dark: #1e293b;
+        --light: #f8fafc;
+        --gray-100: #f1f1f1;
+        --gray-200: #e0e0e0;
+        --gray-300: #c0c0c0;
+        --gray-500: #808080;
+        --gray-600: #606060;
+        --gray-700: #404040;
+      }
+
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: var(--dark);
+        background: var(--light);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .container {
+        max-width: 1140px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ── Navigation ── */
+      .nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: rgba(248, 250, 252, 0.95);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--gray-200);
+        z-index: 100;
+        padding: 16px 0;
+      }
+
+      .nav .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .nav-logo {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 32px;
+        list-style: none;
+      }
+
+      .nav-links a {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--gray-700);
+        transition: color 0.2s;
+      }
+
+      .nav-links a:hover {
+        color: var(--primary);
+      }
+
+      .btn {
+        display: inline-block;
+        padding: 12px 28px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition:
+          transform 0.2s,
+          box-shadow 0.2s;
+        border: none;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      }
+
+      .btn-primary {
+        background: var(--primary);
+        color: var(--light);
+      }
+
+      .btn-secondary {
+        background: transparent;
+        color: var(--primary);
+        border: 2px solid var(--primary);
+      }
+
+      .btn-sm {
+        padding: 10px 22px;
+        font-size: 0.9rem;
+      }
+
+      /* ── Hero ── */
+      .hero {
+        padding: 160px 0 100px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero::before {
+        content: '';
+        position: absolute;
+        top: -200px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(
+          circle,
+          rgba(37, 99, 235, 0.12) 0%,
+          rgba(124, 58, 237, 0.06) 50%,
+          transparent 70%
+        );
+        border-radius: 50%;
+        z-index: 0;
+      }
+
+      .hero .container {
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero h1 {
+        font-size: 3rem;
+        font-weight: 800;
+        line-height: 1.15;
+        margin-bottom: 24px;
+        color: var(--dark);
+      }
+
+      .hero-sub {
+        font-size: 1.2rem;
+        max-width: 600px;
+        margin: 0 auto 40px;
+        color: var(--gray-600);
+        line-height: 1.7;
+      }
+
+      .hero-ctas {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      /* ── Pulse animation ── */
+      .pulse-visual {
+        margin: 60px auto 0;
+        width: 120px;
+        height: 120px;
+        position: relative;
+      }
+
+      .pulse-visual .core {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 40px;
+        height: 40px;
+        background: var(--primary);
+        border-radius: 50%;
+      }
+
+      .pulse-visual .ring {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border: 2px solid var(--primary);
+        border-radius: 50%;
+        animation: pulse-ring 2.5s ease-out infinite;
+      }
+
+      .pulse-visual .ring:nth-child(2) {
+        animation-delay: 0.8s;
+      }
+      .pulse-visual .ring:nth-child(3) {
+        animation-delay: 1.6s;
+      }
+
+      @keyframes pulse-ring {
+        0% {
+          width: 40px;
+          height: 40px;
+          opacity: 0.8;
+        }
+        100% {
+          width: 120px;
+          height: 120px;
+          opacity: 0;
+        }
+      }
+
+      /* ── Metrics Bar ── */
+      .metrics {
+        background: var(--dark);
+        padding: 48px 0;
+      }
+
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+        text-align: center;
+      }
+
+      .metric-item {
+        color: var(--light);
+      }
+
+      .metric-value {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--accent);
+      }
+
+      .metric-label {
+        font-size: 0.9rem;
+        color: var(--gray-300);
+        margin-top: 4px;
+      }
+
+      /* ── Features ── */
+      .features {
+        padding: 100px 0;
+      }
+
+      .section-heading {
+        text-align: center;
+        margin-bottom: 64px;
+      }
+
+      .section-heading h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 16px;
+      }
+
+      .section-heading p {
+        font-size: 1.1rem;
+        color: var(--gray-600);
+        max-width: 560px;
+        margin: 0 auto;
+      }
+
+      .features-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 32px;
+      }
+
+      .feature-card {
+        background: #ffffff;
+        border: 1px solid var(--gray-200);
+        border-radius: 12px;
+        padding: 36px;
+        transition: box-shadow 0.3s;
+      }
+
+      .feature-card:hover {
+        box-shadow: 0 8px 30px rgba(30, 41, 59, 0.08);
+      }
+
+      .feature-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-bottom: 20px;
+      }
+
+      .feature-icon-blue {
+        background: rgba(37, 99, 235, 0.1);
+        color: var(--primary);
+      }
+      .feature-icon-purple {
+        background: rgba(124, 58, 237, 0.1);
+        color: var(--secondary);
+      }
+      .feature-icon-green {
+        background: rgba(16, 185, 129, 0.1);
+        color: var(--accent);
+      }
+      .feature-icon-dark {
+        background: rgba(30, 41, 59, 0.1);
+        color: var(--dark);
+      }
+
+      .feature-card h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+
+      .feature-card p {
+        color: var(--gray-600);
+        line-height: 1.7;
+      }
+
+      /* ── How It Works ── */
+      .how-it-works {
+        padding: 100px 0;
+        background: var(--gray-100);
+      }
+
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 40px;
+        counter-reset: step;
+      }
+
+      .step {
+        text-align: center;
+        counter-increment: step;
+      }
+
+      .step-number {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: var(--light);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 24px;
+      }
+
+      .step h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 12px;
+      }
+
+      .step p {
+        color: var(--gray-600);
+        line-height: 1.7;
+      }
+
+      /* ── Pricing ── */
+      .pricing {
+        padding: 100px 0;
+      }
+
+      .pricing-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+        align-items: start;
+      }
+
+      .pricing-card {
+        background: #ffffff;
+        border: 1px solid var(--gray-200);
+        border-radius: 16px;
+        padding: 40px 32px;
+        text-align: center;
+        position: relative;
+        transition: box-shadow 0.3s;
+      }
+
+      .pricing-card:hover {
+        box-shadow: 0 8px 30px rgba(30, 41, 59, 0.08);
+      }
+
+      .pricing-card.featured {
+        border-color: var(--primary);
+        box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+      }
+
+      .pricing-badge {
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--primary);
+        color: var(--light);
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: 4px 16px;
+        border-radius: 20px;
+      }
+
+      .pricing-card h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .pricing-price {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--dark);
+        margin: 16px 0 8px;
+      }
+
+      .pricing-price span {
+        font-size: 1rem;
+        font-weight: 400;
+        color: var(--gray-500);
+      }
+
+      .pricing-features {
+        list-style: none;
+        margin: 24px 0 32px;
+        text-align: left;
+      }
+
+      .pricing-features li {
+        padding: 8px 0;
+        border-bottom: 1px solid var(--gray-100);
+        font-size: 0.95rem;
+        color: var(--gray-700);
+      }
+
+      .pricing-features li::before {
+        content: '\2713';
+        color: var(--accent);
+        font-weight: 700;
+        margin-right: 10px;
+      }
+
+      /* ── Testimonials ── */
+      .testimonials {
+        padding: 100px 0;
+        background: var(--dark);
+      }
+
+      .testimonials .section-heading h2,
+      .testimonials .section-heading p {
+        color: var(--light);
+      }
+
+      .testimonials .section-heading p {
+        opacity: 0.7;
+      }
+
+      .testimonials-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 32px;
+      }
+
+      .testimonial-card {
+        background: rgba(248, 250, 252, 0.06);
+        border: 1px solid rgba(248, 250, 252, 0.1);
+        border-radius: 12px;
+        padding: 32px;
+      }
+
+      .testimonial-quote {
+        color: var(--gray-300);
+        line-height: 1.7;
+        margin-bottom: 24px;
+        font-style: italic;
+      }
+
+      .testimonial-author {
+        color: var(--light);
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+
+      .testimonial-role {
+        color: var(--gray-500);
+        font-size: 0.85rem;
+        margin-top: 2px;
+      }
+
+      /* ── CTA Section ── */
+      .cta-section {
+        padding: 100px 0;
+        text-align: center;
+      }
+
+      .cta-section h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 20px;
+      }
+
+      .cta-section p {
+        font-size: 1.1rem;
+        color: var(--gray-600);
+        max-width: 560px;
+        margin: 0 auto 36px;
+        line-height: 1.7;
+      }
+
+      .cta-buttons {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      /* ── Footer ── */
+      footer {
+        background: var(--dark);
+        padding: 64px 0 32px;
+        color: var(--gray-300);
+      }
+
+      .footer-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr 1fr;
+        gap: 40px;
+        margin-bottom: 48px;
+      }
+
+      .footer-brand {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--light);
+        margin-bottom: 12px;
+      }
+
+      .footer-desc {
+        font-size: 0.9rem;
+        line-height: 1.7;
+        color: var(--gray-500);
+      }
+
+      .footer-col h4 {
+        color: var(--light);
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 16px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .footer-col ul {
+        list-style: none;
+      }
+
+      .footer-col li {
+        margin-bottom: 10px;
+      }
+
+      .footer-col a {
+        font-size: 0.9rem;
+        color: var(--gray-500);
+        transition: color 0.2s;
+      }
+
+      .footer-col a:hover {
+        color: var(--light);
+      }
+
+      .footer-bottom {
+        border-top: 1px solid rgba(248, 250, 252, 0.1);
+        padding-top: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+        color: var(--gray-500);
+      }
+
+      .social-links {
+        display: flex;
+        gap: 20px;
+      }
+
+      .social-links a {
+        color: var(--gray-500);
+        transition: color 0.2s;
+      }
+
+      .social-links a:hover {
+        color: var(--light);
+      }
+
+      /* ── Mobile Menu Toggle ── */
+      .nav-toggle {
+        display: none;
+        background: none;
+        border: none;
+        cursor: pointer;
+        width: 32px;
+        height: 24px;
+        position: relative;
+      }
+
+      .nav-toggle span {
+        display: block;
+        width: 100%;
+        height: 2px;
+        background: var(--dark);
+        position: absolute;
+        left: 0;
+        transition: 0.3s;
+      }
+
+      .nav-toggle span:nth-child(1) {
+        top: 0;
+      }
+      .nav-toggle span:nth-child(2) {
+        top: 10px;
+      }
+      .nav-toggle span:nth-child(3) {
+        top: 20px;
+      }
+
+      /* ── Responsive ── */
+      @media (max-width: 968px) {
+        .features-grid,
+        .pricing-grid,
+        .testimonials-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .steps {
+          grid-template-columns: 1fr;
+          gap: 32px;
+        }
+
+        .footer-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+
+        .metrics-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 32px;
+        }
+
+        .hero h1 {
+          font-size: 2.2rem;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .nav-toggle {
+          display: block;
+        }
+
+        .nav-links {
+          display: none;
+          position: absolute;
+          top: 100%;
+          left: 0;
+          right: 0;
+          background: var(--light);
+          flex-direction: column;
+          padding: 24px;
+          gap: 16px;
+          border-bottom: 1px solid var(--gray-200);
+        }
+
+        .nav-links.active {
+          display: flex;
+        }
+
+        .hero {
+          padding: 120px 0 60px;
+        }
+
+        .hero h1 {
+          font-size: 1.8rem;
+        }
+
+        .footer-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .footer-bottom {
+          flex-direction: column;
+          gap: 16px;
+          text-align: center;
+        }
+
+        .metrics-grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Navigation -->
+    <nav class="nav" aria-label="Main navigation">
+      <div class="container">
+        <a href="#" class="nav-logo" aria-label="CloudPulse home">CloudPulse</a>
+        <button
+          class="nav-toggle"
+          aria-label="Toggle navigation menu"
+          onclick="document.querySelector('.nav-links').classList.toggle('active')"
+        >
+          <span></span><span></span><span></span>
+        </button>
+        <ul class="nav-links">
+          <li><a href="#features">Features</a></li>
+          <li><a href="#pricing">Pricing</a></li>
+          <li><a href="#testimonials">Testimonials</a></li>
+          <li><a href="#contact">Contact</a></li>
+          <li><a href="#pricing" class="btn btn-primary btn-sm">Start Free Trial</a></li>
+        </ul>
+      </div>
+    </nav>
+
+    <main>
+      <!-- Hero -->
+      <section class="hero" aria-label="Introduction">
+        <div class="container">
+          <h1>Monitor Smarter, Respond Faster</h1>
+          <p class="hero-sub">
+            CloudPulse gives your team full-stack visibility across every cloud environment. Detect
+            anomalies in seconds, not hours.
+          </p>
+          <div class="hero-ctas">
+            <a href="#pricing" class="btn btn-primary">Start Your Free Trial</a>
+            <a href="#features" class="btn btn-secondary">See How It Works</a>
+          </div>
+          <div class="pulse-visual" aria-hidden="true">
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="ring"></div>
+            <div class="core"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Metrics Bar -->
+      <section class="metrics" aria-label="Key metrics">
+        <div class="container">
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <div class="metric-value">99.99%</div>
+              <div class="metric-label">Uptime Guarantee</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-value">500+</div>
+              <div class="metric-label">Integrations</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-value">10,000+</div>
+              <div class="metric-label">Teams Trust CloudPulse</div>
+            </div>
+            <div class="metric-item">
+              <div class="metric-value">&lt;1s</div>
+              <div class="metric-label">Alert Latency</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section class="features" id="features" aria-label="Features">
+        <div class="container">
+          <div class="section-heading">
+            <h2>Everything You Need to Stay in Control</h2>
+            <p>
+              CloudPulse unifies monitoring, alerting, and analysis into one platform built for
+              modern infrastructure.
+            </p>
+          </div>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon feature-icon-blue" aria-hidden="true">&#9632;</div>
+              <h3>Real-Time Dashboards</h3>
+              <p>
+                Custom dashboards that surface the metrics your team needs. Track performance across
+                services, regions, and providers from one unified view.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon feature-icon-purple" aria-hidden="true">&#9889;</div>
+              <h3>Intelligent Alerting</h3>
+              <p>
+                CloudPulse learns your baseline patterns and flags true anomalies. Reduce alert
+                fatigue by up to 90% with context-aware notifications.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon feature-icon-green" aria-hidden="true">&#8982;</div>
+              <h3>Root Cause Analysis</h3>
+              <p>
+                Trace issues from symptom to source in seconds. Correlated logs, metrics, and traces
+                pinpoint the exact service and commit causing degradation.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon feature-icon-dark" aria-hidden="true">&#9729;</div>
+              <h3>Multi-Cloud Visibility</h3>
+              <p>
+                AWS, Azure, GCP, and hybrid environments in a single pane. CloudPulse normalizes
+                data across providers so your team sees one clear picture.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- How It Works -->
+      <section class="how-it-works" aria-label="How it works">
+        <div class="container">
+          <div class="section-heading">
+            <h2>Up and Running in Three Steps</h2>
+            <p>From setup to insights in minutes, not weeks.</p>
+          </div>
+          <div class="steps">
+            <div class="step">
+              <div class="step-number">1</div>
+              <h3>Connect Your Stack</h3>
+              <p>
+                Install the lightweight agent or use our API. CloudPulse auto-discovers services and
+                dependencies across your environment.
+              </p>
+            </div>
+            <div class="step">
+              <div class="step-number">2</div>
+              <h3>Configure Alerts</h3>
+              <p>
+                Set thresholds or let the ML engine learn your normal. Choose notification channels:
+                Slack, PagerDuty, email, or webhook.
+              </p>
+            </div>
+            <div class="step">
+              <div class="step-number">3</div>
+              <h3>Gain Insights</h3>
+              <p>
+                Dashboards populate within minutes. Your team gets actionable data, not raw noise.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing -->
+      <section class="pricing" id="pricing" aria-label="Pricing plans">
+        <div class="container">
+          <div class="section-heading">
+            <h2>Transparent Pricing for Every Stage</h2>
+            <p>Start free for 14 days. No credit card required. Scale when you are ready.</p>
+          </div>
+          <div class="pricing-grid">
+            <div class="pricing-card">
+              <h3>Starter</h3>
+              <div class="pricing-price">$49<span>/mo</span></div>
+              <ul class="pricing-features">
+                <li>Up to 10 hosts</li>
+                <li>7-day data retention</li>
+                <li>50+ integrations</li>
+                <li>Basic alerting</li>
+                <li>Community support</li>
+              </ul>
+              <a href="#contact" class="btn btn-secondary" style="width: 100%; text-align: center"
+                >Get Started</a
+              >
+            </div>
+            <div class="pricing-card featured">
+              <div class="pricing-badge">Most Popular</div>
+              <h3>Pro</h3>
+              <div class="pricing-price">$149<span>/mo</span></div>
+              <ul class="pricing-features">
+                <li>Up to 100 hosts</li>
+                <li>30-day data retention</li>
+                <li>200+ integrations</li>
+                <li>Intelligent alerting</li>
+                <li>Priority email support</li>
+              </ul>
+              <a href="#contact" class="btn btn-primary" style="width: 100%; text-align: center"
+                >Start Free Trial</a
+              >
+            </div>
+            <div class="pricing-card">
+              <h3>Enterprise</h3>
+              <div class="pricing-price">Custom</div>
+              <ul class="pricing-features">
+                <li>Unlimited hosts</li>
+                <li>Custom data retention</li>
+                <li>500+ integrations</li>
+                <li>Intelligent alerting + ML</li>
+                <li>Dedicated CSM</li>
+              </ul>
+              <a href="#contact" class="btn btn-secondary" style="width: 100%; text-align: center"
+                >Contact Sales</a
+              >
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Testimonials -->
+      <section class="testimonials" id="testimonials" aria-label="Customer testimonials">
+        <div class="container">
+          <div class="section-heading">
+            <h2>Trusted by Engineering Teams Worldwide</h2>
+            <p>Hear how CloudPulse transforms incident response and observability.</p>
+          </div>
+          <div class="testimonials-grid">
+            <div class="testimonial-card">
+              <p class="testimonial-quote">
+                "CloudPulse cut our mean time to resolution by 60%. The correlated trace view alone
+                saved our on-call team hours every week."
+              </p>
+              <div class="testimonial-author">Sarah Chen</div>
+              <div class="testimonial-role">VP of Engineering, ScaleGrid</div>
+            </div>
+            <div class="testimonial-card">
+              <p class="testimonial-quote">
+                "We evaluated five monitoring platforms. CloudPulse was the only one that handled
+                our multi-cloud setup without painful configuration."
+              </p>
+              <div class="testimonial-author">Marcus Rivera</div>
+              <div class="testimonial-role">SRE Lead, FinStack</div>
+            </div>
+            <div class="testimonial-card">
+              <p class="testimonial-quote">
+                "The intelligent alerting transformed our incident response. We went from 200 daily
+                alerts to fewer than 20 that matter."
+              </p>
+              <div class="testimonial-author">Aisha Patel</div>
+              <div class="testimonial-role">CTO, NovaBuild</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CTA Section -->
+      <section class="cta-section" id="contact" aria-label="Get started">
+        <div class="container">
+          <h2>Start Monitoring with Confidence</h2>
+          <p>
+            Join 10,000+ engineering teams who rely on CloudPulse for full-stack observability. Get
+            started with a 14-day free trial — no credit card required.
+          </p>
+          <div class="cta-buttons">
+            <a href="#pricing" class="btn btn-primary">Start Your Free Trial</a>
+            <a href="mailto:sales@cloudpulse.io" class="btn btn-secondary">Talk to Sales</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <div class="footer-brand">CloudPulse</div>
+            <p class="footer-desc">
+              Full-stack cloud monitoring for modern engineering teams. Monitor smarter, respond
+              faster.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h4>Product</h4>
+            <ul>
+              <li><a href="#features">Features</a></li>
+              <li><a href="#pricing">Pricing</a></li>
+              <li><a href="#features">Integrations</a></li>
+              <li><a href="#">Changelog</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Company</h4>
+            <ul>
+              <li><a href="#">About</a></li>
+              <li><a href="#">Careers</a></li>
+              <li><a href="#">Blog</a></li>
+              <li><a href="#">Press</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Legal</h4>
+            <ul>
+              <li><a href="#">Privacy Policy</a></li>
+              <li><a href="#">Terms of Service</a></li>
+              <li><a href="#">Security</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>&copy; 2026 CloudPulse. All rights reserved.</span>
+          <div class="social-links">
+            <a href="https://twitter.com/cloudpulse" aria-label="Twitter">Twitter</a>
+            <a href="https://linkedin.com/company/cloudpulse" aria-label="LinkedIn">LinkedIn</a>
+            <a href="https://github.com/cloudpulse" aria-label="GitHub">GitHub</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

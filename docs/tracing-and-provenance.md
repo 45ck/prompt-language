@@ -20,8 +20,11 @@ Claim-eligible runs additionally require the G1 hardening flags
 plus AP-9 attestation verification. `verify-trace.mjs` now accepts
 `--attestation`, `--require-attestation`, `--trusted-signers`,
 `--revoked-signers`, and `--require-role`, and
-`scripts/experiments/meta/attest.mjs` can sign a bundle. The repo currently
-ships placeholder registry files at
+`scripts/experiments/meta/attest.mjs` can sign a bundle. The meta-factory
+harness can now auto-sign and run an attestation-aware verifier pass when
+signer material is configured; otherwise it records an unattested verifier pass
+and marks the run non-claim-eligible. Manual post-run promotion with
+`attest.mjs` remains the fallback. The repo currently ships placeholder registry files at
 [`docs/security/trusted-signers.json`](security/trusted-signers.json) and
 [`docs/security/revoked-signers.json`](security/revoked-signers.json), but
 they are empty and do not establish a production trust root yet.
@@ -132,7 +135,9 @@ Flags:
 The attestation workflow is described in
 [`docs/security/provenance-attestation.md`](security/provenance-attestation.md).
 The verifier/signing surface is now present; real operator trust still
-depends on provisioning non-placeholder signer entries.
+depends on provisioning non-placeholder signer entries. The harness can
+perform the attested verifier pass in-band when signer material is configured,
+and operators can still rerun promotion manually against `attestation.json`.
 
 Exit codes: `0` pass, `1` verification failure, `2` argument error.
 
@@ -166,12 +171,16 @@ three things together:
    and fail the job on non-zero exit. Archive
    `provenance.jsonl`, `session-state.json`, and the verifier JSON
    report as build artifacts.
+4. If the bundle is being promoted beyond recorded evidence, sign it with
+   signer material configured for the harness or sign it manually with
+   `scripts/experiments/meta/attest.mjs`, then ensure `verify-trace` runs with
+   `--attestation ... --require-attestation --require-role operator`.
 
-Runs that pass the current verifier are recorded evidence and strong dev-time
-confidence signals. They are still **not** publishable or claim-eligible
-thesis evidence until a real operator signer is provisioned and used, because
-the checked-in AP-9 registries are empty placeholders. Runs that do not pass
-are discarded, not patched.
+Runs that pass the stock harness verifier are recorded evidence and strong
+dev-time confidence signals. They are still **not** publishable or
+claim-eligible thesis evidence until a real operator signer is provisioned,
+the bundle is operator-attested, and an attestation-aware verifier pass
+succeeds. Runs that do not pass are discarded, not patched.
 
 ## Hardening flags (v2)
 
@@ -215,7 +224,11 @@ committed outside the bundle directory.
    file changed.
 4. Invokes `verify-trace` with `--expected-run-id <nonce> --freshness-window-ms 3600000 --min-entries 1` plus `--expected-pair-count <N>` when the parsed flow has at least one prompt/run node.
 5. Passes `--expected-binary-hashes scripts/experiments/meta/.binary-allow-list.json` when the file exists. A template with an empty allow-list is checked in as `.binary-allow-list.json.template`; drop the `.template` suffix and populate once you have captured the hashes from a trusted live run.
-6. Deletes the nonce file once `verify-trace` has returned.
+6. When signer material is configured, writes `attestation.json` and propagates
+   `--attestation`, signer registries, and optional `--require-attestation`
+   / `--require-role` into the verifier pass. Without signer material, manual
+   promotion with `scripts/experiments/meta/attest.mjs` remains available.
+7. Deletes the nonce file once `verify-trace` has returned.
 
 ### CI gate
 

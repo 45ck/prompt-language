@@ -29,7 +29,9 @@ AP-9 ship:
 - `attest.mjs` appends a local audit record to
   `~/.pl-attest-log.jsonl` (overridable via `PL_ATTEST_LOG_PATH`) on
   every sign; failures to write are warned but never fatal.
-- `run-meta-experiment.mjs` refuses `PL_META_SIGN=1` unless
+- `run-meta-experiment.mjs` supports harness auto-sign when
+  `PL_ATTEST_SIGNER` / `PL_ATTEST_SIGNER_ID` and `PL_ATTEST_KEY_PATH`
+  are configured, and refuses `PL_META_SIGN=1` unless
   `PL_META_SIGNER_ID` is set and the registry entry's role is
   `operator` or `ci`; no `dev-local` default.
 
@@ -50,6 +52,10 @@ Current repo state:
   `--require-role`.
 - `scripts/experiments/meta/attest.mjs` signs bundle payloads against a
   trusted signer registry entry.
+- `scripts/experiments/meta/run-meta-experiment.mjs` can now auto-sign bundles
+  when signer material is configured, and it propagates attestation flags into
+  the verifier pass. Without signer config, the run still records evidence but
+  remains non-claim-eligible.
 - No checked-in bundle in this repo is operator-attested today, because
   the checked-in registries are intentionally empty.
 

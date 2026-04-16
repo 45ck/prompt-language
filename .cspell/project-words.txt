@@ -81,6 +81,13 @@ gateable
 overdesigning
 subflows
 agentscope
+anonymisation
+cmdline
+prioritise
+PYTHONUTF8
+randomised
+Randomise
+sandboxing
 hankweave
 packetized
 repairability

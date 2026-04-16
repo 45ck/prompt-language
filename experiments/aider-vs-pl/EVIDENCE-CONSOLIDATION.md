@@ -14,18 +14,18 @@ As of 2026-04-17, the aider-vs-PL line of evidence consists of: (a) a 10-hypothe
 
 Source: [`experiments/aider-vs-pl/SCORECARD.md`](SCORECARD.md), lines 9-20. All ten hypotheses were run against `qwen3-opencode:30b` (30B MoE, Q4_K_M, Vulkan on AMD RX 7600 XT 16GB, Windows 11) on a single host, N=1 per lane.
 
-| ID  | Task (one-liner)                    | Solo outcome                                     | PL outcome                                        | Phase-1 winner | Pre-declared fixture committed? | Source                                        |
-| --- | ----------------------------------- | ------------------------------------------------ | ------------------------------------------------- | -------------- | ------------------------------- | --------------------------------------------- |
-| H1  | Retry recovery                      | Compiled first try                               | Compiled first try                                | TIE            | No                              | [`h1-retry.md`](results/h1-retry.md)          |
-| H2  | Gate enforcement TDD (slugify)      | 7/10 tests pass                                  | 10/10 tests pass after 3 gate-loop retries        | PL             | No                              | [`h2-tdd.md`](results/h2-tdd.md)              |
-| H3  | Decomposed vs monolithic prompt     | `any` types, 6 tests, 3/5 quality (subjective)   | `unknown` correct, 7 tests, 4/5 quality (subj.)   | PL             | No                              | [`h3-decompose.md`](results/h3-decompose.md)  |
-| H4  | Variable capture pipeline           | 7/10 docs, missing return types                  | 9/10 docs, full signatures, module-grouped        | PL             | No                              | [`h4-pipeline.md`](results/h4-pipeline.md)    |
-| H5  | File scoping prevents breakage      | 0/3 tests after refactor                         | 3/3 tests after 1 retry                           | PL             | No                              | [`h5-scoping.md`](results/h5-scoping.md)      |
-| H6  | Conditional branching               | Caught obvious error, missed subtle NaN          | Same + extra debug feature, also missed NaN       | TIE            | No                              | [`h6-branching.md`](results/h6-branching.md)  |
-| H7  | Simple edit speed                   | 172s avg                                         | 317s avg (1.84x slower)                           | TIE            | No                              | [`h7-speed.md`](results/h7-speed.md)          |
-| H8  | Foreach batch operations            | 4/4 files created, 0/4 spec-conformant, 164s     | 4/4 files created, 4/4 spec-conformant, 585s      | PL             | No                              | [`h8-batch.md`](results/h8-batch.md)          |
-| H9  | Code structure quality              | Separation 1/5, tests crash (missing import)     | Separation 4/5, tests pass 5/5                    | PL             | No                              | [`h9-quality.md`](results/h9-quality.md)      |
-| H10 | Quality ceiling (Result<T,E>)       | not run                                          | Grade B overall (A on impl, C on tests)           | n/a            | No                              | [`h10-ceiling.md`](results/h10-ceiling.md)    |
+| ID  | Task (one-liner)                | Solo outcome                                   | PL outcome                                      | Phase-1 winner | Pre-declared fixture committed? | Source                                       |
+| --- | ------------------------------- | ---------------------------------------------- | ----------------------------------------------- | -------------- | ------------------------------- | -------------------------------------------- |
+| H1  | Retry recovery                  | Compiled first try                             | Compiled first try                              | TIE            | No                              | [`h1-retry.md`](results/h1-retry.md)         |
+| H2  | Gate enforcement TDD (slugify)  | 7/10 tests pass                                | 10/10 tests pass after 3 gate-loop retries      | PL             | No                              | [`h2-tdd.md`](results/h2-tdd.md)             |
+| H3  | Decomposed vs monolithic prompt | `any` types, 6 tests, 3/5 quality (subjective) | `unknown` correct, 7 tests, 4/5 quality (subj.) | PL             | No                              | [`h3-decompose.md`](results/h3-decompose.md) |
+| H4  | Variable capture pipeline       | 7/10 docs, missing return types                | 9/10 docs, full signatures, module-grouped      | PL             | No                              | [`h4-pipeline.md`](results/h4-pipeline.md)   |
+| H5  | File scoping prevents breakage  | 0/3 tests after refactor                       | 3/3 tests after 1 retry                         | PL             | No                              | [`h5-scoping.md`](results/h5-scoping.md)     |
+| H6  | Conditional branching           | Caught obvious error, missed subtle NaN        | Same + extra debug feature, also missed NaN     | TIE            | No                              | [`h6-branching.md`](results/h6-branching.md) |
+| H7  | Simple edit speed               | 172s avg                                       | 317s avg (1.84x slower)                         | TIE            | No                              | [`h7-speed.md`](results/h7-speed.md)         |
+| H8  | Foreach batch operations        | 4/4 files created, 0/4 spec-conformant, 164s   | 4/4 files created, 4/4 spec-conformant, 585s    | PL             | No                              | [`h8-batch.md`](results/h8-batch.md)         |
+| H9  | Code structure quality          | Separation 1/5, tests crash (missing import)   | Separation 4/5, tests pass 5/5                  | PL             | No                              | [`h9-quality.md`](results/h9-quality.md)     |
+| H10 | Quality ceiling (Result<T,E>)   | not run                                        | Grade B overall (A on impl, C on tests)         | n/a            | No                              | [`h10-ceiling.md`](results/h10-ceiling.md)   |
 
 Aggregate: **PL 6 - Solo 0 - Tie 3** ([`SCORECARD.md:22`](SCORECARD.md)).
 
@@ -37,18 +37,18 @@ Subjective-grade flag: H3 ("3/5 quality" solo vs "4/5 quality" PL, from [`h3-dec
 
 Source: [`docs/security/aider-vs-pl-scrutiny.md`](../../docs/security/aider-vs-pl-scrutiny.md), §3 "Per-question verdict" (lines 40-51). Abbreviated verdict table follows.
 
-| # | Question                         | Finding (abbreviated)                                                                                                                                    | Severity      |
-| - | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
-| 1 | Tasks declared before running?   | No. No `TASK.md`/fixture for H1-H10.                                                                                                                     | 4 / critical  |
-| 2 | Scorer blinded?                  | No. Results authored in same commit as narrative.                                                                                                        | 4 / critical  |
-| 3 | Reviewer independence?           | No. Same author/agent designed PL flows, ran both lanes, and scored.                                                                                     | 4 / critical  |
-| 4 | Objective oracle?                | Partial. H2/H5/H8 cite test counts but scripts not checked in. H3/H4/H6/H9/H10 use subjective grades with no committed rubric.                           | 3 / high      |
-| 5 | Sample size / variance?          | N=1 per hypothesis per lane. No CIs, no repetition even where variance was called out (H1 "too easy", H6 "seed data too weak", H7 "variance-dominated"). | 4 / critical  |
-| 6 | Counterbalance / order effects?  | Not addressed. No randomized order, no cache/context-reset protocol. Qwen3 MoE routing is non-deterministic.                                             | 3 / high      |
-| 7 | Reproducibility?                 | Not reproducible. No pinned model revision, no aider version, no PL commit SHA per run, no command line, no seed.                                        | 4 / critical  |
-| 8 | What does "tie" mean?            | Ambiguous. H1 tie = trivial. H6 tie = both missed. H7 tie = PL 84% slower but still "tie".                                                               | 3 / high      |
-| 9 | Adjudication provenance?         | Absent. No signed scorecard, no trace bundle, no invocation log.                                                                                         | 4 / critical  |
-| 10 | Claim-eligible per §3a?         | No. Zero of the five §3a gates hold (strict trace, preflight ready, verify-trace, cross-family reviewer, signed attestation).                            | 4 / critical  |
+| #   | Question                        | Finding (abbreviated)                                                                                                                                    | Severity     |
+| --- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 1   | Tasks declared before running?  | No. No `TASK.md`/fixture for H1-H10.                                                                                                                     | 4 / critical |
+| 2   | Scorer blinded?                 | No. Results authored in same commit as narrative.                                                                                                        | 4 / critical |
+| 3   | Reviewer independence?          | No. Same author/agent designed PL flows, ran both lanes, and scored.                                                                                     | 4 / critical |
+| 4   | Objective oracle?               | Partial. H2/H5/H8 cite test counts but scripts not checked in. H3/H4/H6/H9/H10 use subjective grades with no committed rubric.                           | 3 / high     |
+| 5   | Sample size / variance?         | N=1 per hypothesis per lane. No CIs, no repetition even where variance was called out (H1 "too easy", H6 "seed data too weak", H7 "variance-dominated"). | 4 / critical |
+| 6   | Counterbalance / order effects? | Not addressed. No randomized order, no cache/context-reset protocol. Qwen3 MoE routing is non-deterministic.                                             | 3 / high     |
+| 7   | Reproducibility?                | Not reproducible. No pinned model revision, no aider version, no PL commit SHA per run, no command line, no seed.                                        | 4 / critical |
+| 8   | What does "tie" mean?           | Ambiguous. H1 tie = trivial. H6 tie = both missed. H7 tie = PL 84% slower but still "tie".                                                               | 3 / high     |
+| 9   | Adjudication provenance?        | Absent. No signed scorecard, no trace bundle, no invocation log.                                                                                         | 4 / critical |
+| 10  | Claim-eligible per §3a?         | No. Zero of the five §3a gates hold (strict trace, preflight ready, verify-trace, cross-family reviewer, signed attestation).                            | 4 / critical |
 
 ### Severity-4 critical findings — plain-English explanation
 
@@ -111,13 +111,13 @@ Source: [`experiments/aider-vs-pl/phase2-design.md`](phase2-design.md).
 
 ### Which §3a rules Phase 2 claims to address
 
-| §3a rule                                                   | Phase 2 addresses? | Evidence in phase2-design.md                                       |
-| ---------------------------------------------------------- | ------------------ | ------------------------------------------------------------------ |
-| 1. Strict trace (`PL_TRACE=1 PL_TRACE_STRICT=1`)           | Not explicitly     | Not mentioned in phase2-design; must be set operationally          |
-| 2. Preflight envelope `ready`                              | Not explicitly     | Not mentioned; inherited from repo-wide gating                     |
-| 3. `verify-trace` with attestation + operator role         | TBD                | Signed attestation not in design; must be added at run time        |
-| 4. Cross-family reviewer distinct from factory family      | Partially          | Blinded scoring script is promised ([`phase2-design.md:115`](phase2-design.md)); cross-family reviewer not explicitly named |
-| 5. Signed bundle via `trusted-signers.json`                | TBD                | Not in design; must be added at bundle creation time               |
+| §3a rule                                              | Phase 2 addresses? | Evidence in phase2-design.md                                                                                                |
+| ----------------------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| 1. Strict trace (`PL_TRACE=1 PL_TRACE_STRICT=1`)      | Not explicitly     | Not mentioned in phase2-design; must be set operationally                                                                   |
+| 2. Preflight envelope `ready`                         | Not explicitly     | Not mentioned; inherited from repo-wide gating                                                                              |
+| 3. `verify-trace` with attestation + operator role    | TBD                | Signed attestation not in design; must be added at run time                                                                 |
+| 4. Cross-family reviewer distinct from factory family | Partially          | Blinded scoring script is promised ([`phase2-design.md:115`](phase2-design.md)); cross-family reviewer not explicitly named |
+| 5. Signed bundle via `trusted-signers.json`           | TBD                | Not in design; must be added at bundle creation time                                                                        |
 
 Pre-declared fixtures: yes (H11-H20 all have TASK.md + verify.js committed). Blinded scoring: yes (design). k=3 per cell: yes (design). Cross-family reviewer: partial — design mentions blinded scoring but does not name the reviewer-family constraint; the general repo pattern via [`docs/strategy/cross-family-reviewer.md`](../../docs/strategy/cross-family-reviewer.md) would need to be wired in. Signed attestation: TBD — must be produced by the `attest.mjs` pathway ([`docs/strategy/program-status.md:48`](../../docs/strategy/program-status.md)) at bundle creation.
 

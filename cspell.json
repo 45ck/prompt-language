@@ -129,7 +129,14 @@
     "multiset",
     "keypairs",
     "qwvu",
-    "kv57"
+    "kv57",
+    "PYTHONUTF",
+    "cmdline",
+    "anonymisation",
+    "randomised",
+    "Randomise",
+    "prioritise",
+    "sandboxing"
   ],
   "ignorePaths": [
     "dist/**",

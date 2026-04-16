@@ -1,5 +1,10 @@
+import { createHash } from 'node:crypto';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // cspell:ignore aider qwen PYTHONUTF unstub
+
+import { NULL_TRACE_LOGGER, type TraceLogger } from '../../application/ports/trace-logger.js';
+import { TracedPromptTurnRunner } from './traced-prompt-turn-runner.js';
 
 const mockedExecFileSync = vi.fn();
 
@@ -218,5 +223,135 @@ describe('AiderPromptTurnRunner', () => {
     const runner = new AiderPromptTurnRunner();
 
     expect(runner.resolveFiles('/repo')).toEqual([]);
+  });
+});
+
+// -----------------------------------------------------------------------------
+// Security-audit additions (docs/security/aider-adapter-audit.md)
+// -----------------------------------------------------------------------------
+describe('AiderPromptTurnRunner — security audit coverage', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('forwards PL_RUN_ID / PL_TRACE / PL_TRACE_DIR / PL_TRACE_STRICT to the child env (parity with claude-process-spawner)', () => {
+    vi.stubEnv('PL_RUN_ID', 'run-abc-123');
+    vi.stubEnv('PL_TRACE', '1');
+    vi.stubEnv('PL_TRACE_DIR', '/tmp/pl-trace');
+    vi.stubEnv('PL_TRACE_STRICT', '1');
+
+    const env = buildAiderEnv();
+
+    // ClaudeProcessSpawner forwards exactly these trace-chain env vars to
+    // every spawned child. The aider adapter forwards them by inheritance
+    // via { ...process.env, ... }. That is strictly a superset of the
+    // reference pattern — this test locks that behavior in.
+    expect(env['PL_RUN_ID']).toBe('run-abc-123');
+    expect(env['PL_TRACE']).toBe('1');
+    expect(env['PL_TRACE_DIR']).toBe('/tmp/pl-trace');
+    expect(env['PL_TRACE_STRICT']).toBe('1');
+  });
+
+  it('invokes the python binary by bare name so PATH shims can intercept', async () => {
+    // A shim on PATH must be able to intercept the python binary lookup
+    // (e.g. for test isolation, sandboxing, or deterministic replay). If
+    // the adapter hard-coded an absolute interpreter path, shim semantics
+    // would break. Assert the first arg to execFileSync is literal "python".
+    mockedExecFileSync.mockReturnValue('ok');
+
+    const runner = new AiderPromptTurnRunner();
+    await runner.run({ cwd: '/repo', prompt: 'shim check' });
+
+    expect(mockedExecFileSync).toHaveBeenCalledTimes(1);
+    const firstCall = mockedExecFileSync.mock.calls[0];
+    expect(firstCall).toBeDefined();
+    const command = firstCall?.[0];
+    expect(command).toBe('python');
+  });
+
+  it('produces non-empty sha256 stdin/stdout digests when wrapped with TracedPromptTurnRunner', async () => {
+    // Lock in that the aider adapter correctly participates in the shared
+    // trace-chain stdin/stdout hashing envelope. stdinSha256 must equal
+    // sha256(input.prompt) because that prompt is passed verbatim as
+    // `--message <prompt>`; stdoutSha256 must equal sha256(assistantText).
+    const prompt = 'Fix the bug in parse.ts';
+    const stdoutText = 'Patched parse.ts successfully.';
+    mockedExecFileSync.mockReturnValue(stdoutText);
+
+    const captured: Record<string, unknown>[] = [];
+    const capturingLogger: TraceLogger = {
+      log: (entry) => {
+        captured.push(entry as unknown as Record<string, unknown>);
+      },
+    };
+
+    const runId = 'audit-run-xgav-14';
+    const previousRunId = process.env['PL_RUN_ID'];
+    process.env['PL_RUN_ID'] = runId;
+    try {
+      const traced = new TracedPromptTurnRunner(new AiderPromptTurnRunner(), capturingLogger);
+      const result = await traced.run({ cwd: '/repo', prompt });
+
+      expect(result.exitCode).toBe(0);
+      expect(captured).toHaveLength(2);
+
+      const begin = captured[0];
+      const end = captured[1];
+      expect(begin?.['event']).toBe('agent_invocation_begin');
+      expect(end?.['event']).toBe('agent_invocation_end');
+
+      const expectedStdin = createHash('sha256').update(prompt, 'utf-8').digest('hex');
+      const expectedStdout = createHash('sha256').update(stdoutText, 'utf-8').digest('hex');
+      expect(begin?.['stdinSha256']).toBe(expectedStdin);
+      expect(begin?.['stdinSha256']).toMatch(/^[a-f0-9]{64}$/);
+      expect(end?.['stdoutSha256']).toBe(expectedStdout);
+      expect(end?.['stdoutSha256']).toMatch(/^[a-f0-9]{64}$/);
+    } finally {
+      if (previousRunId === undefined) {
+        delete process.env['PL_RUN_ID'];
+      } else {
+        process.env['PL_RUN_ID'] = previousRunId;
+      }
+    }
+  });
+
+  it('NULL_TRACE_LOGGER short-circuit still runs the adapter without emitting trace entries', async () => {
+    // Complementary guarantee: when tracing is OFF, no trace entries fire,
+    // but the adapter must still execute normally. This prevents a
+    // regression where tracing wrapping could silently break aider.
+    mockedExecFileSync.mockReturnValue('ack');
+
+    const traced = new TracedPromptTurnRunner(new AiderPromptTurnRunner(), NULL_TRACE_LOGGER);
+    const result = await traced.run({ cwd: '/repo', prompt: 'no-trace' });
+
+    expect(result.exitCode).toBe(0);
+    expect(result.assistantText).toBe('ack');
+  });
+
+  // TODO(bead-followup prompt-xgav.11.1): aider passes the full prompt on argv
+  // via `--message <prompt>`, making it visible to any local user via
+  // `ps -ef` / `/proc/<pid>/cmdline` / Process Explorer. Codex sends the
+  // prompt over stdin instead. Until the adapter migrates to stdin
+  // (`--message-file -` or piped stdin), this test is skipped. Re-enable
+  // after the stdin-migration bead lands.
+  it.skip('TODO(bead-followup): does NOT pass the raw prompt on argv (ps-visibility fix)', async () => {
+    mockedExecFileSync.mockReturnValue('ok');
+
+    const runner = new AiderPromptTurnRunner();
+    const sensitivePrompt = 'SECRET_TOKEN=ghp_exampleSensitiveValue please fix';
+    await runner.run({ cwd: '/repo', prompt: sensitivePrompt });
+
+    const firstCall = mockedExecFileSync.mock.calls[0];
+    const argv = firstCall?.[1] as readonly string[] | undefined;
+    expect(argv).toBeDefined();
+    // The fix should ensure the prompt body never appears in argv — it must
+    // be delivered over stdin (or a temp file) so it does not leak into OS
+    // process listings.
+    expect(argv?.some((arg) => arg === sensitivePrompt)).toBe(false);
   });
 });

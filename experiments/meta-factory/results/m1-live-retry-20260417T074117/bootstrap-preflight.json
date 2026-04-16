@@ -1,0 +1,70 @@
+{
+  "overall": "blocked",
+  "items": [
+    {
+      "id": 1,
+      "name": "pinned runtime",
+      "status": "blocked",
+      "detail": "dist/state-hash.js missing (G2 dependency unmet)"
+    },
+    {
+      "id": 2,
+      "name": "sandbox",
+      "status": "warn",
+      "detail": "PL_META_SANDBOX unset — operator responsibility; no runtime enforcement"
+    },
+    {
+      "id": 3,
+      "name": "inventory hash",
+      "status": "ready",
+      "detail": "hashed 7 protected configs → C:\\Projects\\prompt-language\\experiments\\meta-factory\\results\\meta-1776375576567-960000\\bootstrap-envelope\\manifest-pre.json",
+      "entryCount": 7,
+      "manifestPath": "C:\\Projects\\prompt-language\\experiments\\meta-factory\\results\\meta-1776375576567-960000\\bootstrap-envelope\\manifest-pre.json"
+    },
+    {
+      "id": 4,
+      "name": "resource caps",
+      "status": "warn",
+      "detail": "missing env (defaults apply from meta-harness): META_WALL_CLOCK_SEC, META_TOKEN_CAP, META_EVENT_CAP, PL_META_DEPTH, META_FS_GROWTH_MB",
+      "missing": [
+        "META_WALL_CLOCK_SEC",
+        "META_TOKEN_CAP",
+        "META_EVENT_CAP",
+        "PL_META_DEPTH",
+        "META_FS_GROWTH_MB"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "allow-list / deny-list",
+      "status": "warn",
+      "detail": "allow-list present but empty"
+    },
+    {
+      "id": 6,
+      "name": "cross-family reviewer",
+      "status": "warn",
+      "detail": "unset: PL_REVIEWER_FAMILY, PL_FACTORY_FAMILY"
+    },
+    {
+      "id": 7,
+      "name": "approvals",
+      "status": "warn",
+      "detail": "PL_APPROVE_DESTRUCTIVE unset — externally visible actions unguarded"
+    },
+    {
+      "id": 8,
+      "name": "post-run verifier",
+      "status": "unchecked",
+      "detail": "cannot pre-check; run `verify-trace --state --json` under pinned binary after the experiment and archive bundle atomically"
+    }
+  ],
+  "nextActions": [
+    "[blocked #1] pinned runtime: dist/state-hash.js missing (G2 dependency unmet)",
+    "[warn #2] sandbox: PL_META_SANDBOX unset — operator responsibility; no runtime enforcement",
+    "[warn #4] resource caps: missing env (defaults apply from meta-harness): META_WALL_CLOCK_SEC, META_TOKEN_CAP, META_EVENT_CAP, PL_META_DEPTH, META_FS_GROWTH_MB",
+    "[warn #5] allow-list / deny-list: allow-list present but empty",
+    "[warn #6] cross-family reviewer: unset: PL_REVIEWER_FAMILY, PL_FACTORY_FAMILY",
+    "[warn #7] approvals: PL_APPROVE_DESTRUCTIVE unset — externally visible actions unguarded"
+  ]
+}

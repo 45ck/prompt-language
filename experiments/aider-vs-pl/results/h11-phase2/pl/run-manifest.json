@@ -1,0 +1,25 @@
+{
+  "cell": "pl",
+  "hypothesis": "H11",
+  "timestamp_utc": "2026-04-17",
+  "start_ms": 1776376755766,
+  "end_ms": 1776377340121,
+  "wall_ms": 584355,
+  "timeout_budget_ms": 900000,
+  "timeout_hit": false,
+  "aider_version": "0.86.2",
+  "model": "ollama_chat/qwen3-opencode:30b",
+  "ollama_model_blob_sha256": "58574f2e94b99fb9e4391408b57e5aeaaaec10f6384e9a699fc2cb43a5c8eabf",
+  "pl_commit": "9882c56d62e18b505382a4c5b84a81e9c14795da",
+  "fixture_cwd_tar_sha256": "37a6b0bff7a1ee7d7a15f22f7b6eaca5c410377d38c81c7bac86624f44492503",
+  "fixture_path": "experiments/aider-vs-pl/fixtures/h11-multi-file-refactor/",
+  "work_dir": "/tmp/h11-pl-1776376746",
+  "command_line": "C:/Projects/prompt-language/bin/cli.mjs ci --runner aider --file task.flow",
+  "env": {
+    "TERM": "dumb",
+    "PYTHONUTF8": "1",
+    "OLLAMA_API_BASE": "http://127.0.0.1:11434"
+  },
+  "runner_used": "ci --runner aider (native PL flow runner; no fallback needed)",
+  "notes": "PL ci --runner aider completed with exit 0 in 584s. Aider was invoked per flow node with the full rendered flow context. The model edited src/app.js only (introduced ES-module import syntax incompatible with the project's CommonJS package.json type). Other source files were not reached because aider's per-call file-add heuristics did not auto-add the target file named in the interpolated ${file} variable; aider treated each iteration as a fresh context."
+}

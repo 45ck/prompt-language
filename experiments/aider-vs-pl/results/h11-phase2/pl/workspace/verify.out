@@ -1,0 +1,38 @@
+
+Results: 3/12 passed
+  PASS: No "Contact" in src\app.js
+  FAIL: No "Contact" in src\contact-store.js -- Found 2 occurrences of "Contact"
+  FAIL: No "Contact" in src\contact.js -- Found 2 occurrences of "Contact"
+  FAIL: No "Contact" in src\routes.js -- Found 3 occurrences of "Contact"
+  FAIL: No "Contact" in src\seed.js -- Found 1 occurrences of "Contact"
+  FAIL: No "Contact" in src\test.js -- Found 9 occurrences of "Contact"
+  FAIL: No "Contact" in .aider.chat.history.md -- Found 14 occurrences of "Contact"
+  FAIL: No "Contact" in README.md -- Found 7 occurrences of "Contact"
+  PASS: "Client" class exists in some .js file
+  PASS: "ClientStore" or "Client" store class exists
+  FAIL: Application runs without error -- App failed: Command failed: node src/app.js
+(node:26700) Warning: Failed to load the ES module: C:\Users\MQCKENC\AppData\Local\Temp\h11-pl-1776376746\src\app.js. Make sure to set "type": "module" in the nearest package.json file or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+C:\Users\MQCKENC\AppData\Local\Temp\h11-pl-1776376746\src\app.js:1
+import Client from './client';
+^^^^^^
+
+SyntaxError: Cannot use import statement outside a module
+    at wrapSafe (node:internal/modules/cjs/loader:1742:18)
+    at Module._compile (node:internal/modules/cjs/loader:1785:20)
+    at Object..js (node:internal/modules/cjs/loader:1942:10)
+    at Module.load (node:internal/modules/cjs/loader:1532:32)
+    at Module._load (node:internal/modules/cjs/loader:1334:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v25.6.1
+
+  FAIL: All imports resolve -- Command failed: node -e "try { require('./src/app'); } catch(e) { console.error(e.message); process.exit(1); }"
+(node:28200) Warning: Failed to load the ES module: C:\Users\MQCKENC\AppData\Local\Temp\h11-pl-1776376746\src\app.js. Make sure to set "type": "module" in the nearest package.json file or use the .mjs extension.
+(Use `node --trace-warnings ...` to show where the warning was created)
+Cannot use import statement outside a module
+
+
+VERDICT: FAIL (9 failed)

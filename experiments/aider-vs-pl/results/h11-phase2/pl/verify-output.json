@@ -1,0 +1,7 @@
+{
+  "passed": 3,
+  "failed": 9,
+  "exit_code": 1,
+  "stdout": "\nResults: 3/12 passed\n  PASS: No \"Contact\" in src\\app.js\n  FAIL: No \"Contact\" in src\\contact-store.js -- Found 2 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in src\\contact.js -- Found 2 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in src\\routes.js -- Found 3 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in src\\seed.js -- Found 1 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in src\\test.js -- Found 9 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in .aider.chat.history.md -- Found 14 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in README.md -- Found 7 occurrences of \"Contact\"\n  PASS: \"Client\" class exists in some .js file\n  PASS: \"ClientStore\" or \"Client\" store class exists\n  FAIL: Application runs without error -- App failed: Command failed: node src/app.js\n  FAIL: All imports resolve -- Command failed: node -e \"try { require('./src/app'); } catch(e) { console.error(e.message); process.exit(1); }\"\n\nVERDICT: FAIL (9 failed)\n",
+  "stderr": ""
+}

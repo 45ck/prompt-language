@@ -17,13 +17,29 @@ function test(name, fn) {
   }
 }
 
+// Oracle-contamination exclusions: do not scan files the rename-agent
+// does not author. Aider writes its chat history to .aider.chat.history.md
+// (which includes the rendered flow text containing "Contact"); PL writes
+// session state under .prompt-language/; pnpm/npm may drop lockfiles.
+const EXCLUDE_DIRS = new Set([
+  'node_modules',
+  '.prompt-language',
+  '.aider.tags.cache.v3',
+  '.git',
+]);
+const EXCLUDE_FILE_PREFIXES = ['.aider.'];
+
 function getAllFiles(dir, ext) {
   const files = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory() && entry.name !== 'node_modules') {
+    if (entry.isDirectory() && !EXCLUDE_DIRS.has(entry.name)) {
       files.push(...getAllFiles(full, ext));
-    } else if (entry.isFile() && full.endsWith(ext)) {
+    } else if (
+      entry.isFile() &&
+      full.endsWith(ext) &&
+      !EXCLUDE_FILE_PREFIXES.some((p) => entry.name.startsWith(p))
+    ) {
       files.push(full);
     }
   }

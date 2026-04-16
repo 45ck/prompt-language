@@ -1,0 +1,38 @@
+Goal: Rename Contact to Client across the fixture with per-file grep-gate and retry-on-noop
+
+flow:
+  let files = run "grep -rl 'Contact' src/"
+  prompt: Starting H11 multi-file rename. Files to process follow.
+  run: echo "${files}"
+
+  foreach file in ${files}
+    run: grep -c 'Contact' ${file}
+    let remaining_before = "${last_stdout}"
+    prompt: Edit ${file}. Replace every word-boundary occurrence of "Contact" with "Client" and every word-boundary occurrence of "contact" with "client". Do not replace substrings inside longer words. Do not create new files. The file is CommonJS — keep require/module.exports syntax. Preserve indentation and comments.
+    run: grep -c 'Contact' ${file}
+    let remaining_after = "${last_stdout}"
+    if ${remaining_after} != "0"
+      prompt: ${file} still contains ${remaining_after} occurrences of "Contact". Finish the rename in place. Do not introduce ES-module syntax. Keep require/module.exports.
+      run: grep -c 'Contact' ${file}
+    end
+    run: node --check ${file}
+    if command_failed
+      prompt: Syntax check of ${file} failed after your rename: ${last_stderr}. Fix the syntax error without re-introducing "Contact". Keep CommonJS.
+      run: node --check ${file}
+    end
+  end
+
+  run: grep -rn 'Contact' src/ README.md
+  if command_succeeded
+    prompt: Stragglers found: ${last_stdout}. Fix each one by editing the mentioned files. Do not convert anything to ES modules.
+    run: grep -rn 'Contact' src/ README.md
+  end
+
+  run: node src/app.js
+  if command_failed
+    prompt: Integration test failed after the rename. Error: ${last_stderr}. Diagnose the cause (likely an import/require path that still references the old name, or an ES-module syntax slip) and fix it so node src/app.js exits 0.
+    run: node src/app.js
+  end
+
+done when:
+  tests_pass

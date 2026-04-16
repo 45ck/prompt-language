@@ -1,0 +1,52 @@
+Goal: Rename Contact to Client using swarm roles — planner, worker, reviewer
+
+flow:
+  swarm h11_rename
+    role planner
+      run: grep -rl 'Contact' src/ README.md
+      let plan = "${last_stdout}"
+      prompt: The rename plan is these files: ${plan}. Confirm each is valid to edit.
+      return "${plan}"
+    end
+
+    role worker
+      foreach file in ${h11_rename.planner.returned}
+        prompt: In ${file}, replace every word-boundary "Contact" with "Client" and every word-boundary "contact" with "client". Do not replace substrings. Keep CommonJS (require/module.exports). Do not create new files. Preserve comments and indentation.
+        run: grep -c 'Contact' ${file}
+        if ${last_stdout} != "0"
+          prompt: ${file} still has ${last_stdout} occurrences. Finish the edit now.
+        end
+      end
+      return "worker-done"
+    end
+
+    role reviewer
+      run: grep -rn 'Contact' src/ README.md
+      if command_succeeded
+        prompt: Reviewer found stragglers: ${last_stdout}. Fix each one.
+        run: grep -rn 'Contact' src/ README.md
+      end
+      run: node --check src/app.js
+      if command_failed
+        prompt: src/app.js failed syntax check: ${last_stderr}. Fix it.
+      end
+      run: node src/app.js
+      if command_failed
+        prompt: Integration test failed: ${last_stderr}. Diagnose and fix.
+        run: node src/app.js
+      end
+      return "${last_stdout}"
+    end
+
+    flow:
+      start planner
+      await planner
+      start worker
+      await worker
+      start reviewer
+      await reviewer
+    end
+  end
+
+done when:
+  tests_pass

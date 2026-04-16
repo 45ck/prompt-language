@@ -21,4 +21,8 @@ experiments/results/**
 experiments/meta-factory/results/**
 experiments/meta-factory/workspaces/**
 experiments/meta-factory/snapshots/**
+experiments/aider-vs-pl/results/**
+experiments/website-factory/results/**
+experiments/marketing-factory/results/**
+experiments/full-sdlc-factory/results/**
 scripts/eval/agent-shim/.binary-cache.json

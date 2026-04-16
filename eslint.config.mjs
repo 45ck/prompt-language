@@ -34,6 +34,7 @@ export default tseslint.config(
       'experiments/full-saas-factory/**/workspaces/**',
       'experiments/results/**',
       'experiments/aider-vs-pl/fixtures/**',
+      'experiments/aider-vs-pl/results/**',
       'experiments/marketing-factory/results/**',
       'experiments/website-factory/results/**',
       'experiments/full-sdlc-factory/results/**',

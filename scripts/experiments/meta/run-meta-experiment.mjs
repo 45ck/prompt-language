@@ -14,12 +14,12 @@ import {
   mkdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
   copyFileSync,
-  statSync,
 } from 'node:fs';
-import { randomUUID } from 'node:crypto';
-import { tmpdir } from 'node:os';
+import { randomBytes } from 'node:crypto';
+import { homedir } from 'node:os';
 import { dirname, join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { computeManifest } from './compute-manifest.mjs';
@@ -285,30 +285,45 @@ function runVerifyTrace(bundleDir, { expectedRunId, expectedPairCount, freshness
 }
 
 /**
- * Write a single-use nonce to a path outside the meta-flow's workspace
- * (os.tmpdir()) with the most restrictive permissions the platform honors.
- * The harness uses the nonce as PL_RUN_ID, then reads it back and passes it
- * to verify-trace via --expected-run-id so a replayed older trace (AP-5)
- * fails verification.
+ * Write a single-use nonce to a private per-user store outside the
+ * meta-flow workspace. The store defaults to ~/.pl-meta-nonces but can be
+ * overridden in tests via PL_META_NONCE_DIR. The harness uses the nonce as
+ * PL_RUN_ID, then reads it back and passes it to verify-trace via
+ * --expected-run-id so a replayed older trace (AP-5) fails verification.
  */
-function writeRunNonce(runId) {
-  const nonce = randomUUID();
-  const noncePath = join(tmpdir(), `pl-meta-${runId}.nonce`);
+export function resolveNonceStoreDir() {
+  const configured = process.env.PL_META_NONCE_DIR?.trim();
+  const storeDir = configured ? resolve(configured) : join(homedir(), '.pl-meta-nonces');
+  if (!storeDir) {
+    throw new Error('unable to resolve nonce store dir; set PL_META_NONCE_DIR explicitly');
+  }
+  mkdirSync(storeDir, { recursive: true, mode: 0o700 });
+  try {
+    chmodSync(storeDir, 0o700);
+  } catch {
+    /* POSIX chmod may fail on Windows; permissions are advisory there */
+  }
+  return storeDir;
+}
+
+export function writeRunNonce() {
+  const nonce = randomBytes(32).toString('hex');
+  const noncePath = join(resolveNonceStoreDir(), `${randomBytes(32).toString('hex')}.nonce`);
   writeFileSync(noncePath, nonce, { encoding: 'utf8', mode: 0o400 });
   try {
-    chmodSync(noncePath, 0o400);
+    chmodSync(noncePath, 0o600);
   } catch {
     /* POSIX chmod may fail on Windows; permissions are advisory there */
   }
   return { nonce, noncePath };
 }
 
-function readRunNonce(noncePath) {
+export function readRunNonce(noncePath) {
   if (!existsSync(noncePath)) return null;
   return readFileSync(noncePath, 'utf8').trim();
 }
 
-function deleteRunNonce(noncePath) {
+export function deleteRunNonce(noncePath) {
   try {
     rmSync(noncePath, { force: true });
   } catch {

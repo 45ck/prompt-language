@@ -2,11 +2,17 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
-import { main } from './run-meta-experiment.mjs';
+import {
+  deleteRunNonce,
+  main,
+  readRunNonce,
+  resolveNonceStoreDir,
+  writeRunNonce,
+} from './run-meta-experiment.mjs';
 import { computeManifest } from './compute-manifest.mjs';
 import { diffManifests } from './manifest-diff.mjs';
 
@@ -63,4 +69,34 @@ test('computeManifest returns SHA-256 entries and skips node_modules', () => {
   assert.ok('package.json' in m);
   assert.ok(!Object.keys(m).some((k) => k.startsWith('node_modules')));
   assert.match(m['package.json'], /^[0-9a-f]{64}$/);
+});
+
+test('writeRunNonce uses a private nonce store and 64-hex nonce content', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'meta-nonce-'));
+  const prev = process.env.PL_META_NONCE_DIR;
+  process.env.PL_META_NONCE_DIR = dir;
+
+  try {
+    assert.equal(resolveNonceStoreDir(), dir);
+    const { nonce, noncePath } = writeRunNonce('run-1');
+
+    assert.equal(noncePath.startsWith(dir), true, 'nonce must live under configured store');
+    assert.match(nonce, /^[0-9a-f]{64}$/);
+    assert.match(basename(noncePath), /^[0-9a-f]{64}\.nonce$/);
+    assert.equal(readRunNonce(noncePath), nonce);
+    assert.equal(existsSync(noncePath), true);
+
+    if (process.platform !== 'win32') {
+      const storeMode = statSync(dir).mode & 0o777;
+      const fileMode = statSync(noncePath).mode & 0o777;
+      assert.equal(storeMode, 0o700);
+      assert.equal(fileMode, 0o600);
+    }
+
+    deleteRunNonce(noncePath);
+    assert.equal(existsSync(noncePath), false, 'nonce file should be deleted');
+  } finally {
+    if (prev === undefined) delete process.env.PL_META_NONCE_DIR;
+    else process.env.PL_META_NONCE_DIR = prev;
+  }
 });

@@ -184,7 +184,8 @@ the verifier consumed — the JSONL, the state file, the shim binary hash,
 the `runId` — lived inside the writable workspace of the meta-flow. The
 hardening converges on one design change: the verifier must consume at
 least one input that cannot be rewritten by the meta-flow. The default
-harness now supplies three: a nonce under `os.tmpdir()`, a freshness
+harness now supplies three: a nonce under a private per-user store
+(`~/.pl-meta-nonces/` by default), a freshness
 window from the harness clock, and (optionally) a signed binary allow-list
 committed outside the bundle directory.
 
@@ -192,8 +193,9 @@ committed outside the bundle directory.
 
 `scripts/experiments/meta/run-meta-experiment.mjs` now:
 
-1. Writes a fresh UUID nonce to `os.tmpdir()/pl-meta-<runId>.nonce` with
-   mode `0400` **before** launching `claude -p`.
+1. Writes a fresh 64-hex nonce to
+   `~/.pl-meta-nonces/<64-hex-random>.nonce` (or `PL_META_NONCE_DIR` in
+   tests) with restrictive permissions **before** launching `claude -p`.
 2. Uses that nonce as the `PL_RUN_ID`.
 3. Reads the nonce back after the run and refuses to claim success if the
    file changed.

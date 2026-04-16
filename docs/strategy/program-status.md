@@ -70,13 +70,13 @@ registries still declare no trusted production operator keys:
 Any other run is **recorded** (evidence archived, trace verified at whatever
 level was possible) but **not counted toward thesis verdicts**.
 
-| Item                         | Shipped?                                                                                                                    | Blocker                                                  |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| Strict mode (1)              | yes (commit ec086e8)                                                                                                        | operator must set the env var                            |
-| Preflight (2)                | yes; `blocked` refuses live runs and `degraded` remains recorded-only                                                       | operator environment must reach `ready`                  |
+| Item                         | Shipped?                                                                                                                    | Blocker                                                          |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Strict mode (1)              | yes (commit ec086e8)                                                                                                        | operator must set the env var                                    |
+| Preflight (2)                | yes; `blocked` refuses live runs and `degraded` remains recorded-only                                                       | operator environment must reach `ready`                          |
 | Attestation flags (3)        | yes + hardened (2026-04-17); full 9-field payload, raw-64-byte ed25519 pinned, `dev` role removed, verify order §6.2 locked | operator must provision signer material and run in required mode |
-| Cross-family reviewer (4)    | yes; phase-2 enforcement shipped across preflight, review module, scorecard, and verifier                                   | reviewer lane must remain distinct and approve           |
-| Trusted-signers registry (5) | placeholder files exist, but they are empty and declare no production signers                                               | provision a real operator key entry                      |
+| Cross-family reviewer (4)    | yes; phase-2 enforcement shipped across preflight, review module, scorecard, and verifier                                   | reviewer lane must remain distinct and approve                   |
+| Trusted-signers registry (5) | placeholder files exist, but they are empty and declare no production signers                                               | provision a real operator key entry                              |
 
 ## 3b. Verification state of closed beads
 

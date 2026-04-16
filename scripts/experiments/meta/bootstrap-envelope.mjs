@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { KNOWN_FAMILIES, inferFamily, validateFamilySeparation } from './cross-family-review.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(SCRIPT_DIR, '..', '..', '..');
@@ -215,6 +216,31 @@ function checkItem5AllowList(repoRoot) {
   }
 }
 
+function classifyFamilyEnv(value) {
+  if (typeof value !== 'string') {
+    return { raw: value, normalized: null, error: null };
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { raw: value, normalized: null, error: null };
+  }
+
+  const canonical = KNOWN_FAMILIES.includes(trimmed.toLowerCase())
+    ? trimmed.toLowerCase()
+    : inferFamily(trimmed);
+
+  if (!KNOWN_FAMILIES.includes(canonical)) {
+    return {
+      raw: trimmed,
+      normalized: null,
+      error: `unrecognized family '${trimmed}' (known: ${KNOWN_FAMILIES.join(', ')})`,
+    };
+  }
+
+  return { raw: trimmed, normalized: canonical, error: null };
+}
+
 function checkItem6Reviewer() {
   const reviewer = process.env.PL_REVIEWER_FAMILY;
   const factory = process.env.PL_FACTORY_FAMILY;
@@ -224,15 +250,38 @@ function checkItem6Reviewer() {
     if (!factory) missing.push('PL_FACTORY_FAMILY');
     return item(6, 'cross-family reviewer', 'warn', `unset: ${missing.join(', ')}`);
   }
-  if (reviewer.trim().toLowerCase() === factory.trim().toLowerCase()) {
-    return item(
-      6,
-      'cross-family reviewer',
-      'blocked',
-      `factory and reviewer families identical (${reviewer}) — cross-family requirement violated`,
-    );
+
+  const classifiedFactory = classifyFamilyEnv(factory);
+  const classifiedReviewer = classifyFamilyEnv(reviewer);
+  const errors = [];
+  if (classifiedFactory.error) {
+    errors.push(`PL_FACTORY_FAMILY ${classifiedFactory.error}`);
   }
-  return item(6, 'cross-family reviewer', 'ready', `factory=${factory} reviewer=${reviewer}`);
+  if (classifiedReviewer.error) {
+    errors.push(`PL_REVIEWER_FAMILY ${classifiedReviewer.error}`);
+  }
+  if (errors.length > 0) {
+    return item(6, 'cross-family reviewer', 'blocked', errors.join('; '));
+  }
+
+  const separation = validateFamilySeparation(
+    classifiedFactory.normalized,
+    classifiedReviewer.normalized,
+  );
+  if (!separation.valid) {
+    return item(6, 'cross-family reviewer', 'blocked', separation.error);
+  }
+
+  return item(
+    6,
+    'cross-family reviewer',
+    'ready',
+    `factory=${classifiedFactory.normalized} reviewer=${classifiedReviewer.normalized}`,
+    {
+      factoryFamily: classifiedFactory.normalized,
+      reviewerFamily: classifiedReviewer.normalized,
+    },
+  );
 }
 
 function checkItem7Approvals() {

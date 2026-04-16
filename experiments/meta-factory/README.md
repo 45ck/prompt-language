@@ -69,11 +69,20 @@ sign-offs listed in [design/risks.md](design/risks.md). Do not invoke
 
 ### Bootstrap envelope preflight
 
-Before running a meta-experiment, run:
+Before any live meta-run, run:
+
+```sh
 npm run meta:preflight
-to confirm the 8-item bootstrap envelope is configured. Blocked status means
-the run cannot be claim-eligible even if it succeeds. Degraded status means
-some items are operator-responsibility and unchecked.
+```
+
+Interpret the result as follows:
+
+- `blocked`: do not launch the live run. The harness must refuse execution until
+  the blocked items are fixed.
+- `degraded`: the run may proceed, but it is recorded evidence only and is not
+  claim-eligible.
+- `ready`: the bootstrap envelope is satisfied. The run can still fail later,
+  but preflight no longer disqualifies it.
 
 ## Status
 

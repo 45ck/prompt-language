@@ -24,6 +24,7 @@ import { dirname, join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { computeManifest } from './compute-manifest.mjs';
 import { diffManifests } from './manifest-diff.mjs';
+import { runPreflight as runBootstrapEnvelopePreflight } from './bootstrap-envelope.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -237,6 +238,54 @@ function copyIfExists(src, dst) {
   return false;
 }
 
+function persistJson(filePath, value) {
+  writeFileSync(filePath, JSON.stringify(value, null, 2));
+}
+
+export function summarizeBootstrapPreflight(report) {
+  const items = Array.isArray(report?.items) ? report.items : [];
+  const blockedItems = items.filter((item) => item?.status === 'blocked');
+  const warningItems = items.filter((item) => item?.status === 'warn');
+  return {
+    overall: report?.overall ?? 'unknown',
+    blockedItems: blockedItems.map((item) => ({
+      id: item.id ?? null,
+      name: item.name ?? 'unknown',
+      detail: item.detail ?? '',
+    })),
+    warningItems: warningItems.map((item) => ({
+      id: item.id ?? null,
+      name: item.name ?? 'unknown',
+      detail: item.detail ?? '',
+    })),
+    nextActions: Array.isArray(report?.nextActions) ? report.nextActions : [],
+  };
+}
+
+export function deriveClaimEligibility({
+  bootstrapOverall,
+  verifyOk,
+  ruleWeakening,
+  timedOut,
+  errorStr,
+  nonceMismatch,
+}) {
+  const blockers = [];
+  if (bootstrapOverall === 'blocked') blockers.push('bootstrap-preflight-blocked');
+  if (bootstrapOverall === 'degraded') blockers.push('bootstrap-preflight-degraded');
+  if (nonceMismatch) blockers.push('run-nonce-mismatch');
+  if (errorStr) blockers.push('harness-error');
+  if (timedOut) blockers.push('wall-clock-timeout');
+  if (ruleWeakening) blockers.push('rule-weakening-detected');
+  if (verifyOk === false) blockers.push('verify-trace-failed');
+
+  return {
+    eligible: blockers.length === 0,
+    status: blockers.length === 0 ? 'eligible' : 'ineligible',
+    blockers,
+  };
+}
+
 function runVerifyTrace(bundleDir, { expectedRunId, expectedPairCount, freshnessWindowMs }) {
   const verify = join(REPO_ROOT, 'scripts', 'eval', 'verify-trace.mjs');
   if (!existsSync(verify)) return { ran: false, reason: 'verify-trace.mjs-missing' };
@@ -401,16 +450,77 @@ async function dryRun({ flowAbs, flowText, runId }) {
   return result;
 }
 
-async function liveRun({ flowText, runId, wallClockSec }) {
-  const bundleDir = join(REPO_ROOT, 'experiments', 'meta-factory', 'results', runId);
+export async function liveRun(
+  { flowText, runId, wallClockSec, bundleDirOverride = null },
+  deps = {},
+) {
+  const bundleDir =
+    bundleDirOverride ?? join(REPO_ROOT, 'experiments', 'meta-factory', 'results', runId);
+  const ensureCliInstalledFn = deps.ensureCliInstalledFn ?? ensureCliInstalled;
+  const checkShimFn = deps.checkShimFn ?? checkShim;
+  const checkClaudeAuthFn = deps.checkClaudeAuthFn ?? checkClaudeAuth;
+  const runBootstrapPreflightFn =
+    deps.runBootstrapPreflightFn ?? ((options) => runBootstrapEnvelopePreflight(options));
+  const runLiveFn = deps.runLiveFn ?? runLive;
+  const parseFlowTextFn = deps.parseFlowTextFn ?? parseFlowText;
+  const gitStashFn = deps.gitStashFn ?? gitStash;
+  const gitStashPopFn = deps.gitStashPopFn ?? gitStashPop;
+  const computeManifestFn = deps.computeManifestFn ?? computeManifest;
+  const runVerifyTraceFn = deps.runVerifyTraceFn ?? runVerifyTrace;
+  const diffManifestsFn = deps.diffManifestsFn ?? diffManifests;
+  const writeRunNonceFn = deps.writeRunNonceFn ?? writeRunNonce;
+  const readRunNonceFn = deps.readRunNonceFn ?? readRunNonce;
+  const deleteRunNonceFn = deps.deleteRunNonceFn ?? deleteRunNonce;
+  const bootstrapArtifactDir = join(bundleDir, 'bootstrap-envelope');
 
   const preflight = {};
-  preflight.install = ensureCliInstalled();
-  preflight.shim = checkShim();
-  preflight.auth = checkClaudeAuth();
+  preflight.install = ensureCliInstalledFn();
+  preflight.shim = checkShimFn();
+  preflight.auth = checkClaudeAuthFn();
+  mkdirSync(bundleDir, { recursive: true });
+  preflight.bootstrapEnvelope = runBootstrapPreflightFn({
+    repoRoot: REPO_ROOT,
+    bundleDir: bootstrapArtifactDir,
+    env: process.env,
+  });
+  persistJson(join(bundleDir, 'bootstrap-preflight.json'), preflight.bootstrapEnvelope);
+  preflight.bootstrapEnvelopeSummary = summarizeBootstrapPreflight(preflight.bootstrapEnvelope);
+
+  if (preflight.bootstrapEnvelope.overall === 'blocked') {
+    const claimEligibility = deriveClaimEligibility({
+      bootstrapOverall: preflight.bootstrapEnvelope.overall,
+      verifyOk: null,
+      ruleWeakening: false,
+      timedOut: false,
+      errorStr: null,
+      nonceMismatch: false,
+    });
+    const summary = {
+      mode: 'live',
+      runId,
+      bundleDir,
+      success: false,
+      reason: 'bootstrap-preflight-blocked',
+      preflight,
+      claimEligibility,
+      launch: {
+        attempted: false,
+        blockedBy: preflight.bootstrapEnvelopeSummary.blockedItems,
+      },
+    };
+    persistJson(join(bundleDir, 'report.json'), summary);
+    return summary;
+  }
 
   if (!preflight.auth.claudeBin) {
-    mkdirSync(bundleDir, { recursive: true });
+    const claimEligibility = deriveClaimEligibility({
+      bootstrapOverall: preflight.bootstrapEnvelope.overall,
+      verifyOk: null,
+      ruleWeakening: false,
+      timedOut: false,
+      errorStr: 'claude-binary-not-found',
+      nonceMismatch: false,
+    });
     const summary = {
       mode: 'live',
       runId,
@@ -418,8 +528,9 @@ async function liveRun({ flowText, runId, wallClockSec }) {
       success: false,
       reason: 'claude-binary-not-found',
       preflight,
+      claimEligibility,
     };
-    writeFileSync(join(bundleDir, 'report.json'), JSON.stringify(summary, null, 2));
+    persistJson(join(bundleDir, 'report.json'), summary);
     return summary;
   }
 
@@ -429,14 +540,14 @@ async function liveRun({ flowText, runId, wallClockSec }) {
   // verify-trace (as --expected-run-id). A meta-flow that tampers with
   // provenance.jsonl cannot rewrite the nonce file, so verify-trace will
   // reject any trace whose runId fails to equal the nonce.
-  const { nonce: expectedRunId, noncePath } = writeRunNonce(runId);
+  const { nonce: expectedRunId, noncePath } = writeRunNonceFn(runId);
   log(`wrote run nonce to ${noncePath}`);
 
   // Pre-estimate the expected pair count so verify-trace can reject a
   // truncated trace (AP-8). Heuristic only — see estimatePairCount().
   let expectedPairCount = 0;
   try {
-    const spec = await parseFlowText(flowText);
+    const spec = await parseFlowTextFn(flowText);
     expectedPairCount = estimatePairCount(spec);
   } catch {
     /* parse failures surface later; leave at 0 so the flag is omitted */
@@ -444,8 +555,7 @@ async function liveRun({ flowText, runId, wallClockSec }) {
 
   // Stash BEFORE creating the bundle dir so the stash does not sweep it up.
   const stashLabel = `meta-${runId}`;
-  const stash = gitStash(stashLabel);
-  mkdirSync(bundleDir, { recursive: true });
+  const stash = gitStashFn(stashLabel);
 
   let liveResult = null;
   let verify = null;
@@ -455,10 +565,10 @@ async function liveRun({ flowText, runId, wallClockSec }) {
   let errorStr = null;
   let nonceMismatch = false;
   try {
-    manifestPre = computeManifest(REPO_ROOT);
-    writeFileSync(join(bundleDir, 'manifest-pre.json'), JSON.stringify(manifestPre, null, 2));
+    manifestPre = computeManifestFn(REPO_ROOT);
+    persistJson(join(bundleDir, 'manifest-pre.json'), manifestPre);
 
-    liveResult = await runLive({
+    liveResult = await runLiveFn({
       flowText,
       bundleDir,
       runId: expectedRunId,
@@ -474,37 +584,45 @@ async function liveRun({ flowText, runId, wallClockSec }) {
     // Read the nonce back from the read-only tmpdir path. A mismatch here
     // would imply an attacker with cross-directory process privileges, which
     // is a substantially higher bar than workspace write access.
-    const nonceOnDisk = readRunNonce(noncePath);
+    const nonceOnDisk = readRunNonceFn(noncePath);
     if (!nonceOnDisk || nonceOnDisk !== expectedRunId) {
       nonceMismatch = true;
       errorStr = `run nonce at ${noncePath} did not round-trip (expected ${expectedRunId}, got ${nonceOnDisk ?? 'null'})`;
     }
 
-    verify = runVerifyTrace(bundleDir, {
+    verify = runVerifyTraceFn(bundleDir, {
       expectedRunId,
       expectedPairCount,
       freshnessWindowMs: DEFAULT_FRESHNESS_WINDOW_MS,
     });
 
-    manifestPost = computeManifest(REPO_ROOT);
-    writeFileSync(join(bundleDir, 'manifest-post.json'), JSON.stringify(manifestPost, null, 2));
-    diff = diffManifests(manifestPre, manifestPost);
-    writeFileSync(join(bundleDir, 'diff.json'), JSON.stringify(diff, null, 2));
+    manifestPost = computeManifestFn(REPO_ROOT);
+    persistJson(join(bundleDir, 'manifest-post.json'), manifestPost);
+    diff = diffManifestsFn(manifestPre, manifestPost);
+    persistJson(join(bundleDir, 'diff.json'), diff);
   } catch (e) {
     errorStr = (e && e.stack) || String(e);
   } finally {
     // Delete the nonce file after verification completes so a subsequent
     // run cannot accidentally inherit it.
-    deleteRunNonce(noncePath);
+    deleteRunNonceFn(noncePath);
     if (stash.stashed) {
-      const pop = gitStashPop();
-      writeFileSync(join(bundleDir, 'stash-pop.json'), JSON.stringify({ stash, pop }, null, 2));
+      const pop = gitStashPopFn();
+      persistJson(join(bundleDir, 'stash-pop.json'), { stash, pop });
     }
   }
 
   const verifyOk = verify?.ran && verify.exitCode === 0;
   const ruleWeakening = (diff?.protectedChanged ?? []).length > 0;
   const success = Boolean(verifyOk) && !ruleWeakening && !liveResult?.timedOut && !errorStr;
+  const claimEligibility = deriveClaimEligibility({
+    bootstrapOverall: preflight.bootstrapEnvelope.overall,
+    verifyOk,
+    ruleWeakening,
+    timedOut: liveResult?.timedOut ?? false,
+    errorStr,
+    nonceMismatch,
+  });
 
   const summary = {
     mode: 'live',
@@ -516,6 +634,7 @@ async function liveRun({ flowText, runId, wallClockSec }) {
     binaryAllowList: existsSync(BINARY_ALLOW_LIST_PATH) ? BINARY_ALLOW_LIST_PATH : null,
     bundleDir,
     success,
+    claimEligibility,
     reason: nonceMismatch
       ? 'run-nonce-mismatch'
       : errorStr
@@ -533,7 +652,7 @@ async function liveRun({ flowText, runId, wallClockSec }) {
     diff,
     error: errorStr,
   };
-  writeFileSync(join(bundleDir, 'report.json'), JSON.stringify(summary, null, 2));
+  persistJson(join(bundleDir, 'report.json'), summary);
   return summary;
 }
 

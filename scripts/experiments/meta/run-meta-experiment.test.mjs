@@ -2,15 +2,18 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 
 import {
+  deriveClaimEligibility,
   deleteRunNonce,
+  liveRun,
   main,
   readRunNonce,
   resolveNonceStoreDir,
+  summarizeBootstrapPreflight,
   writeRunNonce,
 } from './run-meta-experiment.mjs';
 import { computeManifest } from './compute-manifest.mjs';
@@ -99,4 +102,89 @@ test('writeRunNonce uses a private nonce store and 64-hex nonce content', () => 
     if (prev === undefined) delete process.env.PL_META_NONCE_DIR;
     else process.env.PL_META_NONCE_DIR = prev;
   }
+});
+
+test('summarizeBootstrapPreflight extracts blocked and warning items', () => {
+  const summary = summarizeBootstrapPreflight({
+    overall: 'blocked',
+    items: [
+      { id: 1, name: 'pinned runtime', status: 'blocked', detail: 'rebuild required' },
+      { id: 4, name: 'resource caps', status: 'warn', detail: 'defaults apply' },
+      { id: 8, name: 'post-run verifier', status: 'unchecked', detail: 'post-run only' },
+    ],
+    nextActions: ['do the thing'],
+  });
+
+  assert.equal(summary.overall, 'blocked');
+  assert.deepEqual(summary.blockedItems, [
+    { id: 1, name: 'pinned runtime', detail: 'rebuild required' },
+  ]);
+  assert.deepEqual(summary.warningItems, [
+    { id: 4, name: 'resource caps', detail: 'defaults apply' },
+  ]);
+  assert.deepEqual(summary.nextActions, ['do the thing']);
+});
+
+test('deriveClaimEligibility marks degraded preflight as ineligible even when the run otherwise passes', () => {
+  const eligibility = deriveClaimEligibility({
+    bootstrapOverall: 'degraded',
+    verifyOk: true,
+    ruleWeakening: false,
+    timedOut: false,
+    errorStr: null,
+    nonceMismatch: false,
+  });
+
+  assert.deepEqual(eligibility, {
+    eligible: false,
+    status: 'ineligible',
+    blockers: ['bootstrap-preflight-degraded'],
+  });
+});
+
+test('liveRun short-circuits on blocked bootstrap preflight and persists the report', async () => {
+  const bundleDir = mkdtempSync(join(tmpdir(), 'meta-live-blocked-'));
+  let launchAttempted = false;
+  const bootstrapReport = {
+    overall: 'blocked',
+    items: [{ id: 6, name: 'cross-family reviewer', status: 'blocked', detail: 'same family' }],
+    nextActions: ['pick a cross-family reviewer'],
+  };
+
+  const result = await liveRun(
+    {
+      flowText: 'Goal: blocked live run',
+      runId: 'meta-test-blocked',
+      wallClockSec: 1,
+      bundleDirOverride: bundleDir,
+    },
+    {
+      ensureCliInstalledFn: () => ({ installed: true, ranInstall: false }),
+      checkShimFn: () => ({ exists: true }),
+      checkClaudeAuthFn: () => ({ claudeBin: '/fake/claude', authenticated: true }),
+      runBootstrapPreflightFn: () => bootstrapReport,
+      runLiveFn: async () => {
+        launchAttempted = true;
+        return { exitCode: 0, signal: null, timedOut: false };
+      },
+    },
+  );
+
+  assert.equal(result.success, false);
+  assert.equal(result.reason, 'bootstrap-preflight-blocked');
+  assert.equal(result.launch.attempted, false);
+  assert.equal(launchAttempted, false, 'claude launch must not be attempted');
+  assert.deepEqual(result.claimEligibility, {
+    eligible: false,
+    status: 'ineligible',
+    blockers: ['bootstrap-preflight-blocked'],
+  });
+
+  const persisted = JSON.parse(readFileSync(join(bundleDir, 'bootstrap-preflight.json'), 'utf8'));
+  assert.deepEqual(persisted, bootstrapReport);
+  const summary = JSON.parse(readFileSync(join(bundleDir, 'report.json'), 'utf8'));
+  assert.equal(summary.reason, 'bootstrap-preflight-blocked');
+  assert.deepEqual(summary.launch.blockedBy, [
+    { id: 6, name: 'cross-family reviewer', detail: 'same family' },
+  ]);
 });

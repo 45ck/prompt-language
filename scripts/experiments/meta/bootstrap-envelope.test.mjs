@@ -73,6 +73,18 @@ test('fully-configured env plus real repo reports ready or degraded (item 8 is u
   assert.equal(byId[8].status, 'unchecked');
 });
 
+test('known different families normalize to canonical ids and item 6 is ready', () => {
+  const env = fullyConfiguredEnv();
+  env.PL_FACTORY_FAMILY = 'Claude Sonnet';
+  env.PL_REVIEWER_FAMILY = 'gpt-5';
+  const report = runPreflight({ env });
+  const item6 = report.items.find((i) => i.id === 6);
+  assert.equal(item6.status, 'ready');
+  assert.equal(item6.factoryFamily, 'anthropic');
+  assert.equal(item6.reviewerFamily, 'openai');
+  assert.match(item6.detail, /factory=anthropic reviewer=openai/);
+});
+
 test('missing dist/ → item 1 blocked and overall blocked', () => {
   const fakeRoot = mkdtempSync(join(tmpdir(), 'envelope-'));
   try {
@@ -103,12 +115,24 @@ test('unset PL_REVIEWER_FAMILY → item 6 warn, overall degraded (when no blocks
 
 test('matching factory=reviewer family → item 6 blocked, overall blocked', () => {
   const env = fullyConfiguredEnv();
-  env.PL_FACTORY_FAMILY = 'openai';
+  env.PL_FACTORY_FAMILY = 'gpt-5';
   env.PL_REVIEWER_FAMILY = 'OpenAI';
   const report = runPreflight({ env });
   const item6 = report.items.find((i) => i.id === 6);
   assert.equal(item6.status, 'blocked');
-  assert.match(item6.detail, /identical/i);
+  assert.match(item6.detail, /family separation violated/i);
+  assert.equal(report.overall, 'blocked');
+});
+
+test('unrecognized family declaration → item 6 blocked with known-family guidance', () => {
+  const env = fullyConfiguredEnv();
+  env.PL_FACTORY_FAMILY = 'open-weight';
+  const report = runPreflight({ env });
+  const item6 = report.items.find((i) => i.id === 6);
+  assert.equal(item6.status, 'blocked');
+  assert.match(item6.detail, /PL_FACTORY_FAMILY/);
+  assert.match(item6.detail, /unrecognized family/i);
+  assert.match(item6.detail, /anthropic/);
   assert.equal(report.overall, 'blocked');
 });
 

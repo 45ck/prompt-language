@@ -2617,6 +2617,40 @@ async function testAVForeachRunSource() {
   });
 }
 
+async function testBASnapshotFileCapture() {
+  // Requires the PR2 file-capture flag to be set in the harness env.
+  if (process.env.PL_SNAPSHOT_INCLUDE_FILES !== '1') {
+    console.log('  SKIP  BA: Snapshot file capture (PL_SNAPSHOT_INCLUDE_FILES unset)');
+    return;
+  }
+  await withTempDir(async (dir) => {
+    const prompt = [
+      'Goal: snapshot + rollback with file capture',
+      '',
+      'flow:',
+      '  snapshot "cp"',
+      "  run: node -e \"require('fs').writeFileSync('.prompt-language/drift.txt', 'drift')\"",
+      '  rollback to "cp"',
+      "  run: node -e \"const fs=require('fs'); fs.writeFileSync('result.txt', fs.existsSync('.prompt-language/drift.txt') ? 'present' : 'gone')\"",
+    ].join('\n');
+
+    harnessRun(prompt, dir);
+
+    let result = '';
+    try {
+      result = (await readFile(join(dir, 'result.txt'), 'utf-8')).trim();
+    } catch {
+      result = '';
+    }
+
+    assert(
+      'BA: Snapshot file capture + rollback',
+      result === 'gone',
+      `drift.txt after rollback: "${result}"`,
+    );
+  });
+}
+
 async function testAXSnapshotRollback() {
   await withTempDir(async (dir) => {
     // PR1: snapshot + rollback restore variables state-only.
@@ -2815,6 +2849,7 @@ async function main() {
   await timed('AU', 'Nested try/catch/finally', testAUNestedTryCatchFinally);
   await timed('AV', 'foreach item in run "cmd"', testAVForeachRunSource);
   await timed('AX', 'Snapshot + rollback (state-only)', testAXSnapshotRollback);
+  await timed('BA', 'Snapshot file capture (PR2, gated)', testBASnapshotFileCapture);
 
   if (!QUICK_MODE) {
     await timed('D', 'Gate evaluation', testGateEvaluation);

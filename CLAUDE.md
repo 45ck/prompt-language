@@ -88,6 +88,24 @@ Variables are interpolated via `${varName}` in prompt/run text. Unknown variable
 - `snapshot "name"` captures a state-only checkpoint (variables, currentPath, iteration counters) into `SessionState.snapshots[name]`. Duplicate names overwrite with a warning. No file capture in PR1.
 - `rollback to "name"` restores only those three fields; `spawnedChildren`, `completed`/`failed` status, `warnings`, and the trace/transition sequence are preserved so the hash chain stays monotonic. A missing snapshot pauses the flow (not `markFailed`) so a surrounding `try`/`catch` can recover.
 
+### Self-hosting primitives (PR2 — optional file capture)
+
+PR2 adds an opt-in file-capture path to `snapshot "name"` / `rollback to "name"`. Off by default; enabled per-run via `PL_SNAPSHOT_INCLUDE_FILES=1`. With the flag unset, behavior is identical to PR1.
+
+- When enabled, `snapshot "name"` tar-gzips the stateDir (excluding `.snapshots/`) into `<stateDir>/.snapshots/<sha256>.tar.gz` and attaches the sha256 ref as `filesDigestRef` on the `StateSnapshot`. Identical trees produce identical refs (content-addressed).
+- `rollback to "name"` restores the file tree when `filesDigestRef` is present. On restore failure the flow is marked failed with reason prefix `rollback files failed: ...`; PR1 state-only restore has already applied, so the operator sees divergence rather than continuing on a half-restored workspace.
+- Size cap: `PL_SNAPSHOT_MAX_MB` (default 10). Captures over-cap fail with an exact `snapshot capture exceeds PL_SNAPSHOT_MAX_MB cap of <N> MB; measured <M> MB under <stateDir>` error.
+- Storage location override: `PL_SNAPSHOT_STORE_DIR` redirects tarballs outside the stateDir (useful for CI scratch volumes).
+- **Destructive restore caveat:** `rollback to` with `PL_SNAPSHOT_INCLUDE_FILES=1` deletes any modified files inside `stateDir` that are not part of the captured tree before moving the extracted contents back in. You will lose uncommitted workspace edits under `stateDir` on restore. The env flag plus the explicit `rollback to` DSL gesture both act as opt-in guards.
+- Windows: paths over 260 chars are rejected at capture time with the offending path in the error message rather than silently truncated.
+
+Key implementation files (PR2):
+
+- `src/application/ports/snapshot-store.ts` — `SnapshotStorePort`, `NullSnapshotStore` default
+- `src/application/ports/env-reader.ts` — `EnvReaderPort` so advance-flow reads env flags through a testable port, not `process.env` directly
+- `src/infrastructure/adapters/file-snapshot-store.ts` — tar-gzip adapter with sha256 refs, per-stateDir advisory lock, extract-then-swap restore, stale-marker recovery
+- `src/infrastructure/adapters/process-env-reader.ts` — `process.env` wrapper
+
 ### Security note
 
 `interpolate()` performs raw substitution — use `shellInterpolate()` for `run:` commands. It wraps substituted values in single-quotes to prevent shell injection.
@@ -188,6 +206,7 @@ The automated script (`scripts/eval/smoke-test.mjs`) builds, installs the plugin
 - **AV: foreach in run** — `foreach item in run "cmd"` iterates over command stdout tokens
 - **AW: Labeled break exits outer loop** — `break outer` unwinds nested loops and exits labeled ancestor
 - **AX: Snapshot + rollback (state-only)** — `snapshot "name"` + `rollback to "name"` restores variables-only
+- **BA: Snapshot file capture (PR2, gated)** — with `PL_SNAPSHOT_INCLUDE_FILES=1`, `snapshot` tarballs the stateDir and `rollback` removes drift files created after the snapshot; skipped when the env flag is unset
 - **Z1: List-length drift** — `let x = []` + foreach append writes `items_length` through each iteration
 - **Z2: Nonce propagation** — runtime UUID flows through multiple `run:` nodes and matches state
 - **Z3: Capture-gated branch** — `if coin == "HEADS"` branch selection depends on live prompt capture

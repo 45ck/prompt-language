@@ -239,3 +239,23 @@ test('rework units at the normalizer ceiling zero out the rework term', () => {
   // Index = 100*(0.15+0.2+0.15+0.5*0) = 50
   assert.equal(pl.maintenanceViabilityIndex, 50);
 });
+
+test('missing admissibility.crossFamilyReviewer defaults to not-requested', () => {
+  const input = makeScorecard();
+  delete input.admissibility.crossFamilyReviewer;
+
+  const { scorecard } = scoreScorecard(input);
+  assert.equal(scorecard.admissibility.crossFamilyReviewer, 'not-requested');
+});
+
+test('object-form admissibility.crossFamilyReviewer is normalized to its status', () => {
+  const input = makeScorecard();
+  input.admissibility.crossFamilyReviewer = {
+    status: 'pass',
+    reviewerFamily: 'openai',
+    factoryFamily: 'anthropic',
+  };
+
+  const { scorecard } = scoreScorecard(input);
+  assert.equal(scorecard.admissibility.crossFamilyReviewer, 'pass');
+});

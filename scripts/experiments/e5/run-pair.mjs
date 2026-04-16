@@ -22,6 +22,7 @@ import { runChangeRequest } from './run-change-request.mjs';
 import { runJourneySuite } from './run-journey-suite.mjs';
 import { verifyBlinding } from './verify-blinding.mjs';
 import { scoreScorecard } from './score-scorecard.mjs';
+import { runCrossFamilyReview } from '../meta/cross-family-review.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '..', '..', '..');
@@ -38,6 +39,8 @@ const STAGE_DESCRIPTIONS = {
   'factory-codex': 'Build workspace via codex-alone factory lane',
   'factory-pl': 'Build workspace via prompt-language factory lane',
   'gate-family-1-2-3': 'Run journey-suite gate against lane workspaces',
+  'cross-family-review':
+    'Run an explicit cross-family reviewer against gated lane workspaces and abort on veto',
   'blind-handoff': 'Strip identity artifacts, git-init baseline, and verify blinding for each lane',
   'maintenance-codex-tree': 'Apply change requests to stripped codex workspace',
   'maintenance-pl-tree': 'Apply change requests to stripped pl workspace',
@@ -56,6 +59,7 @@ export function createStageHandlers() {
     'factory-codex': runFactoryCodex,
     'factory-pl': runFactoryPl,
     'gate-family-1-2-3': runGate,
+    'cross-family-review': runCrossFamilyReviewStage,
     'blind-handoff': runBlindHandoff,
     'maintenance-codex-tree': runMaintenance('codex-workspace'),
     'maintenance-pl-tree': runMaintenance('pl-workspace'),
@@ -158,15 +162,190 @@ async function runFactoryPl(stage, ctx) {
 async function runGate(stage, ctx) {
   const targets = stage.appliesTo ?? ['codex-workspace', 'pl-workspace'];
   const report = {};
+  const blockingIssues = [];
   for (const target of targets) {
     const workspace = join(ctx.runDir, target);
     if (!existsSync(workspace)) {
       report[target] = { gateStatus: 'skipped-no-workspace' };
+      blockingIssues.push({
+        target,
+        kind: 'missing-workspace',
+        detail: `workspace missing: ${workspace}`,
+      });
       continue;
     }
     report[target] = await invokeHarness(stage.harness, workspace);
+    const issue = classifyGateIssue(target, report[target]);
+    if (issue) blockingIssues.push(issue);
   }
-  await writeFile(join(ctx.runDir, 'gate-report.json'), JSON.stringify(report, null, 2));
+  const overallStatus = blockingIssues.some((issue) => issue.kind === 'pending-manual-review')
+    ? 'blocked-manual-review'
+    : blockingIssues.length > 0
+      ? 'failed'
+      : 'passed';
+  const artifact = {
+    overallStatus,
+    harness: stage.harness,
+    targets: report,
+    blockingIssues,
+  };
+  await writeFile(join(ctx.runDir, 'gate-report.json'), JSON.stringify(artifact, null, 2));
+  if (blockingIssues.length > 0) {
+    const summary = blockingIssues
+      .map((issue) => `${issue.target}: ${issue.kind}${issue.detail ? ` (${issue.detail})` : ''}`)
+      .join('; ');
+    throw new Error(`gate-family-1-2-3 did not clear: ${summary}`);
+  }
+}
+
+async function runCrossFamilyReviewStage(stage, ctx) {
+  const reviewer = stage.reviewer ?? {};
+  const reviewerFamily = reviewer.family ?? stage.reviewerFamily;
+  const reviewerModel = reviewer.model ?? stage.reviewerModel;
+  const reviewerBin = reviewer.bin ?? stage.reviewerBin;
+  if (!reviewerFamily || !reviewerModel) {
+    throw new Error(
+      'cross-family-review stage requires reviewer family and reviewer model configuration',
+    );
+  }
+
+  const appliesTo = stage.appliesTo ?? [];
+  if (!Array.isArray(appliesTo) || appliesTo.length === 0) {
+    throw new Error('cross-family-review stage requires at least one appliesTo entry');
+  }
+
+  const artifactPath = join(ctx.runDir, 'cross-family-review-report.json');
+  const artifact = {
+    reviewer: {
+      family: reviewerFamily,
+      model: reviewerModel,
+      bin: reviewerBin ?? 'claude',
+    },
+    overallStatus: 'passed',
+    results: {},
+  };
+
+  for (const item of appliesTo) {
+    const target = normalizeCrossFamilyTarget(item, stage);
+    const workspace = join(ctx.runDir, target.workspace);
+    if (!existsSync(workspace)) {
+      artifact.overallStatus = 'failed';
+      artifact.results[target.workspace] = {
+        verdict: 'error',
+        reasons: [`workspace missing: ${workspace}`],
+        factoryFamily: target.factoryFamily,
+        factoryModel: target.factoryModel ?? null,
+        reviewerFamily,
+        reviewerModel,
+        familySeparationValid: false,
+      };
+      await writeFile(artifactPath, JSON.stringify(artifact, null, 2));
+      throw new Error(`cross-family-review aborted: workspace missing for ${target.workspace}`);
+    }
+
+    const result = await runCrossFamilyReview({
+      bundleDir: workspace,
+      reviewerFamily,
+      reviewerModel,
+      reviewerBin,
+      factoryFamily: target.factoryFamily,
+      flowFile: target.flowFile,
+    });
+    artifact.results[target.workspace] = {
+      ...result,
+      factoryModel: target.factoryModel ?? null,
+      artifactPath: join(workspace, 'cross-family-review.json'),
+    };
+
+    if (result.verdict !== 'approve') {
+      artifact.overallStatus = 'failed';
+      await writeFile(artifactPath, JSON.stringify(artifact, null, 2));
+      throw new Error(
+        `cross-family-review aborted for ${target.workspace}: ${result.verdict} (${result.reasons.join('; ')})`,
+      );
+    }
+  }
+
+  await writeFile(artifactPath, JSON.stringify(artifact, null, 2));
+  ctx.log('  cross-family-review: approve');
+}
+
+function normalizeCrossFamilyTarget(item, stage) {
+  if (typeof item === 'string') {
+    return {
+      workspace: item,
+      factoryFamily: stage.factoryFamily,
+      factoryModel: stage.factoryModel,
+      flowFile: stage.flowFile,
+    };
+  }
+  const workspace = item.workspace ?? item.target;
+  if (!workspace) {
+    throw new Error('cross-family-review appliesTo entries must include workspace');
+  }
+  const factoryFamily = item.factoryFamily ?? stage.factoryFamily;
+  if (!factoryFamily) {
+    throw new Error(`cross-family-review missing factoryFamily for ${workspace}`);
+  }
+  return {
+    workspace,
+    factoryFamily,
+    factoryModel: item.factoryModel ?? stage.factoryModel,
+    flowFile: item.flowFile ?? stage.flowFile,
+  };
+}
+
+function classifyGateIssue(target, result) {
+  if (!result || typeof result !== 'object') {
+    return {
+      target,
+      kind: 'invalid-gate-report',
+      detail: 'harness returned no structured report',
+    };
+  }
+  if (result.gateStatus === 'harness-missing') {
+    return {
+      target,
+      kind: 'harness-missing',
+      detail: result.harness,
+    };
+  }
+  if (result.exitCode !== undefined && result.exitCode !== 0) {
+    return {
+      target,
+      kind: 'harness-exit-nonzero',
+      detail: `exitCode=${result.exitCode}`,
+    };
+  }
+  if (result.gateStatus === 'failed') {
+    return {
+      target,
+      kind: 'failed-gate',
+      detail: result.notes ?? 'journey-suite reported failed',
+    };
+  }
+  if (result.gateStatus === 'pending-manual-review') {
+    return {
+      target,
+      kind: 'pending-manual-review',
+      detail: 'manual evidence still required before this lane can clear family 1-3',
+    };
+  }
+  if (result.gateStatus === 'passed') {
+    return null;
+  }
+  if (result.gateStatus === 'skipped-no-workspace') {
+    return {
+      target,
+      kind: 'missing-workspace',
+      detail: 'gate skipped because workspace was missing',
+    };
+  }
+  return {
+    target,
+    kind: 'unexpected-gate-status',
+    detail: String(result.gateStatus ?? 'undefined'),
+  };
 }
 
 async function runBlindHandoff(stage, ctx) {

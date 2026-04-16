@@ -114,6 +114,38 @@ function writeState(path, state) {
   writeFileSync(path, JSON.stringify(state, null, 2), 'utf8');
 }
 
+function rebuildChain(entries) {
+  const rebuilt = entries.map((entry, index) => {
+    const next = { ...entry, seq: index, prevEventHash: index === 0 ? null : undefined };
+    return next;
+  });
+  let prev = null;
+  for (let i = 0; i < rebuilt.length; i += 1) {
+    rebuilt[i].prevEventHash = prev;
+    delete rebuilt[i].eventHash;
+    rebuilt[i].eventHash = hashEvent(rebuilt[i]);
+    prev = rebuilt[i].eventHash;
+  }
+  return rebuilt;
+}
+
+function withReviewerFamily(entries, reviewerFamily, index = 0) {
+  const updated = entries.map((entry, entryIndex) => {
+    if (entryIndex !== index) return { ...entry };
+    return {
+      ...entry,
+      evidence: {
+        ...(entry.evidence ?? {}),
+        reviewer: {
+          ...(entry.evidence?.reviewer ?? {}),
+          family: reviewerFamily,
+        },
+      },
+    };
+  });
+  return rebuildChain(updated);
+}
+
 function runVerifier(tracePath, extraArgs = []) {
   // Legacy entry point used by T1–T8. They exercise chain/witness semantics
   // that predate the AP-1/AP-2 --state mandate, so we default to
@@ -497,5 +529,45 @@ test('T16 allow-missing-state: OK line carries (state-check-skipped) annotation'
     r.stdout,
     /state-check-skipped/,
     `expected (state-check-skipped) annotation; stdout=${r.stdout}`,
+  );
+});
+
+test('T17 expected-reviewer-family: matching reviewer.family evidence passes', () => {
+  const f = freshFixture('T17');
+  writeTrace(f.tracePath, withReviewerFamily(f.entries, 'openai'));
+
+  const r = runVerifier(f.tracePath, ['--expected-reviewer-family', 'openai']);
+  assert.equal(
+    r.status,
+    0,
+    `expected exit 0 for matching reviewer family; out=${combinedOutput(r)}`,
+  );
+  assert.match(r.stdout, /verify-trace OK/);
+});
+
+test('T18 expected-reviewer-family: missing reviewer.family evidence is rejected', () => {
+  const f = freshFixture('T18');
+
+  const r = runVerifier(f.tracePath, ['--expected-reviewer-family', 'openai']);
+  assert.notEqual(r.status, 0, 'expected non-zero exit for missing reviewer family evidence');
+  const out = combinedOutput(r);
+  assert.match(
+    out,
+    /expected-reviewer-family-missing/i,
+    `expected reviewer-family-missing diagnostic; out=${out}`,
+  );
+});
+
+test('T19 expected-reviewer-family: mismatched reviewer.family evidence is rejected', () => {
+  const f = freshFixture('T19');
+  writeTrace(f.tracePath, withReviewerFamily(f.entries, 'anthropic'));
+
+  const r = runVerifier(f.tracePath, ['--expected-reviewer-family', 'openai']);
+  assert.notEqual(r.status, 0, 'expected non-zero exit for reviewer family mismatch');
+  const out = combinedOutput(r);
+  assert.match(
+    out,
+    /expected-reviewer-family-mismatch/i,
+    `expected reviewer-family-mismatch diagnostic; out=${out}`,
   );
 });

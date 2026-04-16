@@ -36,6 +36,7 @@
   "admissibility": {
     "class": "supporting-context",
     "buildGatesPassed": false,
+    "crossFamilyReviewer": "not-requested",
     "claimEligibility": {
       "maintenanceViability": false
     },

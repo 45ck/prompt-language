@@ -18,6 +18,8 @@
  *                                   outside now() +/- N ms.
  *   --expected-pair-count <N>       Reject if count of runtime/shim pairs != N.
  *   --min-entries <N>               Reject if total entry count < N.
+ *   --expected-reviewer-family <id> Reject unless trace evidence carries a
+ *                                   consistent reviewer.family matching <id>.
  *   --expected-binary-hashes <file> JSON file { binaryName: [sha256, ...] }.
  *                                   Reject shim_invocation_* entries whose
  *                                   binarySha256 is not in the allow-list.
@@ -38,7 +40,8 @@
  *   f. (Optional) first entry timestamp within --freshness-window-ms.
  *   g. (Optional) exactly --expected-pair-count runtime/shim pairs.
  *   h. (Optional) at least --min-entries total entries.
- *   i. (Optional) every shim binarySha256 is in --expected-binary-hashes.
+ *   i. (Optional) trace evidence carries reviewer.family == --expected-reviewer-family.
+ *   j. (Optional) every shim binarySha256 is in --expected-binary-hashes.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
@@ -54,6 +57,7 @@ function parseArgs(argv) {
     freshnessWindowMs: null,
     expectedPairCount: null,
     minEntries: null,
+    expectedReviewerFamily: null,
     expectedBinaryHashes: null,
     flow: null,
     json: false,
@@ -67,6 +71,7 @@ function parseArgs(argv) {
     else if (a === '--freshness-window-ms') out.freshnessWindowMs = Number(argv[++i]);
     else if (a === '--expected-pair-count') out.expectedPairCount = Number(argv[++i]);
     else if (a === '--min-entries') out.minEntries = Number(argv[++i]);
+    else if (a === '--expected-reviewer-family') out.expectedReviewerFamily = argv[++i];
     else if (a === '--expected-binary-hashes') out.expectedBinaryHashes = argv[++i];
     else if (a === '--flow') out.flow = argv[++i];
     else if (a === '--json') out.json = true;
@@ -79,6 +84,7 @@ function parseArgs(argv) {
           '  --freshness-window-ms <N>\n' +
           '  --expected-pair-count <N>\n' +
           '  --min-entries <N>\n' +
+          '  --expected-reviewer-family <family>\n' +
           '  --expected-binary-hashes <file>\n' +
           '  --json\n',
       );
@@ -214,6 +220,48 @@ function findLastStateAfterHash(entries) {
     if (typeof h === 'string' && h.length > 0) return h;
   }
   return null;
+}
+
+function getReviewerFamilyEvidence(entry) {
+  const candidates = [
+    entry?.evidence?.reviewer?.family,
+    entry?.reviewer?.family,
+    entry?.review?.reviewerFamily,
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate.trim();
+    }
+  }
+  return null;
+}
+
+function checkExpectedReviewerFamily(entries, expectedFamily) {
+  const observed = new Set();
+  for (const entry of entries) {
+    const family = getReviewerFamilyEvidence(entry);
+    if (family) observed.add(family);
+  }
+  if (observed.size === 0) {
+    return {
+      ok: false,
+      error: 'expected-reviewer-family-missing: no reviewer.family evidence found in trace entries',
+    };
+  }
+  if (observed.size > 1) {
+    return {
+      ok: false,
+      error: `expected-reviewer-family-conflict: multiple reviewer.family values present (${[...observed].join(', ')})`,
+    };
+  }
+  const [actual] = observed;
+  if (actual !== expectedFamily) {
+    return {
+      ok: false,
+      error: `expected-reviewer-family-mismatch: trace carries reviewer.family=${actual}, expected ${expectedFamily}`,
+    };
+  }
+  return { ok: true, reviewerFamily: actual };
 }
 
 function loadBinaryAllowList(filePath) {
@@ -428,6 +476,16 @@ async function main() {
       result.errors.push(
         `min-entries-not-met: trace has ${result.entryCount} entries, need at least ${args.minEntries}`,
       );
+    }
+  }
+
+  if (args.expectedReviewerFamily !== null) {
+    const reviewerFamilyCheck = checkExpectedReviewerFamily(entries, args.expectedReviewerFamily);
+    if (!reviewerFamilyCheck.ok) {
+      result.ok = false;
+      result.errors.push(reviewerFamilyCheck.error);
+    } else {
+      result.reviewerFamily = reviewerFamilyCheck.reviewerFamily;
     }
   }
 

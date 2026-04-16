@@ -7,8 +7,9 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 
@@ -53,6 +54,26 @@ async function loadManifests() {
   return manifests;
 }
 
+async function createRunDir(workspaces = ['codex-workspace', 'pl-workspace']) {
+  const runDir = await mkdtemp(join(tmpdir(), 'run-pair-'));
+  for (const workspace of workspaces) {
+    await mkdir(join(runDir, workspace), { recursive: true });
+  }
+  return runDir;
+}
+
+async function createHarnessScript(report, exitCode = 0) {
+  const dir = await mkdtemp(join(tmpdir(), 'gate-harness-'));
+  const scriptPath = join(dir, 'harness.mjs');
+  const script = [
+    '#!/usr/bin/env node',
+    `process.stdout.write(${JSON.stringify(`${JSON.stringify(report)}\n`)});`,
+    `process.exit(${exitCode});`,
+  ].join('\n');
+  await writeFile(scriptPath, script, 'utf8');
+  return scriptPath;
+}
+
 test('createStageHandlers returns exactly the handler keys declared in the module', () => {
   const handlers = createStageHandlers();
   const keys = Object.keys(handlers).sort();
@@ -81,6 +102,17 @@ test('every stage.stage in each pair manifest is wired to a handler', async () =
         `${file}: stage "${stage.stage}" has no handler (known: ${[...handlerKeys].join(', ')})`,
       );
     }
+  }
+});
+
+test('pair manifests place cross-family-review immediately after gate-family-1-2-3', async () => {
+  const manifests = await loadManifests();
+  for (const { file, manifest } of manifests) {
+    const stages = manifest.stages.map((stage) => stage.stage);
+    const gateIndex = stages.indexOf('gate-family-1-2-3');
+    const reviewIndex = stages.indexOf('cross-family-review');
+    assert.notEqual(gateIndex, -1, `${file}: gate-family-1-2-3 missing`);
+    assert.equal(reviewIndex, gateIndex + 1, `${file}: cross-family-review must follow gate`);
   }
 });
 
@@ -151,6 +183,112 @@ test('createPlan emits stage descriptions and workspace paths', async () => {
   assert.match(text, /pair:/);
   assert.match(text, /stages:/);
   assert.match(text, /workspace paths/);
+});
+
+test('gate-family-1-2-3 fails loudly when the harness is missing', async () => {
+  const handlers = createStageHandlers();
+  const runDir = await createRunDir();
+  const missingHarness = join(runDir, 'missing-harness.mjs');
+  await assert.rejects(
+    () =>
+      handlers['gate-family-1-2-3'](
+        {
+          stage: 'gate-family-1-2-3',
+          appliesTo: ['codex-workspace'],
+          harness: missingHarness,
+        },
+        { runDir, log: () => {} },
+      ),
+    /harness-missing/,
+  );
+
+  const artifact = JSON.parse(await readFile(join(runDir, 'gate-report.json'), 'utf8'));
+  assert.equal(artifact.overallStatus, 'failed');
+  assert.equal(artifact.targets['codex-workspace'].gateStatus, 'harness-missing');
+});
+
+test('gate-family-1-2-3 keeps pending-manual-review distinct from a true pass', async () => {
+  const handlers = createStageHandlers();
+  const runDir = await createRunDir();
+  const harness = await createHarnessScript({
+    gateStatus: 'pending-manual-review',
+    notes: 'manual evidence still required',
+  });
+
+  await assert.rejects(
+    () =>
+      handlers['gate-family-1-2-3'](
+        {
+          stage: 'gate-family-1-2-3',
+          appliesTo: ['codex-workspace'],
+          harness,
+        },
+        { runDir, log: () => {} },
+      ),
+    /pending-manual-review/,
+  );
+
+  const artifact = JSON.parse(await readFile(join(runDir, 'gate-report.json'), 'utf8'));
+  assert.equal(artifact.overallStatus, 'blocked-manual-review');
+  assert.equal(artifact.targets['codex-workspace'].gateStatus, 'pending-manual-review');
+});
+
+test('gate-family-1-2-3 rejects a harness that exits non-zero even if it prints JSON', async () => {
+  const handlers = createStageHandlers();
+  const runDir = await createRunDir();
+  const harness = await createHarnessScript({ gateStatus: 'passed' }, 7);
+
+  await assert.rejects(
+    () =>
+      handlers['gate-family-1-2-3'](
+        {
+          stage: 'gate-family-1-2-3',
+          appliesTo: ['codex-workspace'],
+          harness,
+        },
+        { runDir, log: () => {} },
+      ),
+    /harness-exit-nonzero/,
+  );
+
+  const artifact = JSON.parse(await readFile(join(runDir, 'gate-report.json'), 'utf8'));
+  assert.equal(artifact.overallStatus, 'failed');
+  assert.equal(artifact.targets['codex-workspace'].exitCode, 7);
+});
+
+test('cross-family-review aborts on same-family pairing and writes a stage artifact', async () => {
+  const handlers = createStageHandlers();
+  const runDir = await createRunDir(['codex-workspace']);
+  await writeFile(join(runDir, 'codex-workspace', 'README.md'), '# sample workspace\n', 'utf8');
+
+  await assert.rejects(
+    () =>
+      handlers['cross-family-review'](
+        {
+          stage: 'cross-family-review',
+          reviewer: {
+            family: 'openai',
+            model: 'gpt-5.2',
+          },
+          appliesTo: [
+            {
+              workspace: 'codex-workspace',
+              factoryFamily: 'openai',
+              factoryModel: 'gpt-5.2',
+            },
+          ],
+        },
+        { runDir, log: () => {} },
+      ),
+    /Family separation violated|cross-family-review aborted/,
+  );
+
+  const artifact = JSON.parse(
+    await readFile(join(runDir, 'cross-family-review-report.json'), 'utf8'),
+  );
+  assert.equal(artifact.overallStatus, 'failed');
+  assert.equal(artifact.results['codex-workspace'].verdict, 'error');
+  assert.equal(artifact.results['codex-workspace'].factoryFamily, 'openai');
 });
 
 test('--plan subprocess prints stage list for each pair manifest and exits 0', async () => {

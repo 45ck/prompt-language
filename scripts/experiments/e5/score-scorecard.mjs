@@ -36,6 +36,13 @@ export const CONSTANTS = Object.freeze({
   pairVerdictMarginPoints: 5,
 });
 
+export const CROSS_FAMILY_REVIEWER_STATUSES = Object.freeze([
+  'pass',
+  'downgrade',
+  'fail',
+  'not-requested',
+]);
+
 // ---------------------------------------------------------------------------
 // Pure helpers.
 
@@ -71,6 +78,21 @@ function countMissingProbes(persistence) {
     if (persistence[key] !== true) missing += 1;
   }
   return missing;
+}
+
+export function normalizeCrossFamilyReviewerStatus(value) {
+  if (typeof value === 'string' && CROSS_FAMILY_REVIEWER_STATUSES.includes(value)) {
+    return value;
+  }
+  if (
+    value &&
+    typeof value === 'object' &&
+    typeof value.status === 'string' &&
+    CROSS_FAMILY_REVIEWER_STATUSES.includes(value.status)
+  ) {
+    return value.status;
+  }
+  return 'not-requested';
 }
 
 // ---------------------------------------------------------------------------
@@ -307,6 +329,9 @@ export function scoreScorecard(scorecard) {
   out.comparativeVerdict = pair.verdict;
   out.comparativeSummary = pair.reason;
   if (!out.admissibility) out.admissibility = {};
+  out.admissibility.crossFamilyReviewer = normalizeCrossFamilyReviewerStatus(
+    out.admissibility.crossFamilyReviewer,
+  );
   out.admissibility.buildGatesPassed = laneSummaries.every((s) => s.gating.eligibleForFamilyFour);
   out.admissibility.reason = pair.reason;
 

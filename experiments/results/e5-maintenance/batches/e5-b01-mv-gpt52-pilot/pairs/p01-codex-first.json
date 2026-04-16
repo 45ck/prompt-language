@@ -24,6 +24,29 @@
       "failureHandling": "classify pair build-failed for that lane; still hand off for family-4 on pass side"
     },
     {
+      "stage": "cross-family-review",
+      "reviewer": {
+        "family": "anthropic",
+        "model": "claude-sonnet-4-6",
+        "bin": "claude"
+      },
+      "appliesTo": [
+        {
+          "workspace": "codex-workspace",
+          "factoryLane": "codex-alone",
+          "factoryModel": "gpt-5.2",
+          "factoryFamily": "openai"
+        },
+        {
+          "workspace": "pl-workspace",
+          "factoryLane": "prompt-language",
+          "factoryModel": "gpt-5.2",
+          "factoryFamily": "openai"
+        }
+      ],
+      "failureHandling": "same-family pairing, reviewer error, or reviewer veto aborts the pair before blind handoff"
+    },
+    {
       "stage": "blind-handoff",
       "strip": [
         "*.flow",

@@ -21,12 +21,7 @@ function test(name, fn) {
 // does not author. Aider writes its chat history to .aider.chat.history.md
 // (which includes the rendered flow text containing "Contact"); PL writes
 // session state under .prompt-language/; pnpm/npm may drop lockfiles.
-const EXCLUDE_DIRS = new Set([
-  'node_modules',
-  '.prompt-language',
-  '.aider.tags.cache.v3',
-  '.git',
-]);
+const EXCLUDE_DIRS = new Set(['node_modules', '.prompt-language', '.aider.tags.cache.v3', '.git']);
 const EXCLUDE_FILE_PREFIXES = ['.aider.'];
 
 function getAllFiles(dir, ext) {

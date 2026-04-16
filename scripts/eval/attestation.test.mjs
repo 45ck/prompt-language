@@ -842,6 +842,95 @@ test('T26 trust-root pin: tampered trusted-signers.json is rejected', () => {
   );
 });
 
+test('T28 attest --keygen emits 0600 key + audit log is appended on sign', async () => {
+  // NF2 + G2: keygen must create private key with mode 0600 on POSIX;
+  // on Windows the perm check is advisory and the warning is surfaced
+  // via stderr. The subsequent sign call must append to the audit log.
+  const workDir = mkdtempSync(join(tmpdir(), 'pl-attestation-T28-'));
+  const auditLogPath = join(workDir, 'audit.jsonl');
+  const keyOutDir = join(workDir, 'keys');
+
+  const keygen = spawnSync(
+    NODE_EXE,
+    [ATTEST, '--keygen', '--signer', 'operator-T28', '--keygen-out', keyOutDir, '--json'],
+    { encoding: 'utf8', env: { ...process.env, PL_ATTEST_LOG_PATH: auditLogPath } },
+  );
+  assert.equal(keygen.status, 0, `keygen failed: ${combinedOutput(keygen)}`);
+  const keyInfo = JSON.parse(keygen.stdout);
+  assert.ok(existsSync(keyInfo.privateKeyPath));
+
+  if (process.platform !== 'win32') {
+    const { statSync } = await import('node:fs');
+    const mode = statSync(keyInfo.privateKeyPath).mode;
+    assert.equal(mode & 0o077, 0, 'private key must not be accessible to group/other');
+  } else {
+    // On Windows the warning is the only enforcement mechanism. Check
+    // that the keygen output mentions the advisory note.
+    assert.match(
+      keygen.stderr,
+      /advisory|NTFS|warning/i,
+      `expected Windows advisory warning; stderr=${keygen.stderr}`,
+    );
+  }
+
+  // Sign a real fixture bundle using the generated key; confirm audit log.
+  const fixture = createAttestationFixture('T28-sign');
+  // Swap the fixture's registry entry to reference the keygen-generated pubkey.
+  const reg = JSON.parse(readFileSync(fixture.trustedSignersPath, 'utf8'));
+  reg.signers = [
+    {
+      signerId: 'operator-T28',
+      role: 'operator',
+      publicKey: keyInfo.publicKeyBase64,
+      validFrom: '2026-04-01T00:00:00Z',
+      validUntil: null,
+    },
+  ];
+  writeFileSync(fixture.trustedSignersPath, JSON.stringify(reg, null, 2), 'utf8');
+
+  const sign = spawnSync(
+    NODE_EXE,
+    [
+      ATTEST,
+      '--bundle',
+      fixture.dir,
+      '--signer',
+      'operator-T28',
+      '--key',
+      keyInfo.privateKeyPath,
+      '--trusted-signers',
+      fixture.trustedSignersPath,
+      '--force-replace',
+      '--json',
+    ],
+    { encoding: 'utf8', env: { ...process.env, PL_ATTEST_LOG_PATH: auditLogPath } },
+  );
+  assert.equal(sign.status, 0, `sign failed: ${combinedOutput(sign)}`);
+
+  const auditRaw = readFileSync(auditLogPath, 'utf8').trim().split(/\r?\n/);
+  assert.ok(auditRaw.length >= 1, 'audit log must have at least 1 entry');
+  const lastLine = JSON.parse(auditRaw[auditRaw.length - 1]);
+  assert.equal(lastLine.signerId, 'operator-T28');
+  assert.equal(lastLine.bundleDir, fixture.dir);
+  assert.ok(typeof lastLine.payloadSha256 === 'string' && lastLine.payloadSha256.length === 64);
+});
+
+test('T29 PL_META_SIGN=1 refuses without PL_META_SIGNER_ID', async () => {
+  // NF4 / prompt-kv57.4: direct unit test against the policy helper.
+  const { enforceMetaSignPolicy } = await import('../experiments/meta/run-meta-experiment.mjs');
+  assert.throws(
+    () => enforceMetaSignPolicy({ PL_META_SIGN: '1' }),
+    /PL_META_SIGN=1 requires PL_META_SIGNER_ID with role in \{operator, ci\}/,
+  );
+  assert.throws(
+    () => enforceMetaSignPolicy({ PL_META_SIGN: '1', PL_META_SIGNER_ID: 'dev-local' }),
+    /not found in .*trusted-signers\.json|has role=|no default is accepted/,
+  );
+  // Default (no opt-in) must succeed and report disabled.
+  const result = enforceMetaSignPolicy({});
+  assert.deepEqual(result, { enabled: false });
+});
+
 test('T27 verify-trace OK line surfaces trust-root sha256', () => {
   // G1 / prompt-kv57.6: the OK line must include a trust-root=sha256:<hex8>
   // suffix so an auditor can confirm which registry file was consulted.

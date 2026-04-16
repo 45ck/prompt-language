@@ -656,7 +656,61 @@ export async function liveRun(
   return summary;
 }
 
+/**
+ * NF4 / prompt-kv57.4: `PL_META_SIGN=1` opt-in causes the harness to sign
+ * the run's bundle on completion. It MUST refuse to run unless the
+ * operator has explicitly set `PL_META_SIGNER_ID` AND the looked-up
+ * registry role is {operator, ci}. This closes the accidental
+ * claim-eligibility path where a local dev run could silently self-attest
+ * under a `dev-local` default signer.
+ *
+ * Exit 2 on policy violation so the harness fails fast and loud rather
+ * than silently skipping signing or — worse — signing under an
+ * inappropriate role.
+ */
+export function enforceMetaSignPolicy(env = process.env) {
+  const flag = String(env.PL_META_SIGN ?? '').trim();
+  if (flag !== '1') return { enabled: false };
+  const signerId = String(env.PL_META_SIGNER_ID ?? '').trim();
+  if (!signerId) {
+    throw new Error('PL_META_SIGN=1 requires PL_META_SIGNER_ID with role in {operator, ci}');
+  }
+  const registryPath = resolve(REPO_ROOT, 'docs', 'security', 'trusted-signers.json');
+  if (!existsSync(registryPath)) {
+    throw new Error(`PL_META_SIGN=1 requires ${registryPath}; file is missing`);
+  }
+  let registry;
+  try {
+    registry = JSON.parse(readFileSync(registryPath, 'utf8'));
+  } catch (err) {
+    throw new Error(`PL_META_SIGN=1: cannot parse ${registryPath}: ${err.message}`);
+  }
+  const entry = (registry?.signers ?? []).find((s) => s?.signerId === signerId);
+  if (!entry) {
+    throw new Error(
+      `PL_META_SIGN=1: signer ${signerId} not found in ${registryPath}; no default is accepted`,
+    );
+  }
+  if (entry.role !== 'operator' && entry.role !== 'ci') {
+    throw new Error(
+      `PL_META_SIGN=1 requires PL_META_SIGNER_ID with role in {operator, ci}; ` +
+        `${signerId} has role=${entry.role}`,
+    );
+  }
+  return { enabled: true, signerId, signerRole: entry.role };
+}
+
 export async function main(argv = process.argv.slice(2)) {
+  // NF4: fail fast if PL_META_SIGN=1 is set without a valid registered
+  // operator/ci signer. This must run BEFORE the flow even parses so an
+  // operator cannot pipe through an untrusted signer.
+  try {
+    enforceMetaSignPolicy();
+  } catch (err) {
+    log(err.message);
+    process.exit(2);
+  }
+
   const args = argv.filter((a) => !a.startsWith('--'));
   const flags = new Set(argv.filter((a) => a.startsWith('--')));
   if (args.length < 1) {

@@ -999,8 +999,7 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
       ).href
     ),
     import(
-      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-snapshot-store.js'))
-        .href
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-snapshot-store.js')).href
     ),
     import(pathToFileURL(join(ROOT, 'dist', 'application', 'ports', 'snapshot-store.js')).href),
     import(

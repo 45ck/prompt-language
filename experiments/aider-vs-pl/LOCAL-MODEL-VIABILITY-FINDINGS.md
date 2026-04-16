@@ -7,11 +7,11 @@ Companion docs: [`EVIDENCE-CONSOLIDATION.md`](EVIDENCE-CONSOLIDATION.md) (full m
 
 ## 1. Short answer
 
-| Model class | Size (active params) | Solo aider | Real PL (`ci --runner aider`) | Viable with PL? |
-| --- | --- | --- | --- | --- |
-| Gemma4 small (MoE) | ~2B active (e2b) | **1/11** — degenerate comment loop | **3/11** — flow aborted mid-step (PL runtime bugs) | **No** on this host — blocked by PL defects before thesis can be tested |
-| Gemma4 small (MoE) | ~4B active (e4b) | **1/11** — aider parsed 0-byte file | **3/11** — flow aborted mid-step | **No** on this host — same blocker |
-| Qwen3 30B (MoE) | ~3B active of 30B total | **11/11** on E-SMALL CSV task | — (not run on E-SMALL real-PL arm; see H11 below) | Yes on easy tasks; **2/12** solo / **3/12** PL on H11 harder task |
+| Model class        | Size (active params)    | Solo aider                          | Real PL (`ci --runner aider`)                      | Viable with PL?                                                         |
+| ------------------ | ----------------------- | ----------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- |
+| Gemma4 small (MoE) | ~2B active (e2b)        | **1/11** — degenerate comment loop  | **3/11** — flow aborted mid-step (PL runtime bugs) | **No** on this host — blocked by PL defects before thesis can be tested |
+| Gemma4 small (MoE) | ~4B active (e4b)        | **1/11** — aider parsed 0-byte file | **3/11** — flow aborted mid-step                   | **No** on this host — same blocker                                      |
+| Qwen3 30B (MoE)    | ~3B active of 30B total | **11/11** on E-SMALL CSV task       | — (not run on E-SMALL real-PL arm; see H11 below)  | Yes on easy tasks; **2/12** solo / **3/12** PL on H11 harder task       |
 
 Bottom line: **on this Windows host, with Ollama on AMD Vulkan, local small models (≤4B active) are NOT currently viable through the real `prompt-language ci --runner aider` path** — and not because the small models are hopeless, but because the real PL runtime has two defects that prevent the orchestration from actually running. Qwen3 30B is viable solo on simple tasks but degrades sharply on harder tasks (H11 multi-file refactor) where even the rigor-artifact PL run reached only 3/12.
 
@@ -25,11 +25,11 @@ Source: background agent `a8fe165506fcd92ea` report, fixtures at `/tmp/e-small/`
 
 Task: write a CSV-to-JSON CLI (`csv2json.js`) from argv, handling quoted commas, empty-to-null, and three error-exit paths. Oracle: [`e-small-fixtures/verify.js`](e-small-fixtures/verify.js), 11 assertions, objective exit code.
 
-| Cell | `csv2json.js` shape | verify.js pass | notes |
-| --- | --- | --- | --- |
-| solo / gemma4-opencode:e2b (~2B active, 5.1B MoE) | 28,592 bytes of comment-only text — the single line `// I'm going to use the file system to read the file.` repeated hundreds of times. Zero executable statements. | **1/11** | Degenerate repetition loop. Wall 194s, tokens 860 sent / 8.3k received. |
-| solo / gemma4-opencode:e4b (~4B active, 8.0B MoE) | 0 bytes — aider could not extract a valid edit block from the model output. | **1/11** | Different pathology, same endpoint: repetition of the word "maximally". Wall 326s, tokens 791 sent / 9.4k received. |
-| solo / qwen3-opencode:30b | 1,632 bytes — character-by-character CSV parser with quoted-comma handling, argv/ENOENT/empty-file error paths, `JSON.stringify(..., null, 2)`. | **11/11** | Wall 498s, tokens 803 sent / 6.3k received. |
+| Cell                                              | `csv2json.js` shape                                                                                                                                                 | verify.js pass | notes                                                                                                               |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------- |
+| solo / gemma4-opencode:e2b (~2B active, 5.1B MoE) | 28,592 bytes of comment-only text — the single line `// I'm going to use the file system to read the file.` repeated hundreds of times. Zero executable statements. | **1/11**       | Degenerate repetition loop. Wall 194s, tokens 860 sent / 8.3k received.                                             |
+| solo / gemma4-opencode:e4b (~4B active, 8.0B MoE) | 0 bytes — aider could not extract a valid edit block from the model output.                                                                                         | **1/11**       | Different pathology, same endpoint: repetition of the word "maximally". Wall 326s, tokens 791 sent / 9.4k received. |
+| solo / qwen3-opencode:30b                         | 1,632 bytes — character-by-character CSV parser with quoted-comma handling, argv/ENOENT/empty-file error paths, `JSON.stringify(..., null, 2)`.                     | **11/11**      | Wall 498s, tokens 803 sent / 6.3k received.                                                                         |
 
 Interpretation: the small-model failures are **not partial-correctness failures**. They are complete output-generation failures — token-decoding degenerates into a repetition trap. This is a stability/decoding problem at inference time, not a reasoning-about-CSV problem. Any measurement of solo small-model coding capability on this host is bottle-necked by this stability issue before it reaches the skill question.
 
@@ -46,10 +46,10 @@ PYTHONUTF8=1 OLLAMA_API_BASE=http://127.0.0.1:11434 \
   --model ollama_chat/gemma4-opencode:e{2b,4b} csv2json.flow
 ```
 
-| Cell | PL session status | Nodes completed | `csv2json.js` created | verify.js pass | Notes |
-| --- | --- | --- | --- | --- | --- |
-| real-PL / gemma4-opencode:e4b | `active` (not `completed`, not `failed`) | n1, n2 before abort (flow has 7 nodes) | no | **3/11** — only trivial error-path tests (missing-file, empty-file, no-argument all exit 1 because the script doesn't exist) | Flow aborted mid-step 3 with `Can't initialize prompt toolkit: Found xterm-256color, while expecting a Windows console`. `if command_failed` never triggered (failure is on a prompt node, not a run node). |
-| real-PL / gemma4-opencode:e2b | `active` | only n1 before abort | no | **3/11** — same trivial passes | Same xterm-256color crash, one step earlier. |
+| Cell                          | PL session status                        | Nodes completed                        | `csv2json.js` created | verify.js pass                                                                                                               | Notes                                                                                                                                                                                                       |
+| ----------------------------- | ---------------------------------------- | -------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| real-PL / gemma4-opencode:e4b | `active` (not `completed`, not `failed`) | n1, n2 before abort (flow has 7 nodes) | no                    | **3/11** — only trivial error-path tests (missing-file, empty-file, no-argument all exit 1 because the script doesn't exist) | Flow aborted mid-step 3 with `Can't initialize prompt toolkit: Found xterm-256color, while expecting a Windows console`. `if command_failed` never triggered (failure is on a prompt node, not a run node). |
+| real-PL / gemma4-opencode:e2b | `active`                                 | only n1 before abort                   | no                    | **3/11** — same trivial passes                                                                                               | Same xterm-256color crash, one step earlier.                                                                                                                                                                |
 
 The "3/11" score is deceptive: all three passing tests pass only because there is no script to run, so any invocation exits 1 as the oracle expects. The oracle reports `VERDICT: FAIL` for both cells.
 
@@ -70,27 +70,27 @@ Model: `ollama_chat/qwen3-opencode:30b`, Ollama blob SHA `58574f2e94b9...`, aide
 
 Methodology: first aider-vs-PL run designed to be §3a-shaped end-to-end. Committed fixture predating the run, run-manifest.json per cell, raw aider transcripts, verify-output.json per cell, combined scorecard.json.
 
-| Cell | verify.js pass | Wall ms | Notes |
-| --- | --- | --- | --- |
-| solo / qwen3-opencode:30b | **2/12** | 393,723 | Aider asked for files but made no edits — none were explicitly added to the chat context. |
-| pl / qwen3-opencode:30b | **3/12** | 584,355 (1.48× solo) | `ci --runner aider` drove the full task.flow end-to-end (needed `TERM=dumb` workaround for `prompt-qtn7`). Aider edited `src/app.js` only; introduced ES-module import syntax that broke the CommonJS-app-runs oracle. Other source files never reached. |
+| Cell                      | verify.js pass | Wall ms              | Notes                                                                                                                                                                                                                                                    |
+| ------------------------- | -------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| solo / qwen3-opencode:30b | **2/12**       | 393,723              | Aider asked for files but made no edits — none were explicitly added to the chat context.                                                                                                                                                                |
+| pl / qwen3-opencode:30b   | **3/12**       | 584,355 (1.48× solo) | `ci --runner aider` drove the full task.flow end-to-end (needed `TERM=dumb` workaround for `prompt-qtn7`). Aider edited `src/app.js` only; introduced ES-module import syntax that broke the CommonJS-app-runs oracle. Other source files never reached. |
 
 Winner: **PL by +1**. Both cells are effectively failing the task.
 
 §3a coverage of this single cell-pair (per [`results/h11-phase2/README.md`](results/h11-phase2/README.md)):
 
-| Rule | Covered? |
-| --- | --- |
-| 1. Pre-declared task fixture | yes |
-| 2. Blinded scorer | **no** (same agent scored) |
-| 3. Cross-family reviewer | **no** |
-| 4. Objective oracle (verify.js exit code) | yes |
-| 5. Sample size k >= 3 | **no** (k=1) |
-| 6. Counterbalanced run order | **no** |
-| 7. Reproducibility manifest (model SHA, aider version, PL commit, cmdline) | yes |
-| 8. Tie semantics declared | yes (tie = equal verify_pass within 0 tests) |
-| 9. Signed attestation | **no** |
-| 10. Full §3a gate (strict trace, preflight ready, verify-trace, attestation, cross-family) | **no** |
+| Rule                                                                                       | Covered?                                     |
+| ------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| 1. Pre-declared task fixture                                                               | yes                                          |
+| 2. Blinded scorer                                                                          | **no** (same agent scored)                   |
+| 3. Cross-family reviewer                                                                   | **no**                                       |
+| 4. Objective oracle (verify.js exit code)                                                  | yes                                          |
+| 5. Sample size k >= 3                                                                      | **no** (k=1)                                 |
+| 6. Counterbalanced run order                                                               | **no**                                       |
+| 7. Reproducibility manifest (model SHA, aider version, PL commit, cmdline)                 | yes                                          |
+| 8. Tie semantics declared                                                                  | yes (tie = equal verify_pass within 0 tests) |
+| 9. Signed attestation                                                                      | **no**                                       |
+| 10. Full §3a gate (strict trace, preflight ready, verify-trace, attestation, cross-family) | **no**                                       |
 
 4 of 10 rules satisfied. Better than Phase 1 (0 of 10). Not yet claim-eligible.
 
@@ -102,11 +102,11 @@ The third E-SMALL agent (`a524c22f667463311`) — the PL-style manual 5-step dec
 
 When its results land, the matrix will fill in as follows:
 
-| Cell | Expected outcome to test thesis |
-| --- | --- |
+| Cell                            | Expected outcome to test thesis                                                     |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
 | pl-manual / gemma4-opencode:e2b | If score improves materially over solo 1/11, thesis validated for ~2B-active models |
 | pl-manual / gemma4-opencode:e4b | If score improves materially over solo 1/11, thesis validated for ~4B-active models |
-| pl-manual / qwen3-opencode:30b | Expected parity with solo 11/11 since task is already in solo range for this model |
+| pl-manual / qwen3-opencode:30b  | Expected parity with solo 11/11 since task is already in solo range for this model  |
 
 This file will be updated once that arm lands.
 

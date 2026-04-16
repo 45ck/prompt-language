@@ -86,25 +86,22 @@ describe('FileSnapshotStore — capture + restore round trip', () => {
     expect(big.equals(bigPayload)).toBe(true);
   });
 
-  it.skipIf(process.platform === 'win32')(
-    'preserves POSIX mode bits after restore',
-    async () => {
-      await writeTree(stateDir, {
-        'exec.sh': { content: '#!/bin/sh\necho hi', mode: 0o755 },
-        'ro.txt': { content: 'x', mode: 0o440 },
-      });
-      const store = new FileSnapshotStore({ storeDir });
-      const ref = await store.capture(stateDir);
-      await fs.rm(path.join(stateDir, 'exec.sh'));
-      await fs.rm(path.join(stateDir, 'ro.txt'));
-      await store.restore(ref, stateDir);
-      const execStat = await fs.stat(path.join(stateDir, 'exec.sh'));
-      const roStat = await fs.stat(path.join(stateDir, 'ro.txt'));
-      const MODE_MASK = 0o777;
-      expect(execStat.mode % (MODE_MASK + 1)).toBeGreaterThan(0o600);
-      expect(roStat.mode % (MODE_MASK + 1)).toBeGreaterThan(0);
-    },
-  );
+  it.skipIf(process.platform === 'win32')('preserves POSIX mode bits after restore', async () => {
+    await writeTree(stateDir, {
+      'exec.sh': { content: '#!/bin/sh\necho hi', mode: 0o755 },
+      'ro.txt': { content: 'x', mode: 0o440 },
+    });
+    const store = new FileSnapshotStore({ storeDir });
+    const ref = await store.capture(stateDir);
+    await fs.rm(path.join(stateDir, 'exec.sh'));
+    await fs.rm(path.join(stateDir, 'ro.txt'));
+    await store.restore(ref, stateDir);
+    const execStat = await fs.stat(path.join(stateDir, 'exec.sh'));
+    const roStat = await fs.stat(path.join(stateDir, 'ro.txt'));
+    const MODE_MASK = 0o777;
+    expect(execStat.mode % (MODE_MASK + 1)).toBeGreaterThan(0o600);
+    expect(roStat.mode % (MODE_MASK + 1)).toBeGreaterThan(0);
+  });
 
   it('rejects capture when the tree exceeds the configured cap', async () => {
     const oneMb = Buffer.alloc(1024 * 1024, 0x42);

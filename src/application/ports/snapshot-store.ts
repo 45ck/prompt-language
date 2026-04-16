@@ -49,15 +49,11 @@ export interface SnapshotStorePort {
  */
 export class NullSnapshotStore implements SnapshotStorePort {
   capture(_stateDir: string): Promise<string> {
-    return Promise.reject(
-      new Error('NullSnapshotStore.capture called; file capture is disabled'),
-    );
+    return Promise.reject(new Error('NullSnapshotStore.capture called; file capture is disabled'));
   }
 
   restore(_ref: string, _stateDir: string): Promise<void> {
-    return Promise.reject(
-      new Error('NullSnapshotStore.restore called; file capture is disabled'),
-    );
+    return Promise.reject(new Error('NullSnapshotStore.restore called; file capture is disabled'));
   }
 }
 

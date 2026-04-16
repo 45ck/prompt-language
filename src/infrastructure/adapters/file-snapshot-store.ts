@@ -92,10 +92,7 @@ export class FileSnapshotStore implements SnapshotStorePort {
     }
     await fs.mkdir(storeDir, { recursive: true });
     await recoverStaleMarker(storeDir);
-    const extractDir = path.join(
-      storeDir,
-      `restore-${ref}-${process.pid}-${Date.now()}`,
-    );
+    const extractDir = path.join(storeDir, `restore-${ref}-${process.pid}-${Date.now()}`);
     await fs.mkdir(extractDir, { recursive: true });
     await tar.extract({ file: archive, cwd: extractDir });
     const marker = path.join(storeDir, RESTORE_MARKER);

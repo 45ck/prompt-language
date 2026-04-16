@@ -53,15 +53,103 @@
  *      non-revoked, and payload matches bundle artifacts.
  */
 
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve, basename } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { canonicalJSON, hashEvent, hashState, verifyChain } from './provenance-schema.mjs';
 import {
   buildBundlePayload,
   DEFAULT_REVOKED_SIGNERS_PATH,
   DEFAULT_TRUSTED_SIGNERS_PATH,
+  DEV_ROLE,
   verifyAttestationAgainstBundle,
 } from '../experiments/meta/attestation-lib.mjs';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const TRUST_ROOT_PATH = resolve(HERE, '..', '..', 'dist', 'eval', 'attestation-trust-root.js');
+
+/**
+ * F2 / prompt-qwvu.2: enforce the build-time hash pin on trusted-signers.json
+ * and revoked-signers.json whenever the caller requests attestation
+ * verification. If dist/eval/attestation-trust-root.js is missing (e.g. the
+ * tree has not been built) or if the on-disk registries hash to values that
+ * diverge from what `npm run build` saw, we refuse to trust the registry.
+ *
+ * This blocks the attack where the meta-flow (with workspace write) appends
+ * its own signer entry AFTER the build ran: the verifier sees the divergent
+ * sha256 and bails before any signature math executes.
+ *
+ * Callers may override via --trust-root-sha256 <hex> to support out-of-band
+ * key-rotation flows without a fresh build, but the override must itself be
+ * sourced from a trusted channel (G1 / NF5 footnote).
+ */
+async function loadTrustRoot() {
+  if (!existsSync(TRUST_ROOT_PATH)) {
+    return null;
+  }
+  try {
+    const mod = await import(pathToFileURL(TRUST_ROOT_PATH).href);
+    const root = mod?.ATTESTATION_TRUST_ROOT;
+    if (
+      !root ||
+      typeof root.trustedSignersSha256 !== 'string' ||
+      typeof root.revokedSignersSha256 !== 'string'
+    ) {
+      return null;
+    }
+    return root;
+  } catch {
+    return null;
+  }
+}
+
+function sha256File(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
+
+function enforceTrustRootPin({
+  trustedSignersPath,
+  revokedSignersPath,
+  trustRoot,
+  overrideTrustedSha256,
+  overrideRevokedSha256,
+}) {
+  const errors = [];
+  if (!existsSync(trustedSignersPath)) {
+    errors.push(`trusted-signers file not found: ${trustedSignersPath}`);
+  }
+  if (!existsSync(revokedSignersPath)) {
+    // revoked is optional on disk; downstream loader treats missing as empty,
+    // so skip the pin if no file exists.
+  }
+  if (errors.length > 0) return { ok: false, errors };
+
+  const trustedActual = sha256File(trustedSignersPath);
+  const revokedActual = existsSync(revokedSignersPath) ? sha256File(revokedSignersPath) : null;
+
+  const trustedPinned = overrideTrustedSha256 ?? trustRoot?.trustedSignersSha256 ?? null;
+  const revokedPinned = overrideRevokedSha256 ?? trustRoot?.revokedSignersSha256 ?? null;
+
+  if (!trustedPinned) {
+    errors.push(
+      'attestation trust-root pin is missing: run `npm run build` to generate dist/eval/attestation-trust-root.js, or pass --trusted-signers-sha256 <hex>',
+    );
+    return { ok: false, errors };
+  }
+  if (trustedPinned !== trustedActual) {
+    errors.push(
+      `attestation trust-root mismatch: trusted-signers.json sha256=${trustedActual} but pinned=${trustedPinned}`,
+    );
+  }
+  if (revokedPinned && revokedActual && revokedPinned !== revokedActual) {
+    errors.push(
+      `attestation trust-root mismatch: revoked-signers.json sha256=${revokedActual} but pinned=${revokedPinned}`,
+    );
+  }
+  if (errors.length > 0) return { ok: false, errors };
+  return { ok: true, trustedSha256: trustedActual, revokedSha256: revokedActual };
+}
 
 function parseArgs(argv) {
   const out = {
@@ -78,7 +166,10 @@ function parseArgs(argv) {
     requireAttestation: false,
     trustedSigners: DEFAULT_TRUSTED_SIGNERS_PATH,
     revokedSigners: DEFAULT_REVOKED_SIGNERS_PATH,
+    trustedSignersSha256: null,
+    revokedSignersSha256: null,
     requireRole: null,
+    allowDevRole: false,
     flow: null,
     json: false,
   };
@@ -97,7 +188,10 @@ function parseArgs(argv) {
     else if (a === '--require-attestation') out.requireAttestation = true;
     else if (a === '--trusted-signers') out.trustedSigners = argv[++i];
     else if (a === '--revoked-signers') out.revokedSigners = argv[++i];
+    else if (a === '--trusted-signers-sha256') out.trustedSignersSha256 = argv[++i];
+    else if (a === '--revoked-signers-sha256') out.revokedSignersSha256 = argv[++i];
     else if (a === '--require-role') out.requireRole = argv[++i];
+    else if (a === '--allow-dev-role') out.allowDevRole = true;
     else if (a === '--flow') out.flow = argv[++i];
     else if (a === '--json') out.json = true;
     else if (a === '--help' || a === '-h') {
@@ -115,7 +209,10 @@ function parseArgs(argv) {
           '  --require-attestation\n' +
           `  --trusted-signers <file> (default ${DEFAULT_TRUSTED_SIGNERS_PATH})\n` +
           `  --revoked-signers <file> (default ${DEFAULT_REVOKED_SIGNERS_PATH})\n` +
+          '  --trusted-signers-sha256 <hex>  Override build-time trust-root pin\n' +
+          '  --revoked-signers-sha256 <hex>  Override build-time revocation pin\n' +
           '  --require-role <operator|ci>\n' +
+          '  --allow-dev-role                Widen accepted signer roles to include "dev" (not claim-eligible)\n' +
           '  --json\n',
       );
       process.exit(0);
@@ -357,11 +454,21 @@ function report(result, asJson) {
   }
   if (result.ok) {
     const suffix = result.stateCheckSkipped ? ' (state-check-skipped)' : '';
+    const devSuffix = result.devRoleAllowed ? ' (dev-role-allowed)' : '';
     const attestationSuffix = result.attestation
       ? `, attested-by=${result.attestation.signer} role=${result.attestation.signerRole}`
       : '';
+    // G1 / prompt-kv57.6: surface the trust-root identity so an auditor can
+    // confirm which registry file the verifier consulted.
+    const trustRootSuffix = result.trustRootSha256
+      ? `, trust-root=sha256:${result.trustRootSha256.slice(0, 8)}${
+          result.revokedRootSha256
+            ? ` revoked-root=sha256:${result.revokedRootSha256.slice(0, 8)}`
+            : ''
+        }`
+      : '';
     process.stdout.write(
-      `verify-trace OK: ${result.entryCount} entries, ${result.runtimePairs} runtime/shim pairs, runId=${result.runId}${attestationSuffix}${suffix}\n`,
+      `verify-trace OK: ${result.entryCount} entries, ${result.runtimePairs} runtime/shim pairs, runId=${result.runId}${attestationSuffix}${trustRootSuffix}${suffix}${devSuffix}\n`,
     );
     return;
   }
@@ -423,6 +530,9 @@ async function main() {
     orphans: [],
     binaryHashFailures: [],
     attestation: null,
+    trustRootSha256: null,
+    revokedRootSha256: null,
+    devRoleAllowed: args.allowDevRole,
   };
 
   let entries;
@@ -593,6 +703,26 @@ async function main() {
       if (!existsSync(attestationPath)) {
         throw new Error(`attestation file not found: ${attestationPath}`);
       }
+      const trustedSignersAbs = resolve(args.trustedSigners);
+      const revokedSignersAbs = resolve(args.revokedSigners);
+
+      // F2 / NF5: enforce the build-time sha256 pin before loading.
+      // --require-attestation makes this a hard failure; otherwise a missing
+      // or overridden pin is a warning surface (unused today).
+      const trustRoot = await loadTrustRoot();
+      const pinCheck = enforceTrustRootPin({
+        trustedSignersPath: trustedSignersAbs,
+        revokedSignersPath: revokedSignersAbs,
+        trustRoot,
+        overrideTrustedSha256: args.trustedSignersSha256,
+        overrideRevokedSha256: args.revokedSignersSha256,
+      });
+      if (!pinCheck.ok) {
+        throw new Error(pinCheck.errors.join('; '));
+      }
+      result.trustRootSha256 = pinCheck.trustedSha256;
+      result.revokedRootSha256 = pinCheck.revokedSha256 ?? null;
+
       const bundleDir = dirname(attestationPath);
       const attestation = JSON.parse(readFileSync(attestationPath, 'utf8'));
       const { payload: bundlePayload } = buildBundlePayload({
@@ -603,10 +733,11 @@ async function main() {
       result.attestation = verifyAttestationAgainstBundle({
         attestation,
         bundlePayload,
-        trustedSignersPath: resolve(args.trustedSigners),
-        revokedSignersPath: resolve(args.revokedSigners),
+        trustedSignersPath: trustedSignersAbs,
+        revokedSignersPath: revokedSignersAbs,
         requireRole: args.requireRole,
         expectedRunId: args.expectedRunId,
+        extraAllowedRoles: args.allowDevRole ? [DEV_ROLE] : [],
         expectedPairCount:
           args.expectedPairCount !== null && !Number.isNaN(args.expectedPairCount)
             ? args.expectedPairCount

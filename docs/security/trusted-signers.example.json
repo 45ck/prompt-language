@@ -1,0 +1,30 @@
+{
+  "_comment": "Example only. NOT loaded by verify-trace. Copy entries into trusted-signers.json to enable them. F3 (prompt-qwvu.3): 'dev' role is rejected by the verifier unless --allow-dev-role is passed; the committed registry carries production signers only.",
+  "version": 1,
+  "signers": [
+    {
+      "signerId": "example-operator-2026-04",
+      "role": "operator",
+      "publicKey": "base64 ed25519 pubkey (32 bytes)",
+      "validFrom": "2026-04-01T00:00:00Z",
+      "validUntil": null,
+      "notes": "Illustrative operator entry; replace publicKey with a real key before trusting."
+    },
+    {
+      "signerId": "example-ci-2026-04",
+      "role": "ci",
+      "publicKey": "base64 ed25519 pubkey (32 bytes)",
+      "validFrom": "2026-04-10T00:00:00Z",
+      "validUntil": null,
+      "notes": "Illustrative CI-lane entry; narrower blast radius than operator."
+    },
+    {
+      "signerId": "example-dev-local",
+      "role": "dev",
+      "publicKey": "base64 ed25519 pubkey (32 bytes)",
+      "validFrom": "2026-04-01T00:00:00Z",
+      "validUntil": null,
+      "notes": "Illustrative dev entry. The verifier REJECTS dev-role entries in trusted-signers.json unless the caller passes --allow-dev-role. A bundle signed under this entry is NOT claim-eligible."
+    }
+  ]
+}

@@ -10,7 +10,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { generateKeyPairSync, createHash, sign as signDetached } from 'node:crypto';
-import { mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -246,8 +246,48 @@ function createAttestationFixture(label, options = {}) {
   };
 }
 
+/**
+ * Compute SHA-256 of a file, returning hex. Helper for the pin-override
+ * plumbing below.
+ */
+function sha256OfFile(path) {
+  return createHash('sha256').update(readFileSync(path)).digest('hex');
+}
+
+/**
+ * F2 / prompt-qwvu.2: the build-time trust-root pin lives in
+ * `dist/eval/attestation-trust-root.js` and only matches the checked-in
+ * registries at `docs/security/{trusted,revoked}-signers.json`. Tests
+ * synthesize per-fixture registries under tmpdir(), so they must supply
+ * matching override flags to the verifier.
+ *
+ * This helper inspects the args for `--trusted-signers` / `--revoked-signers`
+ * paths and — if no override is already present — appends a matching
+ * `--trusted-signers-sha256` / `--revoked-signers-sha256` flag computed
+ * from the on-disk fixture file. This keeps per-test plumbing invisible
+ * to the individual test bodies.
+ */
+function injectTrustRootOverrides(args) {
+  const out = [...args];
+  const trustedIdx = out.indexOf('--trusted-signers');
+  const revokedIdx = out.indexOf('--revoked-signers');
+  if (trustedIdx !== -1 && !out.includes('--trusted-signers-sha256')) {
+    const path = out[trustedIdx + 1];
+    if (path && existsSync(path)) {
+      out.push('--trusted-signers-sha256', sha256OfFile(path));
+    }
+  }
+  if (revokedIdx !== -1 && !out.includes('--revoked-signers-sha256')) {
+    const path = out[revokedIdx + 1];
+    if (path && existsSync(path)) {
+      out.push('--revoked-signers-sha256', sha256OfFile(path));
+    }
+  }
+  return out;
+}
+
 function runVerifier(args) {
-  return spawnSync(NODE_EXE, [VERIFIER, ...args], {
+  return spawnSync(NODE_EXE, [VERIFIER, ...injectTrustRootOverrides(args)], {
     encoding: 'utf8',
   });
 }
@@ -748,5 +788,102 @@ test('T25 dev role is rejected by default; --allow-dev-role widens acceptance', 
     combinedOutput(denied),
     /invalid role dev|role-rejected|accepted roles/i,
     `expected dev-role rejection diagnostic; out=${combinedOutput(denied)}`,
+  );
+});
+
+test('T26 trust-root pin: tampered trusted-signers.json is rejected', () => {
+  // F2 / G1: If a caller supplies --trusted-signers-sha256 that does not
+  // match the on-disk file, the verifier refuses to proceed. Simulate an
+  // attacker who appends their own signer to the registry after the pin
+  // was generated.
+  const fixture = createAttestationFixture('T26-trust-root');
+  const originalSha = createHash('sha256')
+    .update(readFileSync(fixture.trustedSignersPath))
+    .digest('hex');
+
+  // Tamper: append a second trusted signer.
+  const reg = JSON.parse(readFileSync(fixture.trustedSignersPath, 'utf8'));
+  reg.signers.push({
+    signerId: 'smuggled-signer',
+    role: 'operator',
+    publicKey: Buffer.alloc(32, 0x00).toString('base64'),
+    validFrom: '2026-04-01T00:00:00Z',
+    validUntil: null,
+  });
+  writeFileSync(fixture.trustedSignersPath, JSON.stringify(reg, null, 2), 'utf8');
+
+  // Caller still passes the ORIGINAL pin (pre-tamper) — verifier must
+  // reject because the on-disk sha256 now diverges.
+  const result = spawnSync(
+    NODE_EXE,
+    [
+      VERIFIER,
+      '--trace',
+      fixture.tracePath,
+      '--state',
+      fixture.statePath,
+      '--attestation',
+      fixture.attestationPath,
+      '--trusted-signers',
+      fixture.trustedSignersPath,
+      '--revoked-signers',
+      fixture.revokedSignersPath,
+      '--trusted-signers-sha256',
+      originalSha,
+      '--require-attestation',
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.notEqual(result.status, 0, 'tampered registry must be rejected');
+  assert.match(
+    combinedOutput(result),
+    /trust-root mismatch/i,
+    `expected trust-root-mismatch; out=${combinedOutput(result)}`,
+  );
+});
+
+test('T27 verify-trace OK line surfaces trust-root sha256', () => {
+  // G1 / prompt-kv57.6: the OK line must include a trust-root=sha256:<hex8>
+  // suffix so an auditor can confirm which registry file was consulted.
+  const fixture = createAttestationFixture('T27-trust-root-line');
+  const attestResult = spawnSync(
+    NODE_EXE,
+    [
+      ATTEST,
+      '--bundle',
+      fixture.dir,
+      '--signer',
+      fixture.signerId,
+      '--key',
+      fixture.privateKeyPath,
+      '--trusted-signers',
+      fixture.trustedSignersPath,
+      '--force-replace',
+      '--json',
+    ],
+    { encoding: 'utf8' },
+  );
+  assert.equal(attestResult.status, 0, `attest failed: ${combinedOutput(attestResult)}`);
+
+  const result = runVerifier([
+    '--trace',
+    fixture.tracePath,
+    '--state',
+    fixture.statePath,
+    '--attestation',
+    fixture.attestationPath,
+    '--trusted-signers',
+    fixture.trustedSignersPath,
+    '--revoked-signers',
+    fixture.revokedSignersPath,
+    '--require-attestation',
+    '--require-role',
+    'operator',
+  ]);
+  assert.equal(result.status, 0, `verify failed: ${combinedOutput(result)}`);
+  assert.match(
+    combinedOutput(result),
+    /trust-root=sha256:[0-9a-f]{8}/,
+    `expected trust-root=sha256:... suffix in OK line; out=${combinedOutput(result)}`,
   );
 });

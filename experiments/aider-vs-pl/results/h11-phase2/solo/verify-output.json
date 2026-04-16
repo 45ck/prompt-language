@@ -1,0 +1,7 @@
+{
+  "passed": 2,
+  "failed": 10,
+  "exit_code": 1,
+  "stdout": "\nResults: 2/12 passed\n  FAIL: No \"Contact\" in src\\app.js -- Found 2 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in src\\contact-store.js -- Found 2 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in src\\contact.js -- Found 2 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in src\\routes.js -- Found 3 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in src\\seed.js -- Found 1 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in src\\test.js -- Found 9 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in .aider.chat.history.md -- Found 11 occurrences of \"Contact\"\n  FAIL: No \"Contact\" in README.md -- Found 7 occurrences of \"Contact\"\n  FAIL: \"Client\" class exists in some .js file -- No file contains \"Client\"\n  FAIL: \"ClientStore\" or \"Client\" store class exists -- No ClientStore found\n  PASS: Application runs without error\n  PASS: All imports resolve\n\nVERDICT: FAIL (10 failed)\n",
+  "stderr": ""
+}

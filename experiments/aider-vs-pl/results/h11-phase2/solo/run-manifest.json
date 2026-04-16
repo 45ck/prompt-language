@@ -1,0 +1,23 @@
+{
+  "cell": "solo",
+  "hypothesis": "H11",
+  "timestamp_utc": "2026-04-17",
+  "start_ms": 1776376138023,
+  "end_ms": 1776376531746,
+  "wall_ms": 393723,
+  "timeout_budget_ms": 900000,
+  "timeout_hit": false,
+  "aider_version": "0.86.2",
+  "model": "ollama_chat/qwen3-opencode:30b",
+  "ollama_model_blob_sha256": "58574f2e94b99fb9e4391408b57e5aeaaaec10f6384e9a699fc2cb43a5c8eabf",
+  "pl_commit": "9882c56d62e18b505382a4c5b84a81e9c14795da",
+  "fixture_cwd_tar_sha256": "37a6b0bff7a1ee7d7a15f22f7b6eaca5c410377d38c81c7bac86624f44492503",
+  "fixture_path": "experiments/aider-vs-pl/fixtures/h11-multi-file-refactor/",
+  "work_dir": "/tmp/h11-solo-1776376126",
+  "command_line": "python -m aider --model ollama_chat/qwen3-opencode:30b --no-auto-commits --no-stream --yes --no-show-model-warnings --no-git --no-check-update --map-tokens 0 --edit-format whole --message <TASK.md>",
+  "env": {
+    "PYTHONUTF8": "1",
+    "OLLAMA_API_BASE": "http://127.0.0.1:11434"
+  },
+  "notes": "Solo run: aider invoked with TASK.md as --message but with no files added to the chat. Aider completed the turn by asking for files (see transcript.log). No edits were made to the workspace."
+}

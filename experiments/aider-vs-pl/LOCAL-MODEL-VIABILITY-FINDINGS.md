@@ -9,13 +9,15 @@ Companion docs: [`EVIDENCE-CONSOLIDATION.md`](EVIDENCE-CONSOLIDATION.md) (full m
 
 | Model class        | Size (active params)    | Solo aider                          | Real PL (`ci --runner aider`)                      | Viable with PL?                                                         |
 | ------------------ | ----------------------- | ----------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------- |
-| Gemma4 small (MoE) | ~2B active (e2b)        | **1/11** — degenerate comment loop  | **3/11** — flow aborted mid-step (PL runtime bugs) | **No** on this host — blocked by PL defects before thesis can be tested |
-| Gemma4 small (MoE) | ~4B active (e4b)        | **1/11** — aider parsed 0-byte file | **3/11** — flow aborted mid-step                   | **No** on this host — same blocker                                      |
-| Qwen3 30B (MoE)    | ~3B active of 30B total | **11/11** on E-SMALL CSV task       | — (not run on E-SMALL real-PL arm; see H11 below)  | Yes on easy tasks; **2/12** solo / **3/12** PL on H11 harder task       |
+| Gemma4 small (MoE) | ~2B active (e2b)        | **1/11** — degenerate comment loop  | **3/11** — flow aborted mid-step (PL runtime bugs); PL-manual 4/11 (artifact, real delta 0) | **No** — model does not produce valid JS literally, PL cannot compensate |
+| Gemma4 small (MoE) | ~4B active (e4b)        | **1/11** — aider parsed 0-byte file | **3/11** — flow aborted mid-step; PL-manual 4/11 (artifact, real delta 0)                   | **No** — same failure mode; retries *degrade* output, not improve it     |
+| Qwen3 30B (MoE)    | ~3B active of 30B total | **11/11** on E-SMALL CSV task       | — (not run on E-SMALL real-PL arm; see H11 below); PL-manual 11/11 (parity with solo)       | Yes on easy tasks; **2/12** solo / **3/12** PL on H11 harder task        |
 
-Bottom line: **on this Windows host, with Ollama on AMD Vulkan, local small models (≤4B active) are NOT currently viable through the real `prompt-language ci --runner aider` path** — and not because the small models are hopeless, but because the real PL runtime has two defects that prevent the orchestration from actually running. Qwen3 30B is viable solo on simple tasks but degrades sharply on harder tasks (H11 multi-file refactor) where even the rigor-artifact PL run reached only 3/12.
+Bottom line: **the user's thesis is refuted for the `gemma4-opencode:{e2b,e4b}` model set on this Windows host, with both the real PL runtime and manual PL-style decomposition tested**. The `+3` apparent delta between solo 1/11 and PL-manual 4/11 is a measurement artifact (broken-JS files incidentally satisfy three error-exit assertions). The real delta on content-producing assertions is **0**. Gemma4-opencode small variants cannot produce valid JavaScript literally on this host — they emit Python, prose, numbered lists, or special tokens regardless of prompt — and decomposition + retry loops **degrade, not improve** these outputs. Qwen3 30B passes the easy E-SMALL task solo (11/11) and drops to 2-3/12 under rigor on the H11 multi-file refactor.
 
-The user's core thesis — "with prompt-language on top of the harness we can use much less powerful models like SMLs locally and see good results with working software" — is **not yet tested** end-to-end. The real-PL arm failed before small-model capability could be probed. The manual PL-style decomposition arm is still running and will be the first honest test.
+The narrower, honest thesis the evidence actually supports: **"PL decomposition + gate loops help models that can at least produce valid syntactically-correct output; they do not rescue models below the literal-code-emission threshold."** For a rescue experiment to succeed, the small-model candidate set must be restricted to models that reliably emit valid JavaScript (or the target language) when asked literally to do so. The gemma4-opencode tags on this host do not meet that minimum bar.
+
+Separately, the real PL runtime (`ci --runner aider`) has two P1 defects discovered during this experiment that blocked measurement entirely on the small-model real-PL arm. Those defects are independent of the model-capability finding above — both failures are confirmed.
 
 ## 2. Evidence
 
@@ -96,19 +98,40 @@ Winner: **PL by +1**. Both cells are effectively failing the task.
 
 Known oracle contamination to fix before k>=3 rerun: `verify.js` scans `.aider.chat.history.md` which contains the rendered flow text ("Contact" strings), so one fail per cell is a false positive caused by the aider chat log itself, not by a missed rename. Flagged in [`results/h11-phase2/README.md`](results/h11-phase2/README.md).
 
-### 2d. E-SMALL PL manual-decomposition arm — not yet in
+### 2d. E-SMALL PL manual-decomposition arm
 
-The third E-SMALL agent (`a524c22f667463311`) — the PL-style manual 5-step decomposition with retry loops, not using `ci --runner aider` — is still in flight at time of writing. This arm is the one that would honestly test the user's thesis. It is not blocked by `prompt-qtn7` (the PL xterm bug) because it drives aider directly from the agent without the PL CLI.
+Source: background agent `a524c22f667463311` report. Artifacts at `C:\Users\MQCKENC\AppData\Local\Temp\e-small\pl-{gemma4-e2b,gemma4-e4b,qwen3-30b}\` and step logs at `...\runs\pl-*.log`.
 
-When its results land, the matrix will fill in as follows:
+**Protocol substitution**: the agent could not drive this arm through aider — aider+litellm wedged on 600s HTTP timeouts for every model on step 1 on this Windows host (independent of the `prompt-qtn7` xterm issue, and independent of the actual Ollama endpoint which responded fine to direct curl). The agent substituted a direct-API runner (`/tmp/e-small/pl-runner.py`) that preserves the experimental shape: same system-prompt constraint, same 5-step decomposition, same verify/retry loop up to 2 retries, same whole-file rewrites per step, with code extracted from fenced blocks. This is therefore a test of **PL-style orchestration against raw Ollama**, not PL+aider. The substitution is principled for comparability; it does mean the arm is not a direct test of the PL runtime itself.
 
-| Cell                            | Expected outcome to test thesis                                                     |
-| ------------------------------- | ----------------------------------------------------------------------------------- |
-| pl-manual / gemma4-opencode:e2b | If score improves materially over solo 1/11, thesis validated for ~2B-active models |
-| pl-manual / gemma4-opencode:e4b | If score improves materially over solo 1/11, thesis validated for ~4B-active models |
-| pl-manual / qwen3-opencode:30b  | Expected parity with solo 11/11 since task is already in solo range for this model  |
+Temperature: 0.1 pinned for PL arm. Solo arm temperature not documented in artifacts.
 
-This file will be updated once that arm lands.
+| Cell                         | verify.js pass after step 3 | verify.js final (after up to 2 retries) | Wall ms | Retries used | Notes                                                                                                                                                                                   |
+| ---------------------------- | --------------------------- | --------------------------------------- | ------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| pl-manual / gemma4-opencode:e2b | 4/11                     | **4/11**                                | 612,800 (timeout-dominated) | 2 | Step 1: Ollama timed out at 600s with empty reply. Step 2: reply was Python (`import sys; def main(): ...`). Step 3: literal token `<\|audio\|>,`. Model does not produce JS literally.    |
+| pl-manual / gemma4-opencode:e4b | 4/11                     | **4/11**                                | 140,900 | 2            | Step 1 produced JS-shaped output (1780 chars) but with invalid leading Bengali-character noise (`বলেও।`) → `SyntaxError`. Retries *degraded*: retry-2 produced a `1. 2. 3. ... 500.` numbered list instead of code. |
+| pl-manual / qwen3-opencode:30b  | 11/11                    | **11/11**                               | 169,300 | 0            | All steps produced valid JS. Zero retries. Indistinguishable from solo.                                                                                                                 |
+
+### Solo vs PL-manual delta (same 3 models, same 11 tests)
+
+| Model                     | Solo pass | PL-manual pass | Delta | Honest reading of delta                                                                                                                                                                                               |
+| ------------------------- | --------- | -------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| gemma4-opencode:e2b       | 1/11      | 4/11           | +3    | **Measurement artifact, not a real improvement.** A syntactically-broken JS file exits 1, which incidentally passes the three "error-exit" assertions (`no argument`, `missing file`, `empty file`). The solo 1/11 and PL-manual 4/11 cells both produce *no working code*. The real delta on content-producing assertions is **0**. |
+| gemma4-opencode:e4b       | 1/11      | 4/11           | +3    | Same artifact. Same zero real delta.                                                                                                                                                                                   |
+| qwen3-opencode:30b        | 11/11     | 11/11          | 0     | Task already in solo range for the 30B model; PL has no room to help.                                                                                                                                                  |
+
+### What the small-model failure looks like in detail
+
+The agent logged specific failure patterns on gemma4-opencode e2b/e4b under PL orchestration:
+
+- Emits **Python** when the system prompt explicitly requires "output raw JavaScript only".
+- Emits **meta-narration** ("I will now write the file that...").
+- Emits **numbered lists** as output ("1. 2. 3. ... 500." filling 3921 chars on one retry).
+- Emits **special tokens** that leak from its own vocabulary (`<|audio|>`).
+- Emits **non-Latin character noise** (`বলেও।` — Bengali) at the start of otherwise JS-shaped output, causing immediate `SyntaxError`.
+- **Degrades on retry**: the retry-2 output is often worse than retry-1, not better. The gate-loop assumption that "feedback causes improvement" does not hold for these models.
+
+This is **not a reasoning-about-CSV problem**. It is a **literal-code-emission problem**. Decomposition cannot help a model that will not produce valid JavaScript for a single step when told literally to do so.
 
 ## 3. What this means for "are local models viable with PL?"
 
@@ -122,26 +145,42 @@ This file will be updated once that arm lands.
 
 The user's thesis is: **"PL lets smaller local models produce working software they cannot produce solo."**
 
-Current evidence does **not** support it, but also does **not** refute it:
+With the PL-manual arm now landed, current evidence **refutes the thesis for the `gemma4-opencode:{e2b,e4b}` model set on this host**:
 
-- Solo small-model baseline: **catastrophic** (1/11 on both gemma4 variants) — not a little worse, a lot worse. This is the right baseline to improve on.
-- PL-orchestrated small-model result: **unknown** — the arm that would test this (real-PL) was blocked by PL runtime defects; the arm that might show it (manual decomposition) has not landed yet.
+- Solo small-model baseline: catastrophic (1/11 on both gemma4 variants). Right baseline to improve on.
+- PL-manual decomposition arm: 4/11 on both variants, where all 3 extra passes are error-exit assertions that a syntactically-broken JS file incidentally satisfies. **Real delta = 0** on content-producing assertions.
+- Failure mode: models do not produce valid JavaScript when told literally to do so. They emit Python, prose, numbered lists, `<|audio|>` tokens, Bengali-character noise. Decomposition surfaces this diagnostic more cleanly than solo, but does not rescue it.
+- Retry behavior: retry-2 output on gemma4 e4b was *worse* than retry-1 (a `1. 2. 3. ... 500.` numbered list replacing previously JS-shaped output). The gate-loop premise that "feedback causes improvement" does not hold for these models.
 
-If the manual-decomposition arm lands with e2b/e4b scoring 8+/11 while the real-PL arm is blocked and solo is 1/11, the honest reading will be: **PL-style orchestration works on small models; PL-the-runtime does not yet reliably deliver it on Windows**. That would be simultaneously a validation of the thesis at the protocol level and an indictment of the runtime's current Windows support. The fix pathway is clear: close `prompt-qtn7` and `prompt-khm1`, re-run, and measure directly.
+**What this does NOT refute**:
+
+- It does not refute the thesis for model classes that can produce valid output literally. Phi-3, Llama-3.1 8B, Qwen3 8B dense, Mistral Nemo, etc., have not been tested and may be in the "solo-fails-task / PL-helps" band.
+- It does not refute the thesis for the real PL runtime: `prompt-qtn7` and `prompt-khm1` prevented that arm from running at all. The PL-manual arm had to fall back to a direct-Ollama Python runner (see §2d protocol substitution).
+- It does not refute the thesis for larger tasks: H11 multi-file refactor shows even Qwen3 30B dropping to 2-3/12, where PL orchestration did edge out solo by +1 test. That is a different regime (task too hard for monolithic solo; PL at least attempts more files) and is the direction where PL+30B-class-local might matter.
+
+### 3b.1. Narrowed thesis the evidence actually supports
+
+**"PL decomposition + gate loops help models that can at least produce valid syntactically-correct output for a single step, but cannot rescue models below the literal-code-emission threshold."**
+
+To demonstrate the original thesis, the candidate set needs a small model that reliably emits valid JavaScript on a single-step prompt. The `gemma4-opencode:{e2b,e4b}` tags on this host do not meet that bar. Recommended next-probe candidates: `qwen2.5-coder:7b`, `codegemma:7b`, `deepseek-coder:6.7b`, `llama3.1:8b`, `phi3:medium`. These should be tested solo first to confirm they can emit valid code literally; only then is the PL-rescue comparison meaningful.
 
 ### 3c. Honest framing for external readers
 
-1. The only objective oracle-backed data we have on small models today says they fail catastrophically solo (1/11) and fail for different reasons through the real PL runtime (3/11 via runtime abort, not via model failure). This should not be cited as evidence that small models are hopeless, and it should not be cited as evidence that PL is hopeless for them.
-2. The only §3a-shaped cell-pair we have (H11 phase-2) is k=1, not blinded, and hits an oracle-contamination issue that costs both cells 1 point. The PL +1 win should be read as "PL did not lose" rather than "PL won decisively".
-3. Phase-1 narrative claims (PL 6-0-3) are still [`SCORECARD.md`](SCORECARD.md)-level informal evidence, not thesis-eligible per [`../../docs/security/aider-vs-pl-scrutiny.md`](../../docs/security/aider-vs-pl-scrutiny.md).
-4. The thesis is live, testable, and not yet tested. The path to testing it is (a) fix the two PL defects, (b) re-run E-SMALL real-PL on gemma4 e2b/e4b, (c) run Phase 2 at k>=3 across the model matrix with blinded scoring.
+1. Objective oracle-backed data on the **`gemma4-opencode:{e2b,e4b}` model pair** says these models fail at the *literal-code-emission* step, both solo and under PL-style manual decomposition, on this Windows+Ollama host. The `+3` solo→PL apparent improvement is a measurement artifact (broken-JS files pass error-exit assertions). This is **a real, specific, objective result for that model set** — not a claim about small models in general.
+2. Real PL runtime (`ci --runner aider`) on small models could not be measured at all because of `prompt-qtn7` (xterm-256color pty crash) and `prompt-khm1` (prompt-node completion timing). These are runtime defects, not model failures.
+3. The only §3a-shaped cell-pair we have (H11 phase-2) is k=1, not blinded, and hits an oracle-contamination issue that costs both cells 1 point. The PL +1 win should be read as "PL did not lose", not "PL won decisively".
+4. Phase-1 narrative claims (PL 6-0-3) remain [`SCORECARD.md`](SCORECARD.md)-level informal evidence, not thesis-eligible per [`../../docs/security/aider-vs-pl-scrutiny.md`](../../docs/security/aider-vs-pl-scrutiny.md).
+5. The original thesis ("PL rescues small models") is **refuted for the gemma4-opencode:{e2b,e4b} set**. The narrowed thesis ("PL helps models above the literal-code-emission threshold, below the task-difficulty ceiling") remains live. Testing it requires a model set that can emit valid JS solo — which the gemma4 small variants here cannot.
 
 ## 4. Decisions this evidence should drive
 
 - **Merge-gate**: close `prompt-qtn7` and `prompt-khm1` before any further aider-vs-PL run on Windows. Without the fixes, every real-PL cell on this host will abort at the second aider invocation.
 - **Oracle hygiene**: patch [`fixtures/h11-multi-file-refactor/verify.js`](fixtures/h11-multi-file-refactor/verify.js) to skip `.aider.chat.history.md` and similar transcript files when scanning for "Contact". Same check applies to any fixture that uses word-boundary regex across the workspace.
 - **Phase-2 scoping**: treat the H11 rigor cell as a methodology-validation exercise (it proved the artifact pipeline works), not as a PL-capability signal. Re-run H11 at k=3 only after the oracle fix and after the two defects are closed.
-- **Thesis framing**: do not cite "PL helps small models" as a conclusion until the manual-decomposition arm lands and, ideally, the real-PL arm is re-run post-defect-fix. Until then, the defensible claim is narrower: "PL decomposition+gate discipline beats monolithic solo on gate-heavy tasks for mid-size local models (30B MoE) in an informal Phase-1 sense; the small-model case is not yet measured."
+- **Drop gemma4-opencode:{e2b,e4b} from the small-model candidate set**: these tags do not clear the minimum literal-code-emission bar. Keeping them on the matrix confuses model-capability failure with orchestration failure.
+- **New small-model candidate set to probe**: `qwen2.5-coder:7b`, `codegemma:7b`, `deepseek-coder:6.7b`, `llama3.1:8b`, `phi3:medium`. First gate: confirm each can emit a valid JS `csv2json.js` solo under aider with `--edit-format whole`. Only promote models that pass that floor to the PL-rescue arm.
+- **aider reliability gate**: the PL-manual arm had to fall back to a direct-Ollama Python runner because aider+litellm wedged on 600s timeouts on all three models on this Windows+git-bash host. File a separate investigation to localize (aider version, litellm version, LITELLM_REQUEST_TIMEOUT, Windows-specific pty/terminal). Without this, every aider-driven measurement on this host carries a harness-wedge confound.
+- **Thesis framing**: the honest defensible claim today is **narrowed** — "PL decomposition+gate discipline improves already-capable models on gate-heavy or multi-file tasks; it does not rescue models below the literal-code-emission threshold, and it has not been shown to help small-but-capable models (that set has not been tested)." The path to the stronger claim is (a) fix the two PL defects and the aider-wedge harness issue, (b) rerun against the `qwen2.5-coder:7b`-class candidate set, (c) do Phase 2 at k≥3 with blinded scoring.
 
 ## 5. Related beads and files
 
@@ -158,6 +197,15 @@ Artifacts:
   - E-SMALL solo: `C:/Users/MQCKENC/AppData/Local/Temp/e-small/solo-{gemma4-e2b,gemma4-e4b,qwen3-30b}/`
   - E-SMALL real-PL: `C:/Users/MQCKENC/AppData/Local/Temp/e-small-real-pl/`
 
-Pending:
+All four planned arms have landed as of 2026-04-17:
 
-- E-SMALL PL manual-decomposition arm (`a524c22f667463311`) — not yet landed. This document will be updated with an additional §2d row and §3b update when that arm completes.
+- E-SMALL solo (`a8fe165506fcd92ea`) — §2a.
+- E-SMALL real-PL (`a7ec27698ded33f6e`) — §2b. Blocked by `prompt-qtn7` + `prompt-khm1`.
+- H11 phase-2 rigor (`a8729d65df3f93d89`) — §2c. First §3a-shaped cell pair (4/10 rules satisfied).
+- E-SMALL PL manual-decomposition (`a524c22f667463311`) — §2d. Required protocol substitution to direct-Ollama due to aider+litellm wedge on this host.
+
+Follow-up work candidates (not yet filed as beads):
+
+- **Replace gemma4-opencode in E-SMALL with a literal-code-emitting candidate set** (`qwen2.5-coder:7b`, `codegemma:7b`, `deepseek-coder:6.7b`, `llama3.1:8b`, `phi3:medium`). Gate each candidate on a solo-emits-valid-JS floor before running the PL-rescue arm.
+- **Investigate aider+litellm 600s HTTP timeout wedge on Windows+git-bash+Ollama**. Separate from `prompt-qtn7` (that's the 2nd-invocation pty crash); this is the 1st-invocation request-timeout issue that forced the PL-manual arm to substitute a direct-API runner.
+- **Phase-2 oracle hygiene**: patch `verify.js` in H11-H20 fixtures to exclude aider chat-history transcripts and other non-source artifacts from word-boundary scans.

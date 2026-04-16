@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="342" viewBox="0 0 720 342">
+  <defs>
+    <style>
+      .bg { fill: #0d1117; }
+      .chrome { fill: #161b22; }
+      .dot-red { fill: #ff5f56; }
+      .dot-yellow { fill: #ffbd2e; }
+      .dot-green { fill: #27c93f; }
+      .title-text { fill: #8b949e; font-family: -apple-system, 'Segoe UI', monospace; font-size: 13px; }
+      .line-num { fill: #484f58; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .comment { fill: #8b949e; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .keyword { fill: #ff7b72; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .directive { fill: #d29922; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .variable { fill: #79c0ff; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .string { fill: #a5d6ff; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .plain { fill: #e6edf3; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .constant { fill: #d2a8ff; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+      .gate { fill: #7ee787; font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 13.5px; }
+    </style>
+  </defs>
+
+  <!-- Window frame -->
+  <rect class="bg" width="720" height="342" rx="10" ry="10"/>
+  <rect class="chrome" x="1" y="1" width="718" height="38" rx="10" ry="10"/>
+  <rect class="chrome" x="1" y="20" width="718" height="19"/>
+
+  <!-- Traffic light dots -->
+  <circle class="dot-red" cx="20" cy="20" r="6"/>
+  <circle class="dot-yellow" cx="40" cy="20" r="6"/>
+  <circle class="dot-green" cx="60" cy="20" r="6"/>
+
+  <!-- Title bar -->
+  <text class="title-text" x="360" y="24" text-anchor="middle">parallel-review.flow</text>
+
+  <!-- Line 1: comment -->
+  <text class="line-num" x="20" y="60"> 1</text>
+  <text class="comment" x="52" y="60"># Parallel review</text>
+
+  <!-- Line 2: blank -->
+  <text class="line-num" x="20" y="82"> 2</text>
+
+  <!-- Line 3: flow: -->
+  <text class="line-num" x="20" y="104"> 3</text>
+  <text class="directive" x="52" y="104">flow:</text>
+
+  <!-- Line 4: let files = run -->
+  <text class="line-num" x="20" y="126"> 4</text>
+  <text y="126"><tspan class="keyword" x="72">let</tspan><tspan class="plain"> files </tspan><tspan class="keyword">= run</tspan><tspan class="string"> "ls src/"</tspan></text>
+
+  <!-- Line 5: blank -->
+  <text class="line-num" x="20" y="148"> 5</text>
+
+  <!-- Line 6: foreach-spawn -->
+  <text class="line-num" x="20" y="170"> 6</text>
+  <text y="170"><tspan class="keyword" x="72">foreach-spawn</tspan><tspan class="plain"> file </tspan><tspan class="keyword">in</tspan><tspan class="plain"> </tspan><tspan class="variable">${files}</tspan><tspan class="keyword"> max</tspan><tspan class="constant"> 20</tspan></text>
+
+  <!-- Line 7: prompt: Review -->
+  <text class="line-num" x="20" y="192"> 7</text>
+  <text y="192"><tspan class="directive" x="92">prompt:</tspan><tspan class="string"> Review and fix bugs in src/</tspan><tspan class="variable">${file}</tspan></text>
+
+  <!-- Line 8: end (foreach-spawn) -->
+  <text class="line-num" x="20" y="214"> 8</text>
+  <text class="keyword" x="72" y="214">end</text>
+
+  <!-- Line 9: blank -->
+  <text class="line-num" x="20" y="236"> 9</text>
+
+  <!-- Line 10: await all -->
+  <text class="line-num" x="20" y="258">10</text>
+  <text y="258"><tspan class="keyword" x="72">await</tspan><tspan class="keyword"> all</tspan></text>
+
+  <!-- Line 11: blank -->
+  <text class="line-num" x="20" y="280">11</text>
+
+  <!-- Line 12: done when: -->
+  <text class="line-num" x="20" y="302">12</text>
+  <text class="directive" x="52" y="302">done when:</text>
+
+  <!-- Line 13: tests_pass -->
+  <text class="line-num" x="20" y="324">13</text>
+  <text class="gate" x="72" y="324">tests_pass</text>
+
+  <!-- Subtle border -->
+  <rect x="0.5" y="0.5" width="719" height="341" rx="10" ry="10" fill="none" stroke="#30363d" stroke-width="1"/>
+</svg>

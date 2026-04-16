@@ -1,0 +1,8 @@
+{
+  "env": { "node": true, "es2022": true },
+  "rules": {
+    "no-unused-vars": "error",
+    "semi": ["error", "always"],
+    "no-var": "error"
+  }
+}

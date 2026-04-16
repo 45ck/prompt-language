@@ -1,0 +1,9 @@
+{
+  "name": "approval-before-deploy",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "migrate": "node migrate.js",
+    "deploy": "bash deploy.sh"
+  }
+}

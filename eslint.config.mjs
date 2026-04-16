@@ -37,6 +37,7 @@ export default tseslint.config(
       'experiments/marketing-factory/results/**',
       'experiments/website-factory/results/**',
       'experiments/full-sdlc-factory/results/**',
+      'examples/public/**',
     ],
   },
 

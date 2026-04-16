@@ -61,7 +61,7 @@ The outer `while ask` loop keeps iterating as long as there are unresolved tasks
 
 Invoke this as a skill from your preferred harness -- Claude Code, Codex CLI, Gemini CLI -- or run it headless in CI with `npx @45ck/prompt-language ci`.
 
-More examples: [docs/examples](docs/examples/index.md) | DSL cheatsheet: [docs/reference/dsl-cheatsheet.md](docs/reference/dsl-cheatsheet.md)
+More examples: [docs/examples](docs/examples/index.md) | [Proof examples](examples/public/) | DSL cheatsheet: [docs/reference/dsl-cheatsheet.md](docs/reference/dsl-cheatsheet.md)
 
 ## Features
 
@@ -101,6 +101,7 @@ Full CLI documentation: [docs/reference/cli-reference.md](docs/reference/cli-ref
 | Architecture and design | [docs/architecture.md](docs/architecture.md)                             |
 | Security model          | [docs/security.md](docs/security.md)                                     |
 | Examples                | [docs/examples/index.md](docs/examples/index.md)                         |
+| Proof examples          | [examples/public/](examples/public/)                                     |
 | Experiments             | [docs/experiments.md](docs/experiments.md)                               |
 | Troubleshooting         | [docs/operations/troubleshooting.md](docs/operations/troubleshooting.md) |
 | Roadmap                 | [docs/roadmap.md](docs/roadmap.md)                                       |

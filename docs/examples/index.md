@@ -2,6 +2,8 @@
 
 Worked flow examples and the larger showcase catalog.
 
+**Runnable proof examples**: Self-contained repos that demonstrate verification gates catching false completion. See [examples/public/](../../examples/public/).
+
 ## Representative examples
 
 | Example                                                       | Pattern                                            |

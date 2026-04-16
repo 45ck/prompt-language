@@ -23,6 +23,13 @@
  *   --expected-binary-hashes <file> JSON file { binaryName: [sha256, ...] }.
  *                                   Reject shim_invocation_* entries whose
  *                                   binarySha256 is not in the allow-list.
+ *   --attestation <path>            Detached attestation.json for the bundle.
+ *   --require-attestation           Reject unless --attestation verifies.
+ *   --trusted-signers <path>        Trusted signer registry. Defaults to
+ *                                   docs/security/trusted-signers.json.
+ *   --revoked-signers <path>        Revoked signer registry. Defaults to
+ *                                   docs/security/revoked-signers.json.
+ *   --require-role <role>           Require attestation signerRole to match.
  *
  * Misc:
  *   --flow <path>                   Informational only (reserved).
@@ -42,11 +49,19 @@
  *   h. (Optional) at least --min-entries total entries.
  *   i. (Optional) trace evidence carries reviewer.family == --expected-reviewer-family.
  *   j. (Optional) every shim binarySha256 is in --expected-binary-hashes.
+ *   k. (Optional) detached attestation signature verifies, signer is trusted,
+ *      non-revoked, and payload matches bundle artifacts.
  */
 
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve, basename } from 'node:path';
+import { dirname, resolve, basename } from 'node:path';
 import { canonicalJSON, hashEvent, hashState, verifyChain } from './provenance-schema.mjs';
+import {
+  buildBundlePayload,
+  DEFAULT_REVOKED_SIGNERS_PATH,
+  DEFAULT_TRUSTED_SIGNERS_PATH,
+  verifyAttestationAgainstBundle,
+} from '../experiments/meta/attestation-lib.mjs';
 
 function parseArgs(argv) {
   const out = {
@@ -59,6 +74,11 @@ function parseArgs(argv) {
     minEntries: null,
     expectedReviewerFamily: null,
     expectedBinaryHashes: null,
+    attestation: null,
+    requireAttestation: false,
+    trustedSigners: DEFAULT_TRUSTED_SIGNERS_PATH,
+    revokedSigners: DEFAULT_REVOKED_SIGNERS_PATH,
+    requireRole: null,
     flow: null,
     json: false,
   };
@@ -73,6 +93,11 @@ function parseArgs(argv) {
     else if (a === '--min-entries') out.minEntries = Number(argv[++i]);
     else if (a === '--expected-reviewer-family') out.expectedReviewerFamily = argv[++i];
     else if (a === '--expected-binary-hashes') out.expectedBinaryHashes = argv[++i];
+    else if (a === '--attestation') out.attestation = argv[++i];
+    else if (a === '--require-attestation') out.requireAttestation = true;
+    else if (a === '--trusted-signers') out.trustedSigners = argv[++i];
+    else if (a === '--revoked-signers') out.revokedSigners = argv[++i];
+    else if (a === '--require-role') out.requireRole = argv[++i];
     else if (a === '--flow') out.flow = argv[++i];
     else if (a === '--json') out.json = true;
     else if (a === '--help' || a === '-h') {
@@ -86,6 +111,11 @@ function parseArgs(argv) {
           '  --min-entries <N>\n' +
           '  --expected-reviewer-family <family>\n' +
           '  --expected-binary-hashes <file>\n' +
+          '  --attestation <file>\n' +
+          '  --require-attestation\n' +
+          `  --trusted-signers <file> (default ${DEFAULT_TRUSTED_SIGNERS_PATH})\n` +
+          `  --revoked-signers <file> (default ${DEFAULT_REVOKED_SIGNERS_PATH})\n` +
+          '  --require-role <operator|ci>\n' +
           '  --json\n',
       );
       process.exit(0);
@@ -327,8 +357,11 @@ function report(result, asJson) {
   }
   if (result.ok) {
     const suffix = result.stateCheckSkipped ? ' (state-check-skipped)' : '';
+    const attestationSuffix = result.attestation
+      ? `, attested-by=${result.attestation.signer} role=${result.attestation.signerRole}`
+      : '';
     process.stdout.write(
-      `verify-trace OK: ${result.entryCount} entries, ${result.runtimePairs} runtime/shim pairs, runId=${result.runId}${suffix}\n`,
+      `verify-trace OK: ${result.entryCount} entries, ${result.runtimePairs} runtime/shim pairs, runId=${result.runId}${attestationSuffix}${suffix}\n`,
     );
     return;
   }
@@ -354,6 +387,22 @@ async function main() {
     process.stderr.write('verify-trace: --trace is required\n');
     process.exit(2);
   }
+  if (args.requireRole && args.requireRole !== 'operator' && args.requireRole !== 'ci') {
+    process.stderr.write('verify-trace: --require-role must be "operator" or "ci"\n');
+    process.exit(2);
+  }
+  if (args.requireAttestation && !args.attestation) {
+    report(
+      {
+        ok: false,
+        errors: ['attestation required but absent'],
+        orphans: [],
+        binaryHashFailures: [],
+      },
+      args.json,
+    );
+    process.exit(1);
+  }
 
   // AP-1/AP-2: --state mandatory unless explicitly opted out.
   if (!args.state && !args.allowMissingState) {
@@ -373,6 +422,7 @@ async function main() {
     errors: [],
     orphans: [],
     binaryHashFailures: [],
+    attestation: null,
   };
 
   let entries;
@@ -535,6 +585,41 @@ async function main() {
     }
   } else if (args.allowMissingState) {
     result.stateCheckSkipped = true;
+  }
+
+  if (args.attestation) {
+    try {
+      const attestationPath = resolve(args.attestation);
+      if (!existsSync(attestationPath)) {
+        throw new Error(`attestation file not found: ${attestationPath}`);
+      }
+      const bundleDir = dirname(attestationPath);
+      const attestation = JSON.parse(readFileSync(attestationPath, 'utf8'));
+      const { payload: bundlePayload } = buildBundlePayload({
+        bundleDir,
+        tracePath,
+        statePath: args.state ? resolve(args.state) : resolve(bundleDir, 'session-state.json'),
+      });
+      result.attestation = verifyAttestationAgainstBundle({
+        attestation,
+        bundlePayload,
+        trustedSignersPath: resolve(args.trustedSigners),
+        revokedSignersPath: resolve(args.revokedSigners),
+        requireRole: args.requireRole,
+        expectedRunId: args.expectedRunId,
+        expectedPairCount:
+          args.expectedPairCount !== null && !Number.isNaN(args.expectedPairCount)
+            ? args.expectedPairCount
+            : null,
+        freshnessWindowMs:
+          args.freshnessWindowMs !== null && !Number.isNaN(args.freshnessWindowMs)
+            ? args.freshnessWindowMs
+            : null,
+      });
+    } catch (err) {
+      result.ok = false;
+      result.errors.push(err.message);
+    }
   }
 
   report(result, args.json);

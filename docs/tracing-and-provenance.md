@@ -17,8 +17,14 @@ witness pairing. Every feature in this document requires:
 
 Claim-eligible runs additionally require the G1 hardening flags
 (`--expected-run-id`, `--expected-pair-count`, `--expected-binary-hashes`)
-and, when AP-9 attestation ships, `--require-attestation` with a signer
-role in `docs/security/trusted-signers.json`.
+plus AP-9 attestation verification. `verify-trace.mjs` now accepts
+`--attestation`, `--require-attestation`, `--trusted-signers`,
+`--revoked-signers`, and `--require-role`, and
+`scripts/experiments/meta/attest.mjs` can sign a bundle. The repo currently
+ships placeholder registry files at
+[`docs/security/trusted-signers.json`](security/trusted-signers.json) and
+[`docs/security/revoked-signers.json`](security/revoked-signers.json), but
+they are empty and do not establish a production trust root yet.
 
 Current claim-eligibility status: **zero runs in the repo satisfy all
 gates today**. See `docs/strategy/program-status.md` §Verification state.
@@ -123,6 +129,11 @@ Flags:
 - `--json` — machine-readable report. Without it the output is a single
   `verify-trace OK` line on success, or an error list on stderr.
 
+The attestation workflow is described in
+[`docs/security/provenance-attestation.md`](security/provenance-attestation.md).
+The verifier/signing surface is now present; real operator trust still
+depends on provisioning non-placeholder signer entries.
+
 Exit codes: `0` pass, `1` verification failure, `2` argument error.
 
 ## Troubleshooting
@@ -156,8 +167,11 @@ three things together:
    `provenance.jsonl`, `session-state.json`, and the verifier JSON
    report as build artifacts.
 
-Runs that pass verify-trace are admissible as evidence for thesis
-claims. Runs that do not pass are discarded, not patched.
+Runs that pass the current verifier are recorded evidence and strong dev-time
+confidence signals. They are still **not** publishable or claim-eligible
+thesis evidence until a real operator signer is provisioned and used, because
+the checked-in AP-9 registries are empty placeholders. Runs that do not pass
+are discarded, not patched.
 
 ## Hardening flags (v2)
 

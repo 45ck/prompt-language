@@ -1,9 +1,27 @@
 # Provenance-Bundle Attestation Design
 
-Status: design only (xgav.9). Not yet implemented. Complements the G1
-hardening flags (`--expected-run-id`, `--expected-pair-count`,
+Status: v1 verifier + signing support shipped in the current working tree.
+`verify-trace.mjs` now accepts the attestation flags below and
+`scripts/experiments/meta/attest.mjs` can sign a bundle. The committed
+registries are still empty placeholders with no trusted production keys
+declared, so no checked-in bundle is claim-eligible yet. This complements
+the G1 hardening flags (`--expected-run-id`, `--expected-pair-count`,
 `--expected-binary-hashes`) that landed after
 `docs/security/witness-chain-attacks.md`.
+
+Current repo state:
+
+- This document defines the AP-9 design and the shipped v1 surface.
+- [`trusted-signers.json`](trusted-signers.json) and
+  [`revoked-signers.json`](revoked-signers.json) now exist as committed
+  placeholders with **no trusted production keys declared**.
+- `scripts/eval/verify-trace.mjs` now implements `--attestation`,
+  `--require-attestation`, `--trusted-signers`, `--revoked-signers`, and
+  `--require-role`.
+- `scripts/experiments/meta/attest.mjs` signs bundle payloads against a
+  trusted signer registry entry.
+- No checked-in bundle in this repo is operator-attested today, because
+  the checked-in registries are intentionally empty.
 
 ## 1. Why this layer is necessary
 
@@ -128,6 +146,11 @@ compares the signature before trusting any field.
 
 ### 4.1 Registry files (both committed, outside bundle)
 
+The committed files in the repo are intentionally empty placeholders until
+real key material and verifier support land. The populated examples below
+show the intended shape only; they are **not** statements about current
+production signers.
+
 `docs/security/trusted-signers.json`
 
 ```jsonc
@@ -135,20 +158,20 @@ compares the signature before trusting any field.
   "version": 1,
   "signers": [
     {
-      "signerId": "operator-45ck-2026-04",
+      "signerId": "example-operator-do-not-trust",
       "role": "operator",
       "publicKey": "base64 ed25519 pubkey (32 bytes)",
       "validFrom": "2026-04-01T00:00:00Z",
       "validUntil": null,
-      "notes": "Primary operator signing key, offline-generated",
+      "notes": "Illustrative example only; not a real trusted signer",
     },
     {
-      "signerId": "ci-main-2026-04",
+      "signerId": "example-ci-do-not-trust",
       "role": "ci",
       "publicKey": "base64 ed25519 pubkey",
       "validFrom": "2026-04-10T00:00:00Z",
       "validUntil": null,
-      "notes": "GitHub Actions secret PL_CI_ATTEST_KEY",
+      "notes": "Illustrative example only; not a real trusted signer",
     },
   ],
 }
@@ -161,7 +184,7 @@ compares the signature before trusting any field.
   "version": 1,
   "revoked": [
     {
-      "signerId": "ci-main-2025-12",
+      "signerId": "example-compromised-ci-do-not-trust",
       "revokedAt": "2026-01-15T00:00:00Z",
       "reason": "suspected leak in CI log",
     },
@@ -221,7 +244,7 @@ Behavior:
 Environment: `PL_ATTEST_KEY_PATH` may override `--key`. Key passphrases
 are read from stdin, never argv.
 
-### 5.2 CI auto-sign (Option C)
+### 5.2 Planned CI auto-sign (Option C)
 
 A `post-meta-live` job in the workflow, gated on:
 
@@ -246,7 +269,7 @@ and automation-accessible. Operator signatures are the strong promise.
 
 ## 6. Verification workflow
 
-### 6.1 New verify-trace flags
+### 6.1 verify-trace flags
 
 | Flag                       | Behavior                                                            |
 | -------------------------- | ------------------------------------------------------------------- |
@@ -359,9 +382,9 @@ earlier ones to add value.
   A signer with a wrong clock or a hostile signer can game freshness
   up to the window size.
 
-## One-line attestation rule
+## Target one-line attestation rule
 
-A bundle is claim-eligible if and only if `verify-trace` exits 0 with
+A bundle becomes claim-eligible once `verify-trace` exits 0 with
 `--require-attestation --require-role operator` against a signature
 produced by a non-revoked `operator` key listed in
 `docs/security/trusted-signers.json` over a payload whose

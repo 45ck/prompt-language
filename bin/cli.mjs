@@ -960,6 +960,9 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
     { FileMemoryStore },
     { FileMessageStore },
     { TracedPromptTurnRunner },
+    { FileSnapshotStore },
+    { NULL_SNAPSHOT_STORE },
+    { ProcessEnvReader },
     runnerModule,
   ] = await Promise.all([
     import(pathToFileURL(join(ROOT, 'dist', 'application', 'run-flow-headless.js')).href),
@@ -994,6 +997,14 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
       pathToFileURL(
         join(ROOT, 'dist', 'infrastructure', 'adapters', 'traced-prompt-turn-runner.js'),
       ).href
+    ),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'file-snapshot-store.js'))
+        .href
+    ),
+    import(pathToFileURL(join(ROOT, 'dist', 'application', 'ports', 'snapshot-store.js')).href),
+    import(
+      pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', 'process-env-reader.js')).href
     ),
     import(
       pathToFileURL(join(ROOT, 'dist', 'infrastructure', 'adapters', runnerConfig.runnerModule))
@@ -1035,6 +1046,17 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
   await stateStore.clear('');
   await stateStore.clearPendingPrompt();
 
+  const envReader = new ProcessEnvReader();
+  const snapshotMaxMb = Number.parseInt(process.env['PL_SNAPSHOT_MAX_MB'] ?? '', 10);
+  const snapshotStoreDirOverride = process.env['PL_SNAPSHOT_STORE_DIR'];
+  const snapshotStore =
+    process.env['PL_SNAPSHOT_INCLUDE_FILES'] === '1'
+      ? new FileSnapshotStore({
+          ...(Number.isFinite(snapshotMaxMb) && snapshotMaxMb > 0 ? { maxMb: snapshotMaxMb } : {}),
+          ...(snapshotStoreDirOverride ? { storeDir: snapshotStoreDirOverride } : {}),
+        })
+      : NULL_SNAPSHOT_STORE;
+
   const result = await runFlowHeadless(
     {
       cwd,
@@ -1052,6 +1074,9 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
       promptTurnRunner,
       stateStore,
       traceLogger,
+      snapshotStore,
+      envReader,
+      stateDir: resolvedStateRoot,
     },
   );
 

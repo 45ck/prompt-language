@@ -179,5 +179,8 @@
     "typescript-eslint": "^8.0.0",
     "vitest": "^4.0.0",
     "zod": "^4.3.6"
+  },
+  "dependencies": {
+    "tar": "^7.5.13"
   }
 }

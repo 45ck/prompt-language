@@ -9,6 +9,8 @@ import type { MessageStore } from './ports/message-store.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { PromptTurnRunner } from './ports/prompt-turn-runner.js';
 import type { StateStore } from './ports/state-store.js';
+import type { SnapshotStorePort } from './ports/snapshot-store.js';
+import type { EnvReaderPort } from './ports/env-reader.js';
 import { parseFlow } from './parse-flow.js';
 import { renderFlow, renderFlowSummaryBlock } from '../domain/render-flow.js';
 import { createSessionState, type SessionState } from '../domain/session-state.js';
@@ -174,6 +176,9 @@ export async function runFlowHeadless(
     readonly promptTurnRunner: PromptTurnRunner;
     readonly stateStore: StateStore;
     readonly traceLogger?: TraceLogger | undefined;
+    readonly snapshotStore?: SnapshotStorePort | undefined;
+    readonly envReader?: EnvReaderPort | undefined;
+    readonly stateDir?: string | undefined;
   },
 ): Promise<RunFlowHeadlessOutput> {
   const maxTurns = input.maxTurns ?? DEFAULT_MAX_TURNS;
@@ -231,6 +236,9 @@ export async function runFlowHeadless(
       deps.memoryStore,
       deps.messageStore,
       deps.traceLogger ?? NULL_TRACE_LOGGER,
+      deps.snapshotStore,
+      deps.envReader,
+      deps.stateDir,
     );
 
     mergeSignals(collectedSignals, step);

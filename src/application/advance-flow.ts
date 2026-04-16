@@ -51,6 +51,8 @@ import type { CaptureReader } from './ports/capture-reader.js';
 import { CAPTURE_PENDING_SENTINEL } from './ports/capture-reader.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
 import type { AuditLogger } from './ports/audit-logger.js';
+import type { SnapshotStorePort } from './ports/snapshot-store.js';
+import type { EnvReaderPort } from './ports/env-reader.js';
 import { NULL_TRACE_LOGGER, type TraceEntry, type TraceLogger } from './ports/trace-logger.js';
 import { hashEvent, hashState } from '../domain/state-hash.js';
 import type { MemoryStore } from './ports/memory-store.js';
@@ -2650,6 +2652,9 @@ export async function autoAdvanceNodes(
   memoryStore?: MemoryStore,
   messageStore?: MessageStore,
   traceLogger: TraceLogger = NULL_TRACE_LOGGER,
+  snapshotStore?: SnapshotStorePort,
+  envReader?: EnvReaderPort,
+  stateDir?: string,
 ): Promise<AutoAdvanceResult> {
   const MAX_ADVANCES = 100;
   const MAX_WALL_CLOCK_MS = 30_000;
@@ -2733,6 +2738,9 @@ export async function autoAdvanceNodes(
       auditLogger,
       memoryStore,
       messageStore,
+      snapshotStore,
+      envReader,
+      stateDir,
     );
     const result = instrumentNodeAdvanceResult(
       node,
@@ -3401,6 +3409,9 @@ async function advanceSingleNode(
   auditLogger?: AuditLogger,
   memoryStore?: MemoryStore,
   messageStore?: MessageStore,
+  snapshotStore?: SnapshotStorePort,
+  envReader?: EnvReaderPort,
+  stateDir?: string,
 ): Promise<
   | AutoAdvanceResult
   | { state: SessionState; advanced: true; traceDetail?: Readonly<Record<string, unknown>> }
@@ -3487,9 +3498,9 @@ async function advanceSingleNode(
     case 'receive':
       return advanceReceiveNode(node, current, messageStore);
     case 'snapshot':
-      return advanceSnapshotNode(node, current);
+      return advanceSnapshotNode(node, current, snapshotStore, envReader, stateDir);
     case 'rollback':
-      return advanceRollbackNode(node, current);
+      return advanceRollbackNode(node, current, snapshotStore, stateDir);
     case 'swarm':
     case 'start':
       return unexpectedLoweredAwayNode(node);
@@ -3504,11 +3515,23 @@ async function advanceSingleNode(
  * Capture a named snapshot of the current variables, path, and iteration
  * counters, then advance past the node. Duplicate names overwrite silently
  * with a warning (handled by addSnapshot).
+ *
+ * PR2: when `snapshotStore` is provided and `PL_SNAPSHOT_INCLUDE_FILES=1`,
+ * the adapter also captures the stateDir file tree and the returned ref is
+ * attached as `filesDigestRef` on the snapshot. Capture failures are
+ * recorded as warnings; the pure-state snapshot still lands.
  */
-function advanceSnapshotNode(
+async function advanceSnapshotNode(
   node: SnapshotNode,
   current: SessionState,
-): { state: SessionState; advanced: true } {
+  snapshotStore?: SnapshotStorePort,
+  envReader?: EnvReaderPort,
+  stateDir?: string,
+): Promise<{
+  state: SessionState;
+  advanced: true;
+  traceDetail?: Readonly<Record<string, unknown>>;
+}> {
   const iterations: Record<string, number> = {};
   for (const [nodeId, progress] of Object.entries(current.nodeProgress)) {
     iterations[nodeId] = progress.iteration;
@@ -3517,40 +3540,85 @@ function advanceSnapshotNode(
   const stateHash =
     current.stateHash ?? hashState({ ...current, stateHash: undefined, prevStateHash: undefined });
 
+  const shouldCaptureFiles =
+    snapshotStore != null &&
+    stateDir != null &&
+    envReader?.read('PL_SNAPSHOT_INCLUDE_FILES') === '1';
+
+  let filesDigestRef: string | undefined;
+  let stateAfterCapture = current;
+  if (shouldCaptureFiles) {
+    try {
+      filesDigestRef = await snapshotStore.capture(stateDir);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      stateAfterCapture = addWarning(current, `snapshot files capture failed: ${msg}`);
+    }
+  }
+
   const snapshot: StateSnapshot = {
     name: node.name,
     createdAt: new Date().toISOString(),
     stateHash,
-    variables: { ...current.variables },
-    currentPath: [...current.currentNodePath],
+    variables: { ...stateAfterCapture.variables },
+    currentPath: [...stateAfterCapture.currentNodePath],
     iterations,
+    ...(filesDigestRef != null ? { filesDigestRef } : {}),
   };
 
-  const withSnapshot = addSnapshot(current, snapshot);
-  return { state: advanceFromPath(withSnapshot, current.currentNodePath), advanced: true };
+  const withSnapshot = addSnapshot(stateAfterCapture, snapshot);
+  const advanced = advanceFromPath(withSnapshot, stateAfterCapture.currentNodePath);
+  return filesDigestRef != null
+    ? {
+        state: advanced,
+        advanced: true,
+        traceDetail: { filesCaptured: true, filesDigestRef },
+      }
+    : { state: advanced, advanced: true };
 }
 
 /**
  * Restore a previously captured snapshot. Missing snapshots pause instead of
  * failing so a surrounding try/catch can recover. spawnedChildren, status
  * flags, warnings, and the trace sequence are preserved (see applySnapshot).
+ *
+ * PR2: when the snapshot was captured with a file tree (`filesDigestRef`
+ * present) and `snapshotStore`/`stateDir` are wired, the file tree is also
+ * restored. A restore failure surfaces as `markFailed` so the operator
+ * sees divergence rather than continuing on a half-restored workspace.
  */
-function advanceRollbackNode(
+async function advanceRollbackNode(
   node: RollbackNode,
   current: SessionState,
-):
+  snapshotStore?: SnapshotStorePort,
+  stateDir?: string,
+): Promise<
   | AutoAdvanceResult
   | {
       state: SessionState;
       advanced: true;
       traceDetail?: Readonly<Record<string, unknown>>;
-    } {
+    }
+> {
   const snapshot = current.snapshots[node.name];
   const restored = applySnapshot(current, node.name);
   if (restored == null || snapshot == null) {
     const warned = addWarning(current, `rollback: no snapshot named "${node.name}"`);
     return { kind: 'pause', state: warned, capturedPrompt: null };
   }
+
+  let filesRestored = false;
+  if (snapshot.filesDigestRef != null && snapshotStore != null && stateDir != null) {
+    try {
+      await snapshotStore.restore(snapshot.filesDigestRef, stateDir);
+      filesRestored = true;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const failed = markFailed(restored, `rollback files failed: ${msg}`);
+      return { state: failed, advanced: true };
+    }
+  }
+
   // Restore variables and iteration counters from snapshot, but advance past
   // the rollback node itself so execution continues forward (not back into a
   // snapshot→rollback infinite loop).
@@ -3558,14 +3626,12 @@ function advanceRollbackNode(
     { ...restored, currentNodePath: [...current.currentNodePath] },
     current.currentNodePath,
   );
-  return {
-    state: advanced,
-    advanced: true,
-    traceDetail: {
-      rolledBackTo: node.name,
-      restoredStateHash: snapshot.stateHash,
-    },
+  const traceDetail: Record<string, unknown> = {
+    rolledBackTo: node.name,
+    restoredStateHash: snapshot.stateHash,
   };
+  if (filesRestored) traceDetail['filesRestored'] = true;
+  return { state: advanced, advanced: true, traceDetail };
 }
 
 // H#15: Break exits the nearest enclosing loop (while/until/retry/foreach).

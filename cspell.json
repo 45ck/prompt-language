@@ -126,7 +126,10 @@
     "badprop",
     "findstr",
     "ksih",
-    "multiset"
+    "multiset",
+    "keypairs",
+    "qwvu",
+    "kv57"
   ],
   "ignorePaths": [
     "dist/**",

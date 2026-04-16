@@ -1,12 +1,42 @@
 # Provenance-Bundle Attestation Design
 
-Status: v1 verifier + signing support shipped in the current working tree.
-`verify-trace.mjs` now accepts the attestation flags below and
-`scripts/experiments/meta/attest.mjs` can sign a bundle. The committed
-registries are still empty placeholders with no trusted production keys
-declared, so no checked-in bundle is claim-eligible yet. This complements
-the G1 hardening flags (`--expected-run-id`, `--expected-pair-count`,
-`--expected-binary-hashes`) that landed after
+Status: v1 verifier + signing support shipped. `verify-trace.mjs` accepts
+the attestation flags below and `scripts/experiments/meta/attest.mjs`
+signs bundles and generates operator keypairs (`--keygen`). The
+hardening pass (prompt-kv57 / prompt-qwvu) landed after the initial
+AP-9 ship:
+
+- Ed25519 signature encoding is pinned to 64 raw bytes with explicit
+  error classes (`attestation-invalid-signature-length`,
+  `attestation-invalid-signature`, `attestation-payload-mismatch`,
+  `attestation-algorithm-rejected`, `attestation-role-rejected`,
+  `attestation-signer-revoked`, `attestation-signer-untrusted`,
+  `attestation-schema-invalid`, `attestation-freshness-window-exceeded`).
+- The verifier runs checks in the fixed order defined in §6.2(a)-(i);
+  signature verify precedes any disk recompute so the error class never
+  leaks oracle information about payload-vs-disk tampering.
+- A build-time sha256 pin over `docs/security/trusted-signers.json` and
+  `docs/security/revoked-signers.json` is emitted to
+  `dist/eval/attestation-trust-root.js` by
+  `scripts/build/emit-attestation-trust-root.mjs`; the verifier refuses
+  to trust a registry whose on-disk sha256 does not match.
+- The `dev` role is no longer accepted by default. Callers that want
+  dev-role experimentation must pass `--allow-dev-role` to verify-trace;
+  the OK line then surfaces `(dev-role-allowed)`. A dev-role bundle is
+  not claim-eligible.
+- The OK line surfaces `trust-root=sha256:<hex8>` so auditors can see
+  which registry was consulted.
+- `attest.mjs` appends a local audit record to
+  `~/.pl-attest-log.jsonl` (overridable via `PL_ATTEST_LOG_PATH`) on
+  every sign; failures to write are warned but never fatal.
+- `run-meta-experiment.mjs` refuses `PL_META_SIGN=1` unless
+  `PL_META_SIGNER_ID` is set and the registry entry's role is
+  `operator` or `ci`; no `dev-local` default.
+
+The committed registries are still empty placeholders with no trusted
+production keys declared, so no checked-in bundle is claim-eligible yet.
+This complements the G1 hardening flags (`--expected-run-id`,
+`--expected-pair-count`, `--expected-binary-hashes`) that landed after
 `docs/security/witness-chain-attacks.md`.
 
 Current repo state:
@@ -232,14 +262,27 @@ node scripts/experiments/meta/attest.mjs \
 
 Behavior:
 
-1. Loads `provenance.jsonl`, `session-state.json`, `manifest-pre.json`
+1. Warns loudly if the `--key` file is group/other-accessible on POSIX,
+   or emits an advisory warning on Windows where NTFS ACLs cannot be
+   POSIX-translated.
+2. Loads `provenance.jsonl`, `session-state.json`, `manifest-pre.json`
    from the bundle.
-2. Computes `manifestHash`, `finalStateHash` from disk; reads
-   `runId`, `commitSha`, `pairCount`, family names from bundle
-   metadata.
-3. Assembles `payload`, canonicalizes, ed25519-signs with `--key`.
-4. Writes `attestation.json`. Refuses if one already exists unless
+3. Computes `manifestHash`, `finalStateHash` from disk; reads `runId`,
+   `commitSha`, `pairCount`, family names from bundle metadata.
+4. Assembles `payload`, canonicalizes, Ed25519-signs with `--key`.
+   Asserts the raw signature is exactly 64 bytes.
+5. Writes `attestation.json`. Refuses if one already exists unless
    `--force-replace` is passed.
+6. Appends `{signerId, bundleDir, payloadSha256, signedAt}` to
+   `~/.pl-attest-log.jsonl` (override via `PL_ATTEST_LOG_PATH`). A
+   log-write failure emits a warning but is not fatal.
+
+Keygen: `node scripts/experiments/meta/attest.mjs --keygen --signer
+<id> [--keygen-out <dir>]` generates a PEM PKCS#8 Ed25519 private key
+with mode 0600 in a directory with mode 0700 (default
+`scripts/eval/.attest-keys/`, already gitignored) and writes the raw
+base64 public key next to it for registry import. On Windows the
+modes are advisory and the tool surfaces a warning to stderr.
 
 Environment: `PL_ATTEST_KEY_PATH` may override `--key`. Key passphrases
 are read from stdin, never argv.
@@ -271,47 +314,74 @@ and automation-accessible. Operator signatures are the strong promise.
 
 ### 6.1 verify-trace flags
 
-| Flag                       | Behavior                                                            |
-| -------------------------- | ------------------------------------------------------------------- |
-| `--attestation <path>`     | When present, verify signature and cross-check payload vs bundle    |
-| `--require-attestation`    | Fail if `--attestation` absent or signature invalid                 |
-| `--trusted-signers <path>` | Default `docs/security/trusted-signers.json`                        |
-| `--revoked-signers <path>` | Default `docs/security/revoked-signers.json`                        |
-| `--require-role <role>`    | Optional; e.g. `--require-role operator` for thesis-eligible checks |
+| Flag                             | Behavior                                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `--attestation <path>`           | When present, verify signature and cross-check payload vs bundle                                              |
+| `--require-attestation`          | Fail if `--attestation` absent or signature invalid                                                           |
+| `--trusted-signers <path>`       | Default `docs/security/trusted-signers.json`                                                                  |
+| `--revoked-signers <path>`       | Default `docs/security/revoked-signers.json`                                                                  |
+| `--trusted-signers-sha256 <hex>` | Override the build-time pin (for tests and out-of-band rotation flows)                                        |
+| `--revoked-signers-sha256 <hex>` | Override the build-time pin for the revocation file                                                           |
+| `--require-role <role>`          | Optional; e.g. `--require-role operator` for thesis-eligible checks                                           |
+| `--allow-dev-role`               | Widen accepted roles to include `dev`; bundle is not claim-eligible; surfaces `(dev-role-allowed)` in OK line |
 
 ### 6.2 Verification steps (in order)
+
+Attestation verification is pinned to this sequence by
+`verifyAttestationAgainstBundle` in
+`scripts/experiments/meta/attestation-lib.mjs`. The order is
+load-bearing: steps that use public information only (schema, registry,
+revocation, role) run before steps that depend on the signature or on
+recomputing payload-bound hashes from disk, so an attacker with
+workspace write never sees an error class that distinguishes
+"valid-signature-tampered-disk" from "invalid-signature".
 
 1. Existing chain verification (unchanged).
 2. Existing G1 checks (`--expected-run-id`, `--expected-pair-count`,
    `--expected-binary-hashes`, freshness, state hash).
-3. If `--attestation` set:
-   a. Parse `attestation.json`; schema-check strictly.
-   b. Look up `signer` in `trusted-signers.json`; reject if missing
-   or if the current time is outside `validFrom`/`validUntil`.
+3. Attestation hash-pin: if `--attestation` is set, confirm
+   `sha256(docs/security/trusted-signers.json)` and
+   `sha256(docs/security/revoked-signers.json)` match the values in
+   `dist/eval/attestation-trust-root.js` (or the
+   `--trusted-signers-sha256` / `--revoked-signers-sha256` overrides).
+4. If `--attestation` set:
+   a. Parse `attestation.json`; schema-check strictly, including
+   `signedAt >= payload.createdAt` and `signature` decoding to a
+   64-byte Ed25519 value.
+   b. Look up `signer` in `trusted-signers.json`; reject if missing or
+   if the registry role disagrees with the attestation's `signerRole`.
    c. Reject if `signer` appears in `revoked-signers.json`.
-   d. Reject if `--require-role` set and `signerRole` does not match.
-   e. Verify ed25519 signature over `canonicalJSON(payload)` using the
+   d. Reject if the current time is outside `validFrom`/`validUntil`.
+   e. Reject if `--require-role` is set and `signerRole` does not match.
+   f. Verify Ed25519 signature over `canonicalJSON(payload)` using the
    pinned public key.
-   f. Recompute `manifestHash`, `finalStateHash` from bundle disk;
-   reject on mismatch.
-   g. Cross-check `payload.runId` against `--expected-run-id`, against
-   `runId` fields in the chain, and against every entry.
-   h. Cross-check `payload.pairCount` against `--expected-pair-count`
-   and the actual pair count in the chain.
-   i. Reject if `payload.createdAt` is outside the freshness window.
-4. If `--require-attestation` and no `--attestation`: exit 1 with
+   g. Recompute `manifestHash`, `finalStateHash` from bundle disk;
+   reject on mismatch of any payload field.
+   h. Cross-check `payload.runId` and `payload.pairCount` against
+   `--expected-run-id` / `--expected-pair-count`.
+   i. Reject if `payload.createdAt` is outside the freshness window;
+   when `--require-role operator`, also enforce
+   `runtimeFamily != reviewerFamily` on the payload.
+5. If `--require-attestation` and no `--attestation`: exit 1 with
    `attestation required but absent`.
 
 ### 6.3 Exit codes and messages
 
-- `0`: `verify-trace OK: N entries, M pairs, attested-by=<signerId> role=<role>`
-- `1`: one of `attestation invalid signature`,
-  `attestation signer revoked`, `attestation payload mismatch: <field>`,
-  `attestation required but absent`, plus existing chain failures.
+- `0`: `verify-trace OK: N entries, M pairs, runId=<id>, attested-by=<signerId> role=<role>, trust-root=sha256:<hex8> [revoked-root=sha256:<hex8>] [(state-check-skipped)] [(dev-role-allowed)]`
+- `1`: one of `attestation-invalid-signature`,
+  `attestation-invalid-signature-length`, `attestation-payload-mismatch`,
+  `attestation-signer-revoked`, `attestation-signer-untrusted`,
+  `attestation-algorithm-rejected`, `attestation-role-rejected`,
+  `attestation-schema-invalid`, `attestation-freshness-window-exceeded`,
+  `attestation required but absent`, `trust-root mismatch: ...`, plus
+  existing chain failures. Error classes are stable identifiers; tests
+  match on them rather than on prose.
 - `2`: argument error (unchanged).
 
 Claim-eligible callers pass `--require-attestation --require-role
-operator`. Dev callers pass nothing new.
+operator`. Dev callers pass nothing new; local-only dev experimentation
+passes `--allow-dev-role`, which adds `(dev-role-allowed)` to the OK
+line.
 
 ## 7. Composition with G1
 

@@ -1,0 +1,17 @@
+{"timestamp":"2026-04-10T08:02:19.175Z","event":"run_command","command":"node -e \"process.exit(0)\"","exitCode":0}
+{"timestamp":"2026-04-10T08:02:19.196Z","event":"run_command","command":"echo and-pass > and-result.txt","exitCode":0}
+{"timestamp":"2026-04-10T08:02:19.216Z","event":"run_command","command":"echo and-fail > and-result.txt","exitCode":0}
+{"timestamp":"2026-04-10T08:02:19.235Z","event":"run_command","command":"echo or-pass > or-result.txt","exitCode":0}
+{"timestamp":"2026-04-10T08:02:19.255Z","event":"run_command","command":"echo or-fail > or-result.txt","exitCode":0}
+{"timestamp":"2026-04-10T08:02:19.360Z","event":"run_command","command":"echo less-than-pass > cmp-result.txt","exitCode":0}
+{"timestamp":"2026-04-10T08:02:19.382Z","event":"run_command","command":"echo less-than-fail > cmp-result.txt","exitCode":0}
+{"timestamp":"2026-04-10T08:02:19.401Z","event":"run_command","command":"echo gte-pass > gte-result.txt","exitCode":0}
+{"timestamp":"2026-04-10T08:02:19.421Z","event":"run_command","command":"echo gte-fail > gte-result.txt","exitCode":0}
+{"timestamp":"2026-04-10T08:02:19.522Z","event":"run_command","command":"echo 'https'-'localhost'-'8080' > multi-var.txt","exitCode":0}
+{"timestamp":"2026-04-16T21:41:06.229Z","event":"node_advance","command":"remember crm_target_market","nodeId":"n1","nodeKind":"remember","nodePath":"0","durationMs":3}
+{"timestamp":"2026-04-16T21:41:06.232Z","event":"node_advance","command":"remember crm_stack","nodeId":"n2","nodeKind":"remember","nodePath":"1","durationMs":1}
+{"timestamp":"2026-04-16T21:41:06.235Z","event":"node_advance","command":"remember crm_package_manager","nodeId":"n3","nodeKind":"remember","nodePath":"2","durationMs":1}
+{"timestamp":"2026-04-16T21:41:06.238Z","event":"node_advance","command":"remember crm_workspace","nodeId":"n4","nodeKind":"remember","nodePath":"3","durationMs":2}
+{"timestamp":"2026-04-16T21:41:06.241Z","event":"node_advance","command":"remember crm_entities","nodeId":"n5","nodeKind":"remember","nodePath":"4","durationMs":2}
+{"timestamp":"2026-04-16T21:41:06.242Z","event":"node_advance","command":"prompt: You are operating a pure prompt-language CRM factory. Work only inside ${crm_workspace}. Treat it as the target repo root. The flow pack is the entire contract; do not invent extra phases, and do not assume any runner-specific conventions. Record non-obvious decisions as ADRs under docs/adr/.","nodeId":"n6","nodeKind":"prompt","nodePath":"5","durationMs":0}
+{"timestamp":"2026-04-16T21:49:05.557Z","event":"node_advance","command":"prompt: # ── Bootstrap: set configuration variables ──","nodeId":"n1","nodeKind":"prompt","nodePath":"0","durationMs":1}

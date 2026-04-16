@@ -1,0 +1,2 @@
+verify-trace FAILED
+  - chain: entry 0: prevEventHash must be string or null

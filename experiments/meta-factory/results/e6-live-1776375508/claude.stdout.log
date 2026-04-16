@@ -1,0 +1,18 @@
+Confirmed: `memory:` hydration at `inject-context.ts:379` runs at parse-time — it reads from `memory.json` and sets variables, OR sets `''` when the key is missing. On this flow's **first run**, `memory.json` was empty at parse-time, so every variable resolved to `''`. The `remember` nodes n1–n5 then wrote to memory, but too late — variables stay `""` for the whole session.
+
+That's a genuine bootstrap ordering bug in this flow's design: the `memory:` block prefetches before `remember` writes, so first-run cold-start is always broken. Fix is `let crm_workspace = "..."` at the top instead of relying on memory prefetch.
+
+**Decision: I'm not advancing the flow.** Reasoning:
+
+- Variables are permanently `""` for this session. Every `${crm_workspace}`, `${crm_package_manager}`, `${crm_entities}` interpolation emits empty. `foreach entity in "${crm_entities}"` iterates zero items.
+- Auto-advancing past n7 triggers n8's `fs.mkdirSync(['docs', ...])` with plugin-repo CWD — creates scaffolding directories at `C:\Projects\prompt-language\docs\research\`, `apps/web/`, `packages/api/` etc. That contaminates your plugin repo, conflicting with the existing `docs/` tree the plugin ships.
+- Gates use `existsSync('docs/prd.md')` in process CWD (evaluate-completion.ts:80). With Claude Code launched at `C:\Projects\prompt-language`, gates check plugin repo, not the workspace. Writing files into the workspace doesn't satisfy them. No in-session action can change process CWD.
+- The stop hook bypass requires `status === 'failed'` or `'cancelled'` (stop-hook-main.ts:36), but flipping status directly risks breaking `_checksum`/`stateHash` integrity.
+
+**What you need to do:**
+
+1. Delete `.prompt-language/session-state.json` (the broken session).
+2. Patch the flow: replace the `remember` bootstrap with `let` at the top (so variables hydrate immediately), and prepend `cd experiments/full-saas-factory/e6-pl-crm-factory/workspace/crm-app && ` to the `run:` commands in `scaffold-project.flow`, `install-dependencies.flow`, `run-acceptance.flow`, `git-commit.flow`, and `generate-crud-entity.flow`.
+3. Or launch `claude -p` from inside the workspace so CWD is correct from the start (still need the `let` fix for variable hydration on cold start).
+
+The stop hook will keep firing until the session is deleted or flipped to `failed`/`cancelled`. I'll let it fire rather than create plugin-repo contamination.

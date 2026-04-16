@@ -1,0 +1,27 @@
+[
+  {
+    "timestamp": "2026-04-16T21:41:06.227Z",
+    "key": "crm_target_market",
+    "value": "small-to-medium sales and service teams"
+  },
+  {
+    "timestamp": "2026-04-16T21:41:06.231Z",
+    "key": "crm_stack",
+    "value": "Next.js + TypeScript + PostgreSQL + Prisma"
+  },
+  {
+    "timestamp": "2026-04-16T21:41:06.234Z",
+    "key": "crm_package_manager",
+    "value": "pnpm"
+  },
+  {
+    "timestamp": "2026-04-16T21:41:06.236Z",
+    "key": "crm_workspace",
+    "value": "experiments/full-saas-factory/e6-pl-crm-factory/workspace/crm-app"
+  },
+  {
+    "timestamp": "2026-04-16T21:41:06.239Z",
+    "key": "crm_entities",
+    "value": "contact company opportunity"
+  }
+]

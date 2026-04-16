@@ -1,0 +1,40 @@
+{
+  "hypothesis": "H11",
+  "hypothesis_name": "multi-file refactor (Contact -> Client rename)",
+  "model": "ollama_chat/qwen3-opencode:30b",
+  "ollama_model_blob_sha256": "58574f2e94b99fb9e4391408b57e5aeaaaec10f6384e9a699fc2cb43a5c8eabf",
+  "aider_version": "0.86.2",
+  "pl_commit": "9882c56d62e18b505382a4c5b84a81e9c14795da",
+  "fixture_cwd_tar_sha256": "37a6b0bff7a1ee7d7a15f22f7b6eaca5c410377d38c81c7bac86624f44492503",
+  "runs_per_cell": 1,
+  "cells": {
+    "solo": {
+      "verify_pass": 2,
+      "verify_fail": 10,
+      "verify_total": 12,
+      "wall_ms": 393723,
+      "tokens_approx": 1535,
+      "tokens_source": "aider transcript reported 801 sent + 734 received on the single turn",
+      "timeout_hit": false,
+      "notes": "Aider was invoked with TASK.md content as --message but no files were added to the chat. Aider asked for files and produced no edits."
+    },
+    "pl": {
+      "verify_pass": 3,
+      "verify_fail": 9,
+      "verify_total": 12,
+      "wall_ms": 584355,
+      "tokens_approx": null,
+      "tokens_source": "not directly captured; PL transcript shows only CI runner envelope while per-node aider token counts live in .aider.chat.history.md (multiple turns, not aggregated)",
+      "timeout_hit": false,
+      "notes": "ci --runner aider drove the task.flow file end-to-end. Aider did edit src/app.js (PASS on Contact-absence test for that file), but introduced ES-module import syntax that broke the app-runs and imports-resolve tests. Most other source files were not reached."
+    }
+  },
+  "delta": {
+    "pass_count": 1,
+    "pass_count_formula": "pl.verify_pass - solo.verify_pass = 3 - 2",
+    "wall_ratio": 1.4842,
+    "wall_ratio_formula": "pl.wall_ms / solo.wall_ms = 584355 / 393723"
+  },
+  "winner": "pl",
+  "tie_semantics": "pl strictly dominates on verify_pass (3 > 2); solo is faster (-190s wall) but with strictly fewer passing tests. Margin is 1 test, which is small and within the range a k=3 rerun could invert."
+}

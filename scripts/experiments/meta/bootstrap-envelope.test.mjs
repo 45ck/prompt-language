@@ -179,7 +179,7 @@ test('CLI exits 1 when blocked and 0 when ready/degraded', () => {
     const okReport = JSON.parse(ok.stdout);
     // Exit code must correlate with overall: blocked→1, ready/degraded→0.
     // We assert the invariant rather than force a specific overall, because
-    // item 1 depends on whether dist/state-hash.js exists in the host repo.
+    // item 1 depends on whether dist/domain/state-hash.js exists in the host repo.
     if (okReport.overall === 'blocked') {
       assert.equal(ok.status, 1, `stderr=${ok.stderr}`);
     } else {

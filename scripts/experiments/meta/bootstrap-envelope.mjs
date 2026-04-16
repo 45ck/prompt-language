@@ -103,9 +103,14 @@ function checkItem1PinnedRuntime(repoRoot) {
   if (!existsSync(distDir)) {
     return item(1, 'pinned runtime', 'blocked', 'dist/ missing — run `npm run build`');
   }
-  const stateHash = join(distDir, 'state-hash.js');
+  const stateHash = join(distDir, 'domain', 'state-hash.js');
   if (!existsSync(stateHash)) {
-    return item(1, 'pinned runtime', 'blocked', 'dist/state-hash.js missing (G2 dependency unmet)');
+    return item(
+      1,
+      'pinned runtime',
+      'blocked',
+      'dist/domain/state-hash.js missing (G2 dependency unmet — run `npm run build`)',
+    );
   }
   const sha = gitHead(repoRoot);
   const commitMs = newestCommitTimeMs(repoRoot);

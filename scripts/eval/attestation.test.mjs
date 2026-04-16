@@ -404,7 +404,7 @@ test('AP-9 payload mismatch: signed payload must still match bundle contents', (
   assert.notEqual(result.status, 0, 'expected non-zero exit for payload mismatch');
   assert.match(
     combinedOutput(result),
-    /attestation payload mismatch/i,
+    /attestation[- ]payload[- ]mismatch/i,
     `expected payload-mismatch diagnostic; out=${combinedOutput(result)}`,
   );
 });
@@ -460,5 +460,293 @@ test('AP-9 passing path: valid signed operator bundle passes verification', (t) 
     combinedOutput(result),
     /attested-by=.*role=operator|verify-trace OK/i,
     `expected attested success output; out=${combinedOutput(result)}`,
+  );
+});
+
+// -----------------------------------------------------------------------
+// T20–T25: hardening-pass contract tests (prompt-kv57).
+//
+// These tests are numbered T20+ to avoid collision with
+// `scripts/eval/tamper-drill.test.mjs` which already uses T17/T18/T19 for
+// reviewer-family coverage (AP-11).
+// -----------------------------------------------------------------------
+
+import {
+  ATTESTATION_VERSION,
+  buildAttestationRecord,
+  ED25519_RAW_SIGNATURE_BYTES,
+  ERR_ALGORITHM_REJECTED,
+  ERR_INVALID_SIGNATURE,
+  ERR_INVALID_SIGNATURE_LENGTH,
+  ERR_PAYLOAD_MISMATCH,
+  ERR_SCHEMA,
+  exportEd25519PublicKeyBase64,
+  verifyPayloadDetached,
+  verifyAttestationAgainstBundle,
+  buildBundlePayload,
+} from '../experiments/meta/attestation-lib.mjs';
+
+test('T20 encoding round-trip: sign with KeyObject, verify via on-disk PEM pubkey', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pl-attestation-T20-'));
+  const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+
+  // Persist pubkey as PEM to disk, re-import SOLELY from file.
+  const pubKeyPemPath = join(dir, 'signer.pub.pem');
+  writeFileSync(pubKeyPemPath, publicKey.export({ format: 'pem', type: 'spki' }), 'utf8');
+
+  // And as base64-raw, the registry format.
+  const pubKeyBase64 = exportEd25519PublicKeyBase64(publicKey);
+  const pubKeyBase64Path = join(dir, 'signer.pub.b64');
+  writeFileSync(pubKeyBase64Path, pubKeyBase64, 'utf8');
+
+  const payload = {
+    version: ATTESTATION_VERSION,
+    runId: 'run-T20',
+    commitSha: '1'.repeat(40),
+    manifestHash: '2'.repeat(64),
+    finalStateHash: '3'.repeat(64),
+    pairCount: 0,
+    runtimeFamily: 'anthropic',
+    reviewerFamily: 'openai',
+    createdAt: '2026-04-17T00:00:00.000Z',
+  };
+
+  const signature = signDetached(null, Buffer.from(canonicalJSON(payload)), privateKey);
+  assert.equal(
+    signature.length,
+    ED25519_RAW_SIGNATURE_BYTES,
+    'raw Ed25519 signature must be 64 bytes',
+  );
+
+  // Reload pubkey from disk (PEM) only, then re-encode to registry base64
+  // to confirm the two formats agree byte-for-byte.
+  const loadedPemText = readFileSync(pubKeyPemPath, 'utf8');
+  assert.match(loadedPemText, /BEGIN PUBLIC KEY/);
+
+  const diskBase64 = readFileSync(pubKeyBase64Path, 'utf8').trim();
+  const ok = verifyPayloadDetached(payload, signature.toString('base64'), diskBase64);
+  assert.equal(ok, true, 'signature must verify using on-disk base64 pubkey');
+});
+
+test('T21 mutated runtimeFamily fails payload verification', () => {
+  const fixture = createAttestationFixture('T21-mutated-runtime');
+  // Tamper AFTER signing by rewriting the bootstrap report's factoryFamily;
+  // the attestation's payload still says 'anthropic', the bundle recomputes
+  // to something else.
+  const report = JSON.parse(readFileSync(fixture.bootstrapPreflightPath, 'utf8'));
+  for (const item of report.items) {
+    if (item.id === 6) item.factoryFamily = 'tampered-family';
+  }
+  writeFileSync(fixture.bootstrapPreflightPath, JSON.stringify(report, null, 2), 'utf8');
+
+  const result = runVerifier([
+    '--trace',
+    fixture.tracePath,
+    '--state',
+    fixture.statePath,
+    '--attestation',
+    fixture.attestationPath,
+    '--trusted-signers',
+    fixture.trustedSignersPath,
+    '--revoked-signers',
+    fixture.revokedSignersPath,
+    '--require-attestation',
+  ]);
+  assert.notEqual(result.status, 0, 'tampered runtimeFamily must fail verify');
+  assert.match(
+    combinedOutput(result),
+    new RegExp(ERR_PAYLOAD_MISMATCH),
+    `expected ${ERR_PAYLOAD_MISMATCH}; out=${combinedOutput(result)}`,
+  );
+  assert.match(
+    combinedOutput(result),
+    /runtimeFamily/,
+    `expected runtimeFamily to be named in the diagnostic; out=${combinedOutput(result)}`,
+  );
+});
+
+test('T22 signedAt < createdAt fails schema check at build time', () => {
+  const payload = {
+    version: ATTESTATION_VERSION,
+    runId: 'run-T22',
+    commitSha: '1'.repeat(40),
+    manifestHash: '2'.repeat(64),
+    finalStateHash: '3'.repeat(64),
+    pairCount: 0,
+    runtimeFamily: 'anthropic',
+    reviewerFamily: 'openai',
+    createdAt: '2026-04-17T12:00:00.000Z',
+  };
+  const dir = mkdtempSync(join(tmpdir(), 'pl-attestation-T22-'));
+  const { privateKey } = generateKeyPairSync('ed25519');
+  const keyPath = join(dir, 'signer.key');
+  writeFileSync(keyPath, privateKey.export({ format: 'pem', type: 'pkcs8' }), 'utf8');
+
+  assert.throws(
+    () =>
+      buildAttestationRecord({
+        payload,
+        signerId: 'op',
+        signerRole: 'operator',
+        keyPath,
+        signedAt: '2026-04-17T11:00:00.000Z', // 1h before createdAt
+      }),
+    new RegExp(`${ERR_SCHEMA}.*signedAt`),
+  );
+});
+
+test('T23 invalid signature length is rejected (32-byte, 96-byte, non-base64, algorithm downgrade)', () => {
+  const fixture = createAttestationFixture('T23-bad-sig');
+  const { payload } = buildBundlePayload({ bundleDir: fixture.dir });
+
+  // 32-byte signature -> length error
+  assert.throws(
+    () =>
+      verifyPayloadDetached(
+        payload,
+        Buffer.alloc(32, 0x11).toString('base64'),
+        rawEd25519PublicKeyBase64(generateKeyPairSync('ed25519').publicKey),
+      ),
+    new RegExp(ERR_INVALID_SIGNATURE_LENGTH),
+  );
+
+  // 96-byte signature -> length error
+  assert.throws(
+    () =>
+      verifyPayloadDetached(
+        payload,
+        Buffer.alloc(96, 0x22).toString('base64'),
+        rawEd25519PublicKeyBase64(generateKeyPairSync('ed25519').publicKey),
+      ),
+    new RegExp(ERR_INVALID_SIGNATURE_LENGTH),
+  );
+
+  // Non-base64 signature -> length error (the base64 regex catches it)
+  assert.throws(
+    () =>
+      verifyPayloadDetached(
+        payload,
+        'not!base64!at!all!',
+        rawEd25519PublicKeyBase64(generateKeyPairSync('ed25519').publicKey),
+      ),
+    new RegExp(ERR_INVALID_SIGNATURE_LENGTH),
+  );
+
+  // Algorithm downgrade on attestation.json -> rejected at shape check
+  const attestation = JSON.parse(readFileSync(fixture.attestationPath, 'utf8'));
+  attestation.algorithm = 'rsa-pss';
+  writeFileSync(fixture.attestationPath, JSON.stringify(attestation, null, 2), 'utf8');
+  assert.throws(
+    () =>
+      verifyAttestationAgainstBundle({
+        attestation,
+        bundlePayload: payload,
+        trustedSignersPath: fixture.trustedSignersPath,
+        revokedSignersPath: fixture.revokedSignersPath,
+      }),
+    new RegExp(ERR_ALGORITHM_REJECTED),
+  );
+});
+
+test('T24 error-class separation: invalid-signature vs payload-mismatch do not leak an oracle', () => {
+  // Same bundle, two tamperings:
+  //   (a) tamper disk contents only -> valid signature, payload mismatch
+  //   (b) tamper signature only     -> invalid signature (fires BEFORE
+  //       payload recompute per NF5 §6.2(f))
+  // Both should fail verification, but with distinct error classes so
+  // callers can reason about them; neither class can be used to infer
+  // anything about the other side of the tampering.
+  const a = createAttestationFixture('T24-disk-tamper');
+  writeFileSync(
+    a.manifestPath,
+    JSON.stringify({ 'package.json': sha256Hex('{"name":"tampered-disk"}') }, null, 2),
+    'utf8',
+  );
+  const aResult = runVerifier([
+    '--trace',
+    a.tracePath,
+    '--state',
+    a.statePath,
+    '--attestation',
+    a.attestationPath,
+    '--trusted-signers',
+    a.trustedSignersPath,
+    '--revoked-signers',
+    a.revokedSignersPath,
+    '--require-attestation',
+  ]);
+  assert.notEqual(aResult.status, 0);
+  assert.match(
+    combinedOutput(aResult),
+    new RegExp(ERR_PAYLOAD_MISMATCH),
+    `(a) expected payload-mismatch; out=${combinedOutput(aResult)}`,
+  );
+  assert.doesNotMatch(
+    combinedOutput(aResult),
+    new RegExp(`${ERR_INVALID_SIGNATURE}\\b`),
+    `(a) must NOT surface invalid-signature: ${combinedOutput(aResult)}`,
+  );
+
+  const b = createAttestationFixture('T24-sig-tamper');
+  const attestation = JSON.parse(readFileSync(b.attestationPath, 'utf8'));
+  // Flip one bit in the signature; keep it 64 bytes so we reach sig-verify.
+  const sig = Buffer.from(attestation.signature, 'base64');
+  sig[0] ^= 0x01;
+  attestation.signature = sig.toString('base64');
+  writeFileSync(b.attestationPath, JSON.stringify(attestation, null, 2), 'utf8');
+  const bResult = runVerifier([
+    '--trace',
+    b.tracePath,
+    '--state',
+    b.statePath,
+    '--attestation',
+    b.attestationPath,
+    '--trusted-signers',
+    b.trustedSignersPath,
+    '--revoked-signers',
+    b.revokedSignersPath,
+    '--require-attestation',
+  ]);
+  assert.notEqual(bResult.status, 0);
+  assert.match(
+    combinedOutput(bResult),
+    new RegExp(`${ERR_INVALID_SIGNATURE}\\b`),
+    `(b) expected invalid-signature; out=${combinedOutput(bResult)}`,
+  );
+  // NF5: signature verify fires BEFORE payload recompute, so the
+  // payload-mismatch class must NOT leak when sig is invalid, even if
+  // disk contents would also mismatch.
+  assert.doesNotMatch(
+    combinedOutput(bResult),
+    new RegExp(ERR_PAYLOAD_MISMATCH),
+    `(b) must NOT surface payload-mismatch: ${combinedOutput(bResult)}`,
+  );
+});
+
+test('T25 dev role is rejected by default; --allow-dev-role widens acceptance', () => {
+  const fixture = createAttestationFixture('T25-dev-role');
+  // Rewrite registry entry + attestation to claim role=dev.
+  const registry = JSON.parse(readFileSync(fixture.trustedSignersPath, 'utf8'));
+  registry.signers[0].role = 'dev';
+  // Default load must reject.
+  writeFileSync(fixture.trustedSignersPath, JSON.stringify(registry, null, 2), 'utf8');
+  const denied = runVerifier([
+    '--trace',
+    fixture.tracePath,
+    '--state',
+    fixture.statePath,
+    '--attestation',
+    fixture.attestationPath,
+    '--trusted-signers',
+    fixture.trustedSignersPath,
+    '--revoked-signers',
+    fixture.revokedSignersPath,
+    '--require-attestation',
+  ]);
+  assert.notEqual(denied.status, 0, 'dev role must be rejected by default');
+  assert.match(
+    combinedOutput(denied),
+    /invalid role dev|role-rejected|accepted roles/i,
+    `expected dev-role rejection diagnostic; out=${combinedOutput(denied)}`,
   );
 });

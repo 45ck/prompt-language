@@ -131,6 +131,18 @@ describe('FileSnapshotStore — capture + restore round trip', () => {
     expect(ref1).toBe(ref2);
   });
 
+  it('captures and restores an empty tree', async () => {
+    const store = new FileSnapshotStore({ storeDir });
+    const ref = await store.capture(stateDir);
+    expect(existsSync(path.join(storeDir, `${ref}.tar.gz`))).toBe(true);
+
+    await writeTree(stateDir, { 'temp.txt': { content: 'remove me' } });
+    await store.restore(ref, stateDir);
+
+    const listing = await fs.readdir(stateDir);
+    expect(listing).toEqual([]);
+  });
+
   it('recovers from a stale restore-in-progress marker', async () => {
     await writeTree(stateDir, { 'keep.txt': { content: 'v1' } });
     const store = new FileSnapshotStore({ storeDir });
@@ -146,6 +158,26 @@ describe('FileSnapshotStore — capture + restore round trip', () => {
     expect(content).toBe('v1');
   });
 
+  it('removes an abandoned restore directory referenced by the stale marker', async () => {
+    await writeTree(stateDir, { 'keep.txt': { content: 'v1' } });
+    const store = new FileSnapshotStore({ storeDir });
+    const ref = await store.capture(stateDir);
+
+    const abandonedExtractDir = path.join(storeDir, 'abandoned-restore');
+    await fs.mkdir(abandonedExtractDir, { recursive: true });
+    await fs.writeFile(path.join(abandonedExtractDir, 'stale.txt'), 'stale');
+
+    const marker = path.join(storeDir, 'restore-in-progress');
+    await fs.writeFile(marker, abandonedExtractDir, 'utf8');
+
+    await store.restore(ref, stateDir);
+
+    expect(existsSync(marker)).toBe(false);
+    expect(existsSync(abandonedExtractDir)).toBe(false);
+    const content = await fs.readFile(path.join(stateDir, 'keep.txt'), 'utf8');
+    expect(content).toBe('v1');
+  });
+
   it('serializes concurrent captures and produces valid refs', async () => {
     await writeTree(stateDir, {
       'a.txt': { content: 'hello' },
@@ -157,6 +189,19 @@ describe('FileSnapshotStore — capture + restore round trip', () => {
     expect(ref2).toMatch(/^[a-f0-9]{64}$/);
     expect(ref1).toBe(ref2);
     expect(existsSync(path.join(storeDir, `${ref1}.tar.gz`))).toBe(true);
+  });
+
+  it('reclaims a stale capture lock before writing a new snapshot', async () => {
+    await writeTree(stateDir, { 'a.txt': { content: 'hello' } });
+    const staleLock = path.join(storeDir, '.lock');
+    await fs.writeFile(staleLock, `${process.pid}:${Date.now() - 120_000}`, 'utf8');
+
+    const store = new FileSnapshotStore({ storeDir });
+    const ref = await store.capture(stateDir);
+
+    expect(ref).toMatch(/^[a-f0-9]{64}$/);
+    expect(existsSync(path.join(storeDir, `${ref}.tar.gz`))).toBe(true);
+    expect(existsSync(staleLock)).toBe(false);
   });
 
   it('cleanup refcounts so shared refs are not blind-deleted', async () => {

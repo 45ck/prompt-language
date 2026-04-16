@@ -42,6 +42,20 @@ describe('CliSessionRunner', () => {
     delete process.env['PL_TRACE_DIR'];
   });
 
+  function setPlatform(value: NodeJS.Platform): () => void {
+    const original = process.platform;
+    Object.defineProperty(process, 'platform', {
+      configurable: true,
+      value,
+    });
+    return () => {
+      Object.defineProperty(process, 'platform', {
+        configurable: true,
+        value: original,
+      });
+    };
+  }
+
   it('advertises external process capabilities', () => {
     const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
 
@@ -138,6 +152,45 @@ describe('CliSessionRunner', () => {
     expect(spawnMock).not.toHaveBeenCalled();
   });
 
+  it('uses the runner cwd when no child cwd or model is provided and omits missing child PIDs', async () => {
+    spawnMock.mockReturnValueOnce({
+      pid: undefined,
+      unref: vi.fn(),
+    });
+
+    const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
+    const handle = await runner.launch({
+      name: 'child_2',
+      goal: 'Goal only',
+      flowText: '',
+      variables: {},
+      stateDir: 'C:/state-dir',
+    });
+
+    expect(spawnMock).toHaveBeenCalledWith(
+      'node',
+      [
+        'bin/cli.mjs',
+        'run',
+        '--runner',
+        'codex',
+        '--state-dir',
+        'C:/state-dir',
+        '--file',
+        expect.stringContaining('state-dir-flow.txt'),
+      ],
+      expect.objectContaining({
+        cwd: 'C:/workspace',
+      }),
+    );
+    expect(handle).toEqual({
+      runId: 'cli-run-id',
+      stateDir: 'C:/state-dir',
+      pid: undefined,
+      captureMode: 'state-file',
+    });
+  });
+
   it('maps completed state-file snapshots to completed with variables', async () => {
     readFileMock.mockResolvedValue(
       JSON.stringify({
@@ -184,6 +237,15 @@ describe('CliSessionRunner', () => {
     });
   });
 
+  it('treats non-terminal persisted states as still running', async () => {
+    readFileMock.mockResolvedValue(JSON.stringify({ status: 'running' }));
+    const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
+
+    await expect(runner.poll({ stateDir: 'C:/state-dir' })).resolves.toEqual({
+      status: 'running',
+    });
+  });
+
   it('returns false when terminate has no pid and uses taskkill on Windows PIDs', async () => {
     const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
 
@@ -193,5 +255,65 @@ describe('CliSessionRunner', () => {
     expect(execFileSyncMock).toHaveBeenCalledWith('taskkill', ['/PID', '4321', '/T', '/F'], {
       stdio: 'ignore',
     });
+  });
+
+  it('uses process groups on non-Windows and falls back to direct pid termination', async () => {
+    const restorePlatform = setPlatform('linux');
+    const killSpy = vi.spyOn(process, 'kill');
+    try {
+      killSpy.mockImplementationOnce(() => true);
+      const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
+      await expect(runner.terminate({ pid: 4321 })).resolves.toBe(true);
+      expect(killSpy).toHaveBeenCalledWith(-4321, 'SIGTERM');
+
+      killSpy.mockReset();
+      killSpy.mockImplementationOnce(() => {
+        const error = new Error('group failed') as NodeJS.ErrnoException;
+        error.code = 'EPERM';
+        throw error;
+      });
+      killSpy.mockImplementationOnce(() => true);
+
+      await expect(runner.terminate({ pid: 4321 })).resolves.toBe(true);
+      expect(killSpy.mock.calls).toEqual([
+        [-4321, 'SIGTERM'],
+        [4321, 'SIGTERM'],
+      ]);
+    } finally {
+      killSpy.mockRestore();
+      restorePlatform();
+    }
+  });
+
+  it('returns false when non-Windows termination discovers a missing process', async () => {
+    const restorePlatform = setPlatform('linux');
+    const killSpy = vi.spyOn(process, 'kill');
+    try {
+      killSpy.mockImplementationOnce(() => {
+        const error = new Error('missing group') as NodeJS.ErrnoException;
+        error.code = 'ESRCH';
+        throw error;
+      });
+
+      const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
+      await expect(runner.terminate({ pid: 4321 })).resolves.toBe(false);
+
+      killSpy.mockReset();
+      killSpy.mockImplementationOnce(() => {
+        const error = new Error('group failed') as NodeJS.ErrnoException;
+        error.code = 'EPERM';
+        throw error;
+      });
+      killSpy.mockImplementationOnce(() => {
+        const error = new Error('missing pid') as NodeJS.ErrnoException;
+        error.code = 'ESRCH';
+        throw error;
+      });
+
+      await expect(runner.terminate({ pid: 4321 })).resolves.toBe(false);
+    } finally {
+      killSpy.mockRestore();
+      restorePlatform();
+    }
   });
 });

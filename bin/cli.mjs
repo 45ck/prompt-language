@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { join, dirname, isAbsolute, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import * as tar from 'tar';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
@@ -40,7 +41,7 @@ const DIRS_TO_COPY = ['dist', 'hooks', 'skills', 'commands', 'agents', '.claude-
 
 // Runtime dependencies required by hook entry points (resolved via ESM import chain).
 // These are copied into the plugin cache's node_modules/ so hooks work outside the repo.
-const RUNTIME_DEPS = ['zod'];
+const RUNTIME_DEPS = ['zod', 'tar'];
 const DIRS_TO_COPY_CODEX = [
   'dist',
   'skills',
@@ -1050,10 +1051,17 @@ async function runHeadlessFlow(flowText, model, runnerConfig, stateDir = '.promp
   const snapshotStoreDirOverride = process.env['PL_SNAPSHOT_STORE_DIR'];
   const snapshotStore =
     process.env['PL_SNAPSHOT_INCLUDE_FILES'] === '1'
-      ? new FileSnapshotStore({
-          ...(Number.isFinite(snapshotMaxMb) && snapshotMaxMb > 0 ? { maxMb: snapshotMaxMb } : {}),
-          ...(snapshotStoreDirOverride ? { storeDir: snapshotStoreDirOverride } : {}),
-        })
+      ? (() => {
+          if (typeof tar.create !== 'function' || typeof tar.extract !== 'function') {
+            throw new Error('PL_SNAPSHOT_INCLUDE_FILES=1 requires tar runtime support');
+          }
+          return new FileSnapshotStore({
+            ...(Number.isFinite(snapshotMaxMb) && snapshotMaxMb > 0
+              ? { maxMb: snapshotMaxMb }
+              : {}),
+            ...(snapshotStoreDirOverride ? { storeDir: snapshotStoreDirOverride } : {}),
+          });
+        })()
       : NULL_SNAPSHOT_STORE;
 
   const result = await runFlowHeadless(

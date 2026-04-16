@@ -2,6 +2,10 @@
 
 > See what happens when Claude says "done" but tests still fail.
 
+<p align="center">
+  <img src="flow.svg" alt="stop-false-done flow" width="720">
+</p>
+
 ## What you'll see
 
 Claude will try to fix a broken calculator. Without the gate, it might declare victory after a plausible-looking edit. With `done when: tests_pass`, the runtime blocks completion until `node test.js` actually exits 0.

@@ -2,6 +2,10 @@
 
 > Block a destructive action until a human says yes.
 
+<p align="center">
+  <img src="flow.svg" alt="approval-deploy flow" width="720">
+</p>
+
 ## What you'll see
 
 The flow runs a database migration, shows the results, then pauses for human approval before deploying. The `approve` node blocks execution until a human explicitly approves. If no approval comes within the timeout, the flow advances without deploying.

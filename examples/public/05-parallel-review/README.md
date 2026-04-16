@@ -2,6 +2,10 @@
 
 > Review every source file in parallel, then aggregate.
 
+<p align="center">
+  <img src="flow.svg" alt="parallel-review flow" width="720">
+</p>
+
 ## What you'll see
 
 The flow discovers source files, spawns a parallel review agent for each one, waits for all to complete, then verifies the combined result with a test gate.

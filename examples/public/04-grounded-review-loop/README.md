@@ -2,6 +2,10 @@
 
 > AI reviews code, but the critique is grounded in real test output.
 
+<p align="center">
+  <img src="flow.svg" alt="grounded-review flow" width="720">
+</p>
+
 ## What you'll see
 
 The `review` node asks Claude to evaluate the code, but grounds its critique in actual `npm test` output. If tests fail, the critique includes the real error messages. Claude then fixes the bugs using that grounded feedback.

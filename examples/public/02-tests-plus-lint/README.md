@@ -2,6 +2,10 @@
 
 > Tests pass. Lint fails. Claude stops anyway -- unless you add a gate.
 
+<p align="center">
+  <img src="flow.svg" alt="tests-plus-lint flow" width="720">
+</p>
+
 ## What you'll see
 
 The code in `src/utils.js` is logically correct -- tests pass. But it uses `var` instead of `const` and has an unused variable. With `all(tests_pass, lint_pass)`, the runtime blocks completion until both checks pass.

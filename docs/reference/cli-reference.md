@@ -167,15 +167,15 @@ npx @45ck/prompt-language run --runner opencode --model opencode/gpt-5-nano my.f
 Notes:
 
 1. `--runner claude` is the default.
-2. `--runner codex`, `--runner opencode`, and `--runner ollama` all use the headless flow runner rather than Claude's interactive hook loop.
+2. All shipped runners (`claude`, `codex`, `opencode`, `ollama`, `aider`) execute through the prompt-language headless runtime rather than bypassing flow semantics with a raw prompt handoff.
 3. When `--runner codex` is selected without an explicit `--model`, prompt-language defaults to `gpt-5.2` on this workstation because the ambient Codex default may fall back to a rate-limited Spark profile.
 4. OpenCode models use the `provider/model` form, for example `opencode/gpt-5-nano`.
 5. Before execution starts, `run` performs shared preflight for runner availability and built-in gate prerequisites. A blocked preflight exits with code `2`.
 6. On this workstation, prefer hosted harness models for headless runner paths; do not install local models here just to exercise `run`.
-7. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
-8. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
-9. `run --json` is currently supported on the headless runner paths (`codex`, `opencode`, `ollama`). `run --runner claude --json` returns a blocked profile report and exits `2`.
-10. Headless `run --json` emits `{ status, diagnostics, outcomes, reason? }` and uses explicit exit codes: `0` success, `1` terminal unsuccessful outcome, `2` blocked/profile-incompatible execution, `3` failed execution.
+7. As of April 17, 2026, the default experiment wiring also pins Claude and Codex lanes to medium reasoning effort via `PROMPT_LANGUAGE_CLAUDE_EFFORT` and `PROMPT_LANGUAGE_CODEX_REASONING_EFFORT` unless the caller overrides them.
+8. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
+9. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
+10. `run --json` emits `{ status, diagnostics, outcomes, reason? }` for all shipped runners and uses explicit exit codes: `0` success, `1` terminal unsuccessful outcome, `2` blocked/profile-incompatible execution, `3` failed execution.
 11. Codex support in `run` is the supervised headless path. The separate `codex-install` scaffold is experimental and should not be read as full native-lifecycle parity with Claude.
 
 ### ci
@@ -189,11 +189,13 @@ npx @45ck/prompt-language ci --runner codex --json my.flow
 npx @45ck/prompt-language ci --runner opencode --model opencode/gpt-5-nano my.flow
 ```
 
-This is the same headless runner path used by `run --runner codex|opencode`, so prompt quality and tool-use behavior depend on the selected model. On this workstation, `ci --runner codex` defaults to `gpt-5.2` when `--model` is omitted.
+This is the same headless runner path used by `run --runner claude|codex|opencode|ollama|aider`, so prompt quality and tool-use behavior depend on the selected model. On this workstation, `ci --runner codex` defaults to `gpt-5.2` when `--model` is omitted.
+
+As of April 17, 2026, the default experiment wiring also pins Claude and Codex lanes to medium reasoning effort via `PROMPT_LANGUAGE_CLAUDE_EFFORT` and `PROMPT_LANGUAGE_CODEX_REASONING_EFFORT` unless the caller overrides them.
 
 `ci` also runs the shared execution preflight before starting the runner. A blocked preflight exits with code `2` instead of attempting execution.
 
-`ci --json` follows the same headless-report contract as `run --json`: `{ status, diagnostics, outcomes, reason? }` with exit codes `0`, `1`, `2`, and `3` for success, unsuccessful, blocked, and failed execution respectively. `ci --runner claude --json` returns a blocked profile report and exits `2`.
+`ci --json` follows the same headless-report contract as `run --json`: `{ status, diagnostics, outcomes, reason? }` with exit codes `0`, `1`, `2`, and `3` for success, unsuccessful, blocked, and failed execution respectively.
 
 ### eval
 

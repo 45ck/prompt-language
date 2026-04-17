@@ -328,8 +328,8 @@ const boundaryAssertions = [
     path: 'docs/reference/cli-reference.md',
     snippets: [
       '~/.claude/plugins/cache/prompt-language-local/prompt-language/<version>/',
-      '`run --runner claude --json` returns a blocked profile report and exits `2`',
-      '`ci --runner claude --json` returns a blocked profile report and exits `2`',
+      '`run --json` emits `{ status, diagnostics, outcomes, reason? }` for all shipped runners',
+      '`ci --json` follows the same headless-report contract as `run --json`',
     ],
   },
   {

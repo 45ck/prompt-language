@@ -659,14 +659,15 @@ describe('CLI commands', () => {
     await expect(readFile(sentinelPath, 'utf8')).rejects.toThrow();
   });
 
-  it('run supports the native claude path and all headless runners', async () => {
+  it('run supports the runtime-backed claude path and all headless runners', async () => {
     const source = await readFile(CLI, 'utf8');
     expect(source).toContain("case 'run':");
+    expect(source).toContain("if (runner === 'claude')");
     expect(source).toContain("if (runner === 'codex')");
     expect(source).toContain("if (runner === 'opencode')");
     expect(source).toContain("if (runner === 'ollama')");
+    expect(source).toContain("runnerModule: 'claude-prompt-turn-runner.js'");
     expect(source).toContain("return runner === 'codex' ? 'gpt-5.2' : undefined;");
-    expect(source).toContain("const claudeArgs = ['-p', '--dangerously-skip-permissions']");
     expect(source).toContain("readOptionValue(args, '--model')");
     expect(source).toContain('Supported runners: claude, codex, opencode, ollama, aider.');
   });
@@ -779,35 +780,64 @@ describe('CLI commands', () => {
     }
   });
 
-  it('run --runner claude --json returns a blocked profile report', async () => {
-    tempDir = await createTempDir('pl-cli-run-json-claude-blocked-');
+  it('run --runner claude --json executes through the headless runtime', async () => {
+    tempDir = await createTempDir('pl-cli-run-json-claude-headless-');
     const flowPath = join(tempDir, 'sample.flow');
     await mkdir(join(tempDir, 'bin'), { recursive: true });
-    await writeFile(flowPath, 'Goal: test\n\nflow:\n  prompt: Create done.txt\n', 'utf8');
-    await createFakeRunner(join(tempDir, 'bin'), 'claude', join(tempDir, 'claude-ran.txt'));
+    await writeFile(
+      flowPath,
+      'Goal: test\n\nflow:\n  prompt: Create done.txt\n\ndone when:\n  file_exists done.txt\n',
+      'utf8',
+    );
+    await createFakeRunner(join(tempDir, 'bin'), 'claude', join(tempDir, 'done.txt'));
 
-    try {
-      execFileSync(
-        process.execPath,
-        [CLI, 'run', '--runner', 'claude', '--json', '--file', flowPath],
-        {
-          cwd: tempDir,
-          encoding: 'utf8',
-          env: {
-            ...process.env,
-            PATH: `${join(tempDir, 'bin')}${delimiter}${dirname(process.execPath)}${delimiter}${process.env['PATH'] ?? ''}`,
-          },
+    const output = execFileSync(
+      process.execPath,
+      [CLI, 'run', '--runner', 'claude', '--json', '--file', flowPath],
+      {
+        cwd: tempDir,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${join(tempDir, 'bin')}${delimiter}${dirname(process.execPath)}${delimiter}${process.env['PATH'] ?? ''}`,
         },
-      );
-      expect.unreachable();
-    } catch (error) {
-      const failure = error as { status?: number; stdout?: string };
-      expect(failure.status).toBe(2);
-      expect(JSON.parse(failure.stdout ?? '{}')).toMatchObject({
-        status: 'blocked',
-        diagnostics: [expect.objectContaining({ code: 'PLC-007' })],
-      });
-    }
+      },
+    );
+
+    expect(JSON.parse(output)).toMatchObject({
+      status: 'ok',
+      outcomes: [expect.objectContaining({ code: 'PLO-005' })],
+    });
+  });
+
+  it('ci --runner claude --json executes through the headless runtime', async () => {
+    tempDir = await createTempDir('pl-cli-ci-json-claude-headless-');
+    const flowPath = join(tempDir, 'sample.flow');
+    await mkdir(join(tempDir, 'bin'), { recursive: true });
+    await writeFile(
+      flowPath,
+      'Goal: test\n\nflow:\n  prompt: Create done.txt\n\ndone when:\n  file_exists done.txt\n',
+      'utf8',
+    );
+    await createFakeRunner(join(tempDir, 'bin'), 'claude', join(tempDir, 'done.txt'));
+
+    const output = execFileSync(
+      process.execPath,
+      [CLI, 'ci', '--runner', 'claude', '--json', '--file', flowPath],
+      {
+        cwd: tempDir,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          PATH: `${join(tempDir, 'bin')}${delimiter}${dirname(process.execPath)}${delimiter}${process.env['PATH'] ?? ''}`,
+        },
+      },
+    );
+
+    expect(JSON.parse(output)).toMatchObject({
+      status: 'ok',
+      outcomes: [expect.objectContaining({ code: 'PLO-005' })],
+    });
   });
 
   it('ci --runner codex --json exits 3 for failed headless execution', async () => {

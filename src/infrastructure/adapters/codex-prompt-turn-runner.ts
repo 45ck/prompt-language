@@ -8,9 +8,19 @@ import type {
   PromptTurnResult,
   PromptTurnRunner,
 } from '../../application/ports/prompt-turn-runner.js';
+// cspell:ignore xhigh
 
 const DEFAULT_TIMEOUT_MS = 600_000;
 const CODEX_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_CODEX_TIMEOUT_MS';
+const CODEX_REASONING_EFFORT_ENV = 'PROMPT_LANGUAGE_CODEX_REASONING_EFFORT';
+const VALID_CODEX_REASONING_EFFORTS = new Set([
+  'none',
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+]);
 
 function quotePowerShellArg(value: string): string {
   return `'${String(value).replace(/'/g, "''")}'`;
@@ -25,6 +35,11 @@ function readPositiveIntEnv(name: string): number | undefined {
   if (!value) return undefined;
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function readCodexReasoningEffort(): string | undefined {
+  const value = process.env[CODEX_REASONING_EFFORT_ENV]?.trim().toLowerCase();
+  return value && VALID_CODEX_REASONING_EFFORTS.has(value) ? value : undefined;
 }
 
 function resolveWindowsCodexCommandPrefix(): [string, string[]] {
@@ -217,6 +232,11 @@ export class CodexPromptTurnRunner implements PromptTurnRunner {
 
     if (input.model != null) {
       args.push('--model', input.model);
+    }
+
+    const reasoningEffort = readCodexReasoningEffort();
+    if (reasoningEffort !== undefined) {
+      args.push('-c', `model_reasoning_effort="${reasoningEffort}"`);
     }
 
     args.push('-');

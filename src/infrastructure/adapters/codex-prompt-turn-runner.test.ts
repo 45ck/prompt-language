@@ -50,6 +50,7 @@ describe('CodexPromptTurnRunner', () => {
       stdout: '',
     });
     mockedExistsSync.mockReturnValue(false);
+    delete process.env['PROMPT_LANGUAGE_CODEX_REASONING_EFFORT'];
   });
 
   it('wraps prompts with execution rules', () => {
@@ -81,6 +82,32 @@ describe('CodexPromptTurnRunner', () => {
       '/repo',
       '--model',
       'gpt-5.4',
+      '-',
+    ]);
+  });
+
+  it('adds configured reasoning effort to codex exec args', () => {
+    process.env['PROMPT_LANGUAGE_CODEX_REASONING_EFFORT'] = 'medium';
+    const runner = new CodexPromptTurnRunner();
+
+    expect(
+      runner.buildArgs(
+        {
+          cwd: '/repo',
+          prompt: 'Continue',
+        },
+        '/tmp/out.txt',
+      ),
+    ).toEqual([
+      'exec',
+      '--dangerously-bypass-approvals-and-sandbox',
+      '--skip-git-repo-check',
+      '--output-last-message',
+      '/tmp/out.txt',
+      '-C',
+      '/repo',
+      '-c',
+      'model_reasoning_effort="medium"',
       '-',
     ]);
   });

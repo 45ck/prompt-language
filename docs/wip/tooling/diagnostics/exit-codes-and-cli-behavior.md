@@ -40,8 +40,8 @@
 
 Current shipped boundary:
 
-- `run --runner codex|opencode|ollama --json` emits `{ status, diagnostics, outcomes, reason? }`
-- `run --runner claude --json` is still unsupported because the native Claude interactive path does not return machine-readable completion state
+- `run --runner claude|codex|opencode|ollama|aider --json` emits `{ status, diagnostics, outcomes, reason? }`
+- blocked preflight still exits `2`, but the blocked report is emitted as JSON when `--json` is set
 
 ### `ci`
 
@@ -49,9 +49,9 @@ Current shipped boundary:
 
 Current shipped boundary:
 
-- `ci --runner codex|opencode|ollama --json` emits the same `{ status, diagnostics, outcomes, reason? }` envelope
+- `ci --runner claude|codex|opencode|ollama|aider --json` emits the same `{ status, diagnostics, outcomes, reason? }` envelope
 - blocked preflight still exits `2`, but the blocked report is emitted as JSON when `--json` is set
-- the native Claude path still does not expose machine-readable completion state
+- runtime/internal failures still exit `3`
 
 ## Human-readable output guidance
 

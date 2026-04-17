@@ -22,6 +22,7 @@ export type {
 export { InMemoryStateStore } from './adapters/in-memory-state-store.js';
 export { InMemoryCommandRunner } from './adapters/in-memory-command-runner.js';
 export { CodexPromptTurnRunner, buildCodexPrompt } from './adapters/codex-prompt-turn-runner.js';
+export { ClaudePromptTurnRunner } from './adapters/claude-prompt-turn-runner.js';
 export {
   OpenCodePromptTurnRunner,
   buildOpenCodePrompt,

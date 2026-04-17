@@ -6,15 +6,14 @@
  * RunnerBackedProcessSpawner. Application code continues to depend only
  * on ProcessSpawner.
  *
- * Defaults to ClaudeSessionRunner when PL_SPAWN_RUNNER is unset or "claude".
- * For other runners (codex, opencode, ollama, aider), creates a CliSessionRunner
- * that delegates to `prompt-language run --runner <name>`.
+ * Defaults to CliSessionRunner with runner="claude" when PL_SPAWN_RUNNER is unset
+ * or "claude". Other supported runners also use CliSessionRunner so spawned child
+ * flows always route back through the prompt-language runtime.
  */
 
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { ProcessSpawner } from '../../application/ports/process-spawner.js';
-import { ClaudeSessionRunner } from './claude-session-runner.js';
 import { CliSessionRunner } from './cli-session-runner.js';
 import { RunnerBackedProcessSpawner } from './runner-backed-process-spawner.js';
 
@@ -37,17 +36,18 @@ function resolveCliPath(): string {
 
 export function resolveProcessSpawner(cwd: string): ProcessSpawner {
   const runner = process.env['PL_SPAWN_RUNNER']?.trim().toLowerCase();
+  const cliPath = resolveCliPath();
 
   if (!runner || runner === 'claude') {
-    return new RunnerBackedProcessSpawner(new ClaudeSessionRunner(cwd));
+    return new RunnerBackedProcessSpawner(new CliSessionRunner(cwd, 'claude', cliPath));
   }
 
   if (!SUPPORTED_RUNNERS.has(runner)) {
     process.stderr.write(
       `[prompt-language] WARNING: Unknown PL_SPAWN_RUNNER="${runner}", falling back to claude.\n`,
     );
-    return new RunnerBackedProcessSpawner(new ClaudeSessionRunner(cwd));
+    return new RunnerBackedProcessSpawner(new CliSessionRunner(cwd, 'claude', cliPath));
   }
 
-  return new RunnerBackedProcessSpawner(new CliSessionRunner(cwd, runner, resolveCliPath()));
+  return new RunnerBackedProcessSpawner(new CliSessionRunner(cwd, runner, cliPath));
 }

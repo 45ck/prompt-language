@@ -107,6 +107,8 @@ export async function spawnFactoryPl({
       ...process.env,
       PL_TRACE: '1',
       PL_RUN_ID: effectiveRunId,
+      PROMPT_LANGUAGE_CODEX_REASONING_EFFORT:
+        process.env.PROMPT_LANGUAGE_CODEX_REASONING_EFFORT ?? 'medium',
     },
   });
   const wallClockSec = Math.round((Date.now() - startedAt) / 1000);

@@ -858,29 +858,9 @@ async function printAndExitBlockedPreflight(flowText, runner, mode, options = {}
 }
 
 function ensureJsonSupportedForRunner(json, runner, commandName) {
-  if (!json || runner !== 'claude') {
-    return;
-  }
-
-  const report = {
-    status: 'blocked',
-    diagnostics: [
-      {
-        code: 'PLC-007',
-        kind: 'profile',
-        phase: 'session-init',
-        severity: 'error',
-        blocksExecution: true,
-        retryable: false,
-        summary: `${commandName} --json is currently supported only for headless runners (codex, opencode, ollama, aider).`,
-        action:
-          'Use --runner codex, --runner opencode, --runner ollama, or --runner aider for machine-readable execution reports.',
-      },
-    ],
-    outcomes: [],
-  };
-  console.log(serializeExecutionReport(report));
-  process.exit(2);
+  void json;
+  void runner;
+  void commandName;
 }
 
 async function writeExecutionReport(report, options = {}) {
@@ -907,6 +887,18 @@ async function runOpenCodeFlow(flowText, model, stateDir) {
     {
       runnerModule: 'opencode-prompt-turn-runner.js',
       runnerExport: 'OpenCodePromptTurnRunner',
+    },
+    stateDir,
+  );
+}
+
+async function runClaudeFlow(flowText, model, stateDir) {
+  return runHeadlessFlow(
+    flowText,
+    model,
+    {
+      runnerModule: 'claude-prompt-turn-runner.js',
+      runnerExport: 'ClaudePromptTurnRunner',
     },
     stateDir,
   );
@@ -1411,6 +1403,18 @@ async function runFlow() {
   });
   ensureJsonSupportedForRunner(json, runner, 'run');
 
+  if (runner === 'claude') {
+    const report = await runClaudeFlow(flowText, model, stateDir);
+    if (json) {
+      console.log(serializeExecutionReport(report));
+    } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+      await writeExecutionReport(report, { header: '[prompt-language run]', stdoutOnOk: true });
+    }
+    const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+    process.exit(deriveDiagnosticReportExitCode(report));
+    return;
+  }
+
   if (runner === 'codex') {
     const report = await runCodexFlow(flowText, model, stateDir);
     if (json) {
@@ -1459,24 +1463,8 @@ async function runFlow() {
     return;
   }
 
-  const { execFileSync } = await import('node:child_process');
-  const claudeCommand = process.platform === 'win32' ? 'claude.cmd' : 'claude';
-  const claudeArgs = ['-p', '--dangerously-skip-permissions'];
-  if (model) {
-    claudeArgs.push('--model', model);
-  }
-  claudeArgs.push(flowText);
-  try {
-    execFileSync(claudeCommand, claudeArgs, {
-      stdio: 'inherit',
-      timeout: 600_000,
-    });
-  } catch (error) {
-    const failure = error;
-    const exitCode = typeof failure?.status === 'number' ? failure.status : 1;
-    console.error(`[prompt-language run] Claude runner exited with code ${exitCode}.`);
-    process.exit(3);
-  }
+  console.error(`Unsupported runner "${runner}".`);
+  process.exit(1);
 }
 
 async function listFlows() {
@@ -1923,7 +1911,7 @@ done when:
   console.log(example);
 }
 
-// H-INT-003: CI/CD mode — run a flow headlessly via `claude -p`
+// H-INT-003: CI/CD mode — run a flow headlessly via the prompt-language runtime
 async function ci() {
   const args = process.argv.slice(3);
   const flowText = await readFlowText(args, 'ci');
@@ -1939,7 +1927,18 @@ async function ci() {
     console.log(`[prompt-language CI] Running flow via ${runner}...`);
   }
   try {
-    if (runner === 'codex') {
+    if (runner === 'claude') {
+      const report = await runClaudeFlow(flowText, model, stateDir);
+      if (json) {
+        console.log(serializeExecutionReport(report));
+      } else if (report.status !== 'ok' || report.diagnostics.length > 0) {
+        await writeExecutionReport(report, { header: '[prompt-language ci]', stdoutOnOk: true });
+      } else {
+        console.log('[prompt-language CI] Flow completed.');
+      }
+      const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
+      process.exit(deriveDiagnosticReportExitCode(report));
+    } else if (runner === 'codex') {
       const report = await runCodexFlow(flowText, model, stateDir);
       if (json) {
         console.log(serializeExecutionReport(report));
@@ -1983,19 +1982,6 @@ async function ci() {
       }
       const { deriveDiagnosticReportExitCode } = await loadDiagnosticPresentation();
       process.exit(deriveDiagnosticReportExitCode(report));
-    } else if (runner === 'claude') {
-      const { execFileSync } = await import('node:child_process');
-      const claudeArgs = ['-p', '--dangerously-skip-permissions'];
-      if (model) {
-        claudeArgs.push('--model', model);
-      }
-      claudeArgs.push(flowText);
-      execFileSync('claude', claudeArgs, {
-        stdio: 'inherit',
-        timeout: 600_000, // 10 min max
-      });
-      console.log('[prompt-language CI] Flow completed.');
-      process.exit(0);
     } else {
       throw new Error(
         `Unsupported runner "${runner}". Supported runners: claude, codex, opencode, ollama, aider.`,
@@ -2089,7 +2075,7 @@ Commands:
   validate     Parse, lint, score, and render a flow without executing it (\`--runner ... --mode interactive|headless\`, \`--check-gates\`)
   render-workflow Show the lowered .flow text for a canonical workflow alias
   artifacts    Inspect artifact packages (\`list\`, \`show\`, \`validate\`)
-  ci           Run a flow headlessly (CI/CD mode, supports \`--runner codex|opencode|ollama|aider\`)
+  ci           Run a flow headlessly (CI/CD mode, supports \`--runner claude|codex|opencode|ollama|aider\`)
   statusline   Configure the Claude Code status line
   watch        Watch for file changes and rebuild
 

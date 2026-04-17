@@ -2,8 +2,8 @@
  * CliSessionRunner — SpawnedSessionRunner implementation that launches
  * child flows via `prompt-language run --runner <name>`.
  *
- * Extracted from CliProcessSpawner. Used when PL_SPAWN_RUNNER is set
- * to a non-Claude runner (codex, opencode, ollama, aider).
+ * Extracted from CliProcessSpawner. Used for all runtime-backed spawned
+ * runners, including claude.
  */
 
 import { randomUUID } from 'node:crypto';

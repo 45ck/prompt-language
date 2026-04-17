@@ -7,6 +7,8 @@ import { delimiter, join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 
 const DEFAULT_HARNESS = 'claude';
+const DEFAULT_CLAUDE_EFFORT = 'medium';
+const DEFAULT_CODEX_REASONING_EFFORT = 'medium';
 const AI_CMD_CONFIG = parseAiCommand(process.env.AI_CMD);
 const HARNESS_SELECTION = parseHarnessSelection(
   process.argv,
@@ -44,6 +46,16 @@ function parseModel(argv, envModel) {
   const flagIndex = argv.indexOf('--model');
   const flagValue = flagIndex >= 0 ? argv[flagIndex + 1] : null;
   return flagValue || envModel || (HARNESS === 'codex' ? 'gpt-5.2' : undefined);
+}
+
+function readClaudeEffort() {
+  const value = process.env.PROMPT_LANGUAGE_CLAUDE_EFFORT?.trim().toLowerCase();
+  return value || DEFAULT_CLAUDE_EFFORT;
+}
+
+function readCodexReasoningEffort() {
+  const value = process.env.PROMPT_LANGUAGE_CODEX_REASONING_EFFORT?.trim().toLowerCase();
+  return value || DEFAULT_CODEX_REASONING_EFFORT;
 }
 
 // ── Independent-witness shim wiring ─────────────────────────────────
@@ -181,6 +193,17 @@ function mergeLaunchEnv(launch) {
     ...cleanEnv(),
     ...launch.env,
   };
+}
+
+function applyHarnessRunnerDefaults(env, runner = HARNESS) {
+  const nextEnv = { ...env };
+  if (runner === 'claude' && !nextEnv.PROMPT_LANGUAGE_CLAUDE_EFFORT) {
+    nextEnv.PROMPT_LANGUAGE_CLAUDE_EFFORT = readClaudeEffort();
+  }
+  if (runner === 'codex' && !nextEnv.PROMPT_LANGUAGE_CODEX_REASONING_EFFORT) {
+    nextEnv.PROMPT_LANGUAGE_CODEX_REASONING_EFFORT = readCodexReasoningEffort();
+  }
+  return nextEnv;
 }
 
 export function normalizeAiderLaunchEnv(env, { platform = process.platform } = {}) {
@@ -401,6 +424,7 @@ function execClaude(prompt, cwd, timeout, model, strict) {
   if (model) {
     args.push('--model', model);
   }
+  args.push('--effort', readClaudeEffort());
   const launch = buildAgentLaunchSpec('claude', args);
 
   try {
@@ -409,7 +433,7 @@ function execClaude(prompt, cwd, timeout, model, strict) {
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: mergeLaunchEnv(launch),
+      env: applyHarnessRunnerDefaults(mergeLaunchEnv(launch), 'claude'),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -466,6 +490,7 @@ function execCodex(prompt, cwd, timeout, model, strict) {
   if (model) {
     args.push('-m', model);
   }
+  args.push('-c', `model_reasoning_effort="${readCodexReasoningEffort()}"`);
   if (cwd) {
     args.push('-C', cwd);
   }
@@ -482,7 +507,7 @@ function execCodex(prompt, cwd, timeout, model, strict) {
       input: buildCodexPrompt(prompt),
       encoding: 'utf-8',
       timeout,
-      env: mergeLaunchEnv(launch),
+      env: applyHarnessRunnerDefaults(mergeLaunchEnv(launch), 'codex'),
       stdio: ['pipe', 'ignore', 'pipe'],
     });
     return readFileSync(outputFile, 'utf-8');
@@ -624,7 +649,34 @@ function execOpenCodeFlow(flowText, cwd, timeout, model, strict) {
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: cleanEnv(),
+      env: applyHarnessRunnerDefaults(cleanEnv(), 'opencode'),
+      maxBuffer: 20 * 1024 * 1024,
+    });
+  } catch (error) {
+    if (error.stderr) {
+      console.error(`  [debug] stderr: ${error.stderr.slice(0, 200)}`);
+    }
+    if (strict) {
+      throw error;
+    }
+    return error.stdout ?? '';
+  }
+}
+
+function execClaudeFlow(flowText, cwd, timeout, model, strict) {
+  const args = [join(ROOT, 'bin', 'cli.mjs'), 'ci', '--runner', 'claude'];
+
+  if (model) {
+    args.push('--model', model);
+  }
+
+  try {
+    return execFileSync('node', args, {
+      input: flowText,
+      encoding: 'utf-8',
+      cwd,
+      timeout,
+      env: applyHarnessRunnerDefaults(cleanEnv(), 'claude'),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -651,7 +703,7 @@ function execCodexFlow(flowText, cwd, timeout, model, strict) {
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: cleanEnv(),
+      env: applyHarnessRunnerDefaults(cleanEnv(), 'codex'),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -722,7 +774,7 @@ function execOllamaFlow(flowText, cwd, timeout, model, strict) {
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: cleanEnv(),
+      env: applyHarnessRunnerDefaults(cleanEnv(), 'ollama'),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -748,7 +800,7 @@ function execAiderFlow(flowText, cwd, timeout, model, strict) {
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: normalizeAiderLaunchEnv(cleanEnv()),
+      env: normalizeAiderLaunchEnv(applyHarnessRunnerDefaults(cleanEnv(), 'aider')),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -823,15 +875,21 @@ export function getCommandLabel() {
 }
 
 export function getFlowCommandLabel() {
-  return HARNESS === 'codex'
-    ? 'prompt-language ci --runner codex'
-    : HARNESS === 'opencode'
-      ? 'prompt-language ci --runner opencode'
-      : HARNESS === 'ollama'
-        ? 'prompt-language ci --runner ollama'
-        : HARNESS === 'aider'
-          ? 'prompt-language ci --runner aider'
-          : getCommandLabel();
+  if (AI_CMD) {
+    return getCommandLabel();
+  }
+
+  return HARNESS === 'claude'
+    ? 'prompt-language ci --runner claude'
+    : HARNESS === 'codex'
+      ? 'prompt-language ci --runner codex'
+      : HARNESS === 'opencode'
+        ? 'prompt-language ci --runner opencode'
+        : HARNESS === 'ollama'
+          ? 'prompt-language ci --runner ollama'
+          : HARNESS === 'aider'
+            ? 'prompt-language ci --runner aider'
+            : getCommandLabel();
 }
 
 export function checkHarnessVersion(timeout = 5000) {
@@ -876,16 +934,18 @@ export function runHarnessFlow(
 
   return HARNESS === 'codex'
     ? execCodexFlow(flowText, cwd, timeout, resolvedModel, strict)
-    : HARNESS === 'opencode'
-      ? execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict)
-      : HARNESS === 'ollama'
-        ? execOllamaFlow(flowText, cwd, timeout, resolvedModel, strict)
-        : HARNESS === 'aider'
-          ? execAiderFlow(flowText, cwd, timeout, resolvedModel, strict)
-          : runHarnessPrompt(flowText, {
-              cwd,
-              timeout,
-              model: resolvedModel,
-              strict,
-            });
+    : HARNESS === 'claude'
+      ? execClaudeFlow(flowText, cwd, timeout, resolvedModel, strict)
+      : HARNESS === 'opencode'
+        ? execOpenCodeFlow(flowText, cwd, timeout, resolvedModel, strict)
+        : HARNESS === 'ollama'
+          ? execOllamaFlow(flowText, cwd, timeout, resolvedModel, strict)
+          : HARNESS === 'aider'
+            ? execAiderFlow(flowText, cwd, timeout, resolvedModel, strict)
+            : runHarnessPrompt(flowText, {
+                cwd,
+                timeout,
+                model: resolvedModel,
+                strict,
+              });
 }

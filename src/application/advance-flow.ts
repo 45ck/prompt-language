@@ -914,14 +914,15 @@ function hasEnclosingTryFinally(nodes: readonly FlowNode[], path: readonly numbe
  * If shouldReLoop is true and iteration < max, re-enters the body; otherwise exits the loop.
  * H-LANG-008: Also checks wall-clock timeout if configured on the parent node.
  */
-function handleLoopReentry(
+async function handleLoopReentry(
   state: SessionState,
   parentPath: readonly number[],
   nodeId: string,
   shouldReLoop: boolean,
   maxIter: number,
   timeoutSeconds?: number,
-): SessionState {
+  reentryDelayMs?: number,
+): Promise<SessionState> {
   const progress = state.nodeProgress[nodeId];
   const iteration = progress?.iteration ?? 1;
   let current = state;
@@ -958,6 +959,9 @@ function handleLoopReentry(
 
   if (shouldReLoop && iteration < maxIter) {
     logLoopProgress(loopLabel, iteration, maxIter, 'continue');
+    if (reentryDelayMs != null && reentryDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, reentryDelayMs));
+    }
     current = updateNodeProgress(current, nodeId, {
       iteration: iteration + 1,
       maxIterations: maxIter,
@@ -1009,7 +1013,7 @@ async function handleBodyExhaustion(
         state.variables,
         commandRunner,
       );
-      return handleLoopReentry(
+      return await handleLoopReentry(
         state,
         parentPath,
         parentNode.id,
@@ -1030,7 +1034,7 @@ async function handleBodyExhaustion(
         state.variables,
         commandRunner,
       );
-      return handleLoopReentry(
+      return await handleLoopReentry(
         state,
         parentPath,
         parentNode.id,
@@ -1044,24 +1048,26 @@ async function handleBodyExhaustion(
       const commandFailed = state.variables['command_failed'];
       // H-REL-004: Set _retry_backoff_seconds when backoff is configured
       let retryState = state;
+      let delayMs: number | undefined;
       if (parentNode.backoffMs != null && commandFailed === true) {
         const progress = state.nodeProgress[parentNode.id];
         const iteration = progress?.iteration ?? 1;
         const MAX_BACKOFF_MS = 60_000;
-        const delayMs = Math.min(parentNode.backoffMs * Math.pow(2, iteration - 1), MAX_BACKOFF_MS);
+        delayMs = Math.min(parentNode.backoffMs * Math.pow(2, iteration - 1), MAX_BACKOFF_MS);
         retryState = updateVariable(
           retryState,
           '_retry_backoff_seconds',
           Math.round(delayMs / 1000),
         );
       }
-      return handleLoopReentry(
+      return await handleLoopReentry(
         retryState,
         parentPath,
         parentNode.id,
         commandFailed === true,
         parentNode.maxAttempts,
         parentNode.timeoutSeconds,
+        delayMs,
       );
     }
 
@@ -3775,7 +3781,7 @@ async function advanceConditionLoop(
           );
           const enterBody = node.kind === 'while' ? groundingMet : !groundingMet;
           return {
-            state: handleLoopReentry(
+            state: await handleLoopReentry(
               current,
               current.currentNodePath,
               node.id,

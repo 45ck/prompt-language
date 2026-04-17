@@ -332,7 +332,7 @@ describe('context-adaptive recovery hooks', () => {
       '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,resume_boundary,state_mismatch,capture_failure',
     );
     expect(additionalContext).toContain('Recovered capture flow');
-    expect(additionalContext).toContain('IMPORTANT: Capture is in progress.');
+    expect(additionalContext).toContain('IMPORTANT: A prompt step is still pending.');
     expect(additionalContext).toContain('Variable capture');
     expect(additionalContext).toContain('.prompt-language/vars/answer');
   });

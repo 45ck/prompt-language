@@ -19,6 +19,7 @@ import { renderFlow, renderFlowCompact, renderFlowSummaryBlock } from '../../dom
 import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
 import { buildReviewJudgeRetryPrompt } from '../../domain/review-judge-capture.js';
 import { findNodeById } from '../../domain/flow-node.js';
+import { interpolate } from '../../domain/interpolate.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
@@ -37,6 +38,9 @@ function findAwaitingCapturePrompt(state: SessionState): string | null {
       }
       if (node?.kind === 'review' && node.judgeName) {
         return buildReviewJudgeRetryPrompt(node.id, state.captureNonce);
+      }
+      if (node?.kind === 'prompt') {
+        return interpolate(node.text, state.variables);
       }
     }
   }
@@ -71,12 +75,12 @@ async function main(): Promise<void> {
     );
   }
 
-  // Build capture context if a variable is awaiting capture
+  // Build resume context if a prompt or capture is awaiting completion
   const capturePrompt = findAwaitingCapturePrompt(state);
   let captureContext = '';
   if (capturePrompt) {
     debug('PreCompact: awaiting capture prompt detected');
-    captureContext = '\n\nIMPORTANT: Capture is in progress. ' + capturePrompt;
+    captureContext = '\n\nIMPORTANT: A prompt step is still pending. ' + capturePrompt;
   }
 
   const summaryStablePrefix = '[prompt-language] Active flow preserved across compaction.\n';

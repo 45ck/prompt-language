@@ -244,6 +244,31 @@ describe('pre-compact hook (integration)', () => {
     expect(parsed.additionalContext).toContain('answer');
   });
 
+  it('re-emits a pending prompt node across compaction', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Prompt compaction'),
+      nodeProgress: {
+        p1: { iteration: 1, maxIterations: 1, status: 'awaiting_capture' },
+      },
+      flowSpec: {
+        goal: 'Prompt compaction',
+        nodes: [{ kind: 'prompt', id: 'p1', text: 'Continue with cleanup' }],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain('IMPORTANT: A prompt step is still pending.');
+    expect(parsed.additionalContext).toContain('Continue with cleanup');
+  });
+
   it('keeps capture handoff instructions visible across a compaction boundary after a capture-file failure', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });
@@ -283,7 +308,7 @@ describe('pre-compact hook (integration)', () => {
     expect(parsed.additionalContext).toContain(
       '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,capture_failure',
     );
-    expect(parsed.additionalContext).toContain('IMPORTANT: Capture is in progress.');
+    expect(parsed.additionalContext).toContain('IMPORTANT: A prompt step is still pending.');
     expect(parsed.additionalContext).toContain(
       'Variable capture for "answer" was not found. Please save your response',
     );
@@ -324,7 +349,7 @@ describe('pre-compact hook (integration)', () => {
     expect(parsed.additionalContext).toContain(
       '[prompt-language] render-mode requested=compact actual=full escalated=true triggerIds=compaction_boundary,capture_failure',
     );
-    expect(parsed.additionalContext).toContain('Capture is in progress');
+    expect(parsed.additionalContext).toContain('A prompt step is still pending');
     expect(parsed.additionalContext).toContain('__review_judge_rv1__');
     expect(parsed.additionalContext).toContain('JSON capture');
   });

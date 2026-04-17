@@ -106,7 +106,8 @@ describe('advance-flow edge cases', () => {
 
     expect(result.kind).toBe('prompt');
     expect(result.capturedPrompt).toBe('after break');
-    expect(result.state.currentNodePath).toEqual([2]);
+    expect(result.state.currentNodePath).toEqual([1]);
+    expect(result.state.nodeProgress['p2']?.status).toBe('awaiting_capture');
   });
 
   it('continue at the end of a loop re-enters once per item without double-executing', async () => {
@@ -150,7 +151,8 @@ describe('advance-flow edge cases', () => {
     const first = await autoAdvanceNodes(state);
     expect(first.kind).toBe('prompt');
     expect(first.capturedPrompt).toBe('outer=0 middle=0 inner=0 a/m1/x');
-    expect(first.state.currentNodePath).toEqual([0, 0, 0, 1]);
+    expect(first.state.currentNodePath).toEqual([0, 0, 0, 0]);
+    expect(first.state.nodeProgress['p1']?.status).toBe('awaiting_capture');
 
     const second = await autoAdvanceNodes(first.state);
     expect(second.kind).toBe('prompt');
@@ -277,8 +279,12 @@ describe('advance-flow edge cases', () => {
 
     expect(result.kind).toBe('prompt');
     expect(result.capturedPrompt).toBe('only prompt');
-    expect(result.state.currentNodePath).toEqual([1]);
-    expect(maybeCompleteFlow(result.state).status).toBe('completed');
+    expect(result.state.currentNodePath).toEqual([0]);
+    expect(result.state.nodeProgress['p1']?.status).toBe('awaiting_capture');
+
+    const completed = await autoAdvanceNodes(result.state);
+    expect(completed.kind).toBe('advance');
+    expect(maybeCompleteFlow(completed.state).status).toBe('completed');
   });
 
   it('walks a deterministic long nested flow without drifting across branch or finally boundaries', async () => {
@@ -357,6 +363,8 @@ describe('advance-flow edge cases', () => {
       maxIterations: 2,
       status: 'completed',
     });
-    expect(maybeCompleteFlow(state).status).toBe('completed');
+    const completed = await autoAdvanceNodes(state);
+    expect(completed.kind).toBe('advance');
+    expect(maybeCompleteFlow(completed.state).status).toBe('completed');
   });
 });

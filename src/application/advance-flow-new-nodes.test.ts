@@ -839,6 +839,45 @@ describe('autoAdvanceNodes — remember node', () => {
     expect(entry.value).toBe('Hello Alice');
   });
 
+  it('hydrates remembered keys into same-session variables for later bootstrap prompts', async () => {
+    const remWorkspace = createRememberNode('rm1', undefined, 'crm_workspace', 'apps/crm');
+    const remPackageManager = createRememberNode('rm2', undefined, 'crm_package_manager', 'pnpm');
+    const promptNode = createPromptNode(
+      'p1',
+      'Bootstrap ${crm_workspace} with ${crm_package_manager}',
+    );
+    const spec = createFlowSpec('test', [remWorkspace, remPackageManager, promptNode]);
+    const state = createSessionState('s1', spec);
+
+    const result = await autoAdvanceNodes(
+      state,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      mockMemoryStore,
+    );
+
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toBe('Bootstrap apps/crm with pnpm');
+    expect(result.state.variables['crm_workspace']).toBe('apps/crm');
+    expect(result.state.variables['crm_package_manager']).toBe('pnpm');
+    expect(mockMemoryStore.append).toHaveBeenCalledTimes(2);
+  });
+
+  it('hydrates remembered keys into same-session variables even without a memory store', async () => {
+    const remNode = createRememberNode('rm1', undefined, 'crm_workspace', 'apps/crm');
+    const promptNode = createPromptNode('p1', 'Workspace: ${crm_workspace}');
+    const spec = createFlowSpec('test', [remNode, promptNode]);
+    const state = createSessionState('s1', spec);
+
+    const result = await autoAdvanceNodes(state);
+
+    expect(result.kind).toBe('prompt');
+    expect(result.capturedPrompt).toBe('Workspace: apps/crm');
+    expect(result.state.variables['crm_workspace']).toBe('apps/crm');
+  });
+
   it('auto-advances past remember node', async () => {
     const remNode = createRememberNode('rm1', 'note');
     const after = createLetNode('l1', 'x', { type: 'literal', value: 'done' });

@@ -1203,6 +1203,55 @@ describe('runFlowHeadless', () => {
     );
   });
 
+  it('receives child messages without an explicit await in headless mode', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-message-'));
+
+    const commandRunner = new ShellCommandRunner();
+    const promptRunner = new RecordingPromptRunner();
+    const messageStore = new FileMessageStore(join(tempDir, '.prompt-language'), {});
+    const processSpawner = new HeadlessProcessSpawner({
+      auditLogger: new FileAuditLogger(tempDir),
+      captureReader: new FileCaptureReader(tempDir),
+      commandRunner,
+      cwd: tempDir,
+      messageStore,
+      memoryStore: new FileMemoryStore(tempDir),
+      promptTurnRunner: promptRunner,
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: child message',
+          '',
+          'flow:',
+          '  spawn "worker"',
+          '    send parent "hello-from-worker"',
+          '  end',
+          '  receive msg from "worker" timeout 5',
+          '  run: echo "${msg}" > received.txt',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        messageStore,
+        memoryStore: new FileMemoryStore(tempDir),
+        processSpawner,
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    await expect(readFile(join(tempDir, 'received.txt'), 'utf8')).resolves.toContain(
+      'hello-from-worker',
+    );
+  });
+
   it('imports spawned child variables back into the parent namespace in headless mode', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-spawn-vars-'));
 

@@ -276,6 +276,12 @@ export async function runFlowHeadless(
     }
 
     if (step.kind === 'pause') {
+      const pausedNode = resolveCurrentNode(state.flowSpec.nodes, state.currentNodePath);
+      if (pausedNode?.kind === 'receive' && pausedNode.timeoutSeconds != null) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        continue;
+      }
+
       if (hasRunningChildren(state)) {
         const snapshot = JSON.stringify(state.spawnedChildren);
         if (lastRunningChildrenSnapshot === snapshot) {
@@ -290,6 +296,7 @@ export async function runFlowHeadless(
           lastRunningChildrenSnapshot = snapshot;
           stalledRunningChildrenSnapshots = 0;
         }
+        await new Promise((resolve) => setTimeout(resolve, 100));
         continue;
       }
       lastRunningChildrenSnapshot = undefined;

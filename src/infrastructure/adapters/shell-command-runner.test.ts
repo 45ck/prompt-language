@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ShellCommandRunner } from './shell-command-runner.js';
 
 const REAL_COMMAND_TEST_TIMEOUT_MS = 30_000;
@@ -44,6 +47,28 @@ describe('ShellCommandRunner', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout.trim()).toBe('expanded');
   });
+
+  it(
+    'preserves nested escapes for Windows direct node -e execution',
+    async () => {
+      if (process.platform !== 'win32') {
+        return;
+      }
+
+      const dir = await mkdtemp(join(tmpdir(), 'pl-shell-runner-'));
+      try {
+        const runner = new ShellCommandRunner();
+        const target = join(dir, 'escapes.txt');
+        const command = `node -e "require('node:fs').writeFileSync('${target.replace(/\\/g, '\\\\')}', 'regex=/\\\\d+/\\\\nline=ok')"`;
+        const result = await runner.run(command);
+        expect(result.exitCode).toBe(0);
+        await expect(readFile(target, 'utf8')).resolves.toBe('regex=/\\d+/\\nline=ok');
+      } finally {
+        await rm(dir, { recursive: true, force: true });
+      }
+    },
+    REAL_COMMAND_TEST_TIMEOUT_MS,
+  );
 
   it('uses custom timeout from options', async () => {
     const runner = new ShellCommandRunner();
@@ -529,7 +554,7 @@ describe('ShellCommandRunner (mocked spawn)', () => {
       expect(capturedFile).toBe(process.execPath);
       expect(capturedArgs).toEqual([
         '-e',
-        "const fs=require('fs'); fs.writeFileSync('x.txt', `count=${1}\\n`); console.log(1);",
+        "const fs=require('fs'); fs.writeFileSync('x.txt', `count=${1}\\\\n`); console.log(1);",
       ]);
       expect(capturedOpts['shell']).toBe(false);
       expect(result.exitCode).toBe(0);

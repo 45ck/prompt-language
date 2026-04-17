@@ -259,6 +259,31 @@ describe('session-start hook (integration)', () => {
     expect(parsed.additionalContext).toContain('.prompt-language/vars/answer');
   });
 
+  it('re-emits a pending prompt node on resume', async () => {
+    const stateDir = join(tempDir, '.prompt-language');
+    await mkdir(stateDir, { recursive: true });
+    const state = {
+      ...makeState('active', 'Prompt resume'),
+      nodeProgress: {
+        p1: { iteration: 1, maxIterations: 1, status: 'awaiting_capture' },
+      },
+      flowSpec: {
+        goal: 'Prompt resume',
+        nodes: [{ kind: 'prompt', id: 'p1', text: 'Continue with cleanup' }],
+        completionGates: [],
+        defaults: { maxIterations: 5, maxAttempts: 3 },
+        warnings: [],
+      },
+    };
+    await writeFile(join(stateDir, 'session-state.json'), JSON.stringify(state));
+
+    const result = runHook('{}', tempDir);
+    expect(result.exitCode).toBe(0);
+    const parsed = JSON.parse(result.stdout) as { additionalContext: string };
+    expect(parsed.additionalContext).toContain('Continue with cleanup');
+    expect(parsed.additionalContext).toContain('prompt: Continue with cleanup  <-- current');
+  });
+
   it('keeps capture failure reason and retry count visible when resuming an interrupted capture', async () => {
     const stateDir = join(tempDir, '.prompt-language');
     await mkdir(stateDir, { recursive: true });

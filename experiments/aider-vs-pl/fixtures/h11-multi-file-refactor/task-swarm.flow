@@ -49,4 +49,4 @@ flow:
   end
 
 done when:
-  tests_pass
+  gate h11_oracle: node verify.js

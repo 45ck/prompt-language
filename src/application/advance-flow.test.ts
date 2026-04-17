@@ -1240,7 +1240,8 @@ describe('autoAdvanceNodes — timeout propagation', () => {
     expect(nodeEntries[1]?.nodeKind).toBe('prompt');
     expect(nodeEntries[1]?.nodePath).toBe('1');
     expect(result.state.nodeProgress['r1']?.completedAt).toBeDefined();
-    expect(result.state.nodeProgress['p1']?.completedAt).toBeDefined();
+    expect(result.state.nodeProgress['p1']?.status).toBe('awaiting_capture');
+    expect(result.state.nodeProgress['p1']?.startedAt).toBeDefined();
   });
 });
 
@@ -3586,8 +3587,9 @@ describe('autoAdvanceNodes — stale-state detection', () => {
     const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
     // Prompt should be captured (not infinite loop)
     expect(capturedPrompt).toBe('Please respond');
-    // Path should have advanced past the prompt
-    expect(result.currentNodePath).toEqual([1]);
+    // Prompt stays current until the next turn completes it.
+    expect(result.currentNodePath).toEqual([0]);
+    expect(result.nodeProgress['p1']?.status).toBe('awaiting_capture');
   });
 
   it('processes many sequential let nodes followed by a prompt without stale detection', async () => {
@@ -3961,6 +3963,7 @@ describe('autoAdvanceNodes — foreach with listCommand', () => {
 
 describe('autoAdvanceNodes — retry backoff', () => {
   it('sets _retry_backoff_seconds on re-loop when backoff configured', async () => {
+    vi.useFakeTimers();
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
     };
@@ -3981,7 +3984,9 @@ describe('autoAdvanceNodes — retry backoff', () => {
       nodeProgress: { re1: { iteration: 1, maxIterations: 3, status: 'running' } },
     };
 
-    const { state: result } = await autoAdvanceNodes(state, runner);
+    const pending = autoAdvanceNodes(state, runner);
+    await vi.runAllTimersAsync();
+    const { state: result } = await pending;
     // autoAdvanceNodes runs all iterations: final backoff = 2000 * 2^(2-1) = 4000ms,
     // but last re-loop sets iteration 3 which hits max, so last set value is iteration 2: 2000*2^1/1000=4
     // Wait — iteration starts at 1, run fails, exhaust sets backoff at iter 1 (=2s), re-enter at iter 2,
@@ -3993,9 +3998,11 @@ describe('autoAdvanceNodes — retry backoff', () => {
     // iter 3 → run, fail, exhaust → backoff=2000*2^(3-1)/1000=8, but handleLoopReentry says 3 >= 3 → exit
     // The last _retry_backoff_seconds = 8
     expect(result.variables['_retry_backoff_seconds']).toBe(8);
+    vi.useRealTimers();
   });
 
   it('doubles backoff on subsequent iterations', async () => {
+    vi.useFakeTimers();
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
     };
@@ -4016,16 +4023,20 @@ describe('autoAdvanceNodes — retry backoff', () => {
       nodeProgress: { re1: { iteration: 3, maxIterations: 5, status: 'running' } },
     };
 
-    const { state: result } = await autoAdvanceNodes(state, runner);
+    const pending = autoAdvanceNodes(state, runner);
+    await vi.runAllTimersAsync();
+    const { state: result } = await pending;
     // autoAdvanceNodes runs remaining iterations from 3 to 5 (max):
     // iter 3 → backoff=1000*2^(3-1)/1000=4, re-enter iter 4
     // iter 4 → backoff=1000*2^(4-1)/1000=8, re-enter iter 5
     // iter 5 → backoff=1000*2^(5-1)/1000=16, but 5 >= max 5 → exit
     // Last _retry_backoff_seconds = 16
     expect(result.variables['_retry_backoff_seconds']).toBe(16);
+    vi.useRealTimers();
   });
 
   it('caps backoff at 60s', async () => {
+    vi.useFakeTimers();
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 1, stdout: '', stderr: '' }),
     };
@@ -4046,9 +4057,12 @@ describe('autoAdvanceNodes — retry backoff', () => {
       nodeProgress: { re1: { iteration: 10, maxIterations: 20, status: 'running' } },
     };
 
-    const { state: result } = await autoAdvanceNodes(state, runner);
+    const pending = autoAdvanceNodes(state, runner);
+    await vi.runAllTimersAsync();
+    const { state: result } = await pending;
     // 10000 * 2^9 = 5120000ms but capped at 60000ms = 60s
     expect(result.variables['_retry_backoff_seconds']).toBe(60);
+    vi.useRealTimers();
   });
 
   it('does not set backoff variable when retry has no backoff', async () => {
@@ -4152,8 +4166,9 @@ describe('autoAdvanceNodes — labeled break', () => {
 
     const { state: result, capturedPrompt } = await autoAdvanceNodes(state);
     expect(capturedPrompt).toBe('done');
-    // Should have advanced past the outer while
-    expect(result.currentNodePath).toEqual([2]);
+    // The prompt itself stays current until the next turn completes it.
+    expect(result.currentNodePath).toEqual([1]);
+    expect(result.nodeProgress['p1']?.status).toBe('awaiting_capture');
   });
 
   it('break without label exits nearest loop even when outer is labeled', async () => {

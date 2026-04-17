@@ -8,6 +8,8 @@
  *   Child receives:      reads from {childStateDir}/messages/inbox.json
  *   Send child → parent: writes to {parentStateDir}/messages/{childName}/inbox.json
  *   Parent reads child:  reads from {parentStateDir}/messages/{childName}/inbox.json
+ *   Named channel send:   writes to {sessionStateDir}/messages/{channel}/inbox.json
+ *   Named channel read:   reads from {sessionStateDir}/messages/{channel}/inbox.json
  *
  * The asymmetry between send and receive is handled by separate path resolvers.
  *
@@ -64,6 +66,8 @@ export class FileMessageStore implements MessageStore {
    *   → {parentStateDir}/messages/{childName}/inbox.json
    * send('childName') from parent:
    *   → {childStateDir}/messages/inbox.json
+   * send('chan') from parent or child:
+   *   → {sessionStateDir}/messages/chan/inbox.json
    */
   private resolveSendPath(target: string): string {
     if (target === 'parent') {
@@ -76,9 +80,8 @@ export class FileMessageStore implements MessageStore {
     if (childStateDir) {
       return join(childStateDir, 'messages', 'inbox.json');
     }
-    // Fallback: derive child state dir by convention relative to current state dir
-    const fallbackDir = join(dirname(this.stateDir), `.prompt-language-${target}`);
-    return join(fallbackDir, 'messages', 'inbox.json');
+
+    return join(this.resolveSharedChannelStateDir(), 'messages', target, 'inbox.json');
   }
 
   /**
@@ -88,6 +91,8 @@ export class FileMessageStore implements MessageStore {
    *   → {childStateDir}/messages/inbox.json  (parent writes here when sending to this child)
    * receive('childName') in parent:
    *   → {parentStateDir}/messages/{childName}/inbox.json  (child writes here when sending to parent)
+   * receive('chan') in parent or child:
+   *   → {sessionStateDir}/messages/chan/inbox.json
    */
   private resolveReceivePath(from: string): string {
     if (from === 'parent') {
@@ -95,8 +100,7 @@ export class FileMessageStore implements MessageStore {
       return join(this.stateDir, 'messages', 'inbox.json');
     }
 
-    // Parent reads the named child's outbox slot inside the parent state dir
-    return join(this.stateDir, 'messages', from, 'inbox.json');
+    return join(this.resolveSharedChannelStateDir(), 'messages', from, 'inbox.json');
   }
 
   /** Extract the child name from the state dir basename (e.g. ".prompt-language-worker" → "worker"). */
@@ -107,7 +111,18 @@ export class FileMessageStore implements MessageStore {
 
   /** Derive the parent state dir: sibling directory named ".prompt-language". */
   private deriveParentStateDir(): string {
+    if (!this.isChildStateDir()) {
+      return this.stateDir;
+    }
     return join(dirname(this.stateDir), '.prompt-language');
+  }
+
+  private resolveSharedChannelStateDir(): string {
+    return this.isChildStateDir() ? this.deriveParentStateDir() : this.stateDir;
+  }
+
+  private isChildStateDir(): boolean {
+    return basename(this.stateDir).startsWith('.prompt-language-');
   }
 
   private async readInbox(inboxPath: string): Promise<MessageEntry[]> {

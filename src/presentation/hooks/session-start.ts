@@ -15,6 +15,7 @@ import { colorizeFlow } from '../../domain/colorize-flow.js';
 import { buildCaptureRetryPrompt } from '../../domain/capture-prompt.js';
 import { buildReviewJudgeRetryPrompt } from '../../domain/review-judge-capture.js';
 import { findNodeById } from '../../domain/flow-node.js';
+import { interpolate } from '../../domain/interpolate.js';
 import { withHookErrorRecovery } from './hook-error-handler.js';
 import type { SessionState } from '../../domain/session-state.js';
 import { readStdin } from './read-stdin.js';
@@ -47,8 +48,7 @@ async function suggestFlows(): Promise<string | null> {
 }
 
 /**
- * Find a let-prompt node that is currently awaiting capture.
- * Returns the variable name if found, null otherwise.
+ * Find a pending prompt or capture that should be re-emitted on resume.
  */
 function findAwaitingCapturePrompt(state: SessionState): string | null {
   for (const [nodeId, progress] of Object.entries(state.nodeProgress)) {
@@ -58,6 +58,9 @@ function findAwaitingCapturePrompt(state: SessionState): string | null {
         return buildCaptureRetryPrompt(node.variableName, state.captureNonce);
       if (node?.kind === 'review' && node.judgeName) {
         return buildReviewJudgeRetryPrompt(node.id, state.captureNonce);
+      }
+      if (node?.kind === 'prompt') {
+        return interpolate(node.text, state.variables);
       }
     }
   }

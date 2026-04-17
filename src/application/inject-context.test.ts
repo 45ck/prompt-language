@@ -680,8 +680,11 @@ describe('injectContext — variable interpolation', () => {
 
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
 
-    expect(result.prompt).toContain('[= hello]');
     expect(result.prompt).toContain('prompt: work');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['greeting']).toBe('hello');
+    expect(saved?.currentNodePath).toEqual([1]);
+    expect(saved?.nodeProgress['p1']?.status).toBe('awaiting_capture');
   });
 
   it('auto-advances consecutive let nodes', async () => {
@@ -695,9 +698,12 @@ describe('injectContext — variable interpolation', () => {
 
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
 
-    expect(result.prompt).toContain('[= 1]');
-    expect(result.prompt).toContain('[= 2]');
     expect(result.prompt).toContain('prompt: work');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['a']).toBe('1');
+    expect(saved?.variables['b']).toBe('2');
+    expect(saved?.currentNodePath).toEqual([2]);
+    expect(saved?.nodeProgress['p1']?.status).toBe('awaiting_capture');
   });
 
   it('let-prompt emits capture meta-prompt on first visit', async () => {
@@ -728,8 +734,11 @@ describe('injectContext — variable interpolation', () => {
 
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
 
-    expect(result.prompt).toContain('[= hello world]');
     expect(result.prompt).toContain('prompt: work');
+    const saved = await store.loadCurrent();
+    expect(saved?.variables['out']).toBe('hello world');
+    expect(saved?.currentNodePath).toEqual([1]);
+    expect(saved?.nodeProgress['p1']?.status).toBe('awaiting_capture');
   });
 
   it('interpolates variable in captured prompt after let auto-advance', async () => {
@@ -931,9 +940,10 @@ describe('injectContext — prompt node auto-advance', () => {
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store);
 
     expect(result.prompt).toContain('First instruction');
-    expect(result.prompt).toContain('Second instruction  <-- current');
+    expect(result.prompt).toContain('First instruction  <-- current');
     const saved = await store.loadCurrent();
-    expect(saved?.currentNodePath).toEqual([1]);
+    expect(saved?.currentNodePath).toEqual([0]);
+    expect(saved?.nodeProgress['p1']?.status).toBe('awaiting_capture');
   });
 
   it('advances state for next invocation', async () => {
@@ -986,9 +996,10 @@ describe('injectContext — prompt node auto-advance', () => {
     expectRecordedInterpolation(commands[0], "echo 'test-file'", 'test-file');
     expect(result.prompt).toContain('Check test-file output');
     const saved = await store.loadCurrent();
-    expect(saved?.currentNodePath).toEqual([3]);
+    expect(saved?.currentNodePath).toEqual([2]);
     expect(saved?.variables['name']).toBe('test-file');
     expect(saved?.variables['command_succeeded']).toBe(true);
+    expect(saved?.nodeProgress['p1']?.status).toBe('awaiting_capture');
   });
 });
 
@@ -1943,8 +1954,9 @@ describe('injectContext — try/catch', () => {
     expect(saved?.variables['result']).toBe('partial output');
     expect(saved?.variables['command_failed']).toBe(true);
     expect(saved?.variables['command_succeeded']).toBe(false);
-    // Path advanced past the try node entirely after the catch prompt was captured.
-    expect(saved?.currentNodePath).toEqual([1]);
+    // The catch-body prompt stays current until the next interaction completes it.
+    expect(saved?.currentNodePath).toEqual([0, 2]);
+    expect(saved?.nodeProgress['p2']?.status).toBe('awaiting_capture');
   });
 });
 
@@ -2287,7 +2299,8 @@ describe('injectContext — let-prompt capture', () => {
     expect(result.prompt).toContain('Fix bug1\nbug2\nbug3');
     const saved = await store.loadCurrent();
     expect(saved?.variables['tasks']).toBe('bug1\nbug2\nbug3');
-    expect(saved?.currentNodePath).toEqual([2]);
+    expect(saved?.currentNodePath).toEqual([1]);
+    expect(saved?.nodeProgress['p1']?.status).toBe('awaiting_capture');
   });
 
   it('retries when capture file is missing', async () => {

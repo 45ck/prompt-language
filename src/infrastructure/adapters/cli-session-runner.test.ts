@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { join } from 'node:path';
 
 const { spawnMock, execFileSyncMock, writeFileSyncMock, readFileMock, randomUuidMock } = vi.hoisted(
   () => ({
@@ -191,6 +192,31 @@ describe('CliSessionRunner', () => {
     });
   });
 
+  it('resolves relative child state dirs against the child cwd on launch', async () => {
+    const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
+    const resolvedStateDir = join('C:/child-workspace', '.prompt-language-child');
+
+    const handle = await runner.launch({
+      name: 'child_3',
+      goal: 'Goal only',
+      flowText: '',
+      variables: {},
+      stateDir: '.prompt-language-child',
+      cwd: 'C:/child-workspace',
+    });
+
+    expect(spawnMock).toHaveBeenCalledWith(
+      'node',
+      expect.arrayContaining(['--state-dir', resolvedStateDir]),
+      expect.objectContaining({
+        env: expect.objectContaining({
+          PROMPT_LANGUAGE_STATE_DIR: resolvedStateDir,
+        }),
+      }),
+    );
+    expect(handle.stateDir).toBe(resolvedStateDir);
+  });
+
   it('maps completed state-file snapshots to completed with variables', async () => {
     readFileMock.mockResolvedValue(
       JSON.stringify({
@@ -244,6 +270,31 @@ describe('CliSessionRunner', () => {
     await expect(runner.poll({ stateDir: 'C:/state-dir' })).resolves.toEqual({
       status: 'running',
     });
+  });
+
+  it('prefers the launched handle stateDir when polling relative child paths', async () => {
+    readFileMock.mockResolvedValue(JSON.stringify({ status: 'completed', variables: { ok: '1' } }));
+    const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
+    const resolvedStateDir = join('C:/child-workspace', '.prompt-language-child');
+
+    await expect(
+      runner.poll({
+        stateDir: '.prompt-language-child',
+        handle: {
+          runId: 'h1',
+          stateDir: resolvedStateDir,
+          captureMode: 'state-file',
+        },
+      }),
+    ).resolves.toEqual({
+      status: 'completed',
+      variables: { ok: '1' },
+    });
+
+    expect(readFileMock).toHaveBeenCalledWith(
+      join(resolvedStateDir, 'session-state.json'),
+      'utf-8',
+    );
   });
 
   it('returns false when terminate has no pid and uses taskkill on Windows PIDs', async () => {

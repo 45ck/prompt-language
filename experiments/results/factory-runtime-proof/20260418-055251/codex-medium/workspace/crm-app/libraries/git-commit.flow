@@ -1,0 +1,9 @@
+library: commit
+
+export flow commit_phase(phase_label="phase", pkg_mgr="pnpm"):
+  run: git add -A
+  run: node -e "const {execSync}=require('node:child_process'); try { const staged = execSync('git diff --cached --name-only',{encoding:'utf8'}).trim(); if (!staged) { console.log('no staged changes; skipping commit'); process.exit(0); } execSync('git commit -m ${JSON.stringify(`chore(${process.argv[1]}): automated phase commit`)}',{stdio:'inherit'}); } catch(e) { console.error('commit skipped:', e.message); process.exit(0); }" ${phase_label}
+
+export flow commit_entity(entity="contact"):
+  run: git add -A
+  run: node -e "const {execSync}=require('node:child_process'); try { const staged = execSync('git diff --cached --name-only',{encoding:'utf8'}).trim(); if (!staged) { console.log('no staged changes; skipping commit'); process.exit(0); } execSync('git commit -m ${JSON.stringify(`feat(${process.argv[1]}): add CRUD slice`)}',{stdio:'inherit'}); } catch(e) { console.error('commit skipped:', e.message); process.exit(0); }" ${entity}

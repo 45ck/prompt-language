@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { join } from 'node:path';
 import type { SpawnedSessionRequest } from './spawned-session-runner.js';
 
 vi.mock('node:child_process', () => ({
@@ -72,6 +73,22 @@ describe('ClaudeSessionRunner', () => {
       expect(options.env['PROMPT_LANGUAGE_STATE_DIR']).toBe('/custom/state');
     });
 
+    it('resolves relative state dirs against the child cwd', async () => {
+      const fakeChild = { pid: 99, unref: vi.fn() };
+      vi.mocked(mockedSpawn).mockReturnValue(fakeChild as never);
+
+      const runner = new ClaudeSessionRunner('/work');
+      const handle = await runner.launch(
+        makeRequest({ stateDir: '.prompt-language-child', cwd: '/child-workspace' }),
+      );
+
+      const resolvedStateDir = join('/child-workspace', '.prompt-language-child');
+      const callArgs = vi.mocked(mockedSpawn).mock.calls[0]!;
+      const options = callArgs[2] as { env: Record<string, string> };
+      expect(options.env['PROMPT_LANGUAGE_STATE_DIR']).toBe(resolvedStateDir);
+      expect(handle.stateDir).toBe(resolvedStateDir);
+    });
+
     it('returns pid undefined when child.pid is undefined', async () => {
       const fakeChild = { pid: undefined, unref: vi.fn() };
       vi.mocked(mockedSpawn).mockReturnValue(fakeChild as never);
@@ -139,6 +156,29 @@ describe('ClaudeSessionRunner', () => {
       const snapshot = await runner.poll({ stateDir: '/state/dir' });
 
       expect(snapshot).toEqual({ status: 'running' });
+    });
+
+    it('prefers handle stateDir when polling launched relative children', async () => {
+      vi.mocked(mockedReadFile).mockResolvedValue(
+        JSON.stringify({ status: 'completed', variables: { result: 'done' } }),
+      );
+
+      const runner = new ClaudeSessionRunner('/work');
+      const resolvedStateDir = join('/child-workspace', '.prompt-language-child');
+      const snapshot = await runner.poll({
+        stateDir: '.prompt-language-child',
+        handle: {
+          runId: 'child-handle',
+          stateDir: resolvedStateDir,
+          captureMode: 'state-file',
+        },
+      });
+
+      expect(snapshot).toEqual({ status: 'completed', variables: { result: 'done' } });
+      expect(mockedReadFile).toHaveBeenCalledWith(
+        join(resolvedStateDir, 'session-state.json'),
+        'utf-8',
+      );
     });
   });
 

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "sessionId": "20e79933-6ca6-4a3e-80e0-7b9722792671",
+  "flowSpec": {
+    "goal": "Sub-task: discovery-requirements",
+    "nodes": [
+      {
+        "kind": "prompt",
+        "id": "n1",
+        "text": "Write docs/prd.md, docs/personas.md, docs/use-cases.md, docs/non-functional-requirements.md, and docs/acceptance-criteria.md for the bounded CRM MVP. Keep scope tight; reject feature creep.",
+        "position": {
+          "line": 4,
+          "column": 3,
+          "text": "  prompt: Write docs/prd.md, docs/personas.md, docs/use-cases.md, docs/non-functional-requirements.md, and docs/acceptance-criteria.md for the bounded CRM MVP. Keep scope tight; reject feature creep."
+        }
+      }
+    ],
+    "completionGates": [],
+    "defaults": {
+      "maxIterations": 5,
+      "maxAttempts": 3
+    },
+    "warnings": []
+  },
+  "currentNodePath": [
+    1
+  ],
+  "nodeProgress": {
+    "n1": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776457994344,
+      "completedAt": 1776458063590
+    }
+  },
+  "variables": {},
+  "gateResults": {},
+  "gateDiagnostics": {},
+  "status": "active",
+  "warnings": [],
+  "spawnedChildren": {},
+  "snapshots": {},
+  "raceChildren": {},
+  "flowSpecHash": "f33034d4",
+  "transitionSeq": 1,
+  "captureNonce": "00167e1b523bd438ae3d09f8806648f8",
+  "stateHash": "6f4fbd49b3781023033e01f9866bae4615a179e5e34cd1443c39360b19f9bc6e",
+  "_checksum": "9fd8d1176273aa601e7f5bbf16e14d9ef1da47755e4424c273deccc6a9d8a4bf"
+}

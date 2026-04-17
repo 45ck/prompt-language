@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "sessionId": "16c8648f-b3f7-46b6-9692-1d3fce925bfd",
+  "flowSpec": {
+    "goal": "Sub-task: discovery-problem",
+    "nodes": [
+      {
+        "kind": "prompt",
+        "id": "n1",
+        "text": "Write docs/research/problem-space.md, docs/research/competitors.md, docs/research/risk-register.md, docs/research/success-metrics.md, and docs/research/workflow-patterns.md grounded in real SME sales and service workflows. Do not speculate beyond the bounded CRM MVP scope (auth, contacts, companies, opportunities, pipeline stages, tasks, notes, dashboard).",
+        "position": {
+          "line": 4,
+          "column": 3,
+          "text": "  prompt: Write docs/research/problem-space.md, docs/research/competitors.md, docs/research/risk-register.md, docs/research/success-metrics.md, and docs/research/workflow-patterns.md grounded in real SME sales and service workflows. Do not speculate beyond the bounded CRM MVP scope (auth, contacts, companies, opportunities, pipeline stages, tasks, notes, dashboard)."
+        }
+      }
+    ],
+    "completionGates": [],
+    "defaults": {
+      "maxIterations": 5,
+      "maxAttempts": 3
+    },
+    "warnings": []
+  },
+  "currentNodePath": [
+    1
+  ],
+  "nodeProgress": {
+    "n1": {
+      "iteration": 1,
+      "maxIterations": 1,
+      "status": "completed",
+      "startedAt": 1776457994360,
+      "completedAt": 1776458058024
+    }
+  },
+  "variables": {},
+  "gateResults": {},
+  "gateDiagnostics": {},
+  "status": "active",
+  "warnings": [],
+  "spawnedChildren": {},
+  "snapshots": {},
+  "raceChildren": {},
+  "flowSpecHash": "aae7fbeb",
+  "transitionSeq": 1,
+  "captureNonce": "7e6c3c002509b1332a614ee21749ea30",
+  "stateHash": "a18e1c0b413ff0244d5c83c5262597c7e8506e7810a41e9bdc364f1d6b530721",
+  "_checksum": "40aef13988083d9fa02e392b52a80fabab97410d6d7e3bcf5d82b447ab772fd9"
+}

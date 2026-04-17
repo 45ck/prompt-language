@@ -1178,39 +1178,6 @@ describe('runFlowHeadless', () => {
     ]);
   });
 
-  it('returns paused when spawned children are still running', async () => {
-    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-pause-'));
-
-    const result = await runFlowHeadless(
-      {
-        cwd: tempDir,
-        flowText: [
-          'Goal: pause',
-          '',
-          'flow:',
-          '  spawn "worker"',
-          '    prompt: Create worker.txt',
-          '  end',
-          '  await all',
-        ].join('\n'),
-        sessionId: randomUUID(),
-      },
-      {
-        auditLogger: new FileAuditLogger(tempDir),
-        captureReader: new FileCaptureReader(tempDir),
-        commandRunner: new InMemoryCommandRunner(),
-        memoryStore: new FileMemoryStore(tempDir),
-        processSpawner: new SequenceStatusProcessSpawner([{ status: 'running' }]),
-        promptTurnRunner: new RecordingPromptRunner(),
-        stateStore: new InMemoryStateStore(),
-      },
-    );
-
-    expect(result.finalState.status).toBe('active');
-    expect(result.turns).toBe(0);
-    expect(result.reason).toBe('Flow paused before reaching completion.');
-  });
-
   it('keeps polling spawned children until they complete', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-pause-'));
 
@@ -1279,6 +1246,45 @@ describe('runFlowHeadless', () => {
     );
 
     expect(result.finalState.status).toBe('completed');
+    expect(result.turns).toBe(0);
+  });
+
+  it('does not fail early when headless child work needs many running polls before completion', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-pause-slow-child-'));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: slow child',
+          '',
+          'flow:',
+          '  spawn "worker"',
+          '    prompt: Create worker.txt',
+          '  end',
+          '  await all',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        processSpawner: new SequenceStatusProcessSpawner([
+          { status: 'running' },
+          { status: 'running' },
+          { status: 'running' },
+          { status: 'running' },
+          { status: 'completed' },
+        ]),
+        promptTurnRunner: new RecordingPromptRunner(),
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.reason).toBeUndefined();
     expect(result.turns).toBe(0);
   });
 

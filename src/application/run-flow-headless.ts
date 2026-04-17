@@ -46,8 +46,6 @@ export interface RunFlowHeadlessOutput {
 const DEFAULT_MAX_TURNS = 24;
 const MAX_ASSISTANT_TEXT_SNIPPET = 160;
 const DEFAULT_HEADLESS_COMMAND_TIMEOUT_MS = 300_000;
-const MAX_STALLED_CHILD_SNAPSHOTS = 2;
-
 function hasRunningChildren(state: SessionState): boolean {
   return Object.values(state.spawnedChildren).some((child) => child?.status === 'running');
 }
@@ -215,8 +213,6 @@ export async function runFlowHeadless(
   await deps.stateStore.save(state);
 
   let turns = 0;
-  let lastRunningChildrenSnapshot: string | undefined;
-  let stalledRunningChildrenSnapshots = 0;
   const buildOutput = (
     finalState: SessionState,
     options: {
@@ -283,32 +279,14 @@ export async function runFlowHeadless(
       }
 
       if (hasRunningChildren(state)) {
-        const snapshot = JSON.stringify(state.spawnedChildren);
-        if (lastRunningChildrenSnapshot === snapshot) {
-          stalledRunningChildrenSnapshots += 1;
-          if (stalledRunningChildrenSnapshots >= MAX_STALLED_CHILD_SNAPSHOTS) {
-            return buildOutput(state, {
-              reason: 'Flow paused before reaching completion.',
-              status: 'failed',
-            });
-          }
-        } else {
-          lastRunningChildrenSnapshot = snapshot;
-          stalledRunningChildrenSnapshots = 0;
-        }
         await new Promise((resolve) => setTimeout(resolve, 100));
         continue;
       }
-      lastRunningChildrenSnapshot = undefined;
-      stalledRunningChildrenSnapshots = 0;
       return buildOutput(state, {
         reason: 'Flow paused before reaching completion.',
         status: 'failed',
       });
     }
-
-    lastRunningChildrenSnapshot = undefined;
-    stalledRunningChildrenSnapshots = 0;
 
     if (step.kind === 'advance') {
       state = maybeCompleteFlow(state);

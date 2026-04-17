@@ -11,6 +11,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { stringifyVariableValue } from '../../domain/variable-value.js';
+import { resolveStateRoot } from './resolve-state-root.js';
 import type {
   SpawnedSessionCapabilities,
   SpawnedSessionHandle,
@@ -55,11 +56,12 @@ export class ClaudeSessionRunner implements SpawnedSessionRunner {
 
     const prompt = this.buildChildPrompt(request);
     const childCwd = request.cwd ?? this.cwd;
+    const resolvedStateDir = resolveStateRoot(childCwd, request.stateDir);
     const modelArgs: string[] = request.model !== undefined ? ['--model', request.model] : [];
 
     const childEnv: NodeJS.ProcessEnv = {
       ...process.env,
-      PROMPT_LANGUAGE_STATE_DIR: request.stateDir,
+      PROMPT_LANGUAGE_STATE_DIR: resolvedStateDir,
       PL_SPAWN_NAME: request.name,
     };
     if (process.env['PL_RUN_ID']) childEnv['PL_RUN_ID'] = process.env['PL_RUN_ID'];
@@ -78,14 +80,20 @@ export class ClaudeSessionRunner implements SpawnedSessionRunner {
     const pid = child.pid ?? 0;
     return {
       runId: randomUUID(),
-      stateDir: request.stateDir,
+      stateDir: resolvedStateDir,
       pid: pid || undefined,
       captureMode: 'state-file',
     };
   }
 
-  async poll(ref: Readonly<{ readonly stateDir: string }>): Promise<SpawnedSessionSnapshot> {
-    const statePath = join(ref.stateDir, 'session-state.json');
+  async poll(
+    ref: Readonly<{
+      readonly stateDir: string;
+      readonly handle?: SpawnedSessionHandle | undefined;
+    }>,
+  ): Promise<SpawnedSessionSnapshot> {
+    const stateRoot = ref.handle?.stateDir ?? resolveStateRoot(this.cwd, ref.stateDir);
+    const statePath = join(stateRoot, 'session-state.json');
     try {
       const raw = await readFile(statePath, 'utf-8');
       const state = JSON.parse(raw) as {

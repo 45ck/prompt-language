@@ -35,11 +35,17 @@ gates today**. See `docs/strategy/program-status.md` §Verification state.
 Runtime-backed artifact bundles are still useful below that bar. For example,
 the bounded factory proof series in
 [`experiments/results/factory-runtime-proof/`](../experiments/results/factory-runtime-proof/)
-persists `session-state.json`, `provenance.jsonl`, and `audit.jsonl` on both
-Codex and Claude lanes. That proves the PL runtime actually advanced state and
-recorded agent activity, but it does **not** by itself make those runs
-claim-eligible. Verifier closure, preflight readiness, and attestation still
-decide whether a bundle can support a thesis-level claim.
+includes provenance-backed bundles such as `20260418-044547`, where both Codex
+and Claude lanes persist `session-state.json`, `provenance.jsonl`, and
+`audit.jsonl`. Newer reruns are not automatically better on every dimension:
+`20260418-055251` is stronger as bounded completion evidence for Codex, but it
+did not capture `provenance.jsonl`, so it should not replace `044547` when the
+claim depends on trace completeness. The same `055251` rerun is also the clearest
+example of why "after the fix" must mean "after the built runtime used in the
+bundle", not simply "after `src/` changed". These bundles prove the PL runtime
+actually advanced state and recorded agent activity, but they do **not** by
+themselves make the runs claim-eligible. Verifier closure, preflight readiness,
+and attestation still decide whether a bundle can support a thesis-level claim.
 
 ## Why this exists
 

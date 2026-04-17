@@ -1,0 +1,1 @@
+{"timestamp":"2026-04-17T20:33:14.344Z","event":"node_advance","command":"prompt: Write docs/prd.md, docs/personas.md, docs/use-cases.md, docs/non-functional-requirements.md, and docs/acceptance-criteria.md for the bounded CRM MVP. Keep scope tight; reject feature creep.","nodeId":"n1","nodeKind":"prompt","nodePath":"0","durationMs":0}

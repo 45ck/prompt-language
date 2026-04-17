@@ -1,0 +1,4 @@
+Goal: Sub-task: discovery-requirements
+
+flow:
+  prompt: Write docs/prd.md, docs/personas.md, docs/use-cases.md, docs/non-functional-requirements.md, and docs/acceptance-criteria.md for the bounded CRM MVP. Keep scope tight; reject feature creep.

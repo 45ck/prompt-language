@@ -9,11 +9,13 @@ import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-s
 import { FileCaptureReader } from '../infrastructure/adapters/file-capture-reader.js';
 import { FileAuditLogger } from '../infrastructure/adapters/file-audit-logger.js';
 import { HeadlessProcessSpawner } from '../infrastructure/adapters/headless-process-spawner.js';
+import { FileMessageStore } from '../infrastructure/adapters/file-message-store.js';
 import { FileMemoryStore } from '../infrastructure/adapters/file-memory-store.js';
 import { ShellCommandRunner } from '../infrastructure/adapters/shell-command-runner.js';
 import { runFlowHeadless } from './run-flow-headless.js';
 import type { PromptTurnResult, PromptTurnRunner } from './ports/prompt-turn-runner.js';
 import { FLOW_OUTCOME_CODES, RUNTIME_DIAGNOSTIC_CODES } from '../domain/diagnostic-report.js';
+import type { SessionState } from '../domain/session-state.js';
 import type {
   ChildStatus,
   ProcessSpawner,
@@ -38,6 +40,15 @@ class RecordingPromptRunner implements PromptTurnRunner {
     this.calls.push(input);
     const result = await this.effect?.(input);
     return result ?? { exitCode: 0 };
+  }
+}
+
+class RecordingStateStore extends InMemoryStateStore {
+  readonly savedStates: SessionState[] = [];
+
+  override async save(state: SessionState): Promise<void> {
+    this.savedStates.push(state);
+    await super.save(state);
   }
 }
 
@@ -81,11 +92,13 @@ describe('runFlowHeadless', () => {
   }> {
     const commandRunner = new ShellCommandRunner();
     const promptRunner = new RecordingPromptRunner();
+    const messageStore = new FileMessageStore(join(cwd, '.prompt-language'), {});
     const processSpawner = new HeadlessProcessSpawner({
       auditLogger: new FileAuditLogger(cwd),
       captureReader: new FileCaptureReader(cwd),
       commandRunner,
       cwd,
+      messageStore,
       memoryStore: new FileMemoryStore(cwd),
       promptTurnRunner: promptRunner,
     });
@@ -100,6 +113,7 @@ describe('runFlowHeadless', () => {
         auditLogger: new FileAuditLogger(cwd),
         captureReader: new FileCaptureReader(cwd),
         commandRunner,
+        messageStore,
         memoryStore: new FileMemoryStore(cwd),
         processSpawner,
         promptTurnRunner: promptRunner,
@@ -150,6 +164,62 @@ describe('runFlowHeadless', () => {
     expect(result.turns).toBe(1);
     expect(promptRunner.prompts).toHaveLength(1);
     expect(promptRunner.prompts[0]).toContain('Create done.txt');
+  });
+
+  it('keeps direct prompt nodes awaiting capture until the runner returns', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-prompt-dispatch-'));
+
+    const stateStore = new RecordingStateStore();
+    let dispatchState: SessionState | null = null;
+    const promptRunner = new RecordingPromptRunner(async () => {
+      dispatchState = await stateStore.loadCurrent();
+      return { exitCode: 0, madeProgress: true };
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: 'Goal: prompt lifecycle\n\nflow:\n  prompt: Create hello.txt\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore,
+      },
+    );
+
+    const promptNodeId = result.finalState.flowSpec.nodes[0]?.id;
+    const savedDispatchState = dispatchState;
+
+    expect(promptNodeId).toBeDefined();
+    expect(savedDispatchState).not.toBeNull();
+    if (promptNodeId == null || savedDispatchState == null) {
+      throw new Error('expected prompt node and dispatch state to be recorded');
+    }
+    const dispatchSnapshot: SessionState = savedDispatchState;
+    const promptId: string = promptNodeId;
+    expect(dispatchSnapshot.currentNodePath).toEqual([0]);
+    expect(dispatchSnapshot.nodeProgress[promptId]).toEqual(
+      expect.objectContaining({
+        status: 'awaiting_capture',
+      }),
+    );
+    expect(dispatchSnapshot.nodeProgress[promptId]?.completedAt).toBeUndefined();
+    expect(result.finalState.nodeProgress[promptId]).toEqual(
+      expect.objectContaining({
+        status: 'completed',
+      }),
+    );
+    expect(result.finalState.nodeProgress[promptId]?.completedAt).toEqual(expect.any(Number));
+    expect(
+      stateStore.savedStates.some(
+        (savedState) => savedState.nodeProgress[promptNodeId ?? '']?.status === 'awaiting_capture',
+      ),
+    ).toBe(true);
   });
 
   it('supports let x = prompt capture flows in headless mode', async () => {
@@ -539,9 +609,12 @@ describe('runFlowHeadless', () => {
       },
     );
 
-    expect(result.finalState.status).toBe('active');
+    expect(result.finalState.status).toBe('failed');
     expect(result.turns).toBe(1);
     expect(result.reason).toBe(
+      'Prompt runner exited with code 7. The runner aborted before applying the fix.',
+    );
+    expect(result.finalState.failureReason).toBe(
       'Prompt runner exited with code 7. The runner aborted before applying the fix.',
     );
     expect(result.report.status).toBe('failed');
@@ -713,9 +786,10 @@ describe('runFlowHeadless', () => {
       },
     );
 
-    expect(result.finalState.status).toBe('active');
+    expect(result.finalState.status).toBe('failed');
     expect(result.turns).toBe(1);
     expect(result.reason).toBe('Prompt runner exited with code 42.');
+    expect(result.finalState.failureReason).toBe('Prompt runner exited with code 42.');
   });
 
   it('includes assistant detail when the prompt runner exits non-zero', async () => {
@@ -742,9 +816,12 @@ describe('runFlowHeadless', () => {
       },
     );
 
-    expect(result.finalState.status).toBe('active');
+    expect(result.finalState.status).toBe('failed');
     expect(result.turns).toBe(1);
     expect(result.reason).toBe(
+      'Prompt runner exited with code 9. Runner aborted after writing partial output.',
+    );
+    expect(result.finalState.failureReason).toBe(
       'Prompt runner exited with code 9. Runner aborted after writing partial output.',
     );
   });
@@ -820,9 +897,12 @@ describe('runFlowHeadless', () => {
       },
     );
 
-    expect(result.finalState.status).toBe('active');
+    expect(result.finalState.status).toBe('failed');
     expect(result.turns).toBe(1);
     expect(result.reason).toContain(
+      'Completion gates failed: file_exists done.txt. Fix the failing checks before completing the task.',
+    );
+    expect(result.finalState.failureReason).toContain(
       'Completion gates failed: file_exists done.txt. Fix the failing checks before completing the task.',
     );
     expect(result.report.status).toBe('unsuccessful');
@@ -871,8 +951,11 @@ describe('runFlowHeadless', () => {
       },
     );
 
-    expect(result.finalState.status).toBe('active');
+    expect(result.finalState.status).toBe('failed');
     expect(result.reason).toBe(
+      'Completion gates failed: file_exists done.txt. Fix the failing checks before completing the task.',
+    );
+    expect(result.finalState.failureReason).toBe(
       'Completion gates failed: file_exists done.txt. Fix the failing checks before completing the task.',
     );
     expect(result.report.status).toBe('unsuccessful');
@@ -1031,16 +1114,54 @@ describe('runFlowHeadless', () => {
     expect(result.turns).toBe(0);
   });
 
+  it('keeps polling when spawned children stay running across two snapshots before completing', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-pause-repeat-'));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: pause twice',
+          '',
+          'flow:',
+          '  spawn "worker"',
+          '    prompt: Create worker.txt',
+          '  end',
+          '  await all',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        processSpawner: new SequenceStatusProcessSpawner([
+          { status: 'running' },
+          { status: 'running' },
+          { status: 'completed' },
+        ]),
+        promptTurnRunner: new RecordingPromptRunner(),
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.turns).toBe(0);
+  });
+
   it('executes spawned child work in headless mode and resumes the parent flow', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-spawn-child-'));
 
     const commandRunner = new ShellCommandRunner();
     const promptRunner = new RecordingPromptRunner();
+    const messageStore = new FileMessageStore(join(tempDir, '.prompt-language'), {});
     const processSpawner = new HeadlessProcessSpawner({
       auditLogger: new FileAuditLogger(tempDir),
       captureReader: new FileCaptureReader(tempDir),
       commandRunner,
       cwd: tempDir,
+      messageStore,
       memoryStore: new FileMemoryStore(tempDir),
       promptTurnRunner: promptRunner,
     });
@@ -1064,6 +1185,7 @@ describe('runFlowHeadless', () => {
         auditLogger: new FileAuditLogger(tempDir),
         captureReader: new FileCaptureReader(tempDir),
         commandRunner,
+        messageStore,
         memoryStore: new FileMemoryStore(tempDir),
         processSpawner,
         promptTurnRunner: promptRunner,
@@ -1086,11 +1208,13 @@ describe('runFlowHeadless', () => {
 
     const commandRunner = new ShellCommandRunner();
     const promptRunner = new RecordingPromptRunner();
+    const messageStore = new FileMessageStore(join(tempDir, '.prompt-language'), {});
     const processSpawner = new HeadlessProcessSpawner({
       auditLogger: new FileAuditLogger(tempDir),
       captureReader: new FileCaptureReader(tempDir),
       commandRunner,
       cwd: tempDir,
+      messageStore,
       memoryStore: new FileMemoryStore(tempDir),
       promptTurnRunner: promptRunner,
     });
@@ -1116,6 +1240,7 @@ describe('runFlowHeadless', () => {
         auditLogger: new FileAuditLogger(tempDir),
         captureReader: new FileCaptureReader(tempDir),
         commandRunner,
+        messageStore,
         memoryStore: new FileMemoryStore(tempDir),
         processSpawner,
         promptTurnRunner: promptRunner,

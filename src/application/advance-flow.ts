@@ -1727,6 +1727,31 @@ export type AutoAdvanceResult =
       readonly outcomes?: readonly FlowOutcome[] | undefined;
     };
 
+function createAwaitingPromptState(state: SessionState, nodeId: string): SessionState {
+  const now = Date.now();
+  const progress = state.nodeProgress[nodeId];
+  return updateNodeProgress(state, nodeId, {
+    iteration: progress?.iteration ?? 1,
+    maxIterations: progress?.maxIterations ?? 1,
+    status: 'awaiting_capture',
+    startedAt: progress?.startedAt ?? now,
+    ...(progress?.loopStartedAt !== undefined ? { loopStartedAt: progress.loopStartedAt } : {}),
+  });
+}
+
+export function completeAwaitingPrompt(state: SessionState, nodeId: string): SessionState {
+  const progress = state.nodeProgress[nodeId];
+  const completed = updateNodeProgress(state, nodeId, {
+    iteration: progress?.iteration ?? 1,
+    maxIterations: progress?.maxIterations ?? 1,
+    status: 'completed',
+    startedAt: progress?.startedAt ?? Date.now(),
+    completedAt: Date.now(),
+    ...(progress?.loopStartedAt !== undefined ? { loopStartedAt: progress.loopStartedAt } : {}),
+  });
+  return advanceFromPath(completed, completed.currentNodePath);
+}
+
 interface CapturedValueResult {
   readonly state: SessionState;
   readonly value: string;
@@ -2492,8 +2517,8 @@ async function importAwaitedSwarmResult(
   const roleId = child.variables?.['__swarm_role']?.trim() ?? child.name;
   const returned =
     child.returned ??
-    (messageStore ? ((await messageStore.receive(child.name)) ?? undefined) : undefined) ??
     child.variables?.['__swarm_return'] ??
+    (messageStore ? ((await messageStore.receive(child.name)) ?? undefined) : undefined) ??
     '';
   const prefix = `${swarmId}.${roleId}`;
 
@@ -2849,7 +2874,7 @@ export async function autoAdvanceNodes(
       );
       return mergeAutoAdvanceSignals(pendingDiagnostics, pendingOutcomes, {
         kind: 'prompt',
-        state: advanceFromPath(current, current.currentNodePath),
+        state: createAwaitingPromptState(current, currentNode.id),
         capturedPrompt: profiledPrompt.prompt,
         ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
       });
@@ -3085,11 +3110,17 @@ async function advanceRememberNode(
   current: SessionState,
   memoryStore?: MemoryStore,
 ): Promise<{ state: SessionState; advanced: true }> {
+  const resolvedValue =
+    node.value !== undefined ? interpolate(node.value, current.variables) : undefined;
+  const resolvedText =
+    node.text !== undefined ? interpolate(node.text, current.variables) : undefined;
+  let nextState = current;
+
+  if (node.key !== undefined && resolvedValue !== undefined) {
+    nextState = updateVariable(nextState, node.key, resolvedValue);
+  }
+
   if (memoryStore) {
-    const resolvedValue =
-      node.value !== undefined ? interpolate(node.value, current.variables) : undefined;
-    const resolvedText =
-      node.text !== undefined ? interpolate(node.text, current.variables) : undefined;
     await memoryStore.append({
       timestamp: new Date().toISOString(),
       ...(resolvedText !== undefined ? { text: resolvedText } : {}),
@@ -3097,7 +3128,8 @@ async function advanceRememberNode(
       ...(resolvedValue !== undefined ? { value: resolvedValue } : {}),
     });
   }
-  return { state: advanceFromPath(current, current.currentNodePath), advanced: true };
+
+  return { state: advanceFromPath(nextState, nextState.currentNodePath), advanced: true };
 }
 
 /** Advance a send node: write a message to the target's inbox and auto-advance. */
@@ -3335,7 +3367,10 @@ function recordNodeTiming(
   const next = after.nodeProgress[node.id];
   const pathChanged = !samePath(before.currentNodePath, after.currentNodePath);
   const enteredChild = isDescendantPath(before.currentNodePath, after.currentNodePath);
-  const completedByAdvance = pathChanged && !enteredChild;
+  const completedByAdvance =
+    pathChanged &&
+    !enteredChild &&
+    (node.kind !== 'prompt' || previous?.status === 'awaiting_capture');
 
   if (!next) {
     if (!completedByAdvance) return after;
@@ -3422,6 +3457,13 @@ async function advanceSingleNode(
     case 'run':
       return advanceRunNode(node, current, commandRunner, auditLogger);
     case 'prompt': {
+      const progress = current.nodeProgress[node.id];
+      if (progress?.status === 'awaiting_capture') {
+        return {
+          state: completeAwaitingPrompt(current, node.id),
+          advanced: true,
+        };
+      }
       const profiledPrompt = applyContextProfileToPrompt(
         current,
         interpolate(node.text, current.variables),
@@ -3429,7 +3471,7 @@ async function advanceSingleNode(
       );
       return {
         kind: 'prompt',
-        state: advanceFromPath(current, current.currentNodePath),
+        state: createAwaitingPromptState(current, node.id),
         capturedPrompt: profiledPrompt.prompt,
         ...(profiledPrompt.model != null ? { model: profiledPrompt.model } : {}),
       };

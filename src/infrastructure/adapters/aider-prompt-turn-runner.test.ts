@@ -55,6 +55,10 @@ describe('buildAiderArgs', () => {
 });
 
 describe('buildAiderEnv', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it('sets PYTHONUTF8 and OLLAMA_API_BASE', () => {
     const env = buildAiderEnv();
 
@@ -66,6 +70,30 @@ describe('buildAiderEnv', () => {
     const env = buildAiderEnv();
 
     expect(env['PATH']).toBe(process.env['PATH']);
+  });
+
+  it('forces TERM=dumb on Windows to avoid prompt-toolkit console mismatches', () => {
+    vi.stubEnv('TERM', 'xterm-256color');
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+
+    try {
+      const env = buildAiderEnv();
+      expect(env['TERM']).toBe('dumb');
+    } finally {
+      platformSpy.mockRestore();
+    }
+  });
+
+  it('preserves TERM on non-Windows hosts', () => {
+    vi.stubEnv('TERM', 'xterm-256color');
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
+
+    try {
+      const env = buildAiderEnv();
+      expect(env['TERM']).toBe('xterm-256color');
+    } finally {
+      platformSpy.mockRestore();
+    }
   });
 });
 

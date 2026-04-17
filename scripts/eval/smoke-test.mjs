@@ -145,6 +145,10 @@ function resolveTimeout() {
     return 240_000;
   }
 
+  if (harness === 'aider') {
+    return 600_000;
+  }
+
   if (harness !== 'opencode' && harness !== 'ollama') {
     return 120_000;
   }

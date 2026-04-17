@@ -1,0 +1,12 @@
+{
+  "fixture": "h11-multi-file-refactor",
+  "arm": "artisan",
+  "runner": "aider",
+  "model": "ollama_chat/qwen3-opencode:30b",
+  "flow": "task-artisan.flow",
+  "plExitCode": 1,
+  "plStatus": "failed",
+  "verifyExitCode": 1,
+  "oracleSummary": "8/11 passed; 3 failed",
+  "note": "Clean temp-workspace rerun after the nested-git harness fix. README and integration/import repair were still incomplete."
+}

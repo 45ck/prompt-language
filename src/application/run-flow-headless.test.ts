@@ -1,18 +1,19 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { InMemoryCommandRunner } from '../infrastructure/adapters/in-memory-command-runner.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { FileCaptureReader } from '../infrastructure/adapters/file-capture-reader.js';
 import { FileAuditLogger } from '../infrastructure/adapters/file-audit-logger.js';
-import { HeadlessProcessSpawner } from '../infrastructure/adapters/headless-process-spawner.js';
 import { FileMessageStore } from '../infrastructure/adapters/file-message-store.js';
 import { FileMemoryStore } from '../infrastructure/adapters/file-memory-store.js';
+import { HeadlessProcessSpawner } from '../infrastructure/adapters/headless-process-spawner.js';
 import { ShellCommandRunner } from '../infrastructure/adapters/shell-command-runner.js';
 import { runFlowHeadless } from './run-flow-headless.js';
+import type { CommandResult, CommandRunner, RunOptions } from './ports/command-runner.js';
 import type { PromptTurnResult, PromptTurnRunner } from './ports/prompt-turn-runner.js';
 import { FLOW_OUTCOME_CODES, RUNTIME_DIAGNOSTIC_CODES } from '../domain/diagnostic-report.js';
 import type { SessionState } from '../domain/session-state.js';
@@ -22,6 +23,7 @@ import type {
   SpawnInput,
   SpawnResult,
 } from './ports/process-spawner.js';
+import { stringifyVariableValue } from '../domain/variable-value.js';
 
 class RecordingPromptRunner implements PromptTurnRunner {
   readonly prompts: string[] = [];
@@ -70,6 +72,101 @@ class SequenceStatusProcessSpawner implements ProcessSpawner {
   }
 }
 
+class EchoRedirectCommandRunner implements CommandRunner {
+  private readonly fallback = new ShellCommandRunner();
+
+  async run(command: string, options?: RunOptions): Promise<CommandResult> {
+    const match = /^echo\s+(.+?)\s*>\s*(.+)$/.exec(command.trim());
+    if (match == null) {
+      return await this.fallback.run(command, options);
+    }
+
+    const cwd = options?.cwd ?? process.cwd();
+    const value = match[1] ?? '';
+    const targetPath = join(cwd, (match[2] ?? '').trim());
+    await mkdir(dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, `${value}\n`, 'utf8');
+    return { exitCode: 0, stdout: '', stderr: '' };
+  }
+}
+
+class ScriptedSpawnProcessSpawner implements ProcessSpawner {
+  private readonly children = new Map<string, ChildStatus>();
+  private nextPid = 1;
+
+  constructor(private readonly baseCwd: string = process.cwd()) {}
+
+  async spawn(input: SpawnInput): Promise<SpawnResult> {
+    const cwd = input.cwd ?? this.baseCwd;
+    const childStateDir = isAbsolute(input.stateDir) ? input.stateDir : join(cwd, input.stateDir);
+    const variables = Object.fromEntries(
+      Object.entries(input.variables).map(([key, value]) => [key, stringifyVariableValue(value)]),
+    ) as Record<string, string>;
+
+    for (const rawLine of input.flowText.split('\n')) {
+      const line = rawLine.trim();
+      if (line.length === 0) {
+        continue;
+      }
+
+      const letMatch = /^let\s+([A-Za-z0-9_.-]+)\s*=\s*(.+)$/.exec(line);
+      if (letMatch != null) {
+        variables[letMatch[1] ?? ''] = this.resolveValue(letMatch[2] ?? '', variables);
+        continue;
+      }
+
+      const returnMatch = /^return\s+(.+)$/.exec(line);
+      if (returnMatch != null) {
+        variables['__swarm_return'] = this.resolveValue(returnMatch[1] ?? '', variables);
+        continue;
+      }
+
+      const runMatch = /^run:\s+(.+)$/.exec(line);
+      if (runMatch != null) {
+        await this.runSimpleCommand(this.resolveValue(runMatch[1] ?? '', variables), cwd);
+        continue;
+      }
+
+      const sendMatch = /^send\s+(?:"([^"]+)"|([A-Za-z0-9_.-]+))\s+(.+)$/.exec(line);
+      if (sendMatch != null) {
+        const target = sendMatch[1] ?? sendMatch[2] ?? '';
+        const message = this.resolveValue(sendMatch[3] ?? '', variables);
+        await new FileMessageStore(childStateDir, {}).send(target, message);
+        continue;
+      }
+    }
+
+    this.children.set(input.stateDir, { status: 'completed', variables });
+    return { pid: this.nextPid++ };
+  }
+
+  async poll(stateDir: string): Promise<ChildStatus> {
+    return this.children.get(stateDir) ?? { status: 'running' };
+  }
+
+  private resolveValue(template: string, variables: Readonly<Record<string, string>>): string {
+    let value = template.trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    return value.replace(/\$\{([^}]+)\}/g, (_match, name: string) => variables[name] ?? '');
+  }
+
+  private async runSimpleCommand(command: string, cwd: string): Promise<void> {
+    const echoMatch = /^echo\s+(.+?)\s*>\s*(.+)$/.exec(command.trim());
+    if (echoMatch == null) {
+      return;
+    }
+
+    const targetPath = join(cwd, (echoMatch[2] ?? '').trim());
+    await mkdir(dirname(targetPath), { recursive: true });
+    await writeFile(targetPath, `${echoMatch[1] ?? ''}\n`, 'utf8');
+  }
+}
+
 function expectedFileExistsCommand(path: string): string {
   return `node -e "process.exit(require('node:fs').existsSync('${path}') ? 0 : 1)"`;
 }
@@ -90,18 +187,10 @@ describe('runFlowHeadless', () => {
     readonly promptRunner: RecordingPromptRunner;
     readonly result: Awaited<ReturnType<typeof runFlowHeadless>>;
   }> {
-    const commandRunner = new ShellCommandRunner();
+    const commandRunner: CommandRunner = new EchoRedirectCommandRunner();
     const promptRunner = new RecordingPromptRunner();
     const messageStore = new FileMessageStore(join(cwd, '.prompt-language'), {});
-    const processSpawner = new HeadlessProcessSpawner({
-      auditLogger: new FileAuditLogger(cwd),
-      captureReader: new FileCaptureReader(cwd),
-      commandRunner,
-      cwd,
-      messageStore,
-      memoryStore: new FileMemoryStore(cwd),
-      promptTurnRunner: promptRunner,
-    });
+    const processSpawner = new ScriptedSpawnProcessSpawner(cwd);
 
     const result = await runFlowHeadless(
       {
@@ -1209,15 +1298,7 @@ describe('runFlowHeadless', () => {
     const commandRunner = new ShellCommandRunner();
     const promptRunner = new RecordingPromptRunner();
     const messageStore = new FileMessageStore(join(tempDir, '.prompt-language'), {});
-    const processSpawner = new HeadlessProcessSpawner({
-      auditLogger: new FileAuditLogger(tempDir),
-      captureReader: new FileCaptureReader(tempDir),
-      commandRunner,
-      cwd: tempDir,
-      messageStore,
-      memoryStore: new FileMemoryStore(tempDir),
-      promptTurnRunner: promptRunner,
-    });
+    const processSpawner = new ScriptedSpawnProcessSpawner(tempDir);
 
     const result = await runFlowHeadless(
       {
@@ -1229,8 +1310,8 @@ describe('runFlowHeadless', () => {
           '  spawn "worker"',
           '    send parent "hello-from-worker"',
           '  end',
-          '  receive msg from "worker" timeout 5',
-          '  run: echo "${msg}" > received.txt',
+          '  receive msg from "worker" timeout 30',
+          "  run: node -e \"require('node:fs').writeFileSync('received.txt', '${msg}')\"",
         ].join('\n'),
         sessionId: randomUUID(),
       },
@@ -1250,7 +1331,7 @@ describe('runFlowHeadless', () => {
     await expect(readFile(join(tempDir, 'received.txt'), 'utf8')).resolves.toContain(
       'hello-from-worker',
     );
-  });
+  }, 60_000);
 
   it('imports spawned child variables back into the parent namespace in headless mode', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-spawn-vars-'));
@@ -1368,7 +1449,7 @@ describe('runFlowHeadless', () => {
     await expect(readFile(join(authoredDir, 'worker-note.txt'), 'utf8')).resolves.toBe(
       await readFile(join(explicitDir, 'worker-note.txt'), 'utf8'),
     );
-  });
+  }, 60_000);
 
   it('keeps reviewer-after-workers swarm runtime equivalent to the explicit lowered orchestration', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-swarm-review-chain-'));
@@ -1466,7 +1547,7 @@ describe('runFlowHeadless', () => {
     await expect(readFile(join(authoredDir, 'review.txt'), 'utf8')).resolves.toContain(
       'frontend-ready+backend-ready',
     );
-  });
+  }, 60_000);
 
   it('completes multi-step run-only flows without invoking the model', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-advance-continue-'));

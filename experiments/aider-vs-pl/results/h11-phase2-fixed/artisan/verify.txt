@@ -1,0 +1,35 @@
+
+Results: 8/11 passed
+  PASS: No "Contact" in src\app.js
+  PASS: No "Contact" in src\contact-store.js
+  PASS: No "Contact" in src\contact.js
+  PASS: No "Contact" in src\routes.js
+  PASS: No "Contact" in src\seed.js
+  PASS: No "Contact" in src\test.js
+  FAIL: No "Contact" in README.md -- Found 7 occurrences of "Contact"
+  PASS: "Client" class exists in some .js file
+  PASS: "ClientStore" or "Client" store class exists
+  FAIL: Application runs without error -- App failed: Command failed: node src/app.js
+C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-fixed\src\contact-store.js:7
+    const client = new Client(data.name, data.email, data.phone, data.company);
+                   ^
+
+ReferenceError: Client is not defined
+    at ClientStore.add (C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-fixed\src\contact-store.js:7:20)
+    at loadSeedData (C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-fixed\src\seed.js:12:11)
+    at Object.<anonymous> (C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-fixed\src\app.js:7:15)
+    at Module._compile (node:internal/modules/cjs/loader:1811:14)
+    at Object..js (node:internal/modules/cjs/loader:1942:10)
+    at Module.load (node:internal/modules/cjs/loader:1532:32)
+    at Module._load (node:internal/modules/cjs/loader:1334:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v25.6.1
+
+  FAIL: All imports resolve -- Command failed: node -e "try { require('./src/app'); } catch(e) { console.error(e.message); process.exit(1); }"
+Client is not defined
+
+
+VERDICT: FAIL (3 failed)

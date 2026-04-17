@@ -1,4 +1,7 @@
 import { createHash } from 'node:crypto';
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // cspell:ignore aider qwen PYTHONUTF unstub
@@ -24,9 +27,11 @@ describe('buildAiderArgs', () => {
       'aider',
       '--model',
       'ollama_chat/qwen3-opencode:30b',
+      '--no-git',
       '--no-auto-commits',
+      '--no-auto-lint',
       '--no-stream',
-      '--yes',
+      '--yes-always',
       '--no-show-model-warnings',
       '--map-tokens',
       '1024',
@@ -52,6 +57,19 @@ describe('buildAiderArgs', () => {
 
     expect(args.slice(-3)).toEqual(['a.ts', 'b.ts', 'c.ts']);
   });
+
+  it('omits --no-git when the cwd itself is a git workspace', () => {
+    const root = mkdtempSync(join(tmpdir(), 'aider-git-args-'));
+
+    try {
+      mkdirSync(join(root, '.git'));
+      const args = buildAiderArgs({ cwd: root, prompt: 'Fix the bug' }, ['app.ts']);
+
+      expect(args).not.toContain('--no-git');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('buildAiderEnv', () => {
@@ -63,6 +81,7 @@ describe('buildAiderEnv', () => {
     const env = buildAiderEnv();
 
     expect(env['PYTHONUTF8']).toBe('1');
+    expect(env['PYTHONIOENCODING']).toBe('utf-8');
     expect(env['OLLAMA_API_BASE']).toBe('http://127.0.0.1:11434');
   });
 
@@ -247,10 +266,56 @@ describe('AiderPromptTurnRunner', () => {
     expect(result.assistantText).toContain('...');
   });
 
-  it('resolveFiles returns an empty array by default', () => {
+  it('resolveFiles adds existing prompt-referenced files to aider chat context', () => {
     const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
 
-    expect(runner.resolveFiles('/repo')).toEqual([]);
+    try {
+      writeFileSync(join(root, 'verify.js'), 'console.log("ok");', 'utf8');
+      writeFileSync(join(root, 'test-input.csv'), 'name\\nAlice\\n', 'utf8');
+
+      expect(
+        runner.resolveFiles(
+          root,
+          'Read verify.js and test-input.csv, then create csv2json.js so node verify.js passes.',
+        ),
+      ).toEqual(['verify.js', 'test-input.csv']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('resolveFiles falls back to top-level files for fresh non-git workspaces', () => {
+    const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
+
+    try {
+      writeFileSync(join(root, 'verify.js'), 'console.log("ok");', 'utf8');
+      writeFileSync(join(root, 'test-input.csv'), 'name\\nAlice\\n', 'utf8');
+      writeFileSync(join(root, 'run-stdout.txt'), 'ignore me', 'utf8');
+      mkdirSync(join(root, '.prompt-language'));
+
+      expect(runner.resolveFiles(root, 'Fix the workspace so the oracle passes.')).toEqual([
+        'test-input.csv',
+        'verify.js',
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('resolveFiles stays empty for git workspaces without explicit file refs', () => {
+    const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
+
+    try {
+      mkdirSync(join(root, '.git'));
+      writeFileSync(join(root, 'verify.js'), 'console.log("ok");', 'utf8');
+
+      expect(runner.resolveFiles(root, 'Fix the bug.')).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 

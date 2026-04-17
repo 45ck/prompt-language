@@ -90,7 +90,7 @@ function tryParseDirectExecution(command: string): DirectExecution | undefined {
 
   return {
     file: process.execPath,
-    args: ['-e', script.replace(/\\"/g, '"').replace(/\\\\/g, '\\')],
+    args: ['-e', script.replace(/\\"/g, '"')],
   };
 }
 

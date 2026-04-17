@@ -15,4 +15,4 @@ flow:
   end
 
 done when:
-  file_exists src/contacts.js
+  gate h14_oracle: node verify.js

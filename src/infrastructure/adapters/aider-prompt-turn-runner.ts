@@ -1,5 +1,7 @@
 // cspell:ignore aider qwen PYTHONUTF
 import { execFileSync } from 'node:child_process';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 
 import type {
   PromptTurnInput,
@@ -11,6 +13,10 @@ const DEFAULT_MODEL = 'ollama_chat/qwen3-opencode:30b';
 const DEFAULT_TIMEOUT_MS = 600_000;
 const AIDER_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_AIDER_TIMEOUT_MS';
 const MAX_OUTPUT_LENGTH = 12_000;
+const MAX_FALLBACK_FILES = 12;
+const FILE_REFERENCE_PATTERN =
+  /(?:^|[^A-Za-z0-9_./\\-])((?:[A-Za-z0-9_.-]+[\\/])*[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8})(?=$|[^A-Za-z0-9_./\\-])/g;
+const TRANSIENT_OUTPUT_FILE_PATTERN = /^(?:run|verify)-(?:stdout|stderr)\.txt$/;
 
 function readPositiveIntEnv(name: string): number | undefined {
   const value = process.env[name]?.trim();
@@ -21,14 +27,17 @@ function readPositiveIntEnv(name: string): number | undefined {
 
 export function buildAiderArgs(input: PromptTurnInput, files: readonly string[]): string[] {
   const model = input.model ?? DEFAULT_MODEL;
+  const disableGit = !hasGitRepo(input.cwd);
   return [
     '-m',
     'aider',
     '--model',
     model,
+    ...(disableGit ? ['--no-git'] : []),
     '--no-auto-commits',
+    '--no-auto-lint',
     '--no-stream',
-    '--yes',
+    '--yes-always',
     '--no-show-model-warnings',
     '--map-tokens',
     '1024',
@@ -44,6 +53,7 @@ export function buildAiderEnv(): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = {
     ...process.env,
     PYTHONUTF8: '1',
+    PYTHONIOENCODING: 'utf-8',
     OLLAMA_API_BASE: 'http://127.0.0.1:11434',
   };
 
@@ -61,9 +71,45 @@ function truncateOutput(text: string): string {
   return text.length <= MAX_OUTPUT_LENGTH ? text : text.slice(0, MAX_OUTPUT_LENGTH) + '...';
 }
 
+function hasGitRepo(cwd: string): boolean {
+  return existsSync(join(cwd, '.git'));
+}
+
+function extractReferencedFiles(cwd: string, prompt: string): string[] {
+  const referencedFiles: string[] = [];
+  const seen = new Set<string>();
+
+  for (const match of prompt.matchAll(FILE_REFERENCE_PATTERN)) {
+    const candidate = match[1]?.trim();
+    if (!candidate || seen.has(candidate)) continue;
+    const absolutePath = join(cwd, candidate);
+
+    try {
+      if (!statSync(absolutePath).isFile()) continue;
+    } catch {
+      continue;
+    }
+
+    seen.add(candidate);
+    referencedFiles.push(candidate);
+  }
+
+  return referencedFiles;
+}
+
+function listFallbackWorkspaceFiles(cwd: string): string[] {
+  return readdirSync(cwd, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .filter((name) => !name.startsWith('.'))
+    .filter((name) => !TRANSIENT_OUTPUT_FILE_PATTERN.test(name))
+    .sort((left, right) => left.localeCompare(right))
+    .slice(0, MAX_FALLBACK_FILES);
+}
+
 export class AiderPromptTurnRunner implements PromptTurnRunner {
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
-    const files = this.resolveFiles(input.cwd);
+    const files = this.resolveFiles(input.cwd, input.prompt);
     const args = buildAiderArgs(input, files);
     const env = buildAiderEnv();
     const timeoutMs = readPositiveIntEnv(AIDER_TIMEOUT_MS_ENV) ?? DEFAULT_TIMEOUT_MS;
@@ -119,7 +165,14 @@ export class AiderPromptTurnRunner implements PromptTurnRunner {
     }
   }
 
-  resolveFiles(_cwd: string): readonly string[] {
-    return [];
+  resolveFiles(cwd: string, prompt: string): readonly string[] {
+    const referencedFiles = extractReferencedFiles(cwd, prompt);
+    if (referencedFiles.length > 0) {
+      return referencedFiles;
+    }
+
+    // Fresh temp workspaces used by evals often do not have a git repo yet, so
+    // aider would otherwise start with an empty repo-map and zero file context.
+    return hasGitRepo(cwd) ? [] : listFallbackWorkspaceFiles(cwd);
   }
 }

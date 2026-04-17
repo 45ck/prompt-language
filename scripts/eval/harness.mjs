@@ -575,8 +575,9 @@ function execAider(prompt, cwd, timeout, model, strict) {
     '--model',
     resolvedModel,
     '--no-auto-commits',
+    '--no-auto-lint',
     '--no-stream',
-    '--yes',
+    '--yes-always',
     '--no-show-model-warnings',
     '--map-tokens',
     '1024',
@@ -594,6 +595,7 @@ function execAider(prompt, cwd, timeout, model, strict) {
       env: normalizeAiderLaunchEnv({
         ...cleanEnv(),
         PYTHONUTF8: '1',
+        PYTHONIOENCODING: 'utf-8',
         OLLAMA_API_BASE: 'http://127.0.0.1:11434',
       }),
       maxBuffer: 20 * 1024 * 1024,

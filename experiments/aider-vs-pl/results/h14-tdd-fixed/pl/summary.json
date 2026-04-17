@@ -1,0 +1,10 @@
+{
+  "fixture": "h14-tdd-red-green",
+  "arm": "pl",
+  "runner": "aider",
+  "model": "ollama_chat/qwen3-opencode:30b",
+  "flow": "task.flow",
+  "plExitCode": 1,
+  "plStatus": "failed",
+  "verifyExitCode": 1
+}

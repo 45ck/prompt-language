@@ -19,3 +19,4 @@ experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/
 
 # Agent-shim runtime cache (never commit; only used when PL_SHIM_TRUST_CACHE=1)
 scripts/eval/agent-shim/.binary-cache.json
+.aider*

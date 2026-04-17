@@ -1,0 +1,23 @@
+# Risk register (bounded CRM MVP)
+
+This register is constrained to the bounded CRM MVP scope: auth, contacts, companies, opportunities, pipeline stages, tasks, notes, and dashboard.
+
+| ID | Risk | Why it matters in SME workflows | MVP mitigation | Early warning signals |
+| --- | --- | --- | --- | --- |
+| R1 | Users see the CRM as extra admin work | Small teams abandon systems that slow down calls, follow-ups, or service handling | Keep create/edit forms short, minimize required fields, support fast linking from existing records | Low record creation after signup, repeated feedback that updates are "too much effort" |
+| R2 | Contacts and companies become duplicated or poorly linked | SMEs often work from partial information, so duplicate records quickly erode trust and make handoffs messy | Add basic duplicate guardrails, encourage contact-to-company linking, make record search easy before create | "I can't tell which record is current", multiple contacts with same email, frequent manual cleanup |
+| R3 | Opportunity stages are interpreted inconsistently | If stages mean different things to different users, dashboard counts stop representing real pipeline health | Start with a simple default stage model, require explicit stage selection, show recent stage changes | Opportunities pile up in one stage, users ask for ad hoc stage meanings in conversation |
+| R4 | Next steps are not captured as tasks | In real SME workflows, missed follow-ups mean lost revenue or delayed service response | Make task creation available from contact, company, and opportunity views; surface overdue items prominently | Many recent notes but few tasks, growing overdue backlog, follow-up complaints |
+| R5 | Notes remain in inboxes or private documents instead of the CRM | Without shared notes, the system fails at handoff continuity | Make notes easy to add from record detail pages and show recent notes in context | Sparse note history, repeated internal questions about prior conversations |
+| R6 | Cross-tenant or unauthorized data exposure | Auth mistakes in CRM data are high-impact because customer records are sensitive and trust is hard to rebuild | Enforce tenant scoping on every read/write path and test access boundaries thoroughly | Any report of seeing another workspace's records, suspicious cross-org IDs in logs |
+| R7 | Dashboard and list views become slow under normal SME usage | A CRM that feels slow during daily review quickly becomes optional | Keep list queries indexed and paginated, keep dashboard aggregates simple and bounded | Slow dashboard loads, lag on search/list navigation, rising query latency |
+| R8 | "Recent activity" becomes incomplete or misleading | Teams use recent changes to understand what happened yesterday or since the last shift | Define a narrow activity feed scope: note added, task created/completed, stage changed | Users question why visible work is missing from activity, inconsistent feed after routine updates |
+| R9 | Scope creep pulls the product beyond the MVP | SMEs commonly ask for imports, email sync, automation, or custom fields once basic CRM data exists | Keep explicit scope boundaries in docs and implementation decisions; reject adjacent platform work during MVP | New requests cluster around communications, automation, or broad customization |
+| R10 | Record deletion or editing causes loss of operational history | Small teams may rely on one shared record for current context; accidental deletion has outsized impact | Use confirmations on destructive actions and keep visible activity/notes tied to surviving records where possible | Users ask where a record went, support incidents after accidental deletes |
+| R11 | Service-oriented users do not see the product as relevant because it feels sales-only | Many SMEs mix sales follow-up with onboarding and service check-ins on the same accounts | Ensure tasks and notes work equally well from company/contact records, not only opportunities | Opportunity usage grows while company/contact notes and tasks stay low |
+| R12 | Teams cannot tell which opportunities are stale | A pipeline without visible aging or recent movement becomes performative rather than operational | Show recent stage changes and notes in dashboard/activity views; make stage changes explicit | Long-lived opportunities with no notes or changes, leadership distrusts pipeline review |
+
+## Risk handling principles
+- Favor mitigations that reduce user effort inside normal CRM use.
+- Prefer risks that can be detected from product signals, not just anecdotal complaints.
+- Keep mitigations inside the bounded CRM MVP; do not solve gaps by adding out-of-scope systems.

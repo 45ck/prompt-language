@@ -1,0 +1,27 @@
+{
+  "label": "20260418-074500",
+  "summaries": [
+    {
+      "runner": "claude",
+      "runDir": "experiments/results/factory-runtime-proof/20260418-074500/claude-medium",
+      "workspace": "experiments/results/factory-runtime-proof/20260418-074500/claude-medium/workspace/crm-app",
+      "exitCode": 0,
+      "statePath": "experiments/results/factory-runtime-proof/20260418-074500/claude-medium/workspace/crm-app/.prompt-language/session-state.json",
+      "status": "completed",
+      "currentNodePath": [
+        9
+      ],
+      "failureReason": null,
+      "spawnedChildren": {
+        "discovery-problem": {
+          "status": "failed",
+          "stateDir": ".prompt-language-discovery-problem"
+        },
+        "discovery-requirements": {
+          "status": "failed",
+          "stateDir": ".prompt-language-discovery-requirements"
+        }
+      }
+    }
+  ]
+}

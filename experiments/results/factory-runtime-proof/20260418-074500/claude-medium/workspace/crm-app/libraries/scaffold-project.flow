@@ -1,0 +1,7 @@
+library: scaffold
+
+export flow bootstrap_directories():
+  run: node -e "const fs=require('node:fs'); for (const d of ['docs','docs/research','docs/architecture','docs/adr','specs','qa-flows','qa-reports','demo','artifacts','artifacts/demo','apps/web','packages/api']) { fs.mkdirSync(d,{recursive:true}); }"
+
+export flow ensure_package_manifest(pkg_mgr="pnpm"):
+  run: node -e "const fs=require('node:fs'); if (!fs.existsSync('package.json')) { fs.writeFileSync('package.json', JSON.stringify({name:'crm-app',private:true,scripts:{lint:'echo lint',typecheck:'echo typecheck',test:'echo test'}}, null, 2) + '\n'); }"

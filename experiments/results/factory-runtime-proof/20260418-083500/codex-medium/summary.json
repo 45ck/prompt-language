@@ -1,0 +1,22 @@
+{
+  "runner": "codex",
+  "runDir": "experiments/results/factory-runtime-proof/20260418-083500/codex-medium",
+  "workspace": "experiments/results/factory-runtime-proof/20260418-083500/codex-medium/workspace/crm-app",
+  "exitCode": 0,
+  "statePath": "experiments/results/factory-runtime-proof/20260418-083500/codex-medium/workspace/crm-app/.prompt-language/session-state.json",
+  "status": "completed",
+  "currentNodePath": [
+    9
+  ],
+  "failureReason": null,
+  "spawnedChildren": {
+    "discovery-problem": {
+      "status": "completed",
+      "stateDir": ".prompt-language-discovery-problem"
+    },
+    "discovery-requirements": {
+      "status": "completed",
+      "stateDir": ".prompt-language-discovery-requirements"
+    }
+  }
+}

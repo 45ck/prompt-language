@@ -1,0 +1,18 @@
+library: discovery
+
+export flow run(target_market="SME teams", stack="Next.js + TypeScript + PostgreSQL + Prisma"):
+  prompt: Phase 1 — Discovery. Produce the documentation pack that downstream build and release phases depend on. Target market is ${target_market}. Stack is ${stack}.
+
+  spawn "discovery-problem" with vars target_market, stack
+    prompt: Write docs/research/problem-space.md, docs/research/competitors.md, docs/research/risk-register.md, docs/research/success-metrics.md, and docs/research/workflow-patterns.md grounded in real SME sales and service workflows. Do not speculate beyond the bounded CRM MVP scope (auth, contacts, companies, opportunities, pipeline stages, tasks, notes, dashboard).
+  end
+
+  spawn "discovery-requirements" with vars target_market, stack
+    prompt: Write docs/prd.md, docs/personas.md, docs/use-cases.md, docs/non-functional-requirements.md, and docs/acceptance-criteria.md for the bounded CRM MVP. Keep scope tight; reject feature creep.
+  end
+
+  await all
+
+  review criteria: "Discovery artifacts must describe a buildable, bounded CRM MVP with clear personas, scope, and acceptance criteria. No speculative features." grounded-by "test -f docs/prd.md && test -f docs/acceptance-criteria.md && test -f docs/personas.md" max 2
+    prompt: Critique the discovery pack. Remove speculative scope, tighten acceptance criteria, and ensure personas match the stated target market. Apply fixes directly to the docs.
+  end

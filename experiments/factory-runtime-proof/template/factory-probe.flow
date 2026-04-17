@@ -1,0 +1,12 @@
+Goal: Bounded CRM factory runtime proof
+
+import "phases/discovery.flow" as discovery
+import "libraries/scaffold-project.flow" as scaffold
+
+flow:
+  let product = "CRM app"
+  let repo_name = "crm-app"
+  let pkg_mgr = "npm run"
+
+  use scaffold.bootstrap_directories()
+  use discovery.run(product=product)

@@ -1,0 +1,15 @@
+
+Results: 2/11 passed
+  FAIL: No "Contact" in src\app.js -- Found 2 occurrences of "Contact"
+  FAIL: No "Contact" in src\contact-store.js -- Found 2 occurrences of "Contact"
+  FAIL: No "Contact" in src\contact.js -- Found 2 occurrences of "Contact"
+  FAIL: No "Contact" in src\routes.js -- Found 3 occurrences of "Contact"
+  FAIL: No "Contact" in src\seed.js -- Found 1 occurrences of "Contact"
+  FAIL: No "Contact" in src\test.js -- Found 9 occurrences of "Contact"
+  FAIL: No "Contact" in README.md -- Found 7 occurrences of "Contact"
+  FAIL: "Client" class exists in some .js file -- No file contains "Client"
+  FAIL: "ClientStore" or "Client" store class exists -- No ClientStore found
+  PASS: Application runs without error
+  PASS: All imports resolve
+
+VERDICT: FAIL (9 failed)

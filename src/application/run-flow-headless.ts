@@ -1,4 +1,9 @@
-import { autoAdvanceNodes, maybeCompleteFlow, resolveCurrentNode } from './advance-flow.js';
+import {
+  autoAdvanceNodes,
+  completeAwaitingPrompt,
+  maybeCompleteFlow,
+  resolveCurrentNode,
+} from './advance-flow.js';
 import { evaluateCompletion, type EvaluateCompletionOutput } from './evaluate-completion.js';
 import type { AuditLogger } from './ports/audit-logger.js';
 import { NULL_TRACE_LOGGER, type TraceLogger } from './ports/trace-logger.js';
@@ -13,7 +18,7 @@ import type { SnapshotStorePort } from './ports/snapshot-store.js';
 import type { EnvReaderPort } from './ports/env-reader.js';
 import { parseFlow } from './parse-flow.js';
 import { renderFlow, renderFlowSummaryBlock } from '../domain/render-flow.js';
-import { createSessionState, type SessionState } from '../domain/session-state.js';
+import { createSessionState, markFailed, type SessionState } from '../domain/session-state.js';
 import {
   createExecutionReport,
   createFlowOutcome,
@@ -41,9 +46,23 @@ export interface RunFlowHeadlessOutput {
 const DEFAULT_MAX_TURNS = 24;
 const MAX_ASSISTANT_TEXT_SNIPPET = 160;
 const DEFAULT_HEADLESS_COMMAND_TIMEOUT_MS = 300_000;
+const MAX_STALLED_CHILD_SNAPSHOTS = 2;
 
 function hasRunningChildren(state: SessionState): boolean {
   return Object.values(state.spawnedChildren).some((child) => child?.status === 'running');
+}
+
+function completeAwaitingPromptTurn(state: SessionState): SessionState {
+  const currentNode = resolveCurrentNode(state.flowSpec.nodes, state.currentNodePath);
+  if (currentNode?.kind !== 'prompt') {
+    return state;
+  }
+
+  if (state.nodeProgress[currentNode.id]?.status !== 'awaiting_capture') {
+    return state;
+  }
+
+  return completeAwaitingPrompt(state, currentNode.id);
 }
 
 function bindCommandRunnerCwd(commandRunner: CommandRunner, cwd: string): CommandRunner {
@@ -197,6 +216,7 @@ export async function runFlowHeadless(
 
   let turns = 0;
   let lastRunningChildrenSnapshot: string | undefined;
+  let stalledRunningChildrenSnapshots = 0;
   const buildOutput = (
     finalState: SessionState,
     options: {
@@ -259,15 +279,21 @@ export async function runFlowHeadless(
       if (hasRunningChildren(state)) {
         const snapshot = JSON.stringify(state.spawnedChildren);
         if (lastRunningChildrenSnapshot === snapshot) {
-          return buildOutput(state, {
-            reason: 'Flow paused before reaching completion.',
-            status: 'failed',
-          });
+          stalledRunningChildrenSnapshots += 1;
+          if (stalledRunningChildrenSnapshots >= MAX_STALLED_CHILD_SNAPSHOTS) {
+            return buildOutput(state, {
+              reason: 'Flow paused before reaching completion.',
+              status: 'failed',
+            });
+          }
+        } else {
+          lastRunningChildrenSnapshot = snapshot;
+          stalledRunningChildrenSnapshots = 0;
         }
-        lastRunningChildrenSnapshot = snapshot;
         continue;
       }
       lastRunningChildrenSnapshot = undefined;
+      stalledRunningChildrenSnapshots = 0;
       return buildOutput(state, {
         reason: 'Flow paused before reaching completion.',
         status: 'failed',
@@ -275,6 +301,7 @@ export async function runFlowHeadless(
     }
 
     lastRunningChildrenSnapshot = undefined;
+    stalledRunningChildrenSnapshots = 0;
 
     if (step.kind === 'advance') {
       state = maybeCompleteFlow(state);
@@ -333,11 +360,14 @@ export async function runFlowHeadless(
 
         if (runResult.exitCode !== 0) {
           const detail = summarizeAssistantText(runResult.assistantText);
+          const reason =
+            detail == null
+              ? `Prompt runner exited with code ${runResult.exitCode}.`
+              : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`;
+          state = markFailed(state, reason);
+          await deps.stateStore.save(state);
           return buildOutput(state, {
-            reason:
-              detail == null
-                ? `Prompt runner exited with code ${runResult.exitCode}.`
-                : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`,
+            reason,
             status: 'failed',
           });
         }
@@ -395,14 +425,33 @@ export async function runFlowHeadless(
 
     if (runResult.exitCode !== 0) {
       const detail = summarizeAssistantText(runResult.assistantText);
+      const reason =
+        detail == null
+          ? `Prompt runner exited with code ${runResult.exitCode}.`
+          : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`;
+      state = markFailed(state, reason);
+      await deps.stateStore.save(state);
       return buildOutput(state, {
-        reason:
-          detail == null
-            ? `Prompt runner exited with code ${runResult.exitCode}.`
-            : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`,
+        reason,
         status: 'failed',
       });
     }
+
+    if (runResult.madeProgress === false) {
+      const detail = summarizeAssistantText(runResult.assistantText);
+      return buildOutput((await deps.stateStore.loadCurrent()) ?? state, {
+        reason:
+          detail == null
+            ? 'Prompt runner completed without observable workspace progress.'
+            : `Prompt runner completed without observable workspace progress. Last assistant output: ${detail}`,
+        status: 'failed',
+      });
+    }
+
+    state = completeAwaitingPromptTurn((await deps.stateStore.loadCurrent()) ?? state);
+    await deps.stateStore.save(state);
+    state = maybeCompleteFlow(state);
+    await deps.stateStore.save(state);
 
     const current = await deps.stateStore.loadCurrent();
     const currentNode = current
@@ -418,21 +467,14 @@ export async function runFlowHeadless(
       gateBlocked = gateResult.blocked;
       gateBlockedByDiagnostic = gateResult.diagnostics.length > 0;
       gateBlockReason = gateBlocked ? summarizeCompletionBlock(gateResult) : undefined;
-    }
+      state = (await deps.stateStore.loadCurrent()) ?? state;
 
-    if (runResult.madeProgress === false) {
-      const detail = summarizeAssistantText(runResult.assistantText);
-      return buildOutput((await deps.stateStore.loadCurrent()) ?? state, {
-        reason:
-          detail == null
-            ? 'Prompt runner completed without observable workspace progress.'
-            : `Prompt runner completed without observable workspace progress. Last assistant output: ${detail}`,
-        status: 'failed',
-      });
+      if (gateBlockedByDiagnostic || state.status === 'failed') {
+        return buildOutput(state, {
+          reason: summarizeCompletionBlock(gateResult),
+        });
+      }
     }
-
-    state = maybeCompleteFlow((await deps.stateStore.loadCurrent()) ?? state);
-    await deps.stateStore.save(state);
 
     if (!gateBlocked && state.status === 'completed') {
       return buildOutput(state, {
@@ -441,15 +483,21 @@ export async function runFlowHeadless(
       });
     }
 
-    if (gateBlocked && currentNode === null) {
-      return buildOutput(state, {
-        reason: gateBlockedByDiagnostic
-          ? (gateBlockReason ?? 'Completion remained blocked after the final prompt turn.')
-          : appendAssistantDetail(
-              gateBlockReason ?? 'Completion remained blocked after the final prompt turn.',
-              runResult.assistantText,
-            ),
-      });
+    if (
+      gateBlocked &&
+      current != null &&
+      currentNode === null &&
+      current.currentNodePath.length <= 1
+    ) {
+      const reason = gateBlockedByDiagnostic
+        ? (gateBlockReason ?? 'Completion remained blocked after the final prompt turn.')
+        : appendAssistantDetail(
+            gateBlockReason ?? 'Completion remained blocked after the final prompt turn.',
+            runResult.assistantText,
+          );
+      state = markFailed(state, reason);
+      await deps.stateStore.save(state);
+      return buildOutput(state, { reason });
     }
   }
 }

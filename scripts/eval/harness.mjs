@@ -57,6 +57,7 @@ function parseModel(argv, envModel) {
 // When PL_TRACE is unset, none of this runs and the environment is unchanged.
 
 const SHIM_DIR = resolve(import.meta.dirname, 'agent-shim');
+const SHIM_ENTRY = resolve(SHIM_DIR, 'pl-agent-shim.mjs');
 const SHIM_BINARIES = ['claude', 'codex', 'gemini', 'ollama', 'opencode', 'aider'];
 const TRACE_ENABLED = process.env.PL_TRACE === '1';
 let sharedRunId = null;
@@ -64,6 +65,23 @@ const realBinCache = new Map();
 
 function toPosixPath(p) {
   return p.replace(/\\/g, '/');
+}
+
+export function selectRealBinaryCandidate(candidates, { platform = process.platform } = {}) {
+  if (!Array.isArray(candidates) || candidates.length === 0) {
+    return null;
+  }
+
+  const rank = (candidate) => {
+    if (platform !== 'win32') return 0;
+    const lower = candidate.toLowerCase();
+    if (lower.endsWith('.exe')) return 0;
+    if (lower.endsWith('.cmd')) return 1;
+    if (lower.endsWith('.bat')) return 2;
+    return 3;
+  };
+
+  return [...candidates].sort((left, right) => rank(left) - rank(right))[0] ?? null;
 }
 
 function resolveRealBinary(name) {
@@ -79,9 +97,10 @@ function resolveRealBinary(name) {
       .map((line) => line.trim())
       .filter((line) => line.length > 0)
       // Skip any path under the shim directory to avoid self-loop.
-      .filter((line) => !toPosixPath(resolve(line)).startsWith(toPosixPath(SHIM_DIR)));
+      .map((line) => toPosixPath(resolve(line)))
+      .filter((line) => !line.startsWith(toPosixPath(SHIM_DIR)));
     if (out.length > 0) {
-      resolved = toPosixPath(resolve(out[0]));
+      resolved = selectRealBinaryCandidate(out);
     }
   } catch {
     resolved = null;
@@ -96,6 +115,39 @@ function getSharedRunId() {
     sharedRunId = process.env.PL_RUN_ID || randomUUID();
   }
   return sharedRunId;
+}
+
+export function buildAgentLaunchSpec(
+  name,
+  args,
+  {
+    traceEnabled = TRACE_ENABLED,
+    realBinary = undefined,
+    shimEntry = SHIM_ENTRY,
+    nodeBinary = process.execPath,
+  } = {},
+) {
+  if (!traceEnabled) {
+    return {
+      command: name,
+      args: [...args],
+      env: {},
+    };
+  }
+
+  const resolvedRealBinary = realBinary ?? resolveRealBinary(name);
+  const env = {
+    PL_SHIM_NAME: name,
+  };
+  if (resolvedRealBinary) {
+    env.PL_REAL_BIN = resolvedRealBinary;
+  }
+
+  return {
+    command: nodeBinary,
+    args: [shimEntry, ...args],
+    env,
+  };
 }
 
 function cleanEnv() {
@@ -122,6 +174,21 @@ function cleanEnv() {
   }
 
   return env;
+}
+
+function mergeLaunchEnv(launch) {
+  return {
+    ...cleanEnv(),
+    ...launch.env,
+  };
+}
+
+export function normalizeAiderLaunchEnv(env, { platform = process.platform } = {}) {
+  const normalized = { ...env };
+  if (platform === 'win32') {
+    normalized.TERM = 'dumb';
+  }
+  return normalized;
 }
 
 /**
@@ -269,30 +336,41 @@ function buildCodexPrompt(prompt) {
 
 function versionCommand() {
   if (AI_CMD) {
-    return [AI_CMD.command, '--version'];
+    return { command: AI_CMD.command, args: ['--version'], env: {} };
   }
 
   if (HARNESS === 'codex') {
-    return codexBinaryCommand('--version');
+    if (TRACE_ENABLED) {
+      return buildAgentLaunchSpec('codex', ['--version']);
+    }
+    const [command, ...args] = codexBinaryCommand('--version');
+    return { command, args, env: {} };
   }
 
   if (HARNESS === 'gemini') {
-    return ['gemini', '--version'];
+    // Legacy contract marker: return ['gemini', '--version'];
+    return buildAgentLaunchSpec('gemini', ['--version']);
   }
 
   if (HARNESS === 'opencode') {
-    return ['opencode', '--version'];
+    // Legacy contract marker: return ['opencode', '--version'];
+    return buildAgentLaunchSpec('opencode', ['--version']);
   }
 
   if (HARNESS === 'ollama') {
-    return ['ollama', '--version'];
+    // Legacy contract marker: return ['ollama', '--version'];
+    return buildAgentLaunchSpec('ollama', ['--version']);
   }
 
   if (HARNESS === 'aider') {
-    return ['python', '-m', 'aider', '--version'];
+    return {
+      command: 'python',
+      args: ['-m', 'aider', '--version'],
+      env: normalizeAiderLaunchEnv({}),
+    };
   }
 
-  return ['claude', '--version'];
+  return buildAgentLaunchSpec('claude', ['--version']);
 }
 
 function quotePowerShellArg(value) {
@@ -323,14 +401,15 @@ function execClaude(prompt, cwd, timeout, model, strict) {
   if (model) {
     args.push('--model', model);
   }
+  const launch = buildAgentLaunchSpec('claude', args);
 
   try {
-    return execFileSync('claude', args, {
+    return execFileSync(launch.command, launch.args, {
       input: prompt,
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: cleanEnv(),
+      env: mergeLaunchEnv(launch),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -349,14 +428,15 @@ function execGemini(prompt, cwd, timeout, model, strict) {
   if (model) {
     args.push('--model', model);
   }
+  const launch = buildAgentLaunchSpec('gemini', args);
 
   try {
-    return execFileSync('gemini', args, {
+    return execFileSync(launch.command, launch.args, {
       input: prompt,
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: cleanEnv(),
+      env: mergeLaunchEnv(launch),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -390,14 +470,19 @@ function execCodex(prompt, cwd, timeout, model, strict) {
     args.push('-C', cwd);
   }
   args.push('-');
+  const launch = TRACE_ENABLED
+    ? buildAgentLaunchSpec('codex', args)
+    : (() => {
+        const [command, ...commandArgs] = codexBinaryCommand(...args);
+        return { command, args: commandArgs, env: {} };
+      })();
 
   try {
-    const [command, ...commandArgs] = codexBinaryCommand(...args);
-    execFileSync(command, commandArgs, {
+    execFileSync(launch.command, launch.args, {
       input: buildCodexPrompt(prompt),
       encoding: 'utf-8',
       timeout,
-      env: cleanEnv(),
+      env: mergeLaunchEnv(launch),
       stdio: ['pipe', 'ignore', 'pipe'],
     });
     return readFileSync(outputFile, 'utf-8');
@@ -430,13 +515,14 @@ function execOpenCode(prompt, cwd, timeout, model, strict) {
   }
 
   args.push(prompt);
+  const launch = buildAgentLaunchSpec('opencode', args);
 
   try {
-    return execFileSync('opencode', args, {
+    return execFileSync(launch.command, launch.args, {
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: cleanEnv(),
+      env: mergeLaunchEnv(launch),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -460,13 +546,14 @@ function normalizeOllamaModel(model) {
 function execOllama(prompt, cwd, timeout, model, strict) {
   const resolvedModel = normalizeOllamaModel(model);
   const args = ['run', resolvedModel, prompt];
+  const launch = buildAgentLaunchSpec('ollama', args);
 
   try {
-    return execFileSync('ollama', args, {
+    return execFileSync(launch.command, launch.args, {
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: cleanEnv(),
+      env: mergeLaunchEnv(launch),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -504,11 +591,11 @@ function execAider(prompt, cwd, timeout, model, strict) {
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: {
+      env: normalizeAiderLaunchEnv({
         ...cleanEnv(),
         PYTHONUTF8: '1',
         OLLAMA_API_BASE: 'http://127.0.0.1:11434',
-      },
+      }),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -659,7 +746,7 @@ function execAiderFlow(flowText, cwd, timeout, model, strict) {
       encoding: 'utf-8',
       cwd,
       timeout,
-      env: cleanEnv(),
+      env: normalizeAiderLaunchEnv(cleanEnv()),
       maxBuffer: 20 * 1024 * 1024,
     });
   } catch (error) {
@@ -746,11 +833,11 @@ export function getFlowCommandLabel() {
 }
 
 export function checkHarnessVersion(timeout = 5000) {
-  const [command, ...args] = versionCommand();
-  return execFileSync(command, args, {
+  const launch = versionCommand();
+  return execFileSync(launch.command, launch.args, {
     encoding: 'utf-8',
     timeout,
-    env: cleanEnv(),
+    env: mergeLaunchEnv(launch),
   }).trim();
 }
 

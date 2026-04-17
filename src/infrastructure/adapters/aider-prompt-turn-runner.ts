@@ -41,11 +41,20 @@ export function buildAiderArgs(input: PromptTurnInput, files: readonly string[])
 }
 
 export function buildAiderEnv(): NodeJS.ProcessEnv {
-  return {
+  const env: NodeJS.ProcessEnv = {
     ...process.env,
     PYTHONUTF8: '1',
     OLLAMA_API_BASE: 'http://127.0.0.1:11434',
   };
+
+  // Aider inherits TERM from git-bash on Windows, but prompt-toolkit expects
+  // a native Windows console there. Force a non-interactive terminal mode for
+  // headless aider runs so multi-step flows do not crash on the second prompt.
+  if (process.platform === 'win32') {
+    env['TERM'] = 'dumb';
+  }
+
+  return env;
 }
 
 function truncateOutput(text: string): string {

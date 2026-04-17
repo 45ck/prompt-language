@@ -23,6 +23,33 @@ npx @45ck/prompt-language --version
 
 ## Commands
 
+## Harness Environment Toggles
+
+These env vars control host-facing prompt adaptation. They do not add new DSL primitives.
+
+- `PROMPT_LANGUAGE_META_PROMPT`
+  Controls NL-to-DSL confirmation/meta-prompting for supported interactive hooks.
+- `PROMPT_LANGUAGE_CLAUDE_META_PROMPT`
+  Overrides `PROMPT_LANGUAGE_META_PROMPT` for the Claude hook.
+- `PROMPT_LANGUAGE_CODEX_META_PROMPT`
+  Overrides `PROMPT_LANGUAGE_META_PROMPT` for the Codex hook.
+- `PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER`
+  Controls the skill-aware prompt wrapper used by prompt-turn runners.
+- `PROMPT_LANGUAGE_CLAUDE_SKILL_PROMPT_WRAPPER`
+  Overrides the skill-aware wrapper for Claude prompt turns.
+- `PROMPT_LANGUAGE_CODEX_SKILL_PROMPT_WRAPPER`
+  Overrides the skill-aware wrapper for Codex prompt turns.
+
+Accepted true values: `1`, `true`, `on`
+
+Accepted false values: `0`, `false`, `off`
+
+Defaults:
+
+1. NL meta-prompting is on by default for supported hooks.
+2. Skill-aware prompt wrapping is on by default for Claude/Codex prompt turns.
+3. Harness-specific vars override the global var for that harness.
+
 ### install (default)
 
 Install the plugin into Claude Code. This is the default command — running `npx @45ck/prompt-language` without arguments does the same thing.
@@ -177,6 +204,7 @@ Notes:
 9. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
 10. `run --json` emits `{ status, diagnostics, outcomes, reason? }` for all shipped runners and uses explicit exit codes: `0` success, `1` terminal unsuccessful outcome, `2` blocked/profile-incompatible execution, `3` failed execution.
 11. Codex support in `run` is the supervised headless path. The separate `codex-install` scaffold is experimental and should not be read as full native-lifecycle parity with Claude.
+12. The skill-aware prompt wrapper used by Claude/Codex prompt turns can be disabled globally or per harness with the env vars listed above. This changes prompt envelope behavior, not flow semantics.
 
 ### ci
 
@@ -196,6 +224,8 @@ As of April 18, 2026, the checked-in factory-runtime evidence packs also pin Cla
 `ci` also runs the shared execution preflight before starting the runner. A blocked preflight exits with code `2` instead of attempting execution.
 
 `ci --json` follows the same headless-report contract as `run --json`: `{ status, diagnostics, outcomes, reason? }` with exit codes `0`, `1`, `2`, and `3` for success, unsuccessful, blocked, and failed execution respectively.
+
+The same per-harness skill-wrapper env vars apply to Claude/Codex prompt turns reached through `ci`.
 
 ### eval
 

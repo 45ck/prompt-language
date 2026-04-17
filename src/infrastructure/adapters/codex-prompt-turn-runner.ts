@@ -13,6 +13,8 @@ import type {
 const DEFAULT_TIMEOUT_MS = 600_000;
 const CODEX_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_CODEX_TIMEOUT_MS';
 const CODEX_REASONING_EFFORT_ENV = 'PROMPT_LANGUAGE_CODEX_REASONING_EFFORT';
+const SKILL_WRAPPER_ENV = 'PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER';
+const CODEX_SKILL_WRAPPER_ENV = 'PROMPT_LANGUAGE_CODEX_SKILL_PROMPT_WRAPPER';
 const VALID_CODEX_REASONING_EFFORTS = new Set([
   'none',
   'minimal',
@@ -40,6 +42,22 @@ function readPositiveIntEnv(name: string): number | undefined {
 function readCodexReasoningEffort(): string | undefined {
   const value = process.env[CODEX_REASONING_EFFORT_ENV]?.trim().toLowerCase();
   return value && VALID_CODEX_REASONING_EFFORTS.has(value) ? value : undefined;
+}
+
+function readBooleanEnv(name: string): boolean | undefined {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (value == null || value === '') return undefined;
+  if (value === '1' || value === 'true' || value === 'on') return true;
+  if (value === '0' || value === 'false' || value === 'off') return false;
+  return undefined;
+}
+
+function useSkillAwarePromptWrapper(): boolean {
+  const harnessValue = readBooleanEnv(CODEX_SKILL_WRAPPER_ENV);
+  if (harnessValue != null) {
+    return harnessValue;
+  }
+  return readBooleanEnv(SKILL_WRAPPER_ENV) ?? true;
 }
 
 function resolveWindowsCodexCommandPrefix(): [string, string[]] {
@@ -112,12 +130,18 @@ function readAssistantText(outputFile: string, fallback?: string): string | unde
 }
 
 export function buildCodexPrompt(prompt: string): string {
+  if (!useSkillAwarePromptWrapper()) {
+    return prompt;
+  }
+
   return [
     'You are executing a prompt-language flow step, not doing open-ended coding.',
     'Treat the text below as the active workflow state and current instruction.',
     'Rules:',
     '- Work directly in the current workspace when the instruction requires file or repository changes.',
     '- Do not stop after describing what you would do. Perform the requested edits, reads, and checks now.',
+    '- If a relevant host or repo skill is already available, use it rather than reinventing the workflow.',
+    '- If a skill or instruction includes prompt-language DSL, exact fixture strings, or literal file contents, preserve them exactly instead of paraphrasing them into prose.',
     '- Preserve exact fixture strings, filenames, and file contents from the workflow. Do not redact, mask, or paraphrase them.',
     '- If a step says a file must contain an exact value, write that exact value with no extra text.',
     '- Prefer minimal changes that satisfy the current step.',

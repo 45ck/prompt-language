@@ -9,6 +9,12 @@ import { randomUUID } from 'node:crypto';
 const DEFAULT_HARNESS = 'claude';
 const DEFAULT_CLAUDE_EFFORT = 'medium';
 const DEFAULT_CODEX_REASONING_EFFORT = 'medium';
+const META_PROMPT_ENV = 'PROMPT_LANGUAGE_META_PROMPT';
+const SKILL_WRAPPER_ENV = 'PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER';
+const CLAUDE_META_PROMPT_ENV = 'PROMPT_LANGUAGE_CLAUDE_META_PROMPT';
+const CODEX_META_PROMPT_ENV = 'PROMPT_LANGUAGE_CODEX_META_PROMPT';
+const CLAUDE_SKILL_WRAPPER_ENV = 'PROMPT_LANGUAGE_CLAUDE_SKILL_PROMPT_WRAPPER';
+const CODEX_SKILL_WRAPPER_ENV = 'PROMPT_LANGUAGE_CODEX_SKILL_PROMPT_WRAPPER';
 const AI_CMD_CONFIG = parseAiCommand(process.env.AI_CMD);
 const HARNESS_SELECTION = parseHarnessSelection(
   process.argv,
@@ -56,6 +62,40 @@ function readClaudeEffort() {
 function readCodexReasoningEffort() {
   const value = process.env.PROMPT_LANGUAGE_CODEX_REASONING_EFFORT?.trim().toLowerCase();
   return value || DEFAULT_CODEX_REASONING_EFFORT;
+}
+
+function readBooleanEnv(name) {
+  const value = process.env[name]?.trim().toLowerCase();
+  if (!value) return undefined;
+  if (value === '1' || value === 'true' || value === 'on') return true;
+  if (value === '0' || value === 'false' || value === 'off') return false;
+  return undefined;
+}
+
+function isMetaPromptEnabled(runner = HARNESS) {
+  const harnessValue =
+    runner === 'claude'
+      ? readBooleanEnv(CLAUDE_META_PROMPT_ENV)
+      : runner === 'codex'
+        ? readBooleanEnv(CODEX_META_PROMPT_ENV)
+        : undefined;
+  if (harnessValue != null) {
+    return harnessValue;
+  }
+  return readBooleanEnv(META_PROMPT_ENV) ?? true;
+}
+
+function useSkillAwarePromptWrapper(runner = HARNESS) {
+  const harnessValue =
+    runner === 'claude'
+      ? readBooleanEnv(CLAUDE_SKILL_WRAPPER_ENV)
+      : runner === 'codex'
+        ? readBooleanEnv(CODEX_SKILL_WRAPPER_ENV)
+        : undefined;
+  if (harnessValue != null) {
+    return harnessValue;
+  }
+  return readBooleanEnv(SKILL_WRAPPER_ENV) ?? true;
 }
 
 // ── Independent-witness shim wiring ─────────────────────────────────
@@ -203,6 +243,18 @@ function applyHarnessRunnerDefaults(env, runner = HARNESS) {
   if (runner === 'codex' && !nextEnv.PROMPT_LANGUAGE_CODEX_REASONING_EFFORT) {
     nextEnv.PROMPT_LANGUAGE_CODEX_REASONING_EFFORT = readCodexReasoningEffort();
   }
+  if (runner === 'claude' && nextEnv[CLAUDE_META_PROMPT_ENV] == null) {
+    nextEnv[CLAUDE_META_PROMPT_ENV] = isMetaPromptEnabled('claude') ? '1' : '0';
+  }
+  if (runner === 'codex' && nextEnv[CODEX_META_PROMPT_ENV] == null) {
+    nextEnv[CODEX_META_PROMPT_ENV] = isMetaPromptEnabled('codex') ? '1' : '0';
+  }
+  if (runner === 'claude' && nextEnv[CLAUDE_SKILL_WRAPPER_ENV] == null) {
+    nextEnv[CLAUDE_SKILL_WRAPPER_ENV] = useSkillAwarePromptWrapper('claude') ? '1' : '0';
+  }
+  if (runner === 'codex' && nextEnv[CODEX_SKILL_WRAPPER_ENV] == null) {
+    nextEnv[CODEX_SKILL_WRAPPER_ENV] = useSkillAwarePromptWrapper('codex') ? '1' : '0';
+  }
   return nextEnv;
 }
 
@@ -339,10 +391,16 @@ function parseAiCommand(rawValue) {
 }
 
 function buildCodexPrompt(prompt) {
+  if (!useSkillAwarePromptWrapper('codex')) {
+    return prompt;
+  }
+
   return [
     'You are executing a prompt-language flow, not doing open-ended coding.',
     'Treat the text below as a DSL program and follow it literally.',
     'Rules:',
+    '- If a relevant host or repo skill is already available, use it rather than reinventing the workflow.',
+    '- If a skill or instruction includes prompt-language DSL, exact fixture strings, or literal file contents, preserve them exactly instead of paraphrasing them into prose.',
     '- Execute prompt, run, let/var, while, until, retry, if/else, try/catch/finally, foreach, break, continue, spawn, await, remember, send, receive, import, and use exactly as written.',
     '- Honor variable interpolation like ${name} and conditionals like and/or, comparisons, and grounded-by commands.',
     '- Remember nodes are concrete file writes, not abstract memory: write `.prompt-language/memory.json` as a JSON array of objects with at least `timestamp`, and optionally `text`, `key`, and `value`.',
@@ -352,6 +410,28 @@ function buildCodexPrompt(prompt) {
     '- Do not inspect the repository unless the flow explicitly tells you to.',
     '- Do not explain your reasoning.',
     '- Do not write code unless the flow commands explicitly create or modify files.',
+    '',
+    prompt,
+  ].join('\n');
+}
+
+function buildClaudePrompt(prompt) {
+  if (!useSkillAwarePromptWrapper('claude')) {
+    return prompt;
+  }
+
+  return [
+    'You are executing a prompt-language flow step, not doing open-ended coding.',
+    'Treat the text below as the active workflow state and current instruction.',
+    'Rules:',
+    '- Work directly in the current workspace when the instruction requires file or repository changes.',
+    '- Do not stop after describing what you would do. Perform the requested edits, reads, and checks now.',
+    '- If a relevant host or repo skill is already available, use it rather than reinventing the workflow.',
+    '- If a skill or instruction includes prompt-language DSL, exact fixture strings, or literal file contents, preserve them exactly instead of paraphrasing them into prose.',
+    '- Preserve exact fixture strings, filenames, and file contents from the workflow. Do not redact, mask, or paraphrase them.',
+    '- If a step says a file must contain an exact value, write that exact value with no extra text.',
+    '- Prefer minimal changes that satisfy the current step.',
+    '- After completing the step, reply with one short line only.',
     '',
     prompt,
   ].join('\n');
@@ -429,7 +509,7 @@ function execClaude(prompt, cwd, timeout, model, strict) {
 
   try {
     return execFileSync(launch.command, launch.args, {
-      input: prompt,
+      input: buildClaudePrompt(prompt),
       encoding: 'utf-8',
       cwd,
       timeout,

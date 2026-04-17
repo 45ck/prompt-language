@@ -92,6 +92,7 @@ async function main(): Promise<void> {
     auditLogger,
     memoryStore,
     traceLogger,
+    { metaPromptHarness: 'codex' },
   );
 
   debug(`Codex UserPromptSubmit: prompt modified=${result.prompt !== input.prompt}`);

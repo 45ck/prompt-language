@@ -291,10 +291,40 @@ export interface InjectContextOutput {
   readonly prompt: string;
 }
 
+export type InjectContextHarness = 'claude' | 'codex';
+
+export interface InjectContextOptions {
+  readonly metaPromptHarness?: InjectContextHarness;
+}
+
 // C4: Experimental config flag — PL_COMPACT_RENDER=1 enables compact rendering
 // for benchmarking and manual testing. Default is full mode.
 export function isCompactRenderMode(): boolean {
   return process.env['PL_COMPACT_RENDER'] === '1';
+}
+
+function readBooleanEnv(name: string): boolean | undefined {
+  const raw = process.env[name]?.trim().toLowerCase();
+  if (raw == null || raw === '') return undefined;
+  if (raw === '1' || raw === 'true' || raw === 'on') return true;
+  if (raw === '0' || raw === 'false' || raw === 'off') return false;
+  return undefined;
+}
+
+export function isMetaPromptEnabled(harness?: InjectContextHarness): boolean {
+  const harnessEnv =
+    harness === 'claude'
+      ? 'PROMPT_LANGUAGE_CLAUDE_META_PROMPT'
+      : harness === 'codex'
+        ? 'PROMPT_LANGUAGE_CODEX_META_PROMPT'
+        : undefined;
+  const harnessValue = harnessEnv == null ? undefined : readBooleanEnv(harnessEnv);
+  if (harnessValue != null) {
+    return harnessValue;
+  }
+
+  const globalValue = readBooleanEnv('PROMPT_LANGUAGE_META_PROMPT');
+  return globalValue ?? true;
 }
 
 function renderInjectedFlow(state: SessionState): string {
@@ -413,6 +443,7 @@ export async function injectContext(
   auditLogger?: AuditLogger,
   memoryStore?: MemoryStore,
   traceLogger: TraceLogger = NULL_TRACE_LOGGER,
+  options: InjectContextOptions = {},
 ): Promise<InjectContextOutput> {
   const existing = await stateStore.loadCurrent();
 
@@ -436,7 +467,11 @@ export async function injectContext(
   const pendingPrompt = await stateStore.loadPendingPrompt();
   if (pendingPrompt) {
     await stateStore.clearPendingPrompt();
-    if (existing?.status !== 'active' && isTrivialPrompt(input.prompt)) {
+    if (
+      existing?.status !== 'active' &&
+      isTrivialPrompt(input.prompt) &&
+      isMetaPromptEnabled(options.metaPromptHarness)
+    ) {
       return { prompt: buildMetaPrompt(pendingPrompt) };
     }
     // User sent a non-trivial prompt or has an active flow — fall through
@@ -656,7 +691,7 @@ export async function injectContext(
   }
 
   // H#40: NL-to-DSL confirmation step — save prompt and ask user to confirm
-  if (looksLikeNaturalLanguage(input.prompt)) {
+  if (isMetaPromptEnabled(options.metaPromptHarness) && looksLikeNaturalLanguage(input.prompt)) {
     await stateStore.savePendingPrompt(input.prompt);
     return {
       prompt:

@@ -86,6 +86,7 @@ async function main(): Promise<void> {
     auditLogger,
     memoryStore,
     traceLogger,
+    { metaPromptHarness: 'claude' },
   );
 
   debug(`UserPromptSubmit: prompt modified=${result.prompt !== input.prompt}`);

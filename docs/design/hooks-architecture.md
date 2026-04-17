@@ -51,11 +51,12 @@ Fires when the user submits a prompt to Claude.
 
 1. Receive the user's prompt text.
 2. Attempt to parse it as DSL. If parsing fails, run natural language detection.
-3. If control-flow intent is found, compile a FlowSpec.
-4. Create a SessionState from the FlowSpec.
-5. Write `.prompt-language/session-state.json`.
-6. Return the first step as the agent's injected instruction.
-7. If no control-flow intent is detected, pass through (no-op).
+3. If control-flow intent is found and NL meta-prompting is enabled for that harness, save a pending prompt and inject the confirmation/meta-prompt path.
+4. If the prompt already contains DSL, compile a FlowSpec immediately.
+5. Create a SessionState from the FlowSpec.
+6. Write `.prompt-language/session-state.json`.
+7. Return the first step as the agent's injected instruction.
+8. If no control-flow intent is detected, or NL meta-prompting is disabled for that harness, pass through (no-op).
 
 ### Flow
 
@@ -63,7 +64,9 @@ Fires when the user submits a prompt to Claude.
 User prompt
   -> Parse DSL
   -> (fail) Natural language detection
-  -> (detected) Compile FlowSpec
+  -> (detected + enabled) Save pending prompt / inject confirmation
+  -> (confirmed) Emit DSL helper prompt
+  -> (DSL returned) Compile FlowSpec
   -> Create SessionState
   -> Write session-state.json
   -> Inject first step

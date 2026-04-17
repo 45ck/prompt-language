@@ -1,6 +1,6 @@
 # Manual Smoke Test Guide
 
-Manual verification of the NL→DSL meta-prompt pipeline in Claude Code.
+Manual verification of the NL→DSL meta-prompt pipeline and skill-aware prompt wrapping in Claude Code and Codex.
 
 ## Prerequisites
 
@@ -22,7 +22,15 @@ Manual verification of the NL→DSL meta-prompt pipeline in Claude Code.
    rm -rf .prompt-language/
    ```
 
+4. **Optional Codex scaffold**:
+
+   ```sh
+   node bin/cli.mjs codex-install
+   ```
+
 ## Test Cases
+
+## NL Meta-Prompt Cases
 
 ### Case 1: Basic until loop
 
@@ -73,7 +81,23 @@ Manual verification of the NL→DSL meta-prompt pipeline in Claude Code.
 - **Verify**: Claude answers the question normally without any `[prompt-language]` prefix
 - [ ] PASS / FAIL
 
-### Case 8: Already-valid DSL
+### Case 8: Meta-prompt disabled globally
+
+- **Setup**: run Claude or Codex with `PROMPT_LANGUAGE_META_PROMPT=0`
+- **Input**: `Run tests, keep fixing until they pass, max 5 tries`
+- **Expected**: Prompt passes through unchanged
+- **Verify**: No confirmation prompt is injected and `.prompt-language/` does not record a pending NL prompt
+- [ ] PASS / FAIL
+
+### Case 9: Claude-only disable, Codex still enabled
+
+- **Setup**: set `PROMPT_LANGUAGE_CLAUDE_META_PROMPT=0` and leave Codex unset
+- **Input**: `Retry the build up to 3 times`
+- **Expected**: Claude passes the prompt through, Codex still shows the confirmation/meta-prompt path
+- **Verify**: Claude has no injected confirmation; Codex still emits the `[prompt-language]` control-flow-intent message
+- [ ] PASS / FAIL
+
+### Case 10: Already-valid DSL
 
 - **Input**:
 
@@ -91,7 +115,7 @@ Manual verification of the NL→DSL meta-prompt pipeline in Claude Code.
 - **Verify**: Response shows `[prompt-language] Active flow: Run tests` context, not a meta-prompt
 - [ ] PASS / FAIL
 
-### Case 9: Active flow + new NL input
+### Case 11: Active flow + new NL input
 
 - **Setup**: First run Case 8 to create an active flow
 - **Input**: `Now fix the linting errors`
@@ -99,12 +123,30 @@ Manual verification of the NL→DSL meta-prompt pipeline in Claude Code.
 - **Verify**: Response includes `[prompt-language] Active flow:` and `Status: active`
 - [ ] PASS / FAIL
 
-### Case 10: Gate enforcement
+### Case 12: Gate enforcement
 
 - **Setup**: Start a flow with `done when:` gates (e.g., Case 8)
 - **Input**: Try to end the conversation or start a new unrelated task
 - **Expected**: The agent should respect completion gates — it should not claim the flow is complete until gates are satisfied
 - **Verify**: Agent continues working toward gate satisfaction rather than stopping early
+- [ ] PASS / FAIL
+
+## Skill Wrapper Cases
+
+### Case 13: Skill-aware prompt wrapper on
+
+- **Setup**: leave `PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER` unset
+- **Input**: run a prompt-turn path that should use an installed repo skill or literal flow text
+- **Expected**: the harness prompt envelope tells the runner to use relevant installed skills and preserve embedded prompt-language DSL literally
+- **Verify**: inspect the prompt-runner tests or harness debug output and confirm the wrapper text is present
+- [ ] PASS / FAIL
+
+### Case 14: Skill-aware prompt wrapper off
+
+- **Setup**: set `PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER=0`
+- **Input**: rerun the same prompt-turn path
+- **Expected**: the raw prompt is forwarded without the wrapper preamble
+- **Verify**: harness debug output or runner instrumentation shows the plain prompt only
 - [ ] PASS / FAIL
 
 ## Troubleshooting
@@ -129,6 +171,12 @@ Pipe input directly to the hook to see what it produces:
 echo '{"prompt":"Run tests until they pass, max 5"}' | npx tsx src/presentation/hooks/user-prompt-submit.ts
 ```
 
+Codex variant:
+
+```sh
+echo '{"prompt":"Run tests until they pass, max 5"}' | npx tsx src/presentation/hooks/codex-user-prompt-submit.ts
+```
+
 ### Debug: check if NL detection triggers
 
 The hook detects NL intent using keyword matching. If a prompt is not being detected as NL:
@@ -138,7 +186,8 @@ The hook detects NL intent using keyword matching. If a prompt is not being dete
 
 ### Common issues
 
-- **No meta-prompt injected for NL input**: The input may not match any NL intent keywords. Check `NL_INTENT_RE` in `inject-context.ts`.
+- **No meta-prompt injected for NL input**: The input may not match enough NL intent keywords, or `PROMPT_LANGUAGE_META_PROMPT` / the harness-specific override may be disabled.
 - **Meta-prompt injected for plain text**: A keyword like "passes", "fails", or "until" may be triggering false positives.
+- **Skill-aware wrapper missing**: Check `PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER` and the harness-specific override.
 - **State file not created after DSL input**: Ensure the working directory is writable and not inside a read-only mount.
 - **Hook errors silently**: The hook catches errors and exits 0 to avoid blocking the user. Check stderr for `[prompt-language] hook error:` messages.

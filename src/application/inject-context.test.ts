@@ -6,6 +6,7 @@ import {
   buildMetaPrompt,
   isTrivialPrompt,
   hasGatesOnly,
+  isMetaPromptEnabled,
 } from './inject-context.js';
 import { InMemoryStateStore } from '../infrastructure/adapters/in-memory-state-store.js';
 import { parseFlow } from './parse-flow.js';
@@ -368,6 +369,86 @@ describe('injectContext — NL meta-prompt', () => {
     );
 
     expect(result.prompt).toBe('Refactor the auth module');
+  });
+
+  it('can disable NL meta-prompting globally', async () => {
+    const original = process.env['PROMPT_LANGUAGE_META_PROMPT'];
+    process.env['PROMPT_LANGUAGE_META_PROMPT'] = '0';
+    try {
+      const store = makeStore();
+      const result = await injectContext(
+        { prompt: 'keep fixing until tests pass', sessionId: 'nl-global-off' },
+        store,
+      );
+
+      expect(result.prompt).toBe('keep fixing until tests pass');
+      expect(await store.loadPendingPrompt()).toBeNull();
+      expect(isMetaPromptEnabled()).toBe(false);
+    } finally {
+      if (original != null) {
+        process.env['PROMPT_LANGUAGE_META_PROMPT'] = original;
+      } else {
+        delete process.env['PROMPT_LANGUAGE_META_PROMPT'];
+      }
+    }
+  });
+
+  it('can disable NL meta-prompting for claude only', async () => {
+    const original = process.env['PROMPT_LANGUAGE_CLAUDE_META_PROMPT'];
+    process.env['PROMPT_LANGUAGE_CLAUDE_META_PROMPT'] = 'off';
+    try {
+      const store = makeStore();
+      const result = await injectContext(
+        { prompt: 'keep fixing until tests pass', sessionId: 'nl-claude-off' },
+        store,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { metaPromptHarness: 'claude' },
+      );
+
+      expect(result.prompt).toBe('keep fixing until tests pass');
+      expect(await store.loadPendingPrompt()).toBeNull();
+      expect(isMetaPromptEnabled('claude')).toBe(false);
+    } finally {
+      if (original != null) {
+        process.env['PROMPT_LANGUAGE_CLAUDE_META_PROMPT'] = original;
+      } else {
+        delete process.env['PROMPT_LANGUAGE_CLAUDE_META_PROMPT'];
+      }
+    }
+  });
+
+  it('keeps NL meta-prompting enabled for codex when only claude is disabled', async () => {
+    const original = process.env['PROMPT_LANGUAGE_CLAUDE_META_PROMPT'];
+    process.env['PROMPT_LANGUAGE_CLAUDE_META_PROMPT'] = '0';
+    try {
+      const store = makeStore();
+      const result = await injectContext(
+        { prompt: 'keep fixing until tests pass', sessionId: 'nl-codex-still-on' },
+        store,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        { metaPromptHarness: 'codex' },
+      );
+
+      expect(result.prompt).toContain('control-flow intent');
+      expect(await store.loadPendingPrompt()).toBe('keep fixing until tests pass');
+      expect(isMetaPromptEnabled('codex')).toBe(true);
+    } finally {
+      if (original != null) {
+        process.env['PROMPT_LANGUAGE_CLAUDE_META_PROMPT'] = original;
+      } else {
+        delete process.env['PROMPT_LANGUAGE_CLAUDE_META_PROMPT'];
+      }
+    }
   });
 
   it('active flow takes precedence over NL detection', async () => {

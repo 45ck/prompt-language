@@ -51,13 +51,28 @@ describe('CodexPromptTurnRunner', () => {
     });
     mockedExistsSync.mockReturnValue(false);
     delete process.env['PROMPT_LANGUAGE_CODEX_REASONING_EFFORT'];
+    delete process.env['PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER'];
+    delete process.env['PROMPT_LANGUAGE_CODEX_SKILL_PROMPT_WRAPPER'];
   });
 
   it('wraps prompts with execution rules', () => {
     const wrapped = buildCodexPrompt('Create hello.txt');
 
     expect(wrapped).toContain('Work directly in the current workspace');
+    expect(wrapped).toContain('If a relevant host or repo skill is already available');
     expect(wrapped).toContain('Create hello.txt');
+  });
+
+  it('can disable the skill-aware prompt wrapper globally', () => {
+    process.env['PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER'] = '0';
+
+    expect(buildCodexPrompt('Create hello.txt')).toBe('Create hello.txt');
+  });
+
+  it('can disable the skill-aware prompt wrapper just for codex', () => {
+    process.env['PROMPT_LANGUAGE_CODEX_SKILL_PROMPT_WRAPPER'] = 'false';
+
+    expect(buildCodexPrompt('Create hello.txt')).toBe('Create hello.txt');
   });
 
   it('builds codex exec args with workspace, model, and output file', () => {

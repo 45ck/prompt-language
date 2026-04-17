@@ -10,7 +10,8 @@ vi.mock('node:child_process', () => ({
   spawnSync: mockedSpawnSync,
 }));
 
-const { ClaudePromptTurnRunner } = await import('./claude-prompt-turn-runner.js');
+const { ClaudePromptTurnRunner, buildClaudePrompt } =
+  await import('./claude-prompt-turn-runner.js');
 
 function createChildProcess() {
   const stdout = new PassThrough();
@@ -39,6 +40,27 @@ describe('ClaudePromptTurnRunner', () => {
     vi.resetAllMocks();
     delete process.env['PROMPT_LANGUAGE_CLAUDE_EFFORT'];
     delete process.env['PROMPT_LANGUAGE_CLAUDE_TIMEOUT_MS'];
+    delete process.env['PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER'];
+    delete process.env['PROMPT_LANGUAGE_CLAUDE_SKILL_PROMPT_WRAPPER'];
+  });
+
+  it('wraps prompts with skill-aware execution rules by default', () => {
+    const wrapped = buildClaudePrompt('Fix the bug');
+
+    expect(wrapped).toContain('If a relevant host or repo skill is already available');
+    expect(wrapped).toContain('Fix the bug');
+  });
+
+  it('can disable the skill-aware prompt wrapper globally', () => {
+    process.env['PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER'] = '0';
+
+    expect(buildClaudePrompt('Fix the bug')).toBe('Fix the bug');
+  });
+
+  it('can disable the skill-aware prompt wrapper just for claude', () => {
+    process.env['PROMPT_LANGUAGE_CLAUDE_SKILL_PROMPT_WRAPPER'] = 'off';
+
+    expect(buildClaudePrompt('Fix the bug')).toBe('Fix the bug');
   });
 
   it('builds claude print args with model and configured effort', () => {
@@ -109,7 +131,9 @@ describe('ClaudePromptTurnRunner', () => {
         windowsHide: true,
       }),
     );
-    expect(child.stdin.read()?.toString('utf-8')).toContain('Fix the bug');
+    const stdinPayload = child.stdin.read()?.toString('utf-8') ?? '';
+    expect(stdinPayload).toContain('Fix the bug');
+    expect(stdinPayload).toContain('If a relevant host or repo skill is already available');
   });
 
   it('settles with exit code 1 on child error', async () => {

@@ -9,6 +9,8 @@ import type {
 const DEFAULT_TIMEOUT_MS = 600_000;
 const CLAUDE_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_CLAUDE_TIMEOUT_MS';
 const CLAUDE_EFFORT_ENV = 'PROMPT_LANGUAGE_CLAUDE_EFFORT';
+const SKILL_WRAPPER_ENV = 'PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER';
+const CLAUDE_SKILL_WRAPPER_ENV = 'PROMPT_LANGUAGE_CLAUDE_SKILL_PROMPT_WRAPPER';
 const VALID_CLAUDE_EFFORTS = new Set(['low', 'medium', 'high']);
 
 function readEnv(name: string): string | undefined {
@@ -23,9 +25,47 @@ function readPositiveIntEnv(name: string): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+function readBooleanEnv(name: string): boolean | undefined {
+  const value = readEnv(name)?.toLowerCase();
+  if (value == null) return undefined;
+  if (value === '1' || value === 'true' || value === 'on') return true;
+  if (value === '0' || value === 'false' || value === 'off') return false;
+  return undefined;
+}
+
 function readClaudeEffort(): string | undefined {
   const value = readEnv(CLAUDE_EFFORT_ENV)?.toLowerCase();
   return value && VALID_CLAUDE_EFFORTS.has(value) ? value : undefined;
+}
+
+function useSkillAwarePromptWrapper(): boolean {
+  const harnessValue = readBooleanEnv(CLAUDE_SKILL_WRAPPER_ENV);
+  if (harnessValue != null) {
+    return harnessValue;
+  }
+  return readBooleanEnv(SKILL_WRAPPER_ENV) ?? true;
+}
+
+export function buildClaudePrompt(prompt: string): string {
+  if (!useSkillAwarePromptWrapper()) {
+    return prompt;
+  }
+
+  return [
+    'You are executing a prompt-language flow step, not doing open-ended coding.',
+    'Treat the text below as the active workflow state and current instruction.',
+    'Rules:',
+    '- Work directly in the current workspace when the instruction requires file or repository changes.',
+    '- Do not stop after describing what you would do. Perform the requested edits, reads, and checks now.',
+    '- If a relevant host or repo skill is already available, use it rather than reinventing the workflow.',
+    '- If a skill or instruction includes prompt-language DSL, exact fixture strings, or literal file contents, preserve them exactly instead of paraphrasing them into prose.',
+    '- Preserve exact fixture strings, filenames, and file contents from the workflow. Do not redact, mask, or paraphrase them.',
+    '- If a step says a file must contain an exact value, write that exact value with no extra text.',
+    '- Prefer minimal changes that satisfy the current step.',
+    '- After completing the step, reply with one short line only.',
+    '',
+    prompt,
+  ].join('\n');
 }
 
 function claudeLaunchCommand(args: readonly string[]): [string, ...string[]] {
@@ -136,7 +176,7 @@ export class ClaudePromptTurnRunner implements PromptTurnRunner {
       });
 
       try {
-        child.stdin?.end(input.prompt);
+        child.stdin?.end(buildClaudePrompt(input.prompt));
       } catch {
         child.stdin?.destroy();
       }

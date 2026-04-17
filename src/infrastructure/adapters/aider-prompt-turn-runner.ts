@@ -1,7 +1,7 @@
 // cspell:ignore aider qwen PYTHONUTF
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 
 import type {
   PromptTurnInput,
@@ -75,23 +75,35 @@ function hasGitRepo(cwd: string): boolean {
   return existsSync(join(cwd, '.git'));
 }
 
+function normalizeReferencedFile(cwd: string, candidate: string): string | undefined {
+  const trimmed = candidate.trim();
+  if (!trimmed) return undefined;
+
+  const absolutePath = resolve(cwd, trimmed);
+  const rel = relative(cwd, absolutePath);
+  if (!rel || rel.startsWith('..') || rel.includes('\0')) {
+    return undefined;
+  }
+
+  try {
+    if (!statSync(absolutePath).isFile()) return undefined;
+  } catch {
+    return undefined;
+  }
+
+  return rel.replace(/\\/g, '/');
+}
+
 function extractReferencedFiles(cwd: string, prompt: string): string[] {
   const referencedFiles: string[] = [];
   const seen = new Set<string>();
 
   for (const match of prompt.matchAll(FILE_REFERENCE_PATTERN)) {
-    const candidate = match[1]?.trim();
-    if (!candidate || seen.has(candidate)) continue;
-    const absolutePath = join(cwd, candidate);
-
-    try {
-      if (!statSync(absolutePath).isFile()) continue;
-    } catch {
-      continue;
-    }
-
-    seen.add(candidate);
-    referencedFiles.push(candidate);
+    const candidate = match[1];
+    const normalized = candidate ? normalizeReferencedFile(cwd, candidate) : undefined;
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    referencedFiles.push(normalized);
   }
 
   return referencedFiles;
@@ -113,7 +125,7 @@ function listFallbackWorkspaceFiles(cwd: string): string[] {
 
 export class AiderPromptTurnRunner implements PromptTurnRunner {
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
-    const files = this.resolveFiles(input.cwd, input.prompt);
+    const files = this.resolveFiles(input.cwd, input.prompt, input.scopePrompt);
     const args = buildAiderArgs(input, files);
     const env = buildAiderEnv();
     const timeoutMs = readPositiveIntEnv(AIDER_TIMEOUT_MS_ENV) ?? DEFAULT_TIMEOUT_MS;
@@ -169,8 +181,12 @@ export class AiderPromptTurnRunner implements PromptTurnRunner {
     }
   }
 
-  resolveFiles(cwd: string, prompt: string): readonly string[] {
-    const referencedFiles = extractReferencedFiles(cwd, prompt);
+  resolveFiles(cwd: string, prompt: string, scopePrompt?: string): readonly string[] {
+    const scopedPrompt = scopePrompt?.trim();
+    const referencedFiles = extractReferencedFiles(
+      cwd,
+      scopedPrompt && scopedPrompt.length > 0 ? scopedPrompt : prompt,
+    );
     if (referencedFiles.length > 0) {
       return referencedFiles;
     }
@@ -178,5 +194,16 @@ export class AiderPromptTurnRunner implements PromptTurnRunner {
     // Fresh temp workspaces used by evals often do not have a git repo yet, so
     // aider would otherwise start with an empty repo-map and zero file context.
     return hasGitRepo(cwd) ? [] : listFallbackWorkspaceFiles(cwd);
+  }
+
+  describeInvocation(input: PromptTurnInput): {
+    readonly argv: readonly string[];
+    readonly binaryPath: string;
+  } {
+    const files = this.resolveFiles(input.cwd, input.prompt, input.scopePrompt);
+    return {
+      argv: ['python', ...buildAiderArgs(input, files)],
+      binaryPath: 'python',
+    };
   }
 }

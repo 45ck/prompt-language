@@ -1,0 +1,12 @@
+{
+  "fixture": "h11-multi-file-refactor",
+  "arm": "artisan-v4",
+  "runner": "aider",
+  "model": "ollama_chat/qwen3-opencode:30b",
+  "flow": "task-artisan-v4.flow",
+  "plExitCode": 1,
+  "plStatus": "unsuccessful",
+  "verifyExitCode": 1,
+  "oracleSummary": "Results: 10/12 passed",
+  "note": "Runtime-scope rerun after scoping aider file selection to the active captured prompt."
+}

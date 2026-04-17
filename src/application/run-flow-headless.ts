@@ -359,10 +359,12 @@ export async function runFlowHeadless(
           });
         }
 
+        const gatePrompt = buildGateOnlyPrompt(state, input.flowText);
         const runResult = await deps.promptTurnRunner.run({
           cwd: input.cwd,
           model: input.model,
-          prompt: buildGateOnlyPrompt(state, input.flowText),
+          prompt: gatePrompt,
+          scopePrompt: gatePrompt,
         });
 
         if (runResult.exitCode !== 0) {
@@ -428,6 +430,7 @@ export async function runFlowHeadless(
       cwd: input.cwd,
       model: input.model ?? step.model,
       prompt: buildPromptEnvelope(state, step.capturedPrompt),
+      scopePrompt: step.capturedPrompt,
     });
 
     if (runResult.exitCode !== 0) {

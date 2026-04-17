@@ -304,6 +304,27 @@ describe('AiderPromptTurnRunner', () => {
     }
   });
 
+  it('resolveFiles uses scopePrompt for aider file selection when provided', () => {
+    const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
+
+    try {
+      mkdirSync(join(root, 'src'));
+      writeFileSync(join(root, 'README.md'), '# docs\n', 'utf8');
+      writeFileSync(join(root, 'src', 'app.js'), 'console.log("ok");\n', 'utf8');
+
+      expect(
+        runner.resolveFiles(
+          root,
+          'flow:\n  prompt: Edit src/app.js\n  prompt: Edit README.md only',
+          'Edit README.md only',
+        ),
+      ).toEqual(['README.md']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('resolveFiles stays empty for git workspaces without explicit file refs', () => {
     const runner = new AiderPromptTurnRunner();
     const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
@@ -313,6 +334,37 @@ describe('AiderPromptTurnRunner', () => {
       writeFileSync(join(root, 'verify.js'), 'console.log("ok");', 'utf8');
 
       expect(runner.resolveFiles(root, 'Fix the bug.')).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('resolveFiles ignores prompt-derived refs that escape the workspace', () => {
+    const runner = new AiderPromptTurnRunner();
+    const parent = mkdtempSync(join(tmpdir(), 'aider-files-parent-'));
+    const root = join(parent, 'workspace');
+
+    try {
+      mkdirSync(root);
+      writeFileSync(join(parent, 'outside.txt'), 'secret\n', 'utf8');
+      writeFileSync(join(root, 'verify.js'), 'console.log("ok");\n', 'utf8');
+
+      expect(runner.resolveFiles(root, 'Read ../outside.txt and verify.js')).toEqual(['verify.js']);
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
+  it('resolveFiles dedupes equivalent safe refs after normalization', () => {
+    const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
+
+    try {
+      writeFileSync(join(root, 'verify.js'), 'console.log("ok");\n', 'utf8');
+
+      expect(runner.resolveFiles(root, 'Read verify.js and ./verify.js and ./verify.js')).toEqual([
+        'verify.js',
+      ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

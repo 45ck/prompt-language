@@ -2,6 +2,7 @@ export interface PromptTurnInput {
   readonly cwd: string;
   readonly prompt: string;
   readonly model?: string | undefined;
+  readonly scopePrompt?: string | undefined;
 }
 
 export interface PromptTurnResult {

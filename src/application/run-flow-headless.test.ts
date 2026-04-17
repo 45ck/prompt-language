@@ -27,17 +27,23 @@ import { stringifyVariableValue } from '../domain/variable-value.js';
 
 class RecordingPromptRunner implements PromptTurnRunner {
   readonly prompts: string[] = [];
-  readonly calls: { cwd: string; prompt: string; model?: string }[] = [];
+  readonly calls: { cwd: string; prompt: string; model?: string; scopePrompt?: string }[] = [];
 
   constructor(
     private readonly effect?: (input: {
       cwd: string;
       prompt: string;
       model?: string;
+      scopePrompt?: string;
     }) => Promise<PromptTurnResult | void>,
   ) {}
 
-  async run(input: { cwd: string; prompt: string; model?: string }): Promise<PromptTurnResult> {
+  async run(input: {
+    cwd: string;
+    prompt: string;
+    model?: string;
+    scopePrompt?: string;
+  }): Promise<PromptTurnResult> {
     this.prompts.push(input.prompt);
     this.calls.push(input);
     const result = await this.effect?.(input);
@@ -429,6 +435,43 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.calls[0]?.model).toBe('explicit-model');
     expect(promptRunner.prompts[0]).toContain('[Internal — prompt-language context profile]');
     expect(promptRunner.prompts[0]).toContain('Applied profiles: reviewer');
+  });
+
+  it('passes the active captured prompt separately as scopePrompt', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-scope-prompt-'));
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 0,
+      madeProgress: true,
+    }));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: scope prompt relay',
+          '',
+          'flow:',
+          '  prompt: Edit src/app.js',
+          '  prompt: Edit README.md only',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(promptRunner.calls).toHaveLength(2);
+    expect(promptRunner.calls[1]?.prompt).toContain('Edit src/app.js');
+    expect(promptRunner.calls[1]?.prompt).toContain('Edit README.md only');
+    expect(promptRunner.calls[1]?.scopePrompt).toBe('Edit README.md only');
   });
 
   it('returns the persisted PLR-005 reason when capture falls back to empty string', async () => {

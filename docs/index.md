@@ -34,11 +34,12 @@ If a feature is not described in the product docs, treat it as unavailable today
 
 ## Start here for shipped usage
 
-| Doc                                          | What you'll get                                                                        |
-| -------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [Getting Started](guides/getting-started.md) | Install the runtime, run your first gate, and see the supervision loop work end to end |
-| [Language Guide](guides/language-guide.md)   | A high-level walkthrough of the runtime model and the shipped language surface         |
-| [How It Works](guides/guide.md)              | Hook lifecycle, variable state, gate trust model, and runtime mechanics                |
+| Doc                                                      | What you'll get                                                                                               |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [Getting Started](guides/getting-started.md)             | Install the runtime, run your first gate, and see the supervision loop work end to end                        |
+| [Claude Code and Codex](guides/claude-code-and-codex.md) | Install the Claude/Codex surfaces, verify hook behavior, toggle meta-prompting, and preserve PL inside skills |
+| [Language Guide](guides/language-guide.md)               | A high-level walkthrough of the runtime model and the shipped language surface                                |
+| [How It Works](guides/guide.md)                          | Hook lifecycle, variable state, gate trust model, and runtime mechanics                                       |
 
 ## Product entry points
 

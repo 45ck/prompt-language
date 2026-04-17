@@ -1,6 +1,6 @@
 # @45ck/prompt-language
 
-A verification-first supervision runtime for coding agents. It wraps Claude Code in a persistent state machine with deterministic control flow, verification gates, and state management.
+A verification-first supervision runtime for coding agents. It wraps supported harnesses such as Claude Code and Codex in a persistent state machine with deterministic control flow, verification gates, and state management.
 
 [![npm](https://img.shields.io/npm/v/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language) [![CI](https://github.com/45ck/prompt-language/actions/workflows/quality.yml/badge.svg)](https://github.com/45ck/prompt-language/actions/workflows/quality.yml) [![license](https://img.shields.io/npm/l/@45ck/prompt-language)](LICENSE) [![node](https://img.shields.io/node/v/@45ck/prompt-language)](package.json) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md) [![npm downloads](https://img.shields.io/npm/dm/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 
@@ -19,6 +19,8 @@ npx @45ck/prompt-language
 ```
 
 Requires [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) and Node.js >= 22. Also works with [Codex CLI](https://github.com/openai/codex), [Gemini CLI](https://github.com/google-gemini/gemini-cli), and other harnesses via `npx @45ck/prompt-language run --runner <name>`.
+
+For the full Claude Code and Codex walkthrough, including install verification, meta-prompt toggles, skill-aware wrapping, and terminal screenshots, see [docs/guides/claude-code-and-codex.md](docs/guides/claude-code-and-codex.md).
 
 ## Example
 
@@ -92,20 +94,21 @@ Full CLI documentation: [docs/reference/cli-reference.md](docs/reference/cli-ref
 
 ## Documentation
 
-| Topic                   | Link                                                                     |
-| ----------------------- | ------------------------------------------------------------------------ |
-| Getting started         | [docs/guides/getting-started.md](docs/guides/getting-started.md)         |
-| Language reference      | [docs/reference/index.md](docs/reference/index.md)                       |
-| DSL cheatsheet          | [docs/reference/dsl-cheatsheet.md](docs/reference/dsl-cheatsheet.md)     |
-| How the runtime works   | [docs/guides/guide.md](docs/guides/guide.md)                             |
-| Architecture and design | [docs/architecture.md](docs/architecture.md)                             |
-| Security model          | [docs/security.md](docs/security.md)                                     |
-| Examples                | [docs/examples/index.md](docs/examples/index.md)                         |
-| Proof examples          | [examples/public/](examples/public/)                                     |
-| Experiments             | [docs/experiments.md](docs/experiments.md)                               |
-| Troubleshooting         | [docs/operations/troubleshooting.md](docs/operations/troubleshooting.md) |
-| Roadmap                 | [docs/roadmap.md](docs/roadmap.md)                                       |
-| Full doc index          | [docs/index.md](docs/index.md)                                           |
+| Topic                   | Link                                                                         |
+| ----------------------- | ---------------------------------------------------------------------------- |
+| Getting started         | [docs/guides/getting-started.md](docs/guides/getting-started.md)             |
+| Claude Code and Codex   | [docs/guides/claude-code-and-codex.md](docs/guides/claude-code-and-codex.md) |
+| Language reference      | [docs/reference/index.md](docs/reference/index.md)                           |
+| DSL cheatsheet          | [docs/reference/dsl-cheatsheet.md](docs/reference/dsl-cheatsheet.md)         |
+| How the runtime works   | [docs/guides/guide.md](docs/guides/guide.md)                                 |
+| Architecture and design | [docs/architecture.md](docs/architecture.md)                                 |
+| Security model          | [docs/security.md](docs/security.md)                                         |
+| Examples                | [docs/examples/index.md](docs/examples/index.md)                             |
+| Proof examples          | [examples/public/](examples/public/)                                         |
+| Experiments             | [docs/experiments.md](docs/experiments.md)                                   |
+| Troubleshooting         | [docs/operations/troubleshooting.md](docs/operations/troubleshooting.md)     |
+| Roadmap                 | [docs/roadmap.md](docs/roadmap.md)                                           |
+| Full doc index          | [docs/index.md](docs/index.md)                                               |
 
 ## Tooling
 

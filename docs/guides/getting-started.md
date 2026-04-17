@@ -2,6 +2,8 @@
 
 See the runtime work in 2 minutes. You'll create a buggy file, add a gate, and watch Claude fix it automatically.
 
+If you want the full harness walkthrough for Claude Code or Codex, including meta-prompt toggles, skill-preservation behavior, and terminal screenshots, start with [Claude Code and Codex](claude-code-and-codex.md).
+
 ## Prerequisites
 
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) installed

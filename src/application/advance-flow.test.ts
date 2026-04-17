@@ -4615,6 +4615,35 @@ describe('autoAdvanceNodes — while ask condition (AI-evaluated)', () => {
     platformSpy.mockRestore();
   });
 
+  it('normalizes chained test -f grounding commands on Windows', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const run = vi.fn(async () => ({ exitCode: 0, stdout: '', stderr: '' }));
+    const runner: CommandRunner = { run };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"all files exist?"',
+      [createPromptNode('p1', 'work')],
+      3,
+      undefined,
+      undefined,
+      'test -f docs/prd.md && test -f docs/acceptance-criteria.md && test -f docs/personas.md',
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt } = await autoAdvanceNodes(state, runner, captureReader);
+    expect(run).toHaveBeenCalledWith(
+      `powershell -NoProfile -Command "if ((Test-Path -LiteralPath 'docs/prd.md') -and (Test-Path -LiteralPath 'docs/acceptance-criteria.md') -and (Test-Path -LiteralPath 'docs/personas.md')) { exit 0 } else { exit 1 }"`,
+    );
+    expect(capturedPrompt).toBe('work');
+
+    platformSpy.mockRestore();
+  });
+
   it('normalizes ls grounding commands to dir on Windows', async () => {
     const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
     const run = vi.fn(async () => ({ exitCode: 0, stdout: 'files', stderr: '' }));
@@ -5578,6 +5607,37 @@ describe('autoAdvanceNodes — if grounded-by fast path', () => {
 });
 
 describe('autoAdvanceNodes — grounded review shell preparation', () => {
+  it('normalizes chained test -f review grounding commands on Windows', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    const runner: CommandRunner = {
+      run: vi.fn().mockResolvedValue({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const reviewNode = createReviewNode(
+      'rv1',
+      [createPromptNode('p1', 'Draft')],
+      2,
+      undefined,
+      'test -f docs/prd.md && test -f docs/acceptance-criteria.md && test -f docs/personas.md',
+    );
+    const spec = createFlowSpec('test', [reviewNode, createPromptNode('p2', 'Passed')]);
+    const state = {
+      ...createSessionState('s1', spec),
+      currentNodePath: [0, 1] as const,
+      nodeProgress: {
+        rv1: { iteration: 1, maxIterations: 2, status: 'running' as const },
+      },
+    };
+
+    const result = await autoAdvanceNodes(state, runner);
+
+    expect(result.capturedPrompt).toBe('Passed');
+    expect(runner.run).toHaveBeenCalledWith(
+      `powershell -NoProfile -Command "if ((Test-Path -LiteralPath 'docs/prd.md') -and (Test-Path -LiteralPath 'docs/acceptance-criteria.md') -and (Test-Path -LiteralPath 'docs/personas.md')) { exit 0 } else { exit 1 }"`,
+    );
+
+    platformSpy.mockRestore();
+  });
+
   it('shell-protects grounded review commands and preserves flow env', async () => {
     const runner: CommandRunner = {
       run: vi.fn().mockResolvedValue({ exitCode: 0, stdout: 'review ok', stderr: '' }),

@@ -1,0 +1,46 @@
+library: acceptance
+
+export flow local_verification(pkg_mgr="pnpm"):
+  run: ${pkg_mgr} lint
+  run: ${pkg_mgr} typecheck
+  run: ${pkg_mgr} test
+
+  review criteria: "No red tests, no skipped checks, no TODOs in hot paths. The acceptance criteria in docs/acceptance-criteria.md must be traceable to green tests." grounded-by "${pkg_mgr} lint && ${pkg_mgr} typecheck && ${pkg_mgr} test" max 2
+    prompt: Inspect verification output and repair violations. Do not weaken lint rules, disable tests, or add skips.
+  end
+
+export gates phase_gates(pkg_mgr="pnpm"):
+  gate lint: ${pkg_mgr} lint
+  gate typecheck: ${pkg_mgr} typecheck
+  gate tests: ${pkg_mgr} test
+  file_exists docs/prd.md
+  file_exists docs/acceptance-criteria.md
+  file_exists docs/architecture/domain-model.md
+  file_exists docs/api-contracts.md
+  file_exists docs/data-model.md
+
+export gates ship_gates(pkg_mgr="pnpm"):
+  gate lint: ${pkg_mgr} lint
+  gate typecheck: ${pkg_mgr} typecheck
+  gate tests: ${pkg_mgr} test
+  file_exists docs/prd.md
+  file_exists docs/acceptance-criteria.md
+  file_exists docs/personas.md
+  file_exists docs/use-cases.md
+  file_exists docs/non-functional-requirements.md
+  file_exists docs/architecture/context.md
+  file_exists docs/architecture/container.md
+  file_exists docs/architecture/domain-model.md
+  file_exists docs/api-contracts.md
+  file_exists docs/data-model.md
+  file_exists docs/adr/adr-001-stack.md
+  file_exists README.md
+  file_exists AGENTS.md
+  file_exists docs/traceability.md
+  file_exists docs/test-strategy.md
+  file_exists CHANGELOG.md
+  file_exists docs/release-notes.md
+  file_exists docs/known-issues.md
+  file_exists docs/handover.md
+  file_exists docs/product-summary.md
+  file_exists docs/demo-script.md

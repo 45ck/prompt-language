@@ -1,0 +1,4 @@
+Goal: discovery phase for the bounded CRM factory proof
+
+flow run(target_market, stack):
+  prompt: Produce discovery artifacts only (no project scaffolding beyond docs). Write `docs/DISCOVERY.md` capturing the target market, scope boundaries, core entities, and key workflows for a CRM built with ${stack} for ${target_market}.

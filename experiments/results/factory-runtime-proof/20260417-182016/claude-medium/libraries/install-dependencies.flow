@@ -1,0 +1,8 @@
+library: deps
+
+export flow ensure_lockfile(pkg_mgr="pnpm"):
+  prompt: Ensure the workspace has a package.json with lint, typecheck, and test scripts wired to the chosen stack. Install dependencies only if a package.json exists; do not invent a stack if the manifest has not been written yet.
+  run: node -e "const fs=require('node:fs'); if (!fs.existsSync('package.json')) { console.log('no package.json yet; skipping install'); process.exit(0); } const {spawnSync}=require('node:child_process'); const mgr=process.argv[1]; const r=spawnSync(mgr,['install'],{stdio:'inherit',shell:true}); process.exit(r.status ?? 0)" ${pkg_mgr}
+
+export flow verify_scripts(pkg_mgr="pnpm"):
+  run: node -e "const fs=require('node:fs'); if (!fs.existsSync('package.json')) { console.log('no package.json'); process.exit(0); } const p=JSON.parse(fs.readFileSync('package.json','utf8')); const missing=['lint','typecheck','test'].filter(s=>!p.scripts||!p.scripts[s]); if (missing.length) { console.error('missing scripts:', missing.join(',')); process.exit(1); } console.log('scripts OK');"

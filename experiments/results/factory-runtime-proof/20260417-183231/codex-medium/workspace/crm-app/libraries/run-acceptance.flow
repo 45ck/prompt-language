@@ -1,0 +1,7 @@
+Goal: acceptance helpers for the bounded CRM factory proof
+
+flow local_verification(pkg_mgr):
+  prompt: Perform local verification appropriate for a documentation-only slice. Ensure discovery and build documentation exists and record a short checklist in `docs/ACCEPTANCE.md`. Do not run long installs or generate full app code.
+
+flow phase_gates(pkg_mgr):
+  prompt: Verify the phase gates for the bounded proof: `docs/DISCOVERY.md`, `docs/BUILD.md`, and `docs/ACCEPTANCE.md` exist, and `factory-probe.flow` contains only in-repo relative imports. Record pass/fail in `docs/ACCEPTANCE.md`.

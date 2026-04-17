@@ -792,6 +792,42 @@ function parseAskVerdict(captured: string): boolean | null {
   return null;
 }
 
+function stripMatchingQuotes(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
+}
+
+function quotePowerShellLiteral(value: string): string {
+  return `'${stripMatchingQuotes(value).replace(/'/g, "''")}'`;
+}
+
+function normalizeWindowsTestFileChain(command: string): string | undefined {
+  const segments = command
+    .split(/\s*&&\s*/)
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+  if (segments.length < 2) {
+    return undefined;
+  }
+
+  const checks = segments.map(
+    (segment) => /^test\s+-f\s+(.+)$/i.exec(segment)?.[1]?.trim() ?? null,
+  );
+  if (checks.some((check) => check == null || check.length === 0)) {
+    return undefined;
+  }
+
+  const condition = checks
+    .map((check) => `(Test-Path -LiteralPath ${quotePowerShellLiteral(check!)})`)
+    .join(' -and ');
+  return `powershell -NoProfile -Command "if (${condition}) { exit 0 } else { exit 1 }"`;
+}
+
 function normalizeGroundingCommand(command: string): string {
   if (process.platform !== 'win32') {
     return command;
@@ -805,6 +841,11 @@ function normalizeGroundingCommand(command: string): string {
   const grepMatch = /^\s*grep(\s+.+)$/i.exec(command);
   if (grepMatch?.[1]) {
     return `findstr${grepMatch[1]}`;
+  }
+
+  const chainedTestFCommand = normalizeWindowsTestFileChain(command);
+  if (chainedTestFCommand) {
+    return chainedTestFCommand;
   }
 
   const testFMatch = /^\s*test\s+-f\s+(.+)$/i.exec(command);

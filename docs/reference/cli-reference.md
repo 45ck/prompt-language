@@ -172,7 +172,7 @@ Notes:
 4. OpenCode models use the `provider/model` form, for example `opencode/gpt-5-nano`.
 5. Before execution starts, `run` performs shared preflight for runner availability and built-in gate prerequisites. A blocked preflight exits with code `2`.
 6. On this workstation, prefer hosted harness models for headless runner paths; do not install local models here just to exercise `run`.
-7. As of April 17, 2026, the default experiment wiring also pins Claude and Codex lanes to medium reasoning effort via `PROMPT_LANGUAGE_CLAUDE_EFFORT` and `PROMPT_LANGUAGE_CODEX_REASONING_EFFORT` unless the caller overrides them.
+7. As of April 18, 2026, the checked-in factory-runtime evidence packs pin Claude and Codex lanes to medium reasoning effort via `PROMPT_LANGUAGE_CLAUDE_EFFORT` and `PROMPT_LANGUAGE_CODEX_REASONING_EFFORT` unless the caller overrides them. Treat that as an evaluation configuration of record, not as a product guarantee or universal recommendation.
 8. As of April 10, 2026, `opencode/gpt-5-nano` passed smoke test `A` through the same OpenCode headless path, which confirms the runner surface can work when the model is tool-capable.
 9. The bounded Gemma comparison remains documented in [OpenCode Gemma 4 Plan](../evaluation/opencode-gemma-plan.md); it is an evaluation note, not the default setup path.
 10. `run --json` emits `{ status, diagnostics, outcomes, reason? }` for all shipped runners and uses explicit exit codes: `0` success, `1` terminal unsuccessful outcome, `2` blocked/profile-incompatible execution, `3` failed execution.
@@ -191,7 +191,7 @@ npx @45ck/prompt-language ci --runner opencode --model opencode/gpt-5-nano my.fl
 
 This is the same headless runner path used by `run --runner claude|codex|opencode|ollama|aider`, so prompt quality and tool-use behavior depend on the selected model. On this workstation, `ci --runner codex` defaults to `gpt-5.2` when `--model` is omitted.
 
-As of April 17, 2026, the default experiment wiring also pins Claude and Codex lanes to medium reasoning effort via `PROMPT_LANGUAGE_CLAUDE_EFFORT` and `PROMPT_LANGUAGE_CODEX_REASONING_EFFORT` unless the caller overrides them.
+As of April 18, 2026, the checked-in factory-runtime evidence packs also pin Claude and Codex lanes to medium reasoning effort via `PROMPT_LANGUAGE_CLAUDE_EFFORT` and `PROMPT_LANGUAGE_CODEX_REASONING_EFFORT` unless the caller overrides them. That is the documented experiment default used for captured evidence, not a promise that medium is always the best setting.
 
 `ci` also runs the shared execution preflight before starting the runner. A blocked preflight exits with code `2` instead of attempting execution.
 

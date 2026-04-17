@@ -1,0 +1,7 @@
+Goal: minimal scaffolding helpers for the bounded CRM factory proof
+
+flow bootstrap_directories():
+  prompt: Ensure repo directories exist for documentation output: create `docs/` (and keep changes minimal).
+
+flow ensure_package_manifest(pkg_mgr):
+  prompt: Ensure a minimal `package.json` exists for ${pkg_mgr} with standard quality-gate script placeholders (`format:check`, `lint`, `spell`, `typecheck`, `test`, `ci`, `eval:smoke`). Keep scope to build-ready documentation; do not add full application scaffolding.

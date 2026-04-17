@@ -1,0 +1,9 @@
+{
+  "name": "crm-app",
+  "private": true,
+  "scripts": {
+    "lint": "echo lint",
+    "typecheck": "echo typecheck",
+    "test": "echo test"
+  }
+}

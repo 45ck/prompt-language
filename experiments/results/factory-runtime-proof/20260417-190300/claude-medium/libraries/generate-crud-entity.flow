@@ -1,0 +1,8 @@
+library: crud
+
+export flow generate(entity="contact", pkg_mgr="pnpm"):
+  prompt: Generate CRUD for entity "${entity}" end-to-end. Step 1 — packages/api: extend docs/data-model.md, add a migration or schema entry, and implement repository, service, and HTTP handlers with validation. Step 2 — apps/web: list view, detail view, create and edit forms, wired to the API with optimistic UX where safe. Step 3 — tests: unit tests for the service layer plus at least one integration test covering the happy path and one negative path. Keep the change grounded in docs/prd.md and docs/acceptance-criteria.md. Do not invent fields not justified by those docs.
+
+  review criteria: "CRUD for ${entity} must compile, lint clean, typecheck, and have green tests. No placeholder handlers, no TODOs in hot paths." grounded-by "${pkg_mgr} lint && ${pkg_mgr} typecheck && ${pkg_mgr} test" max 3
+    prompt: Review the ${entity} CRUD slice end-to-end. Fix broken tests, contract drift between API and web, missing validation, and any dangling TODOs. Apply the fixes directly.
+  end

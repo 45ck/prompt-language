@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "diagnostics": [],
+  "outcomes": [],
+  "reason": "Prompt runner exited with code 124. OpenAI Codex v0.121.0 (research preview) -------- workdir: D:\\Visual Studio Projects\\prompt-language\\experiments\\results\\factory-runtime-proof\\20260417-183231\\c..."
+}

@@ -1,0 +1,17 @@
+Goal: prove the prompt-language CRM factory can run a bounded discovery-only multi-agent slice in ${crm_workspace}
+
+memory:
+  crm_target_market
+  crm_stack
+  crm_workspace
+
+import "phases/discovery.flow" as discovery
+import "libraries/scaffold-project.flow" as scaffold
+
+flow:
+  remember key="crm_target_market" value="small-to-medium sales and service teams"
+  remember key="crm_stack" value="Next.js + TypeScript + PostgreSQL + Prisma"
+  remember key="crm_workspace" value="D:/Visual Studio Projects/prompt-language/experiments/results/factory-runtime-proof/20260417-190300/claude-medium/workspace/crm-app"
+
+  use scaffold.bootstrap_directories()
+  use discovery.run(target_market="${crm_target_market}", stack="${crm_stack}")

@@ -1,0 +1,16 @@
+library: release
+
+export flow run():
+  prompt: Phase 3 — Release. Produce release artifacts grounded in the implemented product. Do not invent features that are not in the repo.
+
+  spawn "release-notes"
+    prompt: Write CHANGELOG.md, docs/release-notes.md, docs/known-issues.md, and docs/handover.md from the current repo state. Ground every entry in actual commits and tests.
+  end
+
+  spawn "product-demo"
+    prompt: Write docs/product-summary.md and docs/demo-script.md so the product narrative matches the shipped scope. Prefer stable, accessible selectors for any demo automation.
+  end
+
+  await all
+
+  approve "Final release checkpoint. Approve to finalize or cancel to keep iterating." timeout 60

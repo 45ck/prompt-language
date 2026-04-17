@@ -18,18 +18,19 @@ The docs in this section are paired with the checked-in dataset bank under [expe
 
 ## Product evidence
 
-| Doc                                                                                               | Focus                                                                                             |
-| ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| [What Works Now](what-works-now.md)                                                               | Short public summary of the strongest proven surfaces and caveats                                 |
-| [Eval Test Matrix](eval-test-matrix.md)                                                           | Automated coverage expectations for parser, runtime, datasets, and CLI                            |
-| [Eval Analysis](eval-analysis.md)                                                                 | Comparative A/B results, latency analysis, and differentiator taxonomy                            |
-| [Codex Parity Matrix](eval-parity-matrix.md)                                                      | Current parity bar plus checked-in execution status for tests, CI, smoke, and supported-host gaps |
-| [Codex Parity Delta Analysis](codex-parity-delta-analysis.md)                                     | Current delta classification and exact remaining full-run evidence gap                            |
-| [v0.4.0 Release Readiness Checklist](v0.4.0-release-readiness-checklist.md)                       | Pre-tag release gate for `v0.4.0`, mapping each required checklist item to current repo evidence  |
-| [2026-04-11 Codex Parity Execution Evidence](2026-04-11-codex-parity-execution-evidence.md)       | Branch-local execution evidence note separating deterministic passes from environment blockers    |
-| [Live Validation Evidence](eval-live-validation-evidence.md)                                      | Required smoke evidence format and blocked-host classification                                    |
-| [Smoke Coverage Status](test-design-smoke-gaps.md)                                                | Current smoke coverage, quick-suite evidence, and remaining gaps                                  |
-| [Operator Shell Rollout and Promotion Evidence](operator-shell-rollout-and-promotion-evidence.md) | Rollout gates, blocker classes, troubleshooting, and promotion evidence for operator-shell slices |
+| Doc                                                                                                                                 | Focus                                                                                                           |
+| ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| [What Works Now](what-works-now.md)                                                                                                 | Short public summary of the strongest proven surfaces and caveats                                               |
+| [Eval Test Matrix](eval-test-matrix.md)                                                                                             | Automated coverage expectations for parser, runtime, datasets, and CLI                                          |
+| [Eval Analysis](eval-analysis.md)                                                                                                   | Comparative A/B results, latency analysis, and differentiator taxonomy                                          |
+| [Codex Parity Matrix](eval-parity-matrix.md)                                                                                        | Current parity bar plus checked-in execution status for tests, CI, smoke, and supported-host gaps               |
+| [Codex Parity Delta Analysis](codex-parity-delta-analysis.md)                                                                       | Current delta classification and exact remaining full-run evidence gap                                          |
+| [v0.4.0 Release Readiness Checklist](v0.4.0-release-readiness-checklist.md)                                                         | Pre-tag release gate for `v0.4.0`, mapping each required checklist item to current repo evidence                |
+| [2026-04-11 Codex Parity Execution Evidence](2026-04-11-codex-parity-execution-evidence.md)                                         | Branch-local execution evidence note separating deterministic passes from environment blockers                  |
+| [2026-04-18 Runtime Factory Proof: Codex + Claude, Medium Effort](2026-04-18-runtime-factory-proof-codex-claude-medium-evidence.md) | Bounded runtime-backed factory evidence across both supported headless lanes, with current non-terminal caveats |
+| [Live Validation Evidence](eval-live-validation-evidence.md)                                                                        | Required smoke evidence format and blocked-host classification                                                  |
+| [Smoke Coverage Status](test-design-smoke-gaps.md)                                                                                  | Current smoke coverage, quick-suite evidence, and remaining gaps                                                |
+| [Operator Shell Rollout and Promotion Evidence](operator-shell-rollout-and-promotion-evidence.md)                                   | Rollout gates, blocker classes, troubleshooting, and promotion evidence for operator-shell slices               |
 
 ## Research continuation
 

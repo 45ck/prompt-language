@@ -32,6 +32,15 @@ they are empty and do not establish a production trust root yet.
 Current claim-eligibility status: **zero runs in the repo satisfy all
 gates today**. See `docs/strategy/program-status.md` §Verification state.
 
+Runtime-backed artifact bundles are still useful below that bar. For example,
+the bounded factory proof series in
+[`experiments/results/factory-runtime-proof/`](../experiments/results/factory-runtime-proof/)
+persists `session-state.json`, `provenance.jsonl`, and `audit.jsonl` on both
+Codex and Claude lanes. That proves the PL runtime actually advanced state and
+recorded agent activity, but it does **not** by itself make those runs
+claim-eligible. Verifier closure, preflight readiness, and attestation still
+decide whether a bundle can support a thesis-level claim.
+
 ## Why this exists
 
 The thesis claims the PL runtime drove an evaluation run, not the harness

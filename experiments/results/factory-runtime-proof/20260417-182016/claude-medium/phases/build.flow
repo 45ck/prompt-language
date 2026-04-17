@@ -1,0 +1,14 @@
+library: build
+
+export flow run(stack="Next.js + TypeScript + PostgreSQL + Prisma"):
+  prompt: Phase 2 — Build. Stack is ${stack}. Produce an architecture and data model that supports the entities listed in docs/prd.md, then implement them. Keep commits small and traceable to acceptance criteria.
+
+  spawn "architecture" with vars stack
+    prompt: Using docs/prd.md and the research pack, write docs/architecture/context.md, docs/architecture/container.md, docs/architecture/domain-model.md, docs/architecture/sequence-contact-to-opportunity.md, docs/api-contracts.md, docs/data-model.md, and docs/adr/adr-001-stack.md. Keep the MVP bounded; no speculative frameworks.
+  end
+
+  spawn "engineering-docs" with vars stack
+    prompt: Write README.md, AGENTS.md, docs/traceability.md, and docs/test-strategy.md. Traceability maps every acceptance criterion to a test and a demo step.
+  end
+
+  await all

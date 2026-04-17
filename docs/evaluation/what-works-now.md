@@ -27,12 +27,23 @@ That is the clearest place where prompt-language adds value over plain prompting
 - running seed eval suites against checked-in datasets
 - using headless Codex or OpenCode runner paths for cheaper repo-local experimentation
 
+The current repo also has bounded **runtime-backed factory evidence** for both
+Codex and Claude on the same discovery-only CRM slice. The latest checked-in
+series under [`experiments/results/factory-runtime-proof/`](../../experiments/results/factory-runtime-proof/)
+shows both lanes persisting PL state/provenance/audit artifacts, spawning child
+workers, and writing discovery docs through the runtime. That is useful proof
+that the PL runner path is real on both hosts, but it is still a partial proof:
+the latest bundles remain non-terminal and are not verifier-closed or
+attested. See
+[2026-04-18 Runtime Factory Proof: Codex + Claude, Medium Effort](2026-04-18-runtime-factory-proof-codex-claude-medium-evidence.md).
+
 ## What is not fully proven yet
 
 - supported-host live smoke with Claude access in a supported host environment: `npm run eval:smoke` is still not closed out by native-Windows evidence alone
 - full Codex parity on a supported Linux/macOS/WSL host with live smoke plus compare and verify reruns
 - broad thesis claims beyond the seeded E1 dataset bank and the historical comparative eval set
 - larger orchestration-shell positioning beyond the current supervision-runtime boundary
+- end-to-end factory completion claims for the bounded Codex/Claude discovery probe: the latest runtime-backed bundles still pause before a clean terminal outcome
 
 That means the full-run parity bead is still open on evidence capture, not on a
 known Codex-specific runtime break.

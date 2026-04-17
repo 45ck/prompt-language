@@ -1,0 +1,6 @@
+{
+  "status": "failed",
+  "diagnostics": [],
+  "outcomes": [],
+  "reason": "Prompt runner exited with code 124. Claude timed out after 600000ms waiting for output."
+}

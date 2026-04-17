@@ -1,0 +1,4 @@
+Goal: build-ready documentation phase for the bounded CRM factory proof
+
+flow run(stack):
+  prompt: Produce build-ready documentation only. Write `docs/BUILD.md` describing how to scaffold and run a minimal CRM repo using ${stack} (npm scripts, local env, database, migrations). Do not implement application features.

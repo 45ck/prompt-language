@@ -1,0 +1,4 @@
+[prompt-language] Flow: build | Status: library
+
+prompt: Build is documentation-only in this proof. Ensure `docs/build.md` documents a build-ready plan for the stack (Next.js + TypeScript + PostgreSQL + Prisma) and npm scripts expected in the eventual scaffold.
+

@@ -1,0 +1,14 @@
+{
+  "name": "crm-app",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "format:check": "echo \"TODO: add formatter\" && exit 0",
+    "lint": "echo \"TODO: add linter\" && exit 0",
+    "spell": "echo \"TODO: add spellcheck\" && exit 0",
+    "typecheck": "echo \"TODO: add typecheck\" && exit 0",
+    "test": "echo \"TODO: add tests\" && exit 0",
+    "ci": "npm run format:check && npm run lint && npm run spell && npm run typecheck && npm run test",
+    "eval:smoke": "echo \"TODO: add smoke eval\" && exit 0"
+  }
+}

@@ -1,0 +1,8 @@
+=== attempt 1 2026-04-18T04:56:49.4078665+10:00 ===
+{
+  "status": "failed",
+  "diagnostics": [],
+  "outcomes": [],
+  "reason": "Flow paused before reaching completion."
+}
+=== attempt 2 2026-04-18T05:13:08.4775146+10:00 ===

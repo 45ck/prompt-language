@@ -39,6 +39,13 @@ End-to-end SaaS product factory generating a CRM application with entity generat
 
 Differential tests (Z-series) that prove the runtime is executing live, not replaying recorded outputs. Each test depends on fresh UUIDs, real child PIDs, capture-gated branches, or hash-matched send/receive payloads. See [docs/thesis-verification.md](thesis-verification.md) and [docs/tracing-and-provenance.md](tracing-and-provenance.md).
 
+The repo also carries a smaller bounded runtime-proof series under
+[experiments/results/factory-runtime-proof/](../experiments/results/factory-runtime-proof/)
+that exercises the CRM discovery slice through the same PL runtime-backed
+Claude/Codex headless paths. That series is useful as execution evidence, but
+it is not an end-to-end factory completion claim. See
+[2026-04-18 Runtime Factory Proof: Codex + Claude, Medium Effort](evaluation/2026-04-18-runtime-factory-proof-codex-claude-medium-evidence.md).
+
 ### E7: Marketing Factory
 
 Marketing website generation comparing PL factory against solo prompting. PL achieved perfect 30/30 scores across three consecutive runs versus a solo average of 28.3/30. Located in [experiments/marketing-factory/](../experiments/marketing-factory/).

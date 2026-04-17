@@ -1,0 +1,29 @@
+Goal: prove the prompt-language CRM factory can run a bounded multi-agent slice in ${crm_workspace}
+
+memory:
+  crm_target_market
+  crm_stack
+  crm_package_manager
+  crm_workspace
+
+import "../../phases/discovery.flow" as discovery
+import "../../phases/build.flow" as build
+import "../../libraries/scaffold-project.flow" as scaffold
+import "../../libraries/run-acceptance.flow" as acceptance
+
+flow:
+  remember key="crm_target_market" value="small-to-medium sales and service teams"
+  remember key="crm_stack" value="Next.js + TypeScript + PostgreSQL + Prisma"
+  remember key="crm_package_manager" value="npm"
+  remember key="crm_workspace" value="D:/Visual Studio Projects/prompt-language/experiments/results/factory-runtime-proof/20260417-183231/claude-medium/workspace/crm-app"
+
+  prompt: You are operating a bounded prompt-language factory proof. Work only inside ${crm_workspace}. Treat it as the target repo root. Use the flow exactly as written and keep the scope to discovery plus build-ready documentation. Do not invent extra phases.
+
+  use scaffold.bootstrap_directories()
+  use scaffold.ensure_package_manifest(pkg_mgr="${crm_package_manager}")
+  use discovery.run(target_market="${crm_target_market}", stack="${crm_stack}")
+  use build.run(stack="${crm_stack}")
+  use acceptance.local_verification(pkg_mgr="${crm_package_manager}")
+
+done when:
+  use acceptance.phase_gates(pkg_mgr="${crm_package_manager}")

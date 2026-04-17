@@ -67,6 +67,7 @@ import {
   runHarnessFlow,
   verifyTraceForCwd,
 } from './harness.mjs';
+import { isHarnessAccessBlocked } from './smoke-blockers.mjs';
 
 const TRACE_ENABLED = process.env.PL_TRACE === '1';
 
@@ -265,14 +266,12 @@ function assertHarnessReady() {
     }
   } catch (error) {
     const output = `${error?.stdout ?? ''}\n${error?.stderr ?? ''}\n${error?.message ?? ''}`;
-    if (
-      /does not have access to Claude|login again|contact your administrator|auth/i.test(output)
-    ) {
+    if (isHarnessAccessBlocked(output)) {
       console.error(
-        `[smoke-test] BLOCKED — ${getHarnessLabel()} login/access is unavailable in this environment.`,
+        `[smoke-test] BLOCKED — ${getHarnessLabel()} login/access/quota is unavailable in this environment.`,
       );
       console.error(
-        `[smoke-test] \`${getFlowCommandLabel()}\` returned an authorization error; smoke scenarios were not run.`,
+        `[smoke-test] \`${getFlowCommandLabel()}\` returned an authorization or quota error; smoke scenarios were not run.`,
       );
       process.exit(2);
     }
@@ -2744,6 +2743,22 @@ async function testAYAgentSkillsSpawn() {
 
 async function testAZProfileBoundSpawn() {
   await withTempDir(async (dir) => {
+    await writeFile(
+      join(dir, 'prompt-language.config.json'),
+      JSON.stringify(
+        {
+          profiles: {
+            default: {
+              systemPreamble: 'Use the default reviewer profile.',
+            },
+          },
+        },
+        null,
+        2,
+      ),
+      'utf-8',
+    );
+
     const prompt = [
       'Goal: test profile binding on spawn',
       '',

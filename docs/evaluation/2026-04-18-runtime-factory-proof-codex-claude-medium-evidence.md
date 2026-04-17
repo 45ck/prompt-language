@@ -9,9 +9,9 @@ The strongest honest claim from this series is:
 
 - prompt-language advanced a real bounded CRM-factory discovery slice through the PL runtime on both Codex and Claude
 - provenance-backed bundles in this series show both lanes persisting `.prompt-language/session-state.json`, `provenance.jsonl`, and `audit.jsonl`
-- the latest built-runtime Codex rerun (`20260418-055251`) reaches a bounded clean terminal outcome through `await all` and `review`
-- the latest built-runtime Claude rerun (`20260418-055251`) materializes child `.prompt-language-discovery-*` state directories and child audit logs, but the parent still times out before closure
-- this is bounded runtime-backed evidence for a real runner path on both hosts, plus a bounded clean completion datapoint on Codex only; it is not a clean end-to-end factory completion claim for both hosts
+- the latest committed clean bounded completion datapoint is `20260418-083500/codex-medium`, which reaches `status: "completed"` with both spawned discovery children completed, `await all` closed, and review passed
+- the latest committed Claude terminal bundle is `20260418-074500/claude-medium`, but it closes with both spawned children recorded `failed`; that bundle proves the runtime path is real, but under the current tree it is evidence of the old await-integrity gap rather than a clean success
+- this is bounded runtime-backed evidence for a real runner path on both hosts, plus one clean bounded completion datapoint on Codex; it is not a clean end-to-end factory completion claim for both hosts
 
 This note is **runtime-backed evidence**, not **claim-eligible evidence**.
 These bundles are not presented as verifier-closed or attested runs, so they
@@ -45,32 +45,32 @@ fix" as "after the built runtime used in the checked-in bundle", not merely
 | `20260417-190300` | `claude-medium` | PL session paused at review prompt; `_review_result.reason = Grounded review checks failed with exit code 1.`   | Claude advanced the same discovery slice through PL into review                     | Blocked by Windows `grounded-by` shell translation                       |
 | `20260418-044547` | `codex-medium`  | Four resume attempts all pause before completion; session remains active at node `8` with spawned children      | Post-fix Codex lane still proves runtime-backed spawn/await and artifact production | Non-terminal                                                             |
 | `20260418-044547` | `claude-medium` | Session remains active at node `9.0` after review-loop entry                                                    | Post-fix Claude no longer fails on the broken Windows `grounded-by` path            | Still non-terminal; outer rerun wrapper timed out before closure         |
-| `20260418-055251` | `codex-medium`  | Parent `session-state.json` reaches `status: "completed"`; `await all` runs through 65 polls and review passes  | Built-runtime Codex lane now has a bounded clean terminal outcome through review    | Bundle is stronger on completion than provenance completeness            |
-| `20260418-055251` | `claude-medium` | Parent run still times out before closure, but child `.prompt-language-discovery-*` dirs and child audits exist | External child-session path now materializes Claude child state on disk             | Parent still non-terminal; no bounded clean completion on Claude         |
+| `20260418-074500` | `claude-medium` | Parent `session-state.json` reaches `status: "completed"` with both spawned children recorded `failed`          | Claude lane reached a terminal PL outcome with provenance/audit artifacts on disk   | This was a false-clean await result under the old runtime semantics      |
+| `20260418-083500` | `codex-medium`  | Parent `session-state.json` reaches `status: "completed"`; both spawned children are `completed`; review passes | Clean bounded Codex completion through `await all` and `review`, with provenance    | Bounded discovery-only slice, not a full claim-eligible factory run      |
 
 ## Strongest artifacts
 
-Post-fix provenance-backed proof bundle:
+Latest committed provenance-backed proof bundles:
 
 - Codex:
-  [`20260418-044547/codex-medium/pl-run.log`](../../experiments/results/factory-runtime-proof/20260418-044547/codex-medium/pl-run.log)
-  [`20260418-044547/codex-medium/workspace/crm-app/.prompt-language/session-state.json`](../../experiments/results/factory-runtime-proof/20260418-044547/codex-medium/workspace/crm-app/.prompt-language/session-state.json)
-  [`20260418-044547/codex-medium/workspace/crm-app/.prompt-language/provenance.jsonl`](../../experiments/results/factory-runtime-proof/20260418-044547/codex-medium/workspace/crm-app/.prompt-language/provenance.jsonl)
-  [`20260418-044547/codex-medium/workspace/crm-app/.prompt-language/audit.jsonl`](../../experiments/results/factory-runtime-proof/20260418-044547/codex-medium/workspace/crm-app/.prompt-language/audit.jsonl)
+  [`20260418-083500/codex-medium/pl-run.log`](../../experiments/results/factory-runtime-proof/20260418-083500/codex-medium/pl-run.log)
+  [`20260418-083500/codex-medium/workspace/crm-app/.prompt-language/session-state.json`](../../experiments/results/factory-runtime-proof/20260418-083500/codex-medium/workspace/crm-app/.prompt-language/session-state.json)
+  [`20260418-083500/codex-medium/workspace/crm-app/.prompt-language/provenance.jsonl`](../../experiments/results/factory-runtime-proof/20260418-083500/codex-medium/workspace/crm-app/.prompt-language/provenance.jsonl)
+  [`20260418-083500/codex-medium/workspace/crm-app/.prompt-language/audit.jsonl`](../../experiments/results/factory-runtime-proof/20260418-083500/codex-medium/workspace/crm-app/.prompt-language/audit.jsonl)
 - Claude:
-  [`20260418-044547/claude-medium/pl-run.log`](../../experiments/results/factory-runtime-proof/20260418-044547/claude-medium/pl-run.log)
-  [`20260418-044547/claude-medium/workspace/crm-app/.prompt-language/session-state.json`](../../experiments/results/factory-runtime-proof/20260418-044547/claude-medium/workspace/crm-app/.prompt-language/session-state.json)
-  [`20260418-044547/claude-medium/workspace/crm-app/.prompt-language/provenance.jsonl`](../../experiments/results/factory-runtime-proof/20260418-044547/claude-medium/workspace/crm-app/.prompt-language/provenance.jsonl)
-  [`20260418-044547/claude-medium/workspace/crm-app/.prompt-language/audit.jsonl`](../../experiments/results/factory-runtime-proof/20260418-044547/claude-medium/workspace/crm-app/.prompt-language/audit.jsonl)
+  [`20260418-074500/claude-medium/pl-run.log`](../../experiments/results/factory-runtime-proof/20260418-074500/claude-medium/pl-run.log)
+  [`20260418-074500/claude-medium/workspace/crm-app/.prompt-language/session-state.json`](../../experiments/results/factory-runtime-proof/20260418-074500/claude-medium/workspace/crm-app/.prompt-language/session-state.json)
+  [`20260418-074500/claude-medium/workspace/crm-app/.prompt-language/provenance.jsonl`](../../experiments/results/factory-runtime-proof/20260418-074500/claude-medium/workspace/crm-app/.prompt-language/provenance.jsonl)
+  [`20260418-074500/claude-medium/workspace/crm-app/.prompt-language/audit.jsonl`](../../experiments/results/factory-runtime-proof/20260418-074500/claude-medium/workspace/crm-app/.prompt-language/audit.jsonl)
 
-Strongest bounded completion datapoint:
+Current clean bounded completion datapoint:
 
 - Codex:
-  [`20260418-055251/codex-medium/workspace/crm-app/.prompt-language/session-state.json`](../../experiments/results/factory-runtime-proof/20260418-055251/codex-medium/workspace/crm-app/.prompt-language/session-state.json)
-  [`20260418-055251/codex-medium/workspace/crm-app/.prompt-language/audit.jsonl`](../../experiments/results/factory-runtime-proof/20260418-055251/codex-medium/workspace/crm-app/.prompt-language/audit.jsonl)
-- Claude child-state materialization:
-  [`20260418-055251/claude-medium/workspace/crm-app/.prompt-language-discovery-problem/session-state.json`](../../experiments/results/factory-runtime-proof/20260418-055251/claude-medium/workspace/crm-app/.prompt-language-discovery-problem/session-state.json)
-  [`20260418-055251/claude-medium/workspace/crm-app/.prompt-language-discovery-requirements/session-state.json`](../../experiments/results/factory-runtime-proof/20260418-055251/claude-medium/workspace/crm-app/.prompt-language-discovery-requirements/session-state.json)
+  [`20260418-083500/codex-medium/workspace/crm-app/.prompt-language/session-state.json`](../../experiments/results/factory-runtime-proof/20260418-083500/codex-medium/workspace/crm-app/.prompt-language/session-state.json)
+  [`20260418-083500/codex-medium/workspace/crm-app/.prompt-language/audit.jsonl`](../../experiments/results/factory-runtime-proof/20260418-083500/codex-medium/workspace/crm-app/.prompt-language/audit.jsonl)
+- Claude terminal-but-not-clean datapoint:
+  [`20260418-074500/claude-medium/workspace/crm-app/.prompt-language/session-state.json`](../../experiments/results/factory-runtime-proof/20260418-074500/claude-medium/workspace/crm-app/.prompt-language/session-state.json)
+  [`20260418-074500/report.json`](../../experiments/results/factory-runtime-proof/20260418-074500/report.json)
 
 Generated discovery artifacts are present in both latest lanes:
 
@@ -87,16 +87,18 @@ Generated discovery artifacts are present in both latest lanes:
 
 - Presence of `.prompt-language/session-state.json`, `provenance.jsonl`, and
   `audit.jsonl` is what makes this runtime-backed evidence.
-- `audit.jsonl` in `20260418-044547` records `spawn:discovery-problem`,
-  `spawn:discovery-requirements`, and repeated `await all` advancement on both
-  lanes, which is the concrete proof that the parent factory flow advanced
-  through PL rather than a raw host shortcut.
+- `audit.jsonl` and `provenance.jsonl` in `20260418-074500` and `20260418-083500`
+  record `spawn:discovery-problem`, `spawn:discovery-requirements`, `await all`,
+  and review advancement, which is the concrete proof that the parent factory
+  flow advanced through PL rather than a raw host shortcut.
 - `provenance.jsonl` records `source: "runtime"` state transitions and
   `source: "adapter"` agent invocations, which is the concrete proof that the
   runner path stayed inside the PL runtime-backed execution surface.
-- `20260418-055251` is stronger on Codex bounded completion than `20260418-044547`,
-  but weaker as a provenance citation because no `provenance.jsonl` was captured
-  in that rerun.
+- `20260418-074500` is important because it exposed a real runtime weakness:
+  the old await implementation allowed a parent to advance to completion even
+  when awaited children had already failed.
+- `20260418-083500` is the clean committed bounded proof because the parent and
+  both spawned children terminate successfully.
 - File presence in `docs/` should be read as bounded discovery outputs, not as
   proof of a broad end-to-end factory claim.
 

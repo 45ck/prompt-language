@@ -2625,6 +2625,7 @@ async function advanceAwaitNode(
 
   let state = current;
   let allDone = true;
+  const failedChildren: import('../domain/session-state.js').SpawnedChild[] = [];
 
   for (const child of children) {
     if (!child) continue;
@@ -2662,6 +2663,31 @@ async function advanceAwaitNode(
 
     state = importChildVariablesWithPrefix(state, terminalChild);
     state = await importAwaitedSwarmResult(state, terminalChild, messageStore);
+    if (terminalChild.status === 'failed') {
+      failedChildren.push(terminalChild);
+    }
+  }
+
+  if (failedChildren.length > 0) {
+    const childFailures = failedChildren.map((child) => {
+      const stderr = child.variables?.['last_stderr']?.trim();
+      return stderr ? `${child.name} (${stderr})` : child.name;
+    });
+    const reason = withPositionContext(
+      state,
+      `await blocked by failed child${failedChildren.length === 1 ? '' : 'ren'}: ${childFailures.join(', ')}`,
+    );
+    const failedState = markFailed(
+      updateNodeProgress(state, node.id, {
+        iteration: state.nodeProgress[node.id]?.iteration ?? 1,
+        maxIterations: state.nodeProgress[node.id]?.maxIterations ?? MAX_AWAIT_POLLS,
+        status: 'failed',
+        startedAt: state.nodeProgress[node.id]?.startedAt ?? Date.now(),
+        completedAt: Date.now(),
+      }),
+      reason,
+    );
+    return { state: failedState, advanced: true };
   }
 
   if (!allDone) {

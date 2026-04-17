@@ -42,13 +42,14 @@ Differential tests (Z-series) that prove the runtime is executing live, not repl
 The repo also carries a smaller bounded runtime-proof series under
 [experiments/results/factory-runtime-proof/](../experiments/results/factory-runtime-proof/)
 that exercises the CRM discovery slice through the same PL runtime-backed
-Claude/Codex paths. The latest built-runtime `codex-medium` rerun completes the
-bounded discovery slice through review; the latest `claude-medium` rerun still
-times out before closure, though it now materializes child state dirs. That
-series is useful as execution evidence, but it is not an end-to-end factory
-completion claim. Use `20260418-044547` when the point is provenance-complete
-runner evidence and `20260418-055251` when the point is the stronger bounded
-Codex completion datapoint. See
+Claude/Codex paths. The current committed evidence is asymmetric: `20260418-083500`
+is the clean bounded Codex proof through `await all` and `review`, while
+`20260418-074500` is the latest Claude terminal bundle but closes with both
+spawned children failed. That series is useful as execution evidence, but it is
+not an end-to-end factory completion claim on both hosts. Use `20260418-083500`
+when the point is the clean bounded completion datapoint and `20260418-074500`
+when the point is the latest provenance-backed Claude runner evidence, including
+the historical await-integrity gap it exposed. See
 [2026-04-18 Runtime Factory Proof: Codex + Claude, Medium Effort](evaluation/2026-04-18-runtime-factory-proof-codex-claude-medium-evidence.md).
 
 ### E7: Marketing Factory

@@ -30,15 +30,14 @@ That is the clearest place where prompt-language adds value over plain prompting
 The current repo also has bounded **runtime-backed factory evidence** for both
 Codex and Claude on the same discovery-only CRM slice. The latest checked-in
 series under [`experiments/results/factory-runtime-proof/`](../../experiments/results/factory-runtime-proof/)
-shows real PL runtime execution on both hosts, with asymmetric latest results:
-the built-runtime `codex-medium` rerun now completes the bounded discovery-only
-slice through `await all` plus `review`, while the latest `claude-medium` rerun
-still times out before closure even though it materializes child state dirs and
-writes discovery docs. That is useful proof that the PL runner path is real on
-both hosts, but it is still only a bounded proof and is not verifier-closed or
-attested. The strongest provenance-backed citation remains `20260418-044547`;
-the newer `20260418-055251` rerun is stronger on Codex completion but does not
-replace `044547` for provenance completeness. See
+shows real PL runtime execution on both hosts, with asymmetric committed
+results: `20260418-083500/codex-medium` is the clean bounded proof, with parent
+completion, both spawned discovery children completed, and review passed. The
+latest committed Claude terminal bundle is `20260418-074500/claude-medium`, but
+that run completes with both spawned children marked failed; it proves the PL
+runner path is real on Claude and also documents the old await-integrity gap
+that has now been fixed in the current tree. That is useful bounded proof, but
+it is still not verifier-closed or attested. See
 [2026-04-18 Runtime Factory Proof: Codex + Claude, Medium Effort](2026-04-18-runtime-factory-proof-codex-claude-medium-evidence.md).
 
 ## What is not fully proven yet
@@ -47,7 +46,7 @@ replace `044547` for provenance completeness. See
 - full Codex parity on a supported Linux/macOS/WSL host with live smoke plus compare and verify reruns
 - broad thesis claims beyond the seeded E1 dataset bank and the historical comparative eval set
 - larger orchestration-shell positioning beyond the current supervision-runtime boundary
-- end-to-end factory completion claims for the bounded Codex/Claude discovery probe: Codex now has a bounded terminal outcome, but Claude still does not
+- clean end-to-end factory completion claims for the bounded Codex/Claude discovery probe on both hosts: Codex has one clean committed bounded proof, while the latest committed Claude terminal bundle still closes over failed children
 
 That means the full-run parity bead is still open on evidence capture, not on a
 known Codex-specific runtime break.

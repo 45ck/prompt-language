@@ -3270,7 +3270,7 @@ describe('autoAdvanceNodes — await edge cases', () => {
     expect(pollFn).not.toHaveBeenCalled();
   });
 
-  it('await skips already-failed children without polling', async () => {
+  it('await fails closed on already-failed children without polling', async () => {
     const pollFn = vi.fn();
     const mockSpawner: ProcessSpawner = {
       async spawn() {
@@ -3291,10 +3291,15 @@ describe('autoAdvanceNodes — await edge cases', () => {
       status: 'failed',
       pid: 1,
       stateDir: '.prompt-language-task-a',
+      variables: { last_stderr: 'child review failed' },
     });
 
-    const { capturedPrompt } = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
-    expect(capturedPrompt).toBe('done');
+    const result = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(result.capturedPrompt).toBeNull();
+    expect(result.state.status).toBe('failed');
+    expect(result.state.failureReason).toContain(
+      'await blocked by failed child: task-a (child review failed)',
+    );
     expect(pollFn).not.toHaveBeenCalled();
   });
 

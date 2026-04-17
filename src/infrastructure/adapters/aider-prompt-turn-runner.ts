@@ -98,13 +98,17 @@ function extractReferencedFiles(cwd: string, prompt: string): string[] {
 }
 
 function listFallbackWorkspaceFiles(cwd: string): string[] {
-  return readdirSync(cwd, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name)
-    .filter((name) => !name.startsWith('.'))
-    .filter((name) => !TRANSIENT_OUTPUT_FILE_PATTERN.test(name))
-    .sort((left, right) => left.localeCompare(right))
-    .slice(0, MAX_FALLBACK_FILES);
+  try {
+    return readdirSync(cwd, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((name) => !name.startsWith('.'))
+      .filter((name) => !TRANSIENT_OUTPUT_FILE_PATTERN.test(name))
+      .sort((left, right) => left.localeCompare(right))
+      .slice(0, MAX_FALLBACK_FILES);
+  } catch {
+    return [];
+  }
 }
 
 export class AiderPromptTurnRunner implements PromptTurnRunner {

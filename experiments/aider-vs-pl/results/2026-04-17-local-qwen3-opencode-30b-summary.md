@@ -31,6 +31,16 @@ The first in-repo reruns were confounded because the aider adapter did not pass 
 - Phase summary: [H11 runtime-scoped README](h11-phase4-runtime-scope/README.md)
 - H11 runtime-scoped artisan-v4: [summary](h11-phase4-runtime-scope/artisan-v4/summary.json), [stderr](h11-phase4-runtime-scope/artisan-v4/pl.stderr.txt), [oracle](h11-phase4-runtime-scope/artisan-v4/verify.txt)
 
+## Phase-5 gate-loop follow-up
+
+- Phase summary: [H11 gate-loop README](h11-phase5-gate-loop/README.md)
+- H11 artisan-v5: [summary](h11-phase5-gate-loop/artisan-v5/summary.json), [stderr](h11-phase5-gate-loop/artisan-v5/pl.stderr.txt), [oracle](h11-phase5-gate-loop/artisan-v5/verify.txt)
+
+## H14 stderr rerun
+
+- Phase summary: [H14 stderr README](h14-phase2-stderr/README.md)
+- H14 stderr rerun: [summary](h14-phase2-stderr/pl-stderr/summary.json), [stderr](h14-phase2-stderr/pl-stderr/pl.stderr.txt), [oracle](h14-phase2-stderr/pl-stderr/verify.txt)
+
 ## Outcomes
 
 - H11 baseline still failed badly: `2/11 passed; 9 failed`.
@@ -44,6 +54,8 @@ The first in-repo reruns were confounded because the aider adapter did not pass 
 - H11 portable swarm stayed at `2/11 passed; 9 failed`.
 - The exploratory README-targeted follow-ups did not beat the winning artisan arm: `artisan-v3` fell to `3/11`, and `artisan-v4` reached `5/11`.
 - The runtime-scoped rerun materially improved the previously bad `artisan-v4` arm to `10/12 passed; 2 failed`, with the README-only repair no longer causing broad source regressions.
+- H11 `artisan-v5` did not close the remaining gap: it landed at `8/11 passed; 3 failed` even after adding a targeted seed-contract gate and a narrower `src/app.js` repair prompt.
+- H14 with stderr fed into the repair loop regressed to `4/8 passed; 4 failed`.
 
 ## Main read
 
@@ -53,15 +65,16 @@ The first in-repo reruns were confounded because the aider adapter did not pass 
 - In the earlier phase-2 clean reruns, the remaining H11 artisan failures were specific and concrete: README text was not renamed, and the JS rename left `Client` undefined in `contact-store.js`, which broke runtime/import verification.
 - The portable fixture changes mattered. Replacing Unix-only shell commands with Node helper scripts and tightening the oracle scope removed avoidable Windows/runtime confounders from the H11 evaluation.
 - The runtime-side scoping hypothesis also held up. Passing the active captured prompt separately into aider file selection prevented the late README-only repair from dragging unrelated `src/*` files back into scope.
+- The next visible bottleneck is the broad completion-gate retry path. Both the H11 `artisan-v5` follow-up and the H14 stderr rerun still collapsed inside repeated `gate ... failed` retries, even after mid-flow prompts were narrowed.
 - H11 artisan-v2 was useful as a runtime check, not as a better flow. After removing the broken file-discovery path, it improved to `5/11`, but it still did not beat the original artisan pattern.
 - Swarm did not beat baseline here. Role separation by itself was not enough to recover the task.
 - The two README-targeted follow-ups (`artisan-v3`, `artisan-v4`) regressed under the old runtime. After the runtime scoping fix, `artisan-v4` improved sharply: the remaining miss is now a narrower semantic/runtime repair issue rather than the earlier repair-turn scoping failure.
-- H14 should not be judged by `file_exists` alone. After replacing the weak completion condition with `gate h14_oracle: node verify.js`, the model got most of the way there but still shipped failing tests.
+- H14 should not be judged by `file_exists` alone. After replacing the weak completion condition with `gate h14_oracle: node verify.js`, the model got most of the way there but still shipped failing tests; adding stderr alone did not rescue it.
 
 ## Practical next steps
 
 - Treat H11 portable artisan as the best current evidence for the thesis: handcrafted gated orchestration can materially improve a local 30B model on a realistic multi-file refactor.
 - Keep the original portable H11 artisan flow as the current best arm. The `artisan-v2`, `artisan-v3`, and `artisan-v4` variants are useful comparison points, but none is an improvement.
-- If H11 gets another pass, do not spend it on broader flow rewrites. The next useful step is narrower runtime/import repair pressure on the remaining `Client is not defined` failure, now that repair-turn scoping is improved.
-- Keep H14 on the oracle gate and tighten the red-green loop until the final failing test is fixed, rather than allowing any file-exists completion condition back in.
+- If H11 gets another pass, do not spend it on more content-only flow variants. The evidence now points at the completion-gate repair semantics as the next bottleneck.
+- Keep H14 on the oracle gate, but do not expect `${last_stderr}` alone to fix it. The next H14 pass needs either a narrower post-oracle repair path or a runtime-side change to gate-retry behavior.
 - Do not invest further in the current H11 swarm variant until it shows a measurable gain over baseline or artisan.

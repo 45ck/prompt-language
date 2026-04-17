@@ -1,0 +1,12 @@
+{
+  "fixture": "h11-multi-file-refactor",
+  "arm": "artisan-v5",
+  "runner": "aider",
+  "model": "ollama_chat/qwen3-opencode:30b",
+  "flow": "task-artisan-v5.flow",
+  "plExitCode": 1,
+  "plStatus": "unsuccessful",
+  "verifyExitCode": 1,
+  "oracleSummary": "Results: 8/11 passed",
+  "note": "Runtime-scoped rerun with a targeted seed-contract gate and a constrained app.js repair prompt."
+}

@@ -1,0 +1,12 @@
+{
+  "fixture": "h14-tdd-red-green",
+  "arm": "pl-stderr",
+  "runner": "aider",
+  "model": "ollama_chat/qwen3-opencode:30b",
+  "flow": "task.flow",
+  "plExitCode": 1,
+  "plStatus": "failed",
+  "verifyExitCode": 1,
+  "oracleSummary": "Results: 4/8 passed",
+  "note": "Rerun after including stderr in the failing-test repair prompt."
+}

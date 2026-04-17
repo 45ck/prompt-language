@@ -1,0 +1,46 @@
+Goal: Rename Contact to Client across the fixture with portable per-file gates, a final README-only repair pass, and a targeted seed contract repair
+
+flow:
+  foreach file in run "node list-contact-targets.js"
+    run: node count-contact.js ${file}
+    let remaining_before = "${last_stdout}"
+    prompt: Edit ${file}. Replace every word-boundary occurrence of "Contact" with "Client" and every word-boundary occurrence of "contact" with "client". Do not replace substrings inside longer words. Do not create new files. The file is CommonJS — keep require/module.exports syntax. Preserve indentation and comments.
+    run: node count-contact.js ${file}
+    let remaining_after = "${last_stdout}"
+    if ${remaining_after} != "0"
+      prompt: ${file} still contains ${remaining_after} occurrences of "Contact". Finish the rename in place. Do not introduce ES-module syntax. Keep require/module.exports.
+      run: node count-contact.js ${file}
+    end
+    run: node --check ${file}
+    if command_failed
+      prompt: Syntax check of ${file} failed after your rename: ${last_stderr}. Fix the syntax error without re-introducing "Contact". Keep CommonJS.
+      run: node --check ${file}
+    end
+  end
+
+  run: node find-contact-stragglers.js --include-readme
+  if command_failed
+    prompt: Stragglers found: ${last_stdout}. Fix each one by editing the mentioned files. Do not convert anything to ES modules.
+    run: node find-contact-stragglers.js --include-readme
+  end
+
+  run: node src/app.js
+  if command_failed
+    prompt: src/app.js failed after the rename. Edit src/app.js only. Keep CommonJS and keep the fixture's original smoke-test shape: require ./contact-store, ./routes, and ./seed; create the store; call loadSeedData(store); createRoutes(store); verify listContacts() returns status 200; verify getContact('alice@example.com') returns status 200 with body.name === 'Alice Johnson'; print the existing success lines; exit 0. Do not turn src/app.js into an Express server. Do not require express, ./client-store, ./client, or any new dependency. Do not create or rename files. The filenames in this fixture stay src/contact.js and src/contact-store.js. Fix the import/usage drift so node src/app.js exits 0 and require('./src/app') resolves cleanly.
+    run: node src/app.js
+  end
+
+  run: node count-contact.js README.md
+  if ${last_stdout} != "0"
+    prompt: README.md still contains ${last_stdout} occurrences of "Contact". Edit README.md only. Do not modify anything under src/. Do not rename files. Do not change any JavaScript code. Replace every remaining word-boundary occurrence of "Contact" with "Client" and every word-boundary occurrence of "contact" with "client". Preserve markdown formatting.
+    run: node count-contact.js README.md
+  end
+
+  run: node check-seed-contract.js
+  if command_failed
+    prompt: src/seed.js still breaks the runtime. Error: ${last_stderr}. Edit src/seed.js only. Keep CommonJS. Do not create new files or nested paths such as src/src/seed.js. Preserve module.exports = { seedContacts, loadSeedData }. seedContacts must stay an array of plain objects. loadSeedData(store) must iterate over seedContacts, call store.add(record) for each item, and return store.count(). Do not instantiate Client at module scope.
+    run: node check-seed-contract.js
+  end
+
+done when:
+  gate h11_oracle: node verify.js

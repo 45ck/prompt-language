@@ -10,7 +10,7 @@ flow:
   until command_succeeded max 5
     run: node src/test.js
     if command_failed
-      prompt: Tests are still failing. Fix the implementation. Error output: ${last_stdout}
+      prompt: Tests are still failing. Fix the implementation. Error output: ${last_stdout} ${last_stderr}
     end
   end
 

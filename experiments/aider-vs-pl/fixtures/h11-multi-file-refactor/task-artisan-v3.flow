@@ -1,4 +1,4 @@
-Goal: Rename Contact to Client across the fixture with per-file grep-gate and retry-on-noop
+Goal: Rename Contact to Client across the fixture with portable per-file gates and a dedicated README repair step
 
 flow:
   foreach file in run "node list-contact-targets.js"
@@ -22,6 +22,12 @@ flow:
   if command_failed
     prompt: Stragglers found: ${last_stdout}. Fix each one by editing the mentioned files. Do not convert anything to ES modules.
     run: node find-contact-stragglers.js --include-readme
+  end
+
+  run: node count-contact.js README.md
+  if ${last_stdout} != "0"
+    prompt: README.md still contains ${last_stdout} occurrences of "Contact". Edit README.md only. Replace every remaining word-boundary occurrence of "Contact" with "Client" and every word-boundary occurrence of "contact" with "client". Preserve markdown formatting.
+    run: node count-contact.js README.md
   end
 
   run: node src/app.js

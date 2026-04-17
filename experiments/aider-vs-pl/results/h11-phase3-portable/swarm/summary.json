@@ -1,0 +1,12 @@
+{
+  "fixture": "h11-multi-file-refactor",
+  "arm": "swarm",
+  "runner": "aider",
+  "model": "ollama_chat/qwen3-opencode:30b",
+  "flow": "task-swarm.flow",
+  "plExitCode": 1,
+  "plStatus": "unsuccessful",
+  "verifyExitCode": 1,
+  "oracleSummary": "Results: 2/11 passed",
+  "note": "Portable rerun with Node-based planning and exit-code reviewer straggler checks."
+}

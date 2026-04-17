@@ -1,0 +1,15 @@
+
+Results: 10/11 passed
+  PASS: No "Contact" in src/app.js
+  PASS: No "Contact" in src/contact-store.js
+  PASS: No "Contact" in src/contact.js
+  PASS: No "Contact" in src/routes.js
+  PASS: No "Contact" in src/seed.js
+  PASS: No "Contact" in src/test.js
+  FAIL: No "Contact" in ./README.md -- Found 7 occurrences of "Contact"
+  PASS: "Client" class exists in some .js file
+  PASS: "ClientStore" or "Client" store class exists
+  PASS: Application runs without error
+  PASS: All imports resolve
+
+VERDICT: FAIL (1 failed)

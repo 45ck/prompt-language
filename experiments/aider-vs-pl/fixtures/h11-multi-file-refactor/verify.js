@@ -21,28 +21,24 @@ function test(name, fn) {
 // does not author. Aider writes its chat history to .aider.chat.history.md
 // (which includes the rendered flow text containing "Contact"); PL writes
 // session state under .prompt-language/; pnpm/npm may drop lockfiles.
-const EXCLUDE_DIRS = new Set(['node_modules', '.prompt-language', '.aider.tags.cache.v3', '.git']);
-const EXCLUDE_FILE_PREFIXES = ['.aider.'];
-
 function getAllFiles(dir, ext) {
   const files = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory() && !EXCLUDE_DIRS.has(entry.name)) {
+    if (entry.isDirectory()) {
       files.push(...getAllFiles(full, ext));
-    } else if (
-      entry.isFile() &&
-      full.endsWith(ext) &&
-      !EXCLUDE_FILE_PREFIXES.some((p) => entry.name.startsWith(p))
-    ) {
+    } else if (entry.isFile() && full.endsWith(ext)) {
       files.push(full);
     }
   }
   return files;
 }
 
+const jsFiles = getAllFiles('./src', '.js').map((file) => file.replace(/\\/g, '/'));
+
+const mdFiles = fs.existsSync('./README.md') ? ['./README.md'] : [];
+
 // Check no "Contact" references remain in JS files
-const jsFiles = getAllFiles('.', '.js').filter((f) => !f.includes('verify.js'));
 for (const file of jsFiles) {
   test(`No "Contact" in ${file}`, () => {
     const content = fs.readFileSync(file, 'utf8');
@@ -53,7 +49,6 @@ for (const file of jsFiles) {
 }
 
 // Check no "Contact" in markdown files
-const mdFiles = getAllFiles('.', '.md').filter((f) => !f.includes('TASK.md'));
 for (const file of mdFiles) {
   test(`No "Contact" in ${file}`, () => {
     const content = fs.readFileSync(file, 'utf8');

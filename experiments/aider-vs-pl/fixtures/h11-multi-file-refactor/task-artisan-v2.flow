@@ -1,19 +1,15 @@
 Goal: Rename Contact to Client across the fixture with per-file gates and an in-flow oracle repair loop
 
 flow:
-  let files = run "grep -rl 'Contact' src/ README.md"
-  prompt: Starting H11 multi-file rename. Files to process follow.
-  run: echo "${files}"
-
-  foreach file in ${files}
-    run: grep -c 'Contact' ${file}
+  foreach file in run "node list-contact-targets.js --include-readme"
+    run: node count-contact.js ${file}
     let remaining_before = "${last_stdout}"
     prompt: Edit ${file}. Replace every word-boundary occurrence of "Contact" with "Client" and every word-boundary occurrence of "contact" with "client". Do not replace substrings inside longer words. Keep CommonJS syntax where applicable. Preserve indentation and comments.
-    run: grep -c 'Contact' ${file}
+    run: node count-contact.js ${file}
     let remaining_after = "${last_stdout}"
     if ${remaining_after} != "0"
       prompt: ${file} still contains ${remaining_after} occurrences of "Contact". Finish the rename in place. Do not introduce ES-module syntax. Keep CommonJS where applicable.
-      run: grep -c 'Contact' ${file}
+      run: node count-contact.js ${file}
     end
     if ${file} != "README.md"
       run: node --check ${file}
@@ -24,18 +20,16 @@ flow:
     end
   end
 
-  until command_succeeded max 3
+  run: node src/app.js
+  if command_failed
+    prompt: Integration test failed after the rename. Error: ${last_stderr}. Diagnose the cause and fix it so node src/app.js exits 0.
     run: node src/app.js
-    if command_failed
-      prompt: Integration test failed after the rename. Error: ${last_stderr}. Diagnose the cause and fix it so node src/app.js exits 0.
-    end
   end
 
-  until command_succeeded max 3
+  run: node verify.js
+  if command_failed
+    prompt: verify.js still fails. Fix every remaining issue reported below, then rerun the oracle. ${last_stdout} ${last_stderr}
     run: node verify.js
-    if command_failed
-      prompt: verify.js still fails. Fix every remaining issue reported below, then rerun the oracle. ${last_stdout} ${last_stderr}
-    end
   end
 
 done when:

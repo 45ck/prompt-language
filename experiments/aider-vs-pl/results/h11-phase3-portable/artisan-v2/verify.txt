@@ -1,0 +1,48 @@
+
+Results: 5/11 passed
+  FAIL: No "Contact" in src/app.js -- Found 2 occurrences of "Contact"
+  PASS: No "Contact" in src/contact-store.js
+  PASS: No "Contact" in src/contact.js
+  FAIL: No "Contact" in src/routes.js -- Found 3 occurrences of "Contact"
+  FAIL: No "Contact" in src/seed.js -- Found 1 occurrences of "Contact"
+  FAIL: No "Contact" in src/test.js -- Found 9 occurrences of "Contact"
+  PASS: No "Contact" in ./README.md
+  PASS: "Client" class exists in some .js file
+  PASS: "ClientStore" or "Client" store class exists
+  FAIL: Application runs without error -- App failed: Command failed: node src/app.js
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module './client'
+Require stack:
+- C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-v2-ee1883f483294c67a17b3a91456bdfa5\src\contact-store.js
+- C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-v2-ee1883f483294c67a17b3a91456bdfa5\src\app.js
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.require (node:internal/modules/cjs/loader:1555:12)
+    at require (node:internal/modules/helpers:152:16)
+    at Object.<anonymous> (C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-v2-ee1883f483294c67a17b3a91456bdfa5\src\contact-store.js:1:20)
+    at Module._compile (node:internal/modules/cjs/loader:1811:14)
+    at Object..js (node:internal/modules/cjs/loader:1942:10) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\MQCKENC\\AppData\\Local\\Temp\\pl-h11-artisan-v2-ee1883f483294c67a17b3a91456bdfa5\\src\\contact-store.js',
+    'C:\\Users\\MQCKENC\\AppData\\Local\\Temp\\pl-h11-artisan-v2-ee1883f483294c67a17b3a91456bdfa5\\src\\app.js'
+  ]
+}
+
+Node.js v25.6.1
+
+  FAIL: All imports resolve -- Command failed: node -e "try { require('./src/app'); } catch(e) { console.error(e.message); process.exit(1); }"
+Cannot find module './client'
+Require stack:
+- C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-v2-ee1883f483294c67a17b3a91456bdfa5\src\contact-store.js
+- C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-v2-ee1883f483294c67a17b3a91456bdfa5\src\app.js
+- C:\Users\MQCKENC\AppData\Local\Temp\pl-h11-artisan-v2-ee1883f483294c67a17b3a91456bdfa5\[eval]
+
+
+VERDICT: FAIL (6 failed)

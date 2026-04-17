@@ -1,4 +1,4 @@
-Goal: Rename Contact to Client across the fixture with per-file grep-gate and retry-on-noop
+Goal: Rename Contact to Client across the fixture with portable per-file gates and a final README-only repair pass
 
 flow:
   foreach file in run "node list-contact-targets.js"
@@ -28,6 +28,12 @@ flow:
   if command_failed
     prompt: Integration test failed after the rename. Error: ${last_stderr}. Diagnose the cause (likely an import/require path that still references the old name, or an ES-module syntax slip) and fix it so node src/app.js exits 0.
     run: node src/app.js
+  end
+
+  run: node count-contact.js README.md
+  if ${last_stdout} != "0"
+    prompt: README.md still contains ${last_stdout} occurrences of "Contact". Edit README.md only. Do not modify anything under src/. Do not rename files. Do not change any JavaScript code. Replace every remaining word-boundary occurrence of "Contact" with "Client" and every word-boundary occurrence of "contact" with "client". Preserve markdown formatting.
+    run: node count-contact.js README.md
   end
 
 done when:

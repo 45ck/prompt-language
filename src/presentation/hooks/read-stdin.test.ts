@@ -39,6 +39,25 @@ describe('readStdin', () => {
     expect(result).toBe('');
   });
 
+  it('returns partial input after idle timeout when stdin never closes', async () => {
+    const readable = new Readable({ read() {} });
+    Object.defineProperty(process, 'stdin', { value: readable, writable: true });
+
+    const pending = readStdin({ idleTimeoutMs: 25 });
+    readable.push(Buffer.from('partial', 'utf-8'));
+
+    await expect(pending).resolves.toBe('partial');
+    readable.destroy();
+  });
+
+  it('returns empty string after idle timeout when stdin never receives data', async () => {
+    const readable = new Readable({ read() {} });
+    Object.defineProperty(process, 'stdin', { value: readable, writable: true });
+
+    await expect(readStdin({ idleTimeoutMs: 25 })).resolves.toBe('');
+    readable.destroy();
+  });
+
   it('rejects on stream error', async () => {
     const readable = new Readable({
       read() {

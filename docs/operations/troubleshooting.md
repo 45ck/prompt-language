@@ -35,6 +35,32 @@ Look for `currentNodePath` (which node is active), `status` (should be `"active"
 
 **Fix**: Use `/flow:reset` to clear all state and start over.
 
+## Hook stdin never closes
+
+**Symptom**: A hook or a direct `npx tsx src/presentation/hooks/...` invocation appears to wait forever even though the host already sent the useful bytes.
+
+**Meaning**: prompt-language now treats hook stdin as fail-open after a short idle timeout. If stdin stays open without more bytes, the hook should continue with the bytes received so far, or `""` if nothing arrived.
+
+**Diagnosis**:
+
+```bash
+npx vitest run src/presentation/hooks/read-stdin.test.ts src/presentation/hooks/hook-robustness.test.ts
+```
+
+If the regression tests pass, the remaining problem is usually the parent launcher, not the hook read path.
+
+**What to inspect next**:
+
+- the exact stderr from the failing hook subprocess
+- whether the host is still writing incremental bytes
+- whether the launcher is masking timeouts behind shell wrapping
+
+**Current contract**:
+
+- no bytes + open stdin -> resolve to `""`
+- some bytes + open stdin -> resolve to the partial payload
+- stream error -> fail with the stream error
+
 ## Gates not passing
 
 **Symptom**: Claude keeps working but the gate never lets it stop.

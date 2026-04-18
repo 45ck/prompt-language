@@ -165,3 +165,5 @@ Each `spawn` node launches an independent child `claude -p` process with its own
 - If the state file is corrupted or unreadable, hooks log a warning and allow the operation (fail-open for safety).
 - If a gate verification command fails, the gate is marked as failing.
 - If max iterations or attempts are exceeded, the flow is marked as failed and the agent is allowed to stop.
+- Hook stdin reads are bounded by an idle timeout. If a host or test harness leaves stdin open without sending more bytes, the hook returns the bytes received so far, or `""` when nothing arrived, instead of hanging forever.
+- The hook robustness test harness now surfaces subprocess timeouts and launcher failures directly rather than masking them behind shell-wrapper exit codes.

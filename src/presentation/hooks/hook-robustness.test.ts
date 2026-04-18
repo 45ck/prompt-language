@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { spawnSync } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+
+const HOOK_TEST_TIMEOUT_MS = process.platform === 'win32' ? 60_000 : 30_000;
 
 let tempDir: string;
 
@@ -25,22 +27,52 @@ interface HookResult {
   stderr: string;
 }
 
+function formatExecFailure(error: unknown): string {
+  const e = error as {
+    message?: string;
+    signal?: string;
+  };
+
+  if (e.signal) {
+    return `Process terminated with signal ${e.signal}`;
+  }
+
+  return e.message ?? 'Hook process failed without an error message';
+}
+
 function runHook(hookName: string, input: string, cwd: string): HookResult {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', `${hookName}.ts`);
-  const result = spawnSync(`npx tsx "${scriptPath}"`, {
-    input,
-    encoding: 'utf-8',
-    cwd,
-    timeout: 15_000,
-    stdio: ['pipe', 'pipe', 'pipe'],
-    shell: true,
-  });
-  return {
-    exitCode: result.status ?? 1,
-    stdout: result.stdout ?? '',
-    stderr: result.stderr ?? '',
-  };
+  try {
+    const stdout = execSync(`npx tsx "${scriptPath}"`, {
+      input,
+      encoding: 'utf-8',
+      cwd,
+      timeout: HOOK_TEST_TIMEOUT_MS,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    return {
+      exitCode: 0,
+      stdout,
+      stderr: '',
+    };
+  } catch (error: unknown) {
+    const e = error as {
+      status?: number | null;
+      code?: string;
+      stdout?: string;
+      stderr?: string;
+    };
+    const stderr = e.stderr ?? '';
+    const failureDetails = formatExecFailure(error);
+
+    return {
+      exitCode: e.status ?? (e.code === 'ETIMEDOUT' ? 124 : 1),
+      stdout: e.stdout ?? '',
+      stderr: stderr ? `${stderr}\n${failureDetails}` : failureDetails,
+    };
+  }
 }
 
 function makeState(overrides: Record<string, unknown> = {}) {

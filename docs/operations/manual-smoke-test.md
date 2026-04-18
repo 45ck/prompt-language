@@ -177,6 +177,20 @@ Codex variant:
 echo '{"prompt":"Run tests until they pass, max 5"}' | npx tsx src/presentation/hooks/codex-user-prompt-submit.ts
 ```
 
+### Debug: verify stdin fail-open behavior
+
+If you want to confirm the hook will not hang when a host keeps stdin open, run the focused regression tests:
+
+```sh
+npx vitest run src/presentation/hooks/read-stdin.test.ts src/presentation/hooks/hook-robustness.test.ts
+```
+
+The important behavior is:
+
+- partial stdin is returned after a short idle timeout even without EOF
+- empty still-open stdin resolves to `""`
+- hook launcher failures show the real timeout/subprocess error instead of a generic shell status
+
 ### Debug: check if NL detection triggers
 
 The hook detects NL intent using keyword matching. If a prompt is not being detected as NL:
@@ -190,4 +204,5 @@ The hook detects NL intent using keyword matching. If a prompt is not being dete
 - **Meta-prompt injected for plain text**: A keyword like "passes", "fails", or "until" may be triggering false positives.
 - **Skill-aware wrapper missing**: Check `PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER` and the harness-specific override.
 - **State file not created after DSL input**: Ensure the working directory is writable and not inside a read-only mount.
+- **Hook appears idle or hung**: Hook stdin reads now fail open after a short idle timeout, so a still-open stdin stream should resolve to partial input or `""` rather than hanging forever. If the hook still fails, check stderr for the real subprocess or timeout message.
 - **Hook errors silently**: The hook catches errors and exits 0 to avoid blocking the user. Check stderr for `[prompt-language] hook error:` messages.

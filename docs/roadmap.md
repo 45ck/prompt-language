@@ -89,6 +89,7 @@ These are the next milestones that matter most to the product, in order:
 | Clean bounded factory proof on both Claude and Codex | Proves the runtime closes real multi-agent work end to end                              | In progress    |
 | Supported-host live smoke and parity evidence        | Turns local/dev confidence into public operational confidence                           | In progress    |
 | Runtime reliability and recovery hardening           | Keeps hooks, child sessions, review loops, and state recovery trustworthy               | In progress    |
+| Non-factory proof program                            | Converts the next experiment wave into narrower runtime, QA, and bounded outcome proof  | Tracked next   |
 | Better operator surfaces                             | Makes install, inspect, validate, and troubleshooting easier without new magic          | Tracked next   |
 | Broader authoring ergonomics                         | LSP, playground, registry, and similar tooling become worth it after the core is proven | Tracked next   |
 

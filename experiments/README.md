@@ -17,6 +17,11 @@ This directory holds the research and evaluation scaffold for controlled prompt-
 | —   | Parallel Modules   | Build concurrency              | spawn/await                                                                                    | Scaffold   | —                     |
 | —   | Self-healing CI    | CI repair                      | retry, try/catch                                                                               | Scaffold   | —                     |
 
+These scaffolded non-factory experiments are now grouped under the evaluation
+note [Non-Factory Proof Program](../docs/evaluation/non-factory-proof-program.md).
+Treat them as the next bounded proof layer after the current factory evidence,
+not as disconnected placeholders.
+
 ## Structure
 
 ```text
@@ -52,3 +57,14 @@ experiments/
 - `eval/` — Shared rubrics, scoring scripts, and evaluation helpers
 - `results/` — Run outputs, scores, and analysis artifacts
 - `templates/` — Reusable experiment design docs
+
+## Current next step
+
+The repo's next experiment priority is **non-factory proof work**:
+
+- close runtime-truth gaps with narrower falsifiers
+- convert smoke-only signals into repeatable differential evidence
+- run bounded QA/outcome benchmarks such as premature-stop, bounded feature,
+  parallel planning, and self-healing CI
+
+See [docs/evaluation/non-factory-proof-program.md](../docs/evaluation/non-factory-proof-program.md).

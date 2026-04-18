@@ -25,6 +25,11 @@ For experiment design templates and methodology, see [experiments/templates/](..
 | [Parallel Modules](../experiments/parallel-isolated-modules/) | Build concurrency           | Scaffold | Isolated module build concurrency            |
 | [Self-healing CI](../experiments/self-healing-ci/)            | CI repair                   | Scaffold | CI repair and auto-fix via retry/try-catch   |
 
+The next planned wave is documented in
+[Non-Factory Proof Program](evaluation/non-factory-proof-program.md). That note
+sequences the repo's next proof work around runtime truth, QA lift, and bounded
+outcome lift rather than defaulting to larger factory claims.
+
 ## Detailed experiment descriptions
 
 ### E1: Repeated Failure
@@ -51,6 +56,18 @@ when the point is the clean bounded completion datapoint and `20260418-074500`
 when the point is the latest provenance-backed Claude runner evidence, including
 the historical await-integrity gap it exposed. See
 [2026-04-18 Runtime Factory Proof: Codex + Claude, Medium Effort](evaluation/2026-04-18-runtime-factory-proof-codex-claude-medium-evidence.md).
+
+### Non-factory proof program
+
+The repo's next proof layer is intentionally not another giant factory.
+
+The current planned sequence is:
+
+- runtime-truth reruns and falsifiers
+- repeated differential proof
+- bounded QA and outcome-lift benchmarks
+
+See [Non-Factory Proof Program](evaluation/non-factory-proof-program.md).
 
 ### E7: Marketing Factory
 

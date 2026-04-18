@@ -31,6 +31,7 @@ The docs in this section are paired with the checked-in dataset bank under [expe
 | [Live Validation Evidence](eval-live-validation-evidence.md)                                                                        | Required smoke evidence format and blocked-host classification                                                                          |
 | [Smoke Coverage Status](test-design-smoke-gaps.md)                                                                                  | Current smoke coverage, quick-suite evidence, and remaining gaps                                                                        |
 | [Operator Shell Rollout and Promotion Evidence](operator-shell-rollout-and-promotion-evidence.md)                                   | Rollout gates, blocker classes, troubleshooting, and promotion evidence for operator-shell slices                                       |
+| [Non-Factory Proof Program](non-factory-proof-program.md)                                                                           | Prioritized next experiment program for runtime truth, QA lift, and bounded outcome lift beyond factories                               |
 
 ## Research continuation
 
@@ -42,6 +43,7 @@ The docs in this section are paired with the checked-in dataset bank under [expe
 | [Render Telemetry Model](../design/render-telemetry-model.md)                               | Machine-readable per-turn render telemetry contract for bytes, timings, gates, fallbacks, recovery, and config gating     |
 | [Benchmark Suite and Canonical Stack](benchmark-suite-and-canonical-stack.md)               | Fixed stack and 20-task benchmark contract for factory-style evals                                                        |
 | [Premature-Stop Benchmark](experiments/premature-stop-benchmark.md)                         | Concrete A/B spec for `vanilla` versus `gated` completion reliability on small bounded tasks                              |
+| [Non-Factory Proof Program](non-factory-proof-program.md)                                   | Sequenced experiment plan tying runtime falsifiers, QA lift, and bounded non-factory benchmarks together                  |
 | [Context-Adaptive Benchmark Pack](context-adaptive-benchmark-pack.md)                       | Preparatory benchmark-pack contract for representative fixtures, baseline comparison, report artifacts, and evidence gaps |
 | [Hook Runtime Overhead Measurement](hook-runtime-overhead-measurement.md)                   | Reproducible startup, state-I/O, render, and gate-overhead capture path                                                   |
 | [Context-Adaptive Program Status](context-adaptive-program-status.md)                       | Short evidence-positioning summary of what the context-adaptive program can and cannot honestly claim today               |

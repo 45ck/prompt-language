@@ -4,6 +4,24 @@
 
 This document maps the [thesis experiments](thesis.md#experiments-that-can-prove-or-disprove-the-thesis) to the project's existing eval infrastructure and outlines what new tooling is needed for each.
 
+It is not the same thing as the product roadmap.
+
+- The [product roadmap](../roadmap.md) is about making prompt-language a trustworthy supervision runtime now.
+- This page is about the larger bet: whether that runtime can become a real engineering medium.
+
+That means the thesis work must build on the product core in stages rather than racing ahead of it.
+
+## Staged proof model
+
+The thesis should be tested in this order:
+
+1. **Runtime truth**: prove the runtime is really in control, inspectable, and repeatable.
+2. **Outcome lift**: prove it improves bounded engineering outcomes over plain prompting.
+3. **Project lift**: prove multi-file structure, wisdom, and orchestration improve maintainability and supervision burden.
+4. **Medium shift**: prove engineers increasingly edit prompt-language artifacts first and code second.
+
+If stage 1 or 2 is weak, stage 4 is just storytelling.
+
 ## Priority order
 
 | Priority | Experiment                              | Why first                                               |
@@ -13,6 +31,8 @@ This document maps the [thesis experiments](thesis.md#experiments-that-can-prove
 | P2       | E2 — Single-file vs multi-file projects | Requires `import` maturity and fixture design           |
 | P3       | E5 — Parallel specialist orchestration  | Builds on `spawn` / `await` / `send` / `receive`        |
 | P4       | E4 — Prompt-language-first factory      | Largest scope, depends on learnings from E1-E3          |
+
+Read this as a dependency order, not a hype order. The later experiments are more ambitious, but they only mean anything if the earlier ones show real lift.
 
 ## Existing infrastructure
 
@@ -27,11 +47,13 @@ This document maps the [thesis experiments](thesis.md#experiments-that-can-prove
 
 All experiments below assume the project builds (`npm run ci`) and smoke tests pass (`npm run eval:smoke`) before any research eval begins.
 
+They also assume the evidence is honest about host support, blocked environments, and runtime caveats. A thesis experiment that quietly leans on an unsupported or unverified host path is not evidence.
+
 ---
 
 ## E1 — Repeated failure elimination
 
-**Goal**: Show that encoding a fix in prompt language prevents the same failure class from recurring.
+**Goal**: Show that encoding a fix in prompt-language supervision reduces repeated human intervention on the same failure class.
 
 ### What exists
 
@@ -60,11 +82,17 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 - **Confirmed** if recovery fixtures measurably reduce repeated interventions across 3+ runs
 - **Rejected** if pass rates do not improve or failures remain in the same category
 
+Why this comes first:
+
+- it tests the clearest near-term promise of the runtime
+- it does not require a full factory story
+- it answers whether prompt-language helps structurally, not stylistically
+
 ---
 
 ## E2 — Single-file vs multi-file projects
 
-**Goal**: Show that structured multi-file prompt-language projects outperform monolithic flows.
+**Goal**: Show that structured multi-file prompt-language projects are easier to maintain and supervise than one large monolithic flow.
 
 ### What exists
 
@@ -94,11 +122,13 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 - **Confirmed** if multi-file projects are more reliable and easier to edit
 - **Rejected** if the added structure increases complexity without reliability gains
 
+This is the first real test of "prompt-language project" thinking rather than single-run scripting.
+
 ---
 
 ## E3 — Wisdom accumulation
 
-**Goal**: Show that a `wisdom.flow` or `memory:` section reduces babysitting over time.
+**Goal**: Show that reusable recorded lessons reduce repeated mistakes and human babysitting over time.
 
 ### What exists
 
@@ -128,11 +158,13 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 - **Confirmed** if wisdom-loaded runs show fewer repeated mistakes
 - **Rejected** if outcomes are indistinguishable
 
+This is important because it tests whether prompt-language can improve from prior work without collapsing into vague memory claims.
+
 ---
 
 ## E4 — Prompt-language-first software factory
 
-**Goal**: Show that prompt language can serve as the primary engineering surface for bounded software.
+**Goal**: Show that prompt-language can become the primary engineering surface for a bounded class of software work.
 
 ### What exists
 
@@ -163,11 +195,13 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 - **Confirmed** if the app works and most engineering happens at the flow layer
 - **Rejected** if heavy manual code cleanup is required or engineers prefer direct code edits
 
+This is the hardest and most thesis-heavy experiment. It should come after the repo has already shown believable outcome lift and maintainability lift in smaller experiments.
+
 ---
 
 ## E5 — Parallel specialist orchestration
 
-**Goal**: Show that multi-agent prompt-language coordination improves outcomes over single-agent.
+**Goal**: Show that explicit specialist coordination improves outcomes when the seams are real, not just because more tokens were spent.
 
 ### What exists
 
@@ -198,6 +232,8 @@ All experiments below assume the project builds (`npm run ci`) and smoke tests p
 - **Confirmed** if multi-agent coordination improves coverage without excessive integration cost
 - **Rejected** if coordination overhead or integration bugs negate the benefits
 
+This is not just a test of "more agents". It is a test of whether prompt-language adds value by making delegation, review, and integration explicit and inspectable.
+
 ---
 
 ## Cross-cutting evaluation metrics
@@ -213,7 +249,19 @@ Every experiment should track these for comparability:
 - total cost and latency
 - **engineering surface preference** — for each change, was it easier to modify the flow or the code?
 
-The last metric is the leading indicator. If engineers consistently prefer editing flows over code for the tasks tested, the thesis is directionally confirmed.
+The last metric is the leading indicator for the long-range thesis. If engineers consistently prefer editing prompt-language artifacts over code for the tasks tested, the thesis is directionally strengthened. If they do not, the runtime may still be valuable, but the "primary engineering medium" claim weakens.
+
+## Exit criteria for the thesis direction
+
+The broader thesis becomes materially stronger only if all of the following begin to show up together:
+
+- prompt-language supervision produces measurably better bounded outcomes
+- multi-file prompt-language projects are easier to revise than flat flows
+- reusable wisdom reduces repeated mistakes
+- multi-agent coordination improves coverage without chaos
+- engineers choose to edit prompt-language artifacts first for at least some bounded software tasks
+
+If the repo only proves gates and bounded supervision, that is still a useful product outcome. It just means the product is a strong supervision runtime rather than a new primary engineering medium.
 
 ## Relationship to existing evals
 

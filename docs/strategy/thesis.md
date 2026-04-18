@@ -5,6 +5,17 @@
 Prompt language is not just a way to prompt models better.
 It is a higher-level engineering medium where humans program the execution system, and code becomes a downstream artifact produced, repaired, and maintained by agents.
 
+## Important boundary
+
+This page is intentionally broader than the current shipped product.
+
+Today, prompt-language is best understood as a **verification-first supervision runtime for coding agents**. The thesis on this page is the larger bet the repo is trying to prove or disprove over time:
+
+- product today: reliable supervision, verification, recovery structure, and inspectable agent execution
+- thesis later: prompt-language artifacts become a primary engineering surface for bounded software
+
+If the evidence never supports that larger step, the product can still succeed as a runtime.
+
 ## Core claim
 
 Traditional software engineering treats source code as the primary thing engineers write.
@@ -111,6 +122,8 @@ It must show that it can reliably improve real engineering outcomes through:
 Prompt-language already has the shape of an execution runtime rather than a mere syntax toy: it provides persistent state, verification gates, control flow, parallel work, imports/reuse, memory, approvals, and inter-process messaging. See the [README feature surface](../../README.md) for the full list.
 
 Current evaluation evidence shows its clearest proven strength is structural enforcement through gates: it wins when prompts are misleading, incomplete, or omit required criteria, while many pure control-flow and context-management tests currently tie with vanilla Claude. See the [evaluation analysis](../evaluation/eval-analysis.md) for hypothesis-by-hypothesis results.
+
+That means the repo's strongest grounded claim right now is not "prompt-language replaces software engineering." The strongest grounded claim is: **prompt-language can act as a useful supervision runtime with explicit verification and control structure around coding agents.**
 
 ## What is not yet proven
 

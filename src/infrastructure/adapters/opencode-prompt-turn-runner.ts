@@ -14,9 +14,24 @@ interface OpenCodeJsonEvent {
     | {
         readonly snapshot?: string | undefined;
         readonly text?: string | undefined;
+        readonly tool?: string | undefined;
+        readonly reason?: string | undefined;
+        readonly state?:
+          | {
+              readonly status?: string | undefined;
+            }
+          | undefined;
       }
     | undefined;
 }
+
+const MUTATING_TOOLS: ReadonlySet<string> = new Set([
+  'write',
+  'edit',
+  'patch',
+  'multi_edit',
+  'notebook_edit',
+]);
 
 const STEP_FINISH_GRACE_MS = 1_000;
 const OPENCODE_AGENT_ENV = 'PROMPT_LANGUAGE_OPENCODE_AGENT';
@@ -164,6 +179,8 @@ export function summarizeOpenCodeJsonOutput(
 ): Pick<PromptTurnResult, 'assistantText' | 'madeProgress'> {
   let startSnapshot: string | undefined;
   let finishSnapshot: string | undefined;
+  let sawMutatingToolUse = false;
+  let sawConversationStop = false;
   const textParts: string[] = [];
 
   for (const rawLine of output.split(/\r?\n/)) {
@@ -182,9 +199,24 @@ export function summarizeOpenCodeJsonOutput(
       continue;
     }
 
-    if (event.type === 'step_finish' && event.part?.snapshot) {
-      finishSnapshot = event.part.snapshot;
+    if (event.type === 'step_finish') {
+      if (event.part?.snapshot) {
+        finishSnapshot = event.part.snapshot;
+      }
+      if (event.part?.reason === 'stop') {
+        sawConversationStop = true;
+      }
       continue;
+    }
+
+    if (
+      event.type === 'tool_use' &&
+      event.part?.tool !== undefined &&
+      MUTATING_TOOLS.has(event.part.tool)
+    ) {
+      if (event.part?.state?.status === 'completed') {
+        sawMutatingToolUse = true;
+      }
     }
 
     if (event.type === 'text' && event.part?.text) {
@@ -193,10 +225,19 @@ export function summarizeOpenCodeJsonOutput(
   }
 
   const assistantText = textParts.join('\n').trim() || undefined;
-  const madeProgress =
+  const snapshotProgress =
     startSnapshot !== undefined && finishSnapshot !== undefined
       ? startSnapshot !== finishSnapshot
-      : false;
+      : undefined;
+
+  let madeProgress: boolean | undefined;
+  if (snapshotProgress !== undefined) {
+    madeProgress = snapshotProgress || sawMutatingToolUse;
+  } else if (sawConversationStop) {
+    madeProgress = sawMutatingToolUse;
+  } else {
+    madeProgress = undefined;
+  }
 
   return { assistantText, madeProgress };
 }

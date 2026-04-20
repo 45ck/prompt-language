@@ -209,11 +209,40 @@ describe('OpenCodePromptTurnRunner', () => {
     });
   });
 
-  it('treats missing snapshot events as no progress', () => {
+  it('defers the progress decision when no step_finish or mutating tool_use is observed', () => {
     expect(
       summarizeOpenCodeJsonOutput(['{"type":"text","part":{"text":"OK"}}'].join('\n')),
     ).toEqual({
       assistantText: 'OK',
+      madeProgress: undefined,
+    });
+  });
+
+  it('detects progress from completed mutating tool_use when snapshots are absent', () => {
+    expect(
+      summarizeOpenCodeJsonOutput(
+        [
+          '{"type":"step_start","part":{}}',
+          '{"type":"tool_use","part":{"tool":"write","state":{"status":"completed"}}}',
+          '{"type":"step_finish","part":{"reason":"stop"}}',
+        ].join('\n'),
+      ),
+    ).toEqual({
+      assistantText: undefined,
+      madeProgress: true,
+    });
+  });
+
+  it('reports no progress after conversation stop without any mutating tool_use', () => {
+    expect(
+      summarizeOpenCodeJsonOutput(
+        [
+          '{"type":"step_start","part":{}}',
+          '{"type":"step_finish","part":{"reason":"stop"}}',
+        ].join('\n'),
+      ),
+    ).toEqual({
+      assistantText: undefined,
       madeProgress: false,
     });
   });

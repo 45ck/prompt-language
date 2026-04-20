@@ -1,0 +1,111 @@
+Goal: Level A self-hosting harness. Given an experiment id, model, arms list, fixture dir, and subject flow path, sweep every arm by provisioning a fresh run dir, copying fixture files, invoking the subject flow (or the solo aider runner), grading via the fixture oracle, collecting wall-time + retry count from the subject audit log, and appending one markdown row per arm to results/${experiment}/${arm}.md. Touches only results artefacts — no src/, no dist/, no fixture mutation.
+
+# ---------------------------------------------------------------------------
+# Parametrisation surface. All overridable via `node bin/cli.mjs run ... --var name=value`.
+# Defaults here keep the flow runnable as-is against the banked R1 fixture.
+# Env vars are NOT consulted: deterministic-flow-inputs beats ambient state,
+# and keeps the audit log self-describing for later replay.
+# ---------------------------------------------------------------------------
+
+flow:
+  let experiment = "${experiment:-r1}"
+  let model = "${model:-ollama_chat/qwen3:8b}"
+  let fixture_dir = "${fixture_dir:-experiments/aider-vs-pl/rescue-viability/fixtures/e-small}"
+  let subject_flow = "${subject_flow:-experiments/aider-vs-pl/rescue-viability/flows/r1-pl-full.flow}"
+  let oracle_cmd = "${oracle_cmd:-node verify.cjs}"
+  # Whitespace-delimited arm list. Each arm is "<label>:<kind>" where kind is "solo" or "pl".
+  # Gluing the two fields into one token avoids nested foreach and sidesteps the
+  # DSL's line-break-sensitive literal parser. `:` chosen over `|` because `|`
+  # is the pipe-transform sigil in let expressions.
+  let arms = "${arms:-qwen3-8b-solo:solo qwen3-8b-pl-full:pl}"
+
+  let results_root = "experiments/aider-vs-pl/rescue-viability/results/${experiment}"
+  let runs_root = "experiments/aider-vs-pl/rescue-viability/runs/${experiment}"
+  run: mkdir -p ${results_root}
+  run: mkdir -p ${runs_root}
+
+  let pl_cli = "${pl_cli:-bin/cli.mjs}"
+  foreach arm_spec in ${arms}
+    # --- parse the arm spec ----------------------------------------------
+    # Shell `cut` is cheaper than a prompt for deterministic string split.
+    let arm_label = run "printf '%s' '${arm_spec}' | cut -d: -f1"
+    let arm_kind  = run "printf '%s' '${arm_spec}' | cut -d: -f2"
+
+    # --- provision a fresh run dir --------------------------------------
+    # Stamp with a UTC seconds counter so repeat sweeps do not clobber each other.
+    let ts = run "date -u +%Y%m%dT%H%M%SZ"
+    let run_dir = run "mkdir -p ${runs_root}/${arm_label}/${ts} && printf '%s' ${runs_root}/${arm_label}/${ts}"
+
+    # Copy every file from the fixture dir. `cp -R` preserves relative layout.
+    run: cp -R ${fixture_dir}/. ${run_dir}/
+
+    # Some fixtures (E-SMALL) need their own `git init` so aider's parent-repo
+    # quirk does not leak edits up the tree (LIVE-NOTES § aider P1 defect).
+    run: cd ${run_dir} && git init -q && git add -A && git commit -q -m fixture --allow-empty
+
+    # --- record start timestamp for wall-time math ----------------------
+    let t_start = run "date -u +%s"
+
+    # --- invoke the subject ---------------------------------------------
+    # Two kinds only. solo = direct aider call, same flags as solo-arm.sh.
+    # pl   = run the supplied subject flow via the same PL CLI we are executing under,
+    #        but from inside the run dir so the subject's audit.jsonl lands at
+    #        ${run_dir}/.prompt-language/audit.jsonl -- isolated from OUR audit log.
+    if ${arm_kind} == "solo"
+      # Solo: one aider invocation, no retry, no gate. Pass/fail recorded by oracle below.
+      # `|| true` is deliberate — aider's own exit code is not the verdict; verify.cjs is.
+      run: cd ${run_dir} && aider --model ${model} --no-auto-commits --no-git --yes --read verify.cjs --message "Produce csv2json.js per verify.cjs." csv2json.js > aider.log 2>&1 || true [timeout 900]
+    else
+      # PL arm: delegate to the supplied flow. The subject flow is responsible for its
+      # own retries/gates. Our harness stays ignorant of how many retries happened --
+      # we will read that back from the subject audit log below.
+      # Copy subject flow into run dir so the audit record points at a pinned artefact
+      # rather than a path that may change between sweeps.
+      run: cp ${subject_flow} ${run_dir}/subject.flow
+      run: cd ${run_dir} && node ${pl_cli:-bin/cli.mjs} ci subject.flow --runner aider --model ${model} > pl.log 2>&1 || true [timeout 1800]
+    end
+
+    let t_end = run "date -u +%s"
+    let wall_seconds = ${t_end} - ${t_start}
+
+    # --- grade via the oracle -------------------------------------------
+    # Re-run the oracle OUTSIDE the subject so the harness measurement is
+    # independent of whatever the subject reported. verify.cjs prints one
+    # line per assertion; we count `PASS` and `FAIL` markers.
+    # `|| true` so a failing oracle does not abort the sweep.
+    run: cd ${run_dir} && ${oracle_cmd} > oracle.log 2>&1 || true
+    let pass_count = run "grep -c '^PASS' ${run_dir}/oracle.log || printf 0"
+    let fail_count = run "grep -c '^FAIL' ${run_dir}/oracle.log || printf 0"
+    let total_count = ${pass_count} + ${fail_count}
+
+    # --- retry count: ONLY from the subject's audit log -----------------
+    # Critical: do NOT grep our own .prompt-language/audit.jsonl -- that would
+    # double-count (our own foreach invocations of `run:` generate audit events
+    # too). The subject flow's audit log lives at ${run_dir}/.prompt-language/audit.jsonl
+    # when arm_kind=pl. For solo arms, retries are 0 by definition.
+    let retry_count = "0"
+    if ${arm_kind} == "pl"
+      let retry_count = run "grep -c '\"event\":\"retry_invoke\"' ${run_dir}/.prompt-language/audit.jsonl || printf 0"
+    end
+
+    # --- silent-ollama-drop detector ------------------------------------
+    # aider P1 Layer 1 (LIVE-NOTES): ollama TCP close mid-inference. The subject's
+    # own retry/gate machinery may swallow this. Flag the run as SUSPECT so the
+    # markdown row is not silently conflated with a clean failure.
+    let ollama_drop = run "grep -c 'APIConnectionError\\|forcibly closed\\|ECONNRESET\\|wsarecv' ${run_dir}/*.log ${run_dir}/.prompt-language/audit.jsonl 2>/dev/null || printf 0"
+    let run_status = "clean"
+    if ${ollama_drop} > 0
+      let run_status = "suspect-ollama-drop"
+    end
+
+    # --- write the markdown row -----------------------------------------
+    # Per-arm file, append mode. Header is written lazily on first touch.
+    let row_file = "${results_root}/${arm_label}.md"
+    # Lazy header: one line condition -> header emission. The `\n` sequences
+    # are shell-escape-interpreted by printf, not DSL-interpreted.
+    run: sh -c "test -f ${row_file} || printf '# Level A sweep: %s / %s\n\n| ts | model | pass | total | wall_s | retries | status | run_dir |\n|---|---|---|---|---|---|---|---|\n' '${experiment}' '${arm_label}' > ${row_file}"
+    run: printf '| %s | %s | %s | %s | %s | %s | %s | %s |\n' "${ts}" "${model}" "${pass_count}" "${total_count}" "${wall_seconds}" "${retry_count}" "${run_status}" "${run_dir}" >> ${row_file}
+  end
+
+done when:
+  file_exists "${results_root}"

@@ -1,0 +1,40 @@
+Goal: R7 arm — scaffold a minimal Next.js 15 app using foreach-spawn fan-out (max 3) for per-file scaffolding, then install and self-heal the build. Mirrors oc-nextjs-v2/build.flow semantically but replaces the six sequential prompts with one parallel fan-out.
+
+env:
+  PL_SPAWN_RUNNER=opencode
+
+flow:
+  # The six files produced by the v2 baseline, one item per spawn child.
+  # Built via the documented list-append form so the parser sees each item
+  # as a distinct element (see docs/reference/let-var.md "List variables").
+  let files = []
+  let files += "package.json"
+  let files += "tsconfig.json"
+  let files += "next.config.js"
+  let files += "app/layout.tsx"
+  let files += "app/page.tsx"
+  let files += "app/about/page.tsx"
+
+  # Fan out one opencode child per target file. max 3 caps parallelism; on a
+  # single-GPU ollama box the model slot serialises regardless, so this is a
+  # fairness/queueing parameter, not a true concurrency parameter.
+  foreach-spawn file in ${files} max 3
+    prompt: You are scaffolding ONE file for a minimal Next.js 15 app. The file to create is exactly ${file} (relative to the current working directory). Use your write tool. Do not create, modify, or touch any other file. Do not add dependencies. Do not run any command. The exact content for each target is: (a) package.json => {"name":"nx","version":"1.0.0","private":true,"scripts":{"dev":"next dev","build":"next build","start":"next start"},"dependencies":{"next":"latest","react":"latest","react-dom":"latest"},"devDependencies":{"typescript":"latest","@types/react":"latest","@types/node":"latest"}} ; (b) tsconfig.json => {"compilerOptions":{"target":"ES2022","lib":["dom","dom.iterable","esnext"],"allowJs":true,"skipLibCheck":true,"strict":true,"noEmit":true,"esModuleInterop":true,"module":"esnext","moduleResolution":"bundler","resolveJsonModule":true,"isolatedModules":true,"jsx":"preserve","incremental":true,"plugins":[{"name":"next"}]},"include":["next-env.d.ts","**/*.ts","**/*.tsx",".next/types/**/*.ts"],"exclude":["node_modules"]} and do NOT set jsxImportSource ; (c) next.config.js => module.exports = {}; ; (d) app/layout.tsx => export default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang="en"><body>{children}</body></html>); } export const metadata = { title: "Opencode Next" }; ; (e) app/page.tsx => export default function Home() { return (<main><h1>Hello from Opencode</h1></main>); } ; (f) app/about/page.tsx => export default function About() { return (<main><h1>About</h1></main>); } . Write only the file matching ${file}. Reply "ok" when done.
+  end
+
+  # Block until every scaffold child has settled (success OR failure).
+  # Failure isolation hypothesis: a bad child's write tool error does not
+  # mutate siblings' scratch state.
+  await all
+
+  run: npm install --no-audit --no-fund --loglevel=error [timeout 600]
+
+  retry max 3
+    run: npx --yes next build [timeout 600]
+    if command_failed
+      prompt: The next build failed. Read the error output from the last command and fix the problem by editing only the necessary file(s) with your edit or write tool. Do not add new dependencies. Do not modify package.json unless a dependency is literally missing. Reply "fixed" when done.
+    end
+  end
+
+done when:
+  all(file_exists "package.json", file_exists "app/page.tsx", file_exists "app/layout.tsx", file_exists "app/about/page.tsx", file_exists ".next/BUILD_ID")

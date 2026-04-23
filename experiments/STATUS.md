@@ -1,4 +1,4 @@
-# STATUS — open research work at 2026-04-20
+# STATUS — open research work at 2026-04-24
 
 Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/` via the `bd` CLI; this file is a committed mirror so the status is readable without a bd install and is PR-reviewable.
 
@@ -7,7 +7,7 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 ## Headline
 
 - **1 bug committed as closed today:** `prompt-959j` (opencode runner progress-detector patch, landed in commit `04367d2`).
-- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. The rest split across runtime bugs, DSL gaps, ecosystem adapters, and individual experiment runs.
+- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. R1-A qwen3:8b solo baseline has now run and timed out at 1/11; R1 replications remain open.
 
 ## Open items by priority
 

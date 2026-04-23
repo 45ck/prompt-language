@@ -30,6 +30,17 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Whether PL-_lite_ (decomposition only, no retry) would also get to ≥ 10/11. Need a second arm to isolate the retry contribution.
 - Whether qwen3:8b solo without any PL scaffolding is above or below 5/11 pre-retry. Need the `solo-arm.sh` run.
 
+## 2026-04-24 R1-A qwen3:8b solo-aider baseline
+
+### Run `qwen3-8b-solo-r1a-20260424` — TERMINATED BY WALL TIME
+
+- Command intent: solo aider, no PL, no retry, `ollama_chat/qwen3:8b`, E-SMALL CSV fixture.
+- Shell portability note: the original `solo-arm.sh` could not run through Windows `bash.exe` because the WSL launcher had no `/bin/bash`; the same steps were executed in PowerShell with the same prompt, model, oracle, and artifact layout.
+- Aider ran for 1800s without producing implementation code. The log shows repetitive reasoning about the CSV mapping rules and two Ollama/litellm connection drops (`wsarecv: An existing connection was forcibly closed by the remote host`); `csv2json.js` remained an empty file.
+- Oracle result after timeout: **1/11** passing. The only passing assertion was `csv2json.js exists`; all functional assertions failed with empty-output/JSON parse or missing error-exit behavior.
+- Artifact: `runs/r1/qwen3-8b-solo-r1a-20260424/`.
+- Interpretation: this gives the missing operational solo baseline for the current qwen3:8b local setup, but it is not a clean model-capability-only measurement because transport instability contributed to the timeout. Compared with the PL-full R1v3 signal of 9/11 after retry, the single-run rescue delta is large, but the variance warning below still applies; R1-B/R1-C replications are now the next required evidence.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

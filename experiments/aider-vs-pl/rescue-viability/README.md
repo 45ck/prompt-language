@@ -1,7 +1,7 @@
 # rescue — does PL's top-level wisdom lift lower-capability models above their solo ceiling
 
-**Status:** R1v3 produced +4 assertions on qwen3:8b E-SMALL; solo baseline (R1-A) not yet run
-**Last update:** 2026-04-20
+**Status:** R1-A solo baseline timed out at 1/11; R1v3 PL-full produced 9/11 after retry on qwen3:8b E-SMALL.
+**Last update:** 2026-04-24
 
 ## Question
 
@@ -9,7 +9,8 @@ If we encode PL's discipline (decomposition, scoping, gates, retry loops) as top
 
 ## What this area has measured (receipts)
 
-- R1v3 run on qwen3:8b E-SMALL, +4 assertions over baseline — see [LIVE-NOTES.md](LIVE-NOTES.md)
+- R1-A solo aider baseline on qwen3:8b E-SMALL timed out after 1800s and scored 1/11 — see [LIVE-NOTES.md](LIVE-NOTES.md)
+- R1v3 PL-full run on qwen3:8b E-SMALL reached 9/11 after retry — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R1..R10 experiment plan and success criteria — see [RESCUE-VIABILITY-PLAN.md](RESCUE-VIABILITY-PLAN.md)
 - Sequencing, stop conditions, and falsification milestone — see [ROADMAP.md](ROADMAP.md)
 - Run artifacts and fixtures — see [runs/](runs/), [fixtures/](fixtures/), [flows/](flows/)
@@ -21,8 +22,8 @@ If we encode PL's discipline (decomposition, scoping, gates, retry loops) as top
 
 ## What is next (ordered)
 
-1. R1-A solo baseline (~8 min, the missing arm needed to claim lift)
-2. R1-B and R1-C replications at additional seeds/models
+1. R1-B and R1-C PL-full replications to establish whether the 9/11 result reproduces
+2. Additional solo repeat if the R1-A timeout looks like a one-off runner/model stall
 3. R2 ablation — remove top-level wisdom and re-run
 
 ## Known blockers

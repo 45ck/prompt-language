@@ -9,6 +9,7 @@ License: MIT. Primary language: TypeScript. Node 24 (or 22.16+).
 OpenClaw is a personal, single-user AI assistant you run on your own devices. Built by Peter Steinberger ("for Molty, a space lobster AI assistant"). The product is the always-on assistant; the **Gateway** is a local control-plane daemon (launchd/systemd service) that fronts a **multi-channel inbox** (WhatsApp, Telegram, Slack, Discord, Signal, iMessage, Matrix, IRC, Teams, WebChat, etc.) and exposes companion surfaces (macOS menu-bar app, iOS/Android "nodes", a live "Canvas"). It is explicitly **not** a developer orchestration runtime — it is a consumer assistant whose internals happen to include an agent loop, tool registry, sessions, and skills.
 
 Key abstractions (from README + architecture docs):
+
 - **Gateway** — WebSocket RPC daemon; typed request/response + server-push events (`agent`, `chat`, `presence`, `health`, `heartbeat`, `cron`), idempotency keys, TypeBox/JSON-Schema validation.
 - **Agents / Sessions** — multi-agent routing: inbound channels/peers map to isolated agents with per-session workspaces and optional Docker sandboxing (`agents.defaults.sandbox.mode`).
 - **Skills** — `~/.openclaw/workspace/skills/<skill>/SKILL.md` (same shape Anthropic is pushing); registry at ClawHub.

@@ -6,25 +6,25 @@
 
 ## 1. Project Catalogue (verified knowledge; website check not required for these widely documented projects)
 
-| Project | One-line | Category | Local/Ollama | Relation to PL |
-|---|---|---|---|---|
-| aider | Terminal pair-programmer with git-aware edits | Harness | Yes (Ollama, llama.cpp via LiteLLM) | Complementary (wrap) |
-| opencode (sst) | OSS Claude Code-style TUI; multi-provider | Harness | Yes (Ollama, LM Studio) | Complementary (wrap) |
-| OpenHands (All-Hands-AI) | Sandboxed dev agent with browser/shell tools | Mixed harness+internal orchestrator | Yes (LiteLLM) | Complementary (wrap) |
-| Cline | VS Code extension agent with plan/act modes | Harness (IDE) | Yes (Ollama, LM Studio) | Complementary but IDE-bound |
-| Roo Code | Cline fork with multi-mode personas | Harness (IDE) | Yes | Complementary but IDE-bound |
-| Continue | IDE autocomplete/chat with custom agents | Harness (IDE) | Yes | Complementary but IDE-bound |
-| Claude Code | Anthropic first-party CLI harness | Harness | No (Anthropic API only) | Complementary (wrap) |
-| Codex CLI | OpenAI first-party CLI harness | Harness | Limited (OpenAI-compatible) | Complementary (wrap) |
-| smol-developer | Early single-shot scaffold generator | Harness (legacy) | Limited | Low priority |
-| gpt-engineer | Iterative scaffold+clarify generator | Harness | Via OpenAI-compatible | Low priority |
-| SWE-agent | Research agent for SWE-bench | Harness + benchmark runner | Via LiteLLM | Complementary |
-| AutoGen / Magentic-One | Multi-agent conversation framework | Orchestrator (framework) | Yes (via OAI-compatible) | Partial competitor |
-| LangGraph | Graph-based agent state machine library | Orchestrator (library) | Yes | Direct competitor (same niche: deterministic graphs) |
-| CrewAI | Role-based multi-agent framework | Orchestrator (framework) | Yes | Partial competitor |
-| DSPy | Prompt program compiler/optimizer | Prompt compiler (not orchestrator) | Yes | Orthogonal |
-| Mirascope | Typed LLM call library | SDK | Yes | Orthogonal |
-| Inspect AI (UK AISI) | Eval framework for LLM capability/safety | Evaluator | Yes | Complementary (use for PL gates) |
+| Project                  | One-line                                      | Category                            | Local/Ollama                        | Relation to PL                                       |
+| ------------------------ | --------------------------------------------- | ----------------------------------- | ----------------------------------- | ---------------------------------------------------- |
+| aider                    | Terminal pair-programmer with git-aware edits | Harness                             | Yes (Ollama, llama.cpp via LiteLLM) | Complementary (wrap)                                 |
+| opencode (sst)           | OSS Claude Code-style TUI; multi-provider     | Harness                             | Yes (Ollama, LM Studio)             | Complementary (wrap)                                 |
+| OpenHands (All-Hands-AI) | Sandboxed dev agent with browser/shell tools  | Mixed harness+internal orchestrator | Yes (LiteLLM)                       | Complementary (wrap)                                 |
+| Cline                    | VS Code extension agent with plan/act modes   | Harness (IDE)                       | Yes (Ollama, LM Studio)             | Complementary but IDE-bound                          |
+| Roo Code                 | Cline fork with multi-mode personas           | Harness (IDE)                       | Yes                                 | Complementary but IDE-bound                          |
+| Continue                 | IDE autocomplete/chat with custom agents      | Harness (IDE)                       | Yes                                 | Complementary but IDE-bound                          |
+| Claude Code              | Anthropic first-party CLI harness             | Harness                             | No (Anthropic API only)             | Complementary (wrap)                                 |
+| Codex CLI                | OpenAI first-party CLI harness                | Harness                             | Limited (OpenAI-compatible)         | Complementary (wrap)                                 |
+| smol-developer           | Early single-shot scaffold generator          | Harness (legacy)                    | Limited                             | Low priority                                         |
+| gpt-engineer             | Iterative scaffold+clarify generator          | Harness                             | Via OpenAI-compatible               | Low priority                                         |
+| SWE-agent                | Research agent for SWE-bench                  | Harness + benchmark runner          | Via LiteLLM                         | Complementary                                        |
+| AutoGen / Magentic-One   | Multi-agent conversation framework            | Orchestrator (framework)            | Yes (via OAI-compatible)            | Partial competitor                                   |
+| LangGraph                | Graph-based agent state machine library       | Orchestrator (library)              | Yes                                 | Direct competitor (same niche: deterministic graphs) |
+| CrewAI                   | Role-based multi-agent framework              | Orchestrator (framework)            | Yes                                 | Partial competitor                                   |
+| DSPy                     | Prompt program compiler/optimizer             | Prompt compiler (not orchestrator)  | Yes                                 | Orthogonal                                           |
+| Mirascope                | Typed LLM call library                        | SDK                                 | Yes                                 | Orthogonal                                           |
+| Inspect AI (UK AISI)     | Eval framework for LLM capability/safety      | Evaluator                           | Yes                                 | Complementary (use for PL gates)                     |
 
 ## 2. Positioning Grid: Harness-vs-Orchestrator × Local-first-vs-Cloud
 
@@ -46,24 +46,24 @@
                        CLOUD-ONLY v
 ```
 
-PL occupies the **orchestrator + local-first** quadrant alongside LangGraph, AutoGen, CrewAI, and Inspect AI. The distinguishing angle inside that quadrant is *verification-first* (gates, retries on failed gate) and *harness-wrapping* (treats external CLIs as first-class units of work), neither of which is the central concern of those neighbours.
+PL occupies the **orchestrator + local-first** quadrant alongside LangGraph, AutoGen, CrewAI, and Inspect AI. The distinguishing angle inside that quadrant is _verification-first_ (gates, retries on failed gate) and _harness-wrapping_ (treats external CLIs as first-class units of work), neither of which is the central concern of those neighbours.
 
 ## 3. PL's Unique Value vs Closest Three Competitors
 
 Closest three by niche overlap: **LangGraph**, **AutoGen**, **CrewAI**.
 
-| Capability | LangGraph | AutoGen | CrewAI | PL |
-|---|---|---|---|---|
-| Graph/state-machine control flow | Yes | Partial | No | Yes |
-| First-class verification gates between steps | No (user builds nodes) | No | No | Yes (declarative) |
-| Retry on gate failure with bounded budget | Manual | Manual | Manual | Declarative |
-| Wraps external coding-agent CLIs (claude, aider, codex, opencode) as primitives | No | No | No | Yes |
-| spawn/race/await parallel primitives | Emerging | Conversation-level | Sequential/hierarchical | Yes, as DSL |
-| DSL purpose-built for coding agents | No (general) | No (general) | No (general) | Yes |
+| Capability                                                                      | LangGraph              | AutoGen            | CrewAI                  | PL                |
+| ------------------------------------------------------------------------------- | ---------------------- | ------------------ | ----------------------- | ----------------- |
+| Graph/state-machine control flow                                                | Yes                    | Partial            | No                      | Yes               |
+| First-class verification gates between steps                                    | No (user builds nodes) | No                 | No                      | Yes (declarative) |
+| Retry on gate failure with bounded budget                                       | Manual                 | Manual             | Manual                  | Declarative       |
+| Wraps external coding-agent CLIs (claude, aider, codex, opencode) as primitives | No                     | No                 | No                      | Yes               |
+| spawn/race/await parallel primitives                                            | Emerging               | Conversation-level | Sequential/hierarchical | Yes, as DSL       |
+| DSL purpose-built for coding agents                                             | No (general)           | No (general)       | No (general)            | Yes               |
 
 Three things PL does that none of those three offer simultaneously:
 
-1. **Harness-as-primitive.** PL addresses the reality that most OSS coding capability lives in *harnesses* (aider/opencode/claude-code), not in SDK calls. LangGraph/AutoGen/CrewAI treat the LLM call as the primitive; PL treats the agent session as the primitive.
+1. **Harness-as-primitive.** PL addresses the reality that most OSS coding capability lives in _harnesses_ (aider/opencode/claude-code), not in SDK calls. LangGraph/AutoGen/CrewAI treat the LLM call as the primitive; PL treats the agent session as the primitive.
 2. **Declarative verification gates.** Retry-until-gate-passes is a language-level construct, not a pattern the user reimplements per graph.
 3. **Race/spawn semantics for coding work specifically** (e.g., race two harnesses on the same ticket, accept the first whose gate passes). Closest analogue is AutoGen group chat, which is dialogue-centric, not verification-centric.
 
@@ -73,7 +73,7 @@ Three things PL does that none of those three offer simultaneously:
 2. **opencode (sst)** - second. Actively developed, provider-agnostic, TUI/headless modes, already used with Ollama/LM Studio. Natural counterpart to Claude Code for users who want an OSS Anthropic-compatible harness.
 3. **OpenHands** - third. Sandboxed execution, browser/shell tools, and a runtime API make it a strong primitive for tasks requiring environment isolation. Wrapping OpenHands lets PL offload sandboxing rather than build it.
 
-Deprioritised: IDE-bound tools (Cline, Roo, Continue) are coupled to VS Code and therefore awkward for a headless orchestrator. smol-developer and gpt-engineer are largely legacy. Inspect AI is worth integrating *as a gate provider* rather than as a harness.
+Deprioritised: IDE-bound tools (Cline, Roo, Continue) are coupled to VS Code and therefore awkward for a headless orchestrator. smol-developer and gpt-engineer are largely legacy. Inspect AI is worth integrating _as a gate provider_ rather than as a harness.
 
 ## 5. Threat Assessment: Direct Competitors to "Deterministic Orchestrator Above Harnesses"
 

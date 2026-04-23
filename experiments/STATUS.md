@@ -13,36 +13,36 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 
 ### P1 — blocking measurement integrity
 
-| ID | Type | Subject | Blocks |
-| --- | --- | --- | --- |
-| `prompt-0zn1` | bug | PL gate evaluator reports `file_exists` as false when file exists on disk (opencode-v2 regression) | Every flow using relative `done when: file_exists …` under opencode. Rescue-viability, self-hosting. |
-| `prompt-7zyi` | bug | PL aider runner walks up to parent git dir for path resolution even with `--no-git` | Every aider run inside `experiments/**` without a per-run `git init`. Rescue-viability, ladder. |
+| ID            | Type | Subject                                                                                            | Blocks                                                                                               |
+| ------------- | ---- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `prompt-0zn1` | bug  | PL gate evaluator reports `file_exists` as false when file exists on disk (opencode-v2 regression) | Every flow using relative `done when: file_exists …` under opencode. Rescue-viability, self-hosting. |
+| `prompt-7zyi` | bug  | PL aider runner walks up to parent git dir for path resolution even with `--no-git`                | Every aider run inside `experiments/**` without a per-run `git init`. Rescue-viability, ladder.      |
 
 ### P2 — next-tier execution work
 
-| ID | Type | Subject | Blocked by |
-| --- | --- | --- | --- |
-| `prompt-g64k` | bug | PL aider runner hangs on ollama TCP stream drop — litellm retries infinitely | — (containment plan written) |
-| `prompt-gysa` | epic | Rescue-viability research program (R1..R10 umbrella) | — |
-| `prompt-b5eb` | task | Rescue-viability R1 replications: lock in qwen3:8b E-SMALL CSV baseline | — |
-| `prompt-zbpc` | task | Run R7 foreach-spawn experiment (blocked on isolation) | `prompt-l1xz`, `prompt-nba9` |
-| `prompt-lmas` | feature | Add pi-mono runner adapter (~300 LOC headless JSONL bridge) | — |
+| ID            | Type    | Subject                                                                      | Blocked by                   |
+| ------------- | ------- | ---------------------------------------------------------------------------- | ---------------------------- |
+| `prompt-g64k` | bug     | PL aider runner hangs on ollama TCP stream drop — litellm retries infinitely | — (containment plan written) |
+| `prompt-gysa` | epic    | Rescue-viability research program (R1..R10 umbrella)                         | —                            |
+| `prompt-b5eb` | task    | Rescue-viability R1 replications: lock in qwen3:8b E-SMALL CSV baseline      | —                            |
+| `prompt-zbpc` | task    | Run R7 foreach-spawn experiment (blocked on isolation)                       | `prompt-l1xz`, `prompt-nba9` |
+| `prompt-lmas` | feature | Add pi-mono runner adapter (~300 LOC headless JSONL bridge)                  | —                            |
 
 ### P3 — follow-ups and ecosystem work
 
-| ID | Type | Subject | Depends on |
-| --- | --- | --- | --- |
-| `prompt-4rcm` | task | R2 PL-intensity ablation on qwen3:8b H8 fixture | `prompt-b5eb` |
-| `prompt-4noo` | task | Level B self-hosting: PL-authored port of opencode runner patch | — (reference patch now merged) |
-| `prompt-l1xz` | bug | Concurrent opencode children may share `.prompt-language/opencode-home/` state | — |
-| `prompt-nba9` | feature | `foreach-spawn` should expose a child-index variable for per-child state isolation | — |
-| `prompt-pm17` | feature | Evaluate OpenHands runner adapter for PL | — |
-| `prompt-82lx` | decision | Prefer aider over opencode as PL runner for local-model orchestration | — |
+| ID            | Type     | Subject                                                                            | Depends on                     |
+| ------------- | -------- | ---------------------------------------------------------------------------------- | ------------------------------ |
+| `prompt-4rcm` | task     | R2 PL-intensity ablation on qwen3:8b H8 fixture                                    | `prompt-b5eb`                  |
+| `prompt-4noo` | task     | Level B self-hosting: PL-authored port of opencode runner patch                    | — (reference patch now merged) |
+| `prompt-l1xz` | bug      | Concurrent opencode children may share `.prompt-language/opencode-home/` state     | —                              |
+| `prompt-nba9` | feature  | `foreach-spawn` should expose a child-index variable for per-child state isolation | —                              |
+| `prompt-pm17` | feature  | Evaluate OpenHands runner adapter for PL                                           | —                              |
+| `prompt-82lx` | decision | Prefer aider over opencode as PL runner for local-model orchestration              | —                              |
 
 ## Recently closed
 
-| ID | Closed | Commit |
-| --- | --- | --- |
+| ID            | Closed     | Commit                                                                                                                     |
+| ------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `prompt-959j` | 2026-04-20 | `04367d2` — fix(runtime): treat completed mutating tool_use as opencode progress. 14/14 tests pass. Pushed to origin/main. |
 
 ## Dependency chains worth knowing

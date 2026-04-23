@@ -6,7 +6,7 @@ Theory reference: `SELF-HOSTING-THEORY.md` §4 Level A — "PL automates the exi
 
 ## 1. Summary
 
-The harness is a PL flow whose *subject* is results artefacts. Given `(experiment, model, fixture_dir, subject_flow, arms)` it fires one sweep that, per arm, provisions a fresh run dir, copies the fixture in, invokes either the solo aider runner or the supplied subject flow, grades via the fixture oracle, and appends one markdown row to `results/<experiment>/<arm>.md`. No mutation of `src/`, `dist/`, fixtures, or the subject flow.
+The harness is a PL flow whose _subject_ is results artefacts. Given `(experiment, model, fixture_dir, subject_flow, arms)` it fires one sweep that, per arm, provisions a fresh run dir, copies the fixture in, invokes either the solo aider runner or the supplied subject flow, grades via the fixture oracle, and appends one markdown row to `results/<experiment>/<arm>.md`. No mutation of `src/`, `dist/`, fixtures, or the subject flow.
 
 This replaces ~6 manual shell steps per arm, previously performed by hand per the `RESCUE-VIABILITY-PLAN` §4 protocol and the existing `solo-arm.sh`.
 
@@ -29,11 +29,11 @@ Arms currently in scope for R1: `qwen3-8b-solo`, `qwen3-8b-pl-full`. R2 adds `qw
 
 Three candidates were considered:
 
-| surface | pro | con |
-|---|---|---|
-| CLI flags (`--experiment r1 --model ...`) | explicit, tracked in shell history | requires CLI-side argument wiring, awkward for list-typed params like `arms` |
-| env vars (`$ARMS`, `$MODEL`) | cheap, no flow edits | invisible in audit log, easy to forget, leaks between sweeps |
-| flow-level `let` with `${var:-default}` interpolation | visible in the flow text, dumped into audit as-is, overridable via `--var` | user needs to know the var names |
+| surface                                               | pro                                                                        | con                                                                          |
+| ----------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| CLI flags (`--experiment r1 --model ...`)             | explicit, tracked in shell history                                         | requires CLI-side argument wiring, awkward for list-typed params like `arms` |
+| env vars (`$ARMS`, `$MODEL`)                          | cheap, no flow edits                                                       | invisible in audit log, easy to forget, leaks between sweeps                 |
+| flow-level `let` with `${var:-default}` interpolation | visible in the flow text, dumped into audit as-is, overridable via `--var` | user needs to know the var names                                             |
 
 **Chosen: flow-level `let` with default values.** Every parameter appears as `let x = "${x:-default}"` at the top of the flow. The effect is:
 
@@ -52,6 +52,7 @@ qwen3-8b-solo:solo qwen3-8b-pl-full:pl
 ```
 
 Why single token:
+
 - `foreach` splits on whitespace by default. A list-of-pairs structure would require nested foreach or a separate arms-list file.
 - `:` is chosen over `|` because `|` is the let-expression pipe-transform sigil.
 
@@ -61,17 +62,17 @@ Kinds are deliberately only two: `solo` (raw aider call, no retry, no gate — m
 
 ### 5.1 Silent ollama TCP drop (LIVE-NOTES aider P1 Layer 1)
 
-Symptom: `APIConnectionError … wsarecv: An existing connection was forcibly closed by the remote host.` The subject's own retry loop may paper over this and eventually hit its retry cap, producing a row that *looks* like a model-capability failure but is actually an infra drop.
+Symptom: `APIConnectionError … wsarecv: An existing connection was forcibly closed by the remote host.` The subject's own retry loop may paper over this and eventually hit its retry cap, producing a row that _looks_ like a model-capability failure but is actually an infra drop.
 
 Mitigation: after oracle grading, the harness greps every `.log` and the subject `audit.jsonl` for the fingerprint set `{APIConnectionError, forcibly closed, ECONNRESET, wsarecv}`. If any hit, `run_status` is marked `suspect-ollama-drop` instead of `clean`. The row still writes; downstream analysis can filter.
 
-Limitation: the harness does not *prevent* double-booking ollama — R5 (spawn/race) arms may still collide with in-flight opencode runs. The fix for that is operational (kill opencode before the sweep), not flow-level.
+Limitation: the harness does not _prevent_ double-booking ollama — R5 (spawn/race) arms may still collide with in-flight opencode runs. The fix for that is operational (kill opencode before the sweep), not flow-level.
 
 ### 5.2 Double-counting retries
 
 The harness itself is a PL flow and therefore writes its own `audit.jsonl` to `.prompt-language/audit.jsonl` relative to its cwd. Every `run:` inside the foreach generates harness-level audit events.
 
-If the harness grepped `retry_invoke` from its own audit log, it would double-count: the subject flow's retries *plus* any retries the harness itself did. (The harness has no retry blocks today, but future edits could add one.)
+If the harness grepped `retry_invoke` from its own audit log, it would double-count: the subject flow's retries _plus_ any retries the harness itself did. (The harness has no retry blocks today, but future edits could add one.)
 
 Discipline: the harness greps **only** `${run_dir}/.prompt-language/audit.jsonl` — i.e. the subject flow's audit log, inside the per-arm run dir. For `solo` arms, retries are 0 by construction (aider runs once, no PL retry loop).
 
@@ -93,13 +94,13 @@ The subject flow's `done when: gate verify_passes: node verify.cjs` already runs
 
 ## 6. Quality-attribute scoring
 
-| attribute | score | note |
-|---|---|---|
-| determinism | medium-high | Same inputs → same run-dir layout and markdown schema. Model stochasticity still dominates row content; that's a property of the subject, not the harness. |
-| observability | high | Every shell action is a `run:` → audit event. `aider.log`, `pl.log`, `oracle.log` persisted per run dir. |
-| reproducibility | medium | `subject.flow` is copied into the run dir so later replay does not depend on HEAD. Fixture is snapshotted. Model weights are not snapshotted (out of scope). |
-| blast radius | minimal | Only writes under `runs/<exp>/` and `results/<exp>/`. Never edits src/dist/fixtures/subject flow. |
-| composability | medium | A different experiment is `--var experiment=r2 --var subject_flow=...`. R4 (runner-sensitivity) needs a new kind `opencode` — small change. |
+| attribute       | score       | note                                                                                                                                                         |
+| --------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| determinism     | medium-high | Same inputs → same run-dir layout and markdown schema. Model stochasticity still dominates row content; that's a property of the subject, not the harness.   |
+| observability   | high        | Every shell action is a `run:` → audit event. `aider.log`, `pl.log`, `oracle.log` persisted per run dir.                                                     |
+| reproducibility | medium      | `subject.flow` is copied into the run dir so later replay does not depend on HEAD. Fixture is snapshotted. Model weights are not snapshotted (out of scope). |
+| blast radius    | minimal     | Only writes under `runs/<exp>/` and `results/<exp>/`. Never edits src/dist/fixtures/subject flow.                                                            |
+| composability   | medium      | A different experiment is `--var experiment=r2 --var subject_flow=...`. R4 (runner-sensitivity) needs a new kind `opencode` — small change.                  |
 
 ## 7. What Level A deliberately does not do
 
@@ -110,7 +111,7 @@ The subject flow's `done when: gate verify_passes: node verify.cjs` already runs
 ## 8. Open questions
 
 1. Should `total == 0` trigger an `oracle-malformed` status alongside `suspect-ollama-drop`? Likely yes; trivial to add.
-2. Should the harness copy the *current* `SCORECARD.md` into the run dir for provenance? Cheap; not done yet.
+2. Should the harness copy the _current_ `SCORECARD.md` into the run dir for provenance? Cheap; not done yet.
 3. Level B's flow will want to `git init` a per-run worktree (meta-factory MD-2). Level A's `git init` is a degenerate form. Worth extracting a shared helper flow at that point.
 
 ## 9. Validation

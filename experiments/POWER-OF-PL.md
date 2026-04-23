@@ -3,7 +3,7 @@
 Date: 2026-04-20
 Scope: what a PL flow can do that a raw coding-agent harness cannot, tied to measurements on this PC. Skeptic-readable in ~5 minutes. Every claim pairs a number or a file reference.
 
-Sibling doc: `experiments/JOURNEY.md` (narrative of how we got here). This doc is the surface view of what the runtime can do *today*, and what we have actually measured doing it.
+Sibling doc: `experiments/JOURNEY.md` (narrative of how we got here). This doc is the surface view of what the runtime can do _today_, and what we have actually measured doing it.
 
 ---
 
@@ -35,10 +35,11 @@ No model self-report of "fixed" is consulted. `command_failed` is set by `last_e
 ## 3. Claim 2 — Decomposition beats monolithic prompts
 
 **Evidence (two runs, same model):**
+
 - H3 — solo produced `any`-typed code with 6 tests; PL with per-step prompts produced `unknown`-typed code with 7 tests. `SCORECARD.md` line 13.
 - Next.js scaffold, 2026-04-20 — v1 single-prompt added a stray `@emotion/react` dependency and broke `next build` with `f.createContext is not a function`; v2 with six one-file prompts + a `retry max 3` build gate produced a clean `tsconfig.json`. Source: `experiments/aider-vs-pl/SESSION-2026-04-20-OPENCODE-NEXTJS.md` lines 9–11, 68–71.
 
-The PL win in both cases is from *slicing* the work, not from cleverer prompts. The model sees one file at a time with explicit "do not add dependencies" constraints; the orchestrator handles sequencing and verification.
+The PL win in both cases is from _slicing_ the work, not from cleverer prompts. The model sees one file at a time with explicit "do not add dependencies" constraints; the orchestrator handles sequencing and verification.
 
 ---
 

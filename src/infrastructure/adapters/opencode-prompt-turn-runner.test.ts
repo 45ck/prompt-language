@@ -236,10 +236,9 @@ describe('OpenCodePromptTurnRunner', () => {
   it('reports no progress after conversation stop without any mutating tool_use', () => {
     expect(
       summarizeOpenCodeJsonOutput(
-        [
-          '{"type":"step_start","part":{}}',
-          '{"type":"step_finish","part":{"reason":"stop"}}',
-        ].join('\n'),
+        ['{"type":"step_start","part":{}}', '{"type":"step_finish","part":{"reason":"stop"}}'].join(
+          '\n',
+        ),
       ),
     ).toEqual({
       assistantText: undefined,

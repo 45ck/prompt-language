@@ -30,12 +30,12 @@ import { renderNodeToDsl, renderNodesToDsl, renderSpawnBody } from './render-nod
 describe('render-node-to-dsl', () => {
   it('renders prompt and run with newline normalization', () => {
     const prompt = createPromptNode('p1', 'line 1\nline 2', 'reviewer');
-    const run = createRunNode('r1', 'echo one\necho two');
+    const run = createRunNode('r1', 'echo one\necho two', 30_000);
 
     expect(renderNodeToDsl(prompt, 1)).toEqual([
       '  prompt using profile "reviewer": line 1 line 2',
     ]);
-    expect(renderNodeToDsl(run, 2)).toEqual(['    run: echo one echo two']);
+    expect(renderNodeToDsl(run, 2)).toEqual(['    run: echo one echo two [timeout 30]']);
   });
 
   it('renders let nodes for all source variants', () => {
@@ -113,6 +113,49 @@ describe('render-node-to-dsl', () => {
     ]);
     expect(renderNodeToDsl(retryNode, 0)).toEqual([
       'retry max 5 backoff 2s',
+      '  run: npm run lint',
+      'end',
+    ]);
+  });
+
+  it('renders loop timeouts when present', () => {
+    const whileNode = createWhileNode(
+      'w-time',
+      'command_failed',
+      [createRunNode('w-run', 'npm test')],
+      3,
+      undefined,
+      15,
+    );
+    const untilNode = createUntilNode(
+      'u-time',
+      'done',
+      [createPromptNode('u-prompt', 'Wait')],
+      4,
+      undefined,
+      20,
+    );
+    const retryNode = createRetryNode(
+      'r-time',
+      [createRunNode('r-run', 'npm run lint')],
+      2,
+      undefined,
+      25,
+      1_000,
+    );
+
+    expect(renderNodeToDsl(whileNode, 0)).toEqual([
+      'while command_failed max 3 timeout 15',
+      '  run: npm test',
+      'end',
+    ]);
+    expect(renderNodeToDsl(untilNode, 0)).toEqual([
+      'until done max 4 timeout 20',
+      '  prompt: Wait',
+      'end',
+    ]);
+    expect(renderNodeToDsl(retryNode, 0)).toEqual([
+      'retry max 2 timeout 25 backoff 1s',
       '  run: npm run lint',
       'end',
     ]);
@@ -212,7 +255,7 @@ describe('render-node-to-dsl', () => {
       'packages/api',
     );
     const awaitAll = createAwaitNode('a1', 'all');
-    const awaitOne = createAwaitNode('a2', 'worker');
+    const awaitOne = createAwaitNode('a2', 'worker', 45);
     const breakNode = createBreakNode('b1');
     const continueNode = createContinueNode('c1');
 
@@ -222,7 +265,7 @@ describe('render-node-to-dsl', () => {
       'end',
     ]);
     expect(renderNodeToDsl(awaitAll, 0)).toEqual(['await all']);
-    expect(renderNodeToDsl(awaitOne, 0)).toEqual(['await "worker"']);
+    expect(renderNodeToDsl(awaitOne, 0)).toEqual(['await "worker" timeout 45']);
     expect(renderNodeToDsl(breakNode, 1)).toEqual(['  break']);
     expect(renderNodeToDsl(continueNode, 1)).toEqual(['  continue']);
   });
@@ -333,7 +376,7 @@ describe('render-node-to-dsl', () => {
     );
 
     expect(renderNodeToDsl(race, 0)).toEqual([
-      'race',
+      'race timeout 60',
       '  spawn "a"',
       '    run: echo a',
       '  end',
@@ -354,13 +397,13 @@ describe('render-node-to-dsl', () => {
     const rememberKeyValue = createRememberNode('rm2', undefined, 'theme', 'dark');
     const sendNode = createSendNode('sd1', 'worker', 'hello');
     const receiveDefault = createReceiveNode('rcv1', 'msg');
-    const receiveFrom = createReceiveNode('rcv2', 'msg', 'worker');
+    const receiveFrom = createReceiveNode('rcv2', 'msg', 'worker', 30);
 
     expect(renderNodeToDsl(rememberText, 0)).toEqual(['remember "persist this"']);
     expect(renderNodeToDsl(rememberKeyValue, 0)).toEqual(['remember key="theme" value="dark"']);
     expect(renderNodeToDsl(sendNode, 0)).toEqual(['send "worker" "hello"']);
     expect(renderNodeToDsl(receiveDefault, 0)).toEqual(['receive msg']);
-    expect(renderNodeToDsl(receiveFrom, 0)).toEqual(['receive msg from "worker"']);
+    expect(renderNodeToDsl(receiveFrom, 0)).toEqual(['receive msg from "worker" timeout 30']);
   });
 
   it('renders helper wrappers for node arrays and spawn body content', () => {

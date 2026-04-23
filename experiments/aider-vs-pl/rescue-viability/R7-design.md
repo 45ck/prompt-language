@@ -36,11 +36,11 @@ the missing file as an isolated error."
 
 ## Arms
 
-| Arm | Flow | Parallel budget | Expected serialisation point |
-|---|---|---|---|
-| A0 baseline | `oc-nextjs-v2/build.flow` | 1 (sequential) | by construction |
-| A1 N=3 | `r7-foreach-spawn.flow` with `max 3` | 3 children | ollama model slot |
-| A2 N=6 | copy of r7 with `max 6` | 6 children | ollama model slot + spawn overhead |
+| Arm         | Flow                                 | Parallel budget | Expected serialisation point       |
+| ----------- | ------------------------------------ | --------------- | ---------------------------------- |
+| A0 baseline | `oc-nextjs-v2/build.flow`            | 1 (sequential)  | by construction                    |
+| A1 N=3      | `r7-foreach-spawn.flow` with `max 3` | 3 children      | ollama model slot                  |
+| A2 N=6      | copy of r7 with `max 6`              | 6 children      | ollama model slot + spawn overhead |
 
 All arms: same model (`qwen3-opencode-big:30b`), same runner
 (opencode), same prompts for the per-file body, same install+retry
@@ -49,12 +49,14 @@ tail, same host.
 ## Metrics
 
 Primary:
+
 - `wall_time_total` — seconds from flow start to `done when` resolution.
 - `wall_time_scaffold` — seconds from start to `await all` resolution
   (baseline: last of the six sequential prompts).
 - `build_success` — boolean, `.next/BUILD_ID` exists.
 
 Secondary:
+
 - `tokens_in`, `tokens_out` summed across all children and the parent.
 - `retry_count` — times the `retry max 3 { next build }` loop fires.
 - `scaffold_failure_count` — number of `prompt:` scaffolding steps (or
@@ -68,6 +70,7 @@ Secondary:
   without re-running.
 
 Observational:
+
 - peak RSS of ollama and of the parent node process.
 - child startup overhead (first child spawn to first prompt token).
 
@@ -76,14 +79,14 @@ significance, only for direction.
 
 ## Predicted outcomes (specific)
 
-| Metric | A0 sequential | A1 N=3 | A2 N=6 |
-|---|---|---|---|
-| wall_time_scaffold | ~40% of total (~16 min) | same or slightly worse (+5–15% due to spawn+queue overhead) | same ± spawn overhead, possibly worse on context-switch thrash |
-| wall_time_total | ~40 min (observed) | 38–46 min | 38–48 min |
-| build_success | ~1.0 (observed 1/1) | ~0.8–1.0 | ~0.6–0.9 (more variance from spawn collisions) |
-| retry_count | 0–1 | 0–1 | 0–2 |
-| scaffold_failure_isolation_index | N/A (no fan-out) | ~1.0 if isolation holds | ~1.0 if isolation holds |
-| error_attribution_clarity | partial (linear log, but interleaved fixes) | clear (per-child logs) | clear but noisier |
+| Metric                           | A0 sequential                               | A1 N=3                                                      | A2 N=6                                                         |
+| -------------------------------- | ------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------- |
+| wall_time_scaffold               | ~40% of total (~16 min)                     | same or slightly worse (+5–15% due to spawn+queue overhead) | same ± spawn overhead, possibly worse on context-switch thrash |
+| wall_time_total                  | ~40 min (observed)                          | 38–46 min                                                   | 38–48 min                                                      |
+| build_success                    | ~1.0 (observed 1/1)                         | ~0.8–1.0                                                    | ~0.6–0.9 (more variance from spawn collisions)                 |
+| retry_count                      | 0–1                                         | 0–1                                                         | 0–2                                                            |
+| scaffold_failure_isolation_index | N/A (no fan-out)                            | ~1.0 if isolation holds                                     | ~1.0 if isolation holds                                        |
+| error_attribution_clarity        | partial (linear log, but interleaved fixes) | clear (per-child logs)                                      | clear but noisier                                              |
 
 In plain English: I expect A1 and A2 to be a **wash on time** and a
 **meaningful win on debuggability** when something breaks. I don't
@@ -93,6 +96,7 @@ lose slightly because more moving parts.
 ## What would falsify H2 (failure isolation)?
 
 Any ONE of these in A1 or A2:
+
 1. A single failing child correlates with ≥2 missing files across runs
    (`isolation_index < 1.0` repeatedly). Means children are leaking
    state somewhere we didn't expect.
@@ -121,12 +125,14 @@ Open concern. `spawn.md` says "The child gets its own state directory"
 but is silent on whether the `opencode-home` cache (used by the
 opencode runner for auth, MCP, session caches) is per-spawn or shared.
 If shared, concurrent children may collide on:
+
 - session sqlite locks
 - tool-registry writes
 - log files written to the same path
 - any auth token refresh
 
 How to detect without executing:
+
 - grep the runner source for `opencode-home` resolution logic and
   confirm whether it is keyed on child id / PID / random suffix.
 - check `docs/reference/spawn.md` and the runner module for a

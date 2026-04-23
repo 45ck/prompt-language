@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 
 // Parse CSV with quoted-comma handling
 function parseCSV(filePath) {
@@ -40,7 +39,7 @@ function parseCSV(filePath) {
     }
 
     // Replace empty strings with null
-    fields = fields.map(field => field === '' ? null : field);
+    fields = fields.map((field) => (field === '' ? null : field));
 
     // Pad with nulls if fewer fields than headers
     while (fields.length < headers.length) {
@@ -75,7 +74,7 @@ const data = parseCSV(filePath);
 const headers = data[0];
 const rows = data.slice(1);
 
-const result = rows.map(row => {
+const result = rows.map((row) => {
   const obj = {};
   for (let i = 0; i < headers.length; i++) {
     obj[headers[i]] = row[i];

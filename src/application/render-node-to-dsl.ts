@@ -7,6 +7,15 @@ function renderAwaitTarget(target: AwaitNode['target']): string {
   return `"${target}"`;
 }
 
+function formatSecondsTimeout(timeoutSeconds?: number): string {
+  return timeoutSeconds != null ? ` timeout ${timeoutSeconds}` : '';
+}
+
+function formatRunTimeout(timeoutMs?: number): string {
+  if (timeoutMs == null) return '';
+  return ` [timeout ${Math.max(1, Math.ceil(timeoutMs / 1000))}]`;
+}
+
 function renderSpawnHeader(node: SpawnNode, pad: string): string {
   let header = `${pad}spawn "${node.name}"`;
   if (node.cwd != null) header += ` in "${node.cwd}"`;
@@ -72,7 +81,7 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
     case 'prompt':
       return [`${pad}prompt${formatProfileClause(node.profile)}: ${node.text.replace(/\n/g, ' ')}`];
     case 'run':
-      return [`${pad}run: ${node.command.replace(/\n/g, ' ')}`];
+      return [`${pad}run: ${node.command.replace(/\n/g, ' ')}${formatRunTimeout(node.timeoutMs)}`];
     case 'let': {
       const keyword = node.declarationKind;
       const op = node.append ? '+=' : '=';
@@ -109,7 +118,7 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
           profile: node.askProfile,
           groundedBy: node.groundedBy,
           maxRetries: node.askMaxRetries,
-        })} max ${node.maxIterations}`,
+        })} max ${node.maxIterations}${formatSecondsTimeout(node.timeoutSeconds)}`,
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
@@ -119,14 +128,14 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
           profile: node.askProfile,
           groundedBy: node.groundedBy,
           maxRetries: node.askMaxRetries,
-        })} max ${node.maxIterations}`,
+        })} max ${node.maxIterations}${formatSecondsTimeout(node.timeoutSeconds)}`,
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
     case 'retry': {
       const backoffTag = node.backoffMs != null ? ` backoff ${node.backoffMs / 1000}s` : '';
       return [
-        `${pad}retry max ${node.maxAttempts}${backoffTag}`,
+        `${pad}retry max ${node.maxAttempts}${formatSecondsTimeout(node.timeoutSeconds)}${backoffTag}`,
         ...node.body.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
@@ -175,7 +184,9 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
       ];
     }
     case 'await':
-      return [`${pad}await ${renderAwaitTarget(node.target)}`];
+      return [
+        `${pad}await ${renderAwaitTarget(node.target)}${formatSecondsTimeout(node.timeoutSeconds)}`,
+      ];
     case 'approve': {
       const approveTimeout = node.timeoutSeconds ? ` timeout ${node.timeoutSeconds / 60}m` : '';
       return [`${pad}approve "${node.message}"${approveTimeout}`];
@@ -195,7 +206,7 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
     }
     case 'race':
       return [
-        `${pad}race`,
+        `${pad}race${formatSecondsTimeout(node.timeoutSeconds)}`,
         ...node.children.flatMap((c) => renderNodeToDsl(c, indent + 1)),
         `${pad}end`,
       ];
@@ -215,7 +226,9 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
       return [`${pad}send "${node.target}" "${node.message}"`];
     case 'receive': {
       const fromPart = node.from !== undefined ? ` from "${node.from}"` : '';
-      return [`${pad}receive ${node.variableName}${fromPart}`];
+      return [
+        `${pad}receive ${node.variableName}${fromPart}${formatSecondsTimeout(node.timeoutSeconds)}`,
+      ];
     }
     case 'swarm': {
       const roleLines = node.roles.flatMap((role) => [

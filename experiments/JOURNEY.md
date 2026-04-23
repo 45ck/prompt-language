@@ -42,7 +42,7 @@ The rigor probe (`experiments/aider-vs-pl/LOCAL-MODEL-VIABILITY-FINDINGS.md`) ad
 
 **Two P1 PL aider-runner defects surfaced during measurement** (`LOCAL-MODEL-VIABILITY-FINDINGS.md:57-62`): `prompt-qtn7` crashes the second aider invocation with a prompt-toolkit xterm-256color error on Windows git-bash (workaround: `TERM=dumb`, now coded into `buildAiderEnv`); `prompt-khm1` marks prompt nodes `completed` at dispatch time with no subprocess-output verification, defeating the gate-based recovery loop for prompt-node failures. These two defects, not model capability, blocked the E-SMALL real-PL arm from measuring anything.
 
-Narrowed thesis the evidence supports (`LOCAL-MODEL-VIABILITY-FINDINGS.md:163`): *PL decomposition + gate loops help models that can already emit valid syntactically-correct output; they do not rescue models below the literal-code-emission threshold.*
+Narrowed thesis the evidence supports (`LOCAL-MODEL-VIABILITY-FINDINGS.md:163`): _PL decomposition + gate loops help models that can already emit valid syntactically-correct output; they do not rescue models below the literal-code-emission threshold._
 
 ## 2026-04-20 morning - the opencode detour
 

@@ -20,6 +20,7 @@ Where things live today:
 - **`.beads/`** — live issue DB (`issues.jsonl`, dolt server running). WIP truth lives here but is invisible from any README.
 
 What a new visitor cannot find today:
+
 - Where the research starts (no chronological entry point).
 - What is the headline result (PL 6–0–3 on qwen3:30b is only in `SCORECARD.md` three levels deep).
 - What changed today (eight new 2026-04-20 docs with no "what's new" surface).
@@ -27,6 +28,7 @@ What a new visitor cannot find today:
 - Where the thesis got narrowed (the `LOCAL-MODEL-VIABILITY-FINDINGS.md` refutation of the broad small-model rescue claim is the pivotal document and is not highlighted anywhere).
 
 Orphaned or duplicated:
+
 - `ecosystem-analysis/` location mismatch (nested in aider-vs-pl, charter says top-level `atlas/`).
 - `docs/experiments.md` vs `experiments/README.md` — same catalog, different shape, drifting.
 - `phase2-design.md` and `LEVEL-A-DESIGN.md` both describe forward plans in the same directory with no index.
@@ -113,6 +115,7 @@ Feeder → section mapping is embedded above so the doc can be drafted by copy-p
 Chosen option: **(a) `experiments/STATUS.md` regenerated from `bd list`.** Committed to git, refreshed by a small script (`scripts/regen-status.mjs` or similar), linked from `experiments/README.md` and the root README's "Research journey" row.
 
 Rationale:
+
 - Beads is already the source of truth (`.beads/issues.jsonl`, dolt server running). A committed markdown snapshot gives a stable URL for a visitor who does not have `bd` installed and does not want to run a tool.
 - Option (b) "live section in root README" couples product-facing surface to research churn; root README should stay stable and not move with every experiment state change.
 - Option (c) "per-area README showing queued/running/done" duplicates beads state into seven places and will drift. Per-area READMEs should instead link to a filtered `STATUS.md` anchor or a `bd list --label <area>` invocation.
@@ -126,34 +129,42 @@ Rationale:
 
 Every area README fits on one screen. Target: a visitor answers "what is this, what is done, what is in flight, what is next" in 30 seconds.
 
-```md
+````md
 # <codename> — <one-line charter>
 
-Area: <codename>   Evidence: strong | medium | thin   Updated: YYYY-MM-DD
+Area: <codename> Evidence: strong | medium | thin Updated: YYYY-MM-DD
 
 ## What this is
+
 One or two sentences. Scope and what is explicitly out of scope.
 
 ## Done (locked findings)
+
 - <finding 1> — <link to doc> (YYYY-MM-DD)
 - <finding 2> — <link to doc> (YYYY-MM-DD)
 
 ## In flight
+
 - <experiment ID> <one line> — bead <bd-NNN> — owner <who>
 - See `../STATUS.md` for the live view.
 
 ## Queued / next
+
 - <experiment ID> <one line> — bead <bd-NNN>
 
 ## Key docs in this directory
+
 - `FILE.md` — <one-line purpose>
 - `subdir/` — <one-line purpose>
 
 ## Reproduce the headline claim
+
 ```bash
 # exact copy-paste command to reproduce the single most important result
 ```
-```
+````
+
+````
 
 **Mock filled in for `experiments/rescue/README.md`:**
 
@@ -187,7 +198,7 @@ Three-axis sweep — model capability (gemma-e4b, qwen3:8b, qwen3:30b, frontier)
 
 ## Reproduce the headline claim
 No locked run matrix yet. See `RESCUE-VIABILITY-PLAN.md` §"How to reproduce" for the first-wave command once R1 lands.
-```
+````
 
 ---
 
@@ -195,20 +206,20 @@ No locked run matrix yet. See `RESCUE-VIABILITY-PLAN.md` §"How to reproduce" fo
 
 Ordered, reversible-where-noted. Each step is a single commit.
 
-| # | Step | Est. min | Risk | Reversibility |
-| - | ---- | -------: | ---- | ------------- |
-| 1 | Add `experiments/JOURNEY.md` drafted from §3 outline, copy-paste-linking existing docs at their current paths. | 60 | Low. New file. No existing doc moves. | Trivial — delete one file. |
-| 2 | Add `experiments/STATUS.md` hand-generated first cut from `bd list`; add `scripts/regen-status.mjs` as a thin wrapper. | 40 | Low. New file. Script can be a one-liner shell wrapping `bd list --json` + a template. | Trivial. |
-| 3 | Add `experiments/README.md` rewrite: journey-first (links to `JOURNEY.md` and `STATUS.md` at top), keep the catalog table below. | 20 | Low — file already exists. Keep the existing catalog table as-is to avoid breaking links from `docs/experiments.md`. | Git revert. |
-| 4 | Add thin-wrapper area directories: `forge/`, `foundry/`, `crucible/` with only a `README.md` each pointing at canonical locations. | 20 | Very low. Pure additions, no renames. | Trivial. |
-| 5 | Rename `experiments/aider-vs-pl/ecosystem-analysis/` → `experiments/atlas/`. Update cross-references in the moved files and in `ladder/` docs that point at it. Grep for the old path first. | 25 | **Medium** — this directory is referenced from `EXPERIMENT-AREAS.md`, `EVIDENCE-CONSOLIDATION.md`, and potentially `docs/`. A grep pass must precede the move. | Reversible via `git mv` inverse; links need re-patching. |
-| 6 | Move today's (2026-04-20) docs that are really harness-arena artifacts out of `aider-vs-pl/` into a new `experiments/harness-arena/` dir: `SESSION-2026-04-20-OPENCODE-NEXTJS.md`, `GUIDE-AND-ROADMAP.md`. Add `harness-arena/README.md` from the §5 template. | 25 | Low–medium. These docs have internal relative links (`../../docs/security/aider-vs-pl-scrutiny.md`, sibling links to `SCORECARD.md`). Fix after move. | `git mv` reversible. |
-| 7 | Move `SELF-HOSTING-THEORY.md` → `experiments/forge/` and `MULTI-AGENT-REVIEW.md` → `experiments/atlas/`. | 15 | Low. | Reversible. |
-| 8 | Rename `experiments/aider-vs-pl/` → `experiments/ladder/`. **This is the biggest single move.** Move `rescue-viability/` out to `experiments/rescue/` at the same time. Promote `RESCUE-VIABILITY-PLAN.md` and `LEVEL-A-DESIGN.md` from `ladder/` into `rescue/`. | 45 | **High** — every cross-link in `docs/security/aider-vs-pl-scrutiny.md`, `docs/experiments.md`, external README badges, any external blog posts, and every intra-experiment link breaks. See §8 discoverability: the reproduce-the-claim command must still work. | Reversible with `git mv` inverse. Links need a full grep-and-patch pass. |
-| 9 | Fill in each area `README.md` from the §5 template. | 45 | Low. | Trivial. |
-| 10 | Edit root `README.md` — add one row or one line: `Research journey → experiments/JOURNEY.md` and `Live status → experiments/STATUS.md`. | 10 | Low. Root README is product-facing; keep the edit small. | Trivial. |
-| 11 | Run `grep -r "aider-vs-pl" .` and `grep -r "ecosystem-analysis" .` across the repo; patch every hit. Run `npm run build` / `npm test` / docs build if any. | 30 | **High if skipped.** This step is the migration's actual correctness gate. | Patches are just edits; revert if the build breaks. |
-| 12 | Update `EXPERIMENT-AREAS.md` from "Proposal — not adopted" to "Adopted 2026-04-20" and make it the second link from `JOURNEY.md`. | 10 | Very low. | Trivial. |
+| #   | Step                                                                                                                                                                                                                                                              | Est. min | Risk                                                                                                                                                                                                                                                             | Reversibility                                                            |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 1   | Add `experiments/JOURNEY.md` drafted from §3 outline, copy-paste-linking existing docs at their current paths.                                                                                                                                                    |       60 | Low. New file. No existing doc moves.                                                                                                                                                                                                                            | Trivial — delete one file.                                               |
+| 2   | Add `experiments/STATUS.md` hand-generated first cut from `bd list`; add `scripts/regen-status.mjs` as a thin wrapper.                                                                                                                                            |       40 | Low. New file. Script can be a one-liner shell wrapping `bd list --json` + a template.                                                                                                                                                                           | Trivial.                                                                 |
+| 3   | Add `experiments/README.md` rewrite: journey-first (links to `JOURNEY.md` and `STATUS.md` at top), keep the catalog table below.                                                                                                                                  |       20 | Low — file already exists. Keep the existing catalog table as-is to avoid breaking links from `docs/experiments.md`.                                                                                                                                             | Git revert.                                                              |
+| 4   | Add thin-wrapper area directories: `forge/`, `foundry/`, `crucible/` with only a `README.md` each pointing at canonical locations.                                                                                                                                |       20 | Very low. Pure additions, no renames.                                                                                                                                                                                                                            | Trivial.                                                                 |
+| 5   | Rename `experiments/aider-vs-pl/ecosystem-analysis/` → `experiments/atlas/`. Update cross-references in the moved files and in `ladder/` docs that point at it. Grep for the old path first.                                                                      |       25 | **Medium** — this directory is referenced from `EXPERIMENT-AREAS.md`, `EVIDENCE-CONSOLIDATION.md`, and potentially `docs/`. A grep pass must precede the move.                                                                                                   | Reversible via `git mv` inverse; links need re-patching.                 |
+| 6   | Move today's (2026-04-20) docs that are really harness-arena artifacts out of `aider-vs-pl/` into a new `experiments/harness-arena/` dir: `SESSION-2026-04-20-OPENCODE-NEXTJS.md`, `GUIDE-AND-ROADMAP.md`. Add `harness-arena/README.md` from the §5 template.    |       25 | Low–medium. These docs have internal relative links (`../../docs/security/aider-vs-pl-scrutiny.md`, sibling links to `SCORECARD.md`). Fix after move.                                                                                                            | `git mv` reversible.                                                     |
+| 7   | Move `SELF-HOSTING-THEORY.md` → `experiments/forge/` and `MULTI-AGENT-REVIEW.md` → `experiments/atlas/`.                                                                                                                                                          |       15 | Low.                                                                                                                                                                                                                                                             | Reversible.                                                              |
+| 8   | Rename `experiments/aider-vs-pl/` → `experiments/ladder/`. **This is the biggest single move.** Move `rescue-viability/` out to `experiments/rescue/` at the same time. Promote `RESCUE-VIABILITY-PLAN.md` and `LEVEL-A-DESIGN.md` from `ladder/` into `rescue/`. |       45 | **High** — every cross-link in `docs/security/aider-vs-pl-scrutiny.md`, `docs/experiments.md`, external README badges, any external blog posts, and every intra-experiment link breaks. See §8 discoverability: the reproduce-the-claim command must still work. | Reversible with `git mv` inverse. Links need a full grep-and-patch pass. |
+| 9   | Fill in each area `README.md` from the §5 template.                                                                                                                                                                                                               |       45 | Low.                                                                                                                                                                                                                                                             | Trivial.                                                                 |
+| 10  | Edit root `README.md` — add one row or one line: `Research journey → experiments/JOURNEY.md` and `Live status → experiments/STATUS.md`.                                                                                                                           |       10 | Low. Root README is product-facing; keep the edit small.                                                                                                                                                                                                         | Trivial.                                                                 |
+| 11  | Run `grep -r "aider-vs-pl" .` and `grep -r "ecosystem-analysis" .` across the repo; patch every hit. Run `npm run build` / `npm test` / docs build if any.                                                                                                        |       30 | **High if skipped.** This step is the migration's actual correctness gate.                                                                                                                                                                                       | Patches are just edits; revert if the build breaks.                      |
+| 12  | Update `EXPERIMENT-AREAS.md` from "Proposal — not adopted" to "Adopted 2026-04-20" and make it the second link from `JOURNEY.md`.                                                                                                                                 |       10 | Very low.                                                                                                                                                                                                                                                        | Trivial.                                                                 |
 
 Total: ~5.75 hours of focused work, fits inside a half-day with buffer. Steps 1–4 can ship alone as a safe "navigation-only" PR if time runs out.
 

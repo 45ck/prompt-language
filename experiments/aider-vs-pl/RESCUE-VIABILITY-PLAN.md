@@ -1,7 +1,7 @@
 # The rescue-viability research plan
 
 Date: 2026-04-20
-Motivating claim (user): *prompt-language should enhance lower-capability models because PL provides pre-baked methodology (decomposition, context, retries, gates) at the top level — wisdom the model itself does not have to contain.*
+Motivating claim (user): _prompt-language should enhance lower-capability models because PL provides pre-baked methodology (decomposition, context, retries, gates) at the top level — wisdom the model itself does not have to contain._
 
 ## 1. What "rescue" means here, precisely
 
@@ -11,7 +11,7 @@ Given a task T and a model M, let:
 - `pl(T, M, φ)` = pass rate of M driving the runner under a PL flow of feature-intensity φ
 - `rescue(T, M, φ) = pl(T, M, φ) - solo(T, M)`
 
-A model M is *rescuable* on task-class T if there exists some φ where `rescue > 0` and `pl > solo_ceiling`. A feature f *matters* on (T, M) if removing f from φ drops `pl` measurably.
+A model M is _rescuable_ on task-class T if there exists some φ where `rescue > 0` and `pl > solo_ceiling`. A feature f _matters_ on (T, M) if removing f from φ drops `pl` measurably.
 
 The existing scorecard only measures `rescue(H1..H10, qwen3-opencode:30b, full-pl)` — six positives, three ties, zero negatives. What it does not show:
 
@@ -50,6 +50,7 @@ Numbered R1…Rn; prefix mirrors H-experiments but concerns rescue specifically.
 **Question:** at what model capability does PL rescue kick in on a task PL already handles perfectly at 30B?
 
 **Arms:**
+
 - `gemma4-opencode:e4b` solo / pl-full
 - `qwen3:8b` solo / pl-full
 - `qwen3-opencode:30b` solo / pl-full (reuse LOCAL-MODEL-VIABILITY-FINDINGS data)
@@ -65,6 +66,7 @@ Numbered R1…Rn; prefix mirrors H-experiments but concerns rescue specifically.
 **Question:** which PL feature is carrying the rescue?
 
 **Arms on qwen3:8b:**
+
 - solo-aider
 - pl-lite: decomposition only (one-prompt-per-file, no retry, no gate)
 - pl-medium: pl-lite + `retry max 3 + if command_failed`
@@ -101,6 +103,7 @@ Numbered R1…Rn; prefix mirrors H-experiments but concerns rescue specifically.
 **Question:** do PL's parallel-agent primitives add measurable rescue, or are they cosmetic at local-model scale?
 
 **Arms on qwen3:8b on H8:**
+
 - pl-full (serial)
 - pl-full with `foreach-spawn max 2` on independent subtasks
 - pl-full with `race` — two attempts, first to pass gates wins

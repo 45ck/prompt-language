@@ -18,7 +18,9 @@ import type { ProcessSpawner } from '../../application/ports/process-spawner.js'
 import type { PromptTurnRunner } from '../../application/ports/prompt-turn-runner.js';
 import type { VariableStore, VariableValue } from '../../domain/variable-value.js';
 import { stringifyVariableValue } from '../../domain/variable-value.js';
+import { FileMessageStore } from './file-message-store.js';
 import { InMemoryStateStore } from './in-memory-state-store.js';
+import { resolveStateRoot } from './resolve-state-root.js';
 import type {
   SpawnedSessionCapabilities,
   SpawnedSessionHandle,
@@ -148,9 +150,15 @@ export class HeadlessSessionRunner implements SpawnedSessionRunner {
     if (!child) return;
 
     try {
+      const childCwd = input.cwd ?? this.deps.cwd;
+      const childStateDir = resolveStateRoot(childCwd, input.stateDir);
+      const childMessageStore =
+        this.deps.messageStore instanceof FileMessageStore
+          ? new FileMessageStore(childStateDir, {})
+          : this.deps.messageStore;
       const result = await runFlowHeadless(
         {
-          cwd: input.cwd ?? this.deps.cwd,
+          cwd: childCwd,
           flowText: buildChildFlow(input),
           ...(input.model != null ? { model: input.model } : {}),
           sessionId: randomUUID(),
@@ -160,9 +168,11 @@ export class HeadlessSessionRunner implements SpawnedSessionRunner {
           captureReader: this.deps.captureReader,
           commandRunner: this.deps.commandRunner,
           memoryStore: this.deps.memoryStore,
+          messageStore: childMessageStore,
           processSpawner: this.deps.processSpawner,
           promptTurnRunner: this.deps.promptTurnRunner,
           stateStore: new InMemoryStateStore(),
+          stateDir: childStateDir,
         },
       );
 

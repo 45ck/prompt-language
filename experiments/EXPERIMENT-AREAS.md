@@ -11,6 +11,7 @@ This document is normative only if the user adopts the codenames. Until then, tr
 ## 1. Ground-truth inventory
 
 One paragraph per existing directory. Evidence strength is marked with three tiers:
+
 - **strong**: multiple locked runs, reproducible, scorecard-backed
 - **medium**: at least one complete run or a published scorecard, but limited replication
 - **thin**: design docs, scaffold, or unexecuted
@@ -68,20 +69,21 @@ Stores. `results/` holds locked baselines and scorecards. `templates/` holds hyp
 ## 2. Proposed naming scheme
 
 Criteria:
+
 - Short (one word), memorable, distinct, not a pun that wears out.
 - Does not collide with H-numbers, R-numbers, E-numbers, or M-numbers already in use.
 - Each name has a single-sentence charter.
 - Names read as **kinds of work** rather than product metaphors.
 
-| Codename | Existing dir(s) | Charter |
-|---|---|---|
-| **ladder** | `aider-vs-pl/` (H1–H10, H11–H20) | Rung-by-rung solo-vs-PL head-to-heads at a single model tier, designed to walk from trivial to hard tasks and locate where orchestration stops mattering. |
-| **rescue** | `aider-vs-pl/rescue-viability/` (R1–R10) | Hold task constant, vary model capability and PL feature intensity, measure whether PL lifts weaker models into usefulness. |
-| **atlas** | `aider-vs-pl/ecosystem-analysis/` (pi-mono, hermes-agent, openclaw, adjacent-ecosystem) | Map the surrounding harness and orchestrator landscape so positioning, wrap-points, and threat calls are explicit. |
-| **forge** | `meta-factory/` (M1–Mn) | Can PL author PL — controlled self-hosting experiments on a frozen runtime, single-target per run, with authoritative gate. |
-| **foundry** | `full-saas-factory/`, `marketing-factory/`, `website-factory/`, `full-sdlc-factory/` (E4, E6, E7, E7-MK, E8, E9) | End-to-end product-build factories where PL orchestrates a full delivery and a solo prompt serves as comparator. |
-| **crucible** | `bounded-feature-benchmark/`, `premature-stop-benchmark/`, `self-healing-ci/`, `parallel-planning/`, `parallel-isolated-modules/` | Narrow stress tests that isolate one DSL primitive (retry, stop-hook, gate, spawn/await) against a bounded fixture. |
-| **harness-arena** (new — see section 3) | *not yet created* | Compare **whole stacks**: cloud harness + frontier model vs PL + local model + task-tuned flow, on shared oracle tasks, with cost and wall-time on the x-axis. |
+| Codename                                | Existing dir(s)                                                                                                                   | Charter                                                                                                                                                        |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ladder**                              | `aider-vs-pl/` (H1–H10, H11–H20)                                                                                                  | Rung-by-rung solo-vs-PL head-to-heads at a single model tier, designed to walk from trivial to hard tasks and locate where orchestration stops mattering.      |
+| **rescue**                              | `aider-vs-pl/rescue-viability/` (R1–R10)                                                                                          | Hold task constant, vary model capability and PL feature intensity, measure whether PL lifts weaker models into usefulness.                                    |
+| **atlas**                               | `aider-vs-pl/ecosystem-analysis/` (pi-mono, hermes-agent, openclaw, adjacent-ecosystem)                                           | Map the surrounding harness and orchestrator landscape so positioning, wrap-points, and threat calls are explicit.                                             |
+| **forge**                               | `meta-factory/` (M1–Mn)                                                                                                           | Can PL author PL — controlled self-hosting experiments on a frozen runtime, single-target per run, with authoritative gate.                                    |
+| **foundry**                             | `full-saas-factory/`, `marketing-factory/`, `website-factory/`, `full-sdlc-factory/` (E4, E6, E7, E7-MK, E8, E9)                  | End-to-end product-build factories where PL orchestrates a full delivery and a solo prompt serves as comparator.                                               |
+| **crucible**                            | `bounded-feature-benchmark/`, `premature-stop-benchmark/`, `self-healing-ci/`, `parallel-planning/`, `parallel-isolated-modules/` | Narrow stress tests that isolate one DSL primitive (retry, stop-hook, gate, spawn/await) against a bounded fixture.                                            |
+| **harness-arena** (new — see section 3) | _not yet created_                                                                                                                 | Compare **whole stacks**: cloud harness + frontier model vs PL + local model + task-tuned flow, on shared oracle tasks, with cost and wall-time on the x-axis. |
 
 Top three picks and why:
 
@@ -99,9 +101,9 @@ Non-themed items keep their current names: `eval/`, `results/`, `templates/`, `f
 
 ### 3.1 Scope declaration (why this is distinct from rescue)
 
-**rescue** holds the model constant and varies PL intensity. Canonical question: *does PL lift Qwen3-30b from 6/10 to 9/10 on task T?*
+**rescue** holds the model constant and varies PL intensity. Canonical question: _does PL lift Qwen3-30b from 6/10 to 9/10 on task T?_
 
-**harness-arena** varies **the entire stack** — harness, model tier, data boundary, and cost profile — and asks whether a carefully-tuned local-model + PL stack can match or beat a vanilla cloud-harness + frontier-model stack on the same oracle. Canonical question: *given a fixed task T, is (Claude Code + Sonnet) better or worse than (opencode + qwen3-opencode-big:30b + task-tuned PL flow) on cost, wall-time, pass-rate, and human-review time?*
+**harness-arena** varies **the entire stack** — harness, model tier, data boundary, and cost profile — and asks whether a carefully-tuned local-model + PL stack can match or beat a vanilla cloud-harness + frontier-model stack on the same oracle. Canonical question: _given a fixed task T, is (Claude Code + Sonnet) better or worse than (opencode + qwen3-opencode-big:30b + task-tuned PL flow) on cost, wall-time, pass-rate, and human-review time?_
 
 These are not nested: rescue assumes you have already picked a model; harness-arena is a **stack bake-off**. Results in one do not imply results in the other.
 
@@ -118,13 +120,13 @@ For a fixed, bounded coding task with a locked oracle, can a PL flow tuned to th
 
 ### 3.4 Arms
 
-| Arm | Harness | Model | Flow | Data boundary |
-|---|---|---|---|---|
-| A1 | Claude Code | claude-sonnet-4.x | vanilla (no PL, default system prompt) | cloud |
-| A2 | Codex CLI | gpt-5.x | vanilla | cloud |
-| A3 | aider (solo) | qwen3-opencode:30b (local Ollama) | vanilla aider | local |
-| A4 | aider under PL | qwen3-opencode:30b | task-tuned flow with gates + retry + review | local |
-| A5 | opencode under PL | qwen3-opencode-big:30b | task-tuned flow (same shape as A4, different runner) | local |
+| Arm | Harness           | Model                             | Flow                                                 | Data boundary |
+| --- | ----------------- | --------------------------------- | ---------------------------------------------------- | ------------- |
+| A1  | Claude Code       | claude-sonnet-4.x                 | vanilla (no PL, default system prompt)               | cloud         |
+| A2  | Codex CLI         | gpt-5.x                           | vanilla                                              | cloud         |
+| A3  | aider (solo)      | qwen3-opencode:30b (local Ollama) | vanilla aider                                        | local         |
+| A4  | aider under PL    | qwen3-opencode:30b                | task-tuned flow with gates + retry + review          | local         |
+| A5  | opencode under PL | qwen3-opencode-big:30b            | task-tuned flow (same shape as A4, different runner) | local         |
 
 A3 is the **solo-local control** that separates "does PL help" from "does local help." Without A3, a win at A4 conflates the two variables.
 
@@ -146,20 +148,22 @@ HA-T4 is the load-bearing new task because the existing H-fixtures are narrow. S
 
 ### 3.6 Metrics
 
-| Metric | Unit | How captured | Notes |
-|---|---|---|---|
-| cost_per_task | USD | API billing export (cloud arms); electricity estimate + hardware amortisation (local arms) | Local = kWh × marginal grid rate + (hardware_cost / expected_lifetime_tasks). Declare the amortisation formula up front. |
-| wall_time | seconds | Start of harness invocation to `done when` resolution or final commit | Exclude human prep time. |
-| pass_rate | 0–1 per task, averaged across runs | Shared oracle (Playwright + unit + lint) run by an **isolated grader script** that does not share files with the agent | Critical: the oracle commands must NOT appear in the agent's system prompt or flow text. |
-| human_review_minutes | minutes | Two graders with a fixed rubric review the delivered diff, independently, timer on | Rubric in section 3.7. Inter-rater agreement target ≥0.7 Cohen's kappa. |
+| Metric               | Unit                               | How captured                                                                                                           | Notes                                                                                                                    |
+| -------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| cost_per_task        | USD                                | API billing export (cloud arms); electricity estimate + hardware amortisation (local arms)                             | Local = kWh × marginal grid rate + (hardware_cost / expected_lifetime_tasks). Declare the amortisation formula up front. |
+| wall_time            | seconds                            | Start of harness invocation to `done when` resolution or final commit                                                  | Exclude human prep time.                                                                                                 |
+| pass_rate            | 0–1 per task, averaged across runs | Shared oracle (Playwright + unit + lint) run by an **isolated grader script** that does not share files with the agent | Critical: the oracle commands must NOT appear in the agent's system prompt or flow text.                                 |
+| human_review_minutes | minutes                            | Two graders with a fixed rubric review the delivered diff, independently, timer on                                     | Rubric in section 3.7. Inter-rater agreement target ≥0.7 Cohen's kappa.                                                  |
 
 Derived:
+
 - cost_per_successful_task = cost_per_task / pass_rate (per task, averaged).
 - total_operator_minutes = wall_time_minutes + human_review_minutes.
 
 ### 3.7 Human-review rubric (must be pre-registered)
 
 Grader checks, each 0/1/2:
+
 1. Correctness beyond oracle (does it handle cases the oracle did not test?).
 2. Code-review readability (naming, structure, commit granularity).
 3. Test coverage quality (are the tests meaningful or tautological?).
@@ -170,15 +174,15 @@ Score out of 10 per task per grader. Two graders per task. Time each grader from
 
 ### 3.8 Risks and mitigations
 
-| Risk | Severity | Mitigation |
-|---|---|---|
-| API cost budget blows up (A1+A2 across 4 tasks × ≥3 repeats) | high | Set a per-arm USD cap. Start with 1 repeat × 4 tasks, inspect, then expand. Pre-register the cap in the run manifest. |
-| Shared oracle leaks into frontier agent's system prompt | high | The oracle script lives outside the agent's working directory and is invoked by the harness-arena runner, not the agent. Grep the agent's final transcript for oracle command strings before scoring. Reject runs where the oracle command appears verbatim in the agent's context. |
-| Human-review metric subjectivity | medium | Pre-registered rubric (section 3.7), two graders, kappa check, discard tasks with kappa<0.5. |
-| Local-arm cost accounting is fuzzy | medium | Declare amortisation formula in the run manifest. Report cost both with and without amortisation. |
-| A4/A5 flow tuning becomes a moving target | medium | Freeze the task-tuned flow per task before the run. Any flow change requires a new run ID. Record the flow SHA in the manifest. |
-| Stack-vs-stack results conflate harness and model | medium | A3 (solo-local) control isolates "does PL help"; A1 vs A2 isolates cloud-harness-vs-cloud-harness; A4 vs A5 isolates aider-vs-opencode under same PL. Cross-table after the fact. |
-| Single-GPU Ollama sequentiality | low | Document the hardware. Do not run A4 and A5 in parallel on the same box. |
+| Risk                                                         | Severity | Mitigation                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| API cost budget blows up (A1+A2 across 4 tasks × ≥3 repeats) | high     | Set a per-arm USD cap. Start with 1 repeat × 4 tasks, inspect, then expand. Pre-register the cap in the run manifest.                                                                                                                                                               |
+| Shared oracle leaks into frontier agent's system prompt      | high     | The oracle script lives outside the agent's working directory and is invoked by the harness-arena runner, not the agent. Grep the agent's final transcript for oracle command strings before scoring. Reject runs where the oracle command appears verbatim in the agent's context. |
+| Human-review metric subjectivity                             | medium   | Pre-registered rubric (section 3.7), two graders, kappa check, discard tasks with kappa<0.5.                                                                                                                                                                                        |
+| Local-arm cost accounting is fuzzy                           | medium   | Declare amortisation formula in the run manifest. Report cost both with and without amortisation.                                                                                                                                                                                   |
+| A4/A5 flow tuning becomes a moving target                    | medium   | Freeze the task-tuned flow per task before the run. Any flow change requires a new run ID. Record the flow SHA in the manifest.                                                                                                                                                     |
+| Stack-vs-stack results conflate harness and model            | medium   | A3 (solo-local) control isolates "does PL help"; A1 vs A2 isolates cloud-harness-vs-cloud-harness; A4 vs A5 isolates aider-vs-opencode under same PL. Cross-table after the fact.                                                                                                   |
+| Single-GPU Ollama sequentiality                              | low      | Document the hardware. Do not run A4 and A5 in parallel on the same box.                                                                                                                                                                                                            |
 
 ### 3.9 First two experiments (with predictions and stop conditions)
 
@@ -232,17 +236,18 @@ Beyond HA-E2, the area opens out to HA-T4 (feature-add) and to the A6 cloud-fron
 
 ## 5. Evidence-quality summary
 
-| Area | Runs locked | Evidence tier | Open questions |
-|---|---|---|---|
-| ladder | 10 (H1–H10) at 1 model | strong at tier, thin cross-tier | H11–H20 unexecuted; cross-model generalisation |
-| rescue | 0 locked | thin | entire matrix unexecuted |
-| atlas | — (survey) | medium | integration claims not run-backed |
-| forge | 0 accepted | thin | M1 not executed live |
-| foundry | ~25 runs across E4/E7-MK/E8/E9 | strong at E4, E7-MK; medium at E8, E9 | E8 runtime-hook activation; E9 no solo comparator |
-| crucible | 0 | thin | all five sub-areas designed only |
-| harness-arena | 0 | thin (new) | full pilot needed before inference |
+| Area          | Runs locked                    | Evidence tier                         | Open questions                                    |
+| ------------- | ------------------------------ | ------------------------------------- | ------------------------------------------------- |
+| ladder        | 10 (H1–H10) at 1 model         | strong at tier, thin cross-tier       | H11–H20 unexecuted; cross-model generalisation    |
+| rescue        | 0 locked                       | thin                                  | entire matrix unexecuted                          |
+| atlas         | — (survey)                     | medium                                | integration claims not run-backed                 |
+| forge         | 0 accepted                     | thin                                  | M1 not executed live                              |
+| foundry       | ~25 runs across E4/E7-MK/E8/E9 | strong at E4, E7-MK; medium at E8, E9 | E8 runtime-hook activation; E9 no solo comparator |
+| crucible      | 0                              | thin                                  | all five sub-areas designed only                  |
+| harness-arena | 0                              | thin (new)                            | full pilot needed before inference                |
 
 Unresolved questions surfaced by this inventory:
+
 1. **Runtime activation**: E8 showed PL runtime hooks did not fire under `claude -p`. Harness-arena A1 must answer whether the same is true under Claude Code proper, or the A1-vs-A4 comparison is confounded.
 2. **Oracle isolation**: No existing area has a verified oracle-leak audit. Harness-arena forces this to be built first.
 3. **Cost accounting for local arms**: Electricity + amortisation formula has not been pinned down anywhere in the repo. Harness-arena is the first area that needs it.
@@ -252,6 +257,7 @@ Unresolved questions surfaced by this inventory:
 ## 6. What to do next
 
 If the user adopts the names:
+
 1. Rename nothing on disk yet; add codename headers to the existing READMEs.
 2. Update `experiments/README.md` and `experiments/CATALOG.md` with the codename column.
 3. For **harness-arena**, create the directory, drop this section 3 content as its `README.md`, and build the runner plumbing (oracle-isolation first, cost-tracking second).

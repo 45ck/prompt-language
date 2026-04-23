@@ -8,17 +8,17 @@ Relationship to prior art: the meta-factory architecture (MD-1 frozen runtime, M
 
 Three levels of self-reference, each more aggressive than the last:
 
-1. **PL orchestrates PL research.** Flows automate the experiment loop: replay fixtures, collect pass rates, write per-run markdown, update SCORECARD. The flow's *subject* is research output; PL itself is unchanged. Low risk, high automation payoff. Arguably what the rescue-viability plan already is, minus the automation layer.
+1. **PL orchestrates PL research.** Flows automate the experiment loop: replay fixtures, collect pass rates, write per-run markdown, update SCORECARD. The flow's _subject_ is research output; PL itself is unchanged. Low risk, high automation payoff. Arguably what the rescue-viability plan already is, minus the automation layer.
 
-2. **PL authors PL tests.** Meta-factory M1. The flow's *subject* is `scripts/eval/smoke-test.mjs`. Edits a known-safe surface (tests, CLAUDE.md catalog); does not mutate the interpreter. Frozen-runtime gates keep the subject and tool separated.
+2. **PL authors PL tests.** Meta-factory M1. The flow's _subject_ is `scripts/eval/smoke-test.mjs`. Edits a known-safe surface (tests, CLAUDE.md catalog); does not mutate the interpreter. Frozen-runtime gates keep the subject and tool separated.
 
-3. **PL authors PL source.** The flow's *subject* is `src/**/*.ts`. The same interpreter that runs the flow is what the flow is editing (in `src/`; `dist/` is frozen per MD-1). Every editing primitive, every parser token, every transition in the DSL is now a dependency of the edit. Highest risk, highest payoff.
+3. **PL authors PL source.** The flow's _subject_ is `src/**/*.ts`. The same interpreter that runs the flow is what the flow is editing (in `src/`; `dist/` is frozen per MD-1). Every editing primitive, every parser token, every transition in the DSL is now a dependency of the edit. Highest risk, highest payoff.
 
 The user's ask is level 3. Meta-factory is built to support it but has only launched M1 (level 2), and not successfully.
 
 ## 2. What's different now (2026-04-20 evidence that wasn't available 2026-04-17)
 
-- **Opencode runner drift bug diagnosed and patched** (`dist/infrastructure/adapters/opencode-prompt-turn-runner.js :: summarizeOpenCodeJsonOutput`). This is *exactly* the kind of bug a self-hosting run should be able to find and fix — the defect report is already written, the patch is tiny, the regression test is obvious.
+- **Opencode runner drift bug diagnosed and patched** (`dist/infrastructure/adapters/opencode-prompt-turn-runner.js :: summarizeOpenCodeJsonOutput`). This is _exactly_ the kind of bug a self-hosting run should be able to find and fix — the defect report is already written, the patch is tiny, the regression test is obvious.
 - **`qwen3-opencode-big:30b`** (32K `num_ctx` ollama variant) removes the system-prompt truncation that killed local-model tool calling. A self-hosting run against the ported-to-`src` version of today's fix is finally viable context-wise.
 - **Two catalogued P1 defects in PL's aider runner** from `EVIDENCE-CONSOLIDATION.md §3`. Named, scoped, with reproducer fixtures. Another "ready to attack" target.
 - **H11 ceiling data (2–3/12 at 30B)** tells us the hardest fixture we have is already above the local model's solo capability. "Edit this one TS file" style tasks are in-scope; "refactor three files + keep tests green" probably isn't. That narrows the MVP design.
@@ -121,13 +121,13 @@ The model will sometimes say "fixed" when it has not edited anything. Always gat
 If Level B lands (one green run on the opencode-runner port):
 
 - We have our first data point on `local-model + PL + meta-factory-gates → real src/ delta`. That calibrates every later claim.
-- The SCORECARD gets a new axis: *can the same pairing that wins on H8 also self-host?* This is a stronger claim than "PL decomposes well."
+- The SCORECARD gets a new axis: _can the same pairing that wins on H8 also self-host?_ This is a stronger claim than "PL decomposes well."
 - The meta-factory design (which already exists on paper) graduates from "sketched" to "demonstrated."
 
 If Level B fails even with the correct patch handed to the model as a hint:
 
 - Refutes the "local model + PL rescues self-hosting" thesis for qwen3-opencode:30b specifically.
-- Does *not* refute meta-factory as a design — only the model arm.
+- Does _not_ refute meta-factory as a design — only the model arm.
 - Points at the next experiment: run the same flow under Sonnet or Haiku via `claude`-runner as an arm, to decouple the PL-flow defect from the model-capability defect.
 
 ## 8. Concrete next step
@@ -143,6 +143,6 @@ A flow for Level B would be ~30 lines of DSL. That's small enough to draft and r
 
 ## 9. What this document does not claim
 
-- Does not claim local models *will* self-host PL. It claims the problem has been *underspecified* until now and enumerates what a decisive test looks like.
+- Does not claim local models _will_ self-host PL. It claims the problem has been _underspecified_ until now and enumerates what a decisive test looks like.
 - Does not claim meta-factory is broken — only that its first live attempt got stuck at preflight rather than at the meta-flow itself. The envelope may still be sound.
 - Does not argue against cloud-model self-hosting as an immediate shipping path. Cloud-arm can probably do Level B today; local-arm is the research question.

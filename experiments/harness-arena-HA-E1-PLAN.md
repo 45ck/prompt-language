@@ -8,13 +8,13 @@ Oracle: 11 assertions in `verify.js` (7 no-"Contact" file checks, 2 Client-class
 
 Per-arm working dir is a fresh copy of the fixture at `experiments/harness-arena/runs/HA-E1/<arm>/workdir/` (src + TASK.md + README.md + package.json ONLY — see section 2). `verify.js` is NOT copied into workdir.
 
-| Arm | Command | Env | Wall | Token/cost est |
-|---|---|---|---|---|
-| A1 | `claude --print --permission-mode acceptEdits --model claude-sonnet-4-5 < TASK.md` (run from workdir) | `ANTHROPIC_API_KEY`; `--add-dir .` implicit | 2–5 min | ~40k in / ~15k out → $0.12–$0.40 |
-| A2 | `codex exec --model gpt-5 --cd <workdir> --full-auto "$(cat TASK.md)"` | `OPENAI_API_KEY` | 2–5 min | ~40k in / ~15k out → $0.05–$0.30 |
-| A3 | `aider --model ollama_chat/qwen3-opencode:30b --yes-always --no-auto-commits --message-file TASK.md src/*.js README.md` | `OLLAMA_API_BASE=http://127.0.0.1:11434` | 8–15 min | $0 API; ~0.02 kWh |
-| A4 | `prompt-language ci --runner aider --flow task-artisan.flow` (copied from fixture) | same as A3 | 12–25 min | $0 API |
-| A5 | `prompt-language ci --runner opencode --flow task-artisan.flow --model qwen3-opencode-big:30b` | same plus `OPENCODE_*` | 10–20 min | $0 API |
+| Arm | Command                                                                                                                 | Env                                         | Wall      | Token/cost est                   |
+| --- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- | --------- | -------------------------------- |
+| A1  | `claude --print --permission-mode acceptEdits --model claude-sonnet-4-5 < TASK.md` (run from workdir)                   | `ANTHROPIC_API_KEY`; `--add-dir .` implicit | 2–5 min   | ~40k in / ~15k out → $0.12–$0.40 |
+| A2  | `codex exec --model gpt-5 --cd <workdir> --full-auto "$(cat TASK.md)"`                                                  | `OPENAI_API_KEY`                            | 2–5 min   | ~40k in / ~15k out → $0.05–$0.30 |
+| A3  | `aider --model ollama_chat/qwen3-opencode:30b --yes-always --no-auto-commits --message-file TASK.md src/*.js README.md` | `OLLAMA_API_BASE=http://127.0.0.1:11434`    | 8–15 min  | $0 API; ~0.02 kWh                |
+| A4  | `prompt-language ci --runner aider --flow task-artisan.flow` (copied from fixture)                                      | same as A3                                  | 12–25 min | $0 API                           |
+| A5  | `prompt-language ci --runner opencode --flow task-artisan.flow --model qwen3-opencode-big:30b`                          | same plus `OPENCODE_*`                      | 10–20 min | $0 API                           |
 
 Flows under test: A4 uses the existing `task-artisan.flow` from the fixture (already tuned for H11; scored 8/11 in phase2-fixed). A5 uses the same flow via the opencode runner adapter.
 
@@ -23,6 +23,7 @@ Flows under test: A4 uses the existing `task-artisan.flow` from the fixture (alr
 The agent MUST NOT see `verify.js` or any string that names its assertions.
 
 Scheme:
+
 1. Harness runner (a new `experiments/harness-arena/runner.js`) creates `runs/HA-E1/<arm>/workdir/` by copying ONLY `TASK.md`, `README.md`, `src/`, `package.json` from the fixture. `verify.js` stays in the fixture path and is invoked by the runner with `cwd=workdir` AFTER the arm terminates.
 2. Flow files copied into workdir (A4, A5) must be pre-scrubbed for oracle command strings (`verify.js`, `/\bContact\b/g`, "11 passed"). Runner greps the copied flow and aborts if hit.
 3. Post-run audit: runner greps each agent's transcript/chat-history (`.aider.chat.history.md`, Claude Code session log, Codex log, opencode session) for the literal strings `verify.js`, `verify(`, `No "Contact"`, and the regex `/\\bContact\\b/g`. Any hit marks the run `ORACLE_LEAK` and disqualifies it.
@@ -44,6 +45,7 @@ Oracle score: `passed / 11` from verify.js. Prior H11 baseline=2/11, artisan=8/1
 ## 5. Expected outcome + stop conditions
 
 Predicted ranking (oracle score): A1 ≈ A2 (10–11/11) > A5 ≈ A4 (7–9/11) > A3 (2–5/11). Stop before HA-E2 if ANY of:
+
 - Any run flagged `ORACLE_LEAK` by the section-2 audit.
 - Cumulative cloud cost > $5.
 - All three local arms score < 3/11 (indicates local stack broken, not a PL question).

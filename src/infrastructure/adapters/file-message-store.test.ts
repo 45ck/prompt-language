@@ -57,6 +57,15 @@ describe('FileMessageStore — parent sends to child', () => {
     const msg = await child.receive('parent');
     expect(msg).toBeUndefined();
   });
+
+  it('falls back to the shared parent-side inbox when the parent lacks a child state-dir mapping', async () => {
+    const parent = new FileMessageStore(parentStateDir, {});
+    await parent.send('worker', 'Fallback hello');
+
+    const child = makeChildStore();
+    const msg = await child.receive('parent');
+    expect(msg).toBe('Fallback hello');
+  });
 });
 
 describe('FileMessageStore — child sends to parent', () => {

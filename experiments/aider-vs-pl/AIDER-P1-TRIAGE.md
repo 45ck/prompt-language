@@ -35,7 +35,7 @@ Not in PL's aider runner per se. Chain of custody:
 - aider does not expose a user-facing `--max-retries` or per-attempt timeout override and does not propagate the retry state to its stdout/stderr, so the retry storm is invisible to the caller.
 - PL's `AiderPromptTurnRunner.run` (`src/infrastructure/adapters/aider-prompt-turn-runner.ts:127-182`) waits on `execFileSync` up to `PROMPT_LANGUAGE_AIDER_TIMEOUT_MS` (default 600 s). When the aider subprocess is finally SIGKILLed by `execFileSync`'s timeout path, the runner returns `exitCode: 124` with `madeProgress: false` (`:157-163`).
 
-So the **PL contribution to this defect is zero at the proximate cause level**. PL is the *victim*, not the *source*. However PL's handling has two maintainability/debt weaknesses:
+So the **PL contribution to this defect is zero at the proximate cause level**. PL is the _victim_, not the _source_. However PL's handling has two maintainability/debt weaknesses:
 
 1. The PL layer has no shorter inner per-turn timeout or healthcheck, so a stuck aider is invisible to the operator for up to 10 minutes.
 2. On timeout, `madeProgress: false` + `exitCode: 124` is indistinguishable (at the flow level) from "aider ran, model emitted nothing" or "aider crashed" — the retry/gate-loop machinery cannot tell "transient network storm — try again immediately" from "model cannot do this task — stop retrying".
@@ -61,12 +61,13 @@ So the **PL contribution to this defect is zero at the proximate cause level**. 
 
 Outline (not full code):
 
-1. Add env `PROMPT_LANGUAGE_AIDER_TURN_TIMEOUT_MS` (default 120 s) as an inner per-turn timeout distinct from the outer `PROMPT_LANGUAGE_AIDER_TIMEOUT_MS`. On expiry, classify the failure as `exitCode: 124` *with a new flag like `reason: 'inner_timeout'`* so callers can retry without penalty.
+1. Add env `PROMPT_LANGUAGE_AIDER_TURN_TIMEOUT_MS` (default 120 s) as an inner per-turn timeout distinct from the outer `PROMPT_LANGUAGE_AIDER_TIMEOUT_MS`. On expiry, classify the failure as `exitCode: 124` _with a new flag like `reason: 'inner_timeout'`_ so callers can retry without penalty.
 2. Pass aider CLI knobs that cap litellm retries if upstream exposes them (`--retries` is available on some aider versions — gate on version detect). If not available, document the known-gap in the runner header comment.
 3. On `exitCode: 124` + `madeProgress: false` + stdout/stderr matching transient-connection regex (`wsarecv|ECONNRESET|APIConnectionError|ReadTimeout`), return a distinguishable `PromptTurnResult` shape (e.g. add `transient: true`) that the flow-executor/retry node can use to avoid counting against the retry budget.
 4. Longer-term: plumb a structured progress signal (stdout heartbeat parsing) so a stalled aider is detectable within seconds, not minutes.
 
 Risk assessment:
+
 - (1) Low. Additive env var. No test regressions expected. Needs unit test covering `undefined env -> outer timeout`, `set env -> inner timeout`, and reason classification.
 - (2) Low-to-medium. Depends on aider version parity across dev hosts — runtime feature-detection is safer than hardcoding. Gate with capability probe or a try/fail-soft mode.
 - (3) Medium. Changes the public `PromptTurnResult` shape (if `transient` is exposed). Must be optional and backwards-compatible.
@@ -92,19 +93,21 @@ Label: Layer 2 per LIVE-NOTES. Severity: P1 (silently corrupts output location).
 3. Observe aider's startup banner (stdout): `Git working dir: C:\Projects\prompt-language` even though `--no-git` was passed in argv (see `aider-prompt-turn-runner.ts:31-37` — `--no-git` is conditionally added when `cwd` lacks a `.git` directory).
 4. Result: file-edit tool calls resolve relative to the **parent** PL repo, not the R1 Run B cwd. The workspace under `runs/r1/qwen3-8b-pl-full-v3/` shows the run.log but `csv2json.js` never lands there (or lands corrupted at the parent-repo root if aider decides to write there).
 
-Note: in the audit.jsonl captured (`runs/r1/qwen3-8b-pl-full-v3/.prompt-language/audit.jsonl:4`), stderr shows `file:///C:/Projects/prompt-language/experiments/aider-vs-pl/rescue-viability/runs/r1/qwen3-8b-pl-full-v3/csv2json.js` — i.e. the file *was* eventually created in the right place on this particular run, but the LIVE-NOTES capture flags the behavior as inconsistent and deterministic enough to be a P1. Reproducibility requires a separate direct probe of aider in `--no-git` mode inside a nested git subtree; prior evidence in LIVE-NOTES is sufficient to raise the bug and scope the fix.
+Note: in the audit.jsonl captured (`runs/r1/qwen3-8b-pl-full-v3/.prompt-language/audit.jsonl:4`), stderr shows `file:///C:/Projects/prompt-language/experiments/aider-vs-pl/rescue-viability/runs/r1/qwen3-8b-pl-full-v3/csv2json.js` — i.e. the file _was_ eventually created in the right place on this particular run, but the LIVE-NOTES capture flags the behavior as inconsistent and deterministic enough to be a P1. Reproducibility requires a separate direct probe of aider in `--no-git` mode inside a nested git subtree; prior evidence in LIVE-NOTES is sufficient to raise the bug and scope the fix.
 
 ### Where the defect originates in code
 
-Primary location: aider itself (upstream). Aider's repo-discovery walks *up* from `cwd` to find `.git` and uses the first hit as its working tree, irrespective of `--no-git` for some code paths. `--no-git` disables commits and repo-map-via-git but does not consistently override repo-root discovery for subtree path resolution. This is an aider-side behavior.
+Primary location: aider itself (upstream). Aider's repo-discovery walks _up_ from `cwd` to find `.git` and uses the first hit as its working tree, irrespective of `--no-git` for some code paths. `--no-git` disables commits and repo-map-via-git but does not consistently override repo-root discovery for subtree path resolution. This is an aider-side behavior.
 
 Secondary location in PL: `src/infrastructure/adapters/aider-prompt-turn-runner.ts:74-76`
+
 ```ts
 function hasGitRepo(cwd: string): boolean {
   return existsSync(join(cwd, '.git'));
 }
 ```
-This check is **shallow** — it only looks at `cwd`, not at any ancestor. Consequently the PL runner silently assumes "no .git at cwd → pass --no-git and everything is fine". In reality, when `cwd` is *under* another git repo, aider ignores `--no-git` for path-root purposes and resolves against the parent.
+
+This check is **shallow** — it only looks at `cwd`, not at any ancestor. Consequently the PL runner silently assumes "no .git at cwd → pass --no-git and everything is fine". In reality, when `cwd` is _under_ another git repo, aider ignores `--no-git` for path-root purposes and resolves against the parent.
 
 ### Is this really a PL defect or caller discipline?
 
@@ -136,10 +139,11 @@ Option A (recommended):
 3. Consider setting `GIT_CEILING_DIRECTORIES=<parentOf(cwd)>` in `buildAiderEnv` as a belt-and-braces measure independent of the argv flag. This is a clean, aider-version-agnostic way to stop git-root discovery from escaping the run directory.
 
 Risk assessment:
+
 - Option A (2) correctness risk: `--subtree-only` semantics may not perfectly isolate path resolution in all aider versions. Feature-detect or fall back on A(3).
 - Option A (3) env-based fix: low risk, documented git behavior, independent of aider version. **Preferred**. Minimal diff: one line added to `buildAiderEnv`. Does not affect existing tests beyond the env assertion.
 - Option B (auto git init): medium-high risk. Pollutes cwd. Rejected.
-- Option C (fail-fast preflight): low risk but bad UX for the common case (experiments/** is always inside the PL repo). Use as a belt over the braces: warn-only mode, not fail-fast.
+- Option C (fail-fast preflight): low risk but bad UX for the common case (experiments/\*\* is always inside the PL repo). Use as a belt over the braces: warn-only mode, not fail-fast.
 
 ### Regression tests (must merge before fix)
 
@@ -153,7 +157,7 @@ Risk assessment:
 
 ## Priority ordering
 
-1. **Defect B first.** It is cheaper, more local, strictly in PL's remit, and its *silent* corruption of output location is worse for experimental integrity than Defect A's *loud* timeout. Defect B silently moves the failure signal; Defect A at least eventually fires a timeout. The `GIT_CEILING_DIRECTORIES` env fix is a ~5-line diff with minimal risk and directly protects every experiment under `experiments/**`. Attack this one today.
+1. **Defect B first.** It is cheaper, more local, strictly in PL's remit, and its _silent_ corruption of output location is worse for experimental integrity than Defect A's _loud_ timeout. Defect B silently moves the failure signal; Defect A at least eventually fires a timeout. The `GIT_CEILING_DIRECTORIES` env fix is a ~5-line diff with minimal risk and directly protects every experiment under `experiments/**`. Attack this one today.
 2. **Defect A second** and only in the PL-mitigation sense: add the inner turn timeout + transient classification. Do not attempt to fix root cause upstream from inside PL. File an aider/litellm issue separately for the retry-storm behavior. Accept that on this host, Ollama-side instability and litellm's infinite retry are a systemic cost you cannot eliminate from the runner.
 
 Rationale: B is a measurement-integrity defect (we cannot trust experimental results until it is fixed); A is a measurement-cost defect (runs take longer and fail noisily, but fail recognizably). In the order "trust first, cost second", B wins.
@@ -162,9 +166,9 @@ Rationale: B is a measurement-integrity defect (we cannot trust experimental res
 
 - **Relation to the originally-filed P1 pair (`prompt-qtn7`, `prompt-khm1`)**:
   - `prompt-qtn7` (xterm-256color crash on 2nd aider invocation) is partially mitigated by `TERM=dumb` in `buildAiderEnv` (`aider-prompt-turn-runner.ts:63-65`). Needs a follow-up verification that the mitigation holds under the new multi-turn flows and its regression test is pinned (`aider-prompt-turn-runner.test.ts:94-104` exercises the env var only, not end-to-end second-invocation behavior). Still live in `LOCAL-MODEL-VIABILITY-FINDINGS.md` §5.
-  - `prompt-khm1` (prompt nodes marked `completed` at dispatch) is *not* addressed by the aider runner — it lives in the flow executor / session-state layer and is out of scope for this triage. If it is still unfixed, it compounds Defect B: even if files land in the wrong dir, prompt nodes still mark complete and the gate-loop cannot tell.
+  - `prompt-khm1` (prompt nodes marked `completed` at dispatch) is _not_ addressed by the aider runner — it lives in the flow executor / session-state layer and is out of scope for this triage. If it is still unfixed, it compounds Defect B: even if files land in the wrong dir, prompt nodes still mark complete and the gate-loop cannot tell.
 
-- **LIVE-NOTES §Open bugs also names a gate-evaluator defect** ("`file_exists '.next/BUILD_ID'` is false 50 times in a row while the file exists on disk"). Likely the *same class* of cwd/path-resolution issue as Defect B, but in the gate evaluator rather than the runner. Fixing Defect B in the runner does not automatically fix it in the gate evaluator — they must be attacked together if the user-visible symptom ("gates don't see files that exist") is to go away.
+- **LIVE-NOTES §Open bugs also names a gate-evaluator defect** ("`file_exists '.next/BUILD_ID'` is false 50 times in a row while the file exists on disk"). Likely the _same class_ of cwd/path-resolution issue as Defect B, but in the gate evaluator rather than the runner. Fixing Defect B in the runner does not automatically fix it in the gate evaluator — they must be attacked together if the user-visible symptom ("gates don't see files that exist") is to go away.
 
 - **SCORECARD.md** narrative scoring (PL 6-Solo 0-Tie 3) predates the live repro and is already downgraded to informal evidence by the methodology scrutiny in EVIDENCE-CONSOLIDATION §3. Defect B retroactively threatens the validity of any Phase-1 cell whose workspace lived inside the PL repo (most of them); it does not flip scores but lowers confidence further.
 
@@ -180,5 +184,5 @@ Rationale: B is a measurement-integrity defect (we cannot trust experimental res
 - Structured outputs: reproducer commands, code locations, blast radius, fix options with risk, regression tests.
 - Evidence / confidence: High for both defects (live repro, banner + audit.jsonl captures). B's silent-path behavior needs one confirmatory probe to nail exact semantics before fix.
 - Assumptions: aider 0.86.2 upstream behavior on `--no-git` + nested git subtree is as described in LIVE-NOTES. Needs a 5-min direct probe before patching to confirm which of `--subtree-only`, `GIT_CEILING_DIRECTORIES`, or both is the right lever.
-- Open questions: (a) is the opencode+aider concurrency on Ollama the definitive trigger for Defect A, or is model-swap thrash alone sufficient? (b) does Defect B also occur when `cwd` *is* a git repo but differs from the aider-assumed repo-root? (c) is `prompt-khm1` still live?
+- Open questions: (a) is the opencode+aider concurrency on Ollama the definitive trigger for Defect A, or is model-swap thrash alone sufficient? (b) does Defect B also occur when `cwd` _is_ a git repo but differs from the aider-assumed repo-root? (c) is `prompt-khm1` still live?
 - Recommended next skill: `rework-plan-writer` to convert this triage into an owner/sequence/closure-criteria plan, and `test-oracle-writer` for the regression tests before any code change lands.

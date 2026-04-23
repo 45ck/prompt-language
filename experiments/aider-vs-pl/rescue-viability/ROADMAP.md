@@ -33,18 +33,18 @@ Serial: R2 -> R5 -> R6. R3, R8, R9, R10 all block on R1 baseline numbers (otherw
 
 ## 2. Per-experiment readiness
 
-| R | Fixture | Flow | Runner OK | Baseline | Wall/arm | Arms | Notes |
-|---|---|---|---|---|---|---|---|
-| R1 | e-small (verify.cjs fixed) | yes | aider | solo 30b 11/11; 8b pre-retry 5-8/11 | 8-15 min | 6 (3 models x 2) + N=3 | Run B in flight |
-| R2 | H8 foreach copy | needs 3 variants (lite/medium/full) | aider | H8 30b 0/4->4/4 | 10-15 min | 4 | Gate carries most lift hypothesis |
-| R3 | E-SMALL, H8, H11ph2 | exists | aider | banked at 30b | 5-30 min | 6 (mostly banked) | Mostly write-up |
-| R4 | H8, H12 | exists | aider + opencode | H8 30b 4/4 | 10-20 min | 4 | Needs bead prompt-l1xz closed |
-| R5 | H8 with spawn/race | not written | aider + PL_SPAWN_RUNNER | R2 results | 15-30 min | 3 | VRAM: 8b+8b fits |
-| R6 | E-SMALL | not written | PL_SPAWN_RUNNER=aider | R1 numbers | 20-40 min | 1 race | VRAM thrash predicted |
-| R7 | nextjs scaffold v2 | v2 exists; needs foreach-spawn variant | opencode | ~30 min seq | 30-40 min | 3 (seq, max=2, max=6) | Beads prompt-l1xz + prompt-nba9 |
-| R8 | E-SMALL | not written | 2 models via spawn | R1 numbers | 15-25 min | 2 | Heterogeneous models |
-| R9 | E-SMALL | review-variant of R1 flow | aider | R1 PL-full | 12-20 min | 1 | Direct swap retry->review |
-| R10 | nextjs scaffold | not written | aider or opencode | R7 baseline | 30-45 min | 1 | send/receive orchestration |
+| R   | Fixture                    | Flow                                   | Runner OK               | Baseline                            | Wall/arm  | Arms                   | Notes                             |
+| --- | -------------------------- | -------------------------------------- | ----------------------- | ----------------------------------- | --------- | ---------------------- | --------------------------------- |
+| R1  | e-small (verify.cjs fixed) | yes                                    | aider                   | solo 30b 11/11; 8b pre-retry 5-8/11 | 8-15 min  | 6 (3 models x 2) + N=3 | Run B in flight                   |
+| R2  | H8 foreach copy            | needs 3 variants (lite/medium/full)    | aider                   | H8 30b 0/4->4/4                     | 10-15 min | 4                      | Gate carries most lift hypothesis |
+| R3  | E-SMALL, H8, H11ph2        | exists                                 | aider                   | banked at 30b                       | 5-30 min  | 6 (mostly banked)      | Mostly write-up                   |
+| R4  | H8, H12                    | exists                                 | aider + opencode        | H8 30b 4/4                          | 10-20 min | 4                      | Needs bead prompt-l1xz closed     |
+| R5  | H8 with spawn/race         | not written                            | aider + PL_SPAWN_RUNNER | R2 results                          | 15-30 min | 3                      | VRAM: 8b+8b fits                  |
+| R6  | E-SMALL                    | not written                            | PL_SPAWN_RUNNER=aider   | R1 numbers                          | 20-40 min | 1 race                 | VRAM thrash predicted             |
+| R7  | nextjs scaffold v2         | v2 exists; needs foreach-spawn variant | opencode                | ~30 min seq                         | 30-40 min | 3 (seq, max=2, max=6)  | Beads prompt-l1xz + prompt-nba9   |
+| R8  | E-SMALL                    | not written                            | 2 models via spawn      | R1 numbers                          | 15-25 min | 2                      | Heterogeneous models              |
+| R9  | E-SMALL                    | review-variant of R1 flow              | aider                   | R1 PL-full                          | 12-20 min | 1                      | Direct swap retry->review         |
+| R10 | nextjs scaffold            | not written                            | aider or opencode       | R7 baseline                         | 30-45 min | 1                      | send/receive orchestration        |
 
 Total new arms: ~30. Banked: ~4.
 
@@ -88,6 +88,7 @@ Runs 1-5 retire the R1 baseline. Runs 6-9 isolate the load-bearing PL feature. 1
 Per-turn rate: 3-5 min small prompt, 8-12 min medium, up to 25 min on H11. Cold model swap: 20-40 s, dominates when arms alternate models (R5, R6, R8 especially). Budget runs 1-15 as one serial block on a single ollama server; pin to one model per contiguous sub-block.
 
 Estimated wall-hours:
+
 - Runs 1-5 (R1 baseline): ~1.0 h.
 - Runs 6-9 (R2): ~1.0 h.
 - Runs 10-11 (R3/R9): ~0.8 h.
@@ -117,7 +118,7 @@ Full R1..R10 (all arms, N=3 where required): ~25-30 wall-hours on this PC.
 
 ## 8. Abandon criteria for the rescue thesis
 
-Thesis: *PL provides top-level methodology that lifts lower-capability models above their solo ceiling.*
+Thesis: _PL provides top-level methodology that lifts lower-capability models above their solo ceiling._
 
 Confirmed if: after R1 (N>=3) AND R2, `median rescue(qwen3:8b, E-SMALL, pl-full) >= +3/11`, AND at least one of (decompose, retry, gate) shows >= +2/11 marginal contribution in R2, AND R3 shows non-decaying rescue at H8.
 
@@ -168,6 +169,7 @@ Columns: arm_label, experiment, model, runner, intensity, fixture, passes/total,
 ## 10. Handover
 
 A future operator needs only:
+
 1. This file.
 2. `fixtures/rN/input/` snapshots.
 3. The listed bead IDs for engineering-debt status: `prompt-l1xz`, `prompt-nba9`, epic `prompt-gysa`.

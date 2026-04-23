@@ -48,7 +48,10 @@ export class FileMessageStore implements MessageStore {
   }
 
   async receive(from: string): Promise<string | undefined> {
-    const inboxPath = this.resolveReceivePath(from);
+    const inboxPath =
+      from === 'parent'
+        ? await this.readParentInboxPathWithFallback()
+        : this.resolveReceivePath(from);
     const existing = await this.readInbox(inboxPath);
     const pendingIdx = existing.findIndex((e) => !e.consumed);
     if (pendingIdx < 0) return undefined;
@@ -134,6 +137,20 @@ export class FileMessageStore implements MessageStore {
     } catch {
       return [];
     }
+  }
+
+  private async readParentInboxPathWithFallback(): Promise<string> {
+    const ownInboxPath = join(this.stateDir, 'messages', 'inbox.json');
+    const ownEntries = await this.readInbox(ownInboxPath);
+    if (ownEntries.some((entry) => !entry.consumed)) {
+      return ownInboxPath;
+    }
+
+    if (!this.isChildStateDir()) {
+      return ownInboxPath;
+    }
+
+    return join(this.deriveParentStateDir(), 'messages', this.deriveChildName(), 'inbox.json');
   }
 
   private async writeInbox(inboxPath: string, entries: readonly MessageEntry[]): Promise<void> {

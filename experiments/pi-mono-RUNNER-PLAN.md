@@ -30,6 +30,7 @@ One-line invocation (Phase 1):
 | `madeProgress` | Derived from mutating tool-use events (see §4). **pi-mono does not expose a `step_start`/`step_finish` snapshot pair like opencode.** So progress is tool-use-based only — this is the "lesson learned from the opencode fix" applied from day one. |
 
 Interface asks pi-mono does not expose natively:
+
 - No snapshot before/after hash of the workspace. We cannot detect "text-only turn that didn't touch files" vs "assistant claimed done". Policy: if at least one mutating tool completed successfully, `madeProgress = true`. Otherwise `false` on normal exit, `undefined` on abnormal exit so the outer loop can decide.
 - No explicit `scopePrompt` channel. Embed scope into the prompt preamble if needed.
 - No per-step event for retry/backoff. Fine — PL's `retry`/`while` is the outer loop.
@@ -48,6 +49,7 @@ pi \
 ```
 
 Env vars (merged with `process.env`):
+
 - `PATH` — inherited; `pi` must be on PATH (preflight probe via `runner-binary-probe`).
 - `OLLAMA_API_BASE=http://127.0.0.1:11434` — harmless if pi-mono ignores it, matches aider.
 - `OPENAI_API_KEY=ollama-local` — dummy value so OAI-compat providers that insist on a key do not crash when pointed at ollama (same pattern as opencode's `OLLAMA_API_KEY` default).
@@ -69,10 +71,12 @@ Env vars (merged with `process.env`):
 ```
 
 Likely alternate shapes worth defensively parsing:
+
 - Anthropic-style `content_block_delta` / `message_stop` if pi-mono mirrors the Anthropic streaming schema.
 - opencode-style nested `part: { tool, state: { status } }`.
 
 Event classification in the summarizer:
+
 - **Start of turn**: `session_start` or first event. Not load-bearing.
 - **Tool call**: `type === 'tool_use'`.
 - **Tool output**: `type === 'tool_result'` with `status === 'completed'`.
@@ -86,6 +90,7 @@ Event classification in the summarizer:
 Replicate the opencode fix: tool-use-based progress is more reliable than output-snapshot-based.
 
 Algorithm (in `summarizePiMonoJsonOutput`):
+
 ```text
 MUTATING_TOOLS = { "write", "edit", "patch", "multi_edit", "apply_patch", "bash" (conditional) }
 sawMutatingToolUse = false
@@ -113,16 +118,19 @@ madeProgress =
 ## 5. Timeout handling
 
 Two independent budgets:
+
 - **Outer exec timeout** — owned by the PL CLI / process supervisor, already in place. Do not change.
 - **Inner per-turn timeout** — owned by this adapter.
 
 Constants:
+
 ```
 const DEFAULT_PI_MONO_TIMEOUT_MS = 180_000;   // 3 min; local qwen3 turns take 30-90s typically
 const PI_MONO_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_PI_MONO_TIMEOUT_MS';
 ```
 
 Rationale for 180s default:
+
 - Aider uses 600s — covers shell/lint/test; pi-mono's turn should be just the LLM turn.
 - opencode uses 90s — opencode has its own step grace; pi-mono streams events so we can detect hangs earlier.
 - 180s is a conservative midpoint pending real measurements.
@@ -132,10 +140,12 @@ On timeout: `terminatePiMonoProcessTree(child)` (copy opencode's Windows `taskki
 ## 6. Working-dir discipline
 
 pi-mono behavior w.r.t. upward walk is **unknown** from the research doc. Known hazards pattern-matched from aider/opencode:
+
 - aider walks up for `.git` — we disable with `--no-git` when missing.
 - opencode walks up for `opencode.json` — we scope with `--dir` and force isolated `$HOME`/`$XDG_CONFIG_HOME`.
 
 Defensive posture for pi-mono:
+
 - Always pass `cwd: input.cwd` to `spawn`. Do not rely on CLI to find config.
 - If pi-mono reads `~/.pi/config.toml` or similar (likely, given `pi-agent-core` + extensions surface), scope with a workspace-local override: `PROMPT_LANGUAGE_PI_MONO_HOME` env var, following the `PROMPT_LANGUAGE_OPENCODE_HOME` pattern. When set, redirect `HOME`, `USERPROFILE`, `APPDATA`, `LOCALAPPDATA`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME` into that root before spawning.
 - **OPEN QUESTION.** Does pi-mono walk up for `.pi-mono/`, `pi.config.toml`, `.git`, or a session directory? Confirm before Phase 2. If yes, document and scope.
@@ -143,10 +153,12 @@ Defensive posture for pi-mono:
 ## 7. File structure and LOC estimate
 
 Create:
+
 - `C:\Projects\prompt-language\src\infrastructure\adapters\pi-mono-prompt-turn-runner.ts` — ~320 LOC. Structure mirrors `opencode-prompt-turn-runner.ts`: `buildPiMonoArgs`, `buildPiMonoEnv`, `preparePiMonoEnv`, `summarizePiMonoJsonOutput`, `buildPiMonoPrompt`, `terminatePiMonoProcessTree`, `class PiMonoPromptTurnRunner`.
 - `C:\Projects\prompt-language\src\infrastructure\adapters\pi-mono-prompt-turn-runner.test.ts` — ~380 LOC. Covers buildArgs, buildEnv, summarizeJsonOutput (fixture-driven), timeout path, progress heuristic edge cases.
 
 Edit:
+
 - `C:\Projects\prompt-language\src\application\execution-preflight.ts` line 14:
   `export type RunnerName = 'claude' | 'codex' | 'opencode' | 'ollama' | 'aider' | 'pi-mono';` — +1 LOC.
 - `C:\Projects\prompt-language\bin\cli.mjs`:
@@ -155,7 +167,7 @@ Edit:
   - `run` command dispatch (~line 1398-1466): add `if (runner === 'pi-mono') { ... }` branch mirroring the opencode branch. ~12 LOC.
   - `ci` command dispatch (~line 1918-1987): mirror branch. ~12 LOC.
   - Help text line 2071, 2078: append `|pi-mono`. ~2 LOC.
-- `C:\Projects\prompt-language\src\infrastructure\adapters\runner-binary-probe.ts` (if it enumerates runners): add `pi-mono` -> probe for `pi` on PATH. ~3 LOC. *Verify existence before editing.*
+- `C:\Projects\prompt-language\src\infrastructure\adapters\runner-binary-probe.ts` (if it enumerates runners): add `pi-mono` -> probe for `pi` on PATH. ~3 LOC. _Verify existence before editing._
 - Profile capabilities in `resolveProfileCapabilities` (execution-preflight.ts line 180-205): the default-else-branch already handles headless-non-claude runners permissively, so no change needed unless we want to flag `pi-mono` as not supporting `approve`. It currently defaults to `supportsMessagePassing: true` for all non-claude runners — confirm this is the intended behavior for pi-mono (probably yes, pi supports tool-mediated coordination).
 
 Total new code: ~700 LOC. Total edits: ~40 LOC across 3-4 files.
@@ -163,6 +175,7 @@ Total new code: ~700 LOC. Total edits: ~40 LOC across 3-4 files.
 ## 8. Test strategy
 
 Unit tests (no network, no `pi` on PATH required):
+
 - `buildPiMonoArgs` — golden-file-style expected argv for (default model), (explicit ollama model), (anthropic model + Phase 2 branch), (no prompt — expect throw or empty-prompt guard).
 - `buildPiMonoEnv` — asserts `OPENAI_API_KEY`, `OLLAMA_API_BASE`, `TERM=dumb` on win32, `NO_COLOR=1` are set, and `process.env` is preserved.
 - `preparePiMonoEnv` — when `PROMPT_LANGUAGE_PI_MONO_HOME` is set, assert scoped HOME/APPDATA layout. Uses a `tmpdir` fixture.
@@ -179,18 +192,20 @@ Unit tests (no network, no `pi` on PATH required):
 ## 9. CLI wiring
 
 Already covered in §7. The runner string is parsed in `bin/cli.mjs` at:
+
 - `ensureSupportedRunner` (line 747) — allow-list gate.
 - `defaultModelForRunner` (line 743) — add `runner === 'pi-mono' ? 'qwen3-opencode:30b' : undefined` (Phase 1 ollama default; Phase 2 removes the default).
 - `defaultValidateModeForRunner` (line 771) — pi-mono is headless, so `'headless'` (the non-claude default already does this, no change needed).
 - `runHeadlessFlow` config switch — adds the module path.
 - `run` / `ci` command dispatch — adds the branch.
-- `ensureJsonSupportedForRunner` (line 860) — pi-mono's `--mode json` means JSON *is* supported; confirm this shim passes through without blocking.
+- `ensureJsonSupportedForRunner` (line 860) — pi-mono's `--mode json` means JSON _is_ supported; confirm this shim passes through without blocking.
 
 ## 10. Cross-benefit — openclaw bridge (out of scope, follow-up)
 
-openclaw is built on pi-mono (per the user's note; not re-verified here). Adding this adapter creates a latent path: once PL can drive pi-mono as a turn runner, a symmetric tool-facing entrypoint to PL can be exposed *to* openclaw, enabling "PL-as-skill-under-openclaw." That bridge is deliberately **out of scope** for this adapter. Track as a follow-up bead after Phase 3 lands.
+openclaw is built on pi-mono (per the user's note; not re-verified here). Adding this adapter creates a latent path: once PL can drive pi-mono as a turn runner, a symmetric tool-facing entrypoint to PL can be exposed _to_ openclaw, enabling "PL-as-skill-under-openclaw." That bridge is deliberately **out of scope** for this adapter. Track as a follow-up bead after Phase 3 lands.
 
 Concretely, the follow-up task is:
+
 - Define a pi-mono-compatible tool manifest for invoking `prompt-language run --flow=... --json` as a single tool call from openclaw.
 - Wire the tool output through pi-mono's `tool_result` shape so openclaw can consume it.
 - This is additive; it does not modify the adapter built here.
@@ -200,11 +215,13 @@ Concretely, the follow-up task is:
 Pick **ollama-default for Phase 1**, mirror `--model <provider>/<model>` in Phase 2.
 
 Rationale:
+
 - Local-parity with opencode, ollama, aider runners keeps the test matrix uniform (qwen3-opencode:30b is PL's proven local model).
 - Phase 1 is easier to land and exercise without API keys in CI.
 - Phase 2 unlocks pi-mono's main differentiator (20+ provider fan-out in one adapter) but risks surface-leakage: if we expose `--model anthropic/claude-opus-4`, we also need to thread `ANTHROPIC_API_KEY`, rate-limit handling, subscription-auth edge cases. Defer until the ollama path is green and the JSON event schema is confirmed (§3 open question).
 
 Implementation in Phase 2:
+
 - If `input.model` contains a `/`, split on first `/`: `provider,modelId = input.model.split('/',1)`.
 - Pass `--provider <provider> --model <modelId>`. For `ollama` prefix, also inject `--base-url http://127.0.0.1:11434/v1`.
 - For hosted providers, do NOT override base URL; rely on pi-ai defaults.
@@ -215,6 +232,7 @@ Alternative rejected: "mirror `--model` string verbatim to pi-mono." Rejected be
 ## 12. Staged rollout
 
 **Phase 1 — ollama-only, `--print` (no JSON).** ~2 days.
+
 - argv: `pi -p <prompt> --provider openai-compat --base-url http://127.0.0.1:11434/v1 --model <model> --tools read,bash,edit,write,grep,find,ls`.
 - madeProgress derived from exitCode + non-empty stdout (aider pattern).
 - Unit tests on buildArgs / buildEnv.
@@ -222,6 +240,7 @@ Alternative rejected: "mirror `--model` string verbatim to pi-mono." Rejected be
 - Ship behind `--runner pi-mono` but document as experimental.
 
 **Phase 2 — `--mode json` streaming + multi-provider.** ~3 days. Blocked on §3 open question.
+
 - Capture a real JSONL sample; freeze the event types the summarizer recognizes.
 - Add `summarizePiMonoJsonOutput` with the §4 progress heuristic.
 - Add `--model <provider>/<model>` translation (§11).
@@ -230,6 +249,7 @@ Alternative rejected: "mirror `--model` string verbatim to pi-mono." Rejected be
 - Remove the experimental label if E1 matches the PL+aider 6-0-3 target.
 
 **Phase 3 — spawn/race integration.** ~2 days.
+
 - Verify `ProcessSpawner.spawn` + `race` work with pi-mono children (should be automatic since it implements `PromptTurnRunner`, but validate session-dir isolation and termination on the Windows path).
 - Run E2 from the research doc: race across three providers.
 - Add a provider-race recipe to `experiments/`.
@@ -254,11 +274,13 @@ Each question is resolvable with one manual `pi` invocation outside PL. None blo
 ## Files touched (absolute paths)
 
 Create:
+
 - C:\Projects\prompt-language\src\infrastructure\adapters\pi-mono-prompt-turn-runner.ts
 - C:\Projects\prompt-language\src\infrastructure\adapters\pi-mono-prompt-turn-runner.test.ts
 - C:\Projects\prompt-language\src\infrastructure\adapters\test-fixtures\pi-mono\*.jsonl (Phase 2)
 
 Edit:
+
 - C:\Projects\prompt-language\src\application\execution-preflight.ts
 - C:\Projects\prompt-language\bin\cli.mjs
 - C:\Projects\prompt-language\src\infrastructure\adapters\runner-binary-probe.ts (verify path first)

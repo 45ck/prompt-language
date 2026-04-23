@@ -16,24 +16,24 @@ Sources consolidated: [SCORECARD.md](SCORECARD.md), [LOCAL-MODEL-VIABILITY-FINDI
 
 ### 2.1 Runner comparison
 
-| Runner | Status on this PC | Notes |
-| --- | --- | --- |
-| `aider` | Heavily tested (H1–H10, E-SMALL, H11 phases 2–5) | Two P1 defects in PL's aider runtime documented in EVIDENCE-CONSOLIDATION. They block the small-model real-PL arm; they do not affect `qwen3-opencode:30b`. |
-| `opencode` | Smoke-tested today (v1 Next.js build, v2 split flow in flight) | PL's opencode runner carries a stale progress detector that reports "no progress" against current opencode JSON output. Patched in `dist/.../opencode-prompt-turn-runner.js` this session; **not** yet ported to `src/`. |
-| `ollama` direct | Untested under PL rigor | Lowest ceiling — no tool use, no file edits. Only useful for single-turn generation. |
-| `claude` / `codex` | Not local | Out of scope for a no-API stack. |
+| Runner             | Status on this PC                                              | Notes                                                                                                                                                                                                                    |
+| ------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `aider`            | Heavily tested (H1–H10, E-SMALL, H11 phases 2–5)               | Two P1 defects in PL's aider runtime documented in EVIDENCE-CONSOLIDATION. They block the small-model real-PL arm; they do not affect `qwen3-opencode:30b`.                                                              |
+| `opencode`         | Smoke-tested today (v1 Next.js build, v2 split flow in flight) | PL's opencode runner carries a stale progress detector that reports "no progress" against current opencode JSON output. Patched in `dist/.../opencode-prompt-turn-runner.js` this session; **not** yet ported to `src/`. |
+| `ollama` direct    | Untested under PL rigor                                        | Lowest ceiling — no tool use, no file edits. Only useful for single-turn generation.                                                                                                                                     |
+| `claude` / `codex` | Not local                                                      | Out of scope for a no-API stack.                                                                                                                                                                                         |
 
 ### 2.2 Model comparison
 
-| Model | Verdict | Evidence |
-| --- | --- | --- |
-| `qwen3-opencode:30b` | Viable for easy tasks, weak on harder | E-SMALL CSV 11/11 solo-aider; H11 multi-file refactor 2/12 solo / 3/12 PL. ~42 tok/s on the AMD RX 7600 XT 16 GB. Modelfile `num_ctx 8192` — needs to be raised. |
-| `qwen3-opencode-big:30b` (session-created) | Same model + 32K `num_ctx` | Fixes opencode system-prompt truncation and "I have no bash tool" hallucinations. No rigor data yet — needs a fixture replay. |
-| `gemma4-opencode:e2b` | **Not viable** | 1/11 E-SMALL. Output is the string `"// I'm going to use the file system..."` repeated hundreds of times. Decoding trap, not a reasoning gap. |
-| `gemma4-opencode:e4b` | **Not viable** | 1/11 E-SMALL. 0-byte files, repetition of `"maximally"`. Different pathology, same endpoint. |
-| `gemma4-opencode-vulkan:31b` | Runs, attempts tool use, mis-names tools (`bash.execute`) | Session finding 2026-04-20. Modelfile `num_ctx 4096` is way too small. Worth retesting after a `-big` variant is created. |
-| `qwen3:30b` (base, non-opencode) | Untested at rigor | Same parameter count as the opencode fine-tune; hypothesis: fine-tune might actually hurt on non-aider/non-opencode harnesses. |
-| `qwen3:8b` | Untested | Would unlock faster iteration if viable; probably below the literal-syntax threshold per gemma evidence. |
+| Model                                      | Verdict                                                   | Evidence                                                                                                                                                         |
+| ------------------------------------------ | --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `qwen3-opencode:30b`                       | Viable for easy tasks, weak on harder                     | E-SMALL CSV 11/11 solo-aider; H11 multi-file refactor 2/12 solo / 3/12 PL. ~42 tok/s on the AMD RX 7600 XT 16 GB. Modelfile `num_ctx 8192` — needs to be raised. |
+| `qwen3-opencode-big:30b` (session-created) | Same model + 32K `num_ctx`                                | Fixes opencode system-prompt truncation and "I have no bash tool" hallucinations. No rigor data yet — needs a fixture replay.                                    |
+| `gemma4-opencode:e2b`                      | **Not viable**                                            | 1/11 E-SMALL. Output is the string `"// I'm going to use the file system..."` repeated hundreds of times. Decoding trap, not a reasoning gap.                    |
+| `gemma4-opencode:e4b`                      | **Not viable**                                            | 1/11 E-SMALL. 0-byte files, repetition of `"maximally"`. Different pathology, same endpoint.                                                                     |
+| `gemma4-opencode-vulkan:31b`               | Runs, attempts tool use, mis-names tools (`bash.execute`) | Session finding 2026-04-20. Modelfile `num_ctx 4096` is way too small. Worth retesting after a `-big` variant is created.                                        |
+| `qwen3:30b` (base, non-opencode)           | Untested at rigor                                         | Same parameter count as the opencode fine-tune; hypothesis: fine-tune might actually hurt on non-aider/non-opencode harnesses.                                   |
+| `qwen3:8b`                                 | Untested                                                  | Would unlock faster iteration if viable; probably below the literal-syntax threshold per gemma evidence.                                                         |
 
 ### 2.3 What PL orchestration actually gives you
 
@@ -78,12 +78,12 @@ curl -s http://127.0.0.1:11434/api/ps   # verify context_length=32768
 
 ### 3.3 Environment variables worth knowing
 
-| Variable | Purpose | This-PC recommended |
-| --- | --- | --- |
+| Variable                              | Purpose                              | This-PC recommended                                                               |
+| ------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------- |
 | `PROMPT_LANGUAGE_OPENCODE_TIMEOUT_MS` | per-turn timeout for opencode runner | `600000` (10 min) for split flows, `1200000` if you insist on a single big prompt |
-| `PROMPT_LANGUAGE_OPENCODE_AGENT` | override agent | `build` for max-permission |
-| `OLLAMA_API_KEY` | shared secret the runner sends | `ollama-local` is fine |
-| `OPENCODE_SERVER_PASSWORD` | headless opencode server auth | set if exposing the server |
+| `PROMPT_LANGUAGE_OPENCODE_AGENT`      | override agent                       | `build` for max-permission                                                        |
+| `OLLAMA_API_KEY`                      | shared secret the runner sends       | `ollama-local` is fine                                                            |
+| `OPENCODE_SERVER_PASSWORD`            | headless opencode server auth        | set if exposing the server                                                        |
 
 ### 3.4 Minimal working flow skeleton (save as `scaffold.flow`)
 
@@ -125,7 +125,7 @@ Run with `node /c/Projects/prompt-language/bin/cli.mjs run --file scaffold.flow 
 ### 4.3 Medium-term (week, new ground)
 
 - **`qwen3:30b` base, non-opencode.** Does the opencode fine-tune actually help when the runner is aider? Re-run E-SMALL + H11 phase-2.
-- **`gemma4-opencode-vulkan:31b` after bumping `num_ctx` to 32K.** Session-2026-04-20 showed it *attempts* tool use — retesting with context headroom and skill-tool disabled will distinguish "capability missing" from "context starved."
+- **`gemma4-opencode-vulkan:31b` after bumping `num_ctx` to 32K.** Session-2026-04-20 showed it _attempts_ tool use — retesting with context headroom and skill-tool disabled will distinguish "capability missing" from "context starved."
 - **PL `spawn` / `review` / `race` primitives with local models.** These are unmapped. Fixture idea: spawn 2 parallel scaffolding attempts on the same task, race for first to pass gates, discard loser.
 - **Streaming-stall detection.** Today's v1 opencode run stalled for minutes with no stdout. Add a heartbeat check that distinguishes a genuinely working model from a hung stream.
 

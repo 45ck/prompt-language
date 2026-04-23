@@ -57,14 +57,14 @@ served by Ollama is a near-zero-cost experiment.
 ## 5. Comparison vs qwen3-opencode:30b baseline
 
 Qwen3-opencode:30b is specifically post-trained for code-agent tool calling and
-is the stronger baseline on *raw tool-call reliability* at comparable parameter
+is the stronger baseline on _raw tool-call reliability_ at comparable parameter
 counts. Hermes-3 and DeepHermes-3 are generalist open-weights models with
 strong function-calling (Hermes-Function-Calling is a sibling repo), but the
 coding-specific RL signal is weaker. Expectation: **Hermes models are
 orthogonal, not strictly better** - stronger on free-form reasoning, memory-
 aware multi-turn dialogue, and skill synthesis; weaker or at-parity on
 deterministic schema-bound tool calls in code-heavy flows. The hermes-agent
-*harness* adds value PL does not currently exercise: persistent skills and
+_harness_ adds value PL does not currently exercise: persistent skills and
 long-horizon memory. That is where the delta would appear, not in single-turn
 tool accuracy.
 

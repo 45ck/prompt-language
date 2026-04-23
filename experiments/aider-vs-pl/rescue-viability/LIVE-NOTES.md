@@ -21,13 +21,13 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 
 ### Observations so far (Run B still live)
 
-- qwen3:8b can emit JS that parses and runs. The earlier pessimism from `LOCAL-MODEL-VIABILITY-FINDINGS.md` (small gemma4 variants emitting Python/prose) does not generalise to qwen3:8b. This model is *above* the literal-code-emission threshold.
-- qwen3:8b is near but not at the "one-shot correct" threshold on E-SMALL. Pre-retry score varies 5–8 of 11. This is *exactly* the regime where PL's retry-on-gate-failure is supposed to earn its keep.
+- qwen3:8b can emit JS that parses and runs. The earlier pessimism from `LOCAL-MODEL-VIABILITY-FINDINGS.md` (small gemma4 variants emitting Python/prose) does not generalise to qwen3:8b. This model is _above_ the literal-code-emission threshold.
+- qwen3:8b is near but not at the "one-shot correct" threshold on E-SMALL. Pre-retry score varies 5–8 of 11. This is _exactly_ the regime where PL's retry-on-gate-failure is supposed to earn its keep.
 - PL-aider-runner retry event emission looks correct: one `retry` event, one `run` per attempt, one `condition:command_failed` per evaluation, one `if` + `prompt` per failed attempt. Compared with today's opencode-runner drift (section §3 of SESSION-2026-04-20-OPENCODE-NEXTJS), the aider runner's audit output matches the documented DSL semantics.
 
 ### What this run will not tell us
 
-- Whether PL-*lite* (decomposition only, no retry) would also get to ≥ 10/11. Need a second arm to isolate the retry contribution.
+- Whether PL-_lite_ (decomposition only, no retry) would also get to ≥ 10/11. Need a second arm to isolate the retry contribution.
 - Whether qwen3:8b solo without any PL scaffolding is above or below 5/11 pre-retry. Need the `solo-arm.sh` run.
 
 ## Variance warning

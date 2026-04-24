@@ -1,0 +1,18 @@
+Goal: Rename Contact to Client across the fixture with a bounded compact repair loop
+
+flow:
+  retry max 2
+    prompt: Rename Contact to Client across the whole fixture in one coordinated edit. Edit only README.md, src/app.js, src/contact-store.js, src/contact.js, src/routes.js, src/seed.js, and src/test.js. Replace every word-boundary occurrence of "Contact" with "Client" and every word-boundary occurrence of "contact" with "client". Keep CommonJS require/module.exports syntax. Do not create new files. Do not create nested paths such as src/src/seed.js. Do not rename files for this controlled fixture: keep src/contact.js and src/contact-store.js, but update their exported class names and internal terminology. Preserve the smoke-test shape in src/app.js: require ./contact-store, ./routes, and ./seed; create the store; call loadSeedData(store); createRoutes(store); verify listContacts() returns status 200; verify getContact('alice@example.com') returns status 200 with body.name === 'Alice Johnson'; print the existing success lines; exit 0. In src/seed.js, preserve module.exports = { seedContacts, loadSeedData }; seedContacts must stay an array of plain objects; loadSeedData(store) must iterate over seedContacts, call store.add(record) for each item, and return store.count().
+    run: node verify.js
+    if command_succeeded
+      break
+    end
+    prompt: The oracle still fails. Fix only the reported failures, keep CommonJS, do not create or rename files, and do not add dependencies. Oracle output: ${last_stdout} ${last_stderr}
+    run: node verify.js
+    if command_succeeded
+      break
+    end
+  end
+
+done when:
+  gate h11_oracle: node verify.js

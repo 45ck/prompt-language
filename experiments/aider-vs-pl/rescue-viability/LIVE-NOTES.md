@@ -219,7 +219,10 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Fixed the H11 oracle denominator at 11 by scoring only the declared JS files plus `README.md`; unexpected nested JS files now fail the import-resolution assertion instead of adding extra denominator rows.
 - Pilot `20260424-152706`: `qwen3-opencode:30b`, solo with explicit file args scored **2/11** in 382s; PL with `task-artisan.flow` reached **7/11** but hit the 1200s outer timeout.
 - Pilot `20260424-155554`: `qwen3-opencode-big:30b`, PL with `task-artisan-v5.flow` reached **6/11** and hit the 1800s outer timeout.
-- Interpretation: do not launch H11 `k>=3` yet. The corrected PL arm must first complete inside a declared timeout; otherwise repetitions mainly measure timeout behavior and broad repair-loop drift.
+- Pilot `20260424-164655`: `qwen3-opencode-big:30b`, PL with compact `task-artisan-v6.flow` completed without outer timeout but scored **2/11**. Diagnosis: the full rendered PL envelope polluted aider prompting; no authored files changed.
+- Pilot `20260424-171124`: `qwen3-opencode-big:30b`, PL with `task-artisan-v6.flow`, separate 1800s outer / 420s turn timeouts, and H11-only `PROMPT_LANGUAGE_AIDER_SCOPED_MESSAGE=1` completed cleanly in **370s** and scored **11/11**.
+- Verification caveat: generic `npm run eval:smoke:aider` still failed on local-model capture/context cases, so scoped-message delivery remains an H11 harness opt-in rather than a default runner behavior.
+- Interpretation: H11 now has one green PL pilot under the corrected controls. The next H11 step can be `k>=3`, but only with the fixed denominator, v6 flow, separate timeouts, and scoped-message opt-in recorded in the manifest.
 - Artifact: `../results/h11-phase6-context-controlled/README.md`.
 
 ## Variance warning

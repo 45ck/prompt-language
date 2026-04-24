@@ -2,8 +2,9 @@ param(
   [int]$Repetitions = 3,
   [string[]]$Arms = @("solo", "pl"),
   [string]$Model = "ollama_chat/qwen3-opencode-big:30b",
-  [string]$FlowFile = "task-artisan-v5.flow",
+  [string]$FlowFile = "task-artisan-v6.flow",
   [int]$AiderTimeoutSeconds = 1800,
+  [int]$PromptTurnTimeoutSeconds = 420,
   [int]$VerifyTimeoutSeconds = 60,
   [int]$MonitorIntervalSeconds = 15,
   [string]$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
@@ -255,7 +256,8 @@ function Invoke-Pl($Workdir, $ArmDir) {
       "PYTHONUTF8" = "1"
       "PYTHONIOENCODING" = "utf-8"
       "OLLAMA_API_BASE" = "http://127.0.0.1:11434"
-      "PROMPT_LANGUAGE_AIDER_TIMEOUT_MS" = [string]($AiderTimeoutSeconds * 1000)
+      "PROMPT_LANGUAGE_AIDER_TIMEOUT_MS" = [string]($PromptTurnTimeoutSeconds * 1000)
+      "PROMPT_LANGUAGE_AIDER_SCOPED_MESSAGE" = "1"
     }
 }
 
@@ -303,6 +305,7 @@ foreach ($rep in 1..$Repetitions) {
       model = $Model
       runner = if ($arm -eq "solo") { "aider" } else { "prompt-language ci --runner aider" }
       flow = if ($arm -eq "solo") { $null } else { $FlowFile }
+      promptTurnTimeoutSeconds = if ($arm -eq "solo") { $null } else { $PromptTurnTimeoutSeconds }
       repoCommit = $commit
       runnerResult = $runner
       verifyResult = $verify

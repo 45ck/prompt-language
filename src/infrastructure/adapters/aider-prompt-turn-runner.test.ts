@@ -58,6 +58,39 @@ describe('buildAiderArgs', () => {
     expect(args.slice(-3)).toEqual(['a.ts', 'b.ts', 'c.ts']);
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('uses the full prompt as the aider message by default', () => {
+    const args = buildAiderArgs(
+      {
+        cwd: '/repo',
+        prompt: '[prompt-language] full rendered flow\n\nEdit README.md only',
+        scopePrompt: 'Edit README.md only',
+      },
+      ['README.md'],
+    );
+
+    const messageIndex = args.indexOf('--message') + 1;
+    expect(args[messageIndex]).toBe('[prompt-language] full rendered flow\n\nEdit README.md only');
+  });
+
+  it('uses scopePrompt as the aider message when explicitly enabled', () => {
+    vi.stubEnv('PROMPT_LANGUAGE_AIDER_SCOPED_MESSAGE', '1');
+    const args = buildAiderArgs(
+      {
+        cwd: '/repo',
+        prompt: '[prompt-language] full rendered flow\n\nEdit README.md only',
+        scopePrompt: 'Edit README.md only',
+      },
+      ['README.md'],
+    );
+
+    const messageIndex = args.indexOf('--message') + 1;
+    expect(args[messageIndex]).toBe('Edit README.md only');
+  });
+
   it('omits --no-git when the cwd itself is a git workspace', () => {
     const root = mkdtempSync(join(tmpdir(), 'aider-git-args-'));
 
@@ -320,6 +353,31 @@ describe('AiderPromptTurnRunner', () => {
           'Edit README.md only',
         ),
       ).toEqual(['README.md']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('run sends the scoped prompt to aider while preserving file scope', async () => {
+    vi.stubEnv('PROMPT_LANGUAGE_AIDER_SCOPED_MESSAGE', '1');
+    mockedExecFileSync.mockReturnValue('ok');
+    const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-scoped-message-'));
+
+    try {
+      writeFileSync(join(root, 'README.md'), '# docs\n', 'utf8');
+
+      await runner.run({
+        cwd: root,
+        prompt: '[prompt-language] flow envelope\n\nEdit README.md only\n\nsummary with verify.js',
+        scopePrompt: 'Edit README.md only',
+      });
+
+      expect(mockedExecFileSync).toHaveBeenCalledWith(
+        'python',
+        expect.arrayContaining(['--message', 'Edit README.md only', 'README.md']),
+        expect.anything(),
+      );
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

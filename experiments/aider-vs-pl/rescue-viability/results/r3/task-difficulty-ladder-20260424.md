@@ -72,10 +72,13 @@ reliable local-model threshold under the current aider runner.
 ## Follow-up: Phase-6 H11 Pilot
 
 After this synthesis, phase-6 added a fixed-denominator H11 oracle and a
-repeatable context-controlled harness. The pilots did not justify launching a
-`k>=3` series: solo stayed at 2/11, PL reached 7/11 with `task-artisan.flow` but
-timed out at 1200s, and `qwen3-opencode-big:30b` with `task-artisan-v5.flow`
-timed out at 6/11 after 1800s.
+repeatable context-controlled harness. The first pilots did not justify
+launching a `k>=3` series: solo stayed at 2/11, PL reached 7/11 with
+`task-artisan.flow` but timed out at 1200s, and `qwen3-opencode-big:30b` with
+`task-artisan-v5.flow` timed out at 6/11 after 1800s.
 
-This strengthens the R3 pivot: the next H11 work is flow termination and
-scoring stability, not more repetitions or more agents.
+A later H11-specific correction changed the result: `task-artisan-v6.flow` plus
+separate outer/per-turn timeouts and opt-in scoped-message prompting completed
+cleanly at 11/11 in 370s. Treat that as a corrected-protocol precondition for
+repetition, not as a broad rescue claim. The generic `npm run eval:smoke:aider`
+check still fails on local-model capture/context cases in this environment.

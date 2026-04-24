@@ -12,6 +12,7 @@ import type {
 const DEFAULT_MODEL = 'ollama_chat/qwen3-opencode:30b';
 const DEFAULT_TIMEOUT_MS = 600_000;
 const AIDER_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_AIDER_TIMEOUT_MS';
+const AIDER_SCOPED_MESSAGE_ENV = 'PROMPT_LANGUAGE_AIDER_SCOPED_MESSAGE';
 const MAX_OUTPUT_LENGTH = 12_000;
 const MAX_FALLBACK_FILES = 12;
 const FILE_REFERENCE_PATTERN =
@@ -28,6 +29,12 @@ function readPositiveIntEnv(name: string): number | undefined {
 export function buildAiderArgs(input: PromptTurnInput, files: readonly string[]): string[] {
   const model = input.model ?? DEFAULT_MODEL;
   const disableGit = !hasGitRepo(input.cwd);
+  const useScopedMessage = process.env[AIDER_SCOPED_MESSAGE_ENV]?.trim() === '1';
+  const scopedMessage = input.scopePrompt?.trim();
+  const message =
+    useScopedMessage && scopedMessage != null && scopedMessage.length > 0
+      ? scopedMessage
+      : input.prompt;
   return [
     '-m',
     'aider',
@@ -44,7 +51,7 @@ export function buildAiderArgs(input: PromptTurnInput, files: readonly string[])
     '--edit-format',
     'whole',
     '--message',
-    input.prompt,
+    message,
     ...files,
   ];
 }

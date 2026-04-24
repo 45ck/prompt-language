@@ -63,8 +63,9 @@ Hardware: AMD RX 7600 XT 16GB VRAM, Windows 11
 
 ## Rescue-Viability R1 Runs
 
-| arm_label                        | experiment | model    | runner | intensity | fixture | passes/total | retries    | wall  | flow_sha                                 | date       | excluded |
-| -------------------------------- | ---------- | -------- | ------ | --------- | ------- | ------------ | ---------- | ----- | ---------------------------------------- | ---------- | -------- |
-| R1-B-qwen8b-plfull-rep2-invalid  | R1         | qwen3:8b | aider  | full      | e-small | 4/11         | unrecorded | 1173s | 862137a9c5bb1de2f01838b01b254af11f929f58 | 2026-04-24 | yes      |
-| R1-B-qwen8b-plfull-rep2-commonjs | R1         | qwen3:8b | aider  | full      | e-small | 5/11         | unrecorded | 1174s | 862137a9c5bb1de2f01838b01b254af11f929f58 | 2026-04-24 | no       |
-| R1-C-qwen8b-plfull-rep3-commonjs | R1         | qwen3:8b | aider  | full      | e-small | 5/11         | unrecorded | 1173s | 862137a9c5bb1de2f01838b01b254af11f929f58 | 2026-04-24 | no       |
+| arm_label                        | experiment | model               | runner | intensity | fixture | passes/total | retries    | wall  | flow_sha                                 | date       | excluded |
+| -------------------------------- | ---------- | ------------------- | ------ | --------- | ------- | ------------ | ---------- | ----- | ---------------------------------------- | ---------- | -------- |
+| R1-B-qwen8b-plfull-rep2-invalid  | R1         | qwen3:8b            | aider  | full      | e-small | 4/11         | unrecorded | 1173s | 862137a9c5bb1de2f01838b01b254af11f929f58 | 2026-04-24 | yes      |
+| R1-B-qwen8b-plfull-rep2-commonjs | R1         | qwen3:8b            | aider  | full      | e-small | 5/11         | unrecorded | 1174s | 862137a9c5bb1de2f01838b01b254af11f929f58 | 2026-04-24 | no       |
+| R1-C-qwen8b-plfull-rep3-commonjs | R1         | qwen3:8b            | aider  | full      | e-small | 5/11         | unrecorded | 1173s | 862137a9c5bb1de2f01838b01b254af11f929f58 | 2026-04-24 | no       |
+| R1-D-gemma4-e4b-plfull-floor     | R1         | gemma4-opencode:e4b | aider  | full      | e-small | 3/11         | 0          | 901s  | dbf174109993cef603e07f6c20d10d9a788c36a8 | 2026-04-24 | no       |

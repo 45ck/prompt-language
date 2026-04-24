@@ -73,6 +73,17 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Current clean qwen3:8b E-SMALL band is: solo operational baseline **1/11 timeout**, PL-full repeats **5/11, 5/11**, earlier PL-full outlier **9/11**.
 - The rescue effect is still positive against the observed solo timeout, but weaker and more variance-sensitive than the initial +8 assertion story. R1-D/R1-E are now needed before deciding whether to pivot to R2 ablation or retune the PL-full prompt.
 
+## 2026-04-24 R1-D gemma4-opencode:e4b PL-full floor check
+
+### Run `gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424` — VALID
+
+- Applied workarounds: per-run `git init`; local `package.json` with `"type":"commonjs"`; same `verify.cjs`, runner, and PL-full flow as corrected R1-B/R1-C.
+- Local inference check: `ollama ps` logged `gemma4-opencode:e4b` resident throughout the run at **68%/32% CPU/GPU**, so the run used local Ollama but did not fully fit on GPU.
+- PL CI result: failed after the configured 900s aider timeout; no `csv2json.js` was produced.
+- Oracle result: **3/11** passing. The only passes were the no-argument, missing-file, and empty-file non-zero exit checks.
+- Artifact: `runs/r1/gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424/`.
+- Interpretation: this confirms the expected floor for the smaller gemma4 opencode variant on E-SMALL. PL orchestration did not rescue a model that failed to emit the target implementation file.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

@@ -1,0 +1,90 @@
+--- OLLAMA PS 2026-04-24T11:03:42.5926129+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.3 GB    100% GPU     11949      22 minutes from now    
+--- OLLAMA PS 2026-04-24T11:04:12.6725235+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:04:42.7560928+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:05:12.8356279+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:05:42.9172770+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:06:12.9852841+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:06:43.0672358+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:07:13.4103346+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:07:43.4931425+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:08:13.5777223+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:08:43.6498680+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:09:14.1054064+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:09:44.1930514+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:10:14.2876943+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:10:44.3626356+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:11:14.4395972+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:11:44.5083832+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:12:14.5949927+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:12:44.6801891+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:13:14.7744960+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:13:44.8472356+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:14:14.9445138+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:14:45.0374115+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:15:15.1434740+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:15:45.2344148+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:16:15.3185726+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:16:45.3817042+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:17:15.4578425+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:17:45.9481793+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:18:16.0145984+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      29 minutes from now    

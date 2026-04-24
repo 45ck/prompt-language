@@ -1,0 +1,272 @@
+--- START 2026-04-24T11:03:42.4492010+10:00 ---
+model=ollama_chat/gemma4-opencode:e4b
+commit=dbf174109993cef603e07f6c20d10d9a788c36a8
+hygiene=local package.json type commonjs; git init in run dir; ollama ps monitor enabled
+[prompt-language CI] Running flow via aider...
+[prompt-language CI] Running flow via aider...
+[prompt-language ci] FAILED
+- Prompt runner exited with code 1. Detected dumb terminal, disabling fancy input and pretty output. Update git name with: git config user.name "Your Name" Update git email with: git config user.e...
+--- PL CI EXIT 3 ---
+--- VERIFY 2026-04-24T11:18:42.7453776+10:00 ---
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+
+Results: 3/11 passed
+  FAIL: csv2json.js exists -- csv2json.js not found
+  FAIL: runs on valid CSV -- Command failed: node csv2json.js test-input.csv
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+
+  FAIL: produces 4 records -- Command failed: node csv2json.js test-input.csv
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+
+  FAIL: correct header keys -- Command failed: node csv2json.js test-input.csv
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+
+  FAIL: simple row values correct -- Command failed: node csv2json.js test-input.csv
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+
+  FAIL: handles quoted field with comma -- Command failed: node csv2json.js test-input.csv
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+
+  FAIL: empty field becomes null -- Command failed: node csv2json.js test-input.csv
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+
+  FAIL: empty quoted field becomes null -- Command failed: node csv2json.js test-input.csv
+node:internal/modules/cjs/loader:1458
+  throw err;
+  ^
+
+Error: Cannot find module 'C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r1\gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424\csv2json.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1455:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1065:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1070:22)
+    at Module._load (node:internal/modules/cjs/loader:1241:25)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v25.6.1
+
+  PASS: no argument exits 1
+  PASS: missing file exits 1
+  PASS: empty file exits 1
+
+VERDICT: FAIL (8 failed)
+--- VERIFY EXIT 1 ---
+--- END 2026-04-24T11:18:43.5621246+10:00 ---

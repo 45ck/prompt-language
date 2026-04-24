@@ -1,0 +1,41 @@
+export interface Invoice {
+  id: string;
+  orderId: string;
+  userId: string;
+  date: Date;
+  amount: number;
+  currency: string;
+  items: {
+    productId: string;
+    quantity: number;
+    price: number;
+  }[];
+  billingAddress: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+}
+
+export function createInvoice(input: Partial<Invoice> = {}) {
+  return {
+    id: input.id ?? '',
+    orderId: input.orderId ?? '',
+    userId: input.userId ?? '',
+    date: input.date ?? new Date(),
+    amount: input.amount ?? 0,
+    currency: input.currency ?? 'USD',
+    items: input.items ?? [],
+    billingAddress: {
+      addressLine1: input.billingAddress?.addressLine1 ?? '',
+      addressLine2: input.billingAddress?.addressLine2 ?? null,
+      city: input.billingAddress?.city ?? '',
+      state: input.billingAddress?.state ?? '',
+      zip: input.billingAddress?.zip ?? '',
+      country: input.billingAddress?.country ?? '',
+    },
+  };
+}

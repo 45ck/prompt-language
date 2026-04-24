@@ -1,0 +1,15 @@
+interface Invoice {
+  id: string;
+  amount: number;
+  paid: boolean;
+  memo: string;
+}
+
+export function createInvoice(input: Partial<Invoice> = {}) {
+  return {
+    id: input.id || '',
+    amount: input.amount !== undefined ? input.amount : 0,
+    paid: input.paid !== undefined ? input.paid : false,
+    memo: input.memo || '',
+  };
+}

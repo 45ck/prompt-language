@@ -1,0 +1,15 @@
+export interface Product {
+  id: string;
+  name: string;
+  price: number;
+  category: string | null;
+}
+
+export function createProduct(input: Partial<Product> = {}) {
+  return {
+    id: input.id ?? '',
+    name: input.name ?? '',
+    price: input.price ?? 0,
+    category: input.category ?? null,
+  };
+}

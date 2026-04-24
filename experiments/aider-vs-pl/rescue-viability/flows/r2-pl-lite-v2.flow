@@ -1,0 +1,20 @@
+Goal: R2 pl-lite/decompose-only on H8 foreach-copy v2. Produce eight TypeScript files that satisfy TASK.md. No retry loop and no completion gate; scoring is external.
+
+flow:
+  prompt: Read TASK.md in the current working directory. Use your read tool. Reply with a concise numbered contract covering the eight required files and the defaulting rule.
+
+  prompt: Implement only src/user.ts according to TASK.md. Use nullish coalescing for defaults. Do not use ||. Reply "ok" when written.
+
+  prompt: Implement only src/product.ts according to TASK.md. Use nullish coalescing for defaults. Do not use ||. Reply "ok" when written.
+
+  prompt: Implement only src/order.ts according to TASK.md. Use nullish coalescing for defaults. Do not use ||. Reply "ok" when written.
+
+  prompt: Implement only src/invoice.ts according to TASK.md. Use nullish coalescing for defaults. Do not use ||. Reply "ok" when written.
+
+  prompt: Implement only src/shipment.ts according to TASK.md. Use nullish coalescing for defaults. Do not use ||. Reply "ok" when written.
+
+  prompt: Implement only src/payment.ts according to TASK.md. Use nullish coalescing for defaults. Do not use ||. Reply "ok" when written.
+
+  prompt: Implement only src/coupon.ts according to TASK.md. Use nullish coalescing for defaults. Do not use ||. Reply "ok" when written.
+
+  prompt: Implement only src/review.ts according to TASK.md. Use nullish coalescing for defaults. Do not use ||. Reply "ok" when written.

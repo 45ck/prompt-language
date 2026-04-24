@@ -120,6 +120,39 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Artifact: `runs/r2/qwen3-8b-solo-r2d-commonjs-20260424/`.
 - Interpretation: the reconstructed H8 fixture is too easy under the current explicit TASK/spec prompt. R2-A does not show rescue because solo qwen3:8b also reaches the oracle ceiling. Do not spend cycles on R2-B/R2-C for this fixture until the original H8 fixture is recovered or the reconstruction is hardened.
 
+## 2026-04-24 R2 hardened H8 follow-up
+
+### Run `qwen3-8b-pl-lite-v2-r2a-commonjs-20260424` — VALID EXPLORATORY
+
+- Fixture: `h8-foreach-copy-v2`, eight blank-file generation targets, TASK-only model context, source-regex external oracle.
+- Local inference check: `ollama ps` logged `qwen3:8b` resident at **100% GPU**.
+- Oracle result: **1/8** passing.
+- Interpretation: v2 showed schema drift under TASK-only context, but its source-regex oracle was still not the right final R2 scorer.
+
+### Run `qwen3-8b-pl-lite-v3-r2a-commonjs-20260424` — VALID
+
+- Fixture: `h8-repair-v3`, pre-seeded buggy files, visible `contract.json`, semantic external oracle with 20 checks.
+- Flow: PL-lite decomposition only; no retry loop and no completion gate.
+- Local inference check: `ollama ps` logged `qwen3:8b` resident at **100% GPU**.
+- Oracle result: **15/20** passing. The flow fixed defaults and most falsy preservation but missed exported interfaces and one `status` falsy case.
+
+### Run `qwen3-8b-solo-v3-r2d-commonjs-20260424` — VALID
+
+- Fixture: same `h8-repair-v3` semantic fixture.
+- Command intent: solo aider, no PL, one repair prompt over all four files.
+- Local inference check: `ollama ps` logged `qwen3:8b` resident at **100% GPU**.
+- Oracle result: **18/20** passing. The remaining failures were missing exported interfaces for `User` and `Order`.
+- Interpretation: on the semantic repair fixture, solo beat PL-lite. Decomposition alone is not the load-bearing feature for this hardened H8 path.
+
+### Run `qwen3-8b-pl-medium-v3-r2b-commonjs-20260424` — EXCLUDED
+
+- Fixture: same `h8-repair-v3` semantic fixture.
+- Flow: PL-medium; PL-lite structure plus `retry max 3` around `node spec.cjs`.
+- Local inference check: `ollama ps` logged `qwen3:8b` resident at **100% GPU**.
+- `prompt-language ci` failed with `Prompt runner exited with code 1` before the arm completed cleanly.
+- Descriptive oracle result after failure: **12/20** passing.
+- Interpretation: excluded from aggregate R2 scoring. The retry/gate path did not produce a clean rescue result and needs runner/failure-mode investigation before more R2-B/R2-C cycles.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

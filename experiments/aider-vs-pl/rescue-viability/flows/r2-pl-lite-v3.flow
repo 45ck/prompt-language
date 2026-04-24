@@ -1,0 +1,12 @@
+Goal: R2 pl-lite/decompose-only on H8 repair v3. Repair four existing TypeScript files so they satisfy TASK.md and contract.json. No retry loop and no completion gate; scoring is external.
+
+flow:
+  prompt: Read TASK.md and contract.json in the current working directory. Use your read tool. Reply with a concise numbered contract covering the four files, required exports, defaults, and falsy-value rule.
+
+  prompt: Repair only src/user.ts according to TASK.md and contract.json. Preserve explicit falsy input values. Do not add dependencies. Reply "ok" when written.
+
+  prompt: Repair only src/product.ts according to TASK.md and contract.json. Preserve explicit falsy input values. Do not add dependencies. Reply "ok" when written.
+
+  prompt: Repair only src/order.ts according to TASK.md and contract.json. Preserve explicit falsy input values. Do not add dependencies. Reply "ok" when written.
+
+  prompt: Repair only src/invoice.ts according to TASK.md and contract.json. Preserve explicit falsy input values. Do not add dependencies. Reply "ok" when written.

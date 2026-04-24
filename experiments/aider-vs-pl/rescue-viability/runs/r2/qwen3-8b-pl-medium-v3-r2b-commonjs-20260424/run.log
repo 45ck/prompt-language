@@ -1,0 +1,33 @@
+--- START 2026-04-24T12:06:25.4561087+10:00 ---
+model=ollama_chat/qwen3:8b
+commit=d662322d98943c0b528bd87f564aa8aa5ee09ee0
+hygiene=git init in run dir; pl-medium v3 retry over oracle; model sees TASK.md contract.json and failure output; ollama ps monitor enabled
+[prompt-language CI] Running R2-B3 pl-medium v3 flow via aider...
+[prompt-language CI] Running flow via aider...
+[prompt-language ci] FAILED
+- Prompt runner exited with code 1. Detected dumb terminal, disabling fancy input and pretty output. Aider v0.86.2 Model: ollama_chat/qwen3:8b with whole edit format Git repo: .git with 0 files Re...
+--- PL CI EXIT 3 ---
+--- VERIFY 2026-04-24T12:23:35.7195266+10:00 ---
+FAIL src/user.ts named exports: missing exported interface User
+PASS src/user.ts property set
+FAIL src/user.ts defaults: id default expected "", got "user-1"
+PASS src/user.ts partial overrides
+PASS src/user.ts falsy preservation
+PASS src/product.ts named exports
+PASS src/product.ts property set
+FAIL src/product.ts defaults: sku default expected "", got "sku"
+PASS src/product.ts partial overrides
+PASS src/product.ts falsy preservation
+FAIL src/order.ts named exports: missing exported interface Order
+PASS src/order.ts property set
+FAIL src/order.ts defaults: id default expected "", got "order-1"
+PASS src/order.ts partial overrides
+FAIL src/order.ts falsy preservation: id falsy value expected "", got "order-1"
+PASS src/invoice.ts named exports
+PASS src/invoice.ts property set
+FAIL src/invoice.ts defaults: id default expected "", got "invoice-1"
+PASS src/invoice.ts partial overrides
+FAIL src/invoice.ts falsy preservation: id falsy value expected "", got "invoice-1"
+Results: 12/20 passed
+--- VERIFY EXIT 1 ---
+--- END 2026-04-24T12:23:35.9084711+10:00 ---

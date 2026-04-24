@@ -1,0 +1,37 @@
+export interface Payment {
+  id: string;
+  userId: string;
+  amount: number;
+  currency: string;
+  method: string;
+  status: string;
+  transactionId: string;
+  billingAddress: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+}
+
+export function createPayment(input: Partial<Payment> = {}) {
+  return {
+    id: input.id ?? '',
+    userId: input.userId ?? '',
+    amount: input.amount ?? 0,
+    currency: input.currency ?? 'USD',
+    method: input.method ?? '',
+    status: input.status ?? 'pending',
+    transactionId: input.transactionId ?? '',
+    billingAddress: {
+      addressLine1: input.billingAddress?.addressLine1 ?? '',
+      addressLine2: input.billingAddress?.addressLine2 ?? null,
+      city: input.billingAddress?.city ?? '',
+      state: input.billingAddress?.state ?? '',
+      zip: input.billingAddress?.zip ?? '',
+      country: input.billingAddress?.country ?? '',
+    },
+  };
+}

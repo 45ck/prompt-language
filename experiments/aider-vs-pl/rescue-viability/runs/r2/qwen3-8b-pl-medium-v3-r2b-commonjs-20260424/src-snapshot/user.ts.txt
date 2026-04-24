@@ -1,0 +1,15 @@
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+export function createUser(input: Partial<User> = {}): User {
+  return {
+    id: input.id === undefined ? 'user-1' : input.id,
+    name: input.name === undefined ? 'Anonymous' : input.name,
+    email: input.email === undefined ? '' : input.email,
+    active: input.active === undefined ? true : input.active,
+  };
+}

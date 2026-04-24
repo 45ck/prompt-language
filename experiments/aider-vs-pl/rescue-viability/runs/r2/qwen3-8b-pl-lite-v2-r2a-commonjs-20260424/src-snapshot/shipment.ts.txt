@@ -1,0 +1,35 @@
+export interface Shipment {
+  id: string;
+  orderId: string;
+  trackingNumber: string;
+  carrier: string;
+  status: string;
+  estimatedDeliveryDate: Date | null;
+  shippingAddress: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+}
+
+export function createShipment(input: Partial<Shipment> = {}) {
+  return {
+    id: input.id ?? '',
+    orderId: input.orderId ?? '',
+    trackingNumber: input.trackingNumber ?? '',
+    carrier: input.carrier ?? '',
+    status: input.status ?? 'pending',
+    estimatedDeliveryDate: input.estimatedDeliveryDate ?? null,
+    shippingAddress: {
+      addressLine1: input.shippingAddress?.addressLine1 ?? '',
+      addressLine2: input.shippingAddress?.addressLine2 ?? null,
+      city: input.shippingAddress?.city ?? '',
+      state: input.shippingAddress?.state ?? '',
+      zip: input.shippingAddress?.zip ?? '',
+      country: input.shippingAddress?.country ?? '',
+    },
+  };
+}

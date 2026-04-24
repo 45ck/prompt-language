@@ -1,0 +1,20 @@
+--- START 2026-04-24T11:48:49.0480775+10:00 ---
+model=ollama_chat/qwen3:8b
+commit=d662322d98943c0b528bd87f564aa8aa5ee09ee0
+hygiene=git init in run dir; pl-lite v2 no retry no completion gate; model sees TASK.md only; oracle external; ollama ps monitor enabled
+[prompt-language CI] Running R2-A2 pl-lite v2 flow via aider...
+[prompt-language CI] Running flow via aider...
+[prompt-language CI] Flow completed.
+--- PL CI EXIT 0 ---
+--- VERIFY 2026-04-24T11:52:53.6558336+10:00 ---
+PASS user
+FAIL product: src/product.ts missing field sku: string
+FAIL order: src/order.ts missing field quantity: number
+FAIL invoice: src/invoice.ts missing field paid: boolean
+FAIL shipment: src/shipment.ts missing field tracking: string
+FAIL payment: src/payment.ts missing field captured: boolean
+FAIL coupon: src/coupon.ts missing field percentOff: number
+FAIL review: src/review.ts missing field published: boolean
+Results: 1/8 passed
+--- VERIFY EXIT 1 ---
+--- END 2026-04-24T11:52:53.7125465+10:00 ---

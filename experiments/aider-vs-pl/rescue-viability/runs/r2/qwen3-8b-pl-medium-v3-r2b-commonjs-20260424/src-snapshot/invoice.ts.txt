@@ -1,0 +1,15 @@
+export interface Invoice {
+  id: string;
+  amount: number;
+  paid: boolean;
+  memo: string;
+}
+
+export function createInvoice(input: Partial<Invoice> = {}): Invoice {
+  return {
+    id: input.id || 'invoice-1',
+    amount: input.amount || 100,
+    paid: input.paid || true,
+    memo: input.memo || 'memo',
+  };
+}

@@ -1,0 +1,19 @@
+export interface Review {
+  id: string;
+  userId: string;
+  productId: string;
+  comment: string;
+  rating: number;
+  createdAt: Date;
+}
+
+export function createReview(input: Partial<Review> = {}) {
+  return {
+    id: input.id ?? '',
+    userId: input.userId ?? '',
+    productId: input.productId ?? '',
+    comment: input.comment ?? '',
+    rating: input.rating ?? 0,
+    createdAt: input.createdAt ?? new Date(),
+  };
+}

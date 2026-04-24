@@ -1,0 +1,105 @@
+--- OLLAMA PS 2026-04-24T12:06:25.5386603+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.2 GB    100% GPU     10275      29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:06:55.6093786+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.2 GB    100% GPU     10240      29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:07:25.6710088+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.2 GB    100% GPU     10240      29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:07:55.7413368+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9798       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:08:25.8077467+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9805       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:08:55.8641378+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:09:25.9202084+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:09:55.9841749+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:10:26.0417200+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:10:56.1117406+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:11:26.1760898+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:11:56.2359936+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:12:26.3046695+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:12:56.3635655+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:13:26.4302304+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:13:56.5007693+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:14:26.5585562+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:14:56.6224914+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:15:26.6775193+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:15:56.7411048+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:16:26.8017677+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:16:56.8595923+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:17:26.9311366+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:17:57.0001761+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:18:27.0582311+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:18:57.1263726+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:19:27.1817859+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       29 minutes from now    
+--- OLLAMA PS 2026-04-24T12:19:57.2495703+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       28 minutes from now    
+--- OLLAMA PS 2026-04-24T12:20:27.3137102+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       28 minutes from now    
+--- OLLAMA PS 2026-04-24T12:20:57.3790316+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       27 minutes from now    
+--- OLLAMA PS 2026-04-24T12:21:27.4357605+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       27 minutes from now    
+--- OLLAMA PS 2026-04-24T12:21:57.5014663+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       26 minutes from now    
+--- OLLAMA PS 2026-04-24T12:22:27.5584134+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       26 minutes from now    
+--- OLLAMA PS 2026-04-24T12:22:57.6319177+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       25 minutes from now    
+--- OLLAMA PS 2026-04-24T12:23:27.7264643+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL               
+qwen3:8b    500a1f067a9f    6.1 GB    100% GPU     9803       25 minutes from now    

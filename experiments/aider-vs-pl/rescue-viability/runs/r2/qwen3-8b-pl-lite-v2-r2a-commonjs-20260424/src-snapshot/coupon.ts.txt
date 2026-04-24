@@ -1,0 +1,21 @@
+export interface Coupon {
+  id: string;
+  userId: string;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  expirationDate: Date | null;
+  usageLimit: number | null;
+}
+
+export function createCoupon(input: Partial<Coupon> = {}) {
+  return {
+    id: input.id ?? '',
+    userId: input.userId ?? '',
+    code: input.code ?? '',
+    discountType: input.discountType ?? 'percentage',
+    discountValue: input.discountValue ?? 0,
+    expirationDate: input.expirationDate ?? null,
+    usageLimit: input.usageLimit ?? 1,
+  };
+}

@@ -1,0 +1,48 @@
+{
+  "modules": [
+    {
+      "file": "src/user.ts",
+      "interfaceName": "User",
+      "factoryName": "createUser",
+      "fields": {
+        "id": { "type": "string", "default": "" },
+        "name": { "type": "string", "default": "" },
+        "email": { "type": "string", "default": "" },
+        "active": { "type": "boolean", "default": false }
+      }
+    },
+    {
+      "file": "src/product.ts",
+      "interfaceName": "Product",
+      "factoryName": "createProduct",
+      "fields": {
+        "sku": { "type": "string", "default": "" },
+        "title": { "type": "string", "default": "" },
+        "price": { "type": "number", "default": 0 },
+        "inStock": { "type": "boolean", "default": true }
+      }
+    },
+    {
+      "file": "src/order.ts",
+      "interfaceName": "Order",
+      "factoryName": "createOrder",
+      "fields": {
+        "id": { "type": "string", "default": "" },
+        "quantity": { "type": "number", "default": 0 },
+        "status": { "type": "string", "default": "draft" },
+        "notes": { "type": "string", "default": "" }
+      }
+    },
+    {
+      "file": "src/invoice.ts",
+      "interfaceName": "Invoice",
+      "factoryName": "createInvoice",
+      "fields": {
+        "id": { "type": "string", "default": "" },
+        "amount": { "type": "number", "default": 0 },
+        "paid": { "type": "boolean", "default": false },
+        "memo": { "type": "string", "default": "" }
+      }
+    }
+  ]
+}

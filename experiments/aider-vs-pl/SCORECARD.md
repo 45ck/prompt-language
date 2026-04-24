@@ -72,3 +72,7 @@ Hardware: AMD RX 7600 XT 16GB VRAM, Windows 11
 | R1-E-qwen30b-solo-ceiling        | R1         | qwen3-opencode:30b  | aider  | solo      | e-small | 11/11        | 0          | 240s  | fd7f2f4bae6492e34c0463a2950980b7c64b715f | 2026-04-24 | no       |
 | R2-A-qwen8b-pllite-h8            | R2         | qwen3:8b            | aider  | lite      | h8      | 4/4          | 0          | 96s   | b27f09c7126e3dcd91ee36f1a68ec340526465ff | 2026-04-24 | no       |
 | R2-D-qwen8b-solo-h8              | R2         | qwen3:8b            | aider  | solo      | h8      | 4/4          | 0          | 35s   | 94a7bfb2c5765d4cae1a7877ca25c419a2af7cf2 | 2026-04-24 | no       |
+| R2-A2-qwen8b-pllite-h8-v2        | R2         | qwen3:8b            | aider  | lite      | h8-v2   | 1/8          | 0          | 245s  | d662322d98943c0b528bd87f564aa8aa5ee09ee0 | 2026-04-24 | no       |
+| R2-A3-qwen8b-pllite-h8-v3        | R2         | qwen3:8b            | aider  | lite      | h8-v3   | 15/20        | 0          | 456s  | d662322d98943c0b528bd87f564aa8aa5ee09ee0 | 2026-04-24 | no       |
+| R2-D3-qwen8b-solo-h8-v3          | R2         | qwen3:8b            | aider  | solo      | h8-v3   | 18/20        | 0          | 146s  | d662322d98943c0b528bd87f564aa8aa5ee09ee0 | 2026-04-24 | no       |
+| R2-B3-qwen8b-plmedium-h8-v3      | R2         | qwen3:8b            | aider  | medium    | h8-v3   | 12/20        | incomplete | 1030s | d662322d98943c0b528bd87f564aa8aa5ee09ee0 | 2026-04-24 | yes      |

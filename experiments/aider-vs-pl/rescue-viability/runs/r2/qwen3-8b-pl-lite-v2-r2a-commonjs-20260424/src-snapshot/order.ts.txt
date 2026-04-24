@@ -1,0 +1,35 @@
+export interface Order {
+  id: string;
+  userId: string;
+  products: string[];
+  date: Date;
+  status: string;
+  total: number;
+  shippingAddress: {
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+}
+
+export function createOrder(input: Partial<Order> = {}) {
+  return {
+    id: input.id ?? '',
+    userId: input.userId ?? '',
+    products: input.products ?? [],
+    date: input.date ?? new Date(),
+    status: input.status ?? 'pending',
+    total: input.total ?? 0,
+    shippingAddress: {
+      addressLine1: input.shippingAddress?.addressLine1 ?? '',
+      addressLine2: input.shippingAddress?.addressLine2 ?? null,
+      city: input.shippingAddress?.city ?? '',
+      state: input.shippingAddress?.state ?? '',
+      zip: input.shippingAddress?.zip ?? '',
+      country: input.shippingAddress?.country ?? '',
+    },
+  };
+}

@@ -57,7 +57,7 @@ Each row = one arm. Ordered for blocker-retirement + falsification-power per hou
 3. R1-C qwen3:8b PL-full on E-SMALL rep 3. **Done 2026-04-24:** corrected run scored 5/11, same header/data-row bug as R1-B.
 4. R1-D gemma4-opencode:e4b PL-full on E-SMALL (confirm floor). **Done 2026-04-24:** 900s timeout, no implementation file, 3/11.
 5. R1-E qwen3-opencode:30b solo-aider on E-SMALL (re-measure ceiling under current aider P1 patches). **Done 2026-04-24:** 11/11 in one solo attempt.
-6. R2-A qwen3:8b pl-lite (decompose only) on H8. ~12 min.
+6. R2-A qwen3:8b pl-lite (decompose only) on H8. **Done 2026-04-24:** reconstructed H8 fixture, no retry/gate, 4/4.
 7. R2-B qwen3:8b pl-medium (lite + retry) on H8. ~15 min.
 8. R2-C qwen3:8b pl-full on H8. ~18 min.
 9. R2-D qwen3:8b solo on H8. ~10 min.

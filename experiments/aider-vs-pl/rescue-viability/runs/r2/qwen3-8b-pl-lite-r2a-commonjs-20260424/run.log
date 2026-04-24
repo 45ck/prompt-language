@@ -1,0 +1,16 @@
+--- START 2026-04-24T11:33:53.9363393+10:00 ---
+model=ollama_chat/qwen3:8b
+commit=b27f09c7126e3dcd91ee36f1a68ec340526465ff
+hygiene=git init in run dir; pl-lite no retry no completion gate; reconstructed H8 fixture; ollama ps monitor enabled
+[prompt-language CI] Running R2-A pl-lite flow via aider...
+[prompt-language CI] Running flow via aider...
+[prompt-language CI] Flow completed.
+--- PL CI EXIT 0 ---
+--- VERIFY 2026-04-24T11:35:29.2628821+10:00 ---
+PASS user
+PASS product
+PASS order
+PASS invoice
+Results: 4/4 passed
+--- VERIFY EXIT 0 ---
+--- END 2026-04-24T11:35:29.3158539+10:00 ---

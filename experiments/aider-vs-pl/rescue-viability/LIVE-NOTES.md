@@ -96,6 +96,18 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Artifact: `runs/r1/qwen3-opencode-30b-solo-r1e-commonjs-20260424/`.
 - Interpretation: the E-SMALL ceiling remains intact under current fixture hygiene and runner state. The task is solvable by the stronger local model without PL orchestration, while qwen3:8b remains below that ceiling.
 
+## 2026-04-24 R2-A qwen3:8b PL-lite H8 ablation
+
+### Run `qwen3-8b-pl-lite-r2a-commonjs-20260424` — VALID
+
+- Fixture note: the original H8 fixture was not checked in, so this run uses a reconstructed `fixtures/h8-foreach-copy/` based on the committed H8 result summary: four files, exported interfaces, exact defaults, and `??` instead of `||`.
+- Flow: `r2-pl-lite.flow`, decomposition only; one prompt to read the contract, then one implementation prompt per file. No retry loop and no completion gate.
+- Local inference check: `ollama ps` logged `qwen3:8b` resident at **100% GPU** during the run.
+- PL CI result: flow completed successfully.
+- Oracle result: **4/4** passing.
+- Artifact: `runs/r2/qwen3-8b-pl-lite-r2a-commonjs-20260424/`.
+- Interpretation: on the reconstructed H8 fixture, retry/gate machinery is not necessary once the task is decomposed into one file per prompt. The next required comparator is qwen3:8b solo on the same reconstructed fixture; if solo fails, R2 localizes the lift to decomposition.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

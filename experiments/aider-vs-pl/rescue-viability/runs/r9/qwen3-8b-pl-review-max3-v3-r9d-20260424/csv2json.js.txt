@@ -1,0 +1,64 @@
+const fs = require('fs');
+const path = require('path');
+
+if (process.argv.length < 3) {
+  console.error('Usage: node csv2json.js <csv-file>');
+  process.exit(1);
+}
+
+const filePath = process.argv[2];
+if (!fs.existsSync(filePath)) {
+  console.error(`Error: File not found: ${filePath}`);
+  process.exit(1);
+}
+
+const fileContent = fs.readFileSync(filePath, 'utf8');
+if (fileContent.trim() === '') {
+  console.error(`Error: Empty file: ${filePath}`);
+  process.exit(1);
+}
+
+const lines = fileContent.split('\n');
+const headers = lines[0].split(',');
+const dataLines = lines.slice(1).filter(line => line.trim() !== '');
+
+function parseCSVLine(line) {
+  const fields = [];
+  let field = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (char === ',' && !inQuotes) {
+      fields.push(field);
+      field = '';
+    } else {
+      field += char;
+    }
+  }
+  if (field !== '') {
+    fields.push(field);
+  }
+  return fields;
+}
+
+const results = [];
+for (const line of dataLines) {
+  const fields = parseCSVLine(line);
+  const obj = {};
+  for (let i = 0; i < headers.length; i++) {
+    if (i < fields.length) {
+      const value = fields[i];
+      obj[headers[i]] = value === '' ? null : value;
+    } else {
+      obj[headers[i]] = null;
+    }
+  }
+  results.push(obj);
+}
+
+console.log(JSON.stringify(results, null, 2));
+process.exit(0);

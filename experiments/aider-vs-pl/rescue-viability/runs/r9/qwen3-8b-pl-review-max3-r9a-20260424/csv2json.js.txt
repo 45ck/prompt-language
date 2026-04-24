@@ -1,0 +1,79 @@
+const fs = require('fs');
+const path = require('path');
+
+function parseCSV(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const lines = content.trim().split('\n');
+  if (lines.length === 0) throw new Error('Empty file');
+
+  const headers = lines[0].split(',');
+  const records = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    const fields = [];
+    let field = '';
+    let inQuotes = false;
+    let currentField = 0;
+
+    for (let j = 0; j < line.length; j++) {
+      const char = line[j];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+        field += char;
+      } else if (char === ',' && !inQuotes) {
+        fields.push(field);
+        field = '';
+        currentField++;
+      } else {
+        field += char;
+      }
+    }
+
+    // Handle trailing comma
+    if (field !== '') {
+      fields.push(field);
+    }
+
+    // Ensure all records have the same number of fields as headers
+    if (fields.length < headers.length) {
+      for (let k = fields.length; k < headers.length; k++) {
+        fields.push(null);
+      }
+    }
+
+    const record = {};
+    for (let k = 0; k < headers.length; k++) {
+      record[headers[k]] = fields[k] || null;
+    }
+    records.push(record);
+  }
+
+  return records;
+}
+
+const args = process.argv.slice(2);
+if (args.length < 1) {
+  console.error('Usage: node csv2json.js <csv-file>');
+  process.exit(1);
+}
+
+const filePath = args[0];
+if (!fs.existsSync(filePath)) {
+  console.error(`Error: File not found: ${filePath}`);
+  process.exit(1);
+}
+
+if (fs.readFileSync(filePath, 'utf8').trim().split('\n').length === 0) {
+  console.error(`Error: Empty file: ${filePath}`);
+  process.exit(1);
+}
+
+try {
+  const data = parseCSV(filePath);
+  console.log(JSON.stringify(data, null, 2));
+  process.exit(0);
+} catch (e) {
+  console.error(`Error: ${e.message}`);
+  process.exit(1);
+}

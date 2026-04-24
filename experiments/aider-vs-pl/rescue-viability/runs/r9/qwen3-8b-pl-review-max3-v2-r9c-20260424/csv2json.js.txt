@@ -1,0 +1,67 @@
+const fs = require('fs');
+
+if (process.argv.length < 3) {
+  console.error('Usage: csv2json.js <file.csv>');
+  process.exit(1);
+}
+
+const filePath = process.argv[2];
+
+if (!fs.existsSync(filePath)) {
+  console.error(`Error: File not found: ${filePath}`);
+  process.exit(1);
+}
+
+const content = fs.readFileSync(filePath, 'utf8');
+if (content.trim() === '') {
+  console.error('Error: Empty file');
+  process.exit(1);
+}
+
+const lines = content.split('\n');
+
+function parseLine(line) {
+  let inQuote = false;
+  let currentField = '';
+  let fields = [];
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuote = !inQuote;
+      continue;
+    }
+    if (char === ',' && !inQuote) {
+      fields.push(currentField);
+      currentField = '';
+    } else {
+      currentField += char;
+    }
+  }
+  if (currentField) {
+    fields.push(currentField);
+  }
+  return fields;
+}
+
+const headers = parseLine(lines[0]);
+const data = lines.slice(1).filter(line => line.trim() !== '').map(line => parseLine(line));
+
+const result = [];
+
+for (const row of data) {
+  const obj = {};
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i];
+    const value = row[i];
+    if (value === '') {
+      obj[header] = null;
+    } else if (value === undefined) {
+      obj[header] = null;
+    } else {
+      obj[header] = value;
+    }
+  }
+  result.push(obj);
+}
+
+console.log(JSON.stringify(result, null, 2));

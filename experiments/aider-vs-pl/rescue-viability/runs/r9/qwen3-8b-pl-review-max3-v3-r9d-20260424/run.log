@@ -1,0 +1,12 @@
+--- START 2026-04-24T14:30:59.2495773+10:00 ---
+model=ollama_chat/qwen3:8b
+commit=d4d6664b0eea72e64f62848ab72569ee488295a9
+hygiene=ollama stop qwen3:8b before run; local package.json type commonjs; git init+fixture commit in run dir; R9 v3 review grounded-by max 3 with Windows-safe review-output.txt; ollama ps monitor enabled
+[prompt-language CI] Running R9-D review max3 v3 flow via aider...
+[prompt-language CI] INTERRUPTED by operator before wrapper finalized run.log.
+[prompt-language CI] Saved session state shows prompt-language failed after 50 completion-gate checks: verify_passes passed, but file_exists "csv2json.js" remained false.
+--- PL CI EXIT unknown ---
+--- VERIFY after interruption ---
+Manual oracle rerun against the saved csv2json.js snapshot passed 11/11. See oracle.txt.
+--- VERIFY EXIT 0 ---
+--- EXCLUDED: interrupted wrapper and gate evaluator cwd bug ---

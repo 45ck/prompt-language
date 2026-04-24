@@ -1,0 +1,15 @@
+
+Results: 11/11 passed
+  PASS: csv2json.js exists
+  PASS: runs on valid CSV
+  PASS: produces 4 records
+  PASS: correct header keys
+  PASS: simple row values correct
+  PASS: handles quoted field with comma
+  PASS: empty field becomes null
+  PASS: empty quoted field becomes null
+  PASS: no argument exits 1
+  PASS: missing file exits 1
+  PASS: empty file exits 1
+
+VERDICT: PASS

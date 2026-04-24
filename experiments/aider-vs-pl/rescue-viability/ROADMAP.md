@@ -63,7 +63,7 @@ Each row = one arm. Ordered for blocker-retirement + falsification-power per hou
 9. R2-D qwen3:8b solo on H8. **Done 2026-04-24 on reconstructed fixture:** 4/4, so reconstruction is too easy for rescue evidence.
    Hardened semantic v3 follow-up: solo 18/20 vs PL-lite 15/20, so decomposition alone did not rescue qwen3:8b.
 10. R3-A qwen3-opencode:30b solo on H11 phase-2 (if not banked under current patches). ~25 min.
-11. R9-A qwen3:8b PL-review-max-3 (no retry) on E-SMALL. ~18 min. Tests review-vs-retry cost.
+11. R9-A qwen3:8b PL-review-max-3 (no retry) on E-SMALL. **Done 2026-04-24 as R9-E v4:** clean PL exit 0, 11/11, 482s, qwen3:8b at 100% GPU. Earlier R9-A..D attempts excluded while hardening the flow.
 12. R4-A qwen3-opencode:30b PL-full on H8 via opencode runner (post-bead prompt-l1xz). ~20 min.
 13. R4-B qwen3-opencode:30b PL-full on H12 via opencode runner. ~25 min.
 14. R5-A qwen3:8b PL-full + race(8b, 8b) on H8 (sanity: race of same model). ~20 min.

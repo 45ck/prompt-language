@@ -1,0 +1,17 @@
+
+Results: 8/11 passed
+  PASS: csv2json.js exists
+  PASS: runs on valid CSV
+  PASS: produces 4 records
+  PASS: correct header keys
+  PASS: simple row values correct
+  FAIL: handles quoted field with comma -- 
+    Expected: "Smith, Bob"
+    Actual:   "\"Smith, Bob\""
+  PASS: empty field becomes null
+  FAIL: empty quoted field becomes null -- Got "\"\""
+  PASS: no argument exits 1
+  PASS: missing file exits 1
+  FAIL: empty file exits 1 -- Exit code undefined
+
+VERDICT: FAIL (3 failed)

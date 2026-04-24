@@ -1,0 +1,79 @@
+const fs = require('fs');
+
+if (process.argv.length < 3) {
+  console.error('Usage: node csv2json.js <file.csv>');
+  process.exit(1);
+}
+
+const filePath = process.argv[2];
+
+if (!fs.existsSync(filePath)) {
+  console.error(`Error: File not found: ${filePath}`);
+  process.exit(1);
+}
+
+const stats = fs.statSync(filePath);
+if (stats.size === 0) {
+  console.error('Error: Empty file');
+  process.exit(1);
+}
+
+const csvData = fs.readFileSync(filePath, 'utf8');
+const lines = csvData.split('\n');
+const headers = lines[0].split(',').map(field => field.trim());
+const dataRows = lines.slice(1).filter(line => line.trim() !== '');
+
+function parseCSVLine(line) {
+  let fields = [];
+  let field = '';
+  let inQuotes = false;
+  let currentField = '';
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      if (!inQuotes) {
+        // Skip the quote character
+        continue;
+      }
+    } else if (char === ',' && !inQuotes) {
+      fields.push(currentField);
+      currentField = '';
+    } else if (char === ',' && inQuotes) {
+      currentField += char;
+    } else if (char === '\r' || char === '\n' || char === '"') {
+      // End of line or quote
+      if (char === '\r' || char === '\n') {
+        // End of line
+        fields.push(currentField);
+        currentField = '';
+      }
+      // Skip the quote
+    } else {
+      currentField += char;
+    }
+  }
+  
+  if (currentField !== '') {
+    fields.push(currentField);
+  }
+  
+  return fields;
+}
+
+const parsedData = dataRows.map(line => {
+  const fields = parseCSVLine(line);
+  // Pad fields with nulls if necessary
+  while (fields.length < headers.length) {
+    fields.push(null);
+  }
+  const obj = {};
+  headers.forEach((header, index) => {
+    const value = fields[index] === '' ? null : fields[index];
+    obj[header] = value;
+  });
+  return obj;
+});
+
+console.log(JSON.stringify(parsedData, null, 2));

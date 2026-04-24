@@ -1,0 +1,14 @@
+Goal: R9 cost probe v4 — produce a csv2json.js CLI using review-grounded repair with oracle-only completion
+
+flow:
+  prompt: Read verify.cjs in the current working directory to understand exactly what csv2json.js must accept and emit. Use your read tool. Reply with a one-line summary of the contract.
+
+  prompt: Write csv2json.js in the current working directory using your write tool. It is a Node CLI that must satisfy the exact contract in verify.cjs. Read the CSV path from process.argv[2]. If argv length is less than 3 print a usage message to stderr and exit with a NON-ZERO code. If the file does not exist print an error to stderr and exit with a NON-ZERO code. If the file is empty print an error to stderr and exit with a NON-ZERO code. Parse CSV with quoted-comma handling: fields wrapped in double quotes allow literal commas inside. The first row is headers. For each data row produce an object mapping header to value. IMPORTANT: if a row has fewer fields than the header row (trailing commas missing), the missing fields MUST still appear in the object as JSON null, not undefined. An empty field value also becomes JSON null. Emit the resulting array via JSON.stringify(arr, null, 2) then exit with code 0. Reply "ok" when written.
+
+  review grounded-by "node verify.cjs" max 3
+    run: node verify.cjs > review-output.txt 2>&1 [timeout 60]
+    prompt: Read review-output.txt and fix csv2json.js only if it reports failing assertions. Use the latest grounded review critique as context: ${_review_critique}. If review-output.txt reports VERDICT: PASS, do not rewrite the file; reply "already passing". If it reports failures, edit csv2json.js with the minimum change that fixes the listed assertions. Do not add dependencies. Reply "reviewed" when done.
+  end
+
+done when:
+  gate verify_passes: node verify.cjs

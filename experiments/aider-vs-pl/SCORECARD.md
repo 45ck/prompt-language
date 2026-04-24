@@ -80,3 +80,4 @@ Hardware: AMD RX 7600 XT 16GB VRAM, Windows 11
 | R2-B5-qwen8b-plmedium-h8-v3b     | R2         | qwen3:8b            | aider  | medium    | h8-v3   | 20/20        | completed  | 476s  | 29e426d271deb09e24a56bc66a16537e0753df09 | 2026-04-24 | no       |
 | R2-B6-qwen8b-plmedium-h8-v3b     | R2         | qwen3:8b            | aider  | medium    | h8-v3   | 20/20        | completed  | 423s  | 121ca20a51870b58522e76d0fa96976a71415ca5 | 2026-04-24 | no       |
 | R2-B7-qwen8b-plmedium-h8-v3b     | R2         | qwen3:8b            | aider  | medium    | h8-v3   | 20/20        | completed  | 337s  | 121ca20a51870b58522e76d0fa96976a71415ca5 | 2026-04-24 | no       |
+| R9-E-qwen8b-plreview-v4          | R9         | qwen3:8b            | aider  | review    | e-small | 11/11        | 3 rounds   | 482s  | d4d6664b0eea72e64f62848ab72569ee488295a9 | 2026-04-24 | no       |

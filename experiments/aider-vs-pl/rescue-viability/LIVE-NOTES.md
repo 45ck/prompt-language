@@ -179,6 +179,27 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Oracle result: **20/20** and **20/20**.
 - Interpretation: the retry-scoped PL-medium result now has a clean N=3 band on hardened H8 v3: 20/20, 20/20, 20/20. This is stronger evidence that explicit oracle-feedback retry is load-bearing for qwen3:8b on this fixture.
 
+## 2026-04-24 R9 review-vs-retry cost probe
+
+### Runs `qwen3-8b-pl-review-max3-r9a-20260424`, `qwen3-8b-pl-review-max3-v2-r9b-20260424`, `qwen3-8b-pl-review-max3-v2-r9c-20260424`, and `qwen3-8b-pl-review-max3-v3-r9d-20260424` — EXCLUDED, INFORMATIVE
+
+- Fixture: E-SMALL CSV-to-JSON fixture with `verify.cjs`.
+- Purpose: replace the R1 `retry max 3` block with `review grounded-by "node verify.cjs" max 3`.
+- Local inference check: runs logged `qwen3:8b` at **100% GPU** during active samples.
+- R9-A/R9-B: excluded due PLR-007 prompt-runner exits after Ollama TCP resets.
+- R9-C: reached **11/11** but `prompt-language ci` exited nonzero due Windows `EPERM` during state rename.
+- R9-D: reached **11/11** but failed after 50 completion-gate checks because `file_exists "csv2json.js"` stayed false while `node verify.cjs` passed, reproducing the known gate evaluator cwd bug.
+- Interpretation: these attempts were useful for flow hardening but are excluded from aggregate R9 scoring.
+
+### Run `qwen3-8b-pl-review-max3-v4-r9e-20260424` — VALID
+
+- Flow: `r9-review-max3-v4.flow`; review-grounded repair with `review max 3`, full oracle output written to `review-output.txt`, and oracle-only completion gate.
+- Timeout controls: outer orchestration command timeout 3600s; aider turn timeout `PROMPT_LANGUAGE_AIDER_TIMEOUT_MS=600000`; in-flow oracle capture `[timeout 60]`; review loop bounded by `review max 3`.
+- Local inference check: `ollama ps` logged `qwen3:8b` resident at **100% GPU** during active samples.
+- PL result: `prompt-language ci` completed cleanly with exit 0.
+- Oracle result: **11/11** passing in **482s**.
+- Interpretation: review-grounded repair can rescue E-SMALL to the ceiling on qwen3:8b, but it needed three review rounds and took longer than the 30B solo ceiling. Treat as a valid cost probe, not a replacement for the R2 retry-scoped result.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

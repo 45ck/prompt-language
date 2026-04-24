@@ -60,7 +60,7 @@ Each row = one arm. Ordered for blocker-retirement + falsification-power per hou
 6. R2-A qwen3:8b pl-lite (decompose only) on H8. **Done 2026-04-24:** reconstructed H8 fixture, no retry/gate, 4/4.
 7. R2-B qwen3:8b pl-medium (lite + retry) on H8. ~15 min.
 8. R2-C qwen3:8b pl-full on H8. ~18 min.
-9. R2-D qwen3:8b solo on H8. ~10 min.
+9. R2-D qwen3:8b solo on H8. **Done 2026-04-24 on reconstructed fixture:** 4/4, so reconstruction is too easy for rescue evidence.
 10. R3-A qwen3-opencode:30b solo on H11 phase-2 (if not banked under current patches). ~25 min.
 11. R9-A qwen3:8b PL-review-max-3 (no retry) on E-SMALL. ~18 min. Tests review-vs-retry cost.
 12. R4-A qwen3-opencode:30b PL-full on H8 via opencode runner (post-bead prompt-l1xz). ~20 min.

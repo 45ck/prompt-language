@@ -108,6 +108,18 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Artifact: `runs/r2/qwen3-8b-pl-lite-r2a-commonjs-20260424/`.
 - Interpretation: on the reconstructed H8 fixture, retry/gate machinery is not necessary once the task is decomposed into one file per prompt. The next required comparator is qwen3:8b solo on the same reconstructed fixture; if solo fails, R2 localizes the lift to decomposition.
 
+## 2026-04-24 R2-D qwen3:8b solo H8 comparator
+
+### Run `qwen3-8b-solo-r2d-commonjs-20260424` — VALID
+
+- Fixture: same reconstructed `fixtures/h8-foreach-copy/` used by R2-A.
+- Command intent: solo aider, no PL, no retry, one prompt that names all four required files and reads `TASK.md` plus `spec.cjs`.
+- Local inference check: `ollama ps` logged `qwen3:8b` resident at **100% GPU** during the run.
+- Aider result: produced all four TypeScript files in one attempt.
+- Oracle result: **4/4** passing.
+- Artifact: `runs/r2/qwen3-8b-solo-r2d-commonjs-20260424/`.
+- Interpretation: the reconstructed H8 fixture is too easy under the current explicit TASK/spec prompt. R2-A does not show rescue because solo qwen3:8b also reaches the oracle ceiling. Do not spend cycles on R2-B/R2-C for this fixture until the original H8 fixture is recovered or the reconstruction is hardened.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

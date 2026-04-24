@@ -7,7 +7,7 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 ## Headline
 
 - **1 bug committed as closed today:** `prompt-959j` (opencode runner progress-detector patch, landed in commit `04367d2`).
-- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. First-pass R1 is complete, and R2-A qwen3:8b PL-lite on reconstructed H8 passed 4/4 with no retry/gate. The earlier qwen3:8b 9/11 PL-full result remains unreproduced.
+- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. First-pass R1 is complete. R2-A PL-lite and R2-D solo both passed reconstructed H8 at 4/4, so that reconstruction is too easy to support a rescue claim. The earlier qwen3:8b 9/11 PL-full result remains unreproduced.
 
 ## Open items by priority
 
@@ -86,5 +86,5 @@ These are written plans awaiting bead-tracked execution tasks:
 If you are picking up work:
 
 1. **If you can fix a P1 infra bug:** `prompt-7zyi` has a concrete plan (fix in `buildAiderEnv` via `GIT_CEILING_DIRECTORIES`); `prompt-0zn1` has an investigation plan with a minimal repro described in `AIDER-P1-TRIAGE.md`'s sibling triage and the gate-evaluator write-up. Either one closed unblocks ≥3 downstream items.
-2. **If you want to run an experiment:** run R2-D solo qwen3:8b on the reconstructed H8 fixture to compare against the R2-A PL-lite 4/4 result.
+2. **If you want to run an experiment:** recover or harden the H8 fixture before continuing R2-B/R2-C; the current reconstruction is ceilinged by solo qwen3:8b.
 3. **If you want to add a runner:** `prompt-lmas` (pi-mono) is scoped at ~300 LOC with a full plan in `pi-mono-RUNNER-PLAN.md`.

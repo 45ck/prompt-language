@@ -71,3 +71,4 @@ Hardware: AMD RX 7600 XT 16GB VRAM, Windows 11
 | R1-D-gemma4-e4b-plfull-floor     | R1         | gemma4-opencode:e4b | aider  | full      | e-small | 3/11         | 0          | 901s  | dbf174109993cef603e07f6c20d10d9a788c36a8 | 2026-04-24 | no       |
 | R1-E-qwen30b-solo-ceiling        | R1         | qwen3-opencode:30b  | aider  | solo      | e-small | 11/11        | 0          | 240s  | fd7f2f4bae6492e34c0463a2950980b7c64b715f | 2026-04-24 | no       |
 | R2-A-qwen8b-pllite-h8            | R2         | qwen3:8b            | aider  | lite      | h8      | 4/4          | 0          | 96s   | b27f09c7126e3dcd91ee36f1a68ec340526465ff | 2026-04-24 | no       |
+| R2-D-qwen8b-solo-h8              | R2         | qwen3:8b            | aider  | solo      | h8      | 4/4          | 0          | 35s   | 94a7bfb2c5765d4cae1a7877ca25c419a2af7cf2 | 2026-04-24 | no       |

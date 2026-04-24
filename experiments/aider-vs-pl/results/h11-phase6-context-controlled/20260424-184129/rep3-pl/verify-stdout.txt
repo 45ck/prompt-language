@@ -1,0 +1,19 @@
+
+Results: 9/11 passed
+  PASS: No "Contact" in src/app.js
+  PASS: No "Contact" in src/contact-store.js
+  PASS: No "Contact" in src/contact.js
+  PASS: No "Contact" in src/routes.js
+  PASS: No "Contact" in src/seed.js
+  PASS: No "Contact" in src/test.js
+  PASS: No "Contact" in ./README.md
+  PASS: "Client" class exists in some .js file
+  PASS: "ClientStore" or "Client" store class exists
+  FAIL: Application runs without error -- App failed: Command failed: node src/app.js
+Failed to get contact
+
+  FAIL: All imports resolve -- Command failed: node -e "try { require('./src/app'); } catch(e) { console.error(e.message); process.exit(1); }"
+Failed to get contact
+
+
+VERDICT: FAIL (2 failed)

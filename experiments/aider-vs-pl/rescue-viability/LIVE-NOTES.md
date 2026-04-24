@@ -225,6 +225,16 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Interpretation: H11 now has one green PL pilot under the corrected controls. The next H11 step can be `k>=3`, but only with the fixed denominator, v6 flow, separate timeouts, and scoped-message opt-in recorded in the manifest.
 - Artifact: `../results/h11-phase6-context-controlled/README.md`.
 
+### Repeated PL series and timeout calibration — COMPLETE
+
+- Run `20260424-181854`: PL-only `k=3`, `task-artisan-v6.flow`, 1800s outer / 420s turn. Results were **2/11**, **2/11**, **11/11**. The two failures ended at the first prompt boundary with unchanged authored files, so 420s was too tight for local aider/Ollama.
+- Run `20260424-184129`: PL-only `k=3`, same flow, 1800s outer / 900s turn. Results were **11/11**, **11/11**, **9/11** with one outer timeout after the model violated the seed/app contract and exhausted the compact retry loop.
+- Fixed the aider adapter to extract sentence-ending file references such as `src/test.js.`. Without this, H11 omitted `src/test.js` from explicit file args and aider could enter an add-file prompt path.
+- Run `20260424-192724`: PL-only `k=3` after the file-reference fix, same 900s turn budget. Results were **11/11**, **11/11**, **2/11**. The failing cell recorded `litellm.Timeout: Connection timed out after 600.0 seconds`, proving the harness turn timeout did not override aider/litellm's API timeout.
+- Fixed the aider adapter to pass `--timeout` derived from `PROMPT_LANGUAGE_AIDER_TIMEOUT_MS`, aligning the API timeout with the PL turn budget.
+- Run `20260424-202142`: PL-only `k=3` after both adapter fixes, 1800s outer / 900s turn. Results were **11/11**, **11/11**, **11/11** with no runner or verifier timeouts. `ollama ps` logs kept `qwen3-opencode-big:30b` resident on the RX 7600 XT at roughly **85% GPU** during active samples.
+- Interpretation: H11 now has a clean PL-only repeated mechanism result under fixed denominator, scoped-message delivery, explicit file args, and aligned aider API timeout. It is still not a solo-vs-PL claim-grade result; the next comparison requires a counterbalanced solo/PL protocol.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

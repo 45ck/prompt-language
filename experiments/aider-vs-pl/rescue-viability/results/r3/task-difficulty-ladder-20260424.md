@@ -82,3 +82,12 @@ separate outer/per-turn timeouts and opt-in scoped-message prompting completed
 cleanly at 11/11 in 370s. Treat that as a corrected-protocol precondition for
 repetition, not as a broad rescue claim. The generic `npm run eval:smoke:aider`
 check still fails on local-model capture/context cases in this environment.
+
+The subsequent phase-6 repetition clarified the operational controls. A
+420-second per-turn budget was too tight, and a 900-second PL turn budget still
+failed once until the aider adapter also passed the matching `--timeout` value
+to aider/litellm. After fixing sentence-ending file-reference extraction and
+aligning the aider API timeout, run `20260424-202142` produced a clean PL-only
+N=3 band at **11/11, 11/11, 11/11**. This updates the H11 mechanism evidence,
+but it does not change the original R3 ladder verdict because the clean band is
+not yet a counterbalanced solo-vs-PL comparison.

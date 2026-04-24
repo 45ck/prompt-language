@@ -1,0 +1,90 @@
+[
+  {
+    "path": "check-seed-contract.js",
+    "sha256": "15649d05760d967794a8816e03a7166ebccd4e679f0bfed9a9543734fa2723fb"
+  },
+  {
+    "path": "count-contact.js",
+    "sha256": "13cd79429aa6b996a5f567f6f99ad4fadba082d0be2adca71854699fd2ff7a91"
+  },
+  {
+    "path": "find-contact-stragglers.js",
+    "sha256": "01dcbf5707b0621391bd2223435b720b9d6a3a68a8c96d8c70a594f92abc7792"
+  },
+  {
+    "path": "list-contact-targets.js",
+    "sha256": "5a2175c4ebbd9b0661a8d427f7733d2b001746e0e35fc8c0ba1a15877a95363e"
+  },
+  {
+    "path": "package.json",
+    "sha256": "c9d2555921f5dd5a246c5839ea047a5ea899c09ba3067cdbe2a2f17260c9d2a6"
+  },
+  {
+    "path": "README.md",
+    "sha256": "1a784d62a433598e39513e48155cdc08534917b5b711fa69335672f32a9d1bb8"
+  },
+  {
+    "path": "src/app.js",
+    "sha256": "263b9ff64d3ab55ccd2ff6869f3fbaade7126e9d918db9e5999f53555217e80f"
+  },
+  {
+    "path": "src/contact-store.js",
+    "sha256": "ddf71aa9ee2404094153695fbdb33c21cc060b111d6a515366e106d1959165f1"
+  },
+  {
+    "path": "src/contact.js",
+    "sha256": "5b3fcf1fa41c6698916406d8c0bb7b3858a749ee1a993ecc6996a9b4cb609712"
+  },
+  {
+    "path": "src/routes.js",
+    "sha256": "5eb399dc0bb15867984c3e35e0a13d4fc8b645f804b2731f7e023dd640b1bae4"
+  },
+  {
+    "path": "src/seed.js",
+    "sha256": "4bf2317c46f5f99a10a029cc1a38f63413d72e89758336968e2831ec893fc0af"
+  },
+  {
+    "path": "src/test.js",
+    "sha256": "2ae1db9b9b155f83faf5bb9b2db4a24275154d5eb02e1477fb41fdbdac5a3ea3"
+  },
+  {
+    "path": "task-artisan-v2.flow",
+    "sha256": "451ace625a6cf73998b2c8f907a558530dd7233ef68f658724049fe3eb209ee3"
+  },
+  {
+    "path": "task-artisan-v3.flow",
+    "sha256": "fd1768961f061126df89d3ab808470da33ce3e87a0f4ace893aab2e2e434b7ef"
+  },
+  {
+    "path": "task-artisan-v4.flow",
+    "sha256": "397c25fd7db5b9a4242b80f3e22dc2392989071270d1016a9bb48f34d9c40eb0"
+  },
+  {
+    "path": "task-artisan-v5.flow",
+    "sha256": "c3eb22d24a4d1b1bc8784d000e16054b7587d68c9fbf725ff90104984f63e616"
+  },
+  {
+    "path": "task-artisan-v6.flow",
+    "sha256": "5359279d009358f8a7e5a0a25b15676f527ea75074fbbd6bfd52c217d953e23d"
+  },
+  {
+    "path": "task-artisan.flow",
+    "sha256": "8d237d1215693922f031de746f442a0567b322f72c5824786016e45f4d2708b5"
+  },
+  {
+    "path": "task-swarm.flow",
+    "sha256": "4f05fbda377a28a5e884301724b1d140426caa2542b7f8151463317425d672c3"
+  },
+  {
+    "path": "task.flow",
+    "sha256": "dc2ed4adb2633ac822c548ec080faa400ebba506c9c0a8f3d9b669ae2a11460c"
+  },
+  {
+    "path": "TASK.md",
+    "sha256": "b5b2bfb7d8a89f805e7eae08fe89348bb0a114d3ec299366936e0a9c3a2450e9"
+  },
+  {
+    "path": "verify.js",
+    "sha256": "3584a2478d3a09a452697230d6d025af2def120f500317fd2f53b628e06cb0ee"
+  }
+]

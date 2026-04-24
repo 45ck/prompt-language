@@ -37,7 +37,7 @@ Serial: R2 -> R5 -> R6. R3, R8, R9, R10 all block on R1 baseline numbers (otherw
 | --- | -------------------------- | -------------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------- | --------- | ---------------------- | --------------------------------- |
 | R1  | e-small (verify.cjs fixed) | yes                                    | aider                   | solo 30b R1-E 11/11; 8b solo R1-A 1/11 timeout; PL-full 5/11, 5/11; gemma4 e4b 3/11; earlier 9/11 outlier | 8-15 min  | 6 (3 models x 2) + N=3 | First-pass R1 complete; R2 next   |
 | R2  | H8 foreach copy            | needs 3 variants (lite/medium/full)    | aider                   | H8 30b 0/4->4/4                                                                                           | 10-15 min | 4                      | Gate carries most lift hypothesis |
-| R3  | E-SMALL, H8, H11ph2        | exists                                 | aider                   | banked at 30b                                                                                             | 5-30 min  | 6 (mostly banked)      | Mostly write-up                   |
+| R3  | E-SMALL, H8, H11ph2        | exists                                 | aider                   | banked at 30b                                                                                             | 5-30 min  | 6 (mostly banked)      | Done: negative/pivot synthesis    |
 | R4  | H8, H12                    | exists                                 | aider + opencode        | H8 30b 4/4                                                                                                | 10-20 min | 4                      | Needs bead prompt-l1xz closed     |
 | R5  | H8 with spawn/race         | not written                            | aider + PL_SPAWN_RUNNER | R2 results                                                                                                | 15-30 min | 3                      | VRAM: 8b+8b fits                  |
 | R6  | E-SMALL                    | not written                            | PL_SPAWN_RUNNER=aider   | R1 numbers                                                                                                | 20-40 min | 1 race                 | VRAM thrash predicted             |
@@ -62,7 +62,7 @@ Each row = one arm. Ordered for blocker-retirement + falsification-power per hou
 8. R2-C qwen3:8b pl-full on H8. ~18 min.
 9. R2-D qwen3:8b solo on H8. **Done 2026-04-24 on reconstructed fixture:** 4/4, so reconstruction is too easy for rescue evidence.
    Hardened semantic v3 follow-up: solo 18/20 vs PL-lite 15/20, so decomposition alone did not rescue qwen3:8b.
-10. R3-A qwen3-opencode:30b solo on H11 phase-2 (if not banked under current patches). ~25 min.
+10. R3-A qwen3-opencode:30b difficulty ladder synthesis. **Done 2026-04-24:** no new compute required; banked artifacts show E-SMALL ceiling/parity, H8 phase-1 lift, and H11 phase-2 collapse to 2/12 solo vs 3/12 PL. Treat as a pivot signal, not a claim-grade verdict.
 11. R9-A qwen3:8b PL-review-max-3 (no retry) on E-SMALL. **Done 2026-04-24 as R9-E v4:** clean PL exit 0, 11/11, 482s, qwen3:8b at 100% GPU. Earlier R9-A..D attempts excluded while hardening the flow.
 12. R4-A qwen3-opencode:30b PL-full on H8 via opencode runner (post-bead prompt-l1xz). ~20 min.
 13. R4-B qwen3-opencode:30b PL-full on H12 via opencode runner. ~25 min.
@@ -75,7 +75,7 @@ Runs 1-5 retire the R1 baseline. Runs 6-9 isolate the load-bearing PL feature. 1
 
 - R1: if 3-rep mean rescue(8b) >= +3/11 with non-overlapping variance vs solo, continue. If <= +1/11 or variance overlaps, thesis fails at 8B; stop and pivot to R3 to map the working band on 30B only.
 - R2: if pl-lite >= 80% of pl-full, retry/gate are cosmetic; stop at R2, do not run R5/R9.
-- R3: if rescue monotonically decays E-SMALL -> H8 -> H11, publish negative; stop sweep.
+- R3: **Done 2026-04-24.** Banked artifacts do not show broad non-decaying rescue with difficulty: E-SMALL has no headroom, H8 phase-1 lift is non-claim evidence, and H11 remains failing at 2/12 solo vs 3/12 PL. Publish as a negative/pivot signal; do not proceed to multi-agent races by default.
 - R4: if opencode < aider on same fixture by >=1 assertion, thin-runner thesis confirmed; stop.
 - R5: if neither race nor foreach-spawn changes pass rate by >= 1 assertion, multi-agent is cosmetic at this scale; skip R6/R7/R10.
 - R6: expected serialisation; stop after one data point regardless.

@@ -200,6 +200,17 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Oracle result: **11/11** passing in **482s**.
 - Interpretation: review-grounded repair can rescue E-SMALL to the ceiling on qwen3:8b, but it needed three review rounds and took longer than the 30B solo ceiling. Treat as a valid cost probe, not a replacement for the R2 retry-scoped result.
 
+## 2026-04-24 R3 task-difficulty ladder
+
+### Synthesis `r3-task-difficulty-ladder-20260424` — COMPLETE
+
+- Scope: fixed local model `qwen3-opencode:30b`; banked E-SMALL, H8, and H11 phase-2 artifacts.
+- Easy: E-SMALL is already at the solo ceiling. Current rescue-folder remeasurement is **11/11** solo; earlier manual PL-style decomposition was also **11/11**, so PL has no headroom on this fixture.
+- Medium: H8 phase-1 was **0/4** solo spec-conformant to **4/4** PL spec-conformant, but remains narrative N=1 evidence without a predeclared fixture.
+- Hard: H11 phase-2 is **2/12** solo to **3/12** PL at 1.48x wall time. Both arms fail; the +1 assertion edge is not enough to support broad rescue scaling.
+- Interpretation: R3 is a negative/pivot signal. PL helps in a capability band where the model can write plausible code and benefits from scoping/gates; it does not make H11-class multi-file refactors reliable for the current 30B local model under aider.
+- Artifact: `results/r3/task-difficulty-ladder-20260424.md`.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

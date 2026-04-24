@@ -1,6 +1,6 @@
 # rescue — does PL's top-level wisdom lift lower-capability models above their solo ceiling
 
-**Status:** R1 complete for the first pass: qwen3:8b solo timed out at 1/11, qwen3:8b PL-full corrected repeats scored 5/11 and 5/11, gemma4-opencode:e4b PL-full scored 3/11 with no implementation file, and qwen3-opencode:30b solo passed 11/11. R2-B has a clean hardened-H8 retry-scoped N=3 band at 20/20, 20/20, 20/20. R9-E review-grounded E-SMALL completed cleanly at 11/11 in 482s.
+**Status:** R1 complete for the first pass: qwen3:8b solo timed out at 1/11, qwen3:8b PL-full corrected repeats scored 5/11 and 5/11, gemma4-opencode:e4b PL-full scored 3/11 with no implementation file, and qwen3-opencode:30b solo passed 11/11. R2-B has a clean hardened-H8 retry-scoped N=3 band at 20/20, 20/20, 20/20. R3 task-difficulty synthesis is complete and is a negative/pivot signal for broad difficulty-scaling claims. R9-E review-grounded E-SMALL completed cleanly at 11/11 in 482s.
 **Last update:** 2026-04-24
 
 ## Question
@@ -16,6 +16,7 @@ If we encode PL's discipline (decomposition, scoping, gates, retry loops) as top
 - R2-A qwen3:8b PL-lite on reconstructed H8 passed 4/4 with no retry and no completion gate — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R2-D qwen3:8b solo on reconstructed H8 also passed 4/4, so this reconstruction does not support a rescue claim — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R2 hardened H8 v3 semantic repair: PL-lite scored 15/20, solo scored 18/20, corrected PL-medium v3b first failed operationally at 19/20, then completed cleanly at 20/20 across three repeats — see [LIVE-NOTES.md](LIVE-NOTES.md)
+- R3 task-difficulty ladder at `qwen3-opencode:30b`: E-SMALL ceiling/parity, H8 phase-1 lift, H11 phase-2 only 2/12 solo to 3/12 PL; this supports a capability-band pivot, not broad rescue scaling — see [results/r3/task-difficulty-ladder-20260424.md](results/r3/task-difficulty-ladder-20260424.md)
 - R9-E qwen3:8b PL review-grounded E-SMALL completed cleanly with exit 0 and scored 11/11 in 482s; timeout controls were explicit at shell, runner, run-node, and review-loop levels — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - Earlier R1v3 PL-full run on qwen3:8b E-SMALL reached 9/11 after retry, but remains an unreproduced high outlier — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R1..R10 experiment plan and success criteria — see [RESCUE-VIABILITY-PLAN.md](RESCUE-VIABILITY-PLAN.md)
@@ -29,9 +30,10 @@ If we encode PL's discipline (decomposition, scoping, gates, retry loops) as top
 
 ## What is next (ordered)
 
-1. Start R3 if the goal is the task-difficulty ladder; R2-B and R9 now both have at least one clean local qwen3:8b result
-2. Repeat R9-E to N=3 only if review-vs-retry cost becomes a publication target; otherwise one clean probe is enough to rank the mechanism
-3. If another aider exit occurs, inspect PLR-007 `_runtime_diagnostic.prompt_runner.*` state before deleting run state
+1. Do not default to R5/R6 multi-agent races yet; R3 says task difficulty, not agent count, is the current limiting variable
+2. If the goal is stronger 30B evidence, rerun H11 with corrected context/file inclusion and k>=3 before adding more orchestration
+3. Repeat R9-E to N=3 only if review-vs-retry cost becomes a publication target; otherwise one clean probe is enough to rank the mechanism
+4. If another aider exit occurs, inspect PLR-007 `_runtime_diagnostic.prompt_runner.*` state before deleting run state
 
 ## Known blockers
 

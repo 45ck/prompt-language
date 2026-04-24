@@ -1,0 +1,13 @@
+{
+  "label": "rep1-pl",
+  "arm": "pl",
+  "repetition": 1,
+  "runnerExitCode": -1,
+  "runnerTimedOut": true,
+  "verifyExitCode": 1,
+  "verifyTimedOut": false,
+  "passes": 6,
+  "total": 11,
+  "oracleSummary": "Results: 6/11 passed",
+  "wallSeconds": 1800.054
+}

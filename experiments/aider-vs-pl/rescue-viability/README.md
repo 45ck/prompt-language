@@ -17,6 +17,7 @@ If we encode PL's discipline (decomposition, scoping, gates, retry loops) as top
 - R2-D qwen3:8b solo on reconstructed H8 also passed 4/4, so this reconstruction does not support a rescue claim — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R2 hardened H8 v3 semantic repair: PL-lite scored 15/20, solo scored 18/20, corrected PL-medium v3b first failed operationally at 19/20, then completed cleanly at 20/20 across three repeats — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R3 task-difficulty ladder at `qwen3-opencode:30b`: E-SMALL ceiling/parity, H8 phase-1 lift, H11 phase-2 only 2/12 solo to 3/12 PL; this supports a capability-band pivot, not broad rescue scaling — see [results/r3/task-difficulty-ladder-20260424.md](results/r3/task-difficulty-ladder-20260424.md)
+- H11 phase-6 context-controlled pilots fixed the oracle denominator and added a repeatable harness, but PL timed out at 7/11 and 6/11, so H11 is not ready for k>=3 — see [../results/h11-phase6-context-controlled/README.md](../results/h11-phase6-context-controlled/README.md)
 - R9-E qwen3:8b PL review-grounded E-SMALL completed cleanly with exit 0 and scored 11/11 in 482s; timeout controls were explicit at shell, runner, run-node, and review-loop levels — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - Earlier R1v3 PL-full run on qwen3:8b E-SMALL reached 9/11 after retry, but remains an unreproduced high outlier — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R1..R10 experiment plan and success criteria — see [RESCUE-VIABILITY-PLAN.md](RESCUE-VIABILITY-PLAN.md)
@@ -30,8 +31,8 @@ If we encode PL's discipline (decomposition, scoping, gates, retry loops) as top
 
 ## What is next (ordered)
 
-1. Do not default to R5/R6 multi-agent races yet; R3 says task difficulty, not agent count, is the current limiting variable
-2. If the goal is stronger 30B evidence, rerun H11 with corrected context/file inclusion and k>=3 before adding more orchestration
+1. Fix H11 flow termination before any k>=3 rerun; phase-6 shows corrected PL pilots still time out
+2. Do not default to R5/R6 multi-agent races yet; R3 says task difficulty and flow termination, not agent count, are the current limiting variables
 3. Repeat R9-E to N=3 only if review-vs-retry cost becomes a publication target; otherwise one clean probe is enough to rank the mechanism
 4. If another aider exit occurs, inspect PLR-007 `_runtime_diagnostic.prompt_runner.*` state before deleting run state
 

@@ -1,0 +1,78 @@
+--- 2026-04-24T15:27:07.3668059+10:00 ---
+NAME        ID              SIZE      PROCESSOR    CONTEXT    UNTIL
+qwen3:8b    500a1f067a9f    6.4 GB    100% GPU     13293      About a minute from now
+--- 2026-04-24T15:27:22.4478835+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:27:37.5392519+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:27:52.6399896+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:28:07.7314638+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:28:22.8371283+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:28:37.9319367+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:28:53.0313812+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:29:08.1300719+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:29:23.2208733+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:29:38.3038452+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:29:53.4088159+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:30:08.5003363+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:30:23.5935784+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:30:38.7128959+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:30:53.8177698+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:31:08.9173915+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:31:24.0287442+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:31:39.1167752+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:31:54.2136496+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:32:09.3178506+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:32:24.4126347+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:32:39.5129736+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:32:54.6212300+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:33:09.7264004+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now
+--- 2026-04-24T15:33:24.8154841+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    11624      29 minutes from now

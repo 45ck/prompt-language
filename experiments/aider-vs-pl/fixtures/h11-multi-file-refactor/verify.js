@@ -34,7 +34,18 @@ function getAllFiles(dir, ext) {
   return files;
 }
 
-const jsFiles = getAllFiles('./src', '.js').map((file) => file.replace(/\\/g, '/'));
+const declaredJsFiles = [
+  'src/app.js',
+  'src/contact-store.js',
+  'src/contact.js',
+  'src/routes.js',
+  'src/seed.js',
+  'src/test.js',
+];
+
+const discoveredJsFiles = getAllFiles('./src', '.js').map((file) => file.replace(/\\/g, '/'));
+const jsFiles = declaredJsFiles;
+const unexpectedJsFiles = discoveredJsFiles.filter((file) => !declaredJsFiles.includes(file));
 
 const mdFiles = fs.existsSync('./README.md') ? ['./README.md'] : [];
 
@@ -90,6 +101,9 @@ test('Application runs without error', () => {
 
 // Check imports resolve (no require errors)
 test('All imports resolve', () => {
+  if (unexpectedJsFiles.length > 0) {
+    throw new Error(`Unexpected JS files under src: ${unexpectedJsFiles.join(', ')}`);
+  }
   const output = execSync(
     'node -e "try { require(\'./src/app\'); } catch(e) { console.error(e.message); process.exit(1); }"',
     {

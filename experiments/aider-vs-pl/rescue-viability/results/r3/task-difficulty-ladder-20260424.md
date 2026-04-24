@@ -68,3 +68,14 @@ timeouts, and explicit in-flow oracle timeouts as in R9-E.
 For `qwen3-opencode:30b`, local inference is viable on easy tasks, PL can help
 on medium gate-heavy tasks, and H11-class multi-file refactors remain below the
 reliable local-model threshold under the current aider runner.
+
+## Follow-up: Phase-6 H11 Pilot
+
+After this synthesis, phase-6 added a fixed-denominator H11 oracle and a
+repeatable context-controlled harness. The pilots did not justify launching a
+`k>=3` series: solo stayed at 2/11, PL reached 7/11 with `task-artisan.flow` but
+timed out at 1200s, and `qwen3-opencode-big:30b` with `task-artisan-v5.flow`
+timed out at 6/11 after 1800s.
+
+This strengthens the R3 pivot: the next H11 work is flow termination and
+scoring stability, not more repetitions or more agents.

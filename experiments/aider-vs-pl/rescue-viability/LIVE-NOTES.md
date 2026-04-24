@@ -211,6 +211,17 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Interpretation: R3 is a negative/pivot signal. PL helps in a capability band where the model can write plausible code and benefits from scoping/gates; it does not make H11-class multi-file refactors reliable for the current 30B local model under aider.
 - Artifact: `results/r3/task-difficulty-ladder-20260424.md`.
 
+## 2026-04-24 H11 phase-6 context-controlled pilots
+
+### Harness/oracle pilot — COMPLETE
+
+- Added `experiments/aider-vs-pl/scripts/run-h11-context-controlled.ps1` to create fresh H11 workdirs, run bounded solo/PL arms, capture `ollama ps`, and write per-cell manifests plus verifier output.
+- Fixed the H11 oracle denominator at 11 by scoring only the declared JS files plus `README.md`; unexpected nested JS files now fail the import-resolution assertion instead of adding extra denominator rows.
+- Pilot `20260424-152706`: `qwen3-opencode:30b`, solo with explicit file args scored **2/11** in 382s; PL with `task-artisan.flow` reached **7/11** but hit the 1200s outer timeout.
+- Pilot `20260424-155554`: `qwen3-opencode-big:30b`, PL with `task-artisan-v5.flow` reached **6/11** and hit the 1800s outer timeout.
+- Interpretation: do not launch H11 `k>=3` yet. The corrected PL arm must first complete inside a declared timeout; otherwise repetitions mainly measure timeout behavior and broad repair-loop drift.
+- Artifact: `../results/h11-phase6-context-controlled/README.md`.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

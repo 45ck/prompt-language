@@ -113,6 +113,7 @@ Run with `node /c/Projects/prompt-language/bin/cli.mjs run --file scaffold.flow 
 
 - **[P1] Port today's opencode-runner fix from `dist/` to `src/infrastructure/adapters/opencode-prompt-turn-runner.ts`** and add a regression test that replays a real opencode JSON stream. Without this, `npm run build` wipes the patch.
 - **[P1] Fix the 2 aider-runner P1 defects** from EVIDENCE-CONSOLIDATION §3. They block the real-PL small-model arm entirely.
+- **[P1] Fix gate evaluator false negatives for relative `file_exists` checks.** R1-B/R1-C qwen3:8b PL-full runs reported `file_exists "csv2json.js"` as failed while the file existed on disk, so completion-gate pass/fail cannot be trusted until cwd/path resolution is isolated.
 - **[P2] Add a PL `preflight` check for Modelfile `num_ctx` vs the flow's predicted token budget.** Warn when system-prompt + tool definitions + first prompt will exceed the model's context.
 - **[P2] Add a pre-warm-model flag or hook** so cold-load latency (20–40 s) doesn't count against the first turn's timeout.
 

@@ -60,3 +60,11 @@ Hardware: AMD RX 7600 XT 16GB VRAM, Windows 11
 - DSL parsing → aider prompt nodes → shell run nodes → gate evaluation → session state
 - Full audit trail with timing
 - Status: completed, all gates passed
+
+## Rescue-Viability R1 Runs
+
+| arm_label                        | experiment | model    | runner | intensity | fixture | passes/total | retries    | wall  | flow_sha                                 | date       | excluded |
+| -------------------------------- | ---------- | -------- | ------ | --------- | ------- | ------------ | ---------- | ----- | ---------------------------------------- | ---------- | -------- |
+| R1-B-qwen8b-plfull-rep2-invalid  | R1         | qwen3:8b | aider  | full      | e-small | 4/11         | unrecorded | 1173s | 862137a9c5bb1de2f01838b01b254af11f929f58 | 2026-04-24 | yes      |
+| R1-B-qwen8b-plfull-rep2-commonjs | R1         | qwen3:8b | aider  | full      | e-small | 5/11         | unrecorded | 1174s | 862137a9c5bb1de2f01838b01b254af11f929f58 | 2026-04-24 | no       |
+| R1-C-qwen8b-plfull-rep3-commonjs | R1         | qwen3:8b | aider  | full      | e-small | 5/11         | unrecorded | 1173s | 862137a9c5bb1de2f01838b01b254af11f929f58 | 2026-04-24 | no       |

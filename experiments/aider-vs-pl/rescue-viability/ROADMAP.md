@@ -58,7 +58,7 @@ Each row = one arm. Ordered for blocker-retirement + falsification-power per hou
 4. R1-D gemma4-opencode:e4b PL-full on E-SMALL (confirm floor). **Done 2026-04-24:** 900s timeout, no implementation file, 3/11.
 5. R1-E qwen3-opencode:30b solo-aider on E-SMALL (re-measure ceiling under current aider P1 patches). **Done 2026-04-24:** 11/11 in one solo attempt.
 6. R2-A qwen3:8b pl-lite (decompose only) on H8. **Done 2026-04-24:** reconstructed H8 fixture, no retry/gate, 4/4.
-7. R2-B qwen3:8b pl-medium (lite + retry) on H8. **Attempted 2026-04-24 on semantic v3 fixture:** excluded; prompt runner exited with code 1, final workspace scored 12/20.
+7. R2-B qwen3:8b pl-medium (lite + retry) on H8. **Attempted 2026-04-24 on semantic v3 fixture:** excluded; prompt runner exited with code 1, final workspace scored 12/20. Corrected retry-scoping v3b also exited operationally but final workspace scored 19/20.
 8. R2-C qwen3:8b pl-full on H8. ~18 min.
 9. R2-D qwen3:8b solo on H8. **Done 2026-04-24 on reconstructed fixture:** 4/4, so reconstruction is too easy for rescue evidence.
    Hardened semantic v3 follow-up: solo 18/20 vs PL-lite 15/20, so decomposition alone did not rescue qwen3:8b.

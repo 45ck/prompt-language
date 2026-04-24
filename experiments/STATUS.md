@@ -7,7 +7,7 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 ## Headline
 
 - **1 bug committed as closed today:** `prompt-959j` (opencode runner progress-detector patch, landed in commit `04367d2`).
-- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. First-pass R1 is complete. R2 hardened H8 v3 currently disfavors decomposition-only rescue: PL-lite 15/20, solo 18/20, PL-medium excluded after prompt-runner exit. The earlier qwen3:8b 9/11 PL-full result remains unreproduced.
+- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. First-pass R1 is complete. R2 hardened H8 v3 disfavors decomposition-only rescue but suggests retry scoping may help: PL-lite 15/20, solo 18/20, corrected PL-medium v3b 19/20 but excluded after prompt-runner exit. The earlier qwen3:8b 9/11 PL-full result remains unreproduced.
 
 ## Open items by priority
 
@@ -86,5 +86,5 @@ These are written plans awaiting bead-tracked execution tasks:
 If you are picking up work:
 
 1. **If you can fix a P1 infra bug:** `prompt-7zyi` has a concrete plan (fix in `buildAiderEnv` via `GIT_CEILING_DIRECTORIES`); `prompt-0zn1` has an investigation plan with a minimal repro described in `AIDER-P1-TRIAGE.md`'s sibling triage and the gate-evaluator write-up. Either one closed unblocks ≥3 downstream items.
-2. **If you want to run an experiment:** investigate the R2-B3 prompt-runner exit before continuing gate/retry or multi-agent arms.
+2. **If you want to run an experiment:** investigate the R2-B3/R2-B4 prompt-runner exits before continuing gate/retry or multi-agent arms.
 3. **If you want to add a runner:** `prompt-lmas` (pi-mono) is scoped at ~300 LOC with a full plan in `pi-mono-RUNNER-PLAN.md`.

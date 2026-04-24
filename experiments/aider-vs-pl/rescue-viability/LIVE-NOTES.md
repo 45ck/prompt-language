@@ -153,6 +153,15 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Descriptive oracle result after failure: **12/20** passing.
 - Interpretation: excluded from aggregate R2 scoring. The retry/gate path did not produce a clean rescue result and needs runner/failure-mode investigation before more R2-B/R2-C cycles.
 
+### Run `qwen3-8b-pl-medium-v3b-r2b-commonjs-20260424` — EXCLUDED, INFORMATIVE
+
+- Fixture: same `h8-repair-v3` semantic fixture.
+- Flow: corrected PL-medium v3b; retry writes oracle output to a file and explicitly names `src/user.ts`, `src/product.ts`, `src/order.ts`, and `src/invoice.ts` in the repair prompt.
+- Local inference check: `ollama ps` logged `qwen3:8b` resident at **100% GPU** throughout the run.
+- `prompt-language ci` again failed with `Prompt runner exited with code 1` before the arm completed cleanly.
+- Descriptive oracle result after failure: **19/20** passing. The only remaining failure was `Order.status` falsy preservation.
+- Interpretation: excluded from aggregate R2 scoring due to the hard aider exit, but informative. Making oracle feedback visible and explicitly scoping retry repairs materially improved the final workspace over PL-lite 15/20 and solo 18/20.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

@@ -29,6 +29,7 @@ function readPositiveIntEnv(name: string): number | undefined {
 export function buildAiderArgs(input: PromptTurnInput, files: readonly string[]): string[] {
   const model = input.model ?? DEFAULT_MODEL;
   const disableGit = !hasGitRepo(input.cwd);
+  const timeoutMs = readPositiveIntEnv(AIDER_TIMEOUT_MS_ENV);
   const useScopedMessage = process.env[AIDER_SCOPED_MESSAGE_ENV]?.trim() === '1';
   const scopedMessage = input.scopePrompt?.trim();
   const message =
@@ -50,6 +51,7 @@ export function buildAiderArgs(input: PromptTurnInput, files: readonly string[])
     '1024',
     '--edit-format',
     'whole',
+    ...(timeoutMs != null ? ['--timeout', String(Math.ceil(timeoutMs / 1000))] : []),
     '--message',
     message,
     ...files,

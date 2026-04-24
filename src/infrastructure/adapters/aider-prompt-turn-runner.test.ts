@@ -270,7 +270,7 @@ describe('AiderPromptTurnRunner', () => {
 
     expect(mockedExecFileSync).toHaveBeenCalledWith(
       'python',
-      expect.anything(),
+      expect.arrayContaining(['--timeout', '5']),
       expect.objectContaining({ timeout: 5000 }),
     );
   });

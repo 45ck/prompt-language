@@ -1,0 +1,24 @@
+--- OLLAMA PS 2026-04-24T11:21:15.0841845+10:00 ---
+NAME                   ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+gemma4-opencode:e4b    8792781df702    10 GB    68%/32% CPU/GPU    10910      27 minutes from now    
+--- OLLAMA PS 2026-04-24T11:21:45.1570402+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    10499      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:22:15.2482343+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    10499      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:22:45.3227495+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    10499      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:23:15.4034515+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    10499      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:23:45.4951873+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    10499      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:24:15.5685449+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    10499      29 minutes from now    
+--- OLLAMA PS 2026-04-24T11:24:45.6414693+10:00 ---
+NAME                  ID              SIZE     PROCESSOR          CONTEXT    UNTIL               
+qwen3-opencode:30b    f92f0cf2e867    19 GB    15%/85% CPU/GPU    10499      29 minutes from now    

@@ -7,7 +7,7 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 ## Headline
 
 - **1 bug committed as closed today:** `prompt-959j` (opencode runner progress-detector patch, landed in commit `04367d2`).
-- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. R1-A qwen3:8b solo baseline timed out at 1/11; corrected R1-B/R1-C PL-full replications scored 5/11 and 5/11; R1-D gemma4-opencode:e4b PL-full scored 3/11 with no implementation file, so the earlier qwen3:8b 9/11 PL-full result remains unreproduced.
+- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. First-pass R1 is complete: qwen3:8b solo 1/11 timeout, corrected qwen3:8b PL-full 5/11 and 5/11, gemma4-opencode:e4b PL-full 3/11, qwen3-opencode:30b solo 11/11. The earlier qwen3:8b 9/11 PL-full result remains unreproduced.
 
 ## Open items by priority
 
@@ -86,5 +86,5 @@ These are written plans awaiting bead-tracked execution tasks:
 If you are picking up work:
 
 1. **If you can fix a P1 infra bug:** `prompt-7zyi` has a concrete plan (fix in `buildAiderEnv` via `GIT_CEILING_DIRECTORIES`); `prompt-0zn1` has an investigation plan with a minimal repro described in `AIDER-P1-TRIAGE.md`'s sibling triage and the gate-evaluator write-up. Either one closed unblocks ≥3 downstream items.
-2. **If you want to run an experiment:** continue `prompt-b5eb` with R1-E from `ROADMAP.md`, then decide whether R2 ablation is still warranted.
+2. **If you want to run an experiment:** continue with R2-A from `ROADMAP.md` to isolate which PL feature carries the qwen3:8b lift.
 3. **If you want to add a runner:** `prompt-lmas` (pi-mono) is scoped at ~300 LOC with a full plan in `pi-mono-RUNNER-PLAN.md`.

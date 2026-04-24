@@ -84,6 +84,18 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Artifact: `runs/r1/gemma4-opencode-e4b-pl-full-r1d-commonjs-20260424/`.
 - Interpretation: this confirms the expected floor for the smaller gemma4 opencode variant on E-SMALL. PL orchestration did not rescue a model that failed to emit the target implementation file.
 
+## 2026-04-24 R1-E qwen3-opencode:30b solo ceiling remeasurement
+
+### Run `qwen3-opencode-30b-solo-r1e-commonjs-20260424` — VALID
+
+- Command intent: solo aider, no PL, no retry, `ollama_chat/qwen3-opencode:30b`, E-SMALL CSV fixture.
+- Applied hygiene: per-run `git init`; local `package.json` with `"type":"commonjs"`; same `verify.cjs` and input as R1-A/R1-B/R1-C/R1-D.
+- Local inference check: `ollama ps` logged `qwen3-opencode:30b` resident during the run at **15%/85% CPU/GPU**.
+- Aider result: produced `csv2json.js` in one attempt.
+- Oracle result: **11/11** passing.
+- Artifact: `runs/r1/qwen3-opencode-30b-solo-r1e-commonjs-20260424/`.
+- Interpretation: the E-SMALL ceiling remains intact under current fixture hygiene and runner state. The task is solvable by the stronger local model without PL orchestration, while qwen3:8b remains below that ceiling.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

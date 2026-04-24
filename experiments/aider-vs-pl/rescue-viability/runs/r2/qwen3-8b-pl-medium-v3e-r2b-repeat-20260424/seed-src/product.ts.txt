@@ -1,0 +1,15 @@
+export interface Product {
+  sku: string;
+  title: string;
+  price: number;
+  inStock: boolean;
+}
+
+export function createProduct(input: Partial<Product> = {}): Product {
+  return {
+    sku: input.sku || 'sku',
+    title: input.title || 'Untitled',
+    price: input.price || 99,
+    inStock: input.inStock || true,
+  };
+}

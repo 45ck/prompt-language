@@ -171,6 +171,14 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Oracle result: **20/20** passing.
 - Interpretation: this is the first clean hardened-H8 result showing retry-scoped PL beating the same semantic fixture's solo qwen3:8b comparator, which scored 18/20. Next step is repetition, not escalation to a broader claim.
 
+### Runs `qwen3-8b-pl-medium-v3d-r2b-repeat-20260424` and `qwen3-8b-pl-medium-v3e-r2b-repeat-20260424` — VALID
+
+- Fixture and flow: same semantic v3 fixture and corrected PL-medium v3b flow as R2-B5.
+- Local inference check: both runs logged `qwen3:8b` resident at **100% GPU**.
+- PL result: both runs completed cleanly with exit 0.
+- Oracle result: **20/20** and **20/20**.
+- Interpretation: the retry-scoped PL-medium result now has a clean N=3 band on hardened H8 v3: 20/20, 20/20, 20/20. This is stronger evidence that explicit oracle-feedback retry is load-bearing for qwen3:8b on this fixture.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

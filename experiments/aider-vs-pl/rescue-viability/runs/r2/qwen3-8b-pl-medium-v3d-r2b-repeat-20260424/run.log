@@ -1,0 +1,32 @@
+--- START 2026-04-24T13:32:38.2512017+10:00 ---
+model=ollama_chat/qwen3:8b
+commit=121ca20a51870b58522e76d0fa96976a71415ca5
+hygiene=git init in run dir; repeat of clean R2-B5 flow; v3b retry scoping; ollama ps monitor enabled
+[prompt-language CI] Running R2-B6 repeat pl-medium v3b flow via aider...
+[prompt-language CI] Running flow via aider...
+[prompt-language CI] Flow completed.
+--- PL CI EXIT 0 ---
+--- VERIFY 2026-04-24T13:39:41.4277830+10:00 ---
+PASS src/user.ts named exports
+PASS src/user.ts property set
+PASS src/user.ts defaults
+PASS src/user.ts partial overrides
+PASS src/user.ts falsy preservation
+PASS src/product.ts named exports
+PASS src/product.ts property set
+PASS src/product.ts defaults
+PASS src/product.ts partial overrides
+PASS src/product.ts falsy preservation
+PASS src/order.ts named exports
+PASS src/order.ts property set
+PASS src/order.ts defaults
+PASS src/order.ts partial overrides
+PASS src/order.ts falsy preservation
+PASS src/invoice.ts named exports
+PASS src/invoice.ts property set
+PASS src/invoice.ts defaults
+PASS src/invoice.ts partial overrides
+PASS src/invoice.ts falsy preservation
+Results: 20/20 passed
+--- VERIFY EXIT 0 ---
+--- END 2026-04-24T13:39:41.6576568+10:00 ---

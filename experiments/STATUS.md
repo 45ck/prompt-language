@@ -7,7 +7,7 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 ## Headline
 
 - **1 bug committed as closed today:** `prompt-959j` (opencode runner progress-detector patch, landed in commit `04367d2`).
-- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. First-pass R1 is complete. R2 hardened H8 v3 now has one clean retry-scoped PL rescue result: PL-lite 15/20, solo 18/20, corrected PL-medium v3b 20/20 after two excluded operational attempts. The earlier qwen3:8b 9/11 PL-full result remains unreproduced.
+- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. First-pass R1 is complete. R2 hardened H8 v3 now has clean retry-scoped PL rescue evidence: PL-lite 15/20, solo 18/20, corrected PL-medium v3b 20/20 across N=3 after two excluded operational attempts. The earlier qwen3:8b 9/11 PL-full result remains unreproduced.
 
 ## Open items by priority
 
@@ -86,5 +86,5 @@ These are written plans awaiting bead-tracked execution tasks:
 If you are picking up work:
 
 1. **If you can fix a P1 infra bug:** `prompt-7zyi` has a concrete plan (fix in `buildAiderEnv` via `GIT_CEILING_DIRECTORIES`); `prompt-0zn1` has an investigation plan with a minimal repro described in `AIDER-P1-TRIAGE.md`'s sibling triage and the gate-evaluator write-up. Either one closed unblocks ≥3 downstream items.
-2. **If you want to run an experiment:** repeat R2-B5 twice before continuing gate/retry or multi-agent arms.
+2. **If you want to run an experiment:** choose between R2-C PL-full on semantic v3, R3 stronger-model H11, or R9 review-vs-retry. R2-B medium retry is no longer the blocker.
 3. **If you want to add a runner:** `prompt-lmas` (pi-mono) is scoped at ~300 LOC with a full plan in `pi-mono-RUNNER-PLAN.md`.

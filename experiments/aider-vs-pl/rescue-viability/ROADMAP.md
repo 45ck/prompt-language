@@ -33,18 +33,18 @@ Serial: R2 -> R5 -> R6. R3, R8, R9, R10 all block on R1 baseline numbers (otherw
 
 ## 2. Per-experiment readiness
 
-| R   | Fixture                    | Flow                                   | Runner OK               | Baseline                                                | Wall/arm  | Arms                   | Notes                             |
-| --- | -------------------------- | -------------------------------------- | ----------------------- | ------------------------------------------------------- | --------- | ---------------------- | --------------------------------- |
-| R1  | e-small (verify.cjs fixed) | yes                                    | aider                   | solo 30b 11/11; 8b solo R1-A 1/11 timeout; PL-full 9/11 | 8-15 min  | 6 (3 models x 2) + N=3 | R1-A complete; replications next  |
-| R2  | H8 foreach copy            | needs 3 variants (lite/medium/full)    | aider                   | H8 30b 0/4->4/4                                         | 10-15 min | 4                      | Gate carries most lift hypothesis |
-| R3  | E-SMALL, H8, H11ph2        | exists                                 | aider                   | banked at 30b                                           | 5-30 min  | 6 (mostly banked)      | Mostly write-up                   |
-| R4  | H8, H12                    | exists                                 | aider + opencode        | H8 30b 4/4                                              | 10-20 min | 4                      | Needs bead prompt-l1xz closed     |
-| R5  | H8 with spawn/race         | not written                            | aider + PL_SPAWN_RUNNER | R2 results                                              | 15-30 min | 3                      | VRAM: 8b+8b fits                  |
-| R6  | E-SMALL                    | not written                            | PL_SPAWN_RUNNER=aider   | R1 numbers                                              | 20-40 min | 1 race                 | VRAM thrash predicted             |
-| R7  | nextjs scaffold v2         | v2 exists; needs foreach-spawn variant | opencode                | ~30 min seq                                             | 30-40 min | 3 (seq, max=2, max=6)  | Beads prompt-l1xz + prompt-nba9   |
-| R8  | E-SMALL                    | not written                            | 2 models via spawn      | R1 numbers                                              | 15-25 min | 2                      | Heterogeneous models              |
-| R9  | E-SMALL                    | review-variant of R1 flow              | aider                   | R1 PL-full                                              | 12-20 min | 1                      | Direct swap retry->review         |
-| R10 | nextjs scaffold            | not written                            | aider or opencode       | R7 baseline                                             | 30-45 min | 1                      | send/receive orchestration        |
+| R   | Fixture                    | Flow                                   | Runner OK               | Baseline                                                                            | Wall/arm  | Arms                   | Notes                             |
+| --- | -------------------------- | -------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------- | --------- | ---------------------- | --------------------------------- |
+| R1  | e-small (verify.cjs fixed) | yes                                    | aider                   | solo 30b 11/11; 8b solo R1-A 1/11 timeout; PL-full 5/11, 5/11; earlier 9/11 outlier | 8-15 min  | 6 (3 models x 2) + N=3 | R1-A/B/C complete; R1-D next      |
+| R2  | H8 foreach copy            | needs 3 variants (lite/medium/full)    | aider                   | H8 30b 0/4->4/4                                                                     | 10-15 min | 4                      | Gate carries most lift hypothesis |
+| R3  | E-SMALL, H8, H11ph2        | exists                                 | aider                   | banked at 30b                                                                       | 5-30 min  | 6 (mostly banked)      | Mostly write-up                   |
+| R4  | H8, H12                    | exists                                 | aider + opencode        | H8 30b 4/4                                                                          | 10-20 min | 4                      | Needs bead prompt-l1xz closed     |
+| R5  | H8 with spawn/race         | not written                            | aider + PL_SPAWN_RUNNER | R2 results                                                                          | 15-30 min | 3                      | VRAM: 8b+8b fits                  |
+| R6  | E-SMALL                    | not written                            | PL_SPAWN_RUNNER=aider   | R1 numbers                                                                          | 20-40 min | 1 race                 | VRAM thrash predicted             |
+| R7  | nextjs scaffold v2         | v2 exists; needs foreach-spawn variant | opencode                | ~30 min seq                                                                         | 30-40 min | 3 (seq, max=2, max=6)  | Beads prompt-l1xz + prompt-nba9   |
+| R8  | E-SMALL                    | not written                            | 2 models via spawn      | R1 numbers                                                                          | 15-25 min | 2                      | Heterogeneous models              |
+| R9  | E-SMALL                    | review-variant of R1 flow              | aider                   | R1 PL-full                                                                          | 12-20 min | 1                      | Direct swap retry->review         |
+| R10 | nextjs scaffold            | not written                            | aider or opencode       | R7 baseline                                                                         | 30-45 min | 1                      | send/receive orchestration        |
 
 Total new arms: ~30. Banked: ~4.
 
@@ -53,8 +53,8 @@ Total new arms: ~30. Banked: ~4.
 Each row = one arm. Ordered for blocker-retirement + falsification-power per hour.
 
 1. R1-A qwen3:8b solo-aider on E-SMALL (no PL). **Done 2026-04-24:** timeout at 1800s, empty `csv2json.js`, 1/11.
-2. R1-B qwen3:8b PL-full on E-SMALL rep 2 (Run B is rep 1). ~15 min.
-3. R1-C qwen3:8b PL-full on E-SMALL rep 3. Establishes variance band. ~15 min.
+2. R1-B qwen3:8b PL-full on E-SMALL rep 2. **Done 2026-04-24:** first attempt invalidated by ESM/CommonJS fixture hygiene; corrected run scored 5/11.
+3. R1-C qwen3:8b PL-full on E-SMALL rep 3. **Done 2026-04-24:** corrected run scored 5/11, same header/data-row bug as R1-B.
 4. R1-D gemma4-opencode:e4b PL-full on E-SMALL (confirm floor). ~10 min.
 5. R1-E qwen3-opencode:30b solo-aider on E-SMALL (re-measure ceiling under current aider P1 patches). ~8 min.
 6. R2-A qwen3:8b pl-lite (decompose only) on H8. ~12 min.

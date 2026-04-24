@@ -41,6 +41,38 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Artifact: `runs/r1/qwen3-8b-solo-r1a-20260424/`.
 - Interpretation: this gives the missing operational solo baseline for the current qwen3:8b local setup, but it is not a clean model-capability-only measurement because transport instability contributed to the timeout. Compared with the PL-full R1v3 signal of 9/11 after retry, the single-run rescue delta is large, but the variance warning below still applies; R1-B/R1-C replications are now the next required evidence.
 
+## 2026-04-24 R1-B/R1-C qwen3:8b PL-full replications
+
+### Run `qwen3-8b-pl-full-r1b-20260424` — INVALIDATED
+
+- Command intent: PL-full aider, `ollama_chat/qwen3:8b`, E-SMALL CSV fixture, rep 2.
+- Fixture hygiene problem: the run directory did not declare `"type":"commonjs"`, so Node inherited the parent repo's ESM mode while the generated solution used `require(...)`.
+- Oracle result after the run: **4/11** passing, but this score is not comparable to the clean arms because the CommonJS/ESM mismatch dominated the functional failures.
+- Artifact: `runs/r1/qwen3-8b-pl-full-r1b-20260424/`.
+
+### Run `qwen3-8b-pl-full-r1b-commonjs-20260424` — VALID
+
+- Applied workarounds: per-run `git init`; local `package.json` with `"type":"commonjs"`; same `verify.cjs`, model, runner, and flow.
+- PL CI result: failed completion gates with `PLO-001 Completion gates failed: file_exists "csv2json.js", verify_passes`.
+- Oracle result: **5/11** passing.
+- Passing assertions: file exists, runs on valid CSV, no-argument error exit, missing-file error exit, empty-file error exit.
+- Failing assertions: produced 3 records instead of 4, header keys were taken from the first data row, and quoted/empty-field mappings failed.
+- Root solution bug: the parser returns only data rows, then the main logic treats `data[0]` as headers.
+- Artifact: `runs/r1/qwen3-8b-pl-full-r1b-commonjs-20260424/`.
+
+### Run `qwen3-8b-pl-full-r1c-commonjs-20260424` — VALID
+
+- Same fixture hygiene and workarounds as the corrected R1-B run.
+- PL CI result: failed completion gates with `PLO-001 Completion gates failed: file_exists "csv2json.js", verify_passes`.
+- Oracle result: **5/11** passing with the same failure pattern as corrected R1-B.
+- Artifact: `runs/r1/qwen3-8b-pl-full-r1c-commonjs-20260424/`.
+
+### Updated interpretation
+
+- The original R1v3 9/11 PL-full result has not reproduced under two CommonJS-hygienic repeats.
+- Current clean qwen3:8b E-SMALL band is: solo operational baseline **1/11 timeout**, PL-full repeats **5/11, 5/11**, earlier PL-full outlier **9/11**.
+- The rescue effect is still positive against the observed solo timeout, but weaker and more variance-sensitive than the initial +8 assertion story. R1-D/R1-E are now needed before deciding whether to pivot to R2 ablation or retune the PL-full prompt.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.
@@ -52,10 +84,10 @@ E-SMALL is short (one file, 11 assertions). A single run is one data point, not 
 - PL runner `aider`: two P1 defects, [EVIDENCE-CONSOLIDATION §3]. **Live repro captured in R1 Run B:**
   - **Layer 1 — ollama TCP connection drop mid-inference.** `litellm.APIConnectionError: Ollama_chatException ... wsarecv: An existing connection was forcibly closed by the remote host.` Triggers infinite litellm retry loop; aider process eventually killed by PL timeout or signal. Reproducer: any second-turn aider call via PL against `ollama_chat/qwen3:8b` on this PC. Suspected cause: concurrent opencode+aider requests to single ollama server or model-swap thrash under load.
   - **Layer 2 — aider uses parent git repo as working dir.** Even with `--no-git`, aider logs `Git working dir: C:\Projects\prompt-language` when run inside a PL checkout subdirectory, despite `--no-git` making the session gitless. Any file edit aider emits is then resolved relative to that parent dir, not the run cwd. Mitigation: `git init` the run directory before invoking PL, or move fixtures outside the PL repo entirely.
-- PL's run of the E-SMALL flow produces **inter-run variance of 5–8/11 on qwen3:8b pre-retry**, same prompt, same model, same input. Measurement protocol needs N ≥ 3 repeats per arm to separate model stochasticity from PL effect.
+- PL's run of the E-SMALL flow produces **inter-run variance of 5–9/11 on qwen3:8b**, same prompt family, same model, same input. Measurement protocol needs N ≥ 3 repeats per arm to separate model stochasticity from PL effect.
 
 ## Workarounds applied / to apply
 
-- For fixture hygiene: fixture dir must have its own `package.json` with `"type":"commonjs"`, OR oracle must use `.cjs` extension, OR fixture lives outside the PL repo. Applied in R1 Run B (renamed `verify.js` → `verify.cjs`).
-- For aider path resolution: `git init` the run dir before invoking PL. **Not yet applied.**
+- For fixture hygiene: fixture dir must have its own `package.json` with `"type":"commonjs"`, OR oracle must use `.cjs` extension, OR fixture lives outside the PL repo. Applied in R1-A and corrected R1-B/R1-C runs.
+- For aider path resolution: `git init` the run dir before invoking PL. Applied in corrected R1-B/R1-C runs.
 - For ollama connection drops: reduce concurrent load (kill opencode before aider run), or retry the whole flow. **Not yet applied.**

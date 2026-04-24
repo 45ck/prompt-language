@@ -16,7 +16,7 @@ const AIDER_SCOPED_MESSAGE_ENV = 'PROMPT_LANGUAGE_AIDER_SCOPED_MESSAGE';
 const MAX_OUTPUT_LENGTH = 12_000;
 const MAX_FALLBACK_FILES = 12;
 const FILE_REFERENCE_PATTERN =
-  /(?:^|[^A-Za-z0-9_./\\-])((?:[A-Za-z0-9_.-]+[\\/])*[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8})(?=$|[^A-Za-z0-9_./\\-])/g;
+  /(?:^|[^A-Za-z0-9_./\\-])((?:[A-Za-z0-9_.-]+[\\/])*[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8})(?=$|[^A-Za-z0-9_/\\-])/g;
 const TRANSIENT_OUTPUT_FILE_PATTERN = /^(?:run|verify)-(?:stdout|stderr)\.txt$/;
 
 function readPositiveIntEnv(name: string): number | undefined {

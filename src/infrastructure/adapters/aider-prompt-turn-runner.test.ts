@@ -358,6 +358,25 @@ describe('AiderPromptTurnRunner', () => {
     }
   });
 
+  it('resolveFiles accepts sentence-ending punctuation after a file reference', () => {
+    const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
+
+    try {
+      mkdirSync(join(root, 'src'));
+      writeFileSync(join(root, 'src', 'test.js'), 'console.log("ok");\n', 'utf8');
+
+      expect(
+        runner.resolveFiles(
+          root,
+          'Edit only src/test.js. Keep CommonJS and do not create new files.',
+        ),
+      ).toEqual(['src/test.js']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('run sends the scoped prompt to aider while preserving file scope', async () => {
     vi.stubEnv('PROMPT_LANGUAGE_AIDER_SCOPED_MESSAGE', '1');
     mockedExecFileSync.mockReturnValue('ok');

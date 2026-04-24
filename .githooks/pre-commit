@@ -215,4 +215,4 @@ done << STAGED_T2B
 $STAGED_FILES
 STAGED_T2B
 
-npm run format:check && npm run lint && npm run spell
+npm run beads:backup:guard && npm run format:check && npm run lint && npm run spell

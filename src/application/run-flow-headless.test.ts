@@ -922,6 +922,17 @@ describe('runFlowHeadless', () => {
     expect(result.turns).toBe(1);
     expect(result.reason).toBe('Prompt runner exited with code 42.');
     expect(result.finalState.failureReason).toBe('Prompt runner exited with code 42.');
+    expect(result.report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: RUNTIME_DIAGNOSTIC_CODES.promptRunnerFailed,
+        retryable: true,
+        summary: 'Prompt runner exited with code 42.',
+      }),
+    ]);
+    expect(result.finalState.variables['_runtime_diagnostic.code']).toBe(
+      RUNTIME_DIAGNOSTIC_CODES.promptRunnerFailed,
+    );
+    expect(result.finalState.variables['_runtime_diagnostic.prompt_runner.exit_code']).toBe('42');
   });
 
   it('includes assistant detail when the prompt runner exits non-zero', async () => {
@@ -955,6 +966,15 @@ describe('runFlowHeadless', () => {
     );
     expect(result.finalState.failureReason).toBe(
       'Prompt runner exited with code 9. Runner aborted after writing partial output.',
+    );
+    expect(result.report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: RUNTIME_DIAGNOSTIC_CODES.promptRunnerFailed,
+        summary: 'Prompt runner exited with code 9. Runner aborted after writing partial output.',
+      }),
+    ]);
+    expect(result.finalState.variables['_runtime_diagnostic.prompt_runner.output']).toBe(
+      'Runner aborted after writing partial output.',
     );
   });
 

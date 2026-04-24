@@ -55,6 +55,7 @@ export const RUNTIME_DIAGNOSTIC_CODES = {
   resumeStateCorruption: 'PLR-004',
   captureRetryFallback: 'PLR-005',
   gateEvaluationCrashed: 'PLR-006',
+  promptRunnerFailed: 'PLR-007',
 } as const;
 
 export const FLOW_OUTCOME_CODES = {

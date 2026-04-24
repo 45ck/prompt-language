@@ -12,17 +12,24 @@ import type { CommandRunner } from './ports/command-runner.js';
 import type { MemoryStore, MemoryEntry } from './ports/memory-store.js';
 import type { MessageStore } from './ports/message-store.js';
 import type { ProcessSpawner } from './ports/process-spawner.js';
-import type { PromptTurnRunner } from './ports/prompt-turn-runner.js';
+import type { PromptTurnResult, PromptTurnRunner } from './ports/prompt-turn-runner.js';
 import type { StateStore } from './ports/state-store.js';
 import type { SnapshotStorePort } from './ports/snapshot-store.js';
 import type { EnvReaderPort } from './ports/env-reader.js';
 import { parseFlow } from './parse-flow.js';
 import { renderFlow, renderFlowSummaryBlock } from '../domain/render-flow.js';
-import { createSessionState, markFailed, type SessionState } from '../domain/session-state.js';
 import {
+  createSessionState,
+  markFailed,
+  updateVariable,
+  type SessionState,
+} from '../domain/session-state.js';
+import {
+  createRuntimeDiagnostic,
   createExecutionReport,
   createFlowOutcome,
   FLOW_OUTCOME_CODES,
+  RUNTIME_DIAGNOSTIC_CODES,
   type DiagnosticReport,
   type FlowDiagnostic,
   type FlowOutcome,
@@ -119,6 +126,53 @@ function readPersistedRuntimeDiagnosticReason(state: SessionState): string | und
     return undefined;
   }
   return `${code} ${summary}`;
+}
+
+function markPromptRunnerFailed(
+  state: SessionState,
+  runResult: PromptTurnResult,
+): { readonly state: SessionState; readonly reason: string; readonly diagnostic: FlowDiagnostic } {
+  const detail = summarizeAssistantText(runResult.assistantText);
+  const reason =
+    detail == null
+      ? `Prompt runner exited with code ${runResult.exitCode}.`
+      : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`;
+  const diagnostic = createRuntimeDiagnostic(
+    RUNTIME_DIAGNOSTIC_CODES.promptRunnerFailed,
+    reason,
+    'Inspect _runtime_diagnostic.prompt_runner.* in the saved session state for full runner output.',
+    true,
+  );
+
+  let nextState = updateVariable(
+    state,
+    '_runtime_diagnostic.code',
+    RUNTIME_DIAGNOSTIC_CODES.promptRunnerFailed,
+  );
+  nextState = updateVariable(nextState, '_runtime_diagnostic.summary', reason);
+  nextState = updateVariable(
+    nextState,
+    '_runtime_diagnostic.prompt_runner.exit_code',
+    String(runResult.exitCode),
+  );
+  nextState = updateVariable(
+    nextState,
+    '_runtime_diagnostic.prompt_runner.made_progress',
+    String(runResult.madeProgress ?? ''),
+  );
+  if (runResult.assistantText != null && runResult.assistantText.trim().length > 0) {
+    nextState = updateVariable(
+      nextState,
+      '_runtime_diagnostic.prompt_runner.output',
+      runResult.assistantText,
+    );
+  }
+
+  return {
+    state: markFailed(nextState, reason),
+    reason,
+    diagnostic,
+  };
 }
 
 function readMemoryValue(entry?: MemoryEntry): string {
@@ -346,16 +400,12 @@ export async function runFlowHeadless(
         });
 
         if (runResult.exitCode !== 0) {
-          const detail = summarizeAssistantText(runResult.assistantText);
-          const reason =
-            detail == null
-              ? `Prompt runner exited with code ${runResult.exitCode}.`
-              : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`;
-          state = markFailed(state, reason);
+          const failure = markPromptRunnerFailed(state, runResult);
+          state = failure.state;
           await deps.stateStore.save(state);
           return buildOutput(state, {
-            reason,
-            status: 'failed',
+            reason: failure.reason,
+            diagnostics: [failure.diagnostic],
           });
         }
 
@@ -412,16 +462,12 @@ export async function runFlowHeadless(
     });
 
     if (runResult.exitCode !== 0) {
-      const detail = summarizeAssistantText(runResult.assistantText);
-      const reason =
-        detail == null
-          ? `Prompt runner exited with code ${runResult.exitCode}.`
-          : `Prompt runner exited with code ${runResult.exitCode}. ${detail}`;
-      state = markFailed(state, reason);
+      const failure = markPromptRunnerFailed(state, runResult);
+      state = failure.state;
       await deps.stateStore.save(state);
       return buildOutput(state, {
-        reason,
-        status: 'failed',
+        reason: failure.reason,
+        diagnostics: [failure.diagnostic],
       });
     }
 

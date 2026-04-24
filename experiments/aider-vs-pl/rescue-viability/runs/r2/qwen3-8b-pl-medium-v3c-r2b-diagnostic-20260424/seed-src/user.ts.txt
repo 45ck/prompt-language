@@ -1,0 +1,15 @@
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  active: boolean;
+}
+
+export function createUser(input: Partial<User> = {}): User {
+  return {
+    id: input.id || 'user-1',
+    name: input.name || 'Anonymous',
+    email: input.email || '',
+    active: input.active || true,
+  };
+}

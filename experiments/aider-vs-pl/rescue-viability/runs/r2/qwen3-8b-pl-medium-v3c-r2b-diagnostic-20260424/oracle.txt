@@ -1,0 +1,21 @@
+PASS src/user.ts named exports
+PASS src/user.ts property set
+PASS src/user.ts defaults
+PASS src/user.ts partial overrides
+PASS src/user.ts falsy preservation
+PASS src/product.ts named exports
+PASS src/product.ts property set
+PASS src/product.ts defaults
+PASS src/product.ts partial overrides
+PASS src/product.ts falsy preservation
+PASS src/order.ts named exports
+PASS src/order.ts property set
+PASS src/order.ts defaults
+PASS src/order.ts partial overrides
+PASS src/order.ts falsy preservation
+PASS src/invoice.ts named exports
+PASS src/invoice.ts property set
+PASS src/invoice.ts defaults
+PASS src/invoice.ts partial overrides
+PASS src/invoice.ts falsy preservation
+Results: 20/20 passed

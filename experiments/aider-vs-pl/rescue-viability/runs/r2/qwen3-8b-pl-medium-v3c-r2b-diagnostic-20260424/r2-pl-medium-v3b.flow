@@ -1,0 +1,19 @@
+Goal: R2 pl-medium on H8 repair v3 with visible oracle feedback. Repair four existing TypeScript files so they satisfy TASK.md and contract.json, then use oracle.txt feedback to fix failures. No completion gate; scoring is external.
+
+flow:
+  prompt: Read TASK.md and contract.json in the current working directory. Use your read tool. Reply with a concise numbered contract covering the four files, required exports, defaults, and falsy-value rule.
+
+  prompt: Repair only src/user.ts according to TASK.md and contract.json. Preserve explicit falsy input values. Do not add dependencies. Reply "ok" when written.
+
+  prompt: Repair only src/product.ts according to TASK.md and contract.json. Preserve explicit falsy input values. Do not add dependencies. Reply "ok" when written.
+
+  prompt: Repair only src/order.ts according to TASK.md and contract.json. Preserve explicit falsy input values. Do not add dependencies. Reply "ok" when written.
+
+  prompt: Repair only src/invoice.ts according to TASK.md and contract.json. Preserve explicit falsy input values. Do not add dependencies. Reply "ok" when written.
+
+  retry max 3
+    run: node spec.cjs > oracle.txt [timeout 60]
+    if command_failed
+      prompt: Read oracle.txt, TASK.md, contract.json, src/user.ts, src/product.ts, src/order.ts, and src/invoice.ts. Fix only the failing checks listed in oracle.txt. Preserve explicit falsy input values. Do not add dependencies. Reply "fixed" when done.
+    end
+  end

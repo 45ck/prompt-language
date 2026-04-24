@@ -1,0 +1,15 @@
+export interface Order {
+  id: string;
+  quantity: number;
+  status: string;
+  notes: string;
+}
+
+export function createOrder(input: Partial<Order> = {}): Order {
+  return {
+    id: input.id === undefined ? '' : input.id,
+    quantity: input.quantity === undefined ? 0 : input.quantity,
+    status: input.status === undefined ? 'draft' : input.status,
+    notes: input.notes === undefined ? '' : input.notes,
+  };
+}

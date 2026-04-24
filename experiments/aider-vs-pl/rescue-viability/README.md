@@ -15,7 +15,7 @@ If we encode PL's discipline (decomposition, scoping, gates, retry loops) as top
 - R1-E qwen3-opencode:30b solo ceiling remeasurement passed 11/11; `ollama ps` showed local partial-GPU placement at 15%/85% CPU/GPU — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R2-A qwen3:8b PL-lite on reconstructed H8 passed 4/4 with no retry and no completion gate — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R2-D qwen3:8b solo on reconstructed H8 also passed 4/4, so this reconstruction does not support a rescue claim — see [LIVE-NOTES.md](LIVE-NOTES.md)
-- R2 hardened H8 v3 semantic repair: PL-lite scored 15/20, solo scored 18/20, PL-medium v3 failed operationally at 12/20, and corrected PL-medium v3b failed operationally at 19/20 — see [LIVE-NOTES.md](LIVE-NOTES.md)
+- R2 hardened H8 v3 semantic repair: PL-lite scored 15/20, solo scored 18/20, corrected PL-medium v3b first failed operationally at 19/20, then completed cleanly at 20/20 on rerun — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - Earlier R1v3 PL-full run on qwen3:8b E-SMALL reached 9/11 after retry, but remains an unreproduced high outlier — see [LIVE-NOTES.md](LIVE-NOTES.md)
 - R1..R10 experiment plan and success criteria — see [RESCUE-VIABILITY-PLAN.md](RESCUE-VIABILITY-PLAN.md)
 - Sequencing, stop conditions, and falsification milestone — see [ROADMAP.md](ROADMAP.md)
@@ -28,9 +28,9 @@ If we encode PL's discipline (decomposition, scoping, gates, retry loops) as top
 
 ## What is next (ordered)
 
-1. Investigate why aider exits 1 during PL-medium retry even when the final workspace reaches 19/20
-2. Do not run R5/R6 multi-agent race work yet; clean R2 gate/retry evidence is still blocked by runner stability
-3. If continuing R2, use semantic v3 plus explicit retry file scoping from `r2-pl-medium-v3b.flow`
+1. Repeat R2-B5 at least twice before treating the 20/20 as stable rather than a lucky stochastic run
+2. Keep using semantic v3 plus explicit retry file scoping from `r2-pl-medium-v3b.flow`
+3. If another aider exit occurs, inspect PLR-007 `_runtime_diagnostic.prompt_runner.*` state before deleting run state
 
 ## Known blockers
 

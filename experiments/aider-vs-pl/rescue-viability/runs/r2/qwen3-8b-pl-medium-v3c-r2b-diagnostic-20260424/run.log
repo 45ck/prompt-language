@@ -1,0 +1,33 @@
+--- START 2026-04-24T13:16:16.0246633+10:00 ---
+model=ollama_chat/qwen3:8b
+commit=29e426d271deb09e24a56bc66a16537e0753df09
+hygiene=git init in run dir; diagnostic rerun after PLR-007 instrumentation; v3b retry scoping; ollama ps monitor enabled
+[prompt-language CI] Running R2-B5 diagnostic pl-medium v3b flow via aider...
+[prompt-language CI] Running flow via aider...
+[prompt-language CI] Flow completed.
+--- PL CI EXIT 0 ---
+--- RUNNER DIAGNOSTIC ---
+--- VERIFY 2026-04-24T13:24:11.6920333+10:00 ---
+PASS src/user.ts named exports
+PASS src/user.ts property set
+PASS src/user.ts defaults
+PASS src/user.ts partial overrides
+PASS src/user.ts falsy preservation
+PASS src/product.ts named exports
+PASS src/product.ts property set
+PASS src/product.ts defaults
+PASS src/product.ts partial overrides
+PASS src/product.ts falsy preservation
+PASS src/order.ts named exports
+PASS src/order.ts property set
+PASS src/order.ts defaults
+PASS src/order.ts partial overrides
+PASS src/order.ts falsy preservation
+PASS src/invoice.ts named exports
+PASS src/invoice.ts property set
+PASS src/invoice.ts defaults
+PASS src/invoice.ts partial overrides
+PASS src/invoice.ts falsy preservation
+Results: 20/20 passed
+--- VERIFY EXIT 0 ---
+--- END 2026-04-24T13:24:11.9059391+10:00 ---

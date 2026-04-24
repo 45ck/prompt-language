@@ -162,6 +162,15 @@ Running log of in-flight R1 runs and what we are learning as it happens. Freeze 
 - Descriptive oracle result after failure: **19/20** passing. The only remaining failure was `Order.status` falsy preservation.
 - Interpretation: excluded from aggregate R2 scoring due to the hard aider exit, but informative. Making oracle feedback visible and explicitly scoping retry repairs materially improved the final workspace over PL-lite 15/20 and solo 18/20.
 
+### Run `qwen3-8b-pl-medium-v3c-r2b-diagnostic-20260424` — VALID
+
+- Fixture: same `h8-repair-v3` semantic fixture.
+- Flow: same corrected PL-medium v3b flow, rerun after adding PLR-007 prompt-runner failure diagnostics.
+- Local inference check: `ollama ps` logged `qwen3:8b` resident at **100% GPU** throughout the run.
+- `prompt-language ci` completed cleanly with exit 0.
+- Oracle result: **20/20** passing.
+- Interpretation: this is the first clean hardened-H8 result showing retry-scoped PL beating the same semantic fixture's solo qwen3:8b comparator, which scored 18/20. Next step is repetition, not escalation to a broader claim.
+
 ## Variance warning
 
 E-SMALL is short (one file, 11 assertions). A single run is one data point, not a measurement. For any conclusion about rescue magnitude the plan calls for at least N=3 repeats per arm after the first inter-arm comparison lands, to separate model stochasticity from PL effect.

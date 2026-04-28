@@ -13,6 +13,10 @@ scripts/eval/results/
 .claude/worktrees/
 experiments/full-saas-factory/e4-codex-crm-factory/workspaces/incomplete/
 experiments/full-saas-factory/e4-codex-crm-factory/workspaces/runs/
+experiments/aider-vs-pl/rescue-viability/runs/r9/r9-review-repeats-*/rep*-qwen3-8b-review-v*/
+experiments/aider-vs-pl/results/h12-h14-local-*/h*/
+experiments/aider-vs-pl/results/h15-api-endpoint-local-*/h15-api-endpoint-*/workspace/
+experiments/aider-vs-pl/results/h15-local-*/h15-*/workspace/
 
 # Beads / Dolt files (added by bd init)
 *.db

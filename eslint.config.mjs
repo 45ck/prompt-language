@@ -35,6 +35,7 @@ export default tseslint.config(
       'experiments/results/**',
       'experiments/aider-vs-pl/fixtures/**',
       'experiments/aider-vs-pl/results/**',
+      'experiments/aider-vs-pl/rescue-viability/runs/**',
       'experiments/marketing-factory/results/**',
       'experiments/website-factory/results/**',
       'experiments/full-sdlc-factory/results/**',

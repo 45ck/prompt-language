@@ -304,6 +304,10 @@
 {"issue_id":"prompt-language-ksih.8","label":"area:experiments"}
 {"issue_id":"prompt-language-ksih.8","label":"initiative:e4-factory"}
 {"issue_id":"prompt-language-ksih.8","label":"type:research"}
+{"issue_id":"prompt-language-lghe","label":"experiments"}
+{"issue_id":"prompt-language-lghe","label":"persona"}
+{"issue_id":"prompt-language-lghe","label":"prompt-language"}
+{"issue_id":"prompt-language-lghe","label":"research"}
 {"issue_id":"prompt-language-vxii","label":"quick-win"}
 {"issue_id":"prompt-language-zhog","label":"area:docs"}
 {"issue_id":"prompt-language-zhog","label":"area:runtime"}

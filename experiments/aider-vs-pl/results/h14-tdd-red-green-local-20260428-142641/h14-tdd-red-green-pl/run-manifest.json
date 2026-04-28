@@ -1,0 +1,55 @@
+{
+  "runId": "20260428-142641",
+  "label": "h14-tdd-red-green-pl",
+  "fixture": "h14-tdd-red-green",
+  "arm": "pl",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "workdir": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h14-tdd-red-green-local-20260428-142641\\h14-tdd-red-green-pl\\workspace",
+  "runnerResult": {
+    "command": "node",
+    "arguments": [
+      "C:\\Projects\\prompt-language\\bin\\cli.mjs",
+      "ci",
+      "--runner",
+      "aider",
+      "--model",
+      "ollama_chat/qwen3-opencode-big:30b",
+      "--file",
+      "task.flow"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h14-tdd-red-green-local-20260428-142641\\h14-tdd-red-green-pl\\workspace",
+    "exitCode": 3,
+    "timedOut": false,
+    "timeoutSeconds": 1800,
+    "startedAt": "2026-04-28T14:31:28.8242506+10:00",
+    "endedAt": "2026-04-28T14:45:38.4498792+10:00",
+    "wallSeconds": 849.626
+  },
+  "workspaceChanges": {
+    "changed": true,
+    "count": 2,
+    "files": [
+      " M src/contacts.js",
+      " M src/test.js"
+    ]
+  },
+  "verifyResult": {
+    "command": "node",
+    "arguments": [
+      "verify.js"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h14-tdd-red-green-local-20260428-142641\\h14-tdd-red-green-pl\\workspace",
+    "exitCode": 1,
+    "timedOut": false,
+    "timeoutSeconds": 60,
+    "startedAt": "2026-04-28T14:45:38.5200968+10:00",
+    "endedAt": "2026-04-28T14:45:38.6577940+10:00",
+    "wallSeconds": 0.138
+  },
+  "oracle": {
+    "passes": 7,
+    "total": 8,
+    "summary": "Results: 7/8 passed"
+  },
+  "error": null
+}

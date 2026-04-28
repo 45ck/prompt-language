@@ -217,6 +217,20 @@ Score out of 10 per task per grader. Two graders per task. Time each grader from
 
 Beyond HA-E2, the area opens out to HA-T4 (feature-add) and to the A6 cloud-frontier-under-PL control, but those are deferred until the pilot methodology holds.
 
+### 3.10 Hybrid routing extension
+
+The 2026-04-28 local-model reruns add a second harness-arena question: not just which stack wins, but when a supervisor should switch stacks during one task.
+
+The planned HA-HR1 pilot treats model choice as a routing policy:
+
+- local models do cheap bulk execution, mechanical edits, repeated verifier repair, and documentation drafts
+- Codex/GPT-5.5-class models do high-ambiguity planning, architecture, security-sensitive reasoning, stuck-state repair, and final review
+- Prompt Language owns the route decision, escalation threshold, budget cap, and manifest trail
+
+This differs from an advisor-only pattern. An advisor can recommend a plan while the local model still performs every edit. A router is stronger: it can hand the next step to a different runner/model when risk, ambiguity, or repeated gate failure justifies the cost.
+
+HA-HR1 is tracked in [`harness-arena/hybrid-model-routing.md`](./harness-arena/hybrid-model-routing.md) and bead `prompt-language-sfd3`.
+
 ---
 
 ## 4. Cross-references

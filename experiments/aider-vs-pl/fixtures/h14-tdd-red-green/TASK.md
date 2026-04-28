@@ -13,7 +13,7 @@ The feature should merge contacts that share the same email address, keeping the
 ## Acceptance Criteria
 
 1. A `mergeDuplicates()` function exists that merges contacts with the same email
-2. When merging, non-empty fields from the newer record take priority
+2. When merging, non-empty fields from the newer record take priority; for this fixture, "newer" means later in the input array, not the `createdAt` timestamp
 3. The merged result has no duplicate emails
 4. Tests exist in `src/test.js` that cover: basic merge, field priority, no-duplicates case, multiple duplicates
 5. All tests pass

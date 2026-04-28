@@ -1,4 +1,4 @@
-# STATUS — open research work at 2026-04-24
+# STATUS — open research work at 2026-04-28
 
 Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/` via the `bd` CLI; this file is a committed mirror so the status is readable without a bd install and is PR-reviewable.
 
@@ -6,8 +6,10 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 
 ## Headline
 
-- **1 bug committed as closed today:** `prompt-959j` (opencode runner progress-detector patch, landed in commit `04367d2`).
-- **13 items open.** Two P1 bugs block measurement integrity. One P2 epic tracks the R1..R10 rescue-viability program. First-pass R1 is complete. R2 hardened H8 v3 now has clean retry-scoped PL rescue evidence: PL-lite 15/20, solo 18/20, corrected PL-medium v3b 20/20 across N=3 after two excluded operational attempts. The earlier qwen3:8b 9/11 PL-full result remains unreproduced.
+- 2026-04-28 local-model ladder reruns are committed. H15 is a clean PL win (`10/10` vs solo `6/10`), H12 is a tie (`8/9` vs `8/9`) with PL much slower, and H14 is a solo win (`8/8` vs PL `6/8`).
+- The current interpretation changed: PL helps when the flow supplies task-fit staged control and oracle-fed repair; it can hurt when over-staged or when repair prompts do not expose the real failure.
+- New tracked experiment: `prompt-language-sfd3`, hybrid local/frontier model routing. Goal: local models handle bulk work, Codex/GPT-5.5-class models handle high-ambiguity reasoning, stuck-state repair, and final review.
+- Raw ad hoc logs from H11/H12/H14/H15 remain local and uncommitted; committed evidence should prefer scorecards, manifests, and curated reports.
 
 ## Open items by priority
 
@@ -20,13 +22,14 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 
 ### P2 — next-tier execution work
 
-| ID            | Type    | Subject                                                                      | Blocked by                   |
-| ------------- | ------- | ---------------------------------------------------------------------------- | ---------------------------- |
-| `prompt-g64k` | bug     | PL aider runner hangs on ollama TCP stream drop — litellm retries infinitely | — (containment plan written) |
-| `prompt-gysa` | epic    | Rescue-viability research program (R1..R10 umbrella)                         | —                            |
-| `prompt-b5eb` | task    | Rescue-viability R1 replications: lock in qwen3:8b E-SMALL CSV baseline      | —                            |
-| `prompt-zbpc` | task    | Run R7 foreach-spawn experiment (blocked on isolation)                       | `prompt-l1xz`, `prompt-nba9` |
-| `prompt-lmas` | feature | Add pi-mono runner adapter (~300 LOC headless JSONL bridge)                  | —                            |
+| ID                     | Type    | Subject                                                                      | Blocked by                   |
+| ---------------------- | ------- | ---------------------------------------------------------------------------- | ---------------------------- |
+| `prompt-g64k`          | bug     | PL aider runner hangs on ollama TCP stream drop — litellm retries infinitely | — (containment plan written) |
+| `prompt-gysa`          | epic    | Rescue-viability research program (R1..R10 umbrella)                         | —                            |
+| `prompt-b5eb`          | task    | Rescue-viability R1 replications: lock in qwen3:8b E-SMALL CSV baseline      | —                            |
+| `prompt-zbpc`          | task    | Run R7 foreach-spawn experiment (blocked on isolation)                       | `prompt-l1xz`, `prompt-nba9` |
+| `prompt-lmas`          | feature | Add pi-mono runner adapter (~300 LOC headless JSONL bridge)                  | —                            |
+| `prompt-language-sfd3` | task    | Hybrid local/frontier model routing experiment                               | —                            |
 
 ### P3 — follow-ups and ecosystem work
 
@@ -72,6 +75,7 @@ These are written plans awaiting bead-tracked execution tasks:
 - `experiments/aider-vs-pl/AIDER-P1-TRIAGE.md` — triage for `prompt-7zyi` + `prompt-g64k`
 - `experiments/REPO-JOURNEY-PLAN.md` — folder reorg plan (not executed)
 - `experiments/harness-arena-HA-E1-PLAN.md` — HA-E1 pilot design
+- `experiments/harness-arena/hybrid-model-routing.md` — HA-HR1 dynamic routing pilot design
 - `experiments/pi-mono-RUNNER-PLAN.md` — pi-mono adapter implementation plan for `prompt-lmas`
 
 ## Conventions
@@ -86,5 +90,5 @@ These are written plans awaiting bead-tracked execution tasks:
 If you are picking up work:
 
 1. **If you can fix a P1 infra bug:** `prompt-7zyi` has a concrete plan (fix in `buildAiderEnv` via `GIT_CEILING_DIRECTORIES`); `prompt-0zn1` has an investigation plan with a minimal repro described in `AIDER-P1-TRIAGE.md`'s sibling triage and the gate-evaluator write-up. Either one closed unblocks ≥3 downstream items.
-2. **If you want to run an experiment:** choose between R2-C PL-full on semantic v3, R3 stronger-model H11, or R9 review-vs-retry. R2-B medium retry is no longer the blocker.
+2. **If you want to run an experiment:** choose between H14 flow redesign, HA-HR1 hybrid routing, R3 stronger-model H11, or R9 review-vs-retry. Prefer runs that improve classification of no-edit, timeout, and oracle-fed repair behavior.
 3. **If you want to add a runner:** `prompt-lmas` (pi-mono) is scoped at ~300 LOC with a full plan in `pi-mono-RUNNER-PLAN.md`.

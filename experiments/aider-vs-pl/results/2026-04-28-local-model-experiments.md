@@ -53,13 +53,17 @@ Prompt Language helps most when the task benefits from staged control: implement
 
 The clean H12/H14 reruns are the counterweight. H12 tied while PL was much slower, and H14 favored solo. This means the work is not just "wrap everything in PL"; the flow has to fit the task. Over-staging can make local models slower and less reliable.
 
+H14's failure mode was specific enough to act on: the PL-written tests called `mergeDuplicates` without importing it, and the implementation removed duplicate emails without merging fields. The H14 flow has been revised to require the import, assert field-merge semantics, and run an oracle-fed repair loop before the final gate.
+
+The first revised H14 rerun (`20260428-142641`) improved the PL arm from `6/8` to `7/8`, but did not pass. It fixed the missing import and incomplete field merge; the remaining failure came from interpreting "newer" via `createdAt` rather than later input order. The fixture now states that later input records define priority, and a clean rerun is still pending.
+
 The main local-model limit is not just intelligence. It is also capture reliability and latency. H11 failures often happened before edits were captured, so they should be classified separately from genuine task-solution failures.
 
 For smaller local models, R9 shows that verifier-grounded review can identify defects, but identifying the defect is not enough. The repair prompt must make the root cause and minimal diff unavoidable, or the 8B model repeats the same structural parsing bug.
 
 ## Next
 
-1. Redesign H14's TDD flow so the implementation prompt explicitly imports/exports the function and runs the external oracle, not only the model-written tests.
+1. Rerun H14 after the input-order priority clarification and compare against the clean solo baseline.
 2. Add an R9-F repair prompt that includes full verifier stdout, asks for a one-line root cause, then requests a minimal diff.
 3. Split H11's first PL prompt into smaller file groups or raise the first-turn timeout, then rerun with the new no-edit classification.
 4. Use bead `prompt-language-lghe` to design a senior-engineer criteria-ranking PL program and test it against plain persona prompting on non-coding decision scenarios.

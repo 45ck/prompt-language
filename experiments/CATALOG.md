@@ -2,27 +2,28 @@
 
 Comprehensive index of all prompt-language experiments. Each experiment tests a specific hypothesis about whether structured flow orchestration improves AI-driven software delivery compared to unstructured prompting.
 
-Last updated: 2026-04-15
+Last updated: 2026-04-28
 
 ## Summary Table
 
-| ID    | Name                         | Domain                         | Status      | Runs                | Key Result                                 |
-| ----- | ---------------------------- | ------------------------------ | ----------- | ------------------- | ------------------------------------------ |
-| E1    | Repeated Failure Elimination | Eval framework                 | Seeded      | 2 (vanilla + gated) | Gated 1/3 vs Vanilla 0/3                   |
-| E4    | CRM Factory (Codex)          | Enterprise SaaS                | Complete    | 16 runs (A02-A19)   | Codex-alone faster; PL better auditability |
-| E5    | Maintenance Viability        | Runtime provenance             | Designed    | 0                   | Program designed, not yet executed         |
-| E6    | Pure PL CRM Factory          | Enterprise SaaS                | Designed    | 0                   | Parse-verified, not yet executed live      |
-| E7    | Enterprise CRM Factory       | Enterprise SaaS (full SDLC)    | Complete    | --                  | Most comprehensive PL factory to date      |
-| E7-MK | Marketing Factory            | Marketing website              | Complete    | 7+ runs             | PL 30/30 x3 (100%) vs Solo 28.3/30 (94%)   |
-| E8    | Website Factory              | Marketing website (enterprise) | Complete    | 4 runs              | Factory 3/4, Solo 4/4                      |
-| E9    | Full SDLC Factory            | Full lifecycle website         | Complete    | 2 runs + QA variant | Phases 1-5 execute end-to-end              |
-| --    | Aider vs PL                  | Coding assistant comparison    | Complete    | 10 hypotheses       | PL 6 wins, 0 losses, 3 ties                |
-| --    | Meta-Factory                 | Self-hosting (PL writes PL)    | In Progress | M1 authored         | M1 flow authored, not yet executed live    |
-| --    | Premature Stop Benchmark     | Reliability                    | Scaffold    | 0                   | Experiment designed, not executed          |
-| --    | Bounded Feature Benchmark    | Implementation quality         | Scaffold    | 0                   | Experiment designed, not executed          |
-| --    | Parallel Planning            | Coordination                   | Scaffold    | 0                   | Experiment designed, not executed          |
-| --    | Parallel Isolated Modules    | Build concurrency              | Scaffold    | 0                   | Experiment designed, not executed          |
-| --    | Self-Healing CI              | CI repair                      | Scaffold    | 0                   | Experiment designed, not executed          |
+| ID     | Name                         | Domain                         | Status      | Runs                | Key Result                                 |
+| ------ | ---------------------------- | ------------------------------ | ----------- | ------------------- | ------------------------------------------ |
+| E1     | Repeated Failure Elimination | Eval framework                 | Seeded      | 2 (vanilla + gated) | Gated 1/3 vs Vanilla 0/3                   |
+| E4     | CRM Factory (Codex)          | Enterprise SaaS                | Complete    | 16 runs (A02-A19)   | Codex-alone faster; PL better auditability |
+| E5     | Maintenance Viability        | Runtime provenance             | Designed    | 0                   | Program designed, not yet executed         |
+| E6     | Pure PL CRM Factory          | Enterprise SaaS                | Designed    | 0                   | Parse-verified, not yet executed live      |
+| E7     | Enterprise CRM Factory       | Enterprise SaaS (full SDLC)    | Complete    | --                  | Most comprehensive PL factory to date      |
+| E7-MK  | Marketing Factory            | Marketing website              | Complete    | 7+ runs             | PL 30/30 x3 (100%) vs Solo 28.3/30 (94%)   |
+| E8     | Website Factory              | Marketing website (enterprise) | Complete    | 4 runs              | Factory 3/4, Solo 4/4                      |
+| E9     | Full SDLC Factory            | Full lifecycle website         | Complete    | 2 runs + QA variant | Phases 1-5 execute end-to-end              |
+| HA-HR1 | Hybrid Model Routing         | Stack/routing comparison       | Planned     | 0                   | Local bulk + frontier escalation designed  |
+| --     | Aider vs PL                  | Coding assistant comparison    | Complete    | 10 hypotheses       | PL 6 wins, 0 losses, 3 ties                |
+| --     | Meta-Factory                 | Self-hosting (PL writes PL)    | In Progress | M1 authored         | M1 flow authored, not yet executed live    |
+| --     | Premature Stop Benchmark     | Reliability                    | Scaffold    | 0                   | Experiment designed, not executed          |
+| --     | Bounded Feature Benchmark    | Implementation quality         | Scaffold    | 0                   | Experiment designed, not executed          |
+| --     | Parallel Planning            | Coordination                   | Scaffold    | 0                   | Experiment designed, not executed          |
+| --     | Parallel Isolated Modules    | Build concurrency              | Scaffold    | 0                   | Experiment designed, not executed          |
+| --     | Self-Healing CI              | CI repair                      | Scaffold    | 0                   | Experiment designed, not executed          |
 
 ---
 
@@ -265,13 +266,34 @@ E5 deliberately demotes E4's process-fidelity signals (`processConformance`, `tr
 
 ---
 
+## HA-HR1: Hybrid Model Routing
+
+**Directory**: [`harness-arena/hybrid-model-routing.md`](harness-arena/hybrid-model-routing.md)
+
+**Hypothesis**: A Prompt Language supervisor can reduce frontier-model usage by sending bulk work to local Ollama models while escalating only high-ambiguity, high-risk, or stuck repair steps to Codex/GPT-5.5-class models.
+
+**Status**: Planned
+
+**Arms**:
+
+- Local-only: aider + Ollama under a task-tuned PL flow
+- Frontier-only: Codex/GPT-5.5-class model for the whole task
+- Advisor-only: frontier model plans/reviews, local model performs all edits
+- Hybrid-router: local default, frontier escalation on explicit policy triggers
+
+**Primary Metrics**: oracle pass rate, wall time, frontier calls per success, estimated USD cost per success, local GPU active minutes, and final review defect count.
+
+**Key Design Point**: The router must be able to change the runner/model for the next unit of work. A pure advisor is only a baseline because advice can be ignored or mistranslated by the local model.
+
+---
+
 ## Aider vs Prompt Language
 
 **Directory**: [`aider-vs-pl/`](aider-vs-pl/)
 
 **Hypothesis**: Prompt Language orchestration compensates for local model weaknesses through decomposition, verification gates, retry loops, and file scoping. The orchestrator does the thinking; the model does the typing.
 
-**Status**: Complete (Phase 1: 10 hypotheses; Phase 2: designed, 10 more hypotheses)
+**Status**: Phase 1 complete; Phase 2 partially run on local Ollama
 
 **Model**: Qwen3 30B (Q4_K_M, local, Vulkan, AMD RX 7600 XT, ~42 tok/s)
 
@@ -290,7 +312,7 @@ E5 deliberately demotes E4's process-fidelity signals (`processConformance`, `tr
 | H9  | Code structure quality    | Tests crash, 1/5 sep | Tests pass, 4/5 sep        | **PL** |
 | H10 | Quality ceiling           | --                   | Grade B (A on impl)        | --     |
 
-**Final Score**: PL 6 wins, Solo 0 wins, 3 ties. PL has never lost a single head-to-head comparison.
+**Phase 1 Score**: PL 6 wins, Solo 0 wins, 3 ties.
 
 **Key Findings**:
 
@@ -301,7 +323,7 @@ E5 deliberately demotes E4's process-fidelity signals (`processConformance`, `tr
 5. Ties happen when the task is trivial
 6. Speed tradeoff is real (1.5-3.5x slower) but acceptable at zero API cost
 
-**Phase 2** (designed, not yet executed): 10 harder hypotheses (H11-H20) including multi-file refactor, security vulnerability fix, performance optimization, TDD, and more. Planned to run across 4 models (Qwen3 30B, Claude Sonnet 4, GPT-4.1, DeepSeek V3).
+**Phase 2 update**: H11-H15 now have partial local-model evidence. The clean 2026-04-28 reruns show H12 tied at `8/9`, H14 favored solo at `8/8` vs PL `6/8`, and H15 favored PL at `10/10` vs solo `6/10`. The current conclusion is narrower than the Phase 1 headline: PL helps when the flow is task-fit and verifier-fed, but over-staging can make local models slower and less reliable.
 
 **PL Runtime Verified**: `prompt-language ci --runner aider` successfully executed a .flow file end-to-end with full DSL parsing, gate evaluation, and audit trail.
 

@@ -1,16 +1,22 @@
 Goal: Implement mergeDuplicates using TDD — write tests first, then implement
 
 flow:
-  prompt: Write at least 4 failing test cases in src/test.js for a mergeDuplicates(contacts) function. The function should merge contacts with the same email, keeping the most complete fields. Test cases should cover: basic merge, field priority, no-duplicates case, and multiple groups of duplicates. Do NOT implement the function yet.
+  prompt: Write at least 4 failing test cases in src/test.js for a mergeDuplicates(contacts) function. Update the destructuring require in src/test.js to import mergeDuplicates from ./contacts, but do NOT implement the function yet. The function should merge contacts with the same email, keeping the most complete fields. For this fixture, "newer record" means later in the input array, not createdAt. Test cases should cover: basic merge, field priority where later non-empty fields win, fallback where older non-empty fields are preserved when later fields are empty, no-duplicates case, and multiple groups of duplicates.
   run: node src/test.js
   if command_succeeded
     prompt: Tests should be FAILING at this point since mergeDuplicates is not yet implemented. Make sure the tests actually call mergeDuplicates and will fail without an implementation.
   end
-  prompt: Now implement the mergeDuplicates function in src/contacts.js. Export it. Make the minimal implementation to pass all the tests you just wrote.
+  prompt: Now implement the mergeDuplicates function in src/contacts.js. Export it. For each duplicate email, merge name, phone, and company by scanning contacts in input order so later non-empty values override earlier values and earlier non-empty values remain when later values are empty. Do not sort by createdAt. Make the minimal implementation to pass all the tests you just wrote.
   until command_succeeded max 5
     run: node src/test.js
     if command_failed
-      prompt: Tests are still failing. Fix the implementation. Error output: ${last_stdout} ${last_stderr}
+      prompt: Tests are still failing. Fix src/test.js imports/tests or src/contacts.js implementation as needed. Error output: ${last_stdout} ${last_stderr}
+    end
+  end
+  until command_succeeded max 3
+    run: node verify.js
+    if command_failed
+      prompt: The external oracle still fails. Fix the reported issues in src/test.js and src/contacts.js only. Oracle output: ${last_stdout} ${last_stderr}
     end
   end
 

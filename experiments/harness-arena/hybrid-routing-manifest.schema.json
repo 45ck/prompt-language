@@ -1,0 +1,187 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://prompt-language.local/experiments/harness-arena/hybrid-routing-manifest.schema.json",
+  "title": "Hybrid model routing run manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "taskId",
+    "arm",
+    "startedAt",
+    "completedAt",
+    "steps",
+    "oracle"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "runId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "taskId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "arm": {
+      "enum": ["local-only", "frontier-only", "advisor-only", "hybrid-router"]
+    },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "frontierCallLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "usdLimit": {
+          "type": "number",
+          "minimum": 0
+        },
+        "wallSecondsLimit": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stepId",
+          "purpose",
+          "runner",
+          "model",
+          "providerClass",
+          "routeDecision",
+          "routeTrigger",
+          "cwd",
+          "startedAt",
+          "completedAt",
+          "exitCode",
+          "timedOut"
+        ],
+        "properties": {
+          "stepId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string",
+            "minLength": 1
+          },
+          "runner": {
+            "enum": ["aider", "codex", "opencode", "prompt-language", "shell", "other"]
+          },
+          "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerClass": {
+            "enum": ["local", "frontier", "deterministic"]
+          },
+          "routeDecision": {
+            "enum": ["local", "frontier", "deterministic"]
+          },
+          "routeTrigger": {
+            "type": "string",
+            "minLength": 1
+          },
+          "cwd": {
+            "type": "string",
+            "minLength": 1
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "exitCode": {
+            "type": ["integer", "null"]
+          },
+          "timedOut": {
+            "type": "boolean"
+          },
+          "wallSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "estimatedUsd": {
+            "type": "number",
+            "minimum": 0
+          },
+          "gpuActiveSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "exitCode", "passed"],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exitCode": {
+          "type": ["integer", "null"]
+        },
+        "passed": {
+          "type": "boolean"
+        },
+        "passes": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "total": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "routingPolicyFailure": {
+          "type": "boolean"
+        },
+        "modelFailure": {
+          "type": "boolean"
+        },
+        "harnessFailure": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

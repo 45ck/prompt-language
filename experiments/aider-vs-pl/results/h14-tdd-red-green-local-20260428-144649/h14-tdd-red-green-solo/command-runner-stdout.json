@@ -1,0 +1,31 @@
+{
+  "command": "aider",
+  "arguments": [
+    "--model",
+    "ollama_chat/qwen3-opencode-big:30b",
+    "--no-auto-commits",
+    "--no-auto-lint",
+    "--no-stream",
+    "--yes-always",
+    "--no-show-model-warnings",
+    "--no-git",
+    "--no-gitignore",
+    "--no-check-update",
+    "--map-tokens",
+    "1024",
+    "--edit-format",
+    "whole",
+    "--timeout",
+    "1800",
+    "--message-file",
+    "solo-prompt.txt",
+    "TASK.md",
+    "package.json",
+    "verify.js",
+    "src/contacts.js",
+    "src/test.js"
+  ],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h14-tdd-red-green-local-20260428-144649\\h14-tdd-red-green-solo\\workspace",
+  "timeoutSeconds": 1800,
+  "startedAt": "2026-04-28T14:46:50.3562065+10:00"
+}

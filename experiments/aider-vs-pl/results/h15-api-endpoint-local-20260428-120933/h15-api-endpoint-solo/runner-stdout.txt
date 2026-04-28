@@ -1,0 +1,1153 @@
+Detected dumb terminal, disabling fancy input and pretty output.
+
+Aider v0.86.2
+Model: ollama_chat/qwen3-opencode-big:30b with whole edit format
+Git repo: none
+Repo-map: disabled
+Added TASK.md to the chat.
+Added src\app.js to the chat.
+Added src\test.js to the chat.
+Added verify.js to the chat.
+
+
+--------------
+Γû║ **THINKING**
+
+Okay, let's see. The user wants me to complete the fixture task for the PATCH
+endpoint. The TASK.md says to add a PATCH /api/contacts/:id endpoint with
+validation. The verify.js file has tests for that, so I need to make sure the
+app.js has the patchContact function that passes those tests.
+
+Looking at the current src/app.js, there's a TODO comment for the PATCH
+endpoint. The existing code has functions for GET, POST, DELETE, but not PATCH.
+The verify.js tests check for patchContact or updateContact, so I need to
+implement that function.
+
+First, I need to create the patchContact function. The function should take an
+id and a data object. It should validate the fields according to the rules in
+TASK.md. For example, name must be 2-100 characters, email must have @ and a
+dot after, phone must be digits, dashes, spaces, optional +, 7-20 chars,
+company can be 1-200 or null.
+
+Wait, the verify.js tests include checks like:
+- PATCH returns 200 on valid update
+- Only provided fields are updated
+- 404 for missing ID
+- 400 for short name, invalid email, invalid phone
+- Accepts valid email and null company
+
+So the patchContact function needs to handle partial updates. That means it
+shouldn't replace the entire contact, just update the fields provided. So for
+each field in the data object, check if it's valid, then update that field in
+the contact.
+
+First, find the contact by id. If not found, return 404.
+
+Then, for each field in the data object (name, email, phone, company), validate
+it. If any field is invalid, return 400 with an error message.
+
+If all fields are valid, update the contact's fields and return 200 with the
+updated contact.
+
+Wait, the verify.js tests have a test for 'PATCH only updates provided fields',
+so the function should only update the fields that are provided in the data,
+not all fields. So for example, if the data has { name: 'Alice Patched' }, then
+only the name should be updated, email remains the same.
+
+So the function should loop through the data object's keys, validate each, and
+if valid, update that key in the contact.
+
+Now, let's check the validation rules again:
+
+- name: 2-100 chars. So if name is provided, check length.
+- email: must have @ and a . after @. So regex like /[^@]+@[^.]+\.[^@]+/ or
+something. But maybe simpler: check for @ and a dot after the @. So if email is
+provided, check if it has @ and a . after the @.
+- phone: digits, dashes, spaces, optional + at start. Length 7-20. So regex
+like /^[+]?[0-9\s-]{7,20}$/. But need to check length after removing
+non-numeric? Wait, the rule says 7-20 chars, so the string should be 7-20
+characters long, containing only digits, dashes, spaces, and optional + at
+start. So maybe check the string length and that it matches the allowed
+characters.
+- company: 1-200 chars or null. So if company is provided, check length (1-200)
+or if it's null, allow it.
+
+Wait, the test for 'PATCH accepts null company (clear field)' checks that
+setting company to null works. So company can be set to null, which clears it.
+
+So in the patch function, for each field:
+
+- If name is provided, check length 2-100.
+- If email is provided, check it has @ and a . after @.
+- If phone is provided, check it's 7-20 chars of allowed characters.
+- If company is provided, check it's 1-200 chars (if not null), but if company
+is null, it's allowed.
+
+Wait, the validation rules say "company: string, 1-200 characters (or null to
+clear)". So if company is provided as a string, it must be 1-200 chars. If it's
+set to null, that's allowed (clearing the field).
+
+So in the code, for company, if data.company is not null, check length. If it's
+null, allow it.
+
+Now, let's draft the patchContact function.
+
+First, find the contact by id. If not found, return 404.
+
+Then, for each field in data, validate. If any validation fails, return 400
+with error.
+
+If all valid, update the contact's fields and return 200.
+
+Wait, but the verify.js tests have a test for 'PATCH rejects invalid email', so
+the function should check email format.
+
+Let's write the validation functions.
+
+For name: if data.name is provided, check if it's between 2-100 chars.
+
+For email: if data.email is provided, check if it contains '@' and a '.' after
+the '@'.
+
+For phone: if data.phone is provided, check if it's 7-20 characters long and
+matches the allowed characters (digits, -, space, + at start).
+
+For company: if data.company is provided and not null, check length 1-200. If
+it's null, allow.
+
+Wait, the test for 'PATCH accepts null company' checks that setting company to
+null works, so the validation for company should allow null.
+
+So in code:
+
+if (data.name !== undefined) {
+  if (data.name.length < 2 || data.name.length > 100) {
+    throw new Error('Name must be 2-100 characters');
+  }
+}
+
+Similarly for email:
+
+if (data.email !== undefined) {
+  if (!data.email.includes('@') || !data.email.includes('.') ||
+data.email.indexOf('@') > data.email.indexOf('.')) {
+    throw new Error('Invalid email format');
+  }
+}
+
+Wait, the email validation rule says "must contain @ and a . after the @". So
+the email must have an @, and after the @, there must be a . So for example,
+'a@b.c' is valid, 'a@b' is invalid.
+
+So the check could be: if email has @, and after the @, there's a ., so the
+index of @ is before the index of ., and there's at least one character after @
+before the .? Wait, no, the rule is just that there's a . after the @, so the
+email must have @ followed by at least one character and then a ., but maybe
+the rule is simpler: the email must have an @ and a . after the @. So 'a@b.c'
+is okay, 'a@b' is not.
+
+So the check could be: if email has @ and the substring after @ contains a .,
+so email.includes('@') && email.split('@')[1].includes('.').
+
+But maybe a simpler way: if email has @ and a . after the @, so the position of
+@ is before the position of ., and there's at least one character between @ and
+.? Not sure, but the test expects that invalid emails like 'not-an-email' are
+rejected.
+
+For phone: the rule says "digits, dashes, spaces, and optional leading + only;
+7-20 chars". So the phone string should be 7-20 characters long, and only
+contain digits, -, space, and optionally a + at the start.
+
+So the phone string should match /^[+]?[0-9\s-]{7,20}$/. But need to check the
+length is between 7-20.
+
+Wait, the length is 7-20 characters, so the string length must be between 7 and
+20 inclusive.
+
+So for phone, if provided, check that the string length is between 7 and 20,
+and that all characters are allowed (digits, -, space, + at start).
+
+But the test for 'PATCH rejects invalid phone' uses 'abc!@#', which is invalid,
+so the validation should catch that.
+
+So in code:
+
+if (data.phone !== undefined) {
+  const phoneRegex = /^[+]?[0-9\s-]{7,20}$/;
+  if (!phoneRegex.test(data.phone)) {
+    throw new Error('Invalid phone format');
+  }
+}
+
+Wait, but the regex would allow a string like '+123-456' which is valid. But
+the length must be 7-20. So the regex checks that the string is 7-20 characters
+and matches the allowed characters.
+
+But the regex [0-9\s-] allows spaces and dashes, so the phone string must be
+7-20 characters of those.
+
+Now, putting it all together.
+
+In app.js, after the existing functions, add:
+
+function patchContact(id, data) {
+  const contact = contacts.find(c => c.id === id);
+  if (!contact) {
+    return { status: 404, body: { error: 'Contact not found' } };
+  }
+
+  // Validate each provided field
+  if (data.name !== undefined) {
+    if (data.name.length < 2 || data.name.length > 100) {
+      throw new Error('Name must be 2-100 characters');
+    }
+  }
+
+  if (data.email !== undefined) {
+    if (!data.email.includes('@') || !data.email.includes('.') ||
+data.email.indexOf('@') > data.email.indexOf('.')) {
+      throw new Error('Invalid email format');
+    }
+  }
+
+  if (data.phone !== undefined) {
+    const phoneRegex = /^[+]?[0-9\s-]{7,20}$/;
+    if (!phoneRegex.test(data.phone)) {
+      throw new Error('Invalid phone format');
+    }
+  }
+
+  if (data.company !== undefined) {
+    if (data.company !== null && (data.company.length < 1 ||
+data.company.length > 200)) {
+      throw new Error('Company must be 1-200 characters');
+    }
+  }
+
+  // Apply valid updates
+  if (data.name !== undefined) contact.name = data.name;
+  if (data.email !== undefined) contact.email = data.email;
+  if (data.phone !== undefined) contact.phone = data.phone;
+  if (data.company !== undefined) contact.company = data.company;
+
+  return { status: 200, body: contact };
+}
+
+Wait, but the verify.js tests have a test for 'PATCH only updates provided
+fields', so the code should only update the fields that are provided. The above
+code does that by checking each data field.
+
+But wait, the test 'PATCH only updates provided fields' checks that when you
+patch with { name: 'Alice Patched' }, the email remains the same. So the code
+should not touch email if it's not provided.
+
+The code above checks each field in data, validates, then updates only if
+provided. So that's correct.
+
+Now, check the test cases in verify.js:
+
+- 'PATCH returns 200 on valid update' ΓÇö the code should return 200 with updated
+contact.
+
+- 'PATCH only updates provided fields' ΓÇö as above.
+
+- 'PATCH returns 404 for missing ID' ΓÇö handled by the contact not found check.
+
+- 'PATCH rejects short name' ΓÇö the name length check.
+
+- 'PATCH rejects invalid email' ΓÇö the email validation.
+
+- 'PATCH rejects invalid phone' ΓÇö phone regex.
+
+- 'PATCH accepts valid email' ΓÇö email validation passes.
+
+- 'PATCH accepts null company' ΓÇö company is set to null, which is allowed.
+
+Also, the test 'test.js has at least 8 PATCH test cases' ΓÇö but the src/test.js
+is missing the PATCH tests. Wait, the TASK.md says to add the tests in
+src/test.js, but the user provided the verify.js which includes the tests.
+Wait, the verify.js has a test for 'test.js has at least 8 PATCH test cases',
+which checks that src/test.js has 8+ tests. But the current src/test.js only
+has tests for GET/POST/DELETE. So the user needs to add the PATCH tests to
+src/test.js.
+
+Wait, the user's task is to complete the fixture task. The TASK.md says to add
+the PATCH endpoint, and the verify.js tests check for it. But the src/test.js
+is the test file that should have the tests. However, the provided src/test.js
+only has existing tests, and the verify.js checks that there are at least 8
+PATCH tests in src/test.js.
+
+Wait, the verify.js has a test:
+
+test('test.js has at least 8 PATCH test cases', () => {
+  const testSource = fs.readFileSync('src/test.js', 'utf8');
+  const patchTests = testSource.match(
+    /test\s*\([^)]*[Pp]atch|test\s*\([^)]*[Uu]pdate|test\s*\([^)]*valid/gi,
+  );
+  if (!patchTests || patchTests.length < 8) {
+    throw new Error(`Expected 8+ PATCH tests, found ${patchTests ?
+patchTests.length : 0}`);
+  }
+});
+
+So the src/test.js needs to have at least 8 tests related to PATCH. But the
+current src/test.js only has tests for GET/POST/DELETE. So the user needs to
+add the PATCH tests to src/test.js.
+
+Wait, but the user's instruction says "Edit only authored fixture files under
+src unless TASK.md requires otherwise." The TASK.md says to add the PATCH
+endpoint, but the tests are part of the task. So the src/test.js needs to have
+the tests.
+
+But the user provided the src/test.js as:
+
+// Existing tests for GET/POST/DELETE
+const { listContacts, getContact, createContact, deleteContact } =
+require('./app');
+
+let passed = 0;
+let failed = 0;
+
+function test(name, fn) {
+  try {
+    fn();
+    passed++;
+  } catch (e) {
+    failed++;
+    console.error(`FAIL: ${name} -- ${e.message}`);
+  }
+}
+
+test('listContacts returns all', () => {
+  const r = listContacts();
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.length < 1) throw new Error('Empty');
+});
+
+test('getContact returns existing', () => {
+  const r = getContact(1);
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.name !== 'Alice Johnson') throw new Error('Wrong name');
+});
+
+test('getContact 404 for missing', () => {
+  const r = getContact(999);
+  if (r.status !== 404) throw new Error(`Status ${r.status}`);
+});
+
+test('createContact succeeds', () => {
+  const r = createContact({ name: 'Test User', email: 'test@test.com' });
+  if (r.status !== 201) throw new Error(`Status ${r.status}`);
+  if (!r.body.id) throw new Error('No ID');
+});
+
+test('createContact rejects missing fields', () => {
+  const r = createContact({ name: '' });
+  if (r.status !== 400) throw new Error(`Status ${r.status}`);
+});
+
+// TODO: Add PATCH endpoint tests here
+
+console.log(`\nResults: ${passed}/${passed + failed} passed`);
+if (failed > 0) {
+  console.log(`VERDICT: FAIL (${failed} failed)`);
+  process.exit(1);
+} else {
+  console.log('VERDICT: PASS');
+  process.exit(0);
+}
+
+So the TODO is to add the PATCH tests. But the verify.js test checks that there
+are at least 8 tests in src/test.js related to PATCH. So the user needs to add
+those tests to src/test.js.
+
+But the user's instruction says to edit only the files under src. So I need to
+add the PATCH tests to src/test.js.
+
+Wait, but the user's current src/test.js has a TODO comment. So the fix
+requires adding the tests to src/test.js and implementing the patchContact
+function in app.js.
+
+But the user's previous message says "Goal: Complete the fixture task in one
+bounded aider turn." So I need to make the necessary changes to both app.js and
+test.js.
+
+Wait, the verify.js is the test runner, and it's checking the tests in
+src/test.js. So the src/test.js needs to have the 8+ tests.
+
+So the steps are:
+
+1. Implement patchContact in app.js.
+
+2. Add the 8+ tests to src/test.js.
+
+But the user's current src/test.js has only 5 tests (listContacts, getContact,
+getContact 404, createContact, createContact rejects). The TODO is to add the
+PATCH tests.
+
+So I need to add the tests to src/test.js. The verify.js test checks for 8+
+tests, so adding 8 tests would meet the requirement.
+
+But the user's instruction says to edit only the authored files under src. So I
+need to modify app.js and test.js.
+
+Wait, the user provided the files, and the task is to complete the fixture. So
+the correct changes are:
+
+- Add patchContact function to app.js.
+
+- Add the 8+ tests to test.js.
+
+But the user's current test.js has a TODO comment. So the code for the tests
+needs to be added.
+
+Let's check the verify.js tests. The verify.js has tests for:
+
+- patchContact or updateContact function exists
+
+- PATCH returns 200 on valid update
+
+- Only updates provided fields
+
+- 404 for missing ID
+
+- Rejects short name
+
+- Rejects invalid email
+
+- Rejects invalid phone
+
+- Accepts valid email
+
+- Accepts null company
+
+- test.js has at least 8 tests
+
+So the src/test.js needs to have tests that cover these. The verify.js is the
+actual test runner, but the tests are written in src/test.js. Wait, no: the
+verify.js is the test runner that runs the tests in src/test.js. Wait, no, the
+verify.js is the test file that's run with node verify.js. The verify.js is the
+test file that's checking the app's functionality, including the tests in
+src/test.js.
+
+Wait, the verify.js has a test that checks if src/test.js has at least 8 PATCH
+tests. So the src/test.js should have the actual tests for the PATCH endpoint.
+
+But the current src/test.js only has tests for GET/POST/DELETE. So to pass the
+verify.js test, src/test.js needs to have 8 tests related to PATCH.
+
+So the user needs to add 8 tests to src/test.js for the PATCH endpoint.
+
+But the user's instruction says to edit only the files under src. So I need to
+add the tests to src/test.js.
+
+But the user's current src/test.js has a TODO comment. So the fix is to add the
+tests there.
+
+However, the user's instruction says "Edit only authored fixture files under
+src unless TASK.md requires otherwise." So the files to edit are app.js and
+test.js.
+
+So the changes needed are:
+
+1. In app.js, add the patchContact function.
+
+2. In test.js, add the 8+ tests for PATCH.
+
+But the user's current test.js has a TODO comment. So I need to add the tests.
+
+Let's draft the tests for test.js.
+
+The tests should cover:
+
+- Valid update (200)
+
+- Only updates provided fields (e.g., update name, check email unchanged)
+
+- 404 for missing ID
+
+- Short name (400)
+
+- Invalid email (400)
+
+- Invalid phone (400)
+
+- Valid email (200)
+
+- Null company (200)
+
+That's 8 tests. So the test.js should have 8 tests.
+
+So in test.js, after the existing tests, add:
+
+test('PATCH returns 200 on valid update', () => {
+  const r = patchContact(1, { name: 'Alice Updated' });
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.name !== 'Alice Updated') throw new Error('Name not updated');
+});
+
+test('PATCH only updates provided fields', () => {
+  const before = getContact(1);
+  const originalEmail = before.body.email;
+  patchContact(1, { name: 'Alice Patched' });
+  const after = getContact(1);
+  if (after.body.email !== originalEmail) throw new Error('Email was changed');
+  if (after.body.name !== 'Alice Patched') throw new Error('Name not updated');
+});
+
+test('PATCH returns 404 for missing ID', () => {
+  const r = patchContact(999, { name: 'Nobody' });
+  if (r.status !== 404) throw new Error(`Status ${r.status}`);
+});
+
+test('PATCH rejects short name', () => {
+  const r = patchContact(1, { name: 'A' });
+  if (r.status !== 400) throw new Error(`Expected 400, got ${r.status}`);
+});
+
+test('PATCH rejects invalid email', () => {
+  const r = patchContact(1, { email: 'not-an-email' });
+  if (r.status !== 400) throw new Error(`Expected 400, got ${r.status}`);
+});
+
+test('PATCH rejects invalid phone', () => {
+  const r = patchContact(1, { phone: 'abc!@#' });
+  if (r.status !== 400) throw new Error(`Expected 400, got ${r.status}`);
+});
+
+test('PATCH accepts valid email', () => {
+  const r = patchContact(2, { email: 'bob.new@example.com' });
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.email !== 'bob.new@example.com') throw new Error('Email not
+updated');
+});
+
+test('PATCH accepts null company (clear field)', () => {
+  const r = patchContact(2, { company: null });
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.company !== null) throw new Error('Company not cleared');
+});
+
+Wait, but the verify.js uses patchContact or updateContact. The app.js has
+patchContact, so the tests should use patchContact.
+
+But in the test.js, the tests are written using the app's functions. However,
+the test.js currently requires app, but the app doesn't have patchContact yet.
+So the test.js needs to be updated to use the new function, but the app.js
+needs to have the function first.
+
+Wait, the test.js is using the app functions. So before adding the tests, the
+app.js must have the patchContact function. So the order is: first implement
+patchContact in app.js, then add the tests in test.js.
+
+But the user's current test.js has a TODO comment. So the fix requires both
+changes.
+
+So the two files to change are:
+
+- src/app.js: add patchContact function.
+
+- src/test.js: add the 8 tests.
+
+Now, let's check if the current app.js has the patchContact function. No, it's
+a TODO. So adding it.
+
+Now, the email validation in the code: the current code checks if email
+includes '@' and '.', but the test for invalid email uses 'not-an-email', which
+doesn't have '@', so it should fail. The code's check is:
+
+if (!data.email.includes('@') || !data.email.includes('.') ||
+data.email.indexOf('@') > data.email.indexOf('.'))
+
+Wait, the third condition: data.email.indexOf('@') > data.email.indexOf('.')
+would mean that the @ comes after the ., which is invalid. For example, 'a.b@c'
+would have @ after ., so it's invalid. But the rule is that there must be a .
+after the @, so the @ should come before the ., so the index of @ should be
+less than the index of ., so the condition should be data.email.indexOf('@') >
+data.email.indexOf('.') to catch invalid cases.
+
+Wait, if email is 'a@b.c', then indexOf('@') is 1, indexOf('.') is 3, so 1 < 3,
+so the condition data.email.indexOf('@') > data.email.indexOf('.') would be
+false, so it passes. If email is 'a.b@c', then indexOf('@') is 3, indexOf('.')
+is 1, so 3 > 1, so the condition is true, and it throws an error. So the check
+is correct.
+
+But the test for invalid email is 'not-an-email', which doesn't have '@', so
+the first condition !data.email.includes('@') is true, so it throws.
+
+So the email validation code is correct.
+
+Phone validation: the regex /^[+]?[0-9\s-]{7,20}$/. Let's see: the string must
+be 7-20 characters, and only contain digits, spaces, dashes, and optional + at
+start.
+
+For example, '+123-456' is 9 characters, which is between 7-20, and matches the
+regex.
+
+'abc!@#' would not match, so it's rejected.
+
+So the phone validation is correct.
+
+Company validation: if data.company is provided and not null, check length
+1-200. If it's null, allow.
+
+So the code:
+
+if (data.company !== undefined) {
+  if (data.company !== null && (data.company.length < 1 || data.company.length
+> 200)) {
+    throw new Error('Company must be 1-200 characters');
+  }
+}
+
+Wait, the condition is: if company is provided (data.company !== undefined),
+then if it's not null and length is not between 1-200, throw error.
+
+But the rule says company can be null to clear. So if company is null, it's
+allowed. So the check should be: if company is provided (not undefined) and not
+null, then check length.
+
+So the code is correct.
+
+Now, the patchContact function should be added to app.js.
+
+Also, the verify.js uses patchContact or updateContact. The app.js should
+export patchContact, so the module.exports should include it.
+
+Looking at app.js, the current exports are:
+
+module.exports = { listContacts, getContact, createContact, deleteContact,
+contacts };
+
+So need to add patchContact to the exports.
+
+So the exports should be:
+
+module.exports = { listContacts, getContact, createContact, deleteContact,
+patchContact, contacts };
+
+Wait, but the contacts array is also exported. The verify.js tests use
+app.patchContact, so the function needs to be exported.
+
+So in app.js, after defining patchContact, add it to the exports.
+
+Now, the src/test.js needs to have the 8 tests. The current test.js has 5
+tests, so adding 8 more would make 13, but the verify.js test checks for at
+least 8.
+
+Wait, the verify.js test checks for 8+ tests related to PATCH. So adding 8
+tests would meet the requirement.
+
+So the src/test.js should have the 8 tests listed above.
+
+Now, let's check if the test.js has the necessary functions. The test.js
+currently uses:
+
+const { listContacts, getContact, createContact, deleteContact } =
+require('./app');
+
+But it doesn't have patchContact. So to use patchContact in the tests, the app
+must export it, which it will after adding to exports.
+
+So the test.js will need to require the app, which now includes patchContact.
+
+So the test.js should have:
+
+const { listContacts, getContact, createContact, deleteContact, patchContact }
+= require('./app');
+
+But the current test.js doesn't have that. So the test.js needs to be updated
+to include patchContact in the require.
+
+Wait, the test.js currently has:
+
+const { listContacts, getContact, createContact, deleteContact } =
+require('./app');
+
+So to use patchContact, it needs to be added to the require.
+
+So the test.js should be modified to:
+
+const { listContacts, getContact, createContact, deleteContact, patchContact }
+= require('./app');
+
+Then, the tests can use patchContact.
+
+So the changes to test.js are:
+
+1. Add patchContact to the require.
+
+2. Add the 8 tests.
+
+Now, putting it all together.
+
+So the two files to change are:
+
+- src/app.js: add patchContact function and export it.
+
+- src/test.js: add the 8 tests and update the require to include patchContact.
+
+Let's write the updated app.js.
+
+Original app.js:
+
+// Simple API framework (no Express dependency)
+const contacts = [
+  {
+    id: 1,
+    name: 'Alice Johnson',
+    email: 'alice@example.com',
+    phone: '555-0101',
+    company: 'Acme Corp',
+  },
+  { id: 2, name: 'Bob Smith', email: 'bob@example.com', phone: '555-0102',
+company: 'Globex Inc' },
+  { id: 3, name: 'Carol Davis', email: 'carol@example.com', phone: '555-0103',
+company: null },
+];
+
+let nextId = 4;
+
+// GET /api/contacts
+function listContacts() {
+  return { status: 200, body: contacts };
+}
+
+// GET /api/contacts/:id
+function getContact(id) {
+  const contact = contacts.find((c) => c.id === id);
+  if (!contact) return { status: 404, body: { error: 'Contact not found' } };
+  return { status: 200, body: contact };
+}
+
+// POST /api/contacts
+function createContact(data) {
+  if (!data.name || !data.email) {
+    return { status: 400, body: { error: 'Name and email are required' } };
+  }
+  const contact = {
+    id: nextId++,
+    name: data.name,
+    email: data.email,
+    phone: data.phone || null,
+    company: data.company || null,
+  };
+  contacts.push(contact);
+  return { status: 201, body: contact };
+}
+
+// DELETE /api/contacts/:id
+function deleteContact(id) {
+  const index = contacts.findIndex((c) => c.id === id);
+  if (index === -1) return { status: 404, body: { error: 'Contact not found' }
+};
+  contacts.splice(index, 1);
+  return { status: 204, body: null };
+}
+
+// TODO: PATCH /api/contacts/:id ΓÇö not yet implemented
+
+// Smoke test
+const all = listContacts();
+if (all.body.length !== 3) {
+  console.error('Init failed');
+  process.exit(1);
+}
+console.log(`API initialized with ${all.body.length} contacts`);
+
+module.exports = { listContacts, getContact, createContact, deleteContact,
+contacts };
+
+Updated app.js should have the patchContact function and include it in exports.
+
+So the new app.js:
+
+Add the patchContact function after deleteContact.
+
+Then, update module.exports to include patchContact.
+
+So:
+
+function patchContact(id, data) {
+  // ... implementation ...
+}
+
+module.exports = { listContacts, getContact, createContact, deleteContact,
+patchContact, contacts };
+
+Now, the test.js needs to be updated.
+
+Original test.js:
+
+// Existing tests for GET/POST/DELETE
+const { listContacts, getContact, createContact, deleteContact } =
+require('./app');
+
+let passed = 0;
+let failed = 0;
+
+function test(name, fn) {
+  try {
+    fn();
+    passed++;
+  } catch (e) {
+    failed++;
+    console.error(`FAIL: ${name} -- ${e.message}`);
+  }
+}
+
+test('listContacts returns all', () => {
+  const r = listContacts();
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.length < 1) throw new Error('Empty');
+});
+
+test('getContact returns existing', () => {
+  const r = getContact(1);
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.name !== 'Alice Johnson') throw new Error('Wrong name');
+});
+
+test('getContact 404 for missing', () => {
+  const r = getContact(999);
+  if (r.status !== 404) throw new Error(`Status ${r.status}`);
+});
+
+test('createContact succeeds', () => {
+  const r = createContact({ name: 'Test User', email: 'test@test.com' });
+  if (r.status !== 201) throw new Error(`Status ${r.status}`);
+  if (!r.body.id) throw new Error('No ID');
+});
+
+test('createContact rejects missing fields', () => {
+  const r = createContact({ name: '' });
+  if (r.status !== 400) throw new Error(`Status ${r.status}`);
+});
+
+// TODO: Add PATCH endpoint tests here
+
+console.log(`\nResults: ${passed}/${passed + failed} passed`);
+if (failed > 0) {
+  console.log(`VERDICT: FAIL (${failed} failed)`);
+  process.exit(1);
+} else {
+  console.log('VERDICT: PASS');
+  process.exit(0);
+}
+
+Updated test.js should have:
+
+- Updated require to include patchContact.
+
+- Added the 8 tests.
+
+So the new test.js:
+
+const { listContacts, getContact, createContact, deleteContact, patchContact }
+= require('./app');
+
+let passed = 0;
+let failed = 0;
+
+function test(name, fn) {
+  try {
+    fn();
+    passed++;
+  } catch (e) {
+    failed++;
+    console.error(`FAIL: ${name} -- ${e.message}`);
+  }
+}
+
+// Existing tests...
+
+// New PATCH tests
+test('PATCH returns 200 on valid update', () => {
+  const r = patchContact(1, { name: 'Alice Updated' });
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.name !== 'Alice Updated') throw new Error('Name not updated');
+});
+
+test('PATCH only updates provided fields', () => {
+  const before = getContact(1);
+  const originalEmail = before.body.email;
+  patchContact(1, { name: 'Alice Patched' });
+  const after = getContact(1);
+  if (after.body.email !== originalEmail) throw new Error('Email was changed');
+  if (after.body.name !== 'Alice Patched') throw new Error('Name not updated');
+});
+
+test('PATCH returns 404 for missing ID', () => {
+  const r = patchContact(999, { name: 'Nobody' });
+  if (r.status !== 404) throw new Error(`Status ${r.status}`);
+});
+
+test('PATCH rejects short name', () => {
+  const r = patchContact(1, { name: 'A' });
+  if (r.status !== 400) throw new Error(`Expected 400, got ${r.status}`);
+});
+
+test('PATCH rejects invalid email', () => {
+  const r = patchContact(1, { email: 'not-an-email' });
+  if (r.status !== 400) throw new Error(`Expected 400, got ${r.status}`);
+});
+
+test('PATCH rejects invalid phone', () => {
+  const r = patchContact(1, { phone: 'abc!@#' });
+  if (r.status !== 400) throw new Error(`Expected 400, got ${r.status}`);
+});
+
+test('PATCH accepts valid email', () => {
+  const r = patchContact(2, { email: 'bob.new@example.com' });
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.email !== 'bob.new@example.com') throw new Error('Email not
+updated');
+});
+
+test('PATCH accepts null company (clear field)', () => {
+  const r = patchContact(2, { company: null });
+  if (r.status !== 200) throw new Error(`Status ${r.status}`);
+  if (r.body.company !== null) throw new Error('Company not cleared');
+});
+
+Now, check if these tests match the verify.js tests.
+
+The verify.js has tests for:
+
+- patchContact or updateContact function exists
+
+- PATCH returns 200 on valid update
+
+- Only updates provided fields
+
+- 404 for missing ID
+
+- Rejects short name
+
+- Rejects invalid email
+
+- Rejects invalid phone
+
+- Accepts valid email
+
+- Accepts null company
+
+So the 8 tests in test.js cover all these.
+
+Now, the app.js needs to have the patchContact function.
+
+Let's write the full app.js with the new function.
+
+Also, note that the verify.js uses app.patchContact, so the function must be
+named patchContact.
+
+Now, check if the email validation in the code is correct. For example, 'a@b.c'
+is valid, 'a@b' is invalid.
+
+The code checks for includes('@') and includes('.') and that @ comes before .,
+which is correct.
+
+Phone validation: the regex /^[+]?[0-9\s-]{7,20}$/. Let's test '1234567' (7
+chars) ΓÇö valid. '+123-456' (9 chars) ΓÇö valid. '123' (3 chars) ΓÇö invalid.
+'abc!@#' ΓÇö invalid.
+
+So the phone validation should work.
+
+Company validation: setting to null is allowed, so the test for null company
+should pass.
+
+Now, the final step is to output the updated files.
+
+So the two files to change are src/app.js and src/test.js.
+
+Let's write the updated content for each.
+
+For src/app.js:
+
+- Add the patchContact function.
+
+- Update module.exports to include patchContact.
+
+For src/test.js:
+
+- Update the require to include patchContact.
+
+- Add the 8 tests.
+
+Now, check if the code is correct.
+
+Wait, in the app.js, the patchContact function should be defined before the
+module.exports.
+
+Yes, the function is defined after deleteContact, before the smoke test.
+
+The smoke test is:
+
+const all = listContacts();
+if (all.body.length !== 3) {
+  console.error('Init failed');
+  process.exit(1);
+}
+console.log(`API initialized with ${all.body.length} contacts`);
+
+So the patchContact function is defined before the smoke test, which is fine.
+
+Now, the updated app.js content.
+
+------------
+Γû║ **ANSWER**
+
+src/app.js
+
+```diff
+@@ -47,16 +47,58 @@
+   if (index === -1) return { status: 404, body: { error: 'Contact not found' }
+};
+   contacts.splice(index, 1);
+   return { status: 204, body: null };
+ }
+
+-// TODO: PATCH /api/contacts/:id ΓÇö not yet implemented
++// PATCH /api/contacts/:id
++function patchContact(id, data) {
++  const contact = contacts.find(c => c.id === id);
++  if (!contact) {
++    return { status: 404, body: { error: 'Contact not found' } };
++  }
++
++  // Validate name
++  if (data.name !== undefined) {
++    if (data.name.length < 2 || data.name.length > 200) {
++      throw new Error('Name must be 2-200 characters');
++    }
++  }
++
++  // Validate email
++  if (data.email !== undefined) {
++    if (!data.email.includes('@') || !data.email.includes('.') ||
+data.email.indexOf('@') > data.email.indexOf('.')) {
++      throw new Error('Invalid email format');
++    }
++  }
++
++  // Validate phone
++  if (data.phone !== undefined) {
++    if (!/^[+]?[0-9\s-]{7,20}$/.test(data.phone)) {
++      throw new Error('Invalid phone format');
++    }
++  }
++
++  // Validate company
++  if (data.company !== undefined && data.company !== null) {
++    if (data.company.length < 1 || data.company.length > 200) {
++      throw new Error('Company name must be 1-200 characters');
++    }
++  }
++
++  // Apply updates
++  if (data.name !== undefined) contact.name = data.name;
++  if (data.email !== undefined) contact.email = data.email;
++  if (data.phone !== undefined) contact.phone = data.phone;
++  if (data.company !== undefined) contact.company = data.company;
++
++  return { status: 200, body: contact };
++}
+
+ // Smoke test
+ const all = listContacts();
+ if (all.body.length !== 3) {
+   console.error('Init failed');
+   process.exit(1);
+ }
+ console.log(`API initialized with ${all.body.length} contacts`);
+
+-module.exports = { listContacts, getContact, createContact, deleteContact,
+contacts };
++module.exports = { listContacts, getContact, createContact, deleteContact,
+patchContact, contacts };
+```
+
+
+
+src/test.js
+
+```diff
+@@ -1,7 +1,7 @@
+ // Existing tests for GET/POST/DELETE
+-const { listContacts, getContact, createContact, deleteContact } =
+require('./app');
++const { listContacts, getContact, createContact, deleteContact, patchContact }
+= require('./app');
+
+ let passed = 0;
+ let failed = 0;
+
+ function test(name, fn) {
+@@ -40,11 +40,57 @@
+ test('createContact rejects missing fields', () => {
+   const r = createContact({ name: '' });
+   if (r.status !== 400) throw new Error(`Status ${r.status}`);
+ });
+
+-// TODO: Add PATCH endpoint tests here
++// PATCH endpoint tests
++test('PATCH returns 200 on valid update', () => {
++  const r = patchContact(1, { name: 'Alice Updated' });
++  if (r.status !== 200) throw new Error(`Status ${r.status}`);
++  if (r.body.name !== 'Alice Updated') throw new Error('Name not updated');
++});
++
++test('PATCH only updates provided fields', () => {
++  const before = getContact(1);
++  const originalEmail = before.body.email;
++  patchContact(1, { name: 'Alice Patched' });
++  const after = getContact(1);
++  if (after.body.email !== originalEmail) throw new Error('Email was
+changed');
++  if (after.body.name !== 'Alice Patched') throw new Error('Name not
+updated');
++});
++
++test('PATCH returns 404 for missing ID', () => {
++  const r = patchContact(999, { name: 'Nobody' });
++  if (r.status !== 404) throw new Error(`Status ${r.status}`);
++});
++
++test('PATCH rejects short name', () => {
++  const r = patchContact(1, { name: 'A' });
++  if (r.status !== 400) throw new Error(`Expected 400, got ${r.status}`);
++});
++
++test('PATCH rejects invalid email', () => {
++  const r = patchContact(1, { email: 'not-an-email' });
++  if (r.status !== 400) throw new Error(`Expected 400, got ${r.status}`);
++});
++
++test('PATCH rejects invalid phone', () => {
++  const r = patchContact(1, { phone: 'abc!@#' });
++  if (r.status !== 400) throw new Error(`Expected 400, got ${r.status}`);
++});
++
++test('PATCH accepts valid email', () => {
++  const r = patchContact(2, { email: 'bob.new@example.com' });
++  if (r.status !== 200) throw new Error(`Status ${r.status}`);
++  if (r.body.email !== 'bob.new@example.com') throw new Error('Email not
+updated');
++});
++
++test('PATCH accepts null company (clear field)', () => {
++  const r = patchContact(2, { company: null });
++  if (r.status !== 200) throw new Error(`Status ${r.status}`);
++  if (r.body.company !== null) throw new Error('Company not cleared');
++});
+
+ console.log(`\nResults: ${passed}/${passed + failed} passed`);
+ if (failed > 0) {
+   console.log(`VERDICT: FAIL (${failed} failed)`);
+   process.exit(1);
+```
+
+
+Tokens: 2.8k sent, 10k received.
+Applied edit to src/app.js
+Applied edit to src/test.js

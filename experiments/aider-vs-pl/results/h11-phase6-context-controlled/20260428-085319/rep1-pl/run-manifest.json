@@ -1,0 +1,48 @@
+{
+  "runId": "20260428-085319",
+  "label": "rep1-pl",
+  "arm": "pl",
+  "repetition": 1,
+  "fixture": "h11-multi-file-refactor",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "runner": "prompt-language ci --runner aider",
+  "flow": "task-artisan-v6.flow",
+  "promptTurnTimeoutSeconds": 900,
+  "repoCommit": "3e037863c3c886f21b94fc99591c8210263b78d3",
+  "runnerResult": {
+    "command": "node",
+    "arguments": [
+      "C:\\Projects\\prompt-language\\bin\\cli.mjs",
+      "ci",
+      "--runner",
+      "aider",
+      "--model",
+      "ollama_chat/qwen3-opencode-big:30b",
+      "--file",
+      "task-artisan-v6.flow"
+    ],
+    "exitCode": 3,
+    "timedOut": false,
+    "timeoutSeconds": 1800,
+    "startedAt": "2026-04-28T08:53:20.6958234+10:00",
+    "endedAt": "2026-04-28T09:08:20.9057798+10:00",
+    "wallSeconds": 900.21
+  },
+  "verifyResult": {
+    "command": "node",
+    "arguments": [
+      "verify.js"
+    ],
+    "exitCode": 1,
+    "timedOut": false,
+    "timeoutSeconds": 60,
+    "startedAt": "2026-04-28T09:08:20.9506339+10:00",
+    "endedAt": "2026-04-28T09:08:21.1631900+10:00",
+    "wallSeconds": 0.213
+  },
+  "oracle": {
+    "passes": 2,
+    "total": 11,
+    "summary": "Results: 2/11 passed"
+  }
+}

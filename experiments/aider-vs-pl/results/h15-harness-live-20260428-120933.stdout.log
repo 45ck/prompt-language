@@ -1,0 +1,7 @@
+
+[32;1mlabel                [0m[32;1m arm [0m[32;1m runnerExitCode[0m[32;1m runnerTimedOut[0m[32;1m verifyExitCode[0m[32;1m verifyTimedOut[0m[32;1m passes[0m[32;1m total[0m[32;1m oracleSummary[0m
+[32;1m-----                [0m [32;1m--- [0m [32;1m--------------[0m [32;1m--------------[0m [32;1m--------------[0m [32;1m--------------[0m [32;1m------[0m [32;1m-----[0m [32;1m-------------      [0m
+h15-api-endpoint-solo solo              0          False              1          False      6    10 Results: 6/10 pass.
+h15-api-endpoint-pl   pl                0          False              0          False     10    10 Results: 10/10 pas.
+
+Wrote fixture-pair results to C:\Projects\prompt-language\experiments\aider-vs-pl\results\h15-api-endpoint-local-20260428-120933

@@ -1,0 +1,15 @@
+{
+  "label": "h12-security-fix-solo",
+  "arm": "solo",
+  "runnerExitCode": null,
+  "runnerTimedOut": null,
+  "verifyExitCode": null,
+  "verifyTimedOut": null,
+  "passes": null,
+  "total": null,
+  "oracleSummary": "not run",
+  "workspaceChanged": false,
+  "workspaceChangeCount": 0,
+  "wallSeconds": null,
+  "errored": false
+}

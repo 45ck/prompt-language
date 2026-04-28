@@ -1,0 +1,52 @@
+{
+  "runId": "20260428-120857",
+  "label": "h15-api-endpoint-pl",
+  "fixture": "h15-api-endpoint",
+  "arm": "pl",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "workdir": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h15-api-endpoint-local-20260428-120857\\h15-api-endpoint-pl\\workspace",
+  "runnerResult": {
+    "command": "node",
+    "arguments": [
+      "C:\\Projects\\prompt-language\\bin\\cli.mjs",
+      "ci",
+      "--runner",
+      "aider",
+      "--model",
+      "ollama_chat/qwen3-opencode-big:30b",
+      "--file",
+      "task.flow"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h15-api-endpoint-local-20260428-120857\\h15-api-endpoint-pl\\workspace",
+    "exitCode": -1,
+    "timedOut": true,
+    "timeoutSeconds": 5,
+    "startedAt": "2026-04-28T12:09:03.7971718+10:00",
+    "endedAt": "2026-04-28T12:09:08.8333447+10:00",
+    "wallSeconds": 5.036
+  },
+  "workspaceChanges": {
+    "changed": false,
+    "count": 0,
+    "files": []
+  },
+  "verifyResult": {
+    "command": "node",
+    "arguments": [
+      "verify.js"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h15-api-endpoint-local-20260428-120857\\h15-api-endpoint-pl\\workspace",
+    "exitCode": 1,
+    "timedOut": false,
+    "timeoutSeconds": 5,
+    "startedAt": "2026-04-28T12:09:08.8955899+10:00",
+    "endedAt": "2026-04-28T12:09:08.9422485+10:00",
+    "wallSeconds": 0.047
+  },
+  "oracle": {
+    "passes": 0,
+    "total": 10,
+    "summary": "Results: 0/10 passed"
+  },
+  "error": null
+}

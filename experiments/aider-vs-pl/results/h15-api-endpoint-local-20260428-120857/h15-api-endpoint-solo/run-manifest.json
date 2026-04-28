@@ -1,0 +1,66 @@
+{
+  "runId": "20260428-120857",
+  "label": "h15-api-endpoint-solo",
+  "fixture": "h15-api-endpoint",
+  "arm": "solo",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "workdir": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h15-api-endpoint-local-20260428-120857\\h15-api-endpoint-solo\\workspace",
+  "runnerResult": {
+    "command": "aider",
+    "arguments": [
+      "--model",
+      "ollama_chat/qwen3-opencode-big:30b",
+      "--no-auto-commits",
+      "--no-auto-lint",
+      "--no-stream",
+      "--yes-always",
+      "--no-show-model-warnings",
+      "--no-git",
+      "--no-gitignore",
+      "--no-check-update",
+      "--map-tokens",
+      "1024",
+      "--edit-format",
+      "whole",
+      "--timeout",
+      "5",
+      "--message-file",
+      "solo-prompt.txt",
+      "TASK.md",
+      "verify.js",
+      "src/app.js",
+      "src/test.js"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h15-api-endpoint-local-20260428-120857\\h15-api-endpoint-solo\\workspace",
+    "exitCode": -1,
+    "timedOut": true,
+    "timeoutSeconds": 5,
+    "startedAt": "2026-04-28T12:08:58.2018014+10:00",
+    "endedAt": "2026-04-28T12:09:03.2487331+10:00",
+    "wallSeconds": 5.047
+  },
+  "workspaceChanges": {
+    "changed": false,
+    "count": 0,
+    "files": []
+  },
+  "verifyResult": {
+    "command": "node",
+    "arguments": [
+      "verify.js"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h15-api-endpoint-local-20260428-120857\\h15-api-endpoint-solo\\workspace",
+    "exitCode": 1,
+    "timedOut": false,
+    "timeoutSeconds": 5,
+    "startedAt": "2026-04-28T12:09:03.3401039+10:00",
+    "endedAt": "2026-04-28T12:09:03.3914410+10:00",
+    "wallSeconds": 0.051
+  },
+  "oracle": {
+    "passes": 0,
+    "total": 10,
+    "summary": "Results: 0/10 passed"
+  },
+  "error": null
+}

@@ -1,0 +1,15 @@
+API initialized with 3 contacts
+
+Results: 6/10 passed
+  PASS: patchContact or updateContact function exists
+  PASS: PATCH returns 200 on valid update
+  PASS: PATCH only updates provided fields
+  PASS: PATCH returns 404 for missing ID
+  FAIL: PATCH rejects short name -- Name must be 2-200 characters
+  FAIL: PATCH rejects invalid email -- Invalid email format
+  FAIL: PATCH rejects invalid phone -- Invalid phone format
+  FAIL: PATCH accepts valid email -- Invalid email format
+  PASS: PATCH accepts null company (clear field)
+  PASS: test.js has at least 8 PATCH test cases
+
+VERDICT: FAIL (4 failed)

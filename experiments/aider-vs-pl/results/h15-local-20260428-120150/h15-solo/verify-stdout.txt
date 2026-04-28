@@ -1,0 +1,3 @@
+Welcome to Node.js v25.6.1.
+Type ".help" for more information.
+>

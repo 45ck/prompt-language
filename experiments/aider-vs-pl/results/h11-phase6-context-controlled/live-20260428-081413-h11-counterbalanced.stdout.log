@@ -1,0 +1,8 @@
+
+[32;1mlabel    [0m[32;1m arm [0m[32;1m repetition[0m[32;1m runnerExitCode[0m[32;1m runnerTimedOut[0m[32;1m verifyExitCode[0m[32;1m verifyTimedOut[0m[32;1m passes[0m[32;1m total[0m[32;1m oracleSummary[0m
+[32;1m-----    [0m [32;1m--- [0m [32;1m----------[0m [32;1m--------------[0m [32;1m--------------[0m [32;1m--------------[0m [32;1m--------------[0m [32;1m------[0m [32;1m-----[0m [32;1m-------------[0m
+rep1-solo solo          1              0          False              1          False      2    11 Results: 2/11 passed
+rep2-solo solo          2              0          False              1          False      2    11 Results: 2/11 passed
+rep3-solo solo          3              0          False              1          False      9    11 Results: 9/11 passed
+
+Wrote H11 context-controlled results to C:\Projects\prompt-language\experiments\aider-vs-pl\results\h11-phase6-context-controlled\20260428-081413

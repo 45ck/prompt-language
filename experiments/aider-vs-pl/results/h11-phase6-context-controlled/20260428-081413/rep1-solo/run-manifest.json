@@ -1,0 +1,69 @@
+{
+  "runId": "20260428-081413",
+  "label": "rep1-solo",
+  "arm": "solo",
+  "repetition": 1,
+  "fixture": "h11-multi-file-refactor",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "runner": "aider",
+  "flow": null,
+  "promptTurnTimeoutSeconds": null,
+  "repoCommit": "3e037863c3c886f21b94fc99591c8210263b78d3",
+  "runnerResult": {
+    "command": "aider",
+    "arguments": [
+      "--model",
+      "ollama_chat/qwen3-opencode-big:30b",
+      "--no-auto-commits",
+      "--no-auto-lint",
+      "--no-stream",
+      "--yes-always",
+      "--no-show-model-warnings",
+      "--no-git",
+      "--no-check-update",
+      "--map-tokens",
+      "1024",
+      "--edit-format",
+      "whole",
+      "--message-file",
+      "solo-prompt.txt",
+      "TASK.md",
+      "package.json",
+      "verify.js",
+      "count-contact.js",
+      "find-contact-stragglers.js",
+      "check-seed-contract.js",
+      "list-contact-targets.js",
+      "README.md",
+      "src/app.js",
+      "src/contact-store.js",
+      "src/contact.js",
+      "src/routes.js",
+      "src/seed.js",
+      "src/test.js"
+    ],
+    "exitCode": 0,
+    "timedOut": false,
+    "timeoutSeconds": 1800,
+    "startedAt": "2026-04-28T08:14:14.4198546+10:00",
+    "endedAt": "2026-04-28T08:30:28.8353877+10:00",
+    "wallSeconds": 974.416
+  },
+  "verifyResult": {
+    "command": "node",
+    "arguments": [
+      "verify.js"
+    ],
+    "exitCode": 1,
+    "timedOut": false,
+    "timeoutSeconds": 60,
+    "startedAt": "2026-04-28T08:30:28.8767808+10:00",
+    "endedAt": "2026-04-28T08:30:29.0958927+10:00",
+    "wallSeconds": 0.219
+  },
+  "oracle": {
+    "passes": 2,
+    "total": 11,
+    "summary": "Results: 2/11 passed"
+  }
+}

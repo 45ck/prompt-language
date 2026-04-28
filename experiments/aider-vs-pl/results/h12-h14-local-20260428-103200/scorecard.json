@@ -1,0 +1,12 @@
+{
+  "label": "h12-solo",
+  "fixture": "h12-security-fix",
+  "arm": "solo",
+  "runnerExitCode": 0,
+  "runnerTimedOut": false,
+  "verifyExitCode": 1,
+  "passes": 8,
+  "total": 9,
+  "oracleSummary": "Results: 8/9 passed",
+  "wallSeconds": 88.924
+}

@@ -1,0 +1,15 @@
+{
+  "label": "h14-tdd-red-green-solo",
+  "arm": "solo",
+  "runnerExitCode": 0,
+  "runnerTimedOut": false,
+  "verifyExitCode": 0,
+  "verifyTimedOut": false,
+  "passes": 8,
+  "total": 8,
+  "oracleSummary": "Results: 8/8 passed",
+  "workspaceChanged": true,
+  "workspaceChangeCount": 2,
+  "wallSeconds": 414.607,
+  "errored": false
+}

@@ -1,0 +1,5 @@
+
+label                  arm  runnerExitCode runnerTimedOut verifyExitCode verifyTimedOut passes total oracleSummary
+-----                  ---  -------------- -------------- -------------- -------------- ------ ----- -------------
+h14-tdd-red-green-solo solo              0          False              0          False      8     8 Results: 8/8 passed
+h14-tdd-red-green-pl   pl                1          False              1          False      6     8 Results: 6/8 passed

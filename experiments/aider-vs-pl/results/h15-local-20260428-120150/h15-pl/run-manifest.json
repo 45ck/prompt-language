@@ -1,0 +1,27 @@
+{
+  "label": "h15-pl",
+  "fixture": "h15-api-endpoint",
+  "arm": "pl",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "runnerResult": {
+    "exitCode": -1,
+    "timedOut": true,
+    "startedAt": "2026-04-28T12:22:52.4373332+10:00",
+    "endedAt": "2026-04-28T12:42:52.4871771+10:00",
+    "wallSeconds": 1200.05,
+    "timeoutSeconds": 1200
+  },
+  "verifyResult": {
+    "exitCode": -1,
+    "timedOut": true,
+    "startedAt": "2026-04-28T12:42:52.4894062+10:00",
+    "endedAt": "2026-04-28T12:43:52.5179245+10:00",
+    "wallSeconds": 60.029,
+    "timeoutSeconds": 60
+  },
+  "oracle": {
+    "passes": null,
+    "total": null,
+    "summary": "unparsed"
+  }
+}

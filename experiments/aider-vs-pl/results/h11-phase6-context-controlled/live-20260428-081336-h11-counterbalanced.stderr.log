@@ -1,0 +1,6 @@
+ForEach-Object : Method invocation failed because [System.IO.Path] does not contain a method named 'GetRelativePath'.
+At C:\Projects\prompt-language\experiments\aider-vs-pl\scripts\run-h11-context-controlled.ps1:36 char:5
++     ForEach-Object {
++     ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [ForEach-Object], RuntimeException
+    + FullyQualifiedErrorId : MethodNotFound,Microsoft.PowerShell.Commands.ForEachObjectCommand

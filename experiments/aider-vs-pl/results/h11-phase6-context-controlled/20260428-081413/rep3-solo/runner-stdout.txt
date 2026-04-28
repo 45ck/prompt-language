@@ -1,0 +1,1172 @@
+Detected dumb terminal, disabling fancy input and pretty output.
+
+Aider v0.86.2
+Model: ollama_chat/qwen3-opencode-big:30b with whole edit format
+Git repo: none
+Repo-map: disabled
+Added README.md to the chat.
+Added TASK.md to the chat.
+Added check-seed-contract.js to the chat.
+Added count-contact.js to the chat.
+Added find-contact-stragglers.js to the chat.
+Added list-contact-targets.js to the chat.
+Added package.json to the chat.
+Added src\app.js to the chat.
+Added src\contact-store.js to the chat.
+Added src\contact.js to the chat.
+Added src\routes.js to the chat.
+Added src\seed.js to the chat.
+Added src\test.js to the chat.
+Added verify.js to the chat.
+
+
+--------------
+Γû║ **THINKING**
+
+Okay, let's tackle this task. The goal is to rename every instance of "Contact"
+to "Client" across specific files. The user provided a list of files to edit
+and some strict rules.
+
+First, I need to check each file listed and replace "Contact" with "Client"
+where it's a word boundary. But I have to be careful not to change things like
+"Client" to "Contact" or other unintended parts. Also, lowercase "contact"
+should become "client".
+
+Starting with README.md. The current README mentions "Contact" multiple times.
+For example, "Contact management system", "Contact records", etc. I need to
+replace all those with "Client". Let me check each occurrence.
+
+In src/app.js, there are references to ContactStore, Contact, and the seed
+data. The seed data uses 'alice@example.com' which is part of the test, so
+that's okay. The code says "Contact system initialized", so that needs to be
+"Client system".
+
+src/contact-store.js: The class name is ContactStore, so it should become
+ClientStore. The methods like add, findByEmail, etc., should have "Contact"
+replaced with "Client" in comments or variable names? Wait, the instructions
+say to replace "Contact" with "Client" in class names, variable names, etc. So
+ContactStore becomes ClientStore. The methods like add(data) don't have
+"Contact" in them, but the class name does. So the class name needs to change.
+
+Wait, the user said to rename the class from Contact to Client. So the class
+name in contact.js is Contact, which should become Client. Similarly,
+ContactStore becomes ClientStore.
+
+Wait, looking at the files:
+
+src/contact.js: class Contact becomes class Client.
+
+src/contact-store.js: class ContactStore becomes class ClientStore.
+
+But the user's instructions say to rename Contact to Client, so the class name
+should change. So in contact.js, the class name changes from Contact to Client.
+Similarly, ContactStore becomes ClientStore.
+
+But the user also said "Do not rename src/contact.js or src/contact-store.js
+for this controlled fixture." Wait, the user says "Do not rename src/contact.js
+or src/contact-store.js for this controlled fixture." Wait, but the task is to
+rename the class, not the file. Wait, the files are named contact.js and
+contact-store.js, but the task says to rename the class, not the file. Wait,
+the user's instructions say "Rename the Contact class/entity to Client
+throughout the entire codebase. This includes: Class names and constructor
+references, Variable names that reference Contact (e.g., newContact ->
+newClient), File names (e.g., contact.js -> client.js)..."
+
+But the user also says "Do not rename src/contact.js or src/contact-store.js
+for this controlled fixture." So even though the task says to rename file
+names, the user is telling us not to do that. So we have to keep the files
+named contact.js and contact-store.js, but change the class names inside them.
+
+Wait, the user's contract says: "Do not rename src/contact.js or
+src/contact-store.js for this controlled fixture." So the files stay as
+contact.js and contact-store.js, but the class inside contact.js is renamed
+from Contact to Client.
+
+So in contact.js, the class name changes from Contact to Client. Similarly, in
+contact-store.js, the class name changes from ContactStore to ClientStore.
+
+Wait, but the user's example in the files shows that contact-store.js has a
+class ContactStore. So that should become ClientStore.
+
+Let me check the files:
+
+src/contact.js: class Contact ΓåÆ class Client.
+
+src/contact-store.js: class ContactStore ΓåÆ class ClientStore.
+
+But the user says "Do not rename src/contact.js or src/contact-store.js", so
+the filenames stay the same, but the class names inside change.
+
+Now, looking at the files to edit:
+
+- README.md: replace "Contact" with "Client" in text.
+
+- src/app.js: replace "Contact" with "Client" in code.
+
+- src/contact-store.js: change class name from ContactStore to ClientStore.
+
+- src/contact.js: change class name from Contact to Client.
+
+- src/routes.js: replace "Contact" with "Client" in comments and code.
+
+- src/seed.js: replace "Contact" with "Client" in comments and seed data
+references.
+
+- src/test.js: replace "Contact" with "Client" in test descriptions and code.
+
+Also, need to check for lowercase "contact" ΓåÆ "client".
+
+Let's go through each file.
+
+Starting with README.md:
+
+Original: "Contact Manager", "Contact records", "Contact class", etc.
+
+Replace all "Contact" with "Client", "contact" with "client".
+
+So "Contact Manager" ΓåÆ "Client Manager"
+
+"Contact management system" ΓåÆ "Client management system"
+
+"Contact records" ΓåÆ "Client records"
+
+"Contact class" ΓåÆ "Client class"
+
+"ContactStore" ΓåÆ "ClientStore" (but in the README, it's written as
+"ContactStore", so that's a class name, so should be "ClientStore")
+
+Wait, the README says:
+
+- `contact.js` ΓÇö Contact class with name, email, phone, company fields
+
+So "Contact class" ΓåÆ "Client class"
+
+Similarly, "ContactStore" ΓåÆ "ClientStore"
+
+So in README.md, all instances of "Contact" (case-sensitive) should be replaced
+with "Client", and "contact" (lowercase) with "client".
+
+Next, src/app.js:
+
+Original:
+
+const { ContactStore } = require('./contact-store');
+
+// Initialize store and load seed data
+const store = new ContactStore();
+const count = loadSeedData(store);
+
+// Smoke test: verify the Contact system works
+const allContacts = routes.listContacts();
+if (allContacts.status !== 200) {
+  console.error('Failed to list contacts');
+  process.exit(1);
+}
+
+const alice = routes.getContact('alice@example.com');
+if (alice.status !== 200 || alice.body.name !== 'Alice Johnson') {
+  console.error('Failed to get contact');
+  process.exit(1);
+}
+
+console.log(`Contact system initialized with ${count} records`);
+console.log(`All ${allContacts.body.length} contacts loaded successfully`);
+
+Replace "Contact" with "Client" in all cases.
+
+So:
+
+const { ClientStore } = require('./contact-store');
+
+const store = new ClientStore();
+
+// Smoke test: verify the Client system works
+const allClients = routes.listClients(); // Wait, no. The routes are still
+named routes, but the system is Client.
+
+Wait, the routes.js file has functions like listContacts, getContact, etc. So
+the routes are still using "Contact" in their names. Wait, but the task says to
+rename the entity, not the route names. Wait, the task says "Rename the Contact
+class/entity to Client throughout the entire codebase. This includes: Class
+names and constructor references, Variable names that reference Contact (e.g.,
+newContact -> newClient), File names (e.g., contact.js -> client.js),
+Import/require paths, Test descriptions and assertions, Seed data references,
+README documentation."
+
+So the route names (listContacts, getContact) should be changed to listClients,
+getClient? Wait, the user's instructions say to replace "Contact" with "Client"
+in all occurrences. So listContacts should become listClients, getContact
+becomes getClient.
+
+Wait, but the user's example in the files shows that the routes are named
+listContacts, getContact, etc. So according to the task, those should be
+renamed to listClients, getClient.
+
+But the user's contract says: "Replace every word-boundary occurrence of
+'Contact' with 'Client'."
+
+So "listContacts" ΓåÆ "listClients", "getContact" ΓåÆ "getClient", etc.
+
+Wait, but the user's instructions say "Do not rename src/contact.js or
+src/contact-store.js for this controlled fixture." But the route names are in
+routes.js, which is a different file. So routes.js should have its function
+names changed.
+
+Wait, looking at src/routes.js:
+
+Original:
+
+function createRoutes(store) {
+  return {
+    listContacts() {
+      return { status: 200, body: store.getAll() };
+    },
+
+    getContact(email) {
+      const contact = store.findByEmail(email);
+      ...
+    },
+
+    createContact(data) {
+      ...
+    },
+
+    deleteContact(email) {
+      ...
+    },
+  };
+}
+
+So listContacts ΓåÆ listClients, getContact ΓåÆ getClient, createContact ΓåÆ
+createClient, deleteContact ΓåÆ deleteClient.
+
+So in routes.js, all those function names need to change.
+
+Similarly, in src/test.js, the tests are named "Contact constructor sets
+fields" ΓåÆ "Client constructor sets fields", etc.
+
+Also, in src/seed.js, the seedContacts array is still called seedContacts, but
+the data is for Contacts. The task says to replace "Contact" with "Client", so
+seedContacts should remain as is (since it's a variable name), but the comments
+should say "Client" instead of "Contact".
+
+Wait, the seedContacts variable name is okay, but the comments should refer to
+Client.
+
+So in seed.js, the comment says "Seed data for initial Contact records" ΓåÆ "Seed
+data for initial Client records".
+
+Also, in the seed data, the objects have fields like name, email, etc., which
+don't need changing.
+
+Now, let's go through each file to make the changes.
+
+Starting with README.md:
+
+Original:
+
+# Contact Manager
+
+A simple Contact management system for storing and retrieving Contact records.
+
+## Modules
+
+- `contact.js` ΓÇö Contact class with name, email, phone, company fields
+- `contact-store.js` ΓÇö In-memory ContactStore for CRUD operations
+- `routes.js` ΓÇö Route handlers for Contact API endpoints
+- `seed.js` ΓÇö Seed data with sample Contact records
+- `test.js` ΓÇö Unit tests for Contact and ContactStore
+
+## Usage
+
+```bash
+node src/app.js    # Run the application
+node src/test.js   # Run tests
+```
+
+Changes:
+
+- Replace "Contact" with "Client" in all instances.
+
+So:
+
+# Client Manager
+
+A simple Client management system for storing and retrieving Client records.
+
+## Modules
+
+- `contact.js` ΓÇö Client class with name, email, phone, company fields
+- `contact-store.js` ΓÇö In-memory ClientStore for CRUD operations
+- `routes.js` ΓÇö Route handlers for Client API endpoints
+- `seed.js` ΓÇö Seed data with sample Client records
+- `test.js` ΓÇö Unit tests for Client and ClientStore
+
+## Usage
+
+```bash
+node src/app.js    # Run the application
+node src/test.js   # Run tests
+```
+
+Wait, but the files are still named contact.js, contact-store.js, etc. So the
+module descriptions should say "Client class" but the file is still contact.js.
+So the README should say "contact.js ΓÇö Client class..." even though the file
+name is contact.js.
+
+Next, src/app.js:
+
+Original:
+
+const { ContactStore } = require('./contact-store');
+const { createRoutes } = require('./routes');
+const { loadSeedData } = require('./seed');
+
+// Initialize store and load seed data
+const store = new ContactStore();
+const count = loadSeedData(store);
+
+// Smoke test: verify the Contact system works
+const allContacts = routes.listContacts();
+if (allContacts.status !== 200) {
+  console.error('Failed to list contacts');
+  process.exit(1);
+}
+
+const alice = routes.getContact('alice@example.com');
+if (alice.status !== 200 || alice.body.name !== 'Alice Johnson') {
+  console.error('Failed to get contact');
+  process.exit(1);
+}
+
+console.log(`Contact system initialized with ${count} records`);
+console.log(`All ${allContacts.body.length} contacts loaded successfully`);
+process.exit(0);
+
+Changes:
+
+- ContactStore ΓåÆ ClientStore
+- store = new ContactStore() ΓåÆ new ClientStore()
+- allContacts ΓåÆ allClients (but the routes are now listClients, so
+routes.listClients())
+- getContact ΓåÆ getClient
+- "Contact system" ΓåÆ "Client system"
+- "contacts" ΓåÆ "clients"
+
+So:
+
+const { ClientStore } = require('./contact-store');
+const { createRoutes } = require('./routes');
+const { loadSeedData } = require('./seed');
+
+// Initialize store and load seed data
+const store = new ClientStore();
+const count = loadSeedData(store);
+
+// Smoke test: verify the Client system works
+const allClients = routes.listClients();
+if (allClients.status !== 200) {
+  console.error('Failed to list clients');
+  process.exit(1);
+}
+
+const alice = routes.getClient('alice@example.com');
+if (alice.status !== 200 || alice.body.name !== 'Alice Johnson') {
+  console.error('Failed to get client');
+  process.exit(1);
+}
+
+console.log(`Client system initialized with ${count} records`);
+console.log(`All ${allClients.body.length} clients loaded successfully`);
+process.exit(0);
+
+Wait, but the routes are now using listClients, getClient, etc., so the code in
+app.js should call those.
+
+Next, src/contact-store.js:
+
+Original:
+
+class ContactStore {
+  constructor() {
+    this.contacts = [];
+  }
+
+  add(data) {
+    const contact = new Contact(data.name, data.email, data.phone,
+data.company);
+    this.contacts.push(contact);
+    return contact;
+  }
+
+  findByEmail(email) {
+    return this.contacts.find((c) => c.email === email) || null;
+  }
+
+  findByCompany(company) {
+    return this.contacts.filter((c) => c.company === company);
+  }
+
+  getAll() {
+    return this.contacts.map((c) => c.toJSON());
+  }
+
+  remove(email) {
+    const index = this.contacts.findIndex((c) => c.email === email);
+    if (index === -1) return false;
+    this.contacts.splice(index, 1);
+    return true;
+  }
+
+  count() {
+    return this.contacts.length;
+  }
+}
+
+Changes:
+
+- Class name: ContactStore ΓåÆ ClientStore
+- In add method: new Contact(...) ΓåÆ new Client(...)
+
+So:
+
+class ClientStore {
+  constructor() {
+    this.clients = []; // Wait, should the internal variable be changed? The
+task says to rename Contact to Client, so the internal storage should be
+clients, but the task says to replace "Contact" with "Client", so the variable
+name might need to change. Wait, the task says "Replace every word-boundary
+occurrence of 'Contact' with 'Client'."
+
+In the add method, it's "new Contact(data...)", so that should become "new
+Client(data...)".
+
+Also, the class name is ContactStore ΓåÆ ClientStore.
+
+But the internal variable 'contacts' should become 'clients' to match the new
+naming.
+
+Wait, the task says to replace "Contact" with "Client", so 'contacts' ΓåÆ
+'clients'.
+
+So in contact-store.js:
+
+- class ContactStore ΓåÆ class ClientStore
+- this.contacts ΓåÆ this.clients
+- in add method: new Contact ΓåÆ new Client
+- in findByEmail, etc., the variable 'contact' is a parameter, but it's a
+variable name. The task says to replace "Contact" (class name) with "Client",
+but variable names like 'contact' should be changed to 'client' if they are
+referencing the entity.
+
+Wait, the task says: "Replace every word-boundary occurrence of 'Contact' with
+'Client'." So 'contact' (lowercase) should become 'client'.
+
+So in the code, 'contact' (as a variable) should be changed to 'client'.
+
+For example, in contact-store.js:
+
+findByEmail(email) {
+  return this.contacts.find((c) => c.email === email) || null;
+}
+
+Here, 'contact' is a variable, but it's part of the code. Wait, the variable
+name is 'c', not 'contact'. The 'contact' in the comment is part of the code.
+Wait, the code uses 'c' as the variable, so the word 'contact' isn't in the
+code. So maybe the variable names like 'contact' in comments or code need to be
+changed.
+
+Wait, the task says "Replace every word-boundary occurrence of 'Contact' with
+'Client'." So only when the exact word 'Contact' (case-sensitive) appears as a
+word. So 'contact' (lowercase) should be replaced with 'client'.
+
+So in the code, any instance of 'Contact' (capital C) becomes 'Client', and
+'contact' (lowercase) becomes 'client'.
+
+So in contact-store.js, the class name is 'ContactStore' ΓåÆ 'ClientStore'.
+
+The 'contacts' array should become 'clients' because 'contact' (lowercase) is
+part of the word.
+
+So:
+
+class ClientStore {
+  constructor() {
+    this.clients = [];
+  }
+
+  add(data) {
+    const client = new Client(data.name, data.email, data.phone, data.company);
+    this.clients.push(client);
+    return client;
+  }
+
+  findByEmail(email) {
+    return this.clients.find((c) => c.email === email) || null;
+  }
+
+  findByCompany(company) {
+    return this.clients.filter((c) => c.company === company);
+  }
+
+  getAll() {
+    return this.clients.map((c) => c.toJSON());
+  }
+
+  remove(email) {
+    const index = this.clients.findIndex((c) => c.email === email);
+    if (index === -1) return false;
+    this.clients.splice(index, 1);
+    return true;
+  }
+
+  count() {
+    return this.clients.length;
+  }
+}
+
+Wait, but the 'contact' in the code is part of the variable name. For example,
+in the add method, 'contact' is a variable, but it's 'const contact = ...' ΓåÆ
+'const client = ...'.
+
+So in contact-store.js, the variable 'contact' (in the add method) should be
+changed to 'client'.
+
+Similarly, in the comments, any mention of 'Contact' should be 'Client'.
+
+But the task says to replace word-boundary occurrences, so 'contact'
+(lowercase) becomes 'client'.
+
+So in the code, 'contact' ΓåÆ 'client', 'Contact' ΓåÆ 'Client'.
+
+Now, src/contact.js:
+
+Original:
+
+class Contact {
+  constructor(name, email, phone, company) {
+    this.name = name;
+    this.email = email;
+    this.phone = phone;
+    this.company = company;
+    this.createdAt = new Date().toISOString();
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      email: this.email,
+      phone: this.phone,
+      company: this.company,
+      createdAt: this.createdAt,
+    };
+  }
+
+  getDisplayName() {
+    return this.company ? `${this.name} (${this.company})` : this.name;
+  }
+}
+
+Changes:
+
+- class Contact ΓåÆ class Client
+- In constructor, the parameters are the same, but the class name changes.
+- The variable names inside the class don't need to change, as they're not
+'Contact' or 'contact'.
+
+So:
+
+class Client {
+  constructor(name, email, phone, company) {
+    this.name = name;
+    this.email = email;
+    this.phone = phone;
+    this.company = company;
+    this.createdAt = new Date().toISOString();
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      email: this.email,
+      phone: this.phone,
+      company: this.company,
+      createdAt: this.createdAt,
+    };
+  }
+
+  getDisplayName() {
+    return this.company ? `${this.name} (${this.company})` : this.name;
+  }
+}
+
+src/routes.js:
+
+Original:
+
+function createRoutes(store) {
+  return {
+    listContacts() {
+      return { status: 200, body: store.getAll() };
+    },
+
+    getContact(email) {
+      const contact = store.findByEmail(email);
+      if (!contact) return { status: 404, body: { error: 'Contact not found' }
+};
+      return { status: 200, body: contact.toJSON() };
+    },
+
+    createContact(data) {
+      if (!data.name || !data.email) {
+        return { status: 400, body: { error: 'Name and email are required' } };
+      }
+      const existing = store.findByEmail(data.email);
+      if (existing) {
+        return { status: 409, body: { error: 'Contact already exists' } };
+      }
+      const contact = store.add(data);
+      return { status: 201, body: contact.toJSON() };
+    },
+
+    deleteContact(email) {
+      const removed = store.remove(email);
+      if (!removed) return { status: 404, body: { error: 'Contact not found' }
+};
+      return { status: 204, body: null };
+    },
+  };
+}
+
+Changes:
+
+- listContacts ΓåÆ listClients
+- getContact ΓåÆ getClient
+- createContact ΓåÆ createClient
+- deleteContact ΓåÆ deleteClient
+- In the error messages: 'Contact not found' ΓåÆ 'Client not found', 'Contact
+already exists' ΓåÆ 'Client already exists'
+
+So:
+
+function createRoutes(store) {
+  return {
+    listClients() {
+      return { status: 200, body: store.getAll() };
+    },
+
+    getClient(email) {
+      const client = store.findByEmail(email);
+      if (!client) return { status: 404, body: { error: 'Client not found' } };
+      return { status: 200, body: client.toJSON() };
+    },
+
+    createClient(data) {
+      if (!data.name || !data.email) {
+        return { status: 400, body: { error: 'Name and email are required' } };
+      }
+      const existing = store.findByEmail(data.email);
+      if (existing) {
+        return { status: 409, body: { error: 'Client already exists' } };
+      }
+      const client = store.add(data);
+      return { status: 201, body: client.toJSON() };
+    },
+
+    deleteClient(email) {
+      const removed = store.remove(email);
+      if (!removed) return { status: 404, body: { error: 'Client not found' }
+};
+      return { status: 204, body: null };
+    },
+  };
+}
+
+src/seed.js:
+
+Original:
+
+// Seed data for initial Contact records
+const seedContacts = [
+  { name: 'Alice Johnson', email: 'alice@example.com', phone: '555-0101',
+company: 'Acme Corp' },
+  ...
+];
+
+function loadSeedData(store) {
+  for (const contact of seedContacts) {
+    store.add(contact);
+  }
+  return store.count();
+}
+
+Changes:
+
+- "Contact records" ΓåÆ "Client records"
+- seedContacts ΓåÆ seedClients (but the variable name is seedContacts; the task
+says to replace "Contact" with "Client", so seedContacts should become
+seedClients. Wait, the variable name is seedContacts, which contains "Contact",
+so it should be renamed to seedClients.
+
+Wait, the task says to replace every occurrence of "Contact" with "Client", so
+seedContacts ΓåÆ seedClients.
+
+But the user's contract says: "Do not instantiate Client at module scope." So
+the seedContacts variable should be renamed to seedClients.
+
+So:
+
+// Seed data for initial Client records
+const seedClients = [
+  { name: 'Alice Johnson', email: 'alice@example.com', phone: '555-0101',
+company: 'Acme Corp' },
+  ...
+];
+
+function loadSeedData(store) {
+  for (const client of seedClients) {
+    store.add(client);
+  }
+  return store.count();
+}
+
+Wait, but the function loadSeedData is called with store, and it uses
+seedClients. So the variable name seedContacts becomes seedClients, and the
+loop variable 'contact' becomes 'client'.
+
+So in seed.js:
+
+const seedClients = [
+  ...
+];
+
+function loadSeedData(store) {
+  for (const client of seedClients) {
+    store.add(client);
+  }
+  return store.count();
+}
+
+src/test.js:
+
+Original:
+
+test('Contact constructor sets fields', () => {
+  const c = new Contact('Alice', 'alice@test.com', '555-0001', 'Acme');
+  ...
+});
+
+Changes:
+
+- 'Contact' ΓåÆ 'Client'
+- 'c' is a variable, but the test name should be 'Client constructor sets
+fields'
+- In the code, 'new Contact' ΓåÆ 'new Client'
+
+So:
+
+test('Client constructor sets fields', () => {
+  const c = new Client('Alice', 'alice@test.com', '555-0001', 'Acme');
+  ...
+});
+
+Similarly, other tests:
+
+test('Contact toJSON returns object' ΓåÆ 'Client toJSON returns object'
+
+test('Contact getDisplayName with company' ΓåÆ 'Client getDisplayName with
+company'
+
+And so on.
+
+Also, in the test descriptions, replace 'Contact' with 'Client'.
+
+Now, let's verify each file.
+
+Check for any remaining "Contact" or "contact" that might have been missed.
+
+For example, in src/test.js, the test names and the code inside.
+
+Also, in the seed.js, the seed data is still using the same data, but the
+variable names and references are updated.
+
+Now, let's compile all the changes into the files.
+
+Starting with README.md:
+
+Replace all "Contact" with "Client", "contact" with "client".
+
+src/app.js: Replace ContactStore with ClientStore, Contact with Client, etc.
+
+src/contact-store.js: Change class name, variable names.
+
+src/contact.js: Change class name.
+
+src/routes.js: Change function names and error messages.
+
+src/seed.js: Change seedContacts to seedClients, and loop variable.
+
+src/test.js: Update test names and code.
+
+Now, let's write out each file with the changes.
+
+------------
+Γû║ **ANSWER**
+
+README.md
+
+````diff
+@@ -1,16 +1,16 @@
+-# Contact Manager
++# Client Manager
+
+-A simple Contact management system for storing and retrieving Contact records.
++A simple Client management system for storing and retrieving Client records.
+
+ ## Modules
+
+-- `contact.js` ΓÇö Contact class with name, email, phone, company fields
+-- `contact-store.js` ΓÇö In-memory ContactStore for CRUD operations
+-- `routes.js` ΓÇö Route handlers for Contact API endpoints
+-- `seed.js` ΓÇö Seed data with sample Contact records
+-- `test.js` ΓÇö Unit tests for Contact and ContactStore
++- `contact.js` ΓÇö Client class with name, email, phone, company fields
++- `contact-store.js` ΓÇö In-memory ClientStore for CRUD operations
++- `routes.js` ΓÇö Route handlers for Client API endpoints
++- `seed.js` ΓÇö Seed data with sample Client records
++- `test.js` ΓÇö Unit tests for Client and ClientStore
+
+ ## Usage
+
+ ```bash
+ node src/app.js    # Run the application
+````
+
+
+
+src/app.js
+
+```diff
+@@ -1,27 +1,24 @@
+-const { ContactStore } = require('./contact-store');
++const { ClientStore } = require('./contact-store');
+ const { createRoutes } = require('./routes');
+ const { loadSeedData } = require('./seed');
+
+ // Initialize store and load seed data
+-const store = new ContactStore();
++const store = new ClientStore();
+ const count = loadSeedData(store);
+
+-// Create route handlers
+-const routes = createRoutes(store);
+-
+-// Smoke test: verify the Contact system works
+-const allContacts = routes.listContacts();
+-if (allContacts.status !== 200) {
+-  console.error('Failed to list contacts');
++// Smoke test: verify the Client system works
++const allClients = routes.listClients();
++if (allClients.status !== 200) {
++  console.error('Failed to list clients');
+   process.exit(1);
+ }
+
+-const alice = routes.getContact('alice@example.com');
++const alice = routes.getClient('alice@example.com');
+ if (alice.status !== 200 || alice.body.name !== 'Alice Johnson') {
+-  console.error('Failed to get contact');
++  console.error('Failed to get client');
+   process.exit(1);
+ }
+
+-console.log(`Contact system initialized with ${count} records`);
+-console.log(`All ${allContacts.body.length} contacts loaded successfully`);
++console.log(`Client system initialized with ${count} records`);
++console.log(`All ${allClients.body.length} clients loaded successfully`);
+ process.exit(0);
+```
+
+
+
+src/contact-store.js
+
+```diff
+@@ -1,38 +1,38 @@
+-const { Contact } = require('./contact');
++const { Client } = require('./contact');
+
+-class ContactStore {
++class ClientStore {
+   constructor() {
+-    this.contacts = [];
++    this.clients = [];
+   }
+
+   add(data) {
+-    const contact = new Contact(data.name, data.email, data.phone,
+data.company);
+-    this.contacts.push(contact);
+-    return contact;
++    const client = new Client(data.name, data.email, data.phone,
+data.company);
++    this.clients.push(client);
++    return client;
+   }
+
+   findByEmail(email) {
+-    return this.contacts.find((c) => c.email === email) || null;
++    return this.clients.find((c) => c.email === email) || null;
+   }
+
+   findByCompany(company) {
+-    return this.contacts.filter((c) => c.company === company);
++    return this.clients.filter((c) => c.company === company);
+   }
+
+   getAll() {
+-    return this.contacts.map((c) => c.toJSON());
++    return this.clients.map((c) => c.toJSON());
+   }
+
+   remove(email) {
+-    const index = this.contacts.findIndex((c) => c.email === email);
++    const index = this.clients.findIndex((c) => c.email === email);
+     if (index === -1) return false;
+-    this.contacts.splice(index, 1);
++    this.clients.splice(index, 1);
+     return true;
+   }
+
+   count() {
+-    return this.contacts.length;
++    return this.clients.length;
+   }
+ }
+
+-module.exports = { ContactStore };
++module.exports = { ClientStore };
+```
+
+
+
+src/contact.js
+
+```diff
+@@ -1,6 +1,6 @@
+-class Contact {
++class Client {
+   constructor(name, email, phone, company) {
+     this.name = name;
+     this.email = email;
+     this.phone = phone;
+     this.company = company;
+@@ -20,6 +20,6 @@
+   getDisplayName() {
+     return this.company ? `${this.name} (${this.company})` : this.name;
+   }
+ }
+
+-module.exports = { Contact };
++module.exports = { Client };
+```
+
+
+
+src/routes.js
+
+```diff
+@@ -1,34 +1,34 @@
+-const { ContactStore } = require('./contact-store');
++const { ClientStore } = require('./contact-store');
+
+ function createRoutes(store) {
+   return {
+-    listContacts() {
++    listClients() {
+       return { status: 200, body: store.getAll() };
+     },
+
+-    getContact(email) {
+-      const contact = store.findByEmail(email);
+-      if (!contact) return { status: 404, body: { error: 'Contact not found' }
+};
+-      return { status: 200, body: contact.toJSON() };
++    getClient(email) {
++      const client = store.findByEmail(email);
++      if (!client) return { status: 404, body: { error: 'Client not found' }
+};
++      return { status: 200, body: client.toJSON() };
+     },
+
+-    createContact(data) {
++    createClient(data) {
+       if (!data.name || !data.email) {
+         return { status: 400, body: { error: 'Name and email are required' }
+};
+       }
+       const existing = store.findByEmail(data.email);
+       if (existing) {
+-        return { status: 409, body: { error: 'Contact already exists' } };
++        return { status: 409, body: { error: 'Client already exists' } };
+       }
+-      const contact = store.add(data);
+-      return { status: 201, body: contact.toJSON() };
++      const client = store.add(data);
++      return { status: 201, body: client.toJSON() };
+     },
+
+-    deleteContact(email) {
++    deleteClient(email) {
+       const removed = store.remove(email);
+-      if (!removed) return { status: 404, body: { error: 'Contact not found' }
+};
++      if (!removed) return { status: 404, body: { error: 'Client not found' }
+};
+       return { status: 204, body: null };
+     },
+   };
+ }
+
+```
+
+
+
+src/seed.js
+
+```diff
+@@ -1,17 +1,17 @@
+-// Seed data for initial Contact records
+-const seedContacts = [
++// Seed data for initial Client records
++const seedClients = [
+   { name: 'Alice Johnson', email: 'alice@example.com', phone: '555-0101',
+company: 'Acme Corp' },
+   { name: 'Bob Smith', email: 'bob@example.com', phone: '555-0102', company:
+'Acme Corp' },
+   { name: 'Carol Davis', email: 'carol@example.com', phone: '555-0103',
+company: 'Globex Inc' },
+   { name: 'Dan Wilson', email: 'dan@example.com', phone: '555-0104', company:
+null },
+   { name: 'Eve Brown', email: 'eve@example.com', phone: '555-0105', company:
+'Initech' },
+ ];
+
+ function loadSeedData(store) {
+-  for (const contact of seedContacts) {
+-    store.add(contact);
++  for (const client of seedClients) {
++    store.add(client);
+   }
+   return store.count();
+ }
+
+-module.exports = { seedContacts, loadSeedData };
++module.exports = { seedClients, loadSeedData };
+```
+
+
+
+src/test.js
+
+```diff
+@@ -1,7 +1,7 @@
+-const { Contact } = require('./contact');
+-const { ContactStore } = require('./contact-store');
++const { Client } = require('./contact');
++const { ClientStore } = require('./contact-store');
+
+ let passed = 0;
+ let failed = 0;
+
+ function test(name, fn) {
+@@ -12,58 +12,58 @@
+     failed++;
+     console.error(`FAIL: ${name} -- ${e.message}`);
+   }
+ }
+
+-test('Contact constructor sets fields', () => {
+-  const c = new Contact('Alice', 'alice@test.com', '555-0001', 'Acme');
++test('Client constructor sets fields', () => {
++  const c = new Client('Alice', 'alice@test.com', '555-0001', 'Acme');
+   if (c.name !== 'Alice') throw new Error('name mismatch');
+   if (c.email !== 'alice@test.com') throw new Error('email mismatch');
+ });
+
+-test('Contact toJSON returns object', () => {
+-  const c = new Contact('Bob', 'bob@test.com', '555-0002', null);
++test('Client toJSON returns object', () => {
++  const c = new Client('Bob', 'bob@test.com', '555-0002', null);
+   const json = c.toJSON();
+   if (typeof json !== 'object') throw new Error('not an object');
+   if (json.name !== 'Bob') throw new Error('name mismatch');
+ });
+
+-test('Contact getDisplayName with company', () => {
+-  const c = new Contact('Alice', 'a@t.com', '555', 'Acme');
++test('Client getDisplayName with company', () => {
++  const c = new Client('Alice', 'a@t.com', '555', 'Acme');
+   if (c.getDisplayName() !== 'Alice (Acme)') throw new Error('wrong display
+name');
+ });
+
+-test('Contact getDisplayName without company', () => {
+-  const c = new Contact('Bob', 'b@t.com', '555', null);
++test('Client getDisplayName without company', () => {
++  const c = new Client('Bob', 'b@t.com', '555', null);
+   if (c.getDisplayName() !== 'Bob') throw new Error('wrong display name');
+ });
+
+-test('ContactStore add and count', () => {
+-  const store = new ContactStore();
++test('ClientStore add and count', () => {
++  const store = new ClientStore();
+   store.add({ name: 'Test', email: 'test@t.com', phone: '555', company: null
+});
+   if (store.count() !== 1) throw new Error('count mismatch');
+ });
+
+-test('ContactStore findByEmail', () => {
+-  const store = new ContactStore();
++test('ClientStore findByEmail', () => {
++  const store = new ClientStore();
+   store.add({ name: 'Test', email: 'test@t.com', phone: '555', company: null
+});
+   const found = store.findByEmail('test@t.com');
+   if (!found) throw new Error('not found');
+   if (found.name !== 'Test') throw new Error('name mismatch');
+ });
+
+-test('ContactStore findByCompany', () => {
+-  const store = new ContactStore();
++test('ClientStore findByCompany', () => {
++  const store = new ClientStore();
+   store.add({ name: 'A', email: 'a@t.com', phone: '1', company: 'X' });
+   store.add({ name: 'B', email: 'b@t.com', phone: '2', company: 'X' });
+   store.add({ name: 'C', email: 'c@t.com', phone: '3', company: 'Y' });
+   const results = store.findByCompany('X');
+   if (results.length !== 2) throw new Error('count mismatch');
+ });
+
+-test('ContactStore remove', () => {
+-  const store = new ContactStore();
++test('ClientStore remove', () => {
++  const store = new ClientStore();
+   store.add({ name: 'Test', email: 'test@t.com', phone: '555', company: null
+});
+   if (!store.remove('test@t.com')) throw new Error('remove returned false');
+   if (store.count() !== 0) throw new Error('count should be 0');
+ });
+
+```
+
+
+Tokens: 5.2k sent, 7.4k received.
+Applied edit to src/contact.js
+Applied edit to src/test.js
+Applied edit to README.md
+Applied edit to src/seed.js
+Applied edit to src/app.js
+Applied edit to src/contact-store.js
+Applied edit to src/routes.js

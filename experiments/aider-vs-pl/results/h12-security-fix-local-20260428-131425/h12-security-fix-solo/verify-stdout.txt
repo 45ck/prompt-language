@@ -1,0 +1,25 @@
+Database initialized with 4 contacts
+Search working correctly
+Database initialized with 4 contacts
+Search working correctly
+Database initialized with 4 contacts
+Search working correctly
+Database initialized with 4 contacts
+Search working correctly
+Database initialized with 4 contacts
+Search working correctly
+Database initialized with 4 contacts
+Search working correctly
+
+Results: 8/9 passed
+  PASS: No string concatenation in SQL queries
+  PASS: No template literal SQL injection
+  PASS: Uses parameterized queries or safe patterns
+  PASS: App loads without error
+  PASS: Normal search still works
+  PASS: Email lookup still works
+  PASS: Company lookup still works
+  FAIL: Name with apostrophe works (Dan O'Brien) -- Expected 1, got 0
+  PASS: SQL injection attempt returns safe result
+
+VERDICT: FAIL (1 failed)

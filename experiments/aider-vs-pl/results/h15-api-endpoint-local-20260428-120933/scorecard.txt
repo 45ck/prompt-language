@@ -1,0 +1,5 @@
+
+label                 arm  runnerExitCode runnerTimedOut verifyExitCode verifyTimedOut passes total oracleSummary
+-----                 ---  -------------- -------------- -------------- -------------- ------ ----- -------------
+h15-api-endpoint-solo solo              0          False              1          False      6    10 Results: 6/10 passed
+h15-api-endpoint-pl   pl                0          False              0          False     10    10 Results: 10/10 pass?

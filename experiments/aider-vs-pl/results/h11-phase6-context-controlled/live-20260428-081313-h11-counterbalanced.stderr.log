@@ -1,0 +1,8 @@
+Get-ChildItem : Cannot find path
+'C:\Projects\prompt-language\pl\experiments\aider-vs-pl\fixtures\h11-multi-file-refactor' because it does not exist.
+At C:\Projects\prompt-language\experiments\aider-vs-pl\scripts\run-h11-context-controlled.ps1:34 char:13
++   $hashes = Get-ChildItem -LiteralPath $Fixture -Recurse -File |
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (C:\Projects\pro...i-file-refactor:String) [Get-ChildItem], ItemNotFound
+   Exception
+    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.GetChildItemCommand

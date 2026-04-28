@@ -1,0 +1,32 @@
+[
+  {
+    "label": "h12-security-fix-solo",
+    "arm": "solo",
+    "runnerExitCode": -1,
+    "runnerTimedOut": true,
+    "verifyExitCode": 1,
+    "verifyTimedOut": false,
+    "passes": 7,
+    "total": 9,
+    "oracleSummary": "Results: 7/9 passed",
+    "workspaceChanged": false,
+    "workspaceChangeCount": 0,
+    "wallSeconds": 5.838,
+    "errored": false
+  },
+  {
+    "label": "h12-security-fix-pl",
+    "arm": "pl",
+    "runnerExitCode": -1,
+    "runnerTimedOut": true,
+    "verifyExitCode": 1,
+    "verifyTimedOut": false,
+    "passes": 7,
+    "total": 9,
+    "oracleSummary": "Results: 7/9 passed",
+    "workspaceChanged": false,
+    "workspaceChangeCount": 0,
+    "wallSeconds": 5.036,
+    "errored": false
+  }
+]

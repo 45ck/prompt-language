@@ -1,0 +1,33 @@
+
+Results: 9/11 passed
+  PASS: No "Contact" in src/app.js
+  PASS: No "Contact" in src/contact-store.js
+  PASS: No "Contact" in src/contact.js
+  PASS: No "Contact" in src/routes.js
+  PASS: No "Contact" in src/seed.js
+  PASS: No "Contact" in src/test.js
+  PASS: No "Contact" in ./README.md
+  PASS: "Client" class exists in some .js file
+  PASS: "ClientStore" or "Client" store class exists
+  FAIL: Application runs without error -- App failed: Command failed: node src/app.js
+C:\Projects\prompt-language\experiments\aider-vs-pl\results\h11-phase6-context-controlled\20260428-081413\rep3-solo\workspace\src\app.js:10
+const allClients = routes.listClients();
+                   ^
+
+ReferenceError: routes is not defined
+    at Object.<anonymous> (C:\Projects\prompt-language\experiments\aider-vs-pl\results\h11-phase6-context-controlled\20260428-081413\rep3-solo\workspace\src\app.js:10:20)
+    at Module._compile (node:internal/modules/cjs/loader:1811:14)
+    at Object..js (node:internal/modules/cjs/loader:1942:10)
+    at Module.load (node:internal/modules/cjs/loader:1532:32)
+    at Module._load (node:internal/modules/cjs/loader:1334:12)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47
+
+Node.js v25.6.1
+
+  FAIL: All imports resolve -- Command failed: node -e "try { require('./src/app'); } catch(e) { console.error(e.message); process.exit(1); }"
+routes is not defined
+
+
+VERDICT: FAIL (2 failed)

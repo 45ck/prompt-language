@@ -1,0 +1,52 @@
+{
+  "runId": "20260428-131233",
+  "label": "h12-security-fix-pl",
+  "fixture": "h12-security-fix",
+  "arm": "pl",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "workdir": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131233\\h12-security-fix-pl\\workspace",
+  "runnerResult": {
+    "command": "node",
+    "arguments": [
+      "C:\\Projects\\prompt-language\\bin\\cli.mjs",
+      "ci",
+      "--runner",
+      "aider",
+      "--model",
+      "ollama_chat/qwen3-opencode-big:30b",
+      "--file",
+      "task.flow"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131233\\h12-security-fix-pl\\workspace",
+    "exitCode": -1,
+    "timedOut": true,
+    "timeoutSeconds": 5,
+    "startedAt": "2026-04-28T13:12:40.1674003+10:00",
+    "endedAt": "2026-04-28T13:12:45.2031078+10:00",
+    "wallSeconds": 5.036
+  },
+  "workspaceChanges": {
+    "changed": false,
+    "count": 0,
+    "files": []
+  },
+  "verifyResult": {
+    "command": "node",
+    "arguments": [
+      "verify.js"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131233\\h12-security-fix-pl\\workspace",
+    "exitCode": 1,
+    "timedOut": false,
+    "timeoutSeconds": 5,
+    "startedAt": "2026-04-28T13:12:45.2651867+10:00",
+    "endedAt": "2026-04-28T13:12:45.3175138+10:00",
+    "wallSeconds": 0.052
+  },
+  "oracle": {
+    "passes": 7,
+    "total": 9,
+    "summary": "Results: 7/9 passed"
+  },
+  "error": null
+}

@@ -1,0 +1,8 @@
+
+[32;1mlabel                  [0m[32;1m runnerExitCode[0m[32;1m runnerTimedOut[0m[32;1m verifyExitCode[0m[32;1m passes[0m[32;1m total[0m[32;1m oracleSummary[0m[32;1m wallSeconds[0m
+[32;1m-----                  [0m [32;1m--------------[0m [32;1m--------------[0m [32;1m--------------[0m [32;1m------[0m [32;1m-----[0m [32;1m-------------[0m [32;1m-----------[0m
+rep1-qwen3-8b-review-v4              1          False              1      5    11 5/11               736.54
+rep2-qwen3-8b-review-v4              3          False              1      5    11 5/11               665.01
+rep3-qwen3-8b-review-v4              3          False              1      5    11 5/11               666.97
+
+Wrote R9 review repeats to C:\Projects\prompt-language\experiments\aider-vs-pl\rescue-viability\runs\r9\r9-review-repeats-20260428-094411

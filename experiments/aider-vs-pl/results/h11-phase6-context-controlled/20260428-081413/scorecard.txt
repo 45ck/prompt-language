@@ -1,0 +1,6 @@
+
+label     arm  repetition runnerExitCode runnerTimedOut verifyExitCode verifyTimedOut passes total oracleSummary
+-----     ---  ---------- -------------- -------------- -------------- -------------- ------ ----- -------------
+rep1-solo solo          1              0          False              1          False      2    11 Results: 2/11 passed
+rep2-solo solo          2              0          False              1          False      2    11 Results: 2/11 passed
+rep3-solo solo          3              0          False              1          False      9    11 Results: 9/11 passed

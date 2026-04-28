@@ -1,0 +1,9 @@
+{
+  "command": "node",
+  "arguments": [
+    "verify.js"
+  ],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h14-tdd-red-green-local-20260428-144649\\h14-tdd-red-green-solo\\workspace",
+  "timeoutSeconds": 60,
+  "startedAt": "2026-04-28T14:53:45.0528340+10:00"
+}

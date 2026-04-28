@@ -1,0 +1,10 @@
+Detected dumb terminal, disabling fancy input and pretty output.
+
+Aider v0.86.2
+Model: ollama_chat/qwen3-opencode-big:30b with whole edit format
+Git repo: none
+Repo-map: disabled
+Added TASK.md to the chat.
+Added src\app.js to the chat.
+Added src\test.js to the chat.
+Added verify.js to the chat.

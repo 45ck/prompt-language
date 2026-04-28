@@ -1,0 +1,70 @@
+{
+  "runId": "20260428-144649",
+  "label": "h14-tdd-red-green-solo",
+  "fixture": "h14-tdd-red-green",
+  "arm": "solo",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "workdir": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h14-tdd-red-green-local-20260428-144649\\h14-tdd-red-green-solo\\workspace",
+  "runnerResult": {
+    "command": "aider",
+    "arguments": [
+      "--model",
+      "ollama_chat/qwen3-opencode-big:30b",
+      "--no-auto-commits",
+      "--no-auto-lint",
+      "--no-stream",
+      "--yes-always",
+      "--no-show-model-warnings",
+      "--no-git",
+      "--no-gitignore",
+      "--no-check-update",
+      "--map-tokens",
+      "1024",
+      "--edit-format",
+      "whole",
+      "--timeout",
+      "1800",
+      "--message-file",
+      "solo-prompt.txt",
+      "TASK.md",
+      "package.json",
+      "verify.js",
+      "src/contacts.js",
+      "src/test.js"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h14-tdd-red-green-local-20260428-144649\\h14-tdd-red-green-solo\\workspace",
+    "exitCode": 0,
+    "timedOut": false,
+    "timeoutSeconds": 1800,
+    "startedAt": "2026-04-28T14:46:50.3562065+10:00",
+    "endedAt": "2026-04-28T14:53:44.9632778+10:00",
+    "wallSeconds": 414.607
+  },
+  "workspaceChanges": {
+    "changed": true,
+    "count": 2,
+    "files": [
+      " M src/contacts.js",
+      " M src/test.js"
+    ]
+  },
+  "verifyResult": {
+    "command": "node",
+    "arguments": [
+      "verify.js"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h14-tdd-red-green-local-20260428-144649\\h14-tdd-red-green-solo\\workspace",
+    "exitCode": 0,
+    "timedOut": false,
+    "timeoutSeconds": 60,
+    "startedAt": "2026-04-28T14:53:45.0528340+10:00",
+    "endedAt": "2026-04-28T14:53:45.1903533+10:00",
+    "wallSeconds": 0.138
+  },
+  "oracle": {
+    "passes": 8,
+    "total": 8,
+    "summary": "Results: 8/8 passed"
+  },
+  "error": null
+}

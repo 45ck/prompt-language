@@ -1,0 +1,32 @@
+[
+  {
+    "label": "rep1-qwen3-8b-review-v4",
+    "runnerExitCode": 1,
+    "runnerTimedOut": false,
+    "verifyExitCode": 1,
+    "passes": 5,
+    "total": 11,
+    "oracleSummary": "5/11",
+    "wallSeconds": 736.543
+  },
+  {
+    "label": "rep2-qwen3-8b-review-v4",
+    "runnerExitCode": 3,
+    "runnerTimedOut": false,
+    "verifyExitCode": 1,
+    "passes": 5,
+    "total": 11,
+    "oracleSummary": "5/11",
+    "wallSeconds": 665.009
+  },
+  {
+    "label": "rep3-qwen3-8b-review-v4",
+    "runnerExitCode": 3,
+    "runnerTimedOut": false,
+    "verifyExitCode": 1,
+    "passes": 5,
+    "total": 11,
+    "oracleSummary": "5/11",
+    "wallSeconds": 666.97
+  }
+]

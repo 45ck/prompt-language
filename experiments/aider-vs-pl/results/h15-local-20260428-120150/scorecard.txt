@@ -1,0 +1,5 @@
+
+label    arm  runnerExitCode runnerTimedOut verifyExitCode verifyTimedOut passes total oracleSummary wallSeconds
+-----    ---  -------------- -------------- -------------- -------------- ------ ----- ------------- -----------
+h15-solo solo             -1           True             -1           True              unparsed          1200.80
+h15-pl   pl               -1           True             -1           True              unparsed          1200.05

@@ -1,0 +1,15 @@
+API initialized with 3 contacts
+
+Results: 0/10 passed
+  FAIL: patchContact or updateContact function exists -- No patchContact/updateContact exported
+  FAIL: PATCH returns 200 on valid update -- patchFn is not a function
+  FAIL: PATCH only updates provided fields -- patchFn is not a function
+  FAIL: PATCH returns 404 for missing ID -- patchFn is not a function
+  FAIL: PATCH rejects short name -- patchFn is not a function
+  FAIL: PATCH rejects invalid email -- patchFn is not a function
+  FAIL: PATCH rejects invalid phone -- patchFn is not a function
+  FAIL: PATCH accepts valid email -- patchFn is not a function
+  FAIL: PATCH accepts null company (clear field) -- patchFn is not a function
+  FAIL: test.js has at least 8 PATCH test cases -- Expected 8+ PATCH tests, found 0
+
+VERDICT: FAIL (10 failed)

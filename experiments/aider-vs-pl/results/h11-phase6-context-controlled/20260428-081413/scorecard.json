@@ -1,0 +1,41 @@
+[
+  {
+    "label": "rep1-solo",
+    "arm": "solo",
+    "repetition": 1,
+    "runnerExitCode": 0,
+    "runnerTimedOut": false,
+    "verifyExitCode": 1,
+    "verifyTimedOut": false,
+    "passes": 2,
+    "total": 11,
+    "oracleSummary": "Results: 2/11 passed",
+    "wallSeconds": 974.416
+  },
+  {
+    "label": "rep2-solo",
+    "arm": "solo",
+    "repetition": 2,
+    "runnerExitCode": 0,
+    "runnerTimedOut": false,
+    "verifyExitCode": 1,
+    "verifyTimedOut": false,
+    "passes": 2,
+    "total": 11,
+    "oracleSummary": "Results: 2/11 passed",
+    "wallSeconds": 420.885
+  },
+  {
+    "label": "rep3-solo",
+    "arm": "solo",
+    "repetition": 3,
+    "runnerExitCode": 0,
+    "runnerTimedOut": false,
+    "verifyExitCode": 1,
+    "verifyTimedOut": false,
+    "passes": 9,
+    "total": 11,
+    "oracleSummary": "Results: 9/11 passed",
+    "wallSeconds": 357.17
+  }
+]

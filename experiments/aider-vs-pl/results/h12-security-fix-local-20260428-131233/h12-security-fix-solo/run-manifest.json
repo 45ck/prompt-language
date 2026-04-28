@@ -1,0 +1,67 @@
+{
+  "runId": "20260428-131233",
+  "label": "h12-security-fix-solo",
+  "fixture": "h12-security-fix",
+  "arm": "solo",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "workdir": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131233\\h12-security-fix-solo\\workspace",
+  "runnerResult": {
+    "command": "aider",
+    "arguments": [
+      "--model",
+      "ollama_chat/qwen3-opencode-big:30b",
+      "--no-auto-commits",
+      "--no-auto-lint",
+      "--no-stream",
+      "--yes-always",
+      "--no-show-model-warnings",
+      "--no-git",
+      "--no-gitignore",
+      "--no-check-update",
+      "--map-tokens",
+      "1024",
+      "--edit-format",
+      "whole",
+      "--timeout",
+      "5",
+      "--message-file",
+      "solo-prompt.txt",
+      "TASK.md",
+      "package.json",
+      "verify.js",
+      "src/app.js",
+      "src/db.js"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131233\\h12-security-fix-solo\\workspace",
+    "exitCode": -1,
+    "timedOut": true,
+    "timeoutSeconds": 5,
+    "startedAt": "2026-04-28T13:12:33.7957315+10:00",
+    "endedAt": "2026-04-28T13:12:39.6333414+10:00",
+    "wallSeconds": 5.838
+  },
+  "workspaceChanges": {
+    "changed": false,
+    "count": 0,
+    "files": []
+  },
+  "verifyResult": {
+    "command": "node",
+    "arguments": [
+      "verify.js"
+    ],
+    "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131233\\h12-security-fix-solo\\workspace",
+    "exitCode": 1,
+    "timedOut": false,
+    "timeoutSeconds": 5,
+    "startedAt": "2026-04-28T13:12:39.7171814+10:00",
+    "endedAt": "2026-04-28T13:12:39.7683878+10:00",
+    "wallSeconds": 0.051
+  },
+  "oracle": {
+    "passes": 7,
+    "total": 9,
+    "summary": "Results: 7/9 passed"
+  },
+  "error": null
+}

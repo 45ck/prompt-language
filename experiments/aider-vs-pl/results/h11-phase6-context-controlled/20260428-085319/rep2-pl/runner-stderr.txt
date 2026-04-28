@@ -1,0 +1,3 @@
+[prompt-language ci] FAILED (1)
+- PLR-007 Prompt runner exited with code 1. Detected dumb terminal, disabling fancy input and pretty output. Update git name with: git config user.name "Your Name" Update git email with: git config user.e...
+  Action: Inspect _runtime_diagnostic.prompt_runner.* in the saved session state for full runner output.

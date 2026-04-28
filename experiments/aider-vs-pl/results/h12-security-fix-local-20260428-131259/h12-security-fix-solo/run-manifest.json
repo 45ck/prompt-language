@@ -1,0 +1,21 @@
+{
+  "runId": "20260428-131259",
+  "label": "h12-security-fix-solo",
+  "fixture": "h12-security-fix",
+  "arm": "solo",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "workdir": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131259\\h12-security-fix-solo\\workspace",
+  "runnerResult": null,
+  "workspaceChanges": {
+    "changed": false,
+    "count": 0,
+    "files": []
+  },
+  "verifyResult": null,
+  "oracle": {
+    "passes": null,
+    "total": null,
+    "summary": "not run"
+  },
+  "error": null
+}

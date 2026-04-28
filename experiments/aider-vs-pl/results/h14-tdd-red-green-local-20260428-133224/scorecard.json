@@ -1,0 +1,32 @@
+[
+  {
+    "label": "h14-tdd-red-green-solo",
+    "arm": "solo",
+    "runnerExitCode": 0,
+    "runnerTimedOut": false,
+    "verifyExitCode": 0,
+    "verifyTimedOut": false,
+    "passes": 8,
+    "total": 8,
+    "oracleSummary": "Results: 8/8 passed",
+    "workspaceChanged": true,
+    "workspaceChangeCount": 2,
+    "wallSeconds": 241.222,
+    "errored": false
+  },
+  {
+    "label": "h14-tdd-red-green-pl",
+    "arm": "pl",
+    "runnerExitCode": 1,
+    "runnerTimedOut": false,
+    "verifyExitCode": 1,
+    "verifyTimedOut": false,
+    "passes": 6,
+    "total": 8,
+    "oracleSummary": "Results: 6/8 passed",
+    "workspaceChanged": true,
+    "workspaceChangeCount": 2,
+    "wallSeconds": 1282.037,
+    "errored": false
+  }
+]

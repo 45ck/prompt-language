@@ -1,0 +1,31 @@
+{
+  "command": "aider",
+  "arguments": [
+    "--model",
+    "ollama_chat/qwen3-opencode-big:30b",
+    "--no-auto-commits",
+    "--no-auto-lint",
+    "--no-stream",
+    "--yes-always",
+    "--no-show-model-warnings",
+    "--no-git",
+    "--no-gitignore",
+    "--no-check-update",
+    "--map-tokens",
+    "1024",
+    "--edit-format",
+    "whole",
+    "--timeout",
+    "1200",
+    "--message-file",
+    "solo-prompt.txt",
+    "TASK.md",
+    "package.json",
+    "verify.js",
+    "src/app.js",
+    "src/db.js"
+  ],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131425\\h12-security-fix-solo\\workspace",
+  "timeoutSeconds": 1200,
+  "startedAt": "2026-04-28T13:14:26.3969821+10:00"
+}

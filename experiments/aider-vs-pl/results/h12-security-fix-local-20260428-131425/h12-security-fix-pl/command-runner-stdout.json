@@ -1,0 +1,16 @@
+{
+  "command": "node",
+  "arguments": [
+    "C:\\Projects\\prompt-language\\bin\\cli.mjs",
+    "ci",
+    "--runner",
+    "aider",
+    "--model",
+    "ollama_chat/qwen3-opencode-big:30b",
+    "--file",
+    "task.flow"
+  ],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131425\\h12-security-fix-pl\\workspace",
+  "timeoutSeconds": 1200,
+  "startedAt": "2026-04-28T13:16:17.8794844+10:00"
+}

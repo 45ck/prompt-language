@@ -60,7 +60,35 @@ function Invoke-LoggedCommand(
   }
 
   $started = Get-Date
-  $process = [System.Diagnostics.Process]::Start($psi)
+  $commandInfoPath = Join-Path (Split-Path -Parent $StdoutPath) "command-$([IO.Path]::GetFileNameWithoutExtension($StdoutPath)).json"
+  $launchInfo = [pscustomobject]@{
+    command = $FileName
+    arguments = $Arguments
+    cwd = $WorkingDirectory
+    timeoutSeconds = $TimeoutSeconds
+    startedAt = $started.ToString("o")
+  }
+  $launchInfo | ConvertTo-Json -Depth 5 | Set-Content -Encoding ascii -LiteralPath $commandInfoPath
+
+  try {
+    $process = [System.Diagnostics.Process]::Start($psi)
+  } catch {
+    $_.Exception.ToString() | Set-Content -Encoding utf8 -LiteralPath $StderrPath
+    return [pscustomobject]@{
+      command = $FileName
+      arguments = $Arguments
+      cwd = $WorkingDirectory
+      exitCode = $null
+      timedOut = $false
+      timeoutSeconds = $TimeoutSeconds
+      startedAt = $started.ToString("o")
+      endedAt = (Get-Date).ToString("o")
+      wallSeconds = 0
+      launchFailed = $true
+      error = $_.Exception.Message
+    }
+  }
+
   $stdoutTask = $process.StandardOutput.ReadToEndAsync()
   $stderrTask = $process.StandardError.ReadToEndAsync()
   $timedOut = $false
@@ -71,8 +99,26 @@ function Invoke-LoggedCommand(
     $process.WaitForExit()
   }
 
-  $stdoutTask.Wait()
-  $stderrTask.Wait()
+  try {
+    $stdoutTask.Wait()
+    $stderrTask.Wait()
+  } catch {
+    $_.Exception.ToString() | Set-Content -Encoding utf8 -LiteralPath $StderrPath
+    $ended = Get-Date
+    return [pscustomobject]@{
+      command = $FileName
+      arguments = $Arguments
+      cwd = $WorkingDirectory
+      exitCode = if ($timedOut) { -1 } else { $process.ExitCode }
+      timedOut = $timedOut
+      timeoutSeconds = $TimeoutSeconds
+      startedAt = $started.ToString("o")
+      endedAt = $ended.ToString("o")
+      wallSeconds = [math]::Round(($ended - $started).TotalSeconds, 3)
+      outputReadFailed = $true
+      error = $_.Exception.Message
+    }
+  }
   $ended = Get-Date
 
   $stdoutTask.Result | Set-Content -Encoding utf8 -LiteralPath $StdoutPath
@@ -137,6 +183,18 @@ Stop only when node verify.js passes or you cannot make further progress.
 "@ | Set-Content -Encoding ascii -LiteralPath (Join-Path $Workdir "solo-prompt.txt")
 }
 
+function Get-SoloAiderFiles($Workdir) {
+  $files = @("TASK.md", "package.json", "verify.js")
+  $srcRoot = Join-Path $Workdir "src"
+  if (Test-Path -LiteralPath $srcRoot) {
+    $files += Get-ChildItem -LiteralPath $srcRoot -File |
+      Sort-Object Name |
+      ForEach-Object { "src/$($_.Name)" }
+  }
+
+  return @($files | Where-Object { Test-Path -LiteralPath (Join-Path $Workdir $_) })
+}
+
 function Invoke-Solo($Workdir, $CellDir) {
   Write-SoloPrompt $Workdir
   $args = @(
@@ -152,12 +210,9 @@ function Invoke-Solo($Workdir, $CellDir) {
     "--map-tokens", "1024",
     "--edit-format", "whole",
     "--timeout", [string]$AiderTimeoutSeconds,
-    "--message-file", "solo-prompt.txt",
-    "TASK.md",
-    "verify.js",
-    "src/app.js",
-    "src/test.js"
+    "--message-file", "solo-prompt.txt"
   )
+  $args += Get-SoloAiderFiles $Workdir
 
   return Invoke-LoggedCommand `
     -FileName "aider" `
@@ -212,7 +267,7 @@ function Invoke-Verify($Workdir, $CellDir) {
 }
 
 New-Directory $RunRoot
-"*/workspace/`n" | Set-Content -Encoding ascii -LiteralPath (Join-Path $RunRoot ".gitignore")
+"*/workspace/" | Set-Content -Encoding ascii -LiteralPath (Join-Path $RunRoot ".gitignore")
 $results = @()
 
 foreach ($arm in @("solo", "pl")) {

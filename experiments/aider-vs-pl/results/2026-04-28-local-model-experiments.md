@@ -9,7 +9,7 @@ The local-model results are mixed but useful:
 
 - H15 produced a clean PL win: solo reached `6/10`; PL reached `10/10`.
 - H11 shows high variance at the current task size. PL can repair to `11/11`, but first-turn timeout/no-capture failures still happen.
-- H12/H14 ad hoc suite results are partially contaminated by launcher/cwd problems and should not be used as claim-grade comparisons.
+- H12/H14 ad hoc suite results were partially contaminated by launcher/cwd problems. Clean harnessed reruns show H12 tied at `8/9`, while H14 favored solo.
 - R9 qwen3:8b review grounding detects failures reliably, but repair remains unreliable; the earlier `11/11` R9-E run is best treated as an outlier.
 
 ## Results
@@ -29,6 +29,10 @@ The local-model results are mixed but useful:
 | H14 `20260428-110536` | PL | `6/8` | PL gate failure | Missing import plus incomplete merge behavior. |
 | H15 `20260428-120933` | solo | `6/10` | exit 0, `417s` | Real edits, verifier failed. |
 | H15 `20260428-120933` | PL | `10/10` | exit 0, `494s` | Real edits, verifier passed. |
+| H12 clean rerun `20260428-131425` | solo | `8/9` | exit 0, `111s` | Real edit; same apostrophe-name failure. |
+| H12 clean rerun `20260428-131425` | PL | `8/9` | exit 0, `811s` | Real edit; same failure at much higher cost. |
+| H14 clean rerun `20260428-133224` | solo | `8/8` | exit 0, `241s` | Clean solo pass. |
+| H14 clean rerun `20260428-133224` | PL | `6/8` | exit 1, `1282s` | TDD flow failed to converge. |
 
 ## Harness Fix
 
@@ -47,13 +51,15 @@ The harness now:
 
 Prompt Language helps most when the task benefits from staged control: implement, check, repair, and re-run the oracle. H15 is the clean example from today: the same local model failed as a solo one-shot but passed under PL control.
 
+The clean H12/H14 reruns are the counterweight. H12 tied while PL was much slower, and H14 favored solo. This means the work is not just "wrap everything in PL"; the flow has to fit the task. Over-staging can make local models slower and less reliable.
+
 The main local-model limit is not just intelligence. It is also capture reliability and latency. H11 failures often happened before edits were captured, so they should be classified separately from genuine task-solution failures.
 
 For smaller local models, R9 shows that verifier-grounded review can identify defects, but identifying the defect is not enough. The repair prompt must make the root cause and minimal diff unavoidable, or the 8B model repeats the same structural parsing bug.
 
 ## Next
 
-1. Rerun H12/H14 only through `run-fixture-pair.ps1` or a derived harness with the same cwd/manifest guarantees.
+1. Redesign H14's TDD flow so the implementation prompt explicitly imports/exports the function and runs the external oracle, not only the model-written tests.
 2. Add an R9-F repair prompt that includes full verifier stdout, asks for a one-line root cause, then requests a minimal diff.
 3. Split H11's first PL prompt into smaller file groups or raise the first-turn timeout, then rerun with the new no-edit classification.
 4. Use bead `prompt-language-lghe` to design a senior-engineer criteria-ranking PL program and test it against plain persona prompting on non-coding decision scenarios.

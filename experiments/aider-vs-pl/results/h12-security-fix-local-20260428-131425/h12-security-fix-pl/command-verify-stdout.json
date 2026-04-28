@@ -1,0 +1,9 @@
+{
+  "command": "node",
+  "arguments": [
+    "verify.js"
+  ],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\aider-vs-pl\\results\\h12-security-fix-local-20260428-131425\\h12-security-fix-pl\\workspace",
+  "timeoutSeconds": 60,
+  "startedAt": "2026-04-28T13:29:49.3030899+10:00"
+}

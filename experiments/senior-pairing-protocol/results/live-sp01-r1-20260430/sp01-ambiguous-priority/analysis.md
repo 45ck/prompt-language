@@ -18,14 +18,16 @@ Model: `ollama_chat/qwen3-opencode-big:30b`
 
 This is a pilot run, not claim-grade evidence. It is `k=1` on one JavaScript
 maintenance fixture. It proves the harness can execute the primary local-model
-arms, preserve fresh workspaces, capture deterministic artifacts, and avoid
-observed `verify.js` contamination on the Aider path.
+arms and capture enough deterministic evidence for the coarse pass/fail table.
+It does not yet prove full artifact completeness, strong reproducibility, or
+complete oracle isolation.
 
 The useful signal is that compact PL senior pairing passed the oracle without
-oracle access violation, while persona-only timed out/fell through without
+observed oracle-access violation, while persona-only stalled or failed without
 editing the workspace. Solo also passed, so this run does not prove PL beats a
 direct local prompt on SP01. It does show persona theater was not sufficient in
-this sample.
+this sample, but the failure cause is not fully auditable from the committed
+bundle.
 
 ## Operational Notes
 
@@ -37,3 +39,5 @@ this sample.
 - The harness initially recorded `npm test` incorrectly on Windows; test
   artifacts and manifests in this bundle were corrected after fixing the
   harness command invocation.
+- Deeper multi-agent review is captured in `deep-analysis.md`; it should be
+  used as the claim-boundary note for this pilot.

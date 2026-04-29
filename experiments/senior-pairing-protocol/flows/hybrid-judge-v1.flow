@@ -1,0 +1,51 @@
+Goal: Solve the task locally, then use a stronger judge for high-risk senior review
+
+rubric "senior_engineering_quality"
+  criterion oracle_correctness type number
+  criterion ambiguity_handling type number
+  criterion risk_classification type number
+  criterion test_quality type number
+  criterion minimality type number
+  criterion repair_discipline type number
+  criterion escalation_judgment type number
+end
+
+judge "external_senior_judge"
+  kind: model
+  rubric: "senior_engineering_quality"
+  inputs: [diff, test_output, output]
+end
+
+flow:
+  let task_brief = run "node -e \"process.stdout.write(require('fs').readFileSync('TASK.md','utf8'))\"" [timeout 60]
+  let senior_frame = prompt "You are acting as a senior engineer guiding a junior local-model developer. Read the task brief and return JSON with: objective, ambiguity, top_risks, smallest_safe_strategy, tests_to_write, escalation_needed. Runtime can be slow; quality matters more than speed. Task brief: ${task_brief}" as json {
+    "objective": "string",
+    "ambiguity": "string",
+    "top_risks": "string",
+    "smallest_safe_strategy": "string",
+    "tests_to_write": "string",
+    "escalation_needed": "boolean"
+  }
+  prompt: Implement the task in a tightly supervised style. First inspect the needed files, then add tests for the risky behavior, then make the smallest production change. Use this senior frame: ${senior_frame}
+  until command_succeeded max 4
+    run: npm test [timeout 300]
+    if command_failed
+      prompt: npm test failed. Repair minimally using the actual output. Output: ${last_stdout} ${last_stderr}
+    end
+  end
+  until command_succeeded max 4
+    run: node verify.js [timeout 300]
+    if command_failed
+      prompt: node verify.js failed. State the root cause in one sentence, then repair minimally. Output: ${last_stdout} ${last_stderr}
+    end
+  end
+  review strict using judge "external_senior_judge" max 2
+    run: npm test [timeout 300]
+    run: node verify.js [timeout 300]
+    prompt: Address only concrete findings from the external senior judge. If the judge passes, do not rewrite. Latest judge reason: ${_review_result.reason}. Latest critique: ${_review_critique}
+  end
+  prompt: Final handoff: summarize deterministic checks, judge verdict, residual risks, and any escalation decision. Judge pass=${_review_result.pass}; confidence=${_review_result.confidence}; reason=${_review_result.reason}
+
+done when:
+  gate tests_pass: npm test
+  gate oracle_passes: node verify.js

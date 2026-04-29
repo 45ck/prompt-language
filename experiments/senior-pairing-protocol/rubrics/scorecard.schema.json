@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Senior Pairing Protocol Scorecard",
+  "type": "object",
+  "required": ["task_id", "arm", "model", "scores", "runtime_telemetry", "verdict"],
+  "properties": {
+    "task_id": { "type": "string" },
+    "arm": {
+      "type": "string",
+      "enum": ["solo-local", "persona-only-control", "pl-senior-pairing-local", "pl-hybrid-judge"]
+    },
+    "model": { "type": "string" },
+    "scores": {
+      "type": "object",
+      "required": [
+        "oracle_correctness",
+        "ambiguity_handling",
+        "risk_classification",
+        "test_quality",
+        "minimality",
+        "repair_discipline",
+        "escalation_judgment"
+      ],
+      "properties": {
+        "oracle_correctness": { "type": "number", "minimum": 0, "maximum": 40 },
+        "ambiguity_handling": { "type": "number", "minimum": 0, "maximum": 10 },
+        "risk_classification": { "type": "number", "minimum": 0, "maximum": 10 },
+        "test_quality": { "type": "number", "minimum": 0, "maximum": 15 },
+        "minimality": { "type": "number", "minimum": 0, "maximum": 10 },
+        "repair_discipline": { "type": "number", "minimum": 0, "maximum": 10 },
+        "escalation_judgment": { "type": "number", "minimum": 0, "maximum": 5 }
+      },
+      "additionalProperties": false
+    },
+    "runtime_telemetry": {
+      "type": "object",
+      "required": ["wall_seconds", "timeout_classification"],
+      "properties": {
+        "wall_seconds": { "type": "number", "minimum": 0 },
+        "prompt_turn_seconds": { "type": "number", "minimum": 0 },
+        "verify_seconds": { "type": "number", "minimum": 0 },
+        "timeout_classification": {
+          "type": "string",
+          "enum": [
+            "none",
+            "solution-timeout",
+            "capture-timeout",
+            "command-timeout",
+            "no-edit-timeout"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["pass", "partial", "fail", "unscorable"]
+    },
+    "notes": { "type": "string" }
+  },
+  "additionalProperties": false
+}

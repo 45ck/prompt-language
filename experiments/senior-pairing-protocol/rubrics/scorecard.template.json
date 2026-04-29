@@ -1,0 +1,22 @@
+{
+  "task_id": "sp01-ambiguous-priority",
+  "arm": "pl-senior-pairing-local",
+  "model": "ollama_chat/example-local-model",
+  "scores": {
+    "oracle_correctness": 0,
+    "ambiguity_handling": 0,
+    "risk_classification": 0,
+    "test_quality": 0,
+    "minimality": 0,
+    "repair_discipline": 0,
+    "escalation_judgment": 0
+  },
+  "runtime_telemetry": {
+    "wall_seconds": 0,
+    "prompt_turn_seconds": 0,
+    "verify_seconds": 0,
+    "timeout_classification": "none"
+  },
+  "verdict": "unscorable",
+  "notes": ""
+}

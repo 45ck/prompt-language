@@ -1,0 +1,17 @@
+{
+  "experiment_id": "senior-pairing-protocol",
+  "task_id": "sp01-ambiguous-priority",
+  "arm": "pl-senior-pairing-local",
+  "model": "ollama_chat/example-local-model",
+  "runner": "aider",
+  "started_at": "YYYY-MM-DDTHH:mm:ssZ",
+  "completed_at": "YYYY-MM-DDTHH:mm:ssZ",
+  "workspace_changed": false,
+  "exit_code": null,
+  "timeouts": {
+    "prompt_turn_seconds": 900,
+    "test_command_seconds": 300,
+    "verify_command_seconds": 300
+  },
+  "runtime_is_primary_score": false
+}

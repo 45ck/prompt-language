@@ -1,0 +1,20 @@
+Goal: Solve the task with a senior-engineer persona prompt but without PL checkpoints
+
+flow:
+  prompt: You are a senior software engineer pairing with a junior developer. Read TASK.md, inspect the workspace, identify ambiguity and risk, write appropriate tests, implement the smallest safe change, run npm test and node verify.js, repair failures, and summarize residual risks. This is a persona-only control arm: do the work directly without relying on structured PL checkpoints beyond the verification loops in this baseline.
+  until command_succeeded max 3
+    run: npm test [timeout 300]
+    if command_failed
+      prompt: npm test failed. As the senior engineer, diagnose the failure and make the smallest safe repair. Test output: ${last_stdout} ${last_stderr}
+    end
+  end
+  until command_succeeded max 3
+    run: node verify.js [timeout 300]
+    if command_failed
+      prompt: The verifier failed. As the senior engineer, diagnose the failure and make the smallest safe repair. Verifier output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+done when:
+  gate tests_pass: npm test
+  gate oracle_passes: node verify.js

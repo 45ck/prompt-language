@@ -1,0 +1,23 @@
+{
+  "id": "senior-pairing-protocol",
+  "status": "planned",
+  "primary_question": "Can prompt-language encode senior-engineer metacognition to improve local-model coding outcomes?",
+  "runtime_policy": {
+    "record_runtime": true,
+    "runtime_primary_score": false,
+    "reason": "Local inference is slow; this phase prioritizes decision and artifact quality."
+  },
+  "arms": ["solo-local", "persona-only-control", "pl-senior-pairing-local", "pl-hybrid-judge"],
+  "flows": {
+    "solo-local": "flows/solo-baseline.flow",
+    "persona-only-control": "flows/persona-control.flow",
+    "pl-senior-pairing-local": "flows/senior-pairing-v1.flow",
+    "pl-hybrid-judge": "flows/hybrid-judge-v1.flow"
+  },
+  "tasks": [
+    "tasks/sp01-ambiguous-priority.md",
+    "tasks/sp02-auth-boundary.md",
+    "tasks/sp03-config-migration.md"
+  ],
+  "scorecard_schema": "rubrics/scorecard.schema.json"
+}

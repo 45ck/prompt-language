@@ -1,0 +1,20 @@
+Goal: Solve the task directly as the solo local-model baseline
+
+flow:
+  prompt: Read TASK.md, inspect the workspace, and implement the requested change. Make the smallest safe change that satisfies npm test and node verify.js. If requirements are ambiguous, choose the most likely interpretation and state the assumption in your final response.
+  until command_succeeded max 3
+    run: npm test [timeout 300]
+    if command_failed
+      prompt: npm test failed. Fix only the relevant task files with the smallest change. Test output: ${last_stdout} ${last_stderr}
+    end
+  end
+  until command_succeeded max 3
+    run: node verify.js [timeout 300]
+    if command_failed
+      prompt: The verifier failed. Fix only the relevant task files with the smallest change. Verifier output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+done when:
+  gate tests_pass: npm test
+  gate oracle_passes: node verify.js

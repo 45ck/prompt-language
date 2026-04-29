@@ -1,4 +1,4 @@
-# STATUS — open research work at 2026-04-28
+# STATUS — open research work at 2026-04-30
 
 Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/` via the `bd` CLI; this file is a committed mirror so the status is readable without a bd install and is PR-reviewable.
 
@@ -9,7 +9,8 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 - 2026-04-28 local-model ladder reruns are committed. H15 is a clean PL win (`10/10` vs solo `6/10`), H12 is a tie (`8/9` vs `8/9`) with PL much slower, and H14 is a solo win (`8/8` vs PL `6/8`).
 - The current interpretation changed: PL helps when the flow supplies task-fit staged control and oracle-fed repair; it can hurt when over-staged or when repair prompts do not expose the real failure.
 - New tracked experiment: `prompt-language-sfd3`, hybrid local/frontier model routing. Goal: local models handle bulk work, Codex/GPT-5.5-class models handle high-ambiguity reasoning, stuck-state repair, and final review.
-- Raw ad hoc logs from H11/H12/H14/H15 remain local and uncommitted; committed evidence should prefer scorecards, manifests, and curated reports.
+- New planned experiment package: `experiments/senior-pairing-protocol/`. Goal: test whether PL can encode senior-engineer metacognition for local models acting like junior developers. Runtime is telemetry, not a primary score.
+- Raw ad hoc logs from H11/H12/H14/H15 are now archived or ignored according to artifact policy; committed evidence should prefer scorecards, manifests, and curated reports.
 
 ## Open items by priority
 
@@ -30,6 +31,7 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 | `prompt-zbpc`          | task    | Run R7 foreach-spawn experiment (blocked on isolation)                       | `prompt-l1xz`, `prompt-nba9` |
 | `prompt-lmas`          | feature | Add pi-mono runner adapter (~300 LOC headless JSONL bridge)                  | —                            |
 | `prompt-language-sfd3` | task    | Hybrid local/frontier model routing experiment                               | —                            |
+| `prompt-language-lghe` | task    | Senior Pairing Protocol experiment: local model as junior developer          | —                            |
 
 ### P3 — follow-ups and ecosystem work
 
@@ -76,6 +78,7 @@ These are written plans awaiting bead-tracked execution tasks:
 - `experiments/REPO-JOURNEY-PLAN.md` — folder reorg plan (not executed)
 - `experiments/harness-arena-HA-E1-PLAN.md` — HA-E1 pilot design
 - `experiments/harness-arena/hybrid-model-routing.md` — HA-HR1 dynamic routing pilot design
+- `experiments/senior-pairing-protocol/` — SPP senior-engineer metacognition pilot design
 - `experiments/pi-mono-RUNNER-PLAN.md` — pi-mono adapter implementation plan for `prompt-lmas`
 
 ## Conventions

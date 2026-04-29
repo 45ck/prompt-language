@@ -1,0 +1,39 @@
+Goal: Solve the task through senior-engineer metacognitive supervision
+
+flow:
+  let task_brief = run "node -e \"process.stdout.write(require('fs').readFileSync('TASK.md','utf8'))\"" [timeout 60]
+  let senior_frame = prompt "You are acting as a senior engineer sitting beside a junior developer. Read this task brief and respond as JSON with: objective, ambiguity, top_risks, smallest_safe_strategy, tests_to_write, escalation_needed. Do not implement yet. Task brief: ${task_brief}" as json {
+    "objective": "string",
+    "ambiguity": "string",
+    "top_risks": "string",
+    "smallest_safe_strategy": "string",
+    "tests_to_write": "string",
+    "escalation_needed": "boolean"
+  }
+  prompt: Before editing, inspect only the files needed for the task. Then write or update tests that would fail on the original behavior. Use this senior frame as the contract: objective=${senior_frame.objective}; ambiguity=${senior_frame.ambiguity}; risks=${senior_frame.top_risks}; tests=${senior_frame.tests_to_write}. Do not implement the production fix yet.
+  run: npm test [timeout 300]
+  if command_succeeded
+    prompt: The tests passed before implementation, which means they may not prove the intended behavior. Strengthen the tests so they fail on the missing or buggy behavior. Keep the changes focused.
+    run: npm test [timeout 300]
+  end
+  prompt: Now implement the smallest safe production change according to the senior strategy: ${senior_frame.smallest_safe_strategy}. Do not broaden scope. Do not rewrite unrelated code.
+  review strict criteria: "The implementation must match the task, preserve architecture boundaries, keep the diff minimal, and use tests that cover the risky behavior." grounded-by "npm test" max 4
+    run: npm test [timeout 300]
+    prompt: If npm test fails, repair the smallest relevant part of the implementation or tests. Use the latest critique and command output. Critique: ${_review_critique}. Output: ${last_stdout} ${last_stderr}
+  end
+  review strict criteria: "The external oracle must pass. Repairs must be grounded in verifier output, not guesses." grounded-by "node verify.js" max 4
+    run: node verify.js [timeout 300]
+    prompt: If the verifier fails, identify the root cause in one sentence, then make the smallest fix. Verifier output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
+  end
+  let final_self_review = prompt "Review the final state as the senior engineer. Return JSON with: pass, residual_risks, tests_evidence, minimality_evidence, escalation_needed. Do not include chain-of-thought; cite concrete evidence only." as json {
+    "pass": "boolean",
+    "residual_risks": "string",
+    "tests_evidence": "string",
+    "minimality_evidence": "string",
+    "escalation_needed": "boolean"
+  }
+  prompt: Final handoff: summarize the implementation, deterministic verification results, residual risks, and whether escalation is still needed. Use this self-review: ${final_self_review}
+
+done when:
+  gate tests_pass: npm test
+  gate oracle_passes: node verify.js

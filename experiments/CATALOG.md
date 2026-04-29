@@ -2,7 +2,7 @@
 
 Comprehensive index of all prompt-language experiments. Each experiment tests a specific hypothesis about whether structured flow orchestration improves AI-driven software delivery compared to unstructured prompting.
 
-Last updated: 2026-04-28
+Last updated: 2026-04-30
 
 ## Summary Table
 
@@ -17,6 +17,7 @@ Last updated: 2026-04-28
 | E8     | Website Factory              | Marketing website (enterprise) | Complete    | 4 runs              | Factory 3/4, Solo 4/4                      |
 | E9     | Full SDLC Factory            | Full lifecycle website         | Complete    | 2 runs + QA variant | Phases 1-5 execute end-to-end              |
 | HA-HR1 | Hybrid Model Routing         | Stack/routing comparison       | Planned     | 0                   | Local bulk + frontier escalation designed  |
+| SPP    | Senior Pairing Protocol      | Local-model supervision        | Planned     | 0                   | Senior metacognition protocol authored     |
 | --     | Aider vs PL                  | Coding assistant comparison    | Complete    | 10 hypotheses       | PL 6 wins, 0 losses, 3 ties                |
 | --     | Meta-Factory                 | Self-hosting (PL writes PL)    | In Progress | M1 authored         | M1 flow authored, not yet executed live    |
 | --     | Premature Stop Benchmark     | Reliability                    | Scaffold    | 0                   | Experiment designed, not executed          |
@@ -284,6 +285,29 @@ E5 deliberately demotes E4's process-fidelity signals (`processConformance`, `tr
 **Primary Metrics**: oracle pass rate, wall time, frontier calls per success, estimated USD cost per success, local GPU active minutes, and final review defect count.
 
 **Key Design Point**: The router must be able to change the runner/model for the next unit of work. A pure advisor is only a baseline because advice can be ignored or mistranslated by the local model.
+
+---
+
+## SPP: Senior Pairing Protocol
+
+**Directory**: [`senior-pairing-protocol/`](senior-pairing-protocol/)
+
+**Hypothesis**: Prompt Language can encode senior-engineer metacognition and supervision strongly enough to improve local-model coding outcomes versus a solo local prompt.
+
+**Status**: Planned (protocol, rubrics, task families, result templates, and parse-verified flow arms authored)
+
+**Arms**:
+
+- `solo-local`: local model receives the task directly
+- `persona-only-control`: local model receives a senior-engineer persona prompt without PL checkpoints
+- `pl-senior-pairing-local`: same local model runs under senior-pairing PL control
+- `pl-hybrid-judge`: local model performs bulk work and a stronger external judge reviews high-risk decisions
+
+**Primary Metrics**: deterministic oracle correctness, ambiguity handling, risk classification, test quality, minimality, repair discipline, and escalation judgment.
+
+**Runtime Policy**: Runtime is telemetry, not a primary score. Local inference is expected to be slow; this experiment prioritizes decision quality and final artifact quality.
+
+**Next Run**: SP01 ambiguous-priority merge across all three arms.
 
 ---
 

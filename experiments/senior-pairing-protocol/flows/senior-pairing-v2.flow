@@ -80,7 +80,3 @@ flow:
     "expected_score_delta_vs_persona": "string"
   }
   prompt: Final handoff: summarize the implementation, test evidence, verifier evidence, senior decision path, residual risks, and whether escalation is needed. Use final self-review=${final_self_review}
-
-done when:
-  gate tests_pass: npm test
-  gate oracle_passes: node verify.js

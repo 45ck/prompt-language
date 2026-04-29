@@ -39,19 +39,19 @@ model.
 
 ## Feature Matrix
 
-| Feature               | Primary arm | V2 exploratory | Full probe | Reason                                                       |
-| --------------------- | ----------- | -------------- | ---------- | ------------------------------------------------------------ |
-| `let run` capture     | Yes         | Yes            | Yes        | Reads task and runtime telemetry from deterministic commands |
-| `let prompt as json`  | Yes         | Yes            | Yes        | Captures senior frame and final review as structured data    |
-| decision ladder       | No          | Yes            | Partial    | Tests ranked criteria and explicit option rejection          |
-| `until` repair loops  | Yes         | Yes            | Yes        | Bounds test and verifier repair attempts                     |
-| command timeouts      | Yes         | Yes            | Yes        | Prevents stuck tests from blocking slow local inference      |
-| `review strict`       | Yes         | Yes            | Yes        | Forces grounded repair instead of self-declared completion   |
-| `rubric` / `judge`    | Hybrid only | No             | Yes        | Keeps external judging separate from deterministic gates     |
-| `spawn` / `await`     | No          | No             | Yes        | Tests parent-controlled senior/junior separation             |
-| child variable import | No          | No             | Yes        | Feeds risk and test-plan child outputs back to parent flow   |
-| `try` / `catch`       | No          | No             | Yes        | Handles intentional red-test failures without losing state   |
-| final gates           | Yes         | Yes            | Yes        | Keeps deterministic evidence authoritative                   |
+| Feature               | Primary arm | V2 exploratory | Full probe | Reason                                                                                    |
+| --------------------- | ----------- | -------------- | ---------- | ----------------------------------------------------------------------------------------- |
+| `let run` capture     | Yes         | Yes            | Yes        | Reads task and runtime telemetry from deterministic commands                              |
+| `let prompt as json`  | Yes         | Yes            | Yes        | Captures senior frame and final review as structured data                                 |
+| decision ladder       | No          | Yes            | Partial    | Tests ranked criteria and explicit option rejection                                       |
+| `until` repair loops  | Yes         | Yes            | Yes        | Bounds test and verifier repair attempts                                                  |
+| command timeouts      | Yes         | Yes            | Yes        | Prevents stuck tests from blocking slow local inference                                   |
+| `review strict`       | Yes         | Yes            | Yes        | Forces grounded repair instead of self-declared completion                                |
+| `rubric` / `judge`    | Hybrid only | No             | Yes        | Keeps external judging separate from deterministic gates                                  |
+| `spawn` / `await`     | No          | No             | Yes        | Tests parent-controlled senior/junior separation                                          |
+| child variable import | No          | No             | Yes        | Feeds risk and test-plan child outputs back to parent flow                                |
+| `try` / `catch`       | No          | No             | Yes        | Handles intentional red-test failures without losing state                                |
+| final gates           | Yes         | Harness-level  | Yes        | V2 uses harness checks so final senior artifacts are not skipped by early gate completion |
 
 ## Interpretation Rule
 
@@ -65,3 +65,8 @@ The v2 exploratory arm should be interpreted as a scaffold-depth test. If it
 beats compact PL, the follow-up question is which added surface caused the lift:
 risk register, decision ranking, explicit invariants, red-test assessment, or
 final evidence review.
+
+V2 intentionally relies on the experiment harness for final `npm test` and
+`node verify.js` checks. In-flow completion gates can complete the flow
+immediately after deterministic checks pass, which prevents post-verification
+senior-review artifacts from being captured.

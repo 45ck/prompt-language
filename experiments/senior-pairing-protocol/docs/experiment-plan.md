@@ -5,6 +5,8 @@
 The Senior Pairing Protocol tests prompt-language as a supervision system for
 local LLM coding agents. The core hypothesis is that explicit senior-engineer
 metacognition improves task outcomes more reliably than a plain persona prompt.
+This first package is a pilot for small JavaScript maintenance fixtures, not a
+general claim across all software work.
 
 ## Hypotheses
 
@@ -20,7 +22,7 @@ metacognition improves task outcomes more reliably than a plain persona prompt.
 ## Acceptance Criteria
 
 - The experiment includes at least four arms: solo local, persona-only control,
-  PL local, and PL hybrid judge.
+  PL local, a full-feature PL probe, and PL hybrid judge.
 - Every scored task has deterministic verification through `npm test` and
   `node verify.js`.
 - Scoring separates deterministic correctness from senior-behavior quality.
@@ -35,8 +37,9 @@ metacognition improves task outcomes more reliably than a plain persona prompt.
 - Proving local models can replace frontier models.
 - Optimizing for fastest completion.
 - Using a senior persona as a substitute for grounded verification.
-- Adding new prompt-language syntax.
-- Creating a broad benchmark suite before the first task shape is validated.
+- Adding broad new prompt-language syntax beyond execution-readiness fixes.
+- Claiming broad benchmark coverage before TDD and performance fixtures are
+  frozen.
 
 ## Experimental Arms
 
@@ -56,6 +59,14 @@ the PL program adds value beyond better instruction wording.
 The local model runs under `flows/senior-pairing-v1.flow`. The flow forces
 structured clarification, risk assessment, plan capture, implementation,
 grounded review, and repair.
+
+### `pl-senior-pairing-full-local`
+
+The local model runs under `flows/senior-pairing-full.flow`. This is an
+exploratory feature probe that exercises spawned risk and test-plan children,
+child variable import, `try`/`catch`, strict review, rubric/judge review, and
+deterministic gates. It should not replace the compact PL arm as the first
+research comparison because the extra orchestration is a confound.
 
 ### `pl-hybrid-judge`
 
@@ -89,6 +100,14 @@ Runtime is recorded as telemetry and is not part of the initial weighted score.
 - Score final artifacts before transcript quality.
 - Require deterministic gates before model-judge approval.
 - Keep task-specific oracle output hidden until repair loops need it.
+- Treat reading `verify.js` before the first verifier failure as a protocol
+  violation unless a task explicitly permits it.
+- Equalize the primary arms at three test/verifier repair loops and compare the
+  full-feature arm only as an exploratory ablation until a feature budget is
+  pre-registered.
+- Randomize arm order, use at least three repeats per task, and blind human
+  scorers to arm labels.
 - Record no-edit, timeout, and capture-failure states separately from solution
   failures.
-- Rotate task shapes: ambiguity, security, migration, TDD, and performance.
+- Rotate task shapes only after the pilot: ambiguity, security, migration, TDD,
+  and performance.

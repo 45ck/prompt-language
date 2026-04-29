@@ -7,11 +7,33 @@
     "runtime_primary_score": false,
     "reason": "Local inference is slow; this phase prioritizes decision and artifact quality."
   },
-  "arms": ["solo-local", "persona-only-control", "pl-senior-pairing-local", "pl-hybrid-judge"],
+  "claim_scope": "Pilot evidence for small JavaScript maintenance fixtures only until TDD and performance fixtures are added.",
+  "budgets": {
+    "repeat_count_minimum": 3,
+    "prompt_turn_seconds": 900,
+    "gate_command_seconds": 300,
+    "arm_wall_budget_seconds": 7200,
+    "max_repair_loops": 3,
+    "max_prompt_turns": 24
+  },
+  "controls": {
+    "fresh_fixture_per_arm": true,
+    "randomize_arm_order": true,
+    "blind_human_scorers_to_arm": true,
+    "oracle_read_before_failure_is_violation": true
+  },
+  "arms": [
+    "solo-local",
+    "persona-only-control",
+    "pl-senior-pairing-local",
+    "pl-senior-pairing-full-local",
+    "pl-hybrid-judge"
+  ],
   "flows": {
     "solo-local": "flows/solo-baseline.flow",
     "persona-only-control": "flows/persona-control.flow",
     "pl-senior-pairing-local": "flows/senior-pairing-v1.flow",
+    "pl-senior-pairing-full-local": "flows/senior-pairing-full.flow",
     "pl-hybrid-judge": "flows/hybrid-judge-v1.flow"
   },
   "tasks": [

@@ -613,7 +613,9 @@ function renderLetNode(
       break;
     }
     case 'run':
-      sourceText = `run "${node.source.command}"`;
+      sourceText = `run "${node.source.command}"${
+        node.source.timeoutMs ? ` [timeout ${node.source.timeoutMs / 1000}s]` : ''
+      }`;
       break;
     case 'memory':
       sourceText = `memory "${node.source.key}"`;

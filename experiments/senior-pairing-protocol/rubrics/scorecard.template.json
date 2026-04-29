@@ -11,12 +11,22 @@
     "repair_discipline": 0,
     "escalation_judgment": 0
   },
+  "evidence": {
+    "oracle_correctness": "",
+    "ambiguity_handling": "",
+    "risk_classification": "",
+    "test_quality": "",
+    "minimality": "",
+    "repair_discipline": "",
+    "escalation_judgment": ""
+  },
   "runtime_telemetry": {
     "wall_seconds": 0,
     "prompt_turn_seconds": 0,
     "verify_seconds": 0,
     "timeout_classification": "none"
   },
+  "oracle_access_violation": false,
   "verdict": "unscorable",
   "notes": ""
 }

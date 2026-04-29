@@ -377,6 +377,25 @@ describe('AiderPromptTurnRunner', () => {
     }
   });
 
+  it('resolveFiles includes prompt-language capture files without extensions', () => {
+    const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
+
+    try {
+      mkdirSync(join(root, '.prompt-language', 'vars'), { recursive: true });
+      writeFileSync(join(root, '.prompt-language', 'vars', 'analysis'), '__PENDING__', 'utf8');
+
+      expect(
+        runner.resolveFiles(
+          root,
+          'Save your JSON answer to `.prompt-language/vars/analysis` using the Write tool.',
+        ),
+      ).toEqual(['.prompt-language/vars/analysis']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('run sends the scoped prompt to aider while preserving file scope', async () => {
     vi.stubEnv('PROMPT_LANGUAGE_AIDER_SCOPED_MESSAGE', '1');
     mockedExecFileSync.mockReturnValue('ok');

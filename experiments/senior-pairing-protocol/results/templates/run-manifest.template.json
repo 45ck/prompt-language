@@ -1,9 +1,22 @@
 {
   "experiment_id": "senior-pairing-protocol",
   "task_id": "sp01-ambiguous-priority",
+  "repeat_id": "r01",
   "arm": "pl-senior-pairing-local",
+  "arm_order_seed": "YYYYMMDD-task-repeat-seed",
+  "arm_order_position": 1,
   "model": "ollama_chat/example-local-model",
+  "model_digest": "sha256-or-local-model-id",
+  "temperature": 0,
   "runner": "aider",
+  "judge_model": null,
+  "repo_commit": "git-sha",
+  "fixture_hash": "sha256",
+  "hardware": {
+    "gpu": "model-or-none",
+    "vram_gb": null,
+    "driver": null
+  },
   "started_at": "YYYY-MM-DDTHH:mm:ssZ",
   "completed_at": "YYYY-MM-DDTHH:mm:ssZ",
   "workspace_changed": false,
@@ -11,7 +24,16 @@
   "timeouts": {
     "prompt_turn_seconds": 900,
     "test_command_seconds": 300,
-    "verify_command_seconds": 300
+    "verify_command_seconds": 300,
+    "gate_command_seconds": 300,
+    "arm_wall_budget_seconds": 7200,
+    "max_prompt_turns": 24,
+    "max_repair_loops": 3
+  },
+  "oracle_access": {
+    "read_verify_before_failure": false,
+    "modified_verify": false,
+    "log_path": "oracle-access-log.txt"
   },
   "runtime_is_primary_score": false
 }

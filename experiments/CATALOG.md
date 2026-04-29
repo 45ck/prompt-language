@@ -301,6 +301,7 @@ E5 deliberately demotes E4's process-fidelity signals (`processConformance`, `tr
 - `solo-local`: local model receives the task directly
 - `persona-only-control`: local model receives a senior-engineer persona prompt without PL checkpoints
 - `pl-senior-pairing-local`: same local model runs under senior-pairing PL control
+- `pl-senior-pairing-full-local`: exploratory full-feature PL probe with spawned reviewers
 - `pl-hybrid-judge`: local model performs bulk work and a stronger external judge reviews high-risk decisions
 
 **Primary Metrics**: deterministic oracle correctness, ambiguity handling, risk classification, test quality, minimality, repair discipline, and escalation judgment.

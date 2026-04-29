@@ -592,6 +592,13 @@ describe('parseFlow — let/var statements', () => {
     expect(node.source).toEqual({ type: 'run', command: 'echo hi' });
   });
 
+  it('parses let with run source timeout', () => {
+    const dsl = `Goal: g\n\nflow:\n  let output = run "echo hi" [timeout 60]`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as LetNode;
+    expect(node.source).toEqual({ type: 'run', command: 'echo hi', timeoutMs: 60000 });
+  });
+
   it('parses let with run source (unquoted)', () => {
     const dsl = `Goal: g\n\nflow:\n  let output = run echo hi`;
     const spec = parse(dsl);

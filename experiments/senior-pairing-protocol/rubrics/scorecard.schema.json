@@ -2,12 +2,18 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Senior Pairing Protocol Scorecard",
   "type": "object",
-  "required": ["task_id", "arm", "model", "scores", "runtime_telemetry", "verdict"],
+  "required": ["task_id", "arm", "model", "scores", "evidence", "runtime_telemetry", "verdict"],
   "properties": {
     "task_id": { "type": "string" },
     "arm": {
       "type": "string",
-      "enum": ["solo-local", "persona-only-control", "pl-senior-pairing-local", "pl-hybrid-judge"]
+      "enum": [
+        "solo-local",
+        "persona-only-control",
+        "pl-senior-pairing-local",
+        "pl-senior-pairing-full-local",
+        "pl-hybrid-judge"
+      ]
     },
     "model": { "type": "string" },
     "scores": {
@@ -32,6 +38,28 @@
       },
       "additionalProperties": false
     },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "oracle_correctness",
+        "ambiguity_handling",
+        "risk_classification",
+        "test_quality",
+        "minimality",
+        "repair_discipline",
+        "escalation_judgment"
+      ],
+      "properties": {
+        "oracle_correctness": { "type": "string" },
+        "ambiguity_handling": { "type": "string" },
+        "risk_classification": { "type": "string" },
+        "test_quality": { "type": "string" },
+        "minimality": { "type": "string" },
+        "repair_discipline": { "type": "string" },
+        "escalation_judgment": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
     "runtime_telemetry": {
       "type": "object",
       "required": ["wall_seconds", "timeout_classification"],
@@ -52,6 +80,7 @@
       },
       "additionalProperties": false
     },
+    "oracle_access_violation": { "type": "boolean" },
     "verdict": {
       "type": "string",
       "enum": ["pass", "partial", "fail", "unscorable"]

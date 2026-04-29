@@ -1,0 +1,57 @@
+# Feature Coverage
+
+This experiment has two PL supervision lanes:
+
+- `pl-senior-pairing-local` is the primary evidence arm. It stays compact so the
+  comparison against `solo-local` and `persona-only-control` is interpretable.
+- `pl-senior-pairing-full-local` is an exploratory feature probe. It verifies
+  that the richer PL orchestration surfaces work with local runners before those
+  surfaces are promoted into the primary evidence arm.
+
+## Runner Model
+
+Aider and Ollama do not parse Prompt Language directly. The Prompt Language
+runtime parses and advances the flow, then sends each prompt turn to the chosen
+runner. This means features such as `spawn`, `await`, `review`, `judge`, command
+timeouts, and gates belong to the PL runtime. The local runner only needs to
+handle the prompt turn or file edits it receives.
+
+For spawned children, set `PL_SPAWN_RUNNER` to the same local runner when child
+work should also use local inference:
+
+```sh
+$env:PL_SPAWN_RUNNER = "aider"
+node bin/cli.mjs run --runner aider --file experiments/senior-pairing-protocol/flows/senior-pairing-full.flow
+```
+
+Use `PL_SPAWN_RUNNER=ollama` when running direct Ollama child sessions. Use
+`PL_SPAWN_RUNNER=codex` only for deliberate frontier-model escalation.
+
+Named `judge` blocks are prompt-language review surfaces. They do not by
+themselves switch to a different runner. The hybrid arm therefore uses an
+explicit `spawn "external_reviewer" model "gpt-5.2"` step; route that child
+through `PL_SPAWN_RUNNER=codex` when the external review must use a frontier
+model.
+
+## Feature Matrix
+
+| Feature               | Primary arm | Full probe | Reason                                                       |
+| --------------------- | ----------- | ---------- | ------------------------------------------------------------ |
+| `let run` capture     | Yes         | Yes        | Reads task and runtime telemetry from deterministic commands |
+| `let prompt as json`  | Yes         | Yes        | Captures senior frame and final review as structured data    |
+| `until` repair loops  | Yes         | Yes        | Bounds test and verifier repair attempts                     |
+| command timeouts      | Yes         | Yes        | Prevents stuck tests from blocking slow local inference      |
+| `review strict`       | Yes         | Yes        | Forces grounded repair instead of self-declared completion   |
+| `rubric` / `judge`    | Hybrid only | Yes        | Keeps external judging separate from deterministic gates     |
+| `spawn` / `await`     | No          | Yes        | Tests parent-controlled senior/junior separation             |
+| child variable import | No          | Yes        | Feeds risk and test-plan child outputs back to parent flow   |
+| `try` / `catch`       | No          | Yes        | Handles intentional red-test failures without losing state   |
+| final gates           | Yes         | Yes        | Keeps deterministic evidence authoritative                   |
+
+## Interpretation Rule
+
+The full probe should not be used as the first proof that senior pairing works.
+It uses more orchestration, more model calls, and potentially more context than
+the primary arm. Treat it as a capability and failure-mode probe. If it clearly
+outperforms the compact primary arm, run a follow-up ablation before making a
+research claim.

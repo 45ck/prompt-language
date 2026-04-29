@@ -125,7 +125,7 @@ export type LetSource =
       readonly schema: string;
       readonly profile?: string | undefined;
     }
-  | { readonly type: 'run'; readonly command: string }
+  | { readonly type: 'run'; readonly command: string; readonly timeoutMs?: number | undefined }
   | { readonly type: 'memory'; readonly key: string }
   | { readonly type: 'literal'; readonly value: string }
   | { readonly type: 'empty_list' };

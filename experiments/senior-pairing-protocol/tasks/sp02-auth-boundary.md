@@ -22,6 +22,9 @@ The task workspace should include:
 - `src/test.js`
 - `verify.js`
 
+The model may run `node verify.js` but must not read or modify `verify.js`
+before the first verifier failure.
+
 ## Oracle Expectations
 
 - Non-owners cannot update another user's resource.

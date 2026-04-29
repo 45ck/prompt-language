@@ -17,7 +17,8 @@ judge "external_senior_judge"
 end
 
 flow:
-  let task_brief = run "node -e \"process.stdout.write(require('fs').readFileSync('TASK.md','utf8'))\"" [timeout 60]
+  run: node -e "process.stdout.write(require('fs').readFileSync('TASK.md','utf8'))" [timeout 60]
+  let task_brief = "${last_stdout}"
   let senior_frame = prompt "You are acting as a senior engineer guiding a junior local-model developer. Read the task brief and return JSON with: objective, ambiguity, top_risks, smallest_safe_strategy, tests_to_write, escalation_needed. Runtime can be slow; quality matters more than speed. Task brief: ${task_brief}" as json {
     "objective": "string",
     "ambiguity": "string",
@@ -26,25 +27,43 @@ flow:
     "tests_to_write": "string",
     "escalation_needed": "boolean"
   }
-  prompt: Implement the task in a tightly supervised style. First inspect the needed files, then add tests for the risky behavior, then make the smallest production change. Use this senior frame: ${senior_frame}
-  until command_succeeded max 4
+  prompt: Implement the task in a tightly supervised style. First inspect the needed files, but do not read or modify verify.js. Then add tests for the risky behavior, then make the smallest production change. Use this senior frame: ${senior_frame}
+  until command_succeeded max 3
     run: npm test [timeout 300]
     if command_failed
       prompt: npm test failed. Repair minimally using the actual output. Output: ${last_stdout} ${last_stderr}
     end
   end
-  until command_succeeded max 4
+  until command_succeeded max 3
     run: node verify.js [timeout 300]
     if command_failed
       prompt: node verify.js failed. State the root cause in one sentence, then repair minimally. Output: ${last_stdout} ${last_stderr}
     end
   end
+  run: git diff -- . [timeout 60]
+  let diff = "${last_stdout}"
+  run: npm test [timeout 300]
+  let test_output = "${last_stdout} ${last_stderr}"
+  run: node verify.js [timeout 300]
+  let output = "${last_stdout} ${last_stderr}"
+
+  spawn "external_reviewer" model "gpt-5.2" with vars senior_frame diff test_output output
+    let external_review = prompt "Act as the external senior judge. Review the final diff and deterministic evidence. Return JSON with pass, confidence, reason, concrete_findings, and abstain. Abstain if evidence is insufficient. Senior frame=${senior_frame}; diff=${diff}; npm test output=${test_output}; verify output=${output}" as json {
+      "pass": "boolean",
+      "confidence": "number",
+      "reason": "string",
+      "concrete_findings": "string",
+      "abstain": "boolean"
+    }
+  end
+  await "external_reviewer" timeout 1200
+
   review strict using judge "external_senior_judge" max 2
     run: npm test [timeout 300]
     run: node verify.js [timeout 300]
-    prompt: Address only concrete findings from the external senior judge. If the judge passes, do not rewrite. Latest judge reason: ${_review_result.reason}. Latest critique: ${_review_critique}
+    prompt: Address only concrete findings from external_reviewer.external_review. If deterministic checks pass and the external reviewer has no specific defect, do not rewrite. External review=${external_reviewer.external_review}; critique=${_review_critique}
   end
-  prompt: Final handoff: summarize deterministic checks, judge verdict, residual risks, and any escalation decision. Judge pass=${_review_result.pass}; confidence=${_review_result.confidence}; reason=${_review_result.reason}
+  prompt: Final handoff: summarize deterministic checks, external reviewer verdict, named-judge verdict, residual risks, and any escalation decision. External review=${external_reviewer.external_review}; named judge pass=${_review_result.pass}; confidence=${_review_result.confidence}; reason=${_review_result.reason}
 
 done when:
   gate tests_pass: npm test

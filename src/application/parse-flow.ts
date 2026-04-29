@@ -1091,8 +1091,24 @@ function parseLetLine(ctx: ParseContext, trimmed: string): FlowNode | null {
           : { type: 'prompt', text };
     }
   } else if (effectiveLower.startsWith('run ')) {
-    const command = stripQuotes(effectiveRhs.slice(4).trim());
-    source = { type: 'run', command };
+    let runRhs = effectiveRhs.slice(4).trim();
+    const bracketTimeoutMatch = /^(.+?)\s+\[timeout\s+(\d+)\]$/i.exec(runRhs);
+    const bareTimeoutMatch = /^(.+?)\s+timeout\s+(\d+)$/i.exec(runRhs);
+    const timeoutMatch =
+      bracketTimeoutMatch ??
+      (bareTimeoutMatch && (bareTimeoutMatch[1]?.trim().split(/\s+/).length ?? 0) > 1
+        ? bareTimeoutMatch
+        : null);
+    let timeoutMs: number | undefined;
+    if (timeoutMatch?.[1] && timeoutMatch[2]) {
+      const timeoutSec = parseInt(timeoutMatch[2], 10);
+      if (timeoutSec > 0) {
+        timeoutMs = timeoutSec * 1000;
+        runRhs = timeoutMatch[1].trim();
+      }
+    }
+    const command = stripQuotes(runRhs);
+    source = timeoutMs != null ? { type: 'run', command, timeoutMs } : { type: 'run', command };
   } else if (effectiveLower.startsWith('memory ')) {
     const memoryRhs = effectiveRhs.slice(7).trim();
     const memoryMatch = /^(?:"([^"]+)"|'([^']+)'|(\S+))$/i.exec(memoryRhs);

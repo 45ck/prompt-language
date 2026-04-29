@@ -1916,7 +1916,12 @@ async function advanceLetNode(
       );
       const result = await commandRunner.run(
         prepared.command,
-        prepared.env != null ? { env: prepared.env } : undefined,
+        node.source.timeoutMs != null || prepared.env != null
+          ? {
+              ...(node.source.timeoutMs != null ? { timeoutMs: node.source.timeoutMs } : {}),
+              ...(prepared.env != null ? { env: prepared.env } : {}),
+            }
+          : undefined,
       );
       value = result.stdout.trimEnd();
       // H-REL-010: Truncate captured variable to MAX_OUTPUT_LENGTH
@@ -2172,22 +2177,39 @@ async function advanceLetPromptJson(
   if (captureReader) {
     const captured = await captureReader.read(node.variableName);
     if (captured && captured !== CAPTURE_PENDING_SENTINEL) {
+      const fencedMatch = /```(?:json)?\s*([\s\S]*?)```/i.exec(captured);
+      const rawJson = fencedMatch?.[1] ? fencedMatch[1].trim() : captured.trim();
+      let validJsonObject = false;
+      try {
+        const parsed: unknown = JSON.parse(rawJson);
+        validJsonObject = parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed);
+      } catch {
+        validJsonObject = false;
+      }
+
+      if (validJsonObject) {
+        await captureReader.clear(node.variableName);
+        debugLog('capture', `Captured JSON value for "${node.variableName}"`, 2);
+        logCaptureAudit(auditLogger, current, node, 'captured', 'read');
+        let successState = updateVariable(current, 'capture_failed', 'false');
+        successState = updateVariable(successState, 'capture_diagnostic', '');
+        return {
+          state: updateNodeProgress(successState, node.id, {
+            iteration: progress.iteration,
+            maxIterations: progress.maxIterations,
+            status: 'completed',
+            completedAt: Date.now(),
+          }),
+          value: rawJson,
+        };
+      }
+
       await captureReader.clear(node.variableName);
-      debugLog('capture', `Captured JSON value for "${node.variableName}"`, 2);
-      logCaptureAudit(auditLogger, current, node, 'captured', 'read');
-      let successState = updateVariable(current, 'capture_failed', 'false');
-      successState = updateVariable(successState, 'capture_diagnostic', '');
-      return {
-        state: updateNodeProgress(successState, node.id, {
-          iteration: progress.iteration,
-          maxIterations: progress.maxIterations,
-          status: 'completed',
-          completedAt: Date.now(),
-        }),
-        value: captured,
-      };
-    }
-    if (captured === CAPTURE_PENDING_SENTINEL) {
+      failureReason = 'captured response was not a valid JSON object';
+      retryPrompt =
+        buildJsonCaptureRetryPrompt(node.variableName, node.source.schema, current.captureNonce) +
+        '\n\nThe previous capture was not a valid JSON object. Rewrite only valid JSON.';
+    } else if (captured === CAPTURE_PENDING_SENTINEL) {
       failureReason = 'capture file still pending (model did not write response)';
       retryPrompt =
         buildJsonCaptureRetryPrompt(node.variableName, node.source.schema, current.captureNonce) +

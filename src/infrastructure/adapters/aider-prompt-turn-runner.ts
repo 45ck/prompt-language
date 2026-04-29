@@ -17,6 +17,8 @@ const MAX_OUTPUT_LENGTH = 12_000;
 const MAX_FALLBACK_FILES = 12;
 const FILE_REFERENCE_PATTERN =
   /(?:^|[^A-Za-z0-9_./\\-])((?:[A-Za-z0-9_.-]+[\\/])*[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,8})(?=$|[^A-Za-z0-9_/\\-])/g;
+const CAPTURE_FILE_REFERENCE_PATTERN =
+  /(?:^|[^A-Za-z0-9_./\\-])(\.prompt-language[\\/]vars[\\/][A-Za-z_]\w*)(?=$|[^A-Za-z0-9_/\\-])/g;
 const TRANSIENT_OUTPUT_FILE_PATTERN = /^(?:run|verify)-(?:stdout|stderr)\.txt$/;
 
 function readPositiveIntEnv(name: string): number | undefined {
@@ -106,6 +108,14 @@ function normalizeReferencedFile(cwd: string, candidate: string): string | undef
 function extractReferencedFiles(cwd: string, prompt: string): string[] {
   const referencedFiles: string[] = [];
   const seen = new Set<string>();
+
+  for (const match of prompt.matchAll(CAPTURE_FILE_REFERENCE_PATTERN)) {
+    const candidate = match[1];
+    const normalized = candidate ? normalizeReferencedFile(cwd, candidate) : undefined;
+    if (!normalized || seen.has(normalized)) continue;
+    seen.add(normalized);
+    referencedFiles.push(normalized);
+  }
 
   for (const match of prompt.matchAll(FILE_REFERENCE_PATTERN)) {
     const candidate = match[1];

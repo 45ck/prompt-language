@@ -2560,6 +2560,29 @@ describe('autoAdvanceNodes — let run', () => {
     expect(capturedPrompt).toBe('done');
   });
 
+  it('passes timeoutMs to commandRunner.run() for let=run', async () => {
+    let capturedTimeout: number | undefined;
+    const runner: CommandRunner = {
+      run: async (_command, options) => {
+        capturedTimeout = options?.timeoutMs;
+        return { exitCode: 0, stdout: 'hello world\n', stderr: '' };
+      },
+    };
+    const letRun = createLetNode('l1', 'output', {
+      type: 'run',
+      command: 'echo hello world',
+      timeoutMs: 60000,
+    });
+    const spec = createFlowSpec('test', [letRun, createPromptNode('p1', 'done')]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
+
+    expect(result.variables['output']).toBe('hello world');
+    expect(capturedTimeout).toBe(60000);
+    expect(capturedPrompt).toBe('done');
+  });
+
   it('jumps to catch when let=run fails inside try', async () => {
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 1, stdout: '', stderr: 'fail' }),
@@ -5383,7 +5406,7 @@ describe('autoAdvanceNodes — let prompt_json capture', () => {
     expect(result.variables['analysis.files_length']).toBe(2);
   });
 
-  it('Phase 2: warns and stores raw string when JSON parse fails', async () => {
+  it('Phase 2: retries when JSON parse fails', async () => {
     const captureReader: CaptureReader = {
       read: vi.fn().mockResolvedValue('not valid json'),
       clear: vi.fn(),
@@ -5401,10 +5424,15 @@ describe('autoAdvanceNodes — let prompt_json capture', () => {
       status: 'awaiting_capture',
     });
 
-    const { state: result } = await autoAdvanceNodes(state, undefined, captureReader);
-    expect(result.nodeProgress['l1']?.status).toBe('completed');
-    expect(result.variables['analysis']).toBe('not valid json');
-    expect(result.warnings.some((w) => w.includes('JSON parse failed'))).toBe(true);
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(
+      state,
+      undefined,
+      captureReader,
+    );
+    expect(capturedPrompt).toContain('not a valid JSON object');
+    expect(result.nodeProgress['l1']?.status).toBe('awaiting_capture');
+    expect(result.nodeProgress['l1']?.iteration).toBe(2);
+    expect(captureReader.clear).toHaveBeenCalledWith('analysis');
   });
 
   it('retries JSON capture when read returns null', async () => {

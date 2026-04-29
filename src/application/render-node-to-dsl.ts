@@ -97,7 +97,7 @@ export function renderNodeToDsl(node: FlowNode, indent: number): string[] {
           src = `prompt${formatProfileClause(node.source.profile)} "${node.source.text}" as json {\n${node.source.schema}\n}`;
           break;
         case 'run':
-          src = `run "${node.source.command}"`;
+          src = `run "${node.source.command}"${formatRunTimeout(node.source.timeoutMs)}`;
           break;
         case 'memory':
           src = `memory "${node.source.key}"`;

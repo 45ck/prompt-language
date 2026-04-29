@@ -1,0 +1,106 @@
+Goal: Solve the task through the full Senior Pairing Protocol feature probe
+
+rubric "senior_engineering_quality"
+  criterion oracle_correctness type number
+  criterion ambiguity_handling type number
+  criterion risk_classification type number
+  criterion test_quality type number
+  criterion minimality type number
+  criterion repair_discipline type number
+  criterion escalation_judgment type number
+end
+
+judge "external_senior_judge"
+  kind: model
+  rubric: "senior_engineering_quality"
+  inputs: [diff, test_output, output]
+end
+
+flow:
+  run: node -e "process.stdout.write(String(Date.now()))" [timeout 30]
+  let started_ms = "${last_stdout}"
+  run: node -e "process.stdout.write(require('fs').readFileSync('TASK.md','utf8'))" [timeout 60]
+  let task_brief = "${last_stdout}"
+  let senior_frame = prompt "Senior engineer: read TASK.md and return JSON with objective, ambiguity, top_risks, smallest_safe_strategy, tests_to_write, escalation_needed, and escalation_reason. Runtime can be slow; score quality over speed. Task brief: ${task_brief}" as json {
+    "objective": "string",
+    "ambiguity": "string",
+    "top_risks": "string",
+    "smallest_safe_strategy": "string",
+    "tests_to_write": "string",
+    "escalation_needed": "boolean",
+    "escalation_reason": "string"
+  }
+
+  spawn "risk" with vars task_brief senior_frame
+    let risk_report = prompt "Act as the senior risk reviewer. Return JSON with safety_risks, architecture_risks, data_risks, test_risks, and must_not_do. Ground the report in this task brief and senior frame: ${task_brief} ${senior_frame}" as json {
+      "safety_risks": "string",
+      "architecture_risks": "string",
+      "data_risks": "string",
+      "test_risks": "string",
+      "must_not_do": "string"
+    }
+  end
+
+  spawn "testplan" with vars task_brief senior_frame
+    let test_plan = prompt "Act as the senior test designer. Return JSON with red_tests, edge_cases, oracle_expectations, and false_positive_risks. Do not implement. Task brief and senior frame: ${task_brief} ${senior_frame}" as json {
+      "red_tests": "string",
+      "edge_cases": "string",
+      "oracle_expectations": "string",
+      "false_positive_risks": "string"
+    }
+  end
+
+  await all timeout 900
+
+  prompt: Write or update tests first. Use the senior frame, risk report, and test plan. Do not read or modify verify.js. Do not implement production code yet. Senior frame=${senior_frame}; risk report=${risk.risk_report}; test plan=${testplan.test_plan}
+  try
+    run: npm test [timeout 300]
+  catch command_failed
+    prompt: The red-test command failed, which is acceptable only if the failure proves the missing behavior. Tighten the test if it fails for setup noise, unrelated reasons, or a false positive. Output: ${last_stdout} ${last_stderr}
+  end
+
+  spawn "implementer" with vars task_brief senior_frame risk.risk_report testplan.test_plan
+    prompt: Act as a junior developer under senior supervision. Implement only the smallest safe change. Follow this senior strategy: ${senior_frame}. Respect these risk controls: ${risk.risk_report}. Satisfy this test plan: ${testplan.test_plan}. Do not broaden scope.
+    until command_succeeded max 3
+      run: npm test [timeout 300]
+      if command_failed
+        prompt: Tests failed. State the root cause in one sentence, then repair the smallest relevant code or test issue. Output: ${last_stdout} ${last_stderr}
+      end
+    end
+    until command_succeeded max 3
+      run: node verify.js [timeout 300]
+      if command_failed
+        prompt: The verifier failed. Repair only the behavior proven by verifier output. Output: ${last_stdout} ${last_stderr}
+      end
+    end
+  end
+
+  await "implementer" timeout 1800
+
+  review strict criteria: "The final artifact must satisfy the deterministic oracle, preserve scope, include useful tests, and show repair discipline grounded in command output." grounded-by "npm test && node verify.js" max 3
+    run: npm test [timeout 300]
+    run: node verify.js [timeout 300]
+    prompt: Address only concrete review findings. Do not rewrite working code. Critique: ${_review_critique}. Output: ${last_stdout} ${last_stderr}
+  end
+
+  review strict using judge "external_senior_judge" max 2
+    run: npm test [timeout 300]
+    run: node verify.js [timeout 300]
+    prompt: Address only concrete external senior judge findings. If deterministic checks pass and the judge has no specific defect, stop editing. Judge reason: ${_review_result.reason}; critique: ${_review_critique}
+  end
+
+  run: node -e "process.stdout.write(String(Date.now()))" [timeout 30]
+  let finished_ms = "${last_stdout}"
+  let final_self_review = prompt "Return JSON with pass, residual_risks, deterministic_evidence, senior_interventions, runtime_note, and escalation_needed. Runtime_ms is ${finished_ms} - ${started_ms}; runtime is telemetry only, not a primary quality score." as json {
+    "pass": "boolean",
+    "residual_risks": "string",
+    "deterministic_evidence": "string",
+    "senior_interventions": "string",
+    "runtime_note": "string",
+    "escalation_needed": "boolean"
+  }
+  prompt: Final handoff: summarize deterministic checks, senior interventions, child outputs, judge verdict, residual risks, and runtime telemetry. Self-review=${final_self_review}
+
+done when:
+  gate tests_pass: npm test
+  gate oracle_passes: node verify.js

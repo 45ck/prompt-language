@@ -12,8 +12,8 @@ quality.
 
 Risk: The flow becomes tuned to one fixture shape.
 
-Mitigation: Use task families with different failure modes: ambiguous priority,
-security boundary, migration compatibility, TDD, and performance.
+Mitigation: Treat the current three tasks as a pilot. Add frozen TDD and
+performance fixtures before making a broader task-family claim.
 
 ## Judge Bias
 
@@ -35,7 +35,10 @@ Risk: If the model sees verifier internals too early, the task becomes oracle
 gaming.
 
 Mitigation: The initial task brief may mention verification commands, but the
-full oracle output should only be fed back after a failed verification loop.
+full oracle output should only be fed back after a failed verification loop. The
+model may run `node verify.js`, but reading or modifying `verify.js` before the
+first verifier failure is a protocol violation unless the task explicitly permits
+it. Record oracle access in `oracle-access-log.txt`.
 
 ## Ambiguity Collapse
 

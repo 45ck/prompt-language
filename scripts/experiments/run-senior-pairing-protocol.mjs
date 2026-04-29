@@ -27,12 +27,20 @@ const ARM_GROUPS = {
     'solo-local',
     'persona-only-control',
     'pl-senior-pairing-local',
+    'pl-senior-pairing-v2-local',
     'pl-senior-pairing-full-local',
+  ],
+  expanded: [
+    'solo-local',
+    'persona-only-control',
+    'pl-senior-pairing-local',
+    'pl-senior-pairing-v2-local',
   ],
   all: [
     'solo-local',
     'persona-only-control',
     'pl-senior-pairing-local',
+    'pl-senior-pairing-v2-local',
     'pl-senior-pairing-full-local',
     'pl-hybrid-judge',
   ],
@@ -42,6 +50,7 @@ const ARMS = {
   'solo-local': 'solo-baseline.flow',
   'persona-only-control': 'persona-control.flow',
   'pl-senior-pairing-local': 'senior-pairing-v1.flow',
+  'pl-senior-pairing-v2-local': 'senior-pairing-v2.flow',
   'pl-senior-pairing-full-local': 'senior-pairing-full.flow',
   'pl-hybrid-judge': 'hybrid-judge-v1.flow',
 };
@@ -239,6 +248,61 @@ function gitStatus() {
   return result.stdout.trim();
 }
 
+function readFlowVariables(stateDir) {
+  const statePath = join(stateDir, 'session-state.json');
+  if (!existsSync(statePath)) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(readFileSync(statePath, 'utf8'));
+    return parsed &&
+      typeof parsed === 'object' &&
+      parsed.variables &&
+      typeof parsed.variables === 'object'
+      ? parsed.variables
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function variableArtifact(variables, name) {
+  if (!Object.prototype.hasOwnProperty.call(variables, name)) {
+    return null;
+  }
+
+  const value = variables[name];
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return { value };
+  }
+}
+
+function writeVariableArtifact(artifactDir, fileName, variables, variableName) {
+  const artifact = variableArtifact(variables, variableName);
+  if (artifact == null) {
+    writeJson(join(artifactDir, fileName), {
+      captured: false,
+      variable: variableName,
+      reason: 'Variable was not present in session-state.json.',
+    });
+    return false;
+  }
+
+  writeJson(join(artifactDir, fileName), {
+    captured: true,
+    variable: variableName,
+    value: artifact,
+  });
+  return true;
+}
+
 function modelDigest(model) {
   const ollamaModel = model.startsWith('ollama_chat/') ? model.slice('ollama_chat/'.length) : model;
   const result = runProcess('ollama', ['show', ollamaModel], { cwd: ROOT, timeoutMs: 30_000 });
@@ -310,12 +374,6 @@ function writeJson(path, value) {
   writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
 
-function writePlaceholderJson(path, value) {
-  if (!existsSync(path)) {
-    writeJson(path, value);
-  }
-}
-
 function runArm({
   arm,
   options,
@@ -326,6 +384,7 @@ function runArm({
   fixtureDir,
   fixtureHash,
   digest,
+  repoStatusAtStart,
 }) {
   const armDir = join(runRoot, repeatId, `${String(position).padStart(2, '0')}-${arm}`);
   const workspaceDir = join(armDir, 'workspace');
@@ -407,6 +466,42 @@ function runArm({
   const changed = diff.trim().length > 0;
   const completedAt = new Date().toISOString();
 
+  const flowVariables = readFlowVariables(stateDir);
+  const capturedArtifacts = {
+    senior_frame: writeVariableArtifact(armDir, 'senior-frame.json', flowVariables, 'senior_frame'),
+    risk_register: writeVariableArtifact(
+      armDir,
+      'risk-report.json',
+      flowVariables,
+      'risk_register',
+    ),
+    test_strategy: writeVariableArtifact(armDir, 'test-plan.json', flowVariables, 'test_strategy'),
+    decision_policy: writeVariableArtifact(
+      armDir,
+      'decision-policy.json',
+      flowVariables,
+      'decision_policy',
+    ),
+    pre_impl_test_assessment: writeVariableArtifact(
+      armDir,
+      'pre-impl-test-assessment.json',
+      flowVariables,
+      'pre_impl_test_assessment',
+    ),
+    change_review: writeVariableArtifact(
+      armDir,
+      'change-review.json',
+      flowVariables,
+      'change_review',
+    ),
+    final_self_review: writeVariableArtifact(
+      armDir,
+      'final-self-review.json',
+      flowVariables,
+      'final_self_review',
+    ),
+  };
+
   const manifest = {
     experiment_id: 'senior-pairing-protocol',
     task_id: options.task,
@@ -420,7 +515,7 @@ function runArm({
     runner: options.runner,
     judge_model: arm === 'pl-hybrid-judge' ? 'gpt-5.2' : null,
     repo_commit: gitCommit(),
-    repo_status_short: gitStatus(),
+    repo_status_short: repoStatusAtStart,
     fixture_hash: fixtureHash,
     hardware: readHardware(),
     started_at: startedAt,
@@ -447,12 +542,9 @@ function runArm({
       log_path: 'oracle-access-log.txt',
     },
     runtime_is_primary_score: false,
+    captured_artifacts: capturedArtifacts,
   };
   writeJson(join(armDir, 'run-manifest.json'), manifest);
-  writePlaceholderJson(join(armDir, 'senior-frame.json'), { captured_by_flow_state: true });
-  writePlaceholderJson(join(armDir, 'risk-report.json'), { captured_by_flow_state: true });
-  writePlaceholderJson(join(armDir, 'test-plan.json'), { captured_by_flow_state: true });
-  writePlaceholderJson(join(armDir, 'final-self-review.json'), { captured_by_flow_state: true });
   writeJson(join(armDir, 'scorecard.json'), {
     experiment_id: 'senior-pairing-protocol',
     task_id: options.task,
@@ -495,6 +587,7 @@ function main() {
   mkdirSync(runRoot, { recursive: true });
   const fixtureHash = hashTree(fixtureDir);
   const digest = modelDigest(options.model);
+  const repoStatusAtStart = gitStatus();
   const summaries = [];
 
   for (let repeat = 1; repeat <= options.repeats; repeat++) {
@@ -516,6 +609,7 @@ function main() {
         fixtureDir,
         fixtureHash,
         digest,
+        repoStatusAtStart,
       });
       summaries.push({
         repeat_id: repeatId,

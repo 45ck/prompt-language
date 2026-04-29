@@ -21,16 +21,19 @@ making senior engineering judgment explicit and enforceable?
 
 ## Arms
 
-| Arm                            | Description                                                                     | Purpose                                |
-| ------------------------------ | ------------------------------------------------------------------------------- | -------------------------------------- |
-| `solo-local`                   | Local model receives the task directly                                          | Baseline for ordinary prompting        |
-| `persona-only-control`         | Local model receives a senior-engineer persona prompt without PL checkpoints    | Controls for prompt theater            |
-| `pl-senior-pairing-local`      | Local model runs through the Senior Pairing Protocol flow                       | Tests PL as metacognitive scaffolding  |
-| `pl-senior-pairing-full-local` | Local model runs through a heavier feature-probe flow with spawned reviewers    | Tests richer PL orchestration support  |
-| `pl-hybrid-judge`              | Local model performs the work, external strong model judges high-risk decisions | Tests local/frontier division of labor |
+| Arm                            | Description                                                                     | Purpose                                                              |
+| ------------------------------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `solo-local`                   | Local model receives the task directly                                          | Baseline for ordinary prompting                                      |
+| `persona-only-control`         | Local model receives a senior-engineer persona prompt without PL checkpoints    | Controls for prompt theater                                          |
+| `pl-senior-pairing-local`      | Local model runs through the Senior Pairing Protocol flow                       | Tests PL as metacognitive scaffolding                                |
+| `pl-senior-pairing-v2-local`   | Local model runs through a richer senior decision-ladder flow                   | Tests whether more explicit scaffolding helps or overloads the model |
+| `pl-senior-pairing-full-local` | Local model runs through a heavier feature-probe flow with spawned reviewers    | Tests richer PL orchestration support                                |
+| `pl-hybrid-judge`              | Local model performs the work, external strong model judges high-risk decisions | Tests local/frontier division of labor                               |
 
 The full-feature arm is exploratory. The primary causal comparison is
 `solo-local` versus `persona-only-control` versus `pl-senior-pairing-local`.
+The v2 arm is also exploratory until the primary matrix has at least three
+repeats per task.
 
 ## What Counts As Evidence
 
@@ -82,4 +85,5 @@ The full-feature arm is exploratory. The primary causal comparison is
 - `experiments/aider-vs-pl/results/2026-04-28-local-model-experiments.md`
 - `experiments/aider-vs-pl/LOCAL-MODEL-VIABILITY-FINDINGS.md`
 - `docs/feature-coverage.md`
+- `docs/hypothesis-matrix.md`
 - `docs/reference/evals-and-judges-v1.md`

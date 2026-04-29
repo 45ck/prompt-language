@@ -4,6 +4,10 @@ This experiment has two PL supervision lanes:
 
 - `pl-senior-pairing-local` is the primary evidence arm. It stays compact so the
   comparison against `solo-local` and `persona-only-control` is interpretable.
+- `pl-senior-pairing-v2-local` is an exploratory senior-program arm. It expands
+  the compact flow with ranked criteria, explicit invariants, and a decision
+  policy so we can test whether more scaffolding improves quality or overloads
+  the local model.
 - `pl-senior-pairing-full-local` is an exploratory feature probe. It verifies
   that the richer PL orchestration surfaces work with local runners before those
   surfaces are promoted into the primary evidence arm.
@@ -35,18 +39,19 @@ model.
 
 ## Feature Matrix
 
-| Feature               | Primary arm | Full probe | Reason                                                       |
-| --------------------- | ----------- | ---------- | ------------------------------------------------------------ |
-| `let run` capture     | Yes         | Yes        | Reads task and runtime telemetry from deterministic commands |
-| `let prompt as json`  | Yes         | Yes        | Captures senior frame and final review as structured data    |
-| `until` repair loops  | Yes         | Yes        | Bounds test and verifier repair attempts                     |
-| command timeouts      | Yes         | Yes        | Prevents stuck tests from blocking slow local inference      |
-| `review strict`       | Yes         | Yes        | Forces grounded repair instead of self-declared completion   |
-| `rubric` / `judge`    | Hybrid only | Yes        | Keeps external judging separate from deterministic gates     |
-| `spawn` / `await`     | No          | Yes        | Tests parent-controlled senior/junior separation             |
-| child variable import | No          | Yes        | Feeds risk and test-plan child outputs back to parent flow   |
-| `try` / `catch`       | No          | Yes        | Handles intentional red-test failures without losing state   |
-| final gates           | Yes         | Yes        | Keeps deterministic evidence authoritative                   |
+| Feature               | Primary arm | V2 exploratory | Full probe | Reason                                                       |
+| --------------------- | ----------- | -------------- | ---------- | ------------------------------------------------------------ |
+| `let run` capture     | Yes         | Yes            | Yes        | Reads task and runtime telemetry from deterministic commands |
+| `let prompt as json`  | Yes         | Yes            | Yes        | Captures senior frame and final review as structured data    |
+| decision ladder       | No          | Yes            | Partial    | Tests ranked criteria and explicit option rejection          |
+| `until` repair loops  | Yes         | Yes            | Yes        | Bounds test and verifier repair attempts                     |
+| command timeouts      | Yes         | Yes            | Yes        | Prevents stuck tests from blocking slow local inference      |
+| `review strict`       | Yes         | Yes            | Yes        | Forces grounded repair instead of self-declared completion   |
+| `rubric` / `judge`    | Hybrid only | No             | Yes        | Keeps external judging separate from deterministic gates     |
+| `spawn` / `await`     | No          | No             | Yes        | Tests parent-controlled senior/junior separation             |
+| child variable import | No          | No             | Yes        | Feeds risk and test-plan child outputs back to parent flow   |
+| `try` / `catch`       | No          | No             | Yes        | Handles intentional red-test failures without losing state   |
+| final gates           | Yes         | Yes            | Yes        | Keeps deterministic evidence authoritative                   |
 
 ## Interpretation Rule
 
@@ -55,3 +60,8 @@ It uses more orchestration, more model calls, and potentially more context than
 the primary arm. Treat it as a capability and failure-mode probe. If it clearly
 outperforms the compact primary arm, run a follow-up ablation before making a
 research claim.
+
+The v2 exploratory arm should be interpreted as a scaffold-depth test. If it
+beats compact PL, the follow-up question is which added surface caused the lift:
+risk register, decision ranking, explicit invariants, red-test assessment, or
+final evidence review.

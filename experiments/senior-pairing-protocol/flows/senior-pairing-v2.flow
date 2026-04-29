@@ -1,0 +1,86 @@
+Goal: Solve the task through an expanded senior-engineering decision program
+
+flow:
+  run: node -e "process.stdout.write(require('fs').readFileSync('TASK.md','utf8'))" [timeout 60]
+  let task_brief = "${last_stdout}"
+  let senior_frame = prompt "You are the senior engineer directing a junior developer. Read the task brief and return JSON with objective, definition_of_done, ambiguity, unknowns, invariants, allowed_files, protected_files, and first_safe_move. Do not implement yet. Task brief: ${task_brief}" as json {
+    "objective": "string",
+    "definition_of_done": "string",
+    "ambiguity": "string",
+    "unknowns": "string",
+    "invariants": "string",
+    "allowed_files": "string",
+    "protected_files": "string",
+    "first_safe_move": "string"
+  }
+  let risk_register = prompt "Build the senior risk register as JSON. Fields: security_risk, data_risk, compatibility_risk, architecture_risk, testability_risk, highest_risk_mistake, stop_conditions. Ground it only in the task brief and senior frame. Task brief: ${task_brief}. Senior frame: ${senior_frame}" as json {
+    "security_risk": "string",
+    "data_risk": "string",
+    "compatibility_risk": "string",
+    "architecture_risk": "string",
+    "testability_risk": "string",
+    "highest_risk_mistake": "string",
+    "stop_conditions": "string"
+  }
+  let decision_policy = prompt "Create a ranked senior decision policy as JSON. Fields: criteria, option_a, option_b, option_c, ranking, chosen_strategy, rejected_strategies, assumptions_to_test, smallest_safe_diff. Rank options by correctness, safety, minimality, testability, and compatibility. Task brief: ${task_brief}. Risks: ${risk_register}" as json {
+    "criteria": "string",
+    "option_a": "string",
+    "option_b": "string",
+    "option_c": "string",
+    "ranking": "string",
+    "chosen_strategy": "string",
+    "rejected_strategies": "string",
+    "assumptions_to_test": "string",
+    "smallest_safe_diff": "string"
+  }
+  let test_strategy = prompt "Design the test strategy as JSON before editing. Fields: red_tests, edge_cases, false_positive_controls, original_bug_signal, regression_checks, verifier_expectations. Tests must prove behavior, not just mirror implementation. Task brief: ${task_brief}. Decision policy: ${decision_policy}" as json {
+    "red_tests": "string",
+    "edge_cases": "string",
+    "false_positive_controls": "string",
+    "original_bug_signal": "string",
+    "regression_checks": "string",
+    "verifier_expectations": "string"
+  }
+  prompt: Inspect TASK.md, package.json, src/contacts.js, and src/test.js. Do not read or modify verify.js. Write or update tests in src/test.js first. Use this contract: senior frame=${senior_frame}; risks=${risk_register}; decision policy=${decision_policy}; test strategy=${test_strategy}. Do not implement production code yet.
+  run: npm test [timeout 300]
+  if command_succeeded
+    prompt: The test command passed before the production change, so the red tests may be weak. Strengthen src/test.js so at least one test would fail on the missing behavior while preserving existing passing tests. Do not read or modify verify.js.
+    run: npm test [timeout 300]
+  end
+  let pre_impl_test_assessment = prompt "Assess the pre-implementation tests as JSON with fields tests_fail_for_right_reason, behavior_proven, false_positive_risk, implementation_ready. Cite command evidence only. npm output: ${last_stdout} ${last_stderr}" as json {
+    "tests_fail_for_right_reason": "boolean",
+    "behavior_proven": "string",
+    "false_positive_risk": "string",
+    "implementation_ready": "boolean"
+  }
+  prompt: Implement the smallest safe production change in src/contacts.js. Follow the chosen strategy and smallest safe diff: ${decision_policy.chosen_strategy}; ${decision_policy.smallest_safe_diff}. Respect invariants=${senior_frame.invariants}. Avoid the highest-risk mistake=${risk_register.highest_risk_mistake}. Do not broaden scope and do not read or modify verify.js.
+  review strict criteria: "Tests must pass, the implementation must be minimal, and repairs must be grounded in concrete command output." grounded-by "npm test" max 3
+    run: npm test [timeout 300]
+    prompt: If tests fail, state the root cause in one sentence, then repair only src/contacts.js or src/test.js. Preserve the senior decision policy. Output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
+  end
+  let change_review = prompt "Review the changed artifact as JSON with fields meets_definition_of_done, tests_evidence, minimality_evidence, invariant_check, unresolved_risks, should_escalate. Use concrete evidence only; no chain-of-thought. Senior frame=${senior_frame}; risks=${risk_register}; decision=${decision_policy}; pre_impl_test_assessment=${pre_impl_test_assessment}" as json {
+    "meets_definition_of_done": "boolean",
+    "tests_evidence": "string",
+    "minimality_evidence": "string",
+    "invariant_check": "string",
+    "unresolved_risks": "string",
+    "should_escalate": "boolean"
+  }
+  review strict criteria: "The hidden verifier must pass. Repairs must address only behavior proven by verifier output and must not inspect or modify verify.js." grounded-by "node verify.js" max 3
+    run: node verify.js [timeout 300]
+    prompt: If the verifier fails, identify the smallest behavior gap and repair only src/contacts.js or src/test.js. Do not read or modify verify.js. Verifier output: ${last_stdout} ${last_stderr}. Change review: ${change_review}. Critique: ${_review_critique}
+  end
+  let final_self_review = prompt "Final senior review as JSON with fields pass, deterministic_evidence, criteria_satisfied, assumptions_resolved, residual_risks, escalation_needed, expected_score_delta_vs_persona. Cite npm test and verifier evidence only." as json {
+    "pass": "boolean",
+    "deterministic_evidence": "string",
+    "criteria_satisfied": "string",
+    "assumptions_resolved": "string",
+    "residual_risks": "string",
+    "escalation_needed": "boolean",
+    "expected_score_delta_vs_persona": "string"
+  }
+  prompt: Final handoff: summarize the implementation, test evidence, verifier evidence, senior decision path, residual risks, and whether escalation is needed. Use final self-review=${final_self_review}
+
+done when:
+  gate tests_pass: npm test
+  gate oracle_passes: node verify.js

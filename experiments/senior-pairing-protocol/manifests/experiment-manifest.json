@@ -26,6 +26,7 @@
     "solo-local",
     "persona-only-control",
     "pl-senior-pairing-local",
+    "pl-senior-pairing-v2-local",
     "pl-senior-pairing-full-local",
     "pl-hybrid-judge"
   ],
@@ -33,6 +34,7 @@
     "solo-local": "flows/solo-baseline.flow",
     "persona-only-control": "flows/persona-control.flow",
     "pl-senior-pairing-local": "flows/senior-pairing-v1.flow",
+    "pl-senior-pairing-v2-local": "flows/senior-pairing-v2.flow",
     "pl-senior-pairing-full-local": "flows/senior-pairing-full.flow",
     "pl-hybrid-judge": "flows/hybrid-judge-v1.flow"
   },

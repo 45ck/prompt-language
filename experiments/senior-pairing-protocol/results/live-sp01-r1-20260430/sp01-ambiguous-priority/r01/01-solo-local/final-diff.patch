@@ -1,0 +1,66 @@
+diff --git "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\original-sanitized/src/contacts.js" "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\final-sanitized/src/contacts.js"
+index a94d41a..086a101 100644
+--- "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\original-sanitized/src/contacts.js"
++++ "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\final-sanitized/src/contacts.js"
+@@ -24,6 +24,32 @@ function removeContact(contacts, email) {
+   return contacts.filter((contact) => contact.email !== email);
+ }
+
+-// TODO: implement mergeContacts(records)
++function mergeContacts(records) {
++  const result = [];
++  const emailToIndex = new Map();
+
+-module.exports = { createContact, findByEmail, addContact, removeContact };
++  for (const contact of records) {
++    const email = contact.email;
++    if (!emailToIndex.has(email)) {
++      result.push(contact);
++      emailToIndex.set(email, result.length - 1);
++    } else {
++      const index = emailToIndex.get(email);
++      const existing = result[index];
++
++      if (contact.name !== null) {
++        existing.name = contact.name;
++      }
++      if (contact.phone !== null) {
++        existing.phone = contact.phone;
++      }
++      if (contact.company !== null) {
++        existing.company = contact.company;
++      }
++    }
++  }
++
++  return result;
++}
++
++module.exports = { createContact, findByEmail, addContact, removeContact, mergeContacts };
+diff --git "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\original-sanitized/src/test.js" "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\final-sanitized/src/test.js"
+index 1242065..50242be 100644
+--- "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\original-sanitized/src/test.js"
++++ "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\final-sanitized/src/test.js"
+@@ -1,4 +1,4 @@
+-const { createContact, findByEmail, addContact, removeContact } = require('./contacts');
++const { createContact, findByEmail, addContact, removeContact, mergeContacts } = require('./contacts');
+
+ let passed = 0;
+ let failed = 0;
+@@ -58,6 +58,16 @@ test('removeContact removes matching email', () => {
+   );
+ });
+
++test('mergeContacts merges based on input order', () => {
++  const contact1 = createContact('Alice', 'a@example.com', '555', 'Acme', 20);
++  const contact2 = createContact('Bob', 'a@example.com', '666', 'Beta', 10);
++  const merged = mergeContacts([contact1, contact2]);
++  assertEqual(merged.length, 1, 'should have one contact');
++  assertEqual(merged[0].name, 'Bob', 'name should be from contact2');
++  assertEqual(merged[0].phone, '666', 'phone should be from contact2');
++  assertEqual(merged[0].createdAt, 20, 'createdAt should be from contact1');
++});
++
+ console.log(`\nResults: ${passed}/${passed + failed} passed`);
+ if (failed > 0) {
+   console.log(`VERDICT: FAIL (${failed} failed)`);

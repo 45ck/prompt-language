@@ -1,0 +1,9 @@
+Results: 2/7 passed
+FAIL: mergeContacts is implemented and exported -- mergeContacts export is missing
+FAIL: student tests cover createdAt conflict -- src/test.js does not reference mergeContacts
+PASS: npm test passes
+FAIL: later input order wins over older-looking createdAt timestamps -- mergeContacts is not a function
+FAIL: empty later fields do not erase earlier useful values -- mergeContacts is not a function or its return value is not iterable
+FAIL: first-seen group position is preserved -- mergeContacts is not a function
+PASS: implementation does not sort by createdAt
+VERDICT: FAIL (5 failed)

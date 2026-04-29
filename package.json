@@ -87,6 +87,8 @@
     "e5:blinding:test": "node --test scripts/experiments/e5/verify-blinding.test.mjs",
     "e5:score": "node scripts/experiments/e5/score-scorecard.mjs",
     "e5:score:test": "node --test scripts/experiments/e5/score-scorecard.test.mjs",
+    "experiment:senior": "node scripts/experiments/run-senior-pairing-protocol.mjs",
+    "experiment:senior:pilot": "node scripts/experiments/run-senior-pairing-protocol.mjs --arms primary --repeats 1",
     "knip": "knip --production",
     "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs --validate --output-type err src",
     "depgraph": "dependency-cruiser --config .dependency-cruiser.cjs --output-type mermaid src --output-to reports/dependency-graph.mmd",

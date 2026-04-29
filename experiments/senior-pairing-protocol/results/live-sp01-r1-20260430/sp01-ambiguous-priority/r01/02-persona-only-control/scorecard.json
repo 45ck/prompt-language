@@ -1,0 +1,10 @@
+{
+  "experiment_id": "senior-pairing-protocol",
+  "task_id": "sp01-ambiguous-priority",
+  "repeat_id": "r01",
+  "arm": "persona-only-control",
+  "oracle_passed": false,
+  "oracle_access_violation": false,
+  "runner_exit_code": 3,
+  "notes": "Pilot scorecard placeholder; senior-behavior scoring is a separate blinded review step."
+}

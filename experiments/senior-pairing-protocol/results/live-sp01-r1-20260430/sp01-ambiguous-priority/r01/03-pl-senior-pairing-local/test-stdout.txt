@@ -1,0 +1,7 @@
+
+> sp01-ambiguous-priority@1.0.0 test
+> node src/test.js
+
+
+Results: 6/6 passed
+VERDICT: PASS

@@ -1,6 +1,6 @@
 {
   "id": "senior-pairing-protocol",
-  "status": "planned",
+  "status": "pilot-run-captured",
   "primary_question": "Can prompt-language encode senior-engineer metacognition to improve local-model coding outcomes?",
   "runtime_policy": {
     "record_runtime": true,

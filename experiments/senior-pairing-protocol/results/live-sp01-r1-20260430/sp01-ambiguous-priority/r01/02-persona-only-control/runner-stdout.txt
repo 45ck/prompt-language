@@ -1,0 +1,17 @@
+{
+  "status": "failed",
+  "diagnostics": [
+    {
+      "code": "PLR-007",
+      "kind": "runtime",
+      "phase": "gate-eval",
+      "severity": "error",
+      "blocksExecution": true,
+      "retryable": true,
+      "summary": "Prompt runner exited with code 1. Detected dumb terminal, disabling fancy input and pretty output. Aider v0.86.2 Model: ollama_chat/qwen3-opencode-big:30b with whole edit format Git repo: none R...",
+      "action": "Inspect _runtime_diagnostic.prompt_runner.* in the saved session state for full runner output."
+    }
+  ],
+  "outcomes": [],
+  "reason": "Prompt runner exited with code 1. Detected dumb terminal, disabling fancy input and pretty output. Aider v0.86.2 Model: ollama_chat/qwen3-opencode-big:30b with whole edit format Git repo: none R..."
+}

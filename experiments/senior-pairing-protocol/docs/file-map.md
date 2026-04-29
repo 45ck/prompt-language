@@ -15,7 +15,14 @@ experiments/senior-pairing-protocol/
     solo-baseline.flow
     persona-control.flow
     senior-pairing-v1.flow
+    senior-pairing-full.flow
     hybrid-judge-v1.flow
+  fixtures/
+    sp01-ambiguous-priority/
+      TASK.md
+      package.json
+      verify.js
+      src/
   manifests/
     experiment-manifest.json
   protocol/

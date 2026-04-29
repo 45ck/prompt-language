@@ -1,0 +1,25 @@
+{
+  "command": "C:\\Program Files\\nodejs\\node.exe",
+  "args": [
+    "C:\\Projects\\prompt-language\\bin\\cli.mjs",
+    "run",
+    "--runner",
+    "aider",
+    "--model",
+    "ollama_chat/qwen3-opencode-big:30b",
+    "--json",
+    "--state-dir",
+    "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\workspace\\.prompt-language",
+    "--file",
+    "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\flows\\solo-baseline.flow"
+  ],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\01-solo-local\\workspace",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "stdout": "{\n  \"status\": \"ok\",\n  \"diagnostics\": [],\n  \"outcomes\": [\n    {\n      \"code\": \"PLO-005\",\n      \"summary\": \"Flow completed.\"\n    }\n  ]\n}\n",
+  "stderr": "",
+  "startedAt": "2026-04-29T22:27:42.049Z",
+  "completedAt": "2026-04-29T22:32:06.938Z",
+  "durationMs": 264889
+}

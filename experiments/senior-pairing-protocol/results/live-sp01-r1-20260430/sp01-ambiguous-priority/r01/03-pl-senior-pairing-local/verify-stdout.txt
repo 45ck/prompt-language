@@ -1,0 +1,9 @@
+Results: 7/7 passed
+PASS: mergeContacts is implemented and exported
+PASS: student tests cover createdAt conflict
+PASS: npm test passes
+PASS: later input order wins over older-looking createdAt timestamps
+PASS: empty later fields do not erase earlier useful values
+PASS: first-seen group position is preserved
+PASS: implementation does not sort by createdAt
+VERDICT: PASS

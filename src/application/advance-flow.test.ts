@@ -2290,6 +2290,45 @@ describe('autoAdvanceNodes — await', () => {
     );
   });
 
+  it('terminates running children when await times out and the spawner supports termination', async () => {
+    const terminate = vi.fn(async () => true);
+    const mockSpawner: ProcessSpawner = {
+      async spawn() {
+        return { pid: 1 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+      terminate,
+    };
+
+    const awaitNode = createAwaitNode('aw1', 'worker', 1);
+    const prompt = createPromptNode('p1', 'done');
+    const spec = createFlowSpec('test', [awaitNode, prompt]);
+    let state = createSessionState('s1', spec);
+    state = updateSpawnedChild(state, 'worker', {
+      name: 'worker',
+      status: 'running',
+      pid: process.pid,
+      stateDir: '.prompt-language-worker',
+    });
+    state = {
+      ...state,
+      nodeProgress: {
+        ...state.nodeProgress,
+        aw1: { iteration: 1, maxIterations: 150, status: 'running', startedAt: Date.now() - 2000 },
+      },
+    };
+
+    const result = await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+
+    expect(terminate).toHaveBeenCalledWith(process.pid);
+    expect(result.state.spawnedChildren['worker']?.status).toBe('failed');
+    expect(result.state.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('terminated child "worker"')]),
+    );
+  });
+
   it('race node times out after its wall-clock limit', async () => {
     const mockSpawner: ProcessSpawner = {
       async spawn() {

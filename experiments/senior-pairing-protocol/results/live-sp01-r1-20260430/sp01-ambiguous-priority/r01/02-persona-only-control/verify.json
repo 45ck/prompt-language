@@ -1,0 +1,13 @@
+{
+  "command": "node",
+  "args": ["verify.js"],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\02-persona-only-control\\workspace",
+  "exitCode": 1,
+  "signal": null,
+  "timedOut": false,
+  "stdout": "Results: 2/7 passed\nFAIL: mergeContacts is implemented and exported -- mergeContacts export is missing\nFAIL: student tests cover createdAt conflict -- src/test.js does not reference mergeContacts\nPASS: npm test passes\nFAIL: later input order wins over older-looking createdAt timestamps -- mergeContacts is not a function\nFAIL: empty later fields do not erase earlier useful values -- mergeContacts is not a function or its return value is not iterable\nFAIL: first-seen group position is preserved -- mergeContacts is not a function\nPASS: implementation does not sort by createdAt\nVERDICT: FAIL (5 failed)\n",
+  "stderr": "",
+  "startedAt": "2026-04-29T22:47:07.864Z",
+  "completedAt": "2026-04-29T22:47:08.320Z",
+  "durationMs": 456
+}

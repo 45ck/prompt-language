@@ -1,17 +1,17 @@
 Goal: Solve the task directly as the solo local-model baseline
 
 flow:
-  prompt: Read TASK.md and the implementation/test files, but do not read or modify verify.js. Implement the requested change. Make the smallest safe change that satisfies npm test and node verify.js. If requirements are ambiguous, choose the most likely interpretation and state the assumption in your final response.
+  prompt: Read TASK.md, src/contacts.js, and src/test.js, but do not read or modify verify.js. Implement the requested change. Make the smallest safe change that satisfies npm test and node verify.js. If requirements are ambiguous, choose the most likely interpretation and state the assumption in your final response.
   until command_succeeded max 3
     run: npm test [timeout 300]
     if command_failed
-      prompt: npm test failed. Fix only the relevant task files with the smallest change. Test output: ${last_stdout} ${last_stderr}
+      prompt: npm test failed. Fix only src/contacts.js or src/test.js with the smallest relevant change. Test output: ${last_stdout} ${last_stderr}
     end
   end
   until command_succeeded max 3
     run: node verify.js [timeout 300]
     if command_failed
-      prompt: The verifier failed. Fix only the relevant task files with the smallest change. Verifier output: ${last_stdout} ${last_stderr}
+      prompt: The verifier failed. Fix only src/contacts.js or src/test.js with the smallest relevant change. Do not read or modify verify.js. Verifier output: ${last_stdout} ${last_stderr}
     end
   end
 

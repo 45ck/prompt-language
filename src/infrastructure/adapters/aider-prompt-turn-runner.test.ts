@@ -318,6 +318,26 @@ describe('AiderPromptTurnRunner', () => {
     }
   });
 
+  it('resolveFiles excludes verify.js when the prompt forbids reading or modifying it', () => {
+    const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
+
+    try {
+      writeFileSync(join(root, 'TASK.md'), '# task\n', 'utf8');
+      writeFileSync(join(root, 'verify.js'), 'console.log("oracle");', 'utf8');
+      writeFileSync(join(root, 'src.js'), 'module.exports = {};\n', 'utf8');
+
+      expect(
+        runner.resolveFiles(
+          root,
+          'Read TASK.md and src.js, but do not read or modify verify.js. Run node verify.js only after making the fix.',
+        ),
+      ).toEqual(['TASK.md', 'src.js']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('resolveFiles falls back to top-level files for fresh non-git workspaces', () => {
     const runner = new AiderPromptTurnRunner();
     const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
@@ -332,6 +352,22 @@ describe('AiderPromptTurnRunner', () => {
         'test-input.csv',
         'verify.js',
       ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('resolveFiles excludes verify.js from fallback files when oracle access is forbidden', () => {
+    const runner = new AiderPromptTurnRunner();
+    const root = mkdtempSync(join(tmpdir(), 'aider-files-'));
+
+    try {
+      writeFileSync(join(root, 'package.json'), '{}\n', 'utf8');
+      writeFileSync(join(root, 'verify.js'), 'console.log("oracle");', 'utf8');
+
+      expect(
+        runner.resolveFiles(root, 'Fix the workspace, but do not read or modify verify.js.'),
+      ).toEqual(['package.json']);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

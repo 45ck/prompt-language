@@ -1,0 +1,13 @@
+{
+  "command": "npm",
+  "args": ["test"],
+  "cwd": "experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\02-persona-only-control\\workspace",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "stdout": "\n> sp01-ambiguous-priority@1.0.0 test\n> node src/test.js\n\n\nResults: 4/4 passed\nVERDICT: PASS\n",
+  "stderr": "",
+  "startedAt": "2026-04-29T23:04:15.264Z",
+  "completedAt": "2026-04-29T23:04:15.616Z",
+  "durationMs": 352
+}

@@ -1,0 +1,35 @@
+{
+  "run_id": "live-sp01-r1-20260430",
+  "task_id": "sp01-ambiguous-priority",
+  "runner": "aider",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "arms": ["solo-local", "persona-only-control", "pl-senior-pairing-local"],
+  "repeats": 1,
+  "dry_run": false,
+  "summaries": [
+    {
+      "repeat_id": "r01",
+      "arm": "solo-local",
+      "oracle_passed": true,
+      "runner_exit_code": 0,
+      "verify_exit_code": 0,
+      "oracle_access_violation": false
+    },
+    {
+      "repeat_id": "r01",
+      "arm": "persona-only-control",
+      "oracle_passed": false,
+      "runner_exit_code": 3,
+      "verify_exit_code": 1,
+      "oracle_access_violation": false
+    },
+    {
+      "repeat_id": "r01",
+      "arm": "pl-senior-pairing-local",
+      "oracle_passed": true,
+      "runner_exit_code": 0,
+      "verify_exit_code": 0,
+      "oracle_access_violation": false
+    }
+  ]
+}

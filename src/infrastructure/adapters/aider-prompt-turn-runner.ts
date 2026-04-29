@@ -20,6 +20,9 @@ const FILE_REFERENCE_PATTERN =
 const CAPTURE_FILE_REFERENCE_PATTERN =
   /(?:^|[^A-Za-z0-9_./\\-])(\.prompt-language[\\/]vars[\\/][A-Za-z_]\w*)(?=$|[^A-Za-z0-9_/\\-])/g;
 const TRANSIENT_OUTPUT_FILE_PATTERN = /^(?:run|verify)-(?:stdout|stderr)\.txt$/;
+const PROTECTED_VERIFY_FILE = 'verify.js';
+const PROTECTED_VERIFY_PATTERN =
+  /\bdo\s+not\s+(?:read|inspect|open|view|modify|edit|change)(?:\s+or\s+(?:read|inspect|open|view|modify|edit|change))*\s+verify\.js\b/i;
 
 function readPositiveIntEnv(name: string): number | undefined {
   const value = process.env[name]?.trim();
@@ -128,15 +131,28 @@ function extractReferencedFiles(cwd: string, prompt: string): string[] {
   return referencedFiles;
 }
 
-function listFallbackWorkspaceFiles(cwd: string): string[] {
+function protectsVerifyFile(prompt: string): boolean {
+  return PROTECTED_VERIFY_PATTERN.test(prompt);
+}
+
+function maybeFilterProtectedFiles(files: readonly string[], prompt: string): string[] {
+  if (!protectsVerifyFile(prompt)) {
+    return [...files];
+  }
+
+  return files.filter((file) => file.replace(/\\/g, '/') !== PROTECTED_VERIFY_FILE);
+}
+
+function listFallbackWorkspaceFiles(cwd: string, prompt: string): string[] {
   try {
-    return readdirSync(cwd, { withFileTypes: true })
+    const files = readdirSync(cwd, { withFileTypes: true })
       .filter((entry) => entry.isFile())
       .map((entry) => entry.name)
       .filter((name) => !name.startsWith('.'))
       .filter((name) => !TRANSIENT_OUTPUT_FILE_PATTERN.test(name))
       .sort((left, right) => left.localeCompare(right))
       .slice(0, MAX_FALLBACK_FILES);
+    return maybeFilterProtectedFiles(files, prompt);
   } catch {
     return [];
   }
@@ -202,9 +218,11 @@ export class AiderPromptTurnRunner implements PromptTurnRunner {
 
   resolveFiles(cwd: string, prompt: string, scopePrompt?: string): readonly string[] {
     const scopedPrompt = scopePrompt?.trim();
-    const referencedFiles = extractReferencedFiles(
-      cwd,
-      scopedPrompt && scopedPrompt.length > 0 ? scopedPrompt : prompt,
+    const fileSelectionPrompt = scopedPrompt && scopedPrompt.length > 0 ? scopedPrompt : prompt;
+    const protectionPrompt = [prompt, scopedPrompt].filter(Boolean).join('\n');
+    const referencedFiles = maybeFilterProtectedFiles(
+      extractReferencedFiles(cwd, fileSelectionPrompt),
+      protectionPrompt,
     );
     if (referencedFiles.length > 0) {
       return referencedFiles;
@@ -212,7 +230,7 @@ export class AiderPromptTurnRunner implements PromptTurnRunner {
 
     // Fresh temp workspaces used by evals often do not have a git repo yet, so
     // aider would otherwise start with an empty repo-map and zero file context.
-    return hasGitRepo(cwd) ? [] : listFallbackWorkspaceFiles(cwd);
+    return hasGitRepo(cwd) ? [] : listFallbackWorkspaceFiles(cwd, protectionPrompt);
   }
 
   describeInvocation(input: PromptTurnInput): {

@@ -1,6 +1,6 @@
 # Senior Pairing Protocol
 
-Status: planned
+Status: pilot run captured
 
 This experiment tests whether prompt-language can encode senior-engineer
 metacognition tightly enough to improve local-model coding work.
@@ -78,6 +78,7 @@ The full-feature arm is exploratory. The primary causal comparison is
 
 ## Related Evidence
 
+- `results/live-sp01-r1-20260430/sp01-ambiguous-priority/analysis.md`
 - `experiments/aider-vs-pl/results/2026-04-28-local-model-experiments.md`
 - `experiments/aider-vs-pl/LOCAL-MODEL-VIABILITY-FINDINGS.md`
 - `docs/feature-coverage.md`

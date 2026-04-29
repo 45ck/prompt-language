@@ -1,0 +1,77 @@
+diff --git "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\03-pl-senior-pairing-local\\original-sanitized/src/contacts.js" "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\03-pl-senior-pairing-local\\final-sanitized/src/contacts.js"
+index a94d41a..990764d 100644
+--- "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\03-pl-senior-pairing-local\\original-sanitized/src/contacts.js"
++++ "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\03-pl-senior-pairing-local\\final-sanitized/src/contacts.js"
+@@ -24,6 +24,30 @@ function removeContact(contacts, email) {
+   return contacts.filter((contact) => contact.email !== email);
+ }
+
+-// TODO: implement mergeContacts(records)
++function mergeContacts(records) {
++  const mergedMap = new Map();
++  for (let i = 0; i < records.length; i++) {
++    const record = records[i];
++    const email = record.email;
++    if (mergedMap.has(email)) {
++      const existing = mergedMap.get(email);
++      ['name', 'phone', 'company'].forEach(field => {
++        if (record[field] !== null) {
++          existing[field] = record[field];
++        }
++      });
++    } else {
++      mergedMap.set(email, { ...record });
++    }
++  }
++  const result = [];
++  for (const record of records) {
++    if (!mergedMap.has(record.email)) continue;
++    if (!result.some(r => r.email === record.email)) {
++      result.push(mergedMap.get(record.email));
++    }
++  }
++  return result;
++}
+
+-module.exports = { createContact, findByEmail, addContact, removeContact };
++module.exports = { createContact, findByEmail, addContact, removeContact, mergeContacts };
+diff --git "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\03-pl-senior-pairing-local\\original-sanitized/src/test.js" "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\03-pl-senior-pairing-local\\final-sanitized/src/test.js"
+index 1242065..531cd6c 100644
+--- "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\03-pl-senior-pairing-local\\original-sanitized/src/test.js"
++++ "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\03-pl-senior-pairing-local\\final-sanitized/src/test.js"
+@@ -1,4 +1,4 @@
+-const { createContact, findByEmail, addContact, removeContact } = require('./contacts');
++const { createContact, findByEmail, addContact, removeContact, mergeContacts } = require('./contacts');
+
+ let passed = 0;
+ let failed = 0;
+@@ -58,6 +58,29 @@ test('removeContact removes matching email', () => {
+   );
+ });
+
++test('mergeContacts uses input order for non-empty fields', () => {
++  const records = [
++    createContact('Old', 'test@example.com', '123', 'OldCo', 100),
++    createContact('New', 'test@example.com', '456', 'NewCo', 50),
++  ];
++  const merged = mergeContacts(records);
++  assertEqual(merged[0].name, 'New', 'name should be from later input');
++  assertEqual(merged[0].phone, '456', 'phone should be from later input');
++  assertEqual(merged[0].company, 'NewCo', 'company should be from later input');
++  assertEqual(merged[0].createdAt, 100, 'createdAt should be from first occurrence');
++});
++
++test('mergeContacts preserves earlier non-empty fields when later is empty', () => {
++  const records = [
++    createContact('Alice', 'a@example.com', '555', 'Acme', 10),
++    createContact('', 'a@example.com', '', '', 20),
++  ];
++  const merged = mergeContacts(records);
++  assertEqual(merged[0].name, 'Alice', 'name should be preserved');
++  assertEqual(merged[0].phone, '555', 'phone should be preserved');
++  assertEqual(merged[0].company, 'Acme', 'company should be preserved');
++});
++
+ console.log(`\nResults: ${passed}/${passed + failed} passed`);
+ if (failed > 0) {
+   console.log(`VERDICT: FAIL (${failed} failed)`);

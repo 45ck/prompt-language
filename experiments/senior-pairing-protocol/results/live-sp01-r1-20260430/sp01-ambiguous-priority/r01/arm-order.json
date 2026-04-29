@@ -1,0 +1,4 @@
+{
+  "seed": "live-sp01-r1-20260430-sp01-ambiguous-priority-r01",
+  "arms": ["solo-local", "persona-only-control", "pl-senior-pairing-local"]
+}

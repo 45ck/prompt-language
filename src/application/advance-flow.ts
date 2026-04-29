@@ -2727,6 +2727,16 @@ async function advanceAwaitNode(
     if (timedOut || pollCount >= MAX_AWAIT_POLLS) {
       for (const child of children) {
         if (child?.status === 'running') {
+          let warning =
+            child.pid !== undefined
+              ? `Await timeout; marked child "${child.name}" (pid ${child.pid}) as failed.`
+              : `Await timeout; marked child "${child.name}" as failed.`;
+          if (child.pid !== undefined && processSpawner.terminate) {
+            const terminated = await processSpawner.terminate(child.pid);
+            warning = terminated
+              ? `Await timeout; terminated child "${child.name}" (pid ${child.pid}).`
+              : `Await timeout; child "${child.name}" (pid ${child.pid}) could not be terminated or was already gone.`;
+          }
           state = updateSpawnedChild(state, child.name, {
             name: child.name,
             pid: child.pid,
@@ -2737,11 +2747,12 @@ async function advanceAwaitNode(
             returned: child.returned,
             variables: child.variables,
           });
+          state = addWarning(state, warning);
         }
       }
       const reason = timedOut
-        ? `Await timeout after ${node.timeoutSeconds}s; marked remaining children as failed.`
-        : `Await timeout after ${MAX_AWAIT_POLLS} polls; marked remaining children as failed.`;
+        ? `Await timeout after ${node.timeoutSeconds}s; remaining children failed or terminated.`
+        : `Await timeout after ${MAX_AWAIT_POLLS} polls; remaining children failed or terminated.`;
       state = {
         ...state,
         warnings: [...state.warnings, reason],

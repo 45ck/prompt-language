@@ -1,0 +1,45 @@
+{
+  "experiment_id": "senior-pairing-protocol",
+  "task_id": "sp01-ambiguous-priority",
+  "repeat_id": "r01",
+  "arm": "solo-local",
+  "arm_order_seed": "live-sp01-r1-20260430-sp01-ambiguous-priority-r01",
+  "arm_order_position": 1,
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "model_digest": null,
+  "temperature": 0,
+  "runner": "aider",
+  "judge_model": null,
+  "repo_commit": "ec8a749ddd610e73b40efeb72413fbefd1e82e78",
+  "repo_status_short": "M .beads/backup/backup_state.json\n M experiments/senior-pairing-protocol/flows/persona-control.flow\n M experiments/senior-pairing-protocol/flows/senior-pairing-v1.flow\n M experiments/senior-pairing-protocol/flows/solo-baseline.flow\n M package.json\n M src/application/advance-flow.test.ts\n M src/application/advance-flow.ts\n M src/infrastructure/adapters/aider-prompt-turn-runner.test.ts\n M src/infrastructure/adapters/aider-prompt-turn-runner.ts\n?? experiments/senior-pairing-protocol/fixtures/\n?? experiments/senior-pairing-protocol/results/live-sp01-r1-20260430/\n?? scripts/experiments/run-senior-pairing-protocol.mjs",
+  "fixture_hash": "2176b3343710eb3e39572e294d0503f18043a2ff5795ea80417942049288311a",
+  "hardware": {
+    "gpu": "nvidia-smi unavailable",
+    "vram_gb": null,
+    "driver": null
+  },
+  "started_at": "2026-04-29T22:27:42.049Z",
+  "completed_at": "2026-04-29T22:32:07.466Z",
+  "workspace_changed": true,
+  "exit_code": 0,
+  "deterministic": {
+    "npm_test_exit_code": 0,
+    "verify_exit_code": 0,
+    "oracle_passed": true
+  },
+  "timeouts": {
+    "prompt_turn_seconds": 900,
+    "test_command_seconds": 300,
+    "verify_command_seconds": 300,
+    "gate_command_seconds": 300,
+    "arm_wall_budget_seconds": 7200,
+    "max_prompt_turns": 24,
+    "max_repair_loops": 3
+  },
+  "oracle_access": {
+    "read_verify_before_failure": false,
+    "modified_verify": false,
+    "log_path": "oracle-access-log.txt"
+  },
+  "runtime_is_primary_score": false
+}

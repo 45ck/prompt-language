@@ -1,0 +1,25 @@
+{
+  "command": "C:\\Program Files\\nodejs\\node.exe",
+  "args": [
+    "C:\\Projects\\prompt-language\\bin\\cli.mjs",
+    "run",
+    "--runner",
+    "aider",
+    "--model",
+    "ollama_chat/qwen3-opencode-big:30b",
+    "--json",
+    "--state-dir",
+    "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\02-persona-only-control\\workspace\\.prompt-language",
+    "--file",
+    "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\flows\\persona-control.flow"
+  ],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-r1-20260430\\sp01-ambiguous-priority\\r01\\02-persona-only-control\\workspace",
+  "exitCode": 3,
+  "signal": null,
+  "timedOut": false,
+  "stdout": "{\n  \"status\": \"failed\",\n  \"diagnostics\": [\n    {\n      \"code\": \"PLR-007\",\n      \"kind\": \"runtime\",\n      \"phase\": \"gate-eval\",\n      \"severity\": \"error\",\n      \"blocksExecution\": true,\n      \"retryable\": true,\n      \"summary\": \"Prompt runner exited with code 1. Detected dumb terminal, disabling fancy input and pretty output. Aider v0.86.2 Model: ollama_chat/qwen3-opencode-big:30b with whole edit format Git repo: none R...\",\n      \"action\": \"Inspect _runtime_diagnostic.prompt_runner.* in the saved session state for full runner output.\"\n    }\n  ],\n  \"outcomes\": [],\n  \"reason\": \"Prompt runner exited with code 1. Detected dumb terminal, disabling fancy input and pretty output. Aider v0.86.2 Model: ollama_chat/qwen3-opencode-big:30b with whole edit format Git repo: none R...\"\n}\n",
+  "stderr": "",
+  "startedAt": "2026-04-29T22:32:07.659Z",
+  "completedAt": "2026-04-29T22:47:07.861Z",
+  "durationMs": 900202
+}

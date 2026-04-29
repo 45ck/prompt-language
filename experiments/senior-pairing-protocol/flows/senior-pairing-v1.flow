@@ -11,20 +11,20 @@ flow:
     "tests_to_write": "string",
     "escalation_needed": "boolean"
   }
-  prompt: Before editing, inspect only the files needed for the task, but do not read or modify verify.js. Then write or update tests that would fail on the original behavior. Use this senior frame as the contract: objective=${senior_frame.objective}; ambiguity=${senior_frame.ambiguity}; risks=${senior_frame.top_risks}; tests=${senior_frame.tests_to_write}. Do not implement the production fix yet.
+  prompt: Before editing, inspect TASK.md, src/contacts.js, and src/test.js, but do not read or modify verify.js. Then write or update tests in src/test.js that would fail on the original behavior. Use this senior frame as the contract: objective=${senior_frame.objective}; ambiguity=${senior_frame.ambiguity}; risks=${senior_frame.top_risks}; tests=${senior_frame.tests_to_write}. Do not implement the production fix yet.
   run: npm test [timeout 300]
   if command_succeeded
     prompt: The tests passed before implementation, which means they may not prove the intended behavior. Strengthen the tests so they fail on the missing or buggy behavior. Keep the changes focused.
     run: npm test [timeout 300]
   end
-  prompt: Now implement the smallest safe production change according to the senior strategy: ${senior_frame.smallest_safe_strategy}. Do not broaden scope. Do not rewrite unrelated code.
+  prompt: Now implement the smallest safe production change in src/contacts.js according to the senior strategy: ${senior_frame.smallest_safe_strategy}. Do not broaden scope. Do not rewrite unrelated code.
   review strict criteria: "The implementation must pass npm test. Semantic senior-quality review happens in the final structured self-review and scorecard, not in this deterministic command loop." grounded-by "npm test" max 3
     run: npm test [timeout 300]
-    prompt: If npm test fails, repair the smallest relevant part of the implementation or tests. Use the latest critique and command output. Critique: ${_review_critique}. Output: ${last_stdout} ${last_stderr}
+    prompt: If npm test fails, repair the smallest relevant part of src/contacts.js or src/test.js. Use the latest critique and command output. Critique: ${_review_critique}. Output: ${last_stdout} ${last_stderr}
   end
   review strict criteria: "The external oracle must pass. Repairs must be grounded in verifier output, not guesses." grounded-by "node verify.js" max 3
     run: node verify.js [timeout 300]
-    prompt: If the verifier fails, identify the root cause in one sentence, then make the smallest fix. Verifier output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
+    prompt: If the verifier fails, identify the root cause in one sentence, then make the smallest fix in src/contacts.js or src/test.js. Do not read or modify verify.js. Verifier output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
   end
   let final_self_review = prompt "Review the final state as the senior engineer. Return JSON with: pass, residual_risks, tests_evidence, minimality_evidence, escalation_needed. Do not include chain-of-thought; cite concrete evidence only." as json {
     "pass": "boolean",

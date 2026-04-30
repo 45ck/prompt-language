@@ -211,6 +211,19 @@ evidence, not claim-grade product evidence. The next variant splits domain
 implementation into a customers/assets foundation card followed by a work_order rules
 card.
 
+Observed split-domain scaffold follow-up on `2026-04-30`: the native-Ollama R22 run
+`live-fscrud-r22-ollama-scaffold-split-domain-v1-20260430-2010` did not produce
+claim-grade evidence. The solo arm failed with `PLR-007` / `fetch failed` and scored
+`4/100`. The scaffold arm did improve on R21 by editing `src/domain.js`, but the edit
+used the wrong export shape (`createCustomer`/`updateCustomer` style ESM stubs instead
+of the required CommonJS `list/read/detail/edit` surface) and failed the first
+customer/assets foundation review after `2/2` rounds. The verifier again scored the
+scaffold arm `80/100`, with `domain_behavior_failed` and missing required exports.
+Treat R22 as evidence that splitting the prompt can trigger action, but not enough
+behavioral control. The next variant tightens exact export preservation, `write_file`
+repair actions, work_order create/edit validation, safe delete rules, and concrete
+server/UI contracts; consider raising the Ollama action-round budget for that run.
+
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence
 for or against the PL-vs-solo hypothesis. A claim-grade comparison requires both arms

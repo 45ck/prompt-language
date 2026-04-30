@@ -446,6 +446,32 @@ describe('FSCRUD verifier script', () => {
     }
   });
 
+  it('fails raw scaffold output until executable domain behavior is implemented', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'fscrud-scaffold-placeholder-'));
+    try {
+      execFileSync(process.execPath, [SCAFFOLD_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+
+      const result = runVerifier(workspace);
+      const report = JSON.parse(result.stdout) as {
+        passed: boolean;
+        hardFailures: string[];
+        checks: { domainBehavior: boolean };
+        domainBehavior: { stderr: string };
+      };
+
+      expect(result.status).toBe(1);
+      expect(report.passed).toBe(false);
+      expect(report.hardFailures).toContain('domain_behavior_failed');
+      expect(report.checks.domainBehavior).toBe(false);
+      expect(report.domainBehavior.stderr).toContain('reset not implemented');
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
   it('keeps FSCRUD task context inline instead of binding artifact handles as the task', () => {
     const flows = [
       'solo-local-crud.flow',
@@ -462,7 +488,11 @@ describe('FSCRUD verifier script', () => {
       );
 
       expect(source).toContain('Task contract: ${task_contract}');
-      expect(source).toContain('__tests__/domain.test.js');
+      if (flow === 'pl-fullstack-crud-scaffold-contract-v1.flow') {
+        expect(source).toContain('__tests__/domain.contract.test.js');
+      } else {
+        expect(source).toContain('__tests__/domain.test.js');
+      }
       expect(source).not.toContain('let task_brief = "${last_stdout}"');
     }
   });

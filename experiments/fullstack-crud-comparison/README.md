@@ -92,7 +92,14 @@ and the old validation-prompt blocker is gone, but the first broad domain
 implementation prompt exhausted the 8 action-round limit before editing
 `src/domain.js`.
 
-The next treatment narrows that domain step into two Senior Cards: customers/assets
-foundation first, then work_order rules. Only after a current-commit smoke pair
+R22 narrowed that domain step into two Senior Cards: customers/assets foundation
+first, then work_order rules. It moved past the exact R21 blocker by editing
+`src/domain.js`, but the edit used the wrong export shape and still failed the first
+strict foundation review; the scaffold arm stayed at `80/100` with
+`domain_behavior_failed`.
+
+The next treatment tightens the scaffold flow around exact CommonJS export names,
+explicit `write_file` repair actions, work_order create/edit rules, safe delete
+semantics, and concrete server/UI behavior. Only after a current-commit smoke pair
 completes with a frozen task, verifier, runner, model, and commit should this scale
 to `k=3` paired runs.

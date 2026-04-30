@@ -128,6 +128,14 @@ runner did not recognize the JSON-capture wording `Save your JSON answer to ...`
 a capture path. Treat this as a parser coverage bug in the local runner, not a
 product-quality outcome.
 
+Observed JSON-capture follow-up on `2026-04-30`: after fixing JSON-capture path
+detection, native `ollama` successfully captured `senior_frame` and advanced to the
+second planning capture, but the `implementation_plan` turn spent roughly `26`
+minutes and ended with `fetch failed`. Treat broad planning captures as unstable on
+this host. For the next tight local run, keep the senior frame capture but bake the
+file-by-file implementation plan directly into the slice prompts so the model spends
+GPU time on artifact creation instead of another planning capture.
+
 Verifier hardening note: a green `node --test` exit is insufficient by itself
 because Node can exit successfully when no test files exist. The FSCRUD verifier
 must require real test files and should score seed data from actual seed artifacts,

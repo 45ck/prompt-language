@@ -132,9 +132,20 @@ function countCrudCoverage(corpus) {
   return Object.fromEntries(CRUD_TERMS.map((term) => [term, corpus.includes(term)]));
 }
 
-function runNpmTest(workspace, enabled) {
+function runNpmTest(workspace, enabled, packageJson) {
   if (!enabled) {
     return { skipped: true, exitCode: null, stdout: '', stderr: '', durationMs: 0 };
+  }
+
+  if (packageJson === null || typeof packageJson?.scripts?.test !== 'string') {
+    return {
+      skipped: false,
+      exitCode: 1,
+      timedOut: false,
+      stdout: '',
+      stderr: 'package.json is missing or does not declare a test script; npm test was not run.',
+      durationMs: 0,
+    };
   }
 
   const started = Date.now();
@@ -229,7 +240,7 @@ function main() {
   const packageJson = readJson(join(options.workspace, 'package.json'));
   const files = listTextFiles(options.workspace);
   const corpus = readCorpus(files);
-  const testResult = runNpmTest(options.workspace, options.runTests);
+  const testResult = runNpmTest(options.workspace, options.runTests, packageJson);
   const scoreResult = scoreWorkspace(options.workspace, packageJson, corpus, testResult);
   const failures = hardFailures(options.workspace, scoreResult);
   const passed = failures.length === 0 && scoreResult.score >= 80;

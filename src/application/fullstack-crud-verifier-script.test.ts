@@ -76,11 +76,20 @@ describe('FSCRUD verifier script', () => {
     writeFileSync(join(workspace, 'README.md'), 'incomplete');
 
     const result = runVerifier(workspace);
-    const report = JSON.parse(result.stdout) as { passed: boolean; hardFailures: string[] };
+    const report = JSON.parse(result.stdout) as {
+      passed: boolean;
+      hardFailures: string[];
+      checks: { npmTestPassed: boolean };
+      npmTest: { exitCode: number; stderr: string; stdout: string };
+    };
 
     expect(result.status).toBe(1);
     expect(report.passed).toBe(false);
     expect(report.hardFailures).toContain('package_json_missing_or_invalid');
+    expect(report.checks.npmTestPassed).toBe(false);
+    expect(report.npmTest.exitCode).toBe(1);
+    expect(report.npmTest.stderr).toContain('package.json is missing');
+    expect(report.npmTest.stdout).not.toContain('@45ck/prompt-language');
   });
 
   it('keeps FSCRUD flows parse-valid', () => {

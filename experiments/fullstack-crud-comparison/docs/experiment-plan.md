@@ -75,6 +75,13 @@ out on the broad scaffold edit prompt at both `600` and `1800` seconds without
 creating files. That result motivates `pl-local-crud-tight`; increasing timeout alone
 did not resolve the edit stall.
 
+Observed tight-arm follow-up on `2026-04-30`: opencode with
+`ollama/qwen3-opencode-big:30b` failed after roughly `762` seconds with no files in
+`workspace/fscrud-01`. The final assistant output was a JSON-shaped `write` request
+instead of an executed workspace edit. Treat `pl-local-crud-tight` as a diagnostic
+probe for local runner/tool-call failure modes, not as claim-grade full-stack
+evidence, until the arm enforces the full UI scope and the verifier is strengthened.
+
 ## GPU Telemetry Policy
 
 GPU utilization is supporting telemetry. It should be captured when possible because

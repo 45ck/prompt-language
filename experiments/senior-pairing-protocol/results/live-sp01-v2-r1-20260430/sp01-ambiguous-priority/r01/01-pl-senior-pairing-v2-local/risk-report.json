@@ -1,0 +1,13 @@
+{
+  "captured": true,
+  "variable": "risk_register",
+  "value": {
+    "security_risk": "Merging records could expose sensitive data if email duplicates are not handled correctly.",
+    "data_risk": "Incorrect merging might lead to loss of non-empty fields from earlier records.",
+    "compatibility_risk": "The solution might not handle edge cases like empty strings in input records.",
+    "architecture_risk": "The current approach may require refactoring if more complex merging rules are added later.",
+    "testability_risk": "Without tests for conflicting input orders, it's hard to verify correctness.",
+    "highest_risk_mistake": "Assuming 'newer' means later in the array without verifying, leading to incorrect merges.",
+    "stop_conditions": "Stop if the merge logic doesn't handle empty strings correctly."
+  }
+}

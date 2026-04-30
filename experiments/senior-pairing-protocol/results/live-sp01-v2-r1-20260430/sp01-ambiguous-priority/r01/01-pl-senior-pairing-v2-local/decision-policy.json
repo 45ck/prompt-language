@@ -1,0 +1,15 @@
+{
+  "captured": true,
+  "variable": "decision_policy",
+  "value": {
+    "criteria": "Correctness, Safety, Minimality, Testability, Compatibility",
+    "option_a": "Merge by email, using input order (later record wins) with field-level overrides",
+    "option_b": "Merge by email, using createdAt timestamp for newer record",
+    "option_c": "Merge by email, using a custom merge function with priority",
+    "ranking": "Option A > Option C > Option B (Option B is invalid per task brief)",
+    "chosen_strategy": "Option A",
+    "rejected_strategies": "Option B (uses createdAt instead of input order), Option C (unnecessary complexity)",
+    "assumptions_to_test": "Input order determines 'newer', empty strings don't override",
+    "smallest_safe_diff": "Process records sequentially, track first occurrence via email, merge fields with later non-empty values"
+  }
+}

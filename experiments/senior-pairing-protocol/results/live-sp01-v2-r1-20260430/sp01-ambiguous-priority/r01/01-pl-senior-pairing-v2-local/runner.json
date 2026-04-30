@@ -1,0 +1,25 @@
+{
+  "command": "C:\\Program Files\\nodejs\\node.exe",
+  "args": [
+    "C:\\Projects\\prompt-language\\bin\\cli.mjs",
+    "run",
+    "--runner",
+    "aider",
+    "--model",
+    "ollama_chat/qwen3-opencode-big:30b",
+    "--json",
+    "--state-dir",
+    "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\workspace\\.prompt-language",
+    "--file",
+    "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\flows\\senior-pairing-v2.flow"
+  ],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\workspace",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "stdout": "{\n  \"status\": \"ok\",\n  \"diagnostics\": [\n    {\n      \"code\": \"PLR-005\",\n      \"kind\": \"runtime\",\n      \"phase\": \"advance\",\n      \"severity\": \"warning\",\n      \"blocksExecution\": false,\n      \"retryable\": true,\n      \"summary\": \"JSON capture for 'senior_frame' fell back to empty string after 3 attempts. (let senior_frame at line 6, col 3)\",\n      \"action\": \"Inspect the capture path or rerun with a working Write/capture surface.\"\n    },\n    {\n      \"code\": \"PLR-005\",\n      \"kind\": \"runtime\",\n      \"phase\": \"advance\",\n      \"severity\": \"warning\",\n      \"blocksExecution\": false,\n      \"retryable\": true,\n      \"summary\": \"JSON capture for 'change_review' fell back to empty string after 3 attempts. (let change_review at line 61, col 3)\",\n      \"action\": \"Inspect the capture path or rerun with a working Write/capture surface.\"\n    }\n  ],\n  \"outcomes\": [\n    {\n      \"code\": \"PLO-005\",\n      \"summary\": \"Flow completed.\"\n    }\n  ],\n  \"reason\": \"PLR-005 JSON capture for 'change_review' fell back to empty string after 3 attempts. (let change_review at line 61, col 3)\"\n}\n",
+  "stderr": "",
+  "startedAt": "2026-04-29T23:54:02.377Z",
+  "completedAt": "2026-04-30T00:22:48.536Z",
+  "durationMs": 1726159
+}

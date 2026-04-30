@@ -248,31 +248,67 @@ function gitStatus() {
   return result.stdout.trim();
 }
 
-function readFlowVariables(stateDir) {
+function readFlowState(stateDir) {
   const statePath = join(stateDir, 'session-state.json');
   if (!existsSync(statePath)) {
-    return {};
+    return { status: 'missing', variables: {}, warnings: [] };
   }
 
   try {
     const parsed = JSON.parse(readFileSync(statePath, 'utf8'));
-    return parsed &&
+    const variables =
+      parsed &&
       typeof parsed === 'object' &&
       parsed.variables &&
       typeof parsed.variables === 'object'
-      ? parsed.variables
-      : {};
+        ? parsed.variables
+        : {};
+    const warnings = Array.isArray(parsed?.warnings) ? parsed.warnings.map(String) : [];
+    return { status: String(parsed?.status ?? 'unknown'), variables, warnings };
   } catch {
-    return {};
+    return { status: 'unreadable', variables: {}, warnings: ['session-state.json was unreadable'] };
   }
 }
 
-function variableArtifact(variables, name) {
-  if (!Object.prototype.hasOwnProperty.call(variables, name)) {
+function normalizeVariableValue(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+
+  if (value.trim() === '') {
+    return '';
+  }
+
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function nestedVariableArtifact(variables, name) {
+  const prefix = `${name}.`;
+  const entries = Object.entries(variables).filter(([key]) => key.startsWith(prefix));
+  if (entries.length === 0) {
     return null;
   }
 
+  return Object.fromEntries(
+    entries.map(([key, value]) => [key.slice(prefix.length), normalizeVariableValue(value)]),
+  );
+}
+
+function variableArtifact(variables, name) {
+  const nested = nestedVariableArtifact(variables, name);
+  if (!Object.prototype.hasOwnProperty.call(variables, name)) {
+    return nested;
+  }
+
   const value = variables[name];
+  if (typeof value === 'string' && value.trim() === '') {
+    return nested;
+  }
+
   if (typeof value !== 'string') {
     return value;
   }
@@ -280,7 +316,7 @@ function variableArtifact(variables, name) {
   try {
     return JSON.parse(value);
   } catch {
-    return { value };
+    return nested ?? { value };
   }
 }
 
@@ -466,7 +502,8 @@ function runArm({
   const changed = diff.trim().length > 0;
   const completedAt = new Date().toISOString();
 
-  const flowVariables = readFlowVariables(stateDir);
+  const flowState = readFlowState(stateDir);
+  const flowVariables = flowState.variables;
   const capturedArtifacts = {
     senior_frame: writeVariableArtifact(armDir, 'senior-frame.json', flowVariables, 'senior_frame'),
     risk_register: writeVariableArtifact(
@@ -487,6 +524,12 @@ function runArm({
       'pre-impl-test-assessment.json',
       flowVariables,
       'pre_impl_test_assessment',
+    ),
+    strengthened_test_assessment: writeVariableArtifact(
+      armDir,
+      'strengthened-test-assessment.json',
+      flowVariables,
+      'strengthened_test_assessment',
     ),
     change_review: writeVariableArtifact(
       armDir,
@@ -542,6 +585,10 @@ function runArm({
       log_path: 'oracle-access-log.txt',
     },
     runtime_is_primary_score: false,
+    flow_state: {
+      status: flowState.status,
+      warnings: flowState.warnings,
+    },
     captured_artifacts: capturedArtifacts,
   };
   writeJson(join(armDir, 'run-manifest.json'), manifest);

@@ -1,0 +1,64 @@
+{
+  "experiment_id": "senior-pairing-protocol",
+  "task_id": "sp01-ambiguous-priority",
+  "repeat_id": "r01",
+  "arm": "pl-senior-pairing-v2-local",
+  "arm_order_seed": "live-sp01-v2-r1-20260430-sp01-ambiguous-priority-r01",
+  "arm_order_position": 1,
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "model_digest": null,
+  "temperature": 0,
+  "runner": "aider",
+  "judge_model": null,
+  "repo_commit": "097ed7a80a1955fe00bcc22712dc27dd3d6a0d80",
+  "repo_status_short": "",
+  "fixture_hash": "2176b3343710eb3e39572e294d0503f18043a2ff5795ea80417942049288311a",
+  "hardware": {
+    "gpu": "nvidia-smi unavailable",
+    "vram_gb": null,
+    "driver": null
+  },
+  "started_at": "2026-04-29T23:54:02.377Z",
+  "completed_at": "2026-04-30T00:22:49.477Z",
+  "workspace_changed": true,
+  "exit_code": 0,
+  "deterministic": {
+    "npm_test_exit_code": 0,
+    "verify_exit_code": 0,
+    "oracle_passed": true
+  },
+  "timeouts": {
+    "prompt_turn_seconds": 900,
+    "test_command_seconds": 300,
+    "verify_command_seconds": 300,
+    "gate_command_seconds": 300,
+    "arm_wall_budget_seconds": 7200,
+    "max_prompt_turns": 24,
+    "max_repair_loops": 3
+  },
+  "oracle_access": {
+    "read_verify_before_failure": false,
+    "modified_verify": false,
+    "log_path": "oracle-access-log.txt"
+  },
+  "runtime_is_primary_score": false,
+  "captured_artifacts": {
+    "senior_frame": false,
+    "risk_register": true,
+    "test_strategy": true,
+    "decision_policy": true,
+    "pre_impl_test_assessment": true,
+    "change_review": false,
+    "final_self_review": true,
+    "strengthened_test_assessment": false
+  },
+  "flow_state": {
+    "status": "completed",
+    "warnings": [
+      "JSON capture for 'senior_frame' fell back to empty string after 3 attempts. (let senior_frame at line 6, col 3)",
+      "Variable 'senior_frame' JSON parse failed; stored raw response.",
+      "JSON capture for 'change_review' fell back to empty string after 3 attempts. (let change_review at line 61, col 3)",
+      "Variable 'change_review' JSON parse failed; stored raw response."
+    ]
+  }
+}

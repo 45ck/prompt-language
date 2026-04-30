@@ -1,0 +1,5 @@
+{
+  "captured": false,
+  "variable": "senior_frame",
+  "reason": "Variable was not present or JSON capture fell back to an empty string."
+}

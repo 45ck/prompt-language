@@ -1,0 +1,32 @@
+{
+  "status": "ok",
+  "diagnostics": [
+    {
+      "code": "PLR-005",
+      "kind": "runtime",
+      "phase": "advance",
+      "severity": "warning",
+      "blocksExecution": false,
+      "retryable": true,
+      "summary": "JSON capture for 'senior_frame' fell back to empty string after 3 attempts. (let senior_frame at line 6, col 3)",
+      "action": "Inspect the capture path or rerun with a working Write/capture surface."
+    },
+    {
+      "code": "PLR-005",
+      "kind": "runtime",
+      "phase": "advance",
+      "severity": "warning",
+      "blocksExecution": false,
+      "retryable": true,
+      "summary": "JSON capture for 'change_review' fell back to empty string after 3 attempts. (let change_review at line 61, col 3)",
+      "action": "Inspect the capture path or rerun with a working Write/capture surface."
+    }
+  ],
+  "outcomes": [
+    {
+      "code": "PLO-005",
+      "summary": "Flow completed."
+    }
+  ],
+  "reason": "PLR-005 JSON capture for 'change_review' fell back to empty string after 3 attempts. (let change_review at line 61, col 3)"
+}

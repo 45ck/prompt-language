@@ -1,0 +1,13 @@
+{
+  "command": "npm",
+  "args": ["test"],
+  "cwd": "C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\workspace",
+  "exitCode": 0,
+  "signal": null,
+  "timedOut": false,
+  "stdout": "\n> sp01-ambiguous-priority@1.0.0 test\n> node src/test.js\n\n\nResults: 7/7 passed\nVERDICT: PASS\n",
+  "stderr": "",
+  "startedAt": "2026-04-30T00:22:48.539Z",
+  "completedAt": "2026-04-30T00:22:48.932Z",
+  "durationMs": 393
+}

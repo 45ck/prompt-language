@@ -1,0 +1,13 @@
+{
+  "captured": true,
+  "variable": "final_self_review",
+  "value": {
+    "pass": true,
+    "deterministic_evidence": "node verify.js passed with exit code 0",
+    "criteria_satisfied": "Correctness, Safety, Minimality, Testability, Compatibility",
+    "assumptions_resolved": "Input order determines 'newer', empty strings don't override",
+    "residual_risks": "None",
+    "escalation_needed": false,
+    "expected_score_delta_vs_persona": "No change"
+  }
+}

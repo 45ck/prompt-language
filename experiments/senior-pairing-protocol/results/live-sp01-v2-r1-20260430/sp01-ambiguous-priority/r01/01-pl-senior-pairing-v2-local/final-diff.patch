@@ -1,0 +1,92 @@
+diff --git "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\original-sanitized/src/contacts.js" "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\final-sanitized/src/contacts.js"
+index a94d41a..0f38cee 100644
+--- "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\original-sanitized/src/contacts.js"
++++ "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\final-sanitized/src/contacts.js"
+@@ -24,6 +24,34 @@ function removeContact(contacts, email) {
+   return contacts.filter((contact) => contact.email !== email);
+ }
+ 
+-// TODO: implement mergeContacts(records)
++function mergeContacts(records) {
++  const merged = [];
++  const emailMap = new Map();
+ 
+-module.exports = { createContact, findByEmail, addContact, removeContact };
++  for (const record of records) {
++    const email = record.email;
++    if (!emailMap.has(email)) {
++      merged.push(record);
++      emailMap.set(email, merged.length - 1);
++    } else {
++      const index = emailMap.get(email);
++      const mergedRecord = merged[index];
++
++      if (record.name !== null && record.name !== undefined && record.name !== '') {
++        mergedRecord.name = record.name;
++      }
++
++      if (record.phone !== null && record.phone !== undefined && record.phone !== '') {
++        mergedRecord.phone = record.phone;
++      }
++
++      if (record.company !== null && record.company !== undefined && record.company !== '') {
++        mergedRecord.company = record.company;
++      }
++    }
++  }
++
++  return merged;
++}
++
++module.exports = { createContact, findByEmail, addContact, removeContact, mergeContacts };
+diff --git "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\original-sanitized/src/test.js" "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\final-sanitized/src/test.js"
+index 1242065..34c2748 100644
+--- "a/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\original-sanitized/src/test.js"
++++ "b/C:\\Projects\\prompt-language\\experiments\\senior-pairing-protocol\\results\\live-sp01-v2-r1-20260430\\sp01-ambiguous-priority\\r01\\01-pl-senior-pairing-v2-local\\final-sanitized/src/test.js"
+@@ -1,4 +1,4 @@
+-const { createContact, findByEmail, addContact, removeContact } = require('./contacts');
++const { createContact, findByEmail, addContact, removeContact, mergeContacts } = require('./contacts');
+ 
+ let passed = 0;
+ let failed = 0;
+@@ -58,6 +58,40 @@ test('removeContact removes matching email', () => {
+   );
+ });
+ 
++test('mergeContacts merges duplicates by input order, ignoring createdAt', () => {
++  const records = [
++    createContact('Old', 'a@example.com', '555', 'OldCo', 10),
++    createContact('New', 'a@example.com', '556', 'NewCo', 5),
++  ];
++  const merged = mergeContacts(records);
++  assertEqual(merged.length, 1, 'should merge into one record');
++  assertEqual(merged[0].name, 'New', 'name should be from later input record');
++  assertEqual(merged[0].email, 'a@example.com', 'email should match');
++  assertEqual(merged[0].createdAt, 10, 'createdAt should be from first occurrence');
++});
++
++test('mergeContacts does not override with empty strings', () => {
++  const records = [
++    createContact('Alice', 'a@example.com', '555', 'Acme', 10),
++    createContact('', 'a@example.com', '556', 'Beta', 5),
++  ];
++  const merged = mergeContacts(records);
++  assertEqual(merged[0].name, 'Alice', 'name should not be overridden by empty string');
++});
++
++test('mergeContacts handles multiple duplicate emails', () => {
++  const records = [
++    createContact('Alice', 'a@example.com', '555', 'Acme', 10),
++    createContact('Bob', 'a@example.com', '556', 'Beta', 5),
++    createContact('Charlie', 'b@example.com', '557', 'Gamma', 15),
++    createContact('David', 'b@example.com', '558', 'Delta', 12),
++  ];
++  const merged = mergeContacts(records);
++  assertEqual(merged.length, 2, 'should have two merged records');
++  assertEqual(merged[0].name, 'Bob', 'name from second record for a@example.com');
++  assertEqual(merged[1].name, 'David', 'name from second record for b@example.com');
++});
++
+ console.log(`\nResults: ${passed}/${passed + failed} passed`);
+ if (failed > 0) {
+   console.log(`VERDICT: FAIL (${failed} failed)`);

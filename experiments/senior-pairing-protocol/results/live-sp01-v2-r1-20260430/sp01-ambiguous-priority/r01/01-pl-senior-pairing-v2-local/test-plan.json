@@ -1,0 +1,12 @@
+{
+  "captured": true,
+  "variable": "test_strategy",
+  "value": {
+    "red_tests": "Test that a later record with non-empty 'name' overrides an earlier empty 'name' in duplicate email group.",
+    "edge_cases": "Empty strings in later records, multiple duplicate emails, records with null values.",
+    "false_positive_controls": "Verify specific field values (e.g., name) are merged correctly, not just any field.",
+    "original_bug_signal": "Merging records based on 'createdAt' timestamp instead of input order.",
+    "regression_checks": "Existing tests for single duplicate records must pass after implementation.",
+    "verifier_expectations": "Merged records must contain latest non-empty values for name, phone, and company."
+  }
+}

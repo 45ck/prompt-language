@@ -1,0 +1,19 @@
+{
+  "run_id": "live-sp01-v2-r1-20260430",
+  "task_id": "sp01-ambiguous-priority",
+  "runner": "aider",
+  "model": "ollama_chat/qwen3-opencode-big:30b",
+  "arms": ["pl-senior-pairing-v2-local"],
+  "repeats": 1,
+  "dry_run": false,
+  "summaries": [
+    {
+      "repeat_id": "r01",
+      "arm": "pl-senior-pairing-v2-local",
+      "oracle_passed": true,
+      "runner_exit_code": 0,
+      "verify_exit_code": 0,
+      "oracle_access_violation": false
+    }
+  ]
+}

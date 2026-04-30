@@ -189,6 +189,17 @@ asks the model to fill `src/domain.js` under a compact Senior Card protocol:
 prompt-language structure and contract feedback; the scaffold provides shape and
 tests, not completed business logic.
 
+Observed scaffold-contract diagnostic on `2026-04-30`: the paired native-Ollama
+run `live-fscrud-r20-ollama-scaffold-contract-v1-20260430-1902` used
+`qwen3-opencode-big:30b`. The solo arm produced only `package.json` and scored
+`22/100`. The scaffold arm created the deterministic scaffold and scored `76/100`,
+with seed integrity passing but `domain_behavior_failed` because `src/domain.js`
+still threw `reset not implemented`. Do not treat R20 as a claim-grade comparison:
+the scaffold flow used an initial `review` block whose body prompt consumed the next
+model turn with a no-op diagnostic response before the domain implementation prompt
+ran. The follow-up fix replaces that check with a deterministic `run` gate and
+adds explicit status vocabulary to the scaffold contract.
+
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence
 for or against the PL-vs-solo hypothesis. A claim-grade comparison requires both arms

@@ -39,6 +39,8 @@ GOAL: Implement a small CommonJS field-service work order tracker.
 FILE: Fill src/domain.js first; contract tests are authoritative.
 MUST: Export reset plus list/create/read/detail/edit/delete functions for customers, assets, and work_orders.
 MUST: Validate customerId, assetId, asset/customer mismatch, status, completedAt, and priority.
+MUST: Accept status values open, scheduled, in_progress, completed, cancelled.
+MUST: Accept priority values low, normal, urgent.
 MUST: Preserve package.json, __tests__/domain.contract.test.js, data/seed.json, and this contract.
 CHECK: cd workspace/fscrud-01 && npm test.
 REPAIR: Patch only missing behavior; do not rewrite passing contracts.
@@ -48,6 +50,9 @@ REPAIR: Patch only missing behavior; do not rewrite passing contracts.
 write(
   'src/domain.js',
   `
+const STATUS_VALUES = ['open', 'scheduled', 'in_progress', 'completed', 'cancelled'];
+const PRIORITY_VALUES = ['low', 'normal', 'urgent'];
+
 function notImplemented(name) {
   throw new Error(name + ' not implemented');
 }
@@ -97,6 +102,8 @@ module.exports = {
   detailWorkOrder,
   editWorkOrder,
   deleteWorkOrder,
+  STATUS_VALUES,
+  PRIORITY_VALUES,
 };
 `,
 );
@@ -277,8 +284,8 @@ write(
   <body>
     <h1>FSCRUD-01 Field Service Work Orders</h1>
     <section id="customers">customers list create read edit detail delete</section>
-    <section id="assets">assets list create read edit detail delete</section>
-    <section id="work_orders">work_orders list create read edit detail delete</section>
+    <section id="assets">assets list create read edit detail delete customerId</section>
+    <section id="work_orders">work_orders list create read edit detail delete customerId assetId status completedAt priority</section>
   </body>
 </html>
 `,

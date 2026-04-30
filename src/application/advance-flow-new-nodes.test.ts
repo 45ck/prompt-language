@@ -239,7 +239,7 @@ describe('autoAdvanceNodes — review node', () => {
   });
 
   it('with grounded-by exiting non-zero: re-loops body and sets _review_critique', async () => {
-    const runner = makeRunner(1);
+    const runner = makeRunner(1, 'missing: detail', 'rule failed');
     const reviewNode = createReviewNode(
       'rv1',
       [createPromptNode('p1', 'Draft')],
@@ -258,6 +258,8 @@ describe('autoAdvanceNodes — review node', () => {
     // Re-loops to body with critique variable set
     expect(result.variables['_review_critique']).toMatch(/round 2/i);
     expect(result.variables['_review_critique']).toMatch(/latest verdict/i);
+    expect(result.variables['_review_critique']).toMatch(/stdout: missing: detail/i);
+    expect(result.variables['_review_critique']).toMatch(/stderr: rule failed/i);
     expect(result.variables['_review_result.pass']).toBe(false);
     expect(result.variables['_review_result.abstain']).toBe(false);
     expect(capturedPrompt).toBe('Draft');

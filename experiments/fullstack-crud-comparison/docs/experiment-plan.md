@@ -156,6 +156,30 @@ after `2/2` repair rounds. Treat this as evidence that the senior/junior PL flow
 needs stronger behavioral scaffolding for domain implementation, not as a completed
 PL-vs-solo comparison.
 
+Next domain-slice change: strict review feedback must carry grounded evidence back
+to the local model. The domain gate now prints missing terms, the repair critique
+includes stdout/stderr evidence, and the domain prompt explicitly requires CommonJS
+exports plus exact operation/status terms. This tests whether tighter senior-style
+feedback can move the same local model past the domain bottleneck without switching
+to an external model.
+
+Observed senior-feedback follow-up on `2026-04-30`: the more detailed domain prompt
+made the local model stall. It spent roughly `70` minutes in the domain turn, reached
+round `13`, produced no workspace action, and ended with `fetch failed`; the partial
+workspace fell back to only `package.json` and verifier `23/100`. Treat this as
+evidence against large dense domain prompts for this local model. The next variant
+uses a shorter imperative senior instruction: one `write_file` action for
+`src/domain.js`, no reads, explicit required terms, and then `done`.
+
+Observed imperative-domain follow-up on `2026-04-30`: the shorter domain instruction
+avoided the long stall and produced `workspace/fscrud-01/src/domain.js`, but the
+model still failed strict review after `3/3` rounds. The improved critique correctly
+included exact missing terms from stderr, yet the model overwrote the file with a
+tiny partial module instead of applying the missing terms. Verifier stayed at
+`23/100`. Treat this as evidence that this local model needs stronger structure than
+natural-language repair prompts for the domain layer. The next hypothesis should test
+PL-provided scaffolds or executable contract tests before free-form implementation.
+
 Verifier hardening note: a green `node --test` exit is insufficient by itself
 because Node can exit successfully when no test files exist. The FSCRUD verifier
 must require real test files and should score seed data from actual seed artifacts,

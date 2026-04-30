@@ -1733,9 +1733,18 @@ async function handleReviewBodyExhaustion(
     String(parentNode.maxRounds) +
     ': Please revise your work.';
   const critiqueFeedback = ` Latest verdict: ${reviewResult.reason}`;
+  const actionableEvidence = reviewResult.evidence
+    .filter((item) => /^(stdout|stderr|runner-error|exit-code):/.test(item))
+    .slice(-3);
+  const critiqueEvidence =
+    actionableEvidence.length > 0 ? ` Evidence: ${actionableEvidence.join(' | ')}` : '';
   const critiquePrompt = parentNode.criteria
-    ? critiqueBase + ' Evaluation criteria: ' + parentNode.criteria + critiqueFeedback
-    : critiqueBase + ' Based on the feedback.' + critiqueFeedback;
+    ? critiqueBase +
+      ' Evaluation criteria: ' +
+      parentNode.criteria +
+      critiqueFeedback +
+      critiqueEvidence
+    : critiqueBase + ' Based on the feedback.' + critiqueFeedback + critiqueEvidence;
 
   let looping = updateNodeProgress(current, parentNode.id, {
     iteration: round + 1,

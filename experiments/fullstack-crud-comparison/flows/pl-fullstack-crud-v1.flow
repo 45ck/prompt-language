@@ -1,0 +1,69 @@
+Goal: build and verify FSCRUD-01 with local inference under prompt-language control
+
+memory:
+  fscrud_workspace
+  fscrud_task
+  fscrud_model_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="experiments/fullstack-crud-comparison/tasks/fscrud-01-field-service-work-orders.md"
+  remember key="fscrud_model_policy" value="local Ollama model; runtime speed is telemetry, not a success metric"
+
+  run: node -e "const fs=require('fs'); fs.mkdirSync('workspace/fscrud-01',{recursive:true});" [timeout 60]
+  run: node -e "process.stdout.write(require('fs').readFileSync('experiments/fullstack-crud-comparison/tasks/fscrud-01-field-service-work-orders.md','utf8'))" [timeout 60]
+  let task_brief = "${last_stdout}"
+
+  let senior_frame = prompt "Return strict JSON only. Frame FSCRUD-01 as a senior engineer before editing. Fields: objective, non_negotiable_requirements, likely_omissions, architecture_bias, validation_risks, verification_strategy. Keep values concise. Task: ${task_brief}" as json {
+    "objective": "string",
+    "non_negotiable_requirements": "string",
+    "likely_omissions": "string",
+    "architecture_bias": "string",
+    "validation_risks": "string",
+    "verification_strategy": "string"
+  }
+
+  let implementation_plan = prompt "Return strict JSON only. Create a ranked implementation plan for FSCRUD-01. Fields: stack_choice, entity_order, api_plan, ui_plan, test_plan, risk_order, done_definition. Optimize for correctness, verifiability, and local-model reliability over speed. Senior frame: ${senior_frame}. Task: ${task_brief}" as json {
+    "stack_choice": "string",
+    "entity_order": "string",
+    "api_plan": "string",
+    "ui_plan": "string",
+    "test_plan": "string",
+    "risk_order": "string",
+    "done_definition": "string"
+  }
+
+  prompt: Work only in ${fscrud_workspace}. Scaffold the app for FSCRUD-01 using this senior frame: ${senior_frame}. Use this implementation plan: ${implementation_plan}. Create README, package metadata, source folders, seed data, and a run manifest. Do not implement every feature yet. Prefer a small TypeScript full-stack shape that can be installed and tested locally.
+
+  review strict criteria: "The scaffold must install, expose real package scripts, and contain no fake completion claims." grounded-by "cd workspace/fscrud-01 && npm install && npm test" max 3
+    run: cd workspace/fscrud-01 && npm install && npm test [timeout 300]
+    prompt: If install or tests fail, repair the scaffold only. Keep the workspace small and deterministic. Command output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
+  end
+
+  foreach entity in "customers assets work_orders"
+    prompt: Implement the ${entity} slice end-to-end in ${fscrud_workspace}. Include data model, validation, API or server handlers, UI list/create/edit/detail/delete paths, seed coverage, and tests. Preserve the stack choice and done definition: ${implementation_plan.stack_choice}; ${implementation_plan.done_definition}. Do not read hidden verifier files.
+    review strict criteria: "The ${entity} slice must have real CRUD behavior, tests, and no placeholder handlers." grounded-by "cd workspace/fscrud-01 && npm test" max 3
+      run: cd workspace/fscrud-01 && npm test [timeout 300]
+      prompt: Repair only the ${entity} slice and directly related shared validation. Use command evidence, not speculation. Output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
+    end
+  end
+
+  prompt: Integrate cross-entity relationship rules in ${fscrud_workspace}: asset customer references, work order customer and asset references, asset/customer mismatch rejection, completedAt rules, and safe delete behavior. Add tests that fail without those rules.
+
+  review strict criteria: "Relationship and status rules must be covered by tests and must pass." grounded-by "cd workspace/fscrud-01 && npm test" max 3
+    run: cd workspace/fscrud-01 && npm test [timeout 300]
+    prompt: Fix the smallest validation or test gap. Do not broaden scope. Output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
+  end
+
+  prompt: Finalize README, run manifest, and verification report in ${fscrud_workspace}. The report must cite install, test, build or typecheck if present, and any verifier command that exists. Do not claim a command passed unless it was run.
+
+  review strict criteria: "The final workspace must install, pass tests, and have complete handoff artifacts." grounded-by "cd workspace/fscrud-01 && npm test" max 3
+    run: cd workspace/fscrud-01 && npm test [timeout 300]
+    prompt: Repair final issues only. Preserve passing behavior and update the verification report from command evidence. Output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
+  end
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md

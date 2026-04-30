@@ -16,6 +16,7 @@ Last updated: 2026-04-30
 | E7-MK  | Marketing Factory            | Marketing website              | Complete    | 7+ runs             | PL 30/30 x3 (100%) vs Solo 28.3/30 (94%)   |
 | E8     | Website Factory              | Marketing website (enterprise) | Complete    | 4 runs              | Factory 3/4, Solo 4/4                      |
 | E9     | Full SDLC Factory            | Full lifecycle website         | Complete    | 2 runs + QA variant | Phases 1-5 execute end-to-end              |
+| FSCRUD | Full-Stack CRUD Comparison   | Local full-stack CRUD          | Designed    | 0                   | Direct local vs PL factory plan authored   |
 | HA-HR1 | Hybrid Model Routing         | Stack/routing comparison       | Planned     | 0                   | Local bulk + frontier escalation designed  |
 | SPP    | Senior Pairing Protocol      | Local-model supervision        | Planned     | 0                   | Senior metacognition protocol authored     |
 | --     | Aider vs PL                  | Coding assistant comparison    | Complete    | 10 hypotheses       | PL 6 wins, 0 losses, 3 ties                |
@@ -264,6 +265,34 @@ E5 deliberately demotes E4's process-fidelity signals (`processConformance`, `tr
 
 - Run 1: brand.md, requirements.md, design.md, tasks.md, index.html (67KB)
 - Run 2: All of the above plus qa-report.md
+
+---
+
+## FSCRUD: Full-Stack CRUD Comparison
+
+**Directory**: [`fullstack-crud-comparison/`](fullstack-crud-comparison/)
+
+**Hypothesis**: Prompt-language improves local-model full-stack CRUD delivery when
+the target has multiple entities, deterministic gates, and explicit cross-layer
+contracts.
+
+**Status**: Designed, no live runs yet
+
+**Task**: FSCRUD-01 field-service work order tracker -- customers, assets, and work
+orders with relationship validation, status rules, UI flows, seed data, tests, and
+verification artifacts.
+
+**Arms**:
+
+- `solo-local-crud`: direct local-model prompt through aider or an equivalent local
+  edit runner.
+- `pl-local-crud-factory`: same local model controlled by
+  `flows/pl-fullstack-crud-v1.flow`.
+
+**Why this is next**: Existing E4/E7/E9/Aider/SPP results show PL's likely advantage
+is governed quality, retries, exact requirements, and traceability, not speed. This
+experiment directly tests the missing comparison: "build a full-stack CRUD app" with
+and without prompt-language control on local inference.
 
 ---
 

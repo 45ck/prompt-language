@@ -1,0 +1,31 @@
+{
+  "id": "FSCRUD-01",
+  "name": "Full-stack CRUD local model comparison",
+  "status": "designed",
+  "createdAt": "2026-04-30",
+  "task": "../tasks/fscrud-01-field-service-work-orders.md",
+  "arms": [
+    {
+      "id": "solo-local-crud",
+      "runner": "aider-or-equivalent-local-edit-runner",
+      "modelPolicy": "same local Ollama model as treatment",
+      "prompt": "../prompts/solo-local.md"
+    },
+    {
+      "id": "pl-local-crud-factory",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as baseline",
+      "flow": "../flows/pl-fullstack-crud-v1.flow"
+    }
+  ],
+  "timeouts": {
+    "soloWallClockMinutes": 90,
+    "plWallClockMinutes": 150,
+    "commandSeconds": 300,
+    "modelTurnSeconds": 600,
+    "maxRetries": 3
+  },
+  "primaryEndpoint": "verified-product-completeness",
+  "rubric": "../rubrics/fullstack-crud-rubric.md",
+  "resultStatus": "no-live-runs-yet"
+}

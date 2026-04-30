@@ -64,6 +64,13 @@ export class FileCaptureReader implements CaptureReader {
     await writeFile(filePath, CAPTURE_PENDING_SENTINEL, 'utf-8');
   }
 
+  async write(varName: string, value: string): Promise<void> {
+    if (!SAFE_VAR_NAME.test(varName)) return;
+    const filePath = this.buildCapturePath(varName);
+    await mkdir(join(this.stateRoot, 'vars'), { recursive: true });
+    await writeFile(filePath, value, 'utf-8');
+  }
+
   async ensureDir(): Promise<void> {
     await mkdir(join(this.stateRoot, 'vars'), { recursive: true });
   }

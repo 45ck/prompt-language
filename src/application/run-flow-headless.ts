@@ -119,6 +119,56 @@ function appendAssistantDetail(reason: string, assistantText?: string): string {
   return detail == null ? reason : `${reason} Last assistant output: ${detail}`;
 }
 
+function extractFencedJsonCapture(text: string): string {
+  const trimmed = text.trim();
+  const fencedMatch = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  return fencedMatch?.[1]?.trim() ?? trimmed;
+}
+
+function isJsonObjectText(text: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(text);
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed);
+  } catch {
+    return false;
+  }
+}
+
+function normalizeDirectAssistantCapture(
+  state: SessionState,
+  assistantText?: string,
+): { readonly varName: string; readonly value: string } | null {
+  const text = assistantText?.trim();
+  if (!text) return null;
+
+  const currentNode = resolveCurrentNode(state.flowSpec.nodes, state.currentNodePath);
+  if (currentNode?.kind !== 'let') return null;
+  if (state.nodeProgress[currentNode.id]?.status !== 'awaiting_capture') return null;
+
+  if (currentNode.source.type === 'prompt_json') {
+    const rawJson = extractFencedJsonCapture(text);
+    return isJsonObjectText(rawJson) ? { varName: currentNode.variableName, value: rawJson } : null;
+  }
+
+  if (currentNode.source.type === 'prompt') {
+    return { varName: currentNode.variableName, value: text };
+  }
+
+  return null;
+}
+
+async function persistDirectAssistantCapture(
+  state: SessionState,
+  captureReader: CaptureReader | undefined,
+  assistantText?: string,
+): Promise<boolean> {
+  if (!captureReader?.write) return false;
+  const capture = normalizeDirectAssistantCapture(state, assistantText);
+  if (capture == null) return false;
+  await captureReader.write(capture.varName, capture.value);
+  return true;
+}
+
 function readPersistedRuntimeDiagnosticReason(state: SessionState): string | undefined {
   const code = String(state.variables['_runtime_diagnostic.code'] ?? '').trim();
   const summary = String(state.variables['_runtime_diagnostic.summary'] ?? '').trim();
@@ -410,6 +460,15 @@ export async function runFlowHeadless(
         }
 
         if (runResult.madeProgress === false) {
+          const capturedDirectly = await persistDirectAssistantCapture(
+            (await deps.stateStore.loadCurrent()) ?? state,
+            deps.captureReader,
+            runResult.assistantText,
+          );
+          if (capturedDirectly) {
+            continue;
+          }
+
           const detail = summarizeAssistantText(runResult.assistantText);
           return buildOutput(state, {
             reason:
@@ -472,6 +531,15 @@ export async function runFlowHeadless(
     }
 
     if (runResult.madeProgress === false) {
+      const capturedDirectly = await persistDirectAssistantCapture(
+        (await deps.stateStore.loadCurrent()) ?? state,
+        deps.captureReader,
+        runResult.assistantText,
+      );
+      if (capturedDirectly) {
+        continue;
+      }
+
       const detail = summarizeAssistantText(runResult.assistantText);
       return buildOutput((await deps.stateStore.loadCurrent()) ?? state, {
         reason:

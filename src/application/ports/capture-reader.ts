@@ -18,6 +18,9 @@ export interface CaptureReader {
   /** Prime capture file with pending sentinel before emitting a capture prompt. */
   prime?(varName: string): Promise<void>;
 
+  /** Write a captured value for runtimes that return prompt answers directly. */
+  write?(varName: string, value: string): Promise<void>;
+
   /** H-REL-005: Extract captured value from inline tags in text. Returns null if not found. */
   readFromText?(text: string, varName: string, nonce?: string): string | null;
 }

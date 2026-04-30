@@ -358,6 +358,40 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.prompts[0]).toContain('Say hello');
   });
 
+  it('accepts direct assistant JSON as a let prompt capture in headless mode', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-direct-json-capture-'));
+
+    const promptRunner = new RecordingPromptRunner(async () => ({
+      exitCode: 0,
+      madeProgress: false,
+      assistantText: '```json\n{"objective":"ship reliable CRUD","risk":"missing tests"}\n```',
+    }));
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText:
+          'Goal: direct capture response\n\nflow:\n  let frame = prompt "Return strict JSON" as json { "objective": "string", "risk": "string" }\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner: new InMemoryCommandRunner(),
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.turns).toBe(1);
+    expect(result.finalState.variables['frame']).toBe(
+      '{"objective":"ship reliable CRUD","risk":"missing tests"}',
+    );
+    expect(result.finalState.variables['frame.objective']).toBe('ship reliable CRUD');
+  });
+
   it('applies a longer default timeout to headless run nodes without explicit timeout', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-run-timeout-'));
     const receivedOptions: { cwd?: string; timeoutMs?: number }[] = [];

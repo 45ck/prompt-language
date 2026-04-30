@@ -121,6 +121,13 @@ limit. Treat this as a capture-envelope isolation bug: local action runners must
 see only the active capture task and must be blocked from writing workspace files
 while a `.prompt-language/vars/...` capture is pending.
 
+Observed capture-isolation follow-up on `2026-04-30`: after adding hard capture
+isolation, native `ollama` no longer leaked future implementation files during the
+first `senior_frame` turn. The run failed cleanly with an empty workspace because the
+runner did not recognize the JSON-capture wording `Save your JSON answer to ...` as
+a capture path. Treat this as a parser coverage bug in the local runner, not a
+product-quality outcome.
+
 Verifier hardening note: a green `node --test` exit is insufficient by itself
 because Node can exit successfully when no test files exist. The FSCRUD verifier
 must require real test files and should score seed data from actual seed artifacts,

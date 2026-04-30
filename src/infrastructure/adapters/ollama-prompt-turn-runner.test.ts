@@ -540,4 +540,57 @@ describe('OllamaPromptTurnRunner', () => {
       readFile(join(tempDir, '.prompt-language', 'vars', 'items'), 'utf8'),
     ).resolves.toBe('done');
   });
+
+  it('detects JSON capture instructions as capture turns', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content: '{"actions":[{"type":"done","message":"Frame completed."}]}',
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content:
+              '{"actions":[{"type":"write_file","path":".prompt-language/vars/senior_frame","content":"{\\"objective\\":\\"ship\\"}"}]}',
+          },
+        }),
+      });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-opencode-big:30b',
+      prompt: [
+        '[prompt-language] Flow: capture | Status: active',
+        '',
+        '> let senior_frame = prompt "Return strict JSON only." as json { ... }  [awaiting response...]  <-- current',
+        '',
+        '[Capture active: write response to .prompt-language/vars/senior_frame using Write tool]',
+        '',
+        'Return strict JSON only.',
+        '',
+        '[Internal — prompt-language JSON capture: Respond with a JSON object that matches this schema:',
+        '```',
+        '"objective": "string"',
+        '```',
+        'Save your JSON answer to `.prompt-language/vars/senior_frame` using the Write tool. Respond with ONLY valid JSON — no explanation, no markdown fences, just the JSON object. Maximum 2000 characters.]',
+      ].join('\n'),
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'Captured .prompt-language/vars/senior_frame',
+      madeProgress: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'vars', 'senior_frame'), 'utf8'),
+    ).resolves.toBe('{"objective":"ship"}');
+  });
 });

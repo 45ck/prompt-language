@@ -287,7 +287,7 @@ function promptRequiresWorkspaceAction(prompt: string): boolean {
 }
 
 function extractCapturePath(prompt: string): string | undefined {
-  const match = /save your answer to `([^`]+)`/i.exec(prompt);
+  const match = /save(?: your (?:json )?answer| it)? to `([^`]+)`/i.exec(prompt);
   return match?.[1];
 }
 

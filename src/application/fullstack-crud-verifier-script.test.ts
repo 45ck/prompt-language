@@ -115,6 +115,7 @@ describe('FSCRUD verifier script', () => {
       );
 
       expect(source).toContain('Task contract: ${task_contract}');
+      expect(source).toContain('__tests__/domain.test.js');
       expect(source).not.toContain('let task_brief = "${last_stdout}"');
     }
   });

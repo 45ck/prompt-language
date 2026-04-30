@@ -11,7 +11,7 @@ flow:
   remember key="fscrud_model_policy" value="local Ollama model; runtime speed is telemetry, not a success metric"
 
   run: node -e "const fs=require('fs'); fs.mkdirSync('workspace/fscrud-01',{recursive:true});" [timeout 60]
-  let task_contract = "FSCRUD-01 field-service work order tracker. Build customers, assets, and work_orders with list/create/read/edit/detail/delete flows; enforce customer-asset-work_order references, asset/customer mismatch rejection, completedAt/status rules, safe deletes, seed data, domain validation tests, integration-style tests for each entity family, README, run-manifest.json, and verification-report.md. Full task source is TASK.md."
+  let task_contract = "FSCRUD-01 field-service work order tracker. Build customers, assets, and work_orders with list/create/read/edit/detail/delete flows; enforce customer-asset-work_order references, asset/customer mismatch rejection, completedAt/status rules, safe deletes, seed data, domain validation tests, integration-style tests for each entity family, README, run-manifest.json, and verification-report.md. Prefer a small deterministic Node/Jest implementation with src/domain.js, src/server.js, and __tests__/domain.test.js before adding extra framework weight. Full task source is TASK.md."
 
   let senior_frame = prompt "Return strict JSON only. Frame FSCRUD-01 as a senior engineer before editing. Fields: objective, non_negotiable_requirements, likely_omissions, architecture_bias, validation_risks, verification_strategy. Keep values concise. Task contract: ${task_contract}. Full task source is TASK.md." as json {
     "objective": "string",
@@ -32,11 +32,11 @@ flow:
     "done_definition": "string"
   }
 
-  prompt: Work only in ${fscrud_workspace}. Read ${fscrud_task} before editing. Scaffold the app for FSCRUD-01 using this senior frame: ${senior_frame}. Use this implementation plan: ${implementation_plan}. Task contract: ${task_contract}. Create README, package metadata, source folders, seed data, and a run manifest. Do not implement every feature yet. Prefer a small TypeScript full-stack shape that can be installed and tested locally.
+  prompt: Work only in ${fscrud_workspace}. Read ${fscrud_task} before editing. Scaffold the app for FSCRUD-01 using this senior frame: ${senior_frame}. Use this implementation plan: ${implementation_plan}. Task contract: ${task_contract}. Create README, package metadata, source folders, seed data, run manifest, verification report, src/domain.js, src/server.js, and __tests__/domain.test.js. Do not proceed with only package metadata or seed data. Prefer a small Node/Jest shape that can be installed and tested locally before adding UI polish.
 
-  review strict criteria: "The scaffold must install, expose real package scripts, and contain no fake completion claims." grounded-by "cd workspace/fscrud-01 && npm install && npm test" max 3
+  review strict criteria: "The scaffold must install, expose real package scripts, include src/domain.js, src/server.js, __tests__/domain.test.js, verification-report.md, and npm test must discover and pass real tests." grounded-by "cd workspace/fscrud-01 && npm install && npm test" max 3
     run: cd workspace/fscrud-01 && npm install && npm test [timeout 300]
-    prompt: If install or tests fail, repair the scaffold only. Keep the workspace small and deterministic. Command output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
+    prompt: If install or tests fail, repair the scaffold only. If Jest says "No tests found", create __tests__/domain.test.js with real assertions against src/domain.js. If verification-report.md is missing, create it from command evidence. Keep the workspace small and deterministic. Command output: ${last_stdout} ${last_stderr}. Critique: ${_review_critique}
   end
 
   foreach entity in "customers assets work_orders"
@@ -64,5 +64,8 @@ flow:
 done when:
   file_exists workspace/fscrud-01/package.json
   file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/__tests__/domain.test.js
   file_exists workspace/fscrud-01/run-manifest.json
   file_exists workspace/fscrud-01/verification-report.md

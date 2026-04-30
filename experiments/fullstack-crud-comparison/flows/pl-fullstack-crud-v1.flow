@@ -7,11 +7,11 @@ memory:
 
 flow:
   remember key="fscrud_workspace" value="workspace/fscrud-01"
-  remember key="fscrud_task" value="experiments/fullstack-crud-comparison/tasks/fscrud-01-field-service-work-orders.md"
+  remember key="fscrud_task" value="TASK.md"
   remember key="fscrud_model_policy" value="local Ollama model; runtime speed is telemetry, not a success metric"
 
   run: node -e "const fs=require('fs'); fs.mkdirSync('workspace/fscrud-01',{recursive:true});" [timeout 60]
-  run: node -e "process.stdout.write(require('fs').readFileSync('experiments/fullstack-crud-comparison/tasks/fscrud-01-field-service-work-orders.md','utf8'))" [timeout 60]
+  run: node -e "process.stdout.write(require('fs').readFileSync('TASK.md','utf8'))" [timeout 60]
   let task_brief = "${last_stdout}"
 
   let senior_frame = prompt "Return strict JSON only. Frame FSCRUD-01 as a senior engineer before editing. Fields: objective, non_negotiable_requirements, likely_omissions, architecture_bias, validation_risks, verification_strategy. Keep values concise. Task: ${task_brief}" as json {

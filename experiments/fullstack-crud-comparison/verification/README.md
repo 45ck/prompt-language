@@ -5,6 +5,9 @@ This directory defines the expected verification shape for future FSCRUD runs.
 The verifier should be committed before live runs and must remain unchanged during a
 claim batch.
 
+The current executable verifier is
+[`verify-fullstack-crud-workspace.mjs`](verify-fullstack-crud-workspace.mjs).
+
 ## Required Checks
 
 The verification script should check:

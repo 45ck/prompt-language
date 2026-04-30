@@ -9,7 +9,8 @@
       "id": "solo-local-crud",
       "runner": "aider-or-equivalent-local-edit-runner",
       "modelPolicy": "same local Ollama model as treatment",
-      "prompt": "../prompts/solo-local.md"
+      "prompt": "../prompts/solo-local.md",
+      "flow": "../flows/solo-local-crud.flow"
     },
     {
       "id": "pl-local-crud-factory",

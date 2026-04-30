@@ -1,0 +1,21 @@
+Goal: build and verify FSCRUD-01 from a direct local-model prompt
+
+memory:
+  fscrud_workspace
+  fscrud_task
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="TASK.md"
+
+  run: node -e "const fs=require('fs'); fs.mkdirSync('workspace/fscrud-01',{recursive:true});" [timeout 60]
+  run: node -e "process.stdout.write(require('fs').readFileSync('TASK.md','utf8'))" [timeout 60]
+  let task_brief = "${last_stdout}"
+
+  prompt: Work only in ${fscrud_workspace}. Build the field-service work order tracker described here: ${task_brief}. Build a full-stack CRUD app with customers, assets, and work orders. Include validation, relationship integrity, UI list/create/edit/detail/delete flows, seed data, tests, README, run manifest, and verification report. Run install, test, and build or typecheck if available before stopping. Do not read or modify hidden verifier files. Local inference can be slow; prioritize correct, complete, verifiable work over speed.
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md

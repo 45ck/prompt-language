@@ -119,6 +119,11 @@ function createSystemPrompt(): string {
 }
 
 export function simplifyPromptLanguageEnvelope(prompt: string): string {
+  const capturePrompt = compactCaptureEnvelope(prompt);
+  if (capturePrompt !== undefined) {
+    return capturePrompt;
+  }
+
   const modeDecision = selectCompactRenderModeForEnvelope(prompt);
   if (modeDecision.actualMode === 'full') {
     return prompt;
@@ -168,6 +173,48 @@ export function simplifyPromptLanguageEnvelope(prompt: string): string {
   }
 
   return `Context:\n${contextSections.join('\n\n')}\n\nCurrent task:\n${task}`;
+}
+
+function compactCaptureEnvelope(prompt: string): string | undefined {
+  const trimmed = prompt.trim();
+  if (
+    !trimmed.startsWith('[prompt-language] Flow:') ||
+    !trimmed.includes('[Capture active:') ||
+    !trimmed.includes('[Internal')
+  ) {
+    return undefined;
+  }
+
+  const internalMatch = /\[Internal [^\n]+capture:[\s\S]+?\]/i.exec(trimmed);
+  if (!internalMatch?.[0]) {
+    return undefined;
+  }
+
+  const beforeInternal = trimmed.slice(0, internalMatch.index).trim();
+  const sections = beforeInternal
+    .split(/\n{2,}/)
+    .map((section) => section.trim())
+    .filter((section) => section.length > 0);
+  const currentTask = sections
+    .reverse()
+    .find(
+      (section) =>
+        !section.startsWith('[prompt-language]') &&
+        !section.startsWith('[Capture active:') &&
+        !/^[~>| ]/.test(section),
+    );
+
+  if (currentTask === undefined) {
+    return undefined;
+  }
+
+  return [
+    currentTask,
+    '',
+    internalMatch[0],
+    '',
+    'Do not execute future flow steps. Do not create or edit workspace files during capture.',
+  ].join('\n');
 }
 
 function extractJsonObject(text: string): string | undefined {
@@ -239,6 +286,11 @@ function promptRequiresWorkspaceAction(prompt: string): boolean {
   );
 }
 
+function extractCapturePath(prompt: string): string | undefined {
+  const match = /save your answer to `([^`]+)`/i.exec(prompt);
+  return match?.[1];
+}
+
 function resolveWorkspacePath(cwd: string, candidate: string): string {
   const trimmed = candidate.trim();
   if (!trimmed) {
@@ -252,6 +304,10 @@ function resolveWorkspacePath(cwd: string, candidate: string): string {
   }
 
   return absolute;
+}
+
+function isSameWorkspacePath(cwd: string, left: string, right: string): boolean {
+  return resolveWorkspacePath(cwd, left) === resolveWorkspacePath(cwd, right);
 }
 
 async function listFiles(cwd: string, pathValue?: string): Promise<string> {
@@ -476,6 +532,7 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
     const requestedModel = resolveOllamaModel(input.model);
     const timeoutMs = getOllamaTimeoutMs();
     const prompt = simplifyPromptLanguageEnvelope(input.prompt);
+    const capturePath = extractCapturePath(prompt);
     const messages: OllamaMessage[] = [
       { role: 'system', content: createSystemPrompt() },
       { role: 'user', content: prompt },
@@ -506,6 +563,32 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
         let reachedDone = false;
 
         for (const action of parsed.actions) {
+          if (capturePath !== undefined) {
+            if (
+              action.type === 'write_file' &&
+              isSameWorkspacePath(input.cwd, action.path, capturePath)
+            ) {
+              await writeWorkspaceFile(input.cwd, action.path, action.content);
+              workspaceActions += 1;
+              await appendTrace(input.cwd, {
+                requestedModel,
+                actualModel,
+                prompt,
+                rounds: round,
+                workspaceActions,
+                message: `Captured ${capturePath}`,
+              });
+              return {
+                exitCode: 0,
+                assistantText: `Captured ${capturePath}`,
+                madeProgress: true,
+              };
+            }
+
+            results.push(`${action.type} rejected: capture turns may only write ${capturePath}`);
+            continue;
+          }
+
           switch (action.type) {
             case 'list_files': {
               const listing = await listFiles(input.cwd, action.path);

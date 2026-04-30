@@ -114,10 +114,21 @@ native `ollama` failed in under one second with `model runner has unexpectedly
 stopped`; the model then appeared in `ollama ps` at `21%/79% CPU/GPU` and a direct
 chat succeeded. Treat cold-start model-runner stops as retryable for this host.
 
+Observed capture-leak follow-up on `2026-04-30`: after retrying cold starts, native
+`ollama` spent roughly `18` minutes in the first `senior_frame` capture turn,
+created several future implementation files, and then failed with the action round
+limit. Treat this as a capture-envelope isolation bug: local action runners must
+see only the active capture task and must be blocked from writing workspace files
+while a `.prompt-language/vars/...` capture is pending.
+
 Verifier hardening note: a green `node --test` exit is insufficient by itself
 because Node can exit successfully when no test files exist. The FSCRUD verifier
 must require real test files and should score seed data from actual seed artifacts,
-not only from keyword matches.
+not only from keyword matches. The verifier is not yet claim-grade: before a
+paired claim batch, add at least one adversarial token-stuffed fixture that must
+fail, executable domain-rule checks, seed referential-integrity checks, and a
+runtime-failure classification that excludes failed runner bundles from PL-vs-solo
+comparison scores.
 
 ## GPU Telemetry Policy
 

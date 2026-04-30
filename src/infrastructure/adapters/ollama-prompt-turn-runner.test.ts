@@ -121,7 +121,7 @@ describe('simplifyPromptLanguageEnvelope', () => {
     );
   });
 
-  it('leaves capture envelopes unchanged so write instructions are preserved', () => {
+  it('compacts capture envelopes to the current task and capture instruction', () => {
     const original = [
       '[prompt-language] Flow: test let-prompt capture | Status: active',
       '',
@@ -139,7 +139,15 @@ describe('simplifyPromptLanguageEnvelope', () => {
       '[prompt-language: step 1/3 "let items", vars: 0]',
     ].join('\n');
 
-    expect(simplifyPromptLanguageEnvelope(original)).toBe(original);
+    expect(simplifyPromptLanguageEnvelope(original)).toBe(
+      [
+        'List exactly three colors: red, green, blue. One per line, no bullets.',
+        '',
+        '[Internal — prompt-language variable capture: After completing the task above, save your answer to `.prompt-language/vars/items` using the Write tool.]',
+        '',
+        'Do not execute future flow steps. Do not create or edit workspace files during capture.',
+      ].join('\n'),
+    );
   });
 
   it('leaves resumed envelopes unchanged so recovery context is not compacted away', () => {
@@ -428,5 +436,108 @@ describe('OllamaPromptTurnRunner', () => {
       madeProgress: true,
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects workspace writes during capture turns', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content:
+              '{"actions":[{"type":"write_file","path":"workspace/app.js","content":"bad"}]}',
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content:
+              '{"actions":[{"type":"write_file","path":".prompt-language/vars/items","content":"{\\"ok\\":true}"},{"type":"done","message":"captured"}]}',
+          },
+        }),
+      });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-opencode-big:30b',
+      prompt: [
+        '[prompt-language] Flow: capture | Status: active',
+        '',
+        '> let items = prompt "Return JSON."  [awaiting response...]  <-- current',
+        '  prompt: Create workspace/app.js',
+        '',
+        '[Capture active: write response to .prompt-language/vars/items using Write tool]',
+        '',
+        'Return JSON.',
+        '',
+        '[Internal — prompt-language variable capture: After completing the task above, save your answer to `.prompt-language/vars/items` using the Write tool.]',
+        '',
+        '[prompt-language: step 1/2 "let items", vars: 0]',
+      ].join('\n'),
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'Captured .prompt-language/vars/items',
+      madeProgress: true,
+    });
+    await expect(readFile(join(tempDir, 'workspace', 'app.js'), 'utf8')).rejects.toThrow();
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'vars', 'items'), 'utf8'),
+    ).resolves.toBe('{"ok":true}');
+  });
+
+  it('rejects commands during capture turns and accepts equivalent capture paths', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content:
+              '{"actions":[{"type":"run_command","command":"Set-Content leaked.txt bad"},{"type":"done","message":"not captured"}]}',
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content:
+              '{"actions":[{"type":"write_file","path":"./.prompt-language/vars/items","content":"done"}]}',
+          },
+        }),
+      });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-opencode-big:30b',
+      prompt: [
+        '[prompt-language] Flow: capture | Status: active',
+        '',
+        '> let items = prompt "Return text."  [awaiting response...]  <-- current',
+        '',
+        '[Capture active: write response to .prompt-language/vars/items using Write tool]',
+        '',
+        'Return text.',
+        '',
+        '[Internal — prompt-language variable capture: After completing the task above, save your answer to `.prompt-language/vars/items` using the Write tool.]',
+      ].join('\n'),
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'Captured .prompt-language/vars/items',
+      madeProgress: true,
+    });
+    await expect(readFile(join(tempDir, 'leaked.txt'), 'utf8')).rejects.toThrow();
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'vars', 'items'), 'utf8'),
+    ).resolves.toBe('done');
   });
 });

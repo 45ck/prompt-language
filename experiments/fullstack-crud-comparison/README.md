@@ -1,6 +1,6 @@
 # Full-Stack CRUD Comparison
 
-Status: designed, not yet executed
+Status: diagnostic probes running; no claim-grade batch yet
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -68,11 +68,17 @@ See [tasks/fscrud-01-field-service-work-orders.md](tasks/fscrud-01-field-service
 
 ## Current Decision
 
-The next work item is to implement the runner harness for this pack, then run one
-paired smoke pair:
+April 30 local probes found useful harness evidence, but not a defensible
+PL-vs-solo claim yet:
 
-1. `solo-local-crud`, repeat `r01`
-2. `pl-local-crud-factory`, repeat `r01`
+- native Ollama can execute real workspace actions, unlike the current local
+  `opencode` path;
+- the tight v3 PL arm exposed a capture-isolation bug where the model wrote future
+  implementation files while the flow was still waiting on `senior_frame`;
+- the verifier is still too text-surface-heavy and can produce false positives
+  against token-stuffed workspaces.
 
-Only after both arms produce artifacts under the same frozen commit should we scale to
+The next work item is to finish runtime capture isolation and strengthen the verifier
+with behavioral false-positive fixtures. Only after a current-commit smoke pair
+completes with a frozen task, verifier, runner, model, and commit should this scale to
 `k=3` paired runs.

@@ -1,6 +1,6 @@
 // cspell:ignore fscrud
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -13,6 +13,13 @@ const VERIFY_SCRIPT = join(
   'fullstack-crud-comparison',
   'verification',
   'verify-fullstack-crud-workspace.mjs',
+);
+const SCAFFOLD_SCRIPT = join(
+  ROOT,
+  'experiments',
+  'fullstack-crud-comparison',
+  'scaffold',
+  'write-scaffold-contract.cjs',
 );
 
 function runVerifier(workspace: string) {
@@ -387,6 +394,55 @@ describe('FSCRUD verifier script', () => {
         { cwd: ROOT, encoding: 'utf8' },
       );
       expect(output).toContain('Flow parsed successfully');
+    }
+  });
+
+  it('writes a scaffold with contract artifacts and required domain vocabulary', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'fscrud-scaffold-'));
+    try {
+      execFileSync(process.execPath, [SCAFFOLD_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+
+      for (const relativePath of [
+        'package.json',
+        'CONTRACT.md',
+        'README.md',
+        'run-manifest.json',
+        'verification-report.md',
+        'src/domain.js',
+        'src/server.js',
+        'public/index.html',
+        '__tests__/domain.contract.test.js',
+        'data/seed.json',
+      ]) {
+        expect(existsSync(join(workspace, relativePath))).toBe(true);
+      }
+
+      const domain = readFileSync(join(workspace, 'src/domain.js'), 'utf8');
+      for (const term of [
+        'reset',
+        'listCustomers',
+        'createCustomer',
+        'listAssets',
+        'createAsset',
+        'listWorkOrders',
+        'createWorkOrder',
+        'in_progress',
+        'cancelled',
+        'urgent',
+      ]) {
+        expect(domain).toContain(term);
+      }
+
+      const contract = readFileSync(join(workspace, 'CONTRACT.md'), 'utf8');
+      expect(contract).toContain(
+        'status values open, scheduled, in_progress, completed, cancelled',
+      );
+      expect(contract).toContain('priority values low, normal, urgent');
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
     }
   });
 

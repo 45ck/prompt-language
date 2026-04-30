@@ -76,8 +76,8 @@ PL-vs-solo claim yet:
   `opencode` path;
 - the tight v3 PL arm exposed a capture-isolation bug where the model wrote future
   implementation files while the flow was still waiting on `senior_frame`;
-- the verifier is still too text-surface-heavy and can produce false positives
-  against token-stuffed workspaces.
+- the verifier has been hardened with real test-file checks, seed integrity checks,
+  and executable domain behavior probes so token-stuffed placeholder workspaces fail.
 - later R15-R19 tight-v3 runs remain harness/runtime diagnostics: capture isolation
   and workspace rooting improved, but all runs failed before producing a complete
   app. The best score was R17 at `38/100`; R15, R16, R18, and R19 stayed at
@@ -85,8 +85,14 @@ PL-vs-solo claim yet:
 - dense senior prompts made the local model stall, while shorter imperative repair
   prompts produced tiny overwrites instead of adding missing behavior.
 
-The next work item is `pl-local-crud-scaffold-contract`: deterministic senior cards,
-canonical CommonJS domain exports, executable contract tests, and a hardened verifier
-that rejects token-stuffed or placeholder workspaces. Only after a current-commit smoke
-pair completes with a frozen task, verifier, runner, model, and commit should this
-scale to `k=3` paired runs.
+The current work item is making `pl-local-crud-scaffold-contract` complete one clean
+local Ollama smoke pair. R20 proved the deterministic scaffold improves artifact
+coverage, but exposed a flow-control bug. R21 proved the scaffold precheck now passes
+and the old validation-prompt blocker is gone, but the first broad domain
+implementation prompt exhausted the 8 action-round limit before editing
+`src/domain.js`.
+
+The next treatment narrows that domain step into two Senior Cards: customers/assets
+foundation first, then work_order rules. Only after a current-commit smoke pair
+completes with a frozen task, verifier, runner, model, and commit should this scale
+to `k=3` paired runs.

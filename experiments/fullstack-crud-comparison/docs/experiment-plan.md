@@ -200,6 +200,17 @@ model turn with a no-op diagnostic response before the domain implementation pro
 ran. The follow-up fix replaces that check with a deterministic `run` gate and
 adds explicit status vocabulary to the scaffold contract.
 
+Observed scaffold-contract follow-up on `2026-04-30`: the native-Ollama R21 run
+`live-fscrud-r21-ollama-scaffold-contract-v1-20260430-1920` advanced past the fixed
+deterministic scaffold gate. The solo arm reached `38/100`, with missing UI, seed
+integrity, and domain behavior. The scaffold arm created the full deterministic
+scaffold, passed the precheck, scored `80/100`, and then failed with runner code `3`
+because Ollama exhausted the 8 action-round limit at the first broad `src/domain.js`
+implementation prompt without modifying the stub. Treat R21 as runtime/prompt-shape
+evidence, not claim-grade product evidence. The next variant splits domain
+implementation into a customers/assets foundation card followed by a work_order rules
+card.
+
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence
 for or against the PL-vs-solo hypothesis. A claim-grade comparison requires both arms

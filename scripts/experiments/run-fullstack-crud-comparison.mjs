@@ -17,11 +17,13 @@ const ARM_FLOWS = {
   'solo-local-crud': join(EXPERIMENT_ROOT, 'flows', 'solo-local-crud.flow'),
   'pl-local-crud-factory': join(EXPERIMENT_ROOT, 'flows', 'pl-fullstack-crud-v1.flow'),
   'pl-local-crud-tight': join(EXPERIMENT_ROOT, 'flows', 'pl-fullstack-crud-tight-v2.flow'),
+  'pl-local-crud-tight-v3': join(EXPERIMENT_ROOT, 'flows', 'pl-fullstack-crud-tight-v3.flow'),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
   primary: ['solo-local-crud', 'pl-local-crud-factory'],
-  tight: ['pl-local-crud-tight'],
+  tight: ['pl-local-crud-tight-v3'],
+  'tight-v2': ['pl-local-crud-tight'],
 };
 
 function parseArgs(argv) {

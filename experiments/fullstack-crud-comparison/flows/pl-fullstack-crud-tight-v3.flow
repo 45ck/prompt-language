@@ -1,0 +1,78 @@
+Goal: build and verify FSCRUD-01 with enforced tight local-inference slices
+
+memory:
+  fscrud_workspace
+  fscrud_task
+  fscrud_model_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="TASK.md"
+  remember key="fscrud_model_policy" value="local Ollama model; slow runtime is acceptable, but every turn must stay bounded"
+
+  run: node -e "const fs=require('fs'); fs.mkdirSync('workspace/fscrud-01/src',{recursive:true}); fs.mkdirSync('workspace/fscrud-01/__tests__',{recursive:true}); fs.mkdirSync('workspace/fscrud-01/data',{recursive:true}); fs.mkdirSync('workspace/fscrud-01/public',{recursive:true});" [timeout 60]
+  let task_contract = "FSCRUD-01 field-service work order tracker. Build customers, assets, and work_orders with list/create/read/edit/detail/delete flows; enforce customer-asset-work_order references, asset/customer mismatch rejection, completedAt/status rules, safe deletes, seed data, domain validation tests, integration-style tests for each entity family, browser-facing UI, README, run-manifest.json, and verification-report.md. Prefer a small deterministic Node CommonJS implementation with src/domain.js, src/server.js, public/index.html, and __tests__/domain.test.js before adding framework weight. Task source is TASK.md."
+
+  let senior_frame = prompt "Return strict JSON only. You are the senior engineer sitting beside a junior developer. Frame FSCRUD-01 as concrete next actions. Fields: objective, non_negotiable_requirements, likely_omissions, architecture_bias, validation_risks, verification_strategy. Keep values concise. Task contract: ${task_contract}." as json {
+    "objective": "string",
+    "non_negotiable_requirements": "string",
+    "likely_omissions": "string",
+    "architecture_bias": "string",
+    "validation_risks": "string",
+    "verification_strategy": "string"
+  }
+
+  let implementation_plan = prompt "Return strict JSON only. Create a file-by-file implementation plan for FSCRUD-01. Fields: package_json, domain_js, domain_tests, server_js, ui_html, seed_data, docs, done_definition. Optimize for correctness and local-model reliability over speed. Senior frame: ${senior_frame}. Task contract: ${task_contract}." as json {
+    "package_json": "string",
+    "domain_js": "string",
+    "domain_tests": "string",
+    "server_js": "string",
+    "ui_html": "string",
+    "seed_data": "string",
+    "docs": "string",
+    "done_definition": "string"
+  }
+
+  prompt: Work only in ${fscrud_workspace}. Create package.json only. Use Node CommonJS and the built-in node:test runner, not Jest. Required scripts: test runs node --test, start runs node src/server.js. Keep dependencies empty unless absolutely needed. Do not edit any other file. Task contract: ${task_contract}. Plan: ${implementation_plan.package_json}
+  review strict criteria: "package.json must exist, expose test and start scripts, and test must run node --test." grounded-by 'node -e "const fs=require(\"fs\"); const j=JSON.parse(fs.readFileSync(\"workspace/fscrud-01/package.json\",\"utf8\")); if(!j.scripts || j.scripts.test !== \"node --test\" || !j.scripts.start) process.exit(1)"' max 2
+    prompt: Repair package.json only. The previous grounded review failed; make test exactly node --test and start run node src/server.js. Do not edit any other file. Critique: ${_review_critique}
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Create src/domain.js only. Implement deterministic in-memory domain functions for customers, assets, and work_orders. Include list/create/read/edit/detail/delete semantics for every entity, customerId and assetId reference checks, asset/customer mismatch rejection, completedAt/status rules, urgent priority support, and safe delete behavior. Export functions for tests. Do not edit any other file. Senior frame: ${senior_frame}. Plan: ${implementation_plan.domain_js}
+  review strict criteria: "src/domain.js must mention all entities, CRUD terms, reference rules, status rules, completedAt, and urgent priority." grounded-by 'node -e "const fs=require(\"fs\"); const t=fs.readFileSync(\"workspace/fscrud-01/src/domain.js\",\"utf8\"); for (const term of [\"customers\",\"assets\",\"work_orders\",\"list\",\"create\",\"edit\",\"detail\",\"delete\",\"customerId\",\"assetId\",\"completedAt\",\"open\",\"scheduled\",\"in_progress\",\"completed\",\"cancelled\",\"urgent\"]) if(!t.includes(term)) process.exit(1)"' max 2
+    prompt: Repair src/domain.js only. The previous grounded review failed; add the missing entity/rule behavior and exports. Critique: ${_review_critique}
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Create __tests__/domain.test.js only. Use node:test and node:assert/strict. Write tests that prove customers, assets, work_orders CRUD, reference integrity, asset/customer mismatch rejection, completedAt/status rules, urgent priority, and safe deletes. Tests must import src/domain.js. Do not edit any other file. Plan: ${implementation_plan.domain_tests}
+  review strict criteria: "domain tests must exist and npm test must discover and pass them." grounded-by "cd workspace/fscrud-01 && npm test" max 3
+    prompt: Repair only src/domain.js and __tests__/domain.test.js so npm test passes with real node:test assertions. If no tests are discovered, create __tests__/domain.test.js. Critique: ${_review_critique}
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Create src/server.js only. Use the existing domain module. Provide minimal HTTP handlers for list/create/read/edit/detail/delete paths for customers, assets, and work_orders. Serve public/index.html for browser UI. Do not add framework weight. Do not edit tests unless strictly required. Plan: ${implementation_plan.server_js}
+  review strict criteria: "src/server.js must exist, mention all entity route families, serve public/index.html, and npm test must still pass." grounded-by 'node -e "const fs=require(\"fs\"); const t=fs.readFileSync(\"workspace/fscrud-01/src/server.js\",\"utf8\"); for (const term of [\"customers\",\"assets\",\"work_orders\",\"public/index.html\"]) if(!t.includes(term)) process.exit(1)" && cd workspace/fscrud-01 && npm test' max 2
+    prompt: Repair src/server.js or directly broken tests only. Keep domain behavior passing. Critique: ${_review_critique}
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Create public/index.html only. Include browser-facing list, create, edit, detail, and delete flows for customers, assets, and work_orders. It may be simple HTML and JavaScript, but all entity names and CRUD operations must be visible. Do not edit any other file. Plan: ${implementation_plan.ui_html}
+  review strict criteria: "public/index.html must include all entities and all CRUD operation words." grounded-by 'node -e "const fs=require(\"fs\"); const t=fs.readFileSync(\"workspace/fscrud-01/public/index.html\",\"utf8\").toLowerCase(); for (const term of [\"customers\",\"assets\",\"work_orders\",\"list\",\"create\",\"edit\",\"detail\",\"delete\"]) if(!t.includes(term)) process.exit(1)"' max 2
+    prompt: Repair public/index.html only. The previous grounded review failed; add the missing visible entity or CRUD coverage. Critique: ${_review_critique}
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Create data/seed.json, README.md, run-manifest.json, and verification-report.md only. Include customers, assets, and work_orders seed data with valid references. README must document install/test/start. verification-report.md must cite npm test evidence honestly. Plan: ${implementation_plan.seed_data}; ${implementation_plan.docs}
+  review strict criteria: "handoff artifacts must exist, mention all entities, and npm test must still pass." grounded-by "cd workspace/fscrud-01 && npm test" max 2
+    prompt: Repair missing handoff artifacts only and preserve passing tests. Critique: ${_review_critique}
+  end
+
+  run: node -e "require('fs').writeFileSync('workspace/fscrud-01/.pl-tight-v3-complete','ok\n')" [timeout 60]
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/public/index.html
+  file_exists workspace/fscrud-01/__tests__/domain.test.js
+  file_exists workspace/fscrud-01/data/seed.json
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md
+  file_exists workspace/fscrud-01/.pl-tight-v3-complete

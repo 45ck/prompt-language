@@ -42,6 +42,16 @@ This is a follow-up treatment for local models that can produce structured plann
 JSON but stall on broad edit prompts. It decomposes the build into file-sized
 instructions, each framed as senior-to-junior direction with a narrow repair gate.
 
+### `pl-local-crud-tight-v3`
+
+The model runs
+[flows/pl-fullstack-crud-tight-v3.flow](../flows/pl-fullstack-crud-tight-v3.flow).
+This supersedes `pl-local-crud-tight` for follow-up runs. It keeps the file-sized
+senior-to-junior direction, switches tests to Node's built-in `node:test` runner to
+avoid dependency installation ambiguity, adds an explicit browser UI slice, and
+requires a final completion marker so early artifact creation cannot short-circuit
+the remaining flow steps.
+
 ## Runner Policy
 
 Use the same local model for both arms. Preferred order:
@@ -81,6 +91,13 @@ Observed tight-arm follow-up on `2026-04-30`: opencode with
 instead of an executed workspace edit. Treat `pl-local-crud-tight` as a diagnostic
 probe for local runner/tool-call failure modes, not as claim-grade full-stack
 evidence, until the arm enforces the full UI scope and the verifier is strengthened.
+
+Observed native-Ollama tight follow-up on `2026-04-30`: the `ollama` runner with
+`qwen3-opencode-big:30b` completed the flow and created all required v2 files, but
+the verifier scored `62/100` because `npm test` failed (`jest` was not installed)
+and rule coverage was incomplete. This supports using an action-executing local
+runner, but also shows that v2 completion gates were too weak. Use
+`pl-local-crud-tight-v3` for the next local run.
 
 ## GPU Telemetry Policy
 

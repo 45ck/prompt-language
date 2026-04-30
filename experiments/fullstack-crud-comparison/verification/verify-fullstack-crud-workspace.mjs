@@ -185,6 +185,7 @@ function scoreWorkspace(workspace, packageJson, corpus, testResult) {
     readme: checkFileExists(workspace, 'README.md'),
     runManifest: checkFileExists(workspace, 'run-manifest.json'),
     verificationReport: checkFileExists(workspace, 'verification-report.md'),
+    browserUi: checkFileExists(workspace, 'public/index.html'),
     testScript: typeof packageJson?.scripts?.test === 'string',
     runScript:
       typeof packageJson?.scripts?.dev === 'string' ||
@@ -205,11 +206,12 @@ function scoreWorkspace(workspace, packageJson, corpus, testResult) {
 
   const score = [
     checks.packageJson ? 10 : 0,
-    checks.readme ? 8 : 0,
-    checks.runManifest ? 6 : 0,
-    checks.verificationReport ? 6 : 0,
+    checks.readme ? 6 : 0,
+    checks.runManifest ? 5 : 0,
+    checks.verificationReport ? 5 : 0,
     checks.testScript ? 8 : 0,
     checks.runScript ? 5 : 0,
+    checks.browserUi ? 4 : 0,
     checks.allEntities ? 15 : 0,
     checks.allCrudTerms ? 10 : 0,
     checks.relationshipRules ? 10 : 0,
@@ -229,6 +231,7 @@ function hardFailures(workspace, scoreResult) {
     failures.push('workspace_missing');
   }
   if (!scoreResult.checks.packageJson) failures.push('package_json_missing_or_invalid');
+  if (!scoreResult.checks.browserUi) failures.push('browser_ui_missing');
   if (!scoreResult.checks.allEntities) failures.push('required_entity_family_missing');
   if (!scoreResult.checks.testScript) failures.push('test_script_missing');
   if (scoreResult.checks.npmTestPassed === false) failures.push('npm_test_failed');

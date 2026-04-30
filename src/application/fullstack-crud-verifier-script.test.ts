@@ -25,6 +25,7 @@ function runVerifier(workspace: string) {
 
 function writeValidWorkspace(workspace: string): void {
   mkdirSync(join(workspace, 'src'), { recursive: true });
+  mkdirSync(join(workspace, 'public'), { recursive: true });
   writeFileSync(
     join(workspace, 'package.json'),
     JSON.stringify(
@@ -41,6 +42,10 @@ function writeValidWorkspace(workspace: string): void {
   writeFileSync(join(workspace, 'README.md'), 'Install, test, and run the app with npm scripts.');
   writeFileSync(join(workspace, 'run-manifest.json'), '{}');
   writeFileSync(join(workspace, 'verification-report.md'), 'npm test passed.');
+  writeFileSync(
+    join(workspace, 'public', 'index.html'),
+    '<h1>customers assets work_orders</h1><button>list create edit detail delete</button>',
+  );
   writeFileSync(join(workspace, 'test.js'), 'console.log("tests pass");');
   writeFileSync(
     join(workspace, 'src', 'app.ts'),
@@ -64,11 +69,16 @@ describe('FSCRUD verifier script', () => {
     writeValidWorkspace(workspace);
 
     const result = runVerifier(workspace);
-    const report = JSON.parse(result.stdout) as { passed: boolean; score: number };
+    const report = JSON.parse(result.stdout) as {
+      passed: boolean;
+      score: number;
+      checks: { browserUi: boolean };
+    };
 
     expect(result.status).toBe(0);
     expect(report.passed).toBe(true);
     expect(report.score).toBeGreaterThanOrEqual(80);
+    expect(report.checks.browserUi).toBe(true);
   });
 
   it('fails when the package and entity surface are missing', () => {
@@ -97,6 +107,7 @@ describe('FSCRUD verifier script', () => {
       'solo-local-crud.flow',
       'pl-fullstack-crud-v1.flow',
       'pl-fullstack-crud-tight-v2.flow',
+      'pl-fullstack-crud-tight-v3.flow',
     ];
 
     for (const flow of flows) {
@@ -123,6 +134,7 @@ describe('FSCRUD verifier script', () => {
       'solo-local-crud.flow',
       'pl-fullstack-crud-v1.flow',
       'pl-fullstack-crud-tight-v2.flow',
+      'pl-fullstack-crud-tight-v3.flow',
     ];
 
     for (const flow of flows) {

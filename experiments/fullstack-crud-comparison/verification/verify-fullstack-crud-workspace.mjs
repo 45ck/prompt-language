@@ -42,6 +42,159 @@ const RULE_TERMS = [
   'cancelled',
   'urgent',
 ];
+const DOMAIN_BEHAVIOR_PROBE = String.raw`
+const path = require('node:path');
+const workspace = process.argv[1];
+const domain = require(path.join(workspace, 'src', 'domain.js'));
+const failures = [];
+
+function requireFunction(name) {
+  if (typeof domain[name] !== 'function') failures.push('missing_export:' + name);
+  return domain[name];
+}
+
+function assert(condition, label) {
+  if (!condition) failures.push(label);
+}
+
+function mustThrow(label, operation) {
+  try {
+    operation();
+    failures.push('expected_throw:' + label);
+  } catch {
+    // Expected.
+  }
+}
+
+function idOf(value, label) {
+  assert(value && (typeof value.id === 'string' || typeof value.id === 'number'), label);
+  return value && value.id;
+}
+
+const names = [
+  'reset',
+  'listCustomers',
+  'createCustomer',
+  'readCustomer',
+  'detailCustomer',
+  'editCustomer',
+  'deleteCustomer',
+  'listAssets',
+  'createAsset',
+  'readAsset',
+  'detailAsset',
+  'editAsset',
+  'deleteAsset',
+  'listWorkOrders',
+  'createWorkOrder',
+  'readWorkOrder',
+  'detailWorkOrder',
+  'editWorkOrder',
+  'deleteWorkOrder',
+];
+for (const name of names) requireFunction(name);
+if (failures.length > 0) {
+  console.error(failures.join('\n'));
+  process.exit(1);
+}
+
+domain.reset();
+const customerA = domain.createCustomer({ name: 'Acme Field Services' });
+const customerB = domain.createCustomer({ name: 'Beta Manufacturing' });
+const customerAId = idOf(customerA, 'customer_id_missing');
+const customerBId = idOf(customerB, 'customer_id_missing');
+assert(domain.listCustomers().length === 2, 'customer_list_count');
+assert(domain.readCustomer(customerAId).name === 'Acme Field Services', 'customer_read');
+assert(domain.detailCustomer(customerAId).id === customerAId, 'customer_detail');
+assert(domain.editCustomer(customerAId, { name: 'Acme Updated' }).name === 'Acme Updated', 'customer_edit');
+
+const assetA = domain.createAsset({ customerId: customerAId, name: 'Truck 7' });
+const assetB = domain.createAsset({ customerId: customerBId, name: 'Pump 2' });
+const assetAId = idOf(assetA, 'asset_id_missing');
+const assetBId = idOf(assetB, 'asset_id_missing');
+assert(domain.listAssets().length === 2, 'asset_list_count');
+assert(domain.readAsset(assetAId).customerId === customerAId, 'asset_read');
+assert(domain.detailAsset(assetAId).id === assetAId, 'asset_detail');
+assert(domain.editAsset(assetAId, { name: 'Truck 7A' }).name === 'Truck 7A', 'asset_edit');
+
+mustThrow('unknown_customer', () =>
+  domain.createWorkOrder({ customerId: 'missing', assetId: assetAId, status: 'open' }),
+);
+mustThrow('unknown_asset', () =>
+  domain.createWorkOrder({ customerId: customerAId, assetId: 'missing', status: 'open' }),
+);
+mustThrow('asset_customer_mismatch', () =>
+  domain.createWorkOrder({ customerId: customerAId, assetId: assetBId, status: 'open' }),
+);
+mustThrow('completed_requires_completedAt', () =>
+  domain.createWorkOrder({
+    customerId: customerAId,
+    assetId: assetAId,
+    status: 'completed',
+    priority: 'normal',
+  }),
+);
+mustThrow('non_completed_rejects_completedAt', () =>
+  domain.createWorkOrder({
+    customerId: customerAId,
+    assetId: assetAId,
+    status: 'open',
+    priority: 'normal',
+    completedAt: '2026-04-30T00:00:00Z',
+  }),
+);
+
+const workOrder = domain.createWorkOrder({
+  customerId: customerAId,
+  assetId: assetAId,
+  status: 'open',
+  priority: 'urgent',
+  title: 'Repair hydraulic lift',
+});
+const workOrderId = idOf(workOrder, 'work_order_id_missing');
+assert(domain.listWorkOrders().length === 1, 'work_order_list_count');
+assert(domain.readWorkOrder(workOrderId).priority === 'urgent', 'work_order_read');
+assert(domain.detailWorkOrder(workOrderId).assetId === assetAId, 'work_order_detail');
+assert(
+  domain.editWorkOrder(workOrderId, {
+    status: 'completed',
+    completedAt: '2026-04-30T00:00:00Z',
+  }).status === 'completed',
+  'work_order_edit_completed',
+);
+domain.deleteWorkOrder(workOrderId);
+assert(
+  !domain.listWorkOrders().some((item) => item.id === workOrderId && !item.deleted && !item.deletedAt),
+  'work_order_delete_safe',
+);
+
+const linked = domain.createWorkOrder({
+  customerId: customerAId,
+  assetId: assetAId,
+  status: 'scheduled',
+  priority: 'normal',
+});
+let customerDeleteBlocked = false;
+try {
+  domain.deleteCustomer(customerAId);
+} catch {
+  customerDeleteBlocked = true;
+}
+if (!customerDeleteBlocked) {
+  assert(
+    !domain.listWorkOrders().some((item) => item.customerId === customerAId && !item.deleted && !item.deletedAt),
+    'customer_delete_left_dangling_work_order',
+  );
+}
+assert(domain.readCustomer(customerBId).id === customerBId, 'unrelated_customer_preserved');
+assert(domain.readAsset(assetBId).id === assetBId, 'unrelated_asset_preserved');
+assert(linked, 'linked_work_order_created');
+
+if (failures.length > 0) {
+  console.error(failures.join('\n'));
+  process.exit(1);
+}
+`;
 
 function parseArgs(argv) {
   const options = { workspace: process.cwd(), json: false, runTests: true };
@@ -161,6 +314,102 @@ function hasSeedData(workspace, files, corpus) {
   );
 }
 
+function validateSeedIntegrity(workspace) {
+  const seed = readJson(join(workspace, 'data', 'seed.json'));
+  const failures = [];
+  if (seed === null || typeof seed !== 'object' || Array.isArray(seed)) {
+    return { passed: false, failures: ['seed_json_missing_or_invalid'], counts: {} };
+  }
+
+  const customers = Array.isArray(seed.customers) ? seed.customers : [];
+  const assets = Array.isArray(seed.assets) ? seed.assets : [];
+  const workOrders = Array.isArray(seed.work_orders)
+    ? seed.work_orders
+    : Array.isArray(seed.workOrders)
+      ? seed.workOrders
+      : [];
+  const customerIds = new Set(customers.map((customer) => String(customer.id ?? '')));
+  const assetById = new Map(assets.map((asset) => [String(asset.id ?? ''), asset]));
+  const validStatuses = new Set(['open', 'scheduled', 'in_progress', 'completed', 'cancelled']);
+  const validPriorities = new Set(['low', 'normal', 'urgent']);
+
+  if (customers.length < 2) failures.push('seed_customers_lt_2');
+  if (assets.length < 3) failures.push('seed_assets_lt_3');
+  if (workOrders.length < 3) failures.push('seed_work_orders_lt_3');
+  if (customers.some((customer) => !customer.id)) failures.push('seed_customer_id_missing');
+
+  for (const asset of assets) {
+    if (!asset.id) failures.push('seed_asset_id_missing');
+    if (!customerIds.has(String(asset.customerId ?? ''))) {
+      failures.push(`seed_asset_customer_missing:${asset.id ?? 'unknown'}`);
+    }
+  }
+
+  for (const workOrder of workOrders) {
+    const asset = assetById.get(String(workOrder.assetId ?? ''));
+    const status = String(workOrder.status ?? '');
+    const priority = String(workOrder.priority ?? '');
+    if (!workOrder.id) failures.push('seed_work_order_id_missing');
+    if (!customerIds.has(String(workOrder.customerId ?? ''))) {
+      failures.push(`seed_work_order_customer_missing:${workOrder.id ?? 'unknown'}`);
+    }
+    if (!asset) {
+      failures.push(`seed_work_order_asset_missing:${workOrder.id ?? 'unknown'}`);
+    } else if (String(asset.customerId ?? '') !== String(workOrder.customerId ?? '')) {
+      failures.push(`seed_work_order_asset_customer_mismatch:${workOrder.id ?? 'unknown'}`);
+    }
+    if (!validStatuses.has(status)) failures.push(`seed_work_order_status_invalid:${status}`);
+    if (!validPriorities.has(priority))
+      failures.push(`seed_work_order_priority_invalid:${priority}`);
+    if (status === 'completed' && !workOrder.completedAt) {
+      failures.push(`seed_completed_missing_completedAt:${workOrder.id ?? 'unknown'}`);
+    }
+    if (status !== 'completed' && workOrder.completedAt) {
+      failures.push(`seed_non_completed_has_completedAt:${workOrder.id ?? 'unknown'}`);
+    }
+  }
+
+  return {
+    passed: failures.length === 0,
+    failures,
+    counts: {
+      customers: customers.length,
+      assets: assets.length,
+      workOrders: workOrders.length,
+    },
+  };
+}
+
+function runDomainBehaviorProbe(workspace) {
+  const domainPath = join(workspace, 'src', 'domain.js');
+  if (!existsSync(domainPath)) {
+    return {
+      skipped: false,
+      passed: false,
+      exitCode: 1,
+      stdout: '',
+      stderr: 'src/domain.js is missing',
+    };
+  }
+
+  const result = spawnSync(process.execPath, ['-e', DOMAIN_BEHAVIOR_PROBE, workspace], {
+    cwd: workspace,
+    encoding: 'utf8',
+    timeout: 30_000,
+    maxBuffer: 1024 * 1024,
+    windowsHide: true,
+  });
+  const exitCode = result.status ?? (result.signal ? 124 : 1);
+  return {
+    skipped: false,
+    passed: exitCode === 0,
+    exitCode,
+    timedOut: result.error?.code === 'ETIMEDOUT',
+    stdout: result.stdout ?? '',
+    stderr: result.stderr ?? String(result.error ?? ''),
+  };
+}
+
 function runNpmTest(workspace, enabled, packageJson) {
   if (!enabled) {
     return { skipped: true, exitCode: null, stdout: '', stderr: '', durationMs: 0 };
@@ -209,6 +458,8 @@ function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
   const ruleCoverage = Object.fromEntries(
     RULE_TERMS.map((term) => [term, corpus.includes(term.toLowerCase())]),
   );
+  const seedIntegrity = validateSeedIntegrity(workspace);
+  const domainBehavior = runDomainBehaviorProbe(workspace);
   const checks = {
     packageJson: packageJson !== null,
     readme: checkFileExists(workspace, 'README.md'),
@@ -229,29 +480,41 @@ function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
     ),
     priorityRules: ['low', 'normal', 'urgent'].every((term) => corpus.includes(term)),
     seedData: hasSeedData(workspace, files, corpus),
+    seedIntegrity: seedIntegrity.passed,
     testsPresent: hasTestFile(workspace, files),
     npmTestPassed: testResult.skipped ? null : testResult.exitCode === 0,
+    domainBehavior: domainBehavior.passed,
   };
 
   const score = [
     checks.packageJson ? 10 : 0,
-    checks.readme ? 6 : 0,
-    checks.runManifest ? 5 : 0,
-    checks.verificationReport ? 5 : 0,
-    checks.testScript ? 8 : 0,
+    checks.readme ? 5 : 0,
+    checks.runManifest ? 4 : 0,
+    checks.verificationReport ? 4 : 0,
+    checks.testScript ? 7 : 0,
     checks.runScript ? 5 : 0,
     checks.browserUi ? 4 : 0,
-    checks.allEntities ? 15 : 0,
-    checks.allCrudTerms ? 10 : 0,
-    checks.relationshipRules ? 10 : 0,
-    checks.statusRules ? 6 : 0,
-    checks.priorityRules ? 4 : 0,
+    checks.allEntities ? 8 : 0,
+    checks.allCrudTerms ? 5 : 0,
+    checks.relationshipRules ? 5 : 0,
+    checks.statusRules ? 4 : 0,
+    checks.priorityRules ? 3 : 0,
     checks.seedData ? 4 : 0,
+    checks.seedIntegrity ? 8 : 0,
     checks.testsPresent ? 4 : 0,
-    checks.npmTestPassed === true ? 4 : 0,
+    checks.npmTestPassed === true ? 5 : 0,
+    checks.domainBehavior ? 15 : 0,
   ].reduce((sum, value) => sum + value, 0);
 
-  return { score, checks, entityCoverage, crudCoverage, ruleCoverage };
+  return {
+    score,
+    checks,
+    entityCoverage,
+    crudCoverage,
+    ruleCoverage,
+    seedIntegrity,
+    domainBehavior,
+  };
 }
 
 function hardFailures(workspace, scoreResult) {
@@ -265,6 +528,8 @@ function hardFailures(workspace, scoreResult) {
   if (!scoreResult.checks.testScript) failures.push('test_script_missing');
   if (!scoreResult.checks.testsPresent) failures.push('tests_missing');
   if (scoreResult.checks.npmTestPassed === false) failures.push('npm_test_failed');
+  if (!scoreResult.checks.seedIntegrity) failures.push('seed_integrity_failed');
+  if (!scoreResult.checks.domainBehavior) failures.push('domain_behavior_failed');
   return failures;
 }
 

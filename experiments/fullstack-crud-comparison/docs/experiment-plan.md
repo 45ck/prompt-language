@@ -180,6 +180,22 @@ tiny partial module instead of applying the missing terms. Verifier stayed at
 natural-language repair prompts for the domain layer. The next hypothesis should test
 PL-provided scaffolds or executable contract tests before free-form implementation.
 
+Next scaffold-contract hypothesis: a deterministic senior scaffold plus executable
+contract tests should move the same local model further than prompt-only domain
+repair. The treatment flow is `pl-fullstack-crud-scaffold-contract-v1.flow`. It
+pre-creates canonical CommonJS exports and `__tests__/domain.contract.test.js`, then
+asks the model to fill `src/domain.js` under a compact Senior Card protocol:
+`GOAL`, `FILE`, `MUST`, `KEEP`, `CHECK`, and `REPAIR`. This isolates the value of
+prompt-language structure and contract feedback; the scaffold provides shape and
+tests, not completed business logic.
+
+Scoring rule for the next comparison: runner, transport, and timeout failures are
+`runtime_failed` or `timeout_partial`, not product-quality failures and not evidence
+for or against the PL-vs-solo hypothesis. A claim-grade comparison requires both arms
+to run from the same commit, task, verifier, runner, model, and timeout policy. Failed
+runner attempts may be preserved as diagnostics, but post-failure install/test steps
+must not be interpreted as successful behavior evidence.
+
 Verifier hardening note: a green `node --test` exit is insufficient by itself
 because Node can exit successfully when no test files exist. The FSCRUD verifier
 must require real test files and should score seed data from actual seed artifacts,

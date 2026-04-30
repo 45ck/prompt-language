@@ -17,6 +17,12 @@
       "runner": "prompt-language",
       "modelPolicy": "same local Ollama model as baseline",
       "flow": "../flows/pl-fullstack-crud-v1.flow"
+    },
+    {
+      "id": "pl-local-crud-scaffold-contract",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as baseline",
+      "flow": "../flows/pl-fullstack-crud-scaffold-contract-v1.flow"
     }
   ],
   "timeouts": {
@@ -28,5 +34,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "no-live-runs-yet"
+  "resultStatus": "diagnostic-only-no-claim-grade-pair-yet"
 }

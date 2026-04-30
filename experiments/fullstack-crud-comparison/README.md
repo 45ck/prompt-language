@@ -45,12 +45,13 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 
 ## Arms
 
-| Arm                     | Runner                                                  | Model                                  | Purpose                                                                     |
-| ----------------------- | ------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
-| `solo-local-crud`       | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                     |
-| `pl-local-crud-factory` | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control             |
-| `pl-local-senior-crud`  | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates         |
-| `hybrid-router-crud`    | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review |
+| Arm                               | Runner                                                  | Model                                  | Purpose                                                                     |
+| --------------------------------- | ------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
+| `solo-local-crud`                 | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                     |
+| `pl-local-crud-factory`           | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control             |
+| `pl-local-crud-scaffold-contract` | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback  |
+| `pl-local-senior-crud`            | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates         |
+| `hybrid-router-crud`              | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review |
 
 Run the first claim attempt with only `solo-local-crud` and
 `pl-local-crud-factory`. Add the senior and hybrid arms only after the baseline
@@ -77,10 +78,15 @@ PL-vs-solo claim yet:
   implementation files while the flow was still waiting on `senior_frame`;
 - the verifier is still too text-surface-heavy and can produce false positives
   against token-stuffed workspaces.
-- later R13-R15 tight-v3 runs remain harness/runtime diagnostics: capture isolation
-  improved, but the local runner still failed before producing a complete app.
+- later R15-R19 tight-v3 runs remain harness/runtime diagnostics: capture isolation
+  and workspace rooting improved, but all runs failed before producing a complete
+  app. The best score was R17 at `38/100`; R15, R16, R18, and R19 stayed at
+  `23/100`.
+- dense senior prompts made the local model stall, while shorter imperative repair
+  prompts produced tiny overwrites instead of adding missing behavior.
 
-The next work item is to finish runtime capture isolation and strengthen the verifier
-with behavioral false-positive fixtures. Only after a current-commit smoke pair
-completes with a frozen task, verifier, runner, model, and commit should this scale to
-`k=3` paired runs.
+The next work item is `pl-local-crud-scaffold-contract`: deterministic senior cards,
+canonical CommonJS domain exports, executable contract tests, and a hardened verifier
+that rejects token-stuffed or placeholder workspaces. Only after a current-commit smoke
+pair completes with a frozen task, verifier, runner, model, and commit should this
+scale to `k=3` paired runs.

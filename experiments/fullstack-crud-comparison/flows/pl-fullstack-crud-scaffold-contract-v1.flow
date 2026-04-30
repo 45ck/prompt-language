@@ -1,0 +1,53 @@
+Goal: build and verify FSCRUD-01 with deterministic senior scaffold and contract tests
+
+memory:
+  fscrud_workspace
+  fscrud_task
+  fscrud_model_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="TASK.md"
+  remember key="fscrud_model_policy" value="local Ollama model; runtime speed is telemetry, not a success metric"
+
+  let task_contract = "FSCRUD-01 field-service work order tracker. Build customers, assets, and work_orders with list/create/read/edit/detail/delete flows; enforce customer-asset-work_order references, asset/customer mismatch rejection, completedAt/status rules, safe deletes, seed data, domain validation tests, integration-style tests for each entity family, README, run-manifest.json, and verification-report.md. Prefer a small deterministic Node CommonJS implementation with src/domain.js, src/server.js, public/index.html, and __tests__/domain.test.js before adding framework weight. Task contract: ${fscrud_task}."
+
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs','../../../../../fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('scaffold script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  review strict criteria: "The deterministic scaffold must exist, expose canonical domain exports, and keep contract tests in __tests__/domain.contract.test.js." grounded-by 'node -e "const fs=require(\"fs\"); for (const p of [\"workspace/fscrud-01/package.json\",\"workspace/fscrud-01/CONTRACT.md\",\"workspace/fscrud-01/src/domain.js\",\"workspace/fscrud-01/__tests__/domain.contract.test.js\",\"workspace/fscrud-01/data/seed.json\"]) if(!fs.existsSync(p)){ console.error(\"missing \"+p); process.exit(1); } const t=fs.readFileSync(\"workspace/fscrud-01/src/domain.js\",\"utf8\"); for (const term of [\"listCustomers\",\"createCustomer\",\"readCustomer\",\"detailCustomer\",\"editCustomer\",\"deleteCustomer\",\"listAssets\",\"createAsset\",\"readAsset\",\"detailAsset\",\"editAsset\",\"deleteAsset\",\"listWorkOrders\",\"createWorkOrder\",\"readWorkOrder\",\"detailWorkOrder\",\"editWorkOrder\",\"deleteWorkOrder\"]) if(!t.includes(term)){ console.error(\"missing export \"+term); process.exit(1); }" ' max 1
+    prompt: Do not edit files. Report the missing deterministic scaffold artifact from the critique. Critique: ${_review_critique}
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Senior Card: GOAL fill src/domain.js so __tests__/domain.contract.test.js passes. FILE src/domain.js only. MUST preserve all existing exported function names. MUST implement in-memory customers, assets, and work_orders with list/create/read/detail/edit/delete. MUST validate customerId, assetId, asset/customer mismatch, status values open/scheduled/in_progress/completed/cancelled, completedAt rules, and priority values low/normal/urgent. KEEP package.json, CONTRACT.md, __tests__/domain.contract.test.js, data/seed.json, public/index.html, README.md, run-manifest.json, and verification-report.md unchanged. CHECK cd workspace/fscrud-01 && npm test. REPAIR patch only missing behavior; do not rewrite passing contract tests. Task contract: ${task_contract}.
+  review strict criteria: "The domain implementation must pass executable contract tests without weakening tests or package scripts." grounded-by "cd workspace/fscrud-01 && npm test" max 3
+    prompt: Repair src/domain.js only. Use this senior repair card. FAILED_CHECK: npm test or domain contract. ALLOWED_FILES: src/domain.js. DO_NOT_TOUCH: package.json, CONTRACT.md, __tests__/domain.contract.test.js, data/seed.json. ACTION: patch only the missing behavior shown in stdout/stderr; preserve all exports and any passing behavior. Critique: ${_review_critique}
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Senior Card: GOAL implement minimal HTTP routes in src/server.js using the passing domain module. FILE src/server.js only. MUST expose list/create/read/detail/edit/delete routes for customers, assets, and work_orders. MUST return JSON errors for validation failures. KEEP domain tests passing and do not edit src/domain.js unless npm test names a direct integration break. CHECK cd workspace/fscrud-01 && npm test. Task contract: ${task_contract}.
+  review strict criteria: "Server slice must mention all route families and preserve passing domain contracts." grounded-by 'node -e "const fs=require(\"fs\");const t=fs.readFileSync(\"workspace/fscrud-01/src/server.js\",\"utf8\").toLowerCase(); for (const term of [\"customers\",\"assets\",\"work_orders\",\"list\",\"create\",\"read\",\"edit\",\"detail\",\"delete\"]) if(!t.includes(term)){ console.error(\"missing server term \"+term); process.exit(1); }" && cd workspace/fscrud-01 && npm test' max 2
+    prompt: Repair src/server.js only unless npm test proves src/domain.js regressed. Preserve the passing contract tests. Critique: ${_review_critique}
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Senior Card: GOAL make public/index.html visibly exercise the API. FILE public/index.html only. MUST show list/create/read/edit/detail/delete controls or labels for customers, assets, and work_orders. MUST mention customerId, assetId, status, completedAt, and priority. KEEP tests and source files unchanged. Task contract: ${task_contract}.
+  review strict criteria: "UI must visibly cover entities, CRUD actions, and relationship/status fields." grounded-by 'node -e "const fs=require(\"fs\");const t=fs.readFileSync(\"workspace/fscrud-01/public/index.html\",\"utf8\").toLowerCase(); for (const term of [\"customers\",\"assets\",\"work_orders\",\"list\",\"create\",\"read\",\"edit\",\"detail\",\"delete\",\"customerid\",\"assetid\",\"status\",\"completedat\",\"priority\"]) if(!t.includes(term)){ console.error(\"missing ui term \"+term); process.exit(1); }"' max 2
+    prompt: Repair public/index.html only. Add the missing visible field or operation labels from the critique. Critique: ${_review_critique}
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Senior Card: GOAL finalize README.md, run-manifest.json, and verification-report.md honestly. FILES README.md, run-manifest.json, verification-report.md only. MUST document npm test, npm start, model/runner placeholders if unknown, and whether the verifier was actually run. KEEP code, tests, seed, and UI unchanged. Task contract: ${task_contract}.
+  review strict criteria: "Final workspace must pass tests and the hardened FSCRUD verifier." grounded-by 'node -e "const fs=require(\"fs\");const cp=require(\"child_process\");const paths=[\"experiments/fullstack-crud-comparison/verification/verify-fullstack-crud-workspace.mjs\",\"../../../../../fullstack-crud-comparison/verification/verify-fullstack-crud-workspace.mjs\"];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error(\"verifier script missing\");process.exit(1)}const r=cp.spawnSync(process.execPath,[script,\"--workspace\",\"workspace/fscrud-01\",\"--json\"],{encoding:\"utf8\",stdio:\"inherit\"});process.exit(r.status??1)"' max 2
+    prompt: Repair only README.md, run-manifest.json, verification-report.md, or the exact source file named by verifier stdout/stderr. Do not weaken tests, seed, package scripts, or contract files. Critique: ${_review_critique}
+  end
+
+  run: node -e "require('fs').writeFileSync('workspace/fscrud-01/.pl-scaffold-contract-complete','ok\n')" [timeout 60]
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/CONTRACT.md
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/public/index.html
+  file_exists workspace/fscrud-01/__tests__/domain.contract.test.js
+  file_exists workspace/fscrud-01/data/seed.json
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md
+  file_exists workspace/fscrud-01/.pl-scaffold-contract-complete

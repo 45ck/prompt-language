@@ -34,6 +34,14 @@ The model runs [flows/pl-fullstack-crud-v1.flow](../flows/pl-fullstack-crud-v1.f
 The flow enforces phase order, senior framing, architecture contract, implementation
 slices, review loops, and deterministic verification.
 
+### `pl-local-crud-tight`
+
+The model runs
+[flows/pl-fullstack-crud-tight-v2.flow](../flows/pl-fullstack-crud-tight-v2.flow).
+This is a follow-up treatment for local models that can produce structured planning
+JSON but stall on broad edit prompts. It decomposes the build into file-sized
+instructions, each framed as senior-to-junior direction with a narrow repair gate.
+
 ## Runner Policy
 
 Use the same local model for both arms. Preferred order:
@@ -59,6 +67,13 @@ Recommended limits:
 
 If a run times out, preserve all artifacts and classify the timeout as a run outcome,
 not as missing data.
+
+Observed follow-up on `2026-04-30`: opencode with
+`ollama/qwen3-opencode-big:30b` captured `senior_frame` and
+`implementation_plan` after the direct-capture runtime bridge was rebuilt, but timed
+out on the broad scaffold edit prompt at both `600` and `1800` seconds without
+creating files. That result motivates `pl-local-crud-tight`; increasing timeout alone
+did not resolve the edit stall.
 
 ## GPU Telemetry Policy
 

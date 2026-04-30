@@ -83,8 +83,12 @@ describe('FSCRUD verifier script', () => {
     expect(report.hardFailures).toContain('package_json_missing_or_invalid');
   });
 
-  it('keeps both FSCRUD flows parse-valid', () => {
-    const flows = ['solo-local-crud.flow', 'pl-fullstack-crud-v1.flow'];
+  it('keeps FSCRUD flows parse-valid', () => {
+    const flows = [
+      'solo-local-crud.flow',
+      'pl-fullstack-crud-v1.flow',
+      'pl-fullstack-crud-tight-v2.flow',
+    ];
 
     for (const flow of flows) {
       const output = execFileSync(
@@ -106,7 +110,11 @@ describe('FSCRUD verifier script', () => {
   });
 
   it('keeps FSCRUD task context inline instead of binding artifact handles as the task', () => {
-    const flows = ['solo-local-crud.flow', 'pl-fullstack-crud-v1.flow'];
+    const flows = [
+      'solo-local-crud.flow',
+      'pl-fullstack-crud-v1.flow',
+      'pl-fullstack-crud-tight-v2.flow',
+    ];
 
     for (const flow of flows) {
       const source = readFileSync(

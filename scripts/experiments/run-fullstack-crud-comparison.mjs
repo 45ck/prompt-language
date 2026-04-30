@@ -16,10 +16,12 @@ const DEFAULT_RUNNER = 'aider';
 const ARM_FLOWS = {
   'solo-local-crud': join(EXPERIMENT_ROOT, 'flows', 'solo-local-crud.flow'),
   'pl-local-crud-factory': join(EXPERIMENT_ROOT, 'flows', 'pl-fullstack-crud-v1.flow'),
+  'pl-local-crud-tight': join(EXPERIMENT_ROOT, 'flows', 'pl-fullstack-crud-tight-v2.flow'),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
   primary: ['solo-local-crud', 'pl-local-crud-factory'],
+  tight: ['pl-local-crud-tight'],
 };
 
 function parseArgs(argv) {

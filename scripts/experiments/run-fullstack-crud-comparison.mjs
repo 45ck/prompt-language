@@ -145,11 +145,19 @@ function modelDigest(model) {
       ? model.slice('ollama/'.length)
       : model;
   const result = runProcess('ollama', ['show', ollamaModel], { cwd: ROOT, timeoutMs: 30_000 });
-  if (result.exitCode !== 0) return null;
-  const digest = result.stdout
+  const showDigest = result.stdout
     .split(/\r?\n/)
     .find((line) => line.trim().toLowerCase().startsWith('digest'));
-  return digest?.replace(/^digest\s+/i, '').trim() ?? null;
+  if (result.exitCode === 0 && showDigest) {
+    return showDigest.replace(/^digest\s+/i, '').trim();
+  }
+
+  const listResult = runProcess('ollama', ['list'], { cwd: ROOT, timeoutMs: 30_000 });
+  if (listResult.exitCode !== 0) return null;
+  const listLine = listResult.stdout
+    .split(/\r?\n/)
+    .find((line) => line.trim().startsWith(`${ollamaModel} `));
+  return listLine?.trim().split(/\s+/)[1] ?? null;
 }
 
 function readHardware() {

@@ -393,4 +393,40 @@ describe('OllamaPromptTurnRunner', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     await expect(readFile(join(tempDir, 'hello.txt'), 'utf8')).resolves.toBe('OK');
   });
+
+  it('retries Ollama cold-start model runner crashes', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS', '1');
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: async () => ({
+          error:
+            'model runner has unexpectedly stopped, this may be due to resource limitations or an internal error',
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content: '{"actions":[{"type":"done","message":"ready"}]}',
+          },
+        }),
+      });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-opencode-big:30b',
+      prompt: 'Acknowledge the task.',
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'ready',
+      madeProgress: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

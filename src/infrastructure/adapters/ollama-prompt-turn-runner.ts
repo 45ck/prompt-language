@@ -360,7 +360,7 @@ function sleep(ms: number): Promise<void> {
 
 function isTransientOllamaError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /fetch failed|network|socket|terminated|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|UND_ERR|HTTP 5\d\d/i.test(
+  return /fetch failed|network|socket|terminated|model runner has unexpectedly stopped|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|UND_ERR|HTTP 5\d\d/i.test(
     message,
   );
 }

@@ -109,6 +109,11 @@ against the v3 flow. The harness should retry transient Ollama fetch failures an
 must not run post-failure `npm install` / `npm test` steps that mutate partial
 workspaces.
 
+Observed retry follow-up on `2026-04-30`: after adding transient fetch retry,
+native `ollama` failed in under one second with `model runner has unexpectedly
+stopped`; the model then appeared in `ollama ps` at `21%/79% CPU/GPU` and a direct
+chat succeeded. Treat cold-start model-runner stops as retryable for this host.
+
 Verifier hardening note: a green `node --test` exit is insufficient by itself
 because Node can exit successfully when no test files exist. The FSCRUD verifier
 must require real test files and should score seed data from actual seed artifacts,

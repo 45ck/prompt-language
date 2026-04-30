@@ -1,6 +1,6 @@
 // cspell:ignore fscrud
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -102,6 +102,20 @@ describe('FSCRUD verifier script', () => {
         { cwd: ROOT, encoding: 'utf8' },
       );
       expect(output).toContain('Flow parsed successfully');
+    }
+  });
+
+  it('keeps FSCRUD task context inline instead of binding artifact handles as the task', () => {
+    const flows = ['solo-local-crud.flow', 'pl-fullstack-crud-v1.flow'];
+
+    for (const flow of flows) {
+      const source = readFileSync(
+        join(ROOT, 'experiments', 'fullstack-crud-comparison', 'flows', flow),
+        'utf8',
+      );
+
+      expect(source).toContain('Task contract: ${task_contract}');
+      expect(source).not.toContain('let task_brief = "${last_stdout}"');
     }
   });
 });

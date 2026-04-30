@@ -11,10 +11,9 @@ flow:
   remember key="fscrud_model_policy" value="local Ollama model; runtime speed is telemetry, not a success metric"
 
   run: node -e "const fs=require('fs'); fs.mkdirSync('workspace/fscrud-01',{recursive:true});" [timeout 60]
-  run: node -e "process.stdout.write(require('fs').readFileSync('TASK.md','utf8'))" [timeout 60]
-  let task_brief = "${last_stdout}"
+  let task_contract = "FSCRUD-01 field-service work order tracker. Build customers, assets, and work_orders with list/create/read/edit/detail/delete flows; enforce customer-asset-work_order references, asset/customer mismatch rejection, completedAt/status rules, safe deletes, seed data, domain validation tests, integration-style tests for each entity family, README, run-manifest.json, and verification-report.md. Full task source is TASK.md."
 
-  let senior_frame = prompt "Return strict JSON only. Frame FSCRUD-01 as a senior engineer before editing. Fields: objective, non_negotiable_requirements, likely_omissions, architecture_bias, validation_risks, verification_strategy. Keep values concise. Task: ${task_brief}" as json {
+  let senior_frame = prompt "Return strict JSON only. Frame FSCRUD-01 as a senior engineer before editing. Fields: objective, non_negotiable_requirements, likely_omissions, architecture_bias, validation_risks, verification_strategy. Keep values concise. Task contract: ${task_contract}. Full task source is TASK.md." as json {
     "objective": "string",
     "non_negotiable_requirements": "string",
     "likely_omissions": "string",
@@ -23,7 +22,7 @@ flow:
     "verification_strategy": "string"
   }
 
-  let implementation_plan = prompt "Return strict JSON only. Create a ranked implementation plan for FSCRUD-01. Fields: stack_choice, entity_order, api_plan, ui_plan, test_plan, risk_order, done_definition. Optimize for correctness, verifiability, and local-model reliability over speed. Senior frame: ${senior_frame}. Task: ${task_brief}" as json {
+  let implementation_plan = prompt "Return strict JSON only. Create a ranked implementation plan for FSCRUD-01. Fields: stack_choice, entity_order, api_plan, ui_plan, test_plan, risk_order, done_definition. Optimize for correctness, verifiability, and local-model reliability over speed. Senior frame: ${senior_frame}. Task contract: ${task_contract}. Full task source is TASK.md." as json {
     "stack_choice": "string",
     "entity_order": "string",
     "api_plan": "string",
@@ -33,7 +32,7 @@ flow:
     "done_definition": "string"
   }
 
-  prompt: Work only in ${fscrud_workspace}. Scaffold the app for FSCRUD-01 using this senior frame: ${senior_frame}. Use this implementation plan: ${implementation_plan}. Create README, package metadata, source folders, seed data, and a run manifest. Do not implement every feature yet. Prefer a small TypeScript full-stack shape that can be installed and tested locally.
+  prompt: Work only in ${fscrud_workspace}. Read ${fscrud_task} before editing. Scaffold the app for FSCRUD-01 using this senior frame: ${senior_frame}. Use this implementation plan: ${implementation_plan}. Task contract: ${task_contract}. Create README, package metadata, source folders, seed data, and a run manifest. Do not implement every feature yet. Prefer a small TypeScript full-stack shape that can be installed and tested locally.
 
   review strict criteria: "The scaffold must install, expose real package scripts, and contain no fake completion claims." grounded-by "cd workspace/fscrud-01 && npm install && npm test" max 3
     run: cd workspace/fscrud-01 && npm install && npm test [timeout 300]

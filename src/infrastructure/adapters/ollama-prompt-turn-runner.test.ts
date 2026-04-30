@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-// cspell:ignore unstub
+// cspell:ignore fscrud unstub
 
 import {
   OllamaPromptTurnRunner,
@@ -436,6 +436,83 @@ describe('OllamaPromptTurnRunner', () => {
       madeProgress: true,
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('feeds file action failures back to the model instead of aborting the turn', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content: '{"actions":[{"type":"read_file","path":"package.json"}]}',
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content:
+              '{"actions":[{"type":"write_file","path":"workspace/fscrud-01/package.json","content":"{\\"scripts\\":{\\"test\\":\\"node --test\\"}}"},{"type":"done","message":"repaired"}]}',
+          },
+        }),
+      });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-opencode-big:30b',
+      prompt: 'Repair package.json only under workspace/fscrud-01.',
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'repaired',
+      madeProgress: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const secondPrompt = JSON.stringify(fetchMock.mock.calls[1]?.[1]);
+    expect(secondPrompt).toContain('read_file(package.json) failed');
+    await expect(
+      readFile(join(tempDir, 'workspace', 'fscrud-01', 'package.json'), 'utf8'),
+    ).resolves.toContain('node --test');
+  });
+
+  it('roots relative file actions under the declared workspace variable', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content:
+            '{"actions":[{"type":"write_file","path":"src/domain.js","content":"module.exports = {};"},{"type":"done","message":"domain created"}]}',
+        },
+      }),
+    });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-opencode-big:30b',
+      prompt: [
+        'Variables:',
+        '  fscrud_workspace = workspace/fscrud-01',
+        '',
+        'Current task:',
+        'Repair src/domain.js only.',
+      ].join('\n'),
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'domain created',
+      madeProgress: true,
+    });
+    await expect(readFile(join(tempDir, 'src', 'domain.js'), 'utf8')).rejects.toThrow();
+    await expect(
+      readFile(join(tempDir, 'workspace', 'fscrud-01', 'src', 'domain.js'), 'utf8'),
+    ).resolves.toBe('module.exports = {};');
   });
 
   it('rejects workspace writes during capture turns', async () => {

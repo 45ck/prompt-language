@@ -136,6 +136,26 @@ this host. For the next tight local run, keep the senior frame capture but bake 
 file-by-file implementation plan directly into the slice prompts so the model spends
 GPU time on artifact creation instead of another planning capture.
 
+Observed tight-plan follow-up on `2026-04-30`: after baking the file-by-file plan
+into the slice prompts, native `ollama` successfully captured `senior_frame` and
+created `workspace/fscrud-01/package.json`. The next package repair/review turn then
+failed with `ENOENT` after the model tried to read `package.json` relative to the
+run root instead of `workspace/fscrud-01/package.json`. The verifier scored the
+partial workspace `23/100` with only `package.json` present. Treat this as another
+runtime/runner diagnostic, not a product-quality or hypothesis outcome. The runner
+must feed file-action failures back to the model instead of aborting the turn, and
+long local runs should use explicit action-round and timeout settings.
+
+Observed path-rooting follow-up on `2026-04-30`: after file-action failures were fed
+back to the model, the tight flow advanced past package repair but the model wrote
+`src/domain.js` at the run root instead of under `workspace/fscrud-01`. After adding
+workspace-rooting for relative file actions, the next run created
+`workspace/fscrud-01/src/domain.js` and reached a verifier score of `38/100`, but
+the generated domain layer was still shallow and failed the strict domain review
+after `2/2` repair rounds. Treat this as evidence that the senior/junior PL flow
+needs stronger behavioral scaffolding for domain implementation, not as a completed
+PL-vs-solo comparison.
+
 Verifier hardening note: a green `node --test` exit is insufficient by itself
 because Node can exit successfully when no test files exist. The FSCRUD verifier
 must require real test files and should score seed data from actual seed artifacts,

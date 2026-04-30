@@ -77,6 +77,8 @@ PL-vs-solo claim yet:
   implementation files while the flow was still waiting on `senior_frame`;
 - the verifier is still too text-surface-heavy and can produce false positives
   against token-stuffed workspaces.
+- later R13-R15 tight-v3 runs remain harness/runtime diagnostics: capture isolation
+  improved, but the local runner still failed before producing a complete app.
 
 The next work item is to finish runtime capture isolation and strengthen the verifier
 with behavioral false-positive fixtures. Only after a current-commit smoke pair

@@ -276,7 +276,7 @@ E5 deliberately demotes E4's process-fidelity signals (`processConformance`, `tr
 the target has multiple entities, deterministic gates, and explicit cross-layer
 contracts.
 
-**Status**: Designed, no live runs yet
+**Status**: Diagnostic probes running; no claim-grade paired batch yet
 
 **Task**: FSCRUD-01 field-service work order tracker -- customers, assets, and work
 orders with relationship validation, status rules, UI flows, seed data, tests, and

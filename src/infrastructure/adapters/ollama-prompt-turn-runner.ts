@@ -9,12 +9,15 @@ import type {
 } from '../../application/ports/prompt-turn-runner.js';
 import { selectCompactRenderModeForEnvelope } from '../../application/select-compact-render-mode.js';
 
+// cspell:ignore fscrud timeouterror
+
 const execFileAsync = promisify(execFile);
 
 const OLLAMA_BASE_URL_ENV = 'PROMPT_LANGUAGE_OLLAMA_BASE_URL';
 const OLLAMA_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS';
 const OLLAMA_RETRY_ATTEMPTS_ENV = 'PROMPT_LANGUAGE_OLLAMA_RETRY_ATTEMPTS';
 const OLLAMA_RETRY_DELAY_MS_ENV = 'PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS';
+const OLLAMA_ACTION_ROUNDS_ENV = 'PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS';
 const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434';
 const DEFAULT_OLLAMA_TIMEOUT_MS = 300_000;
 const DEFAULT_OLLAMA_RETRY_ATTEMPTS = 3;
@@ -100,6 +103,10 @@ function getOllamaRetryAttempts(): number {
 
 function getOllamaRetryDelayMs(): number {
   return readPositiveIntEnv(OLLAMA_RETRY_DELAY_MS_ENV) ?? DEFAULT_OLLAMA_RETRY_DELAY_MS;
+}
+
+function getOllamaActionRounds(): number {
+  return readPositiveIntEnv(OLLAMA_ACTION_ROUNDS_ENV) ?? DEFAULT_ACTION_ROUNDS;
 }
 
 function createSystemPrompt(): string {
@@ -306,12 +313,45 @@ function resolveWorkspacePath(cwd: string, candidate: string): string {
   return absolute;
 }
 
+function extractPreferredWorkspaceRoot(prompt: string): string | undefined {
+  const workOnlyMatch = /\bWork only in ([A-Za-z0-9_./\\-]+)/i.exec(prompt);
+  if (workOnlyMatch?.[1] !== undefined) {
+    return workOnlyMatch[1].replace(/[.。,:;]+$/, '');
+  }
+
+  const variableMatch = /^\s*fscrud_workspace\s*=\s*([A-Za-z0-9_./\\-]+)/im.exec(prompt);
+  return variableMatch?.[1]?.replace(/[.。,:;]+$/, '');
+}
+
+function rootActionPath(pathValue: string, preferredRoot: string | undefined): string {
+  if (preferredRoot === undefined) return pathValue;
+  const normalizedPath = pathValue.replace(/\\/g, '/');
+  const normalizedRoot = preferredRoot.replace(/\\/g, '/').replace(/\/+$/, '');
+  if (
+    normalizedPath === '.' ||
+    normalizedPath.startsWith('/') ||
+    /^[A-Za-z]:\//.test(normalizedPath) ||
+    normalizedPath.startsWith('.prompt-language/') ||
+    normalizedPath === '.prompt-language' ||
+    normalizedPath === normalizedRoot ||
+    normalizedPath.startsWith(`${normalizedRoot}/`) ||
+    normalizedPath.startsWith('workspace/')
+  ) {
+    return pathValue;
+  }
+  return `${preferredRoot.replace(/[\\/]+$/, '')}/${pathValue}`;
+}
+
 function isSameWorkspacePath(cwd: string, left: string, right: string): boolean {
   return resolveWorkspacePath(cwd, left) === resolveWorkspacePath(cwd, right);
 }
 
-async function listFiles(cwd: string, pathValue?: string): Promise<string> {
-  const root = resolveWorkspacePath(cwd, pathValue ?? '.');
+async function listFiles(
+  cwd: string,
+  pathValue: string | undefined,
+  preferredRoot: string | undefined,
+): Promise<string> {
+  const root = resolveWorkspacePath(cwd, rootActionPath(pathValue ?? '.', preferredRoot));
   const entries = await readdir(root, { withFileTypes: true });
   const names = entries
     .slice(0, MAX_LIST_ENTRIES)
@@ -319,8 +359,12 @@ async function listFiles(cwd: string, pathValue?: string): Promise<string> {
   return names.length > 0 ? names.join('\n') : '(empty)';
 }
 
-async function readWorkspaceFile(cwd: string, pathValue: string): Promise<string> {
-  const filePath = resolveWorkspacePath(cwd, pathValue);
+async function readWorkspaceFile(
+  cwd: string,
+  pathValue: string,
+  preferredRoot: string | undefined,
+): Promise<string> {
+  const filePath = resolveWorkspacePath(cwd, rootActionPath(pathValue, preferredRoot));
   const content = await readFile(filePath, 'utf8');
   if (content.length <= MAX_FILE_BYTES) {
     return content;
@@ -328,8 +372,13 @@ async function readWorkspaceFile(cwd: string, pathValue: string): Promise<string
   return content.slice(0, MAX_FILE_BYTES) + '\n... (truncated)';
 }
 
-async function writeWorkspaceFile(cwd: string, pathValue: string, content: string): Promise<void> {
-  const filePath = resolveWorkspacePath(cwd, pathValue);
+async function writeWorkspaceFile(
+  cwd: string,
+  pathValue: string,
+  content: string,
+  preferredRoot: string | undefined,
+): Promise<void> {
+  const filePath = resolveWorkspacePath(cwd, rootActionPath(pathValue, preferredRoot));
   await mkdir(dirname(filePath), { recursive: true });
   await writeFile(filePath, content, 'utf8');
 }
@@ -380,6 +429,21 @@ function truncateOutput(text: string): string {
   return text.length <= MAX_COMMAND_OUTPUT ? text : text.slice(0, MAX_COMMAND_OUTPUT) + '...';
 }
 
+function describeAction(action: RunnerAction): string {
+  switch (action.type) {
+    case 'list_files':
+      return `list_files(${action.path ?? '.'})`;
+    case 'read_file':
+      return `read_file(${action.path})`;
+    case 'write_file':
+      return `write_file(${action.path})`;
+    case 'run_command':
+      return `run_command(${action.command})`;
+    case 'done':
+      return 'done';
+  }
+}
+
 async function appendTrace(
   cwd: string,
   record: {
@@ -416,7 +480,7 @@ function sleep(ms: number): Promise<void> {
 
 function isTransientOllamaError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /fetch failed|network|socket|terminated|model runner has unexpectedly stopped|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|UND_ERR|HTTP 5\d\d/i.test(
+  return /fetch failed|network|socket|terminated|aborted|aborterror|timeouterror|model runner has unexpectedly stopped|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|UND_ERR|HTTP 5\d\d/i.test(
     message,
   );
 }
@@ -446,9 +510,27 @@ async function callOllamaChatOnce(
       signal: controller.signal,
     });
 
-    const payload = (await response.json()) as OllamaChatResponse;
+    const rawBody =
+      typeof response.text === 'function'
+        ? await response.text()
+        : JSON.stringify(await response.json());
+    let payload: OllamaChatResponse | undefined;
+    try {
+      payload = JSON.parse(rawBody) as OllamaChatResponse;
+    } catch {
+      if (!response.ok) {
+        throw new Error(
+          `Ollama request failed with HTTP ${response.status}: ${rawBody.slice(0, 500)}`,
+        );
+      }
+      throw new Error(`Ollama returned invalid JSON: ${rawBody.slice(0, 500)}`);
+    }
+
     if (!response.ok) {
-      throw new Error(payload.error ?? `Ollama request failed with HTTP ${response.status}.`);
+      const bodyHint = rawBody.trim() ? `: ${rawBody.slice(0, 500)}` : '';
+      throw new Error(
+        payload.error ?? `Ollama request failed with HTTP ${response.status}${bodyHint}`,
+      );
     }
 
     const content = payload.message?.content?.trim();
@@ -533,6 +615,8 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
     const timeoutMs = getOllamaTimeoutMs();
     const prompt = simplifyPromptLanguageEnvelope(input.prompt);
     const capturePath = extractCapturePath(prompt);
+    const preferredRoot =
+      capturePath === undefined ? extractPreferredWorkspaceRoot(prompt) : undefined;
     const messages: OllamaMessage[] = [
       { role: 'system', content: createSystemPrompt() },
       { role: 'user', content: prompt },
@@ -541,9 +625,12 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
     let workspaceActions = 0;
     let finalMessage: string | undefined;
     let actualModel = requestedModel;
+    let roundsUsed = 0;
+    const maxActionRounds = getOllamaActionRounds();
 
     try {
-      for (let round = 1; round <= DEFAULT_ACTION_ROUNDS; round += 1) {
+      for (let round = 1; round <= maxActionRounds; round += 1) {
+        roundsUsed = round;
         const response = await callOllamaChatWithFallback(requestedModel, messages, timeoutMs);
         const raw = response.content;
         actualModel = response.actualModel;
@@ -561,72 +648,79 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
 
         const results: string[] = [];
         let reachedDone = false;
+        let actionFailed = false;
 
         for (const action of parsed.actions) {
-          if (capturePath !== undefined) {
-            if (
-              action.type === 'write_file' &&
-              isSameWorkspacePath(input.cwd, action.path, capturePath)
-            ) {
-              await writeWorkspaceFile(input.cwd, action.path, action.content);
-              workspaceActions += 1;
-              await appendTrace(input.cwd, {
-                requestedModel,
-                actualModel,
-                prompt,
-                rounds: round,
-                workspaceActions,
-                message: `Captured ${capturePath}`,
-              });
-              return {
-                exitCode: 0,
-                assistantText: `Captured ${capturePath}`,
-                madeProgress: true,
-              };
+          try {
+            if (capturePath !== undefined) {
+              if (
+                action.type === 'write_file' &&
+                isSameWorkspacePath(input.cwd, action.path, capturePath)
+              ) {
+                await writeWorkspaceFile(input.cwd, action.path, action.content, undefined);
+                workspaceActions += 1;
+                await appendTrace(input.cwd, {
+                  requestedModel,
+                  actualModel,
+                  prompt,
+                  rounds: round,
+                  workspaceActions,
+                  message: `Captured ${capturePath}`,
+                });
+                return {
+                  exitCode: 0,
+                  assistantText: `Captured ${capturePath}`,
+                  madeProgress: true,
+                };
+              }
+
+              results.push(`${action.type} rejected: capture turns may only write ${capturePath}`);
+              continue;
             }
 
-            results.push(`${action.type} rejected: capture turns may only write ${capturePath}`);
-            continue;
-          }
-
-          switch (action.type) {
-            case 'list_files': {
-              const listing = await listFiles(input.cwd, action.path);
-              results.push(`list_files(${action.path ?? '.'})\n${listing}`);
-              break;
+            switch (action.type) {
+              case 'list_files': {
+                const listing = await listFiles(input.cwd, action.path, preferredRoot);
+                results.push(`list_files(${action.path ?? '.'})\n${listing}`);
+                break;
+              }
+              case 'read_file': {
+                const content = await readWorkspaceFile(input.cwd, action.path, preferredRoot);
+                results.push(`read_file(${action.path})\n${content}`);
+                break;
+              }
+              case 'write_file': {
+                await writeWorkspaceFile(input.cwd, action.path, action.content, preferredRoot);
+                workspaceActions += 1;
+                results.push(`write_file(${action.path}) ok`);
+                break;
+              }
+              case 'run_command': {
+                const commandResult = await runWorkspaceCommand(
+                  input.cwd,
+                  action.command,
+                  action.timeout_ms,
+                );
+                workspaceActions += 1;
+                results.push(
+                  `run_command(${action.command}) exit=${commandResult.exitCode}\nstdout:\n${truncateOutput(commandResult.stdout)}\nstderr:\n${truncateOutput(commandResult.stderr)}`,
+                );
+                break;
+              }
+              case 'done': {
+                finalMessage = action.message?.trim() ?? 'Done';
+                reachedDone = true;
+                break;
+              }
             }
-            case 'read_file': {
-              const content = await readWorkspaceFile(input.cwd, action.path);
-              results.push(`read_file(${action.path})\n${content}`);
-              break;
-            }
-            case 'write_file': {
-              await writeWorkspaceFile(input.cwd, action.path, action.content);
-              workspaceActions += 1;
-              results.push(`write_file(${action.path}) ok`);
-              break;
-            }
-            case 'run_command': {
-              const commandResult = await runWorkspaceCommand(
-                input.cwd,
-                action.command,
-                action.timeout_ms,
-              );
-              workspaceActions += 1;
-              results.push(
-                `run_command(${action.command}) exit=${commandResult.exitCode}\nstdout:\n${truncateOutput(commandResult.stdout)}\nstderr:\n${truncateOutput(commandResult.stderr)}`,
-              );
-              break;
-            }
-            case 'done': {
-              finalMessage = action.message?.trim() ?? 'Done';
-              reachedDone = true;
-              break;
-            }
+          } catch (error) {
+            actionFailed = true;
+            const message = error instanceof Error ? error.message : String(error);
+            results.push(`${describeAction(action)} failed: ${message}`);
           }
         }
 
-        if (reachedDone) {
+        if (reachedDone && !actionFailed) {
           const madeProgress = workspaceActions > 0 || !promptRequiresWorkspaceAction(prompt);
           await appendTrace(input.cwd, {
             requestedModel,
@@ -654,11 +748,19 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
 
       return {
         exitCode: 1,
-        assistantText: `Ollama runner exceeded the action round limit (${DEFAULT_ACTION_ROUNDS}).`,
+        assistantText: `Ollama runner exceeded the action round limit (${maxActionRounds}).`,
         madeProgress: workspaceActions > 0,
       };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      await appendTrace(input.cwd, {
+        requestedModel,
+        actualModel,
+        prompt,
+        rounds: roundsUsed,
+        workspaceActions,
+        message: `failed: ${message}`,
+      });
       return {
         exitCode: 1,
         assistantText: `Ollama runner failed: ${message}`,

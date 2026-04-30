@@ -227,21 +227,39 @@ function runArm(context) {
   );
   writeProcessArtifacts(attemptDir, 'runner', runResult);
 
-  const installResult = existsSync(join(workspace, 'package.json'))
-    ? runProcess('npm', ['install'], { cwd: workspace, env: process.env, timeoutMs: 600_000 })
-    : skippedProcess('npm', ['install'], workspace, 'package.json missing');
+  const runnerSucceeded = runResult.exitCode === 0;
+  const packageExists = existsSync(join(workspace, 'package.json'));
+  const installResult =
+    runnerSucceeded && packageExists
+      ? runProcess('npm', ['install'], { cwd: workspace, env: process.env, timeoutMs: 600_000 })
+      : skippedProcess(
+          'npm',
+          ['install'],
+          workspace,
+          runnerSucceeded ? 'package.json missing' : 'runner failed',
+        );
   writeProcessArtifacts(attemptDir, 'install', installResult);
 
-  const testResult = existsSync(join(workspace, 'package.json'))
-    ? runProcess('npm', ['test'], { cwd: workspace, env: process.env, timeoutMs: 300_000 })
-    : skippedProcess('npm', ['test'], workspace, 'package.json missing');
+  const testResult =
+    runnerSucceeded && packageExists
+      ? runProcess('npm', ['test'], { cwd: workspace, env: process.env, timeoutMs: 300_000 })
+      : skippedProcess(
+          'npm',
+          ['test'],
+          workspace,
+          runnerSucceeded ? 'package.json missing' : 'runner failed',
+        );
   writeProcessArtifacts(attemptDir, 'test', testResult);
 
-  const verifyResult = runProcess(
-    process.execPath,
-    [VERIFY_SCRIPT, '--workspace', workspace, '--json'],
-    { cwd: ROOT, env: process.env, timeoutMs: 360_000 },
-  );
+  const verifyArgs = [VERIFY_SCRIPT, '--workspace', workspace, '--json'];
+  if (!runnerSucceeded) {
+    verifyArgs.push('--no-run-tests');
+  }
+  const verifyResult = runProcess(process.execPath, verifyArgs, {
+    cwd: ROOT,
+    env: process.env,
+    timeoutMs: 360_000,
+  });
   writeProcessArtifacts(attemptDir, 'verifier', verifyResult);
 
   const manifest = {

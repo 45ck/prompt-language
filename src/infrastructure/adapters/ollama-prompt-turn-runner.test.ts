@@ -364,4 +364,33 @@ describe('OllamaPromptTurnRunner', () => {
       readFile(join(tempDir, '.prompt-language', 'ollama-turns.jsonl'), 'utf8'),
     ).resolves.toContain('"actualModel":"gemma4-cpu:31b"');
   });
+
+  it('retries transient fetch failures before failing the turn', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS', '1');
+    fetchMock.mockRejectedValueOnce(new TypeError('fetch failed')).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        message: {
+          content:
+            '{"actions":[{"type":"write_file","path":"hello.txt","content":"OK"},{"type":"done","message":"created"}]}',
+        },
+      }),
+    });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-opencode-big:30b',
+      prompt: 'Create a file named hello.txt containing exactly OK',
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'created',
+      madeProgress: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await expect(readFile(join(tempDir, 'hello.txt'), 'utf8')).resolves.toBe('OK');
+  });
 });

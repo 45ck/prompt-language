@@ -54,14 +54,17 @@ the remaining flow steps.
 
 ## Runner Policy
 
-Use the same local model for both arms. Preferred order:
+Use the same local model for both arms. Preferred order after the `2026-04-30`
+local-runner probes:
 
-1. `qwen3-opencode:30b` if it is available and stable.
-2. The strongest locally installed Ollama coding model if Qwen is unavailable.
+1. Native `ollama` runner with `qwen3-opencode-big:30b` or the strongest stable
+   locally installed coding model.
+2. `opencode` only after a separate runner-contract smoke proves that local model
+   responses execute real workspace edits instead of emitting inert tool-call text.
 3. A smaller local model only after one 30B smoke pair establishes the harness.
 
-Use aider as the local edit runner unless opencode is demonstrably stable on this
-host. Record the chosen runner in every run manifest.
+Record the chosen runner in every run manifest. Do not mix runners inside a
+claim batch.
 
 ## Timeout Policy
 
@@ -98,6 +101,18 @@ the verifier scored `62/100` because `npm test` failed (`jest` was not installed
 and rule coverage was incomplete. This supports using an action-executing local
 runner, but also shows that v2 completion gates were too weak. Use
 `pl-local-crud-tight-v3` for the next local run.
+
+Observed v3 follow-up on `2026-04-30`: native `ollama` failed during the first
+capture step with `PLR-007` / `fetch failed`, while the Ollama service was healthy
+afterward. Treat this as transient runner/transport instability, not evidence
+against the v3 flow. The harness should retry transient Ollama fetch failures and
+must not run post-failure `npm install` / `npm test` steps that mutate partial
+workspaces.
+
+Verifier hardening note: a green `node --test` exit is insufficient by itself
+because Node can exit successfully when no test files exist. The FSCRUD verifier
+must require real test files and should score seed data from actual seed artifacts,
+not only from keyword matches.
 
 ## GPU Telemetry Policy
 

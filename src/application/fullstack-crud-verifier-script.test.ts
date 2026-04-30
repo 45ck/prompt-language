@@ -26,12 +26,13 @@ function runVerifier(workspace: string) {
 function writeValidWorkspace(workspace: string): void {
   mkdirSync(join(workspace, 'src'), { recursive: true });
   mkdirSync(join(workspace, 'public'), { recursive: true });
+  mkdirSync(join(workspace, '__tests__'), { recursive: true });
   writeFileSync(
     join(workspace, 'package.json'),
     JSON.stringify(
       {
         scripts: {
-          test: 'node test.js',
+          test: 'node --test',
           start: 'node src/server.js',
         },
       },
@@ -46,7 +47,14 @@ function writeValidWorkspace(workspace: string): void {
     join(workspace, 'public', 'index.html'),
     '<h1>customers assets work_orders</h1><button>list create edit detail delete</button>',
   );
-  writeFileSync(join(workspace, 'test.js'), 'console.log("tests pass");');
+  writeFileSync(
+    join(workspace, '__tests__', 'domain.test.js'),
+    [
+      "const test = require('node:test');",
+      "const assert = require('node:assert/strict');",
+      "test('domain rules pass', () => assert.equal(1, 1));",
+    ].join('\n'),
+  );
   writeFileSync(
     join(workspace, 'src', 'app.ts'),
     [
@@ -72,13 +80,14 @@ describe('FSCRUD verifier script', () => {
     const report = JSON.parse(result.stdout) as {
       passed: boolean;
       score: number;
-      checks: { browserUi: boolean };
+      checks: { browserUi: boolean; testsPresent: boolean };
     };
 
     expect(result.status).toBe(0);
     expect(report.passed).toBe(true);
     expect(report.score).toBeGreaterThanOrEqual(80);
     expect(report.checks.browserUi).toBe(true);
+    expect(report.checks.testsPresent).toBe(true);
   });
 
   it('fails when the package and entity surface are missing', () => {
@@ -100,6 +109,43 @@ describe('FSCRUD verifier script', () => {
     expect(report.npmTest.exitCode).toBe(1);
     expect(report.npmTest.stderr).toContain('package.json is missing');
     expect(report.npmTest.stdout).not.toContain('@45ck/prompt-language');
+  });
+
+  it('fails when npm test passes without a real test file', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'fscrud-zero-tests-'));
+    mkdirSync(join(workspace, 'src'), { recursive: true });
+    mkdirSync(join(workspace, 'public'), { recursive: true });
+    writeFileSync(
+      join(workspace, 'package.json'),
+      JSON.stringify({ scripts: { test: 'node --test', start: 'node src/server.js' } }, null, 2),
+    );
+    writeFileSync(
+      join(workspace, 'public', 'index.html'),
+      '<h1>customers assets work_orders</h1><button>list create edit detail delete</button>',
+    );
+    writeFileSync(
+      join(workspace, 'src', 'app.js'),
+      [
+        'const customers = ["customerId"];',
+        'const assets = ["assetId"];',
+        'const workOrders = ["workOrder", "work orders"];',
+        'const crud = ["list", "create", "edit", "detail", "delete"];',
+        'const status = ["open", "scheduled", "in_progress", "completed", "cancelled"];',
+        'const priority = ["low", "normal", "urgent"];',
+        'const completedAt = "completedAt";',
+      ].join('\n'),
+    );
+
+    const result = runVerifier(workspace);
+    const report = JSON.parse(result.stdout) as {
+      hardFailures: string[];
+      checks: { testsPresent: boolean; npmTestPassed: boolean };
+    };
+
+    expect(result.status).toBe(1);
+    expect(report.hardFailures).toContain('tests_missing');
+    expect(report.checks.testsPresent).toBe(false);
+    expect(report.checks.npmTestPassed).toBe(true);
   });
 
   it('keeps FSCRUD flows parse-valid', () => {

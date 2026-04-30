@@ -13,8 +13,12 @@ const execFileAsync = promisify(execFile);
 
 const OLLAMA_BASE_URL_ENV = 'PROMPT_LANGUAGE_OLLAMA_BASE_URL';
 const OLLAMA_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS';
+const OLLAMA_RETRY_ATTEMPTS_ENV = 'PROMPT_LANGUAGE_OLLAMA_RETRY_ATTEMPTS';
+const OLLAMA_RETRY_DELAY_MS_ENV = 'PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS';
 const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434';
 const DEFAULT_OLLAMA_TIMEOUT_MS = 300_000;
+const DEFAULT_OLLAMA_RETRY_ATTEMPTS = 3;
+const DEFAULT_OLLAMA_RETRY_DELAY_MS = 1_000;
 const DEFAULT_ACTION_ROUNDS = 8;
 const MAX_LIST_ENTRIES = 200;
 const MAX_FILE_BYTES = 100_000;
@@ -88,6 +92,14 @@ function getOllamaBaseUrl(): string {
 
 function getOllamaTimeoutMs(): number {
   return readPositiveIntEnv(OLLAMA_TIMEOUT_MS_ENV) ?? DEFAULT_OLLAMA_TIMEOUT_MS;
+}
+
+function getOllamaRetryAttempts(): number {
+  return readPositiveIntEnv(OLLAMA_RETRY_ATTEMPTS_ENV) ?? DEFAULT_OLLAMA_RETRY_ATTEMPTS;
+}
+
+function getOllamaRetryDelayMs(): number {
+  return readPositiveIntEnv(OLLAMA_RETRY_DELAY_MS_ENV) ?? DEFAULT_OLLAMA_RETRY_DELAY_MS;
 }
 
 function createSystemPrompt(): string {
@@ -340,7 +352,20 @@ async function appendTrace(
   );
 }
 
-async function callOllamaChat(
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolveSleep) => {
+    setTimeout(resolveSleep, ms);
+  });
+}
+
+function isTransientOllamaError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /fetch failed|network|socket|terminated|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|UND_ERR|HTTP 5\d\d/i.test(
+    message,
+  );
+}
+
+async function callOllamaChatOnce(
   model: string,
   messages: readonly OllamaMessage[],
   timeoutMs: number,
@@ -378,6 +403,30 @@ async function callOllamaChat(
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function callOllamaChat(
+  model: string,
+  messages: readonly OllamaMessage[],
+  timeoutMs: number,
+): Promise<string> {
+  const maxAttempts = getOllamaRetryAttempts();
+  const retryDelayMs = getOllamaRetryDelayMs();
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await callOllamaChatOnce(model, messages, timeoutMs);
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts || !isTransientOllamaError(error)) {
+        throw error;
+      }
+      await sleep(retryDelayMs * attempt);
+    }
+  }
+
+  throw lastError;
 }
 
 function getFallbackModels(model: string): readonly string[] {

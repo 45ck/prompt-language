@@ -114,6 +114,10 @@ function readCorpus(files) {
     .toLowerCase();
 }
 
+function relativeTextPath(root, file) {
+  return relative(root, file).replaceAll('\\', '/');
+}
+
 function checkFileExists(root, relativePath) {
   return existsSync(join(root, relativePath));
 }
@@ -130,6 +134,31 @@ function countEntityCoverage(corpus) {
 
 function countCrudCoverage(corpus) {
   return Object.fromEntries(CRUD_TERMS.map((term) => [term, corpus.includes(term)]));
+}
+
+function hasTestFile(workspace, files) {
+  return files
+    .map((file) => relativeTextPath(workspace, file).toLowerCase())
+    .some(
+      (path) =>
+        path === 'test.js' ||
+        path === 'test.mjs' ||
+        path.startsWith('tests/') ||
+        path.startsWith('__tests__/') ||
+        path.includes('/tests/') ||
+        path.includes('/__tests__/') ||
+        /\.(test|spec)\.[cm]?[jt]sx?$/.test(path),
+    );
+}
+
+function hasSeedData(workspace, files, corpus) {
+  return (
+    checkFileExists(workspace, 'data/seed.json') ||
+    files
+      .map((file) => relativeTextPath(workspace, file).toLowerCase())
+      .some((path) => /(^|\/)seed[-_.a-z0-9]*\.(json|js|mjs|cjs|ts)$/.test(path)) ||
+    corpus.includes('seed data')
+  );
 }
 
 function runNpmTest(workspace, enabled, packageJson) {
@@ -174,7 +203,7 @@ function npmTestArgs() {
   return ['test'];
 }
 
-function scoreWorkspace(workspace, packageJson, corpus, testResult) {
+function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
   const entityCoverage = countEntityCoverage(corpus);
   const crudCoverage = countCrudCoverage(corpus);
   const ruleCoverage = Object.fromEntries(
@@ -199,8 +228,8 @@ function scoreWorkspace(workspace, packageJson, corpus, testResult) {
       corpus.includes(term),
     ),
     priorityRules: ['low', 'normal', 'urgent'].every((term) => corpus.includes(term)),
-    seedData: corpus.includes('seed'),
-    testsPresent: corpus.includes('test') || corpus.includes('describe(') || corpus.includes('it('),
+    seedData: hasSeedData(workspace, files, corpus),
+    testsPresent: hasTestFile(workspace, files),
     npmTestPassed: testResult.skipped ? null : testResult.exitCode === 0,
   };
 
@@ -234,6 +263,7 @@ function hardFailures(workspace, scoreResult) {
   if (!scoreResult.checks.browserUi) failures.push('browser_ui_missing');
   if (!scoreResult.checks.allEntities) failures.push('required_entity_family_missing');
   if (!scoreResult.checks.testScript) failures.push('test_script_missing');
+  if (!scoreResult.checks.testsPresent) failures.push('tests_missing');
   if (scoreResult.checks.npmTestPassed === false) failures.push('npm_test_failed');
   return failures;
 }
@@ -244,14 +274,14 @@ function main() {
   const files = listTextFiles(options.workspace);
   const corpus = readCorpus(files);
   const testResult = runNpmTest(options.workspace, options.runTests, packageJson);
-  const scoreResult = scoreWorkspace(options.workspace, packageJson, corpus, testResult);
+  const scoreResult = scoreWorkspace(options.workspace, packageJson, files, corpus, testResult);
   const failures = hardFailures(options.workspace, scoreResult);
   const passed = failures.length === 0 && scoreResult.score >= 80;
   const report = {
     verifier: 'fullstack-crud-workspace',
     workspace: options.workspace,
     fileCount: files.length,
-    files: files.map((file) => relative(options.workspace, file).replaceAll('\\', '/')),
+    files: files.map((file) => relativeTextPath(options.workspace, file)),
     passed,
     hardFailures: failures,
     score: scoreResult.score,

@@ -1,0 +1,15 @@
+Goal: perform read-only frontier review for a hybrid routing pilot
+
+memory:
+  task_brief
+  route_policy
+  policy_version
+
+flow:
+  remember key="policy_version" value="hybrid-routing-v0"
+  remember key="route_policy" value="Frontier review is authoritative for risk findings, not for hidden peer coordination."
+
+  prompt: Review the current diff and available summaries without editing files. Focus on correctness, security, data loss, architecture boundary violations, missing tests, and whether local output ignored frontier guidance. Write hybrid-review.json with riskLevel, ambiguityLevel, reviewDefects, diffSummary, inputArtifactRefs, outputArtifactRefs, and escalationReason when relevant.
+
+done when:
+  file_exists hybrid-review.json

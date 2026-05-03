@@ -14,6 +14,7 @@ Guides are the product-first onboarding path for the shipped runtime. They teach
 | Runtime mechanics and trust model       | [How It Works](guide.md)                                            | Hook lifecycle, variable flow, and gate behavior                  |
 | Exact syntax and defaults               | [Language Reference](../reference/index.md)                         | The authoritative shipped contract                                |
 | Worked patterns to adapt                | [Examples](../examples/index.md)                                    | Copyable flows for common runtime patterns                        |
+| Local/frontier team routing             | [Team Of Agents Guide](team-of-agents.md)                           | Subagent-first local bulk work plus frontier review/escalation    |
 | Quick evidence before adoption          | [What Works Now](../evaluation/what-works-now.md)                   | Short public summary of the strongest proven surface and caveats  |
 | Planned or tracked product work         | [Roadmap](../roadmap.md)                                            | Current backlog status                                            |
 | Unshipped proposals and design packs    | [WIP Features](../wip/index.md)                                     | Ideas and planning work that are not shipped                      |
@@ -29,5 +30,6 @@ Guides are the product-first onboarding path for the shipped runtime. They teach
 | [Language Guide](language-guide.md)               | High-level tour of the shipped language surface                                         |
 | [How It Works](guide.md)                          | Runtime mechanics, hook lifecycle, variables, and gates                                 |
 | [Reference Flows](reference-flows.md)             | Reusable flow shapes built from shipped primitives                                      |
+| [Team Of Agents Guide](team-of-agents.md)         | Subagent-first local bulk work, frontier escalation, and hybrid routing                 |
 | [Use Cases](use-cases.md)                         | Honest guidance on when the runtime helps and when it does not                          |
 | [Non-Node Projects](non-node-projects.md)         | Python, Go, Rust, and custom runner guidance                                            |

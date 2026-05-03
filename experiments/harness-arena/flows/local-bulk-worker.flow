@@ -1,0 +1,23 @@
+Goal: perform bounded local bulk work for a hybrid routing pilot
+
+memory:
+  task_brief
+  route_policy
+  policy_version
+
+flow:
+  remember key="policy_version" value="hybrid-routing-v0"
+  remember key="route_policy" value="Local worker owns mechanical edits, boilerplate, focused test generation from explicit examples, and verifier-named repair only."
+
+  prompt: Work as the local-bulk lane. Read the task fixture and make only low-risk or explicitly assigned edits. Do not make architecture, security, auth, migration, or data-loss decisions. Write local-worker-summary.md with changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary.
+
+  try
+    run: npm test [timeout 300]
+  end
+
+  if command_failed
+    prompt: Repair only the direct failure shown by npm test. If the failure is ambiguous or repeats, stop editing and update local-worker-summary.md with escalationReason.
+  end
+
+done when:
+  file_exists local-worker-summary.md

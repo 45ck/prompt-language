@@ -128,6 +128,31 @@ Keep the product boundary in mind here:
 - The native Codex scaffold remains experimental.
 - The stronger Codex path today is still `run` or `ci --runner codex`.
 
+## Hybrid Local/Frontier Teams
+
+For team-style work, keep prompt-language as the parent supervisor and route
+bounded child sessions through the runner that fits the lane.
+
+Use local runners for bulk work:
+
+```powershell
+$env:PL_SPAWN_RUNNER = 'ollama'
+```
+
+Use Codex for high-reasoning review or escalation:
+
+```powershell
+$env:PL_SPAWN_RUNNER = 'codex'
+```
+
+The recommended pattern is local-first, frontier-on-escalation: Ollama, OpenCode,
+or aider performs inventory, repetitive edits, and verifier-guided repair; Codex
+handles architecture/security ambiguity, repeated local failure, and final
+read-only review. The parent flow should convert frontier findings into explicit
+tasks, gates, or stop conditions.
+
+See [Team Of Agents Guide](team-of-agents.md) for the full operating model.
+
 ## Meta-Prompt Toggle Controls
 
 Use these env vars when you want to change the default behavior.

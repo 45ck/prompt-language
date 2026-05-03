@@ -1,0 +1,53 @@
+Goal: run a static-split hybrid local/frontier team pilot
+
+memory:
+  task_brief
+  policy_version
+  route_policy
+
+flow:
+  remember key="policy_version" value="hybrid-routing-v0"
+  remember key="task_brief" value="Use the task fixture in the current workspace. Keep oracle commands out of model-visible context."
+  remember key="route_policy" value="Local handles bulk and narrow repair. Frontier classifies risk, diagnoses repeated local failure, and performs final read-only review."
+
+  spawn "frontier_classifier" with vars task_brief route_policy policy_version
+    let risk_report = prompt "Classify task risk, ambiguity, likely local fit, and escalation triggers. Return riskLevel, ambiguityLevel, routeDecision, routeTrigger, and any escalationReason. Do not edit files."
+  end
+
+  spawn "local_inventory" with vars task_brief route_policy policy_version
+    let inventory = prompt "Inventory the likely files, commands, and mechanical work. Do not edit files. Return inputArtifactRefs and an implementation outline suitable for a local worker."
+  end
+
+  await all
+
+  spawn "local_worker" with vars task_brief route_policy policy_version frontier_classifier.risk_report local_inventory.inventory
+    prompt: Implement only the bounded local-bulk work from the inventory. Keep edits narrow, run focused checks when available, and write local-worker-summary.md with changed files, commands, and remaining failures.
+  end
+
+  await "local_worker"
+
+  try
+    run: npm test [timeout 300]
+  end
+
+  if command_failed
+    spawn "frontier_repair_advisor" with vars task_brief route_policy policy_version last_stdout last_stderr
+      let repair_plan = prompt "The local worker failed the gate. Diagnose root cause and decide whether a local repair is enough or frontier repair is required. Return explicit file-scoped repair tasks only. Do not edit files."
+    end
+
+    await "frontier_repair_advisor"
+
+    prompt: Apply only the explicit file-scoped repair tasks from ${frontier_repair_advisor.repair_plan}. Run the focused check again and update local-worker-summary.md.
+  end
+
+  spawn "frontier_final_reviewer" with vars task_brief route_policy policy_version
+    let final_review = prompt "Review the final diff and local-worker-summary.md for correctness, security, missing tests, scope drift, and hidden risks. Do not edit files. Write hybrid-review.json with reviewDefects, diffSummary, inputArtifactRefs, and outputArtifactRefs."
+  end
+
+  await "frontier_final_reviewer"
+
+  prompt: Write hybrid-routing-manifest.json for this pilot using policyVersion ${policy_version}, route decisions, risk/ambiguity levels, artifacts, command outcomes, and review defects. Do not include hidden oracle implementation details.
+
+done when:
+  file_exists hybrid-routing-manifest.json
+  file_exists hybrid-review.json

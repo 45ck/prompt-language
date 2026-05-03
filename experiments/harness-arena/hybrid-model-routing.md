@@ -1,7 +1,7 @@
 # Hybrid Model Routing Experiment
 
 Date: 2026-04-28
-Status: planned
+Status: planned; static-split team-flow scaffolds added 2026-05-04
 Bead: `prompt-language-sfd3`
 
 ## Summary
@@ -83,7 +83,15 @@ flow:
   prompt using profile "frontier-reviewer": Review the final diff for hidden risk before commit.
 ```
 
-Current repo constraint: profile-level model metadata exists, but runtime model selection is still not a full per-turn provider router. The first pilot can therefore run as an external harness that invokes separate PL/Codex/local commands and records each lane in a manifest.
+Current repo constraint: profile-level model metadata exists, but runtime model
+selection is still not a full per-turn provider router. The first pilot can
+therefore run as an external harness that invokes separate PL/Codex/local
+commands and records each lane in a manifest. The checked-in static-split flow
+scaffolds are:
+
+- [`flows/hybrid-router-v0.flow`](./flows/hybrid-router-v0.flow)
+- [`flows/local-bulk-worker.flow`](./flows/local-bulk-worker.flow)
+- [`flows/frontier-reviewer.flow`](./flows/frontier-reviewer.flow)
 
 ## Pilot Experiment
 
@@ -124,7 +132,9 @@ Stop conditions:
 
 ## Acceptance Criteria
 
-- A manifest schema records runner, model, provider class, task, route decision, trigger, wall time, exit code, and oracle result for every step.
+- A manifest schema records runner, model, provider class, task, route decision,
+  trigger, risk level, ambiguity level, artifact references, diff summary, review
+  defects, wall time, exit code, and oracle result for every step.
 - The pilot executes at least one task across all four arms.
 - HR-D uses fewer frontier calls than HR-B.
 - HR-D matches or beats HR-A on oracle score.
@@ -141,4 +151,5 @@ Stop conditions:
 
 Build a small HA-HR1 runner that executes the same fixture under HR-A through HR-D and writes one JSON manifest per lane. Use H14 first because we already know the failure modes and can detect whether frontier escalation fixes the missing import/incomplete merge problem without paying for a larger task.
 
+Runbook: [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md).
 Manifest schema: [`hybrid-routing-manifest.schema.json`](./hybrid-routing-manifest.schema.json).

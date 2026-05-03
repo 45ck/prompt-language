@@ -22,12 +22,16 @@ const SCAFFOLD_SCRIPT = join(
   'write-scaffold-contract.cjs',
 );
 
-function runVerifier(workspace: string) {
-  return spawnSync(process.execPath, [VERIFY_SCRIPT, '--workspace', workspace, '--json'], {
-    cwd: ROOT,
-    encoding: 'utf8',
-    timeout: 30_000,
-  });
+function runVerifier(workspace: string, extraArgs: string[] = []) {
+  return spawnSync(
+    process.execPath,
+    [VERIFY_SCRIPT, '--workspace', workspace, '--json', ...extraArgs],
+    {
+      cwd: ROOT,
+      encoding: 'utf8',
+      timeout: 30_000,
+    },
+  );
 }
 
 function writeValidWorkspace(workspace: string): void {
@@ -421,14 +425,24 @@ describe('FSCRUD verifier script', () => {
       }
 
       const domain = readFileSync(join(workspace, 'src/domain.js'), 'utf8');
+      expect(domain).toContain('module.exports = {');
+      expect(domain).not.toContain('export const');
+      expect(domain).not.toContain('export function');
+      expect(domain).not.toContain('export default');
+      expect(domain).not.toContain('updateCustomer');
+      expect(domain).not.toContain('updateAsset');
+      expect(domain).not.toContain('updateWorkOrder');
       for (const term of [
         'reset',
         'listCustomers',
         'createCustomer',
+        'editCustomer',
         'listAssets',
         'createAsset',
+        'editAsset',
         'listWorkOrders',
         'createWorkOrder',
+        'editWorkOrder',
         'in_progress',
         'cancelled',
         'urgent',
@@ -472,6 +486,75 @@ describe('FSCRUD verifier script', () => {
     }
   });
 
+  it('fails ESM update-style domain exports from local model output', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'fscrud-esm-update-shape-'));
+    try {
+      writeValidWorkspace(workspace);
+      writeFileSync(
+        join(workspace, 'src', 'domain.js'),
+        [
+          'export const customers = {};',
+          'export const assets = {};',
+          'export const createCustomer = () => ({});',
+          'export const readCustomer = () => ({});',
+          'export const updateCustomer = () => ({});',
+          'export const deleteCustomer = () => {};',
+          'export const createAsset = () => ({});',
+          'export const readAsset = () => ({});',
+          'export const updateAsset = () => ({});',
+          'export const deleteAsset = () => {};',
+          'export const createWorkOrder = () => ({});',
+          'export const readWorkOrder = () => ({});',
+          'export const updateWorkOrder = () => ({});',
+          'export const deleteWorkOrder = () => {};',
+          'export const reset = () => {};',
+        ].join('\n'),
+      );
+
+      const result = runVerifier(workspace, ['--no-run-tests']);
+      const report = JSON.parse(result.stdout) as {
+        hardFailures: string[];
+        checks: { domainBehavior: boolean };
+        domainBehavior: { stderr: string };
+      };
+
+      expect(result.status).toBe(1);
+      expect(report.hardFailures).toContain('domain_behavior_failed');
+      expect(report.checks.domainBehavior).toBe(false);
+      expect(report.domainBehavior.stderr).toContain('missing_export:listCustomers');
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it('fails CommonJS update aliases when canonical edit exports are missing', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'fscrud-update-alias-shape-'));
+    try {
+      writeValidWorkspace(workspace);
+      const source = readFileSync(join(workspace, 'src', 'domain.js'), 'utf8')
+        .replaceAll('editCustomer', 'updateCustomer')
+        .replaceAll('editAsset', 'updateAsset')
+        .replaceAll('editWorkOrder', 'updateWorkOrder');
+      writeFileSync(join(workspace, 'src', 'domain.js'), source);
+
+      const result = runVerifier(workspace, ['--no-run-tests']);
+      const report = JSON.parse(result.stdout) as {
+        hardFailures: string[];
+        checks: { domainBehavior: boolean };
+        domainBehavior: { stderr: string };
+      };
+
+      expect(result.status).toBe(1);
+      expect(report.hardFailures).toContain('domain_behavior_failed');
+      expect(report.checks.domainBehavior).toBe(false);
+      expect(report.domainBehavior.stderr).toContain('missing_export:editCustomer');
+      expect(report.domainBehavior.stderr).toContain('missing_export:editAsset');
+      expect(report.domainBehavior.stderr).toContain('missing_export:editWorkOrder');
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
   it('keeps FSCRUD task context inline instead of binding artifact handles as the task', () => {
     const flows = [
       'solo-local-crud.flow',
@@ -490,6 +573,11 @@ describe('FSCRUD verifier script', () => {
       expect(source).toContain('Task contract: ${task_contract}');
       if (flow === 'pl-fullstack-crud-scaffold-contract-v1.flow') {
         expect(source).toContain('__tests__/domain.contract.test.js');
+        expect(source).toContain('CommonJS only');
+        expect(source).toContain('module.exports');
+        expect(source).toContain('forbidden_domain_shape');
+        expect(source).toContain('export const');
+        expect(source).toContain('updateCustomer');
       } else {
         expect(source).toContain('__tests__/domain.test.js');
       }

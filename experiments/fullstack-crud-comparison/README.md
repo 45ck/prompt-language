@@ -98,8 +98,10 @@ first, then work_order rules. It moved past the exact R21 blocker by editing
 strict foundation review; the scaffold arm stayed at `80/100` with
 `domain_behavior_failed`.
 
-The next treatment tightens the scaffold flow around exact CommonJS export names,
-explicit `write_file` repair actions, work_order create/edit rules, safe delete
-semantics, and concrete server/UI behavior. Only after a current-commit smoke pair
-completes with a frozen task, verifier, runner, model, and commit should this scale
-to `k=3` paired runs.
+The R23 treatment tightens the scaffold flow around exact CommonJS export names,
+explicit `write_file` repair actions, export-shape guards, work_order create/edit
+rules, safe delete semantics, and concrete server/UI behavior. The next smoke should
+test whether the same local model can move from scaffold artifact completeness to
+executable domain behavior. Only after a current-commit smoke pair completes with a
+frozen task, verifier, runner, model, and commit should this scale to `k=3` paired
+runs.

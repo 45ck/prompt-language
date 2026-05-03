@@ -224,6 +224,15 @@ behavioral control. The next variant tightens exact export preservation, `write_
 repair actions, work_order create/edit validation, safe delete rules, and concrete
 server/UI contracts; consider raising the Ollama action-round budget for that run.
 
+R23 export-shape hypothesis: the same scaffold-contract treatment should surface the
+R22 failure earlier, before the final verifier, by rejecting ESM `export` syntax and
+`update*` aliases inside the first domain review. The treatment remains intentionally
+narrow: keep the deterministic scaffold and executable contract tests, but require a
+CommonJS-only `src/domain.js` with `module.exports` assigning the exact
+`list/read/detail/edit/delete` function names. Success for this smoke is not a
+PL-vs-solo claim; it is evidence that export-shape control moves the scaffold arm past
+the `domain_behavior_failed` bottleneck.
+
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence
 for or against the PL-vs-solo hypothesis. A claim-grade comparison requires both arms

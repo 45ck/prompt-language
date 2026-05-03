@@ -233,6 +233,18 @@ CommonJS-only `src/domain.js` with `module.exports` assigning the exact
 PL-vs-solo claim; it is evidence that export-shape control moves the scaffold arm past
 the `domain_behavior_failed` bottleneck.
 
+Observed R23 export-shape follow-up on `2026-05-04`: the native-Ollama R23 run
+`live-fscrud-r23-ollama-scaffold-export-contract-v1-20260504-0813` was still
+diagnostic, not claim-grade. The solo arm improved to `52/100` but lacked browser UI,
+valid seed integrity, and executable domain behavior. The scaffold arm again reached
+`80/100` with only `domain_behavior_failed`; the new review guard failed earlier, at
+the first domain foundation card, but the model wrote only alternate update-style
+exports inside `module.exports`. Treat this as evidence that negative-name wording can
+prime the local model toward the wrong identifiers. The next variant keeps forbidden
+identifier checks in deterministic code, but removes those wrong names from
+model-facing prompts and emphasizes a positive exact `module.exports` contract plus
+runtime export probing.
+
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence
 for or against the PL-vs-solo hypothesis. A claim-grade comparison requires both arms

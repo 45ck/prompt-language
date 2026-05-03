@@ -98,10 +98,15 @@ first, then work_order rules. It moved past the exact R21 blocker by editing
 strict foundation review; the scaffold arm stayed at `80/100` with
 `domain_behavior_failed`.
 
-The R23 treatment tightens the scaffold flow around exact CommonJS export names,
-explicit `write_file` repair actions, export-shape guards, work_order create/edit
-rules, safe delete semantics, and concrete server/UI behavior. The next smoke should
-test whether the same local model can move from scaffold artifact completeness to
-executable domain behavior. Only after a current-commit smoke pair completes with a
-frozen task, verifier, runner, model, and commit should this scale to `k=3` paired
-runs.
+R23 tightened the scaffold flow around exact CommonJS export names, explicit
+`write_file` repair actions, export-shape guards, work_order create/edit rules, safe
+delete semantics, and concrete server/UI behavior. The guard caught the failure at
+the first domain review, but the model still wrote only alternate update-style exports
+inside `module.exports`; the scaffold arm stayed at `80/100` with
+`domain_behavior_failed`.
+
+The next treatment removes those wrong names from model-facing prompts and keeps them
+only inside deterministic checks. It emphasizes the positive canonical
+`module.exports` contract and runtime export probing. Only after a current-commit
+smoke pair completes with a frozen task, verifier, runner, model, and commit should
+this scale to `k=3` paired runs.

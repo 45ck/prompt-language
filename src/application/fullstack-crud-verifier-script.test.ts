@@ -575,9 +575,18 @@ describe('FSCRUD verifier script', () => {
         expect(source).toContain('__tests__/domain.contract.test.js');
         expect(source).toContain('CommonJS only');
         expect(source).toContain('module.exports');
-        expect(source).toContain('forbidden_domain_shape');
-        expect(source).toContain('export const');
-        expect(source).toContain('updateCustomer');
+        expect(source).toContain('unexpected_export_name_present');
+        expect(source).toContain('missing_required_export');
+        expect(source).not.toContain('forbidden_domain_shape');
+        for (const promptLine of source
+          .split(/\r?\n/)
+          .filter((line) => line.trimStart().startsWith('prompt:'))) {
+          expect(promptLine).not.toContain('updateCustomer');
+          expect(promptLine).not.toContain('updateAsset');
+          expect(promptLine).not.toContain('updateWorkOrder');
+          expect(promptLine).not.toContain('export const');
+          expect(promptLine).not.toContain('export default');
+        }
       } else {
         expect(source).toContain('__tests__/domain.test.js');
       }

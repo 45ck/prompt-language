@@ -112,3 +112,10 @@ the flow now compares the exact runtime `Object.keys(module.exports)` surface an
 emits generic export-surface diagnostics. Only after a current-commit smoke pair
 completes with a frozen task, verifier, runner, model, and commit should this scale
 to `k=3` paired runs.
+
+The R24 live smoke stayed diagnostic: solo reached `61/100`, while scaffold-contract
+again reached `80/100` with only `domain_behavior_failed`. The failure changed from
+the R23 `update*` collapse to `get*` substitutions for required `read/detail` exports,
+plus one repair turn wrote `src/domain.js` at the run root after compaction dropped the
+workspace variable. The next hardening anchors all repair prompts to
+`workspace/fscrud-01` and adds a deterministic run-root leak guard.

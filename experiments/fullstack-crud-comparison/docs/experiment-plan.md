@@ -253,6 +253,19 @@ diagnostics such as `module_exports_surface_mismatch`, `module_exports_non_funct
 and `domain_module_load_failed`. This tests whether local-model repair improves when
 the flow stops repeating incorrect identifiers anywhere that can leak into critique.
 
+Observed R24 positive-export follow-up on `2026-05-04`: the native-Ollama run
+`live-fscrud-r24-ollama-positive-export-contract-v1-20260504-0843` remained
+diagnostic. The solo arm reached `61/100` and still failed browser UI, seed integrity,
+and domain behavior. The scaffold arm again reached `80/100` with only
+`domain_behavior_failed`. R24 did change the failure: the model no longer collapsed
+to alternate `update*` exports, but it substituted `getCustomer`, `getAsset`, and
+`getWorkOrder` for required `read*` and `detail*` exports. A repair turn also created
+`src/domain.js` at the arm root because the compacted prompt carried only
+`_review_critique`, while the repair instruction used unanchored `src/domain.js`.
+Treat this as evidence for two next controls: exact export-surface checks must remain
+generic, and every repair card must restate `workspace/fscrud-01` as the app root and
+fail fast on run-root source leaks.
+
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence
 for or against the PL-vs-solo hypothesis. A claim-grade comparison requires both arms

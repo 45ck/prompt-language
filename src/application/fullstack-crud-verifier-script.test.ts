@@ -579,17 +579,29 @@ describe('FSCRUD verifier script', () => {
         expect(source).toContain('domain_module_load_failed');
         expect(source).toContain('module_exports_surface_mismatch');
         expect(source).toContain('module_exports_non_function');
+        expect(source).toContain('run_root_src_domain_leak');
+        expect(source).toContain('Treat ${fscrud_workspace} as the app root');
+        expect(source).toContain('ALLOWED_FILES: workspace/fscrud-01/src/domain.js');
         expect(source).not.toContain('unexpected_export_name_present');
         expect(source).not.toContain('missing_required_export');
         expect(source).not.toContain('forbidden_domain_shape');
-        for (const promptLine of source
+        const promptLines = source
           .split(/\r?\n/)
-          .filter((line) => line.trimStart().startsWith('prompt:'))) {
+          .filter((line) => line.trimStart().startsWith('prompt:'));
+        for (const promptLine of promptLines) {
           expect(promptLine).not.toContain('updateCustomer');
           expect(promptLine).not.toContain('updateAsset');
           expect(promptLine).not.toContain('updateWorkOrder');
           expect(promptLine).not.toContain('export const');
           expect(promptLine).not.toContain('export default');
+        }
+        for (const repairLine of promptLines.filter((line) => line.includes('Repair'))) {
+          expect(repairLine).toContain('Work only in ${fscrud_workspace}');
+          expect(repairLine).toContain('Treat ${fscrud_workspace} as the app root');
+          expect(repairLine).toContain('workspace/fscrud-01/');
+          expect(repairLine).toContain('Do not create or edit ./src/* at the run root');
+          expect(repairLine).not.toContain('ALLOWED_FILES: src/domain.js');
+          expect(repairLine).not.toContain('ACTION read_file src/domain.js');
         }
         for (const deterministicLine of source
           .split(/\r?\n/)

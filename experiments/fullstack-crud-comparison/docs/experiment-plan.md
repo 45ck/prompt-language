@@ -245,6 +245,14 @@ identifier checks in deterministic code, but removes those wrong names from
 model-facing prompts and emphasizes a positive exact `module.exports` contract plus
 runtime export probing.
 
+R24/R25 export-surface treatment: keep all model-facing instructions positive-only,
+then remove the remaining wrong-name exposure from deterministic probe output as well.
+The scaffold flow should validate the domain module by loading CommonJS
+`module.exports`, comparing the exact sorted export key list, and emitting generic
+diagnostics such as `module_exports_surface_mismatch`, `module_exports_non_function`,
+and `domain_module_load_failed`. This tests whether local-model repair improves when
+the flow stops repeating incorrect identifiers anywhere that can leak into critique.
+
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence
 for or against the PL-vs-solo hypothesis. A claim-grade comparison requires both arms

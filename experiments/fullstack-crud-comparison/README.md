@@ -105,8 +105,10 @@ the first domain review, but the model still wrote only alternate update-style e
 inside `module.exports`; the scaffold arm stayed at `80/100` with
 `domain_behavior_failed`.
 
-The next treatment removes those wrong names from model-facing prompts and keeps them
-only inside deterministic checks. It emphasizes the positive canonical
-`module.exports` contract and runtime export probing. Only after a current-commit
-smoke pair completes with a frozen task, verifier, runner, model, and commit should
-this scale to `k=3` paired runs.
+R24 removes those wrong names from model-facing prompts and emphasizes the positive
+canonical `module.exports` contract with runtime export probing. The follow-up R25
+hardening removes the remaining wrong-name exposure from deterministic probe text too:
+the flow now compares the exact runtime `Object.keys(module.exports)` surface and
+emits generic export-surface diagnostics. Only after a current-commit smoke pair
+completes with a frozen task, verifier, runner, model, and commit should this scale
+to `k=3` paired runs.

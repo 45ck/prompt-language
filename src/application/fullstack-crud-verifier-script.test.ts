@@ -575,8 +575,12 @@ describe('FSCRUD verifier script', () => {
         expect(source).toContain('__tests__/domain.contract.test.js');
         expect(source).toContain('CommonJS only');
         expect(source).toContain('module.exports');
-        expect(source).toContain('unexpected_export_name_present');
-        expect(source).toContain('missing_required_export');
+        expect(source).toContain('Object.keys(moduleExports).sort()');
+        expect(source).toContain('domain_module_load_failed');
+        expect(source).toContain('module_exports_surface_mismatch');
+        expect(source).toContain('module_exports_non_function');
+        expect(source).not.toContain('unexpected_export_name_present');
+        expect(source).not.toContain('missing_required_export');
         expect(source).not.toContain('forbidden_domain_shape');
         for (const promptLine of source
           .split(/\r?\n/)
@@ -586,6 +590,17 @@ describe('FSCRUD verifier script', () => {
           expect(promptLine).not.toContain('updateWorkOrder');
           expect(promptLine).not.toContain('export const');
           expect(promptLine).not.toContain('export default');
+        }
+        for (const deterministicLine of source
+          .split(/\r?\n/)
+          .filter(
+            (line) => line.includes('grounded-by') || line.trimStart().startsWith('run: node -e'),
+          )) {
+          expect(deterministicLine).not.toContain('updateCustomer');
+          expect(deterministicLine).not.toContain('updateAsset');
+          expect(deterministicLine).not.toContain('updateWorkOrder');
+          expect(deterministicLine).not.toContain('export const');
+          expect(deterministicLine).not.toContain('export default');
         }
       } else {
         expect(source).toContain('__tests__/domain.test.js');

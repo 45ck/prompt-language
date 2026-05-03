@@ -2,7 +2,7 @@
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, resolve, relative } from 'node:path';
+import { basename, dirname, join, resolve, relative } from 'node:path';
 
 const EXCLUDED_DIRS = new Set([
   '.git',
@@ -41,6 +41,15 @@ const RULE_TERMS = [
   'completed',
   'cancelled',
   'urgent',
+];
+const RUN_ROOT_LEAK_PATHS = [
+  'src/domain.js',
+  'src/server.js',
+  'public/index.html',
+  'data/seed.json',
+  'package.json',
+  '__tests__/domain.contract.test.js',
+  '__tests__/domain.test.js',
 ];
 const DOMAIN_BEHAVIOR_PROBE = String.raw`
 const path = require('node:path');
@@ -410,6 +419,30 @@ function runDomainBehaviorProbe(workspace) {
   };
 }
 
+function inferRunRoot(workspace) {
+  const resolvedWorkspace = resolve(workspace);
+  const workspaceParent = dirname(resolvedWorkspace);
+  if (basename(resolvedWorkspace) === 'fscrud-01' && basename(workspaceParent) === 'workspace') {
+    return dirname(workspaceParent);
+  }
+  return null;
+}
+
+function checkPathRootIsolation(workspace) {
+  const runRoot = inferRunRoot(workspace);
+  if (runRoot === null) {
+    return { passed: true, skipped: true, runRoot: null, leaks: [] };
+  }
+
+  const leaks = RUN_ROOT_LEAK_PATHS.filter((path) => existsSync(join(runRoot, path)));
+  return {
+    passed: leaks.length === 0,
+    skipped: false,
+    runRoot,
+    leaks,
+  };
+}
+
 function runNpmTest(workspace, enabled, packageJson) {
   if (!enabled) {
     return { skipped: true, exitCode: null, stdout: '', stderr: '', durationMs: 0 };
@@ -460,6 +493,7 @@ function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
   );
   const seedIntegrity = validateSeedIntegrity(workspace);
   const domainBehavior = runDomainBehaviorProbe(workspace);
+  const pathRootIsolation = checkPathRootIsolation(workspace);
   const checks = {
     packageJson: packageJson !== null,
     readme: checkFileExists(workspace, 'README.md'),
@@ -484,6 +518,7 @@ function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
     testsPresent: hasTestFile(workspace, files),
     npmTestPassed: testResult.skipped ? null : testResult.exitCode === 0,
     domainBehavior: domainBehavior.passed,
+    pathRootIsolation: pathRootIsolation.passed,
   };
 
   const score = [
@@ -514,6 +549,7 @@ function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
     ruleCoverage,
     seedIntegrity,
     domainBehavior,
+    pathRootIsolation,
   };
 }
 
@@ -530,6 +566,7 @@ function hardFailures(workspace, scoreResult) {
   if (scoreResult.checks.npmTestPassed === false) failures.push('npm_test_failed');
   if (!scoreResult.checks.seedIntegrity) failures.push('seed_integrity_failed');
   if (!scoreResult.checks.domainBehavior) failures.push('domain_behavior_failed');
+  if (!scoreResult.checks.pathRootIsolation) failures.push('path_root_isolation_failed');
   return failures;
 }
 

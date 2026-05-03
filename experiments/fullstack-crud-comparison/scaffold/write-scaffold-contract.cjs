@@ -102,8 +102,6 @@ module.exports = {
   detailWorkOrder,
   editWorkOrder,
   deleteWorkOrder,
-  STATUS_VALUES,
-  PRIORITY_VALUES,
 };
 `,
 );

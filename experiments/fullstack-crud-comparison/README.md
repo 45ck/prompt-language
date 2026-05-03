@@ -119,3 +119,11 @@ the R23 `update*` collapse to `get*` substitutions for required `read/detail` ex
 plus one repair turn wrote `src/domain.js` at the run root after compaction dropped the
 workspace variable. The next hardening anchors all repair prompts to
 `workspace/fscrud-01` and adds a deterministic run-root leak guard.
+
+A post-R26 multi-agent review found one pre-live blocker: the exact export-surface
+probe conflicted with the scaffold placeholder because the placeholder also exported
+`STATUS_VALUES` and `PRIORITY_VALUES`. The current follow-up removes those extra
+placeholder exports, anchors initial implementation cards to `workspace/fscrud-01`
+the same way repair cards are anchored, narrows the final repair allowlist, and adds a
+verifier-level `pathRootIsolation` hard gate for run-root app-file leaks. The next
+live Ollama run should test this current commit before any claim-grade `k=3` batch.

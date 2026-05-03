@@ -266,6 +266,18 @@ Treat this as evidence for two next controls: exact export-surface checks must r
 generic, and every repair card must restate `workspace/fscrud-01` as the app root and
 fail fast on run-root source leaks.
 
+Post-R26 pre-live review on `2026-05-04`: before launching the next smoke, six
+subagents reviewed the flow, verifier, runner, and evidence. The review found that
+the scaffold placeholder contradicted the exact export-surface probe by exporting
+`STATUS_VALUES` and `PRIORITY_VALUES` in addition to the canonical functions. It also
+found that first-turn implementation cards still used runner-rooted `src/...` paths
+while repair cards used explicit `workspace/fscrud-01/...` paths. The follow-up
+control removes scaffold-only extra exports, anchors all initial cards to
+`workspace/fscrud-01`, constrains final verifier repair to a named allowlist, and
+adds a verifier-level `pathRootIsolation` hard failure for app files written at the
+attempt root. The next run should be recorded as a current-commit R27 diagnostic, not
+as completed R26 evidence.
+
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence
 for or against the PL-vs-solo hypothesis. A claim-grade comparison requires both arms

@@ -180,6 +180,7 @@ describe('FSCRUD verifier script', () => {
         testsPresent: boolean;
         domainBehavior: boolean;
         seedIntegrity: boolean;
+        pathRootIsolation: boolean;
       };
     };
 
@@ -190,6 +191,33 @@ describe('FSCRUD verifier script', () => {
     expect(report.checks.testsPresent).toBe(true);
     expect(report.checks.domainBehavior).toBe(true);
     expect(report.checks.seedIntegrity).toBe(true);
+    expect(report.checks.pathRootIsolation).toBe(true);
+  });
+
+  it('fails when generated app files leak to the run root outside the workspace', () => {
+    const attemptRoot = mkdtempSync(join(tmpdir(), 'fscrud-root-leak-'));
+    const workspace = join(attemptRoot, 'workspace', 'fscrud-01');
+    try {
+      writeValidWorkspace(workspace);
+      mkdirSync(join(attemptRoot, 'src'), { recursive: true });
+      writeFileSync(join(attemptRoot, 'src', 'domain.js'), 'module.exports = {};\n');
+
+      const result = runVerifier(workspace);
+      const report = JSON.parse(result.stdout) as {
+        passed: boolean;
+        hardFailures: string[];
+        checks: { pathRootIsolation: boolean };
+        pathRootIsolation: { leaks: string[] };
+      };
+
+      expect(result.status).toBe(1);
+      expect(report.passed).toBe(false);
+      expect(report.hardFailures).toContain('path_root_isolation_failed');
+      expect(report.checks.pathRootIsolation).toBe(false);
+      expect(report.pathRootIsolation.leaks).toContain('src/domain.js');
+    } finally {
+      rmSync(attemptRoot, { recursive: true, force: true });
+    }
   });
 
   it('fails when the package and entity surface are missing', () => {
@@ -432,6 +460,9 @@ describe('FSCRUD verifier script', () => {
       expect(domain).not.toContain('updateCustomer');
       expect(domain).not.toContain('updateAsset');
       expect(domain).not.toContain('updateWorkOrder');
+      const moduleExportsBlock = domain.slice(domain.indexOf('module.exports'));
+      expect(moduleExportsBlock).not.toContain('STATUS_VALUES');
+      expect(moduleExportsBlock).not.toContain('PRIORITY_VALUES');
       for (const term of [
         'reset',
         'listCustomers',
@@ -582,6 +613,8 @@ describe('FSCRUD verifier script', () => {
         expect(source).toContain('run_root_src_domain_leak');
         expect(source).toContain('Treat ${fscrud_workspace} as the app root');
         expect(source).toContain('ALLOWED_FILES: workspace/fscrud-01/src/domain.js');
+        expect(source).toContain('when the failing verifier field directly names that file');
+        expect(source).toContain('Never edit workspace/fscrud-01/__tests__');
         expect(source).not.toContain('unexpected_export_name_present');
         expect(source).not.toContain('missing_required_export');
         expect(source).not.toContain('forbidden_domain_shape');
@@ -594,6 +627,12 @@ describe('FSCRUD verifier script', () => {
           expect(promptLine).not.toContain('updateWorkOrder');
           expect(promptLine).not.toContain('export const');
           expect(promptLine).not.toContain('export default');
+          expect(promptLine).toContain('Work only in ${fscrud_workspace}');
+          expect(promptLine).toContain('Treat ${fscrud_workspace} as the app root');
+          expect(promptLine).toContain('workspace/fscrud-01/');
+          expect(promptLine).toContain('Do not create or edit ./src/* at the run root');
+          expect(promptLine).not.toContain('ACTION read_file src/');
+          expect(promptLine).not.toContain('FILE src/');
         }
         for (const repairLine of promptLines.filter((line) => line.includes('Repair'))) {
           expect(repairLine).toContain('Work only in ${fscrud_workspace}');

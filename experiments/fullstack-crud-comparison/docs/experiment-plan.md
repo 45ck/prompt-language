@@ -589,6 +589,28 @@ README, manifest, or verification-report artifacts. The next experiment should
 broaden responsibility deliberately, one artifact class at a time, rather than
 rerunning the same server-only control.
 
+### R35 Handoff-Artifacts Control
+
+Next local-only diagnostic: R35 `--arms r35-handoff-artifacts`. It keeps the
+protected deterministic domain kernel, protected deterministic UI skeleton, and a
+protected deterministic `src/server.js`. The local model owns only README, run
+manifest, and verification report.
+
+R35 planned arm:
+
+- `r35-pl-handoff-artifacts`:
+  [flows/pl-fullstack-crud-handoff-artifacts-r35.flow](../flows/pl-fullstack-crud-handoff-artifacts-r35.flow).
+
+Hypothesis: with product behavior supplied deterministically and path-guarded, local
+PL can make the same local model create compliant handoff artifacts that satisfy
+strict public review and hidden verification.
+
+Claim boundary: a pass would not prove the local model can generate domain, UI, or
+server code. It would only support the narrower claim that local inference can
+generate traceable handoff artifacts around deterministic product behavior. A failure
+would explain the R33 mixed-responsibility failure as artifact-following debt rather
+than server integration or hidden verifier behavior.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -612,6 +634,8 @@ Current operating interpretation:
 - The repeated path-guard R34 batch removes the nested app-root blocker across three
   same-commit repeats; the next local-only evidence step is broader artifact
   responsibility, not another R34 repetition.
+- R35 is the next controlled broadening step: handoff artifacts return to local-model
+  responsibility while domain, UI, and server behavior stay deterministic.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

@@ -86,6 +86,15 @@
       "hypothesis": "If README, manifest, and verification report are supplied deterministically and protected, the local model can complete only src/server.js integration around deterministic domain and UI contracts.",
       "claimBoundary": "This is a server-only local integration diagnostic. A pass would not prove local generation of UI, docs, or manifest artifacts; it would isolate whether local inference can complete the remaining server integration task.",
       "result": "Observed in live-fscrud-r34-server-only-rerun-20260504-1710 after adding an R34-specific public gate: 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, and domainBehaviorPassed=true. Strict-root rerun live-fscrud-r34-server-only-strict-root-20260504-1727 scored 100/100 on content and passed public/domain behavior checks, but failed hidden verification with path_root_isolation_failed because the model created a nested fscrud-01/src/server.js. Path-guard rerun live-fscrud-r34-server-only-path-guard-20260504-1801 passed 100/100 with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true after runner/public-gate path discipline hardening. Repeated same-commit batch live-fscrud-r34-server-only-path-guard-k3-20260504-1820 passed R34 3/3 at 100/100 with pathRootIsolation=true, no leaks, no nested roots, executable domain behavior passing, and npm tests exiting 0. Next step is broader artifact responsibility, not another server-only repetition."
+    },
+    {
+      "id": "r35-pl-handoff-artifacts",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R34 after deterministic domain kernel, deterministic UI skeleton, and deterministic server integration setup",
+      "flow": "../flows/pl-fullstack-crud-handoff-artifacts-r35.flow",
+      "status": "planned-diagnostic",
+      "hypothesis": "With product behavior supplied deterministically and protected, local PL can make the local model generate README, run-manifest.json, and verification-report.md under strict review.",
+      "claimBoundary": "This is a handoff-artifacts diagnostic. A pass would not prove local generation of domain, UI, or server code; it would isolate whether local inference can generate compliant handoff artifacts around deterministic product behavior."
     }
   ],
   "timeouts": {
@@ -97,5 +106,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r34-path-guard-k3-pass-broader-artifact-next"
+  "resultStatus": "diagnostic-only-r35-handoff-artifacts-planned"
 }

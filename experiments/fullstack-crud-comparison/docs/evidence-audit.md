@@ -282,6 +282,20 @@ broader thesis. The next evidence step should broaden artifact responsibility on
 class at a time, such as handoff artifacts first or UI skeleton next, while keeping
 the same runner, model, verifier, path guard, and timeout discipline.
 
+## R35 Planned Evidence Target
+
+R35 gives responsibility for handoff artifacts back to the local model while keeping
+domain behavior, UI surface, and server integration deterministic and protected. It
+is intentionally narrower than R33 and broader than R34.
+
+Evidence interpretation:
+
+- A pass supports local generation of README, run manifest, and verification report
+  artifacts under strict PL review when product behavior is already protected.
+- A pass does not support local generation of server, UI, or domain code.
+- A failure isolates the remaining blocker to handoff artifact-following discipline,
+  because the product behavior path is deterministic.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

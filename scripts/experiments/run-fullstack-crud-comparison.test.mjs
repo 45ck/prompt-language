@@ -105,6 +105,14 @@ test('resolves the R34 server-only integration group', () => {
   ]);
 });
 
+test('resolves the R35 handoff-artifacts group', () => {
+  assert.deepEqual(resolveArms('r35-handoff-artifacts'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r35-pl-handoff-artifacts',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

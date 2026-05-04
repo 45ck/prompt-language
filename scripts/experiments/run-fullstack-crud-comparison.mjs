@@ -103,6 +103,11 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-server-only-r34.flow',
   ),
+  'r35-pl-handoff-artifacts': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-handoff-artifacts-r35.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
@@ -136,6 +141,11 @@ const ARM_GROUPS = {
     'r30-solo-local',
     'r31-static-domain-kernel-control',
     'r34-pl-server-only-integration',
+  ],
+  'r35-handoff-artifacts': [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r35-pl-handoff-artifacts',
   ],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],

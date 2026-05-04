@@ -59,6 +59,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `r32-pl-ui-surface-control`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus nearby server/UI surface gates      |
 | `r33-pl-ui-skeleton-integration`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus protected deterministic UI skeleton |
 | `r34-pl-server-only-integration`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/docs/manifest/report; model owns server only |
+| `r35-pl-handoff-artifacts`         | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/server; model owns handoff artifacts only    |
 | `pl-local-senior-crud`             | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
 | `hybrid-router-crud`               | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
@@ -342,6 +343,19 @@ artifacts because those are deterministic protected inputs. The next useful
 experiment is not more R34 repetition; it is a broader R35/R36 treatment that returns
 one artifact class at a time to local-model responsibility while keeping the same
 path guard and verifier discipline.
+
+### R35 Handoff-Artifacts Diagnostic
+
+R35 is designed as `--arms r35-handoff-artifacts`. It keeps the deterministic domain
+kernel, deterministic UI skeleton, and deterministic server integration protected.
+The local model owns only `README.md`, `run-manifest.json`, and
+`verification-report.md`.
+
+This directly retests the R33 failure mode without mixing in server generation. If
+R35 passes, the evidence supports "local model can generate compliant handoff
+artifacts when product behavior is deterministic and protected." It would not prove
+server, UI, or domain generation. If R35 fails, the remaining local bottleneck is
+artifact-following discipline under strict review, not product behavior.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

@@ -50,6 +50,20 @@ const R34_PUBLIC_GATE_SCRIPT = join(
   'scaffold',
   'verify-r34-public.cjs',
 );
+const R35_SERVER_SCRIPT = join(
+  ROOT,
+  'experiments',
+  'fullstack-crud-comparison',
+  'scaffold',
+  'write-r35-server-artifact.cjs',
+);
+const R35_PUBLIC_GATE_SCRIPT = join(
+  ROOT,
+  'experiments',
+  'fullstack-crud-comparison',
+  'scaffold',
+  'verify-r35-public.cjs',
+);
 
 function runVerifier(workspace: string, extraArgs: string[] = []) {
   return spawnSync(
@@ -539,6 +553,7 @@ describe('FSCRUD verifier script', () => {
       'pl-fullstack-crud-micro-contract-v2.flow',
       'pl-fullstack-crud-ui-skeleton-r33.flow',
       'pl-fullstack-crud-server-only-r34.flow',
+      'pl-fullstack-crud-handoff-artifacts-r35.flow',
     ];
 
     for (const flow of flows) {
@@ -739,6 +754,81 @@ describe('FSCRUD verifier script', () => {
 
       expect(result.status).toBe(1);
       expect(result.stderr).toContain('nested_app_root:fscrud-01/src/server.js');
+    } finally {
+      rmSync(attemptRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts an R35 workspace that satisfies the handoff public gate contract', () => {
+    const attemptRoot = mkdtempSync(join(tmpdir(), 'fscrud-r35-public-gate-'));
+    const workspace = join(attemptRoot, 'workspace', 'fscrud-01');
+    try {
+      execFileSync(process.execPath, [SCAFFOLD_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      execFileSync(process.execPath, [DOMAIN_KERNEL_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      execFileSync(process.execPath, [R35_SERVER_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      writeFileSync(
+        join(workspace, 'public', 'index.html'),
+        [
+          '<!doctype html><html><body>',
+          '<section>customers customerId list create edit detail delete</section>',
+          '<section>assets assetId customerId list create edit detail delete</section>',
+          '<section>work_orders status open scheduled in_progress completed cancelled priority low normal urgent completedAt list create edit detail delete</section>',
+          '</body></html>',
+        ].join('\n'),
+      );
+      writeFileSync(
+        join(workspace, 'README.md'),
+        [
+          '# R35 handoff',
+          'Run with npm test and npm start.',
+          'Deterministic domain, UI, and server artifacts are protected.',
+          'The local model generated the handoff artifacts.',
+        ].join('\n'),
+      );
+      writeFileSync(
+        join(workspace, 'run-manifest.json'),
+        JSON.stringify(
+          {
+            arm: 'r35-pl-handoff-artifacts',
+            provider: 'local-only',
+            features: [
+              'deterministic-domain-kernel',
+              'deterministic-ui-skeleton',
+              'deterministic-server-integration',
+              'local-generated-handoff-artifacts',
+            ],
+          },
+          null,
+          2,
+        ),
+      );
+      writeFileSync(
+        join(workspace, 'verification-report.md'),
+        [
+          '# R35 handoff verification',
+          'Public checks: check:domain:exports, check:domain:customer, check:domain:assets, check:domain:work-orders, npm test.',
+          'The hidden verifier is run only by the harness.',
+          'This R35 handoff lane keeps server behavior deterministic.',
+        ].join('\n'),
+      );
+
+      const result = spawnSync(process.execPath, [R35_PUBLIC_GATE_SCRIPT, 'workspace/fscrud-01'], {
+        cwd: attemptRoot,
+        encoding: 'utf8',
+        timeout: 30_000,
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('r35_public_gate_ok');
     } finally {
       rmSync(attemptRoot, { recursive: true, force: true });
     }

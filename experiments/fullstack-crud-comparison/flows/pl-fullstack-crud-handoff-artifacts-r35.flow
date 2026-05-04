@@ -1,0 +1,44 @@
+Goal: R35 local PL handoff-artifacts lane with deterministic FSCRUD-01 domain, UI, and server integration
+
+memory:
+  fscrud_workspace
+  fscrud_task
+  fscrud_r35_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="TASK.md"
+  remember key="fscrud_r35_policy" value="R35 local-only handoff-artifacts lane; deterministic domain kernel, deterministic UI skeleton, and deterministic server integration are protected; local model owns README, run manifest, and verification report only"
+
+  let protected_files = "workspace/fscrud-01/src/domain.js, workspace/fscrud-01/src/server.js, workspace/fscrud-01/public/index.html, workspace/fscrud-01/package.json, workspace/fscrud-01/CONTRACT.md, workspace/fscrud-01/DOMAIN_API.md, workspace/fscrud-01/contracts/domain-exports.json, workspace/fscrud-01/__tests__/domain.contract.test.js, workspace/fscrud-01/data/seed.json, workspace/fscrud-01/scripts/check-domain-exports.cjs, workspace/fscrud-01/scripts/check-domain-customer.cjs, workspace/fscrud-01/scripts/check-domain-assets.cjs, workspace/fscrud-01/scripts/check-domain-work-orders.cjs"
+  let allowed_files = "workspace/fscrud-01/README.md, workspace/fscrud-01/run-manifest.json, workspace/fscrud-01/verification-report.md"
+  let task_contract = "FSCRUD-01 field-service work order tracker. Domain behavior, static UI surface, and server integration are already provided and must not be edited. The measured risk is local-model handoff artifact generation only."
+  let handoff_contract = "Create exactly these handoff artifacts: README.md, run-manifest.json, and verification-report.md. README must document npm test, npm start, deterministic protected artifacts, and the R35 handoff-artifacts claim boundary. run-manifest.json must be valid JSON and include r35-pl-handoff-artifacts, local-only, deterministic-domain-kernel, deterministic-ui-skeleton, deterministic-server-integration, local-generated-handoff-artifacts, protectedArtifacts, modelOwnedFiles, and claimBoundary. verification-report.md must list npm run check:domain:exports, npm run check:domain:customer, npm run check:domain:assets, npm run check:domain:work-orders, npm test, hidden verifier, R35, and handoff. Never write fscrud-01/README.md or workspace/fscrud-01/fscrud-01/README.md."
+
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs','../../../../../fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('scaffold script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-domain-kernel.cjs','../../../../../fullstack-crud-comparison/scaffold/write-domain-kernel.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('domain kernel script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');const ui='<!doctype html>\\n<html lang=\"en\">\\n  <head><meta charset=\"utf-8\"><title>FSCRUD-01 deterministic UI skeleton</title></head>\\n  <body>\\n    <h1>FSCRUD-01 Field Service Work Orders</h1>\\n    <section id=\"customers\" data-entity=\"customers\">customers customerId list create read edit detail delete table rows browse view all add new update modify save show remove archive</section>\\n    <section id=\"assets\" data-entity=\"assets\">assets assetId customerId list create read edit detail delete table rows browse view all add new update modify save show remove archive</section>\\n    <section id=\"work_orders\" data-entity=\"work_orders\">work_orders work orders workOrder customerId assetId status open scheduled in_progress completed cancelled priority low normal urgent completedAt list create read edit detail delete table rows browse view all add new update modify save show remove archive</section>\\n  </body>\\n</html>\\n';fs.writeFileSync('workspace/fscrud-01/public/index.html',ui);" [timeout 60]
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-r35-server-artifact.cjs','../../../../../fullstack-crud-comparison/scaffold/write-r35-server-artifact.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('R35 server script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: cd workspace/fscrud-01 && npm run check:domain:exports && npm run check:domain:customer && npm run check:domain:assets && npm run check:domain:work-orders && npm test [timeout 300]
+  run: node -e "const fs=require('fs');for(const p of ['workspace/fscrud-01/README.md','workspace/fscrud-01/run-manifest.json','workspace/fscrud-01/verification-report.md'])fs.rmSync(p,{force:true});" [timeout 60]
+
+  prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. EXPERIMENT_ARM r35-pl-handoff-artifacts. PROVIDER local-only. Deterministic domain kernel, deterministic UI skeleton, and deterministic server integration are already implemented and green. Do not edit protected files: ${protected_files}. Create or repair only these files: ${allowed_files}. ${handoff_contract} Task contract: ${task_contract}.
+  review strict criteria: "Local handoff artifacts must exist only at workspace/fscrud-01/README.md, workspace/fscrud-01/run-manifest.json, and workspace/fscrud-01/verification-report.md; must not create nested fscrud-01 app roots; must preserve deterministic domain, UI, server, package, seed, tests, and contract files; must pass public domain checks and tests; and must label the R35 deterministic-domain, deterministic-UI, deterministic-server, local-generated-handoff policy." grounded-by "node ../../../../../fullstack-crud-comparison/scaffold/verify-r35-public.cjs workspace/fscrud-01" max 4
+    prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. Repair only these allowed files: ${allowed_files}. Never write fscrud-01/README.md or workspace/fscrud-01/fscrud-01/README.md. Do not edit protected files: ${protected_files}. Critique: ${_review_critique}
+  end
+
+  run: node -e "require('fs').writeFileSync('workspace/fscrud-01/.pl-r35-handoff-artifacts-complete','ok\n')" [timeout 60]
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/DOMAIN_API.md
+  file_exists workspace/fscrud-01/contracts/domain-exports.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/public/index.html
+  file_exists workspace/fscrud-01/__tests__/domain.contract.test.js
+  file_exists workspace/fscrud-01/data/seed.json
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md
+  file_exists workspace/fscrud-01/.pl-r35-handoff-artifacts-complete

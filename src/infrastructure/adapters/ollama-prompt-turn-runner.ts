@@ -327,6 +327,16 @@ function rootActionPath(pathValue: string, preferredRoot: string | undefined): s
   if (preferredRoot === undefined) return pathValue;
   const normalizedPath = pathValue.replace(/\\/g, '/');
   const normalizedRoot = preferredRoot.replace(/\\/g, '/').replace(/\/+$/, '');
+  const preferredRootName = normalizedRoot.split('/').at(-1);
+  if (
+    preferredRootName !== undefined &&
+    normalizedPath !== normalizedRoot &&
+    normalizedPath.startsWith(`${preferredRootName}/`)
+  ) {
+    throw new Error(
+      `Path "${pathValue}" duplicates the app root "${preferredRootName}". Use "${normalizedRoot}/${normalizedPath.slice(`${preferredRootName}/`.length)}" or a path relative to "${normalizedRoot}" instead.`,
+    );
+  }
   if (
     normalizedPath === '.' ||
     normalizedPath.startsWith('/') ||

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-const { existsSync, readFileSync } = require('node:fs');
+const { existsSync, readdirSync, readFileSync } = require('node:fs');
 const { join } = require('node:path');
 const { spawnSync } = require('node:child_process');
 
@@ -25,10 +25,25 @@ function readWorkspaceFile(relativePath) {
   return readFileSync(assertExists(join(workspace, relativePath)), 'utf8');
 }
 
+function listFiles(root, prefix = '') {
+  if (!existsSync(root)) return [];
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const fullPath = join(root, entry.name);
+    return entry.isDirectory() ? listFiles(fullPath, relativePath) : [relativePath];
+  });
+}
+
 for (const leak of ['src/domain.js', 'public/index.html']) {
   if (existsSync(join(attemptRoot, leak))) {
     fail(`run_root_leak:${leak}`);
   }
+}
+
+for (const nestedRoot of listFiles(join(attemptRoot, workspace)).filter((path) =>
+  path.startsWith('fscrud-01/'),
+)) {
+  fail(`nested_app_root:${nestedRoot}`);
 }
 
 for (const relativePath of [

@@ -515,6 +515,57 @@ describe('OllamaPromptTurnRunner', () => {
     ).resolves.toBe('module.exports = {};');
   });
 
+  it('rejects nested app-root paths under the declared workspace variable', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content:
+              '{"actions":[{"type":"write_file","path":"fscrud-01/src/server.js","content":"nested"}]}',
+          },
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          message: {
+            content:
+              '{"actions":[{"type":"write_file","path":"workspace/fscrud-01/src/server.js","content":"correct"},{"type":"done","message":"server repaired"}]}',
+          },
+        }),
+      });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-opencode-big:30b',
+      prompt: [
+        'Variables:',
+        '  fscrud_workspace = workspace/fscrud-01',
+        '',
+        'Current task:',
+        'Repair workspace/fscrud-01/src/server.js only.',
+      ].join('\n'),
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'server repaired',
+      madeProgress: true,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const secondPrompt = JSON.stringify(fetchMock.mock.calls[1]?.[1]);
+    expect(secondPrompt).toContain('duplicates the app root');
+    await expect(
+      readFile(join(tempDir, 'workspace', 'fscrud-01', 'fscrud-01', 'src', 'server.js'), 'utf8'),
+    ).rejects.toThrow();
+    await expect(
+      readFile(join(tempDir, 'workspace', 'fscrud-01', 'src', 'server.js'), 'utf8'),
+    ).resolves.toBe('correct');
+  });
+
   it('rejects workspace writes during capture turns', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
     fetchMock

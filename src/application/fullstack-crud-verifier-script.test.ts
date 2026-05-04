@@ -698,6 +698,52 @@ describe('FSCRUD verifier script', () => {
     }
   });
 
+  it('rejects an R34 workspace with nested app-root server output in the public gate', () => {
+    const attemptRoot = mkdtempSync(join(tmpdir(), 'fscrud-r34-public-nested-root-'));
+    const workspace = join(attemptRoot, 'workspace', 'fscrud-01');
+    try {
+      execFileSync(process.execPath, [SCAFFOLD_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      execFileSync(process.execPath, [DOMAIN_KERNEL_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      execFileSync(process.execPath, [R34_HANDOFF_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      writeFileSync(
+        join(workspace, 'public', 'index.html'),
+        [
+          '<!doctype html><html><body>',
+          '<section>customers customerId list create edit detail delete</section>',
+          '<section>assets assetId customerId list create edit detail delete</section>',
+          '<section>work_orders status open scheduled in_progress completed cancelled priority low normal urgent completedAt list create edit detail delete</section>',
+          '</body></html>',
+        ].join('\n'),
+      );
+      writeFileSync(
+        join(workspace, 'src', 'server.js'),
+        "const domain = require('./domain.js');\nmodule.exports = { domain, customers: true, assets: true, work_orders: true };\n",
+      );
+      mkdirSync(join(workspace, 'fscrud-01', 'src'), { recursive: true });
+      writeFileSync(join(workspace, 'fscrud-01', 'src', 'server.js'), 'nested');
+
+      const result = spawnSync(process.execPath, [R34_PUBLIC_GATE_SCRIPT, 'workspace/fscrud-01'], {
+        cwd: attemptRoot,
+        encoding: 'utf8',
+        timeout: 30_000,
+      });
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain('nested_app_root:fscrud-01/src/server.js');
+    } finally {
+      rmSync(attemptRoot, { recursive: true, force: true });
+    }
+  });
+
   it('writes a scaffold with contract artifacts and required domain vocabulary', () => {
     const workspace = mkdtempSync(join(tmpdir(), 'fscrud-scaffold-'));
     try {

@@ -263,6 +263,25 @@ It still does not prove local generation of the domain kernel, UI skeleton, READ
 run manifest, or verification report. The next claim-grade step should be a repeated
 same-commit R34 path-guard batch, not a broad PL-vs-solo conclusion.
 
+The same-commit R34 path-guard batch
+`live-fscrud-r34-server-only-path-guard-k3-20260504-1820` ran three repeats on
+`2026-05-04` with native Ollama and `qwen3-opencode-big:30b`. The treatment passed
+all three repeats at `100/100`. Each R34 repeat had `pathRootIsolation=true`, no
+nested roots, no leaks, executable domain behavior passing, and npm tests exiting
+`0`.
+
+The solo baseline failed all three repeats with scores `48/100`, `33/100`, and
+`48/100`; failures stayed in the expected broad-product categories rather than
+server-only integration. The static deterministic control passed all three repeats
+at `100/100`.
+
+This upgrades R34 from a single-run diagnostic to a stable narrow control: under
+strict path guarding, local PL can make this local model complete server-only
+integration around deterministic protected FSCRUD artifacts. It does not upgrade the
+broader thesis. The next evidence step should broaden artifact responsibility one
+class at a time, such as handoff artifacts first or UI skeleton next, while keeping
+the same runner, model, verifier, path guard, and timeout discipline.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

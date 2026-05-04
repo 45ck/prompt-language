@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R34 path-guard diagnostic passed; next step is a claim-grade repeated R34 batch
+Status: R34 same-commit path-guard k=3 batch passed; next step is broader artifact responsibility
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -323,6 +323,25 @@ supplied deterministically and path-guarded, the local model can complete server
 integration under PL review gates. The next claim-grade step is a same-commit,
 same-runner, same-model repeated R34 batch before moving to a broader R35/R36 arm
 that gives the local model more artifact responsibility again.
+
+The same-commit R34 path-guard batch
+`live-fscrud-r34-server-only-path-guard-k3-20260504-1820` then ran three repeats on
+`2026-05-04` with native Ollama and `qwen3-opencode-big:30b`. Across all three
+repeats:
+
+- `r30-solo-local`: failed every repeat with scores `48/100`, `33/100`, and
+  `48/100`; failures stayed in UI, seed integrity, and domain behavior.
+- `r31-static-domain-kernel-control`: passed every repeat at `100/100`.
+- `r34-pl-server-only-integration`: passed every repeat at `100/100` with public
+  review, hidden verification, executable domain behavior, npm tests, and
+  `pathRootIsolation` all green.
+
+That makes R34 stable for its narrow server-only claim boundary. It still does not
+prove local generation of domain, UI, README, manifest, or verification-report
+artifacts because those are deterministic protected inputs. The next useful
+experiment is not more R34 repetition; it is a broader R35/R36 treatment that returns
+one artifact class at a time to local-model responsibility while keeping the same
+path guard and verifier discipline.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

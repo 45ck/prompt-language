@@ -573,6 +573,22 @@ and verification-report artifacts are deterministic protected inputs. The next
 claim-grade step is a repeated R34 path-guard batch at the same commit, runner,
 model, verifier, and timeout policy.
 
+Repeated path-guard R34 result:
+`live-fscrud-r34-server-only-path-guard-k3-20260504-1820` ran three repeats on
+`2026-05-04` with native Ollama, `qwen3-opencode-big:30b`, and the same timeout and
+retry policy. Solo failed every repeat at `48/100`, `33/100`, and `48/100`. The
+static deterministic control passed every repeat at `100/100`. The
+`r34-pl-server-only-integration` treatment passed every repeat at `100/100`; each
+R34 verifier showed executable domain behavior passing, npm tests exiting `0`,
+`pathRootIsolation=true`, no leaks, and no nested roots.
+
+Updated interpretation after the repeated batch: R34 is now stable evidence for the
+narrow server-only integration claim under local Ollama and strict path isolation.
+It is not evidence that the local model can generate the protected domain, UI,
+README, manifest, or verification-report artifacts. The next experiment should
+broaden responsibility deliberately, one artifact class at a time, rather than
+rerunning the same server-only control.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -593,9 +609,9 @@ Current operating interpretation:
 - R34 shows deterministic UI/domain/handoff artifacts are enough for the same
   local model to complete server-only behavior under strict PL review when path
   isolation is enforced by the runner and public gate.
-- The path-guard R34 rerun removes the nested app-root blocker; the next local-only
-  evidence step is a repeated same-commit R34 batch before broadening artifact
-  responsibility again.
+- The repeated path-guard R34 batch removes the nested app-root blocker across three
+  same-commit repeats; the next local-only evidence step is broader artifact
+  responsibility, not another R34 repetition.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

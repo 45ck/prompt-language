@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R30 domain-control artifacts drafted; no R30 run yet
+Status: R30 local-only diagnostic complete; R31 domain-kernel control ready
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -47,15 +47,17 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 
 ## Arms
 
-| Arm                               | Runner                                                  | Model                                  | Purpose                                                                     |
-| --------------------------------- | ------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
-| `solo-local-crud`                 | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                     |
-| `pl-local-crud-factory`           | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control             |
-| `pl-local-crud-scaffold-contract` | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback  |
-| `pl-local-crud-micro-contract`    | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                 |
-| `pl-local-crud-micro-contract-v2` | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests |
-| `pl-local-senior-crud`            | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates         |
-| `hybrid-router-crud`              | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review |
+| Arm                                | Runner                                                  | Model                                  | Purpose                                                                     |
+| ---------------------------------- | ------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
+| `solo-local-crud`                  | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                     |
+| `pl-local-crud-factory`            | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control             |
+| `pl-local-crud-scaffold-contract`  | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback  |
+| `pl-local-crud-micro-contract`     | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                 |
+| `pl-local-crud-micro-contract-v2`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests |
+| `r31-static-domain-kernel-control` | prompt-language flow                                    | deterministic only                     | Control: scaffold plus known-good domain kernel, no model-authored code     |
+| `r31-pl-domain-kernel-bulk`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel, local model owns server/UI/docs        |
+| `pl-local-senior-crud`             | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates         |
+| `hybrid-router-crud`               | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review |
 
 Run the first claim attempt with only `solo-local-crud` and
 `pl-local-crud-factory`. Add the senior and hybrid arms only after the baseline
@@ -169,17 +171,31 @@ enough for behavior checks to matter. The run still failed customer behavior/dom
 implementation, so the next control should be a stronger domain implementation lane
 or a deterministic domain kernel, not more export-surface prompting.
 
-R30 is predeclared in
+R30 was predeclared in
 [docs/r30-domain-control-experiment.md](docs/r30-domain-control-experiment.md). It
 compares the local-only baseline, the R29 static/export-control replay, a stronger
 local PL domain-control lane, a local senior-pairing PL lane, and an explicitly
 labeled hybrid/frontier-domain lane. Treat R30 as a bottleneck-isolation experiment,
 not a broad product claim, until it produces a clean repeated batch.
 
-Use `--arms r30-domain-control` for the first local-only R30 run. Use
-`--arms r30-local` only after the first three-arm diagnostic is clean. The hybrid
-frontier-domain flow is predeclared but not runner-enabled until per-step provider
-routing exists.
+The first local-only R30 run
+`live-fscrud-r30-domain-control-20260504-1208` used
+`qwen3-opencode-big:30b` through native Ollama. The direct baseline failed early at
+`8/100`. The R29 replay and stronger R30 domain-control lane both scored `80/100`
+and failed only `domain_behavior_failed`. The R30 domain-control lane preserved the
+exact export surface but left `src/domain.js` as `not implemented` stubs, with the
+hidden verifier failing at `reset not implemented`.
+
+Current R30 interpretation: stronger local natural-language domain control did not
+move the 30B local model past executable domain behavior. The next useful control is
+R31, not another wording-only domain prompt. R31 removes the domain blocker with a
+deterministic kernel, then measures whether local PL can complete server, UI, docs,
+and manifest work around protected domain code.
+
+Use `--arms r31-domain-kernel` for the next diagnostic. It runs the R30 solo
+baseline, a static deterministic-domain control, and the local PL bulk lane with the
+domain kernel protected. The hybrid frontier-domain flow remains predeclared but not
+runner-enabled until per-step provider routing exists.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

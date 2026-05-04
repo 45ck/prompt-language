@@ -1,0 +1,28 @@
+Goal: R31 static deterministic domain-kernel control for FSCRUD-01
+
+memory:
+  fscrud_workspace
+  fscrud_r31_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_r31_policy" value="R31 static control; deterministic scaffold plus deterministic domain kernel; no model-authored product code"
+
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs','../../../../../fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('scaffold script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-domain-kernel.cjs','../../../../../fullstack-crud-comparison/scaffold/write-domain-kernel.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('domain kernel script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: cd workspace/fscrud-01 && npm run check:domain:exports && npm run check:domain:customer && npm run check:domain:assets && npm run check:domain:work-orders && npm test [timeout 300]
+  run: node -e "const fs=require('fs');const manifest=JSON.parse(fs.readFileSync('workspace/fscrud-01/run-manifest.json','utf8'));manifest.arm='r31-static-domain-kernel-control';manifest.domain='deterministic-kernel';manifest.modelAuthoredProductCode=false;fs.writeFileSync('workspace/fscrud-01/run-manifest.json',JSON.stringify(manifest,null,2)+'\n');fs.writeFileSync('workspace/fscrud-01/.pl-r31-static-domain-kernel-complete','ok\n')" [timeout 60]
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/DOMAIN_API.md
+  file_exists workspace/fscrud-01/contracts/domain-exports.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/public/index.html
+  file_exists workspace/fscrud-01/__tests__/domain.contract.test.js
+  file_exists workspace/fscrud-01/data/seed.json
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md
+  file_exists workspace/fscrud-01/.pl-r31-static-domain-kernel-complete

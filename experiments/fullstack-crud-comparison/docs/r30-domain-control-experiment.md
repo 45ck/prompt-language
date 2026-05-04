@@ -144,3 +144,34 @@ A defensible R30 conclusion should be phrased as one of:
   layer."
 - "Hybrid frontier-domain routing was necessary/unnecessary to clear the domain
   layer."
+
+## Observed Local-Only Result
+
+Run: `live-fscrud-r30-domain-control-20260504-1208`
+
+Date: 2026-05-04
+
+Runner/model: native Ollama with `qwen3-opencode-big:30b`
+
+Arms and outcomes:
+
+| Arm                         | Score | Outcome       | Primary failure                   |
+| --------------------------- | ----: | ------------- | --------------------------------- |
+| `r30-solo-local`            |     8 | `flow_failed` | `package_json_missing_or_invalid` |
+| `r29-static-export-control` |    80 | `flow_failed` | `domain_behavior_failed`          |
+| `r30-pl-domain-control`     |    80 | `flow_failed` | `domain_behavior_failed`          |
+
+Interpretation:
+
+- H30-A is supported only as a bottleneck diagnosis: the remaining observed blocker
+  is executable domain behavior.
+- H30-B is weakened: export surface and static scaffold artifacts were preserved in
+  the R30 PL lane.
+- H30-C is not yet tested in this run because the senior-domain lane was not part of
+  the first three-arm local matrix.
+- H30-D remains untested because per-step frontier routing is not implemented.
+
+The decisive failure was concrete. In `r30-pl-domain-control`, the hidden verifier
+reported `reset not implemented`; `src/domain.js` still contained exact exported
+stub functions. The next experiment should therefore be R31 deterministic
+domain-kernel control, not another natural-language-only domain repair variant.

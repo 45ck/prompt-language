@@ -387,6 +387,52 @@ was not isolated to domain behavior. If a domain-green lane reaches verifier pas
 or moves hard failures away from `domain_behavior_failed`, R29 was primarily a
 domain behavior bottleneck.
 
+Observed R30 local-only diagnostic on `2026-05-04`: the run
+`live-fscrud-r30-domain-control-20260504-1208` used native Ollama with
+`qwen3-opencode-big:30b`. `r30-solo-local` failed early at `8/100` after creating
+only `TASK.md`. The R29 replay scored `80/100` and failed
+`domain_behavior_failed`. The stronger `r30-pl-domain-control` lane also scored
+`80/100` and failed `domain_behavior_failed`; the final domain module preserved the
+canonical CommonJS exports but every function still threw `not implemented`, with
+the verifier failing at `reset not implemented`.
+
+R30 therefore falsifies the next natural-language-only domain-control hypothesis for
+this local model. It supports the narrower diagnosis that the remaining blocker is
+executable domain behavior, not static artifact coverage or export surface. Do not
+run another wording-only domain prompt as the next evidence step.
+
+## R31 Deterministic Domain-Kernel Control
+
+R31 tests the next bottleneck question: if executable domain behavior is supplied by
+a deterministic kernel and protected from local edits, can local PL complete the
+remaining server, UI, docs, manifest, and verification-report surface?
+
+R31 arms:
+
+- `r30-solo-local`: same direct local baseline flow as R30.
+- `r31-static-domain-kernel-control`:
+  [flows/static-domain-kernel-r31.flow](../flows/static-domain-kernel-r31.flow).
+- `r31-pl-domain-kernel-bulk`:
+  [flows/pl-fullstack-crud-domain-kernel-r31.flow](../flows/pl-fullstack-crud-domain-kernel-r31.flow).
+
+Use `--arms r31-domain-kernel` for the first diagnostic. The static arm is not a
+model-capability claim; it proves the deterministic kernel plus scaffold can satisfy
+the public and hidden verifier. The PL bulk arm is the meaningful local-model
+measurement: it removes domain reasoning from scope and tests whether the local
+model can produce the surrounding product surface without corrupting protected
+domain files.
+
+R31 decision rules:
+
+- If the static kernel control fails, fix the kernel or verifier before running
+  local model arms.
+- If the static kernel passes and the PL bulk arm fails non-domain hard failures,
+  the next PL work should target server/UI/docs control.
+- If the static kernel passes and the PL bulk arm passes, R29/R30 were domain-layer
+  failures and hybrid/frontier routing should be tested only for `src/domain.js`.
+- If the PL bulk arm edits protected domain, test, seed, contract, or package files,
+  classify the run as policy failure rather than product failure.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and

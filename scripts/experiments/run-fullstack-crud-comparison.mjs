@@ -25,6 +25,7 @@ const OLLAMA_PS_TIMEOUT_MS = 10_000;
 const INSTALL_TIMEOUT_MS = 600_000;
 const TEST_TIMEOUT_MS = 300_000;
 const VERIFY_TIMEOUT_MS = 360_000;
+const SOLO_ARMS = new Set(['solo-local-crud', 'r30-solo-local']);
 const RUNNER_ENV_KEYS = [
   'PROMPT_LANGUAGE_AIDER_TIMEOUT_MS',
   'PROMPT_LANGUAGE_OPENCODE_TIMEOUT_MS',
@@ -77,6 +78,16 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-senior-domain-r30.flow',
   ),
+  'r31-static-domain-kernel-control': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'static-domain-kernel-r31.flow',
+  ),
+  'r31-pl-domain-kernel-bulk': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-domain-kernel-r31.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
@@ -90,6 +101,11 @@ const ARM_GROUPS = {
     'r29-static-export-control',
     'r30-pl-domain-control',
     'r30-pl-senior-domain',
+  ],
+  'r31-domain-kernel': [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r31-pl-domain-kernel-bulk',
   ],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],
@@ -544,7 +560,7 @@ function runArm(context) {
 }
 
 function wallTimeoutMs(arm) {
-  return arm === 'solo-local-crud' ? 90 * 60_000 : 150 * 60_000;
+  return SOLO_ARMS.has(arm) ? 90 * 60_000 : 150 * 60_000;
 }
 
 function skippedProcess(command, args, cwd, reason) {

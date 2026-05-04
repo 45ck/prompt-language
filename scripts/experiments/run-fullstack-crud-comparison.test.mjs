@@ -73,6 +73,14 @@ test('resolves the R30 local domain-control arm groups', () => {
   ]);
 });
 
+test('resolves the R31 deterministic domain-kernel control group', () => {
+  assert.deepEqual(resolveArms('r31-domain-kernel'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r31-pl-domain-kernel-bulk',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(
@@ -199,6 +207,26 @@ test('run manifest records explicit timeout retry env runtime and artifact field
   assert.equal(manifest.runtime.ollamaBacked, true);
   assert.equal(manifest.runtimeArtifacts.ollamaPsBeforeRunner, null);
   assert.equal(manifest.runtimeArtifacts.ollamaPsAfterRunner, null);
+});
+
+test('R30 solo baseline keeps the solo wall-clock timeout policy', () => {
+  const manifest = manifestBase(
+    context({ arm: 'r30-solo-local' }),
+    join(process.cwd(), 'experiments', 'results', 'fullstack-crud-comparison', 'unit', 'r01'),
+    join(
+      process.cwd(),
+      'experiments',
+      'results',
+      'fullstack-crud-comparison',
+      'unit',
+      'r01',
+      'workspace',
+      'fscrud-01',
+    ),
+  );
+
+  assert.equal(manifest.timeouts.runnerWallClockMs, 90 * 60_000);
+  assert.equal(manifest.timeouts.runnerWallClockMinutes, 90);
 });
 
 test('run manifest records Ollama ps artifact refs when supplied by the runner', () => {

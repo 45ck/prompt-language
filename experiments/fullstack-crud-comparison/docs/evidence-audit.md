@@ -119,6 +119,31 @@ decisive signal is not aggregate score alone. The decisive signal is whether a l
 can make the public domain checks pass and whether the hidden verifier then still
 fails on domain behavior or moves to a different hard failure.
 
+## R30 Evidence Update
+
+The first R30 local-only diagnostic,
+`live-fscrud-r30-domain-control-20260504-1208`, did not support the hypothesis that
+stronger local natural-language domain control is enough for this model.
+
+Results:
+
+- `r30-solo-local`: `8/100`, `flow_failed`, primary failure
+  `package_json_missing_or_invalid`.
+- `r29-static-export-control`: `80/100`, `flow_failed`, hard failure
+  `domain_behavior_failed`.
+- `r30-pl-domain-control`: `80/100`, `flow_failed`, hard failure
+  `domain_behavior_failed`.
+
+The stronger R30 domain-control lane preserved static artifacts, seed integrity, UI
+surface, test files, and the exact export surface. It still left `src/domain.js` as
+stub functions and failed executable behavior at `reset not implemented`.
+
+This supports a narrower conclusion: R29/R30 are now isolated to executable domain
+behavior for the local model, not export-surface drift or missing scaffold artifacts.
+It does not prove PL can complete FSCRUD locally. The next useful control is R31:
+provide a deterministic domain kernel, protect it, and test whether local PL can
+complete non-domain server/UI/docs work around it.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

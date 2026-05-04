@@ -39,6 +39,22 @@
       "flow": "../flows/pl-fullstack-crud-micro-contract-v2.flow",
       "status": "planned-diagnostic",
       "hypothesis": "Public domain API contracts, export-surface normalization, and checkpoint scripts can prevent local-model export collapse while preserving hidden verifier isolation."
+    },
+    {
+      "id": "r31-static-domain-kernel-control",
+      "runner": "prompt-language",
+      "modelPolicy": "deterministic scaffold and deterministic domain kernel; no model-authored product code",
+      "flow": "../flows/static-domain-kernel-r31.flow",
+      "status": "planned-diagnostic",
+      "hypothesis": "A known-good domain kernel plus scaffold should pass the public and hidden FSCRUD verifier, proving R30's remaining blocker was executable domain behavior."
+    },
+    {
+      "id": "r31-pl-domain-kernel-bulk",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as baseline after deterministic domain kernel setup",
+      "flow": "../flows/pl-fullstack-crud-domain-kernel-r31.flow",
+      "status": "planned-diagnostic",
+      "hypothesis": "With the domain kernel protected, local PL can complete server, UI, docs, manifest, and verification-report work without corrupting protected artifacts."
     }
   ],
   "timeouts": {

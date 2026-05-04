@@ -2245,3 +2245,8 @@
 {"actor":"45ck","comment":"Added label: research","created_at":"2026-04-28T14:20:44Z","event_type":"label_added","id":"9df89407-89c3-401d-b014-ea82c1fc83af","issue_id":"prompt-language-sfd3","new_value":null,"old_value":null}
 {"actor":"45ck","comment":null,"created_at":"2026-04-28T14:20:44Z","event_type":"created","id":"a54f5fbc-5237-412d-8e3a-1f080e5418e3","issue_id":"prompt-language-sfd3","new_value":"","old_value":""}
 {"actor":"45ck","comment":"Added label: codex","created_at":"2026-04-28T14:20:44Z","event_type":"label_added","id":"fcb124ef-3f42-4a53-833e-ded201ec1b68","issue_id":"prompt-language-sfd3","new_value":null,"old_value":null}
+{"actor":"45ck","comment":"Added label: experiments","created_at":"2026-05-04T12:38:30Z","event_type":"label_added","id":"2a1466a3-6698-458a-bc46-a1a055f8de9d","issue_id":"prompt-language-gm1h","new_value":null,"old_value":null}
+{"actor":"45ck","comment":null,"created_at":"2026-05-04T12:38:30Z","event_type":"created","id":"3766ca99-035a-46fb-b141-368392562c1b","issue_id":"prompt-language-gm1h","new_value":"","old_value":""}
+{"actor":"45ck","comment":"Added label: research","created_at":"2026-05-04T12:38:30Z","event_type":"label_added","id":"51605484-f6f9-46ca-8e4b-2de5d8f4e118","issue_id":"prompt-language-gm1h","new_value":null,"old_value":null}
+{"actor":"45ck","comment":"Added label: local-models","created_at":"2026-05-04T12:38:30Z","event_type":"label_added","id":"8ad6b6a6-097c-4d6f-88ba-d6061993eb5b","issue_id":"prompt-language-gm1h","new_value":null,"old_value":null}
+{"actor":"45ck","comment":"Added label: fscrud","created_at":"2026-05-04T12:38:30Z","event_type":"label_added","id":"9bbe2f6d-a5a0-47f6-90fb-9e56f48d4a9e","issue_id":"prompt-language-gm1h","new_value":null,"old_value":null}

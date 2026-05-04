@@ -85,7 +85,7 @@
       "status": "diagnostic-complete",
       "hypothesis": "If README, manifest, and verification report are supplied deterministically and protected, the local model can complete only src/server.js integration around deterministic domain and UI contracts.",
       "claimBoundary": "This is a server-only local integration diagnostic. A pass would not prove local generation of UI, docs, or manifest artifacts; it would isolate whether local inference can complete the remaining server integration task.",
-      "result": "Observed in live-fscrud-r34-server-only-rerun-20260504-1710 after adding an R34-specific public gate: 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, and domainBehaviorPassed=true. Strict-root rerun live-fscrud-r34-server-only-strict-root-20260504-1727 scored 100/100 on content and passed public/domain behavior checks, but failed hidden verification with path_root_isolation_failed because the model created a nested fscrud-01/src/server.js. Next step is path-discipline hardening before claim-grade batching."
+      "result": "Observed in live-fscrud-r34-server-only-rerun-20260504-1710 after adding an R34-specific public gate: 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, and domainBehaviorPassed=true. Strict-root rerun live-fscrud-r34-server-only-strict-root-20260504-1727 scored 100/100 on content and passed public/domain behavior checks, but failed hidden verification with path_root_isolation_failed because the model created a nested fscrud-01/src/server.js. Path-guard rerun live-fscrud-r34-server-only-path-guard-20260504-1801 passed 100/100 with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true after runner/public-gate path discipline hardening. Next step is a repeated same-commit R34 path-guard batch before broader local-generation claims."
     }
   ],
   "timeouts": {
@@ -97,5 +97,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r34-strict-root-path-discipline-hardening-next"
+  "resultStatus": "diagnostic-only-r34-path-guard-pass-k3-batch-next"
 }

@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R34 strict-root diagnostic complete; next step is path-discipline hardening before claim-grade batching
+Status: R34 path-guard diagnostic passed; next step is a claim-grade repeated R34 batch
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -305,6 +305,24 @@ R34 is not claim-grade under the hardened verifier because it creates a nested
 `fscrud-01/src/server.js`. The next evidence step is not another product-surface
 prompt. It is path-discipline hardening: make the R34 flow and local action policy
 reject or repair nested app-root writes before any `k=3` batch.
+
+The path-guard rerun
+`live-fscrud-r34-server-only-path-guard-20260504-1801` tested that hardening on
+the same local Ollama model:
+
+- `r30-solo-local`: `8/100`, `flow_failed`, broad product failure.
+- `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
+- `r34-pl-server-only-integration`: `100/100`, `verified_pass`,
+  `publicGatePassed=true`, `hiddenOraclePassed=true`,
+  `domainBehaviorPassed=true`, and `pathRootIsolation=true`.
+
+This restores the narrow R34 result under strict path isolation. The evidence still
+does not prove local generation of domain, UI, README, manifest, or verification
+report artifacts. It does support the narrower claim that, with those artifacts
+supplied deterministically and path-guarded, the local model can complete server-only
+integration under PL review gates. The next claim-grade step is a same-commit,
+same-runner, same-model repeated R34 batch before moving to a broader R35/R36 arm
+that gives the local model more artifact responsibility again.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

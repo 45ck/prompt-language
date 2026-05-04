@@ -251,6 +251,18 @@ capability only before strict path isolation. Under the hardened verifier, the
 remaining blocker is local action path discipline, not domain behavior, UI surface,
 or handoff artifact generation.
 
+The path-guard rerun
+`live-fscrud-r34-server-only-path-guard-20260504-1801` tested the runner and public
+gate hardening directly. The treatment scored `100/100`, completed the PL flow,
+passed the public gate, passed the hidden verifier, passed executable domain
+behavior, and passed `pathRootIsolation` with no nested roots.
+
+That is the strongest R34 evidence so far, but it remains narrow. It supports
+constrained server-only local integration around deterministic protected artifacts.
+It still does not prove local generation of the domain kernel, UI skeleton, README,
+run manifest, or verification report. The next claim-grade step should be a repeated
+same-commit R34 path-guard batch, not a broad PL-vs-solo conclusion.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

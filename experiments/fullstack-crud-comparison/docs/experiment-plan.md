@@ -557,6 +557,22 @@ actions. The next useful R34-family change should constrain or repair nested-roo
 writes before final verification; a claim-grade batch before that would overstate
 the evidence.
 
+Path-guard R34 result:
+`live-fscrud-r34-server-only-path-guard-20260504-1801` ran on `2026-05-04` after
+the Ollama action runner began rejecting duplicated app-root paths and the R34 public
+gate began failing nested roots. Solo scored `8/100` with broad product failure. The
+static deterministic control scored `100/100`. The `r34-pl-server-only-integration`
+treatment scored `100/100`, completed the PL flow, passed public review, passed the
+hidden verifier, passed executable domain behavior, and passed `pathRootIsolation`
+with no leaks and no nested roots.
+
+Updated interpretation after path guarding: R34 now supports the narrow server-only
+local integration hypothesis under strict path isolation. It remains a diagnostic
+control, not a full local-generation claim, because domain, UI, README, manifest,
+and verification-report artifacts are deterministic protected inputs. The next
+claim-grade step is a repeated R34 path-guard batch at the same commit, runner,
+model, verifier, and timeout policy.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -575,11 +591,11 @@ Current operating interpretation:
   product success, but local repair still missed non-code handoff artifacts under
   strict review.
 - R34 shows deterministic UI/domain/handoff artifacts are enough for the same
-  local model to complete server-only behavior under strict PL review before path
-  isolation is enforced.
-- The strict-root R34 rerun shows the remaining blocker is nested app-root writes;
-  the next local-only evidence step is path-discipline hardening before any
-  claim-grade batch.
+  local model to complete server-only behavior under strict PL review when path
+  isolation is enforced by the runner and public gate.
+- The path-guard R34 rerun removes the nested app-root blocker; the next local-only
+  evidence step is a repeated same-commit R34 batch before broadening artifact
+  responsibility again.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

@@ -64,6 +64,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `r37-pl-schema-repaired-handoff-source`      | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw handoff intent only            |
 | `r38-pl-senior-plan-repaired-handoff-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw senior plan intent only        |
 | `r39-pl-quality-scored-senior-plan-source`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns quality-scored senior plan source  |
+| `r40-pl-section-selected-senior-plan-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan section choice |
 | `pl-local-senior-crud`                       | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
 | `hybrid-router-crud`                         | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
@@ -547,6 +548,33 @@ bounded field-shaped source emission; R39 shows that explicit rubric terms and
 repair loops did not make the model produce meaningfully richer senior-engineering
 content. The next useful direction is not more wording; it is either constrained
 template filling with deterministic section scaffolds or a hybrid reviewer arm.
+
+### R40 Section-Selected Senior-Plan Diagnostic
+
+R40 is designed as `--arms r40-section-selected-senior-plan`. It keeps the same
+protected deterministic product setup as R39, but changes the local-model role from
+author to selector. The model owns only `senior-plan.selection.txt` and must select
+the six section labels `objective constraints architecture implementation
+verification risk`. Deterministic PL tooling then renders `senior-plan.raw.json`,
+canonical `handoff-source.json`, and final handoff artifacts.
+
+Observed R40 on `2026-05-04`:
+`live-fscrud-r40-section-selected-senior-plan-20260505-0010`.
+
+- `r40-pl-section-selected-senior-plan-source`: `100/100`, `verified_pass`, with
+  public gate, hidden verifier, executable domain behavior, and path-root isolation
+  passing.
+- The model-authored source was exactly the bounded selector payload:
+  `objective constraints architecture implementation verification risk`.
+- In the same run, `r30-solo-local` failed at `43/100`; `r31-static-domain-kernel-control`
+  passed at `100/100`.
+
+Updated R40 interpretation: bounded section selection works where R39 free-form
+quality authoring failed. The strongest supported local-model pattern is now:
+local inference selects or classifies small symbolic options; deterministic
+prompt-language tooling owns rich section prose, schema repair, rendering,
+verification, and protected product behavior. This still does not prove autonomous
+senior-engineering reasoning.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

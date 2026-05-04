@@ -439,6 +439,29 @@ claim remains R38's narrow field-shaped intent emission, not substantive
 senior-engineering reasoning. The next diagnostic should either constrain the
 output structure more mechanically or test hybrid review escalation.
 
+## R40 Evidence Update
+
+R40 tested the constrained-structure path after R39 failed. The local model owned
+only `senior-plan.selection.txt`; deterministic tooling mapped the selected section
+labels to rich senior-plan content, canonical handoff source, and rendered handoff
+artifacts.
+
+Observed R40 result:
+
+- `live-fscrud-r40-section-selected-senior-plan-20260505-0010`: treatment passed at
+  `100/100` with `verified_pass`.
+- The model-authored payload was exactly `objective constraints architecture
+implementation verification risk`.
+- Public gate, hidden verifier, executable domain behavior, and path-root isolation
+  were green for the treatment.
+- Comparison anchors: solo failed at `43/100`; the deterministic static control
+  passed at `100/100`.
+
+Updated R40 evidence: local inference can reliably handle a tiny bounded selector
+role in this setup. The result supports prompt-language as a deterministic
+orchestration and rendering system around local model choices; it does not support
+the claim that the local model authored the richer senior-engineering plan itself.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

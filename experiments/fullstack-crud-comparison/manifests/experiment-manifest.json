@@ -136,6 +136,16 @@
       "hypothesis": "If R38 only proves shallow plan-shaped payload emission, the local model can still emit a more concrete senior plan that passes a deterministic quality scorer for objective, constraints, architecture, implementation, verification, and risk content.",
       "claimBoundary": "This is a quality-scored senior-plan source diagnostic. A pass would not prove autonomous senior engineering or product implementation; it would isolate whether local inference can emit a richer bounded plan source under explicit deterministic scoring.",
       "result": "Observed in live-fscrud-r39-quality-scored-senior-plan-20260504-2315: treatment failed strict review after 3 repair rounds because senior-plan.raw.json scored 6/29 against the deterministic quality threshold of 18/29. The treatment ended flow_failed with verifierScore=82/100, publicGatePassed=false, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored source remained shallow and generic rather than concrete senior-engineering content. This does not support the richer senior-plan quality hypothesis."
+    },
+    {
+      "id": "r40-pl-section-selected-senior-plan-source",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R39 after deterministic domain kernel, deterministic UI skeleton, and deterministic server integration setup",
+      "flow": "../flows/pl-fullstack-crud-section-selected-senior-plan-r40.flow",
+      "status": "diagnostic-complete",
+      "hypothesis": "If R39 fails because local inference cannot author richer senior-plan prose, the local model can still make bounded senior-plan section selections that deterministic tooling renders into a richer senior plan and handoff artifacts.",
+      "claimBoundary": "This is a section-selection diagnostic. A pass does not prove autonomous senior engineering or local senior-plan authorship; it isolates whether local inference can select small symbolic section options while deterministic tooling owns prose, schema repair, rendering, and verification.",
+      "result": "Observed in live-fscrud-r40-section-selected-senior-plan-20260505-0010: treatment passed 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored source was exactly senior-plan.selection.txt with objective constraints architecture implementation verification risk. Solo failed at 43/100 and static control passed at 100/100. This supports bounded selector/classifier use for local models, not local senior-engineering prose authorship."
     }
   ],
   "timeouts": {
@@ -147,5 +157,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r39-quality-scored-senior-plan-failed"
+  "resultStatus": "diagnostic-only-r40-section-selection-passed"
 }

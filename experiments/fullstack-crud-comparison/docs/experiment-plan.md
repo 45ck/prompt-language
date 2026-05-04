@@ -882,6 +882,12 @@ passes, the evidence boundary is field-shaped source emission only. Do not keep
 raising the claim with more prompt wording unless the next arm changes the mechanism,
 such as deterministic section scaffolding or hybrid review.
 
+R40 changes the mechanism to deterministic section scaffolding. The local model
+owns only a bounded section-selection file; deterministic tooling renders the
+senior-plan prose and handoff artifacts from a controlled section library. A pass
+means the viable local role is symbolic selection under strict gates, not senior
+authoring.
+
 ## Decision Rules
 
 Claim `pl-local-crud-factory` better only if:
@@ -910,4 +916,7 @@ isolation green. R39
 senior-plan quality scorer at `6/29`. The current claim boundary is therefore
 senior-plan field/source emission only: deterministic tooling still owns schema
 repair and final handoff rendering, and richer senior reasoning has not been shown
-locally.
+locally. R40 `live-fscrud-r40-section-selected-senior-plan-20260505-0010` passed at
+`100/100` by reducing the local-model responsibility to six bounded section labels.
+This supports local model selector/classifier use with deterministic PL rendering,
+not local senior-engineering authorship.

@@ -145,6 +145,14 @@ test('resolves the R39 quality-scored senior-plan group', () => {
   ]);
 });
 
+test('resolves the R40 section-selected senior-plan group', () => {
+  assert.deepEqual(resolveArms('r40-section-selected-senior-plan'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r40-pl-section-selected-senior-plan-source',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

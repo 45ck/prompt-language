@@ -1,6 +1,6 @@
 # Team Of Agents Runbook
 
-Status: planned HA-HR1 operating procedure.
+Status: planned HA-HR1 operating procedure; dry-run structure runner available.
 
 This runbook is for the local-first/frontier-review pilot. It describes how to
 run the team shape without implying that prompt-language has peer-agent
@@ -13,6 +13,25 @@ semantics.
 - The oracle stays outside the model-visible worktree.
 - The run writes a `hybrid-routing-manifest.json` that validates against
   `hybrid-routing-manifest.schema.json`.
+
+## Dry-Run Structure Check
+
+Use the runner skeleton before any live model work:
+
+```powershell
+node experiments/harness-arena/runner.mjs --dry-run --run-id HA-HR1-structure-001 --output-root .tmp/harness-arena
+```
+
+Expected output artifacts per arm:
+
+- `workspace/`
+- `private/oracle-command.txt`
+- `arm-plan.json`
+- `hybrid-routing-manifest.json`
+
+The dry run is structure-only. Its manifests intentionally set
+`oracle.passed=false`, so they must not be cited as local/frontier model
+evidence.
 
 ## Local Bulk Lane
 
@@ -51,10 +70,11 @@ The static-split pilot flow is:
 node bin/cli.mjs validate --runner codex --mode headless --file experiments/harness-arena/flows/hybrid-router-v0.flow
 ```
 
-A real HA-HR1 runner still needs to wrap this flow so it can:
+The dry-run runner already prepares isolated workspaces, keeps private verifier
+material outside those workspaces, and emits schema-shaped manifests. A real
+HA-HR1 runner still needs to wrap this flow so it can:
 
-- prepare isolated worktrees
-- keep oracle commands out of prompts
+- invoke live local/frontier lanes
 - capture per-lane runner/model/cwd metadata
 - record local GPU active minutes when available
 - enforce frontier budget limits

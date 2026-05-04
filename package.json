@@ -92,6 +92,8 @@
     "experiment:fscrud": "node scripts/experiments/run-fullstack-crud-comparison.mjs",
     "experiment:fscrud:dry": "node scripts/experiments/run-fullstack-crud-comparison.mjs --dry-run",
     "experiment:fscrud:verify": "node experiments/fullstack-crud-comparison/verification/verify-fullstack-crud-workspace.mjs",
+    "experiment:fscrud:test": "node --test scripts/experiments/run-fullstack-crud-comparison.test.mjs",
+    "experiment:harness:test": "node --test experiments/harness-arena/*.test.mjs",
     "knip": "knip --production",
     "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs --validate --output-type err src",
     "depgraph": "dependency-cruiser --config .dependency-cruiser.cjs --output-type mermaid src --output-to reports/dependency-graph.mmd",
@@ -140,7 +142,7 @@
     "eval:compare:v4": "npm run build && node bin/cli.mjs install && node scripts/eval/comparative-eval-v4.mjs",
     "eval:compare:v4:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/comparative-eval-v4.mjs --quick",
     "audit:high": "node scripts/ci/audit-high.mjs",
-    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run docs:consistency && npm run results:e4 && npm run beads:backup:guard:test && npm run beads:backup:guard && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run eval:e2e && npm run audit:high",
+    "ci": "npm run typecheck && npm run lint && npm run format:check && npm run spell && npm run docs:consistency && npm run results:e4 && npm run beads:backup:guard:test && npm run beads:backup:guard && npm run experiment:fscrud:test && npm run experiment:harness:test && npm run depcruise && npm run knip && npm run build && npm run test:coverage && npm run eval:e2e && npm run audit:high",
     "ci:nightly": "npm run ci && npm run mutation",
     "prepare": "node scripts/prepare.mjs",
     "prepublishOnly": "npm run ci"

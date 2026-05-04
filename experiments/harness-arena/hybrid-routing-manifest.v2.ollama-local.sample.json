@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 2,
+  "policyVersion": "ha-hr1-routing-v0",
+  "runId": "ha-hr1-smoke-ollama-local",
+  "taskId": "H14",
+  "arm": "local-only",
+  "startedAt": "2026-05-04T00:00:00.000Z",
+  "completedAt": "2026-05-04T00:02:00.000Z",
+  "budget": {
+    "frontierCallLimit": 0,
+    "usdLimit": 0,
+    "wallSecondsLimit": 300
+  },
+  "steps": [
+    {
+      "stepId": "local-bulk-1",
+      "purpose": "Synthetic local lane for HA-HR1 manifest schema smoke coverage",
+      "runner": "ollama",
+      "model": "qwen3-opencode:30b",
+      "providerClass": "local",
+      "routeDecision": "local",
+      "routeTrigger": "local-only-arm",
+      "riskLevel": "low",
+      "ambiguityLevel": "low",
+      "escalationReason": null,
+      "attemptNumber": 1,
+      "inputArtifactRefs": ["flows/local-bulk-worker.flow"],
+      "outputArtifactRefs": ["artifacts/local-bulk-summary.json"],
+      "diffSummary": "Synthetic manifest only; no workspace diff.",
+      "reviewDefects": [],
+      "cwd": "workspace/h14",
+      "startedAt": "2026-05-04T00:00:00.000Z",
+      "completedAt": "2026-05-04T00:02:00.000Z",
+      "exitCode": 0,
+      "timedOut": false,
+      "wallSeconds": 120,
+      "estimatedUsd": 0,
+      "gpuActiveSeconds": 118,
+      "notes": "Synthetic fixture for schema-shape coverage; not a raw experiment result."
+    }
+  ],
+  "oracle": {
+    "command": "npm run test",
+    "exitCode": 0,
+    "passed": true,
+    "passes": 1,
+    "total": 1,
+    "summary": "Synthetic oracle result for manifest schema smoke coverage."
+  },
+  "classification": {
+    "routingPolicyFailure": false,
+    "modelFailure": false,
+    "harnessFailure": false,
+    "notes": "Synthetic classification for schema-shape coverage."
+  }
+}

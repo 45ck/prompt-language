@@ -149,7 +149,18 @@ Stop conditions:
 
 ## Next Step
 
-Build a small HA-HR1 runner that executes the same fixture under HR-A through HR-D and writes one JSON manifest per lane. Use H14 first because we already know the failure modes and can detect whether frontier escalation fixes the missing import/incomplete merge problem without paying for a larger task.
+Use the dry-run runner skeleton to validate workspace isolation and manifest
+shape across HR-A through HR-D:
+
+```powershell
+node experiments/harness-arena/runner.mjs --dry-run --run-id HA-HR1-structure-001 --output-root .tmp/harness-arena
+```
+
+Then replace the synthetic lanes with live local/frontier calls. Use H14 first
+because we already know the failure modes and can detect whether frontier
+escalation fixes the missing import/incomplete merge problem without paying for
+a larger task. Dry-run manifests are structure checks only; they set
+`oracle.passed=false` and must not be treated as model evidence.
 
 Runbook: [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md).
 Manifest schema: [`hybrid-routing-manifest.schema.json`](./hybrid-routing-manifest.schema.json).

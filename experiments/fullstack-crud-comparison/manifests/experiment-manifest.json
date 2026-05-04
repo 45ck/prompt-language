@@ -146,6 +146,16 @@
       "hypothesis": "If R39 fails because local inference cannot author richer senior-plan prose, the local model can still make bounded senior-plan section selections that deterministic tooling renders into a richer senior plan and handoff artifacts.",
       "claimBoundary": "This is a section-selection diagnostic. A pass does not prove autonomous senior engineering or local senior-plan authorship; it isolates whether local inference can select small symbolic section options while deterministic tooling owns prose, schema repair, rendering, and verification.",
       "result": "Observed in live-fscrud-r40-section-selected-senior-plan-20260505-0010: treatment passed 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored source was exactly senior-plan.selection.txt with objective constraints architecture implementation verification risk. Solo failed at 43/100 and static control passed at 100/100. This supports bounded selector/classifier use for local models, not local senior-engineering prose authorship."
+    },
+    {
+      "id": "r41-pl-decision-matrix-senior-plan-source",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R40 after deterministic domain kernel, deterministic UI skeleton, and deterministic server integration setup",
+      "flow": "../flows/pl-fullstack-crud-decision-matrix-senior-plan-r41.flow",
+      "status": "diagnostic-complete",
+      "hypothesis": "If R40 passes because local inference can copy bounded labels, the local model can also select task-appropriate senior-plan options from a small explicit decision matrix with decoys.",
+      "claimBoundary": "This is a bounded decision-matrix diagnostic. A pass does not prove autonomous senior engineering, local senior-plan authorship, or product implementation; it isolates whether local inference can choose small symbolic options that deterministic tooling validates and renders.",
+      "result": "Observed in live-fscrud-r41-decision-matrix-senior-plan-20260505-0025: treatment passed 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored senior-plan.decisions.txt selected objective=field-service-work-orders, constraints=protected-local-only, architecture=domain-ui-server-seed, implementation=ordered-crud-relationships, verification=domain-checks-and-tests, and risk=path-seed-schema-handoff. Solo failed at 31/100 and static control passed at 100/100. This supports bounded symbolic option selection under deterministic validation and rendering."
     }
   ],
   "timeouts": {
@@ -157,5 +167,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r40-section-selection-passed"
+  "resultStatus": "diagnostic-only-r41-decision-matrix-selection-passed"
 }

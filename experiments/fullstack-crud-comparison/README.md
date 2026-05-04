@@ -65,6 +65,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `r38-pl-senior-plan-repaired-handoff-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw senior plan intent only        |
 | `r39-pl-quality-scored-senior-plan-source`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns quality-scored senior plan source  |
 | `r40-pl-section-selected-senior-plan-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan section choice |
+| `r41-pl-decision-matrix-senior-plan-source`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan option choices |
 | `pl-local-senior-crud`                       | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
 | `hybrid-router-crud`                         | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
@@ -575,6 +576,35 @@ local inference selects or classifies small symbolic options; deterministic
 prompt-language tooling owns rich section prose, schema repair, rendering,
 verification, and protected product behavior. This still does not prove autonomous
 senior-engineering reasoning.
+
+### R41 Decision-Matrix Senior-Plan Diagnostic
+
+R41 is designed as `--arms r41-decision-matrix-senior-plan`. It keeps the R40
+protected deterministic product setup, but asks the model to choose six
+task-appropriate key/value options from a bounded decision matrix with decoys. The
+model owns only `senior-plan.decisions.txt`; deterministic tooling validates all
+six choices before rendering `senior-plan.raw.json`, canonical `handoff-source.json`,
+and handoff artifacts.
+
+Observed R41 on `2026-05-04`:
+`live-fscrud-r41-decision-matrix-senior-plan-20260505-0025`.
+
+- `r41-pl-decision-matrix-senior-plan-source`: `100/100`, `verified_pass`, with
+  public gate, hidden verifier, executable domain behavior, and path-root isolation
+  passing.
+- The model-authored file selected the expected bounded options:
+  `objective=field-service-work-orders`, `constraints=protected-local-only`,
+  `architecture=domain-ui-server-seed`,
+  `implementation=ordered-crud-relationships`,
+  `verification=domain-checks-and-tests`, and
+  `risk=path-seed-schema-handoff`.
+- In the same run, `r30-solo-local` failed at `31/100`; `r31-static-domain-kernel-control`
+  passed at `100/100`.
+
+Updated R41 interpretation: local inference can do bounded option selection when
+the option vocabulary is explicit and deterministic tooling owns validation and
+rendering. This is stronger than R40's label-copy result but still not evidence
+that the local model authors senior plans or implements product behavior.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

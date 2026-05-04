@@ -462,6 +462,30 @@ role in this setup. The result supports prompt-language as a deterministic
 orchestration and rendering system around local model choices; it does not support
 the claim that the local model authored the richer senior-engineering plan itself.
 
+## R41 Evidence Update
+
+R41 tested whether the R40 selector pattern extends from copying section labels to
+choosing task-appropriate options from a bounded decision matrix with decoys.
+
+Observed R41 result:
+
+- `live-fscrud-r41-decision-matrix-senior-plan-20260505-0025`: treatment passed at
+  `100/100` with `verified_pass`.
+- The model-authored `senior-plan.decisions.txt` selected the expected six options:
+  `field-service-work-orders`, `protected-local-only`, `domain-ui-server-seed`,
+  `ordered-crud-relationships`, `domain-checks-and-tests`, and
+  `path-seed-schema-handoff`.
+- Public gate, hidden verifier, executable domain behavior, and path-root isolation
+  were green for the treatment.
+- Comparison anchors: solo failed at `31/100`; the deterministic static control
+  passed at `100/100`.
+
+Updated R41 evidence: local inference can handle bounded decision-matrix selection
+when the valid vocabulary and deterministic scorer are explicit. The evidence now
+supports using local models for small symbolic choices inside a deterministic PL
+system. It still does not support local authorship of rich senior-engineering prose
+or product behavior.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

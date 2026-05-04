@@ -888,6 +888,11 @@ senior-plan prose and handoff artifacts from a controlled section library. A pas
 means the viable local role is symbolic selection under strict gates, not senior
 authoring.
 
+R41 strengthens the selector test by replacing section-label copying with a bounded
+decision matrix that contains task-appropriate options and decoys. A pass means the
+local model can select small symbolic options from an explicit vocabulary; it still
+does not show senior-plan authorship or product implementation.
+
 ## Decision Rules
 
 Claim `pl-local-crud-factory` better only if:
@@ -919,4 +924,8 @@ repair and final handoff rendering, and richer senior reasoning has not been sho
 locally. R40 `live-fscrud-r40-section-selected-senior-plan-20260505-0010` passed at
 `100/100` by reducing the local-model responsibility to six bounded section labels.
 This supports local model selector/classifier use with deterministic PL rendering,
-not local senior-engineering authorship.
+not local senior-engineering authorship. R41
+`live-fscrud-r41-decision-matrix-senior-plan-20260505-0025` also passed at
+`100/100` with six bounded task-appropriate key/value decisions. The strongest
+current local claim is therefore bounded symbolic selection under deterministic
+validation and rendering.

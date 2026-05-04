@@ -153,6 +153,14 @@ test('resolves the R40 section-selected senior-plan group', () => {
   ]);
 });
 
+test('resolves the R41 decision-matrix senior-plan group', () => {
+  assert.deepEqual(resolveArms('r41-decision-matrix-senior-plan'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r41-pl-decision-matrix-senior-plan-source',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

@@ -24,6 +24,12 @@ behavior for harder full-stack tasks. The next useful system shape is not an
 runner/model lane for the next bounded unit of work when evidence says local
 inference is the wrong tool.
 
+R29 sharpened this boundary. Local Ollama is appropriate for controlled
+diagnostics, bulk artifacts, public contracts, checkpoint scripts, and low-risk
+repairs. It is not yet evidence that local-only inference can finish every hard
+domain behavior slice. When Codex or another frontier model supplies advice,
+review, or patches, the run is no longer a local-only claim; it is a hybrid arm.
+
 Drivers:
 
 - keep local models doing bulk and repetitive work
@@ -50,6 +56,7 @@ Default route is local. Escalate to frontier when:
 - risk is high for architecture, security, data loss, auth, permissions, or
   migrations
 - ambiguity is high and multiple valid designs exist
+- the step is high-leverage domain reasoning rather than bulk artifact work
 - local repair fails the same gate twice
 - the local runner times out or produces no edit
 - evidence conflicts across logs, tests, or user intent
@@ -57,6 +64,46 @@ Default route is local. Escalate to frontier when:
 
 Do not escalate formatting, spelling, import cleanup, or deterministic
 test-repair work with a narrow file owner.
+
+## Spawn And Handoff Policy
+
+Spawn only bounded children with explicit ownership and stop conditions. Good
+spawn seams are independent files, repetitive artifact generation,
+verifier-named repair, route classification, and read-only frontier review.
+
+Do not spawn for one continuous design decision, competing edits to the same
+files, access to hidden oracle internals, or attempts to outrun a failing gate.
+If frontier participation would change the evidence class of the run, stop and
+relabel the follow-up as hybrid/escalated work.
+
+Parent-to-child handoff should be narrow: goal, lane, owned artifacts, public
+contracts, public failing output, allowed commands, timeout, and next gate.
+Child-to-parent handoff should return files touched, commands run, results,
+remaining risks, and recommended next gate. The parent decides what becomes
+state, tasks, or stop conditions.
+
+## Timeout Policy
+
+Timeouts are routing evidence. A local timeout or no-edit result should either
+produce one narrower local repair attempt or trigger frontier classification. A
+second same-gate local failure should route to frontier repair or stop the run.
+Timeouts must not be hidden by broadening prompts, disabling gates, or spawning
+replacement children outside the manifest.
+
+## Runtime Boundary Policy
+
+The hybrid router records and constrains side effects; it is not itself an OS
+sandbox. Runtime safety remains a runner and operator responsibility.
+
+Minimum controls for live experiments:
+
+- every local worker has an owned workspace and approved output root
+- command execution is allowlisted by fixture rather than open-ended
+- local Ollama work is serialized unless measured host capacity supports more
+- detached or long-running child processes have parent-owned timeout cleanup
+- frontier escalation requires a data-classification note in the manifest
+- hidden oracle material is stored and referenced as private evidence, not copied
+  into model-visible prompts or traces
 
 ## Options Considered
 
@@ -78,6 +125,13 @@ Every routed step must record:
 - input and output artifact references
 - diff summary and review defects when present
 - oracle result outside model-visible context
+
+Evidence boundaries after R29:
+
+- hidden verifier internals and raw oracle results stay outside child prompts
+- public contracts and checkpoint scripts may be model-visible
+- frontier advice, reviews, or patches must be labeled as frontier/hybrid input
+- local-only claims must keep one runner/model/timeout policy for the whole arm
 
 The schema lives at
 [`experiments/harness-arena/hybrid-routing-manifest.schema.json`](../../experiments/harness-arena/hybrid-routing-manifest.schema.json).

@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R29 diagnostic complete; no claim-grade batch yet
+Status: R30 domain-control artifacts drafted; no R30 run yet
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -168,6 +168,18 @@ deterministic export normalization stabilized the CommonJS export surface long
 enough for behavior checks to matter. The run still failed customer behavior/domain
 implementation, so the next control should be a stronger domain implementation lane
 or a deterministic domain kernel, not more export-surface prompting.
+
+R30 is predeclared in
+[docs/r30-domain-control-experiment.md](docs/r30-domain-control-experiment.md). It
+compares the local-only baseline, the R29 static/export-control replay, a stronger
+local PL domain-control lane, a local senior-pairing PL lane, and an explicitly
+labeled hybrid/frontier-domain lane. Treat R30 as a bottleneck-isolation experiment,
+not a broad product claim, until it produces a clean repeated batch.
+
+Use `--arms r30-domain-control` for the first local-only R30 run. Use
+`--arms r30-local` only after the first three-arm diagnostic is clean. The hybrid
+frontier-domain flow is predeclared but not runner-enabled until per-step provider
+routing exists.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

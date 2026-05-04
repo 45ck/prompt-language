@@ -348,6 +348,45 @@ hypothesis. The next experiment should route domain implementation to a stronger
 external model or use a deterministic domain kernel while measuring local model
 performance on server/UI/docs.
 
+## R30 Domain-Control Experiment
+
+R30 is predeclared in
+[r30-domain-control-experiment.md](r30-domain-control-experiment.md). It is not a
+new broad PL-vs-solo claim batch. It is a narrow control for the R29 question:
+did the run fail because static artifact/export control was still insufficient, or
+because the remaining blocker was executable domain behavior?
+
+R30 arms:
+
+- `r30-solo-local`:
+  [flows/solo-local-crud-r30-domain-control.flow](../flows/solo-local-crud-r30-domain-control.flow).
+- `r29-static-export-control`:
+  [flows/pl-fullstack-crud-micro-contract-v2.flow](../flows/pl-fullstack-crud-micro-contract-v2.flow).
+- `r30-pl-domain-control`:
+  [flows/pl-fullstack-crud-domain-control-r30.flow](../flows/pl-fullstack-crud-domain-control-r30.flow).
+- `r30-pl-senior-domain`:
+  [flows/pl-fullstack-crud-senior-domain-r30.flow](../flows/pl-fullstack-crud-senior-domain-r30.flow).
+- `r30-hybrid-frontier-domain`:
+  [flows/hybrid-frontier-domain-r30.flow](../flows/hybrid-frontier-domain-r30.flow).
+
+Run the local-only arms first. Add the senior-pairing and hybrid/frontier-domain
+lanes only if the baseline and R29 replay are clean enough to compare. If the
+harness cannot route only `src/domain.js` to a frontier runner, mark the hybrid
+arm as `hybrid-routing-infeasible` rather than silently treating it as local-only
+or frontier-only evidence.
+
+Runner support is intentionally narrower than the full design matrix. Use
+`--arms r30-domain-control` for the three-arm local bottleneck test and
+`--arms r30-local` when adding the senior-pairing local lane. The hybrid flow is
+predeclared for review but should not be run as a normal FSCRUD arm until the
+harness supports per-step provider routing.
+
+The expected R30 decision pivot is the first lane that reaches a green public
+domain gate. If a domain-green lane still fails on UI/server/static artifacts, R29
+was not isolated to domain behavior. If a domain-green lane reaches verifier pass
+or moves hard failures away from `domain_behavior_failed`, R29 was primarily a
+domain behavior bottleneck.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and

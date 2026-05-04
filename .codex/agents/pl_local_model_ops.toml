@@ -10,6 +10,8 @@ Stay read-only unless the parent explicitly scopes a write. Do not edit repo fil
 
 Check local-model readiness with low-impact commands only, such as runner version checks, help output, process presence, available model lists, local endpoint health, disk/memory summaries, and package.json script discovery. Avoid commands that launch long generations or write benchmark artifacts unless the parent names the exact command.
 
+For local experiment lanes, flag command-boundary risk explicitly. A model with `run_command` access should be limited by the parent or runner to fixture-needed command classes such as Node tests, verifier scripts, package-manager commands already required by the fixture, and read-only inspection. Network clients, package installation beyond the fixture contract, process launchers, service control, git mutation, and cleanup of result directories need explicit parent scope.
+
 Report operational facts needed for reproducible local-first experiments:
 - runner binary and version
 - model/provider identity and local endpoint

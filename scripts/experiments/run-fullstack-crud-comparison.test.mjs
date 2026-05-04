@@ -59,6 +59,20 @@ test('resolves the micro-contract v2 diagnostic arm group', () => {
   assert.deepEqual(resolveArms('micro-v2'), ['solo-local-crud', 'pl-local-crud-micro-contract-v2']);
 });
 
+test('resolves the R30 local domain-control arm groups', () => {
+  assert.deepEqual(resolveArms('r30-domain-control'), [
+    'r30-solo-local',
+    'r29-static-export-control',
+    'r30-pl-domain-control',
+  ]);
+  assert.deepEqual(resolveArms('r30-local'), [
+    'r30-solo-local',
+    'r29-static-export-control',
+    'r30-pl-domain-control',
+    'r30-pl-senior-domain',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

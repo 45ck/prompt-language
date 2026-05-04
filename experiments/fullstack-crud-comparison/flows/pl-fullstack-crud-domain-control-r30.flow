@@ -1,0 +1,46 @@
+Goal: R30 local PL domain-control lane for FSCRUD-01
+
+memory:
+  fscrud_workspace
+  fscrud_task
+  fscrud_r30_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="TASK.md"
+  remember key="fscrud_r30_policy" value="R30 local-only PL domain-control; domain behavior must be green before server UI docs work"
+
+  let canonical_exports = "reset, listCustomers, createCustomer, readCustomer, detailCustomer, editCustomer, deleteCustomer, listAssets, createAsset, readAsset, detailAsset, editAsset, deleteAsset, listWorkOrders, createWorkOrder, readWorkOrder, detailWorkOrder, editWorkOrder, deleteWorkOrder"
+  let task_contract = "FSCRUD-01 field-service work order tracker. Build customers, assets, and work_orders with list/create/read/edit/detail/delete flows; enforce customer-asset-work_order references, asset/customer mismatch rejection, safe deletes, status values open/scheduled/in_progress/completed/cancelled, completedAt rules, priority values low/normal/urgent, seed data, domain tests, browser UI, README, run-manifest.json, and verification-report.md."
+
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs','../../../../../fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('scaffold script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/normalize-domain-export-surface.cjs','../../../../../fullstack-crud-comparison/scaffold/normalize-domain-export-surface.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('normalizer script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');for(const p of ['workspace/fscrud-01/DOMAIN_API.md','workspace/fscrud-01/contracts/domain-exports.json','workspace/fscrud-01/scripts/check-domain-exports.cjs','workspace/fscrud-01/scripts/check-domain-customer.cjs','workspace/fscrud-01/scripts/check-domain-assets.cjs','workspace/fscrud-01/scripts/check-domain-work-orders.cjs'])if(!fs.existsSync(p)){console.error('missing public checkpoint '+p);process.exit(1)}" [timeout 60]
+
+  prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. EXPERIMENT_ARM r30-pl-domain-control. PROVIDER local-only. Read workspace/fscrud-01/DOMAIN_API.md and workspace/fscrud-01/contracts/domain-exports.json before editing. DOMAIN GATE FIRST. FILE workspace/fscrud-01/src/domain.js only. ACTION read_file workspace/fscrud-01/src/domain.js, then write_file workspace/fscrud-01/src/domain.js with one complete CommonJS replacement. MUST preserve exactly these exports: ${canonical_exports}. MUST implement all customer, asset, and work_order CRUD behavior now. MUST enforce unknown customerId, unknown assetId, asset/customer mismatch, invalid status, invalid priority, completed without completedAt, non-completed with completedAt, and active-reference safe delete behavior. Do not edit tests, package scripts, seed, server, UI, README, manifest, verifier report, or any run-root ./src file. Public gate: cd workspace/fscrud-01 && npm run check:domain:exports && npm run check:domain:customer && npm run check:domain:assets && npm run check:domain:work-orders && npm test. Task contract: ${task_contract}.
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/normalize-domain-export-surface.cjs','../../../../../fullstack-crud-comparison/scaffold/normalize-domain-export-surface.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('normalizer script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  review strict criteria: "The executable domain layer must pass exports, customer, assets, work_orders, and npm test before any server, UI, or docs work starts." grounded-by 'node -e "if(require(\"fs\").existsSync(\"src/domain.js\")){console.error(\"run_root_src_domain_leak\");process.exit(1)}" && cd workspace/fscrud-01 && npm run check:domain:exports && npm run check:domain:customer && npm run check:domain:assets && npm run check:domain:work-orders && npm test' max 5
+    prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. Repair workspace/fscrud-01/src/domain.js only. EXPERIMENT_ARM r30-pl-domain-control. FAILED_DOMAIN_GATE: ${_review_critique}. ACTION read_file workspace/fscrud-01/src/domain.js, then write_file workspace/fscrud-01/src/domain.js with a complete CommonJS domain module. Preserve exact exports: ${canonical_exports}. Do not edit tests, package scripts, seed, server, UI, README, manifest, verifier report, or run-root ./src files.
+    run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/normalize-domain-export-surface.cjs','../../../../../fullstack-crud-comparison/scaffold/normalize-domain-export-surface.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('normalizer script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  end
+
+  prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. The domain gate is green. Do not edit workspace/fscrud-01/src/domain.js, tests, package scripts, contracts, or seed data. Implement or repair workspace/fscrud-01/src/server.js, workspace/fscrud-01/public/index.html, workspace/fscrud-01/README.md, workspace/fscrud-01/run-manifest.json, and workspace/fscrud-01/verification-report.md only. Server/UI must expose list/create/read/edit/detail/delete for customers, assets, and work_orders and visible fields customerId, assetId, status, completedAt, and priority. Record arm r30-pl-domain-control and local-only provider in run-manifest.json.
+  review strict criteria: "Final public checks must preserve the green domain gate and cover server/UI terms; the hidden FSCRUD verifier is run only by the harness after the flow." grounded-by 'node -e "const fs=require(\"fs\");if(fs.existsSync(\"src/domain.js\")){console.error(\"run_root_src_domain_leak\");process.exit(1)}const server=fs.readFileSync(\"workspace/fscrud-01/src/server.js\",\"utf8\").toLowerCase();const ui=fs.readFileSync(\"workspace/fscrud-01/public/index.html\",\"utf8\").toLowerCase();const text=server+\"\\n\"+ui;for(const term of [\"customers\",\"assets\",\"work_orders\",\"list\",\"create\",\"read\",\"edit\",\"detail\",\"delete\",\"customerid\",\"assetid\",\"status\",\"completedat\",\"priority\"])if(!text.includes(term)){console.error(\"missing_public_surface_term:\"+term);process.exit(1)}" && cd workspace/fscrud-01 && npm run check:domain:exports && npm run check:domain:customer && npm run check:domain:assets && npm run check:domain:work-orders && npm test' max 2
+    prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. Repair only the non-domain file directly named by the public final critique. Allowed files: workspace/fscrud-01/src/server.js, workspace/fscrud-01/public/index.html, workspace/fscrud-01/README.md, workspace/fscrud-01/run-manifest.json, workspace/fscrud-01/verification-report.md. Do not edit workspace/fscrud-01/src/domain.js, tests, contracts, package scripts, seed data, or hidden verifier files. Critique: ${_review_critique}
+  end
+
+  run: node -e "require('fs').writeFileSync('workspace/fscrud-01/.pl-r30-domain-control-complete','ok\n')" [timeout 60]
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/DOMAIN_API.md
+  file_exists workspace/fscrud-01/contracts/domain-exports.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/public/index.html
+  file_exists workspace/fscrud-01/__tests__/domain.contract.test.js
+  file_exists workspace/fscrud-01/data/seed.json
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md
+  file_exists workspace/fscrud-01/.pl-r30-domain-control-complete

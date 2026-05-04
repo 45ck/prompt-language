@@ -106,6 +106,19 @@ and the hidden verifier hard failure remained `domain_behavior_failed`. This poi
 the next experiment toward a stronger domain implementation lane or deterministic
 domain kernel, not more export-surface wording.
 
+## R30 Evidence Requirement
+
+R30 should not be scored as another broad product comparison unless it produces a
+clean repeated batch. Its immediate evidence target is narrower: identify whether
+`domain_behavior_failed` is the first-order bottleneck after export-surface control
+has stabilized.
+
+Claim-grade R30 evidence requires a predeclared matrix that keeps local-only arms
+local-only and labels any frontier-authored `src/domain.js` as hybrid evidence. The
+decisive signal is not aggregate score alone. The decisive signal is whether a lane
+can make the public domain checks pass and whether the hidden verifier then still
+fails on domain behavior or moves to a different hard failure.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

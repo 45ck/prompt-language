@@ -1,0 +1,25 @@
+Goal: R30 local-only baseline for FSCRUD-01 domain-control comparison
+
+memory:
+  fscrud_workspace
+  fscrud_task
+  fscrud_r30_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="TASK.md"
+  remember key="fscrud_r30_policy" value="R30 local-only baseline; no PL repair loop; no frontier advice or patches"
+
+  run: node -e "const fs=require('fs');fs.mkdirSync('workspace/fscrud-01',{recursive:true});" [timeout 60]
+  let task_contract = "FSCRUD-01 field-service work order tracker. Build customers, assets, and work_orders with list/create/read/edit/detail/delete flows; enforce customer-asset-work_order references, asset/customer mismatch rejection, safe deletes, status values open/scheduled/in_progress/completed/cancelled, completedAt rules, priority values low/normal/urgent, seed data, domain tests, browser UI, README, run-manifest.json, and verification-report.md."
+
+  prompt: Work only in ${fscrud_workspace}. Read ${fscrud_task} before editing. EXPERIMENT_ARM r30-solo-local. PROVIDER local-only. No frontier advice, patches, or external review are allowed. Task contract: ${task_contract}. Build the complete app in one direct local-model work session. The model owns executable domain behavior, server/API behavior, browser UI, seed data, tests, README, run manifest, and verification report. Do not read or modify hidden verifier files. Prefer a small deterministic CommonJS Node app with src/domain.js, src/server.js, public/index.html, data/seed.json, and __tests__/domain.test.js. Run available install/test commands before stopping and record honest status in run-manifest.json and verification-report.md.
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/public/index.html

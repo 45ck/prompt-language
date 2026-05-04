@@ -8,6 +8,12 @@ imports their outputs, and keeps the final gates authoritative.
 Use this when local inference should carry bulk work and a stronger external
 model should handle risk classification, escalation, or final review.
 
+After R29, the operating claim is narrower: local Ollama can perform real
+workspace actions and useful bulk artifact work under deterministic gates, but
+hard domain behavior may still need frontier repair or a deterministic kernel.
+Do not mix frontier advice or patches into a local-only claim batch. If Codex or
+another frontier model participates, record the run as hybrid/escalated work.
+
 ## What Team Means Here
 
 A team is a parent-authored flow plus child sessions launched with `spawn` and
@@ -28,7 +34,7 @@ Child sessions own only the bounded work they were spawned to do.
 
 | Lane                | Default runner/model fit                 | Use for                                                                 |
 | ------------------- | ---------------------------------------- | ----------------------------------------------------------------------- |
-| `local-bulk`        | Ollama, OpenCode, or aider with Ollama   | inventory, repetitive edits, boilerplate, docs from settled decisions   |
+| `local-bulk`        | Ollama, OpenCode, or aider with Ollama   | inventory, server/UI/docs/fixture work, boilerplate, repetitive edits   |
 | `local-repair`      | Ollama, OpenCode, or aider with Ollama   | verifier-named repairs with narrow files and explicit failing evidence  |
 | `frontier-advisor`  | Codex/GPT-5.5-class reasoning            | risk and ambiguity classification before expensive or unsafe work       |
 | `frontier-repair`   | Codex/GPT-5.5-class reasoning            | root-cause analysis after repeated local failure or conflicting signals |
@@ -53,6 +59,26 @@ Escalate to frontier when any of these are true:
 Do not escalate for formatting, spelling, import cleanup, or a narrow failing
 test with an obvious file owner.
 
+## Spawn Discipline
+
+Spawn a child when the work has a real seam:
+
+- independent file or artifact ownership
+- bulk inventory or repetitive edits that do not need one continuous reasoning
+  thread
+- verifier-named repair with public failing output and narrow files
+- read-only frontier review that should inspect a settled parent diff
+- route classification or root-cause analysis that should stay isolated from
+  the local worker
+
+Do not spawn when:
+
+- the task is a single coherent design decision better handled by one agent
+- children would edit the same files without an explicit merge plan
+- the child needs hidden oracle internals, raw results, or unapproved evidence
+- the purpose is to bypass a timeout, gate, hook, or quality check
+- adding Codex would contaminate a local-only measurement batch
+
 ## Minimal Operator Setup
 
 For local child sessions, choose the child-runner lane:
@@ -73,6 +99,46 @@ $env:PL_SPAWN_RUNNER = 'codex'
 For experiment runs that compare lanes, record each step in a hybrid-routing
 manifest and keep the oracle outside model-visible context.
 
+## Runtime Safety
+
+Agent instructions are not an OS sandbox. A local worker that can execute
+commands can still install packages, start processes, use network clients, or
+mutate files unless the runner enforces tighter controls.
+
+For live local-model experiments:
+
+- run in a disposable or clearly bounded workspace
+- keep raw outputs under an approved output root and do not stage them by default
+- allow only the command classes needed by the fixture, such as `node`, `npm test`,
+  verifier scripts, and read-only inspection commands
+- keep hidden verifier internals and raw oracle output out of model-visible
+  prompts, traces, and child handoffs
+- record any frontier/Codex input as a hybrid or escalated evidence class
+- use one local Ollama generation lane at a time unless the host budget is
+  explicitly measured and recorded
+
+## Timeouts And Handoffs
+
+Use explicit timeouts for every child. The Ollama timeout above is a generous
+process budget for slow local inference; the parent `await` timeout should still
+match the bounded step. A timeout, no-edit result, or repeated same-gate failure
+is routing evidence, not a reason to broaden the prompt indefinitely.
+
+Handoff from parent to child should include only:
+
+- goal, lane, file/artifact ownership, and stop condition
+- public contracts, public checkpoint scripts, and current failing output
+- allowed commands and the next authoritative gate
+
+Child output back to the parent should include:
+
+- files touched or artifacts produced
+- commands run and observed results
+- remaining defects, risks, and suggested next gate
+
+Frontier output should be converted by the parent into explicit tasks, gates, or
+stop conditions before any local worker acts on it.
+
 ## Pilot Flow Shape
 
 The planned HA-HR1 pilot lives under `experiments/harness-arena/`:
@@ -90,8 +156,10 @@ can match frontier-only quality with fewer frontier calls.
 
 - Keep child count low unless the seams are genuinely independent.
 - Give each child a narrow file or artifact ownership boundary.
+- Prefer local Ollama for bulk work after the route is low-risk and public.
 - Make frontier review read-only unless the parent explicitly routes a repair.
 - Preserve gates in the parent, not inside only one child.
+- Treat local timeouts and no-edit results as escalation signals.
 - Record `riskLevel`, `ambiguityLevel`, route decision, artifacts, and review
   defects for every lane decision.
 

@@ -43,6 +43,7 @@ const RUNNER_ENV_KEYS = [
 ];
 const ARM_FLOWS = {
   'solo-local-crud': join(EXPERIMENT_ROOT, 'flows', 'solo-local-crud.flow'),
+  'r30-solo-local': join(EXPERIMENT_ROOT, 'flows', 'solo-local-crud-r30-domain-control.flow'),
   'pl-local-crud-factory': join(EXPERIMENT_ROOT, 'flows', 'pl-fullstack-crud-v1.flow'),
   'pl-local-crud-tight': join(EXPERIMENT_ROOT, 'flows', 'pl-fullstack-crud-tight-v2.flow'),
   'pl-local-crud-tight-v3': join(EXPERIMENT_ROOT, 'flows', 'pl-fullstack-crud-tight-v3.flow'),
@@ -61,6 +62,21 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-micro-contract-v2.flow',
   ),
+  'r29-static-export-control': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-micro-contract-v2.flow',
+  ),
+  'r30-pl-domain-control': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-domain-control-r30.flow',
+  ),
+  'r30-pl-senior-domain': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-senior-domain-r30.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
@@ -68,6 +84,13 @@ const ARM_GROUPS = {
   scaffold: ['solo-local-crud', 'pl-local-crud-scaffold-contract'],
   micro: ['solo-local-crud', 'pl-local-crud-micro-contract'],
   'micro-v2': ['solo-local-crud', 'pl-local-crud-micro-contract-v2'],
+  'r30-domain-control': ['r30-solo-local', 'r29-static-export-control', 'r30-pl-domain-control'],
+  'r30-local': [
+    'r30-solo-local',
+    'r29-static-export-control',
+    'r30-pl-domain-control',
+    'r30-pl-senior-domain',
+  ],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],
 };

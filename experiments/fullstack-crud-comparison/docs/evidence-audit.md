@@ -144,6 +144,31 @@ It does not prove PL can complete FSCRUD locally. The next useful control is R31
 provide a deterministic domain kernel, protect it, and test whether local PL can
 complete non-domain server/UI/docs work around it.
 
+## R31 Evidence Update
+
+The R31 domain-kernel diagnostic,
+`live-fscrud-r31-domain-kernel-20260504-1247`, tested that control directly with
+native Ollama and `qwen3-opencode-big:30b`.
+
+Results:
+
+- `r30-solo-local`: `35/100`, `flow_failed`, hard failures
+  `ui_surface_incomplete`, `seed_integrity_failed`, and
+  `domain_behavior_failed`.
+- `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
+- `r31-pl-domain-kernel-bulk`: `93/100`, `flow_failed`, hard failure
+  `ui_surface_incomplete`; domain behavior passed.
+
+This confirms the deterministic domain kernel is verifier-valid and that the local
+PL lane can avoid the R30 executable-domain failure when the domain layer is supplied
+and protected. It still does not prove local PL can complete FSCRUD end to end,
+because the local bulk lane missed hidden UI/product-surface coverage.
+
+The evidence-backed next step is a protected-kernel server/UI surface-control lane.
+The hypothesis should be narrower than "PL solves FSCRUD locally": test whether
+explicit visible UI route/field/operation gates can close the final `7/100` gap
+without frontier edits.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

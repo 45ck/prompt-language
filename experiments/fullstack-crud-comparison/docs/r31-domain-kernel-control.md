@@ -74,3 +74,29 @@ local.
 
 If the PL bulk lane passes only after protected files are edited, classify it as a
 policy failure, not a local PL product success.
+
+## Result
+
+Run: `live-fscrud-r31-domain-kernel-20260504-1247`
+
+Runner/model: native Ollama with `qwen3-opencode-big:30b`
+
+| Arm                                | Score     | Outcome         | Hard failures                                                              |
+| ---------------------------------- | --------- | --------------- | -------------------------------------------------------------------------- |
+| `r30-solo-local`                   | `35/100`  | `flow_failed`   | `ui_surface_incomplete`, `seed_integrity_failed`, `domain_behavior_failed` |
+| `r31-static-domain-kernel-control` | `100/100` | `verified_pass` | none                                                                       |
+| `r31-pl-domain-kernel-bulk`        | `93/100`  | `flow_failed`   | `ui_surface_incomplete`                                                    |
+
+Observed interpretation:
+
+- H31-A passed. The deterministic scaffold plus domain kernel satisfied public
+  gates and the hidden verifier.
+- H31-B partially passed. The local PL bulk lane preserved green domain behavior and
+  reached `93/100`, but did not complete the full UI/product surface.
+- H31-C passed for this diagnostic. The protected-domain control did not collapse
+  back into the R30 domain-stub failure.
+
+R31 moves the local-model bottleneck from executable domain behavior to surrounding
+server/UI surface completeness. The next local-only experiment should keep the
+protected kernel and tighten browser/server UI coverage gates before considering a
+hybrid frontier-domain lane.

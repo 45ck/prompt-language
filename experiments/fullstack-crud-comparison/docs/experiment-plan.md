@@ -433,6 +433,29 @@ R31 decision rules:
 - If the PL bulk arm edits protected domain, test, seed, contract, or package files,
   classify the run as policy failure rather than product failure.
 
+Observed R31 diagnostic on `2026-05-04`: the run
+`live-fscrud-r31-domain-kernel-20260504-1247` used native Ollama with
+`qwen3-opencode-big:30b`.
+
+- `r30-solo-local` scored `35/100` and failed
+  `ui_surface_incomplete`, `seed_integrity_failed`, and
+  `domain_behavior_failed`.
+- `r31-static-domain-kernel-control` scored `100/100` and reached
+  `verified_pass`.
+- `r31-pl-domain-kernel-bulk` scored `93/100`, passed domain behavior, and failed
+  only `ui_surface_incomplete`.
+
+R31 validates the deterministic domain kernel control and partially validates the
+local PL bulk hypothesis: once executable domain behavior is supplied and protected,
+the local model can complete most surrounding artifacts without falling back into
+the R30 domain-stub failure. The run still is not a full local FSCRUD success,
+because the UI/product surface remained incomplete under the hidden verifier.
+
+Next local-only diagnostic: keep the protected domain kernel and tighten server/UI
+surface gates around list, create, read, edit, detail, delete, relationship fields,
+and visible seed data. Do not spend another run on domain wording until a surface
+control lane has been tested.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -443,6 +466,8 @@ Current operating interpretation:
 - R29 shows export-surface control can stabilize the visible CommonJS contract, but
   behavior implementation still failed before the hidden verifier hard-failed
   `domain_behavior_failed`.
+- R31 shows deterministic domain implementation removes that blocker and shifts the
+  remaining local-only failure to UI/product surface completeness.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

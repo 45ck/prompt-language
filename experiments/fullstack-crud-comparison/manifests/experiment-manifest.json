@@ -45,16 +45,18 @@
       "runner": "prompt-language",
       "modelPolicy": "deterministic scaffold and deterministic domain kernel; no model-authored product code",
       "flow": "../flows/static-domain-kernel-r31.flow",
-      "status": "planned-diagnostic",
-      "hypothesis": "A known-good domain kernel plus scaffold should pass the public and hidden FSCRUD verifier, proving R30's remaining blocker was executable domain behavior."
+      "status": "diagnostic-complete",
+      "hypothesis": "A known-good domain kernel plus scaffold should pass the public and hidden FSCRUD verifier, proving R30's remaining blocker was executable domain behavior.",
+      "result": "Observed in live-fscrud-r31-domain-kernel-20260504-1247: 100/100 verified_pass."
     },
     {
       "id": "r31-pl-domain-kernel-bulk",
       "runner": "prompt-language",
       "modelPolicy": "same local Ollama model as baseline after deterministic domain kernel setup",
       "flow": "../flows/pl-fullstack-crud-domain-kernel-r31.flow",
-      "status": "planned-diagnostic",
-      "hypothesis": "With the domain kernel protected, local PL can complete server, UI, docs, manifest, and verification-report work without corrupting protected artifacts."
+      "status": "diagnostic-complete",
+      "hypothesis": "With the domain kernel protected, local PL can complete server, UI, docs, manifest, and verification-report work without corrupting protected artifacts.",
+      "result": "Observed in live-fscrud-r31-domain-kernel-20260504-1247: 93/100 flow_failed with domain behavior passing and ui_surface_incomplete remaining."
     }
   ],
   "timeouts": {
@@ -66,5 +68,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-no-claim-grade-pair-yet"
+  "resultStatus": "diagnostic-only-r31-moved-bottleneck-to-ui-surface"
 }

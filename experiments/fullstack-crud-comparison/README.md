@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R30 local-only diagnostic complete; R31 domain-kernel control ready
+Status: R31 domain-kernel diagnostic complete; next step is server/UI surface control
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -192,10 +192,24 @@ R31, not another wording-only domain prompt. R31 removes the domain blocker with
 deterministic kernel, then measures whether local PL can complete server, UI, docs,
 and manifest work around protected domain code.
 
-Use `--arms r31-domain-kernel` for the next diagnostic. It runs the R30 solo
-baseline, a static deterministic-domain control, and the local PL bulk lane with the
-domain kernel protected. The hybrid frontier-domain flow remains predeclared but not
-runner-enabled until per-step provider routing exists.
+R31 ran as `live-fscrud-r31-domain-kernel-20260504-1247` with
+`qwen3-opencode-big:30b` through native Ollama. Results:
+
+- `r30-solo-local`: `35/100`, `flow_failed`, hard failures
+  `ui_surface_incomplete`, `seed_integrity_failed`, and
+  `domain_behavior_failed`.
+- `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
+- `r31-pl-domain-kernel-bulk`: `93/100`, `flow_failed`, hard failure
+  `ui_surface_incomplete`; domain behavior passed.
+
+R31 confirms the deterministic domain kernel is valid and that the local PL lane can
+complete executable domain behavior when the domain layer is supplied and protected.
+It does not yet prove full local FSCRUD completion: the remaining blocker moved to
+the browser/server product surface, especially complete visible UI coverage.
+
+The next useful local-only diagnostic is a server/UI surface-control lane around the
+protected domain kernel, not another domain prompt. The hybrid frontier-domain flow
+remains predeclared but not runner-enabled until per-step provider routing exists.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

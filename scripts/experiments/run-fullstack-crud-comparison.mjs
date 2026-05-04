@@ -56,12 +56,18 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-micro-contract-v1.flow',
   ),
+  'pl-local-crud-micro-contract-v2': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-micro-contract-v2.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
   primary: ['solo-local-crud', 'pl-local-crud-factory'],
   scaffold: ['solo-local-crud', 'pl-local-crud-scaffold-contract'],
   micro: ['solo-local-crud', 'pl-local-crud-micro-contract'],
+  'micro-v2': ['solo-local-crud', 'pl-local-crud-micro-contract-v2'],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],
 };
@@ -285,6 +291,13 @@ export function isOllamaBackedRun(options) {
   );
 }
 
+export function classifyRunOutcome(summary) {
+  if (summary.skipped) return 'dry_run_skipped';
+  if (summary.runnerTimedOut) return 'timeout_partial';
+  if (summary.runnerExitCode !== 0) return 'flow_failed';
+  return summary.verifierPassed ? 'verified_pass' : 'verifier_failed';
+}
+
 function collectOllamaPsSnapshot(attemptDir, phase, options) {
   if (!isOllamaBackedRun(options)) return null;
 
@@ -306,7 +319,8 @@ function runArm(context) {
 
   if (context.options.dryRun) {
     writeJson(join(attemptDir, 'run-manifest.json'), manifestBase(context, attemptDir, workspace));
-    return { arm: context.arm, skipped: true, verifierPassed: null };
+    const summary = { arm: context.arm, skipped: true, verifierPassed: null };
+    return { ...summary, outcome: classifyRunOutcome(summary) };
   }
 
   const runnerEnvironment = runnerEnv(context.options);
@@ -390,12 +404,14 @@ function runArm(context) {
     completedAt: new Date().toISOString(),
   };
   writeJson(join(attemptDir, 'run-manifest.json'), manifest);
-  return {
+  const summary = {
     arm: context.arm,
     skipped: false,
     runnerExitCode: runResult.exitCode,
+    runnerTimedOut: runResult.timedOut,
     verifierPassed: verifyResult.exitCode === 0,
   };
+  return { ...summary, outcome: classifyRunOutcome(summary) };
 }
 
 function wallTimeoutMs(arm) {

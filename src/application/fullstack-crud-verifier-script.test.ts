@@ -480,6 +480,8 @@ describe('FSCRUD verifier script', () => {
       'pl-fullstack-crud-tight-v2.flow',
       'pl-fullstack-crud-tight-v3.flow',
       'pl-fullstack-crud-scaffold-contract-v1.flow',
+      'pl-fullstack-crud-micro-contract-v1.flow',
+      'pl-fullstack-crud-micro-contract-v2.flow',
     ];
 
     for (const flow of flows) {
@@ -520,6 +522,12 @@ describe('FSCRUD verifier script', () => {
         'public/index.html',
         '__tests__/domain.contract.test.js',
         'data/seed.json',
+        'DOMAIN_API.md',
+        'contracts/domain-exports.json',
+        'scripts/check-domain-exports.cjs',
+        'scripts/check-domain-customer.cjs',
+        'scripts/check-domain-assets.cjs',
+        'scripts/check-domain-work-orders.cjs',
       ]) {
         expect(existsSync(join(workspace, relativePath))).toBe(true);
       }
@@ -558,6 +566,22 @@ describe('FSCRUD verifier script', () => {
         'status values open, scheduled, in_progress, completed, cancelled',
       );
       expect(contract).toContain('priority values low, normal, urgent');
+
+      const domainApi = readFileSync(join(workspace, 'DOMAIN_API.md'), 'utf8');
+      expect(domainApi).toContain('module.exports = {');
+      expect(domainApi).toContain('listCustomers');
+      expect(domainApi).toContain('editWorkOrder');
+
+      const exportsContract = JSON.parse(
+        readFileSync(join(workspace, 'contracts', 'domain-exports.json'), 'utf8'),
+      ) as { exports: string[] };
+      expect(exportsContract.exports).toContain('deleteCustomer');
+      expect(exportsContract.exports).toContain('listWorkOrders');
+
+      const exportCheck = execFileSync(process.execPath, [
+        join(workspace, 'scripts', 'check-domain-exports.cjs'),
+      ]);
+      expect(exportCheck.toString()).toContain('domain_export_surface_ok');
     } finally {
       rmSync(workspace, { recursive: true, force: true });
     }
@@ -665,6 +689,8 @@ describe('FSCRUD verifier script', () => {
       'pl-fullstack-crud-tight-v2.flow',
       'pl-fullstack-crud-tight-v3.flow',
       'pl-fullstack-crud-scaffold-contract-v1.flow',
+      'pl-fullstack-crud-micro-contract-v1.flow',
+      'pl-fullstack-crud-micro-contract-v2.flow',
     ];
 
     for (const flow of flows) {
@@ -674,18 +700,39 @@ describe('FSCRUD verifier script', () => {
       );
 
       expect(source).toContain('Task contract: ${task_contract}');
-      if (flow === 'pl-fullstack-crud-scaffold-contract-v1.flow') {
+      if (
+        flow === 'pl-fullstack-crud-scaffold-contract-v1.flow' ||
+        flow === 'pl-fullstack-crud-micro-contract-v1.flow' ||
+        flow === 'pl-fullstack-crud-micro-contract-v2.flow'
+      ) {
         expect(source).toContain('__tests__/domain.contract.test.js');
-        expect(source).toContain('CommonJS only');
         expect(source).toContain('module.exports');
-        expect(source).toContain('Object.keys(moduleExports).sort()');
-        expect(source).toContain('domain_module_load_failed');
-        expect(source).toContain('module_exports_surface_mismatch');
-        expect(source).toContain('module_exports_non_function');
         expect(source).toContain('run_root_src_domain_leak');
         expect(source).toContain('Treat ${fscrud_workspace} as the app root');
-        expect(source).toContain('ALLOWED_FILES: workspace/fscrud-01/src/domain.js');
-        expect(source).toContain('when the failing verifier field directly names that file');
+        if (flow === 'pl-fullstack-crud-scaffold-contract-v1.flow') {
+          expect(source).toContain('CommonJS only');
+          expect(source).toContain('ALLOWED_FILES: workspace/fscrud-01/src/domain.js');
+          expect(source).toContain('Object.keys(moduleExports).sort()');
+          expect(source).toContain('domain_module_load_failed');
+          expect(source).toContain('module_exports_surface_mismatch');
+          expect(source).toContain('module_exports_non_function');
+          expect(source).toContain('when the failing verifier field directly names that file');
+        }
+        if (flow === 'pl-fullstack-crud-micro-contract-v1.flow') {
+          expect(source).toContain('Object.keys(moduleExports).sort()');
+          expect(source).toContain('domain_module_load_failed');
+          expect(source).toContain('module_exports_surface_mismatch');
+          expect(source).toContain('module_exports_non_function');
+        }
+        if (flow === 'pl-fullstack-crud-micro-contract-v2.flow') {
+          expect(source).toContain('DOMAIN_API.md');
+          expect(source).toContain('contracts/domain-exports.json');
+          expect(source).toContain('npm run check:domain:exports');
+          expect(source).toContain(
+            'the hidden FSCRUD verifier is run only by the experiment harness after the flow',
+          );
+          expect(source).not.toContain('verify-fullstack-crud-workspace.mjs');
+        }
         expect(source).toContain('Never edit workspace/fscrud-01/__tests__');
         expect(source).not.toContain('unexpected_export_name_present');
         expect(source).not.toContain('missing_required_export');

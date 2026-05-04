@@ -53,6 +53,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `pl-local-crud-factory`           | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control             |
 | `pl-local-crud-scaffold-contract` | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback  |
 | `pl-local-crud-micro-contract`    | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                 |
+| `pl-local-crud-micro-contract-v2` | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests |
 | `pl-local-senior-crud`            | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates         |
 | `hybrid-router-crud`              | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review |
 
@@ -137,11 +138,20 @@ failed the first domain foundation review after the model produced an invalid
 entity/schema-shaped `module.exports = { Customer, Asset }` instead of executable
 CRUD functions.
 
-The next planned diagnostic treatment is
+R28 tested
 [flows/pl-fullstack-crud-micro-contract-v1.flow](flows/pl-fullstack-crud-micro-contract-v1.flow).
-It keeps the deterministic scaffold but splits the domain work into smaller
-executable probes for customers, assets, work order create/read/detail behavior, and
-work order edit/delete plus safe relationship deletes. This tests whether tighter
-senior micro-contract guidance can move the local model past the repeated
-`domain_behavior_failed` plateau without using an external model or handing it a
-completed domain kernel.
+It did not break the `80/100` scaffold plateau. Solo again scored `61/100` with
+browser UI, seed integrity, and domain behavior failures. The micro-contract arm
+kept scaffold artifacts, UI surface, seed integrity, and path-root isolation intact,
+but failed the first customer micro-contract after the model reduced `src/domain.js`
+to six empty customer exports and dropped `deleteCustomer`, all asset exports, and
+all work order exports. Treat R28 as evidence that micro-contract decomposition
+improves artifact coverage over solo but still needs stronger export-surface control.
+
+The next planned diagnostic treatment is
+[flows/pl-fullstack-crud-micro-contract-v2.flow](flows/pl-fullstack-crud-micro-contract-v2.flow).
+It adds public domain API artifacts (`DOMAIN_API.md`, `contracts/domain-exports.json`,
+and `scripts/check-domain-*.cjs`), deterministic export-surface normalization between
+micro steps, and public checkpoint reviews. The hidden FSCRUD verifier remains in the
+experiment harness after the flow, not in model-facing repair loops. Run it with
+`--arms micro-v2`.

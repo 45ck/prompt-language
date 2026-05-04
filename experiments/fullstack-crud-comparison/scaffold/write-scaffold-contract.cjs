@@ -4,6 +4,27 @@ const { mkdirSync, writeFileSync } = require('node:fs');
 const { join, resolve } = require('node:path');
 
 const workspace = resolve(process.argv[2] ?? 'workspace/fscrud-01');
+const domainExports = [
+  'reset',
+  'listCustomers',
+  'createCustomer',
+  'readCustomer',
+  'detailCustomer',
+  'editCustomer',
+  'deleteCustomer',
+  'listAssets',
+  'createAsset',
+  'readAsset',
+  'detailAsset',
+  'editAsset',
+  'deleteAsset',
+  'listWorkOrders',
+  'createWorkOrder',
+  'readWorkOrder',
+  'detailWorkOrder',
+  'editWorkOrder',
+  'deleteWorkOrder',
+];
 
 function write(path, content) {
   writeFileSync(join(workspace, path), content.trimStart() + '\n', 'utf8');
@@ -13,6 +34,8 @@ mkdirSync(join(workspace, 'src'), { recursive: true });
 mkdirSync(join(workspace, '__tests__'), { recursive: true });
 mkdirSync(join(workspace, 'public'), { recursive: true });
 mkdirSync(join(workspace, 'data'), { recursive: true });
+mkdirSync(join(workspace, 'contracts'), { recursive: true });
+mkdirSync(join(workspace, 'scripts'), { recursive: true });
 
 write(
   'package.json',
@@ -23,11 +46,56 @@ write(
       scripts: {
         test: 'node --test',
         start: 'node src/server.js',
+        'check:domain:exports': 'node scripts/check-domain-exports.cjs',
+        'check:domain:customer': 'node scripts/check-domain-customer.cjs',
+        'check:domain:assets': 'node scripts/check-domain-assets.cjs',
+        'check:domain:work-orders': 'node scripts/check-domain-work-orders.cjs',
       },
     },
     null,
     2,
   ),
+);
+
+write(
+  'contracts/domain-exports.json',
+  JSON.stringify(
+    {
+      module: 'src/domain.js',
+      system: 'CommonJS',
+      exports: domainExports,
+    },
+    null,
+    2,
+  ),
+);
+
+write(
+  'DOMAIN_API.md',
+  `
+# Domain API Contract
+
+The domain module is \`src/domain.js\`. It must use CommonJS and expose exactly
+these function exports, no extras:
+
+\`\`\`js
+module.exports = {
+${domainExports.map((name) => `  ${name},`).join('\n')}
+};
+\`\`\`
+
+Run these public checks during implementation:
+
+- \`npm run check:domain:exports\`
+- \`npm run check:domain:customer\`
+- \`npm run check:domain:assets\`
+- \`npm run check:domain:work-orders\`
+- \`npm test\`
+
+Do not rename \`read*\` to \`get*\`, \`detail*\` to \`show*\`, or \`edit*\` to
+alternate operation names. Server code must import this module with
+\`require('./domain.js')\`.
+`,
 );
 
 write(
@@ -208,6 +276,177 @@ test('safe deletes do not leave active dangling work orders', () => {
     false,
   );
 });
+`,
+);
+
+write(
+  'scripts/check-domain-exports.cjs',
+  `
+const expected = ${JSON.stringify(domainExports, null, 2)};
+const domain = require('../src/domain.js');
+
+const actual = Object.keys(domain).sort();
+const sortedExpected = [...expected].sort();
+if (JSON.stringify(actual) !== JSON.stringify(sortedExpected)) {
+  console.error('domain_export_surface_mismatch');
+  console.error('expected=' + sortedExpected.join(','));
+  console.error('actual=' + actual.join(','));
+  process.exit(1);
+}
+
+for (const name of expected) {
+  if (typeof domain[name] !== 'function') {
+    console.error('domain_export_not_function:' + name);
+    process.exit(1);
+  }
+}
+
+console.log('domain_export_surface_ok');
+`,
+);
+
+write(
+  'scripts/check-domain-customer.cjs',
+  `
+const domain = require('../src/domain.js');
+
+domain.reset();
+const customer = domain.createCustomer({
+  name: 'Acme Field Services',
+  email: 'ops@example.test',
+  phone: '555-0100',
+  serviceAddress: '1 Field Way',
+});
+
+if (domain.listCustomers().length !== 1) throw new Error('customer list failed');
+if (domain.readCustomer(customer.id).name !== 'Acme Field Services') {
+  throw new Error('customer read failed');
+}
+if (domain.detailCustomer(customer.id).id !== customer.id) {
+  throw new Error('customer detail failed');
+}
+if (domain.editCustomer(customer.id, { name: 'Acme Updated' }).name !== 'Acme Updated') {
+  throw new Error('customer edit failed');
+}
+domain.deleteCustomer(customer.id);
+if (domain.listCustomers().length !== 0) throw new Error('customer delete failed');
+
+console.log('domain_customer_ok');
+`,
+);
+
+write(
+  'scripts/check-domain-assets.cjs',
+  `
+const domain = require('../src/domain.js');
+
+domain.reset();
+const customer = domain.createCustomer({ name: 'Acme Field Services' });
+const asset = domain.createAsset({
+  customerId: customer.id,
+  name: 'Truck 7',
+  serialNumber: 'TRK-7',
+  assetType: 'truck',
+  installedAt: '2026-04-30',
+});
+
+if (domain.listAssets().length !== 1) throw new Error('asset list failed');
+if (domain.readAsset(asset.id).customerId !== customer.id) throw new Error('asset read failed');
+if (domain.detailAsset(asset.id).id !== asset.id) throw new Error('asset detail failed');
+if (domain.editAsset(asset.id, { name: 'Truck 7A' }).name !== 'Truck 7A') {
+  throw new Error('asset edit failed');
+}
+
+let rejected = false;
+try {
+  domain.createAsset({ customerId: 'missing', name: 'Bad' });
+} catch {
+  rejected = true;
+}
+if (!rejected) throw new Error('asset customer validation failed');
+
+domain.deleteAsset(asset.id);
+domain.deleteCustomer(customer.id);
+console.log('domain_assets_ok');
+`,
+);
+
+write(
+  'scripts/check-domain-work-orders.cjs',
+  `
+const domain = require('../src/domain.js');
+
+function assertRejects(label, operation) {
+  let rejected = false;
+  try {
+    operation();
+  } catch {
+    rejected = true;
+  }
+  if (!rejected) throw new Error(label);
+}
+
+domain.reset();
+const customerA = domain.createCustomer({ name: 'Acme Field Services' });
+const customerB = domain.createCustomer({ name: 'Beta Manufacturing' });
+const assetA = domain.createAsset({ customerId: customerA.id, name: 'Truck 7' });
+const assetB = domain.createAsset({ customerId: customerB.id, name: 'Pump 2' });
+
+assertRejects('unknown customerId', () =>
+  domain.createWorkOrder({ customerId: 'missing', assetId: assetA.id, status: 'open' }),
+);
+assertRejects('unknown assetId', () =>
+  domain.createWorkOrder({ customerId: customerA.id, assetId: 'missing', status: 'open' }),
+);
+assertRejects('asset/customer mismatch', () =>
+  domain.createWorkOrder({ customerId: customerA.id, assetId: assetB.id, status: 'open' }),
+);
+assertRejects('completed requires completedAt', () =>
+  domain.createWorkOrder({
+    customerId: customerA.id,
+    assetId: assetA.id,
+    status: 'completed',
+    priority: 'normal',
+  }),
+);
+assertRejects('non-completed rejects completedAt', () =>
+  domain.createWorkOrder({
+    customerId: customerA.id,
+    assetId: assetA.id,
+    status: 'open',
+    priority: 'normal',
+    completedAt: '2026-04-30T00:00:00Z',
+  }),
+);
+
+const workOrder = domain.createWorkOrder({
+  customerId: customerA.id,
+  assetId: assetA.id,
+  status: 'scheduled',
+  priority: 'urgent',
+  title: 'Repair hydraulic lift',
+});
+if (domain.listWorkOrders().length !== 1) throw new Error('work order list failed');
+if (domain.readWorkOrder(workOrder.id).priority !== 'urgent') {
+  throw new Error('work order read failed');
+}
+if (domain.detailWorkOrder(workOrder.id).assetId !== assetA.id) {
+  throw new Error('work order detail failed');
+}
+if (
+  domain.editWorkOrder(workOrder.id, {
+    status: 'completed',
+    completedAt: '2026-04-30T00:00:00Z',
+  }).status !== 'completed'
+) {
+  throw new Error('work order edit failed');
+}
+domain.deleteWorkOrder(workOrder.id);
+if (domain.listWorkOrders().some((item) => item.id === workOrder.id)) {
+  throw new Error('work order delete failed');
+}
+
+console.log('domain_work_orders_ok');
 `,
 );
 

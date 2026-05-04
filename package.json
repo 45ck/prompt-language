@@ -92,7 +92,7 @@
     "experiment:fscrud": "node scripts/experiments/run-fullstack-crud-comparison.mjs",
     "experiment:fscrud:dry": "node scripts/experiments/run-fullstack-crud-comparison.mjs --dry-run",
     "experiment:fscrud:verify": "node experiments/fullstack-crud-comparison/verification/verify-fullstack-crud-workspace.mjs",
-    "experiment:fscrud:test": "node --test scripts/experiments/run-fullstack-crud-comparison.test.mjs",
+    "experiment:fscrud:test": "node --test scripts/experiments/run-fullstack-crud-comparison.test.mjs experiments/fullstack-crud-comparison/scaffold/*.test.mjs",
     "experiment:harness:test": "node --test experiments/harness-arena/*.test.mjs",
     "knip": "knip --production",
     "depcruise": "dependency-cruiser --config .dependency-cruiser.cjs --validate --output-type err src",

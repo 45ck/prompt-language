@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import {
+  classifyRunOutcome,
   createExperimentLock,
   isOllamaBackedRun,
   manifestBase,
@@ -50,6 +51,50 @@ test('detects Ollama-backed FSCRUD runs for native and aider local models', () =
 
 test('resolves the micro-contract diagnostic arm group', () => {
   assert.deepEqual(resolveArms('micro'), ['solo-local-crud', 'pl-local-crud-micro-contract']);
+});
+
+test('resolves the micro-contract v2 diagnostic arm group', () => {
+  assert.deepEqual(resolveArms('micro-v2'), ['solo-local-crud', 'pl-local-crud-micro-contract-v2']);
+});
+
+test('classifies failed flows separately from verifier product failures', () => {
+  assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
+  assert.equal(
+    classifyRunOutcome({
+      skipped: false,
+      runnerExitCode: 1,
+      runnerTimedOut: false,
+      verifierPassed: false,
+    }),
+    'flow_failed',
+  );
+  assert.equal(
+    classifyRunOutcome({
+      skipped: false,
+      runnerExitCode: 124,
+      runnerTimedOut: true,
+      verifierPassed: false,
+    }),
+    'timeout_partial',
+  );
+  assert.equal(
+    classifyRunOutcome({
+      skipped: false,
+      runnerExitCode: 0,
+      runnerTimedOut: false,
+      verifierPassed: false,
+    }),
+    'verifier_failed',
+  );
+  assert.equal(
+    classifyRunOutcome({
+      skipped: false,
+      runnerExitCode: 0,
+      runnerTimedOut: false,
+      verifierPassed: true,
+    }),
+    'verified_pass',
+  );
 });
 
 test('run manifest records explicit timeout retry env runtime and artifact fields', () => {

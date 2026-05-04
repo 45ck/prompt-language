@@ -64,6 +64,18 @@ customer, asset, work order create/read/detail, and work order edit/delete micro
 contracts. Each micro contract has a narrow allowed file set and an executable probe
 before the next slice starts.
 
+### `pl-local-crud-micro-contract-v2`
+
+The model runs
+[flows/pl-fullstack-crud-micro-contract-v2.flow](../flows/pl-fullstack-crud-micro-contract-v2.flow).
+This diagnostic follows R28. It keeps the deterministic scaffold and micro-contract
+shape, but adds public domain API artifacts and checkpoint scripts inside the
+workspace: `DOMAIN_API.md`, `contracts/domain-exports.json`, and
+`scripts/check-domain-*.cjs`. A deterministic export-surface normalizer runs between
+micro steps so missing exports become placeholder functions instead of ending the
+run before behavior can be tested. The hidden FSCRUD verifier is not used in
+model-facing repair loops; the experiment runner still executes it after the flow.
+
 ## Runner Policy
 
 Use the same local model for both arms. Preferred order after the `2026-04-30`
@@ -311,6 +323,26 @@ micro contracts instead of two larger domain cards. A pass or a non-domain verif
 failure supports the micro-contract control theory. Repeated export drift or rule
 failure after these probes is evidence that natural-language PL decomposition alone
 is still insufficient for this local model on FSCRUD.
+
+Observed R28 micro-contract diagnostic on `2026-05-04`: the native-Ollama run
+`live-fscrud-r28-ollama-micro-contract-v1-20260504-1015` remained diagnostic. Solo
+completed and again scored `61/100`, failing browser UI, UI surface, seed integrity,
+and domain behavior. The micro-contract arm scored `80/100` with scaffold artifacts,
+UI surface, seed integrity, and path-root isolation intact, but the runner failed
+before completion. The first customer micro-contract failed after `2/2` strict
+review rounds with `module_exports_surface_mismatch`; final `src/domain.js` had only
+six empty customer exports and was missing `deleteCustomer` plus all asset and work
+order exports. This supports the idea that PL structure improves artifact coverage
+over solo, but falsifies the v1 micro-contract sub-hypothesis that natural-language
+micro cards alone preserve the canonical CommonJS export surface.
+
+Next R29 diagnostic: run `--arms micro-v2`. The falsifiable hypothesis is that public
+domain API artifacts, checkpoint scripts, and deterministic export normalization can
+prevent export-surface collapse without giving the model a completed domain kernel
+or exposing hidden verifier details. If R29 still fails at customer CRUD after the
+export surface is stable, the next experiment should route domain implementation to
+a stronger external model or use a deterministic domain kernel while measuring local
+model performance on server/UI/docs.
 
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence

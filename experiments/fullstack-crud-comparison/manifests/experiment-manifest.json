@@ -31,6 +31,14 @@
       "flow": "../flows/pl-fullstack-crud-micro-contract-v1.flow",
       "status": "planned-diagnostic",
       "hypothesis": "Executable domain micro contracts can move the local model past the repeated domain_behavior_failed plateau without a deterministic domain kernel."
+    },
+    {
+      "id": "pl-local-crud-micro-contract-v2",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as baseline",
+      "flow": "../flows/pl-fullstack-crud-micro-contract-v2.flow",
+      "status": "planned-diagnostic",
+      "hypothesis": "Public domain API contracts, export-surface normalization, and checkpoint scripts can prevent local-model export collapse while preserving hidden verifier isolation."
     }
   ],
   "timeouts": {

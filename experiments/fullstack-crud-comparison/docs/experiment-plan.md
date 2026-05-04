@@ -481,6 +481,29 @@ creating README, run manifest, or verification report. The next control should b
 structural rather than lexical: deterministic UI skeleton, per-entity UI cards, or
 separate post-UI artifact cards.
 
+### R33 Deterministic UI Skeleton Control
+
+Next local-only diagnostic: R33 `--arms r33-ui-skeleton`. It keeps the protected
+R31 domain kernel and adds a protected deterministic `public/index.html` skeleton
+that satisfies the static UI-surface categories: customers, assets, work_orders,
+list/create/edit/detail/delete, relationship fields, status values, priority values,
+and completedAt.
+
+R33 planned arm:
+
+- `r33-pl-ui-skeleton-integration`:
+  [flows/pl-fullstack-crud-ui-skeleton-r33.flow](../flows/pl-fullstack-crud-ui-skeleton-r33.flow).
+
+Hypothesis: with domain behavior and UI surface coverage supplied deterministically
+and protected, local PL can complete only the remaining integration work:
+`src/server.js`, README, run manifest, verification report, and final wiring.
+
+Claim boundary: a pass would not prove the local model can generate the UI surface.
+It would support only the narrower claim that local inference can perform bounded
+connective assembly around deterministic behavioral and presentation contracts. A
+failure would shift attention away from domain/UI coverage and toward server route
+discipline, documentation completion, or local-runner reliability.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and

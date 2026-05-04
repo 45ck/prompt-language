@@ -47,18 +47,19 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 
 ## Arms
 
-| Arm                                | Runner                                                  | Model                                  | Purpose                                                                     |
-| ---------------------------------- | ------------------------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------- |
-| `solo-local-crud`                  | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                     |
-| `pl-local-crud-factory`            | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control             |
-| `pl-local-crud-scaffold-contract`  | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback  |
-| `pl-local-crud-micro-contract`     | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                 |
-| `pl-local-crud-micro-contract-v2`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests |
-| `r31-static-domain-kernel-control` | prompt-language flow                                    | deterministic only                     | Control: scaffold plus known-good domain kernel, no model-authored code     |
-| `r31-pl-domain-kernel-bulk`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel, local model owns server/UI/docs        |
-| `r32-pl-ui-surface-control`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus nearby server/UI surface gates     |
-| `pl-local-senior-crud`             | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates         |
-| `hybrid-router-crud`               | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review |
+| Arm                                | Runner                                                  | Model                                  | Purpose                                                                      |
+| ---------------------------------- | ------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
+| `solo-local-crud`                  | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                      |
+| `pl-local-crud-factory`            | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control              |
+| `pl-local-crud-scaffold-contract`  | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback   |
+| `pl-local-crud-micro-contract`     | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                  |
+| `pl-local-crud-micro-contract-v2`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests  |
+| `r31-static-domain-kernel-control` | prompt-language flow                                    | deterministic only                     | Control: scaffold plus known-good domain kernel, no model-authored code      |
+| `r31-pl-domain-kernel-bulk`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel, local model owns server/UI/docs         |
+| `r32-pl-ui-surface-control`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus nearby server/UI surface gates      |
+| `r33-pl-ui-skeleton-integration`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus protected deterministic UI skeleton |
+| `pl-local-senior-crud`             | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
+| `hybrid-router-crud`               | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
 Run the first claim attempt with only `solo-local-crud` and
 `pl-local-crud-factory`. Add the senior and hybrid arms only after the baseline
@@ -225,6 +226,20 @@ useful local-only diagnostic should use a deterministic UI skeleton or smaller
 per-entity UI cards, not more wording in one bulk UI prompt. The hybrid
 frontier-domain flow remains predeclared but not runner-enabled until per-step
 provider routing exists.
+
+### R33 Deterministic UI Skeleton Diagnostic
+
+R33 is designed as `--arms r33-ui-skeleton`. It keeps the R31 deterministic domain
+kernel, writes a deterministic `public/index.html` skeleton with all required
+entity/action/status/priority/completion surface terms, protects both files, and
+lets the local model own only `src/server.js`, `README.md`, `run-manifest.json`,
+and `verification-report.md`.
+
+This is intentionally narrower than R32. If R33 passes, it does not prove the local
+model can generate the UI surface. It proves the local model can perform constrained
+integration around deterministic behavior and deterministic UI-surface contracts. If
+it fails, the remaining bottleneck is likely server/docs/report discipline, route
+consistency, or local-runner reliability rather than domain or UI surface coverage.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

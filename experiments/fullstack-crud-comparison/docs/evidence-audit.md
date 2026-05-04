@@ -194,6 +194,20 @@ surface blocker. The next useful local-only control should add structure the mod
 cannot skip: deterministic UI skeleton, per-entity UI cards, or split artifact cards
 after the UI surface is green.
 
+## R33 Planned Evidence Target
+
+R33 is a deterministic UI skeleton control. It will keep the R31 deterministic
+domain kernel, add a protected deterministic `public/index.html` skeleton, and ask
+the local model to complete only server integration and final handoff artifacts.
+
+Evidence interpretation is intentionally bounded:
+
+- A pass would support "local model can finish constrained integration around
+  deterministic domain and UI contracts."
+- A pass would not support "local model can generate the UI surface."
+- A failure would indicate the remaining blocker is likely server/docs/report
+  orchestration or runner reliability, not domain behavior or static UI coverage.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

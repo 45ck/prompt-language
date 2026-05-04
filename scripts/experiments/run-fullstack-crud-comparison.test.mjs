@@ -89,6 +89,14 @@ test('resolves the R32 UI surface-control group', () => {
   ]);
 });
 
+test('resolves the R33 deterministic UI skeleton group', () => {
+  assert.deepEqual(resolveArms('r33-ui-skeleton'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r33-pl-ui-skeleton-integration',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

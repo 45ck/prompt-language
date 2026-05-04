@@ -241,23 +241,36 @@ integration around deterministic behavior and deterministic UI-surface contracts
 it fails, the remaining bottleneck is likely server/docs/report discipline, route
 consistency, or local-runner reliability rather than domain or UI surface coverage.
 
-Observed R33 on `2026-05-04`:
-`live-fscrud-r33-ui-skeleton-20260504-1533`.
+Observed R33 on `2026-05-04` after the invalid review syntax was fixed:
+`live-fscrud-r33-ui-skeleton-reviewgate-20260504-1624`.
 
-- `r30-solo-local`: `26/100`, `flow_failed`, hard failures
-  `package_json_missing_or_invalid`, `ui_surface_incomplete`,
-  `test_script_missing`, `seed_integrity_failed`, and `domain_behavior_failed`.
+- `r30-solo-local`: `8/100`, `flow_failed`, hard failures
+  `package_json_missing_or_invalid`, `browser_ui_missing`,
+  `ui_surface_incomplete`, `test_script_missing`, `tests_missing`,
+  `seed_integrity_failed`, and `domain_behavior_failed`.
 - `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
-- `r33-pl-ui-skeleton-integration`: `95/100`, `flow_failed`, no hard failures,
+- `r33-pl-ui-skeleton-integration`: `87/100`, `flow_failed`, no hard failures,
   `hiddenOraclePassed=true`, `domainBehaviorPassed=true`, and `uiSurface=true`.
 
 R33 partially supports the structural hypothesis: deterministic UI skeleton plus
 deterministic domain kernel removed the UI/domain blockers and produced verifier-
-passing product artifacts. It also exposed a separate runner problem: the PL prompt
-runner exited `3` with "completed without observable workspace progress" before the
-flow could mark its completion sentinel, even though the workspace contained the
-expected server, README, run manifest, and verification report and manual `npm test`
-passed.
+passing product artifacts. The fixed review-gate rerun also shows the remaining
+blocker is not syntax or UI/domain capability: strict public review failed after
+four repair rounds because the local model created `src/server.js` and `README.md`
+but repeatedly did not create `run-manifest.json` or `verification-report.md`.
+
+### R34 Server-Only Diagnostic
+
+R34 is designed as `--arms r34-server-only`. It keeps the deterministic domain
+kernel and deterministic UI skeleton from R33, adds deterministic README, run
+manifest, and verification report artifacts, protects all of those files, and
+lets the local model own only `src/server.js`.
+
+This isolates the R33 failure. If R34 passes, the evidence supports "local model
+can perform constrained server integration when handoff artifacts are supplied."
+It would not prove the local model can generate UI, docs, or manifest artifacts.
+If R34 fails, the remaining blocker is server integration or local repair-loop
+reliability, not artifact-following overhead.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

@@ -504,24 +504,33 @@ connective assembly around deterministic behavioral and presentation contracts. 
 failure would shift attention away from domain/UI coverage and toward server route
 discipline, documentation completion, or local-runner reliability.
 
-Observed R33 diagnostic on `2026-05-04`: the run
-`live-fscrud-r33-ui-skeleton-20260504-1533` used native Ollama with
+Observed R33 diagnostic on `2026-05-04`: the fixed review-gate run
+`live-fscrud-r33-ui-skeleton-reviewgate-20260504-1624` used native Ollama with
 `qwen3-opencode-big:30b`.
 
-- `r30-solo-local` scored `26/100` and failed package, UI, test-script, seed, and
-  domain behavior gates.
+- `r30-solo-local` scored `8/100` and failed package, browser UI, UI surface,
+  test-script, tests-present, seed, and domain behavior gates.
 - `r31-static-domain-kernel-control` scored `100/100` and reached
   `verified_pass`.
-- `r33-pl-ui-skeleton-integration` scored `95/100`; the verifier passed with no
+- `r33-pl-ui-skeleton-integration` scored `87/100`; the verifier passed with no
   hard failures, `hiddenOraclePassed=true`, `domainBehaviorPassed=true`, and
   `uiSurface=true`, but the PL runner returned `flow_failed`.
 
 Interpretation: R33 confirms the deterministic UI skeleton removes the R31/R32 UI
 surface blocker and that local inference can assemble the remaining product
-artifacts around deterministic domain/UI contracts. The failed flow outcome is a
-separate completion-observability issue: the prompt runner reported "completed
-without observable workspace progress" before the sentinel could be written, even
-though the generated workspace passed the verifier and manual `npm test`.
+artifacts around deterministic domain/UI contracts. After fixing invalid review
+syntax, the failed flow outcome is no longer a runner-observability issue. It is a
+substantive strict-review failure: across four repair rounds the local model
+created `src/server.js` and `README.md` but did not create `run-manifest.json` or
+`verification-report.md`, even though the grounded critique named the missing
+manifest path.
+
+Next diagnostic: R34 `--arms r34-server-only`. It supplies deterministic README,
+run manifest, and verification report artifacts in addition to deterministic
+domain/UI artifacts, then lets the local model own only `src/server.js`. This
+tests whether R33 failed because the task mixed server integration with handoff
+artifact creation, rather than because the model cannot complete server
+integration around protected contracts.
 
 Current operating interpretation:
 
@@ -537,6 +546,10 @@ Current operating interpretation:
   remaining local-only failure to UI/product surface completeness.
 - R32 shows stronger UI wording and nearby public gates still do not make the local
   model reliably fill the full surface in one bulk turn.
+- R33 shows deterministic UI/domain artifacts are enough for hidden verifier
+  product success, but local repair still missed non-code handoff artifacts under
+  strict review.
+- R34 is the next isolation test for server-only integration.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

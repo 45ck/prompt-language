@@ -36,6 +36,13 @@ const R33_PUBLIC_GATE_SCRIPT = join(
   'scaffold',
   'verify-r33-public.cjs',
 );
+const R34_HANDOFF_SCRIPT = join(
+  ROOT,
+  'experiments',
+  'fullstack-crud-comparison',
+  'scaffold',
+  'write-r34-handoff-artifacts.cjs',
+);
 
 function runVerifier(workspace: string, extraArgs: string[] = []) {
   return spawnSync(
@@ -498,6 +505,7 @@ describe('FSCRUD verifier script', () => {
       'pl-fullstack-crud-micro-contract-v1.flow',
       'pl-fullstack-crud-micro-contract-v2.flow',
       'pl-fullstack-crud-ui-skeleton-r33.flow',
+      'pl-fullstack-crud-server-only-r34.flow',
     ];
 
     for (const flow of flows) {
@@ -587,6 +595,29 @@ describe('FSCRUD verifier script', () => {
       expect(result.stdout).toContain('r33_public_gate_ok');
     } finally {
       rmSync(attemptRoot, { recursive: true, force: true });
+    }
+  });
+
+  it('writes deterministic R34 handoff artifacts for server-only diagnostics', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'fscrud-r34-handoff-'));
+    try {
+      execFileSync(process.execPath, [R34_HANDOFF_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+
+      const readme = readFileSync(join(workspace, 'README.md'), 'utf8');
+      const manifest = readFileSync(join(workspace, 'run-manifest.json'), 'utf8');
+      const report = readFileSync(join(workspace, 'verification-report.md'), 'utf8');
+
+      expect(readme).toContain('npm test');
+      expect(readme).toContain('npm start');
+      expect(manifest).toContain('r34-pl-server-only-integration');
+      expect(manifest).toContain('deterministic-handoff-docs');
+      expect(report).toContain('check:domain:exports');
+      expect(report).toContain('hidden verifier');
+    } finally {
+      rmSync(workspace, { recursive: true, force: true });
     }
   });
 

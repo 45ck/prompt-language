@@ -75,7 +75,17 @@
       "status": "diagnostic-complete",
       "hypothesis": "With domain behavior and UI surface coverage supplied deterministically and protected, local PL can complete the remaining server, docs, manifest, report, and final wiring work without corrupting protected artifacts.",
       "claimBoundary": "This is a deterministic UI skeleton control. A pass would not prove the local model can generate the UI surface; it would only support the narrower claim that local inference can perform constrained integration around deterministic behavioral and presentation contracts.",
-      "result": "Observed in live-fscrud-r33-ui-skeleton-20260504-1533: verifier passed 95/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, uiSurface=true, and no hard failures, but the PL runner returned flow_failed because the prompt runner classified completion as no observable workspace progress."
+      "result": "Observed in live-fscrud-r33-ui-skeleton-reviewgate-20260504-1624 after fixing invalid review syntax: verifier passed 87/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, uiSurface=true, and no hard failures, but strict public review failed after 4 rounds because the local model did not create run-manifest.json or verification-report.md."
+    },
+    {
+      "id": "r34-pl-server-only-integration",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R33 after deterministic domain kernel, deterministic UI skeleton, and deterministic handoff artifacts setup",
+      "flow": "../flows/pl-fullstack-crud-server-only-r34.flow",
+      "status": "planned-diagnostic",
+      "hypothesis": "If README, manifest, and verification report are supplied deterministically and protected, the local model can complete only src/server.js integration around deterministic domain and UI contracts.",
+      "claimBoundary": "This is a server-only local integration diagnostic. A pass would not prove local generation of UI, docs, or manifest artifacts; it would isolate whether local inference can complete the remaining server integration task.",
+      "result": "Not yet run."
     }
   ],
   "timeouts": {
@@ -87,5 +97,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r33-product-passed-runner-observability-failed"
+  "resultStatus": "diagnostic-only-r34-server-only-planned"
 }

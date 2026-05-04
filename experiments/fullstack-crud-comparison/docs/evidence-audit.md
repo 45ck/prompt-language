@@ -208,19 +208,24 @@ Evidence interpretation is intentionally bounded:
 - A failure would indicate the remaining blocker is likely server/docs/report
   orchestration or runner reliability, not domain behavior or static UI coverage.
 
-Observed R33 result:
-`live-fscrud-r33-ui-skeleton-20260504-1533`.
+Observed R33 result after the review-gate syntax fix:
+`live-fscrud-r33-ui-skeleton-reviewgate-20260504-1624`.
 
-- Solo baseline: `26/100`, broad product failure.
+- Solo baseline: `8/100`, broad product failure.
 - Static deterministic control: `100/100`, `verified_pass`.
-- R33 treatment: `95/100`, verifier passed, no hard failures, hidden oracle passed,
+- R33 treatment: `87/100`, verifier passed, no hard failures, hidden oracle passed,
   domain behavior passed, and UI surface passed.
 
-The treatment still has `outcome=flow_failed` because the PL prompt runner exited
-with code `3` and reason "completed without observable workspace progress." This is
-best classified as runner completion-observability debt, not product failure: the
-workspace contained `src/server.js`, README, run manifest, verification report, and
-manual `npm test` passed.
+The treatment still has `outcome=flow_failed`, but the cause changed after fixing
+the invalid review syntax. The flow reached strict grounded review and failed after
+four rounds because `run-manifest.json` and `verification-report.md` remained
+missing. The local model did create `src/server.js` and `README.md`, and the hidden
+verifier still passed with no hard failures. Classify this as artifact-following
+debt under strict local repair, not domain or UI failure.
+
+Next evidence target: R34 supplies README, run manifest, and verification report
+deterministically and protects them, leaving only `src/server.js` to the local
+model. This separates server integration ability from handoff-artifact discipline.
 
 ## Model-Use Boundary
 

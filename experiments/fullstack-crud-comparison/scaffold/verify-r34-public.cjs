@@ -1,0 +1,132 @@
+#!/usr/bin/env node
+'use strict';
+
+const { existsSync, readFileSync } = require('node:fs');
+const { join } = require('node:path');
+const { spawnSync } = require('node:child_process');
+
+const workspace = process.argv[2] || 'workspace/fscrud-01';
+const attemptRoot = process.cwd();
+
+function fail(message) {
+  console.error(message);
+  process.exit(1);
+}
+
+function assertExists(relativePath) {
+  const fullPath = join(attemptRoot, relativePath);
+  if (!existsSync(fullPath)) {
+    fail(`missing_file:${relativePath}`);
+  }
+  return fullPath;
+}
+
+function readWorkspaceFile(relativePath) {
+  return readFileSync(assertExists(join(workspace, relativePath)), 'utf8');
+}
+
+for (const leak of ['src/domain.js', 'public/index.html']) {
+  if (existsSync(join(attemptRoot, leak))) {
+    fail(`run_root_leak:${leak}`);
+  }
+}
+
+for (const relativePath of [
+  'src/server.js',
+  'public/index.html',
+  'README.md',
+  'run-manifest.json',
+  'verification-report.md',
+]) {
+  assertExists(join(workspace, relativePath));
+}
+
+const domain = readWorkspaceFile('src/domain.js');
+if (domain.includes('not implemented')) {
+  fail('domain_kernel_not_preserved');
+}
+
+const ui = readWorkspaceFile('public/index.html').toLowerCase();
+for (const term of [
+  'customers',
+  'assets',
+  'work_orders',
+  'list',
+  'create',
+  'edit',
+  'detail',
+  'delete',
+  'customerid',
+  'assetid',
+  'status',
+  'open',
+  'scheduled',
+  'in_progress',
+  'completed',
+  'cancelled',
+  'priority',
+  'low',
+  'normal',
+  'urgent',
+  'completedat',
+]) {
+  if (!ui.includes(term)) {
+    fail(`ui_skeleton_term_missing:${term}`);
+  }
+}
+
+const server = readWorkspaceFile('src/server.js').toLowerCase();
+for (const term of ["require('./domain.js')", 'customers', 'assets', 'work_orders']) {
+  if (!server.includes(term)) {
+    fail(`server_term_missing:${term}`);
+  }
+}
+
+const manifest = readWorkspaceFile('run-manifest.json').toLowerCase();
+for (const term of [
+  'r34-pl-server-only-integration',
+  'deterministic-domain-kernel',
+  'deterministic-ui-skeleton',
+  'deterministic-handoff-docs',
+  'local-only',
+]) {
+  if (!manifest.includes(term)) {
+    fail(`manifest_term_missing:${term}`);
+  }
+}
+
+const readme = readWorkspaceFile('README.md').toLowerCase();
+if (
+  !readme.includes('npm test') ||
+  !readme.includes('npm start') ||
+  !readme.includes('deterministic')
+) {
+  fail('readme_missing_policy_or_commands');
+}
+
+const report = readWorkspaceFile('verification-report.md').toLowerCase();
+if (!report.includes('check:domain:exports') || !report.includes('hidden verifier')) {
+  fail('verification_report_missing_checks');
+}
+
+const publicChecks = [
+  'npm run check:domain:exports',
+  'npm run check:domain:customer',
+  'npm run check:domain:assets',
+  'npm run check:domain:work-orders',
+  'npm test',
+];
+
+for (const command of publicChecks) {
+  const result = spawnSync(command, {
+    cwd: join(attemptRoot, workspace),
+    encoding: 'utf8',
+    shell: true,
+    stdio: 'inherit',
+  });
+  if (result.status !== 0) {
+    fail(`public_check_failed:${command}`);
+  }
+}
+
+console.log('r34_public_gate_ok');

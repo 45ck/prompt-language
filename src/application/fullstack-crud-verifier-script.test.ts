@@ -43,6 +43,13 @@ const R34_HANDOFF_SCRIPT = join(
   'scaffold',
   'write-r34-handoff-artifacts.cjs',
 );
+const R34_PUBLIC_GATE_SCRIPT = join(
+  ROOT,
+  'experiments',
+  'fullstack-crud-comparison',
+  'scaffold',
+  'verify-r34-public.cjs',
+);
 
 function runVerifier(workspace: string, extraArgs: string[] = []) {
   return spawnSync(
@@ -618,6 +625,50 @@ describe('FSCRUD verifier script', () => {
       expect(report).toContain('hidden verifier');
     } finally {
       rmSync(workspace, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts an R34 workspace that satisfies the server-only public gate contract', () => {
+    const attemptRoot = mkdtempSync(join(tmpdir(), 'fscrud-r34-public-gate-'));
+    const workspace = join(attemptRoot, 'workspace', 'fscrud-01');
+    try {
+      execFileSync(process.execPath, [SCAFFOLD_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      execFileSync(process.execPath, [DOMAIN_KERNEL_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      execFileSync(process.execPath, [R34_HANDOFF_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      writeFileSync(
+        join(workspace, 'public', 'index.html'),
+        [
+          '<!doctype html><html><body>',
+          '<section>customers customerId list create edit detail delete</section>',
+          '<section>assets assetId customerId list create edit detail delete</section>',
+          '<section>work_orders status open scheduled in_progress completed cancelled priority low normal urgent completedAt list create edit detail delete</section>',
+          '</body></html>',
+        ].join('\n'),
+      );
+      writeFileSync(
+        join(workspace, 'src', 'server.js'),
+        "const domain = require('./domain.js');\nmodule.exports = { domain, customers: true, assets: true, work_orders: true };\n",
+      );
+
+      const result = spawnSync(process.execPath, [R34_PUBLIC_GATE_SCRIPT, 'workspace/fscrud-01'], {
+        cwd: attemptRoot,
+        encoding: 'utf8',
+        timeout: 30_000,
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('r34_public_gate_ok');
+    } finally {
+      rmSync(attemptRoot, { recursive: true, force: true });
     }
   });
 

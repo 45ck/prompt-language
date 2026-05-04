@@ -677,6 +677,45 @@ itself, not only the downstream rendered handoff files. The next local-only
 experiment should require runtime-level schema/constrained output support, or the
 claim must be weakened to deterministic artifact rendering from non-model inputs.
 
+### R37 Schema-Repaired Handoff-Source Diagnostic
+
+R37 tests whether the R36 failure is strict JSON/schema fidelity rather than handoff
+intent. The local model owns only `handoff-source.raw.json`. Deterministic tooling
+then checks that the raw file contains the minimum local-only handoff intent terms
+and normalizes canonical `handoff-source.json` before rendering README, manifest,
+and verification-report artifacts.
+
+R37 planned arm:
+
+- `r37-pl-schema-repaired-handoff-source`:
+  [flows/pl-fullstack-crud-schema-repaired-handoff-r37.flow](../flows/pl-fullstack-crud-schema-repaired-handoff-r37.flow).
+
+Hypothesis: if R36 failed because exact JSON syntax was too brittle, the local model
+can still emit enough raw handoff intent for deterministic schema repair while the
+product path remains protected and verifier-green.
+
+Claim boundary: a pass would support only schema-repairable handoff intent, not
+strict model-authored schema compliance and not model-authored final README,
+manifest, or verification-report artifacts.
+
+Observed R37 results on `2026-05-04`:
+
+- `live-fscrud-r37-schema-repaired-handoff-20260504-2055`: treatment scored
+  `82/100`; hidden oracle, domain behavior, UI surface, seed integrity, and path
+  isolation passed. The model wrote a repairable raw handoff intent object, and
+  deterministic normalization produced canonical `handoff-source.json`, but an
+  unnecessary post-normalization model review stopped progress before deterministic
+  rendering.
+- `live-fscrud-r37-schema-repaired-handoff-fixed-20260504-2110`: after removing that
+  post-normalization model step, treatment scored `100/100` and completed as
+  `verified_pass` with public gate, hidden oracle, executable domain behavior, and
+  path isolation all green.
+
+Updated R37 interpretation: the R36 failure was partly strict schema fidelity. The
+local model can emit enough raw handoff intent for deterministic schema repair, but
+it still should not be credited with strict JSON-schema compliance or with generating
+the final handoff artifacts.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -707,6 +746,9 @@ Current operating interpretation:
   exact-template style.
 - R36 shows that the same brittleness remains when the handoff task is reduced to
   one structured source file, including an exact JSON template.
+- R37 separates schema syntax fidelity from raw handoff intent emission and supports
+  the narrow schema-repair path: local emits minimal intent; deterministic tooling
+  owns schema normalization and rendered handoff artifacts.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

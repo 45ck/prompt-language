@@ -350,6 +350,29 @@ diagnostic would need runtime-level schema/constrained output support, or it sho
 be labeled as deterministic artifact rendering rather than local model handoff
 generation.
 
+## R37 Evidence Update
+
+R37 gives the model only
+`handoff-source.raw.json` and uses deterministic tooling to check for minimum
+handoff intent before normalizing canonical `handoff-source.json` and rendering the
+final handoff artifacts.
+
+Observed R37 results:
+
+- `live-fscrud-r37-schema-repaired-handoff-20260504-2055`: treatment scored
+  `82/100`; the model emitted repairable raw intent and deterministic normalization
+  produced canonical `handoff-source.json`, but a post-normalization model review
+  stopped the flow before deterministic rendering.
+- `live-fscrud-r37-schema-repaired-handoff-fixed-20260504-2110`: treatment scored
+  `100/100` and passed public gate, hidden verifier, executable domain behavior,
+  and path isolation after that unnecessary model step was removed.
+
+Updated R37 evidence: this supports only schema-repairable local handoff intent. It
+does not prove strict local JSON-schema compliance or local generation of final
+README, manifest, or verification-report artifacts. It does show a useful pattern:
+let local inference emit small intent payloads, then use deterministic normalization
+and rendering for artifacts where exact schema/format compliance matters.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

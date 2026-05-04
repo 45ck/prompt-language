@@ -106,6 +106,16 @@
       "hypothesis": "If freeform handoff artifact generation is the R35 blocker, the local model can instead create one compliant structured handoff-source.json that deterministic tooling renders into README, run-manifest.json, and verification-report.md.",
       "claimBoundary": "This is a structured-source diagnostic. A pass would not prove local generation of domain, UI, server, or final rendered handoff files; it would isolate whether local inference can generate a compliant structured source for deterministic handoff rendering.",
       "result": "Observed in live-fscrud-r36-structured-handoff-20260504-2008 and live-fscrud-r36-structured-handoff-template-20260504-2025: both scored 82/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, uiSurface=true, seed integrity passing, and pathRootIsolation=true, but flow_failed at the structured source review. The first run wrote {}, and the exact-template follow-up wrote an invented short object instead of the supplied JSON. R36 does not support the hypothesis that a single structured source file is enough under the current natural-language local runner."
+    },
+    {
+      "id": "r37-pl-schema-repaired-handoff-source",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R36 after deterministic domain kernel, deterministic UI skeleton, and deterministic server integration setup",
+      "flow": "../flows/pl-fullstack-crud-schema-repaired-handoff-r37.flow",
+      "status": "diagnostic-complete",
+      "hypothesis": "If the R36 failure is strict JSON schema fidelity rather than handoff intent, the local model can emit a raw handoff-source intent file that deterministic schema repair normalizes into canonical handoff-source.json and rendered handoff artifacts.",
+      "claimBoundary": "This is a schema-repair diagnostic. A pass would not prove local generation of final handoff files or strict schema compliance; it would isolate whether local inference can produce enough handoff intent for deterministic constrained normalization.",
+      "result": "Observed in live-fscrud-r37-schema-repaired-handoff-fixed-20260504-2110: treatment scored 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored raw source contained the required local/deterministic/domain/UI/server/handoff intent but not the final schema; deterministic normalization and rendering produced canonical handoff artifacts."
     }
   ],
   "timeouts": {
@@ -117,5 +127,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r36-structured-source-blocked"
+  "resultStatus": "diagnostic-only-r37-schema-repair-passed"
 }

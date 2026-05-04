@@ -451,10 +451,16 @@ the local model can complete most surrounding artifacts without falling back int
 the R30 domain-stub failure. The run still is not a full local FSCRUD success,
 because the UI/product surface remained incomplete under the hidden verifier.
 
-Next local-only diagnostic: keep the protected domain kernel and tighten server/UI
-surface gates around list, create, read, edit, detail, delete, relationship fields,
-and visible seed data. Do not spend another run on domain wording until a surface
-control lane has been tested.
+Next local-only diagnostic: R32 `--arms r32-ui-surface`. It keeps the protected
+domain kernel and tightens server/UI surface gates around nearby list, create, edit,
+detail, delete terms for each entity plus relationship fields and visible
+work-order status/priority/completion terms. Do not spend another run on domain
+wording until the surface-control lane has been tested.
+
+R32 planned arm:
+
+- `r32-pl-ui-surface-control`:
+  [flows/pl-fullstack-crud-ui-surface-r32.flow](../flows/pl-fullstack-crud-ui-surface-r32.flow).
 
 Current operating interpretation:
 

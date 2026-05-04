@@ -88,6 +88,11 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-domain-kernel-r31.flow',
   ),
+  'r32-pl-ui-surface-control': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-ui-surface-r32.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
@@ -106,6 +111,11 @@ const ARM_GROUPS = {
     'r30-solo-local',
     'r31-static-domain-kernel-control',
     'r31-pl-domain-kernel-bulk',
+  ],
+  'r32-ui-surface': [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r32-pl-ui-surface-control',
   ],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],

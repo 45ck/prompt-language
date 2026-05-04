@@ -57,6 +57,14 @@
       "status": "diagnostic-complete",
       "hypothesis": "With the domain kernel protected, local PL can complete server, UI, docs, manifest, and verification-report work without corrupting protected artifacts.",
       "result": "Observed in live-fscrud-r31-domain-kernel-20260504-1247: 93/100 flow_failed with domain behavior passing and ui_surface_incomplete remaining."
+    },
+    {
+      "id": "r32-pl-ui-surface-control",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R31 after deterministic domain kernel setup",
+      "flow": "../flows/pl-fullstack-crud-ui-surface-r32.flow",
+      "status": "planned-diagnostic",
+      "hypothesis": "With the domain kernel protected and explicit nearby UI entity/action gates, local PL can close the remaining ui_surface_incomplete failure without frontier edits."
     }
   ],
   "timeouts": {

@@ -164,10 +164,10 @@ PL lane can avoid the R30 executable-domain failure when the domain layer is sup
 and protected. It still does not prove local PL can complete FSCRUD end to end,
 because the local bulk lane missed hidden UI/product-surface coverage.
 
-The evidence-backed next step is a protected-kernel server/UI surface-control lane.
-The hypothesis should be narrower than "PL solves FSCRUD locally": test whether
-explicit visible UI route/field/operation gates can close the final `7/100` gap
-without frontier edits.
+The evidence-backed next step is R32, a protected-kernel server/UI surface-control
+lane. The hypothesis is narrower than "PL solves FSCRUD locally": test whether
+explicit nearby UI entity/action gates can close the final `7/100` gap without
+frontier edits.
 
 ## Model-Use Boundary
 

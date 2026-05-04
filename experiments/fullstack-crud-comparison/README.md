@@ -56,6 +56,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `pl-local-crud-micro-contract-v2`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests |
 | `r31-static-domain-kernel-control` | prompt-language flow                                    | deterministic only                     | Control: scaffold plus known-good domain kernel, no model-authored code     |
 | `r31-pl-domain-kernel-bulk`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel, local model owns server/UI/docs        |
+| `r32-pl-ui-surface-control`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus nearby server/UI surface gates     |
 | `pl-local-senior-crud`             | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates         |
 | `hybrid-router-crud`               | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review |
 
@@ -207,9 +208,11 @@ complete executable domain behavior when the domain layer is supplied and protec
 It does not yet prove full local FSCRUD completion: the remaining blocker moved to
 the browser/server product surface, especially complete visible UI coverage.
 
-The next useful local-only diagnostic is a server/UI surface-control lane around the
-protected domain kernel, not another domain prompt. The hybrid frontier-domain flow
-remains predeclared but not runner-enabled until per-step provider routing exists.
+The next useful local-only diagnostic is R32:
+`--arms r32-ui-surface`. It keeps the protected domain kernel and adds explicit
+nearby entity/action UI coverage gates around the R31 failure. The hybrid
+frontier-domain flow remains predeclared but not runner-enabled until per-step
+provider routing exists.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

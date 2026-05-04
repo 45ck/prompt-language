@@ -1,0 +1,42 @@
+Goal: R32 local PL UI surface-control lane with deterministic FSCRUD-01 domain kernel
+
+memory:
+  fscrud_workspace
+  fscrud_task
+  fscrud_r32_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="TASK.md"
+  remember key="fscrud_r32_policy" value="R32 local-only surface lane; deterministic domain kernel is protected; local model owns server UI docs only"
+
+  let protected_files = "workspace/fscrud-01/src/domain.js, workspace/fscrud-01/package.json, workspace/fscrud-01/CONTRACT.md, workspace/fscrud-01/DOMAIN_API.md, workspace/fscrud-01/contracts/domain-exports.json, workspace/fscrud-01/__tests__/domain.contract.test.js, workspace/fscrud-01/data/seed.json, workspace/fscrud-01/scripts/check-domain-exports.cjs, workspace/fscrud-01/scripts/check-domain-customer.cjs, workspace/fscrud-01/scripts/check-domain-assets.cjs, workspace/fscrud-01/scripts/check-domain-work-orders.cjs"
+  let allowed_files = "workspace/fscrud-01/src/server.js, workspace/fscrud-01/public/index.html, workspace/fscrud-01/README.md, workspace/fscrud-01/run-manifest.json, workspace/fscrud-01/verification-report.md"
+  let task_contract = "FSCRUD-01 field-service work order tracker. Domain logic already passes public checks and must not be edited. The remaining measured risk is UI surface coverage."
+  let ui_surface_contract = "In public/index.html create three explicit nearby sections: customers, assets, work_orders. Each section must contain the words list, create, edit, detail, delete within that same section. The work_orders section must also visibly contain customerId, assetId, status, open, scheduled, in_progress, completed, cancelled, priority, low, normal, urgent, completedAt. The customers and assets sections must include customerId and assetId where relationship context is relevant."
+
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs','../../../../../fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('scaffold script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-domain-kernel.cjs','../../../../../fullstack-crud-comparison/scaffold/write-domain-kernel.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('domain kernel script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: cd workspace/fscrud-01 && npm run check:domain:exports && npm run check:domain:customer && npm run check:domain:assets && npm run check:domain:work-orders && npm test [timeout 300]
+  run: node -e "const fs=require('fs');for(const p of ['workspace/fscrud-01/src/server.js','workspace/fscrud-01/public/index.html','workspace/fscrud-01/README.md','workspace/fscrud-01/run-manifest.json','workspace/fscrud-01/verification-report.md'])fs.rmSync(p,{force:true});" [timeout 60]
+
+  prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. EXPERIMENT_ARM r32-pl-ui-surface-control. PROVIDER local-only. The domain kernel is already implemented and green. Do not edit protected files: ${protected_files}. Create or repair only these files: ${allowed_files}. Use CommonJS server code that imports ./domain.js. Build server routes and a browser UI for customers, assets, and work_orders. UI surface contract: ${ui_surface_contract}. Server and UI must expose list/create/read/edit/detail/delete flows for all three entities, plus relationship fields customerId and assetId. README must document npm test and npm start. run-manifest.json must record r32-pl-ui-surface-control, deterministic-domain-kernel, and local-only surface-control. verification-report.md must list public checks run by the flow and say the hidden verifier is run only by the harness. Task contract: ${task_contract}.
+  review strict criteria: "Local surface files must exist, preserve the deterministic domain kernel, pass public domain checks and tests, and satisfy nearby UI surface coverage for every entity/action pair." grounded-by 'node -e "const fs=require(\"fs\");if(fs.existsSync(\"src/domain.js\")){console.error(\"run_root_src_domain_leak\");process.exit(1)}for(const p of [\"workspace/fscrud-01/src/server.js\",\"workspace/fscrud-01/public/index.html\",\"workspace/fscrud-01/README.md\",\"workspace/fscrud-01/run-manifest.json\",\"workspace/fscrud-01/verification-report.md\"]){if(!fs.existsSync(p)){console.error(\"missing_allowed_file:\"+p);process.exit(1)}}const domain=fs.readFileSync(\"workspace/fscrud-01/src/domain.js\",\"utf8\");if(domain.includes(\"not implemented\")){console.error(\"domain_kernel_not_preserved\");process.exit(1)}const ui=fs.readFileSync(\"workspace/fscrud-01/public/index.html\",\"utf8\").toLowerCase();const server=fs.readFileSync(\"workspace/fscrud-01/src/server.js\",\"utf8\").toLowerCase();const corpus=ui+\"\\n\"+server;function hasAllNear(entityTerms,actionTerms){const left=[];for(const term of entityTerms){let i=corpus.indexOf(term);while(i!==-1){left.push(i);i=corpus.indexOf(term,i+term.length)}}const right=[];for(const term of actionTerms){let i=corpus.indexOf(term);while(i!==-1){right.push(i);i=corpus.indexOf(term,i+term.length)}}return left.some((l)=>right.some((r)=>Math.abs(l-r)<=1200));}const entities={customers:[\"customer\",\"customers\"],assets:[\"asset\",\"assets\"],workOrders:[\"work order\",\"work orders\",\"workorder\",\"workorders\",\"work_order\",\"work_orders\"]};const actions={list:[\"list\",\"table\",\"rows\",\"browse\",\"view all\"],create:[\"create\",\"add\",\"new\"],edit:[\"edit\",\"update\",\"modify\",\"save\"],detail:[\"detail\",\"details\",\"view\",\"show\"],delete:[\"delete\",\"remove\",\"archive\"]};for(const [entity,terms] of Object.entries(entities)){for(const [action,actionTerms] of Object.entries(actions)){if(!hasAllNear(terms,actionTerms)){console.error(\"missing_ui_entity_action:\"+entity+\".\"+action);process.exit(1)}}}for(const term of [\"customerid\",\"customer id\",\"assetid\",\"asset id\",\"status\",\"open\",\"scheduled\",\"in_progress\",\"in progress\",\"completed\",\"cancelled\",\"priority\",\"low\",\"normal\",\"urgent\",\"completedat\",\"completed at\"]){if(!corpus.includes(term)){console.error(\"missing_ui_task_term:\"+term);process.exit(1)}}const manifest=fs.readFileSync(\"workspace/fscrud-01/run-manifest.json\",\"utf8\").toLowerCase();if(!manifest.includes(\"r32-pl-ui-surface-control\")||!manifest.includes(\"deterministic-domain-kernel\")||!manifest.includes(\"local-only\")){console.error(\"manifest_missing_r32_surface_labels\");process.exit(1)}" && cd workspace/fscrud-01 && npm run check:domain:exports && npm run check:domain:customer && npm run check:domain:assets && npm run check:domain:work-orders && npm test' max 4
+    prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. Repair only these allowed files: ${allowed_files}. Do not edit protected files: ${protected_files}. Make the UI surface contract explicit with nearby per-entity operation sections. Critique: ${_review_critique}
+  end
+
+  run: node -e "require('fs').writeFileSync('workspace/fscrud-01/.pl-r32-ui-surface-control-complete','ok\n')" [timeout 60]
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/DOMAIN_API.md
+  file_exists workspace/fscrud-01/contracts/domain-exports.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/public/index.html
+  file_exists workspace/fscrud-01/__tests__/domain.contract.test.js
+  file_exists workspace/fscrud-01/data/seed.json
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md
+  file_exists workspace/fscrud-01/.pl-r32-ui-surface-control-complete

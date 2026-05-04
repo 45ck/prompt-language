@@ -97,6 +97,6 @@ Observed interpretation:
   back into the R30 domain-stub failure.
 
 R31 moves the local-model bottleneck from executable domain behavior to surrounding
-server/UI surface completeness. The next local-only experiment should keep the
-protected kernel and tighten browser/server UI coverage gates before considering a
-hybrid frontier-domain lane.
+server/UI surface completeness. The next local-only experiment is R32
+`r32-pl-ui-surface-control`: keep the protected kernel and tighten browser/server UI
+coverage gates before considering a hybrid frontier-domain lane.

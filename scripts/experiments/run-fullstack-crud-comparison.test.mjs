@@ -81,6 +81,14 @@ test('resolves the R31 deterministic domain-kernel control group', () => {
   ]);
 });
 
+test('resolves the R32 UI surface-control group', () => {
+  assert.deepEqual(resolveArms('r32-ui-surface'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r32-pl-ui-surface-control',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

@@ -155,3 +155,31 @@ and `scripts/check-domain-*.cjs`), deterministic export-surface normalization be
 micro steps, and public checkpoint reviews. The hidden FSCRUD verifier remains in the
 experiment harness after the flow, not in model-facing repair loops. Run it with
 `--arms micro-v2`.
+
+## Current System Interpretation
+
+R28 is useful diagnostic evidence, not a product-quality win and not a claim-grade
+PL-vs-solo batch. It shows that the local Ollama lane can execute real workspace
+actions and that prompt-language scaffolding can preserve broad artifact coverage:
+the micro-contract arm kept scaffold artifacts, UI surface, seed integrity, and
+path-root isolation where solo again failed several product gates. It also shows the
+current bottleneck clearly: natural-language micro cards did not preserve the exact
+CommonJS export surface once the model started editing `src/domain.js`.
+
+R29 micro-v2 exists to test one narrower control theory: public, model-visible
+domain API artifacts plus deterministic export normalization may keep the export
+surface stable long enough for behavior checks to matter. It is not intended to give
+the model the hidden verifier or a completed domain kernel. If R29 still fails while
+the export surface is stable, treat that as evidence that this local model needs
+either a stronger implementation lane for domain logic or a deterministic domain
+kernel, not as evidence that the existing local-only flow is complete.
+
+Use local Ollama when the purpose is measuring the local-model thesis, performing
+bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic
+path. Keep the same runner, model, commit, verifier, and timeout policy inside any
+claim batch.
+
+Use an external frontier model only when the question has changed to hybrid routing:
+read-only final review, high-ambiguity root-cause analysis, security or data-loss
+risk, or repeated local failure after the run has been classified. Do not mix
+frontier edits into a local-only claim batch; record that as a separate hybrid arm.

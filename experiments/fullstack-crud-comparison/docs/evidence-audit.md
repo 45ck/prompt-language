@@ -1,6 +1,6 @@
 # Evidence Audit
 
-Date: 2026-04-30
+Date: 2026-05-04
 
 ## What We Already Know
 
@@ -38,6 +38,12 @@ Existing CRM and website factories are adjacent evidence, not the direct answer.
 The next experiment should therefore be a full-stack CRUD benchmark with objective
 gates and paired local-model runs.
 
+As of R28, we still do not have a claim-grade FSCRUD batch. The live local probes are
+valuable because they expose the bottleneck, but they remain diagnostics: solo has
+repeatedly completed partial apps around the `61/100` level, while the strongest
+prompt-language scaffold and micro-contract arms have plateaued around `80/100` with
+`domain_behavior_failed`.
+
 ## Narrowed Thesis
 
 The defensible thesis is not "prompt-language always beats direct prompting."
@@ -71,3 +77,46 @@ drop details, but still small enough to verify deterministically.
 The comparison should use local inference first. A hybrid frontier-router arm is
 valuable later, but adding it now would blur the core question. First prove or falsify
 the local-only PL lift.
+
+## R28 Evidence Update
+
+R28 tested the first micro-contract treatment with native Ollama. The result supports
+one narrow claim and rejects another:
+
+- Supported: prompt-language structure can improve broad artifact coverage over the
+  same local model running solo.
+- Rejected: natural-language micro-contract cards alone can reliably preserve the
+  exact CommonJS domain export surface for this task and model.
+
+The important failure was not missing documentation or a cosmetic UI issue. The model
+reduced `src/domain.js` to a partial set of empty customer exports, omitted
+`deleteCustomer`, and dropped all asset and work order exports. That is why R28 should
+drive export-surface controls rather than broader prompts or stronger rhetoric.
+
+## R29 Purpose
+
+R29 micro-v2 should test whether a public product contract can stabilize the model's
+edit target. The allowed controls are model-visible `DOMAIN_API.md`,
+`contracts/domain-exports.json`, checkpoint scripts, and deterministic export
+normalization between micro steps. The hidden verifier must remain outside the
+repair loop.
+
+A useful R29 outcome is not only a pass. If the export surface stays stable and the
+run then fails on customer behavior, that identifies the next bottleneck as behavior
+implementation rather than export preservation. If the export surface collapses
+again, the evidence points away from natural-language local decomposition for the
+domain layer.
+
+## Model-Use Boundary
+
+Use local Ollama when the experiment is testing local-model capability, bulk
+artifact generation under deterministic gates, repeated repair against public
+checks, or GPU/cost telemetry. The R28 evidence says local Ollama is appropriate for
+diagnostics and controlled local-only measurements, but not yet proven sufficient for
+the FSCRUD domain layer.
+
+Use an external frontier model only when the run is explicitly a hybrid experiment or
+when the operational risk justifies escalation: final read-only review,
+high-ambiguity root-cause analysis, architecture/security/data-loss decisions, or
+repeated local failure after classification. Frontier advice or patches must not be
+mixed into a local-only claim batch.

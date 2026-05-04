@@ -1,5 +1,5 @@
-# prompt-language Codex scaffold.
-# Codex hooks are experimental; opt in explicitly before using the local install.
+# prompt-language project-scoped Codex scaffold.
+# Keep repo subagents bounded; this project often has live experiment runs.
 
 [features]
 codex_hooks = true

@@ -136,6 +136,14 @@
               "minLength": 1
             }
           },
+          "stdoutArtifactRef": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stderrArtifactRef": {
+            "type": "string",
+            "minLength": 1
+          },
           "diffSummary": {
             "type": "string"
           },
@@ -163,6 +171,10 @@
           },
           "timedOut": {
             "type": "boolean"
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 1
           },
           "wallSeconds": {
             "type": "number",
@@ -207,6 +219,25 @@
         },
         "summary": {
           "type": "string"
+        },
+        "timedOut": {
+          "type": "boolean"
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "wallSeconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "stdoutArtifactRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stderrArtifactRef": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },

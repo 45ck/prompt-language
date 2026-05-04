@@ -14,6 +14,13 @@ This experiment tests a dynamic routing policy for Prompt Language runs:
 
 The point is not an "advisor" that only writes suggestions. The router must be able to change which runner/model does the next unit of work.
 
+Current evidence should keep the policy conservative. FSCRUD R28 is not
+harness-arena evidence, but it is relevant local-model evidence: local Ollama plus
+prompt-language scaffolding improved artifact coverage over solo local prompting,
+while the domain lane still collapsed the required CommonJS export surface. That
+supports local-first bulk work and public-checkpoint repair, but it does not justify
+claiming local-only completion or using frontier help inside a local-only batch.
+
 ## Decision Framing
 
 | Option         | Structure                                                                         | Upside                                                                       | Weakness                                                                   | Verdict                   |
@@ -45,6 +52,7 @@ Escalate to frontier work:
 - cross-layer changes where repository boundaries are uncertain
 - repeated local gate failure after two repair attempts
 - local no-edit or timeout classification
+- repeated public API or export-surface collapse after deterministic checkpoints
 - conflicting evidence from tests, lints, or user intent
 - final review before commit on high-risk changes
 
@@ -53,6 +61,21 @@ Do not escalate:
 - formatting, spelling, lint cleanup, or simple import fixes
 - tasks with a deterministic failing test and a narrow diff
 - low-risk repeated fixture runs where local cost is the point of the measurement
+- local-only claim batches, except to stop the batch and relabel the follow-up as a
+  hybrid/advisor/frontier arm
+
+## FSCRUD R29 Implication
+
+R29 micro-v2 is the next local-only diagnostic before a hybrid FSCRUD arm. Its
+purpose is to test whether public API artifacts, checkpoint scripts, and
+deterministic export normalization can stabilize the local model's domain edits
+without exposing the hidden verifier or providing a completed domain kernel.
+
+If R29 keeps the export surface stable but fails behavior, the router has evidence
+that domain implementation may need frontier repair or a deterministic kernel while
+local Ollama remains useful for server, UI, docs, and fixture work. If R29 still
+collapses the export surface, route policy should treat that as a local model fit
+failure for this domain layer, not as a reason to make broader prompts.
 
 ## Prompt Language Shape
 

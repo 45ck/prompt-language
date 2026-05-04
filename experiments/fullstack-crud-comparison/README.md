@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R34 server-only diagnostic complete pre-nested-root guard; next step is strict R34 rerun under the stronger verifier
+Status: R34 strict-root diagnostic complete; next step is path-discipline hardening before claim-grade batching
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -287,10 +287,24 @@ R34 supports the narrow hypothesis: when domain behavior, UI surface, README,
 manifest, and verification report are deterministic protected artifacts, the
 local model can complete a constrained `src/server.js` integration task under PL
 review gates. It does not prove local generation of UI/docs/manifest artifacts.
-Residual risk: the final workspace also contained an extra nested
-`fscrud-01/src/server.js`. A workspace-internal nested-root guard was added after
-this run, so the next evidence step is a strict R34 rerun under the stronger
-verifier before using R34-style flows in a claim-grade batch.
+
+The strict-root rerun
+`live-fscrud-r34-server-only-strict-root-20260504-1727` changed the classification:
+
+- `r30-solo-local`: `18/100`, `flow_failed`, hard failures
+  `package_json_missing_or_invalid`, `ui_surface_incomplete`,
+  `test_script_missing`, `seed_integrity_failed`, and
+  `domain_behavior_failed`.
+- `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
+- `r34-pl-server-only-integration`: `100/100` scored content, public gate passed,
+  domain behavior passed, but hidden oracle failed with
+  `path_root_isolation_failed`.
+
+This means the local model can still satisfy the server-only behavioral task, but
+R34 is not claim-grade under the hardened verifier because it creates a nested
+`fscrud-01/src/server.js`. The next evidence step is not another product-surface
+prompt. It is path-discipline hardening: make the R34 flow and local action policy
+reject or repair nested app-root writes before any `k=3` batch.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

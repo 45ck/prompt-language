@@ -237,10 +237,19 @@ with native Ollama and `qwen3-opencode-big:30b`.
 This supports a narrow claim: local PL can make the same local model perform
 server-only integration when domain behavior, UI surface, README, run manifest,
 and verification report are deterministic protected artifacts. It does not prove
-local generation of those artifacts. The residual evidence gap is path
-discipline: the model created an extra nested `fscrud-01/src/server.js`. A
-nested-root guard was added after this result, so the next evidence target is a
-strict R34 rerun under the stronger verifier.
+local generation of those artifacts.
+
+The strict-root rerun
+`live-fscrud-r34-server-only-strict-root-20260504-1727` tested the same diagnostic
+after adding the nested-root guard. The treatment again scored `100/100` on content,
+passed the public gate, and passed executable domain behavior, but the hidden oracle
+failed with `path_root_isolation_failed` because the workspace contained an extra
+nested `fscrud-01/src/server.js`.
+
+That updates the evidence boundary: R34 proves constrained server integration
+capability only before strict path isolation. Under the hardened verifier, the
+remaining blocker is local action path discipline, not domain behavior, UI surface,
+or handoff artifact generation.
 
 ## Model-Use Boundary
 

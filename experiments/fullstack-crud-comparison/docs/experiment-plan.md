@@ -542,6 +542,21 @@ model also created an extra nested `fscrud-01/src/server.js`. A nested app-root
 duplication guard was added after this run, so the next evidence step is a strict
 R34 rerun under the stronger verifier before claim-grade batching.
 
+Strict-root R34 result:
+`live-fscrud-r34-server-only-strict-root-20260504-1727` ran on `2026-05-04` with
+the nested app-root duplication guard active. Solo scored `18/100` with package,
+UI, test-script, seed, and domain hard failures. The static deterministic control
+again scored `100/100` and verified. The `r34-pl-server-only-integration`
+treatment scored `100/100` on content, passed public review, and passed executable
+domain behavior, but the hidden verifier failed with `path_root_isolation_failed`
+because the local model created a nested `fscrud-01/src/server.js`.
+
+Updated interpretation: the constrained server-only hypothesis holds only before
+strict path isolation. The remaining blocker is path discipline in local model file
+actions. The next useful R34-family change should constrain or repair nested-root
+writes before final verification; a claim-grade batch before that would overstate
+the evidence.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -560,9 +575,10 @@ Current operating interpretation:
   product success, but local repair still missed non-code handoff artifacts under
   strict review.
 - R34 shows deterministic UI/domain/handoff artifacts are enough for the same
-  local model to complete server-only integration under strict PL review.
-- The verifier now rejects nested app-root duplication; the next local-only
-  evidence step is a strict R34 rerun under that stronger guard before any
+  local model to complete server-only behavior under strict PL review before path
+  isolation is enforced.
+- The strict-root R34 rerun shows the remaining blocker is nested app-root writes;
+  the next local-only evidence step is path-discipline hardening before any
   claim-grade batch.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.

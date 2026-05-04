@@ -261,6 +261,47 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.prompts[0]).toContain('Create done.txt');
   });
 
+  it('accepts prompt-runner no-progress reports when the workspace changed', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-progress-fingerprint-'));
+    const commandRunner = new InMemoryCommandRunner();
+    commandRunner.setResult(expectedFileExistsCommand('done.txt'), {
+      exitCode: 0,
+      stdout: '',
+      stderr: '',
+    });
+
+    const promptRunner = new RecordingPromptRunner(async ({ cwd }) => {
+      await writeFile(join(cwd, 'done.txt'), 'ok', 'utf8');
+      return {
+        exitCode: 0,
+        assistantText: 'Task complete',
+        madeProgress: false,
+      };
+    });
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText:
+          'Goal: create file\n\nflow:\n  prompt: Create done.txt\n\ndone when:\n  file_exists done.txt\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.report.status).toBe('ok');
+    expect(result.reason ?? '').not.toContain('without observable workspace progress');
+    expect(promptRunner.prompts).toHaveLength(1);
+  });
+
   it('keeps direct prompt nodes awaiting capture until the runner returns', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-prompt-dispatch-'));
 
@@ -642,6 +683,60 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.prompts).toHaveLength(1);
     expect(promptRunner.prompts[0]).toContain('Fix app.js so it exits 0 instead of 1.');
     expect(promptRunner.prompts[0]).toContain('done when:');
+  });
+
+  it('accepts gate-only no-progress reports when the workspace changed', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-only-progress-fingerprint-'));
+    await writeFile(join(tempDir, 'app.js'), 'process.exit(1)\n', 'utf8');
+    await writeFile(
+      join(tempDir, 'package.json'),
+      JSON.stringify({
+        name: 'gate-only-progress-fingerprint-test',
+        scripts: { test: 'node app.js' },
+      }),
+      'utf8',
+    );
+
+    const promptRunner = new RecordingPromptRunner(async ({ cwd }) => {
+      await writeFile(join(cwd, 'app.js'), 'process.exit(0)\n', 'utf8');
+      return {
+        exitCode: 0,
+        assistantText: 'Task complete',
+        madeProgress: false,
+      };
+    });
+    const commandRunner = {
+      run: async (command: string) => {
+        if (command !== 'npm test') {
+          return { exitCode: 1, stdout: '', stderr: `unexpected command: ${command}` };
+        }
+        const app = await readFile(join(tempDir, 'app.js'), 'utf8');
+        return app.includes('process.exit(0)')
+          ? { exitCode: 0, stdout: '', stderr: '' }
+          : { exitCode: 1, stdout: '', stderr: '' };
+      },
+    };
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: 'Fix app.js so it exits 0 instead of 1.\n\ndone when:\n  tests_pass\n',
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.report.status).toBe('ok');
+    expect(result.reason ?? '').not.toContain('without observable workspace progress');
+    expect(promptRunner.prompts).toHaveLength(1);
   });
 
   it('does not carry transient gate-failed outcomes into a later completed report', async () => {

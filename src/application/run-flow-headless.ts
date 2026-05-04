@@ -4,6 +4,8 @@ import {
   maybeCompleteFlow,
   resolveCurrentNode,
 } from './advance-flow.js';
+import { readdirSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { evaluateCompletion, type EvaluateCompletionOutput } from './evaluate-completion.js';
 import type { AuditLogger } from './ports/audit-logger.js';
 import { NULL_TRACE_LOGGER, type TraceLogger } from './ports/trace-logger.js';
@@ -53,6 +55,14 @@ export interface RunFlowHeadlessOutput {
 const DEFAULT_MAX_TURNS = 24;
 const MAX_ASSISTANT_TEXT_SNIPPET = 160;
 const DEFAULT_HEADLESS_COMMAND_TIMEOUT_MS = 300_000;
+const WORKSPACE_FINGERPRINT_MAX_FILES = 2_000;
+const WORKSPACE_FINGERPRINT_SKIP_DIRS = new Set([
+  '.git',
+  '.prompt-language',
+  'coverage',
+  'dist',
+  'node_modules',
+]);
 function hasRunningChildren(state: SessionState): boolean {
   return Object.values(state.spawnedChildren).some((child) => child?.status === 'running');
 }
@@ -117,6 +127,51 @@ function summarizeCompletionBlock(result: EvaluateCompletionOutput): string {
 function appendAssistantDetail(reason: string, assistantText?: string): string {
   const detail = summarizeAssistantText(assistantText);
   return detail == null ? reason : `${reason} Last assistant output: ${detail}`;
+}
+
+function fingerprintWorkspace(cwd: string): string | null {
+  const entries: string[] = [];
+
+  function visit(dir: string): boolean {
+    let children;
+    try {
+      children = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return true;
+    }
+
+    for (const child of children) {
+      if (child.isDirectory() && WORKSPACE_FINGERPRINT_SKIP_DIRS.has(child.name)) {
+        continue;
+      }
+
+      const fullPath = join(dir, child.name);
+      const rel = relative(cwd, fullPath).replaceAll('\\', '/');
+
+      if (child.isDirectory()) {
+        if (!visit(fullPath)) return false;
+        continue;
+      }
+
+      if (!child.isFile()) continue;
+      if (entries.length >= WORKSPACE_FINGERPRINT_MAX_FILES) return false;
+
+      try {
+        const stat = statSync(fullPath);
+        entries.push(`${rel}:${stat.size}:${stat.mtimeMs}`);
+      } catch {
+        entries.push(`${rel}:unreadable`);
+      }
+    }
+
+    return true;
+  }
+
+  return visit(cwd) ? entries.sort().join('\n') : null;
+}
+
+function didWorkspaceChange(before: string | null, after: string | null): boolean {
+  return before !== null && after !== null && before !== after;
 }
 
 function extractFencedJsonCapture(text: string): string {
@@ -442,12 +497,17 @@ export async function runFlowHeadless(
         }
 
         const gatePrompt = buildGateOnlyPrompt(state, input.flowText);
+        const workspaceBeforePrompt = fingerprintWorkspace(input.cwd);
         const runResult = await deps.promptTurnRunner.run({
           cwd: input.cwd,
           model: input.model,
           prompt: gatePrompt,
           scopePrompt: gatePrompt,
         });
+        const workspaceChanged = didWorkspaceChange(
+          workspaceBeforePrompt,
+          fingerprintWorkspace(input.cwd),
+        );
 
         if (runResult.exitCode !== 0) {
           const failure = markPromptRunnerFailed(state, runResult);
@@ -459,7 +519,7 @@ export async function runFlowHeadless(
           });
         }
 
-        if (runResult.madeProgress === false) {
+        if (runResult.madeProgress === false && !workspaceChanged) {
           const capturedDirectly = await persistDirectAssistantCapture(
             (await deps.stateStore.loadCurrent()) ?? state,
             deps.captureReader,
@@ -513,12 +573,17 @@ export async function runFlowHeadless(
       });
     }
 
+    const workspaceBeforePrompt = fingerprintWorkspace(input.cwd);
     const runResult = await deps.promptTurnRunner.run({
       cwd: input.cwd,
       model: input.model ?? step.model,
       prompt: buildPromptEnvelope(state, step.capturedPrompt),
       scopePrompt: step.capturedPrompt,
     });
+    const workspaceChanged = didWorkspaceChange(
+      workspaceBeforePrompt,
+      fingerprintWorkspace(input.cwd),
+    );
 
     if (runResult.exitCode !== 0) {
       const failure = markPromptRunnerFailed(state, runResult);
@@ -530,7 +595,7 @@ export async function runFlowHeadless(
       });
     }
 
-    if (runResult.madeProgress === false) {
+    if (runResult.madeProgress === false && !workspaceChanged) {
       const capturedDirectly = await persistDirectAssistantCapture(
         (await deps.stateStore.loadCurrent()) ?? state,
         deps.captureReader,

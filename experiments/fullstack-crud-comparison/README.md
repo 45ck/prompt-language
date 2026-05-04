@@ -459,6 +459,25 @@ schema-following. The local model can emit enough handoff intent when the syntax
 burden is reduced to a small raw source, but prompt-language/deterministic tooling
 must own normalization and final artifact rendering for this task.
 
+Repeated same-commit R37 batch:
+`live-fscrud-r37-schema-repaired-handoff-k3-20260504-2130`.
+
+- `r30-solo-local`: failed all three repeats with scores `35/100`, `26/100`, and
+  `33/100`; hard failures remained broad product failures such as UI surface, seed
+  integrity, package/test setup, and executable domain behavior.
+- `r31-static-domain-kernel-control`: passed all three repeats at `100/100`.
+- `r37-pl-schema-repaired-handoff-source`: passed all three repeats at `100/100`
+  with public gate, hidden verifier, executable domain behavior, path isolation,
+  README, run manifest, and verification report all green.
+- The model-authored raw handoff source was identical across R37 repeats: a minimal
+  JSON object carrying local/deterministic/domain/UI/server/handoff intent plus
+  `handoff-source.raw.json` as the model-owned file.
+
+Updated repeated-batch interpretation: R37 is stable for its narrow claim boundary.
+It does not reopen the broader local-generation claim; it shows the practical system
+pattern that works on this host is local intent emission plus deterministic schema
+normalization and artifact rendering.
+
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic
 path. Keep the same runner, model, commit, verifier, and timeout policy inside any

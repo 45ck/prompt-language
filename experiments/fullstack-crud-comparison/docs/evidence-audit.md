@@ -373,6 +373,17 @@ README, manifest, or verification-report artifacts. It does show a useful patter
 let local inference emit small intent payloads, then use deterministic normalization
 and rendering for artifacts where exact schema/format compliance matters.
 
+Repeated R37 batch:
+`live-fscrud-r37-schema-repaired-handoff-k3-20260504-2130` ran three same-commit
+repeats with native Ollama and `qwen3-opencode-big:30b`.
+
+- R37 passed `3/3` at `100/100`.
+- The deterministic static control passed `3/3` at `100/100`.
+- Solo failed `3/3` with scores `35/100`, `26/100`, and `33/100`.
+- The R37 raw source was minimal and identical across repeats, so the repeated pass
+  should be credited to a stable local-intent plus deterministic-normalization
+  pattern, not to rich model-authored handoff artifacts.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

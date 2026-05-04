@@ -115,7 +115,7 @@
       "status": "diagnostic-complete",
       "hypothesis": "If the R36 failure is strict JSON schema fidelity rather than handoff intent, the local model can emit a raw handoff-source intent file that deterministic schema repair normalizes into canonical handoff-source.json and rendered handoff artifacts.",
       "claimBoundary": "This is a schema-repair diagnostic. A pass would not prove local generation of final handoff files or strict schema compliance; it would isolate whether local inference can produce enough handoff intent for deterministic constrained normalization.",
-      "result": "Observed in live-fscrud-r37-schema-repaired-handoff-fixed-20260504-2110: treatment scored 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored raw source contained the required local/deterministic/domain/UI/server/handoff intent but not the final schema; deterministic normalization and rendering produced canonical handoff artifacts."
+      "result": "Observed in live-fscrud-r37-schema-repaired-handoff-fixed-20260504-2110: treatment scored 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. Repeated same-commit batch live-fscrud-r37-schema-repaired-handoff-k3-20260504-2130 passed R37 3/3 at 100/100 with identical repairable raw intent payloads. The model-authored raw source contained the required local/deterministic/domain/UI/server/handoff intent but not the final schema; deterministic normalization and rendering produced canonical handoff artifacts."
     }
   ],
   "timeouts": {
@@ -127,5 +127,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r37-schema-repair-passed"
+  "resultStatus": "diagnostic-only-r37-schema-repair-k3-passed"
 }

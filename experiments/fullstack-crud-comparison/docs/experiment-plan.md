@@ -716,6 +716,25 @@ local model can emit enough raw handoff intent for deterministic schema repair, 
 it still should not be credited with strict JSON-schema compliance or with generating
 the final handoff artifacts.
 
+Repeated R37 same-commit batch on `2026-05-04`:
+`live-fscrud-r37-schema-repaired-handoff-k3-20260504-2130`.
+
+- `r30-solo-local`: failed all repeats with scores `35/100`, `26/100`, and
+  `33/100`.
+- `r31-static-domain-kernel-control`: passed all repeats at `100/100`.
+- `r37-pl-schema-repaired-handoff-source`: passed all repeats at `100/100`, with
+  public gate, hidden oracle, domain behavior, path isolation, README, run manifest,
+  and verification report all green.
+- The raw model-owned handoff source was the same minimal JSON object in all three
+  R37 repeats, carrying the required local/deterministic/domain/UI/server/handoff
+  intent but delegating canonical schema and rendered artifacts to deterministic
+  tooling.
+
+Updated repeated-batch interpretation: R37 is stable for schema-repairable handoff
+intent. It should be treated as an implementation pattern for local-model
+experiments: ask the local model for small intent payloads and let deterministic
+tools own exact schemas, public artifacts, and final verification surfaces.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -749,6 +768,8 @@ Current operating interpretation:
 - R37 separates schema syntax fidelity from raw handoff intent emission and supports
   the narrow schema-repair path: local emits minimal intent; deterministic tooling
   owns schema normalization and rendered handoff artifacts.
+- The repeated R37 batch passed `3/3`, so this schema-repair path is stable enough to
+  use as a design pattern in later local/hybrid experiments.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

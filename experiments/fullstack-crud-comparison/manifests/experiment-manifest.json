@@ -82,10 +82,10 @@
       "runner": "prompt-language",
       "modelPolicy": "same local Ollama model as R33 after deterministic domain kernel, deterministic UI skeleton, and deterministic handoff artifacts setup",
       "flow": "../flows/pl-fullstack-crud-server-only-r34.flow",
-      "status": "planned-diagnostic",
+      "status": "diagnostic-complete",
       "hypothesis": "If README, manifest, and verification report are supplied deterministically and protected, the local model can complete only src/server.js integration around deterministic domain and UI contracts.",
       "claimBoundary": "This is a server-only local integration diagnostic. A pass would not prove local generation of UI, docs, or manifest artifacts; it would isolate whether local inference can complete the remaining server integration task.",
-      "result": "Not yet run."
+      "result": "Observed in live-fscrud-r34-server-only-rerun-20260504-1710 after adding an R34-specific public gate: 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, and domainBehaviorPassed=true. Residual caveat: the model also created a nested fscrud-01/src/server.js. A nested-root guard was added after this result, so R34 needs a strict rerun under the stronger verifier before claim-grade batching."
     }
   ],
   "timeouts": {
@@ -97,5 +97,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r34-server-only-planned"
+  "resultStatus": "diagnostic-only-r34-server-only-pre-nested-root-guard-strict-rerun-next"
 }

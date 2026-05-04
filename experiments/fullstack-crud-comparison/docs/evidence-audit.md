@@ -223,9 +223,24 @@ missing. The local model did create `src/server.js` and `README.md`, and the hid
 verifier still passed with no hard failures. Classify this as artifact-following
 debt under strict local repair, not domain or UI failure.
 
-Next evidence target: R34 supplies README, run manifest, and verification report
-deterministically and protects them, leaving only `src/server.js` to the local
-model. This separates server integration ability from handoff-artifact discipline.
+## R34 Evidence Update
+
+R34 ran as `live-fscrud-r34-server-only-rerun-20260504-1710` on `2026-05-04`
+with native Ollama and `qwen3-opencode-big:30b`.
+
+- Solo baseline: `40/100`, broad product failure with UI, seed, and domain hard
+  failures.
+- Static deterministic control: `100/100`, `verified_pass`.
+- R34 treatment: `100/100`, `verified_pass`, public gate passed, hidden oracle
+  passed, and domain behavior passed.
+
+This supports a narrow claim: local PL can make the same local model perform
+server-only integration when domain behavior, UI surface, README, run manifest,
+and verification report are deterministic protected artifacts. It does not prove
+local generation of those artifacts. The residual evidence gap is path
+discipline: the model created an extra nested `fscrud-01/src/server.js`. A
+nested-root guard was added after this result, so the next evidence target is a
+strict R34 rerun under the stronger verifier.
 
 ## Model-Use Boundary
 

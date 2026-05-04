@@ -321,6 +321,32 @@ describe('FSCRUD verifier script', () => {
     }
   });
 
+  it('fails when generated app files duplicate a nested app root inside the workspace', () => {
+    const attemptRoot = mkdtempSync(join(tmpdir(), 'fscrud-nested-root-leak-'));
+    const workspace = join(attemptRoot, 'workspace', 'fscrud-01');
+    try {
+      writeValidWorkspace(workspace);
+      mkdirSync(join(workspace, 'fscrud-01', 'src'), { recursive: true });
+      writeFileSync(join(workspace, 'fscrud-01', 'src', 'server.js'), 'module.exports = {};\n');
+
+      const result = runVerifier(workspace);
+      const report = JSON.parse(result.stdout) as {
+        passed: boolean;
+        hardFailures: string[];
+        checks: { pathRootIsolation: boolean };
+        pathRootIsolation: { nestedRoots: string[] };
+      };
+
+      expect(result.status).toBe(1);
+      expect(report.passed).toBe(false);
+      expect(report.hardFailures).toContain('path_root_isolation_failed');
+      expect(report.checks.pathRootIsolation).toBe(false);
+      expect(report.pathRootIsolation.nestedRoots).toContain('fscrud-01/src/server.js');
+    } finally {
+      rmSync(attemptRoot, { recursive: true, force: true });
+    }
+  });
+
   it('fails when the package and entity surface are missing', () => {
     const workspace = mkdtempSync(join(tmpdir(), 'fscrud-invalid-'));
     writeFileSync(join(workspace, 'README.md'), 'incomplete');

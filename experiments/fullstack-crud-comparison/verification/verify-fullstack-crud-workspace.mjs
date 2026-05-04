@@ -548,18 +548,29 @@ function inferRunRoot(workspace) {
   return null;
 }
 
-function checkPathRootIsolation(workspace) {
+function checkPathRootIsolation(workspace, files) {
   const runRoot = inferRunRoot(workspace);
+  const nestedRoots = files
+    .map((file) => relativeTextPath(workspace, file))
+    .filter((path) => path.startsWith('fscrud-01/') || path.startsWith('workspace/fscrud-01/'));
+
   if (runRoot === null) {
-    return { passed: true, skipped: true, runRoot: null, leaks: [] };
+    return {
+      passed: nestedRoots.length === 0,
+      skipped: true,
+      runRoot: null,
+      leaks: [],
+      nestedRoots,
+    };
   }
 
   const leaks = RUN_ROOT_LEAK_PATHS.filter((path) => existsSync(join(runRoot, path)));
   return {
-    passed: leaks.length === 0,
+    passed: leaks.length === 0 && nestedRoots.length === 0,
     skipped: false,
     runRoot,
     leaks,
+    nestedRoots,
   };
 }
 
@@ -753,7 +764,7 @@ function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
   );
   const seedIntegrity = validateSeedIntegrity(workspace);
   const domainBehavior = runDomainBehaviorProbe(workspace);
-  const pathRootIsolation = checkPathRootIsolation(workspace);
+  const pathRootIsolation = checkPathRootIsolation(workspace, files);
   const uiSurface = checkUiSurface(workspace, files);
   const checks = {
     packageJson: packageJson !== null,

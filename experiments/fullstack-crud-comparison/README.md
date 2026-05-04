@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R31 domain-kernel diagnostic complete; next step is server/UI surface control
+Status: R34 server-only diagnostic complete pre-nested-root guard; next step is strict R34 rerun under the stronger verifier
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -58,6 +58,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `r31-pl-domain-kernel-bulk`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel, local model owns server/UI/docs         |
 | `r32-pl-ui-surface-control`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus nearby server/UI surface gates      |
 | `r33-pl-ui-skeleton-integration`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus protected deterministic UI skeleton |
+| `r34-pl-server-only-integration`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/docs/manifest/report; model owns server only |
 | `pl-local-senior-crud`             | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
 | `hybrid-router-crud`               | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
@@ -271,6 +272,25 @@ can perform constrained server integration when handoff artifacts are supplied."
 It would not prove the local model can generate UI, docs, or manifest artifacts.
 If R34 fails, the remaining blocker is server integration or local repair-loop
 reliability, not artifact-following overhead.
+
+Observed R34 on `2026-05-04` after adding an R34-specific public review gate:
+`live-fscrud-r34-server-only-rerun-20260504-1710`.
+
+- `r30-solo-local`: `40/100`, `flow_failed`, hard failures
+  `ui_surface_incomplete`, `seed_integrity_failed`, and `domain_behavior_failed`.
+- `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
+- `r34-pl-server-only-integration`: `100/100`, `verified_pass`,
+  `publicGatePassed=true`, `hiddenOraclePassed=true`, and
+  `domainBehaviorPassed=true`.
+
+R34 supports the narrow hypothesis: when domain behavior, UI surface, README,
+manifest, and verification report are deterministic protected artifacts, the
+local model can complete a constrained `src/server.js` integration task under PL
+review gates. It does not prove local generation of UI/docs/manifest artifacts.
+Residual risk: the final workspace also contained an extra nested
+`fscrud-01/src/server.js`. A workspace-internal nested-root guard was added after
+this run, so the next evidence step is a strict R34 rerun under the stronger
+verifier before using R34-style flows in a claim-grade batch.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

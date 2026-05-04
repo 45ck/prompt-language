@@ -525,12 +525,22 @@ created `src/server.js` and `README.md` but did not create `run-manifest.json` o
 `verification-report.md`, even though the grounded critique named the missing
 manifest path.
 
-Next diagnostic: R34 `--arms r34-server-only`. It supplies deterministic README,
-run manifest, and verification report artifacts in addition to deterministic
-domain/UI artifacts, then lets the local model own only `src/server.js`. This
-tests whether R33 failed because the task mixed server integration with handoff
-artifact creation, rather than because the model cannot complete server
-integration around protected contracts.
+R34 diagnostic result: `live-fscrud-r34-server-only-rerun-20260504-1710` ran on
+`2026-05-04` with native Ollama and `qwen3-opencode-big:30b` after adding an
+R34-specific public review gate. Solo scored `40/100` with UI, seed, and domain
+hard failures. The static deterministic control scored `100/100`. The
+`r34-pl-server-only-integration` treatment scored `100/100`, completed the PL
+flow, passed public review, passed the hidden verifier, and passed executable
+domain behavior.
+
+Interpretation: R34 supports the narrow server-only hypothesis. The R33 failure
+was caused by mixed server-plus-handoff artifact responsibility, not an inability
+to integrate a server around protected deterministic contracts. The pass does
+not prove local generation of UI, docs, manifest, or verification-report
+artifacts because those were supplied deterministically. Residual caveat: the
+model also created an extra nested `fscrud-01/src/server.js`. A nested app-root
+duplication guard was added after this run, so the next evidence step is a strict
+R34 rerun under the stronger verifier before claim-grade batching.
 
 Current operating interpretation:
 
@@ -549,7 +559,11 @@ Current operating interpretation:
 - R33 shows deterministic UI/domain artifacts are enough for hidden verifier
   product success, but local repair still missed non-code handoff artifacts under
   strict review.
-- R34 is the next isolation test for server-only integration.
+- R34 shows deterministic UI/domain/handoff artifacts are enough for the same
+  local model to complete server-only integration under strict PL review.
+- The verifier now rejects nested app-root duplication; the next local-only
+  evidence step is a strict R34 rerun under that stronger guard before any
+  claim-grade batch.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

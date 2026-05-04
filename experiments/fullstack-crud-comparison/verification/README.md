@@ -1,3 +1,5 @@
+<!-- cspell:ignore FSCRUD -->
+
 # Verification Contract
 
 This directory defines the expected verification shape for future FSCRUD runs.
@@ -23,7 +25,13 @@ The verification script should check:
 - completed work orders require `completedAt`
 - non-completed work orders reject `completedAt`
 - UI files expose list/create/edit/detail/delete flows for each entity family
+- UI files expose task concepts for customer/asset references, status, priority,
+  and completion tracking
 - run manifest and verification report exist
+
+The JSON report includes `scoreBreakdown`, `domainSubScores`, and `uiSurface` so
+future runs can compare which domain slice failed instead of relying on only the
+aggregate score.
 
 ## Non-Goals
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// cspell:ignore assetid completedat customerid fscrud FSCRUD workorder workorders
 
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -42,6 +43,27 @@ const RULE_TERMS = [
   'cancelled',
   'urgent',
 ];
+const UI_TEXT_EXTENSIONS = new Set(['.html', '.css', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']);
+const UI_ENTITY_TERMS = {
+  customers: ['customer', 'customers'],
+  assets: ['asset', 'assets'],
+  workOrders: ['work order', 'work orders', 'workorder', 'workorders', 'work_order', 'work_orders'],
+};
+const UI_CRUD_TERMS = {
+  list: ['list', 'table', 'rows', 'browse', 'view all'],
+  create: ['create', 'add', 'new'],
+  edit: ['edit', 'update', 'modify', 'save'],
+  detail: ['detail', 'details', 'view', 'show'],
+  delete: ['delete', 'remove', 'archive'],
+};
+const UI_TASK_TERMS = {
+  customerReference: ['customerid', 'customer id', 'customer'],
+  assetReference: ['assetid', 'asset id', 'asset'],
+  status: ['status', 'open', 'scheduled', 'in_progress', 'in progress', 'completed', 'cancelled'],
+  priority: ['priority', 'low', 'normal', 'urgent'],
+  completion: ['completedat', 'completed at', 'completed date', 'completion date'],
+};
+const UI_ENTITY_CRUD_WINDOW_CHARS = 1_200;
 const RUN_ROOT_LEAK_PATHS = [
   'src/domain.js',
   'src/server.js',
@@ -288,14 +310,112 @@ function hasAny(corpus, terms) {
   return terms.some((term) => corpus.includes(term.toLowerCase()));
 }
 
-function countEntityCoverage(corpus) {
+function coverageForTermGroups(corpus, groups) {
   return Object.fromEntries(
-    Object.entries(ENTITY_TERMS).map(([entity, terms]) => [entity, hasAny(corpus, terms)]),
+    Object.entries(groups).map(([label, terms]) => [label, hasAny(corpus, terms)]),
   );
+}
+
+function missingCoverage(coverage) {
+  return Object.entries(coverage)
+    .filter(([, present]) => !present)
+    .map(([label]) => label);
+}
+
+function countEntityCoverage(corpus) {
+  return coverageForTermGroups(corpus, ENTITY_TERMS);
 }
 
 function countCrudCoverage(corpus) {
   return Object.fromEntries(CRUD_TERMS.map((term) => [term, corpus.includes(term)]));
+}
+
+function isUiSurfacePath(path) {
+  const normalized = path.toLowerCase();
+  const extension = extensionOf(normalized);
+  if (!UI_TEXT_EXTENSIONS.has(extension)) return false;
+  if (/^(app|pages|components|public|static|client)\//.test(normalized)) return true;
+  if (normalized.startsWith('src/')) {
+    if (/^src\/(components|pages|views|ui|client|frontend)\//.test(normalized)) return true;
+    return /(^|\/)(app|client|frontend|index|main|ui|view)\.[cm]?[jt]sx?$/.test(normalized);
+  }
+  return false;
+}
+
+function findTermIndexes(corpus, terms) {
+  const indexes = [];
+  for (const term of terms) {
+    const needle = term.toLowerCase();
+    let index = corpus.indexOf(needle);
+    while (index !== -1) {
+      indexes.push(index);
+      index = corpus.indexOf(needle, index + needle.length);
+    }
+  }
+  return indexes;
+}
+
+function hasNearbyTerms(corpus, leftTerms, rightTerms, maxDistance) {
+  const leftIndexes = findTermIndexes(corpus, leftTerms);
+  const rightIndexes = findTermIndexes(corpus, rightTerms);
+  return leftIndexes.some((left) =>
+    rightIndexes.some((right) => Math.abs(left - right) <= maxDistance),
+  );
+}
+
+function countUiEntityCrudCoverage(corpus) {
+  return Object.fromEntries(
+    Object.entries(UI_ENTITY_TERMS).map(([entity, entityTerms]) => [
+      entity,
+      Object.fromEntries(
+        Object.entries(UI_CRUD_TERMS).map(([action, actionTerms]) => [
+          action,
+          hasNearbyTerms(corpus, entityTerms, actionTerms, UI_ENTITY_CRUD_WINDOW_CHARS),
+        ]),
+      ),
+    ]),
+  );
+}
+
+function flattenMissingEntityCrudCoverage(entityCrudCoverage) {
+  return Object.entries(entityCrudCoverage).flatMap(([entity, actionCoverage]) =>
+    Object.entries(actionCoverage)
+      .filter(([, present]) => !present)
+      .map(([action]) => `${entity}.${action}`),
+  );
+}
+
+function checkUiSurface(workspace, files) {
+  const uiFiles = files.filter((file) => isUiSurfacePath(relativeTextPath(workspace, file)));
+  const corpus = readCorpus(uiFiles);
+  const entityCoverage = coverageForTermGroups(corpus, UI_ENTITY_TERMS);
+  const crudCoverage = coverageForTermGroups(corpus, UI_CRUD_TERMS);
+  const taskConceptCoverage = coverageForTermGroups(corpus, UI_TASK_TERMS);
+  const entityCrudCoverage = countUiEntityCrudCoverage(corpus);
+  const missing = {
+    files: uiFiles.length === 0 ? ['ui_surface_files'] : [],
+    entities: missingCoverage(entityCoverage),
+    crud: missingCoverage(crudCoverage),
+    taskConcepts: missingCoverage(taskConceptCoverage),
+    entityCrud: flattenMissingEntityCrudCoverage(entityCrudCoverage),
+  };
+  const passed =
+    uiFiles.length > 0 &&
+    Object.values(entityCoverage).every(Boolean) &&
+    Object.values(crudCoverage).every(Boolean) &&
+    Object.values(taskConceptCoverage).every(Boolean) &&
+    missing.entityCrud.length === 0;
+
+  return {
+    passed,
+    files: uiFiles.map((file) => relativeTextPath(workspace, file)),
+    entityCoverage,
+    crudCoverage,
+    taskConceptCoverage,
+    entityCrudCoverage,
+    nearbyWindowChars: UI_ENTITY_CRUD_WINDOW_CHARS,
+    missing,
+  };
 }
 
 function hasTestFile(workspace, files) {
@@ -485,6 +605,146 @@ function npmTestArgs() {
   return ['test'];
 }
 
+function scoreMetric(passed, maxScore, details = {}) {
+  return {
+    score: passed ? maxScore : 0,
+    maxScore,
+    passed,
+    ...details,
+  };
+}
+
+function scoreWeightedChecks(weightedChecks) {
+  return weightedChecks.reduce((sum, [passed, points]) => sum + (passed ? points : 0), 0);
+}
+
+function buildScoreBreakdown(checks) {
+  return {
+    projectArtifacts: {
+      score: scoreWeightedChecks([
+        [checks.packageJson, 10],
+        [checks.readme, 5],
+        [checks.runManifest, 4],
+        [checks.verificationReport, 4],
+      ]),
+      maxScore: 23,
+      checks: {
+        packageJson: checks.packageJson,
+        readme: checks.readme,
+        runManifest: checks.runManifest,
+        verificationReport: checks.verificationReport,
+      },
+    },
+    runtimeScripts: {
+      score: scoreWeightedChecks([
+        [checks.testScript, 7],
+        [checks.runScript, 5],
+      ]),
+      maxScore: 12,
+      checks: {
+        testScript: checks.testScript,
+        runScript: checks.runScript,
+      },
+    },
+    uiSurface: {
+      score: scoreWeightedChecks([
+        [checks.browserUi, 2],
+        [checks.uiSurface, 2],
+      ]),
+      maxScore: 4,
+      checks: {
+        browserUi: checks.browserUi,
+        staticSurface: checks.uiSurface,
+      },
+    },
+    domainModel: {
+      score: scoreWeightedChecks([
+        [checks.allEntities, 8],
+        [checks.allCrudTerms, 5],
+        [checks.relationshipRules, 5],
+        [checks.statusRules, 4],
+        [checks.priorityRules, 3],
+      ]),
+      maxScore: 25,
+      checks: {
+        allEntities: checks.allEntities,
+        allCrudTerms: checks.allCrudTerms,
+        relationshipRules: checks.relationshipRules,
+        statusRules: checks.statusRules,
+        priorityRules: checks.priorityRules,
+      },
+    },
+    dataIntegrity: {
+      score: scoreWeightedChecks([
+        [checks.seedData, 4],
+        [checks.seedIntegrity, 8],
+      ]),
+      maxScore: 12,
+      checks: {
+        seedData: checks.seedData,
+        seedIntegrity: checks.seedIntegrity,
+      },
+    },
+    verification: {
+      score: scoreWeightedChecks([
+        [checks.testsPresent, 4],
+        [checks.npmTestPassed === true, 5],
+      ]),
+      maxScore: 9,
+      checks: {
+        testsPresent: checks.testsPresent,
+        npmTestPassed: checks.npmTestPassed,
+      },
+    },
+    executableDomain: {
+      score: checks.domainBehavior ? 15 : 0,
+      maxScore: 15,
+      checks: {
+        domainBehavior: checks.domainBehavior,
+      },
+    },
+  };
+}
+
+function totalScore(scoreBreakdown) {
+  return Object.values(scoreBreakdown).reduce((sum, section) => sum + section.score, 0);
+}
+
+function buildDomainSubScores(checks, entityCoverage, crudCoverage, ruleCoverage, seedIntegrity) {
+  return {
+    entities: scoreMetric(checks.allEntities, 8, { coverage: entityCoverage }),
+    crudSurface: scoreMetric(checks.allCrudTerms, 5, { coverage: crudCoverage }),
+    relationships: scoreMetric(checks.relationshipRules, 5, {
+      coverage: {
+        customerId: ruleCoverage.customerId,
+        assetId: ruleCoverage.assetId,
+        completedAt: ruleCoverage.completedAt,
+      },
+    }),
+    statuses: scoreMetric(checks.statusRules, 4, {
+      coverage: {
+        open: ruleCoverage.open,
+        scheduled: ruleCoverage.scheduled,
+        in_progress: ruleCoverage.in_progress,
+        completed: ruleCoverage.completed,
+        cancelled: ruleCoverage.cancelled,
+      },
+    }),
+    priorities: scoreMetric(checks.priorityRules, 3, {
+      coverage: {
+        low: ruleCoverage.low,
+        normal: ruleCoverage.normal,
+        urgent: ruleCoverage.urgent,
+      },
+    }),
+    seedIntegrity: scoreMetric(checks.seedIntegrity, 8, {
+      failures: seedIntegrity.failures,
+      counts: seedIntegrity.counts,
+    }),
+    executableBehavior: scoreMetric(checks.domainBehavior, 15),
+  };
+}
+
 function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
   const entityCoverage = countEntityCoverage(corpus);
   const crudCoverage = countCrudCoverage(corpus);
@@ -494,12 +754,14 @@ function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
   const seedIntegrity = validateSeedIntegrity(workspace);
   const domainBehavior = runDomainBehaviorProbe(workspace);
   const pathRootIsolation = checkPathRootIsolation(workspace);
+  const uiSurface = checkUiSurface(workspace, files);
   const checks = {
     packageJson: packageJson !== null,
     readme: checkFileExists(workspace, 'README.md'),
     runManifest: checkFileExists(workspace, 'run-manifest.json'),
     verificationReport: checkFileExists(workspace, 'verification-report.md'),
     browserUi: checkFileExists(workspace, 'public/index.html'),
+    uiSurface: uiSurface.passed,
     testScript: typeof packageJson?.scripts?.test === 'string',
     runScript:
       typeof packageJson?.scripts?.dev === 'string' ||
@@ -520,33 +782,25 @@ function scoreWorkspace(workspace, packageJson, files, corpus, testResult) {
     domainBehavior: domainBehavior.passed,
     pathRootIsolation: pathRootIsolation.passed,
   };
-
-  const score = [
-    checks.packageJson ? 10 : 0,
-    checks.readme ? 5 : 0,
-    checks.runManifest ? 4 : 0,
-    checks.verificationReport ? 4 : 0,
-    checks.testScript ? 7 : 0,
-    checks.runScript ? 5 : 0,
-    checks.browserUi ? 4 : 0,
-    checks.allEntities ? 8 : 0,
-    checks.allCrudTerms ? 5 : 0,
-    checks.relationshipRules ? 5 : 0,
-    checks.statusRules ? 4 : 0,
-    checks.priorityRules ? 3 : 0,
-    checks.seedData ? 4 : 0,
-    checks.seedIntegrity ? 8 : 0,
-    checks.testsPresent ? 4 : 0,
-    checks.npmTestPassed === true ? 5 : 0,
-    checks.domainBehavior ? 15 : 0,
-  ].reduce((sum, value) => sum + value, 0);
-
-  return {
-    score,
+  const scoreBreakdown = buildScoreBreakdown(checks);
+  const domainSubScores = buildDomainSubScores(
     checks,
     entityCoverage,
     crudCoverage,
     ruleCoverage,
+    seedIntegrity,
+  );
+  const score = totalScore(scoreBreakdown);
+
+  return {
+    score,
+    checks,
+    scoreBreakdown,
+    domainSubScores,
+    entityCoverage,
+    crudCoverage,
+    ruleCoverage,
+    uiSurface,
     seedIntegrity,
     domainBehavior,
     pathRootIsolation,
@@ -560,6 +814,7 @@ function hardFailures(workspace, scoreResult) {
   }
   if (!scoreResult.checks.packageJson) failures.push('package_json_missing_or_invalid');
   if (!scoreResult.checks.browserUi) failures.push('browser_ui_missing');
+  if (!scoreResult.checks.uiSurface) failures.push('ui_surface_incomplete');
   if (!scoreResult.checks.allEntities) failures.push('required_entity_family_missing');
   if (!scoreResult.checks.testScript) failures.push('test_script_missing');
   if (!scoreResult.checks.testsPresent) failures.push('tests_missing');

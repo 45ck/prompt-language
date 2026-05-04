@@ -1,18 +1,46 @@
 #!/usr/bin/env node
+// cspell:ignore FSCRUD fscrud noheader
 
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { hostname } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const EXPERIMENT_ROOT = join(ROOT, 'experiments', 'fullstack-crud-comparison');
 const RESULTS_ROOT = join(ROOT, 'experiments', 'results', 'fullstack-crud-comparison');
+const RUN_LOCK_DIR = join(RESULTS_ROOT, '.run.lock');
 const TASK_PATH = join(EXPERIMENT_ROOT, 'tasks', 'fscrud-01-field-service-work-orders.md');
 const VERIFY_SCRIPT = join(EXPERIMENT_ROOT, 'verification', 'verify-fullstack-crud-workspace.mjs');
 const DEFAULT_MODEL = 'ollama_chat/qwen3-opencode:30b';
 const DEFAULT_RUNNER = 'aider';
+const DEFAULT_LOCAL_RUNNER_TIMEOUT_MS = 600_000;
+const DEFAULT_GATE_TIMEOUT_MS = 300_000;
+const DEFAULT_OLLAMA_RETRY_ATTEMPTS = 3;
+const DEFAULT_OLLAMA_RETRY_DELAY_MS = 1_000;
+const DEFAULT_OLLAMA_ACTION_ROUNDS = 8;
+const OLLAMA_PS_TIMEOUT_MS = 10_000;
+const INSTALL_TIMEOUT_MS = 600_000;
+const TEST_TIMEOUT_MS = 300_000;
+const VERIFY_TIMEOUT_MS = 360_000;
+const RUNNER_ENV_KEYS = [
+  'PROMPT_LANGUAGE_AIDER_TIMEOUT_MS',
+  'PROMPT_LANGUAGE_OPENCODE_TIMEOUT_MS',
+  'PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS',
+  'PROMPT_LANGUAGE_OLLAMA_RETRY_ATTEMPTS',
+  'PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS',
+  'PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS',
+  'PROMPT_LANGUAGE_GATE_TIMEOUT_MS',
+  'PROMPT_LANGUAGE_OLLAMA_BASE_URL',
+  'OLLAMA_API_BASE',
+  'PL_TRACE',
+  'PL_TRACE_DIR',
+  'PL_TRACE_STRICT',
+  'FSCRUD_RUNNER',
+  'FSCRUD_MODEL',
+];
 const ARM_FLOWS = {
   'solo-local-crud': join(EXPERIMENT_ROOT, 'flows', 'solo-local-crud.flow'),
   'pl-local-crud-factory': join(EXPERIMENT_ROOT, 'flows', 'pl-fullstack-crud-v1.flow'),
@@ -23,16 +51,22 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-scaffold-contract-v1.flow',
   ),
+  'pl-local-crud-micro-contract': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-micro-contract-v1.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
   primary: ['solo-local-crud', 'pl-local-crud-factory'],
   scaffold: ['solo-local-crud', 'pl-local-crud-scaffold-contract'],
+  micro: ['solo-local-crud', 'pl-local-crud-micro-contract'],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],
 };
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const options = {
     arms: 'smoke',
     repeats: 1,
@@ -73,7 +107,7 @@ function timestampId() {
   )}${pad(date.getUTCMinutes())}${pad(date.getUTCSeconds())}`;
 }
 
-function resolveArms(value) {
+export function resolveArms(value) {
   const arms =
     ARM_GROUPS[value] ??
     value
@@ -128,6 +162,19 @@ function writeProcessArtifacts(dir, name, result) {
   writeJson(join(dir, `${name}.json`), result);
   writeFileSync(join(dir, `${name}-stdout.txt`), result.stdout, 'utf8');
   writeFileSync(join(dir, `${name}-stderr.txt`), result.stderr, 'utf8');
+}
+
+function artifactRef(name, result) {
+  return {
+    json: `${name}.json`,
+    stdout: `${name}-stdout.txt`,
+    stderr: `${name}-stderr.txt`,
+    exitCode: result.exitCode,
+    timedOut: result.timedOut,
+    durationMs: result.durationMs,
+    startedAt: result.startedAt,
+    completedAt: result.completedAt,
+  };
 }
 
 function gitCommit() {
@@ -197,18 +244,58 @@ function prepareAttempt(attemptDir) {
   cpSync(TASK_PATH, join(attemptDir, 'TASK.md'));
 }
 
+function parsePositiveInt(value, fallback) {
+  const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 function runnerEnv(options) {
   return {
     ...process.env,
-    PROMPT_LANGUAGE_AIDER_TIMEOUT_MS: process.env.PROMPT_LANGUAGE_AIDER_TIMEOUT_MS ?? '600000',
+    PROMPT_LANGUAGE_AIDER_TIMEOUT_MS:
+      process.env.PROMPT_LANGUAGE_AIDER_TIMEOUT_MS ?? String(DEFAULT_LOCAL_RUNNER_TIMEOUT_MS),
     PROMPT_LANGUAGE_OPENCODE_TIMEOUT_MS:
-      process.env.PROMPT_LANGUAGE_OPENCODE_TIMEOUT_MS ?? '600000',
-    PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS: process.env.PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS ?? '600000',
-    PROMPT_LANGUAGE_GATE_TIMEOUT_MS: process.env.PROMPT_LANGUAGE_GATE_TIMEOUT_MS ?? '300000',
+      process.env.PROMPT_LANGUAGE_OPENCODE_TIMEOUT_MS ?? String(DEFAULT_LOCAL_RUNNER_TIMEOUT_MS),
+    PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS:
+      process.env.PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS ?? String(DEFAULT_LOCAL_RUNNER_TIMEOUT_MS),
+    PROMPT_LANGUAGE_OLLAMA_RETRY_ATTEMPTS:
+      process.env.PROMPT_LANGUAGE_OLLAMA_RETRY_ATTEMPTS ?? String(DEFAULT_OLLAMA_RETRY_ATTEMPTS),
+    PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS:
+      process.env.PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS ?? String(DEFAULT_OLLAMA_RETRY_DELAY_MS),
+    PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS:
+      process.env.PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS ?? String(DEFAULT_OLLAMA_ACTION_ROUNDS),
+    PROMPT_LANGUAGE_GATE_TIMEOUT_MS:
+      process.env.PROMPT_LANGUAGE_GATE_TIMEOUT_MS ?? String(DEFAULT_GATE_TIMEOUT_MS),
     PL_TRACE: process.env.PL_TRACE ?? '1',
     FSCRUD_RUNNER: options.runner,
     FSCRUD_MODEL: options.model,
   };
+}
+
+function runnerEnvSnapshot(options) {
+  const env = runnerEnv(options);
+  return Object.fromEntries(RUNNER_ENV_KEYS.map((key) => [key, env[key] ?? null]));
+}
+
+export function isOllamaBackedRun(options) {
+  return (
+    options.runner === 'ollama' ||
+    options.model.startsWith('ollama/') ||
+    options.model.startsWith('ollama_chat/')
+  );
+}
+
+function collectOllamaPsSnapshot(attemptDir, phase, options) {
+  if (!isOllamaBackedRun(options)) return null;
+
+  const artifactName = `ollama-ps-${phase}`;
+  const result = runProcess('ollama', ['ps'], {
+    cwd: ROOT,
+    env: process.env,
+    timeoutMs: OLLAMA_PS_TIMEOUT_MS,
+  });
+  writeProcessArtifacts(attemptDir, artifactName, result);
+  return artifactRef(artifactName, result);
 }
 
 function runArm(context) {
@@ -222,6 +309,12 @@ function runArm(context) {
     return { arm: context.arm, skipped: true, verifierPassed: null };
   }
 
+  const runnerEnvironment = runnerEnv(context.options);
+  const ollamaPsBeforeRunner = collectOllamaPsSnapshot(
+    attemptDir,
+    'before-runner',
+    context.options,
+  );
   const runResult = runProcess(
     process.execPath,
     [
@@ -237,15 +330,20 @@ function runArm(context) {
       '--file',
       ARM_FLOWS[context.arm],
     ],
-    { cwd: attemptDir, env: runnerEnv(context.options), timeoutMs: wallTimeoutMs(context.arm) },
+    { cwd: attemptDir, env: runnerEnvironment, timeoutMs: wallTimeoutMs(context.arm) },
   );
   writeProcessArtifacts(attemptDir, 'runner', runResult);
+  const ollamaPsAfterRunner = collectOllamaPsSnapshot(attemptDir, 'after-runner', context.options);
 
   const runnerSucceeded = runResult.exitCode === 0;
   const packageExists = existsSync(join(workspace, 'package.json'));
   const installResult =
     runnerSucceeded && packageExists
-      ? runProcess('npm', ['install'], { cwd: workspace, env: process.env, timeoutMs: 600_000 })
+      ? runProcess('npm', ['install'], {
+          cwd: workspace,
+          env: process.env,
+          timeoutMs: INSTALL_TIMEOUT_MS,
+        })
       : skippedProcess(
           'npm',
           ['install'],
@@ -256,7 +354,11 @@ function runArm(context) {
 
   const testResult =
     runnerSucceeded && packageExists
-      ? runProcess('npm', ['test'], { cwd: workspace, env: process.env, timeoutMs: 300_000 })
+      ? runProcess('npm', ['test'], {
+          cwd: workspace,
+          env: process.env,
+          timeoutMs: TEST_TIMEOUT_MS,
+        })
       : skippedProcess(
           'npm',
           ['test'],
@@ -272,12 +374,15 @@ function runArm(context) {
   const verifyResult = runProcess(process.execPath, verifyArgs, {
     cwd: ROOT,
     env: process.env,
-    timeoutMs: 360_000,
+    timeoutMs: VERIFY_TIMEOUT_MS,
   });
   writeProcessArtifacts(attemptDir, 'verifier', verifyResult);
 
   const manifest = {
-    ...manifestBase(context, attemptDir, workspace),
+    ...manifestBase(context, attemptDir, workspace, {
+      ollamaPsBeforeRunner,
+      ollamaPsAfterRunner,
+    }),
     runnerExitCode: runResult.exitCode,
     installExitCode: installResult.exitCode,
     testExitCode: testResult.exitCode,
@@ -314,7 +419,67 @@ function skippedProcess(command, args, cwd, reason) {
   };
 }
 
-function manifestBase(context, attemptDir, workspace) {
+function timeoutDetails(context) {
+  const env = runnerEnv(context.options);
+  return {
+    soloWallClockMinutes: 90,
+    plWallClockMinutes: 150,
+    runnerWallClockMs: wallTimeoutMs(context.arm),
+    runnerWallClockMinutes: wallTimeoutMs(context.arm) / 60_000,
+    aiderTurnMs: parsePositiveInt(
+      env.PROMPT_LANGUAGE_AIDER_TIMEOUT_MS,
+      DEFAULT_LOCAL_RUNNER_TIMEOUT_MS,
+    ),
+    opencodeTurnMs: parsePositiveInt(
+      env.PROMPT_LANGUAGE_OPENCODE_TIMEOUT_MS,
+      DEFAULT_LOCAL_RUNNER_TIMEOUT_MS,
+    ),
+    ollamaTurnMs: parsePositiveInt(
+      env.PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS,
+      DEFAULT_LOCAL_RUNNER_TIMEOUT_MS,
+    ),
+    gateMs: parsePositiveInt(env.PROMPT_LANGUAGE_GATE_TIMEOUT_MS, DEFAULT_GATE_TIMEOUT_MS),
+    installMs: INSTALL_TIMEOUT_MS,
+    testMs: TEST_TIMEOUT_MS,
+    verifierMs: VERIFY_TIMEOUT_MS,
+    ollamaPsMs: OLLAMA_PS_TIMEOUT_MS,
+    modelTurnSeconds: 600,
+    commandSeconds: 300,
+  };
+}
+
+function retryDetails(options) {
+  const env = runnerEnv(options);
+  return {
+    ollamaAttempts: parsePositiveInt(
+      env.PROMPT_LANGUAGE_OLLAMA_RETRY_ATTEMPTS,
+      DEFAULT_OLLAMA_RETRY_ATTEMPTS,
+    ),
+    ollamaDelayMs: parsePositiveInt(
+      env.PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS,
+      DEFAULT_OLLAMA_RETRY_DELAY_MS,
+    ),
+    ollamaActionRounds: parsePositiveInt(
+      env.PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS,
+      DEFAULT_OLLAMA_ACTION_ROUNDS,
+    ),
+  };
+}
+
+function runtimeDetails(context) {
+  return {
+    nodeVersion: process.version,
+    platform: process.platform,
+    arch: process.arch,
+    host: hostname(),
+    pid: process.pid,
+    execPath: process.execPath,
+    ollamaBacked: isOllamaBackedRun(context.options),
+    experimentLock: context.experimentLock ?? null,
+  };
+}
+
+export function manifestBase(context, attemptDir, workspace, runtimeArtifacts = {}) {
   return {
     experimentId: 'FSCRUD-01',
     arm: context.arm,
@@ -329,63 +494,118 @@ function manifestBase(context, attemptDir, workspace) {
     attemptDir: relative(ROOT, attemptDir).replaceAll('\\', '/'),
     workspace: relative(ROOT, workspace).replaceAll('\\', '/'),
     hardware: context.hardware,
-    timeouts: {
-      soloWallClockMinutes: 90,
-      plWallClockMinutes: 150,
-      modelTurnSeconds: 600,
-      commandSeconds: 300,
+    timeouts: timeoutDetails(context),
+    retries: retryDetails(context.options),
+    environment: runnerEnvSnapshot(context.options),
+    runtime: runtimeDetails(context),
+    runtimeArtifacts: {
+      ollamaPsBeforeRunner: runtimeArtifacts.ollamaPsBeforeRunner ?? null,
+      ollamaPsAfterRunner: runtimeArtifacts.ollamaPsAfterRunner ?? null,
     },
     runtimeIsPrimaryScore: false,
     createdAt: new Date().toISOString(),
   };
 }
 
+export function createExperimentLock(options, lockPath = RUN_LOCK_DIR) {
+  mkdirSync(dirname(lockPath), { recursive: true });
+
+  const metadata = {
+    runId: options.runId,
+    runner: options.runner,
+    model: options.model,
+    pid: process.pid,
+    host: hostname(),
+    startedAt: new Date().toISOString(),
+    cwd: ROOT,
+    lockPath: relative(ROOT, lockPath).replaceAll('\\', '/'),
+  };
+
+  try {
+    mkdirSync(lockPath);
+  } catch (error) {
+    const code = error && typeof error === 'object' ? error.code : undefined;
+    if (code !== 'EEXIST') throw error;
+
+    const ownerPath = join(lockPath, 'owner.json');
+    const owner = existsSync(ownerPath) ? readFileSync(ownerPath, 'utf8').trim() : 'unknown owner';
+    throw new Error(
+      [
+        'Another FSCRUD experiment appears to be running.',
+        `Lock: ${relative(ROOT, lockPath).replaceAll('\\', '/')}`,
+        `Owner: ${owner}`,
+        'If this is stale, remove the lock directory after confirming no run is active.',
+      ].join('\n'),
+    );
+  }
+
+  writeJson(join(lockPath, 'owner.json'), metadata);
+  return { path: lockPath, metadata };
+}
+
+export function releaseExperimentLock(lock) {
+  rmSync(lock.path, { recursive: true, force: true });
+}
+
 function main() {
   const options = parseArgs(process.argv.slice(2));
   const arms = resolveArms(options.arms);
-  const runRoot = join(RESULTS_ROOT, options.runId);
-  mkdirSync(runRoot, { recursive: true });
+  const lock = createExperimentLock(options);
 
-  const shared = {
-    options,
-    modelDigest: modelDigest(options.model),
-    repoCommit: gitCommit(),
-    repoStatusAtStart: gitStatus(),
-    taskSha256: sha256File(TASK_PATH),
-    hardware: readHardware(),
-  };
-  const summaries = [];
+  try {
+    const runRoot = join(RESULTS_ROOT, options.runId);
+    mkdirSync(runRoot, { recursive: true });
 
-  for (let repeat = 1; repeat <= options.repeats; repeat += 1) {
-    const repeatId = `r${String(repeat).padStart(2, '0')}`;
-    const repeatDir = join(runRoot, repeatId);
-    mkdirSync(repeatDir, { recursive: true });
-    writeJson(join(repeatDir, 'arm-order.json'), { arms });
+    const shared = {
+      options,
+      modelDigest: modelDigest(options.model),
+      repoCommit: gitCommit(),
+      repoStatusAtStart: gitStatus(),
+      taskSha256: sha256File(TASK_PATH),
+      hardware: readHardware(),
+      experimentLock: lock.metadata,
+    };
+    const summaries = [];
 
-    arms.forEach((arm, index) => {
-      console.log(`[fscrud] ${repeatId} ${index + 1}/${arms.length} ${arm}`);
-      summaries.push(
-        runArm({
-          ...shared,
-          arm,
-          repeatId,
-          repeatDir,
-          position: String(index + 1).padStart(2, '0'),
-        }),
-      );
+    for (let repeat = 1; repeat <= options.repeats; repeat += 1) {
+      const repeatId = `r${String(repeat).padStart(2, '0')}`;
+      const repeatDir = join(runRoot, repeatId);
+      mkdirSync(repeatDir, { recursive: true });
+      writeJson(join(repeatDir, 'arm-order.json'), { arms });
+
+      arms.forEach((arm, index) => {
+        console.log(`[fscrud] ${repeatId} ${index + 1}/${arms.length} ${arm}`);
+        summaries.push(
+          runArm({
+            ...shared,
+            arm,
+            repeatId,
+            repeatDir,
+            position: String(index + 1).padStart(2, '0'),
+          }),
+        );
+      });
+    }
+
+    writeJson(join(runRoot, 'summary.json'), {
+      runId: options.runId,
+      arms,
+      repeats: options.repeats,
+      runner: options.runner,
+      model: options.model,
+      dryRun: options.dryRun,
+      timeouts: timeoutDetails({ arm: arms[0], options }),
+      retries: retryDetails(options),
+      environment: runnerEnvSnapshot(options),
+      runtime: runtimeDetails({ options, experimentLock: lock.metadata }),
+      summaries,
     });
+    console.log(`[fscrud] results: ${relative(ROOT, runRoot).replaceAll('\\', '/')}`);
+  } finally {
+    releaseExperimentLock(lock);
   }
-
-  writeJson(join(runRoot, 'summary.json'), {
-    runId: options.runId,
-    arms,
-    repeats: options.repeats,
-    runner: options.runner,
-    model: options.model,
-    dryRun: options.dryRun,
-    summaries,
-  });
-  console.log(`[fscrud] results: ${relative(ROOT, runRoot).replaceAll('\\', '/')}`);
 }
 
-main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main();
+}

@@ -93,7 +93,7 @@
             "minLength": 1
           },
           "runner": {
-            "enum": ["aider", "codex", "opencode", "prompt-language", "shell", "other"]
+            "enum": ["aider", "codex", "ollama", "opencode", "prompt-language", "shell", "other"]
           },
           "model": {
             "type": "string",

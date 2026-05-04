@@ -1,3 +1,5 @@
+<!-- cspell:ignore FSCRUD fscrud metacognition metacognitive precheck -->
+
 # Full-Stack CRUD Comparison
 
 Status: diagnostic probes running; no claim-grade batch yet
@@ -50,6 +52,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `solo-local-crud`                 | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                     |
 | `pl-local-crud-factory`           | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control             |
 | `pl-local-crud-scaffold-contract` | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback  |
+| `pl-local-crud-micro-contract`    | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                 |
 | `pl-local-senior-crud`            | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates         |
 | `hybrid-router-crud`              | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review |
 
@@ -127,3 +130,18 @@ placeholder exports, anchors initial implementation cards to `workspace/fscrud-0
 the same way repair cards are anchored, narrows the final repair allowlist, and adds a
 verifier-level `pathRootIsolation` hard gate for run-root app-file leaks. The next
 live Ollama run should test this current commit before any claim-grade `k=3` batch.
+
+R27 tested that current-contract scaffold and stayed diagnostic. Solo completed but
+still failed verifier at `61/100`. Scaffold-contract kept the R26 fixes intact but
+failed the first domain foundation review after the model produced an invalid
+entity/schema-shaped `module.exports = { Customer, Asset }` instead of executable
+CRUD functions.
+
+The next planned diagnostic treatment is
+[flows/pl-fullstack-crud-micro-contract-v1.flow](flows/pl-fullstack-crud-micro-contract-v1.flow).
+It keeps the deterministic scaffold but splits the domain work into smaller
+executable probes for customers, assets, work order create/read/detail behavior, and
+work order edit/delete plus safe relationship deletes. This tests whether tighter
+senior micro-contract guidance can move the local model past the repeated
+`domain_behavior_failed` plateau without using an external model or handing it a
+completed domain kernel.

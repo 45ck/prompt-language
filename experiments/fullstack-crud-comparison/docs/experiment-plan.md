@@ -1,3 +1,5 @@
+<!-- cspell:ignore FSCRUD fscrud precheck -->
+
 # Experiment Plan
 
 ## Research Question
@@ -51,6 +53,16 @@ senior-to-junior direction, switches tests to Node's built-in `node:test` runner
 avoid dependency installation ambiguity, adds an explicit browser UI slice, and
 requires a final completion marker so early artifact creation cannot short-circuit
 the remaining flow steps.
+
+### `pl-local-crud-micro-contract`
+
+The model runs
+[flows/pl-fullstack-crud-micro-contract-v1.flow](../flows/pl-fullstack-crud-micro-contract-v1.flow).
+This is the next diagnostic treatment after the scaffold-contract plateau. It keeps
+the deterministic senior scaffold, but decomposes the hard domain layer into
+customer, asset, work order create/read/detail, and work order edit/delete micro
+contracts. Each micro contract has a narrow allowed file set and an executable probe
+before the next slice starts.
 
 ## Runner Policy
 
@@ -277,6 +289,28 @@ control removes scaffold-only extra exports, anchors all initial cards to
 adds a verifier-level `pathRootIsolation` hard failure for app files written at the
 attempt root. The next run should be recorded as a current-commit R27 diagnostic, not
 as completed R26 evidence.
+
+Observed R27 current-contract diagnostic on `2026-05-04`: the native-Ollama run
+`live-fscrud-r27-ollama-current-contract-v1-20260504-0932` used
+`qwen3-opencode-big:30b` and the same paired arms as R24. The solo arm completed the
+flow and again scored `61/100`, failing browser UI, seed integrity, and domain
+behavior. The scaffold-contract arm failed at the first domain foundation review
+after `2/2` repair rounds and scored `80/100` with only `domain_behavior_failed`.
+The previous blockers stayed fixed: no scaffold export-surface precheck mismatch and
+no run-root app-file leak. The new failure was a different local-model collapse: the
+model replaced `src/domain.js` with `module.exports = { Customer, Asset }`, which is
+invalid executable CommonJS because `Customer` and `Asset` are undefined and the
+required CRUD functions are absent. Treat this as evidence that the local model is
+still drifting to entity/schema-shaped output under broad domain cards.
+
+Next micro-contract diagnostic: if R27 still fails at `domain_behavior_failed`, run a
+new `pl-local-crud-micro-contract` arm before scaling to `k=3`. The falsifiable
+hypothesis is that the same local model can preserve exact CommonJS exports and
+complete the domain rules when the senior instruction is split into executable
+micro contracts instead of two larger domain cards. A pass or a non-domain verifier
+failure supports the micro-contract control theory. Repeated export drift or rule
+failure after these probes is evidence that natural-language PL decomposition alone
+is still insufficient for this local model on FSCRUD.
 
 Scoring rule for the next comparison: runner, transport, and timeout failures are
 `runtime_failed` or `timeout_partial`, not product-quality failures and not evidence

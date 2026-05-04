@@ -57,7 +57,13 @@ function writeValidWorkspace(workspace: string): void {
   writeFileSync(join(workspace, 'verification-report.md'), 'npm test passed.');
   writeFileSync(
     join(workspace, 'public', 'index.html'),
-    '<h1>customers assets work_orders</h1><button>list create edit detail delete</button>',
+    [
+      '<h1>customers assets work_orders</h1>',
+      '<section>customers list create read edit detail delete email phone serviceAddress</section>',
+      '<section>assets list create read edit detail delete customerId serialNumber assetType</section>',
+      '<section>work_orders list create read edit detail delete customerId assetId status priority completedAt</section>',
+      '<p>open scheduled in_progress completed cancelled low normal urgent</p>',
+    ].join('\n'),
   );
   writeFileSync(
     join(workspace, '__tests__', 'domain.test.js'),
@@ -177,10 +183,17 @@ describe('FSCRUD verifier script', () => {
       score: number;
       checks: {
         browserUi: boolean;
+        uiSurface: boolean;
         testsPresent: boolean;
         domainBehavior: boolean;
         seedIntegrity: boolean;
         pathRootIsolation: boolean;
+      };
+      uiSurface: { passed: boolean; missing: { entityCrud: string[] } };
+      scoreBreakdown: { uiSurface: { score: number; maxScore: number } };
+      domainSubScores: {
+        entities: { passed: boolean; score: number; maxScore: number };
+        executableBehavior: { passed: boolean; score: number; maxScore: number };
       };
     };
 
@@ -188,10 +201,69 @@ describe('FSCRUD verifier script', () => {
     expect(report.passed).toBe(true);
     expect(report.score).toBeGreaterThanOrEqual(80);
     expect(report.checks.browserUi).toBe(true);
+    expect(report.checks.uiSurface).toBe(true);
+    expect(report.uiSurface.passed).toBe(true);
+    expect(report.uiSurface.missing.entityCrud).toEqual([]);
+    expect(report.scoreBreakdown.uiSurface).toMatchObject({ score: 4, maxScore: 4 });
+    expect(report.domainSubScores.entities).toMatchObject({ passed: true, score: 8, maxScore: 8 });
+    expect(report.domainSubScores.executableBehavior).toEqual({
+      passed: true,
+      score: 15,
+      maxScore: 15,
+    });
     expect(report.checks.testsPresent).toBe(true);
     expect(report.checks.domainBehavior).toBe(true);
     expect(report.checks.seedIntegrity).toBe(true);
     expect(report.checks.pathRootIsolation).toBe(true);
+  });
+
+  it('fails when UI files exist but omit required CRUD task concepts', () => {
+    const workspace = mkdtempSync(join(tmpdir(), 'fscrud-ui-surface-'));
+    writeValidWorkspace(workspace);
+    writeFileSync(
+      join(workspace, 'public', 'index.html'),
+      '<h1>Field service dashboard</h1><p>Generated shell only.</p>',
+    );
+
+    const result = runVerifier(workspace, ['--no-run-tests']);
+    const report = JSON.parse(result.stdout) as {
+      hardFailures: string[];
+      checks: {
+        browserUi: boolean;
+        uiSurface: boolean;
+        allEntities: boolean;
+        allCrudTerms: boolean;
+      };
+      scoreBreakdown: { uiSurface: { score: number; maxScore: number } };
+      uiSurface: {
+        passed: boolean;
+        missing: {
+          entities: string[];
+          crud: string[];
+          taskConcepts: string[];
+          entityCrud: string[];
+        };
+      };
+    };
+
+    expect(result.status).toBe(1);
+    expect(report.hardFailures).toContain('ui_surface_incomplete');
+    expect(report.checks.browserUi).toBe(true);
+    expect(report.checks.uiSurface).toBe(false);
+    expect(report.checks.allEntities).toBe(true);
+    expect(report.checks.allCrudTerms).toBe(true);
+    expect(report.scoreBreakdown.uiSurface).toMatchObject({ score: 2, maxScore: 4 });
+    expect(report.uiSurface.passed).toBe(false);
+    expect(report.uiSurface.missing.entities).toEqual(['customers', 'assets', 'workOrders']);
+    expect(report.uiSurface.missing.crud).toEqual(['list', 'create', 'edit', 'detail', 'delete']);
+    expect(report.uiSurface.missing.taskConcepts).toEqual([
+      'customerReference',
+      'assetReference',
+      'status',
+      'priority',
+      'completion',
+    ]);
+    expect(report.uiSurface.missing.entityCrud).toContain('workOrders.delete');
   });
 
   it('fails when generated app files leak to the run root outside the workspace', () => {

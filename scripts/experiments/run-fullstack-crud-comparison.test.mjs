@@ -129,6 +129,14 @@ test('resolves the R37 schema-repaired handoff-source group', () => {
   ]);
 });
 
+test('resolves the R38 senior-plan repaired handoff-source group', () => {
+  assert.deepEqual(resolveArms('r38-senior-plan-repaired-handoff'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r38-pl-senior-plan-repaired-handoff-source',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

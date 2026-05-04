@@ -47,23 +47,24 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 
 ## Arms
 
-| Arm                                     | Runner                                                  | Model                                  | Purpose                                                                      |
-| --------------------------------------- | ------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
-| `solo-local-crud`                       | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                      |
-| `pl-local-crud-factory`                 | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control              |
-| `pl-local-crud-scaffold-contract`       | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback   |
-| `pl-local-crud-micro-contract`          | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                  |
-| `pl-local-crud-micro-contract-v2`       | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests  |
-| `r31-static-domain-kernel-control`      | prompt-language flow                                    | deterministic only                     | Control: scaffold plus known-good domain kernel, no model-authored code      |
-| `r31-pl-domain-kernel-bulk`             | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel, local model owns server/UI/docs         |
-| `r32-pl-ui-surface-control`             | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus nearby server/UI surface gates      |
-| `r33-pl-ui-skeleton-integration`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus protected deterministic UI skeleton |
-| `r34-pl-server-only-integration`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/docs/manifest/report; model owns server only |
-| `r35-pl-handoff-artifacts`              | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/server; model owns handoff artifacts only    |
-| `r36-pl-structured-handoff-source`      | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns structured handoff source only     |
-| `r37-pl-schema-repaired-handoff-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw handoff intent only            |
-| `pl-local-senior-crud`                  | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
-| `hybrid-router-crud`                    | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
+| Arm                                          | Runner                                                  | Model                                  | Purpose                                                                      |
+| -------------------------------------------- | ------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
+| `solo-local-crud`                            | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                      |
+| `pl-local-crud-factory`                      | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control              |
+| `pl-local-crud-scaffold-contract`            | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback   |
+| `pl-local-crud-micro-contract`               | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                  |
+| `pl-local-crud-micro-contract-v2`            | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests  |
+| `r31-static-domain-kernel-control`           | prompt-language flow                                    | deterministic only                     | Control: scaffold plus known-good domain kernel, no model-authored code      |
+| `r31-pl-domain-kernel-bulk`                  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel, local model owns server/UI/docs         |
+| `r32-pl-ui-surface-control`                  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus nearby server/UI surface gates      |
+| `r33-pl-ui-skeleton-integration`             | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus protected deterministic UI skeleton |
+| `r34-pl-server-only-integration`             | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/docs/manifest/report; model owns server only |
+| `r35-pl-handoff-artifacts`                   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/server; model owns handoff artifacts only    |
+| `r36-pl-structured-handoff-source`           | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns structured handoff source only     |
+| `r37-pl-schema-repaired-handoff-source`      | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw handoff intent only            |
+| `r38-pl-senior-plan-repaired-handoff-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw senior plan intent only        |
+| `pl-local-senior-crud`                       | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
+| `hybrid-router-crud`                         | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
 Run the first claim attempt with only `solo-local-crud` and
 `pl-local-crud-factory`. Add the senior and hybrid arms only after the baseline
@@ -477,6 +478,43 @@ Updated repeated-batch interpretation: R37 is stable for its narrow claim bounda
 It does not reopen the broader local-generation claim; it shows the practical system
 pattern that works on this host is local intent emission plus deterministic schema
 normalization and artifact rendering.
+
+### R38 Senior-Plan Repaired Handoff Diagnostic
+
+R38 is designed as `--arms r38-senior-plan-repaired-handoff`. It keeps the same
+deterministic domain kernel, UI skeleton, and server integration as R37, but raises
+the model-owned source from a keyword-level handoff payload to
+`senior-plan.raw.json`. The raw source must include objective, constraints,
+architecture, implementation, verification, risk, local, deterministic, domain, UI,
+server, handoff, and `senior-plan.raw.json`. Deterministic tooling still normalizes
+canonical `handoff-source.json` and renders final handoff artifacts.
+
+Observed R38 on `2026-05-04`:
+`live-fscrud-r38-senior-plan-repaired-handoff-20260504-2215` and
+`live-fscrud-r38-senior-plan-repaired-handoff-fixed-20260504-2240`.
+
+- The first R38 run showed the model could emit a richer senior-plan source, but
+  the flow failed because a final post-render model review asked the model to wait
+  after deterministic artifacts already existed. Hidden verifier, domain behavior,
+  and path isolation passed; the treatment scored `95/100` but ended `flow_failed`.
+- The fixed R38 run made final artifact verification deterministic and required the
+  model-owned filename in the raw source. R38 then scored `100/100`, completed the
+  PL flow, and passed public gate, hidden verifier, executable domain behavior, and
+  path isolation.
+- The model-authored source was still shallow, but it was plan-shaped rather than
+  only keyword-shaped: it included objective, constraints, architecture,
+  implementation, verification, risk, local/deterministic/product-boundary terms,
+  handoff, deterministic rendered artifacts, and `senior-plan.raw.json`.
+- In the same fixed run, `r30-solo-local` failed at `35/100` with UI surface, seed
+  integrity, and domain behavior failures; `r31-static-domain-kernel-control` passed
+  at `100/100`.
+
+Updated R38 interpretation: the senior-engineer prompt-language hypothesis is
+supported only at the constrained intent-source layer. Local inference can emit a
+small senior-plan scaffold when deterministic gates define the required fields, but
+the evidence still does not prove autonomous senior engineering or final artifact
+generation. The useful pattern remains: local model supplies bounded intent or plan
+signals; deterministic PL tooling performs schema repair, rendering, and verification.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

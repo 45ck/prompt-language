@@ -116,6 +116,16 @@
       "hypothesis": "If the R36 failure is strict JSON schema fidelity rather than handoff intent, the local model can emit a raw handoff-source intent file that deterministic schema repair normalizes into canonical handoff-source.json and rendered handoff artifacts.",
       "claimBoundary": "This is a schema-repair diagnostic. A pass would not prove local generation of final handoff files or strict schema compliance; it would isolate whether local inference can produce enough handoff intent for deterministic constrained normalization.",
       "result": "Observed in live-fscrud-r37-schema-repaired-handoff-fixed-20260504-2110: treatment scored 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. Repeated same-commit batch live-fscrud-r37-schema-repaired-handoff-k3-20260504-2130 passed R37 3/3 at 100/100 with identical repairable raw intent payloads. The model-authored raw source contained the required local/deterministic/domain/UI/server/handoff intent but not the final schema; deterministic normalization and rendering produced canonical handoff artifacts."
+    },
+    {
+      "id": "r38-pl-senior-plan-repaired-handoff-source",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R37 after deterministic domain kernel, deterministic UI skeleton, and deterministic server integration setup",
+      "flow": "../flows/pl-fullstack-crud-senior-plan-repaired-handoff-r38.flow",
+      "status": "planned-diagnostic",
+      "hypothesis": "If R37 passes because keyword-level handoff intent is repairable, the local model can also emit a richer senior-engineering plan source with objective, constraints, architecture, implementation, verification, risk, and handoff intent for deterministic schema repair.",
+      "claimBoundary": "This is a senior-plan schema-repair diagnostic. A pass would not prove local generation of final product artifacts, strict schema compliance, or correct autonomous engineering execution; it would isolate whether local inference can provide a richer plan-shaped source that deterministic tooling can normalize.",
+      "result": "Observed in live-fscrud-r38-senior-plan-repaired-handoff-20260504-2215: treatment scored 95/100 with hiddenOraclePassed=true and domainBehaviorPassed=true, but flow_failed because a final post-render model review produced no progress before the completion marker. Fixed run live-fscrud-r38-senior-plan-repaired-handoff-fixed-20260504-2240 made final verification deterministic and required senior-plan.raw.json in the model source; treatment scored 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored source was shallow but plan-shaped: objective, constraints, architecture, implementation, verification, risk, local/deterministic/domain/UI/server/handoff terms, deterministic rendered artifacts, and senior-plan.raw.json."
     }
   ],
   "timeouts": {
@@ -127,5 +137,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r37-schema-repair-k3-passed"
+  "resultStatus": "diagnostic-only-r38-senior-plan-repair-passed"
 }

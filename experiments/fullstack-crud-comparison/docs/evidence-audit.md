@@ -384,6 +384,35 @@ repeats with native Ollama and `qwen3-opencode-big:30b`.
   should be credited to a stable local-intent plus deterministic-normalization
   pattern, not to rich model-authored handoff artifacts.
 
+## R38 Evidence Update
+
+R38 tested the next senior-engineering hypothesis: whether the model can emit a
+richer plan-shaped source, not just a minimal handoff keyword payload, while
+deterministic tooling still owns schema repair and final artifacts.
+
+Observed R38 results:
+
+- `live-fscrud-r38-senior-plan-repaired-handoff-20260504-2215`: treatment scored
+  `95/100`; hidden verification passed, domain behavior passed, and path isolation
+  passed, but the PL flow failed because a final post-render model review produced
+  no workspace progress before the completion marker.
+- `live-fscrud-r38-senior-plan-repaired-handoff-fixed-20260504-2240`: treatment
+  scored `100/100` and passed public gate, hidden verifier, executable domain
+  behavior, and path isolation after final artifact verification was made
+  deterministic and the raw model-owned filename became mandatory.
+- The fixed run's `senior-plan.raw.json` included objective, constraints,
+  architecture, implementation, verification, risk, local, deterministic, domain,
+  UI, server, handoff, deterministic rendered artifacts, and
+  `senior-plan.raw.json`.
+- The same fixed run kept the comparison anchors intact: solo failed at `35/100`,
+  while the deterministic static control passed at `100/100`.
+
+Updated R38 evidence: the user's senior-engineer PL hypothesis works only in a
+bounded source-emission form so far. The local model can provide a shallow but
+structured senior-plan payload when the field vocabulary and verifier are explicit.
+It still does not prove autonomous senior engineering, strict schema compliance, or
+local generation of final handoff artifacts.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

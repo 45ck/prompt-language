@@ -865,6 +865,18 @@ Only after local-only results are understood, add a hybrid arm where PL routes b
 implementation to local inference and escalates only high-risk reviews to a stronger
 external model.
 
+### Phase D: Senior-Plan Source Diagnostics
+
+R38 adds a narrow senior-engineering source diagnostic after the R37 schema-repair
+result. The model owns only `senior-plan.raw.json`; deterministic tooling validates
+the senior-plan vocabulary, normalizes canonical handoff source, renders final
+artifacts, and runs public/hidden verification.
+
+Use this phase to test whether "senior engineer sitting beside a junior developer"
+prompt language improves local source intent quality. Do not treat a pass as proof
+of autonomous senior engineering unless the model also owns executable product
+changes in a separate arm.
+
 ## Decision Rules
 
 Claim `pl-local-crud-factory` better only if:
@@ -882,3 +894,11 @@ Claim solo better if:
 
 - solo passes more gates, has equal or better verified completeness, and PL overhead
   does not produce better artifacts.
+
+## Current Diagnostic Result
+
+As of `2026-05-04`, R38 fixed run
+`live-fscrud-r38-senior-plan-repaired-handoff-fixed-20260504-2240` passed at
+`100/100` with public gate, hidden verifier, executable domain behavior, and path
+isolation green. The claim boundary is senior-plan source emission only: deterministic
+tooling still owns schema repair and final handoff rendering.

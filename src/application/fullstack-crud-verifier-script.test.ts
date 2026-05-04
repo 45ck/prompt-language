@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
+import { parseFlow } from './parse-flow.js';
 
 const ROOT = resolve(__dirname, '..', '..');
 const VERIFY_SCRIPT = join(
@@ -20,6 +21,20 @@ const SCAFFOLD_SCRIPT = join(
   'fullstack-crud-comparison',
   'scaffold',
   'write-scaffold-contract.cjs',
+);
+const DOMAIN_KERNEL_SCRIPT = join(
+  ROOT,
+  'experiments',
+  'fullstack-crud-comparison',
+  'scaffold',
+  'write-domain-kernel.cjs',
+);
+const R33_PUBLIC_GATE_SCRIPT = join(
+  ROOT,
+  'experiments',
+  'fullstack-crud-comparison',
+  'scaffold',
+  'verify-r33-public.cjs',
 );
 
 function runVerifier(workspace: string, extraArgs: string[] = []) {
@@ -482,9 +497,17 @@ describe('FSCRUD verifier script', () => {
       'pl-fullstack-crud-scaffold-contract-v1.flow',
       'pl-fullstack-crud-micro-contract-v1.flow',
       'pl-fullstack-crud-micro-contract-v2.flow',
+      'pl-fullstack-crud-ui-skeleton-r33.flow',
     ];
 
     for (const flow of flows) {
+      const flowText = readFileSync(
+        join(ROOT, 'experiments', 'fullstack-crud-comparison', 'flows', flow),
+        'utf8',
+      );
+      const spec = parseFlow(flowText);
+      expect(spec.warnings, `${flow} parser warnings`).toEqual([]);
+
       const output = execFileSync(
         process.execPath,
         [
@@ -500,6 +523,70 @@ describe('FSCRUD verifier script', () => {
         { cwd: ROOT, encoding: 'utf8' },
       );
       expect(output).toContain('Flow parsed successfully');
+    }
+  });
+
+  it('accepts an R33 workspace that satisfies the public gate contract', () => {
+    const attemptRoot = mkdtempSync(join(tmpdir(), 'fscrud-r33-public-gate-'));
+    const workspace = join(attemptRoot, 'workspace', 'fscrud-01');
+    try {
+      execFileSync(process.execPath, [SCAFFOLD_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      execFileSync(process.execPath, [DOMAIN_KERNEL_SCRIPT, workspace], {
+        cwd: ROOT,
+        encoding: 'utf8',
+      });
+      writeFileSync(
+        join(workspace, 'public', 'index.html'),
+        [
+          '<!doctype html><html><body>',
+          '<section>customers customerId list create edit detail delete</section>',
+          '<section>assets assetId customerId list create edit detail delete</section>',
+          '<section>work_orders status open scheduled in_progress completed cancelled priority low normal urgent completedAt list create edit detail delete</section>',
+          '</body></html>',
+        ].join('\n'),
+      );
+      writeFileSync(
+        join(workspace, 'src', 'server.js'),
+        "const domain = require('./domain.js');\nmodule.exports = { domain, customers: true, assets: true, work_orders: true };\n",
+      );
+      writeFileSync(
+        join(workspace, 'run-manifest.json'),
+        JSON.stringify(
+          {
+            arm: 'r33-pl-ui-skeleton-integration',
+            features: [
+              'deterministic-domain-kernel',
+              'deterministic-ui-skeleton',
+              'protected-artifacts',
+              'local-only',
+            ],
+          },
+          null,
+          2,
+        ),
+      );
+      writeFileSync(
+        join(workspace, 'README.md'),
+        'Run with npm test and npm start. Deterministic domain and UI files are protected.\n',
+      );
+      writeFileSync(
+        join(workspace, 'verification-report.md'),
+        'Public checks: check:domain:exports, check:domain:customer, check:domain:assets, check:domain:work-orders, npm test. Hidden verifier is run only by the harness.\n',
+      );
+
+      const result = spawnSync(process.execPath, [R33_PUBLIC_GATE_SCRIPT, 'workspace/fscrud-01'], {
+        cwd: attemptRoot,
+        encoding: 'utf8',
+        timeout: 30_000,
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain('r33_public_gate_ok');
+    } finally {
+      rmSync(attemptRoot, { recursive: true, force: true });
     }
   });
 

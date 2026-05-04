@@ -877,6 +877,11 @@ prompt language improves local source intent quality. Do not treat a pass as pro
 of autonomous senior engineering unless the model also owns executable product
 changes in a separate arm.
 
+R39 extends this phase with deterministic quality scoring. If R39 fails while R38
+passes, the evidence boundary is field-shaped source emission only. Do not keep
+raising the claim with more prompt wording unless the next arm changes the mechanism,
+such as deterministic section scaffolding or hybrid review.
+
 ## Decision Rules
 
 Claim `pl-local-crud-factory` better only if:
@@ -900,5 +905,9 @@ Claim solo better if:
 As of `2026-05-04`, R38 fixed run
 `live-fscrud-r38-senior-plan-repaired-handoff-fixed-20260504-2240` passed at
 `100/100` with public gate, hidden verifier, executable domain behavior, and path
-isolation green. The claim boundary is senior-plan source emission only: deterministic
-tooling still owns schema repair and final handoff rendering.
+isolation green. R39
+`live-fscrud-r39-quality-scored-senior-plan-20260504-2315` failed the stricter
+senior-plan quality scorer at `6/29`. The current claim boundary is therefore
+senior-plan field/source emission only: deterministic tooling still owns schema
+repair and final handoff rendering, and richer senior reasoning has not been shown
+locally.

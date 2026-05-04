@@ -413,6 +413,32 @@ structured senior-plan payload when the field vocabulary and verifier are explic
 It still does not prove autonomous senior engineering, strict schema compliance, or
 local generation of final handoff artifacts.
 
+## R39 Evidence Update
+
+R39 tested whether the R38 senior-plan source could be made substantively richer by
+adding a deterministic quality score over concrete objective, constraints,
+architecture, implementation, verification, and risk terms.
+
+Observed R39 result:
+
+- `live-fscrud-r39-quality-scored-senior-plan-20260504-2315`: treatment failed the
+  strict review after three repair rounds because `senior-plan.raw.json` scored
+  `6/29`, below the required `18/29`.
+- The treatment ended `flow_failed` with public gate failing, while hidden
+  verifier and executable domain behavior were green due to deterministic protected
+  product artifacts.
+- The final raw source was still shallow and generic. It included the top-level
+  fields, but not enough concrete field-service, CRUD, verification, path isolation,
+  seed integrity, schema, or risk terms to pass the quality scorer.
+- Comparison anchors remained useful: solo failed at `12/100`; the deterministic
+  static control passed at `100/100`.
+
+Updated R39 evidence: explicit rubric wording plus three repair rounds did not make
+this local model produce richer senior-engineering plan content. The supported
+claim remains R38's narrow field-shaped intent emission, not substantive
+senior-engineering reasoning. The next diagnostic should either constrain the
+output structure more mechanically or test hybrid review escalation.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

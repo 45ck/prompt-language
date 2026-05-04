@@ -126,6 +126,16 @@
       "hypothesis": "If R37 passes because keyword-level handoff intent is repairable, the local model can also emit a richer senior-engineering plan source with objective, constraints, architecture, implementation, verification, risk, and handoff intent for deterministic schema repair.",
       "claimBoundary": "This is a senior-plan schema-repair diagnostic. A pass would not prove local generation of final product artifacts, strict schema compliance, or correct autonomous engineering execution; it would isolate whether local inference can provide a richer plan-shaped source that deterministic tooling can normalize.",
       "result": "Observed in live-fscrud-r38-senior-plan-repaired-handoff-20260504-2215: treatment scored 95/100 with hiddenOraclePassed=true and domainBehaviorPassed=true, but flow_failed because a final post-render model review produced no progress before the completion marker. Fixed run live-fscrud-r38-senior-plan-repaired-handoff-fixed-20260504-2240 made final verification deterministic and required senior-plan.raw.json in the model source; treatment scored 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored source was shallow but plan-shaped: objective, constraints, architecture, implementation, verification, risk, local/deterministic/domain/UI/server/handoff terms, deterministic rendered artifacts, and senior-plan.raw.json."
+    },
+    {
+      "id": "r39-pl-quality-scored-senior-plan-source",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R38 after deterministic domain kernel, deterministic UI skeleton, and deterministic server integration setup",
+      "flow": "../flows/pl-fullstack-crud-quality-scored-senior-plan-r39.flow",
+      "status": "diagnostic-complete",
+      "hypothesis": "If R38 only proves shallow plan-shaped payload emission, the local model can still emit a more concrete senior plan that passes a deterministic quality scorer for objective, constraints, architecture, implementation, verification, and risk content.",
+      "claimBoundary": "This is a quality-scored senior-plan source diagnostic. A pass would not prove autonomous senior engineering or product implementation; it would isolate whether local inference can emit a richer bounded plan source under explicit deterministic scoring.",
+      "result": "Observed in live-fscrud-r39-quality-scored-senior-plan-20260504-2315: treatment failed strict review after 3 repair rounds because senior-plan.raw.json scored 6/29 against the deterministic quality threshold of 18/29. The treatment ended flow_failed with verifierScore=82/100, publicGatePassed=false, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored source remained shallow and generic rather than concrete senior-engineering content. This does not support the richer senior-plan quality hypothesis."
     }
   ],
   "timeouts": {
@@ -137,5 +147,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r38-senior-plan-repair-passed"
+  "resultStatus": "diagnostic-only-r39-quality-scored-senior-plan-failed"
 }

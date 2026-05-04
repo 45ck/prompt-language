@@ -63,6 +63,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `r36-pl-structured-handoff-source`           | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns structured handoff source only     |
 | `r37-pl-schema-repaired-handoff-source`      | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw handoff intent only            |
 | `r38-pl-senior-plan-repaired-handoff-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw senior plan intent only        |
+| `r39-pl-quality-scored-senior-plan-source`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns quality-scored senior plan source  |
 | `pl-local-senior-crud`                       | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
 | `hybrid-router-crud`                         | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
@@ -515,6 +516,37 @@ small senior-plan scaffold when deterministic gates define the required fields, 
 the evidence still does not prove autonomous senior engineering or final artifact
 generation. The useful pattern remains: local model supplies bounded intent or plan
 signals; deterministic PL tooling performs schema repair, rendering, and verification.
+
+### R39 Quality-Scored Senior-Plan Diagnostic
+
+R39 is designed as `--arms r39-quality-scored-senior-plan`. It keeps the same
+protected deterministic product setup as R38, but adds a deterministic quality score
+over `senior-plan.raw.json`. The scorer requires at least `18/29` concrete terms
+across objective, constraints, architecture, implementation, verification, and risk.
+This directly tests whether the local model can move beyond shallow field presence.
+
+Observed R39 on `2026-05-04`:
+`live-fscrud-r39-quality-scored-senior-plan-20260504-2315`.
+
+- `r39-pl-quality-scored-senior-plan-source`: failed the strict review after three
+  repair rounds. The final raw source scored only `6/29`, so deterministic
+  normalization and handoff rendering never ran.
+- The hidden verifier still passed after the run because deterministic protected
+  product files existed, but the public PL gate failed and the treatment score was
+  `82/100` with `flow_failed`.
+- The model-authored source remained shallow, for example "Domain-driven design",
+  "FSCRUD-01 deterministic behavior", "Rubric terms validated", and a truncated
+  `rubric_terms` value, rather than concrete ordered implementation, verification,
+  and risk details.
+- In the same run, `r30-solo-local` failed at `12/100`; `r31-static-domain-kernel-control`
+  passed at `100/100`.
+
+Updated R39 interpretation: the stronger senior-plan quality hypothesis is not
+supported for this local model under the current natural-language runner. R38 proves
+bounded field-shaped source emission; R39 shows that explicit rubric terms and
+repair loops did not make the model produce meaningfully richer senior-engineering
+content. The next useful direction is not more wording; it is either constrained
+template filling with deterministic section scaffolds or a hybrid reviewer arm.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

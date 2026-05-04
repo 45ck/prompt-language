@@ -137,6 +137,14 @@ test('resolves the R38 senior-plan repaired handoff-source group', () => {
   ]);
 });
 
+test('resolves the R39 quality-scored senior-plan group', () => {
+  assert.deepEqual(resolveArms('r39-quality-scored-senior-plan'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r39-pl-quality-scored-senior-plan-source',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

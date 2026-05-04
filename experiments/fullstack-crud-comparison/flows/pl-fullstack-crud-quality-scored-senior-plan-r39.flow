@@ -1,0 +1,49 @@
+Goal: R39 local PL quality-scored senior-plan diagnostic with deterministic FSCRUD-01 product behavior
+
+memory:
+  fscrud_workspace
+  fscrud_task
+  fscrud_r39_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="TASK.md"
+  remember key="fscrud_r39_policy" value="R39 local-only quality-scored senior-plan lane; deterministic domain kernel, deterministic UI skeleton, and deterministic server integration are protected; local model owns senior-plan.raw.json only; deterministic quality scorer validates the plan before canonical handoff-source.json and rendered handoff artifacts are created"
+
+  let protected_files = "workspace/fscrud-01/src/domain.js, workspace/fscrud-01/src/server.js, workspace/fscrud-01/public/index.html, workspace/fscrud-01/package.json, workspace/fscrud-01/CONTRACT.md, workspace/fscrud-01/DOMAIN_API.md, workspace/fscrud-01/contracts/domain-exports.json, workspace/fscrud-01/__tests__/domain.contract.test.js, workspace/fscrud-01/data/seed.json, workspace/fscrud-01/scripts/check-domain-exports.cjs, workspace/fscrud-01/scripts/check-domain-customer.cjs, workspace/fscrud-01/scripts/check-domain-assets.cjs, workspace/fscrud-01/scripts/check-domain-work-orders.cjs"
+  let source_contract = "Create workspace/fscrud-01/senior-plan.raw.json. The file may be JSON or plain text. It must explicitly include objective, constraints, architecture, implementation, verification, risk, local, deterministic, domain, UI, server, handoff, and senior-plan.raw.json. It must also include concrete senior plan terms: field service, work order, customer, asset, protected, local-only, do not edit, deterministic rendered, seed, ordered, create, read, edit, delete, relationship, check:domain:exports, check:domain:customer, check:domain:assets, check:domain:work-orders, npm test, path, isolation, seed integrity, domain behavior, schema, and handoff."
+
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs','../../../../../fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('scaffold script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-domain-kernel.cjs','../../../../../fullstack-crud-comparison/scaffold/write-domain-kernel.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('domain kernel script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');const ui='<!doctype html>\\n<html lang=\"en\">\\n  <head><meta charset=\"utf-8\"><title>FSCRUD-01 deterministic UI skeleton</title></head>\\n  <body>\\n    <h1>FSCRUD-01 Field Service Work Orders</h1>\\n    <section id=\"customers\" data-entity=\"customers\">customers customerId list create read edit detail delete table rows browse view all add new update modify save show remove archive</section>\\n    <section id=\"assets\" data-entity=\"assets\">assets assetId customerId list create read edit detail delete table rows browse view all add new update modify save show remove archive</section>\\n    <section id=\"work_orders\" data-entity=\"work_orders\">work_orders work orders workOrder customerId assetId status open scheduled in_progress completed cancelled priority low normal urgent completedAt list create read edit detail delete table rows browse view all add new update modify save show remove archive</section>\\n  </body>\\n</html>\\n';fs.writeFileSync('workspace/fscrud-01/public/index.html',ui);" [timeout 60]
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-r35-server-artifact.cjs','../../../../../fullstack-crud-comparison/scaffold/write-r35-server-artifact.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('R39 server script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: cd workspace/fscrud-01 && npm run check:domain:exports && npm run check:domain:customer && npm run check:domain:assets && npm run check:domain:work-orders && npm test [timeout 300]
+  run: node -e "const fs=require('fs');for(const p of ['workspace/fscrud-01/README.md','workspace/fscrud-01/run-manifest.json','workspace/fscrud-01/verification-report.md','workspace/fscrud-01/handoff-source.json','workspace/fscrud-01/senior-plan.raw.json'])fs.rmSync(p,{force:true});" [timeout 60]
+
+  prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. EXPERIMENT_ARM r39-pl-quality-scored-senior-plan-source. PROVIDER local-only. Use one write_file action to create only workspace/fscrud-01/senior-plan.raw.json. Do not edit protected files: ${protected_files}. Do not create handoff-source.json, README.md, run-manifest.json, or verification-report.md. Do not summarize. Contract: ${source_contract}
+  review strict criteria: "senior-plan.raw.json must exist only at workspace/fscrud-01/senior-plan.raw.json and score at least 18/29 on the deterministic R39 senior-plan quality rubric." grounded-by "node ../../../../../fullstack-crud-comparison/scaffold/normalize-r39-quality-senior-plan-source.cjs workspace/fscrud-01 --check-only" max 3
+    prompt: Work only in ${fscrud_workspace}. Repair only workspace/fscrud-01/senior-plan.raw.json. Use one write_file action. Include objective, constraints, architecture, implementation, verification, risk, local, deterministic, domain, UI, server, handoff, senior-plan.raw.json, and the concrete rubric terms from the contract. Do not edit protected files: ${protected_files}. Do not write handoff-source.json, README.md, run-manifest.json, or verification-report.md. Critique: ${_review_critique}
+  end
+
+  run: node ../../../../../fullstack-crud-comparison/scaffold/normalize-r39-quality-senior-plan-source.cjs workspace/fscrud-01 [timeout 60]
+  run: node ../../../../../fullstack-crud-comparison/scaffold/verify-r39-quality-senior-plan-source.cjs workspace/fscrud-01 [timeout 60]
+  run: node ../../../../../fullstack-crud-comparison/scaffold/write-r36-handoff-artifacts.cjs workspace/fscrud-01 [timeout 60]
+  run: node ../../../../../fullstack-crud-comparison/scaffold/verify-r35-public.cjs workspace/fscrud-01 [timeout 60]
+
+  run: node -e "require('fs').writeFileSync('workspace/fscrud-01/.pl-r39-quality-scored-senior-plan-complete','ok\n')" [timeout 60]
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/DOMAIN_API.md
+  file_exists workspace/fscrud-01/contracts/domain-exports.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/public/index.html
+  file_exists workspace/fscrud-01/__tests__/domain.contract.test.js
+  file_exists workspace/fscrud-01/data/seed.json
+  file_exists workspace/fscrud-01/senior-plan.raw.json
+  file_exists workspace/fscrud-01/handoff-source.json
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md
+  file_exists workspace/fscrud-01/.pl-r39-quality-scored-senior-plan-complete

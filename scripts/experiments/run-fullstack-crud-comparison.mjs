@@ -123,6 +123,11 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-senior-plan-repaired-handoff-r38.flow',
   ),
+  'r39-pl-quality-scored-senior-plan-source': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-quality-scored-senior-plan-r39.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
@@ -176,6 +181,11 @@ const ARM_GROUPS = {
     'r30-solo-local',
     'r31-static-domain-kernel-control',
     'r38-pl-senior-plan-repaired-handoff-source',
+  ],
+  'r39-quality-scored-senior-plan': [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r39-pl-quality-scored-senior-plan-source',
   ],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],

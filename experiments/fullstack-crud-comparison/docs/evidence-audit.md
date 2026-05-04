@@ -309,6 +309,23 @@ artifact-following. The follow-up R35 change splits README, manifest, and
 verification report into separate cards with file-specific public checks before the
 full R35 public gate.
 
+Follow-up R35 results:
+
+- `live-fscrud-r35-handoff-artifacts-split-20260504-1945`: treatment scored
+  `87/100`, hidden verification passed, executable domain behavior passed, UI
+  surface passed, and path isolation passed, but the flow failed after creating only
+  `README.md`.
+- `live-fscrud-r35-handoff-artifacts-template-20260504-1955`: treatment again scored
+  `87/100` with the same protected product checks passing, but the model wrote a
+  generic README and ignored a grounded `readme_missing:npm test` critique before
+  the flow reached `run-manifest.json` or `verification-report.md`.
+
+Updated R35 evidence: stronger split-card structure and exact template wording did
+not make this local model comply with non-code handoff artifact generation. R35
+therefore isolates the remaining local-only blocker to artifact-following and repair
+compliance, not product behavior. A deterministic fallback writer would make the
+flow pass, but it would no longer measure local-model handoff artifact generation.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

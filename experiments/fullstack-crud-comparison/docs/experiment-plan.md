@@ -627,6 +627,25 @@ first R35 flow was still too broad for local handoff artifact following. The
 follow-up R35 flow splits README, manifest, and verification report into separate
 file-specific cards before the final public gate.
 
+Observed R35 follow-ups on `2026-05-04`:
+
+- `live-fscrud-r35-handoff-artifacts-split-20260504-1945`: `r35-pl-handoff-artifacts`
+  scored `87/100`; hidden oracle, executable domain behavior, UI surface, and path
+  isolation all passed, but the PL flow failed after the model created only
+  `README.md`.
+- `live-fscrud-r35-handoff-artifacts-template-20260504-1955`: `r35-pl-handoff-artifacts`
+  again scored `87/100`; protected product checks stayed green, but the model wrote
+  a generic README and ignored the grounded `readme_missing:npm test` repair
+  critique before reaching manifest or report generation.
+
+Updated R35 interpretation after split-card and exact-template runs: the narrow
+handoff-artifact hypothesis is not supported for this local model. Prompt-language
+gates correctly expose the failure and preserve deterministic product behavior, but
+more explicit natural-language artifact cards did not produce compliant README,
+manifest, and verification-report files. The next diagnostic should test structured
+artifact emission or a separately labeled hybrid reviewer/advisor path rather than
+another wording-only handoff prompt.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -652,8 +671,9 @@ Current operating interpretation:
   responsibility, not another R34 repetition.
 - R35 is the next controlled broadening step: handoff artifacts return to local-model
   responsibility while domain, UI, and server behavior stay deterministic.
-- The first R35 smoke shows that handoff artifact-following remains brittle unless
-  the PL flow splits each required artifact into its own checked card.
+- The R35 follow-ups show that handoff artifact-following remains brittle even after
+  each artifact is split into its own checked card and the README prompt is made
+  exact-template style.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

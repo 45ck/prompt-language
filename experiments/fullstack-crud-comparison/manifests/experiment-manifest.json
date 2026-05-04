@@ -95,7 +95,7 @@
       "status": "planned-diagnostic",
       "hypothesis": "With product behavior supplied deterministically and protected, local PL can make the local model generate README, run-manifest.json, and verification-report.md under strict review.",
       "claimBoundary": "This is a handoff-artifacts diagnostic. A pass would not prove local generation of domain, UI, or server code; it would isolate whether local inference can generate compliant handoff artifacts around deterministic product behavior.",
-      "result": "First smoke live-fscrud-r35-handoff-artifacts-20260504-1925 scored 91/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true, but flow_failed because verification-report.md was missing and the repair response made no observable workspace progress. Follow-up flow splits README, manifest, and verification report into file-specific checked cards before the full public gate."
+      "result": "First smoke live-fscrud-r35-handoff-artifacts-20260504-1925 scored 91/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true, but flow_failed because verification-report.md was missing and the repair response made no observable workspace progress. Split-card follow-up live-fscrud-r35-handoff-artifacts-split-20260504-1945 scored 87/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, uiSurface=true, and pathRootIsolation=true, but created only README.md. Exact-template follow-up live-fscrud-r35-handoff-artifacts-template-20260504-1955 again scored 87/100 with protected product checks green, but the local model wrote a generic README and ignored readme_missing:npm test before reaching run-manifest.json or verification-report.md. R35 now isolates a local artifact-following and repair-compliance blocker rather than a product behavior blocker."
     }
   ],
   "timeouts": {
@@ -107,5 +107,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r35-handoff-artifacts-split-flow-next"
+  "resultStatus": "diagnostic-only-r35-artifact-following-blocked"
 }

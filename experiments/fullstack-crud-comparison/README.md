@@ -374,6 +374,26 @@ still needs stronger PL structure. The follow-up R35 flow splits handoff generat
 into file-specific README, manifest, and verification-report cards before the full
 public gate.
 
+Observed split-card and exact-template R35 follow-ups on `2026-05-04`:
+`live-fscrud-r35-handoff-artifacts-split-20260504-1945` and
+`live-fscrud-r35-handoff-artifacts-template-20260504-1955`.
+
+- Both runs kept the deterministic product path stable: hidden verifier passed,
+  executable domain behavior passed, UI surface passed, and path isolation passed.
+- Both R35 treatments scored `87/100` and ended `flow_failed` before creating
+  `run-manifest.json` or `verification-report.md`.
+- The split-card run created only `README.md`; the exact-template follow-up still
+  wrote a generic README and ignored a grounded `readme_missing:npm test` repair
+  critique.
+
+Updated interpretation: R35 now falsifies the narrow hypothesis that more explicit
+handoff-card wording is enough for this local model. The remaining bottleneck is
+local artifact-following and repair compliance for non-code handoff files, not
+domain, UI, server, seed, or path-root behavior. The next useful experiment should
+either test constrained/structured artifact emission for local models or move to a
+separately labeled hybrid advisor/reviewer arm; do not count deterministic writes of
+README/manifest/report as local-model handoff generation.
+
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic
 path. Keep the same runner, model, commit, verifier, and timeout policy inside any

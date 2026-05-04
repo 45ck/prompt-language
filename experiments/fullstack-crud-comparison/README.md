@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R34 same-commit path-guard k=3 batch passed; next step is broader artifact responsibility
+Status: R36 structured-source diagnostic failed; next step is schema-constrained local output or a labeled hybrid arm
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -60,6 +60,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `r33-pl-ui-skeleton-integration`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus protected deterministic UI skeleton |
 | `r34-pl-server-only-integration`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/docs/manifest/report; model owns server only |
 | `r35-pl-handoff-artifacts`         | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/server; model owns handoff artifacts only    |
+| `r36-pl-structured-handoff-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns structured handoff source only     |
 | `pl-local-senior-crud`             | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
 | `hybrid-router-crud`               | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
@@ -393,6 +394,31 @@ domain, UI, server, seed, or path-root behavior. The next useful experiment shou
 either test constrained/structured artifact emission for local models or move to a
 separately labeled hybrid advisor/reviewer arm; do not count deterministic writes of
 README/manifest/report as local-model handoff generation.
+
+### R36 Structured Handoff-Source Diagnostic
+
+R36 is designed as `--arms r36-structured-handoff`. It keeps the deterministic domain
+kernel, UI skeleton, and server integration protected. The local model owns only
+`handoff-source.json`; deterministic tooling renders `README.md`,
+`run-manifest.json`, and `verification-report.md` from that source.
+
+Observed R36 smoke and exact-template follow-up on `2026-05-04`:
+`live-fscrud-r36-structured-handoff-20260504-2008` and
+`live-fscrud-r36-structured-handoff-template-20260504-2025`.
+
+- Both runs kept the deterministic product path stable: hidden verifier passed,
+  executable domain behavior passed, UI surface passed, seed integrity passed, and
+  path isolation passed.
+- Both R36 treatments scored `82/100` and ended `flow_failed` at the structured
+  source review before the deterministic renderer could create handoff artifacts.
+- The first R36 run wrote `{}` to `handoff-source.json`; the exact-template follow-up
+  wrote a short invented object instead of the supplied JSON template.
+
+Updated interpretation: R36 falsifies the narrower hypothesis that a single
+structured source file is enough for this local model. The next local-only path
+should not be another natural-language artifact prompt. It should either add
+runtime-level constrained decoding/schema enforcement or be explicitly classified as
+a deterministic artifact renderer rather than model-generated handoff evidence.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

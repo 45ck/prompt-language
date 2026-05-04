@@ -646,6 +646,37 @@ manifest, and verification-report files. The next diagnostic should test structu
 artifact emission or a separately labeled hybrid reviewer/advisor path rather than
 another wording-only handoff prompt.
 
+### R36 Structured Handoff-Source Control
+
+R36 tests whether the local model can comply with one structured source artifact
+when deterministic tooling owns the final README, manifest, and verification report
+projection.
+
+R36 planned arm:
+
+- `r36-pl-structured-handoff-source`:
+  [flows/pl-fullstack-crud-structured-handoff-r36.flow](../flows/pl-fullstack-crud-structured-handoff-r36.flow).
+
+Hypothesis: if freeform handoff-file generation is the R35 bottleneck, a single
+model-owned `handoff-source.json` plus deterministic rendering should pass public
+and hidden verification while preserving the local-only claim boundary.
+
+Observed R36 results on `2026-05-04`:
+
+- `live-fscrud-r36-structured-handoff-20260504-2008`: treatment scored `82/100`;
+  hidden oracle, domain behavior, UI surface, seed integrity, and path isolation
+  passed, but the model wrote `{}` to `handoff-source.json` and failed the
+  structured-source public review before rendering.
+- `live-fscrud-r36-structured-handoff-template-20260504-2025`: treatment again
+  scored `82/100` with protected product checks green, but the model wrote an
+  invented short object rather than the supplied exact JSON source template.
+
+Updated R36 interpretation: the structured-source hypothesis is not supported under
+the current local natural-language runner. The model is failing the source contract
+itself, not only the downstream rendered handoff files. The next local-only
+experiment should require runtime-level schema/constrained output support, or the
+claim must be weakened to deterministic artifact rendering from non-model inputs.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -674,6 +705,8 @@ Current operating interpretation:
 - The R35 follow-ups show that handoff artifact-following remains brittle even after
   each artifact is split into its own checked card and the README prompt is made
   exact-template style.
+- R36 shows that the same brittleness remains when the handoff task is reduced to
+  one structured source file, including an exact JSON template.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

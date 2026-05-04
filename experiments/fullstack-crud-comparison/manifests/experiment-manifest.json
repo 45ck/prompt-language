@@ -96,6 +96,16 @@
       "hypothesis": "With product behavior supplied deterministically and protected, local PL can make the local model generate README, run-manifest.json, and verification-report.md under strict review.",
       "claimBoundary": "This is a handoff-artifacts diagnostic. A pass would not prove local generation of domain, UI, or server code; it would isolate whether local inference can generate compliant handoff artifacts around deterministic product behavior.",
       "result": "First smoke live-fscrud-r35-handoff-artifacts-20260504-1925 scored 91/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true, but flow_failed because verification-report.md was missing and the repair response made no observable workspace progress. Split-card follow-up live-fscrud-r35-handoff-artifacts-split-20260504-1945 scored 87/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, uiSurface=true, and pathRootIsolation=true, but created only README.md. Exact-template follow-up live-fscrud-r35-handoff-artifacts-template-20260504-1955 again scored 87/100 with protected product checks green, but the local model wrote a generic README and ignored readme_missing:npm test before reaching run-manifest.json or verification-report.md. R35 now isolates a local artifact-following and repair-compliance blocker rather than a product behavior blocker."
+    },
+    {
+      "id": "r36-pl-structured-handoff-source",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R35 after deterministic domain kernel, deterministic UI skeleton, and deterministic server integration setup",
+      "flow": "../flows/pl-fullstack-crud-structured-handoff-r36.flow",
+      "status": "diagnostic-complete",
+      "hypothesis": "If freeform handoff artifact generation is the R35 blocker, the local model can instead create one compliant structured handoff-source.json that deterministic tooling renders into README, run-manifest.json, and verification-report.md.",
+      "claimBoundary": "This is a structured-source diagnostic. A pass would not prove local generation of domain, UI, server, or final rendered handoff files; it would isolate whether local inference can generate a compliant structured source for deterministic handoff rendering.",
+      "result": "Observed in live-fscrud-r36-structured-handoff-20260504-2008 and live-fscrud-r36-structured-handoff-template-20260504-2025: both scored 82/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, uiSurface=true, seed integrity passing, and pathRootIsolation=true, but flow_failed at the structured source review. The first run wrote {}, and the exact-template follow-up wrote an invented short object instead of the supplied JSON. R36 does not support the hypothesis that a single structured source file is enough under the current natural-language local runner."
     }
   ],
   "timeouts": {
@@ -107,5 +117,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r35-artifact-following-blocked"
+  "resultStatus": "diagnostic-only-r36-structured-source-blocked"
 }

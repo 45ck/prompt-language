@@ -113,6 +113,14 @@ test('resolves the R35 handoff-artifacts group', () => {
   ]);
 });
 
+test('resolves the R36 structured handoff-source group', () => {
+  assert.deepEqual(resolveArms('r36-structured-handoff'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r36-pl-structured-handoff-source',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

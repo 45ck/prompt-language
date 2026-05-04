@@ -326,6 +326,30 @@ therefore isolates the remaining local-only blocker to artifact-following and re
 compliance, not product behavior. A deterministic fallback writer would make the
 flow pass, but it would no longer measure local-model handoff artifact generation.
 
+## R36 Evidence Update
+
+R36 tested whether the R35 blocker was specifically multi-file Markdown/JSON
+handoff generation, or whether the same local model would comply if asked for one
+structured source file that deterministic tooling could render into handoff
+artifacts.
+
+Observed R36 results:
+
+- `live-fscrud-r36-structured-handoff-20260504-2008`: treatment scored `82/100`,
+  hidden verification passed, domain behavior passed, UI surface passed, seed
+  integrity passed, and path isolation passed, but the model wrote `{}` to
+  `handoff-source.json` and failed the structured-source review.
+- `live-fscrud-r36-structured-handoff-template-20260504-2025`: treatment again
+  scored `82/100` with protected product checks green, but the model wrote a short
+  invented object instead of the supplied exact JSON template.
+
+Updated R36 evidence: the failure is not just freeform handoff prose. This local
+model is not reliably following even a single structured-source artifact contract
+under the current natural-language PL runner. The next defensible local-only
+diagnostic would need runtime-level schema/constrained output support, or it should
+be labeled as deterministic artifact rendering rather than local model handoff
+generation.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

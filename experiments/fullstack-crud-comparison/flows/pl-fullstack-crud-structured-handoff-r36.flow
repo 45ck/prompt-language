@@ -1,0 +1,50 @@
+Goal: R36 local PL structured handoff-source diagnostic with deterministic FSCRUD-01 product behavior
+
+memory:
+  fscrud_workspace
+  fscrud_task
+  fscrud_r36_policy
+
+flow:
+  remember key="fscrud_workspace" value="workspace/fscrud-01"
+  remember key="fscrud_task" value="TASK.md"
+  remember key="fscrud_r36_policy" value="R36 local-only structured handoff-source lane; deterministic domain kernel, deterministic UI skeleton, and deterministic server integration are protected; local model owns handoff-source.json only; deterministic renderer projects README, run manifest, and verification report"
+
+  let protected_files = "workspace/fscrud-01/src/domain.js, workspace/fscrud-01/src/server.js, workspace/fscrud-01/public/index.html, workspace/fscrud-01/package.json, workspace/fscrud-01/CONTRACT.md, workspace/fscrud-01/DOMAIN_API.md, workspace/fscrud-01/contracts/domain-exports.json, workspace/fscrud-01/__tests__/domain.contract.test.js, workspace/fscrud-01/data/seed.json, workspace/fscrud-01/scripts/check-domain-exports.cjs, workspace/fscrud-01/scripts/check-domain-customer.cjs, workspace/fscrud-01/scripts/check-domain-assets.cjs, workspace/fscrud-01/scripts/check-domain-work-orders.cjs"
+  let allowed_files = "workspace/fscrud-01/handoff-source.json"
+  let source_contract = "Write this exact JSON object as the entire content of workspace/fscrud-01/handoff-source.json: {\"experimentArm\":\"r36-pl-structured-handoff-source\",\"provider\":\"local-only\",\"claimBoundary\":\"R36 measures structured local handoff source generation while deterministic domain, deterministic UI, deterministic server, and handoff artifacts are protected or rendered.\",\"publicChecks\":[\"npm run check:domain:exports\",\"npm run check:domain:customer\",\"npm run check:domain:assets\",\"npm run check:domain:work-orders\",\"npm test\"],\"policyTags\":[\"r36\",\"local-only\",\"structured-handoff-source\",\"deterministic-domain-kernel\",\"deterministic-ui-skeleton\",\"deterministic-server-integration\"],\"modelOwnedFiles\":[\"handoff-source.json\"]}"
+
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs','../../../../../fullstack-crud-comparison/scaffold/write-scaffold-contract.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('scaffold script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-domain-kernel.cjs','../../../../../fullstack-crud-comparison/scaffold/write-domain-kernel.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('domain kernel script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: node -e "const fs=require('fs');const ui='<!doctype html>\\n<html lang=\"en\">\\n  <head><meta charset=\"utf-8\"><title>FSCRUD-01 deterministic UI skeleton</title></head>\\n  <body>\\n    <h1>FSCRUD-01 Field Service Work Orders</h1>\\n    <section id=\"customers\" data-entity=\"customers\">customers customerId list create read edit detail delete table rows browse view all add new update modify save show remove archive</section>\\n    <section id=\"assets\" data-entity=\"assets\">assets assetId customerId list create read edit detail delete table rows browse view all add new update modify save show remove archive</section>\\n    <section id=\"work_orders\" data-entity=\"work_orders\">work_orders work orders workOrder customerId assetId status open scheduled in_progress completed cancelled priority low normal urgent completedAt list create read edit detail delete table rows browse view all add new update modify save show remove archive</section>\\n  </body>\\n</html>\\n';fs.writeFileSync('workspace/fscrud-01/public/index.html',ui);" [timeout 60]
+  run: node -e "const fs=require('fs');const cp=require('child_process');const paths=['experiments/fullstack-crud-comparison/scaffold/write-r35-server-artifact.cjs','../../../../../fullstack-crud-comparison/scaffold/write-r35-server-artifact.cjs'];const script=paths.find((p)=>fs.existsSync(p));if(!script){console.error('R36 server script missing');process.exit(1)}const r=cp.spawnSync(process.execPath,[script,'workspace/fscrud-01'],{stdio:'inherit'});process.exit(r.status??1)" [timeout 60]
+  run: cd workspace/fscrud-01 && npm run check:domain:exports && npm run check:domain:customer && npm run check:domain:assets && npm run check:domain:work-orders && npm test [timeout 300]
+  run: node -e "const fs=require('fs');for(const p of ['workspace/fscrud-01/README.md','workspace/fscrud-01/run-manifest.json','workspace/fscrud-01/verification-report.md','workspace/fscrud-01/handoff-source.json'])fs.rmSync(p,{force:true});" [timeout 60]
+
+  prompt: Work only in ${fscrud_workspace}. Treat workspace/fscrud-01 as the app root. EXPERIMENT_ARM r36-pl-structured-handoff-source. PROVIDER local-only. Use one write_file action to create only workspace/fscrud-01/handoff-source.json. Do not edit protected files: ${protected_files}. Do not create README.md, run-manifest.json, or verification-report.md. Do not summarize. Contract: ${source_contract}
+  review strict criteria: "handoff-source.json must exist only at workspace/fscrud-01/handoff-source.json, parse as JSON, and include the R36 structured source terms." grounded-by "node ../../../../../fullstack-crud-comparison/scaffold/verify-r36-handoff-source.cjs workspace/fscrud-01" max 3
+    prompt: Work only in ${fscrud_workspace}. Repair only workspace/fscrud-01/handoff-source.json. Use one write_file action. Replace the entire file with the exact JSON from this contract: ${source_contract}. Do not edit protected files: ${protected_files}. Do not write README.md, run-manifest.json, or verification-report.md. Critique: ${_review_critique}
+  end
+
+  run: node ../../../../../fullstack-crud-comparison/scaffold/write-r36-handoff-artifacts.cjs workspace/fscrud-01 [timeout 60]
+
+  review strict criteria: "Rendered handoff artifacts must exist at workspace/fscrud-01/README.md, workspace/fscrud-01/run-manifest.json, and workspace/fscrud-01/verification-report.md; must preserve deterministic domain, UI, server, package, seed, tests, and contract files; must pass public domain checks and tests; and must label local-only structured handoff source plus R35-compatible handoff artifacts." grounded-by "node ../../../../../fullstack-crud-comparison/scaffold/verify-r35-public.cjs workspace/fscrud-01" max 1
+    prompt: Work only in ${fscrud_workspace}. Repair only workspace/fscrud-01/handoff-source.json, then wait for deterministic rendering. Do not edit protected files: ${protected_files}. Critique: ${_review_critique}
+  end
+
+  run: node -e "require('fs').writeFileSync('workspace/fscrud-01/.pl-r36-structured-handoff-complete','ok\n')" [timeout 60]
+
+done when:
+  file_exists workspace/fscrud-01/package.json
+  file_exists workspace/fscrud-01/DOMAIN_API.md
+  file_exists workspace/fscrud-01/contracts/domain-exports.json
+  file_exists workspace/fscrud-01/README.md
+  file_exists workspace/fscrud-01/src/domain.js
+  file_exists workspace/fscrud-01/src/server.js
+  file_exists workspace/fscrud-01/public/index.html
+  file_exists workspace/fscrud-01/__tests__/domain.contract.test.js
+  file_exists workspace/fscrud-01/data/seed.json
+  file_exists workspace/fscrud-01/handoff-source.json
+  file_exists workspace/fscrud-01/run-manifest.json
+  file_exists workspace/fscrud-01/verification-report.md
+  file_exists workspace/fscrud-01/.pl-r36-structured-handoff-complete

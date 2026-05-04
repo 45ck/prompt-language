@@ -72,9 +72,10 @@
       "runner": "prompt-language",
       "modelPolicy": "same local Ollama model as R32 after deterministic domain kernel and deterministic UI skeleton setup",
       "flow": "../flows/pl-fullstack-crud-ui-skeleton-r33.flow",
-      "status": "planned-diagnostic",
+      "status": "diagnostic-complete",
       "hypothesis": "With domain behavior and UI surface coverage supplied deterministically and protected, local PL can complete the remaining server, docs, manifest, report, and final wiring work without corrupting protected artifacts.",
-      "claimBoundary": "This is a deterministic UI skeleton control. A pass would not prove the local model can generate the UI surface; it would only support the narrower claim that local inference can perform constrained integration around deterministic behavioral and presentation contracts."
+      "claimBoundary": "This is a deterministic UI skeleton control. A pass would not prove the local model can generate the UI surface; it would only support the narrower claim that local inference can perform constrained integration around deterministic behavioral and presentation contracts.",
+      "result": "Observed in live-fscrud-r33-ui-skeleton-20260504-1533: verifier passed 95/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, uiSurface=true, and no hard failures, but the PL runner returned flow_failed because the prompt runner classified completion as no observable workspace progress."
     }
   ],
   "timeouts": {
@@ -86,5 +87,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "r33-planned-deterministic-ui-skeleton-control"
+  "resultStatus": "diagnostic-only-r33-product-passed-runner-observability-failed"
 }

@@ -241,6 +241,24 @@ integration around deterministic behavior and deterministic UI-surface contracts
 it fails, the remaining bottleneck is likely server/docs/report discipline, route
 consistency, or local-runner reliability rather than domain or UI surface coverage.
 
+Observed R33 on `2026-05-04`:
+`live-fscrud-r33-ui-skeleton-20260504-1533`.
+
+- `r30-solo-local`: `26/100`, `flow_failed`, hard failures
+  `package_json_missing_or_invalid`, `ui_surface_incomplete`,
+  `test_script_missing`, `seed_integrity_failed`, and `domain_behavior_failed`.
+- `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
+- `r33-pl-ui-skeleton-integration`: `95/100`, `flow_failed`, no hard failures,
+  `hiddenOraclePassed=true`, `domainBehaviorPassed=true`, and `uiSurface=true`.
+
+R33 partially supports the structural hypothesis: deterministic UI skeleton plus
+deterministic domain kernel removed the UI/domain blockers and produced verifier-
+passing product artifacts. It also exposed a separate runner problem: the PL prompt
+runner exited `3` with "completed without observable workspace progress" before the
+flow could mark its completion sentinel, even though the workspace contained the
+expected server, README, run manifest, and verification report and manual `npm test`
+passed.
+
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic
 path. Keep the same runner, model, commit, verifier, and timeout policy inside any

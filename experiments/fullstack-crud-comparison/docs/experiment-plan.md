@@ -504,6 +504,25 @@ connective assembly around deterministic behavioral and presentation contracts. 
 failure would shift attention away from domain/UI coverage and toward server route
 discipline, documentation completion, or local-runner reliability.
 
+Observed R33 diagnostic on `2026-05-04`: the run
+`live-fscrud-r33-ui-skeleton-20260504-1533` used native Ollama with
+`qwen3-opencode-big:30b`.
+
+- `r30-solo-local` scored `26/100` and failed package, UI, test-script, seed, and
+  domain behavior gates.
+- `r31-static-domain-kernel-control` scored `100/100` and reached
+  `verified_pass`.
+- `r33-pl-ui-skeleton-integration` scored `95/100`; the verifier passed with no
+  hard failures, `hiddenOraclePassed=true`, `domainBehaviorPassed=true`, and
+  `uiSurface=true`, but the PL runner returned `flow_failed`.
+
+Interpretation: R33 confirms the deterministic UI skeleton removes the R31/R32 UI
+surface blocker and that local inference can assemble the remaining product
+artifacts around deterministic domain/UI contracts. The failed flow outcome is a
+separate completion-observability issue: the prompt runner reported "completed
+without observable workspace progress" before the sentinel could be written, even
+though the generated workspace passed the verifier and manual `npm test`.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and

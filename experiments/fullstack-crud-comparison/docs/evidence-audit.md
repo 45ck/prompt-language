@@ -208,6 +208,20 @@ Evidence interpretation is intentionally bounded:
 - A failure would indicate the remaining blocker is likely server/docs/report
   orchestration or runner reliability, not domain behavior or static UI coverage.
 
+Observed R33 result:
+`live-fscrud-r33-ui-skeleton-20260504-1533`.
+
+- Solo baseline: `26/100`, broad product failure.
+- Static deterministic control: `100/100`, `verified_pass`.
+- R33 treatment: `95/100`, verifier passed, no hard failures, hidden oracle passed,
+  domain behavior passed, and UI surface passed.
+
+The treatment still has `outcome=flow_failed` because the PL prompt runner exited
+with code `3` and reason "completed without observable workspace progress." This is
+best classified as runner completion-observability debt, not product failure: the
+workspace contained `src/server.js`, README, run manifest, verification report, and
+manual `npm test` passed.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

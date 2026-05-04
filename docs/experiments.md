@@ -1,8 +1,24 @@
 # Experiments
 
-Controlled experiments comparing prompt-language factory workflows against solo prompting and alternative tools. Each experiment tests specific hypotheses about when structured supervision outperforms unstructured prompting.
+This is the docs entry point for prompt-language evidence and experiments. It keeps
+the product README clean: stable usage docs stay in guides/reference, while
+measurements, hypotheses, caveats, and raw run artifacts live here or under
+[`../experiments/`](../experiments/).
 
-For experiment design templates and methodology, see [experiments/templates/](../experiments/templates/).
+For the current short answer to "what works now?", start with
+[What Works Now](evaluation/what-works-now.md). For the raw research tree, run
+catalog, and dated receipts, see [`../experiments/README.md`](../experiments/README.md).
+For experiment design templates and methodology, see
+[`../experiments/templates/`](../experiments/templates/).
+
+## Boundaries
+
+- Product guarantees belong in [guides/](guides/index.md) and
+  [reference/](reference/index.md), not in experiment notes.
+- Current evidence and caveats belong in [evaluation/](evaluation/index.md).
+- Experiment designs, raw outputs, scorecards, and research work-in-progress belong
+  in [`../experiments/`](../experiments/).
+- External research synthesis belongs in [research/](research/README.md).
 
 ## Experiment catalog
 
@@ -16,19 +32,26 @@ For experiment design templates and methodology, see [experiments/templates/](..
 
 ## Comparison and benchmark experiments
 
-| Name                                                          | Domain                      | Status   | Summary                                      |
-| ------------------------------------------------------------- | --------------------------- | -------- | -------------------------------------------- |
-| [Aider vs PL](../experiments/aider-vs-pl/SCORECARD.md)        | Coding assistant comparison | Complete | Head-to-head across 10 hypotheses            |
-| [Premature Stop](../experiments/premature-stop-benchmark/)    | Reliability                 | Scaffold | Repeated-stop and premature-exit comparisons |
-| [Bounded Feature](../experiments/bounded-feature-benchmark/)  | Implementation quality      | Scaffold | Bounded implementation quality benchmarks    |
-| [Parallel Planning](../experiments/parallel-planning/)        | Coordination                | Scaffold | Plan quality and coordination experiments    |
-| [Parallel Modules](../experiments/parallel-isolated-modules/) | Build concurrency           | Scaffold | Isolated module build concurrency            |
-| [Self-healing CI](../experiments/self-healing-ci/)            | CI repair                   | Scaffold | CI repair and auto-fix via retry/try-catch   |
+| Name                                                          | Domain                      | Status   | Summary                                       |
+| ------------------------------------------------------------- | --------------------------- | -------- | --------------------------------------------- |
+| [Aider vs PL](../experiments/aider-vs-pl/SCORECARD.md)        | Coding assistant comparison | Complete | Head-to-head across 10 hypotheses             |
+| [Full-stack CRUD](../experiments/fullstack-crud-comparison/)  | Local-model product build   | Active   | Local Ollama vs PL domain/control diagnostics |
+| [Harness Arena](../experiments/harness-arena/)                | Local/frontier routing      | Planned  | Hybrid routing and provider-boundary pilots   |
+| [Senior Pairing](../experiments/senior-pairing-protocol/)     | Local-model supervision     | Planned  | Senior-engineer supervision flow program      |
+| [Premature Stop](../experiments/premature-stop-benchmark/)    | Reliability                 | Scaffold | Repeated-stop and premature-exit comparisons  |
+| [Bounded Feature](../experiments/bounded-feature-benchmark/)  | Implementation quality      | Scaffold | Bounded implementation quality benchmarks     |
+| [Parallel Planning](../experiments/parallel-planning/)        | Coordination                | Scaffold | Plan quality and coordination experiments     |
+| [Parallel Modules](../experiments/parallel-isolated-modules/) | Build concurrency           | Scaffold | Isolated module build concurrency             |
+| [Self-healing CI](../experiments/self-healing-ci/)            | CI repair                   | Scaffold | CI repair and auto-fix via retry/try-catch    |
 
 The next planned wave is documented in
 [Non-Factory Proof Program](evaluation/non-factory-proof-program.md). That note
 sequences the repo's next proof work around runtime truth, QA lift, and bounded
 outcome lift rather than defaulting to larger factory claims.
+
+The broader experiment-area map is maintained in
+[`../experiments/README.md`](../experiments/README.md) and
+[`../experiments/EXPERIMENT-AREAS.md`](../experiments/EXPERIMENT-AREAS.md).
 
 ## Detailed experiment descriptions
 

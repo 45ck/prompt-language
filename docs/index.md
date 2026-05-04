@@ -24,7 +24,7 @@ If a feature is not described in the product docs, treat it as unavailable today
 | [security.md](security.md)         | Defense-in-depth safeguards, threat mitigations, and environment variables     |
 | [examples/](examples/index.md)     | Worked examples and the showcase catalog                                       |
 | [evaluation/](evaluation/index.md) | Evidence, parity matrices, QA coverage, and current caveats for product claims |
-| [experiments.md](experiments.md)   | Index of controlled experiments (E1-E8) with links and results                 |
+| [experiments.md](experiments.md)   | Controlled experiments, evidence pointers, and experiment-area catalog         |
 | [operations/](operations/index.md) | Troubleshooting and smoke/validation runbooks                                  |
 | [security/](security/)             | Provenance attestation, witness chain analysis, and security audits            |
 | [strategy/](strategy/index.md)     | Product positioning and long-range thesis material, not shipped guarantees     |
@@ -64,7 +64,7 @@ If a feature is not described in the product docs, treat it as unavailable today
 | Area        | Entry point                                | Contents                                                             |
 | ----------- | ------------------------------------------ | -------------------------------------------------------------------- |
 | Evaluation  | [evaluation/index.md](evaluation/index.md) | Comparative results, parity matrix, and QA analysis                  |
-| Experiments | [experiments.md](experiments.md)           | Controlled experiments (E1-E8) with results and methodology          |
+| Experiments | [experiments.md](experiments.md)           | Controlled experiments, evidence pointers, and experiment-area map   |
 | Strategy    | [strategy/index.md](strategy/index.md)     | Positioning, thesis, and experiment roadmap                          |
 | Research    | [research/README.md](research/README.md)   | External research reports and archived sources that inform direction |
 

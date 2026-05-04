@@ -928,4 +928,11 @@ not local senior-engineering authorship. R41
 `live-fscrud-r41-decision-matrix-senior-plan-20260505-0025` also passed at
 `100/100` with six bounded task-appropriate key/value decisions. The strongest
 current local claim is therefore bounded symbolic selection under deterministic
-validation and rendering.
+validation and rendering. R42
+`live-fscrud-r42-rubric-decision-senior-plan-20260505-0045` showed a shape failure
+with semantically correct comma-separated choices at `82/100`; the fixed run
+`live-fscrud-r42-rubric-decision-senior-plan-fixed-20260505-0105` passed at
+`100/100` after deterministic ordered-list normalization and stricter repair
+formatting. The claim boundary is now: local inference can make bounded
+rubric-derived symbolic choices, while deterministic PL must still own shape
+normalization, rich prose, rendering, and verification.

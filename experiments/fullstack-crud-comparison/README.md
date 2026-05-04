@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R37 schema-repaired handoff-source diagnostic passed with a narrow claim boundary
+Status: R42 rubric-decision senior-plan diagnostic passed with a narrow claim boundary
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -66,6 +66,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `r39-pl-quality-scored-senior-plan-source`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns quality-scored senior plan source  |
 | `r40-pl-section-selected-senior-plan-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan section choice |
 | `r41-pl-decision-matrix-senior-plan-source`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan option choices |
+| `r42-pl-rubric-decision-senior-plan-source`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns rubric-derived senior-plan choices |
 | `pl-local-senior-crud`                       | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
 | `hybrid-router-crud`                         | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
@@ -605,6 +606,43 @@ Updated R41 interpretation: local inference can do bounded option selection when
 the option vocabulary is explicit and deterministic tooling owns validation and
 rendering. This is stronger than R40's label-copy result but still not evidence
 that the local model authors senior plans or implements product behavior.
+
+### R42 Rubric-Decision Senior-Plan Diagnostic
+
+R42 is designed as `--arms r42-rubric-decision-senior-plan`. It keeps the R41
+protected deterministic product setup, but describes the correct choices through a
+compact rubric plus decoy options instead of relying only on exact decision-matrix
+copying. The model still owns only `senior-plan.decisions.txt`; deterministic
+tooling validates the selected options, tolerates an ordered option-list shape, and
+renders `senior-plan.raw.json`, canonical `handoff-source.json`, and handoff
+artifacts.
+
+Observed R42 on `2026-05-05`:
+`live-fscrud-r42-rubric-decision-senior-plan-20260505-0045` and
+`live-fscrud-r42-rubric-decision-senior-plan-fixed-20260505-0105`.
+
+- The first R42 treatment selected the correct six semantic options, but wrote them
+  as one comma-separated line instead of six `key=value` lines. The flow ended
+  `flow_failed` at `82/100`; hidden verifier and domain behavior passed, but public
+  handoff artifacts were not rendered.
+- The fixed R42 flow added deterministic ordered-list normalization and a stricter
+  repair format. The treatment then passed at `100/100`, `verified_pass`, with
+  public gate, hidden verifier, executable domain behavior, and path-root isolation
+  passing.
+- The fixed model-authored file selected
+  `objective=field-service-work-orders`, `constraints=protected-local-only`,
+  `architecture=domain-ui-server-seed`,
+  `implementation=ordered-crud-relationships`,
+  `verification=domain-checks-and-tests`, and
+  `risk=path-seed-schema-handoff`.
+- In the fixed run, `r30-solo-local` failed at `18/100`;
+  `r31-static-domain-kernel-control` passed at `100/100`.
+
+Updated R42 interpretation: the local model can infer the right bounded options
+from a rubric, but schema/shape discipline remains fragile. Prompt-language is
+useful here because deterministic normalization and repair can turn semantically
+correct local output into verified artifacts. This still does not prove local
+senior-plan authorship or product implementation.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

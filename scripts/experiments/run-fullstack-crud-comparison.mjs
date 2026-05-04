@@ -138,6 +138,11 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-decision-matrix-senior-plan-r41.flow',
   ),
+  'r42-pl-rubric-decision-senior-plan-source': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-rubric-decision-senior-plan-r42.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
@@ -206,6 +211,11 @@ const ARM_GROUPS = {
     'r30-solo-local',
     'r31-static-domain-kernel-control',
     'r41-pl-decision-matrix-senior-plan-source',
+  ],
+  'r42-rubric-decision-senior-plan': [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r42-pl-rubric-decision-senior-plan-source',
   ],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],

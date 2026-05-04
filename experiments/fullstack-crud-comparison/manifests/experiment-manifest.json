@@ -156,6 +156,16 @@
       "hypothesis": "If R40 passes because local inference can copy bounded labels, the local model can also select task-appropriate senior-plan options from a small explicit decision matrix with decoys.",
       "claimBoundary": "This is a bounded decision-matrix diagnostic. A pass does not prove autonomous senior engineering, local senior-plan authorship, or product implementation; it isolates whether local inference can choose small symbolic options that deterministic tooling validates and renders.",
       "result": "Observed in live-fscrud-r41-decision-matrix-senior-plan-20260505-0025: treatment passed 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored senior-plan.decisions.txt selected objective=field-service-work-orders, constraints=protected-local-only, architecture=domain-ui-server-seed, implementation=ordered-crud-relationships, verification=domain-checks-and-tests, and risk=path-seed-schema-handoff. Solo failed at 31/100 and static control passed at 100/100. This supports bounded symbolic option selection under deterministic validation and rendering."
+    },
+    {
+      "id": "r42-pl-rubric-decision-senior-plan-source",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R41 after deterministic domain kernel, deterministic UI skeleton, and deterministic server integration setup",
+      "flow": "../flows/pl-fullstack-crud-rubric-decision-senior-plan-r42.flow",
+      "status": "diagnostic-complete",
+      "hypothesis": "If R41 passes because local inference can choose bounded options from an explicit matrix, the local model can also infer the task-appropriate senior-plan options from a compact rubric plus decoy options.",
+      "claimBoundary": "This is a rubric-decision diagnostic. A pass does not prove autonomous senior engineering, local senior-plan authorship, or product implementation; it isolates whether local inference can infer small symbolic options from a rubric while deterministic tooling validates, normalizes shape, and renders artifacts.",
+      "result": "Observed in live-fscrud-r42-rubric-decision-senior-plan-20260505-0045: treatment selected the correct six semantic options but wrote a comma-separated line, ending flow_failed at 82/100 with hiddenOraclePassed=true and domainBehaviorPassed=true before public handoff rendering. Fixed run live-fscrud-r42-rubric-decision-senior-plan-fixed-20260505-0105 added deterministic ordered-list normalization and stricter repair formatting; treatment passed 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. Solo failed at 18/100 and static control passed at 100/100. This supports local rubric-derived bounded option selection plus deterministic shape normalization, not local senior-plan authorship."
     }
   ],
   "timeouts": {
@@ -167,5 +177,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r41-decision-matrix-selection-passed"
+  "resultStatus": "diagnostic-only-r42-rubric-decision-selection-passed"
 }

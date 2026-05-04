@@ -486,6 +486,33 @@ supports using local models for small symbolic choices inside a deterministic PL
 system. It still does not support local authorship of rich senior-engineering prose
 or product behavior.
 
+## R42 Evidence Update
+
+R42 tested whether the bounded selector pattern extends to rubric-described choices
+with decoy options, rather than direct decision-matrix copying.
+
+Observed R42 result:
+
+- `live-fscrud-r42-rubric-decision-senior-plan-20260505-0045`: treatment selected
+  the correct six semantic options, but wrote them as one comma-separated line. The
+  flow failed before deterministic handoff rendering and scored `82/100`.
+- `live-fscrud-r42-rubric-decision-senior-plan-fixed-20260505-0105`: after adding
+  deterministic ordered-list normalization and a stricter repair format, treatment
+  passed at `100/100` with `verified_pass`.
+- The fixed model-authored `senior-plan.decisions.txt` selected
+  `field-service-work-orders`, `protected-local-only`, `domain-ui-server-seed`,
+  `ordered-crud-relationships`, `domain-checks-and-tests`, and
+  `path-seed-schema-handoff`.
+- Public gate, hidden verifier, executable domain behavior, and path-root isolation
+  were green for the fixed treatment.
+- Fixed-run comparison anchors: solo failed at `18/100`; the deterministic static
+  control passed at `100/100`.
+
+Updated R42 evidence: local inference can infer bounded senior-plan options from a
+rubric, but output shape is still brittle. The supported system pattern is local
+semantic choice plus deterministic parser/repair/rendering, not free-form senior
+engineering authorship.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

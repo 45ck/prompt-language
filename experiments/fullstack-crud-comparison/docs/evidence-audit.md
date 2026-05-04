@@ -296,6 +296,19 @@ Evidence interpretation:
 - A failure isolates the remaining blocker to handoff artifact-following discipline,
   because the product behavior path is deterministic.
 
+First R35 smoke result:
+`live-fscrud-r35-handoff-artifacts-20260504-1925` ran on `2026-05-04` with native
+Ollama and `qwen3-opencode-big:30b`. The treatment scored `91/100`, passed hidden
+verification, passed executable domain behavior, and passed path isolation, but the
+PL flow failed public review. It created `README.md` and a generic
+`run-manifest.json`, missed `verification-report.md`, and then returned a no-op
+repair response.
+
+That does not falsify product assembly; it isolates the residual issue to handoff
+artifact-following. The follow-up R35 change splits README, manifest, and
+verification report into separate cards with file-specific public checks before the
+full R35 public gate.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

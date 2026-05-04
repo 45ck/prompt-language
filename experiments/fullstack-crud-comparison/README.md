@@ -357,6 +357,23 @@ artifacts when product behavior is deterministic and protected." It would not pr
 server, UI, or domain generation. If R35 fails, the remaining local bottleneck is
 artifact-following discipline under strict review, not product behavior.
 
+Observed first R35 smoke on `2026-05-04`:
+`live-fscrud-r35-handoff-artifacts-20260504-1925`.
+
+- `r30-solo-local`: `35/100`, `flow_failed`, hard failures
+  `ui_surface_incomplete`, `seed_integrity_failed`, and
+  `domain_behavior_failed`.
+- `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
+- `r35-pl-handoff-artifacts`: `91/100`, hidden verifier passed, domain behavior
+  passed, and path isolation passed, but the PL flow failed public review. The model
+  created `README.md` and a generic `run-manifest.json`, missed
+  `verification-report.md`, and then answered that no repair was needed.
+
+Interpretation: the product behavior path is stable, but handoff artifact-following
+still needs stronger PL structure. The follow-up R35 flow splits handoff generation
+into file-specific README, manifest, and verification-report cards before the full
+public gate.
+
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic
 path. Keep the same runner, model, commit, verifier, and timeout policy inside any

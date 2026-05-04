@@ -611,6 +611,22 @@ generate traceable handoff artifacts around deterministic product behavior. A fa
 would explain the R33 mixed-responsibility failure as artifact-following debt rather
 than server integration or hidden verifier behavior.
 
+Observed first R35 smoke on `2026-05-04`:
+`live-fscrud-r35-handoff-artifacts-20260504-1925` used native Ollama with
+`qwen3-opencode-big:30b`.
+
+- `r30-solo-local` scored `35/100` and failed UI, seed, and domain behavior gates.
+- `r31-static-domain-kernel-control` scored `100/100` and verified.
+- `r35-pl-handoff-artifacts` scored `91/100`; hidden verifier passed, domain behavior
+  passed, and path isolation passed, but the public PL flow failed because
+  `verification-report.md` was missing and the repair turn made no observable
+  workspace progress.
+
+Updated R35 interpretation: deterministic product behavior is not the blocker. The
+first R35 flow was still too broad for local handoff artifact following. The
+follow-up R35 flow splits README, manifest, and verification report into separate
+file-specific cards before the final public gate.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -636,6 +652,8 @@ Current operating interpretation:
   responsibility, not another R34 repetition.
 - R35 is the next controlled broadening step: handoff artifacts return to local-model
   responsibility while domain, UI, and server behavior stay deterministic.
+- The first R35 smoke shows that handoff artifact-following remains brittle unless
+  the PL flow splits each required artifact into its own checked card.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

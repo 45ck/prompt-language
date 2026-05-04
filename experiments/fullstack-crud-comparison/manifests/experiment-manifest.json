@@ -94,7 +94,8 @@
       "flow": "../flows/pl-fullstack-crud-handoff-artifacts-r35.flow",
       "status": "planned-diagnostic",
       "hypothesis": "With product behavior supplied deterministically and protected, local PL can make the local model generate README, run-manifest.json, and verification-report.md under strict review.",
-      "claimBoundary": "This is a handoff-artifacts diagnostic. A pass would not prove local generation of domain, UI, or server code; it would isolate whether local inference can generate compliant handoff artifacts around deterministic product behavior."
+      "claimBoundary": "This is a handoff-artifacts diagnostic. A pass would not prove local generation of domain, UI, or server code; it would isolate whether local inference can generate compliant handoff artifacts around deterministic product behavior.",
+      "result": "First smoke live-fscrud-r35-handoff-artifacts-20260504-1925 scored 91/100 with hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true, but flow_failed because verification-report.md was missing and the repair response made no observable workspace progress. Follow-up flow splits README, manifest, and verification report into file-specific checked cards before the full public gate."
     }
   ],
   "timeouts": {
@@ -106,5 +107,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r35-handoff-artifacts-planned"
+  "resultStatus": "diagnostic-only-r35-handoff-artifacts-split-flow-next"
 }

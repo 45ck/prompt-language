@@ -7,12 +7,14 @@ import { join } from 'node:path';
 import test from 'node:test';
 
 import {
+  classifyTimeoutPhase,
   classifyRunOutcome,
   createExperimentLock,
   isOllamaBackedRun,
   manifestBase,
   releaseExperimentLock,
   resolveArms,
+  summarizeVerifierOutput,
 } from './run-fullstack-crud-comparison.mjs';
 
 function context(overrides = {}) {
@@ -82,6 +84,16 @@ test('classifies failed flows separately from verifier product failures', () => 
       skipped: false,
       runnerExitCode: 0,
       runnerTimedOut: false,
+      timeoutClassification: { phase: 'verifier' },
+      verifierPassed: false,
+    }),
+    'timeout_partial',
+  );
+  assert.equal(
+    classifyRunOutcome({
+      skipped: false,
+      runnerExitCode: 0,
+      runnerTimedOut: false,
       verifierPassed: false,
     }),
     'verifier_failed',
@@ -95,6 +107,51 @@ test('classifies failed flows separately from verifier product failures', () => 
     }),
     'verified_pass',
   );
+});
+
+test('summarizes verifier stdout for run summaries without exposing full hidden output', () => {
+  const summary = summarizeVerifierOutput(
+    JSON.stringify({
+      passed: false,
+      score: 80,
+      maxScore: 100,
+      hardFailures: ['domain_behavior_failed'],
+      checks: { npmTestPassed: null, domainBehavior: false },
+    }),
+  );
+
+  assert.deepEqual(summary, {
+    verifierScore: 80,
+    verifierMaxScore: 100,
+    hardFailures: ['domain_behavior_failed'],
+    primaryFailure: 'domain_behavior_failed',
+    publicGatePassed: false,
+    hiddenOraclePassed: false,
+    domainBehaviorPassed: false,
+  });
+  assert.equal(summarizeVerifierOutput('not json').verifierScore, null);
+});
+
+test('classifies the first timed-out phase with bounded diagnostic detail', () => {
+  const timeout = classifyTimeoutPhase({
+    runner: { timedOut: false, timeoutMs: 1000 },
+    verifier: {
+      timedOut: true,
+      timeoutMs: 360000,
+      signal: 'SIGTERM',
+      exitCode: 124,
+      stderrTail: 'verifier timed out',
+    },
+  });
+
+  assert.deepEqual(timeout, {
+    phase: 'verifier',
+    timeoutMs: 360000,
+    signal: 'SIGTERM',
+    exitCode: 124,
+    stderrTail: 'verifier timed out',
+  });
+  assert.equal(classifyTimeoutPhase({ runner: { timedOut: false } }), null);
 });
 
 test('run manifest records explicit timeout retry env runtime and artifact fields', () => {

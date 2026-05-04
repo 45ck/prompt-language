@@ -38,7 +38,7 @@ Existing CRM and website factories are adjacent evidence, not the direct answer.
 The next experiment should therefore be a full-stack CRUD benchmark with objective
 gates and paired local-model runs.
 
-As of R28, we still do not have a claim-grade FSCRUD batch. The live local probes are
+As of R29, we still do not have a claim-grade FSCRUD batch. The live local probes are
 valuable because they expose the bottleneck, but they remain diagnostics: solo has
 repeatedly completed partial apps around the `61/100` level, while the strongest
 prompt-language scaffold and micro-contract arms have plateaued around `80/100` with
@@ -93,27 +93,26 @@ reduced `src/domain.js` to a partial set of empty customer exports, omitted
 `deleteCustomer`, and dropped all asset and work order exports. That is why R28 should
 drive export-surface controls rather than broader prompts or stronger rhetoric.
 
-## R29 Purpose
+## R29 Evidence Update
 
-R29 micro-v2 should test whether a public product contract can stabilize the model's
-edit target. The allowed controls are model-visible `DOMAIN_API.md`,
-`contracts/domain-exports.json`, checkpoint scripts, and deterministic export
-normalization between micro steps. The hidden verifier must remain outside the
-repair loop.
+R29 tested micro-v2 with the public domain API artifacts, checkpoint scripts, and
+deterministic export normalization. Solo again scored `61/100` and ended
+`verifier_failed`. The micro-v2 arm scored `80/100` but ended `flow_failed` at the
+first customer review after `3/3` rounds.
 
-A useful R29 outcome is not only a pass. If the export surface stays stable and the
-run then fails on customer behavior, that identifies the next bottleneck as behavior
-implementation rather than export preservation. If the export surface collapses
-again, the evidence points away from natural-language local decomposition for the
-domain layer.
+The useful result is that the export surface stabilized. The remaining blocker moved
+to behavior implementation: customer behavior/domain implementation still failed,
+and the hidden verifier hard failure remained `domain_behavior_failed`. This points
+the next experiment toward a stronger domain implementation lane or deterministic
+domain kernel, not more export-surface wording.
 
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk
 artifact generation under deterministic gates, repeated repair against public
-checks, or GPU/cost telemetry. The R28 evidence says local Ollama is appropriate for
-diagnostics and controlled local-only measurements, but not yet proven sufficient for
-the FSCRUD domain layer.
+checks, or GPU/cost telemetry. The R28/R29 evidence says local Ollama is appropriate
+for diagnostics and controlled local-only measurements, but not yet proven sufficient
+for the FSCRUD domain layer.
 
 Use an external frontier model only when the run is explicitly a hybrid experiment or
 when the operational risk justifies escalation: final read-only review,

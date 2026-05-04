@@ -170,6 +170,10 @@ function writeProcessArtifacts(dir, name, result) {
   writeFileSync(join(dir, `${name}-stderr.txt`), result.stderr, 'utf8');
 }
 
+function writeAttemptStatus(attemptDir, value) {
+  writeJson(join(attemptDir, 'attempt-status.json'), value);
+}
+
 function artifactRef(name, result) {
   return {
     json: `${name}.json`,
@@ -181,6 +185,71 @@ function artifactRef(name, result) {
     startedAt: result.startedAt,
     completedAt: result.completedAt,
   };
+}
+
+function tailText(value, maxLength = 1200) {
+  if (!value) return '';
+  return value.length <= maxLength ? value : value.slice(-maxLength);
+}
+
+export function summarizeVerifierOutput(stdout) {
+  try {
+    const report = JSON.parse(stdout);
+    const hardFailures = Array.isArray(report.hardFailures) ? report.hardFailures : [];
+    return {
+      verifierScore: typeof report.score === 'number' ? report.score : null,
+      verifierMaxScore: typeof report.maxScore === 'number' ? report.maxScore : null,
+      hardFailures,
+      primaryFailure: hardFailures[0] ?? null,
+      publicGatePassed: report.checks?.npmTestPassed === true,
+      hiddenOraclePassed: report.passed === true,
+      domainBehaviorPassed:
+        typeof report.domainBehavior?.passed === 'boolean'
+          ? report.domainBehavior.passed
+          : typeof report.checks?.domainBehavior === 'boolean'
+            ? report.checks.domainBehavior
+            : null,
+    };
+  } catch {
+    return {
+      verifierScore: null,
+      verifierMaxScore: null,
+      hardFailures: [],
+      primaryFailure: null,
+      publicGatePassed: null,
+      hiddenOraclePassed: null,
+      domainBehaviorPassed: null,
+    };
+  }
+}
+
+function phaseSummary(name, result, timeoutMs) {
+  return {
+    name,
+    exitCode: result.exitCode,
+    signal: result.signal,
+    timedOut: result.timedOut,
+    timeoutMs,
+    durationMs: result.durationMs,
+    startedAt: result.startedAt,
+    completedAt: result.completedAt,
+    stderrTail: tailText(result.stderr),
+    artifacts: artifactRef(name, result),
+  };
+}
+
+export function classifyTimeoutPhase(phases) {
+  for (const [phase, result] of Object.entries(phases)) {
+    if (!result?.timedOut) continue;
+    return {
+      phase,
+      timeoutMs: result.timeoutMs ?? null,
+      signal: result.signal ?? null,
+      exitCode: result.exitCode ?? null,
+      stderrTail: result.stderrTail ?? tailText(result.stderr ?? ''),
+    };
+  }
+  return null;
 }
 
 function gitCommit() {
@@ -293,7 +362,7 @@ export function isOllamaBackedRun(options) {
 
 export function classifyRunOutcome(summary) {
   if (summary.skipped) return 'dry_run_skipped';
-  if (summary.runnerTimedOut) return 'timeout_partial';
+  if (summary.runnerTimedOut || summary.timeoutClassification) return 'timeout_partial';
   if (summary.runnerExitCode !== 0) return 'flow_failed';
   return summary.verifierPassed ? 'verified_pass' : 'verifier_failed';
 }
@@ -316,10 +385,28 @@ function runArm(context) {
   const stateDir = join(attemptDir, '.prompt-language');
   const workspace = join(attemptDir, 'workspace', 'fscrud-01');
   prepareAttempt(attemptDir);
+  const phases = {};
+
+  const updateStatus = (currentPhase, extra = {}) => {
+    writeAttemptStatus(attemptDir, {
+      arm: context.arm,
+      repeatId: context.repeatId,
+      currentPhase,
+      attemptDir: relative(ROOT, attemptDir).replaceAll('\\', '/'),
+      workspace: relative(ROOT, workspace).replaceAll('\\', '/'),
+      phases,
+      updatedAt: new Date().toISOString(),
+      ...extra,
+    });
+  };
+  updateStatus('prepared');
 
   if (context.options.dryRun) {
     writeJson(join(attemptDir, 'run-manifest.json'), manifestBase(context, attemptDir, workspace));
     const summary = { arm: context.arm, skipped: true, verifierPassed: null };
+    updateStatus('dry-run-complete', {
+      summary: { ...summary, outcome: classifyRunOutcome(summary) },
+    });
     return { ...summary, outcome: classifyRunOutcome(summary) };
   }
 
@@ -329,6 +416,8 @@ function runArm(context) {
     'before-runner',
     context.options,
   );
+  updateStatus('runner');
+  const runnerTimeoutMs = wallTimeoutMs(context.arm);
   const runResult = runProcess(
     process.execPath,
     [
@@ -344,13 +433,15 @@ function runArm(context) {
       '--file',
       ARM_FLOWS[context.arm],
     ],
-    { cwd: attemptDir, env: runnerEnvironment, timeoutMs: wallTimeoutMs(context.arm) },
+    { cwd: attemptDir, env: runnerEnvironment, timeoutMs: runnerTimeoutMs },
   );
   writeProcessArtifacts(attemptDir, 'runner', runResult);
+  phases.runner = phaseSummary('runner', runResult, runnerTimeoutMs);
   const ollamaPsAfterRunner = collectOllamaPsSnapshot(attemptDir, 'after-runner', context.options);
 
   const runnerSucceeded = runResult.exitCode === 0;
   const packageExists = existsSync(join(workspace, 'package.json'));
+  updateStatus('install');
   const installResult =
     runnerSucceeded && packageExists
       ? runProcess('npm', ['install'], {
@@ -365,7 +456,9 @@ function runArm(context) {
           runnerSucceeded ? 'package.json missing' : 'runner failed',
         );
   writeProcessArtifacts(attemptDir, 'install', installResult);
+  phases.install = phaseSummary('install', installResult, INSTALL_TIMEOUT_MS);
 
+  updateStatus('test');
   const testResult =
     runnerSucceeded && packageExists
       ? runProcess('npm', ['test'], {
@@ -380,17 +473,22 @@ function runArm(context) {
           runnerSucceeded ? 'package.json missing' : 'runner failed',
         );
   writeProcessArtifacts(attemptDir, 'test', testResult);
+  phases.test = phaseSummary('test', testResult, TEST_TIMEOUT_MS);
 
   const verifyArgs = [VERIFY_SCRIPT, '--workspace', workspace, '--json'];
   if (!runnerSucceeded) {
     verifyArgs.push('--no-run-tests');
   }
+  updateStatus('verifier');
   const verifyResult = runProcess(process.execPath, verifyArgs, {
     cwd: ROOT,
     env: process.env,
     timeoutMs: VERIFY_TIMEOUT_MS,
   });
   writeProcessArtifacts(attemptDir, 'verifier', verifyResult);
+  phases.verifier = phaseSummary('verifier', verifyResult, VERIFY_TIMEOUT_MS);
+  const verifierSummary = summarizeVerifierOutput(verifyResult.stdout);
+  const timeoutClassification = classifyTimeoutPhase(phases);
 
   const manifest = {
     ...manifestBase(context, attemptDir, workspace, {
@@ -401,6 +499,8 @@ function runArm(context) {
     installExitCode: installResult.exitCode,
     testExitCode: testResult.exitCode,
     verifierExitCode: verifyResult.exitCode,
+    verifierSummary,
+    timeoutClassification,
     completedAt: new Date().toISOString(),
   };
   writeJson(join(attemptDir, 'run-manifest.json'), manifest);
@@ -409,8 +509,14 @@ function runArm(context) {
     skipped: false,
     runnerExitCode: runResult.exitCode,
     runnerTimedOut: runResult.timedOut,
+    installTimedOut: installResult.timedOut,
+    testTimedOut: testResult.timedOut,
+    verifierTimedOut: verifyResult.timedOut,
     verifierPassed: verifyResult.exitCode === 0,
+    timeoutClassification,
+    ...verifierSummary,
   };
+  updateStatus('complete', { summary: { ...summary, outcome: classifyRunOutcome(summary) } });
   return { ...summary, outcome: classifyRunOutcome(summary) };
 }
 

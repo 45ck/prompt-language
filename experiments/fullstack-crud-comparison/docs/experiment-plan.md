@@ -336,24 +336,28 @@ order exports. This supports the idea that PL structure improves artifact covera
 over solo, but falsifies the v1 micro-contract sub-hypothesis that natural-language
 micro cards alone preserve the canonical CommonJS export surface.
 
-Next R29 diagnostic: run `--arms micro-v2`. The falsifiable hypothesis is that public
-domain API artifacts, checkpoint scripts, and deterministic export normalization can
-prevent export-surface collapse without giving the model a completed domain kernel
-or exposing hidden verifier details. If R29 still fails at customer CRUD after the
-export surface is stable, the next experiment should route domain implementation to
-a stronger external model or use a deterministic domain kernel while measuring local
-model performance on server/UI/docs.
+Observed R29 micro-v2 diagnostic on `2026-05-04`: solo scored `61/100` and ended
+`verifier_failed`. The micro-v2 arm scored `80/100` but ended `flow_failed` at the
+first customer review after `3/3` rounds. The public API artifacts, checkpoint
+scripts, and deterministic export normalization stabilized the export surface, but
+customer behavior/domain implementation still failed. The hidden verifier hard
+failure remained `domain_behavior_failed`.
+
+R29 supports the export-control sub-hypothesis but not the full local-only delivery
+hypothesis. The next experiment should route domain implementation to a stronger
+external model or use a deterministic domain kernel while measuring local model
+performance on server/UI/docs.
 
 Current operating interpretation:
 
-- R28 supports a narrow process claim only: prompt-language scaffolding improved
-  artifact coverage over solo on the same local Ollama setup.
+- R28/R29 support a narrow process claim only: prompt-language scaffolding and
+  export controls improved artifact/export coverage over solo on the same local
+  Ollama setup.
 - R28 falsifies the v1 micro-contract assumption that natural-language decomposition
   alone is enough to preserve the canonical CommonJS export surface.
-- R29 tests export-surface control, not general intelligence. The public
-  `DOMAIN_API.md`, `contracts/domain-exports.json`, checkpoint scripts, and
-  normalizer are allowed controls because they are part of the visible product
-  contract, while the hidden verifier remains outside model-facing repair loops.
+- R29 shows export-surface control can stabilize the visible CommonJS contract, but
+  behavior implementation still failed before the hidden verifier hard-failed
+  `domain_behavior_failed`.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

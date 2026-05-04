@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: diagnostic probes running; no claim-grade batch yet
+Status: R29 diagnostic complete; no claim-grade batch yet
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -148,31 +148,26 @@ to six empty customer exports and dropped `deleteCustomer`, all asset exports, a
 all work order exports. Treat R28 as evidence that micro-contract decomposition
 improves artifact coverage over solo but still needs stronger export-surface control.
 
-The next planned diagnostic treatment is
+R29 tested
 [flows/pl-fullstack-crud-micro-contract-v2.flow](flows/pl-fullstack-crud-micro-contract-v2.flow).
-It adds public domain API artifacts (`DOMAIN_API.md`, `contracts/domain-exports.json`,
-and `scripts/check-domain-*.cjs`), deterministic export-surface normalization between
-micro steps, and public checkpoint reviews. The hidden FSCRUD verifier remains in the
-experiment harness after the flow, not in model-facing repair loops. Run it with
-`--arms micro-v2`.
+Solo again scored `61/100` and ended `verifier_failed`. The micro-v2 arm scored
+`80/100` but ended `flow_failed` at the first customer review after `3/3` rounds.
+The public API artifacts and export normalizer stabilized the export surface, but
+customer behavior/domain implementation still failed; the hidden verifier hard
+failure remained `domain_behavior_failed`.
 
 ## Current System Interpretation
 
-R28 is useful diagnostic evidence, not a product-quality win and not a claim-grade
-PL-vs-solo batch. It shows that the local Ollama lane can execute real workspace
-actions and that prompt-language scaffolding can preserve broad artifact coverage:
-the micro-contract arm kept scaffold artifacts, UI surface, seed integrity, and
-path-root isolation where solo again failed several product gates. It also shows the
-current bottleneck clearly: natural-language micro cards did not preserve the exact
-CommonJS export surface once the model started editing `src/domain.js`.
+R28/R29 are useful diagnostic evidence, not product-quality wins and not a
+claim-grade PL-vs-solo batch. They show that the local Ollama lane can execute real
+workspace actions and that prompt-language scaffolding can preserve broad artifact
+coverage where solo repeatedly fails product gates.
 
-R29 micro-v2 exists to test one narrower control theory: public, model-visible
-domain API artifacts plus deterministic export normalization may keep the export
-surface stable long enough for behavior checks to matter. It is not intended to give
-the model the hidden verifier or a completed domain kernel. If R29 still fails while
-the export surface is stable, treat that as evidence that this local model needs
-either a stronger implementation lane for domain logic or a deterministic domain
-kernel, not as evidence that the existing local-only flow is complete.
+R29 narrowed the bottleneck. Public, model-visible domain API artifacts plus
+deterministic export normalization stabilized the CommonJS export surface long
+enough for behavior checks to matter. The run still failed customer behavior/domain
+implementation, so the next control should be a stronger domain implementation lane
+or a deterministic domain kernel, not more export-surface prompting.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

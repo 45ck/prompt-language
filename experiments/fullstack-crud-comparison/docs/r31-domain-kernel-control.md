@@ -100,3 +100,7 @@ R31 moves the local-model bottleneck from executable domain behavior to surround
 server/UI surface completeness. The next local-only experiment is R32
 `r32-pl-ui-surface-control`: keep the protected kernel and tighten browser/server UI
 coverage gates before considering a hybrid frontier-domain lane.
+
+R32 follow-up result: `live-fscrud-r32-ui-surface-20260504-1448` did not close the
+gap. The treatment arm scored `80/100`, kept domain behavior green, and still failed
+`ui_surface_incomplete` after exhausting the public strict-review loop.

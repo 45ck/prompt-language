@@ -208,9 +208,21 @@ complete executable domain behavior when the domain layer is supplied and protec
 It does not yet prove full local FSCRUD completion: the remaining blocker moved to
 the browser/server product surface, especially complete visible UI coverage.
 
-The next useful local-only diagnostic is R32:
-`--arms r32-ui-surface`. It keeps the protected domain kernel and adds explicit
-nearby entity/action UI coverage gates around the R31 failure. The hybrid
+R32 ran as `live-fscrud-r32-ui-surface-20260504-1448` with the same model and
+runner. Results:
+
+- `r30-solo-local`: `40/100`, `flow_failed`, hard failures
+  `ui_surface_incomplete`, `seed_integrity_failed`, and
+  `domain_behavior_failed`.
+- `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
+- `r32-pl-ui-surface-control`: `80/100`, `flow_failed`, hard failure
+  `ui_surface_incomplete`; domain behavior passed.
+
+R32 did not improve on R31. The model wrote a small customer/asset UI, omitted
+work_orders/status/priority/completedAt surface coverage, and exhausted the strict
+review loop before creating README, run manifest, or verification report. The next
+useful local-only diagnostic should use a deterministic UI skeleton or smaller
+per-entity UI cards, not more wording in one bulk UI prompt. The hybrid
 frontier-domain flow remains predeclared but not runner-enabled until per-step
 provider routing exists.
 

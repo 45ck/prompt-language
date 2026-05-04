@@ -63,8 +63,9 @@
       "runner": "prompt-language",
       "modelPolicy": "same local Ollama model as R31 after deterministic domain kernel setup",
       "flow": "../flows/pl-fullstack-crud-ui-surface-r32.flow",
-      "status": "planned-diagnostic",
-      "hypothesis": "With the domain kernel protected and explicit nearby UI entity/action gates, local PL can close the remaining ui_surface_incomplete failure without frontier edits."
+      "status": "diagnostic-complete",
+      "hypothesis": "With the domain kernel protected and explicit nearby UI entity/action gates, local PL can close the remaining ui_surface_incomplete failure without frontier edits.",
+      "result": "Observed in live-fscrud-r32-ui-surface-20260504-1448: 80/100 flow_failed with domain behavior passing and ui_surface_incomplete remaining."
     }
   ],
   "timeouts": {
@@ -76,5 +77,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r31-moved-bottleneck-to-ui-surface"
+  "resultStatus": "diagnostic-only-r32-refuted-single-bulk-ui-surface-prompt"
 }

@@ -462,6 +462,25 @@ R32 planned arm:
 - `r32-pl-ui-surface-control`:
   [flows/pl-fullstack-crud-ui-surface-r32.flow](../flows/pl-fullstack-crud-ui-surface-r32.flow).
 
+Observed R32 diagnostic on `2026-05-04`: the run
+`live-fscrud-r32-ui-surface-20260504-1448` used native Ollama with
+`qwen3-opencode-big:30b`.
+
+- `r30-solo-local` scored `40/100` and failed
+  `ui_surface_incomplete`, `seed_integrity_failed`, and
+  `domain_behavior_failed`.
+- `r31-static-domain-kernel-control` scored `100/100` and reached
+  `verified_pass`.
+- `r32-pl-ui-surface-control` scored `80/100`, passed domain behavior, and failed
+  `ui_surface_incomplete`.
+
+R32 refutes the narrower assumption that one stronger nearby-coverage UI prompt is
+enough. The local model produced partial customer/asset UI, omitted work_orders and
+status/priority/completedAt UI concepts, and exhausted the strict review before
+creating README, run manifest, or verification report. The next control should be
+structural rather than lexical: deterministic UI skeleton, per-entity UI cards, or
+separate post-UI artifact cards.
+
 Current operating interpretation:
 
 - R28/R29 support a narrow process claim only: prompt-language scaffolding and
@@ -474,6 +493,8 @@ Current operating interpretation:
   `domain_behavior_failed`.
 - R31 shows deterministic domain implementation removes that blocker and shifts the
   remaining local-only failure to UI/product surface completeness.
+- R32 shows stronger UI wording and nearby public gates still do not make the local
+  model reliably fill the full surface in one bulk turn.
 - A local-only claim batch must not include frontier advice, frontier-authored
   patches, or per-run changes to model, runner, task, verifier, timeout, or commit.
 - A frontier model is justified only for a separately labeled hybrid arm, read-only

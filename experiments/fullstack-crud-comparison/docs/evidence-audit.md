@@ -169,6 +169,31 @@ lane. The hypothesis is narrower than "PL solves FSCRUD locally": test whether
 explicit nearby UI entity/action gates can close the final `7/100` gap without
 frontier edits.
 
+## R32 Evidence Update
+
+The R32 UI surface-control diagnostic,
+`live-fscrud-r32-ui-surface-20260504-1448`, tested that narrower hypothesis with
+native Ollama and `qwen3-opencode-big:30b`.
+
+Results:
+
+- `r30-solo-local`: `40/100`, `flow_failed`, hard failures
+  `ui_surface_incomplete`, `seed_integrity_failed`, and
+  `domain_behavior_failed`.
+- `r31-static-domain-kernel-control`: `100/100`, `verified_pass`.
+- `r32-pl-ui-surface-control`: `80/100`, `flow_failed`, hard failure
+  `ui_surface_incomplete`; domain behavior passed.
+
+R32 did not close the R31 gap. The public review loop failed after `4/4` rounds:
+the generated UI covered only customers and assets, missed work_orders and the
+status/priority/completedAt task concepts, and the run never reached README,
+run-manifest, or verification-report creation.
+
+This weakens the "just write the prompt language better" explanation for the UI
+surface blocker. The next useful local-only control should add structure the model
+cannot skip: deterministic UI skeleton, per-entity UI cards, or split artifact cards
+after the UI surface is green.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

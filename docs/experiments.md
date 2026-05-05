@@ -112,6 +112,15 @@ PL control system." See
 
 Marketing website generation comparing PL factory against solo prompting. PL achieved perfect 30/30 scores across three consecutive runs versus a solo average of 28.3/30. Located in [experiments/marketing-factory/](../experiments/marketing-factory/).
 
+### Enterprise CRM factory scaffold
+
+The enterprise CRM factory under
+[experiments/full-saas-factory/e7-enterprise-crm-factory/](../experiments/full-saas-factory/e7-enterprise-crm-factory/)
+is scaffolded and useful as a stress case for DSL surface area, but it should not
+be cited as a clean live completion. The 2026-04-17 live smoke failed; current
+evidence from the factory line is strongest on smaller bounded runtime-backed
+slices, not the full enterprise factory.
+
 ### E8: Website Factory
 
 Enterprise 6-phase website build: discovery, architecture, design system, implementation, QA, release. Uses 22 flow files and 8 reusable libraries with specialized agent assignments. Compares PL factory (Astro, 30 files, 12 docs) against solo (Next.js, 14 files). Run 1 scorecard: [experiments/website-factory/results/run1-scorecard.md](../experiments/website-factory/results/run1-scorecard.md). Located in [experiments/website-factory/](../experiments/website-factory/).

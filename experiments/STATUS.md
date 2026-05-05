@@ -11,9 +11,9 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
   act as a bounded selector/ranker/rationale/risk-response source when PL owns
   deterministic validation, normalization, rendering, and verification.
 - The next high-value experiment is not another protected deterministic R-series
-  pass. The next step should increase responsibility in one controlled dimension:
-  a tiny local implementation slice, a hybrid local/frontier review arm, or a
-  cross-domain bounded selector batch.
+  pass. The immediate sequence is: package the bounded-choice pattern, then test a
+  tiny local implementation slice that increases responsibility in exactly one
+  controlled dimension.
 - The product roadmap implication is unchanged but sharper: prioritize trustworthy
   supervision, evidence capture, replay, and boundary control over broad
   orchestration-shell expansion.
@@ -101,6 +101,7 @@ These are written plans awaiting bead-tracked execution tasks:
 - `experiments/harness-arena-HA-E1-PLAN.md` — HA-E1 pilot design
 - `experiments/harness-arena/hybrid-model-routing.md` — HA-HR1 dynamic routing pilot design
 - `experiments/senior-pairing-protocol/` — SPP senior-engineer metacognition pilot design
+- `experiments/fullstack-crud-comparison/docs/tiny-local-implementation-slice-plan.md` — next FSCRUD responsibility-expansion plan
 - `experiments/pi-mono-RUNNER-PLAN.md` — pi-mono adapter implementation plan for `prompt-lmas`
 
 ## Conventions

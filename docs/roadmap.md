@@ -113,6 +113,11 @@ These are the next milestones that matter most to the product, in order:
 | Better operator surfaces                             | Makes install, inspect, validate, and troubleshooting easier without new magic          | Tracked next   |
 | Broader authoring ergonomics                         | LSP, playground, registry, and similar tooling become worth it after the core is proven | Tracked next   |
 
+The immediate next slice is to make the bounded semantic-choice pattern reusable
+with current primitives, then test one tiny executable local-model implementation
+slice. That expands model responsibility by one dimension without reintroducing a
+full-stack local-only unsupported claim.
+
 ## WIP: tracked next
 
 These are open `.beads` items that fit the current product direction and are easy for users to understand.

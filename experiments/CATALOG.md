@@ -12,7 +12,7 @@ Last updated: 2026-05-06
 | E4     | CRM Factory (Codex)          | Enterprise SaaS                | Complete    | 16 runs (A02-A19)   | Codex-alone faster; PL better auditability                                                   |
 | E5     | Maintenance Viability        | Runtime provenance             | Designed    | 0                   | Program designed, not yet executed                                                           |
 | E6     | Pure PL CRM Factory          | Enterprise SaaS                | Designed    | 0                   | Parse-verified, not yet executed live                                                        |
-| E7     | Enterprise CRM Factory       | Enterprise SaaS (full SDLC)    | Complete    | --                  | Most comprehensive PL factory to date                                                        |
+| E7     | Enterprise CRM Factory       | Enterprise SaaS (full SDLC)    | Scaffolded  | live smoke failed   | Most comprehensive PL factory scaffold; not a clean live completion                          |
 | E7-MK  | Marketing Factory            | Marketing website              | Complete    | 7+ runs             | PL 30/30 x3 (100%) vs Solo 28.3/30 (94%)                                                     |
 | E8     | Website Factory              | Marketing website (enterprise) | Complete    | 4 runs              | Factory 3/4, Solo 4/4                                                                        |
 | E9     | Full SDLC Factory            | Full lifecycle website         | Complete    | 2 runs + QA variant | Phases 1-5 execute end-to-end                                                                |
@@ -144,7 +144,8 @@ E5 deliberately demotes E4's process-fidelity signals (`processConformance`, `tr
 
 **Hypothesis**: If prompt-language is a credible engineering medium, an enterprise CRM factory should be expressible with full SDLC phases, parallelism, quality gates, security audits, review loops, and deployment -- the way a real engineering team works.
 
-**Status**: Complete (most comprehensive PL factory to date)
+**Status**: Scaffolded. Most comprehensive PL factory to date, but the 2026-04-17
+live smoke failed; do not cite it as clean live execution evidence.
 
 **Scope**: 15 business entities + 5 system features across 6 SDLC phases + scaffold:
 

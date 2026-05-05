@@ -20,8 +20,9 @@ full-stack implementation. See
 
 ## Proven in this repo
 
-- `npm run test` passes on the current worktree
-- `npm run ci` passes on the current worktree
+- Last recorded verification on 2026-05-06: `npm run test` and `npm run ci`
+  passed before commit `f4717fa`. Rerun those gates after new local edits before
+  treating the worktree as green.
 - checked-in evaluation evidence includes a `27/27` `npm run eval:smoke:codex:quick` pass through the Codex headless path
 - the v1 eval runner is real: checked-in JSONL datasets, repeat counts, machine-readable reports, and baseline comparison all ship through `prompt-language eval`
 - review and judge plumbing is now part of the runtime surface rather than dead design text: named judges, typed review verdict capture, and strict fail-closed review behavior are implemented and tested

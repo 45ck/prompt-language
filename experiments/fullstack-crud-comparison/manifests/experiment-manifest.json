@@ -1,7 +1,7 @@
 {
   "id": "FSCRUD-01",
   "name": "Full-stack CRUD local model comparison",
-  "status": "designed",
+  "status": "active-diagnostics",
   "createdAt": "2026-04-30",
   "task": "../tasks/fscrud-01-field-service-work-orders.md",
   "arms": [
@@ -29,7 +29,7 @@
       "runner": "prompt-language",
       "modelPolicy": "same local Ollama model as baseline",
       "flow": "../flows/pl-fullstack-crud-micro-contract-v1.flow",
-      "status": "planned-diagnostic",
+      "status": "diagnostic-complete",
       "hypothesis": "Executable domain micro contracts can move the local model past the repeated domain_behavior_failed plateau without a deterministic domain kernel."
     },
     {
@@ -37,7 +37,7 @@
       "runner": "prompt-language",
       "modelPolicy": "same local Ollama model as baseline",
       "flow": "../flows/pl-fullstack-crud-micro-contract-v2.flow",
-      "status": "planned-diagnostic",
+      "status": "diagnostic-complete",
       "hypothesis": "Public domain API contracts, export-surface normalization, and checkpoint scripts can prevent local-model export collapse while preserving hidden verifier isolation."
     },
     {

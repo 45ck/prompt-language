@@ -75,6 +75,9 @@ the selector result. The next evidence should increase one of these responsibili
 | Cross-domain bounded selector batch                                      | Tests whether R40-R45 generalize beyond one FSCRUD task.                                               |
 | Senior Pairing Protocol rerun with bounded implementation responsibility | Tests metacognitive supervision as executable structure instead of longer senior prose.                |
 
+The first implementation-slice plan is now predeclared at
+[`experiments/fullstack-crud-comparison/docs/tiny-local-implementation-slice-plan.md`](../../experiments/fullstack-crud-comparison/docs/tiny-local-implementation-slice-plan.md).
+
 ## Current Bottom Line
 
 Prompt-language is not just "writing prompts better." The proven value is moving

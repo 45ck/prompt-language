@@ -123,6 +123,12 @@ Prompt-language already has the shape of an execution runtime rather than a mere
 
 Current evaluation evidence shows its clearest proven strength is structural enforcement through gates: it wins when prompts are misleading, incomplete, or omit required criteria, while many pure control-flow and context-management tests currently tie with vanilla Claude. See the [evaluation analysis](../evaluation/eval-analysis.md) for hypothesis-by-hypothesis results.
 
+The FSCRUD R30-R45 diagnostics add a narrower local-model finding: local inference
+can be useful as a bounded semantic selector/ranker/rationale source when
+prompt-language owns deterministic validation, normalization, rendering, and
+verification. That is stronger than "write prompts better," but weaker than
+"local model implements the product."
+
 That means the repo's strongest grounded claim right now is not "prompt-language replaces software engineering." The strongest grounded claim is: **prompt-language can act as a useful supervision runtime with explicit verification and control structure around coding agents.**
 
 ## What is not yet proven
@@ -135,6 +141,8 @@ The following are still hypotheses, not established facts:
 - that multi-agent prompt-language systems can build bounded software reliably
 - that problems can be permanently "fixed at the prompt-language layer"
 - that prompt language can become a primary engineering surface rather than just a supervision layer
+- that local-only models can own full-stack implementation without deterministic
+  product scaffolds and protected artifacts
 
 ## Research agenda
 

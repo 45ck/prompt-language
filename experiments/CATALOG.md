@@ -2,30 +2,30 @@
 
 Comprehensive index of all prompt-language experiments. Each experiment tests a specific hypothesis about whether structured flow orchestration improves AI-driven software delivery compared to unstructured prompting.
 
-Last updated: 2026-04-30
+Last updated: 2026-05-06
 
 ## Summary Table
 
-| ID     | Name                         | Domain                         | Status      | Runs                | Key Result                                 |
-| ------ | ---------------------------- | ------------------------------ | ----------- | ------------------- | ------------------------------------------ |
-| E1     | Repeated Failure Elimination | Eval framework                 | Seeded      | 2 (vanilla + gated) | Gated 1/3 vs Vanilla 0/3                   |
-| E4     | CRM Factory (Codex)          | Enterprise SaaS                | Complete    | 16 runs (A02-A19)   | Codex-alone faster; PL better auditability |
-| E5     | Maintenance Viability        | Runtime provenance             | Designed    | 0                   | Program designed, not yet executed         |
-| E6     | Pure PL CRM Factory          | Enterprise SaaS                | Designed    | 0                   | Parse-verified, not yet executed live      |
-| E7     | Enterprise CRM Factory       | Enterprise SaaS (full SDLC)    | Complete    | --                  | Most comprehensive PL factory to date      |
-| E7-MK  | Marketing Factory            | Marketing website              | Complete    | 7+ runs             | PL 30/30 x3 (100%) vs Solo 28.3/30 (94%)   |
-| E8     | Website Factory              | Marketing website (enterprise) | Complete    | 4 runs              | Factory 3/4, Solo 4/4                      |
-| E9     | Full SDLC Factory            | Full lifecycle website         | Complete    | 2 runs + QA variant | Phases 1-5 execute end-to-end              |
-| FSCRUD | Full-Stack CRUD Comparison   | Local full-stack CRUD          | Designed    | 0                   | Direct local vs PL factory plan authored   |
-| HA-HR1 | Hybrid Model Routing         | Stack/routing comparison       | Planned     | 0                   | Local bulk + frontier escalation designed  |
-| SPP    | Senior Pairing Protocol      | Local-model supervision        | Planned     | 0                   | Senior metacognition protocol authored     |
-| --     | Aider vs PL                  | Coding assistant comparison    | Complete    | 10 hypotheses       | PL 6 wins, 0 losses, 3 ties                |
-| --     | Meta-Factory                 | Self-hosting (PL writes PL)    | In Progress | M1 authored         | M1 flow authored, not yet executed live    |
-| --     | Premature Stop Benchmark     | Reliability                    | Scaffold    | 0                   | Experiment designed, not executed          |
-| --     | Bounded Feature Benchmark    | Implementation quality         | Scaffold    | 0                   | Experiment designed, not executed          |
-| --     | Parallel Planning            | Coordination                   | Scaffold    | 0                   | Experiment designed, not executed          |
-| --     | Parallel Isolated Modules    | Build concurrency              | Scaffold    | 0                   | Experiment designed, not executed          |
-| --     | Self-Healing CI              | CI repair                      | Scaffold    | 0                   | Experiment designed, not executed          |
+| ID     | Name                         | Domain                         | Status      | Runs                | Key Result                                                                                   |
+| ------ | ---------------------------- | ------------------------------ | ----------- | ------------------- | -------------------------------------------------------------------------------------------- |
+| E1     | Repeated Failure Elimination | Eval framework                 | Seeded      | 2 (vanilla + gated) | Gated 1/3 vs Vanilla 0/3                                                                     |
+| E4     | CRM Factory (Codex)          | Enterprise SaaS                | Complete    | 16 runs (A02-A19)   | Codex-alone faster; PL better auditability                                                   |
+| E5     | Maintenance Viability        | Runtime provenance             | Designed    | 0                   | Program designed, not yet executed                                                           |
+| E6     | Pure PL CRM Factory          | Enterprise SaaS                | Designed    | 0                   | Parse-verified, not yet executed live                                                        |
+| E7     | Enterprise CRM Factory       | Enterprise SaaS (full SDLC)    | Complete    | --                  | Most comprehensive PL factory to date                                                        |
+| E7-MK  | Marketing Factory            | Marketing website              | Complete    | 7+ runs             | PL 30/30 x3 (100%) vs Solo 28.3/30 (94%)                                                     |
+| E8     | Website Factory              | Marketing website (enterprise) | Complete    | 4 runs              | Factory 3/4, Solo 4/4                                                                        |
+| E9     | Full SDLC Factory            | Full lifecycle website         | Complete    | 2 runs + QA variant | Phases 1-5 execute end-to-end                                                                |
+| FSCRUD | Full-Stack CRUD Comparison   | Local full-stack CRUD          | Active      | R30-R45 diagnostics | Local implementation brittle; bounded selector/ranker/rationale/risk-response pattern passed |
+| HA-HR1 | Hybrid Model Routing         | Stack/routing comparison       | Planned     | 0                   | Local bulk + frontier escalation designed                                                    |
+| SPP    | Senior Pairing Protocol      | Local-model supervision        | Planned     | 0                   | Should build on FSCRUD bounded-decision evidence                                             |
+| --     | Aider vs PL                  | Coding assistant comparison    | Complete    | 10 hypotheses       | PL 6 wins, 0 losses, 3 ties                                                                  |
+| --     | Meta-Factory                 | Self-hosting (PL writes PL)    | In Progress | M1 authored         | M1 flow authored, not yet executed live                                                      |
+| --     | Premature Stop Benchmark     | Reliability                    | Scaffold    | 0                   | Experiment designed, not executed                                                            |
+| --     | Bounded Feature Benchmark    | Implementation quality         | Scaffold    | 0                   | Experiment designed, not executed                                                            |
+| --     | Parallel Planning            | Coordination                   | Scaffold    | 0                   | Experiment designed, not executed                                                            |
+| --     | Parallel Isolated Modules    | Build concurrency              | Scaffold    | 0                   | Experiment designed, not executed                                                            |
+| --     | Self-Healing CI              | CI repair                      | Scaffold    | 0                   | Experiment designed, not executed                                                            |
 
 ---
 
@@ -276,23 +276,40 @@ E5 deliberately demotes E4's process-fidelity signals (`processConformance`, `tr
 the target has multiple entities, deterministic gates, and explicit cross-layer
 contracts.
 
-**Status**: Diagnostic probes running; no claim-grade paired batch yet
+**Status**: Active diagnostics through R45; no claim-grade full-product local-only
+implementation batch yet
 
 **Task**: FSCRUD-01 field-service work order tracker -- customers, assets, and work
 orders with relationship validation, status rules, UI flows, seed data, tests, and
 verification artifacts.
 
-**Arms**:
+**Current evidence**:
+
+- R30-R32: local natural-language control preserved scaffold structure but did not
+  reliably solve executable domain behavior or UI surface completeness.
+- R31/R34: deterministic domain/UI/product controls proved the verifier and
+  protected-artifact strategy can reach `100/100`.
+- R35-R39: local free-form handoff and senior-plan authoring stayed brittle or
+  shallow.
+- R40-R45: bounded local section selection, decision-matrix choice, rubric choice,
+  weighted ranking, rationale, and risk-response selection all passed when
+  deterministic tooling owned validation, normalization, rendering, and verification.
+
+**Core arms**:
 
 - `solo-local-crud`: direct local-model prompt through aider or an equivalent local
   edit runner.
 - `pl-local-crud-factory`: same local model controlled by
   `flows/pl-fullstack-crud-v1.flow`.
+- R-series diagnostics: controlled local-only lanes that vary what the local model
+  owns versus what deterministic PL tooling protects.
 
-**Why this is next**: Existing E4/E7/E9/Aider/SPP results show PL's likely advantage
-is governed quality, retries, exact requirements, and traceability, not speed. This
-experiment directly tests the missing comparison: "build a full-stack CRUD app" with
-and without prompt-language control on local inference.
+**Current interpretation**: FSCRUD rejects the sloppy claim that "better prompt
+language makes the local model build the whole CRUD app." It supports a narrower
+architecture: local models can provide bounded semantic decisions inside a
+deterministic PL envelope, while PL owns gates, schema/shape repair, rendering, and
+evidence capture. See
+[`../docs/evaluation/2026-05-06-evidence-snapshot.md`](../docs/evaluation/2026-05-06-evidence-snapshot.md).
 
 ---
 
@@ -337,7 +354,10 @@ and without prompt-language control on local inference.
 
 **Runtime Policy**: Runtime is telemetry, not a primary score. Local inference is expected to be slow; this experiment prioritizes decision quality and final artifact quality.
 
-**Next Run**: SP01 ambiguous-priority merge across all three arms.
+**Next Run**: Reframe SP01 around bounded implementation ownership and hybrid review
+instead of relying on longer senior-persona prose. FSCRUD R39 is direct evidence
+that free-form senior-plan quality does not automatically improve just because the
+prompt sounds more senior.
 
 ---
 

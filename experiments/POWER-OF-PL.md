@@ -103,6 +103,14 @@ await all
 
 PL does not make a small model smarter inside a single turn. It adds retries, gates, decomposition, variable capture, and structural control — all outside the model call. If the model is below the "literal syntactically valid code" threshold, PL cannot rescue it: `gemma4-opencode:e2b` scored 1/11 on E-SMALL by emitting the string `"// I'm going to use the file system..."` repeated hundreds of times; `gemma4-opencode:e4b` scored 1/11 with 0-byte files and `"maximally"` repeated. These are decoding traps, not reasoning gaps, and PL retry+gate cannot rescue them. Source: `experiments/aider-vs-pl/GUIDE-AND-ROADMAP.md` §2.2 lines 32–33; `LOCAL-MODEL-VIABILITY-FINDINGS.md`.
 
+The 2026-05-06 FSCRUD diagnostics add a second boundary. PL did not make
+`qwen3-opencode-big:30b` autonomously build a full-stack CRUD product through better
+senior prose. What worked was more constrained: local inference selected, ranked,
+and justified bounded options while deterministic PL scripts protected product
+artifacts, normalized shape, rendered handoff files, and ran public/hidden
+verification. That is evidence for PL as an execution and validation envelope, not
+evidence that local models became autonomous senior engineers.
+
 ---
 
 ## 10. Try it — reproduce the strongest measurable claim (R1v3, +4 assertions)

@@ -48,6 +48,24 @@ The repo already has a real core product:
 
 The strongest current value is still **verification and supervision**, not broad automation theatre. That is why the roadmap below prioritizes proof, reliability, and supported-host evidence over inventing lots of new surface area.
 
+## Evidence checkpoint: 2026-05-06
+
+The FSCRUD R30-R45 local-model sequence tightened the research boundary:
+
+- local-only prompt wording and senior prose did not prove autonomous full-stack
+  implementation for `qwen3-opencode-big:30b`;
+- deterministic kernels, protected artifacts, and gates were effective at isolating
+  the failure modes;
+- R40-R45 passed when local-model responsibility was bounded to selector/ranker,
+  short rationale, and risk-response choices while PL owned validation, normalization,
+  rendering, and verification.
+
+Roadmap implication: keep product work focused on trustworthy supervision,
+evidence capture, replay, and boundaries. Treat hybrid routing and bounded local
+semantic-choice modules as research tracks, not shipped product guarantees. The
+current evidence summary is
+[Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md).
+
 ## Shipped vs tracked
 
 The runtime already ships:
@@ -90,6 +108,8 @@ These are the next milestones that matter most to the product, in order:
 | Supported-host live smoke and parity evidence        | Turns local/dev confidence into public operational confidence                           | In progress    |
 | Runtime reliability and recovery hardening           | Keeps hooks, child sessions, review loops, and state recovery trustworthy               | In progress    |
 | Non-factory proof program                            | Converts the next experiment wave into narrower runtime, QA, and bounded outcome proof  | Tracked next   |
+| Hybrid local/frontier routing evidence               | Tests local bulk/selection plus frontier review without contaminating local-only claims | Tracked next   |
+| Bounded local semantic-choice modules                | Turns R40-R45 selector/ranker evidence into reusable, validated workflow patterns       | Exploratory    |
 | Better operator surfaces                             | Makes install, inspect, validate, and troubleshooting easier without new magic          | Tracked next   |
 | Broader authoring ergonomics                         | LSP, playground, registry, and similar tooling become worth it after the core is proven | Tracked next   |
 

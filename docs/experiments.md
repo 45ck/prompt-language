@@ -6,8 +6,11 @@ measurements, hypotheses, caveats, and raw run artifacts live here or under
 [`../experiments/`](../experiments/).
 
 For the current short answer to "what works now?", start with
-[What Works Now](evaluation/what-works-now.md). For the raw research tree, run
-catalog, and dated receipts, see [`../experiments/README.md`](../experiments/README.md).
+[What Works Now](evaluation/what-works-now.md). For the current post-FSCRUD evidence
+boundary, see
+[Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md). For the
+raw research tree, run catalog, and dated receipts, see
+[`../experiments/README.md`](../experiments/README.md).
 For experiment design templates and methodology, see
 [`../experiments/templates/`](../experiments/templates/).
 
@@ -32,17 +35,17 @@ For experiment design templates and methodology, see
 
 ## Comparison and benchmark experiments
 
-| Name                                                          | Domain                      | Status   | Summary                                       |
-| ------------------------------------------------------------- | --------------------------- | -------- | --------------------------------------------- |
-| [Aider vs PL](../experiments/aider-vs-pl/SCORECARD.md)        | Coding assistant comparison | Complete | Head-to-head across 10 hypotheses             |
-| [Full-stack CRUD](../experiments/fullstack-crud-comparison/)  | Local-model product build   | Active   | Local Ollama vs PL domain/control diagnostics |
-| [Harness Arena](../experiments/harness-arena/)                | Local/frontier routing      | Planned  | Hybrid routing and provider-boundary pilots   |
-| [Senior Pairing](../experiments/senior-pairing-protocol/)     | Local-model supervision     | Planned  | Senior-engineer supervision flow program      |
-| [Premature Stop](../experiments/premature-stop-benchmark/)    | Reliability                 | Scaffold | Repeated-stop and premature-exit comparisons  |
-| [Bounded Feature](../experiments/bounded-feature-benchmark/)  | Implementation quality      | Scaffold | Bounded implementation quality benchmarks     |
-| [Parallel Planning](../experiments/parallel-planning/)        | Coordination                | Scaffold | Plan quality and coordination experiments     |
-| [Parallel Modules](../experiments/parallel-isolated-modules/) | Build concurrency           | Scaffold | Isolated module build concurrency             |
-| [Self-healing CI](../experiments/self-healing-ci/)            | CI repair                   | Scaffold | CI repair and auto-fix via retry/try-catch    |
+| Name                                                          | Domain                      | Status   | Summary                                                                        |
+| ------------------------------------------------------------- | --------------------------- | -------- | ------------------------------------------------------------------------------ |
+| [Aider vs PL](../experiments/aider-vs-pl/SCORECARD.md)        | Coding assistant comparison | Complete | Head-to-head across 10 hypotheses                                              |
+| [Full-stack CRUD](../experiments/fullstack-crud-comparison/)  | Local-model product build   | Active   | R30-R45 local diagnostics: implementation limits, bounded selector/ranker wins |
+| [Harness Arena](../experiments/harness-arena/)                | Local/frontier routing      | Planned  | Hybrid routing and provider-boundary pilots                                    |
+| [Senior Pairing](../experiments/senior-pairing-protocol/)     | Local-model supervision     | Planned  | Senior-engineer supervision flow program                                       |
+| [Premature Stop](../experiments/premature-stop-benchmark/)    | Reliability                 | Scaffold | Repeated-stop and premature-exit comparisons                                   |
+| [Bounded Feature](../experiments/bounded-feature-benchmark/)  | Implementation quality      | Scaffold | Bounded implementation quality benchmarks                                      |
+| [Parallel Planning](../experiments/parallel-planning/)        | Coordination                | Scaffold | Plan quality and coordination experiments                                      |
+| [Parallel Modules](../experiments/parallel-isolated-modules/) | Build concurrency           | Scaffold | Isolated module build concurrency                                              |
+| [Self-healing CI](../experiments/self-healing-ci/)            | CI repair                   | Scaffold | CI repair and auto-fix via retry/try-catch                                     |
 
 The next planned wave is documented in
 [Non-Factory Proof Program](evaluation/non-factory-proof-program.md). That note
@@ -91,6 +94,19 @@ The current planned sequence is:
 - bounded QA and outcome-lift benchmarks
 
 See [Non-Factory Proof Program](evaluation/non-factory-proof-program.md).
+
+### Full-stack CRUD local-model diagnostics
+
+The FSCRUD series is the current best evidence for local-model boundaries. R30-R39
+showed that the local 30B lane remained brittle on executable product implementation
+and rich senior-plan authoring. R40-R45 then showed a narrower working pattern:
+bounded local section selection, decision-matrix choice, rubric-derived choice,
+weighted ranking, rationale, and senior risk-response selection under deterministic
+validation/rendering. The current conclusion is not "local model builds full-stack
+CRUD"; it is "local model can provide bounded semantic choices inside a deterministic
+PL control system." See
+[Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md) and
+[experiments/fullstack-crud-comparison/](../experiments/fullstack-crud-comparison/).
 
 ### E7: Marketing Factory
 

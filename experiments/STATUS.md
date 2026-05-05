@@ -1,4 +1,4 @@
-# STATUS — open research work at 2026-04-30
+# STATUS — open research work at 2026-05-06
 
 Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/` via the `bd` CLI; this file is a committed mirror so the status is readable without a bd install and is PR-reviewable.
 
@@ -6,11 +6,32 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 
 ## Headline
 
+- FSCRUD R30-R45 is now the current local-model evidence boundary. It did not prove
+  autonomous local full-stack implementation. It did prove that local Ollama can
+  act as a bounded selector/ranker/rationale/risk-response source when PL owns
+  deterministic validation, normalization, rendering, and verification.
+- The next high-value experiment is not another protected deterministic R-series
+  pass. The next step should increase responsibility in one controlled dimension:
+  a tiny local implementation slice, a hybrid local/frontier review arm, or a
+  cross-domain bounded selector batch.
+- The product roadmap implication is unchanged but sharper: prioritize trustworthy
+  supervision, evidence capture, replay, and boundary control over broad
+  orchestration-shell expansion.
+
 - 2026-04-28 local-model ladder reruns are committed. H15 is a clean PL win (`10/10` vs solo `6/10`), H12 is a tie (`8/9` vs `8/9`) with PL much slower, and H14 is a solo win (`8/8` vs PL `6/8`).
 - The current interpretation changed: PL helps when the flow supplies task-fit staged control and oracle-fed repair; it can hurt when over-staged or when repair prompts do not expose the real failure.
 - New tracked experiment: `prompt-language-sfd3`, hybrid local/frontier model routing. Goal: local models handle bulk work, Codex/GPT-5.5-class models handle high-ambiguity reasoning, stuck-state repair, and final review.
 - New planned experiment package: `experiments/senior-pairing-protocol/`. Goal: test whether PL can encode senior-engineer metacognition for local models acting like junior developers. Runtime is telemetry, not a primary score.
 - Raw ad hoc logs from H11/H12/H14/H15 are now archived or ignored according to artifact policy; committed evidence should prefer scorecards, manifests, and curated reports.
+
+## Current evidence boundary
+
+| Area                 | What we know                                                                                                            | What remains open                                                                |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Runtime/product      | Gates, retries, review, state, and CI-backed validation are real and useful.                                            | Supported-host parity and replay/audit improvements remain roadmap work.         |
+| Local model FSCRUD   | Bounded semantic choice works under deterministic PL validation; free-form local product implementation stayed brittle. | Whether local ownership can safely expand to tiny executable slices.             |
+| Senior metacognition | Long senior prose is not enough; bounded criteria and deterministic scoring work better.                                | Whether the Senior Pairing Protocol improves real implementation outcomes.       |
+| Hybrid routing       | The strategy is now better motivated: local for bounded/bulk work, frontier for high-ambiguity review/escalation.       | Needs a clean arm that records frontier calls separately from local-only claims. |
 
 ## Open items by priority
 
@@ -23,15 +44,16 @@ Snapshot of the beads tracker for experiments. Source of truth lives in `.beads/
 
 ### P2 — next-tier execution work
 
-| ID                     | Type    | Subject                                                                      | Blocked by                   |
-| ---------------------- | ------- | ---------------------------------------------------------------------------- | ---------------------------- |
-| `prompt-g64k`          | bug     | PL aider runner hangs on ollama TCP stream drop — litellm retries infinitely | — (containment plan written) |
-| `prompt-gysa`          | epic    | Rescue-viability research program (R1..R10 umbrella)                         | —                            |
-| `prompt-b5eb`          | task    | Rescue-viability R1 replications: lock in qwen3:8b E-SMALL CSV baseline      | —                            |
-| `prompt-zbpc`          | task    | Run R7 foreach-spawn experiment (blocked on isolation)                       | `prompt-l1xz`, `prompt-nba9` |
-| `prompt-lmas`          | feature | Add pi-mono runner adapter (~300 LOC headless JSONL bridge)                  | —                            |
-| `prompt-language-sfd3` | task    | Hybrid local/frontier model routing experiment                               | —                            |
-| `prompt-language-lghe` | task    | Senior Pairing Protocol experiment: local model as junior developer          | —                            |
+| ID                            | Type    | Subject                                                                          | Blocked by                   |
+| ----------------------------- | ------- | -------------------------------------------------------------------------------- | ---------------------------- |
+| `prompt-g64k`                 | bug     | PL aider runner hangs on ollama TCP stream drop — litellm retries infinitely     | — (containment plan written) |
+| `prompt-gysa`                 | epic    | Rescue-viability research program (R1..R10 umbrella)                             | —                            |
+| `prompt-b5eb`                 | task    | Rescue-viability R1 replications: lock in qwen3:8b E-SMALL CSV baseline          | —                            |
+| `prompt-zbpc`                 | task    | Run R7 foreach-spawn experiment (blocked on isolation)                           | `prompt-l1xz`, `prompt-nba9` |
+| `prompt-lmas`                 | feature | Add pi-mono runner adapter (~300 LOC headless JSONL bridge)                      | —                            |
+| `prompt-language-sfd3`        | task    | Hybrid local/frontier model routing experiment                                   | —                            |
+| `prompt-language-lghe`        | task    | Senior Pairing Protocol experiment: local model as junior developer              | —                            |
+| `prompt-language-fscrud-next` | task    | FSCRUD next-step: tiny local implementation slice or cross-domain selector batch | —                            |
 
 ### P3 — follow-ups and ecosystem work
 

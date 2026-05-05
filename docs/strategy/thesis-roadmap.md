@@ -22,6 +22,20 @@ The thesis should be tested in this order:
 
 If stage 1 or 2 is weak, stage 4 is just storytelling.
 
+## 2026-05-06 update
+
+The FSCRUD R30-R45 diagnostics sharpen stage 2. They show that local-model
+ownership is not binary:
+
+- free-form local implementation and senior-plan authoring stayed brittle;
+- bounded local selection, ranking, rationale, and risk-response choice passed when
+  PL owned deterministic validation and rendering;
+- therefore the next thesis experiments should test gradual responsibility
+  expansion, not jump straight to "PL is the primary engineering surface."
+
+The next thesis-valid step is a small executable implementation slice or hybrid
+review/escalation arm with local-only and hybrid claims kept separate.
+
 ## Priority order
 
 | Priority | Experiment                              | Why first                                               |

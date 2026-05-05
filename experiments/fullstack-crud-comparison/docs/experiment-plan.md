@@ -940,4 +940,8 @@ normalization, rich prose, rendering, and verification. R43
 with a correct weighted ranking of bounded senior-plan candidates. This extends the
 claim from option selection to ranked-criteria selection, but the same boundary
 holds: deterministic PL still owns product behavior, rich prose, schema shape,
-rendering, and verification.
+rendering, and verification. R44
+`live-fscrud-r44-weighted-rationale-senior-plan-20260506-0815` passed at `100/100`
+with a correct ranking and bounded criteria-grounded top rationale. The current
+claim is therefore selector/ranker/rationale-module capability under explicit
+criteria and deterministic validation, not autonomous senior-engineering execution.

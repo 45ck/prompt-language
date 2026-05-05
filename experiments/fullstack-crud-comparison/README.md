@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R43 weighted-ranking senior-plan diagnostic passed with a narrow claim boundary
+Status: R44 weighted-rationale senior-plan diagnostic passed with a narrow claim boundary
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -47,29 +47,30 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 
 ## Arms
 
-| Arm                                          | Runner                                                  | Model                                  | Purpose                                                                      |
-| -------------------------------------------- | ------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
-| `solo-local-crud`                            | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                      |
-| `pl-local-crud-factory`                      | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control              |
-| `pl-local-crud-scaffold-contract`            | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback   |
-| `pl-local-crud-micro-contract`               | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                  |
-| `pl-local-crud-micro-contract-v2`            | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests  |
-| `r31-static-domain-kernel-control`           | prompt-language flow                                    | deterministic only                     | Control: scaffold plus known-good domain kernel, no model-authored code      |
-| `r31-pl-domain-kernel-bulk`                  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel, local model owns server/UI/docs         |
-| `r32-pl-ui-surface-control`                  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus nearby server/UI surface gates      |
-| `r33-pl-ui-skeleton-integration`             | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus protected deterministic UI skeleton |
-| `r34-pl-server-only-integration`             | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/docs/manifest/report; model owns server only |
-| `r35-pl-handoff-artifacts`                   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/server; model owns handoff artifacts only    |
-| `r36-pl-structured-handoff-source`           | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns structured handoff source only     |
-| `r37-pl-schema-repaired-handoff-source`      | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw handoff intent only            |
-| `r38-pl-senior-plan-repaired-handoff-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw senior plan intent only        |
-| `r39-pl-quality-scored-senior-plan-source`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns quality-scored senior plan source  |
-| `r40-pl-section-selected-senior-plan-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan section choice |
-| `r41-pl-decision-matrix-senior-plan-source`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan option choices |
-| `r42-pl-rubric-decision-senior-plan-source`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns rubric-derived senior-plan choices |
-| `r43-pl-weighted-ranking-senior-plan-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns weighted senior-plan ranking       |
-| `pl-local-senior-crud`                       | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
-| `hybrid-router-crud`                         | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
+| Arm                                            | Runner                                                  | Model                                  | Purpose                                                                      |
+| ---------------------------------------------- | ------------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------- |
+| `solo-local-crud`                              | aider or prompt-language `--runner aider` direct prompt | local Ollama model                     | Baseline: direct "build the app" prompt                                      |
+| `pl-local-crud-factory`                        | prompt-language flow                                    | same local Ollama model                | Treatment: phase, gate, retry, review, and verification control              |
+| `pl-local-crud-scaffold-contract`              | prompt-language flow                                    | same local Ollama model                | Treatment: deterministic senior scaffold plus executable contract feedback   |
+| `pl-local-crud-micro-contract`                 | prompt-language flow                                    | same local Ollama model                | Diagnostic: scaffold plus executable domain micro contracts                  |
+| `pl-local-crud-micro-contract-v2`              | prompt-language flow                                    | same local Ollama model                | Diagnostic: public domain API contract, export normalizer, checkpoint tests  |
+| `r31-static-domain-kernel-control`             | prompt-language flow                                    | deterministic only                     | Control: scaffold plus known-good domain kernel, no model-authored code      |
+| `r31-pl-domain-kernel-bulk`                    | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel, local model owns server/UI/docs         |
+| `r32-pl-ui-surface-control`                    | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus nearby server/UI surface gates      |
+| `r33-pl-ui-skeleton-integration`               | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain kernel plus protected deterministic UI skeleton |
+| `r34-pl-server-only-integration`               | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/docs/manifest/report; model owns server only |
+| `r35-pl-handoff-artifacts`                     | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected domain/UI/server; model owns handoff artifacts only    |
+| `r36-pl-structured-handoff-source`             | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns structured handoff source only     |
+| `r37-pl-schema-repaired-handoff-source`        | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw handoff intent only            |
+| `r38-pl-senior-plan-repaired-handoff-source`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns raw senior plan intent only        |
+| `r39-pl-quality-scored-senior-plan-source`     | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns quality-scored senior plan source  |
+| `r40-pl-section-selected-senior-plan-source`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan section choice |
+| `r41-pl-decision-matrix-senior-plan-source`    | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan option choices |
+| `r42-pl-rubric-decision-senior-plan-source`    | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns rubric-derived senior-plan choices |
+| `r43-pl-weighted-ranking-senior-plan-source`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns weighted senior-plan ranking       |
+| `r44-pl-weighted-rationale-senior-plan-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns weighted ranking plus rationale    |
+| `pl-local-senior-crud`                         | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
+| `hybrid-router-crud`                           | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
 Run the first claim attempt with only `solo-local-crud` and
 `pl-local-crud-factory`. Add the senior and hybrid arms only after the baseline
@@ -672,6 +673,32 @@ strategies by explicit weighted criteria. This is the strongest support so far f
 using local models as selector/ranker/classifier components inside a deterministic
 PL system. It still does not show free-form senior-engineering authorship or local
 product implementation.
+
+### R44 Weighted-Rationale Senior-Plan Diagnostic
+
+R44 is designed as `--arms r44-weighted-rationale-senior-plan`. It extends R43 by
+asking the model to attach a short criteria-grounded rationale to the top-ranked
+candidate. The model owns only `senior-plan.rationale.txt`; deterministic tooling
+validates ranking order and required rationale terms before rendering
+`senior-plan.raw.json`, canonical `handoff-source.json`, and handoff artifacts.
+
+Observed R44 on `2026-05-06`:
+`live-fscrud-r44-weighted-rationale-senior-plan-20260506-0815`.
+
+- `r44-pl-weighted-rationale-senior-plan-source`: `100/100`, `verified_pass`, with
+  public gate, hidden verifier, executable domain behavior, and path-root isolation
+  passing.
+- The model-authored rationale ranked `bravo-protected-crud-kernel`,
+  `charlie-editable-manual-plan`, then `alpha-frontend-notes-plan`, and the top
+  reason included protected local files, domain/UI/server/seed, ordered CRUD,
+  domain checks/tests, and path/seed/schema/handoff risk.
+- In the same run, `r30-solo-local` failed at `26/100`;
+  `r31-static-domain-kernel-control` passed at `100/100`.
+
+Updated R44 interpretation: local inference can produce a bounded ranked choice
+with a short criteria-grounded rationale when the criteria and acceptable evidence
+terms are explicit. This supports local use as a small ranker/rationale module, not
+as an autonomous senior engineer or product implementer.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

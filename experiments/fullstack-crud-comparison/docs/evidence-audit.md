@@ -537,6 +537,30 @@ criteria. This supports using prompt-language to turn local models into small
 selector/ranker modules whose outputs are normalized and rendered deterministically.
 It still does not support local free-form senior-engineering authorship.
 
+## R44 Evidence Update
+
+R44 tested whether the local model can attach a short criteria-grounded rationale to
+the bounded weighted ranking from R43.
+
+Observed R44 result:
+
+- `live-fscrud-r44-weighted-rationale-senior-plan-20260506-0815`: treatment passed
+  at `100/100` with `verified_pass`.
+- The model-authored `senior-plan.rationale.txt` ranked
+  `bravo-protected-crud-kernel`, `charlie-editable-manual-plan`, then
+  `alpha-frontend-notes-plan`.
+- The top rationale included protected local files, domain/UI/server/seed coverage,
+  ordered CRUD, domain checks and tests, and path/seed/schema/handoff risk.
+- Public gate, hidden verifier, executable domain behavior, and path-root isolation
+  were green for the treatment.
+- Comparison anchors: solo failed at `26/100`; the deterministic static control
+  passed at `100/100`.
+
+Updated R44 evidence: local inference can produce a bounded rationale when the
+acceptable evidence terms are explicit. This strengthens the selector/ranker module
+claim, but still does not show free-form senior-engineering authorship or product
+implementation.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

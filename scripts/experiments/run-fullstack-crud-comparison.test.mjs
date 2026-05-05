@@ -177,6 +177,14 @@ test('resolves the R43 weighted-ranking senior-plan group', () => {
   ]);
 });
 
+test('resolves the R44 weighted-rationale senior-plan group', () => {
+  assert.deepEqual(resolveArms('r44-weighted-rationale-senior-plan'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r44-pl-weighted-rationale-senior-plan-source',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

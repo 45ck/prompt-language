@@ -143,6 +143,11 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-rubric-decision-senior-plan-r42.flow',
   ),
+  'r43-pl-weighted-ranking-senior-plan-source': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-weighted-ranking-senior-plan-r43.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
@@ -216,6 +221,11 @@ const ARM_GROUPS = {
     'r30-solo-local',
     'r31-static-domain-kernel-control',
     'r42-pl-rubric-decision-senior-plan-source',
+  ],
+  'r43-weighted-ranking-senior-plan': [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r43-pl-weighted-ranking-senior-plan-source',
   ],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],

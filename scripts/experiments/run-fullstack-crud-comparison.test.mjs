@@ -169,6 +169,14 @@ test('resolves the R42 rubric-decision senior-plan group', () => {
   ]);
 });
 
+test('resolves the R43 weighted-ranking senior-plan group', () => {
+  assert.deepEqual(resolveArms('r43-weighted-ranking-senior-plan'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r43-pl-weighted-ranking-senior-plan-source',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

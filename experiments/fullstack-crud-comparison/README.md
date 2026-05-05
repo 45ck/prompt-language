@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R42 rubric-decision senior-plan diagnostic passed with a narrow claim boundary
+Status: R43 weighted-ranking senior-plan diagnostic passed with a narrow claim boundary
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -67,6 +67,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `r40-pl-section-selected-senior-plan-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan section choice |
 | `r41-pl-decision-matrix-senior-plan-source`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior-plan option choices |
 | `r42-pl-rubric-decision-senior-plan-source`  | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns rubric-derived senior-plan choices |
+| `r43-pl-weighted-ranking-senior-plan-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns weighted senior-plan ranking       |
 | `pl-local-senior-crud`                       | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
 | `hybrid-router-crud`                         | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
@@ -643,6 +644,34 @@ from a rubric, but schema/shape discipline remains fragile. Prompt-language is
 useful here because deterministic normalization and repair can turn semantically
 correct local output into verified artifacts. This still does not prove local
 senior-plan authorship or product implementation.
+
+### R43 Weighted-Ranking Senior-Plan Diagnostic
+
+R43 is designed as `--arms r43-weighted-ranking-senior-plan`. It directly tests the
+ranked-criteria pattern: the model sees weighted criteria and three candidate
+senior-plan strategies, then owns only `senior-plan.ranking.txt`. Deterministic
+tooling validates the ranking, normalizes common local output shapes, renders
+`senior-plan.raw.json`, canonical `handoff-source.json`, and handoff artifacts, and
+runs public/hidden verification.
+
+Observed R43 on `2026-05-06`:
+`live-fscrud-r43-weighted-ranking-senior-plan-20260506-0015`.
+
+- `r43-pl-weighted-ranking-senior-plan-source`: `100/100`, `verified_pass`, with
+  public gate, hidden verifier, executable domain behavior, and path-root isolation
+  passing.
+- The model-authored ranking was correct:
+  `1=bravo-protected-crud-kernel`,
+  `2=charlie-editable-manual-plan`, and
+  `3=alpha-frontend-notes-plan`.
+- In the same run, `r30-solo-local` failed at `26/100`;
+  `r31-static-domain-kernel-control` passed at `100/100`.
+
+Updated R43 interpretation: the local model can rank bounded senior-plan candidate
+strategies by explicit weighted criteria. This is the strongest support so far for
+using local models as selector/ranker/classifier components inside a deterministic
+PL system. It still does not show free-form senior-engineering authorship or local
+product implementation.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

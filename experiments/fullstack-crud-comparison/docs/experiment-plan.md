@@ -935,4 +935,9 @@ with semantically correct comma-separated choices at `82/100`; the fixed run
 `100/100` after deterministic ordered-list normalization and stricter repair
 formatting. The claim boundary is now: local inference can make bounded
 rubric-derived symbolic choices, while deterministic PL must still own shape
-normalization, rich prose, rendering, and verification.
+normalization, rich prose, rendering, and verification. R43
+`live-fscrud-r43-weighted-ranking-senior-plan-20260506-0015` passed at `100/100`
+with a correct weighted ranking of bounded senior-plan candidates. This extends the
+claim from option selection to ranked-criteria selection, but the same boundary
+holds: deterministic PL still owns product behavior, rich prose, schema shape,
+rendering, and verification.

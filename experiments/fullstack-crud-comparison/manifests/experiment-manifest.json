@@ -166,6 +166,16 @@
       "hypothesis": "If R41 passes because local inference can choose bounded options from an explicit matrix, the local model can also infer the task-appropriate senior-plan options from a compact rubric plus decoy options.",
       "claimBoundary": "This is a rubric-decision diagnostic. A pass does not prove autonomous senior engineering, local senior-plan authorship, or product implementation; it isolates whether local inference can infer small symbolic options from a rubric while deterministic tooling validates, normalizes shape, and renders artifacts.",
       "result": "Observed in live-fscrud-r42-rubric-decision-senior-plan-20260505-0045: treatment selected the correct six semantic options but wrote a comma-separated line, ending flow_failed at 82/100 with hiddenOraclePassed=true and domainBehaviorPassed=true before public handoff rendering. Fixed run live-fscrud-r42-rubric-decision-senior-plan-fixed-20260505-0105 added deterministic ordered-list normalization and stricter repair formatting; treatment passed 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. Solo failed at 18/100 and static control passed at 100/100. This supports local rubric-derived bounded option selection plus deterministic shape normalization, not local senior-plan authorship."
+    },
+    {
+      "id": "r43-pl-weighted-ranking-senior-plan-source",
+      "runner": "prompt-language",
+      "modelPolicy": "same local Ollama model as R42 after deterministic domain kernel, deterministic UI skeleton, and deterministic server integration setup",
+      "flow": "../flows/pl-fullstack-crud-weighted-ranking-senior-plan-r43.flow",
+      "status": "diagnostic-complete",
+      "hypothesis": "If R42 passes because local inference can infer bounded options from a rubric, the local model can also rank bounded senior-plan candidates by explicit weighted criteria.",
+      "claimBoundary": "This is a weighted-ranking diagnostic. A pass does not prove autonomous senior engineering, local senior-plan authorship, or product implementation; it isolates whether local inference can rank small symbolic candidate strategies while deterministic tooling validates, normalizes shape, and renders artifacts.",
+      "result": "Observed in live-fscrud-r43-weighted-ranking-senior-plan-20260506-0015: treatment passed 100/100 verified_pass with publicGatePassed=true, hiddenOraclePassed=true, domainBehaviorPassed=true, and pathRootIsolation=true. The model-authored senior-plan.ranking.txt ranked 1=bravo-protected-crud-kernel, 2=charlie-editable-manual-plan, and 3=alpha-frontend-notes-plan. Solo failed at 26/100 and static control passed at 100/100. This supports local ranked-criteria selection under deterministic validation and rendering, not local senior-plan authorship."
     }
   ],
   "timeouts": {
@@ -177,5 +187,5 @@
   },
   "primaryEndpoint": "verified-product-completeness",
   "rubric": "../rubrics/fullstack-crud-rubric.md",
-  "resultStatus": "diagnostic-only-r42-rubric-decision-selection-passed"
+  "resultStatus": "diagnostic-only-r43-weighted-ranking-selection-passed"
 }

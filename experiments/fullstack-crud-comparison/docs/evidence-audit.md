@@ -513,6 +513,30 @@ rubric, but output shape is still brittle. The supported system pattern is local
 semantic choice plus deterministic parser/repair/rendering, not free-form senior
 engineering authorship.
 
+## R43 Evidence Update
+
+R43 tested the user's ranked-criteria hypothesis directly: give the local model
+weighted criteria and candidate senior-plan strategies, then ask it to rank them
+while deterministic tooling owns validation, normalization, rendering, and
+verification.
+
+Observed R43 result:
+
+- `live-fscrud-r43-weighted-ranking-senior-plan-20260506-0015`: treatment passed at
+  `100/100` with `verified_pass`.
+- The model-authored `senior-plan.ranking.txt` ranked the candidates correctly:
+  `bravo-protected-crud-kernel`, `charlie-editable-manual-plan`, then
+  `alpha-frontend-notes-plan`.
+- Public gate, hidden verifier, executable domain behavior, and path-root isolation
+  were green for the treatment.
+- Comparison anchors: solo failed at `26/100`; the deterministic static control
+  passed at `100/100`.
+
+Updated R43 evidence: local inference can perform bounded ranking against explicit
+criteria. This supports using prompt-language to turn local models into small
+selector/ranker modules whose outputs are normalized and rendered deterministically.
+It still does not support local free-form senior-engineering authorship.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

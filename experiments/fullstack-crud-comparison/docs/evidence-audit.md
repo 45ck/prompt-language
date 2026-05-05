@@ -561,6 +561,33 @@ acceptable evidence terms are explicit. This strengthens the selector/ranker mod
 claim, but still does not show free-form senior-engineering authorship or product
 implementation.
 
+## R45 Evidence Update
+
+R45 tests whether the R44 pattern extends from explaining a selected plan to choosing
+a bounded senior risk response from the known FSCRUD failure history. The model owns
+only `senior-plan.risk-response.txt`; deterministic tooling validates that it ranks
+`guard-path-seed-schema-handoff` above broader editable scope and manual review, and
+that the top rationale names path-root isolation, seed integrity, schema repair,
+handoff artifacts, deterministic verification, and protected local scope.
+
+Observed R45 result:
+
+- `live-fscrud-r45-risk-response-senior-plan-20260506-0835`: treatment passed at
+  `100/100` with `verified_pass`.
+- The model-authored `senior-plan.risk-response.txt` ranked
+  `guard-path-seed-schema-handoff`, `expand-editable-product-scope`, then
+  `defer-verification-to-manual-review`.
+- The top rationale included path-root isolation, seed integrity, schema repair,
+  handoff artifacts, deterministic verification, and protected local scope.
+- Public gate, hidden verifier, executable domain behavior, and path-root isolation
+  were green for the treatment.
+- Comparison anchors: solo failed at `35/100`; the deterministic static control
+  passed at `100/100`.
+
+Updated R45 evidence: local inference can choose a bounded risk response under
+explicit criteria and deterministic scoring. It still does not prove autonomous
+risk analysis, senior-plan authorship, or product implementation.
+
 ## Model-Use Boundary
 
 Use local Ollama when the experiment is testing local-model capability, bulk

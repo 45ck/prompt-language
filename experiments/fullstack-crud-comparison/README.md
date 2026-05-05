@@ -2,7 +2,7 @@
 
 # Full-Stack CRUD Comparison
 
-Status: R44 weighted-rationale senior-plan diagnostic passed with a narrow claim boundary
+Status: R45 risk-response senior-plan diagnostic passed with a narrow claim boundary
 
 This experiment is the next best test of the local-model prompt-language thesis.
 It asks a direct question:
@@ -69,6 +69,7 @@ Runtime is telemetry only. Local inference is allowed to be slow.
 | `r42-pl-rubric-decision-senior-plan-source`    | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns rubric-derived senior-plan choices |
 | `r43-pl-weighted-ranking-senior-plan-source`   | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns weighted senior-plan ranking       |
 | `r44-pl-weighted-rationale-senior-plan-source` | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns weighted ranking plus rationale    |
+| `r45-pl-risk-response-senior-plan-source`      | prompt-language flow                                    | same local Ollama model                | Diagnostic: protected product; model owns bounded senior risk response       |
 | `pl-local-senior-crud`                         | prompt-language flow                                    | same local Ollama model                | Optional later arm: senior pairing metacognition plus factory gates          |
 | `hybrid-router-crud`                           | prompt-language flow                                    | local default plus frontier escalation | Later arm: local bulk work, external model only for policy-triggered review  |
 
@@ -699,6 +700,34 @@ Updated R44 interpretation: local inference can produce a bounded ranked choice
 with a short criteria-grounded rationale when the criteria and acceptable evidence
 terms are explicit. This supports local use as a small ranker/rationale module, not
 as an autonomous senior engineer or product implementer.
+
+### R45 Risk-Response Senior-Plan Diagnostic
+
+R45 is designed as `--arms r45-risk-response-senior-plan`. It extends R44 from
+ranking a candidate strategy to choosing a bounded senior risk response based on the
+actual failure history: path-root isolation, seed integrity, schema repair, handoff
+artifacts, deterministic verification, and protected local scope. The model owns
+only `senior-plan.risk-response.txt`; deterministic tooling validates the ranking
+and required risk terms before rendering `senior-plan.raw.json`, canonical
+`handoff-source.json`, and handoff artifacts.
+
+Observed R45 on `2026-05-06`:
+`live-fscrud-r45-risk-response-senior-plan-20260506-0835`.
+
+- `r45-pl-risk-response-senior-plan-source`: `100/100`, `verified_pass`, with
+  public gate, hidden verifier, executable domain behavior, and path-root isolation
+  passing.
+- The model-authored risk response ranked `guard-path-seed-schema-handoff`,
+  `expand-editable-product-scope`, then `defer-verification-to-manual-review`, and
+  the top reason included path-root isolation, seed integrity, schema repair,
+  handoff artifacts, deterministic verification, and protected local scope.
+- In the same run, `r30-solo-local` failed at `35/100`;
+  `r31-static-domain-kernel-control` passed at `100/100`.
+
+Updated R45 interpretation: local inference can choose a bounded senior risk
+response when the criteria and acceptable evidence terms are explicit. This supports
+local use as a small risk-response selector inside deterministic PL, not autonomous
+senior engineering, local product implementation, or free-form risk analysis.
 
 Use local Ollama when the purpose is measuring the local-model thesis, performing
 bulk artifact work with deterministic gates, or reproducing the R28/R29 diagnostic

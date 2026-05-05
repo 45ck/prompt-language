@@ -893,6 +893,12 @@ decision matrix that contains task-appropriate options and decoys. A pass means 
 local model can select small symbolic options from an explicit vocabulary; it still
 does not show senior-plan authorship or product implementation.
 
+R45 extends the selector/ranker phase into bounded risk-response choice. The model
+owns only `senior-plan.risk-response.txt`; deterministic tooling validates ranking
+and risk terms, then renders the senior-plan and handoff artifacts. A pass means the
+local model can choose a small senior risk response from explicit criteria; it still
+does not show free-form senior risk analysis or product implementation.
+
 ## Decision Rules
 
 Claim `pl-local-crud-factory` better only if:
@@ -945,3 +951,10 @@ rendering, and verification. R44
 with a correct ranking and bounded criteria-grounded top rationale. The current
 claim is therefore selector/ranker/rationale-module capability under explicit
 criteria and deterministic validation, not autonomous senior-engineering execution.
+R45 is the next diagnostic: bounded risk-response selection from prior failure modes
+with deterministic validation and rendering. R45
+`live-fscrud-r45-risk-response-senior-plan-20260506-0835` passed at `100/100` with
+the expected risk-response ranking and required risk terms. The claim boundary now
+extends to bounded risk-response selection under explicit criteria, while
+deterministic PL still owns product behavior, rich prose, schema shape, rendering,
+and verification.

@@ -185,6 +185,14 @@ test('resolves the R44 weighted-rationale senior-plan group', () => {
   ]);
 });
 
+test('resolves the R45 risk-response senior-plan group', () => {
+  assert.deepEqual(resolveArms('r45-risk-response-senior-plan'), [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r45-pl-risk-response-senior-plan-source',
+  ]);
+});
+
 test('classifies failed flows separately from verifier product failures', () => {
   assert.equal(classifyRunOutcome({ skipped: true }), 'dry_run_skipped');
   assert.equal(

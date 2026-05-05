@@ -153,6 +153,11 @@ const ARM_FLOWS = {
     'flows',
     'pl-fullstack-crud-weighted-rationale-senior-plan-r44.flow',
   ),
+  'r45-pl-risk-response-senior-plan-source': join(
+    EXPERIMENT_ROOT,
+    'flows',
+    'pl-fullstack-crud-risk-response-senior-plan-r45.flow',
+  ),
 };
 const ARM_GROUPS = {
   smoke: ['solo-local-crud', 'pl-local-crud-factory'],
@@ -236,6 +241,11 @@ const ARM_GROUPS = {
     'r30-solo-local',
     'r31-static-domain-kernel-control',
     'r44-pl-weighted-rationale-senior-plan-source',
+  ],
+  'r45-risk-response-senior-plan': [
+    'r30-solo-local',
+    'r31-static-domain-kernel-control',
+    'r45-pl-risk-response-senior-plan-source',
   ],
   tight: ['pl-local-crud-tight-v3'],
   'tight-v2': ['pl-local-crud-tight'],

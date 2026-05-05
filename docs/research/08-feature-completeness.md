@@ -1,5 +1,13 @@
 # Report 08: Feature Completeness Assessment
 
+> Historical assessment, last reviewed 2026-05-06. This report reflects a
+> 2026-04 enhancement review and is superseded for current product/evidence
+> status by [Program Status](../strategy/program-status.md),
+> [Evidence Snapshot: 2026-05-06](../evaluation/2026-05-06-evidence-snapshot.md),
+> and [Research Synthesis: 2026-05-06](../evaluation/2026-05-06-research-synthesis.md).
+> Do not cite "feature-complete" as the current shipped-status claim without
+> checking those pages first.
+
 > The DSL is feature-complete for its intended purpose. Most proposed enhancements are already achievable with existing primitives.
 
 ## Abstract

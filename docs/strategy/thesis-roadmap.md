@@ -36,6 +36,10 @@ ownership is not binary:
 The next thesis-valid step is a small executable implementation slice or hybrid
 review/escalation arm with local-only and hybrid claims kept separate.
 
+The current hypothesis verdict table is maintained in
+[Research Synthesis: 2026-05-06](../evaluation/2026-05-06-research-synthesis.md).
+Use that synthesis as the claim boundary before adding more thesis experiments.
+
 ## Priority order
 
 | Priority | Experiment                              | Why first                                               |

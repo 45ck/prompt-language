@@ -6,6 +6,18 @@ Evaluation measures the current product and its caveats. It does not expand the 
 
 The docs in this section are paired with the checked-in dataset bank under [experiments/eval/README.md](../../experiments/eval/README.md) and the locked report bank under [experiments/results/README.md](../../experiments/results/README.md).
 
+## Current authority
+
+Use these pages as the current evidence boundary before citing older plans:
+
+| Doc                                                                | Current role                                                                       |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| [What Works Now](what-works-now.md)                                | Short public answer for the strongest proven mechanism and caveats                 |
+| [Evidence Snapshot: 2026-05-06](2026-05-06-evidence-snapshot.md)   | Current post-FSCRUD product and local-model evidence boundary                      |
+| [Research Synthesis: 2026-05-06](2026-05-06-research-synthesis.md) | Current cross-experiment claim ledger and hypothesis verdicts                      |
+| [Program Status](../strategy/program-status.md)                    | Current thesis status, claim-eligibility rule, blockers, and next operator actions |
+| [Non-Factory Proof Program](non-factory-proof-program.md)          | Current next-proof sequence for runtime truth, QA lift, and bounded outcome lift   |
+
 ## How to use this section
 
 | If you need...                | Go here                                      | Why                                                             |
@@ -22,6 +34,7 @@ The docs in this section are paired with the checked-in dataset bank under [expe
 | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | [What Works Now](what-works-now.md)                                                                                                 | Short public summary of the strongest proven surfaces and caveats                                                                       |
 | [Evidence Snapshot: 2026-05-06](2026-05-06-evidence-snapshot.md)                                                                    | Current post-FSCRUD claim boundary: proven mechanisms, local-model limits, and next evidence steps                                      |
+| [Research Synthesis: 2026-05-06](2026-05-06-research-synthesis.md)                                                                  | Cross-experiment hypothesis verdicts: supported, narrowed, rejected, and still unproved claims                                          |
 | [Eval Test Matrix](eval-test-matrix.md)                                                                                             | Automated coverage expectations for parser, runtime, datasets, and CLI                                                                  |
 | [Eval Analysis](eval-analysis.md)                                                                                                   | Comparative A/B results, latency analysis, and differentiator taxonomy                                                                  |
 | [Codex Parity Matrix](eval-parity-matrix.md)                                                                                        | Current parity bar plus checked-in execution status for tests, CI, smoke, and supported-host gaps                                       |
@@ -55,5 +68,5 @@ The docs in this section are paired with the checked-in dataset bank under [expe
 | [Eval Artifact Bundles and Replay](eval-artifact-bundles-and-replay.md)                     | Defines run bundles, replay handles, baseline lineage, and annotations                                                    |
 | [Regression Promotion Workflow](regression-promotion-workflow.md)                           | Defines the path from captured run failure to approved bank entry                                                         |
 | [Self-Hosted Meta-Layer Pilot](self-hosted-meta-layer-pilot.md)                             | Bounded repo-local pilot for self-maintaining eval assets first                                                           |
-| [Hypotheses v4](hypotheses-v4.md)                                                           | Research hypothesis set for later evaluation work                                                                         |
+| [Hypotheses v4](hypotheses-v4.md)                                                           | Historical candidate bank; not current evidence and not a claim source                                                    |
 | [Context-Adaptive Results Template](context-adaptive-rendering-results-template.md)         | Draft results template for render-mode experiments                                                                        |

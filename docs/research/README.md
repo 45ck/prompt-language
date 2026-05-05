@@ -12,6 +12,18 @@ Internal research reports synthesizing findings from 20+ external sources on pro
 | Near-term tracked product work | [Roadmap](../roadmap.md)             | `.beads`-backed shipped-vs-tracked status                               |
 | The longer-range thesis        | [Strategy](../strategy/index.md)     | Product positioning plus the broader bet the repo is trying to validate |
 
+## Current authority
+
+These reports are background research, not the current status surface. Before
+citing research conclusions, check the current boundary docs:
+
+| Doc                                                                              | Role                                                                |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [What Works Now](../evaluation/what-works-now.md)                                | Short current evidence summary                                      |
+| [Evidence Snapshot: 2026-05-06](../evaluation/2026-05-06-evidence-snapshot.md)   | Current post-FSCRUD evidence boundary                               |
+| [Research Synthesis: 2026-05-06](../evaluation/2026-05-06-research-synthesis.md) | Cross-experiment hypothesis verdicts and claim ledger               |
+| [Program Status](../strategy/program-status.md)                                  | Current thesis status, blockers, and claim-eligibility requirements |
+
 ## Key insight
 
 prompt-language is **not** a chaining framework (LangChain), an optimization compiler (DSPy), or a multi-agent platform (CrewAI). It is a **meta-orchestration layer** for an existing autonomous agent (Claude Code). The DSL provides structure, sequencing, and gate enforcement — the agent provides reasoning. This distinction shapes how all external research applies to our design, but it remains research framing rather than the canonical shipped feature list. See [Report 00](00-architecture-position.md) for the full argument.
@@ -28,7 +40,7 @@ prompt-language is **not** a chaining framework (LangChain), an optimization com
 | 05  | [Developer Trust](05-developer-trust.md)                     | Why developers don't trust AI agents and how prompt-language addresses the trust gap. Covers the five failure modes (fake completion, lazy placeholders, stopping early, death spirals, context amnesia), the 84% adoption / 29% trust paradox, and how gates and flow structure directly address each failure mode. |
 | 06  | [Agentic Tool Landscape](06-agentic-tool-landscape.md)       | How current agentic coding tools handle orchestration. Covers Copilot, Cursor, Devin, Claude Code, Codex architectures, the merge problem, MCP/ACP protocols, and where prompt-language fits as the only user-facing workflow DSL.                                                                                   |
 | 07  | [Enhancement Opportunities](07-enhancement-opportunities.md) | Full wishlist with evidence tiers (Strong/Moderate/Speculative), proposed DSL syntax, and priority matrix. Top items: approval nodes, retry backoff, flow budgets, compact rendering, self-reflection on failure.                                                                                                    |
-| 08  | [Feature Completeness](08-feature-completeness.md)           | Re-evaluates all 15 enhancements from Report 07 against existing primitives. Finds 10/15 already achievable, 2 handled by host agent, 2 integration patterns, 1 genuine gap (niche). Concludes the DSL is feature-complete; forward work is documentation, hardening, and eval coverage.                             |
+| 08  | [Feature Completeness](08-feature-completeness.md)           | Historical 2026-04 assessment. Re-evaluates Report 07 enhancements against the then-current primitive set; superseded for current status by the 2026-05 evidence and program-status docs.                                                                                                                            |
 
 ## Tracked Research Plans
 

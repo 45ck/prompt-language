@@ -9,6 +9,8 @@ For the current short answer to "what works now?", start with
 [What Works Now](evaluation/what-works-now.md). For the current post-FSCRUD evidence
 boundary, see
 [Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md). For the
+cross-experiment claim ledger, see
+[Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md). For the
 raw research tree, run catalog, and dated receipts, see
 [`../experiments/README.md`](../experiments/README.md).
 For experiment design templates and methodology, see
@@ -25,27 +27,28 @@ For experiment design templates and methodology, see
 
 ## Experiment catalog
 
-| ID  | Name               | Domain             | Status     | Summary                                                     |
-| --- | ------------------ | ------------------ | ---------- | ----------------------------------------------------------- |
-| E1  | Repeated Failure   | Reliability        | Complete   | Gate enforcement vs prompt-only completion                  |
-| E4  | CRM Factory        | Enterprise SaaS    | Complete   | End-to-end CRM with spawn/await, foreach-spawn, race, retry |
-| E5  | Trace Verification | Runtime provenance | Active     | Z-series differential tests proving live runtime execution  |
-| E7  | Marketing Factory  | Marketing website  | Complete   | PL achieved 30/30 x3 vs solo 28.3/30 average                |
-| E8  | Website Factory    | Enterprise website | Run 1 done | 6-phase enterprise build: Factory 3/4 vs Solo 4/4           |
+| ID    | Name                         | Domain             | Status     | Summary                                                     |
+| ----- | ---------------------------- | ------------------ | ---------- | ----------------------------------------------------------- |
+| E1    | Repeated Failure Elimination | Reliability        | Seeded     | Gate enforcement vs prompt-only completion on a 3-case seed |
+| E4    | CRM Factory                  | Enterprise SaaS    | Complete   | End-to-end CRM with spawn/await, foreach-spawn, race, retry |
+| E5    | Maintenance Viability        | Maintainability    | Designed   | Blind second-lane maintenance protocol, not yet executed    |
+| E7    | Enterprise CRM Factory       | Enterprise SaaS    | Scaffolded | Full-SDLC scaffold; 2026-04-17 live smoke failed            |
+| E7-MK | Marketing Factory            | Marketing website  | Complete   | PL achieved 30/30 x3 vs solo 28.3/30 average                |
+| E8    | Website Factory              | Enterprise website | Run 1 done | 6-phase enterprise build: Factory 3/4 vs Solo 4/4           |
 
 ## Comparison and benchmark experiments
 
-| Name                                                          | Domain                      | Status   | Summary                                                                        |
-| ------------------------------------------------------------- | --------------------------- | -------- | ------------------------------------------------------------------------------ |
-| [Aider vs PL](../experiments/aider-vs-pl/SCORECARD.md)        | Coding assistant comparison | Complete | Head-to-head across 10 hypotheses                                              |
-| [Full-stack CRUD](../experiments/fullstack-crud-comparison/)  | Local-model product build   | Active   | R30-R45 local diagnostics: implementation limits, bounded selector/ranker wins |
-| [Harness Arena](../experiments/harness-arena/)                | Local/frontier routing      | Planned  | Hybrid routing and provider-boundary pilots                                    |
-| [Senior Pairing](../experiments/senior-pairing-protocol/)     | Local-model supervision     | Planned  | Senior-engineer supervision flow program                                       |
-| [Premature Stop](../experiments/premature-stop-benchmark/)    | Reliability                 | Scaffold | Repeated-stop and premature-exit comparisons                                   |
-| [Bounded Feature](../experiments/bounded-feature-benchmark/)  | Implementation quality      | Scaffold | Bounded implementation quality benchmarks                                      |
-| [Parallel Planning](../experiments/parallel-planning/)        | Coordination                | Scaffold | Plan quality and coordination experiments                                      |
-| [Parallel Modules](../experiments/parallel-isolated-modules/) | Build concurrency           | Scaffold | Isolated module build concurrency                                              |
-| [Self-healing CI](../experiments/self-healing-ci/)            | CI repair                   | Scaffold | CI repair and auto-fix via retry/try-catch                                     |
+| Name                                                          | Domain                      | Status     | Summary                                                                        |
+| ------------------------------------------------------------- | --------------------------- | ---------- | ------------------------------------------------------------------------------ |
+| [Aider vs PL](../experiments/aider-vs-pl/SCORECARD.md)        | Coding assistant comparison | Historical | Phase-1 directional signal; later local ladder is mixed and non-claim-eligible |
+| [Full-stack CRUD](../experiments/fullstack-crud-comparison/)  | Local-model product build   | Active     | R30-R45 local diagnostics: implementation limits, bounded selector/ranker wins |
+| [Harness Arena](../experiments/harness-arena/)                | Local/frontier routing      | Planned    | Hybrid routing and provider-boundary pilots                                    |
+| [Senior Pairing](../experiments/senior-pairing-protocol/)     | Local-model supervision     | Planned    | Senior-engineer supervision flow program                                       |
+| [Premature Stop](../experiments/premature-stop-benchmark/)    | Reliability                 | Scaffold   | Repeated-stop and premature-exit comparisons                                   |
+| [Bounded Feature](../experiments/bounded-feature-benchmark/)  | Implementation quality      | Scaffold   | Bounded implementation quality benchmarks                                      |
+| [Parallel Planning](../experiments/parallel-planning/)        | Coordination                | Scaffold   | Plan quality and coordination experiments                                      |
+| [Parallel Modules](../experiments/parallel-isolated-modules/) | Build concurrency           | Scaffold   | Isolated module build concurrency                                              |
+| [Self-healing CI](../experiments/self-healing-ci/)            | CI repair                   | Scaffold   | CI repair and auto-fix via retry/try-catch                                     |
 
 The next planned wave is documented in
 [Non-Factory Proof Program](evaluation/non-factory-proof-program.md). That note
@@ -66,9 +69,22 @@ Tests whether verification gates catch failures that prompt-only workflows miss.
 
 End-to-end SaaS product factory generating a CRM application with entity generation, CRUD scaffolding, and deployment configuration. Uses spawn/await for parallel module builds. Located in [experiments/full-saas-factory/](../experiments/full-saas-factory/).
 
-### E5: Trace Verification
+### E5: Maintenance Viability
 
-Differential tests (Z-series) that prove the runtime is executing live, not replaying recorded outputs. Each test depends on fresh UUIDs, real child PIDs, capture-gated branches, or hash-matched send/receive payloads. See [docs/thesis-verification.md](thesis-verification.md) and [docs/tracing-and-provenance.md](tracing-and-provenance.md).
+Tests whether software produced under PL supervision is easier for a separate
+blind lane to run, extend, and maintain than direct Codex output. The protocol and
+templates exist, but no live pair has produced a maintenance viability score yet.
+See
+[experiments/results/e5-maintenance/](../experiments/results/e5-maintenance/).
+
+### Runtime Trace Verification
+
+Trace verification is product/evaluation infrastructure, not the E5 experiment.
+Differential Z-series tests prove the runtime is executing live, not replaying
+recorded outputs. Each test depends on fresh UUIDs, real child PIDs,
+capture-gated branches, or hash-matched send/receive payloads. See
+[docs/thesis-verification.md](thesis-verification.md) and
+[docs/tracing-and-provenance.md](tracing-and-provenance.md).
 
 The repo also carries a smaller bounded runtime-proof series under
 [experiments/results/factory-runtime-proof/](../experiments/results/factory-runtime-proof/)
@@ -108,7 +124,7 @@ PL control system." See
 [Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md) and
 [experiments/fullstack-crud-comparison/](../experiments/fullstack-crud-comparison/).
 
-### E7: Marketing Factory
+### E7-MK: Marketing Factory
 
 Marketing website generation comparing PL factory against solo prompting. PL achieved perfect 30/30 scores across three consecutive runs versus a solo average of 28.3/30. Located in [experiments/marketing-factory/](../experiments/marketing-factory/).
 
@@ -125,9 +141,17 @@ slices, not the full enterprise factory.
 
 Enterprise 6-phase website build: discovery, architecture, design system, implementation, QA, release. Uses 22 flow files and 8 reusable libraries with specialized agent assignments. Compares PL factory (Astro, 30 files, 12 docs) against solo (Next.js, 14 files). Run 1 scorecard: [experiments/website-factory/results/run1-scorecard.md](../experiments/website-factory/results/run1-scorecard.md). Located in [experiments/website-factory/](../experiments/website-factory/).
 
+This is structured-prompt/process evidence, not clean PL-runtime evidence. The
+reported run shows flow-shaped output and useful artifacts, but runtime
+hooks/gates did not reliably drive the key result.
+
 ### Aider vs PL
 
-Head-to-head comparison of Aider coding assistant against prompt-language across 10 hypotheses. [Scorecard](../experiments/aider-vs-pl/SCORECARD.md). Located in [experiments/aider-vs-pl/](../experiments/aider-vs-pl/).
+Head-to-head comparison of Aider coding assistant against prompt-language across
+10 hypotheses. Treat the phase-1 `6/0/3` result as historical dev-time evidence,
+not claim-eligible thesis proof: it used N=1 narrative scoring and the later
+local-model ladder produced mixed results. [Scorecard](../experiments/aider-vs-pl/SCORECARD.md).
+Located in [experiments/aider-vs-pl/](../experiments/aider-vs-pl/).
 
 ### Meta Factory
 
@@ -151,5 +175,6 @@ For evaluation methodology, A/B results, and parity matrices, see:
 
 - [Evaluation results](evaluation/eval-analysis.md)
 - [What works now](evaluation/what-works-now.md)
+- [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md)
 - [Eval parity matrix](evaluation/eval-parity-matrix.md)
 - [Thesis](strategy/thesis.md) and [thesis roadmap](strategy/thesis-roadmap.md)

@@ -20,9 +20,10 @@ Read this section after you understand the shipped product surface. The thesis p
 
 ## Pages
 
-| Doc                                          | Focus                                                     |
-| -------------------------------------------- | --------------------------------------------------------- |
-| [Positioning](positioning.md)                | Product framing and category boundaries                   |
-| [Thesis](thesis.md)                          | Long-term research claim, not a shipped feature guarantee |
-| [Thesis Research Roadmap](thesis-roadmap.md) | Concrete experiments to prove or disprove the thesis      |
-| [Roadmap](../roadmap.md)                     | Shipped-vs-tracked product roadmap tied to `.beads`       |
+| Doc                                                                  | Focus                                                              |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [Positioning](positioning.md)                                        | Product framing and category boundaries                            |
+| [Thesis](thesis.md)                                                  | Long-term research claim, not a shipped feature guarantee          |
+| [Thesis Research Roadmap](thesis-roadmap.md)                         | Concrete experiments to prove or disprove the thesis               |
+| [Research Synthesis](../evaluation/2026-05-06-research-synthesis.md) | Current cross-experiment verdicts on which hypotheses have held up |
+| [Roadmap](../roadmap.md)                                             | Shipped-vs-tracked product roadmap tied to `.beads`                |

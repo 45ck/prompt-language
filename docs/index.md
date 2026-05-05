@@ -74,9 +74,10 @@ If a feature is not described in the product docs, treat it as unavailable today
 | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | [Research Index](research/README.md)                                               | Research reports with abstracts and source list                           |
 | [Architecture Position](research/00-architecture-position.md)                      | How prompt-language differs from LangChain, DSPy, and CrewAI              |
-| [Feature Completeness](research/08-feature-completeness.md)                        | Assessment of what the current shipped primitives already cover           |
+| [Feature Completeness](research/08-feature-completeness.md)                        | Historical 2026-04 assessment; check current authority docs before citing |
 | [What Works Now](evaluation/what-works-now.md)                                     | Short public summary of the strongest proven surface and current caveats  |
 | [Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md)        | Post-FSCRUD evidence boundary and next experiment direction               |
+| [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md)      | Cross-experiment hypothesis verdicts and current research implications    |
 | [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)          | Accepted subagent-first boundary                                          |
 | [Operator Shell Boundary](design/operator-shell-boundary.md)                       | Accepted shell-over-runtime boundary for imported OMX adaptation work     |
 | [Output Summarization Policy](design/output-summarization-policy.md)               | Accepted thresholds and fail-closed policy for compact summary surfaces   |

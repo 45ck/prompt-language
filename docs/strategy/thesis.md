@@ -131,6 +131,13 @@ verification. That is stronger than "write prompts better," but weaker than
 
 That means the repo's strongest grounded claim right now is not "prompt-language replaces software engineering." The strongest grounded claim is: **prompt-language can act as a useful supervision runtime with explicit verification and control structure around coding agents.**
 
+For the current cross-experiment verdicts, see
+[Research Synthesis: 2026-05-06](../evaluation/2026-05-06-research-synthesis.md).
+The short version is: the runtime-supervision hypothesis has held up; the
+local-autonomous-engineering hypothesis has not; bounded local semantic judgment
+inside a deterministic PL envelope is the strongest new local-model finding; the
+primary-engineering-medium thesis remains open.
+
 ## What is not yet proven
 
 The following are still hypotheses, not established facts:

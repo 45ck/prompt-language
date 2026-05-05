@@ -6,26 +6,26 @@ Last updated: 2026-05-06
 
 ## Summary Table
 
-| ID     | Name                         | Domain                         | Status      | Runs                | Key Result                                                                                   |
-| ------ | ---------------------------- | ------------------------------ | ----------- | ------------------- | -------------------------------------------------------------------------------------------- |
-| E1     | Repeated Failure Elimination | Eval framework                 | Seeded      | 2 (vanilla + gated) | Gated 1/3 vs Vanilla 0/3                                                                     |
-| E4     | CRM Factory (Codex)          | Enterprise SaaS                | Complete    | 16 runs (A02-A19)   | Codex-alone faster; PL better auditability                                                   |
-| E5     | Maintenance Viability        | Runtime provenance             | Designed    | 0                   | Program designed, not yet executed                                                           |
-| E6     | Pure PL CRM Factory          | Enterprise SaaS                | Designed    | 0                   | Parse-verified, not yet executed live                                                        |
-| E7     | Enterprise CRM Factory       | Enterprise SaaS (full SDLC)    | Scaffolded  | live smoke failed   | Most comprehensive PL factory scaffold; not a clean live completion                          |
-| E7-MK  | Marketing Factory            | Marketing website              | Complete    | 7+ runs             | PL 30/30 x3 (100%) vs Solo 28.3/30 (94%)                                                     |
-| E8     | Website Factory              | Marketing website (enterprise) | Complete    | 4 runs              | Factory 3/4, Solo 4/4                                                                        |
-| E9     | Full SDLC Factory            | Full lifecycle website         | Complete    | 2 runs + QA variant | Phases 1-5 execute end-to-end                                                                |
-| FSCRUD | Full-Stack CRUD Comparison   | Local full-stack CRUD          | Active      | R30-R45 diagnostics | Local implementation brittle; bounded selector/ranker/rationale/risk-response pattern passed |
-| HA-HR1 | Hybrid Model Routing         | Stack/routing comparison       | Planned     | 0                   | Local bulk + frontier escalation designed                                                    |
-| SPP    | Senior Pairing Protocol      | Local-model supervision        | Planned     | 0                   | Should build on FSCRUD bounded-decision evidence                                             |
-| --     | Aider vs PL                  | Coding assistant comparison    | Complete    | 10 hypotheses       | PL 6 wins, 0 losses, 3 ties                                                                  |
-| --     | Meta-Factory                 | Self-hosting (PL writes PL)    | In Progress | M1 authored         | M1 flow authored, not yet executed live                                                      |
-| --     | Premature Stop Benchmark     | Reliability                    | Scaffold    | 0                   | Experiment designed, not executed                                                            |
-| --     | Bounded Feature Benchmark    | Implementation quality         | Scaffold    | 0                   | Experiment designed, not executed                                                            |
-| --     | Parallel Planning            | Coordination                   | Scaffold    | 0                   | Experiment designed, not executed                                                            |
-| --     | Parallel Isolated Modules    | Build concurrency              | Scaffold    | 0                   | Experiment designed, not executed                                                            |
-| --     | Self-Healing CI              | CI repair                      | Scaffold    | 0                   | Experiment designed, not executed                                                            |
+| ID     | Name                         | Domain                         | Status                     | Runs                | Key Result                                                                                   |
+| ------ | ---------------------------- | ------------------------------ | -------------------------- | ------------------- | -------------------------------------------------------------------------------------------- |
+| E1     | Repeated Failure Elimination | Eval framework                 | Seeded                     | 2 (vanilla + gated) | Gated 1/3 vs Vanilla 0/3                                                                     |
+| E4     | CRM Factory (Codex)          | Enterprise SaaS                | Complete                   | 16 runs (A02-A19)   | Codex-alone faster; PL better auditability                                                   |
+| E5     | Maintenance Viability        | Maintainability                | Designed                   | 0                   | Blind second-lane maintenance protocol designed, not yet executed                            |
+| E6     | Pure PL CRM Factory          | Enterprise SaaS                | Partial                    | live smoke partial  | Shipped scaffold; 2026-04-17 live smoke exposed runtime blockers                             |
+| E7     | Enterprise CRM Factory       | Enterprise SaaS (full SDLC)    | Scaffolded                 | live smoke failed   | Most comprehensive PL factory scaffold; not a clean live completion                          |
+| E7-MK  | Marketing Factory            | Marketing website              | Complete                   | 7+ runs             | PL 30/30 x3 (100%) vs Solo 28.3/30 (94%)                                                     |
+| E8     | Website Factory              | Marketing website (enterprise) | Structured-prompt evidence | 4 runs              | Factory 3/4, Solo 4/4; runtime hooks did not reliably drive the key result                   |
+| E9     | Full SDLC Factory            | Full lifecycle website         | Complete                   | 2 runs + QA variant | Phases 1-5 execute end-to-end                                                                |
+| FSCRUD | Full-Stack CRUD Comparison   | Local full-stack CRUD          | Active                     | R30-R45 diagnostics | Local implementation brittle; bounded selector/ranker/rationale/risk-response pattern passed |
+| HA-HR1 | Hybrid Model Routing         | Stack/routing comparison       | Planned                    | 0                   | Local bulk + frontier escalation designed                                                    |
+| SPP    | Senior Pairing Protocol      | Local-model supervision        | Planned                    | 0                   | Should build on FSCRUD bounded-decision evidence                                             |
+| --     | Aider vs PL                  | Coding assistant comparison    | Historical                 | 10 hypotheses       | Directional dev-time signal: PL 6 wins, 0 losses, 3 ties                                     |
+| --     | Meta-Factory                 | Self-hosting (PL writes PL)    | In Progress                | M1 authored         | M1 flow authored, not yet executed live                                                      |
+| --     | Premature Stop Benchmark     | Reliability                    | Scaffold                   | 0                   | Experiment designed, not executed                                                            |
+| --     | Bounded Feature Benchmark    | Implementation quality         | Scaffold                   | 0                   | Experiment designed, not executed                                                            |
+| --     | Parallel Planning            | Coordination                   | Scaffold                   | 0                   | Experiment designed, not executed                                                            |
+| --     | Parallel Isolated Modules    | Build concurrency              | Scaffold                   | 0                   | Experiment designed, not executed                                                            |
+| --     | Self-Healing CI              | CI repair                      | Scaffold                   | 0                   | Experiment designed, not executed                                                            |
 
 ---
 
@@ -387,7 +387,9 @@ prompt sounds more senior.
 | H9  | Code structure quality    | Tests crash, 1/5 sep | Tests pass, 4/5 sep        | **PL** |
 | H10 | Quality ceiling           | --                   | Grade B (A on impl)        | --     |
 
-**Phase 1 Score**: PL 6 wins, Solo 0 wins, 3 ties.
+**Phase 1 Score**: PL 6 wins, Solo 0 wins, 3 ties. This is useful dev-time
+evidence, but not claim-eligible thesis evidence because the phase-1 runs were
+N=1, narrative-scored, and not pre-registered with the current evidence bar.
 
 **Key Findings**:
 
@@ -543,7 +545,7 @@ Reusable experiment design document templates:
 1. **Retry-with-validation** is the highest-value pattern. Simple `retry max 3` with inline validation scripts eliminates the last 3-6% of quality variance that solo prompts cannot reach (E7-MK: 100% vs 94%).
 2. **Gate enforcement** turns 7/10 into 10/10 (Aider H2) and 0/3 into 3/3 (Aider H5).
 3. **Decomposition** produces more type-correct, spec-conformant code than monolithic prompts (Aider H3, H8, H9).
-4. **Auditability and structure** -- PL produces richer artifact trails (E4, E8).
+4. **Auditability and structure** -- PL produces richer artifact trails (E4, E8), but this remains directional where the rubric rewards PL-native process shape.
 5. **Brand/style consistency** -- PL catches subtle edge cases like product name spelling and heading capitalization (E7-MK MK-3).
 
 ### Where PL Does Not Win
@@ -557,4 +559,4 @@ Reusable experiment design document templates:
 1. PL runtime hooks do not activate in `claude -p` subprocesses (E8) -- flow text is interpreted as prompt instructions, not executed by the PL state machine. This means gate enforcement and retry loops were not tested in E8.
 2. E5's maintenance viability thesis has not been executed -- the critical question of whether PL's extra investment translates to maintainable software remains unanswered.
 3. Meta-factory (M1) has not been executed live -- the self-hosting claim remains unproven.
-4. Phase 2 of Aider comparison (harder tasks, multiple models) is designed but not executed.
+4. Phase 2 of Aider comparison is partially run; H12 tied, H14 favored solo, and H15 favored PL. It needs repeated, pre-declared cells before broad comparative claims.

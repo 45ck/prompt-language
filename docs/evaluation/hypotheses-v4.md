@@ -1,5 +1,11 @@
 # Hypotheses v4: Agentic Engineering Research
 
+> Historical candidate bank, last reviewed 2026-05-06. This document is not
+> current evidence and should not be cited as a claim source. Some entries use
+> older "plugin" terminology and expected-winner labels from the original
+> ideation pass; use [Research Synthesis: 2026-05-06](2026-05-06-research-synthesis.md)
+> and [Program Status](../strategy/program-status.md) for current claim boundaries.
+
 240 new hypotheses (H256-H495) across 6 domains, designed to explore
 the boundaries of gate enforcement, parallelism, reliability, DX,
 language design, performance, and safety in prompt-language workflows.

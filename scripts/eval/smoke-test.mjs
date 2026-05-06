@@ -76,6 +76,7 @@ const TRACE_ENABLED = process.env.PL_TRACE === '1';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const RESULTS_DIR = join(__dirname, 'results');
 const FLAKY_REPORT = join(__dirname, 'flaky-report.mjs');
+const PROVIDER_TELEMETRY_PATH = join('.prompt-language', 'provider-telemetry.jsonl');
 
 const QUICK_MODE = process.argv.includes('--quick');
 const HISTORY_MODE = process.argv.includes('--history');
@@ -87,6 +88,8 @@ let failed = 0;
 
 /** Structured results collected during the run. */
 const results = [];
+const providerTelemetry = [];
+const runtimeSnapshots = [];
 let currentTest = { name: '', label: '', startTime: 0 };
 
 function assert(label, condition, detail = '') {
@@ -174,6 +177,122 @@ function isReadyFlowOutput(text) {
   return /\bok\b/i.test(text) || /\[prompt-language CI\]\s+Flow completed\./i.test(text);
 }
 
+function parseTelemetryJsonl(text, testName) {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      try {
+        const parsed = JSON.parse(line);
+        return parsed && typeof parsed.provider === 'string' ? { test: testName, ...parsed } : null;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+}
+
+async function collectProviderTelemetry(cwd, testName) {
+  try {
+    const text = await readFile(join(cwd, PROVIDER_TELEMETRY_PATH), 'utf8');
+    providerTelemetry.push(...parseTelemetryJsonl(text, testName));
+  } catch {
+    /* provider telemetry is optional and best-effort */
+  }
+}
+
+function summarizeProviderTelemetry(records) {
+  const providers = [...new Set(records.map((record) => record.provider))].sort();
+  let inputTokens = 0;
+  let outputTokens = 0;
+  let totalTokens = 0;
+  let sawTokens = false;
+  let estimatedCostUsd = 0;
+  let sawCost = false;
+  let retryCount = 0;
+
+  for (const record of records) {
+    const usage = record.tokenUsage ?? {};
+    if (typeof usage.inputTokens === 'number') {
+      sawTokens = true;
+      inputTokens += usage.inputTokens;
+    }
+    if (typeof usage.outputTokens === 'number') {
+      sawTokens = true;
+      outputTokens += usage.outputTokens;
+    }
+    if (typeof usage.totalTokens === 'number') {
+      sawTokens = true;
+      totalTokens += usage.totalTokens;
+    }
+    if (typeof record.estimatedCostUsd === 'number') {
+      sawCost = true;
+      estimatedCostUsd += record.estimatedCostUsd;
+    }
+    retryCount += typeof record.retryCount === 'number' ? record.retryCount : 0;
+  }
+
+  return {
+    records: records.length,
+    providers,
+    inputTokens: sawTokens ? inputTokens : null,
+    outputTokens: sawTokens ? outputTokens : null,
+    totalTokens: sawTokens ? totalTokens : null,
+    estimatedCostUsd: sawCost ? estimatedCostUsd : null,
+    retryCount,
+  };
+}
+
+function isOllamaBackedSmoke() {
+  return getHarnessName() === 'ollama' || String(getEffectiveModel() ?? '').startsWith('ollama/');
+}
+
+function captureCommandSnapshot(command) {
+  const startedAt = Date.now();
+  try {
+    const stdout = execSync(command, {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      timeout: 10_000,
+    });
+    return {
+      command,
+      exitCode: 0,
+      duration_ms: Date.now() - startedAt,
+      stdout: stdout.trim().slice(0, 4_000),
+      stderr: '',
+    };
+  } catch (error) {
+    return {
+      command,
+      exitCode: typeof error.status === 'number' ? error.status : 1,
+      duration_ms: Date.now() - startedAt,
+      stdout: String(error.stdout ?? '')
+        .trim()
+        .slice(0, 4_000),
+      stderr: String(error.stderr ?? error.message ?? '')
+        .trim()
+        .slice(0, 4_000),
+    };
+  }
+}
+
+function captureRuntimeSnapshots(phase) {
+  if (!isOllamaBackedSmoke()) {
+    return null;
+  }
+
+  return {
+    phase,
+    timestamp: new Date().toISOString(),
+    ollamaPs: captureCommandSnapshot('ollama ps'),
+    nvidiaSmi: captureCommandSnapshot(
+      'nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu,power.draw,driver_version --format=csv,noheader,nounits',
+    ),
+  };
+}
+
 /** Write structured results to a JSON file. */
 async function writeResults(totalStart) {
   await mkdir(RESULTS_DIR, { recursive: true });
@@ -204,6 +323,9 @@ async function writeResults(totalStart) {
     traceEnabled: TRACE_ENABLED,
     only: ONLY_FILTERS ? [...ONLY_FILTERS].sort() : null,
     quickMode: QUICK_MODE,
+    providerMetrics: summarizeProviderTelemetry(providerTelemetry),
+    providerTelemetry,
+    runtimeSnapshots,
     duration_ms: Date.now() - totalStart,
     passed,
     failed,
@@ -272,6 +394,9 @@ async function writeBlockedResult({ totalStart, reason, detail }) {
       traceEnabled: TRACE_ENABLED,
       only: ONLY_FILTERS ? [...ONLY_FILTERS].sort() : null,
       quickMode: QUICK_MODE,
+      providerMetrics: summarizeProviderTelemetry(providerTelemetry),
+      providerTelemetry,
+      runtimeSnapshots,
       duration_ms: Date.now() - totalStart,
       passed,
       failed,
@@ -480,6 +605,7 @@ async function withTempDir(fn) {
       }
     }
   } finally {
+    await collectProviderTelemetry(dir, currentTest.name);
     await cleanupDir(dir);
   }
 }
@@ -2937,6 +3063,10 @@ async function main() {
     console.log(`[smoke-test] Restricting run to: ${[...ONLY_FILTERS].join(', ')}\n`);
   }
   console.log(`[smoke-test] Starting live flow smoke tests via ${getFlowCommandLabel()}...\n`);
+  const beforeSnapshot = captureRuntimeSnapshots('before');
+  if (beforeSnapshot !== null) {
+    runtimeSnapshots.push(beforeSnapshot);
+  }
 
   // Check harness CLI is available
   try {
@@ -3043,6 +3173,10 @@ async function main() {
   }
 
   console.log(`\n[smoke-test] Summary: ${passed}/${passed + failed} passed`);
+  const afterSnapshot = captureRuntimeSnapshots('after');
+  if (afterSnapshot !== null) {
+    runtimeSnapshots.push(afterSnapshot);
+  }
 
   // Write structured results and clean up old files
   await writeResults(totalStart);

@@ -8,6 +8,7 @@ import type {
   PromptTurnRunner,
 } from '../../application/ports/prompt-turn-runner.js';
 import { selectCompactRenderModeForEnvelope } from '../../application/select-compact-render-mode.js';
+import { appendProviderTelemetry, normalizeOllamaTelemetry } from './provider-telemetry.js';
 
 // cspell:ignore fscrud timeouterror
 
@@ -36,10 +37,26 @@ interface OllamaMessage {
 }
 
 interface OllamaChatResponse {
+  readonly model?: string | undefined;
+  readonly created_at?: string | undefined;
+  readonly done?: boolean | undefined;
+  readonly done_reason?: string | undefined;
+  readonly total_duration?: number | undefined;
+  readonly load_duration?: number | undefined;
+  readonly prompt_eval_count?: number | undefined;
+  readonly prompt_eval_duration?: number | undefined;
+  readonly eval_count?: number | undefined;
+  readonly eval_duration?: number | undefined;
   readonly message?: {
     readonly content?: string | undefined;
   };
   readonly error?: string | undefined;
+}
+
+interface OllamaChatTurn {
+  readonly content: string;
+  readonly payload: OllamaChatResponse;
+  readonly retryCount: number;
 }
 
 interface ActionEnvelope {
@@ -499,7 +516,7 @@ async function callOllamaChatOnce(
   model: string,
   messages: readonly OllamaMessage[],
   timeoutMs: number,
-): Promise<string> {
+): Promise<OllamaChatResponse> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -547,7 +564,7 @@ async function callOllamaChatOnce(
     if (!content) {
       throw new Error('Ollama returned an empty response.');
     }
-    return content;
+    return payload;
   } finally {
     clearTimeout(timer);
   }
@@ -557,14 +574,19 @@ async function callOllamaChat(
   model: string,
   messages: readonly OllamaMessage[],
   timeoutMs: number,
-): Promise<string> {
+): Promise<OllamaChatTurn> {
   const maxAttempts = getOllamaRetryAttempts();
   const retryDelayMs = getOllamaRetryDelayMs();
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      return await callOllamaChatOnce(model, messages, timeoutMs);
+      const payload = await callOllamaChatOnce(model, messages, timeoutMs);
+      return {
+        content: payload.message?.content?.trim() ?? '',
+        payload,
+        retryCount: attempt - 1,
+      };
     } catch (error) {
       lastError = error;
       if (attempt >= maxAttempts || !isTransientOllamaError(error)) {
@@ -588,11 +610,19 @@ async function callOllamaChatWithFallback(
   model: string,
   messages: readonly OllamaMessage[],
   timeoutMs: number,
-): Promise<{ content: string; actualModel: string }> {
+): Promise<{
+  content: string;
+  actualModel: string;
+  payload: OllamaChatResponse;
+  retryCount: number;
+}> {
   try {
+    const turn = await callOllamaChat(model, messages, timeoutMs);
     return {
-      content: await callOllamaChat(model, messages, timeoutMs),
+      content: turn.content,
       actualModel: model,
+      payload: turn.payload,
+      retryCount: turn.retryCount,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -602,9 +632,12 @@ async function callOllamaChatWithFallback(
 
     for (const fallbackModel of getFallbackModels(model)) {
       try {
+        const turn = await callOllamaChat(fallbackModel, messages, timeoutMs);
         return {
-          content: await callOllamaChat(fallbackModel, messages, timeoutMs),
+          content: turn.content,
           actualModel: fallbackModel,
+          payload: turn.payload,
+          retryCount: turn.retryCount,
         };
       } catch (fallbackError) {
         const fallbackMessage =
@@ -644,6 +677,16 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
         const response = await callOllamaChatWithFallback(requestedModel, messages, timeoutMs);
         const raw = response.content;
         actualModel = response.actualModel;
+        const telemetry = normalizeOllamaTelemetry(response.payload);
+        await appendProviderTelemetry(input.cwd, {
+          timestamp: new Date().toISOString(),
+          provider: 'ollama',
+          requestedModel,
+          actualModel,
+          retryCount: response.retryCount,
+          estimatedCostUsd: null,
+          ...telemetry,
+        });
         messages.push({ role: 'assistant', content: raw });
 
         const parsed = parseActionEnvelope(raw);

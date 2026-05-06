@@ -124,16 +124,16 @@ into a single "local model works" claim.
 
 ## Evidence Quality Notes
 
-| Evidence family            | Strength            | Notes                                                                                                     |
-| -------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------- |
-| Repo runtime and CI        | Strong              | Current product/runtime claims are backed by tests and CI.                                                |
-| Bounded live smoke         | Medium              | 2026-05-06 `--only E` passed on Ollama, Codex, and Claude; not full-suite or telemetry-complete evidence. |
-| E7-MK marketing factory    | Medium-strong       | Repeated small-scope wins with deterministic checks; not general software delivery proof.                 |
-| E4 CRM factory             | Medium-directional  | Useful comparative evidence; direct Codex faster, PL more auditable, but rubric independence is limited.  |
-| Aider H1-H10               | Directional         | Useful historical signal, but not claim-eligible thesis proof.                                            |
-| FSCRUD R30-R45             | Medium diagnostic   | Strong for boundary finding; not a claim-grade full-product local implementation batch.                   |
-| E6/E7 large factories      | Weak for completion | Good stress scaffolds; failed or partial live smoke means no clean runtime completion claim.              |
-| HA-HR1 / SPP / E5 / thesis | Designed only       | Important plans, but no outcome evidence yet.                                                             |
+| Evidence family            | Strength            | Notes                                                                                                                                                                       |
+| -------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repo runtime and CI        | Strong              | Current product/runtime claims are backed by tests and CI.                                                                                                                  |
+| Bounded live smoke         | Medium              | 2026-05-06 `--only E` passed on Ollama, Codex, and Claude; Ollama prompt telemetry now records token/duration/GPU evidence, but full-suite and cloud telemetry remain open. |
+| E7-MK marketing factory    | Medium-strong       | Repeated small-scope wins with deterministic checks; not general software delivery proof.                                                                                   |
+| E4 CRM factory             | Medium-directional  | Useful comparative evidence; direct Codex faster, PL more auditable, but rubric independence is limited.                                                                    |
+| Aider H1-H10               | Directional         | Useful historical signal, but not claim-eligible thesis proof.                                                                                                              |
+| FSCRUD R30-R45             | Medium diagnostic   | Strong for boundary finding; not a claim-grade full-product local implementation batch.                                                                                     |
+| E6/E7 large factories      | Weak for completion | Good stress scaffolds; failed or partial live smoke means no clean runtime completion claim.                                                                                |
+| HA-HR1 / SPP / E5 / thesis | Designed only       | Important plans, but no outcome evidence yet.                                                                                                                               |
 
 ## Current Answer to "Did Our Hypotheses Come True?"
 

@@ -46,14 +46,17 @@ Every live inference artifact should record:
 
 The smoke runner currently records `timestamp`, `os`, `nodeVersion`, `status`,
 `harness`, `runnerHarness`, `harnessLabel`, `flowCommandLabel`, `model`,
-`timeoutMs`, `traceEnabled`, `only`, `quickMode`, `duration_ms`, `passed`,
-`failed`, and per-test `{name,label,passed,duration_ms,error}`. Blocked reports
-also record `blockedReason` and `blockedDetail`, and may contain zero tests.
+`timeoutMs`, `traceEnabled`, `only`, `quickMode`, `providerMetrics`,
+`providerTelemetry`, `runtimeSnapshots`, `duration_ms`, `passed`, `failed`, and
+per-test `{name,label,passed,duration_ms,error}`. Blocked reports also record
+`blockedReason` and `blockedDetail`, and may contain zero tests.
 
 Still missing from the smoke report itself: commit/branch/operator, exact
 invoked npm command, stdout/stderr artifact paths, token usage and estimated
-cost for cloud runs, `ollama ps` / GPU residency for local runs, retry counts,
-raw provider transcript paths, and trace artifact paths when tracing is enabled.
+cost for cloud runs, raw provider transcript paths, and trace artifact paths when
+tracing is enabled. Ollama-backed runs now record provider token/duration fields
+when a prompt turn occurs, plus before/after `ollama ps` and best-effort
+`nvidia-smi` snapshots.
 
 ## Minimal Matrix Before Full Claims
 

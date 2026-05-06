@@ -43,6 +43,7 @@ quality claims.
 | Claude bare print      | `haiku`             | Auth failure | 2.2s        | JSON result reported zero tokens and `Not logged in`                       | $0                               |
 | Codex local via Ollama | `qwen3:8b`          | Exit 0       | 26.6s       | 4,096 input, 369 output tokens in Codex JSONL; `ollama ps` showed 100% GPU | $0 API cost                      |
 | HA-HR1 fake-live       | deterministic shell | Exit 0       | ~1.1s total | Per-step wall time, timeout, exit code, estimated USD, GPU seconds         | Harness only                     |
+| PL Ollama smoke `A`    | `qwen3:8b`          | Failed `0/1` | 21.0s       | 496 input, 716 output, 1212 total tokens; `ollama ps` showed 100% GPU      | $0 API cost                      |
 
 Using OpenAI's published GPT-5.4 mini API price as a rough equivalent
 ($0.75/1M input tokens and $4.50/1M output tokens, published 2026-03-17), the
@@ -76,16 +77,15 @@ PL is probably wasteful when:
 
 ## Next Implementation Slice
 
-Add live measurement support to `experiments/harness-arena/runner.mjs` before
-running larger pilots:
+Continue live measurement support before running larger pilots:
 
 1. Add `--live-probe` or `--live` support for one read-only prompt task.
 2. Capture stdout, stderr, timeout, exit code, wall time, and raw provider events.
 3. Parse Codex JSONL usage into manifest fields.
 4. Parse Claude JSON usage when authenticated; record auth failures as harness
    failures, not model failures.
-5. Parse or estimate local Ollama tokens; always capture `ollama ps` before,
-   during, and after local runs.
+5. Reuse the smoke-runner Ollama telemetry path for local PL turns and add
+   during-run sampling where GPU active time matters.
 6. Store a pricing table with every run so estimated USD is reproducible.
 7. Keep `local-only`, `frontier-only`, `advisor-only`, and `hybrid-router` claims
    separate.

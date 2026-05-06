@@ -227,6 +227,9 @@ describe('OllamaPromptTurnRunner', () => {
           content:
             '{"actions":[{"type":"write_file","path":"hello.txt","content":"Hello, world!"},{"type":"done","message":"created"}]}',
         },
+        prompt_eval_count: 17,
+        eval_count: 9,
+        total_duration: 2_000_000_000,
       }),
     });
 
@@ -246,6 +249,9 @@ describe('OllamaPromptTurnRunner', () => {
     await expect(
       readFile(join(tempDir, '.prompt-language', 'ollama-turns.jsonl'), 'utf8'),
     ).resolves.toContain('"workspaceActions":1');
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
+    ).resolves.toContain('"totalTokens":26');
   });
 
   it('allows done-only acknowledgements for non-workspace prompts', async () => {

@@ -36,10 +36,12 @@ ownership is not binary:
 The next thesis-valid step is a small executable implementation slice or hybrid
 review/escalation arm with local-only and hybrid claims kept separate.
 
-The 2026-05-06 live-smoke follow-up also adds a nearer operational prerequisite:
-provider telemetry. Before using live model runs for cost, speed, or GPU claims,
-the smoke artifacts need token usage, estimated cost where exposed, Ollama usage
-or GPU snapshots, retry counts, and stdout/stderr or trace artifact references.
+The 2026-05-06 live-smoke follow-up also started the operational telemetry
+baseline. Ollama-backed prompt turns now record token counts, duration fields,
+retry counts, zero API cost, and best-effort GPU snapshots in smoke artifacts.
+Cloud/frontier token and cost parsing, stdout/stderr artifact refs, and
+telemetry-backed comparative repetitions remain required before cost/speed
+claims.
 
 The current hypothesis verdict table is maintained in
 [Research Synthesis: 2026-05-06](../evaluation/2026-05-06-research-synthesis.md).

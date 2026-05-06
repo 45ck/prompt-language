@@ -15,6 +15,20 @@ gitignored, so this page records the checkable claim boundary.
 | Codex   | `gpt-5.2`                | `node scripts/eval/smoke-test.mjs --harness codex --quick --only E`  | `smoke-2026-05-06T00-31-22-532Z.json` | `1/1` passed | bounded `E` smoke |
 | Claude  | default Claude CLI model | `node scripts/eval/smoke-test.mjs --harness claude --quick --only E` | `smoke-2026-05-06T00-48-54-771Z.json` | `1/1` passed | `5445ms` total    |
 
+## Telemetry Probe
+
+After the bounded `E` passes, the Ollama telemetry path was exercised with
+`node scripts/eval/smoke-test.mjs --harness ollama --quick --only A` using
+`EVAL_MODEL=ollama/qwen3:8b` and `EVAL_TIMEOUT_MS=180000`.
+
+That `A` scenario failed behaviorally (`0/1` passed; `answer.txt` was not
+created), so it is not success evidence. It is telemetry evidence: the smoke
+report `smoke-2026-05-06T01-12-14-491Z.json` recorded two Ollama provider
+records, `496` input tokens, `716` output tokens, `1212` total tokens, `0`
+retries, `estimatedCostUsd: null`, before/after `ollama ps`, and `100% GPU`
+residency for `qwen3:8b`. `nvidia-smi` was unavailable on this workstation, and
+that failure was recorded without failing the smoke harness.
+
 The Claude run used `EVAL_TIMEOUT_MS=120000` and
 `PROMPT_LANGUAGE_CLAUDE_EFFORT=medium`. It passed only after the Windows runner
 stopped hardcoding `claude.cmd` and allowed `cmd.exe` to resolve `claude` through
@@ -29,19 +43,22 @@ stopped hardcoding `claude.cmd` and allowed `cmd.exe` to resolve `claude` throug
 - The current smoke report schema is sufficient for bounded pass/fail evidence:
   harness, runner harness, model, timeout, selected tests, duration, and
   blocked metadata when applicable.
+- Ollama-backed prompt turns can now emit provider telemetry into smoke reports:
+  token counts, duration fields, retry count, zero API cost, and best-effort
+  local runtime snapshots.
 
 ## What This Does Not Prove
 
 - It does not prove full quick-suite or full-suite live parity.
-- It does not prove claim-grade token usage, estimated cloud cost, retry counts,
-  raw provider transcript retention, or Ollama GPU residency inside the smoke
-  report itself.
+- It does not prove claim-grade cloud token usage, estimated cloud cost, raw
+  provider transcript retention, or telemetry-backed full-suite parity.
 - It does not prove local models can autonomously build full-stack products; the
   local-model claim boundary remains the narrower selector/ranker pattern in
   [Evidence Snapshot: 2026-05-06](2026-05-06-evidence-snapshot.md).
 
 ## Next Evidence Needed
 
-The next claim-grade step is provider telemetry, not more prose: record
-token/cost fields for cloud runs, Ollama usage/GPU snapshots for local runs, and
-stdout/stderr or trace artifact paths in the smoke report.
+The next claim-grade step is telemetry-backed repetition: rerun the relevant
+quick/full smoke slices and comparative experiments with provider metrics
+captured, then add Codex/Claude usage parsing and stdout/stderr or trace artifact
+paths for cloud/frontier runs.

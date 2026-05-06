@@ -196,7 +196,13 @@ function parseTelemetryJsonl(text, testName) {
 async function collectProviderTelemetry(cwd, testName) {
   try {
     const text = await readFile(join(cwd, PROVIDER_TELEMETRY_PATH), 'utf8');
-    providerTelemetry.push(...parseTelemetryJsonl(text, testName));
+    const records = parseTelemetryJsonl(text, testName);
+    providerTelemetry.push(...records);
+    const testResult = [...results].reverse().find((result) => result.name === testName);
+    if (testResult) {
+      testResult.providerTelemetry = records;
+      testResult.providerMetrics = summarizeProviderTelemetry(records);
+    }
   } catch {
     /* provider telemetry is optional and best-effort */
   }
@@ -208,6 +214,12 @@ function summarizeProviderTelemetry(records) {
   let outputTokens = 0;
   let totalTokens = 0;
   let sawTokens = false;
+  let cacheReadInputTokens = 0;
+  let sawCacheReadInputTokens = false;
+  let cacheCreationInputTokens = 0;
+  let sawCacheCreationInputTokens = false;
+  let reasoningOutputTokens = 0;
+  let sawReasoningOutputTokens = false;
   let estimatedCostUsd = 0;
   let sawCost = false;
   let retryCount = 0;
@@ -226,6 +238,18 @@ function summarizeProviderTelemetry(records) {
       sawTokens = true;
       totalTokens += usage.totalTokens;
     }
+    if (typeof usage.cacheReadInputTokens === 'number') {
+      sawCacheReadInputTokens = true;
+      cacheReadInputTokens += usage.cacheReadInputTokens;
+    }
+    if (typeof usage.cacheCreationInputTokens === 'number') {
+      sawCacheCreationInputTokens = true;
+      cacheCreationInputTokens += usage.cacheCreationInputTokens;
+    }
+    if (typeof usage.reasoningOutputTokens === 'number') {
+      sawReasoningOutputTokens = true;
+      reasoningOutputTokens += usage.reasoningOutputTokens;
+    }
     if (typeof record.estimatedCostUsd === 'number') {
       sawCost = true;
       estimatedCostUsd += record.estimatedCostUsd;
@@ -239,6 +263,9 @@ function summarizeProviderTelemetry(records) {
     inputTokens: sawTokens ? inputTokens : null,
     outputTokens: sawTokens ? outputTokens : null,
     totalTokens: sawTokens ? totalTokens : null,
+    cacheReadInputTokens: sawCacheReadInputTokens ? cacheReadInputTokens : null,
+    cacheCreationInputTokens: sawCacheCreationInputTokens ? cacheCreationInputTokens : null,
+    reasoningOutputTokens: sawReasoningOutputTokens ? reasoningOutputTokens : null,
     estimatedCostUsd: sawCost ? estimatedCostUsd : null,
     retryCount,
   };
@@ -353,6 +380,7 @@ async function appendHistory(report, runId) {
       runnerHarness: report.runnerHarness,
       model: report.model,
       timeoutMs: report.timeoutMs,
+      providerMetrics: test.providerMetrics ?? summarizeProviderTelemetry([]),
       os: report.os,
       nodeVersion: report.nodeVersion,
     }),

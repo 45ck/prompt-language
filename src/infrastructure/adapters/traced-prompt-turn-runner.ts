@@ -99,7 +99,11 @@ export class TracedPromptTurnRunner implements PromptTurnRunner {
 
     emitTraceEntry(this.traceLogger, beginPartial);
 
-    const emitEnd = (exitCode: number, stdout: string): void => {
+    const emitEnd = (
+      exitCode: number,
+      stdout: string,
+      providerTelemetry?: PromptTurnResult['providerTelemetry'],
+    ): void => {
       const endPartial: Record<string, unknown> = {
         timestamp: new Date().toISOString(),
         event: 'agent_invocation_end',
@@ -114,12 +118,13 @@ export class TracedPromptTurnRunner implements PromptTurnRunner {
       if (this.context.nodeId !== undefined) endPartial['nodeId'] = this.context.nodeId;
       if (this.context.nodeKind !== undefined) endPartial['nodeKind'] = this.context.nodeKind;
       if (this.context.nodePath !== undefined) endPartial['nodePath'] = this.context.nodePath;
+      if (providerTelemetry !== undefined) endPartial['providerTelemetry'] = providerTelemetry;
       emitTraceEntry(this.traceLogger, endPartial);
     };
 
     try {
       const result = await this.inner.run(input);
-      emitEnd(result.exitCode ?? 0, result.assistantText ?? '');
+      emitEnd(result.exitCode ?? 0, result.assistantText ?? '', result.providerTelemetry);
       return result;
     } catch (error) {
       emitEnd(TRACED_PROMPT_TURN_ERROR_EXIT, '');

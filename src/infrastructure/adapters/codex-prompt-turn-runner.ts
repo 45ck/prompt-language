@@ -5,9 +5,14 @@ import { dirname, join } from 'node:path';
 
 import type {
   PromptTurnInput,
+  PromptTurnProviderTelemetry,
   PromptTurnResult,
   PromptTurnRunner,
 } from '../../application/ports/prompt-turn-runner.js';
+import {
+  appendProviderTelemetryBestEffort,
+  normalizeCodexTelemetryFromJsonl,
+} from './provider-telemetry.js';
 // cspell:ignore xhigh
 
 const DEFAULT_TIMEOUT_MS = 600_000;
@@ -151,6 +156,12 @@ export function buildCodexPrompt(prompt: string): string {
   ].join('\n');
 }
 
+function codexStatus(exitCode: number): PromptTurnProviderTelemetry['status'] {
+  if (exitCode === 0) return 'ok';
+  if (exitCode === 124) return 'timeout';
+  return 'error';
+}
+
 export class CodexPromptTurnRunner implements PromptTurnRunner {
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
     const outputFile = join(
@@ -160,6 +171,7 @@ export class CodexPromptTurnRunner implements PromptTurnRunner {
     const args = this.buildArgs(input, outputFile);
     const timeoutMs = readPositiveIntEnv(CODEX_TIMEOUT_MS_ENV) ?? DEFAULT_TIMEOUT_MS;
     const [command, ...commandArgs] = codexBinaryCommand(...args);
+    const startedAt = Date.now();
 
     return await new Promise<PromptTurnResult>((resolve) => {
       const child = spawn(command, commandArgs, {
@@ -177,22 +189,43 @@ export class CodexPromptTurnRunner implements PromptTurnRunner {
         if (settled) return;
         settled = true;
         if (timer !== undefined) clearTimeout(timer);
-        try {
+        void (async () => {
+          await appendProviderTelemetryBestEffort(input.cwd, {
+            timestamp: new Date().toISOString(),
+            ...result.providerTelemetry!,
+          });
           resolve(result);
-        } finally {
+        })().finally(() => {
           try {
             rmSync(outputFile, { force: true });
           } catch {
             // ignore cleanup failures
           }
-        }
+        });
       };
 
       const buildResult = (exitCode: number): PromptTurnResult => {
         const fallback = [stdout.trim(), stderr.trim()].filter(Boolean).join('\n');
+        const parsedTelemetry = normalizeCodexTelemetryFromJsonl(stdout);
+        const providerTelemetry: PromptTurnProviderTelemetry = {
+          provider: 'codex',
+          requestedModel: input.model,
+          actualModel: input.model,
+          status: codexStatus(exitCode),
+          exitCode,
+          tokenUsage: parsedTelemetry.tokenUsage,
+          duration: {
+            totalMs: parsedTelemetry.duration?.totalMs ?? Date.now() - startedAt,
+            firstTokenMs: parsedTelemetry.duration?.firstTokenMs,
+          },
+          retryCount: 0,
+          estimatedCostUsd: null,
+          metadata: parsedTelemetry.metadata,
+        };
         return {
           exitCode,
           assistantText: readAssistantText(outputFile, fallback),
+          providerTelemetry,
         };
       };
 
@@ -228,6 +261,18 @@ export class CodexPromptTurnRunner implements PromptTurnRunner {
           settle({
             exitCode: 124,
             assistantText: readAssistantText(outputFile, fallback),
+            providerTelemetry: {
+              provider: 'codex',
+              requestedModel: input.model,
+              actualModel: input.model,
+              status: 'timeout',
+              exitCode: 124,
+              duration: {
+                totalMs: Date.now() - startedAt,
+              },
+              retryCount: 0,
+              estimatedCostUsd: null,
+            },
           });
           return;
         }
@@ -246,6 +291,7 @@ export class CodexPromptTurnRunner implements PromptTurnRunner {
   buildArgs(input: PromptTurnInput, outputFile: string): string[] {
     const args = [
       'exec',
+      '--json',
       '--dangerously-bypass-approvals-and-sandbox',
       '--skip-git-repo-check',
       '--output-last-message',

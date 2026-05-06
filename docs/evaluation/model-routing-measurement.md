@@ -44,6 +44,8 @@ quality claims.
 | Codex local via Ollama | `qwen3:8b`          | Exit 0       | 26.6s       | 4,096 input, 369 output tokens in Codex JSONL; `ollama ps` showed 100% GPU | $0 API cost                      |
 | HA-HR1 fake-live       | deterministic shell | Exit 0       | ~1.1s total | Per-step wall time, timeout, exit code, estimated USD, GPU seconds         | Harness only                     |
 | PL Ollama smoke `A`    | `qwen3:8b`          | Failed `0/1` | 21.0s       | 496 input, 716 output, 1212 total tokens; `ollama ps` showed 100% GPU      | $0 API cost                      |
+| PL Codex smoke `A`     | `gpt-5.2`           | Passed `1/1` | 26.9s       | 112,399 input, 502 output, 110,336 cached input, 251 reasoning output      | Cost null until pricing basis    |
+| PL Claude smoke `A`    | `claude-opus-4-7`   | Passed `1/1` | 31.9s       | 23 input, 796 output, 308,988 cache read, 62,602 cache creation            | Provider-reported $0.5657715     |
 
 Using OpenAI's published GPT-5.4 mini API price as a rough equivalent
 ($0.75/1M input tokens and $4.50/1M output tokens, published 2026-03-17), the
@@ -81,13 +83,13 @@ Continue live measurement support before running larger pilots:
 
 1. Add `--live-probe` or `--live` support for one read-only prompt task.
 2. Capture stdout, stderr, timeout, exit code, wall time, and raw provider events.
-3. Parse Codex JSONL usage into manifest fields.
-4. Parse Claude JSON usage when authenticated; record auth failures as harness
-   failures, not model failures.
-5. Reuse the smoke-runner Ollama telemetry path for local PL turns and add
-   during-run sampling where GPU active time matters.
-6. Store a pricing table with every run so estimated USD is reproducible.
-7. Keep `local-only`, `frontier-only`, `advisor-only`, and `hybrid-router` claims
+3. Reuse the prompt-turn provider telemetry artifact for PL-routed Codex,
+   Claude, and Ollama runs.
+4. Attach a versioned pricing basis before converting Codex/Claude token counts
+   into estimated cost claims unless the provider reports exact cost.
+5. Add during-run sampling where GPU active time matters; `ollama ps` snapshots
+   prove model residency, not sustained utilization.
+6. Keep `local-only`, `frontier-only`, `advisor-only`, and `hybrid-router` claims
    separate.
 
 ## Minimum Pilot

@@ -52,11 +52,13 @@ per-test `{name,label,passed,duration_ms,error}`. Blocked reports also record
 `blockedReason` and `blockedDetail`, and may contain zero tests.
 
 Still missing from the smoke report itself: commit/branch/operator, exact
-invoked npm command, stdout/stderr artifact paths, token usage and estimated
-cost for cloud runs, raw provider transcript paths, and trace artifact paths when
-tracing is enabled. Ollama-backed runs now record provider token/duration fields
-when a prompt turn occurs, plus before/after `ollama ps` and best-effort
-`nvidia-smi` snapshots.
+invoked npm command, stdout/stderr artifact paths, raw provider transcript paths,
+and trace artifact paths when tracing is enabled. Provider telemetry now uses
+the shared `.prompt-language/provider-telemetry.jsonl` artifact for Ollama,
+Codex, and Claude prompt-turn runners where usage is exposed. Ollama-backed runs
+also record before/after `ollama ps` and best-effort `nvidia-smi` snapshots.
+Cloud cost remains `null` unless the provider reports cost or the run declares a
+versioned pricing basis.
 
 ## Minimal Matrix Before Full Claims
 

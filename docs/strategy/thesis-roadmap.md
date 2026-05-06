@@ -39,7 +39,9 @@ review/escalation arm with local-only and hybrid claims kept separate.
 The 2026-05-06 live-smoke follow-up also started the operational telemetry
 baseline. Ollama-backed prompt turns now record token counts, duration fields,
 retry counts, zero API cost, and best-effort GPU snapshots in smoke artifacts.
-Cloud/frontier token and cost parsing, stdout/stderr artifact refs, and
+Codex and Claude prompt-turn runners now emit bounded provider telemetry where
+their CLIs expose usage: Codex JSONL token/timing events and Claude structured
+JSON usage/cost with metadata-only log fallback. Stdout/stderr artifact refs and
 telemetry-backed comparative repetitions remain required before cost/speed
 claims.
 

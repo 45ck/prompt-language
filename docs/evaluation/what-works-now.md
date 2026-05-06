@@ -23,10 +23,13 @@ full-stack implementation. See
 - Last recorded bounded live smoke on 2026-05-06: Ollama `qwen3:8b`, Codex
   `gpt-5.2`, and Claude CLI each passed the `--only E` smoke slice on win32. See
   [Live Smoke Evidence: 2026-05-06](2026-05-06-live-smoke-evidence.md).
-- Ollama-backed smoke reports now capture local provider telemetry when a prompt
-  turn runs: token counts, duration fields, retry count, zero API cost, and
-  before/after `ollama ps` snapshots. The first prompt-backed telemetry probe
-  failed behaviorally, so this proves measurement plumbing, not model quality.
+- Smoke reports now capture provider telemetry when a prompt turn runs. Ollama
+  records token counts, duration fields, retry count, zero API cost, and
+  before/after `ollama ps` snapshots. Codex records JSONL token/timing events
+  where exposed. Claude records structured JSON usage/cost where available plus
+  metadata-only session-log fallback. The first prompt-backed local telemetry
+  probe failed behaviorally, so this proves measurement plumbing, not model
+  quality.
 - Rerun `npm run test` and `npm run ci` after new local edits before treating the
   worktree as green.
 - historical checked-in evaluation evidence includes an older `27/27` `npm run eval:smoke:codex:quick` pass through the Codex headless path; current-branch Codex live claims require a fresh rerun
@@ -73,7 +76,8 @@ known Codex-specific runtime break.
 
 - prompt-language adds overhead; the gate and review structure only pays off when the task is failure-prone enough to justify supervision
 - telemetry supports cost and latency accounting, but it does not by itself prove
-  PL is cheaper, faster, or better
+  PL is cheaper, faster, or better; cloud cost must stay `null` unless the
+  provider reports it or the run declares a versioned pricing basis
 - quick smoke is a strong regression signal, but it does not replace supported-host live smoke
 - the current product direction is still "verification-first supervision runtime", not "general orchestration shell"
 

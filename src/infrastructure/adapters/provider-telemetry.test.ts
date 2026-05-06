@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   PROVIDER_TELEMETRY_PATH,
   appendProviderTelemetry,
+  normalizeClaudeJsonTelemetry,
+  normalizeCodexTelemetryFromJsonl,
   normalizeOllamaTelemetry,
   parseProviderTelemetryJsonl,
   readProviderTelemetry,
@@ -75,9 +77,149 @@ describe('provider telemetry', () => {
       inputTokens: 3,
       outputTokens: 5,
       totalTokens: 8,
+      cacheReadInputTokens: null,
+      cacheCreationInputTokens: null,
+      reasoningOutputTokens: null,
       estimatedCostUsd: null,
       retryCount: 1,
     });
+  });
+
+  it('summarizes Claude-style cache token fields without treating them as API cost', () => {
+    const records = parseProviderTelemetryJsonl(
+      JSON.stringify({
+        timestamp: '2026-05-06T00:00:00.000Z',
+        provider: 'claude',
+        tokenUsage: {
+          inputTokens: 10,
+          outputTokens: 4,
+          totalTokens: 14,
+          cacheReadInputTokens: 20,
+          cacheCreationInputTokens: 30,
+        },
+      }),
+    );
+
+    expect(summarizeProviderTelemetry(records)).toEqual({
+      records: 1,
+      providers: ['claude'],
+      inputTokens: 10,
+      outputTokens: 4,
+      totalTokens: 14,
+      cacheReadInputTokens: 20,
+      cacheCreationInputTokens: 30,
+      reasoningOutputTokens: null,
+      estimatedCostUsd: null,
+      retryCount: 0,
+    });
+  });
+
+  it('normalizes Codex JSONL token and timing events without retaining transcripts', () => {
+    const telemetry = normalizeCodexTelemetryFromJsonl(
+      [
+        '{"type":"event_msg","msg":{"type":"agent_message","message":"secret text"}}',
+        JSON.stringify({
+          type: 'event_msg',
+          msg: {
+            type: 'token_count',
+            payload: {
+              info: {
+                last_token_usage: {
+                  input_tokens: 10,
+                  cached_input_tokens: 4,
+                  output_tokens: 5,
+                  reasoning_output_tokens: 2,
+                  total_tokens: 17,
+                },
+              },
+            },
+          },
+        }),
+        JSON.stringify({
+          type: 'event_msg',
+          msg: {
+            type: 'task_complete',
+            payload: {
+              duration_ms: 1234,
+              time_to_first_token_ms: 321,
+            },
+          },
+        }),
+      ].join('\n'),
+    );
+
+    expect(telemetry).toEqual({
+      tokenUsage: {
+        inputTokens: 10,
+        outputTokens: 5,
+        totalTokens: 17,
+        cacheReadInputTokens: 4,
+        reasoningOutputTokens: 2,
+      },
+      duration: {
+        totalMs: 1234,
+        firstTokenMs: 321,
+      },
+    });
+    expect(JSON.stringify(telemetry)).not.toContain('secret text');
+  });
+
+  it('normalizes current Codex turn.completed usage events', () => {
+    expect(
+      normalizeCodexTelemetryFromJsonl(
+        JSON.stringify({
+          type: 'turn.completed',
+          usage: {
+            input_tokens: 20,
+            cached_input_tokens: 7,
+            output_tokens: 5,
+            reasoning_output_tokens: 3,
+          },
+        }),
+      ),
+    ).toEqual({
+      tokenUsage: {
+        inputTokens: 20,
+        outputTokens: 5,
+        totalTokens: 25,
+        cacheReadInputTokens: 7,
+        reasoningOutputTokens: 3,
+      },
+    });
+  });
+
+  it('normalizes Claude JSON output usage and result metadata without retaining result text', () => {
+    const telemetry = normalizeClaudeJsonTelemetry({
+      type: 'result',
+      result: 'secret answer',
+      session_id: 'session-1',
+      total_cost_usd: 0.01,
+      duration_ms: 900,
+      usage: {
+        input_tokens: 6,
+        output_tokens: 3,
+        cache_read_input_tokens: 2,
+        cache_creation_input_tokens: 1,
+      },
+    });
+
+    expect(telemetry).toEqual({
+      tokenUsage: {
+        inputTokens: 6,
+        outputTokens: 3,
+        totalTokens: 9,
+        cacheReadInputTokens: 2,
+        cacheCreationInputTokens: 1,
+      },
+      duration: {
+        totalMs: 900,
+      },
+      estimatedCostUsd: 0.01,
+      metadata: {
+        sessionId: 'session-1',
+      },
+    });
+    expect(JSON.stringify(telemetry)).not.toContain('secret answer');
   });
 
   it('skips malformed JSONL rows', () => {

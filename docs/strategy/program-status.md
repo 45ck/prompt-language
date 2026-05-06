@@ -82,12 +82,13 @@ Every item below is a commit on `main`.
 - Local-model ladder evidence refresh (2026-04-28) — commits `34bd205` and `de4032d`. Added a fixture-pair harness, curated H12/H14/H15 evidence, and a local-model findings report. Current result: H15 PL win, H12 tie at higher PL cost, H14 solo win due to a weak TDD flow. This is useful engineering evidence but remains non-claim-eligible under §3a.
 - Hybrid model routing experiment plan (2026-04-28) — `experiments/harness-arena/hybrid-model-routing.md` and bead `prompt-language-sfd3`. The planned HA-HR1 pilot compares local-only, frontier-only, advisor-only, and dynamic hybrid-router arms.
 
-Provider telemetry is now captured for Ollama-backed bounded smoke prompt turns:
-token counts, duration fields, retry count, zero API cost, and best-effort
-`ollama ps` / GPU snapshots. Still not measured / not claimed: thesis-level cost,
-latency, or pass-rate deltas for H1–H6. No E5 pair has produced a
-`maintenanceViabilityIndex` number, and no cloud/frontier smoke run is yet
-telemetry-complete.
+Provider telemetry is now captured for bounded smoke prompt turns across the
+primary runners: Ollama records local token/duration/GPU evidence, Codex parses
+JSONL token/timing events where exposed, and Claude parses structured JSON
+usage/cost plus metadata-only session-log fallback. Still not measured / not
+claimed: thesis-level cost, latency, or pass-rate deltas for H1-H6. No E5 pair
+has produced a `maintenanceViabilityIndex` number, and cloud cost claims still
+require provider-reported cost or a versioned pricing basis.
 
 ## 3a. Claim-eligibility rule
 

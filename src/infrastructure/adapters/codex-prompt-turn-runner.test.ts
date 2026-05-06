@@ -89,6 +89,7 @@ describe('CodexPromptTurnRunner', () => {
       ),
     ).toEqual([
       'exec',
+      '--json',
       '--dangerously-bypass-approvals-and-sandbox',
       '--skip-git-repo-check',
       '--output-last-message',
@@ -115,6 +116,7 @@ describe('CodexPromptTurnRunner', () => {
       ),
     ).toEqual([
       'exec',
+      '--json',
       '--dangerously-bypass-approvals-and-sandbox',
       '--skip-git-repo-check',
       '--output-last-message',
@@ -142,10 +144,19 @@ describe('CodexPromptTurnRunner', () => {
     child.stderr.end();
     const result = await resultPromise;
 
-    expect(result).toEqual({
-      exitCode: 0,
-      assistantText: 'done',
-    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        exitCode: 0,
+        assistantText: 'done',
+        providerTelemetry: expect.objectContaining({
+          provider: 'codex',
+          requestedModel: 'gpt-5.4',
+          status: 'ok',
+          exitCode: 0,
+          estimatedCostUsd: null,
+        }),
+      }),
+    );
     expect(mockedSpawn).toHaveBeenCalledTimes(1);
     expect(mockedSpawn.mock.calls[0]?.[2]).toEqual(
       expect.objectContaining({
@@ -261,7 +272,79 @@ describe('CodexPromptTurnRunner', () => {
     expect(result).toEqual({
       exitCode: 17,
       assistantText: 'partial result',
+      providerTelemetry: expect.objectContaining({
+        provider: 'codex',
+        status: 'error',
+        exitCode: 17,
+      }),
     });
     expect(mockedRmSync).toHaveBeenCalledTimes(1);
+  });
+
+  it('extracts Codex JSONL telemetry while preserving assistant text from output file', async () => {
+    const runner = new CodexPromptTurnRunner();
+    const child = createChildProcess();
+    mockedSpawn.mockReturnValue(child);
+    mockedReadFileSync.mockReturnValue('assistant from file');
+
+    const resultPromise = runner.run({
+      cwd: '/repo',
+      model: 'gpt-5.4',
+      prompt: 'Fix the bug',
+    });
+    child.stdout.write(
+      JSON.stringify({
+        type: 'event_msg',
+        msg: {
+          type: 'token_count',
+          payload: {
+            info: {
+              last_token_usage: {
+                input_tokens: 10,
+                cached_input_tokens: 4,
+                output_tokens: 5,
+                reasoning_output_tokens: 2,
+                total_tokens: 17,
+              },
+            },
+          },
+        },
+      }),
+    );
+    child.stdout.write('\nnot-json\n');
+    child.stdout.write(
+      JSON.stringify({
+        type: 'event_msg',
+        msg: {
+          type: 'task_complete',
+          payload: {
+            duration_ms: 1234,
+            time_to_first_token_ms: 321,
+          },
+        },
+      }),
+    );
+    child.stdout.end();
+    child.stderr.end();
+    const result = await resultPromise;
+
+    expect(result.assistantText).toBe('assistant from file');
+    expect(result.providerTelemetry).toEqual(
+      expect.objectContaining({
+        provider: 'codex',
+        requestedModel: 'gpt-5.4',
+        tokenUsage: {
+          inputTokens: 10,
+          outputTokens: 5,
+          totalTokens: 17,
+          cacheReadInputTokens: 4,
+          reasoningOutputTokens: 2,
+        },
+        duration: {
+          totalMs: 1234,
+          firstTokenMs: 321,
+        },
+      }),
+    );
   });
 });

@@ -2,9 +2,15 @@ import { spawn, spawnSync } from 'node:child_process';
 
 import type {
   PromptTurnInput,
+  PromptTurnProviderTelemetry,
   PromptTurnResult,
   PromptTurnRunner,
 } from '../../application/ports/prompt-turn-runner.js';
+import { readClaudeProviderTelemetry } from './claude-telemetry-reader.js';
+import {
+  appendProviderTelemetryBestEffort,
+  normalizeClaudeJsonTelemetry,
+} from './provider-telemetry.js';
 
 const DEFAULT_TIMEOUT_MS = 600_000;
 const CLAUDE_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_CLAUDE_TIMEOUT_MS';
@@ -69,6 +75,22 @@ export function buildClaudePrompt(prompt: string): string {
   ].join('\n');
 }
 
+function parseClaudeJsonOutput(stdout: string): unknown | undefined {
+  const trimmed = stdout.trim();
+  if (!trimmed) return undefined;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return undefined;
+  }
+}
+
+function readClaudeJsonResult(parsed: unknown): string | undefined {
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+  const result = (parsed as Record<string, unknown>)['result'];
+  return typeof result === 'string' && result.trim() ? result.trim() : undefined;
+}
+
 export function claudeLaunchCommand(args: readonly string[]): [string, ...string[]] {
   const command = readEnv(CLAUDE_BIN_ENV) ?? 'claude';
   if (process.platform === 'win32') {
@@ -100,10 +122,17 @@ function terminateClaudeProcessTree(child: ReturnType<typeof spawn>): void {
   child.stderr?.destroy();
 }
 
+function claudeStatus(exitCode: number): PromptTurnProviderTelemetry['status'] {
+  if (exitCode === 0) return 'ok';
+  if (exitCode === 124) return 'timeout';
+  return 'error';
+}
+
 export class ClaudePromptTurnRunner implements PromptTurnRunner {
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
     const args = this.buildArgs(input);
     const timeoutMs = readPositiveIntEnv(CLAUDE_TIMEOUT_MS_ENV) ?? DEFAULT_TIMEOUT_MS;
+    const startedAt = Date.now();
 
     return await new Promise<PromptTurnResult>((resolve) => {
       const [command, ...commandArgs] = claudeLaunchCommand(args);
@@ -122,10 +151,48 @@ export class ClaudePromptTurnRunner implements PromptTurnRunner {
         if (settled) return;
         settled = true;
         if (timer !== undefined) clearTimeout(timer);
-        resolve(result);
+        void (async () => {
+          const endedAt = Date.now();
+          const jsonTelemetry = normalizeClaudeJsonTelemetry(parseClaudeJsonOutput(stdout));
+          const usageTelemetry = await readClaudeProviderTelemetry({
+            cwd: input.cwd,
+            startedAt,
+            endedAt,
+          }).catch(() => undefined);
+          const providerTelemetry: PromptTurnProviderTelemetry = {
+            provider: 'claude',
+            requestedModel: input.model,
+            actualModel: jsonTelemetry.actualModel ?? usageTelemetry?.actualModel ?? input.model,
+            status: claudeStatus(result.exitCode),
+            exitCode: result.exitCode,
+            tokenUsage: jsonTelemetry.tokenUsage ?? usageTelemetry?.tokenUsage,
+            duration: {
+              totalMs: jsonTelemetry.duration?.totalMs ?? endedAt - startedAt,
+            },
+            retryCount: 0,
+            estimatedCostUsd:
+              jsonTelemetry.estimatedCostUsd ?? usageTelemetry?.estimatedCostUsd ?? null,
+            metadata: {
+              ...usageTelemetry?.metadata,
+              ...jsonTelemetry.metadata,
+            },
+          };
+          const resultWithTelemetry: PromptTurnResult = {
+            ...result,
+            providerTelemetry,
+          };
+          await appendProviderTelemetryBestEffort(input.cwd, {
+            timestamp: new Date().toISOString(),
+            ...providerTelemetry,
+          });
+          resolve(resultWithTelemetry);
+        })();
       };
 
       const buildAssistantText = (): string | undefined => {
+        const parsed = parseClaudeJsonOutput(stdout);
+        const jsonResult = readClaudeJsonResult(parsed);
+        if (jsonResult !== undefined) return jsonResult;
         const primary = stdout.trim();
         if (primary.length > 0) return primary;
         const fallback = stderr.trim();
@@ -186,7 +253,7 @@ export class ClaudePromptTurnRunner implements PromptTurnRunner {
   }
 
   buildArgs(input: PromptTurnInput): string[] {
-    const args = ['-p', '--dangerously-skip-permissions'];
+    const args = ['-p', '--dangerously-skip-permissions', '--output-format', 'json'];
     if (input.model != null) {
       args.push('--model', input.model);
     }

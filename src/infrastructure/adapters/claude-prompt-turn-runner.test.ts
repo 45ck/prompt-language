@@ -43,6 +43,7 @@ describe('ClaudePromptTurnRunner', () => {
     delete process.env['PROMPT_LANGUAGE_CLAUDE_BIN'];
     delete process.env['PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER'];
     delete process.env['PROMPT_LANGUAGE_CLAUDE_SKILL_PROMPT_WRAPPER'];
+    process.env['PROMPT_LANGUAGE_CLAUDE_TELEMETRY'] = '0';
   });
 
   it('wraps prompts with skill-aware execution rules by default', () => {
@@ -77,6 +78,8 @@ describe('ClaudePromptTurnRunner', () => {
     ).toEqual([
       '-p',
       '--dangerously-skip-permissions',
+      '--output-format',
+      'json',
       '--model',
       'claude-sonnet-4-6',
       '--effort',
@@ -93,7 +96,7 @@ describe('ClaudePromptTurnRunner', () => {
         cwd: '/repo',
         prompt: 'Continue',
       }),
-    ).toEqual(['-p', '--dangerously-skip-permissions']);
+    ).toEqual(['-p', '--dangerously-skip-permissions', '--output-format', 'json']);
   });
 
   it('uses the PATH-resolved claude command on Windows instead of a hard-coded cmd shim', () => {
@@ -139,16 +142,27 @@ describe('ClaudePromptTurnRunner', () => {
     child.stderr.end();
     const result = await resultPromise;
 
-    expect(result).toEqual({
-      exitCode: 0,
-      assistantText: 'done',
-    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        exitCode: 0,
+        assistantText: 'done',
+        providerTelemetry: expect.objectContaining({
+          provider: 'claude',
+          requestedModel: 'claude-sonnet-4-6',
+          status: 'ok',
+          exitCode: 0,
+          estimatedCostUsd: null,
+        }),
+      }),
+    );
     const [command, args, options] = mockedSpawn.mock.calls[0] ?? [];
     expect(String(command)).toMatch(/(?:cmd\.exe|claude(?:\.cmd)?)$/);
     expect(args).toEqual(
       expect.arrayContaining([
         '-p',
         '--dangerously-skip-permissions',
+        '--output-format',
+        'json',
         '--model',
         'claude-sonnet-4-6',
       ]),
@@ -183,6 +197,13 @@ describe('ClaudePromptTurnRunner', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.assistantText).toContain('boom');
+    expect(result.providerTelemetry).toEqual(
+      expect.objectContaining({
+        provider: 'claude',
+        status: 'error',
+        exitCode: 1,
+      }),
+    );
   });
 
   it('treats a timed-out child as exit code 124', async () => {
@@ -205,8 +226,64 @@ describe('ClaudePromptTurnRunner', () => {
 
       expect(result.exitCode).toBe(124);
       expect(result.assistantText).toContain('timed out');
+      expect(result.providerTelemetry).toEqual(
+        expect.objectContaining({
+          provider: 'claude',
+          status: 'timeout',
+          exitCode: 124,
+        }),
+      );
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('parses Claude JSON output for assistant text and telemetry without storing result text', async () => {
+    const runner = new ClaudePromptTurnRunner();
+    const child = createChildProcess();
+    mockedSpawn.mockReturnValue(child);
+
+    const resultPromise = runner.run({
+      cwd: '/repo',
+      model: 'claude-sonnet-4-6',
+      prompt: 'Fix the bug',
+    });
+    child.stdout.write(
+      JSON.stringify({
+        type: 'result',
+        result: 'assistant from json',
+        duration_ms: 900,
+        total_cost_usd: 0.01,
+        usage: {
+          input_tokens: 6,
+          output_tokens: 3,
+          cache_read_input_tokens: 2,
+          cache_creation_input_tokens: 1,
+        },
+      }),
+    );
+    child.stdout.end();
+    child.stderr.end();
+    const result = await resultPromise;
+
+    expect(result.assistantText).toBe('assistant from json');
+    expect(result.providerTelemetry).toEqual(
+      expect.objectContaining({
+        provider: 'claude',
+        requestedModel: 'claude-sonnet-4-6',
+        tokenUsage: {
+          inputTokens: 6,
+          outputTokens: 3,
+          totalTokens: 9,
+          cacheReadInputTokens: 2,
+          cacheCreationInputTokens: 1,
+        },
+        duration: {
+          totalMs: 900,
+        },
+        estimatedCostUsd: 0.01,
+      }),
+    );
+    expect(JSON.stringify(result.providerTelemetry)).not.toContain('assistant from json');
   });
 });

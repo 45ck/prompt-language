@@ -29,6 +29,19 @@ retries, `estimatedCostUsd: null`, before/after `ollama ps`, and `100% GPU`
 residency for `qwen3:8b`. `nvidia-smi` was unavailable on this workstation, and
 that failure was recorded without failing the smoke harness.
 
+After Codex/Claude telemetry wiring, the prompt-backed `A` slice was rerun:
+
+| Harness | Model                    | Report                                | Result       | Provider records | Usage summary                                                                                                                                  |
+| ------- | ------------------------ | ------------------------------------- | ------------ | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Codex   | `gpt-5.2`                | `smoke-2026-05-06T01-37-42-108Z.json` | `1/1` passed | 2                | `112399` input, `502` output, `112901` total, `110336` cached input, `251` reasoning output; cost `null` because no pricing basis was attached |
+| Claude  | `claude-opus-4-7` actual | `smoke-2026-05-06T01-38-27-270Z.json` | `1/1` passed | 2                | `23` input, `796` output, `819` total, `308988` cache read, `62602` cache creation; provider-reported `estimatedCostUsd` total `0.5657715`     |
+
+These are bounded smoke probes, not comparative thesis runs. The Codex report
+shows token accounting is captured but cost remains intentionally unclaimed
+without a versioned pricing basis. The Claude report includes provider-reported
+cost and cache-token splits, so it is suitable for accounting within this smoke
+scope.
+
 The Claude run used `EVAL_TIMEOUT_MS=120000` and
 `PROMPT_LANGUAGE_CLAUDE_EFFORT=medium`. It passed only after the Windows runner
 stopped hardcoding `claude.cmd` and allowed `cmd.exe` to resolve `claude` through
@@ -43,15 +56,18 @@ stopped hardcoding `claude.cmd` and allowed `cmd.exe` to resolve `claude` throug
 - The current smoke report schema is sufficient for bounded pass/fail evidence:
   harness, runner harness, model, timeout, selected tests, duration, and
   blocked metadata when applicable.
-- Ollama-backed prompt turns can now emit provider telemetry into smoke reports:
-  token counts, duration fields, retry count, zero API cost, and best-effort
-  local runtime snapshots.
+- Prompt turns can now emit provider telemetry into smoke reports. Ollama
+  records token/duration/retry/zero-API-cost and best-effort runtime evidence.
+  Codex records JSONL token/timing events where the CLI exposes them. Claude
+  records structured JSON usage/cost where available plus metadata-only
+  session-log fallback.
 
 ## What This Does Not Prove
 
 - It does not prove full quick-suite or full-suite live parity.
-- It does not prove claim-grade cloud token usage, estimated cloud cost, raw
-  provider transcript retention, or telemetry-backed full-suite parity.
+- It does not prove claim-grade cloud cost, raw provider transcript retention, or
+  telemetry-backed full-suite parity. Cloud cost remains unclaimed unless it is
+  provider-reported or computed from a versioned pricing basis.
 - It does not prove local models can autonomously build full-stack products; the
   local-model claim boundary remains the narrower selector/ranker pattern in
   [Evidence Snapshot: 2026-05-06](2026-05-06-evidence-snapshot.md).
@@ -60,5 +76,4 @@ stopped hardcoding `claude.cmd` and allowed `cmd.exe` to resolve `claude` throug
 
 The next claim-grade step is telemetry-backed repetition: rerun the relevant
 quick/full smoke slices and comparative experiments with provider metrics
-captured, then add Codex/Claude usage parsing and stdout/stderr or trace artifact
-paths for cloud/frontier runs.
+captured, then add stdout/stderr or trace artifact paths for cloud/frontier runs.

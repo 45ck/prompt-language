@@ -125,4 +125,31 @@ describe('TracedPromptTurnRunner', () => {
     expect(logger.entries[0]!.nodeId).toBe('n7');
     expect(logger.entries[0]!.nodeKind).toBe('prompt');
   });
+
+  it('copies provider telemetry into the end trace entry without assistant content', async () => {
+    const inner = new FakeInnerRunner();
+    inner.result = {
+      exitCode: 0,
+      assistantText: 'secret assistant body',
+      providerTelemetry: {
+        provider: 'codex',
+        requestedModel: 'gpt-5.4',
+        tokenUsage: {
+          inputTokens: 10,
+          outputTokens: 5,
+          totalTokens: 15,
+        },
+        estimatedCostUsd: null,
+      },
+    };
+    const logger = makeRecordingLogger();
+    const runner = new TracedPromptTurnRunner(inner, logger);
+
+    await runner.run({ cwd: '/tmp', prompt: 'x' });
+
+    expect((logger.entries[1] as unknown as Record<string, unknown>)['providerTelemetry']).toEqual(
+      inner.result.providerTelemetry,
+    );
+    expect(JSON.stringify(logger.entries[1])).not.toContain('secret assistant body');
+  });
 });

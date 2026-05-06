@@ -291,7 +291,7 @@ const boundaryAssertions = [
     path: 'README.md',
     snippets: [
       'verification-first supervision runtime for coding agents',
-      '~85% of execution is deterministic; ~15% is AI',
+      'the exact deterministic/AI split depends on the flow you write',
       '`npx @45ck/prompt-language run`       | Execute a flow via Claude or headless runner |',
     ],
   },

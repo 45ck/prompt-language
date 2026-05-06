@@ -15,7 +15,7 @@ Dependencies flow strictly inward: presentation depends on infrastructure, infra
 
 ## Execution model
 
-The runtime is approximately 85% deterministic (no AI involvement). Only `prompt` nodes and `let x = prompt` capture pause for Claude's response. All other node types -- `let`, `run`, `while`, `until`, `retry`, `if`, `try`, `foreach`, `break`, `continue`, `spawn`, `await` -- auto-advance without AI interaction.
+The runtime is deterministic for every node that can be evaluated without model input. Only `prompt` nodes, `let x = prompt` captures, and AI-backed subjective checks pause for the configured harness response. All other node types -- `let`, `run`, `while`, `until`, `retry`, `if`, `try`, `foreach`, `break`, `continue`, `spawn`, `await` -- auto-advance without AI interaction.
 
 ### Hook-driven loop
 

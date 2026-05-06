@@ -8,7 +8,7 @@ const SMOKE = join(ROOT, 'scripts', 'eval', 'smoke-test.mjs');
 const PACKAGE_JSON = join(ROOT, 'package.json');
 
 describe('eval harness contracts', () => {
-  it('keeps Codex and OpenCode direct prompts and flow execution as separate paths', async () => {
+  it('keeps native flow runners separate from direct prompt execution', async () => {
     const source = await readFile(HARNESS, 'utf8');
 
     expect(source).toContain(
@@ -17,6 +17,9 @@ describe('eval harness contracts', () => {
     expect(source).toContain(
       "return flagValue || envModel || (HARNESS === 'codex' ? 'gpt-5.2' : undefined);",
     );
+    expect(source).toContain('function execClaude(');
+    expect(source).toContain('function execClaudeFlow(');
+    expect(source).toContain("'ci', '--runner', 'claude'");
     expect(source).toContain('function execCodexFlow(');
     expect(source).toContain("'ci', '--runner', 'codex'");
     expect(source).toContain("return ['opencode', '--version'];");
@@ -27,6 +30,9 @@ describe('eval harness contracts', () => {
     expect(source).toContain('function execOllama(');
     expect(source).toContain('function execOllamaFlow(');
     expect(source).toContain("'ci', '--runner', 'ollama'");
+    expect(source).toContain('function execAider(');
+    expect(source).toContain('function execAiderFlow(');
+    expect(source).toContain("'ci', '--runner', 'aider'");
     expect(source).toContain('export function runHarnessFlow(');
   });
 
@@ -50,7 +56,8 @@ describe('eval harness contracts', () => {
 
     expect(source).toContain('getFlowCommandLabel');
     expect(source).toContain('runHarnessFlow');
-    expect(source).toContain('function assertHarnessReady()');
+    expect(source).toContain('async function assertHarnessReady(totalStart)');
+    expect(source).toContain('async function writeBlockedResult');
     expect(source).toContain('Goal: readiness check');
     expect(source).toContain('function isReadyFlowOutput(text)');
     expect(source).toContain('unexpected readiness output');
@@ -70,16 +77,20 @@ describe('eval harness contracts', () => {
     expect(source).toContain('return 1_800_000;');
   });
 
-  it('exposes npm smoke commands for the Gemini, OpenCode, and Ollama baselines', async () => {
+  it('exposes npm smoke commands for all non-default harness baselines', async () => {
     const pkg = JSON.parse(await readFile(PACKAGE_JSON, 'utf8')) as {
       scripts?: Record<string, string>;
     };
 
     expect(pkg.scripts?.['eval:smoke:gemini']).toContain('--harness gemini');
     expect(pkg.scripts?.['eval:smoke:gemini:quick']).toContain('--harness gemini --quick');
+    expect(pkg.scripts?.['eval:smoke:codex']).toContain('--harness codex');
+    expect(pkg.scripts?.['eval:smoke:codex:quick']).toContain('--harness codex --quick');
     expect(pkg.scripts?.['eval:smoke:opencode']).toContain('--harness opencode');
     expect(pkg.scripts?.['eval:smoke:opencode:quick']).toContain('--harness opencode --quick');
     expect(pkg.scripts?.['eval:smoke:ollama']).toContain('--harness ollama');
     expect(pkg.scripts?.['eval:smoke:ollama:quick']).toContain('--harness ollama --quick');
+    expect(pkg.scripts?.['eval:smoke:aider']).toContain('--harness aider');
+    expect(pkg.scripts?.['eval:smoke:aider:quick']).toContain('--harness aider --quick');
   });
 });

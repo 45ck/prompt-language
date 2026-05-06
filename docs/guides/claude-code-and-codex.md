@@ -47,7 +47,7 @@ Important:
 - Node.js `>= 22`
 - Claude Code installed if you want the Claude hook path
 - Codex CLI installed if you want the Codex runner or Codex scaffold path
-- from this repo root: `D:\Visual Studio Projects\prompt-language`
+- from this repo root
 - built hook artifacts if you want to run the `dist/` hook examples directly:
 
 ```powershell
@@ -133,7 +133,7 @@ Keep the product boundary in mind here:
 For team-style work, keep prompt-language as the parent supervisor and route
 bounded child sessions through the runner that fits the lane.
 
-Use local runners for bulk work:
+Use local runners for bounded, verifier-guided bulk or selection work:
 
 ```powershell
 $env:PL_SPAWN_RUNNER = 'ollama'
@@ -146,10 +146,11 @@ $env:PL_SPAWN_RUNNER = 'codex'
 ```
 
 The recommended pattern is local-first, frontier-on-escalation: Ollama, OpenCode,
-or aider performs inventory, repetitive edits, and verifier-guided repair; Codex
-handles architecture/security ambiguity, repeated local failure, and final
-read-only review. The parent flow should convert frontier findings into explicit
-tasks, gates, or stop conditions.
+or aider can be tried for bounded inventory, repetitive edits, and
+verifier-guided repair; claim success only with run evidence. Codex handles
+architecture/security ambiguity, repeated local failure, and final read-only
+review. The parent flow should convert frontier findings into explicit tasks,
+gates, or stop conditions.
 
 See [Team Of Agents Guide](team-of-agents.md) for the full operating model.
 

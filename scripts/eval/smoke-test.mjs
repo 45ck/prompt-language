@@ -61,6 +61,8 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   checkHarnessVersion,
+  getEffectiveModel,
+  getEvidenceHarnessName,
   getFlowCommandLabel,
   getHarnessLabel,
   getHarnessName,
@@ -192,6 +194,15 @@ async function writeResults(totalStart) {
     timestamp: runId,
     os: platform(),
     nodeVersion,
+    status: failed > 0 ? 'failed' : 'passed',
+    harness: getEvidenceHarnessName(),
+    runnerHarness: getHarnessName(),
+    harnessLabel: getHarnessLabel(),
+    flowCommandLabel: getFlowCommandLabel(),
+    model: getEffectiveModel(),
+    timeoutMs: TIMEOUT,
+    traceEnabled: TRACE_ENABLED,
+    only: ONLY_FILTERS ? [...ONLY_FILTERS].sort() : null,
     quickMode: QUICK_MODE,
     duration_ms: Date.now() - totalStart,
     passed,
@@ -215,6 +226,11 @@ async function appendHistory(report, runId) {
       durationMs: test.duration_ms,
       attempt: 1,
       quickMode: report.quickMode,
+      status: report.status,
+      harness: report.harness,
+      runnerHarness: report.runnerHarness,
+      model: report.model,
+      timeoutMs: report.timeoutMs,
       os: report.os,
       nodeVersion: report.nodeVersion,
     }),
@@ -222,6 +238,68 @@ async function appendHistory(report, runId) {
 
   await mkdir(RESULTS_DIR, { recursive: true });
   await appendFile(join(RESULTS_DIR, 'history.jsonl'), `${lines.join('\n')}\n`);
+}
+
+async function writeBlockedResult({ totalStart, reason, detail }) {
+  await mkdir(RESULTS_DIR, { recursive: true });
+
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const runId = new Date().toISOString();
+  const filename = `smoke-${timestamp}.json`;
+  const filepath = join(RESULTS_DIR, filename);
+
+  let nodeVersion = '';
+  try {
+    nodeVersion = execSync('node -v', { encoding: 'utf-8' }).trim();
+  } catch {
+    nodeVersion = process.version;
+  }
+
+  const report = {
+    timestamp: runId,
+    os: platform(),
+    nodeVersion,
+    status: 'blocked',
+    blockedReason: reason,
+    blockedDetail: detail,
+    harness: getEvidenceHarnessName(),
+    runnerHarness: getHarnessName(),
+    harnessLabel: getHarnessLabel(),
+    flowCommandLabel: getFlowCommandLabel(),
+    model: getEffectiveModel(),
+    timeoutMs: TIMEOUT,
+    traceEnabled: TRACE_ENABLED,
+    only: ONLY_FILTERS ? [...ONLY_FILTERS].sort() : null,
+    quickMode: QUICK_MODE,
+    duration_ms: Date.now() - totalStart,
+    passed,
+    failed,
+    tests: results,
+  };
+
+  await writeFile(filepath, JSON.stringify(report, null, 2));
+  await appendFile(
+    join(RESULTS_DIR, 'history.jsonl'),
+    `${JSON.stringify({
+      date: report.timestamp,
+      runId,
+      testId: null,
+      testName: null,
+      passed: false,
+      durationMs: report.duration_ms,
+      attempt: 1,
+      quickMode: report.quickMode,
+      status: report.status,
+      blockedReason: report.blockedReason,
+      harness: report.harness,
+      runnerHarness: report.runnerHarness,
+      model: report.model,
+      timeoutMs: report.timeoutMs,
+      os: report.os,
+      nodeVersion: report.nodeVersion,
+    })}\n`,
+  );
+  console.log(`\n[smoke-test] Blocked result written to ${filepath}`);
 }
 
 /** Keep only the most recent 50 result files. */
@@ -243,12 +321,17 @@ async function cleanupOldResults() {
   }
 }
 
-function assertHarnessReady() {
+async function assertHarnessReady(totalStart) {
   try {
     const version = checkHarnessVersion();
     console.log(`[smoke-test] Harness: ${getHarnessLabel()} ${version}`);
   } catch {
     console.error(`[smoke-test] SKIP — ${getHarnessLabel()} not found.`);
+    await writeBlockedResult({
+      totalStart,
+      reason: 'harness-not-found',
+      detail: `${getHarnessLabel()} CLI not found`,
+    });
     process.exit(2);
   }
 
@@ -277,6 +360,11 @@ function assertHarnessReady() {
       console.error(
         `[smoke-test] \`${getFlowCommandLabel()}\` returned an authorization or quota error; smoke scenarios were not run.`,
       );
+      await writeBlockedResult({
+        totalStart,
+        reason: 'harness-access-blocked',
+        detail: `${getFlowCommandLabel()} returned an authorization or quota error`,
+      });
       process.exit(2);
     }
     if (/empty readiness output/i.test(output)) {
@@ -286,6 +374,11 @@ function assertHarnessReady() {
       console.error(
         `[smoke-test] \`${getFlowCommandLabel()}\` produced empty output for a trivial flow; smoke scenarios were not run.`,
       );
+      await writeBlockedResult({
+        totalStart,
+        reason: 'empty-readiness-output',
+        detail: `${getFlowCommandLabel()} produced empty output for a trivial flow`,
+      });
       process.exit(2);
     }
     if (/unexpected readiness output:/i.test(output)) {
@@ -299,6 +392,23 @@ function assertHarnessReady() {
         `[smoke-test] \`${getFlowCommandLabel()}\` must execute the flow and emit an OK-style result for the readiness probe.`,
       );
       console.error(`[smoke-test] Readiness output: ${snippet}`);
+      await writeBlockedResult({
+        totalStart,
+        reason: 'unexpected-readiness-output',
+        detail: snippet,
+      });
+      process.exit(2);
+    }
+    if (/not recognized|command not found|enoent/i.test(output)) {
+      console.error(
+        `[smoke-test] BLOCKED — ${getHarnessLabel()} runner command is unavailable to the PL flow runtime.`,
+      );
+      console.error(`[smoke-test] Readiness output: ${formatOutputSnippet(output)}`);
+      await writeBlockedResult({
+        totalStart,
+        reason: 'runner-command-unavailable',
+        detail: formatOutputSnippet(output),
+      });
       process.exit(2);
     }
     if (getHarnessName() === 'opencode') {
@@ -308,6 +418,11 @@ function assertHarnessReady() {
       console.error(
         `[smoke-test] \`${getFlowCommandLabel()}\` failed during readiness check. Review the configured model and local runner state.`,
       );
+      await writeBlockedResult({
+        totalStart,
+        reason: 'readiness-failed',
+        detail: `${getFlowCommandLabel()} failed during readiness check`,
+      });
       process.exit(2);
     }
     throw error;
@@ -502,7 +617,6 @@ async function testRunAutoExecution() {
       '',
       'flow:',
       '  run: echo hello > run-output.txt',
-      '  prompt: Check if run-output.txt exists and confirm its contents.',
     ].join('\n');
 
     harnessRun(prompt, dir);
@@ -2823,10 +2937,15 @@ async function main() {
     console.log(`[smoke-test] Version: ${version}`);
   } catch {
     console.log(`[smoke-test] SKIP — ${getHarnessLabel()} not found.`);
-    process.exit(0);
+    await writeBlockedResult({
+      totalStart,
+      reason: 'harness-not-found',
+      detail: `${getHarnessLabel()} CLI not found`,
+    });
+    process.exit(2);
   }
 
-  assertHarnessReady();
+  await assertHarnessReady(totalStart);
 
   // Plugin should already be built + installed by npm run eval:smoke.
   // Run tests — A, B, E, H, I, K are fast; C is medium; D is slow (gate loop)

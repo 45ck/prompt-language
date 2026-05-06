@@ -31,7 +31,7 @@ the catalog and raw research tree.
 
 ## How it works in three bullets
 
-- **Deterministic execution** -- loops, branches, variables, and retries run without AI involvement. The AI only activates at `prompt` nodes. ~85% of execution is deterministic; ~15% is AI.
+- **Deterministic execution** -- loops, branches, variables, and retries run without AI involvement. The AI only activates at `prompt` nodes, so the exact deterministic/AI split depends on the flow you write.
 - **Verification gates** -- `done when: tests_pass` runs real commands and blocks completion until they pass. The AI cannot self-report "done."
 - **Parallel agents** -- `spawn` launches child processes, `await` collects results, `race` picks the fastest. Variables flow between parent and children automatically.
 
@@ -41,7 +41,7 @@ the catalog and raw research tree.
 npx @45ck/prompt-language
 ```
 
-Requires [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) and Node.js >= 22. Also works with [Codex CLI](https://github.com/openai/codex), [Gemini CLI](https://github.com/google-gemini/gemini-cli), and other harnesses via `npx @45ck/prompt-language run --runner <name>`.
+Default interactive install requires [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) and Node.js >= 22. Headless native runners require Node.js >= 22 plus the selected CLI: Codex CLI, OpenCode, Ollama, or aider. Gemini is currently an eval comparison harness, not a native `ci --runner gemini` path. See the [Harness Conformance Matrix](docs/evaluation/harness-conformance-matrix.md) before making runner-support claims.
 
 For the full Claude Code and Codex walkthrough, including install verification, meta-prompt toggles, skill-aware wrapping, and terminal screenshots, see [docs/guides/claude-code-and-codex.md](docs/guides/claude-code-and-codex.md).
 
@@ -84,7 +84,7 @@ done when:
 
 The outer `while ask` loop keeps iterating as long as there are unresolved tasks or review findings. Each iteration implements tasks with retry, then spawns a reviewer -- if the reviewer finds problems, those become the new task list and the loop continues. The flow only exits when the AI judges there's nothing left _and_ real `tests_pass` + `lint_pass` gates confirm it.
 
-Invoke this as a skill from your preferred harness -- Claude Code, Codex CLI, Gemini CLI -- or run it headless in CI with `npx @45ck/prompt-language ci`.
+Invoke this as a skill from your preferred supported host, or run it headless in CI with `npx @45ck/prompt-language ci`. Native flow runners currently cover Claude, Codex, OpenCode, Ollama, and aider; Gemini remains comparison-only until it has a native runner adapter.
 
 More examples: [docs/examples](docs/examples/index.md) | [examples/public](examples/public/) | DSL cheatsheet: [docs/reference/dsl-cheatsheet.md](docs/reference/dsl-cheatsheet.md)
 

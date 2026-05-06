@@ -20,13 +20,13 @@ Use these pages as the current evidence boundary before citing older plans:
 
 ## How to use this section
 
-| If you need...                | Go here                                      | Why                                                             |
-| ----------------------------- | -------------------------------------------- | --------------------------------------------------------------- |
-| The quickest evidence summary | [What Works Now](what-works-now.md)          | Short public read on the strongest proven mechanism and caveats |
-| The shipped product contract  | [Reference](../reference/index.md)           | Evaluation does not define shipped syntax or guarantees         |
-| Current runner/status caveats | [Codex Parity Matrix](eval-parity-matrix.md) | Current support limits, smoke status, and parity gaps           |
-| Long-range hypotheses         | [Strategy](../strategy/index.md)             | Thesis framing and experiment program beyond current proof      |
-| External research synthesis   | [Research](../research/README.md)            | Source-driven reports that informed the product direction       |
+| If you need...                | Go here                                                                                                                     | Why                                                                    |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| The quickest evidence summary | [What Works Now](what-works-now.md)                                                                                         | Short public read on the strongest proven mechanism and caveats        |
+| The shipped product contract  | [Reference](../reference/index.md)                                                                                          | Evaluation does not define shipped syntax or guarantees                |
+| Current runner/status caveats | [Harness Conformance Matrix](harness-conformance-matrix.md) and [Live Inference Test Matrix](live-inference-test-matrix.md) | Current support levels, smoke status, telemetry needs, and parity gaps |
+| Long-range hypotheses         | [Strategy](../strategy/index.md)                                                                                            | Thesis framing and experiment program beyond current proof             |
+| External research synthesis   | [Research](../research/README.md)                                                                                           | Source-driven reports that informed the product direction              |
 
 ## Product evidence
 
@@ -36,6 +36,8 @@ Use these pages as the current evidence boundary before citing older plans:
 | [Evidence Snapshot: 2026-05-06](2026-05-06-evidence-snapshot.md)                                                                    | Current post-FSCRUD claim boundary: proven mechanisms, local-model limits, and next evidence steps                                      |
 | [Research Synthesis: 2026-05-06](2026-05-06-research-synthesis.md)                                                                  | Cross-experiment hypothesis verdicts: supported, narrowed, rejected, and still unproved claims                                          |
 | [Model Routing Measurement Plan](model-routing-measurement.md)                                                                      | Metrics and pilot criteria for local/frontier/PL cost, token, wall-time, and usefulness comparisons                                     |
+| [Harness Conformance Matrix](harness-conformance-matrix.md)                                                                         | Native PL runners for Claude, Codex, OpenCode, Ollama, and Aider, plus Gemini prompt-template comparison and `AI_CMD` custom coverage   |
+| [Live Inference Test Matrix](live-inference-test-matrix.md)                                                                         | Static, bounded-live, full-live, and claim-eligible evidence requirements for cloud and local inference harnesses                       |
 | [Eval Test Matrix](eval-test-matrix.md)                                                                                             | Automated coverage expectations for parser, runtime, datasets, and CLI                                                                  |
 | [Eval Analysis](eval-analysis.md)                                                                                                   | Comparative A/B results, latency analysis, and differentiator taxonomy                                                                  |
 | [Codex Parity Matrix](eval-parity-matrix.md)                                                                                        | Current parity bar plus checked-in execution status for tests, CI, smoke, and supported-host gaps                                       |

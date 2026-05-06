@@ -898,6 +898,30 @@ export function getHarnessName() {
   return HARNESS;
 }
 
+export function getEvidenceHarnessName() {
+  return AI_CMD ? 'AI_CMD' : HARNESS;
+}
+
+export function getEffectiveModel(model = DEFAULT_MODEL) {
+  if (model) {
+    return model;
+  }
+
+  if (HARNESS === 'codex') {
+    return 'gpt-5.2';
+  }
+
+  if (HARNESS === 'ollama') {
+    return 'gemma4:31b';
+  }
+
+  if (HARNESS === 'aider') {
+    return 'ollama_chat/qwen3-opencode:30b';
+  }
+
+  return null;
+}
+
 export function getHarnessLabel() {
   if (AI_CMD) {
     return `Custom AI command (${AI_CMD.command})`;

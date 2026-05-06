@@ -8,11 +8,12 @@ imports their outputs, and keeps the final gates authoritative.
 Use this when local inference should carry bulk work and a stronger external
 model should handle risk classification, escalation, or final review.
 
-After R29, the operating claim is narrower: local Ollama can perform real
-workspace actions and useful bulk artifact work under deterministic gates, but
-hard domain behavior may still need frontier repair or a deterministic kernel.
-Do not mix frontier advice or patches into a local-only claim batch. If Codex or
-another frontier model participates, record the run as hybrid/escalated work.
+After R29, the operating claim is narrower: local Ollama has shown bounded
+workspace-action and artifact-selection usefulness under deterministic gates,
+but autonomous implementation remains unproven. Hard domain behavior may still
+need frontier repair or a deterministic kernel. Do not mix frontier advice or
+patches into a local-only claim batch. If Codex or another frontier model
+participates, record the run as hybrid/escalated work.
 
 ## What Team Means Here
 

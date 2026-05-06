@@ -635,6 +635,46 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.prompts).toHaveLength(0);
   });
 
+  it('evaluates composite all() gates in prompt-free headless flows', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-composite-all-'));
+
+    const commandRunner = new EchoRedirectCommandRunner();
+    const promptRunner = new RecordingPromptRunner();
+
+    const result = await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: composite gates',
+          '',
+          'flow:',
+          '  run: echo alpha > a.txt',
+          '  run: echo beta > b.txt',
+          '  run: echo gamma > c.txt',
+          '',
+          'done when:',
+          '  all(file_exists a.txt, file_exists b.txt, file_exists c.txt)',
+        ].join('\n'),
+        sessionId: randomUUID(),
+      },
+      {
+        auditLogger: new FileAuditLogger(tempDir),
+        captureReader: new FileCaptureReader(tempDir),
+        commandRunner,
+        memoryStore: new FileMemoryStore(tempDir),
+        promptTurnRunner: promptRunner,
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(result.finalState.status).toBe('completed');
+    expect(result.turns).toBe(0);
+    expect(promptRunner.prompts).toHaveLength(0);
+    await expect(readFile(join(tempDir, 'a.txt'), 'utf8')).resolves.toBe('alpha\n');
+    await expect(readFile(join(tempDir, 'b.txt'), 'utf8')).resolves.toBe('beta\n');
+    await expect(readFile(join(tempDir, 'c.txt'), 'utf8')).resolves.toBe('gamma\n');
+  });
+
   it('prompts for gate-only flows before re-evaluating completion gates', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-gate-only-'));
     await writeFile(join(tempDir, 'app.js'), 'process.exit(1)\n', 'utf8');

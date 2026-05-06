@@ -8,7 +8,9 @@ const HARNESS = join(ROOT, 'scripts', 'eval', 'harness.mjs');
 
 interface HarnessInfo {
   harness: string;
+  evidenceHarness: string;
   harnessLabel: string;
+  effectiveModel: string | null;
   commandLabel: string;
   flowCommandLabel: string;
 }
@@ -24,14 +26,18 @@ function readHarnessInfo({
   const script = `
     import {
       getHarnessName,
+      getEvidenceHarnessName,
       getHarnessLabel,
+      getEffectiveModel,
       getCommandLabel,
       getFlowCommandLabel,
     } from ${JSON.stringify(harnessUrl)};
     console.log(
       JSON.stringify({
         harness: getHarnessName(),
+        evidenceHarness: getEvidenceHarnessName(),
         harnessLabel: getHarnessLabel(),
+        effectiveModel: getEffectiveModel(),
         commandLabel: getCommandLabel(),
         flowCommandLabel: getFlowCommandLabel(),
       }),
@@ -54,7 +60,9 @@ describe('eval harness selection', () => {
     const info = readHarnessInfo({ args: ['--', '--harness', 'gemini'] });
 
     expect(info.harness).toBe('gemini');
+    expect(info.evidenceHarness).toBe('gemini');
     expect(info.harnessLabel).toBe('Gemini CLI');
+    expect(info.effectiveModel).toBeNull();
     expect(info.commandLabel).toBe('gemini -p --yolo');
     expect(info.flowCommandLabel).toBe('gemini -p --yolo');
   });
@@ -63,7 +71,9 @@ describe('eval harness selection', () => {
     const info = readHarnessInfo({ env: { EVAL_HARNESS: 'opencode' } });
 
     expect(info.harness).toBe('opencode');
+    expect(info.evidenceHarness).toBe('opencode');
     expect(info.harnessLabel).toBe('OpenCode CLI');
+    expect(info.effectiveModel).toBeNull();
     expect(info.commandLabel).toBe('opencode run');
     expect(info.flowCommandLabel).toBe('prompt-language ci --runner opencode');
   });
@@ -72,9 +82,22 @@ describe('eval harness selection', () => {
     const info = readHarnessInfo({ env: { EVAL_HARNESS: 'ollama' } });
 
     expect(info.harness).toBe('ollama');
+    expect(info.evidenceHarness).toBe('ollama');
     expect(info.harnessLabel).toBe('Ollama CLI');
+    expect(info.effectiveModel).toBe('gemma4:31b');
     expect(info.commandLabel).toBe('ollama run');
     expect(info.flowCommandLabel).toBe('prompt-language ci --runner ollama');
+  });
+
+  it('supports selecting Aider via EVAL_HARNESS', () => {
+    const info = readHarnessInfo({ env: { EVAL_HARNESS: 'aider' } });
+
+    expect(info.harness).toBe('aider');
+    expect(info.evidenceHarness).toBe('aider');
+    expect(info.harnessLabel).toBe('Aider CLI');
+    expect(info.effectiveModel).toBe('ollama_chat/qwen3-opencode:30b');
+    expect(info.commandLabel).toBe('python -m aider --message');
+    expect(info.flowCommandLabel).toBe('prompt-language ci --runner aider');
   });
 
   it('lets AI_CMD override command labels for custom template runs', () => {
@@ -85,7 +108,9 @@ describe('eval harness selection', () => {
     });
 
     expect(info.harness).toBe('claude');
+    expect(info.evidenceHarness).toBe('AI_CMD');
     expect(info.harnessLabel).toBe('Custom AI command (gemini)');
+    expect(info.effectiveModel).toBeNull();
     expect(info.commandLabel).toBe('gemini -p --yolo');
     expect(info.flowCommandLabel).toBe('gemini -p --yolo');
   });
@@ -99,7 +124,9 @@ describe('eval harness selection', () => {
     });
 
     expect(info.harness).toBe('codex');
+    expect(info.evidenceHarness).toBe('codex');
     expect(info.harnessLabel).toBe('Codex CLI');
+    expect(info.effectiveModel).toBe('gpt-5.2');
     expect(info.commandLabel).toBe('codex exec');
     expect(info.flowCommandLabel).toBe('prompt-language ci --runner codex');
   });
@@ -113,7 +140,9 @@ describe('eval harness selection', () => {
     });
 
     expect(info.harness).toBe('opencode');
+    expect(info.evidenceHarness).toBe('opencode');
     expect(info.harnessLabel).toBe('OpenCode CLI');
+    expect(info.effectiveModel).toBeNull();
     expect(info.commandLabel).toBe('opencode run');
     expect(info.flowCommandLabel).toBe('prompt-language ci --runner opencode');
   });

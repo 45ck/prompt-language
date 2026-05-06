@@ -217,6 +217,13 @@ export class ClaudePromptTurnRunner implements PromptTurnRunner {
         stderr += chunk;
       });
 
+      child.stdin?.on('error', (error: NodeJS.ErrnoException) => {
+        if (error.code === 'EPIPE' || error.code === 'ERR_STREAM_DESTROYED') {
+          return;
+        }
+        stderr += error.message;
+      });
+
       child.once('error', (error) => {
         stderr += error.message;
         settle({

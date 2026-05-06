@@ -13,7 +13,12 @@ import type { CaptureReader } from './ports/capture-reader.js';
 import type { CommandRunner } from './ports/command-runner.js';
 import type { MemoryStore, MemoryEntry } from './ports/memory-store.js';
 import type { MessageStore } from './ports/message-store.js';
-import type { ProcessSpawner } from './ports/process-spawner.js';
+import type {
+  ChildStatus,
+  ProcessSpawner,
+  SpawnInput,
+  SpawnResult,
+} from './ports/process-spawner.js';
 import type { PromptTurnResult, PromptTurnRunner } from './ports/prompt-turn-runner.js';
 import type { StateStore } from './ports/state-store.js';
 import type { SnapshotStorePort } from './ports/snapshot-store.js';
@@ -63,6 +68,34 @@ const WORKSPACE_FINGERPRINT_SKIP_DIRS = new Set([
   'dist',
   'node_modules',
 ]);
+
+function withDefaultSpawnModel(
+  processSpawner: ProcessSpawner | undefined,
+  model: string | undefined,
+): ProcessSpawner | undefined {
+  if (processSpawner == null || model == null) {
+    return processSpawner;
+  }
+
+  return {
+    spawn(input: SpawnInput): Promise<SpawnResult> {
+      return processSpawner.spawn({
+        ...input,
+        model: input.model ?? model,
+      });
+    },
+    poll(stateDir: string): Promise<ChildStatus> {
+      return processSpawner.poll(stateDir);
+    },
+    ...(processSpawner.terminate != null
+      ? {
+          terminate(pid: number): Promise<boolean> {
+            return processSpawner.terminate?.(pid) ?? Promise.resolve(false);
+          },
+        }
+      : {}),
+  };
+}
 function hasRunningChildren(state: SessionState): boolean {
   return Object.values(state.spawnedChildren).some((child) => child?.status === 'running');
 }
@@ -370,6 +403,7 @@ export async function runFlowHeadless(
     deps.memoryStore,
   );
   await deps.stateStore.save(state);
+  const processSpawner = withDefaultSpawnModel(deps.processSpawner, input.model);
 
   let turns = 0;
   const buildOutput = (
@@ -406,7 +440,7 @@ export async function runFlowHeadless(
       state,
       commandRunner,
       deps.captureReader,
-      deps.processSpawner,
+      processSpawner,
       deps.auditLogger,
       deps.memoryStore,
       deps.messageStore,

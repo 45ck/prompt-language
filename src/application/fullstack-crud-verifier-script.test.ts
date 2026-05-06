@@ -569,10 +569,6 @@ describe('FSCRUD verifier script', () => {
         [
           join(ROOT, 'bin', 'cli.mjs'),
           'validate',
-          '--runner',
-          'aider',
-          '--mode',
-          'headless',
           '--file',
           join(ROOT, 'experiments', 'fullstack-crud-comparison', 'flows', flow),
         ],

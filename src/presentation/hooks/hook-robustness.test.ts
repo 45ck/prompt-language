@@ -44,7 +44,7 @@ function runHook(hookName: string, input: string, cwd: string): HookResult {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', `${hookName}.ts`);
   try {
-    const stdout = execSync(`npx tsx "${scriptPath}"`, {
+    const stdout = execSync(`"${srcRoot}/node_modules/.bin/tsx" "${scriptPath}"`, {
       input,
       encoding: 'utf-8',
       cwd,

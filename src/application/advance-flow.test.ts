@@ -1608,6 +1608,49 @@ describe('autoAdvanceNodes — spawn', () => {
     expect(spawnedInputs[0]!.model).toBe('gpt-5');
   });
 
+  it('uses agent profile context and model when spawn references a named agent', async () => {
+    const spawnedInputs: SpawnInput[] = [];
+    const mockSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 42 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+    const spawn = createSpawnNode(
+      'sp1',
+      'worker',
+      [createPromptNode('p1', 'inner')],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      'reviewer',
+    );
+    const spec = createFlowSpec(
+      'test',
+      [spawn],
+      [],
+      [],
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      { careful: { name: 'careful', systemPreamble: 'Review carefully.', model: 'gpt-review' } },
+      { reviewer: { name: 'reviewer', profile: 'careful' } },
+    );
+    const state = createSessionState('s1', spec);
+    await autoAdvanceNodes(state, undefined, undefined, mockSpawner);
+    expect(spawnedInputs[0]!.goal).toContain('Review carefully.');
+    expect(spawnedInputs[0]!.model).toBe('gpt-review');
+  });
+
   it('node model overrides profile model (fgch)', async () => {
     const spawnedInputs: SpawnInput[] = [];
     const mockSpawner: ProcessSpawner = {
@@ -5673,7 +5716,7 @@ describe('autoAdvanceNodes — if grounded-by fast path', () => {
       });
     } else {
       expect(command).toBe("echo 'alpha & echo injected'");
-      expect(options).toBeUndefined();
+      expect(options).toEqual({ env: { SAFE_ENV: '1' } });
     }
   });
 });

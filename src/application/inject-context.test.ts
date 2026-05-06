@@ -1005,7 +1005,7 @@ describe('injectContext — run node auto-advance', () => {
     await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
 
     expect(commands).toHaveLength(1);
-    expectRecordedInterpolation(commands[0], "node 'app.js'", 'app.js');
+    expectRecordedInterpolation(commands[0], 'node app.js', 'app.js');
   });
 });
 
@@ -1074,7 +1074,7 @@ describe('injectContext — prompt node auto-advance', () => {
     const result = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
 
     expect(commands).toHaveLength(1);
-    expectRecordedInterpolation(commands[0], "echo 'test-file'", 'test-file');
+    expectRecordedInterpolation(commands[0], 'echo test-file', 'test-file');
     expect(result.prompt).toContain('Check test-file output');
     const saved = await store.loadCurrent();
     expect(saved?.currentNodePath).toEqual([2]);
@@ -1166,7 +1166,7 @@ describe('injectContext — let run edge cases', () => {
     await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
 
     expect(commands).toHaveLength(1);
-    expectRecordedInterpolation(commands[0], "echo 'foo'", 'foo');
+    expectRecordedInterpolation(commands[0], 'echo foo', 'foo');
   });
 
   it('let run sets exit variables (last_exit_code, command_failed, etc.)', async () => {
@@ -2297,12 +2297,12 @@ describe('injectContext — foreach iteration', () => {
     // First: let auto-advances, foreach enters with f=a.ts, run executes, prompt captures
     const result1 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
     expect(result1.prompt).toContain('check a.ts');
-    expectRecordedInterpolation(commands[0], "lint 'a.ts'", 'a.ts');
+    expectRecordedInterpolation(commands[0], 'lint a.ts', 'a.ts');
 
     // Second: body exhausted, f=b.ts, re-enter
     const result2 = await injectContext({ prompt: 'Go', sessionId: 's1' }, store, mockRunner);
     expect(result2.prompt).toContain('check b.ts');
-    expectRecordedInterpolation(commands[1], "lint 'b.ts'", 'b.ts');
+    expectRecordedInterpolation(commands[1], 'lint b.ts', 'b.ts');
   });
 
   it('parses and executes foreach from DSL text', async () => {

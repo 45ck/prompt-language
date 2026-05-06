@@ -1,6 +1,6 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
 import {
@@ -353,7 +353,7 @@ describe('eval-dataset-runner', () => {
 
       const firstCase = report.cases[0];
       expect(firstCase?.runId).toMatch(/^eval\.e1\.case-a\.claude\.gated\.r1\./);
-      expect(firstCase?.artifacts?.bundlePath).toContain('\\runs\\');
+      expect(firstCase?.artifacts?.bundlePath).toContain(`${sep}runs${sep}`);
       expect(firstCase?.artifacts?.annotationPath).toBeNull();
 
       const bundlePath = firstCase?.artifacts?.bundlePath;

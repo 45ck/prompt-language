@@ -261,6 +261,46 @@ describe('runFlowHeadless', () => {
     expect(promptRunner.prompts[0]).toContain('Create done.txt');
   });
 
+  it('passes the parent model to child spawns without explicit model selection', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-model-spawn-'));
+    const spawnedInputs: SpawnInput[] = [];
+    const processSpawner: ProcessSpawner = {
+      async spawn(input) {
+        spawnedInputs.push(input);
+        return { pid: 123 };
+      },
+      async poll() {
+        return { status: 'running' };
+      },
+    };
+
+    await runFlowHeadless(
+      {
+        cwd: tempDir,
+        flowText: [
+          'Goal: test parent model inheritance',
+          '',
+          'flow:',
+          '  spawn "worker"',
+          '    prompt: Do child work',
+          '  end',
+        ].join('\n'),
+        model: 'ollama/qwen3-opencode-big:30b',
+        sessionId: randomUUID(),
+        maxTurns: 1,
+      },
+      {
+        commandRunner: new InMemoryCommandRunner(),
+        processSpawner,
+        promptTurnRunner: new RecordingPromptRunner(),
+        stateStore: new InMemoryStateStore(),
+      },
+    );
+
+    expect(spawnedInputs).toHaveLength(1);
+    expect(spawnedInputs[0]!.model).toBe('ollama/qwen3-opencode-big:30b');
+  });
+
   it('accepts prompt-runner no-progress reports when the workspace changed', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-headless-progress-fingerprint-'));
     const commandRunner = new InMemoryCommandRunner();
@@ -738,7 +778,7 @@ describe('runFlowHeadless', () => {
     );
 
     const promptRunner = new RecordingPromptRunner(async ({ cwd }) => {
-      await writeFile(join(cwd, 'app.js'), 'process.exit(0)\n', 'utf8');
+      await writeFile(join(cwd, 'app.js'), 'process.exit(0)\n// fixed\n', 'utf8');
       return {
         exitCode: 0,
         assistantText: 'Task complete',

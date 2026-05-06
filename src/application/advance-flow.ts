@@ -2494,9 +2494,14 @@ async function advanceSpawnNode(
 
   const stateDir = `.prompt-language-${node.name}`;
   const flowText = renderSpawnBody(node);
+  const agent =
+    node.agentRef != null && current.flowSpec.agents != null
+      ? current.flowSpec.agents[node.agentRef]
+      : undefined;
+  const profileName = node.profileName ?? agent?.profile;
   // beads: prompt-language-fgch — prepend profile context block to child goal
   const profileResolved =
-    node.profileName != null ? buildProfileContextBlock(current, node.profileName) : undefined;
+    profileName != null ? buildProfileContextBlock(current, profileName) : undefined;
   // beads: prompt-language-yvda — resolve agent-level skills into directives for child prompt
   const agentSkillBlock = resolveAgentSkillDirectives(current, node.agentRef);
   const baseGoal = `Sub-task: ${node.name}`;

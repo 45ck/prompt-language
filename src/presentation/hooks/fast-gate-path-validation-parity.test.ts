@@ -31,7 +31,7 @@ interface HookResult {
 function runHook(hookName: 'post-tool-use' | 'codex-post-tool-use', cwd: string): HookResult {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', `${hookName}.ts`);
-  const result = spawnSync(`npx tsx "${scriptPath}"`, {
+  const result = spawnSync(`"${srcRoot}/node_modules/.bin/tsx" "${scriptPath}"`, {
     input: JSON.stringify({ tool_name: 'Write' }),
     encoding: 'utf-8',
     cwd,

@@ -33,7 +33,7 @@ const FULL_MODE = process.argv.includes('--full');
 // ── Helpers ──────────────────────────────────────────────────────────
 
 function runHook(input, cwd) {
-  return execSync(`npx tsx "${HOOK_SCRIPT}"`, {
+  return execSync(`"${SRC_ROOT}/node_modules/.bin/tsx" "${HOOK_SCRIPT}"`, {
     input,
     encoding: 'utf-8',
     cwd,

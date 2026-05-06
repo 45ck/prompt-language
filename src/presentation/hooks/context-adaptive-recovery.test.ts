@@ -30,7 +30,7 @@ interface HookResult {
 function runHook(scriptName: 'session-start.ts' | 'pre-compact.ts', cwd: string): HookResult {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', scriptName);
-  const result = spawnSync(`npx tsx "${scriptPath}"`, {
+  const result = spawnSync(`"${srcRoot}/node_modules/.bin/tsx" "${scriptPath}"`, {
     input: '{}',
     encoding: 'utf-8',
     cwd,

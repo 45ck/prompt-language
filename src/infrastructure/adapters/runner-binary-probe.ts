@@ -11,17 +11,13 @@ const RUNNER_BINARIES: Readonly<Record<RunnerName, string>> = {
 };
 
 function candidateNames(binary: string, env: NodeJS.ProcessEnv): readonly string[] {
-  if (process.platform !== 'win32' || extname(binary)) {
+  const extensions = env['PATHEXT']?.split(';').filter((value) => value.length > 0) ?? [];
+  if (extname(binary) || (process.platform !== 'win32' && extensions.length === 0)) {
     return [binary];
   }
 
-  const extensions = env['PATHEXT']?.split(';').filter((value) => value.length > 0) ?? [
-    '.EXE',
-    '.CMD',
-    '.BAT',
-    '.COM',
-  ];
-  return [binary, ...extensions.map((extension) => `${binary}${extension}`)];
+  const platformExtensions = extensions.length > 0 ? extensions : ['.EXE', '.CMD', '.BAT', '.COM'];
+  return [binary, ...platformExtensions.map((extension) => `${binary}${extension}`)];
 }
 
 export function probeRunnerBinary(

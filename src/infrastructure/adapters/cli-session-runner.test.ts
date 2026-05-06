@@ -298,14 +298,19 @@ describe('CliSessionRunner', () => {
   });
 
   it('returns false when terminate has no pid and uses taskkill on Windows PIDs', async () => {
-    const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
+    const restorePlatform = setPlatform('win32');
+    try {
+      const runner = new CliSessionRunner('C:/workspace', 'codex', 'bin/cli.mjs');
 
-    await expect(runner.terminate({ pid: undefined })).resolves.toBe(false);
-    await expect(runner.terminate({ pid: 4321 })).resolves.toBe(true);
+      await expect(runner.terminate({ pid: undefined })).resolves.toBe(false);
+      await expect(runner.terminate({ pid: 4321 })).resolves.toBe(true);
 
-    expect(execFileSyncMock).toHaveBeenCalledWith('taskkill', ['/PID', '4321', '/T', '/F'], {
-      stdio: 'ignore',
-    });
+      expect(execFileSyncMock).toHaveBeenCalledWith('taskkill', ['/PID', '4321', '/T', '/F'], {
+        stdio: 'ignore',
+      });
+    } finally {
+      restorePlatform();
+    }
   });
 
   it('uses process groups on non-Windows and falls back to direct pid termination', async () => {

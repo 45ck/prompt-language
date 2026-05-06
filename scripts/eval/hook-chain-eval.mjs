@@ -32,7 +32,7 @@ function runHook(script, input, cwd) {
     stdio: ['pipe', 'pipe', 'pipe'],
   };
   try {
-    const stdout = execSync(`npx tsx "${script}"`, opts);
+    const stdout = execSync(`"${SRC_ROOT}/node_modules/.bin/tsx" "${script}"`, opts);
     return { exitCode: 0, stdout, stderr: '' };
   } catch (error) {
     return {

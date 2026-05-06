@@ -31,7 +31,7 @@ interface HookResult {
 function runHook(input: string, cwd: string, env: NodeJS.ProcessEnv = {}): HookResult {
   const srcRoot = join(import.meta.dirname, '..', '..', '..');
   const scriptPath = join(srcRoot, 'src', 'presentation', 'hooks', 'post-tool-use.ts');
-  const result = spawnSync(`npx tsx "${scriptPath}"`, {
+  const result = spawnSync(`"${srcRoot}/node_modules/.bin/tsx" "${scriptPath}"`, {
     input,
     encoding: 'utf-8',
     cwd,

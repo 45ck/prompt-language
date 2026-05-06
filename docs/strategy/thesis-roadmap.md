@@ -45,6 +45,12 @@ JSON usage/cost with metadata-only log fallback. Stdout/stderr artifact refs and
 telemetry-backed comparative repetitions remain required before cost/speed
 claims.
 
+The first repeated prompt-backed telemetry slice (`A`) is operationally useful
+but not thesis-confirming: Ollama `qwen3:8b` failed `0/3`, Codex `gpt-5.2`
+passed the available local smoke artifacts with unknown cost basis, and Claude
+passed with provider-reported cost. This supports "we can measure local and
+cloud runners under PL"; it does not support "PL is cheaper/faster/better."
+
 The current hypothesis verdict table is maintained in
 [Research Synthesis: 2026-05-06](../evaluation/2026-05-06-research-synthesis.md).
 Use that synthesis as the claim boundary before adding more thesis experiments.

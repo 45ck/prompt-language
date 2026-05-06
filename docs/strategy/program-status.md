@@ -90,6 +90,12 @@ claimed: thesis-level cost, latency, or pass-rate deltas for H1-H6. No E5 pair
 has produced a `maintenanceViabilityIndex` number, and cloud cost claims still
 require provider-reported cost or a versioned pricing basis.
 
+The first repeated smoke `A` telemetry slice is now measurable through
+`npm run eval:smoke:summary`: Ollama `qwen3:8b` failed `0/3`, Codex `gpt-5.2`
+passed the available local artifacts with unknown cost basis, and Claude passed
+with provider-reported cost. This is operational measurement evidence, not a
+thesis-level local-vs-cloud comparison.
+
 ## 3a. Claim-eligibility rule
 
 A run becomes **claim-eligible** only once ALL of the following hold. Today

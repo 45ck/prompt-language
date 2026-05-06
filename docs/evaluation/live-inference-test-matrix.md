@@ -60,6 +60,10 @@ also record before/after `ollama ps` and best-effort `nvidia-smi` snapshots.
 Cloud cost remains `null` unless the provider reports cost or the run declares a
 versioned pricing basis.
 
+Use `npm run eval:smoke:summary` to aggregate local smoke artifacts into a safe
+markdown or JSON telemetry summary. The summary intentionally uses aggregate
+`providerMetrics` and does not copy raw `providerTelemetry` entries into docs.
+
 ## Minimal Matrix Before Full Claims
 
 Use this small matrix before spending time on the full suite:
@@ -68,10 +72,14 @@ Use this small matrix before spending time on the full suite:
 | ---- | ----------------------------------- | -------------------------------------------------------------------- |
 | 1    | `npm run harness:conformance`       | Proves static coverage has not drifted.                              |
 | 2    | Ollama `--only E` with `qwen3:8b`   | Proves local PL flow execution can create observable workspace diff. |
-| 3    | Codex `--only E` with a cheap model | Proves cloud PL flow execution and token telemetry path.             |
+| 3    | Codex `--only E` with a cheap model | Proves cloud PL flow execution path.                                 |
 | 4    | Claude `--only E` if logged in      | Separates auth blocker from PL runtime behavior.                     |
 | 5    | One capture scenario such as `G`    | Tests model-output protocol, the weakest local-model path.           |
 | 6    | One spawn scenario such as `AM`     | Tests child process state persistence and timeout handling.          |
+
+For token, cost, or local-vs-cloud claims, also run `k=3` on a prompt-backed
+smoke id such as `A` for each provider under comparison. The `E` scenario is
+useful for runner plumbing, but it may not produce prompt-turn telemetry.
 
 Only after these pass should the full quick or full smoke suite be used as a
 claim-level run.

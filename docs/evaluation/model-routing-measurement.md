@@ -47,6 +47,30 @@ quality claims.
 | PL Codex smoke `A`     | `gpt-5.2`           | Passed `1/1` | 26.9s       | 112,399 input, 502 output, 110,336 cached input, 251 reasoning output      | Cost null until pricing basis    |
 | PL Claude smoke `A`    | `claude-opus-4-7`   | Passed `1/1` | 31.9s       | 23 input, 796 output, 308,988 cache read, 62,602 cache creation            | Provider-reported $0.5657715     |
 
+## Repeated Provider Telemetry Matrix
+
+The first bounded repetition used smoke id `A`, because it exercises real prompt
+turns and therefore produces provider telemetry. The local artifacts are under
+`scripts/eval/results/`; regenerate the aggregate view with:
+
+```sh
+npm run eval:smoke:summary -- --test A --harness ollama,codex,claude --last 12
+```
+
+Observed on 2026-05-06 in this bounded prompt-backed smoke slice:
+
+| Provider | Harness | Model label                    | Runs | Result | Median wall time | Token/cost signal                                                                                    | Cost basis        |
+| -------- | ------- | ------------------------------ | ---: | ------ | ---------------: | ---------------------------------------------------------------------------------------------------- | ----------------- |
+| Ollama   | ollama  | `ollama/qwen3:8b`              |    3 | `0/3`  |            21.1s | 1,488 input, 2,148 output, 3,636 total; `ollama ps` showed GPU residency                             | zero API cost     |
+| Codex    | codex   | `gpt-5.2`                      |    5 | `5/5`  |            27.1s | 314,408 input, 1,382 output, 308,736 cached input, 772 reasoning output                              | unknown           |
+| Claude   | claude  | CLI default / partial metadata |    3 | `3/3`  |            44.4s | 69 input, 2,487 output, 967,945 cache read, 146,753 cache creation; provider-reported cost $1.463699 | provider-reported |
+
+Claim boundary: this is telemetry-comparable, not outcome-comparable proof.
+`k=3` is a stability probe, not statistical proof. The Ollama result is a
+behavioral failure with useful local telemetry; the Codex result is a pass-rate
+signal with cost intentionally left null; the Claude result is pass-rate plus
+provider-reported cost for this smoke scope.
+
 Using OpenAI's published GPT-5.4 mini API price as a rough equivalent
 ($0.75/1M input tokens and $4.50/1M output tokens, published 2026-03-17), the
 Codex frontier probe is roughly $0.014-$0.016 if billed like API usage. Codex

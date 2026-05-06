@@ -30,6 +30,11 @@ full-stack implementation. See
   metadata-only session-log fallback. The first prompt-backed local telemetry
   probe failed behaviorally, so this proves measurement plumbing, not model
   quality.
+- `npm run eval:smoke:summary` now aggregates local smoke reports into a safe
+  telemetry table without copying raw provider transcripts. The 2026-05-06
+  bounded `A` slice shows Ollama `qwen3:8b` failed `0/3`, Codex `gpt-5.2`
+  passed `5/5` with cost still unknown, and Claude passed `3/3` with
+  provider-reported cost for that smoke scope.
 - Rerun `npm run test` and `npm run ci` after new local edits before treating the
   worktree as green.
 - historical checked-in evaluation evidence includes an older `27/27` `npm run eval:smoke:codex:quick` pass through the Codex headless path; current-branch Codex live claims require a fresh rerun

@@ -47,6 +47,30 @@ The Claude run used `EVAL_TIMEOUT_MS=120000` and
 stopped hardcoding `claude.cmd` and allowed `cmd.exe` to resolve `claude` through
 `PATHEXT`; this workstation has `claude.exe` and no `claude.cmd`.
 
+## Repeated Prompt-Backed Telemetry Slice
+
+A bounded top-up matrix reran smoke `A` through Ollama, Codex, and Claude and
+was summarized with:
+
+```sh
+npm run eval:smoke:summary -- --test A --harness ollama,codex,claude --last 12
+```
+
+Observed result from local smoke artifacts ending
+`smoke-2026-05-06T01-56-55-427Z.json`:
+
+| Harness | Model label                    | Runs | Passes | Median wall time | Usage/cost summary                                                                                   |
+| ------- | ------------------------------ | ---: | -----: | ---------------: | ---------------------------------------------------------------------------------------------------- |
+| Ollama  | `ollama/qwen3:8b`              |    3 |      0 |            21.1s | 1,488 input, 2,148 output, 3,636 total; zero provider API cost; GPU residency snapshot captured      |
+| Codex   | `gpt-5.2`                      |    5 |      5 |            27.1s | 314,408 input, 1,382 output, 308,736 cached input, 772 reasoning output; cost basis unknown          |
+| Claude  | CLI default / partial metadata |    3 |      3 |            44.4s | 69 input, 2,487 output, 967,945 cache read, 146,753 cache creation; provider-reported cost $1.463699 |
+
+This is measurement-readiness evidence. It shows the same PL smoke slice can now
+be measured across local and cloud runners. It does not prove local-vs-cloud
+quality or cost advantage, because the local Ollama arm failed behaviorally and
+the cloud arms use different providers, accounting surfaces, and model
+capabilities.
+
 ## What This Proves
 
 - The PL smoke harness can execute the same bounded `run` scenario through local

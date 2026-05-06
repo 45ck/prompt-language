@@ -44,9 +44,16 @@ Every live inference artifact should record:
 - retry count or retry evidence where the runner exposes it
 - stdout/stderr paths or retained snippets sufficient to explain failures
 
-The smoke runner now records the first six fields plus per-test duration in its
-JSON report. Provider-specific token, cost, retry, and GPU data still need a
-live-runner artifact layer for full experiment claims.
+The smoke runner currently records `timestamp`, `os`, `nodeVersion`, `status`,
+`harness`, `runnerHarness`, `harnessLabel`, `flowCommandLabel`, `model`,
+`timeoutMs`, `traceEnabled`, `only`, `quickMode`, `duration_ms`, `passed`,
+`failed`, and per-test `{name,label,passed,duration_ms,error}`. Blocked reports
+also record `blockedReason` and `blockedDetail`, and may contain zero tests.
+
+Still missing from the smoke report itself: commit/branch/operator, exact
+invoked npm command, stdout/stderr artifact paths, token usage and estimated
+cost for cloud runs, `ollama ps` / GPU residency for local runs, retry counts,
+raw provider transcript paths, and trace artifact paths when tracing is enabled.
 
 ## Minimal Matrix Before Full Claims
 

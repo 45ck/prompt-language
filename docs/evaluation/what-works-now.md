@@ -20,9 +20,11 @@ full-stack implementation. See
 
 ## Proven in this repo
 
-- Last recorded verification on 2026-05-06: `npm run test` and `npm run ci`
-  passed before commit `f4717fa`. Rerun those gates after new local edits before
-  treating the worktree as green.
+- Last recorded bounded live smoke on 2026-05-06: Ollama `qwen3:8b`, Codex
+  `gpt-5.2`, and Claude CLI each passed the `--only E` smoke slice on win32. See
+  [Live Smoke Evidence: 2026-05-06](2026-05-06-live-smoke-evidence.md).
+- Rerun `npm run test` and `npm run ci` after new local edits before treating the
+  worktree as green.
 - historical checked-in evaluation evidence includes an older `27/27` `npm run eval:smoke:codex:quick` pass through the Codex headless path; current-branch Codex live claims require a fresh rerun
 - the v1 eval runner is real: checked-in JSONL datasets, repeat counts, machine-readable reports, and baseline comparison all ship through `prompt-language eval`
 - review and judge plumbing is now part of the runtime surface rather than dead design text: named judges, typed review verdict capture, and strict fail-closed review behavior are implemented and tested

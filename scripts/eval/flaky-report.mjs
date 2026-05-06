@@ -82,6 +82,13 @@ async function loadHistoryRuns() {
 
   const runs = new Map();
   for (const entry of entries) {
+    if (
+      entry.status === 'blocked' ||
+      typeof entry.testId !== 'string' ||
+      typeof entry.testName !== 'string'
+    ) {
+      continue;
+    }
     const runId = entry.runId ?? entry.date;
     if (!runs.has(runId)) {
       runs.set(runId, {
@@ -109,6 +116,9 @@ function buildReport(runs) {
 
   for (const run of runs) {
     for (const test of run.tests) {
+      if (typeof test.name !== 'string' || typeof test.label !== 'string') {
+        continue;
+      }
       if (!stats.has(test.name)) {
         stats.set(test.name, {
           name: test.name,

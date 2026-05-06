@@ -9,7 +9,10 @@ It replaces the older pre-implementation gap analysis that assumed `approve`, `r
 - The smoke suite now spans `A` through `BA`, with quick and full subsets called out in the smoke runner.
 - Historical evidence records an older quick Codex slice at `27/27` through `npm run eval:smoke:codex:quick`.
 - That quick-smoke result should be treated as non-current unless it is rerun on this branch.
-- `npm run eval:smoke` is still required for supported-host live validation, but it is blocked on this workstation by missing Claude auth/login.
+- Current post-`7ae85ec` bounded smoke evidence exists for `--only E`: Ollama
+  `qwen3:8b`, Codex `gpt-5.2`, and Claude CLI all passed `1/1` on win32. See
+  [Live Smoke Evidence: 2026-05-06](2026-05-06-live-smoke-evidence.md).
+- These are bounded live-smoke passes, not quick-suite or claim-grade full-suite evidence.
 
 ## Coverage snapshot
 

@@ -9,6 +9,7 @@ import type {
 const DEFAULT_TIMEOUT_MS = 600_000;
 const CLAUDE_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_CLAUDE_TIMEOUT_MS';
 const CLAUDE_EFFORT_ENV = 'PROMPT_LANGUAGE_CLAUDE_EFFORT';
+const CLAUDE_BIN_ENV = 'PROMPT_LANGUAGE_CLAUDE_BIN';
 const SKILL_WRAPPER_ENV = 'PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER';
 const CLAUDE_SKILL_WRAPPER_ENV = 'PROMPT_LANGUAGE_CLAUDE_SKILL_PROMPT_WRAPPER';
 const VALID_CLAUDE_EFFORTS = new Set(['low', 'medium', 'high']);
@@ -68,11 +69,12 @@ export function buildClaudePrompt(prompt: string): string {
   ].join('\n');
 }
 
-function claudeLaunchCommand(args: readonly string[]): [string, ...string[]] {
+export function claudeLaunchCommand(args: readonly string[]): [string, ...string[]] {
+  const command = readEnv(CLAUDE_BIN_ENV) ?? 'claude';
   if (process.platform === 'win32') {
-    return ['cmd.exe', '/d', '/s', '/c', 'claude.cmd', ...args];
+    return ['cmd.exe', '/d', '/s', '/c', command, ...args];
   }
-  return ['claude', ...args];
+  return [command, ...args];
 }
 
 function terminateClaudeProcessTree(child: ReturnType<typeof spawn>): void {

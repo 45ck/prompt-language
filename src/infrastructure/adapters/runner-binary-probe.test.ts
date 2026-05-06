@@ -26,4 +26,11 @@ describe('probeRunnerBinary', () => {
       probeRunnerBinary('codex', { PATH: `${tempDir}${delimiter}/bin`, PATHEXT: '.CMD;.EXE' }),
     ).toBe(true);
   });
+
+  it('accepts a Windows EXE runner without requiring a CMD shim', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-runner-probe-'));
+    await writeFile(join(tempDir, 'claude.EXE'), '', 'utf8');
+
+    expect(probeRunnerBinary('claude', { PATH: tempDir, PATHEXT: '.CMD;.EXE' })).toBe(true);
+  });
 });

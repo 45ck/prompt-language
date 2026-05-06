@@ -916,7 +916,7 @@ export function getEffectiveModel(model = DEFAULT_MODEL) {
   }
 
   if (HARNESS === 'aider') {
-    return 'ollama_chat/qwen3-opencode:30b';
+    return 'ollama/gemma4:31b';
   }
 
   return null;

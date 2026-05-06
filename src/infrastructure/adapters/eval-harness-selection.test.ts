@@ -95,7 +95,7 @@ describe('eval harness selection', () => {
     expect(info.harness).toBe('aider');
     expect(info.evidenceHarness).toBe('aider');
     expect(info.harnessLabel).toBe('Aider CLI');
-    expect(info.effectiveModel).toBe('ollama_chat/qwen3-opencode:30b');
+    expect(info.effectiveModel).toBe('ollama/gemma4:31b');
     expect(info.commandLabel).toBe('python -m aider --message');
     expect(info.flowCommandLabel).toBe('prompt-language ci --runner aider');
   });

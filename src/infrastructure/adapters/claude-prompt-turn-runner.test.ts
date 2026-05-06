@@ -10,7 +10,7 @@ vi.mock('node:child_process', () => ({
   spawnSync: mockedSpawnSync,
 }));
 
-const { ClaudePromptTurnRunner, buildClaudePrompt } =
+const { ClaudePromptTurnRunner, buildClaudePrompt, claudeLaunchCommand } =
   await import('./claude-prompt-turn-runner.js');
 
 function createChildProcess() {
@@ -40,6 +40,7 @@ describe('ClaudePromptTurnRunner', () => {
     vi.resetAllMocks();
     delete process.env['PROMPT_LANGUAGE_CLAUDE_EFFORT'];
     delete process.env['PROMPT_LANGUAGE_CLAUDE_TIMEOUT_MS'];
+    delete process.env['PROMPT_LANGUAGE_CLAUDE_BIN'];
     delete process.env['PROMPT_LANGUAGE_SKILL_PROMPT_WRAPPER'];
     delete process.env['PROMPT_LANGUAGE_CLAUDE_SKILL_PROMPT_WRAPPER'];
   });
@@ -93,6 +94,34 @@ describe('ClaudePromptTurnRunner', () => {
         prompt: 'Continue',
       }),
     ).toEqual(['-p', '--dangerously-skip-permissions']);
+  });
+
+  it('uses the PATH-resolved claude command on Windows instead of a hard-coded cmd shim', () => {
+    const originalPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    try {
+      expect(claudeLaunchCommand(['-p'])).toEqual(['cmd.exe', '/d', '/s', '/c', 'claude', '-p']);
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    }
+  });
+
+  it('allows an explicit Claude binary override for non-standard installs', () => {
+    process.env['PROMPT_LANGUAGE_CLAUDE_BIN'] = 'C:\\Tools\\claude.exe';
+    const originalPlatform = process.platform;
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    try {
+      expect(claudeLaunchCommand(['-p'])).toEqual([
+        'cmd.exe',
+        '/d',
+        '/s',
+        '/c',
+        'C:\\Tools\\claude.exe',
+        '-p',
+      ]);
+    } finally {
+      Object.defineProperty(process, 'platform', { value: originalPlatform });
+    }
   });
 
   it('launches claude and returns stdout as assistant text', async () => {

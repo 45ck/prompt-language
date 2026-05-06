@@ -178,6 +178,24 @@ smoke_result:
 scenario_summary:
 blocker_type:
 blocker_detail:
+smoke_report:
+  harness:
+  runner_harness:
+  harness_label:
+  flow_command_label:
+  model:
+  timeout_ms:
+  trace_enabled:
+  only:
+  quick_mode:
+  blocked_reason:
+  blocked_detail:
+  stdout_stderr_artifacts:
+  provider_metrics:
+    token_usage:
+    estimated_cost_usd:
+    gpu_state:
+    retry_count:
 regression_classification:
 next_action:
 ```

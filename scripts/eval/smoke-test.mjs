@@ -241,65 +241,72 @@ async function appendHistory(report, runId) {
 }
 
 async function writeBlockedResult({ totalStart, reason, detail }) {
-  await mkdir(RESULTS_DIR, { recursive: true });
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const runId = new Date().toISOString();
-  const filename = `smoke-${timestamp}.json`;
-  const filepath = join(RESULTS_DIR, filename);
-
-  let nodeVersion = '';
   try {
-    nodeVersion = execSync('node -v', { encoding: 'utf-8' }).trim();
-  } catch {
-    nodeVersion = process.version;
+    await mkdir(RESULTS_DIR, { recursive: true });
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const runId = new Date().toISOString();
+    const filename = `smoke-${timestamp}.json`;
+    const filepath = join(RESULTS_DIR, filename);
+
+    let nodeVersion = '';
+    try {
+      nodeVersion = execSync('node -v', { encoding: 'utf-8' }).trim();
+    } catch {
+      nodeVersion = process.version;
+    }
+
+    const report = {
+      timestamp: runId,
+      os: platform(),
+      nodeVersion,
+      status: 'blocked',
+      blockedReason: reason,
+      blockedDetail: detail,
+      harness: getEvidenceHarnessName(),
+      runnerHarness: getHarnessName(),
+      harnessLabel: getHarnessLabel(),
+      flowCommandLabel: getFlowCommandLabel(),
+      model: getEffectiveModel(),
+      timeoutMs: TIMEOUT,
+      traceEnabled: TRACE_ENABLED,
+      only: ONLY_FILTERS ? [...ONLY_FILTERS].sort() : null,
+      quickMode: QUICK_MODE,
+      duration_ms: Date.now() - totalStart,
+      passed,
+      failed,
+      tests: results,
+    };
+
+    await writeFile(filepath, JSON.stringify(report, null, 2));
+    await appendFile(
+      join(RESULTS_DIR, 'history.jsonl'),
+      `${JSON.stringify({
+        date: report.timestamp,
+        runId,
+        testId: null,
+        testName: null,
+        passed: false,
+        durationMs: report.duration_ms,
+        attempt: 1,
+        quickMode: report.quickMode,
+        status: report.status,
+        blockedReason: report.blockedReason,
+        harness: report.harness,
+        runnerHarness: report.runnerHarness,
+        model: report.model,
+        timeoutMs: report.timeoutMs,
+        os: report.os,
+        nodeVersion: report.nodeVersion,
+      })}\n`,
+    );
+    console.log(`\n[smoke-test] Blocked result written to ${filepath}`);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[smoke-test] Failed to write blocked result artifact: ${message}`);
+  } finally {
+    await cleanupOldResults();
   }
-
-  const report = {
-    timestamp: runId,
-    os: platform(),
-    nodeVersion,
-    status: 'blocked',
-    blockedReason: reason,
-    blockedDetail: detail,
-    harness: getEvidenceHarnessName(),
-    runnerHarness: getHarnessName(),
-    harnessLabel: getHarnessLabel(),
-    flowCommandLabel: getFlowCommandLabel(),
-    model: getEffectiveModel(),
-    timeoutMs: TIMEOUT,
-    traceEnabled: TRACE_ENABLED,
-    only: ONLY_FILTERS ? [...ONLY_FILTERS].sort() : null,
-    quickMode: QUICK_MODE,
-    duration_ms: Date.now() - totalStart,
-    passed,
-    failed,
-    tests: results,
-  };
-
-  await writeFile(filepath, JSON.stringify(report, null, 2));
-  await appendFile(
-    join(RESULTS_DIR, 'history.jsonl'),
-    `${JSON.stringify({
-      date: report.timestamp,
-      runId,
-      testId: null,
-      testName: null,
-      passed: false,
-      durationMs: report.duration_ms,
-      attempt: 1,
-      quickMode: report.quickMode,
-      status: report.status,
-      blockedReason: report.blockedReason,
-      harness: report.harness,
-      runnerHarness: report.runnerHarness,
-      model: report.model,
-      timeoutMs: report.timeoutMs,
-      os: report.os,
-      nodeVersion: report.nodeVersion,
-    })}\n`,
-  );
-  console.log(`\n[smoke-test] Blocked result written to ${filepath}`);
 }
 
 /** Keep only the most recent 50 result files. */

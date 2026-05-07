@@ -374,3 +374,101 @@ test('live mode executes operator-supplied lane commands and private oracle arti
     rmSync(scriptRoot, { recursive: true, force: true });
   }
 });
+
+test('live hybrid-router inserts frontier repair after local lane failure', () => {
+  const outputRoot = tempRoot();
+  const scriptRoot = tempRoot();
+  try {
+    mkdirSync(scriptRoot, { recursive: true });
+    const frontierScript = join(scriptRoot, 'frontier-step.mjs');
+    const localScript = join(scriptRoot, 'local-fail.mjs');
+    const repairScript = join(scriptRoot, 'frontier-repair.mjs');
+    const oracleScript = join(scriptRoot, 'oracle.mjs');
+    writeFileSync(
+      frontierScript,
+      [
+        'const [, , workspace, stepId] = process.argv;',
+        'console.log(`frontier:${stepId}:${workspace.length}`);',
+      ].join('\n'),
+    );
+    writeFileSync(
+      localScript,
+      [
+        'const [, , workspace, stepId] = process.argv;',
+        'console.log(`local-failed:${stepId}:${workspace.length}`);',
+        'process.exit(1);',
+      ].join('\n'),
+    );
+    writeFileSync(
+      repairScript,
+      [
+        "import { writeFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const [, , workspace, stepId] = process.argv;',
+        "writeFileSync(join(workspace, 'frontier-repair.txt'), stepId);",
+        'console.log(`repair:${stepId}`);',
+      ].join('\n'),
+    );
+    writeFileSync(
+      oracleScript,
+      [
+        "import { existsSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const workspace = process.argv.at(-1);',
+        "if (!existsSync(join(workspace, 'frontier-repair.txt'))) process.exit(1);",
+        "console.log('repair oracle pass');",
+      ].join('\n'),
+    );
+
+    const frontierCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      frontierScript,
+    )} <workspace> <stepId>`;
+    const localCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      localScript,
+    )} <workspace> <stepId>`;
+    const repairCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      repairScript,
+    )} <workspace> <stepId>`;
+    const oracleCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      oracleScript,
+    )} --workspace <workspace>`;
+
+    const result = runHarnessArena(
+      parseArgs([
+        '--live',
+        '--arms',
+        'hybrid-router',
+        '--live-local-command',
+        localCommand,
+        '--live-frontier-command',
+        frontierCommand,
+        '--live-frontier-repair-command',
+        repairCommand,
+        '--oracle-command',
+        oracleCommand,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'hybrid-repair-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+
+    assert.deepEqual(
+      manifest.steps.map((step) => step.stepId),
+      ['frontier-classify', 'local-bulk', 'frontier-repair', 'frontier-review'],
+    );
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.equal(manifest.steps[1].exitCode, 1);
+    assert.equal(manifest.steps[2].frontierCallKind, 'repair');
+    assert.equal(manifest.steps[2].providerClass, 'frontier');
+    assert.equal(manifest.oracle.passed, true);
+    assert.match(readArmArtifact(armRun, manifest.oracle.stdoutArtifactRef), /repair oracle pass/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+    rmSync(scriptRoot, { recursive: true, force: true });
+  }
+});

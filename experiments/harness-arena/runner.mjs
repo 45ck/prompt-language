@@ -42,6 +42,7 @@ const ARG_FIELDS = {
   '--frontier-runner': 'frontierRunner',
   '--live-deterministic-command': 'liveDeterministicCommand',
   '--live-frontier-command': 'liveFrontierCommand',
+  '--live-frontier-repair-command': 'liveFrontierRepairCommand',
   '--live-local-command': 'liveLocalCommand',
   '--local-endpoint': 'localEndpoint',
   '--local-model': 'localModel',
@@ -84,6 +85,7 @@ export function parseArgs(argv) {
     frontierRunner: 'codex',
     liveDeterministicCommand: null,
     liveFrontierCommand: null,
+    liveFrontierRepairCommand: null,
     liveLocalCommand: null,
     localEndpoint: process.env.PROMPT_LANGUAGE_OLLAMA_BASE_URL ?? null,
     localModel: process.env.EVAL_MODEL?.replace(/^ollama\//, '') ?? 'qwen3:8b',
@@ -345,18 +347,62 @@ function executeFakeLiveSteps(options, armDir, arm, workspace) {
 }
 
 function executeLiveSteps(options, armDir, arm, workspace) {
-  return ARM_STEPS[arm].map(([stepId, routeDecision], index) => {
-    const command = buildLiveStepCommand(options, arm, stepId, routeDecision, index, workspace);
-    const artifactDir = join(armDir, 'artifacts', 'steps', stepArtifactDirectory(index, stepId));
-    return executeCommandPhase({
-      artifactDir,
+  const executions = [];
+  const stepDefinitions = [];
+
+  for (const stepDefinition of ARM_STEPS[arm]) {
+    const execution = executeLiveStep(
+      options,
       armDir,
-      command,
-      cwd: workspace,
-      phase: 'step',
-      timeoutMs: options.stepTimeoutMs,
-    });
+      arm,
+      workspace,
+      stepDefinition,
+      executions.length,
+    );
+    executions.push(execution);
+    stepDefinitions.push(stepDefinition);
+
+    if (shouldRunHybridRepair(arm, stepDefinition, execution)) {
+      const repairDefinition = ['frontier-repair', 'frontier', 'local public-gate failure repair'];
+      const repairExecution = executeLiveStep(
+        {
+          ...options,
+          liveFrontierCommand: options.liveFrontierRepairCommand ?? options.liveFrontierCommand,
+        },
+        armDir,
+        arm,
+        workspace,
+        repairDefinition,
+        executions.length,
+      );
+      executions.push(repairExecution);
+      stepDefinitions.push(repairDefinition);
+    }
+  }
+
+  executions.stepDefinitions = stepDefinitions;
+  return executions;
+}
+
+function executeLiveStep(options, armDir, arm, workspace, [stepId, routeDecision], index) {
+  const command = buildLiveStepCommand(options, arm, stepId, routeDecision, index, workspace);
+  const artifactDir = join(armDir, 'artifacts', 'steps', stepArtifactDirectory(index, stepId));
+  return executeCommandPhase({
+    artifactDir,
+    armDir,
+    command,
+    cwd: workspace,
+    phase: 'step',
+    timeoutMs: options.stepTimeoutMs,
   });
+}
+
+function shouldRunHybridRepair(arm, [stepId], execution) {
+  return (
+    arm === 'hybrid-router' &&
+    stepId === 'local-bulk' &&
+    (execution.timedOut || execution.exitCode !== 0)
+  );
 }
 
 function shouldExecutePrivateOracle(options) {
@@ -566,12 +612,16 @@ function buildManifest(options, arm, workspace, stepExecutions = null, oracleExe
       providerFallbackPolicy: 'forbid',
       localOnlyAllowsFrontierInput: false,
     },
-    steps: ARM_STEPS[arm].map((step, index) =>
+    steps: manifestStepDefinitions(arm, stepExecutions).map((step, index) =>
       buildStep(step, index, options, workspace, stepExecutions?.[index] ?? null),
     ),
     oracle: buildOracle(options, oracleExecution),
     classification: buildClassification(options, stepExecutions, oracleExecution),
   };
+}
+
+function manifestStepDefinitions(arm, stepExecutions) {
+  return stepExecutions?.stepDefinitions ?? ARM_STEPS[arm];
 }
 
 function claimStatusForMode(mode) {
@@ -745,6 +795,7 @@ function liveStepIdentity(options, routeDecision) {
 function frontierCallKindForStep(stepId) {
   if (stepId.includes('classify')) return 'classifier';
   if (stepId.includes('advice')) return 'advisor';
+  if (stepId.includes('repair')) return 'repair';
   if (stepId.includes('review')) return 'review';
   if (stepId.includes('frontier-full')) return 'full-work';
   return 'none';

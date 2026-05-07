@@ -266,6 +266,111 @@ test('leak audit rejects an oracle command copied into model-visible text', () =
   }
 });
 
-test('live mode is explicitly blocked until the real runner exists', () => {
-  assert.throws(() => parseArgs(['--live']), /live HA-HR1 model execution is not implemented/);
+test('live mode requires explicit lane command and private oracle templates', () => {
+  assert.throws(
+    () => parseArgs(['--live', '--arms', 'local-only']),
+    /--live requires --oracle-command/,
+  );
+  assert.throws(
+    () =>
+      parseArgs([
+        '--live',
+        '--arms',
+        'local-only',
+        '--oracle-command',
+        'node private/oracle.mjs --workspace <workspace>',
+      ]),
+    /--live requires command templates for selected routes: local/,
+  );
+});
+
+test('live mode executes operator-supplied lane commands and private oracle artifacts', () => {
+  const outputRoot = tempRoot();
+  const scriptRoot = tempRoot();
+  try {
+    mkdirSync(scriptRoot, { recursive: true });
+    const liveScript = join(scriptRoot, 'live-step.mjs');
+    const oracleScript = join(scriptRoot, 'oracle.mjs');
+    writeFileSync(
+      liveScript,
+      [
+        "import { writeFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const [workspace, arm, stepId, routeDecision, taskId] = process.argv.slice(2);',
+        "writeFileSync(join(workspace, 'live-step.json'), JSON.stringify({",
+        '  arm,',
+        '  routeDecision,',
+        '  stepId,',
+        '  taskId,',
+        '}));',
+        'console.log(`live:${arm}:${stepId}:${routeDecision}:${taskId}`);',
+      ].join('\n'),
+    );
+    writeFileSync(
+      oracleScript,
+      [
+        "import { existsSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const workspace = process.argv.at(-1);',
+        "if (!existsSync(join(workspace, 'live-step.json'))) {",
+        "  console.error('missing live-step artifact');",
+        '  process.exit(1);',
+        '}',
+        "console.log('live oracle pass');",
+      ].join('\n'),
+    );
+
+    const liveCommand = [
+      quoteCommandArg(process.execPath),
+      quoteCommandArg(liveScript),
+      '<workspace>',
+      '<arm>',
+      '<stepId>',
+      '<routeDecision>',
+      '<taskId>',
+    ].join(' ');
+    const oracleCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      oracleScript,
+    )} --workspace <workspace>`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--live',
+        '--arms',
+        'local-only',
+        '--live-local-command',
+        liveCommand,
+        '--oracle-command',
+        oracleCommand,
+        '--local-model',
+        'qwen3:8b',
+        '--local-endpoint',
+        'http://127.0.0.1:11434',
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'live-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.equal(manifest.claimStatus, 'live-model-evidence');
+    assert.equal(manifest.oracle.passed, true);
+    assert.equal(step.runner, 'ollama');
+    assert.equal(step.provider, 'ollama');
+    assert.equal(step.providerClass, 'local');
+    assert.equal(step.requestedModel, 'qwen3:8b');
+    assert.equal(step.endpoint, 'http://127.0.0.1:11434');
+    assert.equal(step.timedOut, false);
+    assert.match(readArmArtifact(armRun, step.stdoutArtifactRef), /live:local-only:local-bulk/);
+    assert.match(readArmArtifact(armRun, manifest.oracle.stdoutArtifactRef), /live oracle pass/);
+    assert.equal(existsSync(join(armRun.workspace, 'HARNESS-ARENA-LIVE.md')), true);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+    rmSync(scriptRoot, { recursive: true, force: true });
+  }
 });

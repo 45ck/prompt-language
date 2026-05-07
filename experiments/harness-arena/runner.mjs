@@ -26,10 +26,27 @@ const FAKE_LIVE_NOTE = `# Harness Arena Fake Live Run
 This directory is exercised by deterministic local commands only.
 No local or frontier LLM has been invoked.
 `;
+const LIVE_NOTE = `# Harness Arena Live Run
+
+This directory is eligible for operator-supplied live local/frontier model commands.
+The private oracle remains outside model-visible workspace input.
+`;
 const ARG_FIELDS = {
+  '--adapter-version': 'adapterVersion',
   '--arms': 'arms',
   '--fake-step-command': 'fakeStepCommand',
   '--fixture': 'fixture',
+  '--frontier-endpoint': 'frontierEndpoint',
+  '--frontier-model': 'frontierModel',
+  '--frontier-provider': 'frontierProvider',
+  '--frontier-runner': 'frontierRunner',
+  '--live-deterministic-command': 'liveDeterministicCommand',
+  '--live-frontier-command': 'liveFrontierCommand',
+  '--live-local-command': 'liveLocalCommand',
+  '--local-endpoint': 'localEndpoint',
+  '--local-model': 'localModel',
+  '--local-provider': 'localProvider',
+  '--local-runner': 'localRunner',
   '--oracle-command': 'oracleCommand',
   '--oracle-timeout-ms': 'oracleTimeoutMs',
   '--output-root': 'outputRoot',
@@ -57,9 +74,21 @@ const ARM_STEPS = {
 
 export function parseArgs(argv) {
   const options = {
+    adapterVersion: 'harness-arena-live-command-v1',
     arms: 'all',
     fakeStepCommand: null,
     fixture: null,
+    frontierEndpoint: null,
+    frontierModel: 'codex-default',
+    frontierProvider: 'openai',
+    frontierRunner: 'codex',
+    liveDeterministicCommand: null,
+    liveFrontierCommand: null,
+    liveLocalCommand: null,
+    localEndpoint: process.env.PROMPT_LANGUAGE_OLLAMA_BASE_URL ?? null,
+    localModel: process.env.EVAL_MODEL?.replace(/^ollama\//, '') ?? 'qwen3:8b',
+    localProvider: 'ollama',
+    localRunner: 'ollama',
     mode: 'dry-run',
     oracleCommand: DEFAULT_ORACLE_COMMAND,
     oracleTimeoutMs: DEFAULT_ORACLE_TIMEOUT_MS,
@@ -89,7 +118,9 @@ export function parseArgs(argv) {
       continue;
     }
     if (arg === '--live') {
-      throw new Error('live HA-HR1 model execution is not implemented; use --fake-live');
+      setMode(options, 'live', explicitMode);
+      explicitMode = true;
+      continue;
     }
     const field = ARG_FIELDS[arg];
     const value = argv[index + 1];
@@ -107,15 +138,39 @@ export function parseArgs(argv) {
     options.oracleCommand = defaultFakeOracleCommand();
   }
 
+  const resolvedArms = resolveArms(options.arms);
+  validateLiveOptions({ ...options, arms: resolvedArms }, oracleCommandProvided);
+
   return {
     ...options,
-    arms: resolveArms(options.arms),
+    arms: resolvedArms,
     fixture: options.fixture ? resolve(options.fixture) : null,
     outputRoot: resolve(options.outputRoot),
     runGroupId: options.runGroupId ?? options.runId ?? 'HA-HR1-structure',
     runId: options.runId ?? timestampId(),
     startedAt: options.startedAt ?? new Date().toISOString(),
   };
+}
+
+function validateLiveOptions(options, oracleCommandProvided) {
+  if (options.mode !== 'live') return;
+  if (!oracleCommandProvided) {
+    throw new Error('--live requires --oracle-command so model-visible work stays oracle-blind');
+  }
+  const missingRoutes = requiredLiveRoutes(options.arms).filter(
+    (routeDecision) => !liveCommandForRoute(options, routeDecision),
+  );
+  if (missingRoutes.length > 0) {
+    throw new Error(
+      `--live requires command templates for selected routes: ${missingRoutes.join(', ')}`,
+    );
+  }
+}
+
+function requiredLiveRoutes(arms) {
+  return [
+    ...new Set(arms.flatMap((arm) => ARM_STEPS[arm].map(([, routeDecision]) => routeDecision))),
+  ].sort();
 }
 
 function setMode(options, nextMode, explicitMode) {
@@ -158,10 +213,7 @@ export function runHarnessArena(options) {
     taskId: options.taskId,
     arms: options.arms,
     manifests: armRuns.map((run) => relative(runRoot, run.manifestPath).replaceAll('\\', '/')),
-    claimStatus:
-      options.mode === 'fake-live'
-        ? 'fake-live-deterministic-not-model-evidence'
-        : 'structure-only-not-model-evidence',
+    claimStatus: claimStatusForMode(options.mode),
   });
   return { runRoot, armRuns };
 }
@@ -173,23 +225,20 @@ function materializeArm(options, runRoot, arm, index) {
   mkdirSync(privateDir, { recursive: true });
   mkdirSync(workspace, { recursive: true });
   prepareWorkspace(workspace, options);
-  const stepExecutions =
-    options.mode === 'fake-live' ? executeFakeLiveSteps(options, armDir, arm, workspace) : null;
+  const stepExecutions = executeSteps(options, armDir, arm, workspace);
   writeJson(join(armDir, 'arm-plan.json'), {
     mode: options.mode,
     arm,
     taskId: options.taskId,
     workspace,
     plannedSteps: ARM_STEPS[arm].map(([stepId]) => stepId),
-    claimStatus:
-      options.mode === 'fake-live'
-        ? 'fake-live-deterministic-not-model-evidence'
-        : 'structure-only-not-model-evidence',
+    claimStatus: claimStatusForMode(options.mode),
   });
   writeFileSync(join(privateDir, 'oracle-command.txt'), `${options.oracleCommand}\n`, 'utf8');
   assertNoOracleLeak(workspace, options.oracleCommand);
-  const oracleExecution =
-    options.mode === 'fake-live' ? executePrivateOracle(options, armDir, workspace) : null;
+  const oracleExecution = shouldExecutePrivateOracle(options)
+    ? executePrivateOracle(options, armDir, workspace)
+    : null;
   assertNoOracleLeak(workspace, options.oracleCommand);
   const manifest = buildManifest(options, arm, workspace, stepExecutions, oracleExecution);
   const validation = validateManifestAgainstSchema(manifest);
@@ -202,9 +251,7 @@ function materializeArm(options, runRoot, arm, index) {
 function prepareWorkspace(workspace, options) {
   if (options.fixture) copyModelVisibleFixture(options.fixture, workspace);
   else writeFileSync(join(workspace, 'TASK.md'), syntheticTask(options), 'utf8');
-  const noteFile =
-    options.mode === 'fake-live' ? 'HARNESS-ARENA-FAKE-LIVE.md' : 'HARNESS-ARENA-DRY-RUN.md';
-  const note = options.mode === 'fake-live' ? FAKE_LIVE_NOTE : DRY_RUN_NOTE;
+  const { note, noteFile } = workspaceRunNote(options.mode);
   writeFileSync(join(workspace, noteFile), note, 'utf8');
 }
 
@@ -215,9 +262,18 @@ Task ID: ${options.taskId}
 
 ${options.taskBrief}
 
-This workspace is model-visible input for a dry run only.
-No local or frontier model has been invoked.
+This workspace is model-visible input for HA-HR1 ${options.mode} evaluation.
 `;
+}
+
+function workspaceRunNote(mode) {
+  if (mode === 'fake-live') {
+    return { note: FAKE_LIVE_NOTE, noteFile: 'HARNESS-ARENA-FAKE-LIVE.md' };
+  }
+  if (mode === 'live') {
+    return { note: LIVE_NOTE, noteFile: 'HARNESS-ARENA-LIVE.md' };
+  }
+  return { note: DRY_RUN_NOTE, noteFile: 'HARNESS-ARENA-DRY-RUN.md' };
 }
 
 export function copyModelVisibleFixture(fixtureRoot, workspace) {
@@ -267,6 +323,12 @@ function isBlockedSegment(segment) {
   );
 }
 
+function executeSteps(options, armDir, arm, workspace) {
+  if (options.mode === 'fake-live') return executeFakeLiveSteps(options, armDir, arm, workspace);
+  if (options.mode === 'live') return executeLiveSteps(options, armDir, arm, workspace);
+  return null;
+}
+
 function executeFakeLiveSteps(options, armDir, arm, workspace) {
   return ARM_STEPS[arm].map(([stepId], index) => {
     const command = buildFakeStepCommand(options, arm, stepId, index, workspace);
@@ -280,6 +342,25 @@ function executeFakeLiveSteps(options, armDir, arm, workspace) {
       timeoutMs: options.stepTimeoutMs,
     });
   });
+}
+
+function executeLiveSteps(options, armDir, arm, workspace) {
+  return ARM_STEPS[arm].map(([stepId, routeDecision], index) => {
+    const command = buildLiveStepCommand(options, arm, stepId, routeDecision, index, workspace);
+    const artifactDir = join(armDir, 'artifacts', 'steps', stepArtifactDirectory(index, stepId));
+    return executeCommandPhase({
+      artifactDir,
+      armDir,
+      command,
+      cwd: workspace,
+      phase: 'step',
+      timeoutMs: options.stepTimeoutMs,
+    });
+  });
+}
+
+function shouldExecutePrivateOracle(options) {
+  return options.mode === 'fake-live' || options.mode === 'live';
 }
 
 function executePrivateOracle(options, armDir, workspace) {
@@ -354,6 +435,7 @@ function buildFakeStepCommand(options, arm, stepId, index, workspace) {
   if (options.fakeStepCommand) {
     return commandFromTemplate(options.fakeStepCommand, {
       arm,
+      routeDecision: 'deterministic',
       stepId,
       workspace,
     });
@@ -374,6 +456,26 @@ function buildFakeStepCommand(options, arm, stepId, index, workspace) {
     command: process.execPath,
     displayCommand: 'node -e <harness-arena fake step>',
   };
+}
+
+function buildLiveStepCommand(options, arm, stepId, routeDecision, index, workspace) {
+  const template = liveCommandForRoute(options, routeDecision);
+  if (!template) throw new Error(`missing live command template for route: ${routeDecision}`);
+  return commandFromTemplate(template, {
+    arm,
+    attempt: String(index + 1),
+    routeDecision,
+    stepId,
+    taskId: options.taskId,
+    workspace,
+  });
+}
+
+function liveCommandForRoute(options, routeDecision) {
+  if (routeDecision === 'local') return options.liveLocalCommand;
+  if (routeDecision === 'frontier') return options.liveFrontierCommand;
+  if (routeDecision === 'deterministic') return options.liveDeterministicCommand;
+  return null;
 }
 
 function commandFromTemplate(template, replacements) {
@@ -439,11 +541,6 @@ function defaultFakeOracleCommand() {
 }
 
 function buildManifest(options, arm, workspace, stepExecutions = null, oracleExecution = null) {
-  const claimStatus =
-    options.mode === 'fake-live'
-      ? 'fake-live-deterministic-not-model-evidence'
-      : 'structure-only-not-model-evidence';
-
   return {
     schemaVersion: 2,
     policyVersion: options.policyVersion,
@@ -451,7 +548,7 @@ function buildManifest(options, arm, workspace, stepExecutions = null, oracleExe
     taskId: options.taskId,
     arm,
     runGroupId: options.runGroupId,
-    claimStatus,
+    claimStatus: claimStatusForMode(options.mode),
     repo: repoMetadata(),
     startedAt: options.startedAt,
     completedAt: options.startedAt,
@@ -477,6 +574,12 @@ function buildManifest(options, arm, workspace, stepExecutions = null, oracleExe
   };
 }
 
+function claimStatusForMode(mode) {
+  if (mode === 'fake-live') return 'fake-live-deterministic-not-model-evidence';
+  if (mode === 'live') return 'live-model-evidence';
+  return 'structure-only-not-model-evidence';
+}
+
 function buildOracle(options, oracleExecution) {
   if (!oracleExecution) {
     return {
@@ -499,7 +602,7 @@ function buildOracle(options, oracleExecution) {
     stdoutArtifactRef: oracleExecution.stdoutArtifactRef,
     summary: oracleExecution.timedOut
       ? `Private oracle exceeded hard timeout ${oracleExecution.timeoutMs}ms.`
-      : 'Private oracle executed after fake-live steps.',
+      : `Private oracle executed after ${options.mode} steps.`,
     timedOut: oracleExecution.timedOut,
     timeoutMs: oracleExecution.timeoutMs,
     wallSeconds: oracleExecution.wallSeconds,
@@ -507,7 +610,7 @@ function buildOracle(options, oracleExecution) {
 }
 
 function buildClassification(options, stepExecutions, oracleExecution) {
-  if (options.mode !== 'fake-live') {
+  if (options.mode === 'dry-run') {
     return {
       routingPolicyFailure: false,
       modelFailure: false,
@@ -519,15 +622,21 @@ function buildClassification(options, stepExecutions, oracleExecution) {
   const timedOut = stepExecutions?.some((step) => step.timedOut) || oracleExecution?.timedOut;
   return {
     routingPolicyFailure: false,
-    modelFailure: false,
+    modelFailure: Boolean(options.mode === 'live' && oracleExecution?.exitCode !== 0),
     harnessFailure: Boolean(timedOut),
-    notes:
-      'Fake-live deterministic local command execution only. No local or frontier LLM was invoked.',
+    notes: classificationNotes(options.mode),
   };
 }
 
+function classificationNotes(mode) {
+  if (mode === 'live') {
+    return 'Live operator-supplied lane commands executed. Manifest validity depends on private oracle pass/fail artifacts.';
+  }
+  return 'Fake-live deterministic local command execution only. No local or frontier LLM was invoked.';
+}
+
 function buildStep([stepId, routeDecision, routeTrigger], index, options, workspace, execution) {
-  const model = options.mode === 'fake-live' ? 'fake-live-local-command' : 'dry-run-synthetic';
+  const identity = stepIdentityForMode(options, routeDecision);
   const outputArtifactRefs = execution
     ? [execution.stdoutArtifactRef, execution.stderrArtifactRef, execution.metadataArtifactRef]
     : ['arm-plan.json'];
@@ -535,15 +644,15 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
   return {
     stepId,
     purpose: `Synthetic ${stepId} lane for HA-HR1 ${options.mode}`,
-    runner: 'shell',
-    model,
-    provider: 'harness-arena',
-    endpoint: null,
-    requestedModel: model,
-    actualModel: model,
+    runner: identity.runner,
+    model: identity.model,
+    provider: identity.provider,
+    endpoint: identity.endpoint,
+    requestedModel: identity.model,
+    actualModel: identity.model,
     providerSubstitution: { occurred: false, reason: null },
-    adapterVersion: 'harness-arena-runner-v1',
-    providerClass: 'deterministic',
+    adapterVersion: identity.adapterVersion,
+    providerClass: identity.providerClass,
     routeDecision,
     routeTrigger,
     riskLevel: 'low',
@@ -570,7 +679,7 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     diffSummary:
       options.mode === 'fake-live'
         ? 'Deterministic local command executed; no LLM edits were attempted.'
-        : 'No live edits; workspace skeleton only.',
+        : stepDiffSummary(options.mode),
     reviewDefects: [],
     cwd: workspace,
     startedAt: execution?.startedAt ?? options.startedAt,
@@ -583,9 +692,53 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     wallSeconds: execution?.wallSeconds ?? 0,
     estimatedUsd: 0,
     gpuActiveSeconds: 0,
-    notes: execution
-      ? fakeLiveStepNotes(execution)
-      : 'Dry-run step emitted by harness-arena runner skeleton.',
+    notes: stepNotes(options.mode, execution),
+  };
+}
+
+function stepIdentityForMode(options, routeDecision) {
+  if (options.mode === 'live') {
+    return liveStepIdentity(options, routeDecision);
+  }
+  const model = options.mode === 'fake-live' ? 'fake-live-local-command' : 'dry-run-synthetic';
+  return {
+    adapterVersion: 'harness-arena-runner-v1',
+    endpoint: null,
+    model,
+    provider: 'harness-arena',
+    providerClass: 'deterministic',
+    runner: 'shell',
+  };
+}
+
+function liveStepIdentity(options, routeDecision) {
+  if (routeDecision === 'frontier') {
+    return {
+      adapterVersion: options.adapterVersion,
+      endpoint: options.frontierEndpoint,
+      model: options.frontierModel,
+      provider: options.frontierProvider,
+      providerClass: 'frontier',
+      runner: options.frontierRunner,
+    };
+  }
+  if (routeDecision === 'local') {
+    return {
+      adapterVersion: options.adapterVersion,
+      endpoint: options.localEndpoint,
+      model: options.localModel,
+      provider: options.localProvider,
+      providerClass: 'local',
+      runner: options.localRunner,
+    };
+  }
+  return {
+    adapterVersion: options.adapterVersion,
+    endpoint: null,
+    model: 'live-deterministic-command',
+    provider: 'harness-arena',
+    providerClass: 'deterministic',
+    runner: 'shell',
   };
 }
 
@@ -620,6 +773,20 @@ function fakeLiveStepNotes(execution) {
     return `Fake-live deterministic command exceeded hard timeout ${execution.timeoutMs}ms; no LLM invoked.`;
   }
   return `Fake-live deterministic command completed within hard timeout ${execution.timeoutMs}ms; no LLM invoked.`;
+}
+
+function stepDiffSummary(mode) {
+  if (mode === 'live') return 'Operator-supplied live lane command executed.';
+  return 'No live edits; workspace skeleton only.';
+}
+
+function stepNotes(mode, execution) {
+  if (!execution) return 'Dry-run step emitted by harness-arena runner skeleton.';
+  if (mode === 'fake-live') return fakeLiveStepNotes(execution);
+  if (execution.timedOut) {
+    return `Live lane command exceeded hard timeout ${execution.timeoutMs}ms.`;
+  }
+  return `Live lane command completed within hard timeout ${execution.timeoutMs}ms.`;
 }
 
 export function validateManifestAgainstSchema(manifest) {
@@ -724,7 +891,7 @@ function byName(left, right) {
 }
 
 export function usage() {
-  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live] [--arms all|list] [--output-root dir] [--run-id id]\n`;
+  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--output-root dir] [--run-id id]\n`;
 }
 
 function main(argv = process.argv.slice(2)) {

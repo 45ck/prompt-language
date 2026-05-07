@@ -1,9 +1,10 @@
 # harness-arena — compare whole stacks: vanilla cloud harness + frontier model vs PL + local model + task-tuned flow
 
-**Status:** Planned. HA-E1 and HA-HR1 pilots not yet run; the runner supports
-dry-run structure materialization and deterministic fake-live command execution,
-but live local/frontier LLM execution is not implemented.
-**Last update:** 2026-05-04
+**Status:** Planned. HA-E1 and full HA-HR1 pilots have not yet run; the runner
+supports dry-run structure materialization, deterministic fake-live command
+execution, and explicit `--live` lane command execution with private oracle
+artifacts.
+**Last update:** 2026-05-08
 
 ## Question
 
@@ -21,11 +22,14 @@ evidence:
 - `--fake-live` executes deterministic local shell commands only. It captures
   per-step `stdout.txt`, `stderr.txt`, and `metadata.json` artifacts under each
   arm's `artifacts/steps/` directory.
+- `--live` executes operator-supplied lane command templates. The runner records
+  requested/actual model, provider, endpoint, command artifacts, timeout metadata,
+  and private oracle artifacts in a claim-grade manifest.
 - Fake-live step metadata records `timeoutMs`, `timedOut`, `exitCode`, and
   `wallSeconds` in both artifacts and the manifest.
-- The oracle runs only after fake-live steps, from `private/oracle/`, with its
-  command stored in `private/oracle-command.txt`. Oracle stdout/stderr artifacts
-  stay under `private/oracle/` and are not copied into the model-visible
+- The oracle runs only after fake-live or live steps, from `private/oracle/`, with
+  its command stored in `private/oracle-command.txt`. Oracle stdout/stderr
+  artifacts stay under `private/oracle/` and are not copied into the model-visible
   workspace.
 
 Adjacent evidence from FSCRUD R28 should inform the first pilot but must not be
@@ -54,23 +58,24 @@ read-only review.
    `node experiments/harness-arena/runner.mjs --dry-run --run-id HA-HR1-structure-001 --output-root .tmp/harness-arena`
 2. Validate deterministic fake-live command/oracle plumbing with
    `node experiments/harness-arena/runner.mjs --fake-live --run-id HA-HR1-fake-live-001 --output-root .tmp/harness-arena`
-3. Clear the live-readiness gates in
-   [HA-HR1-LIVE-PILOT-PLAN.md](HA-HR1-LIVE-PILOT-PLAN.md), especially Ollama
-   HTTP API readiness for local-runner evidence
-4. Replace the fake-live lanes with live local/frontier invocations while
-   preserving workspace/oracle isolation
+3. Run a local-only live lane against a WSL-reachable Ollama endpoint with
+   `--live-local-command`, `--oracle-command`, and `--arms local-only`
+4. Add budgeted frontier command templates for frontier-only, advisor-only, and
+   hybrid-router arms
 5. Run HA-HR1 across local-only, frontier-only, advisor-only, and hybrid-router arms
 6. Run HA-E1 pilot under a $5 budget cap
 7. Write up findings and decide whether to scale
 
 ## Known blockers
 
-- HA-HR1 still depends on live model execution and real verifier/oracle wiring
-  before model-quality claims can be made.
+- HA-HR1 full-arm claims still depend on budgeted frontier command templates and
+  real task-specific verifier/oracle wiring.
 - Dry-run manifests intentionally set `oracle.passed=false`; they validate
   structure only and are not model-performance evidence.
 - Fake-live manifests may set `oracle.passed=true`, but that only proves local
   harness plumbing. It is not local/frontier model evidence.
+- Live manifests are model evidence only for the route commands actually supplied
+  by the operator. A local-only live run is not frontier or hybrid evidence.
 - The checked-in flows are scaffolds for orchestration shape, not completed evidence.
 
 ## Local tests

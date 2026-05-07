@@ -82,6 +82,29 @@ Local Ollama is not enough by itself when it repeatedly times out, produces no e
 collapses required public interfaces, or touches files outside the assigned root. In
 those cases, classify the local result before deciding whether to run a hybrid arm.
 
+## Live Runner Lane
+
+Use `--live` only with explicit lane command templates and a private oracle command:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --arms local-only \
+  --live-local-command 'node scripts/eval/smoke-test.mjs --harness ollama --quick --only E' \
+  --oracle-command 'node private/ha-hr1-oracle.mjs --workspace <workspace>' \
+  --local-model qwen3:8b \
+  --local-endpoint "$PROMPT_LANGUAGE_OLLAMA_BASE_URL" \
+  --run-id HA-HR1-live-local-001 \
+  --output-root .tmp/harness-arena
+```
+
+The runner interpolates `<workspace>`, `<arm>`, `<stepId>`, `<routeDecision>`,
+`<attempt>`, and `<taskId>` in lane command templates. It records command
+stdout/stderr/metadata under `artifacts/steps/` and runs the oracle from
+`private/oracle/` after the live lane completes. A selected arm that contains a
+frontier route also requires `--live-frontier-command`; otherwise `--live` fails
+before creating a run.
+
 ## Frontier Review Lane
 
 Use frontier reasoning for final review or escalation diagnosis:
@@ -116,12 +139,12 @@ The static-split pilot flow is:
 node bin/cli.mjs validate --runner codex --mode headless --file experiments/harness-arena/flows/hybrid-router-v0.flow
 ```
 
-The dry-run runner already prepares isolated workspaces, keeps private verifier
-material outside those workspaces, and emits schema-shaped manifests. A real
-HA-HR1 runner still needs to wrap this flow so it can:
+The HA-HR1 runner prepares isolated workspaces, keeps private verifier material
+outside those workspaces, emits schema-shaped manifests, and can wrap explicit live
+local/frontier lane commands. Full pilot runs still need task-specific commands
+that:
 
-- invoke live local/frontier lanes
-- capture per-lane runner/model/cwd metadata
+- invoke the intended local/frontier flows
 - record local GPU active minutes when available
 - enforce frontier budget limits
 - validate the manifest after the oracle runs

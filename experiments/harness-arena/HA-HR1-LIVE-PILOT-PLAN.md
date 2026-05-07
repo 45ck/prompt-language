@@ -170,12 +170,21 @@ The pilot is worth scaling only if:
 
 ## Next Implementation Increment
 
-1. Extend the manifest/schema or runbook with missing claim-grade fields:
-   requested/actual model, endpoint, pricing basis, prompt-program identity,
-   provider-substitution status, data classification, and explicit budget
-   enforcement.
-2. Add tests that reject missing claim-grade fields for live-mode manifests while
-   preserving dry-run/fake-live compatibility.
-3. Add a live preflight command that fails fast when the Ollama HTTP API is not
-   reachable.
-4. Only then wire the first live local lane for a small fixture.
+1. Add a task-specific private oracle for the first HA-HR1 fixture instead of the
+   connectivity-only smoke oracle.
+2. Add budgeted frontier command templates and run frontier-only/advisor-only arms.
+3. Run the hybrid-router arm only after local-only and frontier-only baselines are
+   archived with schema-valid manifests.
+
+## Latest Live Evidence
+
+On 2026-05-08, the first local-only live lane passed through the WSL-reachable
+Windows Ollama endpoint using `qwen3:8b`. The resulting manifest is:
+
+```text
+.tmp/harness-arena/HA-HR1-live-local-ollama-002/01-local-only/hybrid-routing-manifest.json
+```
+
+It records `claimStatus: live-model-evidence`, local Ollama metadata, step exit code
+`0`, step wall time `7.316s`, and `oracle.passed: true`. Treat this as
+connectivity-level local model evidence, not full HA-HR1 routing evidence.

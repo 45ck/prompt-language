@@ -203,3 +203,22 @@ the runner correctly blocked completion as unsuccessful after `282.942s`, and th
 private oracle failed because the local model replaced the fixture with a shallow
 `mergeContacts` helper and comment-only tests. This is useful local-only failure
 evidence, not a harness failure.
+
+The first H14 frontier-only baseline is:
+
+```text
+.tmp/harness-arena/HA-HR1-H14-frontier-codex-001/01-frontier-only/hybrid-routing-manifest.json
+```
+
+Codex completed the same public-gated H14 flow in `210.182s`, and the private
+oracle passed `6/6`.
+
+The first H14 advisor-only run is:
+
+```text
+.tmp/harness-arena/HA-HR1-H14-advisor-codex-ollama-001/01-advisor-only/hybrid-routing-manifest.json
+```
+
+The frontier advice step passed in `89.671s`, but the local apply step failed the
+public gates after `291.338s`; the private oracle failed `2/6`. For this fixture,
+frontier advice alone did not rescue local `qwen3:8b`.

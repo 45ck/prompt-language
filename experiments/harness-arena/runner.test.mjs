@@ -54,8 +54,14 @@ test('dry run materializes all HA-HR1 arms with schema-shaped manifests', () => 
       assert.equal(existsSync(join(armRun.workspace, 'TASK.md')), true);
       assert.equal(existsSync(join(armRun.armDir, 'private', 'oracle-command.txt')), true);
       assert.equal(manifest.oracle.passed, false);
+      assert.equal(manifest.claimStatus, 'structure-only-not-model-evidence');
+      assert.equal(manifest.evidencePolicy.manifestAuthor, 'harness');
+      assert.equal(manifest.evidencePolicy.oracleVisibility, 'private-artifacts-only');
+      assert.equal(manifest.budget.enforced, true);
       assert.equal(manifest.startedAt, FIXED_TIME);
       assert.ok(manifest.steps.every((step) => step.cwd === armRun.workspace));
+      assert.ok(manifest.steps.every((step) => step.requestedModel === step.actualModel));
+      assert.ok(manifest.steps.every((step) => step.providerSubstitution.occurred === false));
     }
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });
@@ -106,11 +112,19 @@ test('fake live executes deterministic local step commands and private oracle ar
     const [step] = manifest.steps;
 
     assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.equal(manifest.claimStatus, 'fake-live-deterministic-not-model-evidence');
     assert.equal(manifest.oracle.passed, true);
+    assert.equal(manifest.oracle.visibility, 'private-artifacts-only');
+    assert.match(manifest.oracle.commandSha256, /^[a-f0-9]{64}$/);
     assert.equal(manifest.oracle.timedOut, false);
     assert.equal(manifest.oracle.timeoutMs, 1000);
     assert.equal(step.timedOut, false);
     assert.equal(step.timeoutMs, 1000);
+    assert.equal(step.provider, 'harness-arena');
+    assert.equal(step.requestedModel, 'fake-live-local-command');
+    assert.equal(step.actualModel, 'fake-live-local-command');
+    assert.equal(step.cost.basis, 'none');
+    assert.equal(step.frontierCallKind, 'none');
     assert.equal(step.stdoutArtifactRef, 'artifacts/steps/01-local-bulk/stdout.txt');
     assert.equal(step.stderrArtifactRef, 'artifacts/steps/01-local-bulk/stderr.txt');
     assert.match(

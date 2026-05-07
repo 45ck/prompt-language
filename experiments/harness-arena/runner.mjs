@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -33,6 +34,7 @@ const ARG_FIELDS = {
   '--oracle-timeout-ms': 'oracleTimeoutMs',
   '--output-root': 'outputRoot',
   '--policy-version': 'policyVersion',
+  '--run-group-id': 'runGroupId',
   '--run-id': 'runId',
   '--started-at': 'startedAt',
   '--step-timeout-ms': 'stepTimeoutMs',
@@ -63,6 +65,7 @@ export function parseArgs(argv) {
     oracleTimeoutMs: DEFAULT_ORACLE_TIMEOUT_MS,
     outputRoot: DEFAULT_OUTPUT_ROOT,
     policyVersion: 'hybrid-routing-v0',
+    runGroupId: null,
     runId: null,
     startedAt: null,
     stepTimeoutMs: DEFAULT_STEP_TIMEOUT_MS,
@@ -109,6 +112,7 @@ export function parseArgs(argv) {
     arms: resolveArms(options.arms),
     fixture: options.fixture ? resolve(options.fixture) : null,
     outputRoot: resolve(options.outputRoot),
+    runGroupId: options.runGroupId ?? options.runId ?? 'HA-HR1-structure',
     runId: options.runId ?? timestampId(),
     startedAt: options.startedAt ?? new Date().toISOString(),
   };
@@ -435,15 +439,36 @@ function defaultFakeOracleCommand() {
 }
 
 function buildManifest(options, arm, workspace, stepExecutions = null, oracleExecution = null) {
+  const claimStatus =
+    options.mode === 'fake-live'
+      ? 'fake-live-deterministic-not-model-evidence'
+      : 'structure-only-not-model-evidence';
+
   return {
     schemaVersion: 2,
     policyVersion: options.policyVersion,
     runId: options.runId,
     taskId: options.taskId,
     arm,
+    runGroupId: options.runGroupId,
+    claimStatus,
+    repo: repoMetadata(),
     startedAt: options.startedAt,
     completedAt: options.startedAt,
-    budget: { frontierCallLimit: 0, usdLimit: 0, wallSecondsLimit: 1 },
+    budget: {
+      frontierCallLimit: 0,
+      usdLimit: 0,
+      wallSecondsLimit: 1,
+      localRepairAttemptLimit: 0,
+      retryPolicy: 'none',
+      enforced: true,
+    },
+    evidencePolicy: {
+      manifestAuthor: 'harness',
+      oracleVisibility: 'private-artifacts-only',
+      providerFallbackPolicy: 'forbid',
+      localOnlyAllowsFrontierInput: false,
+    },
     steps: ARM_STEPS[arm].map((step, index) =>
       buildStep(step, index, options, workspace, stepExecutions?.[index] ?? null),
     ),
@@ -456,6 +481,8 @@ function buildOracle(options, oracleExecution) {
   if (!oracleExecution) {
     return {
       command: options.oracleCommand,
+      commandSha256: sha256(options.oracleCommand),
+      visibility: 'private-artifacts-only',
       exitCode: null,
       passed: false,
       summary: 'Dry-run structure validation only; no task oracle was executed.',
@@ -464,6 +491,8 @@ function buildOracle(options, oracleExecution) {
 
   return {
     command: options.oracleCommand,
+    commandSha256: sha256(options.oracleCommand),
+    visibility: 'private-artifacts-only',
     exitCode: oracleExecution.exitCode,
     passed: oracleExecution.exitCode === 0 && !oracleExecution.timedOut,
     stderrArtifactRef: oracleExecution.stderrArtifactRef,
@@ -498,6 +527,7 @@ function buildClassification(options, stepExecutions, oracleExecution) {
 }
 
 function buildStep([stepId, routeDecision, routeTrigger], index, options, workspace, execution) {
+  const model = options.mode === 'fake-live' ? 'fake-live-local-command' : 'dry-run-synthetic';
   const outputArtifactRefs = execution
     ? [execution.stdoutArtifactRef, execution.stderrArtifactRef, execution.metadataArtifactRef]
     : ['arm-plan.json'];
@@ -506,7 +536,13 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     stepId,
     purpose: `Synthetic ${stepId} lane for HA-HR1 ${options.mode}`,
     runner: 'shell',
-    model: options.mode === 'fake-live' ? 'fake-live-local-command' : 'dry-run-synthetic',
+    model,
+    provider: 'harness-arena',
+    endpoint: null,
+    requestedModel: model,
+    actualModel: model,
+    providerSubstitution: { occurred: false, reason: null },
+    adapterVersion: 'harness-arena-runner-v1',
     providerClass: 'deterministic',
     routeDecision,
     routeTrigger,
@@ -514,6 +550,21 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     ambiguityLevel: 'low',
     escalationReason: null,
     attemptNumber: index + 1,
+    promptProgram: {
+      kind: 'synthetic',
+      path: null,
+      sha256: sha256(`${options.policyVersion}:${options.mode}:${stepId}`),
+    },
+    cost: {
+      basis: 'none',
+      estimatedUsd: 0,
+      providerReportedUsd: null,
+      inputTokens: null,
+      outputTokens: null,
+      pricingVersion: null,
+    },
+    dataClassification: 'public',
+    frontierCallKind: frontierCallKindForStep(stepId),
     inputArtifactRefs: ['workspace/TASK.md'],
     outputArtifactRefs,
     diffSummary:
@@ -536,6 +587,32 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
       ? fakeLiveStepNotes(execution)
       : 'Dry-run step emitted by harness-arena runner skeleton.',
   };
+}
+
+function frontierCallKindForStep(stepId) {
+  if (stepId.includes('classify')) return 'classifier';
+  if (stepId.includes('advice')) return 'advisor';
+  if (stepId.includes('review')) return 'review';
+  if (stepId.includes('frontier-full')) return 'full-work';
+  return 'none';
+}
+
+function repoMetadata() {
+  return {
+    commit: gitOutput(['rev-parse', 'HEAD']) ?? 'unknown',
+    dirty: (gitOutput(['status', '--short']) ?? '').trim().length > 0,
+  };
+}
+
+function gitOutput(args) {
+  const result = spawnSync('git', args, {
+    cwd: ROOT,
+    encoding: 'utf8',
+    timeout: 10_000,
+    windowsHide: true,
+  });
+  if (result.status !== 0) return null;
+  return result.stdout.trim();
 }
 
 function fakeLiveStepNotes(execution) {
@@ -590,6 +667,10 @@ function checkEnum(value, allowed, path, errors) {
 
 function checkConst(value, expected, path, errors) {
   if (value !== expected) errors.push(`${path} must equal ${expected}`);
+}
+
+function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
 }
 
 function assertNoOracleLeak(workspace, oracleCommand) {

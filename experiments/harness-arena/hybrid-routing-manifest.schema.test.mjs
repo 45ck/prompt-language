@@ -11,11 +11,21 @@ const sample = readJson('hybrid-routing-manifest.v2.ollama-local.sample.json');
 const routingMetadataFields = [
   'runner',
   'model',
+  'provider',
+  'endpoint',
+  'requestedModel',
+  'actualModel',
+  'providerSubstitution',
+  'adapterVersion',
   'providerClass',
   'routeDecision',
   'routeTrigger',
   'riskLevel',
   'ambiguityLevel',
+  'promptProgram',
+  'cost',
+  'dataClassification',
+  'frontierCallKind',
 ];
 
 function readJson(relativePath) {
@@ -129,6 +139,12 @@ function validateManifestShape(manifest) {
   validateSchemaVersion(manifest, errors);
   validateEnum(schema.properties.arm, manifest.arm, 'manifest.arm', errors);
   validateOptionalObject(schema.properties.budget, manifest.budget, 'manifest.budget', errors);
+  validateOptionalObject(
+    schema.properties.evidencePolicy,
+    manifest.evidencePolicy,
+    'manifest.evidencePolicy',
+    errors,
+  );
   validateSteps(manifest.steps, errors);
   validateOracle(manifest.oracle, errors);
   validateOptionalObject(
@@ -148,6 +164,10 @@ test('schema version 2 accepts a synthetic Ollama local lane', () => {
   assert.equal(schema.properties.schemaVersion.const, 2);
   assert.equal(sample.schemaVersion, 2);
   assert.equal(step.runner, 'ollama');
+  assert.equal(step.provider, 'ollama');
+  assert.equal(step.requestedModel, 'qwen3-opencode:30b');
+  assert.equal(step.actualModel, 'qwen3-opencode:30b');
+  assert.equal(step.providerSubstitution.occurred, false);
   assert.equal(step.providerClass, 'local');
   assert.equal(step.routeDecision, 'local');
   assert.ok(stepSchema.runner.enum.includes('ollama'));
@@ -156,7 +176,7 @@ test('schema version 2 accepts a synthetic Ollama local lane', () => {
   assert.deepEqual(validateManifestShape(sample), []);
 });
 
-test('schema requires routing metadata for every step', () => {
+test('schema requires claim-grade metadata for every step', () => {
   const requiredFields = schema.properties.steps.items.required;
 
   for (const field of routingMetadataFields) {
@@ -171,5 +191,15 @@ test('rejects a manifest step missing routing metadata', () => {
 
   assert.deepEqual(validateManifestShape(invalidManifest), [
     'manifest.steps[0].routeTrigger is required by schema',
+  ]);
+});
+
+test('rejects a manifest step missing provider identity metadata', () => {
+  const invalidManifest = cloneJson(sample);
+
+  delete invalidManifest.steps[0].actualModel;
+
+  assert.deepEqual(validateManifestShape(invalidManifest), [
+    'manifest.steps[0].actualModel is required by schema',
   ]);
 });

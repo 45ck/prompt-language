@@ -10,6 +10,11 @@
     "runId",
     "taskId",
     "arm",
+    "runGroupId",
+    "claimStatus",
+    "repo",
+    "budget",
+    "evidencePolicy",
     "startedAt",
     "completedAt",
     "steps",
@@ -34,6 +39,31 @@
     "arm": {
       "enum": ["local-only", "frontier-only", "advisor-only", "hybrid-router"]
     },
+    "runGroupId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "claimStatus": {
+      "enum": [
+        "structure-only-not-model-evidence",
+        "fake-live-deterministic-not-model-evidence",
+        "live-model-evidence"
+      ]
+    },
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "dirty"],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dirty": {
+          "type": "boolean"
+        }
+      }
+    },
     "startedAt": {
       "type": "string",
       "format": "date-time"
@@ -45,6 +75,14 @@
     "budget": {
       "type": "object",
       "additionalProperties": false,
+      "required": [
+        "frontierCallLimit",
+        "usdLimit",
+        "wallSecondsLimit",
+        "localRepairAttemptLimit",
+        "retryPolicy",
+        "enforced"
+      ],
       "properties": {
         "frontierCallLimit": {
           "type": "integer",
@@ -57,6 +95,41 @@
         "wallSecondsLimit": {
           "type": "integer",
           "minimum": 1
+        },
+        "localRepairAttemptLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "retryPolicy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "enforced": {
+          "type": "boolean"
+        }
+      }
+    },
+    "evidencePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifestAuthor",
+        "oracleVisibility",
+        "providerFallbackPolicy",
+        "localOnlyAllowsFrontierInput"
+      ],
+      "properties": {
+        "manifestAuthor": {
+          "enum": ["harness", "model", "operator"]
+        },
+        "oracleVisibility": {
+          "enum": ["private-artifacts-only", "model-visible"]
+        },
+        "providerFallbackPolicy": {
+          "enum": ["forbid", "record-and-invalidate", "allow"]
+        },
+        "localOnlyAllowsFrontierInput": {
+          "type": "boolean"
         }
       }
     },
@@ -71,12 +144,22 @@
           "purpose",
           "runner",
           "model",
+          "provider",
+          "endpoint",
+          "requestedModel",
+          "actualModel",
+          "providerSubstitution",
+          "adapterVersion",
           "providerClass",
           "routeDecision",
           "routeTrigger",
           "riskLevel",
           "ambiguityLevel",
           "attemptNumber",
+          "promptProgram",
+          "cost",
+          "dataClassification",
+          "frontierCallKind",
           "cwd",
           "startedAt",
           "completedAt",
@@ -96,6 +179,38 @@
             "enum": ["aider", "codex", "ollama", "opencode", "prompt-language", "shell", "other"]
           },
           "model": {
+            "type": "string",
+            "minLength": 1
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1
+          },
+          "endpoint": {
+            "type": ["string", "null"]
+          },
+          "requestedModel": {
+            "type": "string",
+            "minLength": 1
+          },
+          "actualModel": {
+            "type": "string",
+            "minLength": 1
+          },
+          "providerSubstitution": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["occurred", "reason"],
+            "properties": {
+              "occurred": {
+                "type": "boolean"
+              },
+              "reason": {
+                "type": ["string", "null"]
+              }
+            }
+          },
+          "adapterVersion": {
             "type": "string",
             "minLength": 1
           },
@@ -121,6 +236,64 @@
           "attemptNumber": {
             "type": "integer",
             "minimum": 1
+          },
+          "promptProgram": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "path", "sha256"],
+            "properties": {
+              "kind": {
+                "enum": ["flow", "prompt", "synthetic", "shell"]
+              },
+              "path": {
+                "type": ["string", "null"]
+              },
+              "sha256": {
+                "type": ["string", "null"]
+              }
+            }
+          },
+          "cost": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "basis",
+              "estimatedUsd",
+              "providerReportedUsd",
+              "inputTokens",
+              "outputTokens",
+              "pricingVersion"
+            ],
+            "properties": {
+              "basis": {
+                "enum": ["none", "provider-reported", "estimated"]
+              },
+              "estimatedUsd": {
+                "type": "number",
+                "minimum": 0
+              },
+              "providerReportedUsd": {
+                "type": ["number", "null"],
+                "minimum": 0
+              },
+              "inputTokens": {
+                "type": ["integer", "null"],
+                "minimum": 0
+              },
+              "outputTokens": {
+                "type": ["integer", "null"],
+                "minimum": 0
+              },
+              "pricingVersion": {
+                "type": ["string", "null"]
+              }
+            }
+          },
+          "dataClassification": {
+            "enum": ["public", "internal", "private-oracle"]
+          },
+          "frontierCallKind": {
+            "enum": ["none", "classifier", "advisor", "repair", "review", "full-work"]
           },
           "inputArtifactRefs": {
             "type": "array",
@@ -197,11 +370,18 @@
     "oracle": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["command", "exitCode", "passed"],
+      "required": ["command", "commandSha256", "visibility", "exitCode", "passed"],
       "properties": {
         "command": {
           "type": "string",
           "minLength": 1
+        },
+        "commandSha256": {
+          "type": "string",
+          "minLength": 1
+        },
+        "visibility": {
+          "enum": ["private-artifacts-only", "model-visible"]
         },
         "exitCode": {
           "type": ["integer", "null"]

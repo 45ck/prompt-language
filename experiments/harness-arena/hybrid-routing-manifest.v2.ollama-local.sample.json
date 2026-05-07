@@ -4,12 +4,27 @@
   "runId": "ha-hr1-smoke-ollama-local",
   "taskId": "H14",
   "arm": "local-only",
+  "runGroupId": "ha-hr1-smoke",
+  "claimStatus": "fake-live-deterministic-not-model-evidence",
+  "repo": {
+    "commit": "synthetic",
+    "dirty": false
+  },
   "startedAt": "2026-05-04T00:00:00.000Z",
   "completedAt": "2026-05-04T00:02:00.000Z",
   "budget": {
     "frontierCallLimit": 0,
     "usdLimit": 0,
-    "wallSecondsLimit": 300
+    "wallSecondsLimit": 300,
+    "localRepairAttemptLimit": 0,
+    "retryPolicy": "none",
+    "enforced": true
+  },
+  "evidencePolicy": {
+    "manifestAuthor": "harness",
+    "oracleVisibility": "private-artifacts-only",
+    "providerFallbackPolicy": "forbid",
+    "localOnlyAllowsFrontierInput": false
   },
   "steps": [
     {
@@ -17,6 +32,15 @@
       "purpose": "Synthetic local lane for HA-HR1 manifest schema smoke coverage",
       "runner": "ollama",
       "model": "qwen3-opencode:30b",
+      "provider": "ollama",
+      "endpoint": "http://127.0.0.1:11434",
+      "requestedModel": "qwen3-opencode:30b",
+      "actualModel": "qwen3-opencode:30b",
+      "providerSubstitution": {
+        "occurred": false,
+        "reason": null
+      },
+      "adapterVersion": "synthetic-schema-sample",
       "providerClass": "local",
       "routeDecision": "local",
       "routeTrigger": "local-only-arm",
@@ -24,6 +48,21 @@
       "ambiguityLevel": "low",
       "escalationReason": null,
       "attemptNumber": 1,
+      "promptProgram": {
+        "kind": "flow",
+        "path": "experiments/harness-arena/flows/local-bulk-worker.flow",
+        "sha256": "synthetic-flow-hash"
+      },
+      "cost": {
+        "basis": "none",
+        "estimatedUsd": 0,
+        "providerReportedUsd": null,
+        "inputTokens": null,
+        "outputTokens": null,
+        "pricingVersion": null
+      },
+      "dataClassification": "public",
+      "frontierCallKind": "none",
       "inputArtifactRefs": ["flows/local-bulk-worker.flow"],
       "outputArtifactRefs": ["artifacts/local-bulk-summary.json"],
       "diffSummary": "Synthetic manifest only; no workspace diff.",
@@ -41,6 +80,8 @@
   ],
   "oracle": {
     "command": "npm run test",
+    "commandSha256": "synthetic-oracle-command-hash",
+    "visibility": "private-artifacts-only",
     "exitCode": 0,
     "passed": true,
     "passes": 1,

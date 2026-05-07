@@ -238,3 +238,22 @@ repair step, so it could only diagnose the failed local work.
 Decision: do not scale the static H14 hybrid shape. The next useful increment is a
 failure-aware hybrid arm that escalates from local public-gate failure to bounded
 frontier repair before the private oracle.
+
+Follow-up failure-aware hybrid runs:
+
+```text
+.tmp/harness-arena/HA-HR1-H14-hybrid-repair-codex-ollama-001/01-hybrid-router/hybrid-routing-manifest.json
+.tmp/harness-arena/HA-HR1-H14-hybrid-repair-codex-ollama-002/01-hybrid-router/hybrid-routing-manifest.json
+.tmp/harness-arena/HA-HR1-H14-hybrid-repair-codex-ollama-003/01-hybrid-router/hybrid-routing-manifest.json
+```
+
+`001` inserted frontier repair and reached public-test success, but hidden oracle
+failed `5/6` because the repair dropped the original `createContact` export. `002`
+kept export names but changed original positional APIs; hidden oracle again failed
+`5/6`. `003` used a public gate hardened for original API compatibility. The local
+step failed with an Ollama runtime connection error, frontier repair passed, final
+review passed, and the private oracle passed `6/6`.
+
+Decision: H14 failure-aware hybrid can recover, but it used three frontier calls
+versus one frontier call for the passing frontier-only baseline. For H14-like TDD
+implementation, local `qwen3:8b` is not a cost-saving bulk worker under this policy.

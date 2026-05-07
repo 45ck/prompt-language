@@ -173,3 +173,85 @@ For H14, the current static hybrid shape is not worth scaling. The evidence says
 The next useful increment is not more repetitions of the same static hybrid arm.
 It is a failure-aware hybrid arm that escalates from local failure to a bounded
 frontier repair step, then re-runs the private oracle.
+
+### `HA-HR1-H14-hybrid-repair-codex-ollama-001`
+
+The first failure-aware hybrid run inserted `frontier-repair` after local public
+gate failure.
+
+Outcome:
+
+- frontier-classify exit code: `0`
+- local-bulk exit code: `1`
+- frontier-repair exit code: `0`
+- frontier-review exit code: `0`
+- private oracle: failed
+
+Oracle result:
+
+```text
+Results: 5/6 passed
+```
+
+The repair step restored `mergeDuplicates` and public tests but dropped the
+existing `createContact` export. This exposed a gap in the public H14 gate.
+
+### `HA-HR1-H14-hybrid-repair-codex-ollama-002`
+
+After the public gate was hardened to require original export names, the second
+failure-aware hybrid run still failed hidden behavior.
+
+Outcome:
+
+- frontier-classify wall time: `90.645s`
+- local-bulk timed out: `900.104s`
+- frontier-repair wall time: `206.776s`
+- frontier-review wall time: `91.048s`
+- private oracle: failed
+
+Oracle result:
+
+```text
+Results: 5/6 passed
+```
+
+The repair preserved export names but changed the original positional APIs. This
+exposed a second public-gate gap: export names alone were not enough.
+
+### `HA-HR1-H14-hybrid-repair-codex-ollama-003`
+
+After the public gate was hardened again to exercise original positional APIs, the
+third failure-aware hybrid run passed.
+
+Outcome:
+
+- frontier-classify wall time: `168.576s`
+- local-bulk exit code: `3`
+- local-bulk wall time: `129.746s`
+- frontier-repair wall time: `175.595s`
+- frontier-review wall time: `161.263s`
+- private oracle: passed
+
+Oracle result:
+
+```text
+Results: 6/6 passed
+```
+
+The local step failed with an Ollama runtime connection error, not a successful
+local implementation. The inserted frontier repair completed the task and the
+private oracle passed.
+
+## H14 Routing Result
+
+For H14, failure-aware hybrid can recover from local failure, but the current policy
+does not beat the frontier-only baseline on frontier-call count:
+
+- frontier-only passed with one frontier call;
+- static hybrid failed;
+- failure-aware hybrid passed with three frontier calls plus a failed local call.
+
+This means H14 is a bad candidate for cost-saving local delegation with `qwen3:8b`.
+The useful policy is to classify H14-like TDD implementation as frontier-owned, or
+to use local only for narrower substeps with stronger public gates and a strict
+early-failure cutoff.

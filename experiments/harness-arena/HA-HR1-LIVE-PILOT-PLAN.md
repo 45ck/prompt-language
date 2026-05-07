@@ -1,8 +1,8 @@
 # HA-HR1 Live Pilot Plan
 
 Date: 2026-05-08
-Status: ready for structure checks; blocked on Ollama HTTP API readiness before
-live local-model evidence
+Status: structure checks pass; native Ollama smoke passes only when a Windows
+Ollama server is exposed to WSL on a non-localhost endpoint
 
 ## Goal
 
@@ -115,6 +115,28 @@ Observed on 2026-05-08:
 Interpretation: the harness structure is ready for the next implementation
 increment, but live local-model evidence is blocked until the Ollama API endpoint
 used by the native runner is reachable.
+
+Follow-up on 2026-05-08:
+
+| Check                                      | Result | Note                                                                 |
+| ------------------------------------------ | ------ | -------------------------------------------------------------------- |
+| Windows `127.0.0.1:11434` via PowerShell   | pass   | Windows Ollama API returns `{"version":"0.20.5"}`                    |
+| WSL `127.0.0.1:11434` via `curl`           | fail   | Connection refused                                                   |
+| Temporary Windows `0.0.0.0:11435` from WSL | pass   | WSL gateway endpoint returns `{"version":"0.20.5"}`                  |
+| Ollama smoke `--only E` with `qwen3:8b`    | pass   | `1/1` smoke case passed through `prompt-language ci --runner ollama` |
+
+The working local-runner pattern for this host is:
+
+```sh
+HOST=$(ip route | awk '/default/ {print $3}')
+PROMPT_LANGUAGE_OLLAMA_BASE_URL="http://$HOST:11435" \
+  EVAL_MODEL=ollama/qwen3:8b \
+  node scripts/eval/smoke-test.mjs --harness ollama --quick --only E
+```
+
+The temporary Windows Ollama server used for that smoke was stopped after the
+run. Do not treat this as HA-HR1 live evidence; it proves native Ollama runner
+connectivity for one small smoke case only.
 
 ## Evidence Contract
 

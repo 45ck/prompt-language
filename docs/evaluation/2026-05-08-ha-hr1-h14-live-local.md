@@ -125,3 +125,51 @@ Interpretation: frontier advice alone did not rescue this local model on H14. Th
 local lane still replaced the fixture with a shallow helper and comment-only tests.
 For this fixture, successful completion required frontier execution, not just
 frontier review/advice.
+
+### `HA-HR1-H14-hybrid-codex-ollama-001`
+
+The hybrid-router run executed frontier classify, local bulk, and frontier review.
+
+Outcome:
+
+- frontier-classify exit code: `0`
+- frontier-classify wall time: `51.287s`
+- local-bulk exit code: `1`
+- local-bulk wall time: `290.396s`
+- frontier-review exit code: `0`
+- frontier-review wall time: `67.755s`
+- private oracle: failed
+- classification: model failure
+
+Representative local-bulk outcome:
+
+```json
+{
+  "status": "unsuccessful",
+  "reason": "Completion gates failed: h14_public_contract. Fix the failing checks before completing the task. Last assistant output: Summary written with file changes and test status."
+}
+```
+
+Oracle result:
+
+```text
+Results: 2/6 passed
+```
+
+The frontier review correctly diagnosed the incomplete local output: no
+`mergeDuplicates` implementation, no export, and no executable merge tests. The
+static hybrid-router shape still failed because review happened after the failed
+local implementation and did not include a frontier repair step.
+
+## Decision
+
+For H14, the current static hybrid shape is not worth scaling. The evidence says:
+
+- local-only `qwen3:8b` fails this TDD implementation fixture;
+- frontier advice followed by local apply also fails;
+- frontier-only passes;
+- hybrid classify/local/review detects the failure but does not repair it.
+
+The next useful increment is not more repetitions of the same static hybrid arm.
+It is a failure-aware hybrid arm that escalates from local failure to a bounded
+frontier repair step, then re-runs the private oracle.

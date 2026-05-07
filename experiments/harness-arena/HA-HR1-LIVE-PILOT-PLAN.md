@@ -222,3 +222,19 @@ The first H14 advisor-only run is:
 The frontier advice step passed in `89.671s`, but the local apply step failed the
 public gates after `291.338s`; the private oracle failed `2/6`. For this fixture,
 frontier advice alone did not rescue local `qwen3:8b`.
+
+The first static H14 hybrid-router run is:
+
+```text
+.tmp/harness-arena/HA-HR1-H14-hybrid-codex-ollama-001/01-hybrid-router/hybrid-routing-manifest.json
+```
+
+Frontier classify passed in `51.287s`, local bulk failed the public gates after
+`290.396s`, frontier review passed in `67.755s`, and the private oracle failed
+`2/6`. The frontier review correctly identified the missing implementation/export
+and missing executable tests, but the static hybrid arm did not include a frontier
+repair step, so it could only diagnose the failed local work.
+
+Decision: do not scale the static H14 hybrid shape. The next useful increment is a
+failure-aware hybrid arm that escalates from local public-gate failure to bounded
+frontier repair before the private oracle.

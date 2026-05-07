@@ -9,19 +9,19 @@ flow:
   remember key="policy_version" value="hybrid-routing-v0"
   remember key="route_policy" value="Local worker owns the H14 implementation and public tests only. Hidden oracle details are not available."
 
-  prompt: Read TASK.md, src/contacts.js, and src/test.js. Add at least five tests in src/test.js that call mergeDuplicates and cover basic merge, later non-empty field priority, older non-empty fallback, no duplicates, and multiple duplicate groups. Then implement mergeDuplicates in src/contacts.js and export it. Write local-worker-summary.md only after the public checks pass.
+  prompt: Read TASK.md, src/contacts.js, and src/test.js. Add at least five tests in src/test.js that call mergeDuplicates and cover basic merge, later non-empty field priority, older non-empty fallback, no duplicates, and multiple duplicate groups. Then implement mergeDuplicates in src/contacts.js and export it without removing the existing createContact, findByEmail, addContact, or removeContact exports. Write local-worker-summary.md only after the public checks pass.
 
   until command_succeeded max 4
-    run: node -e "const fs=require('fs'); const contacts=fs.readFileSync('src/contacts.js','utf8'); const tests=fs.readFileSync('src/test.js','utf8'); const count=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(merge|duplicate)[^'\\\"]*['\\\"]/gi)||[]).length; if (!contacts.includes('mergeDuplicates')) { console.error('mergeDuplicates missing in src/contacts.js'); process.exit(1); } if (!/module\\.exports\\s*=.*mergeDuplicates/s.test(contacts)) { console.error('mergeDuplicates is not exported'); process.exit(1); } if (count < 5) { console.error('expected at least 5 merge/duplicate tests, found '+count); process.exit(1); }"
+    run: node -e "const fs=require('fs'); const contacts=fs.readFileSync('src/contacts.js','utf8'); const tests=fs.readFileSync('src/test.js','utf8'); const count=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(merge|duplicate)[^'\\\"]*['\\\"]/gi)||[]).length; const exports=['createContact','findByEmail','addContact','removeContact','mergeDuplicates']; const missing=exports.filter((name)=>!new RegExp('module\\\\.exports\\\\s*=.*\\\\b'+name+'\\\\b','s').test(contacts)); if (!contacts.includes('mergeDuplicates')) { console.error('mergeDuplicates missing in src/contacts.js'); process.exit(1); } if (missing.length) { console.error('missing exports: '+missing.join(',')); process.exit(1); } if (count < 5) { console.error('expected at least 5 merge/duplicate tests, found '+count); process.exit(1); }"
     if command_failed
-      prompt: The public structural gate failed. Fix only src/test.js and src/contacts.js so mergeDuplicates is implemented, exported, and covered by at least five merge/duplicate tests. Gate output: ${last_stdout} ${last_stderr}
+      prompt: The public structural gate failed. Fix only src/test.js and src/contacts.js so mergeDuplicates is implemented, all original contacts exports are preserved, and at least five merge/duplicate tests exist. Gate output: ${last_stdout} ${last_stderr}
     end
   end
 
   until command_succeeded max 6
     run: npm test [timeout 120]
     if command_failed
-      prompt: Public tests are failing. Fix only src/test.js and src/contacts.js. Preserve the required merge behavior: later non-empty fields override, older non-empty fields remain when later fields are empty, and unique emails stay present. Test output: ${last_stdout} ${last_stderr}
+      prompt: Public tests are failing. Fix only src/test.js and src/contacts.js. Preserve the existing createContact, findByEmail, addContact, and removeContact behavior, plus the required merge behavior: later non-empty fields override, older non-empty fields remain when later fields are empty, and unique emails stay present. Test output: ${last_stdout} ${last_stderr}
     end
   end
 
@@ -29,5 +29,5 @@ flow:
 
 done when:
   file_exists local-worker-summary.md
-  gate h14_public_contract: node -e "const fs=require('fs'); const contacts=fs.readFileSync('src/contacts.js','utf8'); const tests=fs.readFileSync('src/test.js','utf8'); const count=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(merge|duplicate)[^'\\\"]*['\\\"]/gi)||[]).length; if (!contacts.includes('mergeDuplicates')) process.exit(1); if (!/module\\.exports\\s*=.*mergeDuplicates/s.test(contacts)) process.exit(1); if (count < 5) process.exit(1);"
+  gate h14_public_contract: node -e "const fs=require('fs'); const contacts=fs.readFileSync('src/contacts.js','utf8'); const tests=fs.readFileSync('src/test.js','utf8'); const count=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(merge|duplicate)[^'\\\"]*['\\\"]/gi)||[]).length; const exports=['createContact','findByEmail','addContact','removeContact','mergeDuplicates']; const missing=exports.filter((name)=>!new RegExp('module\\\\.exports\\\\s*=.*\\\\b'+name+'\\\\b','s').test(contacts)); if (!contacts.includes('mergeDuplicates')) process.exit(1); if (missing.length) process.exit(1); if (count < 5) process.exit(1);"
   gate public_tests: npm test

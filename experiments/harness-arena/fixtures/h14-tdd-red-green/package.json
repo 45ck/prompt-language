@@ -1,0 +1,8 @@
+{
+  "name": "ha-hr1-h14-tdd-red-green",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node src/test.js"
+  }
+}

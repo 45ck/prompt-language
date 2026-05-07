@@ -188,3 +188,18 @@ Windows Ollama endpoint using `qwen3:8b`. The resulting manifest is:
 It records `claimStatus: live-model-evidence`, local Ollama metadata, step exit code
 `0`, step wall time `7.316s`, and `oracle.passed: true`. Treat this as
 connectivity-level local model evidence, not full HA-HR1 routing evidence.
+
+The first task-shaped H14 local-only runs are:
+
+```text
+.tmp/harness-arena/HA-HR1-H14-local-ollama-001/01-local-only/hybrid-routing-manifest.json
+.tmp/harness-arena/HA-HR1-H14-local-ollama-002/01-local-only/hybrid-routing-manifest.json
+```
+
+`001` used the generic local-bulk flow and exposed a harness-flow weakness: the
+local model wrote `local-worker-summary.md` without editing `src/contacts.js` or
+`src/test.js`, so the private oracle failed. `002` used the H14 public-gated flow;
+the runner correctly blocked completion as unsuccessful after `282.942s`, and the
+private oracle failed because the local model replaced the fixture with a shallow
+`mergeContacts` helper and comment-only tests. This is useful local-only failure
+evidence, not a harness failure.

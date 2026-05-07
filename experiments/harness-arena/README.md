@@ -43,6 +43,8 @@ read-only review.
 ## What is in flight
 
 - HA-HR1 deterministic runner core — see [runner.mjs](runner.mjs)
+- HA-HR1 H14 fixture and oracle — see [fixtures/h14-tdd-red-green/](fixtures/h14-tdd-red-green/)
+  and [oracles/h14-tdd-red-green-oracle.mjs](oracles/h14-tdd-red-green-oracle.mjs)
 - HA-E1 pilot plan — see [../harness-arena-HA-E1-PLAN.md](../harness-arena-HA-E1-PLAN.md)
 - HA-HR1 hybrid routing plan — see [hybrid-model-routing.md](hybrid-model-routing.md)
 - HA-HR1 live pilot readiness plan — see
@@ -68,8 +70,9 @@ read-only review.
 
 ## Known blockers
 
-- HA-HR1 full-arm claims still depend on budgeted frontier command templates and
-  real task-specific verifier/oracle wiring.
+- HA-HR1 full-arm claims still depend on budgeted frontier command templates.
+- H14 task-specific oracle wiring exists, and the first local-only H14 run is a
+  local model failure, not a pass.
 - Dry-run manifests intentionally set `oracle.passed=false`; they validate
   structure only and are not model-performance evidence.
 - Fake-live manifests may set `oracle.passed=true`, but that only proves local

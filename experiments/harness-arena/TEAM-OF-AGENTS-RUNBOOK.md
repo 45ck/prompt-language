@@ -105,6 +105,25 @@ stdout/stderr/metadata under `artifacts/steps/` and runs the oracle from
 frontier route also requires `--live-frontier-command`; otherwise `--live` fails
 before creating a run.
 
+For the H14 fixture, use the H14-specific local flow instead of the generic
+local-bulk flow:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --arms local-only \
+  --fixture experiments/harness-arena/fixtures/h14-tdd-red-green \
+  --task-id HA-HR1-H14-tdd-red-green \
+  --live-local-command 'bash -lc "PROMPT_LANGUAGE_OLLAMA_BASE_URL=$PROMPT_LANGUAGE_OLLAMA_BASE_URL PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=600000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node /path/to/prompt-language/bin/cli.mjs run --runner ollama --model qwen3:8b --json --file /path/to/prompt-language/experiments/harness-arena/flows/h14-local-bulk-worker.flow"' \
+  --oracle-command 'node /path/to/prompt-language/experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs --workspace <workspace>' \
+  --local-model qwen3:8b \
+  --local-endpoint "$PROMPT_LANGUAGE_OLLAMA_BASE_URL" \
+  --step-timeout-ms 900000 \
+  --oracle-timeout-ms 30000 \
+  --run-id HA-HR1-H14-local-ollama-001 \
+  --output-root .tmp/harness-arena
+```
+
 ## Frontier Review Lane
 
 Use frontier reasoning for final review or escalation diagnosis:

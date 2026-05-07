@@ -41,6 +41,8 @@ read-only review.
 - HA-HR1 deterministic runner core — see [runner.mjs](runner.mjs)
 - HA-E1 pilot plan — see [../harness-arena-HA-E1-PLAN.md](../harness-arena-HA-E1-PLAN.md)
 - HA-HR1 hybrid routing plan — see [hybrid-model-routing.md](hybrid-model-routing.md)
+- HA-HR1 live pilot readiness plan — see
+  [HA-HR1-LIVE-PILOT-PLAN.md](HA-HR1-LIVE-PILOT-PLAN.md)
 - Synthetic v2 manifest schema smoke coverage — see
   [hybrid-routing-manifest.schema.test.mjs](hybrid-routing-manifest.schema.test.mjs)
 - Static-split team-flow scaffolds — see [flows/](flows/)
@@ -52,11 +54,14 @@ read-only review.
    `node experiments/harness-arena/runner.mjs --dry-run --run-id HA-HR1-structure-001 --output-root .tmp/harness-arena`
 2. Validate deterministic fake-live command/oracle plumbing with
    `node experiments/harness-arena/runner.mjs --fake-live --run-id HA-HR1-fake-live-001 --output-root .tmp/harness-arena`
-3. Replace the fake-live lanes with live local/frontier invocations while
+3. Clear the live-readiness gates in
+   [HA-HR1-LIVE-PILOT-PLAN.md](HA-HR1-LIVE-PILOT-PLAN.md), especially Ollama
+   HTTP API readiness for local-runner evidence
+4. Replace the fake-live lanes with live local/frontier invocations while
    preserving workspace/oracle isolation
-4. Run HA-HR1 across local-only, frontier-only, advisor-only, and hybrid-router arms
-5. Run HA-E1 pilot under a $5 budget cap
-6. Write up findings and decide whether to scale
+5. Run HA-HR1 across local-only, frontier-only, advisor-only, and hybrid-router arms
+6. Run HA-E1 pilot under a $5 budget cap
+7. Write up findings and decide whether to scale
 
 ## Known blockers
 
@@ -93,5 +98,6 @@ than implied by prompts.
 
 - Plan: [../harness-arena-HA-E1-PLAN.md](../harness-arena-HA-E1-PLAN.md)
 - Hybrid routing plan: [hybrid-model-routing.md](hybrid-model-routing.md)
+- Live pilot plan: [HA-HR1-LIVE-PILOT-PLAN.md](HA-HR1-LIVE-PILOT-PLAN.md)
 - Operator guide: [../../docs/guides/team-of-agents.md](../../docs/guides/team-of-agents.md)
 - Sibling areas: [../aider-vs-pl/](../aider-vs-pl/), [../aider-vs-pl/rescue-viability/](../aider-vs-pl/rescue-viability/), [../ecosystem-analysis/](../ecosystem-analysis/)

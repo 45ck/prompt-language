@@ -3,6 +3,7 @@ dist/
 coverage/
 reports/
 .tsbuildinfo/
+.tmp/
 test-results/
 *.tsbuildinfo
 .stryker-tmp/

@@ -54,8 +54,20 @@ test('patchContact valid name update works', () => {
   if (result.body.name !== 'Alice Updated') throw new Error('Name not updated');
 });
 
+test('patch valid plus phone update works', () => {
+  const result = patchContact(2, { phone: '+1 555-0199' });
+  expectStatus(result, 200);
+  if (result.body.phone !== '+1 555-0199') throw new Error('Phone not updated');
+});
+
 test('patch short name validation includes an error body', () => {
   const result = patchContact(1, { name: 'A' });
+  expectStatus(result, 400);
+  expectErrorBody(result);
+});
+
+test('patch non-string name validation is rejected', () => {
+  const result = patchContact(1, { name: null });
   expectStatus(result, 400);
   expectErrorBody(result);
 });
@@ -78,6 +90,12 @@ test('patch email without at validation is rejected', () => {
   expectErrorBody(result);
 });
 
+test('patch non-string email validation is rejected', () => {
+  const result = patchContact(1, { email: null });
+  expectStatus(result, 400);
+  expectErrorBody(result);
+});
+
 test('patch phone invalid characters validation is rejected', () => {
   const result = patchContact(1, { phone: 'abc!' });
   expectStatus(result, 400);
@@ -90,8 +108,26 @@ test('patch short phone validation is rejected', () => {
   expectErrorBody(result);
 });
 
+test('patch long phone validation is rejected', () => {
+  const result = patchContact(1, { phone: '+1 555 0101 0101 0101 9999' });
+  expectStatus(result, 400);
+  expectErrorBody(result);
+});
+
 test('patch empty company validation is rejected', () => {
   const result = patchContact(1, { company: '' });
+  expectStatus(result, 400);
+  expectErrorBody(result);
+});
+
+test('patch long company validation is rejected', () => {
+  const result = patchContact(1, { company: 'C'.repeat(201) });
+  expectStatus(result, 400);
+  expectErrorBody(result);
+});
+
+test('patch non-string company validation is rejected', () => {
+  const result = patchContact(1, { company: 123 });
   expectStatus(result, 400);
   expectErrorBody(result);
 });

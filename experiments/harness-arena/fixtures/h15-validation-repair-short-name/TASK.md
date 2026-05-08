@@ -24,3 +24,4 @@ an error body.
    `patchContact`, and `contacts` exports remain present.
 6. Successful `deleteContact` still returns status `204` with body `null`.
 7. `node src/test.js` passes.
+8. Do not relax `+` phone support, non-string rejection, or long-field limits.

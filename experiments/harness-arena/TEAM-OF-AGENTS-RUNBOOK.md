@@ -132,7 +132,7 @@ default arm from `h14-qwen3-coder-routing-policy.v1.json`:
 node experiments/harness-arena/runner.mjs \
   --live \
   --h14-qwen-coder-subrole api-preservation \
-  --live-local-command 'bash -lc "PROMPT_LANGUAGE_OLLAMA_BASE_URL=$PROMPT_LANGUAGE_OLLAMA_BASE_URL PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node /path/to/prompt-language/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file /path/to/prompt-language/experiments/harness-arena/flows/h14-api-preservation-worker.flow"' \
+  --live-local-command 'bash -lc "PROMPT_LANGUAGE_OLLAMA_BASE_URL=$PROMPT_LANGUAGE_OLLAMA_BASE_URL PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node /path/to/prompt-language/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>"' \
   --local-endpoint "$PROMPT_LANGUAGE_OLLAMA_BASE_URL" \
   --run-id HA-HR1-H14-api-preservation-routed-001 \
   --output-root .tmp/harness-arena
@@ -141,7 +141,9 @@ node experiments/harness-arena/runner.mjs \
 `implementation-from-tests` and `api-preservation` route to `local-only` by
 default. `test-authoring` and `full-tdd` route to `frontier-only` by default, so a
 live run for those subroles requires `--live-frontier-command` instead of
-`--live-local-command`.
+`--live-local-command`. H14 route-profile live commands must reference the routed
+flow; use `<h14Flow>` for the absolute path or `<h14FlowRelative>` for the
+repo-relative path.
 
 ## Frontier Review Lane
 

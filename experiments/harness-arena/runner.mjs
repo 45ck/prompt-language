@@ -540,14 +540,39 @@ function buildFakeStepCommand(options, arm, stepId, index, workspace) {
 function buildLiveStepCommand(options, arm, stepId, routeDecision, index, workspace) {
   const template = liveCommandForRoute(options, routeDecision);
   if (!template) throw new Error(`missing live command template for route: ${routeDecision}`);
+  validateH14LiveCommandTemplate(options, template);
+  const h14Flow = options.h14QwenCoderRoute
+    ? join(ROOT, options.h14QwenCoderRoute.route.flow)
+    : null;
   return commandFromTemplate(template, {
     arm,
     attempt: String(index + 1),
+    h14Flow,
+    h14FlowRelative: options.h14QwenCoderRoute?.route.flow ?? null,
     routeDecision,
     stepId,
     taskId: options.taskId,
     workspace,
   });
+}
+
+function validateH14LiveCommandTemplate(options, template) {
+  const route = options.h14QwenCoderRoute?.route;
+  if (!route) return;
+
+  const absoluteFlow = join(ROOT, route.flow);
+  if (
+    template.includes('<h14Flow>') ||
+    template.includes('<h14FlowRelative>') ||
+    template.includes(route.flow) ||
+    template.includes(absoluteFlow)
+  ) {
+    return;
+  }
+
+  throw new Error(
+    `H14 qwen-coder live command must reference the routed flow ${route.flow}; use <h14Flow> for the absolute path.`,
+  );
 }
 
 function liveCommandForRoute(options, routeDecision) {

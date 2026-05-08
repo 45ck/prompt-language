@@ -343,6 +343,119 @@ test('H14 qwen3-coder live profile requires only the routed lane command', () =>
   );
 });
 
+test('H14 qwen3-coder live profile interpolates the routed flow path into lane commands', () => {
+  const outputRoot = tempRoot();
+  const scriptRoot = tempRoot();
+  try {
+    mkdirSync(scriptRoot, { recursive: true });
+    const liveScript = join(scriptRoot, 'h14-live-step.mjs');
+    const oracleScript = join(scriptRoot, 'oracle.mjs');
+    writeFileSync(
+      liveScript,
+      [
+        "import { existsSync, writeFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const [workspace, h14Flow, h14FlowRelative] = process.argv.slice(2);',
+        'if (!existsSync(h14Flow)) {',
+        '  console.error(`missing h14 flow: ${h14Flow}`);',
+        '  process.exit(1);',
+        '}',
+        "writeFileSync(join(workspace, 'h14-flow.json'), JSON.stringify({",
+        '  h14Flow,',
+        '  h14FlowRelative,',
+        '}));',
+        'console.log(`h14-flow:${h14FlowRelative}`);',
+      ].join('\n'),
+    );
+    writeFileSync(
+      oracleScript,
+      [
+        "import { existsSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const workspace = process.argv.at(-1);',
+        "if (!existsSync(join(workspace, 'h14-flow.json'))) process.exit(1);",
+        "console.log('h14 route command oracle pass');",
+      ].join('\n'),
+    );
+
+    const liveCommand = [
+      quoteCommandArg(process.execPath),
+      quoteCommandArg(liveScript),
+      '<workspace>',
+      '<h14Flow>',
+      '<h14FlowRelative>',
+    ].join(' ');
+    const oracleCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      oracleScript,
+    )} --workspace <workspace>`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--live',
+        '--h14-qwen-coder-subrole',
+        'api-preservation',
+        '--live-local-command',
+        liveCommand,
+        '--oracle-command',
+        oracleCommand,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'h14-flow-placeholder-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+    const h14Flow = readJson(join(armRun.workspace, 'h14-flow.json'));
+
+    assert.equal(manifest.oracle.passed, true);
+    assert.equal(step.exitCode, 0);
+    assert.match(h14Flow.h14Flow, /h14-api-preservation-worker\.flow$/);
+    assert.equal(
+      h14Flow.h14FlowRelative,
+      'experiments/harness-arena/flows/h14-api-preservation-worker.flow',
+    );
+    assert.match(
+      readArmArtifact(armRun, step.stdoutArtifactRef),
+      /h14-flow:experiments\/harness-arena\/flows\/h14-api-preservation-worker\.flow/,
+    );
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+    rmSync(scriptRoot, { recursive: true, force: true });
+  }
+});
+
+test('H14 qwen3-coder live profile rejects lane commands that omit the routed flow', () => {
+  const outputRoot = tempRoot();
+  try {
+    const liveCommand = `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(
+      "console.log('wrong command')",
+    )}`;
+
+    assert.throws(
+      () =>
+        runHarnessArena(
+          parseArgs([
+            '--live',
+            '--h14-qwen-coder-subrole',
+            'api-preservation',
+            '--live-local-command',
+            liveCommand,
+            '--output-root',
+            outputRoot,
+            '--run-id',
+            'h14-missing-flow-run',
+          ]),
+        ),
+      /must reference the routed flow experiments\/harness-arena\/flows\/h14-api-preservation-worker\.flow/,
+    );
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('live mode executes operator-supplied lane commands and private oracle artifacts', () => {
   const outputRoot = tempRoot();
   const scriptRoot = tempRoot();

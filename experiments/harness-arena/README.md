@@ -29,6 +29,9 @@ evidence:
   routing policy. Promoted subroles default to `local-only`; non-promoted subroles
   default to `frontier-only`, with the matching fixture, oracle, policy version,
   timeout, and flow identity recorded by the runner.
+- H14 route-profile live commands must reference the routed flow. Use
+  `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative
+  flow path in `--live-local-command` / `--live-frontier-command`.
 - Fake-live step metadata records `timeoutMs`, `timedOut`, `exitCode`, and
   `wallSeconds` in both artifacts and the manifest.
 - The oracle runs only after fake-live or live steps, from `private/oracle/`, with

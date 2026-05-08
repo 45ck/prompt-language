@@ -136,6 +136,11 @@ unavailable for the selected route profile. For example, `<workspce>` is rejecte
 instead of being passed through literally, and `<h15Flow>` is rejected outside an
 H15 route context.
 
+Command stdout/stderr artifacts are capped by `--command-output-limit-bytes`
+(default `1048576`). Metadata records whether stdout or stderr was truncated plus
+the original byte counts, so a noisy local command cannot silently inflate the
+run artifact set.
+
 By default, live command templates use `--command-safety-policy deny-high-risk`.
 That blocks shell wrappers, network clients, package-manager mutation,
 destructive filesystem commands, service/process control, and git mutation before

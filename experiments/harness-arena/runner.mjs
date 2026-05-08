@@ -19,6 +19,7 @@ const ALL_ARMS = ['local-only', 'frontier-only', 'advisor-only', 'hybrid-router'
 const DEFAULT_ORACLE_COMMAND = 'node private/ha-hr1-oracle.mjs --workspace <workspace>';
 const DEFAULT_STEP_TIMEOUT_MS = 1_000;
 const DEFAULT_ORACLE_TIMEOUT_MS = 1_000;
+const DEFAULT_COMMAND_OUTPUT_LIMIT_BYTES = 1_048_576;
 const COMMAND_ENVIRONMENT_POLICIES = ['parent-env-inherited', 'minimal-allowlist'];
 const COMMAND_SAFETY_POLICIES = ['deny-high-risk', 'unrestricted'];
 const DEFAULT_TASK_BRIEF =
@@ -42,6 +43,7 @@ const ARG_FIELDS = {
   '--adapter-version': 'adapterVersion',
   '--arms': 'arms',
   '--command-environment-policy': 'commandEnvironmentPolicy',
+  '--command-output-limit-bytes': 'commandOutputLimitBytes',
   '--command-safety-policy': 'commandSafetyPolicy',
   '--fake-step-command': 'fakeStepCommand',
   '--fixture': 'fixture',
@@ -98,6 +100,7 @@ export function parseArgs(argv) {
     adapterVersion: 'harness-arena-live-command-v1',
     arms: 'all',
     commandEnvironmentPolicy: 'parent-env-inherited',
+    commandOutputLimitBytes: DEFAULT_COMMAND_OUTPUT_LIMIT_BYTES,
     commandSafetyPolicy: 'deny-high-risk',
     fakeStepCommand: null,
     fixture: null,
@@ -228,6 +231,7 @@ function parseArgValue(field, value, flag) {
   if (
     field === 'oracleTimeoutMs' ||
     field === 'stepTimeoutMs' ||
+    field === 'commandOutputLimitBytes' ||
     field === 'localResourceSnapshotIntervalMs'
   ) {
     return parsePositiveInteger(value, flag);
@@ -622,6 +626,7 @@ function executeFakeLiveSteps(options, armDir, arm, workspace) {
       armDir,
       command,
       commandEnvironmentPolicy: options.commandEnvironmentPolicy,
+      commandOutputLimitBytes: options.commandOutputLimitBytes,
       cwd: workspace,
       phase: 'step',
       timeoutMs: options.stepTimeoutMs,
@@ -698,6 +703,7 @@ function executeLiveStep(options, armDir, arm, workspace, [stepId, routeDecision
     armDir,
     command,
     commandEnvironmentPolicy: options.commandEnvironmentPolicy,
+    commandOutputLimitBytes: options.commandOutputLimitBytes,
     cwd: workspace,
     phase: 'step',
     timeoutMs: options.stepTimeoutMs,
@@ -897,6 +903,7 @@ function executeLocalResourceSnapshot(options, armDir, workspace, { arm, attempt
     armDir,
     command,
     commandEnvironmentPolicy: options.commandEnvironmentPolicy,
+    commandOutputLimitBytes: options.commandOutputLimitBytes,
     cwd: workspace,
     phase: `resource-${label}`,
     timeoutMs: Math.min(options.stepTimeoutMs, 30_000),
@@ -943,6 +950,7 @@ function executePrivateOracle(options, armDir, workspace) {
     armDir,
     command,
     commandEnvironmentPolicy: options.commandEnvironmentPolicy,
+    commandOutputLimitBytes: options.commandOutputLimitBytes,
     cwd: artifactDir,
     phase: 'oracle',
     timeoutMs: options.oracleTimeoutMs,
@@ -954,6 +962,7 @@ function executeCommandPhase({
   armDir,
   command,
   commandEnvironmentPolicy,
+  commandOutputLimitBytes,
   cwd,
   phase,
   timeoutMs,
@@ -962,6 +971,7 @@ function executeCommandPhase({
   const execution = runCommandWithTimeout({
     ...command,
     commandEnvironmentPolicy,
+    outputLimitBytes: commandOutputLimitBytes,
     cwd,
     timeoutMs,
   });
@@ -974,6 +984,7 @@ function executeCommandPhase({
     phase,
     command: command.displayCommand,
     commandEnvironmentPolicy,
+    commandOutputLimitBytes,
     commandSafetyPolicy: command.safetyPolicy ?? 'unrestricted',
     timeoutMs,
     timedOut: execution.timedOut,
@@ -982,6 +993,10 @@ function executeCommandPhase({
     wallSeconds: execution.wallSeconds,
     durationMs: execution.durationMs,
     error: execution.error,
+    stdoutTruncated: execution.stdoutTruncated,
+    stderrTruncated: execution.stderrTruncated,
+    stdoutOriginalBytes: execution.stdoutOriginalBytes,
+    stderrOriginalBytes: execution.stderrOriginalBytes,
   });
   return {
     ...execution,
@@ -997,6 +1012,7 @@ export function runCommandWithTimeout({
   command,
   commandEnvironmentPolicy = 'parent-env-inherited',
   cwd,
+  outputLimitBytes = DEFAULT_COMMAND_OUTPUT_LIMIT_BYTES,
   timeoutMs,
 }) {
   const startedAt = new Date().toISOString();
@@ -1011,6 +1027,14 @@ export function runCommandWithTimeout({
   });
   const durationMs = Math.round(Number(process.hrtime.bigint() - started) / 1_000_000);
   const timedOut = result.error?.code === 'ETIMEDOUT';
+  const stdout = truncateOutput(
+    typeof result.stdout === 'string' ? result.stdout : '',
+    outputLimitBytes,
+  );
+  const stderr = truncateOutput(
+    typeof result.stderr === 'string' ? result.stderr : '',
+    outputLimitBytes,
+  );
 
   return {
     completedAt: new Date().toISOString(),
@@ -1019,10 +1043,29 @@ export function runCommandWithTimeout({
     exitCode: typeof result.status === 'number' ? result.status : null,
     signal: result.signal ?? null,
     startedAt,
-    stderr: typeof result.stderr === 'string' ? result.stderr : '',
-    stdout: typeof result.stdout === 'string' ? result.stdout : '',
+    stderr: stderr.value,
+    stderrOriginalBytes: stderr.originalBytes,
+    stderrTruncated: stderr.truncated,
+    stdout: stdout.value,
+    stdoutOriginalBytes: stdout.originalBytes,
+    stdoutTruncated: stdout.truncated,
     timedOut,
     wallSeconds: Number((durationMs / 1_000).toFixed(3)),
+  };
+}
+
+function truncateOutput(value, limitBytes) {
+  const originalBytes = Buffer.byteLength(value, 'utf8');
+  if (originalBytes <= limitBytes) return { originalBytes, truncated: false, value };
+
+  let end = Math.max(0, limitBytes);
+  while (Buffer.byteLength(value.slice(0, end), 'utf8') > limitBytes) {
+    end -= 1;
+  }
+  return {
+    originalBytes,
+    truncated: true,
+    value: value.slice(0, end),
   };
 }
 
@@ -1772,7 +1815,7 @@ function byName(left, right) {
 }
 
 export function usage() {
-  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--h11-qwen-coder-task task] [--h14-local-subrole subrole] [--h14-qwen-coder-subrole subrole] [--h15-qwen-coder-task task] [--frontier-call-limit n] [--usd-limit n] [--wall-seconds-limit n] [--local-repair-attempt-limit n] [--command-environment-policy parent-env-inherited|minimal-allowlist] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
+  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--h11-qwen-coder-task task] [--h14-local-subrole subrole] [--h14-qwen-coder-subrole subrole] [--h15-qwen-coder-task task] [--frontier-call-limit n] [--usd-limit n] [--wall-seconds-limit n] [--local-repair-attempt-limit n] [--command-environment-policy parent-env-inherited|minimal-allowlist] [--command-output-limit-bytes n] [--command-safety-policy deny-high-risk|unrestricted] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
 }
 
 function main(argv = process.argv.slice(2)) {

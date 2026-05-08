@@ -113,6 +113,9 @@ evidence:
   without manually opening every artifact.
 - Fake-live step metadata records `timeoutMs`, `timedOut`, `exitCode`, and
   `wallSeconds` in both artifacts and the manifest.
+- Command stdout/stderr artifacts are capped by `--command-output-limit-bytes`
+  (default 1048576). Step, resource, and oracle metadata record the cap,
+  truncation flags, and original byte counts.
 - The oracle runs only after fake-live or live steps, from `private/oracle/`, with
   its raw command stored only in `private/oracle-command.txt`. Public manifests
   record `oracle.commandSha256` plus `oracle.commandArtifactRef`, not the raw

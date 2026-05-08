@@ -260,6 +260,49 @@ test('fake live records hard timeout metadata and still runs private oracle phas
   }
 });
 
+test('fake live caps command stdout and stderr artifacts with truncation metadata', () => {
+  const outputRoot = tempRoot();
+  try {
+    const noisyCommand = `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(
+      ["process.stdout.write('o'.repeat(40));", "process.stderr.write('e'.repeat(45));"].join(' '),
+    )}`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--fake-live',
+        '--arms',
+        'local-only',
+        '--command-output-limit-bytes',
+        '16',
+        '--fake-step-command',
+        noisyCommand,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'capped-output-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+    const metadata = readJson(
+      join(armRun.armDir, 'artifacts', 'steps', '01-local-bulk', 'metadata.json'),
+    );
+
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.equal(Buffer.byteLength(readArmArtifact(armRun, step.stdoutArtifactRef)), 16);
+    assert.equal(Buffer.byteLength(readArmArtifact(armRun, step.stderrArtifactRef)), 16);
+    assert.equal(metadata.commandOutputLimitBytes, 16);
+    assert.equal(metadata.stdoutTruncated, true);
+    assert.equal(metadata.stderrTruncated, true);
+    assert.equal(metadata.stdoutOriginalBytes, 40);
+    assert.equal(metadata.stderrOriginalBytes, 45);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('fixture copy excludes private verifier and oracle files', () => {
   const fixture = tempRoot();
   const outputRoot = tempRoot();

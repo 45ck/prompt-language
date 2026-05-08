@@ -1,0 +1,40 @@
+Goal: author H14 mergeDuplicates tests while preserving the existing implementation
+
+memory:
+  task_brief
+  route_policy
+  policy_version
+
+flow:
+  remember key="policy_version" value="hybrid-routing-v0"
+  remember key="route_policy" value="Local worker owns src/test.js only. src/contacts.js already contains the implementation and must not be edited. Hidden oracle details are not available."
+
+  prompt: Read TASK.md, src/contacts.js, and src/test.js. Add executable tests for mergeDuplicates in src/test.js only. Import mergeDuplicates, preserve the existing createContact/findByEmail/addContact/removeContact tests, and add at least five tests that call mergeDuplicates covering basic merge, later non-empty field priority, older non-empty fallback, no duplicates, and multiple duplicate groups. Do not edit src/contacts.js.
+
+  retry max 4
+    run: node -e "const fs=require('fs'); const tests=fs.readFileSync('src/test.js','utf8'); const count=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(merge|duplicate)[^'\\\"]*['\\\"]/gi)||[]).length; const calls=(tests.match(/mergeDuplicates\\s*\\(/g)||[]).length; if (!tests.includes('mergeDuplicates')) { console.error('mergeDuplicates missing from src/test.js'); process.exit(1); } if (!/require\\(['\\\"]\\.\\/contacts['\\\"]\\)/.test(tests)) { console.error('contacts import missing'); process.exit(1); } if (count < 5 || calls < 5) { console.error('expected at least 5 merge/duplicate tests that call mergeDuplicates, found tests='+count+' calls='+calls); process.exit(1); }"
+    if command_failed
+      prompt: The test-authoring structural gate failed. Fix src/test.js only. Import mergeDuplicates and add at least five executable merge/duplicate tests that call mergeDuplicates. Preserve existing tests. Do not edit src/contacts.js. Gate output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  retry max 6
+    run: npm test [timeout 120]
+    if command_failed
+      prompt: Public tests are failing. Fix src/test.js only so the existing implementation passes and the mergeDuplicates tests are executable. Do not edit src/contacts.js. Test output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  prompt: Use a write_file action to create local-worker-summary.md at the workspace root. Include changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary. Do not mention or infer hidden oracle implementation details.
+
+  retry max 2
+    run: node -e "process.exit(require('node:fs').existsSync('local-worker-summary.md') ? 0 : 1)"
+    if command_failed
+      prompt: local-worker-summary.md is still missing. Use a write_file action now to create local-worker-summary.md at the workspace root with changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary.
+    end
+  end
+
+done when:
+  file_exists local-worker-summary.md
+  gate tests_authored: node -e "const fs=require('fs'); const tests=fs.readFileSync('src/test.js','utf8'); const contacts=fs.readFileSync('src/contacts.js','utf8'); const count=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(merge|duplicate)[^'\\\"]*['\\\"]/gi)||[]).length; const calls=(tests.match(/mergeDuplicates\\s*\\(/g)||[]).length; if (!tests.includes('mergeDuplicates')||count<5||calls<5) process.exit(1); if (!contacts.includes('function mergeDuplicates(contacts)')) process.exit(1);"
+  gate public_tests: npm test

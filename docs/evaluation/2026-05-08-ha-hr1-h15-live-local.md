@@ -459,6 +459,45 @@ Decision: promote the PATCH test-authoring micro-flow to local ownership for
 shared-fixture delete guard. This is still tests-only H15 support; full H15
 endpoint implementation remains frontier-baseline.
 
+Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-010-20260508T184143Z`
+
+Result:
+
+- Route: `--h15-qwen-coder-task test-authoring`
+- Repo commit: `db689c2`
+- Repo dirty: `false`
+- Step exit: `0`
+- Timed out: `false`
+- Wall time: `213.489s`
+- Model calls: `7`
+- Tokens: `20,910`
+- Resource samples: `91`
+- Frontier calls: `0`
+- Frontier-call cap: `0`
+- Private oracle: `PASS`, `4/4`
+
+Private oracle result:
+
+```text
+PASS: implementation remains unchanged
+PASS: tests import and exercise PATCH validation
+PASS: public tests pass
+PASS: tests reject broken PATCH validation mutants
+
+Results: 4/4 passed
+```
+
+The promoted route replay preserved `src/app.js`, changed only `src/test.js`,
+kept the response-object test harness intact, passed public tests, and killed the
+private PATCH validation mutants. Sampled residency showed `qwen3-coder:30b`
+through the PowerShell transport with `19 GB`, `13%/87% CPU/GPU`, and `4096`
+context.
+
+Decision: keep PATCH test-authoring promoted for tests-only local ownership. The
+route is now `5/9` overall and `4/4` after the shared-fixture delete guard. This
+still does not promote full H15 endpoint implementation; it says the local model
+can reliably author the PATCH validation test suite under this constrained flow.
+
 ## Alternative Validation Model Screen
 
 Run: `HA-HR1-H15-validation-only-qwen36-001`
@@ -506,7 +545,7 @@ negative promotion result for one route:
 - A narrower qwen3-coder short-name validation repair screen also failed after
   one private-oracle regression and one hardened-gate timeout; implementation
   repair remains not promoted.
-- H15 PATCH test-authoring is promoted as a tests-only local route after three
+- H15 PATCH test-authoring is promoted as a tests-only local route after four
   consecutive clean post-guard passes; it is not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.

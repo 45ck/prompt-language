@@ -278,9 +278,9 @@ Run the next experiment as a budgeted adjacent-task screen:
    checked route, but use it mainly as a health/control lane.
 2. H15 validation-only stays local-screen positive for `qwen3-coder:30b`; repeat
    only if the flow changes.
-3. H15 PATCH test-authoring is the best next local improvement target because
-   prior failures were narrow: missing one validation case and stateful test
-   pollution.
+3. H15 PATCH test-authoring has now replayed cleanly as a promoted local route
+   with zero frontier calls; use it as a tests-only local lane, not as evidence
+   for full endpoint ownership.
 4. Any H15 hybrid retry must use `--frontier-call-limit 2` when it is only
    classifier plus final review, or `--frontier-call-limit 3` when one repair is
    intentionally allowed. The dynamic repair insertion now respects that cap, so

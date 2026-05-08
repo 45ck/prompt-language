@@ -177,9 +177,9 @@ The pilot is worth scaling only if:
    TDD and checked H11 multi-file refactor. Do not infer broad local ownership.
 3. For H15, keep full endpoint work on the frontier-only baseline until a narrower
    local micro-flow changes the evidence.
-4. Make H15 PATCH test-authoring the next local route-hardening target. The
-   useful failures are now narrow enough to fix with public gate labels and
-   fresh-fixture guidance.
+4. Keep H15 PATCH test-authoring as a promoted tests-only local route. The
+   post-guard replay passed with zero frontier calls, but this does not promote
+   full H15 endpoint implementation.
 5. Run any H15 hybrid retry with an explicit frontier-call cap:
    `--frontier-call-limit 2` for classifier plus review only, or
    `--frontier-call-limit 3` when one repair is intentionally allowed. Dynamic

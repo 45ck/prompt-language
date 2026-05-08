@@ -289,7 +289,7 @@ PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
 
 Then run only claim-bearing screens that answer a new question:
 
-- H15 PATCH test-authoring route repair;
+- H15 PATCH test-authoring replay only as a promoted tests-only health lane;
 - budgeted H15 hybrid with explicit `--frontier-call-limit`;
 - a small classifier/reviewer control for `gemma4-opencode:e4b`;
 - GLM-4.7-Flash install/readiness only after installed local candidates stop

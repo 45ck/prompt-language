@@ -64,6 +64,28 @@ Do not escalate:
 - local-only claim batches, except to stop the batch and relabel the follow-up as a
   hybrid/advisor/frontier arm
 
+## H14 Qwen3-Coder Overlay
+
+The 2026-05-08 H14 subrole runs refine Routing Policy V0 for
+`qwen3-coder:30b`. The machine-readable overlay is
+[`h14-qwen3-coder-routing-policy.v1.json`](./h14-qwen3-coder-routing-policy.v1.json).
+
+Current H14 routing decisions:
+
+| Subrole                       | Local result | Route decision                  |
+| ----------------------------- | ------------ | ------------------------------- |
+| Implementation from tests     | `3/3` clean  | local-promoted                  |
+| API-preserving implementation | `3/3` clean  | local-promoted                  |
+| Standalone test authoring     | `1/3` clean  | frontier or deterministic       |
+| Full TDD ownership            | no clean set | frontier-owned or hybrid repair |
+
+Policy implication: keep local `qwen3-coder:30b` for bounded implementation work
+when tests and API gates already exist. Do not route standalone test authoring or
+full H14-style TDD ownership to the local lane until the model reaches the same
+clean-pass threshold on those subroles. For cost reduction, generate tests through
+a frontier reviewer or deterministic template first, then let the local worker
+implement against those tests.
+
 ## FSCRUD R29 Implication
 
 R29 micro-v2 is the next local-only diagnostic before a hybrid FSCRUD arm. Its

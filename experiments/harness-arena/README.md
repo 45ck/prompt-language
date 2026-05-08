@@ -115,6 +115,9 @@ evidence:
   record `oracle.commandSha256` plus `oracle.commandArtifactRef`, not the raw
   command. Oracle stdout/stderr artifacts stay under `private/oracle/` and are
   not copied into the model-visible workspace.
+- Live and fake-live manifests declare `evidencePolicy.commandEnvironmentPolicy`.
+  The current runner records `parent-env-inherited`, so claim reviews must treat
+  environment containment as explicit metadata rather than an unstated guarantee.
 
 Adjacent evidence from FSCRUD R28 remains useful context but must not be counted
 as harness-arena evidence. R28 showed that local Ollama can perform real

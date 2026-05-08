@@ -1137,6 +1137,7 @@ function buildManifest(options, arm, workspace, stepExecutions = null, oracleExe
     evidencePolicy: {
       manifestAuthor: 'harness',
       oracleVisibility: 'private-artifacts-only',
+      commandEnvironmentPolicy: 'parent-env-inherited',
       providerFallbackPolicy: 'forbid',
       localOnlyAllowsFrontierInput: false,
     },

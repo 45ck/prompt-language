@@ -171,7 +171,12 @@ test('schema version 2 accepts a synthetic Ollama local lane', () => {
   assert.deepEqual(step.resourceSnapshotArtifactRefs, []);
   assert.equal(stepSchema.resourceSnapshotArtifactRefs.items.type, 'string');
   assert.equal(sample.classification.resourceFailure, false);
+  assert.equal(sample.evidencePolicy.commandEnvironmentPolicy, 'parent-env-inherited');
   assert.equal(schema.properties.classification.properties.resourceFailure.type, 'boolean');
+  assert.deepEqual(schema.properties.evidencePolicy.properties.commandEnvironmentPolicy.enum, [
+    'parent-env-inherited',
+    'minimal-allowlist',
+  ]);
   assert.equal(step.providerClass, 'local');
   assert.equal(step.routeDecision, 'local');
   assert.ok(stepSchema.runner.enum.includes('ollama'));

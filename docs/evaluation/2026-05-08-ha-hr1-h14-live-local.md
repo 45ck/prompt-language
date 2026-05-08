@@ -1258,3 +1258,60 @@ This promotion is lower priority than the existing `devstral-small-2:24b` and
 `qwen3-coder:30b` routes because it is much slower on the same fixtures. It is
 not promoted for standalone test authoring or full H14 local-only until those
 separate screens pass.
+
+## H14 Local Portfolio PowerShell Bridge Smoke
+
+### `HA-HR1-H14-api-preservation-powershell-20260508T072016Z`
+
+After commits `c436bbc` and `77698ad` added the
+`PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell` bridge, the H14 local portfolio
+route was run through the Windows-local Ollama API from WSL:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --h14-local-subrole api-preservation \
+  --live-local-command "bash -lc 'PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node $(pwd)/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>'" \
+  --oracle-command "node $(pwd)/experiments/harness-arena/oracles/h14-api-preservation-oracle.mjs --workspace <workspace>" \
+  --local-resource-snapshot-command "ollama ps" \
+  --local-resource-snapshot-interval-ms 2000 \
+  --local-endpoint "ollama-powershell" \
+  --run-id HA-HR1-H14-api-preservation-powershell-20260508T072016Z \
+  --output-root .tmp/harness-arena
+```
+
+Outcome:
+
+- route profile: `h14-local-portfolio`
+- route trigger:
+  `h14-local-portfolio:h14-api-preserving-implementation:local-promoted`
+- policy version: `h14-local-subrole-routing-v1`
+- selected model: `qwen3-coder:30b`
+- transport telemetry: `metadata.transport=powershell`
+- step exit code: `0`
+- step wall time: `61.77s`
+- timeout: `false`
+- private oracle: passed
+- oracle result: `5/5`
+- provider substitution: `false`
+- provider retries: `0` on all five Ollama turns
+- provider telemetry totals: `11,911` tokens across five turns
+- resource samples: `29/29` non-empty `ollama ps` samples
+
+Oracle result:
+
+```text
+PASS: source keeps expected export names
+PASS: public tests keep API contract coverage
+PASS: public tests pass
+PASS: hidden API checks pass
+PASS: hidden merge checks pass
+
+Results: 5/5 passed
+```
+
+Decision: this validates the new PowerShell bridge as a real WSL-to-Windows
+Ollama transport for the H14 local portfolio route, not just a direct model
+smoke. It does not change the model promotion matrix: `qwen3-coder:30b` remains
+promoted for H14 implementation-from-tests and API-preserving implementation,
+while full H14 local-only and standalone test authoring remain not promoted.

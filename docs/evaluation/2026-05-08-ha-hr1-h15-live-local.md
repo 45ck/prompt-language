@@ -210,6 +210,32 @@ Decision: do not promote `devstral-small-2:24b` for H15 validation ownership.
 This is useful negative screen evidence because the failure was model/task
 behavior, not host capacity.
 
+Run: `HA-HR1-H15-validation-only-qwen3-opencode-001`
+
+Result:
+
+- Model: `qwen3-opencode:30b`
+- Route: generic local-only H15 validation model screen
+- Step exit: `3`
+- Wall time: `949.854s`
+- Model calls: `2`
+- Tokens: `4,925`
+- Resource samples: `412`
+- Private oracle: `FAIL`, `6/8`
+- Frontier calls: `0`
+
+This run also used the H15 validation-only worker flow and private oracle as a
+generic model screen. It stayed resident as `qwen3-opencode:30b` with a split
+CPU/GPU load, but the Prompt Language runner ended during gate evaluation with
+`PLR-007` after the Ollama PowerShell bridge timed out. The private oracle still
+ran against the workspace and found the same no-progress result as the devstral
+screen: short name validation still returned `200`, and `src/test.js` contained
+only one validation-focused PATCH test.
+
+Decision: do not promote `qwen3-opencode:30b` for H15 validation ownership. On
+this route/runtime, it was slower than devstral and did not produce useful
+workspace progress before the bridge timeout.
+
 ### PATCH Test-Authoring Local Screen
 
 Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-002`
@@ -388,9 +414,9 @@ negative promotion result for one route:
 - H15 endpoint work is not promoted for local-only ownership yet.
 - H15 validation-only work has one clean local-screen pass and one failed repeat;
   it is not promoted.
-- `devstral-small-2:24b` also failed the H15 validation-only screen, so the next
-  H15 local attempt should be a different candidate or a changed route contract,
-  not another devstral rerun.
+- `devstral-small-2:24b` and `qwen3-opencode:30b` also failed the H15
+  validation-only screen, so the next H15 local attempt should change the route
+  contract or runtime, not rerun these fallback models unchanged.
 - H15 PATCH test-authoring is promoted as a tests-only local route after three
   consecutive clean post-guard passes; it is not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,

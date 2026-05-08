@@ -163,7 +163,9 @@ remains experimental until local micro-flows reliably reduce frontier
 repair/review work. A passing hybrid run would still not be local-only evidence.
 The separate `devstral-small-2:24b` validation-only model screen also failed
 without timeout or resource failure, so it is not a replacement H15 validation
-owner.
+owner. A separate `qwen3-opencode:30b` validation-only screen also failed after
+the PowerShell bridge timed out during gate evaluation, so the fallback H14
+subrole models are not H15 validation owners under the current route contract.
 
 ## Prompt Language Shape
 
@@ -275,9 +277,10 @@ node experiments/harness-arena/runner.mjs --live --h15-qwen-coder-task validatio
 Use the full command template in
 [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md). The next local-model
 step should either harden the H11 deletion/summary gates and rerun that screen,
-or screen a different local candidate on a narrow H15 micro-flow. The current
-H11 rerun target is two more clean passes on the behavior-preservation route. It
-should not be another full H15 local/hybrid attempt on the same hardware.
+or change the H15 micro-flow contract before another local fallback screen. The
+current H11 rerun target is two more clean passes on the behavior-preservation
+route. It should not be another full H15 local/hybrid attempt on the same
+hardware.
 
 Runbook: [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md).
 Manifest schema: [`hybrid-routing-manifest.schema.json`](./hybrid-routing-manifest.schema.json).

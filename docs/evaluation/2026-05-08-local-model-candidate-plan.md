@@ -23,6 +23,13 @@ implementation subrole screens at `3/3` each, with sampled `/api/ps` residency
 evidence in every subrole sample tick. It is promoted for the same narrow
 implementation-from-tests and API-preservation subroles only.
 
+Update: `qwen3.6:27b` passed readiness with sampled residency evidence, but the
+first H14 API-preservation subrole run hit the 900s hard timeout and then failed
+the private oracle at `3/5`. Stop its API-preservation replicate set at `0/1`;
+do not promote it for implementation ownership. Treat it as a lower-priority
+reviewer/classifier control unless a future prompt or runtime lane changes the
+timeout behavior.
+
 ## Current Host State
 
 - WSL reports 31 GiB RAM with about 24 GiB available.
@@ -75,8 +82,8 @@ context and CPU/GPU offload. That is the measurement contract for this repo.
 | ---- | ---------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | 1    | `qwen3-coder:30b`      | Best installed local coding model; MoE active params make it plausible          | Readiness smoke, then H14 S2 implementation subrole  |
 | 2    | `devstral-small-2:24b` | Installed coding-oriented model with smaller footprint than 30B class           | Readiness smoke, then H14 S2                         |
-| 3    | `qwen3.6:27b`          | Installed newer Qwen general model; useful control                              | Readiness smoke, then H14 S4 API preservation        |
-| 4    | `qwen3-opencode:30b`   | Installed coding-tuned variant; compare against official Qwen coder             | Readiness smoke, then H14 S2                         |
+| 3    | `qwen3-opencode:30b`   | Installed coding-tuned variant; compare against official Qwen coder             | Readiness smoke, then H14 S2                         |
+| 4    | `qwen3.6:27b`          | Loads cleanly, but timed out on first H14 API-preservation implementation run   | Reviewer/classifier control only                     |
 | 5    | `gemma4-opencode:e4b`  | Smaller installed model, likely useful for classification/ranking not ownership | Route classifier and doc/test drafting               |
 | 6    | `gemma4:26b`           | Installed but less obvious coding-agent fit                                     | Smoke only unless the above fail to load             |
 | 7    | `GLM-4.7-Flash`        | Strong 30B-class paper candidate; not installed here                            | Install only after installed 30B lanes show capacity |
@@ -107,6 +114,15 @@ Current `devstral-small-2:24b` status:
 - H14 implementation-from-tests: passed `3/3`, private oracle `6/6` in each run;
 - H14 API-preservation: passed `3/3`, private oracle `5/5` in each run;
 - H14 test-authoring: not tested in this screen and not promoted;
+- full H14 local-only: not promoted.
+
+Current `qwen3.6:27b` status:
+
+- readiness: passed with sampled residency evidence;
+- H14 API-preservation: stopped at `0/1` after a 900s timeout and private oracle
+  `3/5`;
+- H14 implementation-from-tests: not run after API-preservation cutoff;
+- H14 test-authoring: not promoted;
 - full H14 local-only: not promoted.
 
 ## One Hundred Hypotheses

@@ -1082,3 +1082,75 @@ passes rather than endpoint-only smoke evidence.
 This does not promote `devstral-small-2:24b` for full H14 local-only or
 standalone test authoring. Those remain separate screens with their own replicate
 requirements.
+
+## Qwen3.6 27B Subrole Screen
+
+After `qwen3.6:27b` passed the Prompt Language readiness smoke with sampled
+`/api/ps` residency, it was screened first on H14 API-preservation as a newer
+Qwen general-model control. The temporary Windows Ollama listener was exposed to
+WSL at `http://172.17.32.1:11435` with `OLLAMA_CONTEXT_LENGTH=8192`,
+`OLLAMA_NUM_PARALLEL=1`, and `OLLAMA_FLASH_ATTENTION=1`.
+
+The model row reported by `/api/ps` was:
+
+```json
+{
+  "name": "qwen3.6:27b",
+  "model": "qwen3.6:27b",
+  "size": 23336128416,
+  "digest": "a50eda8ed977ab48a12431878896b27ffd5cef552c17af3317d9623b939a7f1e",
+  "details": {
+    "family": "qwen35",
+    "parameter_size": "27.8B",
+    "quantization_level": "Q4_K_M"
+  },
+  "size_vram": 15527374080,
+  "context_length": 8192
+}
+```
+
+The API-preservation screen used:
+
+- fixture: `experiments/harness-arena/fixtures/h14-api-preservation`
+- flow: `experiments/harness-arena/flows/h14-api-preservation-worker.flow`
+- oracle: `experiments/harness-arena/oracles/h14-api-preservation-oracle.mjs`
+- policy version: `h14-qwen3-6-subrole-screen-v1`
+- run id: `HA-HR1-H14-api-preservation-qwen3-6-27b-001`
+
+Outcome:
+
+| Run   | Oracle | Step exit | Timed out | Wall time | Sample ticks | Residency hits |
+| ----- | ------ | --------: | --------: | --------: | -----------: | -------------: |
+| `001` | 3/5    |    `null` |      true |  900.102s |          448 |            448 |
+
+Oracle result:
+
+```text
+PASS: source keeps expected export names
+PASS: public tests keep API contract coverage
+FAIL: public tests pass -- npm-equivalent test failed:
+
+Results: 7/9 passed
+VERDICT: FAIL (2 failed)
+
+FAIL: mergeDuplicates later non-empty fields override earlier values -- later name: expected "Alice2", got "Alice"
+FAIL: mergeDuplicates preserves unique contacts and group order -- alice phone merged: expected "555", got null
+
+PASS: hidden API checks pass
+FAIL: hidden merge checks pass -- mergeDuplicates first group incorrect: expected {"name":"First","email":"first@test.com","phone":"111","company":"NewCo"}, got {"name":"First","email":"first@test.com","phone":"111","company":"OldCo"}
+
+Results: 3/5 passed
+```
+
+### Qwen3.6 Decision
+
+`qwen3.6:27b` is not promoted for H14 API-preserving implementation. This is
+claim-grade negative evidence because every sampled resource tick contained the
+resident `qwen3.6:27b` row, so the failure is not an endpoint or model-residency
+failure. The local step consumed the full 900s budget and still failed both
+public and hidden merge semantics.
+
+Stop this replicate set at `0/1` under the early cutoff policy. Running two more
+900s API-preservation reps is lower value than screening the next installed
+coding-tuned candidate. Keep `qwen3.6:27b` as a possible reviewer/classifier
+control, not an implementation-owner candidate.

@@ -31,11 +31,11 @@ test('H11 qwen3-coder policy exposes multi-file refactor screen candidate', () =
   assert.equal(route.decision, 'local-screen-candidate');
   assert.equal(route.owner, 'local');
   assert.equal(route.cleanPasses, 0);
-  assert.equal(route.totalRuns, 1);
+  assert.equal(route.totalRuns, 2);
   assert.match(route.fixture, /h11-multi-file-refactor$/);
   assert.match(route.flow, /h11-multi-file-refactor-worker\.flow$/);
   assert.match(route.oracle, /h11-multi-file-refactor-oracle\.mjs$/);
-  assert.match(route.notes, /0\/1/);
+  assert.match(route.notes, /0\/2/);
   assert.match(route.notes, /no clean Harness Arena pass yet/);
 });
 

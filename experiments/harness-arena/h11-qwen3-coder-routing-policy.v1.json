@@ -34,7 +34,7 @@
       "flow": "experiments/harness-arena/flows/h11-multi-file-refactor-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h11-multi-file-refactor-oracle.mjs",
       "cleanPasses": 0,
-      "totalRuns": 1,
+      "totalRuns": 2,
       "requiredGuards": [
         "public-tests",
         "structural-rename",
@@ -43,7 +43,7 @@
         "private-oracle"
       ],
       "localStopPolicy": "stop after the first timeout, no-edit result, old Contact terminology straggler, import failure, public test failure, or private oracle failure",
-      "notes": "Current Harness Arena result is 0/1: HA-HR1-H11-multi-file-refactor-qwen-coder-001 failed with leftover old contact filenames, hidden route drift, missing local-worker-summary.md, and a late Ollama PowerShell JSON control-character diagnostic. The older aider-vs-pl H11 evidence showed PL can help local qwen3-opencode-big:30b on this class, but this qwen3-coder route has no clean Harness Arena pass yet."
+      "notes": "Current Harness Arena result is 0/2. Run 001 failed with leftover old contact filenames, hidden route drift, missing local-worker-summary.md, and a late Ollama PowerShell JSON control-character diagnostic. Run 002 fixed stale filenames and summary creation after explicit deletion instructions, but failed private oracle on missing Client.toJSON and hidden route behavior. The current flow revision adds a public behavior-preservation gate before the next live screen. The older aider-vs-pl H11 evidence showed PL can help local qwen3-opencode-big:30b on this class, but this qwen3-coder route has no clean Harness Arena pass yet."
     }
   ],
   "escalationTriggers": [

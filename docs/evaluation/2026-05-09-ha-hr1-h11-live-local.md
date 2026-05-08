@@ -13,7 +13,7 @@ The tested hypothesis was narrow:
 - H11 should remain a screen candidate until a clean live manifest passes the
   private oracle without frontier input.
 
-## Run
+## Run 001
 
 Run: `HA-HR1-H11-multi-file-refactor-qwen-coder-001`
 
@@ -77,3 +77,45 @@ explicitly deterministic. A good follow-up screen is either a smaller
 delete-old-files repair lane or a revised H11 flow with a public gate whose error
 message names the exact obsolete filenames and requires `local-worker-summary.md`
 before app smoke is considered complete.
+
+## Run 002
+
+Run: `HA-HR1-H11-multi-file-refactor-qwen-coder-002`
+
+Route:
+`node experiments/harness-arena/runner.mjs --live --h11-qwen-coder-task multi-file-refactor ...`
+
+Result:
+
+- Repo commit: `cef33bf`
+- Runner: `ollama`
+- Model: `qwen3-coder:30b`
+- Transport: `PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell`
+- Endpoint label: `ollama-powershell-stdin`
+- Step exit: `0`
+- Wall time: `284.329s`
+- Model calls: `15`
+- Tokens: `41,880`
+- Resource samples: `120`
+- Frontier calls: `0`
+- Private oracle: `FAIL`, `2/4`
+
+Private oracle failures:
+
+- `Client#toJSON()` was missing
+- hidden route checks failed
+
+Public path behavior:
+
+- public tests passed at `9/9`
+- app smoke passed
+- stale `src/contact.js` and `src/contact-store.js` were removed
+- `local-worker-summary.md` was created
+- final Prompt Language status was `completed` with `gateFailureCount: 0`
+
+Decision: this is a route-hardening success but not a model promotion. The
+explicit `rm -f` instruction fixed the stale-file and summary-artifact failures.
+The next route revision must add public behavior-preservation gates for the
+original API shape: `Client#toJSON()`, `Client#getDisplayName()`, `ClientStore`
+method names, route `body` responses, duplicate create handling, and `204/null`
+delete behavior.

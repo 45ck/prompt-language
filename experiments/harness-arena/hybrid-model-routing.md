@@ -113,16 +113,17 @@ before launching the local lane.
 
 Current H11 routing decision:
 
-| Task                | Current model     | Route decision         | Reason                                                     |
-| ------------------- | ----------------- | ---------------------- | ---------------------------------------------------------- |
-| Multi-file refactor | `qwen3-coder:30b` | local-screen-candidate | First live screen is `0/1`; leftover files and route drift |
+| Task                | Current model     | Route decision         | Reason                                                      |
+| ------------------- | ----------------- | ---------------------- | ----------------------------------------------------------- |
+| Multi-file refactor | `qwen3-coder:30b` | local-screen-candidate | Current live screen is `0/2`; latest failed API/route drift |
 
 Policy implication: H11 is the next local-screen target because it tests
 cross-file reasoning, no-edit/timeout behavior, import resolution, and API drift.
 Do not count it as promoted local ownership until it has live claim-grade passes.
 The next H11 revision should make obsolete-file deletion and the
 `local-worker-summary.md` artifact harder public gates before another promotion
-attempt.
+attempt. The current flow now also has a behavior-preservation public gate for
+the original Client API and route response shape.
 
 ## FSCRUD R29 Implication
 
@@ -270,8 +271,9 @@ node experiments/harness-arena/runner.mjs --live --h15-qwen-coder-task validatio
 Use the full command template in
 [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md). The next local-model
 step should either harden the H11 deletion/summary gates and rerun that screen,
-or continue with narrower H15 micro-flows. It should not be another full H15
-local/hybrid attempt on the same hardware.
+or continue with narrower H15 micro-flows. The current H11 rerun target is the
+behavior-preservation gate added after run 002. It should not be another full
+H15 local/hybrid attempt on the same hardware.
 
 Runbook: [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md).
 Manifest schema: [`hybrid-routing-manifest.schema.json`](./hybrid-routing-manifest.schema.json).

@@ -425,9 +425,9 @@
     "oracle": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["command", "commandSha256", "visibility", "exitCode", "passed"],
+      "required": ["commandArtifactRef", "commandSha256", "visibility", "exitCode", "passed"],
       "properties": {
-        "command": {
+        "commandArtifactRef": {
           "type": "string",
           "minLength": 1
         },

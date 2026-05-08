@@ -50,7 +50,9 @@ Expected output artifacts per arm:
 
 The dry run is structure-only. Its manifests intentionally set
 `oracle.passed=false`, so they must not be cited as local/frontier model
-evidence.
+evidence. Manifests identify the oracle command by hash and
+`private/oracle-command.txt`; the raw command must not be copied into public
+manifest fields or the model-visible workspace.
 
 ## Team Shape
 
@@ -324,6 +326,8 @@ repair step.
 Stop and classify the run as harness failure when:
 
 - the oracle command appears in model-visible context
+- the raw oracle command appears in public manifest fields instead of only
+  `private/oracle-command.txt`
 - the manifest is missing route, risk, ambiguity, artifact, or runner metadata
 - local and frontier lanes edit the same files without parent approval
 - a local timeout/no-edit is not classified

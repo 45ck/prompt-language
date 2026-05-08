@@ -1161,7 +1161,7 @@ function claimStatusForMode(mode) {
 function buildOracle(options, oracleExecution) {
   if (!oracleExecution) {
     return {
-      command: options.oracleCommand,
+      commandArtifactRef: 'private/oracle-command.txt',
       commandSha256: sha256(options.oracleCommand),
       visibility: 'private-artifacts-only',
       exitCode: null,
@@ -1171,7 +1171,7 @@ function buildOracle(options, oracleExecution) {
   }
 
   return {
-    command: options.oracleCommand,
+    commandArtifactRef: 'private/oracle-command.txt',
     commandSha256: sha256(options.oracleCommand),
     visibility: 'private-artifacts-only',
     exitCode: oracleExecution.exitCode,

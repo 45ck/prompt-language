@@ -57,6 +57,8 @@ test('dry run materializes all HA-HR1 arms with schema-shaped manifests', () => 
       assert.equal(manifest.claimStatus, 'structure-only-not-model-evidence');
       assert.equal(manifest.evidencePolicy.manifestAuthor, 'harness');
       assert.equal(manifest.evidencePolicy.oracleVisibility, 'private-artifacts-only');
+      assert.equal(manifest.oracle.commandArtifactRef, 'private/oracle-command.txt');
+      assert.equal(Object.hasOwn(manifest.oracle, 'command'), false);
       assert.equal(manifest.budget.enforced, true);
       assert.equal(manifest.startedAt, FIXED_TIME);
       assert.ok(manifest.steps.every((step) => step.cwd === armRun.workspace));

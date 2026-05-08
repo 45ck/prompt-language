@@ -90,7 +90,7 @@
     }
   ],
   "oracle": {
-    "command": "npm run test",
+    "commandArtifactRef": "private/oracle-command.txt",
     "commandSha256": "synthetic-oracle-command-hash",
     "visibility": "private-artifacts-only",
     "exitCode": 0,

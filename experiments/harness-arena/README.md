@@ -111,9 +111,10 @@ evidence:
 - Fake-live step metadata records `timeoutMs`, `timedOut`, `exitCode`, and
   `wallSeconds` in both artifacts and the manifest.
 - The oracle runs only after fake-live or live steps, from `private/oracle/`, with
-  its command stored in `private/oracle-command.txt`. Oracle stdout/stderr
-  artifacts stay under `private/oracle/` and are not copied into the model-visible
-  workspace.
+  its raw command stored only in `private/oracle-command.txt`. Public manifests
+  record `oracle.commandSha256` plus `oracle.commandArtifactRef`, not the raw
+  command. Oracle stdout/stderr artifacts stay under `private/oracle/` and are
+  not copied into the model-visible workspace.
 
 Adjacent evidence from FSCRUD R28 remains useful context but must not be counted
 as harness-arena evidence. R28 showed that local Ollama can perform real

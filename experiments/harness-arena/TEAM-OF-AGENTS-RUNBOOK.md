@@ -282,11 +282,14 @@ at 16 GB on GPU and made partial PATCH progress, but timed out at 900s and faile
 the private oracle because validation rules and PATCH test coverage were
 incomplete.
 
+The first frontier-only baseline passed the same H15 task with one Codex call in
+328.917s. That is currently stronger than the hybrid route for H15: fewer frontier
+calls, less wall time, and no local runtime failure.
+
 Do not repeat the same 30B H15 local lane on the same hardware unless the local
 runtime or model quantization changes. Do not promote `devstral-small-2:24b` for
-H15 local-only. The next useful decision point is:
+H15 local-only. Use frontier-only as the current H15 baseline. The next useful
+local decision point is:
 
-- run a frontier-only H15 baseline and compare wall time, frontier-call count, and
-  estimated cost against the hybrid run; or
 - screen another smaller code-focused model with a narrower validation/test
   micro-flow before another full H15 local-only attempt.

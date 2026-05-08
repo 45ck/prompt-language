@@ -161,6 +161,9 @@ checked-in validation-only route remains screen-only after a failed repeat, whil
 the PATCH test-authoring route is promoted for tests-only ownership. Hybrid
 remains experimental until local micro-flows reliably reduce frontier
 repair/review work. A passing hybrid run would still not be local-only evidence.
+The separate `devstral-small-2:24b` validation-only model screen also failed
+without timeout or resource failure, so it is not a replacement H15 validation
+owner.
 
 ## Prompt Language Shape
 
@@ -272,9 +275,9 @@ node experiments/harness-arena/runner.mjs --live --h15-qwen-coder-task validatio
 Use the full command template in
 [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md). The next local-model
 step should either harden the H11 deletion/summary gates and rerun that screen,
-or continue with narrower H15 micro-flows. The current H11 rerun target is two
-more clean passes on the behavior-preservation route. It should not be another
-full H15 local/hybrid attempt on the same hardware.
+or screen a different local candidate on a narrow H15 micro-flow. The current
+H11 rerun target is two more clean passes on the behavior-preservation route. It
+should not be another full H15 local/hybrid attempt on the same hardware.
 
 Runbook: [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md).
 Manifest schema: [`hybrid-routing-manifest.schema.json`](./hybrid-routing-manifest.schema.json).

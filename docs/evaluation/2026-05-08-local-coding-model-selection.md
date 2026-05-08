@@ -66,7 +66,7 @@ CPU/GPU once context and KV cache are included.
 | Priority | Model                  | Local status                       | Why                                                                                                                  |
 | -------- | ---------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | 1        | `qwen3-coder:30b`      | Promoted for full H14 TDD          | Official Ollama package; 30B-class MoE with about 3.3B active parameters; code and agent focused.                    |
-| 2        | `devstral-small-2:24b` | Promoted for two H14 subroles      | Smaller installed coding model; strong implementation subrole pass rate and faster than the OpenCode 30B variant.    |
+| 2        | `devstral-small-2:24b` | Promoted for two H14 subroles      | Smaller installed coding model; strong H14 subrole pass rate, but failed the H15 validation-only model screen.       |
 | 3        | `qwen3-opencode:30b`   | Promoted for two H14 subroles      | Coding-tuned installed variant; passed implementation subroles, but slower than `devstral-small-2:24b`.              |
 | 4        | `qwen3:30b`            | Slow general-model control         | Passed readiness, but produced far more tokens and latency than `qwen3-coder:30b`.                                   |
 | 5        | `qwen3.6:27b`          | Reviewer/classifier control only   | Passed readiness but failed API-preservation after the hard timeout.                                                 |
@@ -164,7 +164,9 @@ Live model batches must be treated as contained experiments:
 1. Keep `qwen3-coder:30b` as the promoted H14 full-TDD worker under the checked
    route policy.
 2. Keep `devstral-small-2:24b` and `qwen3-opencode:30b` as fallback local
-   implementers only for implementation-from-tests and API-preservation.
+   implementers only for implementation-from-tests and API-preservation; do not
+   route H15 validation ownership to `devstral-small-2:24b` after its
+   no-progress model-screen failure.
 3. Do not spend more H14 implementation-owner time on `qwen3.6:27b`; use it only
    as a reviewer/classifier control unless a new runtime lane changes its timeout
    behavior.

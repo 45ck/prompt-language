@@ -184,6 +184,32 @@ Decision: keep validation-only as `local-screen`, not promoted. The earlier clea
 pass remains useful evidence, but run `003` shows the route is still unstable and
 too expensive to own without another gate/flow revision.
 
+Run: `HA-HR1-H15-validation-only-devstral-small-2-001`
+
+Result:
+
+- Model: `devstral-small-2:24b`
+- Route: generic local-only H15 validation model screen
+- Step exit: `3`
+- Wall time: `263.631s`
+- Model calls: `5`
+- Tokens: `16,906`
+- Resource samples: `117`
+- Private oracle: `FAIL`, `6/8`
+- Frontier calls: `0`
+
+This run used the same H15 validation-only worker flow and private oracle, but
+was launched as a generic model screen rather than the checked-in qwen3-coder
+route profile. It completed without timeout or Ollama resource failure and stayed
+resident as `devstral-small-2:24b` on GPU, but the Prompt Language runner
+reported no observable workspace progress. The private oracle found that short
+name validation still returned `200`, and `src/test.js` contained only one
+validation-focused PATCH test.
+
+Decision: do not promote `devstral-small-2:24b` for H15 validation ownership.
+This is useful negative screen evidence because the failure was model/task
+behavior, not host capacity.
+
 ### PATCH Test-Authoring Local Screen
 
 Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-002`
@@ -362,6 +388,9 @@ negative promotion result for one route:
 - H15 endpoint work is not promoted for local-only ownership yet.
 - H15 validation-only work has one clean local-screen pass and one failed repeat;
   it is not promoted.
+- `devstral-small-2:24b` also failed the H15 validation-only screen, so the next
+  H15 local attempt should be a different candidate or a changed route contract,
+  not another devstral rerun.
 - H15 PATCH test-authoring is promoted as a tests-only local route after three
   consecutive clean post-guard passes; it is not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,

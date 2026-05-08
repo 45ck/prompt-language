@@ -641,6 +641,9 @@ describe('OllamaPromptTurnRunner', () => {
     await chmod(fakePowerShellPath, 0o755);
     vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TRANSPORT', 'powershell');
     vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_POWERSHELL_PATH', fakePowerShellPath);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_BASE_URL', 'http://127.0.0.1:11435');
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS', '12345');
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_NUM_CTX', '4096');
 
     const runner = new OllamaPromptTurnRunner();
     const result = await runner.run({
@@ -651,6 +654,10 @@ describe('OllamaPromptTurnRunner', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.assistantText).toContain('powershell bridge unavailable');
+    expect(result.assistantText).toContain('model=qwen3-coder:30b');
+    expect(result.assistantText).toContain('endpoint=http://127.0.0.1:11435/api/chat');
+    expect(result.assistantText).toContain('timeoutMs=12345');
+    expect(result.assistantText).toContain('numCtx=4096');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

@@ -159,6 +159,16 @@ function buildOllamaRequestOptions(): OllamaRequestOptions {
   };
 }
 
+function describeOllamaRequestContext(model: string, endpoint: string, timeoutMs: number): string {
+  const numCtx = getOllamaNumCtx();
+  return [
+    `model=${model}`,
+    `endpoint=${endpoint}`,
+    `timeoutMs=${timeoutMs}`,
+    ...(numCtx !== undefined ? [`numCtx=${numCtx}`] : []),
+  ].join(', ');
+}
+
 function getOllamaTransport(): OllamaTransport {
   const transport = readEnv(OLLAMA_TRANSPORT_ENV);
   if (transport === 'cli' || transport === 'powershell') return transport;
@@ -719,6 +729,7 @@ async function callOllamaPowerShellOnce(
     options: buildOllamaRequestOptions(),
   });
   const endpoint = `${getOllamaBaseUrl()}/api/chat`;
+  const requestContext = describeOllamaRequestContext(model, endpoint, timeoutMs);
   const timeoutSeconds = Math.max(1, Math.ceil(timeoutMs / 1_000));
   const script = [
     "$ErrorActionPreference='Stop'",
@@ -738,7 +749,7 @@ async function callOllamaPowerShellOnce(
     const responsePayload = JSON.parse(rawBody) as OllamaChatResponse;
     const content = responsePayload.message?.content?.trim();
     if (!content) {
-      throw new Error('Ollama PowerShell bridge returned an empty response.');
+      throw new Error(`Ollama PowerShell bridge returned an empty response (${requestContext}).`);
     }
     return responsePayload;
   } catch (error) {
@@ -753,9 +764,11 @@ async function callOllamaPowerShellOnce(
     const detail = [stdout, stderr, message].filter(Boolean).join('\n').slice(0, 500);
     const suffix = detail ? `: ${detail}` : '';
     if (failure.signal === 'SIGTERM') {
-      throw new Error(`Ollama PowerShell bridge timed out after ${timeoutMs}ms${suffix}`);
+      throw new Error(
+        `Ollama PowerShell bridge timed out after ${timeoutMs}ms (${requestContext})${suffix}`,
+      );
     }
-    throw new Error(`Ollama PowerShell bridge failed${suffix}`);
+    throw new Error(`Ollama PowerShell bridge failed (${requestContext})${suffix}`);
   }
 }
 

@@ -46,6 +46,14 @@ passing `6/6` in every run. It is now promoted for full H14 TDD only under the
 hardened H14 flow, PowerShell stdin transport, and a 16 action-round budget.
 Fallback local models remain unpromoted for full TDD.
 
+Update: on 2026-05-09 local time, a fresh Prompt Language smoke confirmed
+`qwen3-coder:30b` still works through the PowerShell transport. The WSL HTTP
+endpoints were not reachable, but `PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell`
+passed smoke case `A` with two Ollama provider records, 679 total tokens, zero
+retries, and post-run residency at `19 GB`, `13%/87% CPU/GPU`, `4096` context.
+This keeps the local track active; it does not justify rerunning broad local
+ownership screens that already have clear decisions.
+
 ## Current Host State
 
 - WSL reports 31 GiB RAM with about 24 GiB available.
@@ -260,7 +268,8 @@ These are ranked by expected value for this workstation and harness.
 
 ## Next Commands
 
-Only run these when Windows free RAM is high enough:
+Only run these when Windows free RAM is high enough and the experiment needs the
+WSL-reachable HTTP listener:
 
 ```sh
 HOST=$(ip route | awk '/default/ {print $3; exit}')
@@ -269,9 +278,22 @@ curl -sS --max-time 5 "$PROMPT_LANGUAGE_OLLAMA_BASE_URL/api/version"
 curl -sS --max-time 5 "$PROMPT_LANGUAGE_OLLAMA_BASE_URL/api/ps"
 ```
 
-Then run a live local readiness smoke for `qwen3-coder:30b`, with sampled
-resource snapshots and `resourceSnapshotSummary` checked before reading raw
-artifacts.
+For the current host state, prefer the PowerShell transport:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
+  EVAL_MODEL=ollama/qwen3-coder:30b \
+  EVAL_TIMEOUT_MS=1800000 \
+  node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
+```
+
+Then run only claim-bearing screens that answer a new question:
+
+- H15 PATCH test-authoring route repair;
+- budgeted H15 hybrid with explicit `--frontier-call-limit`;
+- a small classifier/reviewer control for `gemma4-opencode:e4b`;
+- GLM-4.7-Flash install/readiness only after installed local candidates stop
+  answering the current routing questions.
 
 ## Sources
 

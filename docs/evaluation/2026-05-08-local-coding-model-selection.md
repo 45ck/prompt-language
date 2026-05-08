@@ -232,6 +232,63 @@ Current decision from the readiness and subrole screens:
 5. Defer `gemma4-opencode` until there is a specific classifier/reviewer question
    worth answering.
 
+## 2026-05-09 Live Health Check
+
+A fresh bounded smoke confirmed that local inference is still usable through the
+PowerShell transport even though WSL `127.0.0.1:11434` and the prior gateway HTTP
+listener were not reachable.
+
+Command shape:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
+  EVAL_MODEL=ollama/qwen3-coder:30b \
+  EVAL_TIMEOUT_MS=1800000 \
+  node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
+```
+
+Result artifact:
+`scripts/eval/results/smoke-2026-05-08T18-35-17-272Z.json`.
+
+Outcome:
+
+- smoke case `A: Context file relay`: passed `1/1`;
+- model: `qwen3-coder:30b`;
+- transport telemetry: `metadata.transport=powershell`;
+- provider records: `2`;
+- tokens: `492` input, `187` output, `679` total;
+- retries: `0`;
+- total smoke wall time: `101.615s`;
+- post-run residency: `19 GB`, `13%/87% CPU/GPU`, `4096` context.
+
+Decision: continue using PowerShell stdin transport for live local checks on this
+host. Do not spend time restoring WSL HTTP before the next claim run unless a
+specific runner needs HTTP-only sampling. The immediate bottleneck is model-task
+fit and budgeted routing, not basic local inference.
+
+## Next Cost-Reduction Screen
+
+The next useful claim screen is not another broad H14 local run. H14 already has
+a promoted `qwen3-coder:30b` local route, and H15 full endpoint ownership already
+routes to frontier-only after local resource and completeness failures.
+
+Run the next experiment as a budgeted adjacent-task screen:
+
+1. H11 local-only replay under `qwen3-coder:30b` remains promoted for the exact
+   checked route, but use it mainly as a health/control lane.
+2. H15 validation-only stays local-screen positive for `qwen3-coder:30b`; repeat
+   only if the flow changes.
+3. H15 PATCH test-authoring is the best next local improvement target because
+   prior failures were narrow: missing one validation case and stateful test
+   pollution.
+4. Any H15 hybrid retry must use `--frontier-call-limit 2` when it is only
+   classifier plus final review, or `--frontier-call-limit 3` when one repair is
+   intentionally allowed. The dynamic repair insertion now respects that cap, so
+   the manifest can prove the experiment did not silently spend extra frontier
+   calls.
+5. A hybrid route is promoted only if it passes at least `2/3`, uses fewer
+   frontier calls than frontier-only, and avoids local runtime resource failure.
+
 ## Latest Model Scan
 
 The May 8, 2026 scan changes the shortlist, but not the decision boundary:

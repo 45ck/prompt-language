@@ -170,13 +170,23 @@ The pilot is worth scaling only if:
 
 ## Next Implementation Increment
 
-1. Add a task-specific private oracle for the first HA-HR1 fixture instead of the
-   connectivity-only smoke oracle.
-2. Use the runner budget flags (`--frontier-call-limit`, `--usd-limit`,
+1. Use the runner budget flags (`--frontier-call-limit`, `--usd-limit`,
    `--wall-seconds-limit`, `--local-repair-attempt-limit`, and `--retry-policy`)
-   when running frontier-only/advisor-only arms.
-3. Run the hybrid-router arm only after local-only and frontier-only baselines are
-   archived with schema-valid manifests.
+   on every new claim-bearing live run.
+2. Treat `qwen3-coder:30b` as the promoted local route only for checked H14 full
+   TDD and checked H11 multi-file refactor. Do not infer broad local ownership.
+3. For H15, keep full endpoint work on the frontier-only baseline until a narrower
+   local micro-flow changes the evidence.
+4. Make H15 PATCH test-authoring the next local route-hardening target. The
+   useful failures are now narrow enough to fix with public gate labels and
+   fresh-fixture guidance.
+5. Run any H15 hybrid retry with an explicit frontier-call cap:
+   `--frontier-call-limit 2` for classifier plus review only, or
+   `--frontier-call-limit 3` when one repair is intentionally allowed. Dynamic
+   repair insertion is budget-aware, so a capped run can now prove it did not
+   spend an extra hidden frontier call.
+6. Run the hybrid-router arm only after the relevant local-only and frontier-only
+   baselines are archived with schema-valid manifests.
 
 ## Latest Live Evidence
 

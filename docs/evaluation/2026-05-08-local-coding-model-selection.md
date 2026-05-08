@@ -426,7 +426,8 @@ Run the next experiment as a budgeted adjacent-task screen:
 1. H11 local-only replay under `qwen3-coder:30b` remains promoted for the exact
    checked route, but use it mainly as a health/control lane.
 2. H15 validation-only stays local-screen positive for `qwen3-coder:30b`; repeat
-   only if the flow changes.
+   only if the flow changes. H15 one-defect implementation repair is not
+   promoted after qwen3-coder and Devstral both drifted broader API behavior.
 3. H15 PATCH test-authoring has now replayed cleanly as a promoted local route
    with zero frontier calls twice after promotion; use it as a tests-only local
    lane, not as evidence for full endpoint ownership.
@@ -490,9 +491,9 @@ readiness and H14 subrole screens:
 - Every subrole sample tick across those six runs contained the resident
   `devstral-small-2:24b` `/api/ps` row.
 
-Keep Devstral Small 2 promoted for the two bounded implementation subroles and
-as the fallback full-H14 worker. It is not promoted for standalone test authoring
-or H15 endpoint ownership.
+Keep Devstral Small 2 promoted for the two bounded implementation subroles, as
+the fallback full-H14 worker, and as the H15 PATCH test-authoring fallback. It is
+not promoted for H15 validation, H15 validation repair, or H15 endpoint ownership.
 
 Current latest-model ranking for this PC:
 

@@ -90,7 +90,8 @@ evidence:
   `oracles/h15-validation-repair-short-name-oracle.mjs` enforcing unchanged
   public tests, the single intended app repair, and hidden validation edges.
   Current model evidence is negative: qwen3-coder regressed hidden validation
-  semantics, then timed out after public-gate hardening.
+  semantics, then timed out after public-gate hardening; Devstral also failed
+  the repair screen twice by rewriting broader seed and 404 behavior.
 - H14 route-profile live commands must reference the routed flow. Use
   `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative
   flow path in `--live-local-command` / `--live-frontier-command`.

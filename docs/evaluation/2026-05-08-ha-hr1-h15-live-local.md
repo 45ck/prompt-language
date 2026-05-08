@@ -290,6 +290,56 @@ Decision: keep H15 validation repair not promoted. On this runtime, the local mo
 can enter the repair loop, but it is too slow and too drift-prone for this
 one-defect H15 implementation repair.
 
+Run: `HA-HR1-H15-validation-repair-short-name-devstral-001-20260508T222705Z`
+
+Result:
+
+- Model: `devstral-small-2:24b`
+- Repo commit: `431fc43`
+- Route: generic local-only H15 validation repair screen
+- Fixture: `h15-validation-repair-short-name`
+- Step exit: `3`
+- Wall time: `503.342s`
+- Resource samples: `221`
+- Private oracle: `FAIL`, `6/9`
+- Frontier calls: `0`
+
+This Devstral run used the first checked-in repair oracle. The model fixed the
+public short-name error-body failure, but exhausted the 10 action-round budget
+before producing `local-worker-summary.md`. It also rewrote broader API behavior:
+seed contact 3 changed from `Carol Davis` to `Carol Brown`, and missing-ID PATCH
+behavior returned a null body instead of the original error body.
+
+The oracle also exposed a harness-side false positive: it initially treated
+`.prompt-language/*` and `HARNESS-ARENA-LIVE.md` as unexpected model files even
+though those are harness-owned runtime artifacts. That was corrected in
+`d28c040`, alongside a stronger flow gate for seed and 404 preservation.
+
+Run: `HA-HR1-H15-validation-repair-short-name-devstral-hardened-001-20260508T224007Z`
+
+Result:
+
+- Model: `devstral-small-2:24b`
+- Repo commit: `d28c040`
+- Route: hardened generic local-only H15 validation repair screen
+- Fixture: `h15-validation-repair-short-name`
+- Step exit: `1`
+- Wall time: `637.508s`
+- Resource samples: `283`
+- Private oracle: `FAIL`, `6/9`
+- Frontier calls: `0`
+
+The hardened rerun created `local-worker-summary.md`, preserved public tests, and
+passed public tests, but still rewrote broader API behavior. The private oracle
+rejected the run because seed contact 3 changed, GET/PATCH missing-ID behavior
+lost error bodies, and the flow hard-stopped after repeated `api_preserved` gate
+failures.
+
+Decision: do not promote `devstral-small-2:24b` for H15 validation repair. It
+remains useful as a full-H14 fallback and H15 PATCH test-authoring fallback, but
+these repair screens show the same H15 implementation drift pattern as
+qwen3-coder on this route.
+
 ### PATCH Test-Authoring Local Screen
 
 Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-002`
@@ -631,8 +681,10 @@ negative promotion result for one route:
   the next H15 local attempt should change the route contract or runtime, not
   rerun these fallback models unchanged.
 - A narrower qwen3-coder short-name validation repair screen also failed after
-  one private-oracle regression and one hardened-gate timeout; implementation
-  repair remains not promoted.
+  one private-oracle regression and one hardened-gate timeout. Devstral then
+  failed the same repair shape twice, including a hardened rerun that still
+  rewrote seed data and missing-ID error bodies; implementation repair remains
+  not promoted.
 - H15 PATCH test-authoring is promoted as a tests-only local route after five
   consecutive clean qwen-coder post-guard passes. `devstral-small-2:24b` is now
   a promoted fallback for that tests-only route after three clean committed-state

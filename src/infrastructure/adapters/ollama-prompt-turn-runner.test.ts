@@ -2,7 +2,7 @@ import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-// cspell:ignore fscrud unstub
+// cspell:ignore fscrud unstub wsarecv
 
 import {
   OllamaPromptTurnRunner,
@@ -585,6 +585,52 @@ describe('OllamaPromptTurnRunner', () => {
 
     expect(result.exitCode).toBe(1);
     expect(result.assistantText).toContain('powershell bridge unavailable');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('retries transient PowerShell transport socket resets', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    const fakePowerShellPath = join(tempDir, 'flaky-powershell.mjs');
+    const attemptPath = join(tempDir, 'flaky-powershell-attempts.txt');
+    await writeFile(
+      fakePowerShellPath,
+      [
+        '#!/usr/bin/env node',
+        "import { existsSync, readFileSync, writeFileSync } from 'node:fs';",
+        'const attemptPath = process.env.FAKE_POWERSHELL_ATTEMPTS_PATH;',
+        "const attempts = existsSync(attemptPath) ? Number(readFileSync(attemptPath, 'utf8')) : 0;",
+        'writeFileSync(attemptPath, String(attempts + 1));',
+        'process.stdin.resume();',
+        'if (attempts === 0) {',
+        '  process.stderr.write(\'Invoke-RestMethod : {"error":"read tcp 127.0.0.1:61634->127.0.0.1:61869: wsarecv: An existing connection was forcibly closed by the remote host."}\');',
+        '  process.exit(1);',
+        '}',
+        'process.stdout.write(\'{"model":"qwen3-coder:30b","message":{"content":"{\\\\\\"actions\\\\\\":[{\\\\\\"type\\\\\\":\\\\\\"done\\\\\\",\\\\\\"message\\\\\\":\\\\\\"powershell retried\\\\\\"}]}"},"prompt_eval_count":3,"eval_count":4}\');',
+      ].join('\n'),
+      'utf8',
+    );
+    await chmod(fakePowerShellPath, 0o755);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TRANSPORT', 'powershell');
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_POWERSHELL_PATH', fakePowerShellPath);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS', '1');
+    vi.stubEnv('FAKE_POWERSHELL_ATTEMPTS_PATH', attemptPath);
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-coder:30b',
+      prompt: 'Acknowledge the task after retry.',
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'powershell retried',
+      madeProgress: true,
+    });
+    await expect(readFile(attemptPath, 'utf8')).resolves.toBe('2');
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
+    ).resolves.toContain('"retryCount":1');
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

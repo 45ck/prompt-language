@@ -10,7 +10,7 @@ import type {
 import { selectCompactRenderModeForEnvelope } from '../../application/select-compact-render-mode.js';
 import { appendProviderTelemetry, normalizeOllamaTelemetry } from './provider-telemetry.js';
 
-// cspell:ignore fscrud hidethinking NOHISTORY nowordwrap timeouterror
+// cspell:ignore fscrud hidethinking NOHISTORY nowordwrap timeouterror wsarecv
 
 const execFileAsync = promisify(execFile);
 
@@ -536,7 +536,7 @@ function sleep(ms: number): Promise<void> {
 
 function isTransientOllamaError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return /fetch failed|network|socket|terminated|aborted|aborterror|timeouterror|model runner has unexpectedly stopped|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|UND_ERR|HTTP 5\d\d/i.test(
+  return /fetch failed|network|socket|terminated|aborted|aborterror|timeouterror|model runner has unexpectedly stopped|ECONNRESET|ECONNREFUSED|EPIPE|ETIMEDOUT|UND_ERR|HTTP 5\d\d|wsarecv|forcibly closed by the remote host|read tcp/i.test(
     message,
   );
 }

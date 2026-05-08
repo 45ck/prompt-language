@@ -421,3 +421,59 @@ implementation-from-tests subrole. This supports the routing policy of assigning
 bounded, public-gated implementation work to the local model. It does not overturn
 the full-H14 decision because full TDD ownership still lacks a clean pass and has
 shown timeout/artifact reliability problems.
+
+### `HA-HR1-H14-S2-local-qwen3-coder-002`
+
+The second implementation-from-tests replicate used the same fixture, flow, model,
+endpoint, and private oracle.
+
+Outcome:
+
+- step exit code: `0`
+- step wall time: `171.346s`
+- private oracle: passed
+- provider telemetry: 7 Ollama records, 19,114 input tokens, 1,607 output tokens,
+  20,721 total tokens, zero provider API cost, no retries
+- residency snapshot: 19,014,187,008 bytes loaded, 3,457,613,824 bytes VRAM,
+  4,096 context
+
+Oracle result:
+
+```text
+Results: 6/6 passed
+```
+
+### `HA-HR1-H14-S2-local-qwen3-coder-003`
+
+The third implementation-from-tests replicate also passed.
+
+Outcome:
+
+- step exit code: `0`
+- step wall time: `151.732s`
+- private oracle: passed
+- provider telemetry: 7 Ollama records, 19,114 input tokens, 1,607 output tokens,
+  20,721 total tokens, zero provider API cost, no retries
+- residency snapshot: 19,014,187,008 bytes loaded, 3,457,613,824 bytes VRAM,
+  4,096 context
+
+Oracle result:
+
+```text
+Results: 6/6 passed
+```
+
+### S2 Decision
+
+`qwen3-coder:30b` is now `3/3` on the H14 implementation-from-tests subrole:
+
+| Run   | Exit | Oracle | Wall time | Tokens |
+| ----- | ---: | ------ | --------: | -----: |
+| `001` |    0 | 6/6    |  263.364s | 16,041 |
+| `002` |    0 | 6/6    |  171.346s | 20,721 |
+| `003` |    0 | 6/6    |  151.732s | 20,721 |
+
+Decision: promote `qwen3-coder:30b` for bounded implementation-from-tests work.
+Do not promote it to full H14 local-only yet. The next required subrole is API
+preservation under a separate fixture or an equivalent repeatable gate, because
+full H14 failures showed artifact, timeout, and public-test reliability risks.

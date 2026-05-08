@@ -159,6 +159,17 @@ function buildOllamaRequestOptions(): OllamaRequestOptions {
   };
 }
 
+function formatActionRoundLimitMessage(maxActionRounds: number, workspaceActions: number): string {
+  return [
+    `Ollama runner exceeded the action round limit (${maxActionRounds}).`,
+    'This is a local runner budget stop, not proof that the model or task failed.',
+    `For promoted local routes, rerun with an explicit ${OLLAMA_ACTION_ROUNDS_ENV}=16 or ${OLLAMA_ACTION_ROUNDS_ENV}=24 budget; otherwise narrow the flow or escalate after repeated public-gate failure.`,
+    workspaceActions > 0
+      ? 'The model made workspace progress before the cap, so inspect the diff and artifacts before deciding whether to rerun.'
+      : 'The model made no workspace progress before the cap, so prefer narrowing or escalation over only raising the budget.',
+  ].join(' ');
+}
+
 function describeOllamaRequestContext(model: string, endpoint: string, timeoutMs: number): string {
   const numCtx = getOllamaNumCtx();
   return [
@@ -1075,9 +1086,18 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
         });
       }
 
+      const assistantText = formatActionRoundLimitMessage(maxActionRounds, workspaceActions);
+      await appendTrace(input.cwd, {
+        requestedModel,
+        actualModel,
+        prompt,
+        rounds: maxActionRounds,
+        workspaceActions,
+        message: assistantText,
+      });
       return {
         exitCode: 1,
-        assistantText: `Ollama runner exceeded the action round limit (${maxActionRounds}).`,
+        assistantText,
         madeProgress: workspaceActions > 0,
       };
     } catch (error) {

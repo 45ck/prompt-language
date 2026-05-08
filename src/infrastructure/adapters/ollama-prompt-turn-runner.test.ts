@@ -371,6 +371,38 @@ describe('OllamaPromptTurnRunner', () => {
     });
   });
 
+  it('returns an actionable diagnostic when action rounds are exhausted', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS', '2');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: '{"actions":[{"type":"list_files","path":"."}]}',
+        },
+      }),
+    });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-coder:30b',
+      prompt: 'Create secret.txt containing exactly "magic-unicorn-42"',
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.madeProgress).toBe(false);
+    expect(result.assistantText).toContain('Ollama runner exceeded the action round limit (2).');
+    expect(result.assistantText).toContain('local runner budget stop');
+    expect(result.assistantText).toContain('PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=16');
+    expect(result.assistantText).toContain('PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24');
+    expect(result.assistantText).toContain('made no workspace progress');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'ollama-turns.jsonl'), 'utf8'),
+    ).resolves.toContain('"rounds":2');
+  });
+
   it('falls back to gemma4-cpu:31b when gemma4:31b fails to load', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
     fetchMock

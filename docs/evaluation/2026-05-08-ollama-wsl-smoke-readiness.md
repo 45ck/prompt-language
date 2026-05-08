@@ -208,6 +208,61 @@ Samples 5 through 9 contained the resident model row from `/api/ps`:
 This is the first readiness run in this sequence that proves both Prompt
 Language smoke success and sampled local model residency for `qwen3-coder:30b`.
 
+HA-HR1 local-only live lane with `devstral-small-2:24b` and sampled `/api/ps`
+snapshots:
+
+The same temporary WSL-reachable listener setup was reused for the next installed
+candidate:
+
+- `OLLAMA_NUM_PARALLEL=1`
+- `OLLAMA_CONTEXT_LENGTH=8192`
+- `OLLAMA_FLASH_ATTENTION=1`
+
+```sh
+HOST=$(ip route | awk '/default/ {print $3; exit})
+ENDPOINT="http://$HOST:11435"
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --arms local-only \
+  --live-local-command "bash -lc 'cd $(pwd) && PROMPT_LANGUAGE_OLLAMA_BASE_URL=$ENDPOINT EVAL_MODEL=ollama/devstral-small-2:24b EVAL_TIMEOUT_MS=1800000 node scripts/eval/smoke-test.mjs --harness ollama --quick --only E && printf devstral-small-2-24b-readiness-passed > <workspace>/devstral-small-2-24b-readiness.txt'" \
+  --local-resource-snapshot-command "bash -lc 'curl -sS --max-time 2 <localEndpoint>/api/ps'" \
+  --local-resource-snapshot-interval-ms 1000 \
+  --oracle-command "node -e \"const fs=require('node:fs'); const path=require('node:path'); const workspace=process.argv[1]; const marker=path.join(workspace,'devstral-small-2-24b-readiness.txt'); if (!fs.existsSync(marker)) { console.error('missing devstral readiness marker'); process.exit(1); } console.log('devstral readiness oracle pass');\" <workspace>" \
+  --local-model devstral-small-2:24b \
+  --local-endpoint "$ENDPOINT" \
+  --step-timeout-ms 1800000 \
+  --oracle-timeout-ms 10000 \
+  --run-id HA-HR1-live-local-devstral-small-2-24b-readiness-001 \
+  --output-root .tmp/harness-arena
+```
+
+Result: pass. The manifest at
+`.tmp/harness-arena/HA-HR1-live-local-devstral-small-2-24b-readiness-001/01-local-only/hybrid-routing-manifest.json`
+records `claimStatus: live-model-evidence`, step exit code `0`, step wall time
+`10.122s`, and `oracle.passed: true`. `resourceSnapshotSummary` records 10
+sampled ticks, zero probe failures, and 36 total resource artifact refs.
+
+Six of ten sampled `/api/ps` stdout artifacts contained the resident model row:
+
+```json
+{
+  "name": "devstral-small-2:24b",
+  "model": "devstral-small-2:24b",
+  "size": 16696905744,
+  "digest": "24277f07f62db8f9cb68e9dfc679ea1818a7fbac47a50eff0a701d3f645b63c8",
+  "details": {
+    "family": "mistral3",
+    "parameter_size": "24.0B",
+    "quantization_level": "Q4_K_M"
+  },
+  "size_vram": 14912782352,
+  "context_length": 8192
+}
+```
+
+This proves Prompt Language smoke success and sampled local model residency for
+`devstral-small-2:24b`.
+
 ## Interpretation
 
 The local model stack is usable for bounded smoke testing on this host if the

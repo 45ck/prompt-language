@@ -959,3 +959,126 @@ local-promoted subroles, now with direct model-residency evidence in every sampl
 tick. This still does not promote full H14 local-only or test authoring. Full H14
 and standalone test-authoring remain frontier-owned or hybrid-repair candidates
 until their replicate evidence reaches the same bar.
+
+## Devstral Small 2 Subrole Screen
+
+After `devstral-small-2:24b` passed the Prompt Language readiness smoke with
+sampled `/api/ps` residency, it was screened on the same two H14 implementation
+subroles. These runs used the generic HA-HR1 `local-only` arm with explicit H14
+fixtures and private oracles, not the checked-in qwen-coder route profile.
+
+The temporary Windows Ollama listener was exposed to WSL at
+`http://172.17.32.1:11435` with `OLLAMA_CONTEXT_LENGTH=8192`,
+`OLLAMA_NUM_PARALLEL=1`, and `OLLAMA_FLASH_ATTENTION=1`. The model card reported
+by `/api/ps` during the runs was:
+
+```json
+{
+  "name": "devstral-small-2:24b",
+  "model": "devstral-small-2:24b",
+  "size": 16696905744,
+  "digest": "24277f07f62db8f9cb68e9dfc679ea1818a7fbac47a50eff0a701d3f645b63c8",
+  "details": {
+    "family": "mistral3",
+    "parameter_size": "24.0B",
+    "quantization_level": "Q4_K_M"
+  },
+  "size_vram": 14912782352,
+  "context_length": 8192
+}
+```
+
+### Implementation From Tests
+
+The implementation-from-tests screen used:
+
+- fixture: `experiments/harness-arena/fixtures/h14-impl-from-tests`
+- flow: `experiments/harness-arena/flows/h14-impl-from-tests-worker.flow`
+- oracle: `experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs`
+- policy version: `h14-devstral-subrole-screen-v1`
+
+Command shape:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --arms local-only \
+  --fixture experiments/harness-arena/fixtures/h14-impl-from-tests \
+  --task-id h14-implementation-from-tests-devstral \
+  --policy-version h14-devstral-subrole-screen-v1 \
+  --live-local-command "bash -lc 'PROMPT_LANGUAGE_OLLAMA_BASE_URL=$ENDPOINT PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node $(pwd)/bin/cli.mjs run --runner ollama --model devstral-small-2:24b --json --file $(pwd)/experiments/harness-arena/flows/h14-impl-from-tests-worker.flow'" \
+  --local-resource-snapshot-command "bash -lc 'curl -sS --max-time 2 <localEndpoint>/api/ps'" \
+  --local-resource-snapshot-interval-ms 2000 \
+  --oracle-command "node $(pwd)/experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs --workspace <workspace>" \
+  --local-model devstral-small-2:24b \
+  --local-endpoint "$ENDPOINT" \
+  --step-timeout-ms 900000 \
+  --oracle-timeout-ms 10000 \
+  --output-root .tmp/harness-arena
+```
+
+Outcome:
+
+| Run   | Oracle | Step exit | Wall time | Sample ticks | Residency hits |
+| ----- | ------ | --------: | --------: | -----------: | -------------: |
+| `001` | 6/6    |         0 |   94.528s |           47 |             47 |
+| `002` | 6/6    |         0 |   94.509s |           47 |             47 |
+| `003` | 6/6    |         0 |   94.520s |           47 |             47 |
+
+Representative oracle result:
+
+```text
+PASS: mergeDuplicates implementation exists
+PASS: mergeDuplicates is exported
+PASS: tests import and call mergeDuplicates
+PASS: at least five merge/duplicate tests exist
+PASS: public tests pass
+PASS: hidden behavior checks pass
+
+Results: 6/6 passed
+```
+
+### API Preservation
+
+The API-preservation screen used:
+
+- fixture: `experiments/harness-arena/fixtures/h14-api-preservation`
+- flow: `experiments/harness-arena/flows/h14-api-preservation-worker.flow`
+- oracle: `experiments/harness-arena/oracles/h14-api-preservation-oracle.mjs`
+- policy version: `h14-devstral-subrole-screen-v1`
+
+Outcome:
+
+| Run   | Oracle | Step exit | Wall time | Sample ticks | Residency hits |
+| ----- | ------ | --------: | --------: | -----------: | -------------: |
+| `001` | 5/5    |         0 |  106.689s |           53 |             53 |
+| `002` | 5/5    |         0 |  102.592s |           51 |             51 |
+| `003` | 5/5    |         0 |  102.574s |           51 |             51 |
+
+Representative oracle result:
+
+```text
+PASS: source keeps expected export names
+PASS: public tests keep API contract coverage
+PASS: public tests pass
+PASS: hidden API checks pass
+PASS: hidden merge checks pass
+
+Results: 5/5 passed
+```
+
+### Devstral Decision
+
+`devstral-small-2:24b` is locally promoted for the same two narrow implementation
+subroles as `qwen3-coder:30b`:
+
+- implementation-from-tests: `3/3`
+- API-preservation: `3/3`
+
+Every subrole sample tick across all six runs contained the resident
+`devstral-small-2:24b` `/api/ps` row, so these are model-residency-backed local
+passes rather than endpoint-only smoke evidence.
+
+This does not promote `devstral-small-2:24b` for full H14 local-only or
+standalone test authoring. Those remain separate screens with their own replicate
+requirements.

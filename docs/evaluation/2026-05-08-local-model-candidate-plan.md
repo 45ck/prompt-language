@@ -18,6 +18,11 @@ is promoted for the narrow implementation-from-tests and API-preservation
 subroles only. It is still not promoted for full H14 or standalone test
 authoring.
 
+Update: `devstral-small-2:24b` has also passed readiness plus the same two H14
+implementation subrole screens at `3/3` each, with sampled `/api/ps` residency
+evidence in every subrole sample tick. It is promoted for the same narrow
+implementation-from-tests and API-preservation subroles only.
+
 ## Current Host State
 
 - WSL reports 31 GiB RAM with about 24 GiB available.
@@ -94,6 +99,14 @@ Current `qwen3-coder:30b` status:
   `6/6`;
 - H14 API-preservation: passed in the sampled refresh, private oracle `5/5`;
 - H14 test-authoring: not promoted, prior replicate set is `1/3`;
+- full H14 local-only: not promoted.
+
+Current `devstral-small-2:24b` status:
+
+- readiness: passed with sampled residency evidence;
+- H14 implementation-from-tests: passed `3/3`, private oracle `6/6` in each run;
+- H14 API-preservation: passed `3/3`, private oracle `5/5` in each run;
+- H14 test-authoring: not tested in this screen and not promoted;
 - full H14 local-only: not promoted.
 
 ## One Hundred Hypotheses

@@ -595,8 +595,8 @@ function sampledLiveStepCommand(options, armDir, workspace, stepCommand, context
     sampledLiveStepScript({
       intervalSeconds: Number((options.localResourceSnapshotIntervalMs / 1_000).toFixed(3)),
       sampleDir,
-      snapshotCommand: snapshotCommand.displayCommand,
-      stepCommand: stepCommand.displayCommand,
+      snapshotCommand: [snapshotCommand.command, ...snapshotCommand.args],
+      stepCommand: [stepCommand.command, ...stepCommand.args],
     }),
     'utf8',
   );
@@ -611,6 +611,8 @@ function sampledLiveStepScript({ intervalSeconds, sampleDir, snapshotCommand, st
   return `#!/usr/bin/env bash
 set +e
 sample_dir=${quoteShellArg(sampleDir)}
+snapshot_command=(${bashArrayLiteral(snapshotCommand)})
+step_command=(${bashArrayLiteral(stepCommand)})
 mkdir -p "$sample_dir"
 sample_index=1
 (
@@ -619,7 +621,7 @@ sample_index=1
     stdout_path="$sample_dir/sample-\${sample_id}-stdout.txt"
     stderr_path="$sample_dir/sample-\${sample_id}-stderr.txt"
     metadata_path="$sample_dir/sample-\${sample_id}-metadata.json"
-    (${snapshotCommand}) > "$stdout_path" 2> "$stderr_path"
+    "\${snapshot_command[@]}" > "$stdout_path" 2> "$stderr_path"
     sample_exit=$?
     printf '{"phase":"resource-sample","sampleIndex":%s,"exitCode":%s}\\n' "$sample_index" "$sample_exit" > "$metadata_path"
     sample_index=$((sample_index + 1))
@@ -627,12 +629,16 @@ sample_index=1
   done
 ) &
 sampler_pid=$!
-(${stepCommand})
+"\${step_command[@]}"
 step_exit=$?
 kill "$sampler_pid" >/dev/null 2>&1
 wait "$sampler_pid" >/dev/null 2>&1
 exit "$step_exit"
 `;
+}
+
+function bashArrayLiteral(values) {
+  return values.map((value) => quoteShellArg(value)).join(' ');
 }
 
 function collectResourceSampleArtifactRefs(armDir, artifactDir) {

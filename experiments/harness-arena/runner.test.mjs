@@ -891,6 +891,89 @@ test('live mode executes operator-supplied lane commands and private oracle arti
   }
 });
 
+test('sampled live run preserves shell variables inside nested command templates', () => {
+  const outputRoot = tempRoot();
+  const scriptRoot = tempRoot();
+  try {
+    mkdirSync(scriptRoot, { recursive: true });
+    const liveScript = join(scriptRoot, 'write-live.mjs');
+    const snapshotScript = join(scriptRoot, 'snapshot.mjs');
+    const oracleScript = join(scriptRoot, 'oracle.mjs');
+    writeFileSync(
+      liveScript,
+      [
+        "import { writeFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const [workspace] = process.argv.slice(2);',
+        "writeFileSync(join(workspace, 'live-step.json'), JSON.stringify({ ok: true }));",
+        "console.log('nested shell variable preserved');",
+      ].join('\n'),
+    );
+    writeFileSync(snapshotScript, "console.log('sample ok');\n");
+    writeFileSync(
+      oracleScript,
+      [
+        "import { existsSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const workspace = process.argv.at(-1);',
+        "if (!existsSync(join(workspace, 'live-step.json'))) process.exit(1);",
+        "console.log('nested oracle pass');",
+      ].join('\n'),
+    );
+
+    const liveCommand = `bash -lc "repo=${scriptRoot}; node \\"$repo/write-live.mjs\\" <workspace>"`;
+    const oracleCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      oracleScript,
+    )} --workspace <workspace>`;
+    const snapshotCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      snapshotScript,
+    )}`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--live',
+        '--arms',
+        'local-only',
+        '--live-local-command',
+        liveCommand,
+        '--oracle-command',
+        oracleCommand,
+        '--local-resource-snapshot-command',
+        snapshotCommand,
+        '--local-resource-snapshot-interval-ms',
+        '100',
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'nested-shell-live-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+    const wrapperPath = join(
+      armRun.armDir,
+      'artifacts',
+      'steps',
+      '01-local-bulk',
+      'run-with-resource-sampling.sh',
+    );
+
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.equal(step.exitCode, 0);
+    assert.equal(manifest.oracle.passed, true);
+    assert.match(
+      readArmArtifact(armRun, step.stdoutArtifactRef),
+      /nested shell variable preserved/,
+    );
+    assert.match(readFileSync(wrapperPath, 'utf8'), /step_command=\('bash' '-lc'/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+    rmSync(scriptRoot, { recursive: true, force: true });
+  }
+});
+
 test('live hybrid-router inserts frontier repair after local lane failure', () => {
   const outputRoot = tempRoot();
   const scriptRoot = tempRoot();

@@ -1,14 +1,21 @@
+<!-- cspell:ignore subrole subroles -->
+
 # HA-HR1 H14 Live Evidence
 
 Date: 2026-05-08
 
 ## Summary
 
-The first task-shaped HA-HR1 runs used the H14 TDD red-green fixture with
-`qwen3:8b` through the WSL-reachable Windows Ollama endpoint and Codex as the
-frontier runner.
+The first task-shaped HA-HR1 runs used the H14 TDD red-green fixture through the
+WSL-reachable Windows Ollama endpoint and Codex as the frontier runner.
 
-Result so far: local-only and advisor-only fail; frontier-only passes.
+Result so far:
+
+- local `qwen3:8b` fails H14 local-only and advisor-only;
+- frontier-only Codex passes;
+- failure-aware hybrid can pass, but is frontier-repair dominated;
+- local `qwen3-coder:30b` is materially stronger than `qwen3:8b`, but has not
+  produced a clean local-only H14 lane pass yet.
 
 ## Runs
 
@@ -255,3 +262,107 @@ This means H14 is a bad candidate for cost-saving local delegation with `qwen3:8
 The useful policy is to classify H14-like TDD implementation as frontier-owned, or
 to use local only for narrower substeps with stronger public gates and a strict
 early-failure cutoff.
+
+## Qwen3-Coder Follow-Up
+
+After the readiness smoke promoted `qwen3-coder:30b`, two local-only H14 runs were
+executed through the same WSL-reachable Windows Ollama endpoint at
+`http://172.17.32.1:11435`.
+
+### `HA-HR1-H14-local-qwen3-coder-001`
+
+This run used commit `bf205d7` and the H14 public-gated local flow before the flow
+was hardened for the summary artifact.
+
+Outcome:
+
+- step exit code: `1`
+- step wall time: `798.365s`
+- private oracle: passed
+- classification: product pass with artifact-completion failure
+- provider telemetry: 10 Ollama records, 27,898 input tokens, 3,638 output
+  tokens, 31,536 total tokens, zero provider API cost, no retries
+- residency snapshot during the run: 19,014,187,008 bytes loaded,
+  15,775,507,456 bytes VRAM, 4,096 context
+
+The model implemented `mergeDuplicates`, exported it, preserved original APIs,
+added executable merge/duplicate tests, passed public tests, and passed the hidden
+oracle:
+
+```text
+Results: 6/6 passed
+```
+
+The lane still exited unsuccessful because `local-worker-summary.md` was missing:
+
+```json
+{
+  "status": "unsuccessful",
+  "reason": "Completion gates failed: file_exists local-worker-summary.md. Fix the failing checks before completing the task."
+}
+```
+
+This is stronger than the `qwen3:8b` local-only evidence, but it is not a clean
+local-only lane pass because the model did not satisfy the artifact completion
+contract.
+
+The run also exposed a flow weakness: the second `until command_succeeded` loop
+skipped `npm test` because the previous structural gate had already set
+`command_succeeded=true`. The final completion gate still ran `npm test`, so the
+oracle pass is valid, but the flow shape was weaker than intended.
+
+### Flow Hardening
+
+Commit `758259d` hardened `experiments/harness-arena/flows/h14-local-bulk-worker.flow`
+before the second replicate:
+
+- replaced the two public-check `until command_succeeded` loops with `retry`
+  blocks so the checks run at least once;
+- clarified that `local-worker-summary.md` should be written only after public
+  checks pass;
+- added a bounded summary-file repair loop before the final completion gates.
+
+### `HA-HR1-H14-local-qwen3-coder-002`
+
+This run used commit `758259d` and the hardened flow.
+
+Outcome:
+
+- step timed out at `900.102s`
+- private oracle: failed
+- classification: model failure plus budget timeout
+- provider telemetry: 17 Ollama records, 57,464 input tokens, 3,622 output
+  tokens, 61,086 total tokens, zero provider API cost, no retries
+- residency snapshot remained in the same 19 GB loaded / 15.8 GB VRAM envelope
+
+Oracle result:
+
+```text
+Results: 5/6 passed
+```
+
+The model implemented and exported `mergeDuplicates`, and hidden behavior checks
+passed, but `npm test` failed because `src/test.js` added merge tests without
+importing `mergeDuplicates`:
+
+```text
+FAIL: public tests pass -- npm-equivalent test failed:
+Results: 4/9 passed
+VERDICT: FAIL (5 failed)
+```
+
+### Qwen3-Coder Decision
+
+`qwen3-coder:30b` should not be marked as failed in the same sense as
+`qwen3:8b`. It reached correct hidden H14 behavior once, which is a meaningful
+capability signal. It also failed to produce a clean claim-grade local-only lane
+across two attempts, which is a reliability and cost signal.
+
+Current policy:
+
+- do not claim `qwen3-coder:30b` is H14-capable local-only;
+- do promote it to narrower H14-derived subrole fixtures, especially
+  implementation-from-tests and API-preservation;
+- keep full H14 local-only behind a 3/3 clean-pass requirement;
+- keep H14-like end-to-end TDD frontier-owned unless local subrole evidence
+  improves.

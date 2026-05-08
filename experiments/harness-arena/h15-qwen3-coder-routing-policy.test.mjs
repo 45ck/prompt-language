@@ -55,6 +55,22 @@ test('H15 qwen3-coder policy exposes validation-only local screen', () => {
   assert.match(route.notes, /run 003 exhausted/);
 });
 
+test('H15 qwen3-coder policy routes validation repair to frontier baseline', () => {
+  const policy = readPolicy();
+  const route = routeByTask(policy, 'h15-validation-repair-short-name');
+
+  assert.equal(route.decision, 'frontier-baseline');
+  assert.equal(route.owner, 'frontier');
+  assert.equal(route.selectedModel.name, 'codex-default');
+  assert.equal(route.localDraftModel.name, 'qwen3-coder:30b');
+  assert.equal(route.cleanPasses, 0);
+  assert.equal(route.totalRuns, 4);
+  assert.match(route.flow, /h15-validation-repair-short-name-worker\.flow$/);
+  assert.match(route.oracle, /h15-validation-repair-short-name-oracle\.mjs$/);
+  assert.match(route.notes, /Devstral repair screens/);
+  assert.match(route.notes, /implementation-repair negative evidence/);
+});
+
 test('H15 qwen3-coder policy exposes promoted PATCH test-authoring route', () => {
   const policy = readPolicy();
   const route = routeByTask(policy, 'h15-patch-test-authoring');
@@ -106,6 +122,7 @@ test('H15 qwen3-coder resolver maps aliases to frontier baseline decisions', () 
   assert.equal(normalizeH15QwenCoderTask('api-endpoint'), 'h15-api-endpoint');
   assert.equal(normalizeH15QwenCoderTask('patch-contact'), 'h15-api-endpoint');
   assert.equal(normalizeH15QwenCoderTask('validation-only'), 'h15-validation-only');
+  assert.equal(normalizeH15QwenCoderTask('repair-short-name'), 'h15-validation-repair-short-name');
   assert.equal(normalizeH15QwenCoderTask('test-authoring'), 'h15-patch-test-authoring');
 
   const endpoint = resolveH15QwenCoderRoute('patch-contact');
@@ -120,6 +137,20 @@ test('H15 qwen3-coder resolver maps aliases to frontier baseline decisions', () 
   assert.ok(endpoint.escalationTriggers.includes('validation-semantic-miss'));
 
   assert.throws(() => resolveH15QwenCoderRoute('unknown-task'), /unknown H15 qwen3-coder task/);
+});
+
+test('H15 qwen3-coder resolver maps validation repair aliases to frontier baseline', () => {
+  const repair = resolveH15QwenCoderRoute('validation-repair');
+
+  assert.equal(repair.shouldRunLocal, false);
+  assert.equal(repair.shouldRunHybrid, false);
+  assert.equal(repair.shouldRunFrontier, true);
+  assert.equal(repair.shouldRunLocalScreen, false);
+  assert.equal(repair.localDraftModel.name, 'qwen3-coder:30b');
+  assert.equal(repair.route.owner, 'frontier');
+  assert.equal(repair.route.task, 'h15-validation-repair-short-name');
+  assert.match(repair.route.flow, /h15-validation-repair-short-name-worker\.flow$/);
+  assert.match(repair.route.oracle, /h15-validation-repair-short-name-oracle\.mjs$/);
 });
 
 test('H15 qwen3-coder resolver maps validation aliases to local screen decisions', () => {

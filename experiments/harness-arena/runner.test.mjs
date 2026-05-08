@@ -552,6 +552,46 @@ test('H15 qwen3-coder profile maps validation micro-flow to local screen default
   }
 });
 
+test('H15 qwen3-coder profile maps validation repair to frontier baseline defaults', () => {
+  const outputRoot = tempRoot();
+  try {
+    const options = parseArgs([
+      '--dry-run',
+      '--h15-qwen-coder-task',
+      'repair-short-name',
+      '--output-root',
+      outputRoot,
+      '--run-id',
+      'h15-validation-repair-frontier-route',
+      '--started-at',
+      FIXED_TIME,
+    ]);
+    const result = runHarnessArena(options);
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+
+    assert.deepEqual(options.arms, ['frontier-only']);
+    assert.equal(options.taskId, 'h15-validation-repair-short-name');
+    assert.equal(options.h15QwenCoderRoute.shouldRunLocal, false);
+    assert.equal(options.h15QwenCoderRoute.shouldRunFrontier, true);
+    assert.equal(options.localModel, 'qwen3-coder:30b');
+    assert.match(options.oracleCommand, /h15-validation-repair-short-name-oracle\.mjs/);
+    assert.equal(existsSync(join(armRun.workspace, 'src', 'app.js')), true);
+    assert.equal(step.stepId, 'frontier-full');
+    assert.equal(step.routeDecision, 'frontier');
+    assert.match(
+      step.routeTrigger,
+      /h15-qwen3-coder:h15-validation-repair-short-name:frontier-baseline/,
+    );
+    assert.equal(step.promptProgram.kind, 'flow');
+    assert.match(step.promptProgram.path, /h15-validation-repair-short-name-worker\.flow$/);
+    assert.match(step.notes, /H15 qwen3-coder policy frontier-baseline/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('H15 qwen3-coder profile maps PATCH test-authoring micro-flow to promoted local defaults', () => {
   const outputRoot = tempRoot();
   try {
@@ -627,6 +667,10 @@ test('H15 qwen3-coder profile rejects route and model overrides outside evidence
   assert.throws(
     () => parseArgs(['--h15-qwen-coder-task', 'api-endpoint', '--arms', 'local-only']),
     /H15 route h15-api-endpoint is frontier-baseline and must run arms frontier-only/,
+  );
+  assert.throws(
+    () => parseArgs(['--h15-qwen-coder-task', 'repair-short-name', '--arms', 'local-only']),
+    /H15 route h15-validation-repair-short-name is frontier-baseline and must run arms frontier-only/,
   );
   assert.throws(
     () =>

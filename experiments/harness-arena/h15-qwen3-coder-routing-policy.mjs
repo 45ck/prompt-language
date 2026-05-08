@@ -22,6 +22,9 @@ const TASK_ALIASES = new Map([
   ['validation', 'h15-validation-only'],
   ['validation-only', 'h15-validation-only'],
   ['validation-micro', 'h15-validation-only'],
+  ['validation-repair', 'h15-validation-repair-short-name'],
+  ['repair-short-name', 'h15-validation-repair-short-name'],
+  ['short-name-repair', 'h15-validation-repair-short-name'],
 ]);
 
 export function loadH15QwenCoderRoutingPolicy(policyPath = DEFAULT_H15_QWEN_CODER_POLICY_PATH) {

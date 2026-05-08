@@ -76,6 +76,37 @@
       "notes": "Use only as a local diagnostic micro-flow. HA-HR1-H15-validation-only-qwen-coder-002 passed as evidence for validation hardening, but run 003 exhausted the 20 action-round limit and failed the private oracle because short-name validation lacked the expected error body. This is not promoted for full H15 endpoint ownership."
     },
     {
+      "task": "h15-validation-repair-short-name",
+      "decision": "frontier-baseline",
+      "owner": "frontier",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "qwen3-coder and devstral both reached the repair loop, but repeated runs rewrote broader API behavior or timed out before satisfying the hardened preservation gate"
+      },
+      "selectedModel": {
+        "provider": "openai",
+        "name": "codex-default",
+        "endpointClass": "frontier",
+        "selectionReason": "single-defect H15 implementation repair is currently drift-prone locally; use frontier ownership until a materially different local contract is screened"
+      },
+      "fixture": "experiments/harness-arena/fixtures/h15-validation-repair-short-name",
+      "flow": "experiments/harness-arena/flows/h15-validation-repair-short-name-worker.flow",
+      "oracle": "experiments/harness-arena/oracles/h15-validation-repair-short-name-oracle.mjs",
+      "cleanPasses": 0,
+      "totalRuns": 4,
+      "requiredGuards": [
+        "single-defect-repair-only",
+        "public-tests-preserved",
+        "api-surface-preserved",
+        "local-worker-summary",
+        "private-oracle"
+      ],
+      "localStopPolicy": "do not rerun local-only repair on this hardware without a materially different route contract; use frontier baseline for this repair shape",
+      "notes": "Not promoted for local implementation repair. qwen3-coder repair screens HA-HR1-H15-validation-repair-short-name-qwen-coder-002 and 003 failed from hidden validation/API drift and hardened-gate timeout. Devstral repair screens HA-HR1-H15-validation-repair-short-name-devstral-001-20260508T222705Z and HA-HR1-H15-validation-repair-short-name-devstral-hardened-001-20260508T224007Z also failed after broad seed-data and missing-ID error-body rewrites. This is implementation-repair negative evidence, separate from Devstral's H15 PATCH test-authoring fallback promotion."
+    },
+    {
       "task": "h15-patch-test-authoring",
       "decision": "local-promoted",
       "owner": "local",

@@ -80,10 +80,13 @@ evidence:
   test-authoring micro-flow. It defaults to a promoted local-only arm where the
   local model may edit only `src/test.js`; `devstral-small-2:24b` is promoted as
   the fallback for this tests-only route.
+- `--h15-qwen-coder-task repair-short-name` applies the checked-in one-defect
+  H15 validation repair route. It defaults to `frontier-only`; local evidence is
+  negative after qwen3-coder and Devstral both drifted broader API behavior.
 - H15 route profiles enforce their evidence boundary. The endpoint task must stay
-  on the frontier-only arm, validation-only accepts only its selected local model,
-  and `devstral-small-2:24b` is accepted only as the PATCH test-authoring
-  fallback.
+  on the frontier-only arm, repair-short-name must stay on the frontier-only arm,
+  validation-only accepts only its selected local model, and
+  `devstral-small-2:24b` is accepted only as the PATCH test-authoring fallback.
 - `fixtures/h15-validation-repair-short-name` and
   `flows/h15-validation-repair-short-name-worker.flow` exist as a generic H15
   repair screen, with

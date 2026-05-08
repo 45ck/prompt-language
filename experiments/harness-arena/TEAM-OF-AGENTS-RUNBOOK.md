@@ -195,13 +195,14 @@ harness can prove the route-specific flow was in scope.
 
 Do not rerun the full H15 local or hybrid lane on this hardware just because the
 route exists historically. Local H15 work should be a separate experimental
-micro-flow first: validation-only implementation, PATCH test authoring, or one
-public-gate repair loop with a shorter timeout and sampled local resource
-snapshots. The checked-in repair oracle is
+micro-flow first: validation-only implementation or PATCH test authoring. The
+one-defect repair route now resolves to frontier-only through
+`--h15-qwen-coder-task repair-short-name`; local repair evidence is negative for
+both qwen3-coder and Devstral. The checked-in repair oracle is
 `experiments/harness-arena/oracles/h15-validation-repair-short-name-oracle.mjs`;
-use it for any repair-loop evidence instead of public tests alone. A
-frontier-assisted follow-up must be labeled as advisor-only, frontier-only, or
-hybrid-router in the manifest, not local-only.
+use it for any future materially different repair-loop evidence instead of
+public tests alone. A frontier-assisted follow-up must be labeled as
+advisor-only, frontier-only, or hybrid-router in the manifest, not local-only.
 
 For the checked-in validation-only local screen, use the same H15 route profile
 with the validation task alias. Run

@@ -1,7 +1,7 @@
 # Hybrid Model Routing Experiment
 
 Date: 2026-04-28
-Status: planned; static-split team-flow scaffolds added 2026-05-04
+Status: active; H14/H15 route policies and runner profiles added 2026-05-08
 Bead: `prompt-language-sfd3`
 
 ## Summary
@@ -14,12 +14,15 @@ This experiment tests a dynamic routing policy for Prompt Language runs:
 
 The point is not an "advisor" that only writes suggestions. The router must be able to change which runner/model does the next unit of work.
 
-Current evidence should keep the policy conservative. FSCRUD R28 is not
-harness-arena evidence, but it is relevant local-model evidence: local Ollama plus
-prompt-language scaffolding improved artifact coverage over solo local prompting,
-while the domain lane still collapsed the required CommonJS export surface. That
-supports local-first bulk work and public-checkpoint repair, but it does not justify
-claiming local-only completion or using frontier help inside a local-only batch.
+Current evidence should keep the policy conservative. H14 now has promoted local
+routes for `qwen3-coder:30b`, but H15 endpoint work is explicitly
+`hybrid-required` because local-only runs drifted on API preservation and
+validation behavior. FSCRUD R28 remains adjacent local-model evidence: local
+Ollama plus prompt-language scaffolding improved artifact coverage over solo
+local prompting, while the domain lane still collapsed the required CommonJS
+export surface. Together, these results support local-first bulk work and
+public-checkpoint repair, but they do not justify claiming local-only completion
+for unpromoted routes or using frontier help inside a local-only batch.
 
 ## Decision Framing
 
@@ -110,6 +113,27 @@ that domain implementation may need frontier repair or a deterministic kernel wh
 local Ollama remains useful for server, UI, docs, and fixture work. If R29 still
 collapses the export surface, route policy should treat that as a local model fit
 failure for this domain layer, not as a reason to make broader prompts.
+
+## H15 Hybrid Overlay
+
+The 2026-05-08 H15 endpoint runs refine Routing Policy V0 in the opposite
+direction from H14: `qwen3-coder:30b` is useful as a local draft worker, but not
+a local-only owner. The machine-readable overlay is
+[`h15-qwen3-coder-routing-policy.v1.json`](./h15-qwen3-coder-routing-policy.v1.json).
+Use [`h15-qwen3-coder-routing-policy.mjs`](./h15-qwen3-coder-routing-policy.mjs)
+to resolve the task before launching a hybrid lane.
+
+Current H15 routing decision:
+
+| Task         | Local draft model | Route decision  | Reason                                                        |
+| ------------ | ----------------- | --------------- | ------------------------------------------------------------- |
+| API endpoint | `qwen3-coder:30b` | hybrid-required | Near-complete local drafts, but repeated API/validation drift |
+
+Policy implication: the next H15 claim must be a hybrid-router run with explicit
+frontier classification/review and a separate frontier repair command for local
+public-gate failure. A passing hybrid run is still not local-only evidence; it is
+evidence that local drafting plus frontier review can potentially reduce frontier
+work while preserving quality.
 
 ## Prompt Language Shape
 
@@ -206,18 +230,18 @@ Stop conditions:
 
 ## Next Step
 
-Use the dry-run runner skeleton to validate workspace isolation and manifest
-shape across HR-A through HR-D:
+Run the H15 hybrid-router profile with explicit local and frontier commands:
 
-```powershell
-node experiments/harness-arena/runner.mjs --dry-run --run-id HA-HR1-structure-001 --output-root .tmp/harness-arena
+```sh
+node experiments/harness-arena/runner.mjs --live --h15-qwen-coder-task api-endpoint ...
 ```
 
-Then replace the synthetic lanes with live local/frontier calls. Use H14 first
-because we already know the failure modes and can detect whether frontier
-escalation fixes the missing import/incomplete merge problem without paying for
-a larger task. Dry-run manifests are structure checks only; they set
-`oracle.passed=false` and must not be treated as model evidence.
+Use the full command template in
+[`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md). The first H15 hybrid
+replicate should answer whether local drafting plus frontier classification/review
+can pass the private oracle with fewer frontier calls than a frontier-only H15
+baseline. If it fails, classify the failure before repeating or adding an H11
+multi-file fixture.
 
 Runbook: [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md).
 Manifest schema: [`hybrid-routing-manifest.schema.json`](./hybrid-routing-manifest.schema.json).

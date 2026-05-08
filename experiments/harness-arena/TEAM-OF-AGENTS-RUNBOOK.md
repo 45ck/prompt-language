@@ -1,16 +1,25 @@
 # Team Of Agents Runbook
 
-Status: planned HA-HR1 operating procedure; dry-run structure runner available.
+Status: active HA-HR1 operating procedure; live H14 and H15 route profiles
+available.
 
 This runbook is for the local-first/frontier-review pilot. It describes how to
 run the team shape without implying that prompt-language has peer-agent
 semantics.
 
-The current evidence base is adjacent, not completed HA-HR1 evidence. FSCRUD R28
-showed that local Ollama plus prompt-language scaffolding can improve artifact
-coverage over solo local prompting, but it also showed a concrete local failure mode:
-domain export-surface collapse under natural-language micro-contract edits. Use that
-as routing evidence, not as proof that hybrid routing works.
+The current evidence base now includes HA-HR1 route evidence:
+
+- H14 local-only is promoted for `qwen3-coder:30b` on the checked H14 local
+  portfolio routes, including full TDD under the hardened PowerShell stdin route.
+- `devstral-small-2:24b` and `qwen3-opencode:30b` are fallback local
+  implementers for H14 implementation-from-tests and API-preservation only.
+- H15 API endpoint work is not promoted local-only under `qwen3-coder:30b`; it is
+  routed as `hybrid-required`.
+
+FSCRUD R28 remains adjacent evidence only. It showed that local Ollama plus
+prompt-language scaffolding can improve artifact coverage over solo local prompting,
+but it also exposed domain export-surface collapse. Use that as routing evidence,
+not as proof that every local-first route works.
 
 ## Prerequisites
 
@@ -154,12 +163,40 @@ node experiments/harness-arena/runner.mjs \
 Use `--h14-qwen-coder-subrole` instead only when reproducing the older
 qwen-coder-only evidence profile.
 
-`implementation-from-tests`, `api-preservation`, and `test-authoring` route to
-`local-only` by default. `full-tdd` still routes to `frontier-only` by default, so
-a live run for that subrole requires `--live-frontier-command` instead of
-`--live-local-command`. H14 route-profile live commands must reference the routed
-flow; use `<h14Flow>` for the absolute path or `<h14FlowRelative>` for the
-repo-relative path.
+`implementation-from-tests`, `api-preservation`, `test-authoring`, and `full-tdd`
+route to `local-only` by default for the current H14 local portfolio. H14
+route-profile live commands must reference the routed flow; use `<h14Flow>` for
+the absolute path or `<h14FlowRelative>` for the repo-relative path.
+
+For current H15 evidence, use the H15 route profile. It defaults to
+`hybrid-router`, so live execution requires both local and frontier command
+templates:
+
+```sh
+repo=/path/to/prompt-language
+
+node "$repo/experiments/harness-arena/runner.mjs" \
+  --live \
+  --h15-qwen-coder-task api-endpoint \
+  --live-local-command 'bash -lc "repo=/path/to/prompt-language; PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node \"$repo/bin/cli.mjs\" run --runner ollama --model qwen3-coder:30b --json --file <routeFlow>"' \
+  --live-frontier-command 'bash -lc "repo=/path/to/prompt-language; H15_ROUTE_FLOW=<routeFlow> H15_ROUTE_FLOW_RELATIVE=<routeFlowRelative> H15_STEP_ID=<stepId> H15_ROUTE_DECISION=<routeDecision> node \"$repo/bin/cli.mjs\" run --runner codex --json --file \"$repo/experiments/harness-arena/flows/frontier-reviewer.flow\""' \
+  --live-frontier-repair-command 'bash -lc "repo=/path/to/prompt-language; H15_ROUTE_FLOW=<routeFlow> H15_ROUTE_FLOW_RELATIVE=<routeFlowRelative> H15_STEP_ID=<stepId> H15_ROUTE_DECISION=<routeDecision> node \"$repo/bin/cli.mjs\" run --runner codex --json --file <routeFlow>"' \
+  --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \
+  --local-resource-snapshot-interval-ms 2000 \
+  --local-endpoint ollama-powershell-stdin \
+  --frontier-provider openai \
+  --frontier-runner codex \
+  --frontier-model codex-default \
+  --run-id HA-HR1-H15-hybrid-qwen-coder-001 \
+  --output-root .tmp/harness-arena
+```
+
+Replace `/path/to/prompt-language` before running. The local command runs the
+task-specific H15 worker flow through Ollama. The normal frontier command runs the
+read-only reviewer flow but still references `<routeFlow>` so the harness can
+prove the route-specific flow was in scope. The repair command is separate and may
+run the H15 worker flow through Codex only after the local step fails; that turns
+the result into hybrid evidence, not local-only evidence.
 
 Use `--local-resource-snapshot-command` for live local runs when host diagnostics
 matter. The runner records before/after stdout, stderr, and metadata artifact refs
@@ -235,12 +272,11 @@ Stop and classify the run as model or route failure, not harness failure, when:
 
 ## Next Measurement
 
-Run one fixture across four arms before claiming anything:
+Run the H15 hybrid-router profile once with the command shape above before adding
+new fixtures. The next decision should be based on the manifest:
 
-- local-only
-- frontier-only
-- advisor-only
-- hybrid-router
-
-The hybrid-router arm needs fewer frontier calls than frontier-only and an equal
-or better oracle result than local-only before the policy is worth scaling.
+- If the private H15 oracle passes, repeat to `3/3` before claiming route value.
+- If it fails, classify whether the failure came from local draft quality,
+  frontier review/repair, runtime resources, or oracle mismatch.
+- Compare frontier calls, wall time, and estimated cost against a later
+  frontier-only H15 baseline before claiming cost reduction.

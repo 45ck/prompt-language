@@ -123,6 +123,35 @@ records `claimStatus: live-model-evidence`, step exit code `0`, step wall time
 The `ollama ps` snapshots were empty before and after the step, so this run proves
 snapshot artifact attachment, not sustained model residency.
 
+HA-HR1 local-only live lane with sampled resource snapshots:
+
+```sh
+HOST=$(ip route | awk '/default/ {print $3; exit})
+ENDPOINT="http://$HOST:11435"
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --arms local-only \
+  --live-local-command "bash -lc 'cd $(pwd) && PROMPT_LANGUAGE_OLLAMA_BASE_URL=$ENDPOINT EVAL_MODEL=ollama/qwen3:8b node scripts/eval/smoke-test.mjs --harness ollama --quick --only E && printf live-local-sampled-smoke-passed > <workspace>/live-local-sampled-smoke.txt'" \
+  --local-resource-snapshot-command "bash -lc 'OLLAMA_HOST=<localEndpoint> ollama ps'" \
+  --local-resource-snapshot-interval-ms 500 \
+  --oracle-command "node -e \"const fs=require('node:fs'); const path=require('node:path'); const workspace=process.argv[1]; const marker=path.join(workspace,'live-local-sampled-smoke.txt'); if (!fs.existsSync(marker)) { console.error('missing live marker'); process.exit(1); } console.log('live sampled snapshot oracle pass');\" <workspace>" \
+  --local-model qwen3:8b \
+  --local-endpoint "$ENDPOINT" \
+  --step-timeout-ms 600000 \
+  --oracle-timeout-ms 10000 \
+  --run-id HA-HR1-live-local-ollama-sampled-001 \
+  --output-root .tmp/harness-arena
+```
+
+Result: pass. The manifest at
+`.tmp/harness-arena/HA-HR1-live-local-ollama-sampled-001/01-local-only/hybrid-routing-manifest.json`
+records `claimStatus: live-model-evidence`, step exit code `0`, step wall time
+`44.024s`, `oracle.passed: true`, and `150` resource snapshot artifact refs.
+Those refs include before/after snapshots plus 48 sampled ticks, each with stdout,
+stderr, and metadata. The sampled `ollama ps` stdout files still did not contain
+a resident model row, so this run proves during-step sample artifact capture, not
+model residency.
+
 ## Interpretation
 
 The local model stack is usable for bounded smoke testing on this host if the

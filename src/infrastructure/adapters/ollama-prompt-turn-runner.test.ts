@@ -307,6 +307,9 @@ describe('OllamaPromptTurnRunner', () => {
     });
     const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
     expect(request.options).toMatchObject({ temperature: 0, num_ctx: 4096 });
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
+    ).resolves.toContain('"numCtx":4096');
   });
 
   it('treats a compacted first-step acknowledgement as progress even when the raw envelope contains later file work', async () => {
@@ -533,6 +536,9 @@ describe('OllamaPromptTurnRunner', () => {
     await expect(
       readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
     ).resolves.toContain('"transport":"powershell"');
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
+    ).resolves.toContain('"numCtx":4096');
   });
 
   it('rejects explicit context size on CLI transport because the local CLI has no context flag', async () => {

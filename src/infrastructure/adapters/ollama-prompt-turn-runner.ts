@@ -936,6 +936,7 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
         const raw = response.content;
         actualModel = response.actualModel;
         const telemetry = normalizeOllamaTelemetry(response.payload);
+        const configuredNumCtx = getOllamaNumCtx();
         await appendProviderTelemetry(input.cwd, {
           timestamp: new Date().toISOString(),
           provider: 'ollama',
@@ -943,7 +944,10 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
           actualModel,
           retryCount: response.retryCount,
           estimatedCostUsd: null,
-          metadata: { transport: response.transport },
+          metadata: {
+            transport: response.transport,
+            ...(configuredNumCtx !== undefined ? { numCtx: configuredNumCtx } : {}),
+          },
           ...telemetry,
         });
         messages.push({ role: 'assistant', content: raw });

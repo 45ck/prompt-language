@@ -310,6 +310,10 @@ PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
   node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
 ```
 
+The Ollama adapter records the configured `numCtx` value in provider telemetry,
+so low-context evidence should preserve both the requested context and the
+observed `ollama ps` residency.
+
 Then run only claim-bearing screens that answer a new question:
 
 - H15 PATCH test-authoring replay only as a promoted tests-only health lane;

@@ -1,9 +1,10 @@
 # harness-arena — compare whole stacks: vanilla cloud harness + frontier model vs PL + local model + task-tuned flow
 
-**Status:** Planned. HA-E1 and full HA-HR1 pilots have not yet run; the runner
-supports dry-run structure materialization, deterministic fake-live command
-execution, and explicit `--live` lane command execution with private oracle
-artifacts.
+**Status:** Active. Full HA-E1 is still planned, but HA-HR1 now has live local
+evidence, checked-in H14/H15 routing policies, and runner profiles for promoted
+or hybrid-required routes. The runner supports dry-run structure materialization,
+deterministic fake-live command execution, and explicit `--live` lane command
+execution with private oracle artifacts.
 **Last update:** 2026-05-08
 
 ## Question
@@ -12,7 +13,25 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
 
 ## What this area has measured (receipts)
 
-- None yet; pilot HA-E1 has not been run.
+- H14 local-only with `qwen3:8b` failed. Advisor-only and static hybrid did not
+  rescue that model; failure-aware hybrid eventually passed but was
+  frontier-repair dominated.
+- H14 local portfolio evidence promoted `qwen3-coder:30b` for full H14 TDD under
+  the hardened PowerShell stdin route. It also promoted
+  `devstral-small-2:24b` and `qwen3-opencode:30b` only for the narrower
+  implementation-from-tests and API-preservation subroles.
+- H15 endpoint evidence did not promote `qwen3-coder:30b` for local-only
+  ownership. The local model produced near-complete endpoint work, but repeated
+  API-preservation and validation drift made the route `hybrid-required`.
+- The current H15 runner profile is executable with
+  `node experiments/harness-arena/runner.mjs --h15-qwen-coder-task api-endpoint`;
+  in live mode it requires both local and frontier lane commands.
+
+Primary evidence records:
+
+- [H14 live local evidence](../../docs/evaluation/2026-05-08-ha-hr1-h14-live-local.md)
+- [H15 live local evidence](../../docs/evaluation/2026-05-08-ha-hr1-h15-live-local.md)
+- [Local coding model selection](../../docs/evaluation/2026-05-08-local-coding-model-selection.md)
 
 Deterministic runner plumbing now exists, but it is not model-performance
 evidence:
@@ -35,9 +54,15 @@ evidence:
   oracle, policy version, timeout, and flow identity recorded by the runner.
 - `--h14-qwen-coder-subrole` remains available for the older qwen-coder-only
   route profile when reproducing historical evidence.
+- `--h15-qwen-coder-task api-endpoint` applies the checked-in H15 route policy.
+  The current route is `hybrid-router`, with `qwen3-coder:30b` as the local draft
+  model and frontier classification/review required for live runs.
 - H14 route-profile live commands must reference the routed flow. Use
   `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative
   flow path in `--live-local-command` / `--live-frontier-command`.
+- H15 route-profile live commands must reference the routed flow. Use
+  `<h15Flow>` or the generic `<routeFlow>` placeholder for the absolute path, and
+  `<h15FlowRelative>` or `<routeFlowRelative>` for the repo-relative path.
 - `--local-resource-snapshot-command` optionally records before/after local-step
   resource probes, such as `ollama ps`, as manifest artifact refs. Add
   `--local-resource-snapshot-interval-ms` to sample the same probe while a local
@@ -51,13 +76,13 @@ evidence:
   artifacts stay under `private/oracle/` and are not copied into the model-visible
   workspace.
 
-Adjacent evidence from FSCRUD R28 should inform the first pilot but must not be
-counted as harness-arena evidence. R28 showed that local Ollama can perform real
-workspace actions and that prompt-language scaffolding can preserve broad artifacts,
-but it also exposed export-surface collapse in the local domain implementation lane.
-That is a routing signal: local-first is plausible for bulk scaffolded work, while
-frontier escalation should be reserved for recorded risk, repeated local failure, or
-read-only review.
+Adjacent evidence from FSCRUD R28 remains useful context but must not be counted
+as harness-arena evidence. R28 showed that local Ollama can perform real
+workspace actions and that prompt-language scaffolding can preserve broad
+artifacts, but it also exposed export-surface collapse in the local domain
+implementation lane. That remains a routing signal: local-first is plausible for
+bulk scaffolded work, while frontier escalation should be reserved for recorded
+risk, repeated local failure, or read-only review.
 
 ## What is in flight
 
@@ -68,6 +93,10 @@ read-only review.
 - HA-HR1 hybrid routing plan — see [hybrid-model-routing.md](hybrid-model-routing.md)
 - HA-HR1 live pilot readiness plan — see
   [HA-HR1-LIVE-PILOT-PLAN.md](HA-HR1-LIVE-PILOT-PLAN.md)
+- H14 local portfolio route policy — see
+  [h14-local-routing-policy.v1.json](h14-local-routing-policy.v1.json)
+- H15 qwen-coder route policy — see
+  [h15-qwen3-coder-routing-policy.v1.json](h15-qwen3-coder-routing-policy.v1.json)
 - Synthetic v2 manifest schema smoke coverage — see
   [hybrid-routing-manifest.schema.test.mjs](hybrid-routing-manifest.schema.test.mjs)
 - Static-split team-flow scaffolds — see [flows/](flows/)
@@ -75,36 +104,38 @@ read-only review.
 
 ## What is next (ordered)
 
-1. Validate the HA-HR1 dry-run manifests with
-   `node experiments/harness-arena/runner.mjs --dry-run --run-id HA-HR1-structure-001 --output-root .tmp/harness-arena`
-2. Validate deterministic fake-live command/oracle plumbing with
-   `node experiments/harness-arena/runner.mjs --fake-live --run-id HA-HR1-fake-live-001 --output-root .tmp/harness-arena`
-3. Run a local-only live lane against a WSL-reachable Ollama endpoint with
-   `--live-local-command`, `--oracle-command`, and `--arms local-only`
-4. Use `--h14-local-subrole api-preservation`,
-   `--h14-local-subrole implementation-from-tests`, or
-   `--h14-local-subrole test-authoring` to route promoted H14 subroles through
-   the local-only lane without manually restating fixture/oracle paths. Use
-   `--h14-qwen-coder-subrole` only when reproducing the original qwen-coder-only
-   overlay.
-5. Add budgeted frontier command templates for frontier-only, advisor-only, and
-   hybrid-router arms
-6. Run HA-HR1 across local-only, frontier-only, advisor-only, and hybrid-router arms
-7. Run HA-E1 pilot under a $5 budget cap
-8. Write up findings and decide whether to scale
+1. Run a real H15 hybrid-router live replicate with
+   `--h15-qwen-coder-task api-endpoint`, a PowerShell-backed Ollama local command,
+   a budgeted frontier command, sampled local resource snapshots, and the private
+   H15 oracle. This is the next direct test of "local bulk plus frontier review"
+   cost reduction.
+2. If H15 hybrid passes, repeat to `3/3` before claiming the route has economic
+   value. Compare frontier calls, wall time, and token/cost basis against a
+   frontier-only baseline.
+3. If H15 hybrid fails, classify whether the failure is local draft quality,
+   frontier repair/review insufficiency, harness/runtime failure, or private
+   oracle mismatch before adding more repetitions.
+4. Add an H11-style multi-file refactor fixture only after the H15 hybrid route
+   has a clean pass/fail classification. H11 should target cross-file reasoning,
+   timeout/no-edit behavior, and API-surface drift.
+5. Run HA-E1 under a budget cap after one H15 hybrid route and one multi-file
+   route have claim-grade manifests.
 
 ## Known blockers
 
-- HA-HR1 full-arm claims still depend on budgeted frontier command templates.
-- H14 task-specific oracle wiring exists, and the first local-only H14 run is a
-  local model failure, not a pass.
+- H15 hybrid claim runs still depend on budgeted frontier command templates that
+  can perform classification, repair/review, and final manifest-visible handoff.
+- H14 local-only claims are no longer blocked for promoted `qwen3-coder:30b`
+  routes, but fallback local models are not promoted for full H14.
+- H15 local-only is a negative promotion result, not an open blocker.
 - Dry-run manifests intentionally set `oracle.passed=false`; they validate
   structure only and are not model-performance evidence.
 - Fake-live manifests may set `oracle.passed=true`, but that only proves local
   harness plumbing. It is not local/frontier model evidence.
 - Live manifests are model evidence only for the route commands actually supplied
   by the operator. A local-only live run is not frontier or hybrid evidence.
-- The checked-in flows are scaffolds for orchestration shape, not completed evidence.
+- The checked-in flows are evidence only for the specific route, model, runtime,
+  command, and oracle contract recorded in their manifests.
 
 ## Local tests
 

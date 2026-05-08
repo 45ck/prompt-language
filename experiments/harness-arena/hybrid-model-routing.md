@@ -130,7 +130,7 @@ Current H15 routing decision:
 | -------------------- | ----------------- | ----------------- | --------------------------------------------------------------------------- |
 | API endpoint         | Codex             | frontier-baseline | One frontier-only call passed; measured hybrid used three frontier calls    |
 | Validation only      | `qwen3-coder:30b` | local-screen      | Passed `HA-HR1-H15-validation-only-qwen-coder-002` with zero frontier calls |
-| PATCH test-authoring | `qwen3-coder:30b` | local-screen      | First test-authoring screen failed at `0/1`; revised route needs rerun      |
+| PATCH test-authoring | `qwen3-coder:30b` | local-screen      | Test-authoring screens failed at `0/2`; revised route needs rerun           |
 
 Policy implication: the next full H15 claim should use frontier-only. The
 checked-in validation-only route is positive local diagnostic evidence, not full

@@ -189,6 +189,29 @@ surface exact missing-case labels in the public structural gate and explicitly
 tell the local worker to use fresh contacts for PATCH tests that could mutate
 shared fixture state.
 
+Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-003`
+
+Result:
+
+- Repo commit: `fc3108b`
+- Route: `--h15-qwen-coder-task test-authoring`
+- Step exit: failed with `PLR-007`
+- Failure reason: `Ollama runner exceeded the action round limit (16)`
+- Wall time: `580.995s`
+- Private oracle: `FAIL`, `2/4`
+- Frontier calls: `0`
+
+The route revision improved the first attempt: the model added missing ID,
+both email cases, `company: ''`, `company: null`, and the literal
+`phone: '123456'` case after labeled feedback. It then regressed the test
+harness by replacing the original `test(...)` blocks with custom functions and
+assuming app functions returned raw contacts or threw validation exceptions.
+The implementation actually returns `{ status, body }` response objects.
+
+Decision: leave PATCH test-authoring at `0/2`. The next route revision should
+make the response-object contract and test harness preservation explicit. Do
+not count this as H15 local-screen success.
+
 ## Routing Decision
 
 Do not mark the local-model strategy as a failure overall. Mark this as a
@@ -197,7 +220,7 @@ negative promotion result for one route:
 - H14 full TDD is promoted for `qwen3-coder:30b` under the existing H14 route.
 - H15 endpoint work is not promoted for local-only ownership yet.
 - H15 validation-only work now has a clean local-screen pass.
-- H15 PATCH test-authoring has one failed local-screen run and remains
+- H15 PATCH test-authoring has two failed local-screen runs and remains
   not promoted.
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.

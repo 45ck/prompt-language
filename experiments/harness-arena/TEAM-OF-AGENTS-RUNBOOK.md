@@ -272,11 +272,14 @@ Stop and classify the run as model or route failure, not harness failure, when:
 
 ## Next Measurement
 
-Run the H15 hybrid-router profile once with the command shape above before adding
-new fixtures. The next decision should be based on the manifest:
+The first H15 hybrid-router measurement is recorded in
+`docs/evaluation/2026-05-08-ha-hr1-h15-hybrid.md`. It reached
+`qwen3-coder:30b`, then failed local inference with an Ollama runtime resource
+limit before frontier repair passed the private oracle.
 
-- If the private H15 oracle passes, repeat to `3/3` before claiming route value.
-- If it fails, classify whether the failure came from local draft quality,
-  frontier review/repair, runtime resources, or oracle mismatch.
-- Compare frontier calls, wall time, and estimated cost against a later
-  frontier-only H15 baseline before claiming cost reduction.
+Do not repeat that same 30B H15 local lane on the same hardware unless the local
+runtime or model quantization changes. The next useful decision point is:
+
+- run a smaller H15-capable local candidate through the same hybrid profile; or
+- run a frontier-only H15 baseline and compare wall time, frontier-call count, and
+  estimated cost against the hybrid run.

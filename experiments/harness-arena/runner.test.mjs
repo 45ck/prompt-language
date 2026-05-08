@@ -722,7 +722,7 @@ test('live local runtime resource failures classify as harness failures, not mod
     assert.equal(manifest.classification.harnessFailure, true);
     assert.equal(manifest.classification.modelFailure, false);
     assert.equal(manifest.classification.resourceFailure, true);
-    assert.match(manifest.classification.notes, /insufficient system memory/);
+    assert.match(manifest.classification.notes, /resource limit/);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });
     rmSync(scriptRoot, { recursive: true, force: true });
@@ -994,8 +994,9 @@ test('live hybrid-router inserts frontier repair after local lane failure', () =
       localScript,
       [
         'const [, , workspace, stepId] = process.argv;',
-        'console.log(`local-failed:${stepId}:${workspace.length}`);',
-        'process.exit(1);',
+        'console.log(\'Prompt runner exited with code 1. Ollama runner failed: Ollama PowerShell bridge failed: Invoke-RestMethod : {"error":"model runner has unexpectedly stopped, this may be due to resource limitations"}\');',
+        'console.log(`local-resource-failed:${stepId}:${workspace.length}`);',
+        'process.exit(3);',
       ].join('\n'),
     );
     writeFileSync(
@@ -1061,10 +1062,13 @@ test('live hybrid-router inserts frontier repair after local lane failure', () =
       ['frontier-classify', 'local-bulk', 'frontier-repair', 'frontier-review'],
     );
     assert.equal(validateManifestAgainstSchema(manifest).valid, true);
-    assert.equal(manifest.steps[1].exitCode, 1);
+    assert.equal(manifest.steps[1].exitCode, 3);
     assert.equal(manifest.steps[2].frontierCallKind, 'repair');
     assert.equal(manifest.steps[2].providerClass, 'frontier');
     assert.equal(manifest.oracle.passed, true);
+    assert.equal(manifest.classification.harnessFailure, true);
+    assert.equal(manifest.classification.modelFailure, false);
+    assert.equal(manifest.classification.resourceFailure, true);
     assert.match(readArmArtifact(armRun, manifest.oracle.stdoutArtifactRef), /repair oracle pass/);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });

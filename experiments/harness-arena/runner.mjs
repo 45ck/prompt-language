@@ -1054,12 +1054,14 @@ function isLocalRuntimeResourceFailure(execution) {
   const combined = [execution?.stdout, execution?.stderr, execution?.error]
     .filter(Boolean)
     .join('\n');
-  return /Ollama runner failed: model requires more system memory/i.test(combined);
+  return /Ollama runner failed: .*?(model requires more system memory|model runner has unexpectedly stopped|resource limit)/is.test(
+    combined,
+  );
 }
 
 function classificationNotes(mode, { resourceFailure = false } = {}) {
   if (resourceFailure) {
-    return 'Live lane command could not start local inference because the local runtime reported insufficient system memory.';
+    return 'Live lane command could not complete local inference because the local runtime reported a resource limit.';
   }
   if (mode === 'live') {
     return 'Live operator-supplied lane commands executed. Manifest validity depends on private oracle pass/fail artifacts.';

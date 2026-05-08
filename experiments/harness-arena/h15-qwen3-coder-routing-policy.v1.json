@@ -52,19 +52,19 @@
         "provider": "ollama",
         "name": "qwen3-coder:30b",
         "endpointClass": "local",
-        "selectionReason": "validation-only micro-flow is the next diagnostic after full H15 local and hybrid runs exposed validation drift and resource failures"
+        "selectionReason": "validation-only micro-flow passed HA-HR1-H15-validation-only-qwen-coder-002 without frontier calls after full H15 local and hybrid runs exposed validation drift and resource failures"
       },
       "selectedModel": {
         "provider": "ollama",
         "name": "qwen3-coder:30b",
         "endpointClass": "local",
-        "selectionReason": "screening route only; not promoted for full H15 ownership"
+        "selectionReason": "screening route passed for validation hardening only; not promoted for full H15 ownership"
       },
       "fixture": "experiments/harness-arena/fixtures/h15-validation-only",
       "flow": "experiments/harness-arena/flows/h15-validation-only-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h15-validation-only-oracle.mjs",
-      "cleanPasses": 0,
-      "totalRuns": 0,
+      "cleanPasses": 1,
+      "totalRuns": 1,
       "requiredGuards": [
         "patch-validation",
         "existing-api-preserved",
@@ -73,7 +73,7 @@
         "private-oracle"
       ],
       "localStopPolicy": "stop after the first timeout, resource failure, original API drift, or validation oracle failure; do not convert the same run into full H15 evidence",
-      "notes": "Use only as a local diagnostic micro-flow. Passing this route is evidence for validation hardening, not for full H15 endpoint ownership."
+      "notes": "Use only as a local diagnostic micro-flow. The clean pass is evidence for validation hardening, not for full H15 endpoint ownership."
     }
   ],
   "escalationTriggers": [

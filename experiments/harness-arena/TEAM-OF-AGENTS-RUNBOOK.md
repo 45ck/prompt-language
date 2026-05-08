@@ -197,8 +197,10 @@ snapshots. A frontier-assisted follow-up must be labeled as advisor-only,
 frontier-only, or hybrid-router in the manifest, not local-only.
 
 For the checked-in validation-only local screen, use the same H15 route profile
-with the validation task alias. This is local diagnostic evidence only, not full
-H15 endpoint ownership:
+with the validation task alias. Run
+`HA-HR1-H15-validation-only-qwen-coder-002` passed public tests `14/14` and the
+private oracle `8/8` with zero frontier calls, so this is positive local
+diagnostic evidence only, not full H15 endpoint ownership:
 
 ```sh
 repo=/path/to/prompt-language

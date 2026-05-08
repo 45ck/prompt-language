@@ -135,6 +135,34 @@ Private oracle failures:
 Decision: H15 is not promoted for local-only ownership under
 `qwen3-coder:30b`.
 
+### Validation-Only Local Screen
+
+Run: `HA-HR1-H15-validation-only-qwen-coder-002`
+
+Result:
+
+- Repo commit: `e6686b9`
+- Route: `--h15-qwen-coder-task validation-only`
+- Step exit: `0`
+- Public gate: `PASS`
+- Public tests: `14/14`
+- Private oracle: `PASS`, `8/8`
+- Wall time: `143.995s`
+- Model turns: `8`
+- Tokens: `24,660`
+- Resource samples: `62`
+- Frontier calls: `0`
+
+An earlier validation-only attempt exposed a flow bug rather than a model result:
+the `#` character in a one-line flow command truncated the invalid phone test
+value as a DSL comment marker. Commit `e6686b9` replaced that command fixture
+value in the H15 flows, and the rerun above passed with the fixed route.
+
+Decision: promote the H15 validation-only route as positive local-screen
+evidence for `qwen3-coder:30b`. This does not promote full H15 endpoint
+ownership; it proves the local model can handle the narrower validation
+hardening micro-flow when the route contract is clean.
+
 ## Routing Decision
 
 Do not mark the local-model strategy as a failure overall. Mark this as a
@@ -142,6 +170,7 @@ negative promotion result for one route:
 
 - H14 full TDD is promoted for `qwen3-coder:30b` under the existing H14 route.
 - H15 endpoint work is not promoted for local-only ownership yet.
+- H15 validation-only work now has a clean local-screen pass.
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.
 
@@ -155,9 +184,9 @@ Executable routing policy:
 Recommended H15 policy:
 
 - Use frontier-only as the current full-task baseline.
-- Treat local H15 as experimental until a narrower validation/test micro-flow
-  passes with claim-grade manifests. The first checked-in local screen is
-  `--h15-qwen-coder-task validation-only`.
+- Use the checked-in `--h15-qwen-coder-task validation-only` route as the first
+  promoted local-screen diagnostic before any future full H15 local or hybrid
+  retry.
 - Treat r16 failure as a local route stop.
 - Treat r24 as exploratory only until it passes at least `3/3` clean manifests.
 - Do not repeat the full local/hybrid lane on the same hardware unless runtime

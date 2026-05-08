@@ -208,7 +208,7 @@ repo=/path/to/prompt-language
 node "$repo/experiments/harness-arena/runner.mjs" \
   --live \
   --h15-qwen-coder-task validation-only \
-  --live-local-command 'bash -lc "repo=/path/to/prompt-language; PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=600000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=12 node \"$repo/bin/cli.mjs\" run --runner ollama --model qwen3-coder:30b --json --file <routeFlow>"' \
+  --live-local-command 'bash -lc "repo=/path/to/prompt-language; PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=600000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=16 node \"$repo/bin/cli.mjs\" run --runner ollama --model qwen3-coder:30b --json --file <routeFlow>"' \
   --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \
   --local-resource-snapshot-interval-ms 2000 \
   --local-endpoint ollama-powershell-stdin \

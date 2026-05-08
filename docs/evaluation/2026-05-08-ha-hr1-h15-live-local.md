@@ -163,6 +163,32 @@ evidence for `qwen3-coder:30b`. This does not promote full H15 endpoint
 ownership; it proves the local model can handle the narrower validation
 hardening micro-flow when the route contract is clean.
 
+### PATCH Test-Authoring Local Screen
+
+Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-002`
+
+Result:
+
+- Repo commit: `50d98eb`
+- Route: `--h15-qwen-coder-task test-authoring`
+- Step exit: failed with `PLR-007`
+- Failure reason: `Ollama runner exceeded the action round limit (12)`
+- Private oracle: `FAIL`, `2/4`
+- Frontier calls: `0`
+
+Private oracle failures:
+
+- missing required case: email without `@`
+- public tests failed at `12/13`
+- the partial-preservation test reused a shared contact after another PATCH test
+  had already changed its company to `null`
+
+Decision: do not promote PATCH test-authoring yet. This is a useful route
+failure, not a local-model strategy failure. The next route revision should
+surface exact missing-case labels in the public structural gate and explicitly
+tell the local worker to use fresh contacts for PATCH tests that could mutate
+shared fixture state.
+
 ## Routing Decision
 
 Do not mark the local-model strategy as a failure overall. Mark this as a
@@ -171,6 +197,8 @@ negative promotion result for one route:
 - H14 full TDD is promoted for `qwen3-coder:30b` under the existing H14 route.
 - H15 endpoint work is not promoted for local-only ownership yet.
 - H15 validation-only work now has a clean local-screen pass.
+- H15 PATCH test-authoring has one failed local-screen run and remains
+  not promoted.
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.
 

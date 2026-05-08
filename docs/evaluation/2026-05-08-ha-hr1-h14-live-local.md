@@ -1,4 +1,4 @@
-<!-- cspell:ignore subrole subroles -->
+<!-- cspell:ignore stdin subrole subroles wsarecv -->
 
 # HA-HR1 H14 Live Evidence
 
@@ -14,8 +14,10 @@ Result so far:
 - local `qwen3:8b` fails H14 local-only and advisor-only;
 - frontier-only Codex passes;
 - failure-aware hybrid can pass, but is frontier-repair dominated;
-- local `qwen3-coder:30b` is materially stronger than `qwen3:8b`, but has not
-  produced a clean local-only H14 lane pass yet.
+- local `qwen3-coder:30b` is materially stronger than `qwen3:8b` and now has
+  clean local-only H14 passes for implementation-from-tests, API preservation,
+  standalone test authoring, and full H14 TDD under the hardened PowerShell
+  stdin transport.
 
 ## Runs
 
@@ -1479,3 +1481,137 @@ Outcome:
 Decision: the promoted local-portfolio route now works end to end for
 `test-authoring`; this is route smoke on top of the clarified `3/3` screen, not
 a full H14 TDD promotion.
+
+## H14 Full TDD PowerShell Stdin Screen
+
+### Pre-Build Stdin Transport Screen
+
+Commit `4d75fc0` changed the Ollama PowerShell bridge to pass the chat payload
+over stdin instead of embedding it in the PowerShell `-Command` string. A first
+rerun used the source change before rebuilding the ignored `dist/` runtime, so
+the live CLI still exercised the old base64 command-line bridge.
+
+Outcome:
+
+- run ids:
+  `HA-HR1-H14-full-tdd-powershell-stdin-r16-001-20260508T084114Z`,
+  `HA-HR1-H14-full-tdd-powershell-stdin-r16-002-20260508T084330Z`,
+  `HA-HR1-H14-full-tdd-powershell-stdin-r16-003-20260508T084546Z`
+- oracle pass rate: `0/3`
+- failure shape: unchanged `powershell.exe: Invalid argument`
+- interpretation: invalid as model-quality evidence because the built CLI had
+  not picked up the source transport fix.
+
+### Built Stdin Transport Screen
+
+After `npm run build`, the same full H14 TDD lane was rerun with:
+
+- model: `qwen3-coder:30b`
+- flow: `experiments/harness-arena/flows/h14-local-bulk-worker.flow`
+- fixture: `experiments/harness-arena/fixtures/h14-tdd-red-green`
+- oracle: `experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs`
+- transport: `PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell`
+- action-round budget: `16`
+- policy version: `h14-full-tdd-local-powershell-stdin-built-r16-v1`
+
+| Run id                                                                | Oracle | Step exit | Timeout | Wall time | Turns | Tokens | Retries | Samples |
+| --------------------------------------------------------------------- | ------ | --------- | ------- | --------- | ----- | ------ | ------- | ------- |
+| `HA-HR1-H14-full-tdd-powershell-stdin-built-r16-001-20260508T084923Z` | 2/6    | 3         | false   | 170.765s  | 12    | 44,368 | 0       | 74/74   |
+| `HA-HR1-H14-full-tdd-powershell-stdin-built-r16-002-20260508T085214Z` | 6/6    | 0         | false   | 158.284s  | 11    | 37,334 | 0       | 68/68   |
+| `HA-HR1-H14-full-tdd-powershell-stdin-built-r16-003-20260508T085453Z` | 6/6    | 0         | false   | 128.550s  | 8     | 27,341 | 0       | 56/56   |
+
+Aggregate:
+
+- oracle pass rate: `2/3`
+- transport telemetry: `metadata.transport=powershell`
+- provider substitution: `false`
+- observed transport improvement: no command-line `Invalid argument` failure
+- remaining failed-run shape: PowerShell surfaced an Ollama socket reset:
+  `wsarecv: An existing connection was forcibly closed by the remote host`
+
+This established that stdin transport fixed the command-line-size failure, but
+also exposed a retry-classification gap for Windows-local Ollama socket resets.
+
+### Retry-Hardened Full TDD Screen
+
+Commit `e3e82fe` added the Windows socket reset wording to Ollama transient
+retry detection, then the CLI was rebuilt and the same screen was repeated with
+policy version `h14-full-tdd-local-powershell-stdin-retry-r16-v1`.
+
+| Run id                                                                | Oracle | Step exit | Timeout | Wall time | Turns | Tokens | Retries | Samples |
+| --------------------------------------------------------------------- | ------ | --------- | ------- | --------- | ----- | ------ | ------- | ------- |
+| `HA-HR1-H14-full-tdd-powershell-stdin-retry-r16-001-20260508T090234Z` | 6/6    | 0         | false   | 131.436s  | 8     | 27,341 | 0       | 57/57   |
+| `HA-HR1-H14-full-tdd-powershell-stdin-retry-r16-002-20260508T090446Z` | 6/6    | 0         | false   | 128.919s  | 8     | 27,341 | 0       | 56/56   |
+| `HA-HR1-H14-full-tdd-powershell-stdin-retry-r16-003-20260508T090655Z` | 6/6    | 0         | false   | 132.992s  | 8     | 27,341 | 0       | 57/57   |
+
+Aggregate:
+
+- oracle pass rate: `3/3`
+- total Ollama turns: `24`
+- total provider tokens: `82,023`
+- average step wall time: `131.116s`
+- provider substitution: `false`
+- transport telemetry: `metadata.transport=powershell`
+- provider retries observed: `0`
+- resource sample failures: `0`
+
+Representative oracle result:
+
+```text
+PASS: mergeDuplicates implementation exists
+PASS: mergeDuplicates is exported
+PASS: tests import and call mergeDuplicates
+PASS: at least five merge/duplicate tests exist
+PASS: public tests pass
+PASS: hidden behavior checks pass
+
+Results: 6/6 passed
+```
+
+### Full TDD Decision
+
+Promote full local H14 TDD for `qwen3-coder:30b` only, using the hardened H14
+flow, PowerShell stdin transport, and a 16 action-round budget. Do not add
+fallback local models for full TDD yet: the fallback evidence covers narrower
+implementation subroles, not combined red-green ownership. Keep frontier repair
+as the escalation path on any public-gate, private-oracle, timeout, or transport
+failure.
+
+### Routed Full TDD Smoke
+
+After the local portfolio policy was updated, the promoted route was smoke
+tested with `--h14-local-subrole full-tdd` and the `<h14Flow>` placeholder:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --h14-local-subrole full-tdd \
+  --live-local-command "bash -lc 'PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=16 node $(pwd)/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>'" \
+  --oracle-command "node $(pwd)/experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs --workspace <workspace>" \
+  --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \
+  --local-resource-snapshot-interval-ms 2000 \
+  --local-endpoint ollama-powershell-stdin \
+  --run-id HA-HR1-H14-full-tdd-routed-powershell-stdin-20260508T091237Z \
+  --output-root .tmp/harness-arena
+```
+
+Outcome:
+
+- route trigger: `h14-local-portfolio:h14-full-tdd:local-promoted`
+- policy version: `h14-local-subrole-routing-v1`
+- prompt program: `experiments/harness-arena/flows/h14-local-bulk-worker.flow`
+- selected model: `qwen3-coder:30b`
+- transport telemetry: `metadata.transport=powershell`
+- step exit code: `0`
+- step wall time: `129.757s`
+- timeout: `false`
+- private oracle: passed
+- oracle result: `6/6`
+- provider substitution: `false`
+- provider retries: `0`
+- provider telemetry totals: `27,341` tokens across 8 turns
+- resource samples: `56/56` non-empty `ollama ps` samples
+
+Decision: the promoted local-portfolio route now works end to end for
+`full-tdd`. This is route smoke on top of the retry-hardened `3/3` full-lane
+screen.

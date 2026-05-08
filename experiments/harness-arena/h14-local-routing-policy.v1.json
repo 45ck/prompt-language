@@ -98,15 +98,20 @@
     },
     {
       "subrole": "h14-full-tdd",
-      "decision": "frontier-owned-or-hybrid-repair",
-      "owner": "frontier",
-      "selectedModel": null,
+      "decision": "local-promoted",
+      "owner": "local",
+      "selectedModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "3/3 full H14 TDD clean passes after PowerShell stdin transport and socket-reset retry hardening"
+      },
       "fallbackModels": [],
       "fixture": "experiments/harness-arena/fixtures/h14-tdd-red-green",
       "flow": "experiments/harness-arena/flows/h14-local-bulk-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs",
-      "cleanPasses": 0,
-      "totalRuns": 2,
+      "cleanPasses": 3,
+      "totalRuns": 3,
       "requiredGuards": [
         "test-authoring",
         "implementation",
@@ -114,7 +119,7 @@
         "local-worker-summary",
         "private-oracle"
       ],
-      "notes": "Do not claim full local-only H14 capability until all subroles and the full lane reach the clean-pass threshold."
+      "notes": "Use for full local H14 TDD only with qwen3-coder:30b, the hardened H14 flow, PowerShell stdin transport, and 16 action rounds. Keep frontier repair available on any public gate or private oracle failure."
     }
   ],
   "escalationTriggers": [
@@ -131,6 +136,8 @@
     "apiPreservationActionRounds": 24,
     "testAuthoringActionRounds": 8,
     "testAuthoringPolicy": "local-promoted-with-clarified-semantics",
+    "fullTddActionRounds": 16,
+    "fullTddPolicy": "local-promoted-with-hardened-flow-and-powershell-stdin-transport",
     "stepTimeoutMs": 900000
   }
 }

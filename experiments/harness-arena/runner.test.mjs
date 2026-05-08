@@ -358,13 +358,14 @@ test('H14 local portfolio profile maps promoted subroles to selected local defau
   }
 });
 
-test('H14 qwen3-coder profile maps non-promoted subroles to frontier route defaults', () => {
-  const options = parseArgs(['--h14-qwen-coder-subrole', 'test-authoring']);
+test('H14 qwen3-coder profile maps full TDD to local route defaults', () => {
+  const options = parseArgs(['--h14-qwen-coder-subrole', 'full-tdd']);
 
-  assert.deepEqual(options.arms, ['frontier-only']);
-  assert.equal(options.taskId, 'h14-test-authoring');
-  assert.equal(options.h14QwenCoderRoute.shouldRunLocal, false);
-  assert.match(options.oracleCommand, /h14-test-authoring-oracle\.mjs/);
+  assert.deepEqual(options.arms, ['local-only']);
+  assert.equal(options.taskId, 'h14-full-tdd');
+  assert.equal(options.h14QwenCoderRoute.shouldRunLocal, true);
+  assert.equal(options.localModel, 'qwen3-coder:30b');
+  assert.match(options.oracleCommand, /h14-tdd-red-green-oracle\.mjs/);
 });
 
 test('H14 route profiles are mutually exclusive', () => {
@@ -386,8 +387,8 @@ test('H14 qwen3-coder live profile requires only the routed lane command', () =>
     /--live requires command templates for selected routes: local/,
   );
   assert.throws(
-    () => parseArgs(['--live', '--h14-qwen-coder-subrole', 'test-authoring']),
-    /--live requires command templates for selected routes: frontier/,
+    () => parseArgs(['--live', '--h14-qwen-coder-subrole', 'full-tdd']),
+    /--live requires command templates for selected routes: local/,
   );
 });
 

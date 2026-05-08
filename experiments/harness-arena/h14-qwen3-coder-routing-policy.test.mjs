@@ -49,8 +49,8 @@ test('H14 qwen3-coder routing policy promotes only stable local subroles', () =>
     routeBySubrole(policy, 'h14-api-preserving-implementation').decision,
     'local-promoted',
   );
-  assert.equal(routeBySubrole(policy, 'h14-test-authoring').decision, 'frontier-or-deterministic');
-  assert.equal(routeBySubrole(policy, 'h14-full-tdd').decision, 'frontier-owned-or-hybrid-repair');
+  assert.equal(routeBySubrole(policy, 'h14-test-authoring').decision, 'local-promoted');
+  assert.equal(routeBySubrole(policy, 'h14-full-tdd').decision, 'local-promoted');
 });
 
 test('H14 qwen3-coder routing policy references checked-in evidence and harness files', () => {
@@ -70,6 +70,8 @@ test('H14 qwen3-coder routing policy references checked-in evidence and harness 
   assert.match(evidence, /S2 Decision/);
   assert.match(evidence, /S3 Decision/);
   assert.match(evidence, /S4 Decision/);
+  assert.match(evidence, /Clarified Test-Authoring Decision/);
+  assert.match(evidence, /Full TDD Decision/);
 });
 
 test('H14 qwen3-coder route resolver maps aliases to local and escalation decisions', () => {
@@ -88,12 +90,12 @@ test('H14 qwen3-coder route resolver maps aliases to local and escalation decisi
   assert.match(implementation.route.flow, /h14-impl-from-tests-worker\.flow$/);
 
   const testAuthoring = resolveH14QwenCoderRoute('test-authoring');
-  assert.equal(testAuthoring.shouldRunLocal, false);
-  assert.equal(testAuthoring.route.owner, 'frontier-or-deterministic-template');
+  assert.equal(testAuthoring.shouldRunLocal, true);
+  assert.equal(testAuthoring.route.owner, 'local');
 
   const fullTdd = resolveH14QwenCoderRoute('full-tdd');
-  assert.equal(fullTdd.shouldRunLocal, false);
-  assert.equal(fullTdd.route.owner, 'frontier');
+  assert.equal(fullTdd.shouldRunLocal, true);
+  assert.equal(fullTdd.route.owner, 'local');
 
   assert.throws(
     () => resolveH14QwenCoderRoute('unknown-subrole'),

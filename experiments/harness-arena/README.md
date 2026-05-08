@@ -27,8 +27,8 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   make `frontier-only` the current baseline route.
 - H11 multi-file refactor now has a Harness Arena fixture, private oracle,
   worker flow, and `qwen3-coder:30b` local-screen candidate profile. It is wired
-  for live evidence and is currently `1/3`: the third live screen passed the
-  private oracle after explicit deletion instructions and a public
+  for live evidence and is currently `2/4`: the third and fourth live screens
+  passed the private oracle after explicit deletion instructions and a public
   behavior-preservation gate.
 - The current H15 runner profile is executable with
   `node experiments/harness-arena/runner.mjs --h15-qwen-coder-task api-endpoint`;
@@ -128,7 +128,7 @@ risk, repeated local failure, or read-only review.
 1. Keep H15 endpoint work on the frontier-only baseline route until local
    micro-flows show reliable value.
 2. Repeat the hardened H11 multi-file refactor screen until it either reaches
-   three clean passes or shows a new failure mode. Current status is `1/3`.
+   three clean passes or shows a new failure mode. Current status is `2/4`.
 3. Promote a local H15 candidate back into a hybrid full-task route only after the
    micro-flow passes with claim-grade manifests and sampled resource evidence.
 4. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
@@ -142,7 +142,7 @@ risk, repeated local failure, or read-only review.
   routes, but fallback local models are not promoted for full H14.
 - H15 local-only is a negative promotion result, not an open blocker.
 - H11 local-only is not promoted yet. The current `qwen3-coder:30b` screen is
-  `1/3`; it needs two more clean passes before promotion.
+  `2/4`; it needs one more clean pass before promotion.
 - Dry-run manifests intentionally set `oracle.passed=false`; they validate
   structure only and are not model-performance evidence.
 - Fake-live manifests may set `oracle.passed=true`, but that only proves local

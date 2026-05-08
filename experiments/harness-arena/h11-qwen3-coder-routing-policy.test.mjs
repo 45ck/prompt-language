@@ -30,12 +30,12 @@ test('H11 qwen3-coder policy exposes multi-file refactor screen candidate', () =
   const route = routeByTask(policy, 'h11-multi-file-refactor');
   assert.equal(route.decision, 'local-screen-candidate');
   assert.equal(route.owner, 'local');
-  assert.equal(route.cleanPasses, 1);
-  assert.equal(route.totalRuns, 3);
+  assert.equal(route.cleanPasses, 2);
+  assert.equal(route.totalRuns, 4);
   assert.match(route.fixture, /h11-multi-file-refactor$/);
   assert.match(route.flow, /h11-multi-file-refactor-worker\.flow$/);
   assert.match(route.oracle, /h11-multi-file-refactor-oracle\.mjs$/);
-  assert.match(route.notes, /1\/3/);
+  assert.match(route.notes, /2\/4/);
   assert.match(route.notes, /not promoted until three clean passes/);
 });
 

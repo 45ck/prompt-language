@@ -33,8 +33,8 @@
       "fixture": "experiments/harness-arena/fixtures/h11-multi-file-refactor",
       "flow": "experiments/harness-arena/flows/h11-multi-file-refactor-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h11-multi-file-refactor-oracle.mjs",
-      "cleanPasses": 1,
-      "totalRuns": 3,
+      "cleanPasses": 2,
+      "totalRuns": 4,
       "requiredGuards": [
         "public-tests",
         "structural-rename",
@@ -43,7 +43,7 @@
         "private-oracle"
       ],
       "localStopPolicy": "stop after the first timeout, no-edit result, old Contact terminology straggler, import failure, public test failure, or private oracle failure",
-      "notes": "Current Harness Arena result is 1/3. Run 001 failed with leftover old contact filenames, hidden route drift, missing local-worker-summary.md, and a late Ollama PowerShell JSON control-character diagnostic. Run 002 fixed stale filenames and summary creation after explicit deletion instructions, but failed private oracle on missing Client.toJSON and hidden route behavior. Run 003 passed private oracle 4/4 after adding the public behavior-preservation gate. The older aider-vs-pl H11 evidence showed PL can help local qwen3-opencode-big:30b on this class; this qwen3-coder route now has one clean Harness Arena pass but is not promoted until three clean passes."
+      "notes": "Current Harness Arena result is 2/4, with two clean passes toward the three-pass promotion threshold. Run 001 failed with leftover old contact filenames, hidden route drift, missing local-worker-summary.md, and a late Ollama PowerShell JSON control-character diagnostic. Run 002 fixed stale filenames and summary creation after explicit deletion instructions, but failed private oracle on missing Client.toJSON and hidden route behavior. Runs 003 and 004 passed private oracle 4/4 after adding the public behavior-preservation gate. The older aider-vs-pl H11 evidence showed PL can help local qwen3-opencode-big:30b on this class; this qwen3-coder route now has repeat clean Harness Arena passes but is not promoted until three clean passes."
     }
   ],
   "escalationTriggers": [

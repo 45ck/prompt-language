@@ -1,7 +1,8 @@
 # Hybrid Model Routing Experiment
 
 Date: 2026-04-28
-Status: active; H14/H15 route policies and runner profiles added 2026-05-08
+Status: active; H14/H15 route policies and runner profiles added 2026-05-08;
+H11 local-screen evidence added 2026-05-09
 Bead: `prompt-language-sfd3`
 
 ## Summary
@@ -112,13 +113,16 @@ before launching the local lane.
 
 Current H11 routing decision:
 
-| Task                | Current model     | Route decision         | Reason                                                   |
-| ------------------- | ----------------- | ---------------------- | -------------------------------------------------------- |
-| Multi-file refactor | `qwen3-coder:30b` | local-screen-candidate | Fixture, flow, and private oracle are wired; no pass yet |
+| Task                | Current model     | Route decision         | Reason                                                     |
+| ------------------- | ----------------- | ---------------------- | ---------------------------------------------------------- |
+| Multi-file refactor | `qwen3-coder:30b` | local-screen-candidate | First live screen is `0/1`; leftover files and route drift |
 
 Policy implication: H11 is the next local-screen target because it tests
 cross-file reasoning, no-edit/timeout behavior, import resolution, and API drift.
 Do not count it as promoted local ownership until it has live claim-grade passes.
+The next H11 revision should make obsolete-file deletion and the
+`local-worker-summary.md` artifact harder public gates before another promotion
+attempt.
 
 ## FSCRUD R29 Implication
 
@@ -265,8 +269,9 @@ node experiments/harness-arena/runner.mjs --live --h15-qwen-coder-task validatio
 
 Use the full command template in
 [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md). The next local-model
-step should be a narrower H15 micro-flow, not another full H15 local/hybrid
-attempt on the same hardware.
+step should either harden the H11 deletion/summary gates and rerun that screen,
+or continue with narrower H15 micro-flows. It should not be another full H15
+local/hybrid attempt on the same hardware.
 
 Runbook: [`TEAM-OF-AGENTS-RUNBOOK.md`](./TEAM-OF-AGENTS-RUNBOOK.md).
 Manifest schema: [`hybrid-routing-manifest.schema.json`](./hybrid-routing-manifest.schema.json).

@@ -9,6 +9,7 @@
   },
   "evidence": {
     "summaryDoc": "experiments/aider-vs-pl/results/h11-phase6-context-controlled/README.md",
+    "latestHarnessArenaLiveDoc": "docs/evaluation/2026-05-09-ha-hr1-h11-live-local.md",
     "selectionDoc": "docs/evaluation/2026-05-08-local-coding-model-selection.md",
     "minimumCleanPassesForPromotion": 3
   },
@@ -27,13 +28,13 @@
         "provider": "ollama",
         "name": "qwen3-coder:30b",
         "endpointClass": "local",
-        "selectionReason": "screening route only; no qwen3-coder Harness Arena H11 live pass recorded yet"
+        "selectionReason": "screening route only; first qwen3-coder Harness Arena H11 live screen failed private oracle and completion gates"
       },
       "fixture": "experiments/harness-arena/fixtures/h11-multi-file-refactor",
       "flow": "experiments/harness-arena/flows/h11-multi-file-refactor-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h11-multi-file-refactor-oracle.mjs",
       "cleanPasses": 0,
-      "totalRuns": 0,
+      "totalRuns": 1,
       "requiredGuards": [
         "public-tests",
         "structural-rename",
@@ -42,7 +43,7 @@
         "private-oracle"
       ],
       "localStopPolicy": "stop after the first timeout, no-edit result, old Contact terminology straggler, import failure, public test failure, or private oracle failure",
-      "notes": "Use as the first Harness Arena H11 local screen for multi-file refactor behavior. The older aider-vs-pl H11 evidence showed PL can help local qwen3-opencode-big:30b on this class, but this qwen3-coder route has no clean Harness Arena pass yet."
+      "notes": "Current Harness Arena result is 0/1: HA-HR1-H11-multi-file-refactor-qwen-coder-001 failed with leftover old contact filenames, hidden route drift, missing local-worker-summary.md, and a late Ollama PowerShell JSON control-character diagnostic. The older aider-vs-pl H11 evidence showed PL can help local qwen3-opencode-big:30b on this class, but this qwen3-coder route has no clean Harness Arena pass yet."
     }
   ],
   "escalationTriggers": [

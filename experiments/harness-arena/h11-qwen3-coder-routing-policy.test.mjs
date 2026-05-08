@@ -31,16 +31,21 @@ test('H11 qwen3-coder policy exposes multi-file refactor screen candidate', () =
   assert.equal(route.decision, 'local-screen-candidate');
   assert.equal(route.owner, 'local');
   assert.equal(route.cleanPasses, 0);
-  assert.equal(route.totalRuns, 0);
+  assert.equal(route.totalRuns, 1);
   assert.match(route.fixture, /h11-multi-file-refactor$/);
   assert.match(route.flow, /h11-multi-file-refactor-worker\.flow$/);
   assert.match(route.oracle, /h11-multi-file-refactor-oracle\.mjs$/);
+  assert.match(route.notes, /0\/1/);
   assert.match(route.notes, /no clean Harness Arena pass yet/);
 });
 
 test('H11 qwen3-coder policy references checked-in evidence and harness files', () => {
   const policy = readPolicy();
   assert.ok(existsSync(join(ROOT, policy.evidence.summaryDoc)), 'summary evidence doc missing');
+  assert.ok(
+    existsSync(join(ROOT, policy.evidence.latestHarnessArenaLiveDoc)),
+    'latest Harness Arena live doc missing',
+  );
   assert.ok(existsSync(join(ROOT, policy.evidence.selectionDoc)), 'selection doc missing');
 
   for (const route of policy.routes) {

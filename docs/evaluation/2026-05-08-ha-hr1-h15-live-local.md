@@ -145,6 +145,13 @@ negative promotion result for one route:
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.
 
+Executable routing policy:
+
+- Standalone resolver:
+  `node experiments/harness-arena/h15-qwen3-coder-routing-policy.mjs api-endpoint --json`
+- Harness runner profile:
+  `node experiments/harness-arena/runner.mjs --h15-qwen-coder-task api-endpoint`
+
 Recommended H15 policy:
 
 - Use local only for a bounded first attempt if wall time is acceptable.

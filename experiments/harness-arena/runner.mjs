@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { resolveH14LocalRoute } from './h14-local-routing-policy.mjs';
 import { resolveH14QwenCoderRoute } from './h14-qwen3-coder-routing-policy.mjs';
+import { resolveH15QwenCoderRoute } from './h15-qwen3-coder-routing-policy.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
@@ -45,6 +46,7 @@ const ARG_FIELDS = {
   '--frontier-runner': 'frontierRunner',
   '--h14-local-subrole': 'h14LocalSubrole',
   '--h14-qwen-coder-subrole': 'h14QwenCoderSubrole',
+  '--h15-qwen-coder-task': 'h15QwenCoderTask',
   '--live-deterministic-command': 'liveDeterministicCommand',
   '--live-frontier-command': 'liveFrontierCommand',
   '--live-frontier-repair-command': 'liveFrontierRepairCommand',
@@ -94,6 +96,8 @@ export function parseArgs(argv) {
     h14LocalSubrole: null,
     h14QwenCoderRoute: null,
     h14QwenCoderSubrole: null,
+    h15QwenCoderRoute: null,
+    h15QwenCoderTask: null,
     liveDeterministicCommand: null,
     liveFrontierCommand: null,
     liveFrontierRepairCommand: null,
@@ -156,14 +160,23 @@ export function parseArgs(argv) {
   if (options.mode === 'fake-live' && !oracleCommandProvided) {
     options.oracleCommand = defaultFakeOracleCommand();
   }
-  if (options.h14LocalSubrole && options.h14QwenCoderSubrole) {
+  const routeProfileCount = [
+    options.h14LocalSubrole,
+    options.h14QwenCoderSubrole,
+    options.h15QwenCoderTask,
+  ].filter(Boolean).length;
+  if (routeProfileCount > 1) {
     throw new Error(
-      'Use only one H14 route profile: --h14-local-subrole or --h14-qwen-coder-subrole',
+      'Use only one route profile: --h14-local-subrole, --h14-qwen-coder-subrole, or --h15-qwen-coder-task',
     );
   }
   applyH14LocalRouteDefaults(options, providedFields);
   applyH14QwenCoderRouteDefaults(options, providedFields);
-  if ((options.h14LocalRoute || options.h14QwenCoderRoute) && options.oracleCommand) {
+  applyH15QwenCoderRouteDefaults(options, providedFields);
+  if (
+    (options.h14LocalRoute || options.h14QwenCoderRoute || options.h15QwenCoderRoute) &&
+    options.oracleCommand
+  ) {
     oracleCommandProvided = true;
   }
 
@@ -176,6 +189,7 @@ export function parseArgs(argv) {
     fixture: options.fixture ? resolve(options.fixture) : null,
     h14LocalRoute: options.h14LocalRoute,
     h14QwenCoderRoute: options.h14QwenCoderRoute,
+    h15QwenCoderRoute: options.h15QwenCoderRoute,
     outputRoot: resolve(options.outputRoot),
     runGroupId: options.runGroupId ?? options.runId ?? 'HA-HR1-structure',
     runId: options.runId ?? timestampId(),
@@ -204,7 +218,7 @@ function applyH14LocalRouteDefaults(options, providedFields) {
     if (!providedFields.has('localProvider')) options.localProvider = resolved.model.provider;
     if (!providedFields.has('localRunner')) options.localRunner = resolved.model.provider;
   }
-  if (!providedFields.has('oracleCommand')) options.oracleCommand = h14OracleCommand(route);
+  if (!providedFields.has('oracleCommand')) options.oracleCommand = routeOracleCommand(route);
   if (!providedFields.has('policyVersion')) options.policyVersion = resolved.policyVersion;
   if (!providedFields.has('stepTimeoutMs')) {
     options.stepTimeoutMs = resolved.runtimeDefaults?.stepTimeoutMs ?? options.stepTimeoutMs;
@@ -227,13 +241,38 @@ function applyH14QwenCoderRouteDefaults(options, providedFields) {
   if (!providedFields.has('localModel')) options.localModel = resolved.model.name;
   if (!providedFields.has('localProvider')) options.localProvider = resolved.model.provider;
   if (!providedFields.has('localRunner')) options.localRunner = resolved.model.provider;
-  if (!providedFields.has('oracleCommand')) options.oracleCommand = h14OracleCommand(route);
+  if (!providedFields.has('oracleCommand')) options.oracleCommand = routeOracleCommand(route);
   if (!providedFields.has('policyVersion')) options.policyVersion = resolved.policyVersion;
   if (!providedFields.has('stepTimeoutMs')) {
     options.stepTimeoutMs = resolved.runtimeDefaults?.stepTimeoutMs ?? options.stepTimeoutMs;
   }
   if (!providedFields.has('taskBrief')) options.taskBrief = route.notes;
   if (!providedFields.has('taskId')) options.taskId = route.subrole;
+}
+
+function applyH15QwenCoderRouteDefaults(options, providedFields) {
+  if (!options.h15QwenCoderTask) return;
+
+  const resolved = resolveH15QwenCoderRoute(options.h15QwenCoderTask);
+  const route = resolved.route;
+  options.h15QwenCoderRoute = resolved;
+
+  if (!providedFields.has('arms')) {
+    options.arms = resolved.shouldRunLocal ? 'local-only' : 'hybrid-router';
+  }
+  if (!providedFields.has('fixture')) options.fixture = route.fixture;
+  if (!providedFields.has('localModel')) options.localModel = resolved.localDraftModel.name;
+  if (!providedFields.has('localProvider')) {
+    options.localProvider = resolved.localDraftModel.provider;
+  }
+  if (!providedFields.has('localRunner')) options.localRunner = resolved.localDraftModel.provider;
+  if (!providedFields.has('oracleCommand')) options.oracleCommand = routeOracleCommand(route);
+  if (!providedFields.has('policyVersion')) options.policyVersion = resolved.policyVersion;
+  if (!providedFields.has('stepTimeoutMs')) {
+    options.stepTimeoutMs = resolved.runtimeDefaults?.stepTimeoutMs ?? options.stepTimeoutMs;
+  }
+  if (!providedFields.has('taskBrief')) options.taskBrief = route.notes;
+  if (!providedFields.has('taskId')) options.taskId = route.task;
 }
 
 function validateLiveOptions(options, oracleCommandProvided) {
@@ -788,14 +827,18 @@ function buildFakeStepCommand(options, arm, stepId, index, workspace) {
 function buildLiveStepCommand(options, arm, stepId, routeDecision, index, workspace) {
   const template = liveCommandForRoute(options, routeDecision);
   if (!template) throw new Error(`missing live command template for route: ${routeDecision}`);
-  validateH14LiveCommandTemplate(options, template);
-  const h14Route = selectedH14Route(options);
-  const h14Flow = h14Route ? join(ROOT, h14Route.route.flow) : null;
+  validateProfileLiveCommandTemplate(options, template);
+  const profileRoute = selectedProfileRoute(options);
+  const routeFlow = profileRoute ? join(ROOT, profileRoute.route.flow) : null;
   return commandFromTemplate(template, {
     arm,
     attempt: String(index + 1),
-    h14Flow,
-    h14FlowRelative: h14Route?.route.flow ?? null,
+    h14Flow: profileRoute?.profileKind === 'H14' ? routeFlow : null,
+    h14FlowRelative: profileRoute?.profileKind === 'H14' ? profileRoute.route.flow : null,
+    h15Flow: profileRoute?.profileKind === 'H15' ? routeFlow : null,
+    h15FlowRelative: profileRoute?.profileKind === 'H15' ? profileRoute.route.flow : null,
+    routeFlow,
+    routeFlowRelative: profileRoute?.route.flow ?? null,
     routeDecision,
     stepId,
     taskId: options.taskId,
@@ -803,14 +846,19 @@ function buildLiveStepCommand(options, arm, stepId, routeDecision, index, worksp
   });
 }
 
-function validateH14LiveCommandTemplate(options, template) {
-  const route = selectedH14Route(options)?.route;
-  if (!route) return;
+function validateProfileLiveCommandTemplate(options, template) {
+  const profileRoute = selectedProfileRoute(options);
+  const route = profileRoute?.route;
+  if (!profileRoute || !route) return;
 
   const absoluteFlow = join(ROOT, route.flow);
   if (
+    template.includes('<routeFlow>') ||
+    template.includes('<routeFlowRelative>') ||
     template.includes('<h14Flow>') ||
     template.includes('<h14FlowRelative>') ||
+    template.includes('<h15Flow>') ||
+    template.includes('<h15FlowRelative>') ||
     template.includes(route.flow) ||
     template.includes(absoluteFlow)
   ) {
@@ -818,7 +866,7 @@ function validateH14LiveCommandTemplate(options, template) {
   }
 
   throw new Error(
-    `H14 live command must reference the routed flow ${route.flow}; use <h14Flow> for the absolute path.`,
+    `${profileRoute.profileKind} live command must reference the routed flow ${route.flow}; use <routeFlow> for the absolute path.`,
   );
 }
 
@@ -895,7 +943,7 @@ function defaultFakeOracleCommand() {
   return `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(script)} <workspace>`;
 }
 
-function h14OracleCommand(route) {
+function routeOracleCommand(route) {
   return `${quoteCommandArg(process.execPath)} ${quoteCommandArg(join(ROOT, route.oracle))} --workspace <workspace>`;
 }
 
@@ -1015,13 +1063,14 @@ function classificationNotes(mode, { resourceFailure = false } = {}) {
 
 function buildStep([stepId, routeDecision, routeTrigger], index, options, workspace, execution) {
   const identity = stepIdentityForMode(options, routeDecision);
-  const h14ResolvedRoute = selectedH14Route(options);
-  const h14Route = h14ResolvedRoute?.route ?? null;
-  const promptProgram = h14Route
+  const profileRoute = selectedProfileRoute(options);
+  const route = profileRoute?.route ?? null;
+  const routeId = routeIdentifier(route);
+  const promptProgram = route
     ? {
         kind: 'flow',
-        path: h14Route.flow,
-        sha256: fileSha256FromRoot(h14Route.flow),
+        path: route.flow,
+        sha256: fileSha256FromRoot(route.flow),
       }
     : {
         kind: 'synthetic',
@@ -1039,8 +1088,8 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
 
   return {
     stepId,
-    purpose: h14Route
-      ? `H14 ${h14Route.subrole} ${stepId} lane for ${options.mode}`
+    purpose: route
+      ? `${profileRoute.profileKind} ${routeId} ${stepId} lane for ${options.mode}`
       : `Synthetic ${stepId} lane for HA-HR1 ${options.mode}`,
     runner: identity.runner,
     model: identity.model,
@@ -1052,14 +1101,14 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     adapterVersion: identity.adapterVersion,
     providerClass: identity.providerClass,
     routeDecision,
-    routeTrigger: h14Route
-      ? `${h14ResolvedRoute.triggerProfile}:${h14Route.subrole}:${h14Route.decision}`
+    routeTrigger: route
+      ? `${profileRoute.triggerProfile}:${routeId}:${route.decision}`
       : routeTrigger,
     riskLevel: 'low',
     ambiguityLevel: 'low',
     escalationReason:
-      h14Route && !h14ResolvedRoute.shouldRunLocal && routeDecision === 'frontier'
-        ? `H14 ${h14ResolvedRoute.displayProfile} policy route ${h14Route.decision}`
+      route && !profileRoute.shouldRunLocal && routeDecision === 'frontier'
+        ? `${profileRoute.profileKind} ${profileRoute.displayProfile} policy route ${route.decision}`
         : null,
     attemptNumber: index + 1,
     promptProgram,
@@ -1073,7 +1122,7 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     },
     dataClassification: 'public',
     frontierCallKind: frontierCallKindForStep(stepId),
-    inputArtifactRefs: h14Route ? ['workspace/TASK.md', h14Route.flow] : ['workspace/TASK.md'],
+    inputArtifactRefs: route ? ['workspace/TASK.md', route.flow] : ['workspace/TASK.md'],
     outputArtifactRefs,
     resourceSnapshotArtifactRefs: execution?.resourceSnapshotArtifactRefs ?? [],
     resourceSnapshotSummary:
@@ -1094,17 +1143,18 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     wallSeconds: execution?.wallSeconds ?? 0,
     estimatedUsd: 0,
     gpuActiveSeconds: 0,
-    notes: h14Route
-      ? `H14 ${h14ResolvedRoute.displayProfile} policy ${h14Route.decision}. ${stepNotes(options.mode, execution)}`
+    notes: route
+      ? `${profileRoute.profileKind} ${profileRoute.displayProfile} policy ${route.decision}. ${stepNotes(options.mode, execution)}`
       : stepNotes(options.mode, execution),
   };
 }
 
-function selectedH14Route(options) {
+function selectedProfileRoute(options) {
   if (options.h14LocalRoute) {
     return {
       ...options.h14LocalRoute,
       displayProfile: 'local-portfolio',
+      profileKind: 'H14',
       triggerProfile: 'h14-local-portfolio',
     };
   }
@@ -1112,10 +1162,23 @@ function selectedH14Route(options) {
     return {
       ...options.h14QwenCoderRoute,
       displayProfile: 'qwen3-coder',
+      profileKind: 'H14',
       triggerProfile: 'h14-qwen3-coder',
     };
   }
+  if (options.h15QwenCoderRoute) {
+    return {
+      ...options.h15QwenCoderRoute,
+      displayProfile: 'qwen3-coder',
+      profileKind: 'H15',
+      triggerProfile: 'h15-qwen3-coder',
+    };
+  }
   return null;
+}
+
+function routeIdentifier(route) {
+  return route?.subrole ?? route?.task ?? null;
 }
 
 function stepIdentityForMode(options, routeDecision) {

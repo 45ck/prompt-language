@@ -1615,3 +1615,65 @@ Outcome:
 Decision: the promoted local-portfolio route now works end to end for
 `full-tdd`. This is route smoke on top of the retry-hardened `3/3` full-lane
 screen.
+
+## H14 Full TDD Devstral Fallback Screen
+
+After the full H14 route was promoted for `qwen3-coder:30b`, the next useful
+fallback question was whether the smaller installed `devstral-small-2:24b` model
+could also own the combined red-green H14 task, not just the narrower
+implementation subroles it had already passed.
+
+Command shape:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --arms local-only \
+  --fixture experiments/harness-arena/fixtures/h14-tdd-red-green \
+  --policy-version h14-devstral-full-tdd-screen-r16-v1 \
+  --live-local-command "bash -lc 'PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=16 node $(pwd)/bin/cli.mjs run --runner ollama --model devstral-small-2:24b --json --file $(pwd)/experiments/harness-arena/flows/h14-local-bulk-worker.flow'" \
+  --oracle-command "node $(pwd)/experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs --workspace <workspace>" \
+  --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \
+  --local-resource-snapshot-interval-ms 2000 \
+  --local-model devstral-small-2:24b \
+  --local-endpoint ollama-powershell-stdin \
+  --step-timeout-ms 1200000 \
+  --run-id HA-HR1-H14-full-tdd-devstral-r16-001-20260508T205853Z \
+  --output-root .tmp/harness-arena
+```
+
+Outcome:
+
+- run id: `HA-HR1-H14-full-tdd-devstral-r16-001-20260508T205853Z`
+- model: `devstral-small-2:24b`
+- transport telemetry: `metadata.transport=powershell`
+- step exit code: `0`
+- timed out: `false`
+- step wall time: `209.762s`
+- private oracle: passed
+- oracle result: `6/6`
+- provider substitution: `false`
+- provider retries: `0`
+- provider telemetry totals: `19,171` tokens across `7` Ollama calls
+- resource samples: `90/90` non-empty stdout samples, `0` metadata parse
+  failures
+- residency: sampled `ollama ps` showed `16 GB`, `100% GPU`, and `4096`
+  context for `devstral-small-2:24b`
+
+Private oracle result:
+
+```text
+PASS: mergeDuplicates implementation exists
+PASS: mergeDuplicates is exported
+PASS: tests import and call mergeDuplicates
+PASS: at least five merge/duplicate tests exist
+PASS: public tests pass
+PASS: hidden behavior checks pass
+
+Results: 6/6 passed
+```
+
+Decision: this is a positive first full-H14 Devstral screen, but it is not a
+promotion yet. The promotion threshold remains `3/3` clean full-lane manifests
+with no frontier input. Run two more identical Devstral full-TDD reps before
+changing the H14 local portfolio policy.

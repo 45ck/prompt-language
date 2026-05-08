@@ -30,7 +30,9 @@ The H14 evidence supports a narrow conclusion:
 - `qwen3-coder:30b` later passed the full H14 local-only lane `3/3` after the
   PowerShell stdin transport and socket-reset retry hardening;
 - `devstral-small-2:24b` and `qwen3-opencode:30b` passed the two narrow H14
-  implementation subrole screens at `3/3` each, but have not passed full H14;
+  implementation subrole screens at `3/3` each;
+- `devstral-small-2:24b` has now passed one full H14 local-only screen, private
+  oracle `6/6`, but still needs two more clean reps before full-H14 promotion;
 - `qwen3.6:27b` passed readiness, then failed the first H14 API-preservation
   screen after consuming the full 900s budget.
 
@@ -66,7 +68,7 @@ CPU/GPU once context and KV cache are included.
 | Priority | Model                  | Local status                     | Why                                                                                                                  |
 | -------- | ---------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | 1        | `qwen3-coder:30b`      | Promoted for full H14 TDD        | Official Ollama package; 30B-class MoE with about 3.3B active parameters; code and agent focused.                    |
-| 2        | `devstral-small-2:24b` | Promoted for two H14 subroles    | Smaller installed coding model; strong H14 subrole pass rate, but failed the H15 validation-only model screen.       |
+| 2        | `devstral-small-2:24b` | Full-H14 screen in progress      | Smaller installed coding model; first full H14 pass is clean, but it still needs `3/3` before full-H14 promotion.    |
 | 3        | `qwen3-opencode:30b`   | Promoted for two H14 subroles    | Coding-tuned installed variant; passed H14 subroles, but failed the H15 validation screen after a bridge timeout.    |
 | 4        | `qwen3:30b`            | Slow general-model control       | Passed readiness, but produced far more tokens and latency than `qwen3-coder:30b`.                                   |
 | 5        | `qwen3.6:27b`          | Reviewer/classifier control only | Passed readiness but failed API-preservation after the hard timeout.                                                 |
@@ -164,10 +166,9 @@ Live model batches must be treated as contained experiments:
 
 1. Keep `qwen3-coder:30b` as the promoted H14 full-TDD worker under the checked
    route policy.
-2. Keep `devstral-small-2:24b` and `qwen3-opencode:30b` as fallback local
-   implementers only for implementation-from-tests and API-preservation; do not
-   route H15 validation ownership to either fallback after the devstral
-   no-progress failure and the qwen3-opencode bridge-timeout failure.
+2. Run two more identical `devstral-small-2:24b` full-H14 TDD reps before
+   changing the H14 local portfolio. Keep `qwen3-opencode:30b` as a fallback
+   implementer only for implementation-from-tests and API-preservation.
 3. Do not spend more H14 implementation-owner time on `qwen3.6:27b`; use it only
    as a reviewer/classifier control unless a new runtime lane changes its timeout
    behavior.
@@ -225,12 +226,14 @@ Current decision from the readiness and subrole screens:
 
 1. Promote `qwen3-coder:30b` for full H14 TDD under the hardened PowerShell stdin
    route.
-2. Promote `devstral-small-2:24b` and `qwen3-opencode:30b` only for the two
-   narrow implementation subroles they passed.
-3. Keep `qwen3:30b` as a slow general-model control, not the main local worker.
-4. Keep `qwen3.6:27b` out of implementation ownership after its 900s
+2. Keep `devstral-small-2:24b` in full-H14 screening after its first clean full
+   TDD pass; do not promote it until it reaches `3/3`.
+3. Promote `qwen3-opencode:30b` only for the two narrow implementation subroles
+   it passed.
+4. Keep `qwen3:30b` as a slow general-model control, not the main local worker.
+5. Keep `qwen3.6:27b` out of implementation ownership after its 900s
    API-preservation failure.
-5. Do not route `gemma4-opencode:e4b` as the cheap classifier under the current
+6. Do not route `gemma4-opencode:e4b` as the cheap classifier under the current
    default-context Prompt Language smoke path; it needs a low-context profile
    before another readiness attempt is useful.
 
@@ -469,18 +472,22 @@ readiness and H14 subrole screens:
 - Later H14 implementation-from-tests passed `3/3` with private oracle `6/6` in
   every run.
 - Later H14 API-preservation passed `3/3` with private oracle `5/5` in every run.
+- The first full H14 local-only screen passed with private oracle `6/6`,
+  `209.762s` wall time, `7` Ollama calls, `19,171` total tokens, zero retries,
+  and sampled `100% GPU` residency at `4096` context.
 - Every subrole sample tick across those six runs contained the resident
   `devstral-small-2:24b` `/api/ps` row.
 
-Promote Devstral Small 2 only for those two bounded implementation subroles. It
-is not promoted for standalone test authoring or full H14 local-only.
+Keep Devstral Small 2 promoted only for the two bounded implementation subroles.
+It is not promoted for standalone test authoring or full H14 local-only yet; it
+needs two more clean full-H14 reps to reach the `3/3` promotion threshold.
 
 Current latest-model ranking for this PC:
 
 | Rank | Candidate              | Decision                                                                                                 |
 | ---- | ---------------------- | -------------------------------------------------------------------------------------------------------- |
 | 1    | `qwen3-coder:30b`      | Promoted full H14 worker under the hardened route; best local implementation owner.                      |
-| 2    | `devstral-small-2:24b` | Promoted fallback for two bounded H14 implementation subroles; not full-H14 promoted.                    |
+| 2    | `devstral-small-2:24b` | Full-H14 screen in progress after first clean pass; still unpromoted until `3/3`.                        |
 | 3    | `qwen3-opencode:30b`   | Promoted fallback for the same two subroles, but slower than Devstral and Qwen Coder.                    |
 | 4    | `qwen3:30b`            | Passed `A` but too slow; keep as general-model control.                                                  |
 | 5    | `qwen3.6:27b`          | Passed readiness but failed API-preservation after timeout; reviewer/classifier control only.            |
@@ -502,10 +509,11 @@ Latest large open-weight models worth tracking, but not workstation-local here:
 
 The engineering conclusion is still not "local failed." The better conclusion
 is narrower: `qwen3-coder:30b` is the only current local model with enough live
-Prompt Language evidence to own full H14 TDD. Devstral Small 2 and Qwen3 OpenCode
-are useful local fallback implementers for bounded subroles. Qwen3.6 and larger
-new open-weight families belong in reviewer/classifier or API/server comparison
-lanes until they produce workstation-local promotion evidence.
+Prompt Language evidence to own full H14 TDD. Devstral Small 2 is the next
+full-H14 fallback candidate after one clean pass, while Qwen3 OpenCode remains a
+bounded-subrole fallback. Qwen3.6 and larger new open-weight families belong in
+reviewer/classifier or API/server comparison lanes until they produce
+workstation-local promotion evidence.
 
 ## Sources
 

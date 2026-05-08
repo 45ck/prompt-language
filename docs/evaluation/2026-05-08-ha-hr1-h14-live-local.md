@@ -579,6 +579,53 @@ still does not promote the model for full H14 local-only ownership. Full H14 sti
 requires the model to author tests, preserve APIs, satisfy artifact contracts, and
 finish within budget in the same lane.
 
+### `HA-HR1-H14-api-preservation-routed-qwen-coder-001`
+
+After commit `ff4f4d9` wired the checked-in H14 qwen-coder policy into the
+HA-HR1 runner, the API-preservation subrole was re-run through the route profile:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --h14-qwen-coder-subrole api-preservation \
+  --live-local-command '<ollama prompt-language command>' \
+  --local-endpoint http://172.17.32.1:11435 \
+  --run-id HA-HR1-H14-api-preservation-routed-qwen-coder-001 \
+  --output-root .tmp/harness-arena
+```
+
+The profile selected `local-only`, the `h14-api-preservation` fixture, the
+API-preservation oracle, policy version
+`h14-qwen3-coder-subrole-routing-v1`, and the
+`h14-api-preservation-worker.flow` prompt program.
+
+Outcome:
+
+- step exit code: `0`
+- step wall time: `183.645s`
+- private oracle: passed
+- provider telemetry: 6 Ollama records, 13,913 input tokens, 1,228 output tokens,
+  15,141 total tokens, zero provider API cost, no retries
+- route trigger:
+  `h14-qwen3-coder:h14-api-preserving-implementation:local-promoted`
+
+Oracle result:
+
+```text
+PASS: source keeps expected export names
+PASS: public tests keep API contract coverage
+PASS: public tests pass
+PASS: hidden API checks pass
+PASS: hidden merge checks pass
+
+Results: 5/5 passed
+```
+
+Decision: the runner integration is live-valid for the promoted API-preservation
+subrole. This is not a new broader capability claim; it proves the routing profile
+can execute the already-promoted local subrole and preserve claim-grade manifest
+metadata without manually restating fixture and oracle paths.
+
 ## H14 Test-Authoring Subrole Results
 
 The third narrower subrole fixture is `h14-test-authoring`. This fixture keeps the

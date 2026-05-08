@@ -236,6 +236,60 @@ Decision: do not promote `qwen3-opencode:30b` for H15 validation ownership. On
 this route/runtime, it was slower than devstral and did not produce useful
 workspace progress before the bridge timeout.
 
+### Validation Repair Local Screen
+
+Run: `HA-HR1-H15-validation-repair-short-name-qwen-coder-002`
+
+Result:
+
+- Model: `qwen3-coder:30b`
+- Route: generic local-only H15 validation repair screen
+- Fixture: `h15-validation-repair-short-name`
+- Step exit: `0`
+- Wall time: `351.806s`
+- Model calls: `15`
+- Tokens: `47,582`
+- Resource samples: `153`
+- Private oracle: `FAIL`, `6/8`
+- Frontier calls: `0`
+
+This screen changed the H15 validation contract from broad validation ownership
+to one named public repair: short-name PATCH validation already returned `400`
+but lacked an error body. The local worker completed the public flow, but the
+private oracle found regressions: valid `+` phone updates returned `400`, and a
+non-string validation case crashed because the rewrite accessed `.length` on
+`null`.
+
+Decision: do not promote the repair screen. The result showed the narrower
+contract was executable, but the public gate was too weak and allowed API
+semantic drift.
+
+Run: `HA-HR1-H15-validation-repair-short-name-qwen-coder-003`
+
+Result:
+
+- Model: `qwen3-coder:30b`
+- Route: generic local-only H15 validation repair screen with hardened public
+  gates
+- Fixture: `h15-validation-repair-short-name`
+- Step exit: timed out
+- Wall time: `900.100s`
+- Model calls: `16`
+- Tokens: `67,481`
+- Resource samples: `386`
+- Private oracle: `FAIL`, `7/8`
+- Frontier calls: `0`
+
+Commit `8856629` hardened the public tests and done gate to catch the regressions
+from run `002`: valid `+` phone support, non-string rejection, and long-field
+limits. The model still rewrote more than the target line, changed the name
+minimum to `< 1`, and timed out before recovering. The private oracle found the
+short-name case returned `200`.
+
+Decision: keep H15 validation repair not promoted. On this runtime, the local model
+can enter the repair loop, but it is too slow and too drift-prone for this
+one-defect H15 implementation repair.
+
 ### PATCH Test-Authoring Local Screen
 
 Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-002`
@@ -417,6 +471,9 @@ negative promotion result for one route:
 - `devstral-small-2:24b` and `qwen3-opencode:30b` also failed the H15
   validation-only screen, so the next H15 local attempt should change the route
   contract or runtime, not rerun these fallback models unchanged.
+- A narrower qwen3-coder short-name validation repair screen also failed after
+  one private-oracle regression and one hardened-gate timeout; implementation
+  repair remains not promoted.
 - H15 PATCH test-authoring is promoted as a tests-only local route after three
   consecutive clean post-guard passes; it is not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,

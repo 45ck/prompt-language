@@ -23,8 +23,9 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   implementation-from-tests and API-preservation subroles.
 - H15 endpoint evidence did not promote `qwen3-coder:30b` for local-only
   ownership. The local model produced near-complete endpoint work, but repeated
-  API-preservation drift, validation drift, and the latest hybrid resource failure
-  make `frontier-only` the current baseline route.
+  API-preservation drift, validation drift, a failed one-defect validation repair
+  screen, and the latest hybrid resource failure make `frontier-only` the current
+  baseline route.
 - H11 multi-file refactor now has a Harness Arena fixture, private oracle,
   worker flow, and promoted `qwen3-coder:30b` local route. It is currently
   `3/5`: the third, fourth, and fifth live screens passed the private oracle
@@ -75,6 +76,10 @@ evidence:
 - `--h15-qwen-coder-task test-authoring` applies the checked-in H15 PATCH
   test-authoring micro-flow. It defaults to a promoted local-only arm where the
   local model may edit only `src/test.js`.
+- `fixtures/h15-validation-repair-short-name` and
+  `flows/h15-validation-repair-short-name-worker.flow` exist as a generic H15
+  repair screen. Current evidence is negative: qwen3-coder regressed hidden
+  validation semantics, then timed out after public-gate hardening.
 - H14 route-profile live commands must reference the routed flow. Use
   `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative
   flow path in `--live-local-command` / `--live-frontier-command`.

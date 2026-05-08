@@ -477,3 +477,104 @@ Decision: promote `qwen3-coder:30b` for bounded implementation-from-tests work.
 Do not promote it to full H14 local-only yet. The next required subrole is API
 preservation under a separate fixture or an equivalent repeatable gate, because
 full H14 failures showed artifact, timeout, and public-test reliability risks.
+
+## H14 API-Preservation Subrole Results
+
+The second narrower subrole fixture is `h14-api-preservation`. This fixture keeps
+the test-authoring burden out of the local lane, but makes API safety explicit:
+the worker must fix `mergeDuplicates` while preserving CommonJS export names,
+function argument counts, create/find/add/remove behavior, non-mutating behavior,
+and the required summary artifact.
+
+The fixture starts red:
+
+- `npm test` initially passes `7/9` public tests;
+- `h14-api-preservation-oracle.mjs` initially passes `3/5` checks because public
+  merge behavior and hidden merge behavior fail.
+
+Commit `5a40477` added the fixture, flow, oracle, and oracle tests.
+
+### `HA-HR1-H14-S3-local-qwen3-coder-001`
+
+The first API-preservation run used local `qwen3-coder:30b` and the same
+WSL-reachable Windows Ollama endpoint at `http://172.17.32.1:11435`.
+
+Outcome:
+
+- step exit code: `0`
+- step wall time: `459.860s`
+- private oracle: passed
+- provider telemetry: 6 Ollama records, 14,412 input tokens, 1,270 output tokens,
+  15,682 total tokens, zero provider API cost, no retries
+- residency snapshot during/after the run: 19,014,187,008 bytes loaded,
+  2,693,683,200 bytes VRAM, 4,096 context
+- repo state: run used commit `89f0082` with the uncommitted S3 fixture present
+
+Oracle result:
+
+```text
+PASS: source keeps expected export names
+PASS: public tests keep API contract coverage
+PASS: public tests pass
+PASS: hidden API checks pass
+PASS: hidden merge checks pass
+
+Results: 5/5 passed
+```
+
+### `HA-HR1-H14-S3-local-qwen3-coder-002`
+
+The second API-preservation replicate used clean commit `5a40477`.
+
+Outcome:
+
+- step exit code: `0`
+- step wall time: `122.002s`
+- private oracle: passed
+- provider telemetry: 6 Ollama records, 13,913 input tokens, 1,247 output tokens,
+  15,160 total tokens, zero provider API cost, no retries
+- residency snapshot: 19,014,187,008 bytes loaded, 2,693,683,200 bytes VRAM,
+  4,096 context
+
+Oracle result:
+
+```text
+Results: 5/5 passed
+```
+
+### `HA-HR1-H14-S3-local-qwen3-coder-003`
+
+The third API-preservation replicate also used clean commit `5a40477`.
+
+Outcome:
+
+- step exit code: `0`
+- step wall time: `119.855s`
+- private oracle: passed
+- provider telemetry: 6 Ollama records, 13,913 input tokens, 1,247 output tokens,
+  15,160 total tokens, zero provider API cost, no retries
+- residency snapshot: 19,014,187,008 bytes loaded, 2,693,683,200 bytes VRAM,
+  4,096 context
+
+Oracle result:
+
+```text
+Results: 5/5 passed
+```
+
+### S3 Decision
+
+`qwen3-coder:30b` is now `3/3` on the H14 API-preservation subrole:
+
+| Run   | Exit | Oracle | Wall time | Tokens |
+| ----- | ---: | ------ | --------: | -----: |
+| `001` |    0 | 5/5    |  459.860s | 15,682 |
+| `002` |    0 | 5/5    |  122.002s | 15,160 |
+| `003` |    0 | 5/5    |  119.855s | 15,160 |
+
+Decision: promote `qwen3-coder:30b` for bounded API-preserving implementation
+work when public tests already exist and completion gates are explicit. This
+strengthens the local-bulk-worker policy for narrow implementation subroles, but
+still does not promote the model for full H14 local-only ownership. Full H14 still
+requires the model to author tests, preserve APIs, satisfy artifact contracts, and
+finish within budget in the same lane.

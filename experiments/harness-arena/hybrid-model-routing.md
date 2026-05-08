@@ -151,17 +151,19 @@ to resolve the task before launching the current baseline lane.
 
 Current H15 routing decision:
 
-| Task                 | Current model     | Route decision    | Reason                                                                      |
-| -------------------- | ----------------- | ----------------- | --------------------------------------------------------------------------- |
-| API endpoint         | Codex             | frontier-baseline | One frontier-only call passed; measured hybrid used three frontier calls    |
-| Validation only      | `qwen3-coder:30b` | local-screen      | Route is `1/2`; repeat run exhausted action rounds and failed oracle        |
-| PATCH test-authoring | `qwen3-coder:30b` | local-promoted    | Route is `6/10`; tests-only route passed five times after the fixture guard |
+| Task                 | Current model     | Route decision    | Reason                                                                                                                        |
+| -------------------- | ----------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| API endpoint         | Codex             | frontier-baseline | One frontier-only call passed; measured hybrid used three frontier calls                                                      |
+| Validation only      | `qwen3-coder:30b` | local-screen      | Route is `1/2`; repeat run exhausted action rounds and failed oracle                                                          |
+| PATCH test-authoring | `qwen3-coder:30b` | local-promoted    | Route is `6/10`; tests-only route passed five times after the fixture guard, with `devstral-small-2:24b` promoted as fallback |
 
 Policy implication: the next full H15 claim should use frontier-only. The
 checked-in validation-only route remains screen-only after a failed repeat, while
-the PATCH test-authoring route is promoted for tests-only ownership. Hybrid
-remains experimental until local micro-flows reliably reduce frontier
-repair/review work. A passing hybrid run would still not be local-only evidence.
+the PATCH test-authoring route is promoted for tests-only ownership. Devstral
+Small 2 is now a fallback for that tests-only route after three clean
+committed-state passes. Hybrid remains experimental until local micro-flows
+reliably reduce frontier repair/review work. A passing hybrid run would still not
+be local-only evidence.
 The separate `devstral-small-2:24b` validation-only model screen also failed
 without timeout or resource failure, so it is not a replacement H15 validation
 owner. A separate `qwen3-opencode:30b` validation-only screen also failed after

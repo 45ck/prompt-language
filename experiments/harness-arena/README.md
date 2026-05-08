@@ -19,7 +19,9 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   frontier-repair dominated.
 - H14 local portfolio evidence promoted `qwen3-coder:30b` for full H14 TDD under
   the hardened PowerShell stdin route. It also promoted `devstral-small-2:24b`
-  as a full-H14 fallback after three clean full-lane passes.
+  as a full-H14 fallback after three clean full-lane passes and as an H15
+  PATCH-test-authoring fallback after three clean committed-state tests-only
+  passes.
   `qwen3-opencode:30b` remains promoted only for the narrower
   implementation-from-tests and API-preservation subroles.
 - H15 endpoint evidence did not promote `qwen3-coder:30b` for local-only
@@ -76,7 +78,8 @@ evidence:
   rounds and failed the private oracle.
 - `--h15-qwen-coder-task test-authoring` applies the checked-in H15 PATCH
   test-authoring micro-flow. It defaults to a promoted local-only arm where the
-  local model may edit only `src/test.js`.
+  local model may edit only `src/test.js`; `devstral-small-2:24b` is promoted as
+  the fallback for this tests-only route.
 - `fixtures/h15-validation-repair-short-name` and
   `flows/h15-validation-repair-short-name-worker.flow` exist as a generic H15
   repair screen. Current evidence is negative: qwen3-coder regressed hidden

@@ -22,7 +22,9 @@ checked H14 local portfolio.
 Update: `devstral-small-2:24b` has also passed readiness plus the same two H14
 implementation subrole screens at `3/3` each, with sampled `/api/ps` residency
 evidence in every subrole sample tick. It is promoted for the same narrow
-implementation-from-tests and API-preservation subroles only.
+implementation-from-tests and API-preservation subroles, the full-H14 fallback
+route, and the H15 PATCH test-authoring fallback route. It is still not promoted
+for H15 endpoint implementation ownership.
 
 Update: `qwen3.6:27b` passed readiness with sampled residency evidence, but the
 first H14 API-preservation subrole run hit the 900s hard timeout and then failed
@@ -53,7 +55,9 @@ residency. Run `003` also passed the private oracle but is excluded from the
 clean promotion set because resource samples captured `qwen3-opencode-big:30b`
 in a `Stopping...` state and provider telemetry recorded one retry. Keep
 `qwen3-coder:30b` as the selected first-choice full-H14 worker because it is
-faster on this route.
+faster on this route. Devstral is also promoted as the H15 PATCH test-authoring
+fallback after three clean committed-state tests-only passes under the
+equivalent-edge gate.
 
 Update: on 2026-05-09 local time, a fresh Prompt Language smoke confirmed
 `qwen3-coder:30b` still works through the PowerShell transport. The WSL HTTP
@@ -143,17 +147,17 @@ context and CPU/GPU offload. That is the measurement contract for this repo.
 
 ## Ranked Candidate Tests
 
-| Rank | Candidate              | Why                                                                           | First task                                           |
-| ---- | ---------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------- |
-| 1    | `qwen3-coder:30b`      | Best installed local coding model; MoE active params make it plausible        | Readiness smoke, then H14 S2 implementation subrole  |
-| 2    | `devstral-small-2:24b` | Installed coding-oriented model with smaller footprint than 30B class         | Promoted full-H14 fallback; no H15 ownership         |
-| 3    | `qwen3-opencode:30b`   | Installed coding-tuned variant; compare against official Qwen coder           | Readiness smoke, then H14 S2                         |
-| 4    | `qwen3.6:27b`          | Loads cleanly, but timed out on first H14 API-preservation implementation run | Reviewer/classifier control only                     |
-| 5    | `gemma4-opencode:e4b`  | Failed readiness at both 32K and explicit 4K context                          | Different backend only before any classifier use     |
-| 6    | `gemma4-opencode:e2b`  | Standard and Vulkan packages loaded at 4K but failed the minimum smoke        | Different backend only before any classifier use     |
-| 7    | `gemma4:26b`           | Installed but less obvious coding-agent fit                                   | Smoke only unless the above fail to load             |
-| 8    | `GLM-4.7-Flash`        | Strong 30B-class paper candidate; not installed here                          | Install only after installed 30B lanes show capacity |
-| 9    | DeepSeek V4 Flash API  | Latest DeepSeek, but too large for local                                      | Frontier/cloud comparison arm only                   |
+| Rank | Candidate              | Why                                                                           | First task                                                                    |
+| ---- | ---------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1    | `qwen3-coder:30b`      | Best installed local coding model; MoE active params make it plausible        | Readiness smoke, then H14 S2 implementation subrole                           |
+| 2    | `devstral-small-2:24b` | Installed coding-oriented model with smaller footprint than 30B class         | Promoted full-H14 fallback and H15 tests-only fallback; no endpoint ownership |
+| 3    | `qwen3-opencode:30b`   | Installed coding-tuned variant; compare against official Qwen coder           | Readiness smoke, then H14 S2                                                  |
+| 4    | `qwen3.6:27b`          | Loads cleanly, but timed out on first H14 API-preservation implementation run | Reviewer/classifier control only                                              |
+| 5    | `gemma4-opencode:e4b`  | Failed readiness at both 32K and explicit 4K context                          | Different backend only before any classifier use                              |
+| 6    | `gemma4-opencode:e2b`  | Standard and Vulkan packages loaded at 4K but failed the minimum smoke        | Different backend only before any classifier use                              |
+| 7    | `gemma4:26b`           | Installed but less obvious coding-agent fit                                   | Smoke only unless the above fail to load                                      |
+| 8    | `GLM-4.7-Flash`        | Strong 30B-class paper candidate; not installed here                          | Install only after installed 30B lanes show capacity                          |
+| 9    | DeepSeek V4 Flash API  | Latest DeepSeek, but too large for local                                      | Frontier/cloud comparison arm only                                            |
 
 ## Promotion Ladder
 

@@ -63,6 +63,10 @@ test('H15 qwen3-coder policy exposes promoted PATCH test-authoring route', () =>
   assert.equal(route.owner, 'local');
   assert.equal(route.selectedModel.name, 'qwen3-coder:30b');
   assert.equal(route.localDraftModel.name, 'qwen3-coder:30b');
+  assert.deepEqual(
+    route.fallbackModels.map((model) => model.name),
+    ['devstral-small-2:24b'],
+  );
   assert.equal(route.cleanPasses, 6);
   assert.equal(route.totalRuns, 10);
   assert.match(route.flow, /h15-patch-test-authoring-worker\.flow$/);
@@ -76,6 +80,7 @@ test('H15 qwen3-coder policy exposes promoted PATCH test-authoring route', () =>
   assert.match(route.notes, /qwen-coder-007, 008, and 009 passed/);
   assert.match(route.notes, /qwen-coder-010 repeated/);
   assert.match(route.notes, /qwen-coder-011 repeated/);
+  assert.match(route.notes, /devstral-clean-001/);
 });
 
 test('H15 qwen3-coder policy references checked-in evidence and harness files', () => {

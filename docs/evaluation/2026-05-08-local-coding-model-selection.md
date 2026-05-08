@@ -34,6 +34,9 @@ The H14 evidence supports a narrow conclusion:
 - `devstral-small-2:24b` has now passed three clean full H14 local-only screens,
   private oracle `6/6` in each counted run, and is promoted as the full-H14
   fallback behind `qwen3-coder:30b`;
+- `devstral-small-2:24b` also passed three clean committed-state H15 PATCH
+  test-authoring runs after the equivalent-edge gate correction, so it is
+  promoted as the H15 tests-only fallback;
 - `qwen3.6:27b` passed readiness, then failed the first H14 API-preservation
   screen after consuming the full 900s budget.
 
@@ -66,16 +69,16 @@ CPU/GPU once context and KV cache are included.
 
 ## Model Shortlist
 
-| Priority | Model                  | Local status                     | Why                                                                                                                  |
-| -------- | ---------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 1        | `qwen3-coder:30b`      | Promoted for full H14 TDD        | Official Ollama package; 30B-class MoE with about 3.3B active parameters; code and agent focused.                    |
-| 2        | `devstral-small-2:24b` | Promoted full-H14 fallback       | Smaller installed coding model; three clean full-H14 passes, but slower than `qwen3-coder:30b`.                      |
-| 3        | `qwen3-opencode:30b`   | Promoted for two H14 subroles    | Coding-tuned installed variant; passed H14 subroles, but failed the H15 validation screen after a bridge timeout.    |
-| 4        | `qwen3:30b`            | Slow general-model control       | Passed readiness, but produced far more tokens and latency than `qwen3-coder:30b`.                                   |
-| 5        | `qwen3.6:27b`          | Reviewer/classifier control only | Passed readiness but failed API-preservation after the hard timeout.                                                 |
-| 6        | `gemma4-opencode:e4b`  | Failed readiness                 | Smaller package, but live `A` smokes timed out at both 32K and explicit 4K context.                                  |
-| 7        | `gemma4-opencode:e2b`  | Failed readiness                 | Smaller 5.1B packages loaded at 4K context, but standard and Vulkan variants both failed the live `A` smoke.         |
-| 8        | GLM-4.7-Flash          | Promising follow-up              | 30B-class open-weight model with strong coding claims; add only after Ollama availability and host fit are verified. |
+| Priority | Model                  | Local status                                  | Why                                                                                                                                                      |
+| -------- | ---------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1        | `qwen3-coder:30b`      | Promoted for full H14 TDD                     | Official Ollama package; 30B-class MoE with about 3.3B active parameters; code and agent focused.                                                        |
+| 2        | `devstral-small-2:24b` | Promoted full-H14 and H15 tests-only fallback | Smaller installed coding model; three clean full-H14 passes and three clean H15 PATCH test-authoring fallback passes, but slower than `qwen3-coder:30b`. |
+| 3        | `qwen3-opencode:30b`   | Promoted for two H14 subroles                 | Coding-tuned installed variant; passed H14 subroles, but failed the H15 validation screen after a bridge timeout.                                        |
+| 4        | `qwen3:30b`            | Slow general-model control                    | Passed readiness, but produced far more tokens and latency than `qwen3-coder:30b`.                                                                       |
+| 5        | `qwen3.6:27b`          | Reviewer/classifier control only              | Passed readiness but failed API-preservation after the hard timeout.                                                                                     |
+| 6        | `gemma4-opencode:e4b`  | Failed readiness                              | Smaller package, but live `A` smokes timed out at both 32K and explicit 4K context.                                                                      |
+| 7        | `gemma4-opencode:e2b`  | Failed readiness                              | Smaller 5.1B packages loaded at 4K context, but standard and Vulkan variants both failed the live `A` smoke.                                             |
+| 8        | GLM-4.7-Flash          | Promising follow-up                           | 30B-class open-weight model with strong coding claims; add only after Ollama availability and host fit are verified.                                     |
 
 Do not start local testing with `qwen3-coder-next`. The current Ollama package is
 around 52 GB for the 80B-A3B model. It is interesting as cloud/open-weight server
@@ -230,8 +233,9 @@ Current decision from the readiness and subrole screens:
 1. Promote `qwen3-coder:30b` for full H14 TDD under the hardened PowerShell stdin
    route.
 2. Promote `devstral-small-2:24b` as the full-H14 fallback after clean runs
-   `001`, `002`, and `004` passed the private oracle `6/6`; keep
-   `qwen3-coder:30b` selected first because it is faster.
+   `001`, `002`, and `004` passed the private oracle `6/6`, and as the H15
+   PATCH test-authoring fallback after three clean committed-state tests-only
+   passes; keep `qwen3-coder:30b` selected first because it is faster.
 3. Promote `qwen3-opencode:30b` only for the two narrow implementation subroles
    it passed.
 4. Keep `qwen3:30b` as a slow general-model control, not the main local worker.
@@ -492,16 +496,16 @@ or H15 endpoint ownership.
 
 Current latest-model ranking for this PC:
 
-| Rank | Candidate              | Decision                                                                                                 |
-| ---- | ---------------------- | -------------------------------------------------------------------------------------------------------- |
-| 1    | `qwen3-coder:30b`      | Promoted full H14 worker under the hardened route; best local implementation owner.                      |
-| 2    | `devstral-small-2:24b` | Promoted full-H14 fallback; slower than Qwen Coder but clean enough for fallback routing.                |
-| 3    | `qwen3-opencode:30b`   | Promoted fallback for the same two subroles, but slower than Devstral and Qwen Coder.                    |
-| 4    | `qwen3:30b`            | Passed `A` but too slow; keep as general-model control.                                                  |
-| 5    | `qwen3.6:27b`          | Passed readiness but failed API-preservation after timeout; reviewer/classifier control only.            |
-| 6    | `GLM-4.7-Flash`        | Strong 30B-A3B paper/model-card candidate; test only after locating a runner package that fits the host. |
-| 7    | `gemma4-opencode:e4b`  | Failed both default-context and explicit 4K-context smoke attempts.                                      |
-| 8    | `gemma4-opencode:e2b`  | Standard package failed through the bridge; Vulkan package exhausted action rounds at explicit 4K.       |
+| Rank | Candidate              | Decision                                                                                                              |
+| ---- | ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 1    | `qwen3-coder:30b`      | Promoted full H14 worker under the hardened route; best local implementation owner.                                   |
+| 2    | `devstral-small-2:24b` | Promoted full-H14 fallback and H15 tests-only fallback; slower than Qwen Coder but clean enough for fallback routing. |
+| 3    | `qwen3-opencode:30b`   | Promoted fallback for the same two subroles, but slower than Devstral and Qwen Coder.                                 |
+| 4    | `qwen3:30b`            | Passed `A` but too slow; keep as general-model control.                                                               |
+| 5    | `qwen3.6:27b`          | Passed readiness but failed API-preservation after timeout; reviewer/classifier control only.                         |
+| 6    | `GLM-4.7-Flash`        | Strong 30B-A3B paper/model-card candidate; test only after locating a runner package that fits the host.              |
+| 7    | `gemma4-opencode:e4b`  | Failed both default-context and explicit 4K-context smoke attempts.                                                   |
+| 8    | `gemma4-opencode:e2b`  | Standard package failed through the bridge; Vulkan package exhausted action rounds at explicit 4K.                    |
 
 Latest large open-weight models worth tracking, but not workstation-local here:
 

@@ -537,6 +537,55 @@ route is now `6/10` overall and `5/5` after the shared-fixture delete guard. Thi
 still does not promote full H15 endpoint implementation; it strengthens the
 cheap local tests-only lane.
 
+### PATCH Test-Authoring Devstral Fallback Screen
+
+After `devstral-small-2:24b` was promoted as a full-H14 fallback, the next H15
+question was whether it can back up the already-promoted qwen-coder
+PATCH-test-authoring micro-flow. This is still tests-only support: the model may
+edit `src/test.js` only, and the private oracle rejects implementation edits and
+tests that do not kill PATCH validation mutants.
+
+An initial operator-command attempt,
+`HA-HR1-H15-patch-test-authoring-devstral-001-20260508T214034Z`, is excluded
+from model evidence because the command template expanded `$repo` too early and
+tried to execute `/bin/cli.mjs`.
+
+The first valid run under the original literal-edge structural gate,
+`HA-HR1-H15-patch-test-authoring-devstral-002-20260508T214113Z`, produced
+semantically useful tests but failed the route:
+
+- step exit: `3`
+- wall time: `289.650s`
+- private oracle: `FAIL`, `3/4`
+- public tests: `PASS`
+- mutant-killing oracle check: `PASS`
+- failure: no `local-worker-summary.md`, and the structural case check required
+  exact literals such as `bad@domain` even though the generated tests used
+  equivalent invalid examples such as `alice@domain`
+
+Commit `dad3495` corrected the route and private oracle to accept equivalent
+validation edge literals while still requiring public tests and mutant-killing
+coverage.
+
+Run `HA-HR1-H15-patch-test-authoring-devstral-003-20260508T214838Z` passed after
+that correction, but the repo was dirty during the run, so it is diagnostic
+evidence only. The three clean committed-state runs after `dad3495` are:
+
+| Run ID                                                                | Oracle | Step exit | Timeout | Wall time | Samples | Counted |
+| --------------------------------------------------------------------- | ------ | --------- | ------- | --------- | ------- | ------- |
+| `HA-HR1-H15-patch-test-authoring-devstral-clean-001-20260508T215500Z` | 4/4    | 0         | false   | 169.209s  | 75      | yes     |
+| `HA-HR1-H15-patch-test-authoring-devstral-clean-002-20260508T215813Z` | 4/4    | 0         | false   | 169.009s  | 75      | yes     |
+| `HA-HR1-H15-patch-test-authoring-devstral-clean-003-20260508T220122Z` | 4/4    | 0         | false   | 169.014s  | 75      | yes     |
+
+All three counted runs recorded repo commit `dad3495`, `dirty=false`, requested
+and actual model `devstral-small-2:24b`, no provider substitution, zero frontier
+calls, and sampled `ollama ps` residency at `16 GB`, `100% GPU`, and `4096`
+context.
+
+Decision: promote `devstral-small-2:24b` as the fallback H15 PATCH
+test-authoring local worker behind `qwen3-coder:30b`. Do not promote it for H15
+validation ownership or full endpoint implementation.
+
 ## Alternative Validation Model Screen
 
 Run: `HA-HR1-H15-validation-only-qwen36-001`
@@ -585,7 +634,9 @@ negative promotion result for one route:
   one private-oracle regression and one hardened-gate timeout; implementation
   repair remains not promoted.
 - H15 PATCH test-authoring is promoted as a tests-only local route after five
-  consecutive clean post-guard passes; it is not full H15 endpoint ownership.
+  consecutive clean qwen-coder post-guard passes. `devstral-small-2:24b` is now
+  a promoted fallback for that tests-only route after three clean committed-state
+  passes. This is not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.
 

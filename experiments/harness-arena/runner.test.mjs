@@ -456,6 +456,63 @@ test('H14 qwen3-coder live profile rejects lane commands that omit the routed fl
   }
 });
 
+test('live local runtime resource failures classify as harness failures, not model failures', () => {
+  const outputRoot = tempRoot();
+  const scriptRoot = tempRoot();
+  try {
+    mkdirSync(scriptRoot, { recursive: true });
+    const localScript = join(scriptRoot, 'local-resource-fail.mjs');
+    const oracleScript = join(scriptRoot, 'oracle-fail.mjs');
+    writeFileSync(
+      localScript,
+      [
+        "console.log('Prompt runner exited with code 1. Ollama runner failed: model requires more system memory (16.3 GiB) than is available (15.5 GiB)');",
+        'process.exit(3);',
+      ].join('\n'),
+    );
+    writeFileSync(
+      oracleScript,
+      ["console.log('oracle sees unchanged red fixture');", 'process.exit(1);'].join('\n'),
+    );
+
+    const localCommand = [
+      quoteCommandArg(process.execPath),
+      quoteCommandArg(localScript),
+      '<h14Flow>',
+    ].join(' ');
+    const oracleCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      oracleScript,
+    )} --workspace <workspace>`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--live',
+        '--h14-qwen-coder-subrole',
+        'api-preservation',
+        '--live-local-command',
+        localCommand,
+        '--oracle-command',
+        oracleCommand,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'local-resource-failure-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const manifest = readJson(result.armRuns[0].manifestPath);
+
+    assert.equal(manifest.steps[0].exitCode, 3);
+    assert.equal(manifest.oracle.passed, false);
+    assert.equal(manifest.classification.harnessFailure, true);
+    assert.equal(manifest.classification.modelFailure, false);
+    assert.match(manifest.classification.notes, /insufficient system memory/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+    rmSync(scriptRoot, { recursive: true, force: true });
+  }
+});
+
 test('live mode executes operator-supplied lane commands and private oracle artifacts', () => {
   const outputRoot = tempRoot();
   const scriptRoot = tempRoot();

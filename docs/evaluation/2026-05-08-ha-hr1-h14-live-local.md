@@ -674,6 +674,33 @@ subrole. This is not a new broader capability claim; it proves the routing profi
 can execute the already-promoted local subrole and preserve claim-grade manifest
 metadata without manually restating fixture and oracle paths.
 
+### `HA-HR1-H14-api-preservation-h14flow-qwen-coder-001`
+
+After commit `bd475c1` required H14 route-profile commands to reference the routed
+flow, the API-preservation route was run with the `<h14Flow>` placeholder instead
+of a manually repeated flow path.
+
+Outcome:
+
+- step exit code: `3`
+- step wall time: `3.635s`
+- private oracle: failed against the unchanged red fixture
+- placeholder expansion: passed; the recorded command contains the absolute
+  `h14-api-preservation-worker.flow` path selected by the policy
+- runtime result: blocked before useful inference
+
+Runner output:
+
+```text
+Prompt runner exited with code 1. Ollama runner failed: model requires more system memory (16.3 GiB) than is available (15.5 GiB)
+```
+
+Decision: this is not a `qwen3-coder:30b` model-quality failure and does not
+change the promoted API-preservation route. It is a local-runtime resource block
+that proved the `<h14Flow>` placeholder expands through the live command path.
+The follow-up harness patch classifies this resource-failure shape as
+`harnessFailure: true` and `modelFailure: false`.
+
 ## H14 Test-Authoring Subrole Results
 
 The third narrower subrole fixture is `h14-test-authoring`. This fixture keeps the

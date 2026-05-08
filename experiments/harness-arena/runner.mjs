@@ -732,15 +732,28 @@ function buildClassification(options, stepExecutions, oracleExecution) {
   }
 
   const timedOut = stepExecutions?.some((step) => step.timedOut) || oracleExecution?.timedOut;
+  const resourceFailure = stepExecutions?.some(isLocalRuntimeResourceFailure) ?? false;
   return {
     routingPolicyFailure: false,
-    modelFailure: Boolean(options.mode === 'live' && oracleExecution?.exitCode !== 0),
-    harnessFailure: Boolean(timedOut),
-    notes: classificationNotes(options.mode),
+    modelFailure: Boolean(
+      options.mode === 'live' && oracleExecution?.exitCode !== 0 && !resourceFailure,
+    ),
+    harnessFailure: Boolean(timedOut || resourceFailure),
+    notes: classificationNotes(options.mode, { resourceFailure }),
   };
 }
 
-function classificationNotes(mode) {
+function isLocalRuntimeResourceFailure(execution) {
+  const combined = [execution?.stdout, execution?.stderr, execution?.error]
+    .filter(Boolean)
+    .join('\n');
+  return /Ollama runner failed: model requires more system memory/i.test(combined);
+}
+
+function classificationNotes(mode, { resourceFailure = false } = {}) {
+  if (resourceFailure) {
+    return 'Live lane command could not start local inference because the local runtime reported insufficient system memory.';
+  }
   if (mode === 'live') {
     return 'Live operator-supplied lane commands executed. Manifest validity depends on private oracle pass/fail artifacts.';
   }

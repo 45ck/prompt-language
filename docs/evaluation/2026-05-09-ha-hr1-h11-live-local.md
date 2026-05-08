@@ -215,3 +215,52 @@ Decision: count this as the second clean H11 local-screen pass for
 passes. The useful lesson is that run 003 was repeatable, but the model still
 needed one public structural repair prompt to delete stale files, so promotion
 should wait for one more clean private-oracle pass.
+
+## Run 005
+
+Run: `HA-HR1-H11-multi-file-refactor-qwen-coder-005`
+
+Route:
+`node experiments/harness-arena/runner.mjs --live --h11-qwen-coder-task multi-file-refactor ...`
+
+Result:
+
+- Repo commit: `4734930`
+- Runner: `ollama`
+- Model: `qwen3-coder:30b`
+- Transport: `PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell`
+- Endpoint label: `ollama-powershell-stdin`
+- Step exit: `0`
+- Wall time: `488.865s`
+- Model calls: `20`
+- Tokens: `55,156`
+- Resource samples: `201`
+- Frontier calls: `0`
+- Private oracle: `PASS`, `4/4`
+
+Private oracle result:
+
+```text
+PASS: rename structure is complete
+PASS: public tests and app smoke pass
+PASS: hidden Client API checks pass
+PASS: hidden Client route checks pass
+
+Results: 4/4 passed
+```
+
+Public path behavior:
+
+- public tests passed
+- structural rename gate passed after stale-file deletion feedback
+- behavior-preservation gate passed
+- app smoke passed
+- `local-worker-summary.md` was created
+- final Prompt Language status was `completed` with `gateFailureCount: 0`
+
+Decision: promote this specific H11 route to local ownership for
+`qwen3-coder:30b`. The route now has three consecutive clean private-oracle
+passes after the public deletion, behavior-preservation, app-smoke, and summary
+gates were hardened. This does not generalize to all multi-file refactors; it
+means this exact H11 contract is safe to run as a promoted local route until new
+evidence contradicts it.

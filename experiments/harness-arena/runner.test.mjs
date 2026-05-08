@@ -284,7 +284,7 @@ test('live mode requires explicit lane command and private oracle templates', ()
   );
 });
 
-test('H11 qwen3-coder profile maps multi-file refactor to local screen candidate defaults', () => {
+test('H11 qwen3-coder profile maps multi-file refactor to promoted local defaults', () => {
   const outputRoot = tempRoot();
   try {
     const options = parseArgs([
@@ -294,7 +294,7 @@ test('H11 qwen3-coder profile maps multi-file refactor to local screen candidate
       '--output-root',
       outputRoot,
       '--run-id',
-      'h11-refactor-local-screen',
+      'h11-refactor-local-promoted',
       '--started-at',
       FIXED_TIME,
     ]);
@@ -305,21 +305,18 @@ test('H11 qwen3-coder profile maps multi-file refactor to local screen candidate
 
     assert.deepEqual(options.arms, ['local-only']);
     assert.equal(options.taskId, 'h11-multi-file-refactor');
-    assert.equal(options.h11QwenCoderRoute.shouldRunLocal, false);
-    assert.equal(options.h11QwenCoderRoute.shouldRunLocalScreen, true);
+    assert.equal(options.h11QwenCoderRoute.shouldRunLocal, true);
+    assert.equal(options.h11QwenCoderRoute.shouldRunLocalScreen, false);
     assert.equal(options.localModel, 'qwen3-coder:30b');
     assert.equal(options.policyVersion, 'h11-qwen3-coder-multi-file-refactor-routing-v1');
     assert.match(options.oracleCommand, /h11-multi-file-refactor-oracle\.mjs/);
     assert.equal(existsSync(join(armRun.workspace, 'src', 'contact.js')), true);
     assert.equal(step.stepId, 'local-bulk');
     assert.equal(step.routeDecision, 'local');
-    assert.match(
-      step.routeTrigger,
-      /h11-qwen3-coder:h11-multi-file-refactor:local-screen-candidate/,
-    );
+    assert.match(step.routeTrigger, /h11-qwen3-coder:h11-multi-file-refactor:local-promoted/);
     assert.equal(step.promptProgram.kind, 'flow');
     assert.match(step.promptProgram.path, /h11-multi-file-refactor-worker\.flow$/);
-    assert.match(step.notes, /H11 qwen3-coder policy local-screen-candidate/);
+    assert.match(step.notes, /H11 qwen3-coder policy local-promoted/);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });
   }

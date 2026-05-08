@@ -22,21 +22,22 @@ function routeByTask(policy, task) {
   return route;
 }
 
-test('H11 qwen3-coder policy exposes multi-file refactor screen candidate', () => {
+test('H11 qwen3-coder policy exposes promoted multi-file refactor route', () => {
   const policy = readPolicy();
   assert.equal(policy.policyVersion, 'h11-qwen3-coder-multi-file-refactor-routing-v1');
   assert.equal(policy.model.name, 'qwen3-coder:30b');
 
   const route = routeByTask(policy, 'h11-multi-file-refactor');
-  assert.equal(route.decision, 'local-screen-candidate');
+  assert.equal(route.decision, 'local-promoted');
   assert.equal(route.owner, 'local');
-  assert.equal(route.cleanPasses, 2);
-  assert.equal(route.totalRuns, 4);
+  assert.equal(route.cleanPasses, 3);
+  assert.equal(route.totalRuns, 5);
+  assert.ok(route.requiredGuards.includes('behavior-preservation'));
   assert.match(route.fixture, /h11-multi-file-refactor$/);
   assert.match(route.flow, /h11-multi-file-refactor-worker\.flow$/);
   assert.match(route.oracle, /h11-multi-file-refactor-oracle\.mjs$/);
-  assert.match(route.notes, /2\/4/);
-  assert.match(route.notes, /not promoted until three clean passes/);
+  assert.match(route.notes, /3\/5/);
+  assert.match(route.notes, /now promoted/);
 });
 
 test('H11 qwen3-coder policy references checked-in evidence and harness files', () => {
@@ -55,13 +56,13 @@ test('H11 qwen3-coder policy references checked-in evidence and harness files', 
   }
 });
 
-test('H11 qwen3-coder resolver maps aliases to local screen candidate decisions', () => {
+test('H11 qwen3-coder resolver maps aliases to promoted local decisions', () => {
   assert.equal(normalizeH11QwenCoderTask('h11'), 'h11-multi-file-refactor');
   assert.equal(normalizeH11QwenCoderTask('rename'), 'h11-multi-file-refactor');
 
   const resolved = resolveH11QwenCoderRoute('multi-file-refactor');
-  assert.equal(resolved.shouldRunLocalScreen, true);
-  assert.equal(resolved.shouldRunLocal, false);
+  assert.equal(resolved.shouldRunLocalScreen, false);
+  assert.equal(resolved.shouldRunLocal, true);
   assert.equal(resolved.shouldRunFrontier, false);
   assert.equal(resolved.route.owner, 'local');
   assert.match(resolved.route.flow, /h11-multi-file-refactor-worker\.flow$/);
@@ -78,6 +79,7 @@ test('H11 qwen3-coder resolver CLI emits JSON decisions', () => {
 
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
-  assert.equal(parsed.shouldRunLocalScreen, true);
+  assert.equal(parsed.shouldRunLocal, true);
+  assert.equal(parsed.shouldRunLocalScreen, false);
   assert.equal(parsed.route.task, 'h11-multi-file-refactor');
 });

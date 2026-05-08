@@ -51,6 +51,7 @@ const ARG_FIELDS = {
   '--local-model': 'localModel',
   '--local-provider': 'localProvider',
   '--local-resource-snapshot-command': 'localResourceSnapshotCommand',
+  '--local-resource-snapshot-interval-ms': 'localResourceSnapshotIntervalMs',
   '--local-runner': 'localRunner',
   '--oracle-command': 'oracleCommand',
   '--oracle-timeout-ms': 'oracleTimeoutMs',
@@ -97,6 +98,7 @@ export function parseArgs(argv) {
     localModel: process.env.EVAL_MODEL?.replace(/^ollama\//, '') ?? 'qwen3:8b',
     localProvider: 'ollama',
     localResourceSnapshotCommand: null,
+    localResourceSnapshotIntervalMs: null,
     localRunner: 'ollama',
     mode: 'dry-run',
     oracleCommand: DEFAULT_ORACLE_COMMAND,
@@ -139,7 +141,9 @@ export function parseArgs(argv) {
     if (field === 'oracleCommand') oracleCommandProvided = true;
     providedFields.add(field);
     options[field] =
-      field === 'oracleTimeoutMs' || field === 'stepTimeoutMs'
+      field === 'oracleTimeoutMs' ||
+      field === 'stepTimeoutMs' ||
+      field === 'localResourceSnapshotIntervalMs'
         ? parsePositiveInteger(value, arg)
         : value;
     index += 1;
@@ -420,11 +424,12 @@ function executeLiveSteps(options, armDir, arm, workspace) {
 }
 
 function executeLiveStep(options, armDir, arm, workspace, [stepId, routeDecision], index) {
-  const command = buildLiveStepCommand(options, arm, stepId, routeDecision, index, workspace);
   const artifactDir = join(armDir, 'artifacts', 'steps', stepArtifactDirectory(index, stepId));
+  let command = buildLiveStepCommand(options, arm, stepId, routeDecision, index, workspace);
   const resourceSnapshotArtifactRefs = [];
+  const canSnapshot = shouldCaptureLocalResourceSnapshot(options, routeDecision);
 
-  if (shouldCaptureLocalResourceSnapshot(options, routeDecision)) {
+  if (canSnapshot) {
     resourceSnapshotArtifactRefs.push(
       ...executeLocalResourceSnapshot(options, armDir, workspace, {
         arm,
@@ -433,6 +438,15 @@ function executeLiveStep(options, armDir, arm, workspace, [stepId, routeDecision
         stepId,
       }),
     );
+  }
+
+  if (shouldSampleLocalResources(options, routeDecision)) {
+    command = sampledLiveStepCommand(options, armDir, workspace, command, {
+      arm,
+      attempt: String(index + 1),
+      artifactDir,
+      stepId,
+    });
   }
 
   const execution = executeCommandPhase({
@@ -444,7 +458,9 @@ function executeLiveStep(options, armDir, arm, workspace, [stepId, routeDecision
     timeoutMs: options.stepTimeoutMs,
   });
 
-  if (shouldCaptureLocalResourceSnapshot(options, routeDecision)) {
+  resourceSnapshotArtifactRefs.push(...collectResourceSampleArtifactRefs(armDir, artifactDir));
+
+  if (canSnapshot) {
     resourceSnapshotArtifactRefs.push(
       ...executeLocalResourceSnapshot(options, armDir, workspace, {
         arm,
@@ -465,6 +481,81 @@ function shouldCaptureLocalResourceSnapshot(options, routeDecision) {
     typeof options.localResourceSnapshotCommand === 'string' &&
     options.localResourceSnapshotCommand.trim().length > 0
   );
+}
+
+function shouldSampleLocalResources(options, routeDecision) {
+  return (
+    shouldCaptureLocalResourceSnapshot(options, routeDecision) &&
+    Boolean(options.localResourceSnapshotIntervalMs)
+  );
+}
+
+function sampledLiveStepCommand(options, armDir, workspace, stepCommand, context) {
+  const sampleDir = join(context.artifactDir, 'resource-samples');
+  mkdirSync(sampleDir, { recursive: true });
+  const snapshotCommand = commandFromTemplate(options.localResourceSnapshotCommand, {
+    arm: context.arm,
+    attempt: context.attempt,
+    label: 'sample',
+    localEndpoint: options.localEndpoint,
+    localModel: options.localModel,
+    stepId: context.stepId,
+    taskId: options.taskId,
+    workspace,
+  });
+  const wrapperPath = join(context.artifactDir, 'run-with-resource-sampling.sh');
+  writeFileSync(
+    wrapperPath,
+    sampledLiveStepScript({
+      intervalSeconds: Number((options.localResourceSnapshotIntervalMs / 1_000).toFixed(3)),
+      sampleDir,
+      snapshotCommand: snapshotCommand.displayCommand,
+      stepCommand: stepCommand.displayCommand,
+    }),
+    'utf8',
+  );
+  return {
+    args: [wrapperPath],
+    command: 'bash',
+    displayCommand: `bash ${quoteCommandArg(artifactRef(armDir, wrapperPath))}`,
+  };
+}
+
+function sampledLiveStepScript({ intervalSeconds, sampleDir, snapshotCommand, stepCommand }) {
+  return `#!/usr/bin/env bash
+set +e
+sample_dir=${quoteShellArg(sampleDir)}
+mkdir -p "$sample_dir"
+sample_index=1
+(
+  while true; do
+    sample_id=$(printf "%03d" "$sample_index")
+    stdout_path="$sample_dir/sample-\${sample_id}-stdout.txt"
+    stderr_path="$sample_dir/sample-\${sample_id}-stderr.txt"
+    metadata_path="$sample_dir/sample-\${sample_id}-metadata.json"
+    (${snapshotCommand}) > "$stdout_path" 2> "$stderr_path"
+    sample_exit=$?
+    printf '{"phase":"resource-sample","sampleIndex":%s,"exitCode":%s}\\n' "$sample_index" "$sample_exit" > "$metadata_path"
+    sample_index=$((sample_index + 1))
+    sleep ${quoteShellArg(String(intervalSeconds))}
+  done
+) &
+sampler_pid=$!
+(${stepCommand})
+step_exit=$?
+kill "$sampler_pid" >/dev/null 2>&1
+wait "$sampler_pid" >/dev/null 2>&1
+exit "$step_exit"
+`;
+}
+
+function collectResourceSampleArtifactRefs(armDir, artifactDir) {
+  const sampleDir = join(artifactDir, 'resource-samples');
+  if (!existsSync(sampleDir)) return [];
+  return readdirSync(sampleDir)
+    .filter((file) => file.endsWith('.txt') || file.endsWith('.json'))
+    .sort()
+    .map((file) => artifactRef(armDir, join(sampleDir, file)));
 }
 
 function executeLocalResourceSnapshot(options, armDir, workspace, { arm, attempt, label, stepId }) {
@@ -692,6 +783,10 @@ export function splitCommandLine(commandLine) {
 
 function quoteCommandArg(value) {
   return `"${String(value).replaceAll('"', '\\"')}"`;
+}
+
+function quoteShellArg(value) {
+  return `'${String(value).replaceAll("'", "'\\''")}'`;
 }
 
 function defaultFakeOracleCommand() {
@@ -1106,7 +1201,7 @@ function byName(left, right) {
 }
 
 export function usage() {
-  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command]\n`;
+  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
 }
 
 function main(argv = process.argv.slice(2)) {

@@ -134,6 +134,7 @@ node experiments/harness-arena/runner.mjs \
   --h14-qwen-coder-subrole api-preservation \
   --live-local-command 'bash -lc "PROMPT_LANGUAGE_OLLAMA_BASE_URL=$PROMPT_LANGUAGE_OLLAMA_BASE_URL PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node /path/to/prompt-language/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>"' \
   --local-resource-snapshot-command 'bash -lc "OLLAMA_HOST=<localEndpoint> ollama ps"' \
+  --local-resource-snapshot-interval-ms 2000 \
   --local-endpoint "$PROMPT_LANGUAGE_OLLAMA_BASE_URL" \
   --run-id HA-HR1-H14-api-preservation-routed-001 \
   --output-root .tmp/harness-arena
@@ -149,7 +150,9 @@ repo-relative path.
 Use `--local-resource-snapshot-command` for live local runs when host diagnostics
 matter. The runner records before/after stdout, stderr, and metadata artifact refs
 on each local step so `ollama ps`, GPU probes, or OS memory probes stay attached
-to the manifest without changing the model-visible workspace.
+to the manifest without changing the model-visible workspace. Add
+`--local-resource-snapshot-interval-ms` when residency or utilization needs
+during-step samples instead of edge-only snapshots.
 
 ## Frontier Review Lane
 

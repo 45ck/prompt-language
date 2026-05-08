@@ -112,7 +112,9 @@ Continue live measurement support before running larger pilots:
 4. Attach a versioned pricing basis before converting Codex/Claude token counts
    into estimated cost claims unless the provider reports exact cost.
 5. Use the harness `--local-resource-snapshot-command` option for local live
-   runs; `ollama ps` snapshots prove model residency, not sustained utilization.
+   runs, and add `--local-resource-snapshot-interval-ms` when residency can be
+   missed by before/after snapshots; `ollama ps` proves model residency, not
+   sustained utilization.
 6. Keep `local-only`, `frontier-only`, `advisor-only`, and `hybrid-router` claims
    separate.
 

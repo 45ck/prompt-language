@@ -170,7 +170,9 @@ The later `qwen3.6:27b` validation-only screen also failed after one model call,
 bridge timeout, and private-oracle validation miss, so it is not a replacement
 validation owner. A later `gemma4-opencode:e4b` cheap-classifier readiness smoke
 also timed out at 32K context, so it should not enter classifier or reviewer
-routes until a low-context profile has a passing readiness artifact. A narrower
+routes. A follow-up `PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096` smoke proved explicit
+context control but still timed out through the PowerShell bridge, so this is a
+local backend/model-fit failure for classifier routing on this host. A narrower
 `qwen3-coder:30b` short-name validation repair screen also failed:
 first by passing public checks while regressing hidden validation semantics, then
 by timing out after the public gate was hardened. H15 implementation repair

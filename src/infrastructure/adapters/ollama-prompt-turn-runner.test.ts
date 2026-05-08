@@ -281,6 +281,34 @@ describe('OllamaPromptTurnRunner', () => {
     });
   });
 
+  it('sends explicit context size to Ollama HTTP requests when configured', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_NUM_CTX', '4096');
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          content: '{"actions":[{"type":"done","message":"context ok"}]}',
+        },
+      }),
+    });
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/gemma4:31b',
+      prompt: 'Acknowledge the task.',
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'context ok',
+      madeProgress: true,
+    });
+    const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(request.options).toMatchObject({ temperature: 0, num_ctx: 4096 });
+  });
+
   it('treats a compacted first-step acknowledgement as progress even when the raw envelope contains later file work', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
     fetchMock.mockResolvedValue({
@@ -475,6 +503,7 @@ describe('OllamaPromptTurnRunner', () => {
     await chmod(fakePowerShellPath, 0o755);
     vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TRANSPORT', 'powershell');
     vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_POWERSHELL_PATH', fakePowerShellPath);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_NUM_CTX', '4096');
     vi.stubEnv('FAKE_POWERSHELL_ARGS_PATH', argLogPath);
 
     const runner = new OllamaPromptTurnRunner();
@@ -500,9 +529,40 @@ describe('OllamaPromptTurnRunner', () => {
     expect(args.at(-1)).toContain('Invoke-RestMethod');
     expect(args.join('\n')).not.toContain(longMarker);
     expect(log.input).toContain(longMarker);
+    expect(JSON.parse(log.input).options).toMatchObject({ temperature: 0, num_ctx: 4096 });
     await expect(
       readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
     ).resolves.toContain('"transport":"powershell"');
+  });
+
+  it('rejects explicit context size on CLI transport because the local CLI has no context flag', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    const fakeCliPath = join(tempDir, 'should-not-run.mjs');
+    await writeFile(
+      fakeCliPath,
+      [
+        '#!/usr/bin/env node',
+        "throw new Error('CLI transport should not run when context override is configured');",
+      ].join('\n'),
+      'utf8',
+    );
+    await chmod(fakeCliPath, 0o755);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TRANSPORT', 'cli');
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_CLI_PATH', fakeCliPath);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_NUM_CTX', '4096');
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-coder:30b',
+      prompt: 'Acknowledge the task.',
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.assistantText).toContain(
+      'PROMPT_LANGUAGE_OLLAMA_NUM_CTX is only supported by http or powershell transport',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('rejects oversized CLI transport prompts before launching Ollama', async () => {

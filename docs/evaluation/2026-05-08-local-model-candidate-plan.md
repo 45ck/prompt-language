@@ -54,12 +54,14 @@ retries, and post-run residency at `19 GB`, `13%/87% CPU/GPU`, `4096` context.
 This keeps the local track active; it does not justify rerunning broad local
 ownership screens that already have clear decisions.
 
-Update: a later 2026-05-09 local smoke tried `gemma4-opencode:e4b` as the cheap
-classifier/reviewer candidate. It failed the same `A` smoke with
-`spawnSync node ETIMEDOUT` under a 900s budget. During the run `ollama ps`
-showed `10 GB`, `67%/33% CPU/GPU`, and `32768` context. Treat this as a failed
-default-context readiness screen. Do not use this model for route classification
-until there is an explicit low-context profile and a passing readiness artifact.
+Update: later 2026-05-09 local smokes tried `gemma4-opencode:e4b` as the cheap
+classifier/reviewer candidate. The default-context `A` smoke failed with
+`spawnSync node ETIMEDOUT` under a 900s budget while `ollama ps` showed `10 GB`,
+`67%/33% CPU/GPU`, and `32768` context. A follow-up run with
+`PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096` proved the new context knob worked because
+`ollama ps` showed `4096` context, but the smoke still failed with PLR-007 after
+the PowerShell bridge timed out. Do not use this model for route classification
+on this host unless a different backend changes the timeout behavior.
 
 ## Current Host State
 
@@ -115,7 +117,7 @@ context and CPU/GPU offload. That is the measurement contract for this repo.
 | 2    | `devstral-small-2:24b` | Installed coding-oriented model with smaller footprint than 30B class         | Readiness smoke, then H14 S2                         |
 | 3    | `qwen3-opencode:30b`   | Installed coding-tuned variant; compare against official Qwen coder           | Readiness smoke, then H14 S2                         |
 | 4    | `qwen3.6:27b`          | Loads cleanly, but timed out on first H14 API-preservation implementation run | Reviewer/classifier control only                     |
-| 5    | `gemma4-opencode:e4b`  | Failed the default-context readiness smoke at 32K context                     | Low-context readiness only before any classifier use |
+| 5    | `gemma4-opencode:e4b`  | Failed readiness at both 32K and explicit 4K context                          | Different backend only before any classifier use     |
 | 6    | `gemma4:26b`           | Installed but less obvious coding-agent fit                                   | Smoke only unless the above fail to load             |
 | 7    | `GLM-4.7-Flash`        | Strong 30B-class paper candidate; not installed here                          | Install only after installed 30B lanes show capacity |
 | 8    | DeepSeek V4 Flash API  | Latest DeepSeek, but too large for local                                      | Frontier/cloud comparison arm only                   |
@@ -180,9 +182,9 @@ These are ranked by expected value for this workstation and harness.
 8. H008: `devstral-small-2:24b` is the best installed fallback if 30B models do not load.
 9. H009: `qwen3.6:27b` is better as a reviewer/classifier than as the main implementer.
 10. H010: `gemma4-opencode:e4b` is useful for cheap route classification only.
-    Current evidence rejects the default-context version of this hypothesis:
-    the 2026-05-09 `A` smoke timed out at 32K context. Retest only with an
-    explicit low-context profile.
+    Current evidence rejects this hypothesis for the current PowerShell
+    transport: the 2026-05-09 `A` smoke timed out at both 32K context and
+    explicit 4K context.
 11. H011: `qwen3-opencode:30b` improves command following but not hidden-oracle pass rate.
 12. H012: `qwen3-opencode-big:30b` has no practical advantage over `qwen3-coder:30b`.
 13. H013: `gemma4:31b` is too heavy for reliable Windows Ollama on this host.
@@ -297,12 +299,23 @@ PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
   node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
 ```
 
+For low-context candidate screens, pin the Ollama context explicitly through the
+Prompt Language Ollama adapter:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
+  PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096 \
+  EVAL_MODEL=ollama/gemma4-opencode:e4b \
+  EVAL_TIMEOUT_MS=900000 \
+  node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
+```
+
 Then run only claim-bearing screens that answer a new question:
 
 - H15 PATCH test-authoring replay only as a promoted tests-only health lane;
 - budgeted H15 hybrid with explicit `--frontier-call-limit`;
-- a low-context readiness profile before any further `gemma4-opencode:e4b`
-  classifier/reviewer control;
+- no further `gemma4-opencode:e4b` classifier/reviewer control on the current
+  PowerShell transport;
 - GLM-4.7-Flash install/readiness only after installed local candidates stop
   answering the current routing questions.
 

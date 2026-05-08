@@ -22,6 +22,7 @@ const OLLAMA_ACTION_ROUNDS_ENV = 'PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS';
 const OLLAMA_TRANSPORT_ENV = 'PROMPT_LANGUAGE_OLLAMA_TRANSPORT';
 const OLLAMA_CLI_PATH_ENV = 'PROMPT_LANGUAGE_OLLAMA_CLI_PATH';
 const OLLAMA_POWERSHELL_PATH_ENV = 'PROMPT_LANGUAGE_OLLAMA_POWERSHELL_PATH';
+const OLLAMA_NUM_CTX_ENV = 'PROMPT_LANGUAGE_OLLAMA_NUM_CTX';
 const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434';
 const DEFAULT_OLLAMA_TIMEOUT_MS = 300_000;
 const DEFAULT_OLLAMA_RETRY_ATTEMPTS = 3;
@@ -65,6 +66,11 @@ interface OllamaChatTurn {
   readonly payload: OllamaChatResponse;
   readonly retryCount: number;
   readonly transport: OllamaTransport;
+}
+
+interface OllamaRequestOptions {
+  readonly temperature: 0;
+  readonly num_ctx?: number | undefined;
 }
 
 interface ProcessFailure extends Error {
@@ -139,6 +145,18 @@ function getOllamaRetryDelayMs(): number {
 
 function getOllamaActionRounds(): number {
   return readPositiveIntEnv(OLLAMA_ACTION_ROUNDS_ENV) ?? DEFAULT_ACTION_ROUNDS;
+}
+
+function getOllamaNumCtx(): number | undefined {
+  return readPositiveIntEnv(OLLAMA_NUM_CTX_ENV);
+}
+
+function buildOllamaRequestOptions(): OllamaRequestOptions {
+  const numCtx = getOllamaNumCtx();
+  return {
+    temperature: 0,
+    ...(numCtx !== undefined ? { num_ctx: numCtx } : {}),
+  };
 }
 
 function getOllamaTransport(): OllamaTransport {
@@ -698,9 +716,7 @@ async function callOllamaPowerShellOnce(
     model,
     stream: false,
     messages,
-    options: {
-      temperature: 0,
-    },
+    options: buildOllamaRequestOptions(),
   });
   const endpoint = `${getOllamaBaseUrl()}/api/chat`;
   const timeoutSeconds = Math.max(1, Math.ceil(timeoutMs / 1_000));
@@ -761,9 +777,7 @@ async function callOllamaChatOnce(
         model,
         stream: false,
         messages,
-        options: {
-          temperature: 0,
-        },
+        options: buildOllamaRequestOptions(),
       }),
       signal: controller.signal,
     });
@@ -813,6 +827,9 @@ async function callOllamaChat(
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
+      if (transport === 'cli' && getOllamaNumCtx() !== undefined) {
+        throw new Error(`${OLLAMA_NUM_CTX_ENV} is only supported by http or powershell transport.`);
+      }
       const payload =
         transport === 'cli'
           ? await callOllamaCliOnce(model, messages, timeoutMs)

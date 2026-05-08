@@ -70,7 +70,7 @@ CPU/GPU once context and KV cache are included.
 | 3        | `qwen3-opencode:30b`   | Promoted for two H14 subroles    | Coding-tuned installed variant; passed H14 subroles, but failed the H15 validation screen after a bridge timeout.    |
 | 4        | `qwen3:30b`            | Slow general-model control       | Passed readiness, but produced far more tokens and latency than `qwen3-coder:30b`.                                   |
 | 5        | `qwen3.6:27b`          | Reviewer/classifier control only | Passed readiness but failed API-preservation after the hard timeout.                                                 |
-| 6        | `gemma4-opencode:e4b`  | Failed default-context readiness | Smaller package, but the live `A` smoke timed out at 32K context; retest only with an explicit low-context profile.  |
+| 6        | `gemma4-opencode:e4b`  | Failed readiness                 | Smaller package, but live `A` smokes timed out at both 32K and explicit 4K context.                                  |
 | 7        | GLM-4.7-Flash          | Promising follow-up              | 30B-class open-weight model with strong coding claims; add only after Ollama availability and host fit are verified. |
 
 Do not start local testing with `qwen3-coder-next`. The current Ollama package is
@@ -253,10 +253,29 @@ Result:
   `67%/33% CPU/GPU`, `32768` context;
 - post-run `ollama stop gemma4-opencode:e4b` cleared model residency.
 
-Decision: this is negative readiness evidence for the current default-context
-route, not a broad quality judgment about Gemma. Keep it out of classifier or
-reviewer routing until the harness can launch it with a small explicit context
-and record that lower-context setting in the evidence trail.
+Follow-up low-context run:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
+  PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096 \
+  EVAL_MODEL=ollama/gemma4-opencode:e4b \
+  EVAL_TIMEOUT_MS=900000 \
+  node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
+```
+
+Result:
+
+- the adapter successfully set `ollama ps` context to `4096`;
+- residency showed `gemma4-opencode:e4b`, `10 GB`, `69%/31% CPU/GPU`, `4096`
+  context;
+- the smoke still failed with PLR-007 after the PowerShell bridge timed out;
+- no completed smoke result artifact was written;
+- post-run `ollama stop gemma4-opencode:e4b` cleared model residency.
+
+Decision: this is negative readiness evidence for both the default-context and
+low-context Prompt Language routes on this host, not a broad quality judgment
+about Gemma. Keep it out of classifier and reviewer routing unless a different
+runtime backend changes the timeout behavior.
 
 ## 2026-05-09 Live Health Check
 
@@ -373,7 +392,7 @@ Current latest-model ranking for this PC:
 | 4    | `qwen3:30b`            | Passed `A` but too slow; keep as general-model control.                                                  |
 | 5    | `qwen3.6:27b`          | Passed readiness but failed API-preservation after timeout; reviewer/classifier control only.            |
 | 6    | `GLM-4.7-Flash`        | Strong 30B-A3B paper/model-card candidate; test only after locating a runner package that fits the host. |
-| 7    | `gemma4-opencode:e4b`  | Failed the default-context smoke timeout; only retry with a low-context route.                           |
+| 7    | `gemma4-opencode:e4b`  | Failed both default-context and explicit 4K-context smoke attempts.                                      |
 
 Latest large open-weight models worth tracking, but not workstation-local here:
 

@@ -96,6 +96,33 @@ records `claimStatus: live-model-evidence`, `runner: ollama`, `providerClass:
 local`, `requestedModel: qwen3:8b`, step exit code `0`, step wall time `7.316s`,
 and `oracle.passed: true`.
 
+HA-HR1 local-only live lane with resource snapshots:
+
+```sh
+HOST=$(ip route | awk '/default/ {print $3; exit})
+ENDPOINT="http://$HOST:11435"
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --arms local-only \
+  --live-local-command "bash -lc 'cd $(pwd) && PROMPT_LANGUAGE_OLLAMA_BASE_URL=$ENDPOINT EVAL_MODEL=ollama/qwen3:8b node scripts/eval/smoke-test.mjs --harness ollama --quick --only E && printf live-local-snapshot-smoke-passed > <workspace>/live-local-snapshot-smoke.txt'" \
+  --local-resource-snapshot-command "bash -lc 'ollama ps'" \
+  --oracle-command "node -e \"const fs=require('node:fs'); const path=require('node:path'); const workspace=process.argv[1]; const marker=path.join(workspace,'live-local-snapshot-smoke.txt'); if (!fs.existsSync(marker)) { console.error('missing live marker'); process.exit(1); } console.log('live snapshot oracle pass');\" <workspace>" \
+  --local-model qwen3:8b \
+  --local-endpoint "$ENDPOINT" \
+  --step-timeout-ms 600000 \
+  --oracle-timeout-ms 10000 \
+  --run-id HA-HR1-live-local-ollama-snapshot-001 \
+  --output-root .tmp/harness-arena
+```
+
+Result: pass. The manifest at
+`.tmp/harness-arena/HA-HR1-live-local-ollama-snapshot-001/01-local-only/hybrid-routing-manifest.json`
+records `claimStatus: live-model-evidence`, step exit code `0`, step wall time
+`41.361s`, `oracle.passed: true`, and six
+`resourceSnapshotArtifactRefs` for before/after stdout, stderr, and metadata.
+The `ollama ps` snapshots were empty before and after the step, so this run proves
+snapshot artifact attachment, not sustained model residency.
+
 ## Interpretation
 
 The local model stack is usable for bounded smoke testing on this host if the

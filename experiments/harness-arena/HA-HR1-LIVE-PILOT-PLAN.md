@@ -172,7 +172,9 @@ The pilot is worth scaling only if:
 
 1. Add a task-specific private oracle for the first HA-HR1 fixture instead of the
    connectivity-only smoke oracle.
-2. Add budgeted frontier command templates and run frontier-only/advisor-only arms.
+2. Use the runner budget flags (`--frontier-call-limit`, `--usd-limit`,
+   `--wall-seconds-limit`, `--local-repair-attempt-limit`, and `--retry-policy`)
+   when running frontier-only/advisor-only arms.
 3. Run the hybrid-router arm only after local-only and frontier-only baselines are
    archived with schema-valid manifests.
 

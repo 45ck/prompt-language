@@ -286,8 +286,24 @@ that:
 
 - invoke the intended local/frontier flows
 - record local GPU active minutes when available
-- enforce frontier budget limits
 - validate the manifest after the oracle runs
+
+Budget limits are now runner inputs, not just prose. Use these flags on live
+claim runs so each manifest records the allowed frontier calls, local repair
+attempts, wall-clock budget, cost budget, and retry policy:
+
+```sh
+--frontier-call-limit 4 \
+--local-repair-attempt-limit 1 \
+--wall-seconds-limit 3600 \
+--usd-limit 0 \
+--retry-policy first-local-failure
+```
+
+The runner rejects live runs whose selected arms require more planned frontier
+steps than `--frontier-call-limit`. Set `--local-repair-attempt-limit 0` when a
+hybrid-router run should diagnose local failure without inserting a frontier
+repair step.
 
 ## Stop Conditions
 

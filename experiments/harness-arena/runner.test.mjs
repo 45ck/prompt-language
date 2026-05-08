@@ -68,6 +68,67 @@ test('dry run materializes all HA-HR1 arms with schema-shaped manifests', () => 
   }
 });
 
+test('budget flags are recorded in manifests', () => {
+  const outputRoot = tempRoot();
+  try {
+    const result = runHarnessArena(
+      parseArgs([
+        '--dry-run',
+        '--arms',
+        'local-only',
+        '--frontier-call-limit',
+        '0',
+        '--usd-limit',
+        '0.25',
+        '--wall-seconds-limit',
+        '1200',
+        '--local-repair-attempt-limit',
+        '2',
+        '--retry-policy',
+        'first-local-failure',
+        '--run-id',
+        'budgeted-run',
+        '--started-at',
+        FIXED_TIME,
+        '--output-root',
+        outputRoot,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.deepEqual(manifest.budget, {
+      enforced: true,
+      frontierCallLimit: 0,
+      localRepairAttemptLimit: 2,
+      retryPolicy: 'first-local-failure',
+      usdLimit: 0.25,
+      wallSecondsLimit: 1200,
+    });
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('live budget validation rejects frontier arms above the call cap', () => {
+  assert.throws(
+    () =>
+      parseArgs([
+        '--live',
+        '--arms',
+        'frontier-only',
+        '--live-frontier-command',
+        'node -e "process.exit(0)"',
+        '--oracle-command',
+        'node -e "process.exit(0)" <workspace>',
+        '--frontier-call-limit',
+        '0',
+      ]),
+    /planned frontier step count 1/,
+  );
+});
+
 test('fake live executes deterministic local step commands and private oracle artifacts', () => {
   const outputRoot = tempRoot();
   const oracleRoot = tempRoot();
@@ -1178,6 +1239,7 @@ test('sampled live run preserves shell variables inside nested command templates
 
 test('live hybrid-router inserts frontier repair after local lane failure', () => {
   const outputRoot = tempRoot();
+  const noRepairOutputRoot = tempRoot();
   const scriptRoot = tempRoot();
   try {
     mkdirSync(scriptRoot, { recursive: true });
@@ -1272,8 +1334,43 @@ test('live hybrid-router inserts frontier repair after local lane failure', () =
     assert.equal(manifest.classification.modelFailure, false);
     assert.equal(manifest.classification.resourceFailure, true);
     assert.match(readArmArtifact(armRun, manifest.oracle.stdoutArtifactRef), /repair oracle pass/);
+
+    const noRepairResult = runHarnessArena(
+      parseArgs([
+        '--live',
+        '--arms',
+        'hybrid-router',
+        '--live-local-command',
+        localCommand,
+        '--live-frontier-command',
+        frontierCommand,
+        '--live-frontier-repair-command',
+        repairCommand,
+        '--oracle-command',
+        oracleCommand,
+        '--local-repair-attempt-limit',
+        '0',
+        '--output-root',
+        noRepairOutputRoot,
+        '--run-id',
+        'hybrid-no-repair-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [noRepairArmRun] = noRepairResult.armRuns;
+    const noRepairManifest = readJson(noRepairArmRun.manifestPath);
+
+    assert.deepEqual(
+      noRepairManifest.steps.map((step) => step.stepId),
+      ['frontier-classify', 'local-bulk', 'frontier-review'],
+    );
+    assert.equal(validateManifestAgainstSchema(noRepairManifest).valid, true);
+    assert.equal(noRepairManifest.budget.localRepairAttemptLimit, 0);
+    assert.equal(noRepairManifest.oracle.passed, false);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });
+    rmSync(noRepairOutputRoot, { recursive: true, force: true });
     rmSync(scriptRoot, { recursive: true, force: true });
   }
 });

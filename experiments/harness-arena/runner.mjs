@@ -41,6 +41,7 @@ const ARG_FIELDS = {
   '--arms': 'arms',
   '--fake-step-command': 'fakeStepCommand',
   '--fixture': 'fixture',
+  '--frontier-call-limit': 'frontierCallLimit',
   '--frontier-endpoint': 'frontierEndpoint',
   '--frontier-model': 'frontierModel',
   '--frontier-provider': 'frontierProvider',
@@ -56,6 +57,7 @@ const ARG_FIELDS = {
   '--local-endpoint': 'localEndpoint',
   '--local-model': 'localModel',
   '--local-provider': 'localProvider',
+  '--local-repair-attempt-limit': 'localRepairAttemptLimit',
   '--local-resource-snapshot-command': 'localResourceSnapshotCommand',
   '--local-resource-snapshot-interval-ms': 'localResourceSnapshotIntervalMs',
   '--local-runner': 'localRunner',
@@ -63,12 +65,15 @@ const ARG_FIELDS = {
   '--oracle-timeout-ms': 'oracleTimeoutMs',
   '--output-root': 'outputRoot',
   '--policy-version': 'policyVersion',
+  '--retry-policy': 'retryPolicy',
   '--run-group-id': 'runGroupId',
   '--run-id': 'runId',
   '--started-at': 'startedAt',
   '--step-timeout-ms': 'stepTimeoutMs',
   '--task-brief': 'taskBrief',
   '--task-id': 'taskId',
+  '--usd-limit': 'usdLimit',
+  '--wall-seconds-limit': 'wallSecondsLimit',
 };
 const ARM_STEPS = {
   'local-only': [['local-bulk', 'local', 'local-only control arm']],
@@ -90,6 +95,7 @@ export function parseArgs(argv) {
     arms: 'all',
     fakeStepCommand: null,
     fixture: null,
+    frontierCallLimit: null,
     frontierEndpoint: null,
     frontierModel: 'codex-default',
     frontierProvider: 'openai',
@@ -109,6 +115,7 @@ export function parseArgs(argv) {
     localEndpoint: process.env.PROMPT_LANGUAGE_OLLAMA_BASE_URL ?? null,
     localModel: process.env.EVAL_MODEL?.replace(/^ollama\//, '') ?? 'qwen3:8b',
     localProvider: 'ollama',
+    localRepairAttemptLimit: 1,
     localResourceSnapshotCommand: null,
     localResourceSnapshotIntervalMs: null,
     localRunner: 'ollama',
@@ -117,12 +124,15 @@ export function parseArgs(argv) {
     oracleTimeoutMs: DEFAULT_ORACLE_TIMEOUT_MS,
     outputRoot: DEFAULT_OUTPUT_ROOT,
     policyVersion: 'hybrid-routing-v0',
+    retryPolicy: 'none',
     runGroupId: null,
     runId: null,
     startedAt: null,
     stepTimeoutMs: DEFAULT_STEP_TIMEOUT_MS,
     taskBrief: DEFAULT_TASK_BRIEF,
     taskId: 'HA-HR1-synthetic',
+    usdLimit: 0,
+    wallSecondsLimit: 1,
   };
   let explicitMode = false;
   let oracleCommandProvided = false;
@@ -152,12 +162,7 @@ export function parseArgs(argv) {
     if (value == null) throw new Error(`${arg} requires a value`);
     if (field === 'oracleCommand') oracleCommandProvided = true;
     providedFields.add(field);
-    options[field] =
-      field === 'oracleTimeoutMs' ||
-      field === 'stepTimeoutMs' ||
-      field === 'localResourceSnapshotIntervalMs'
-        ? parsePositiveInteger(value, arg)
-        : value;
+    options[field] = parseArgValue(field, value, arg);
     index += 1;
   }
 
@@ -190,11 +195,16 @@ export function parseArgs(argv) {
   }
 
   const resolvedArms = resolveArms(options.arms);
-  validateLiveOptions({ ...options, arms: resolvedArms }, oracleCommandProvided);
+  const frontierCallLimit =
+    options.frontierCallLimit ?? defaultFrontierCallLimit(resolvedArms, options);
+  const budgetedOptions = { ...options, arms: resolvedArms, frontierCallLimit };
+  validateBudgetOptions(budgetedOptions);
+  validateLiveOptions(budgetedOptions, oracleCommandProvided);
 
   return {
     ...options,
     arms: resolvedArms,
+    frontierCallLimit,
     fixture: options.fixture ? resolve(options.fixture) : null,
     h11QwenCoderRoute: options.h11QwenCoderRoute,
     h14LocalRoute: options.h14LocalRoute,
@@ -205,6 +215,22 @@ export function parseArgs(argv) {
     runId: options.runId ?? timestampId(),
     startedAt: options.startedAt ?? new Date().toISOString(),
   };
+}
+
+function parseArgValue(field, value, flag) {
+  if (
+    field === 'oracleTimeoutMs' ||
+    field === 'stepTimeoutMs' ||
+    field === 'localResourceSnapshotIntervalMs'
+  ) {
+    return parsePositiveInteger(value, flag);
+  }
+  if (field === 'frontierCallLimit' || field === 'localRepairAttemptLimit') {
+    return parseNonNegativeInteger(value, flag);
+  }
+  if (field === 'usdLimit') return parseNonNegativeNumber(value, flag);
+  if (field === 'wallSecondsLimit') return parsePositiveInteger(value, flag);
+  return value;
 }
 
 function applyH11QwenCoderRouteDefaults(options, providedFields) {
@@ -329,6 +355,31 @@ function validateLiveOptions(options, oracleCommandProvided) {
   }
 }
 
+function validateBudgetOptions(options) {
+  const plannedFrontierCalls = plannedFrontierStepCount(options.arms);
+  if (options.mode !== 'live') return;
+  if (options.frontierCallLimit < plannedFrontierCalls) {
+    throw new Error(
+      `--frontier-call-limit ${options.frontierCallLimit} is below the selected arms' planned frontier step count ${plannedFrontierCalls}`,
+    );
+  }
+}
+
+function defaultFrontierCallLimit(arms, options) {
+  return plannedFrontierStepCount(arms) + plannedHybridRepairAllowance(arms, options);
+}
+
+function plannedFrontierStepCount(arms) {
+  return arms
+    .flatMap((arm) => ARM_STEPS[arm])
+    .filter(([, routeDecision]) => routeDecision === 'frontier').length;
+}
+
+function plannedHybridRepairAllowance(arms, options) {
+  if (!arms.includes('hybrid-router')) return 0;
+  return options.localRepairAttemptLimit > 0 ? 1 : 0;
+}
+
 function requiredLiveRoutes(arms) {
   return [
     ...new Set(arms.flatMap((arm) => ARM_STEPS[arm].map(([, routeDecision]) => routeDecision))),
@@ -346,6 +397,22 @@ function parsePositiveInteger(value, flag) {
   const parsed = Number.parseInt(value, 10);
   if (!Number.isInteger(parsed) || parsed <= 0 || String(parsed) !== value) {
     throw new Error(`${flag} requires a positive integer`);
+  }
+  return parsed;
+}
+
+function parseNonNegativeInteger(value, flag) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isInteger(parsed) || parsed < 0 || String(parsed) !== value) {
+    throw new Error(`${flag} requires a non-negative integer`);
+  }
+  return parsed;
+}
+
+function parseNonNegativeNumber(value, flag) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${flag} requires a non-negative number`);
   }
   return parsed;
 }
@@ -522,7 +589,7 @@ function executeLiveSteps(options, armDir, arm, workspace) {
     executions.push(execution);
     stepDefinitions.push(stepDefinition);
 
-    if (shouldRunHybridRepair(arm, stepDefinition, execution)) {
+    if (shouldRunHybridRepair(options, arm, stepDefinition, execution)) {
       const repairDefinition = ['frontier-repair', 'frontier', 'local public-gate failure repair'];
       const repairExecution = executeLiveStep(
         {
@@ -762,8 +829,9 @@ function executeLocalResourceSnapshot(options, armDir, workspace, { arm, attempt
   return [execution.stdoutArtifactRef, execution.stderrArtifactRef, execution.metadataArtifactRef];
 }
 
-function shouldRunHybridRepair(arm, [stepId], execution) {
+function shouldRunHybridRepair(options, arm, [stepId], execution) {
   return (
+    options.localRepairAttemptLimit > 0 &&
     arm === 'hybrid-router' &&
     stepId === 'local-bulk' &&
     (execution.timedOut || execution.exitCode !== 0)
@@ -1009,11 +1077,11 @@ function buildManifest(options, arm, workspace, stepExecutions = null, oracleExe
     startedAt: options.startedAt,
     completedAt: options.startedAt,
     budget: {
-      frontierCallLimit: 0,
-      usdLimit: 0,
-      wallSecondsLimit: 1,
-      localRepairAttemptLimit: 0,
-      retryPolicy: 'none',
+      frontierCallLimit: options.frontierCallLimit,
+      usdLimit: options.usdLimit,
+      wallSecondsLimit: options.wallSecondsLimit,
+      localRepairAttemptLimit: options.localRepairAttemptLimit,
+      retryPolicy: options.retryPolicy,
       enforced: true,
     },
     evidencePolicy: {
@@ -1440,7 +1508,7 @@ function byName(left, right) {
 }
 
 export function usage() {
-  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--h11-qwen-coder-task task] [--h14-local-subrole subrole] [--h14-qwen-coder-subrole subrole] [--h15-qwen-coder-task task] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
+  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--h11-qwen-coder-task task] [--h14-local-subrole subrole] [--h14-qwen-coder-subrole subrole] [--h15-qwen-coder-task task] [--frontier-call-limit n] [--usd-limit n] [--wall-seconds-limit n] [--local-repair-attempt-limit n] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
 }
 
 function main(argv = process.argv.slice(2)) {

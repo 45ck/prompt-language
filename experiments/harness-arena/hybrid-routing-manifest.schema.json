@@ -116,6 +116,7 @@
         "manifestAuthor",
         "oracleVisibility",
         "commandEnvironmentPolicy",
+        "commandSafetyPolicy",
         "providerFallbackPolicy",
         "localOnlyAllowsFrontierInput"
       ],
@@ -128,6 +129,9 @@
         },
         "commandEnvironmentPolicy": {
           "enum": ["parent-env-inherited", "minimal-allowlist"]
+        },
+        "commandSafetyPolicy": {
+          "enum": ["deny-high-risk", "unrestricted"]
         },
         "providerFallbackPolicy": {
           "enum": ["forbid", "record-and-invalidate", "allow"]

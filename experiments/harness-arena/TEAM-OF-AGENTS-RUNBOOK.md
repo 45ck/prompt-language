@@ -131,12 +131,20 @@ stdout/stderr/metadata under `artifacts/steps/` and runs the oracle from
 frontier route also requires `--live-frontier-command`; otherwise `--live` fails
 before creating a run.
 
+By default, live command templates use `--command-safety-policy deny-high-risk`.
+That blocks shell wrappers, network clients, package-manager mutation,
+destructive filesystem commands, service/process control, and git mutation before
+execution. Add `--command-safety-policy unrestricted` only for trusted
+reproduction commands that intentionally need a shell wrapper or PowerShell
+resource probe; the manifest records that weaker containment claim.
+
 For the H14 fixture, use the H14-specific local flow instead of the generic
 local-bulk flow:
 
 ```sh
 node experiments/harness-arena/runner.mjs \
   --live \
+  --command-safety-policy unrestricted \
   --arms local-only \
   --fixture experiments/harness-arena/fixtures/h14-tdd-red-green \
   --task-id HA-HR1-H14-tdd-red-green \
@@ -157,6 +165,7 @@ policy version, and default arm from `h14-local-routing-policy.v1.json`:
 ```sh
 node experiments/harness-arena/runner.mjs \
   --live \
+  --command-safety-policy unrestricted \
   --h14-local-subrole api-preservation \
   --live-local-command 'bash -lc "PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node /path/to/prompt-language/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>"' \
   --local-resource-snapshot-command 'ollama ps' \
@@ -182,6 +191,7 @@ repo=/path/to/prompt-language
 
 node "$repo/experiments/harness-arena/runner.mjs" \
   --live \
+  --command-safety-policy unrestricted \
   --h15-qwen-coder-task api-endpoint \
   --live-frontier-command 'bash -lc "repo=/path/to/prompt-language; H15_ROUTE_FLOW=<routeFlow> H15_ROUTE_FLOW_RELATIVE=<routeFlowRelative> H15_STEP_ID=<stepId> H15_ROUTE_DECISION=<routeDecision> node \"$repo/bin/cli.mjs\" run --runner codex --json --file <routeFlow>"' \
   --frontier-provider openai \
@@ -217,6 +227,7 @@ repo=/path/to/prompt-language
 
 node "$repo/experiments/harness-arena/runner.mjs" \
   --live \
+  --command-safety-policy unrestricted \
   --h15-qwen-coder-task validation-only \
   --live-local-command 'bash -lc "repo=/path/to/prompt-language; PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=600000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=16 node \"$repo/bin/cli.mjs\" run --runner ollama --model qwen3-coder:30b --json --file <routeFlow>"' \
   --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \
@@ -236,6 +247,7 @@ repo=/path/to/prompt-language
 
 node "$repo/experiments/harness-arena/runner.mjs" \
   --live \
+  --command-safety-policy unrestricted \
   --h15-qwen-coder-task test-authoring \
   --live-local-command 'bash -lc "repo=/path/to/prompt-language; PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=600000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=12 node \"$repo/bin/cli.mjs\" run --runner ollama --model qwen3-coder:30b --json --file <routeFlow>"' \
   --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \

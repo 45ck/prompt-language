@@ -58,6 +58,7 @@ test('dry run materializes all HA-HR1 arms with schema-shaped manifests', () => 
       assert.equal(manifest.evidencePolicy.manifestAuthor, 'harness');
       assert.equal(manifest.evidencePolicy.oracleVisibility, 'private-artifacts-only');
       assert.equal(manifest.evidencePolicy.commandEnvironmentPolicy, 'parent-env-inherited');
+      assert.equal(manifest.evidencePolicy.commandSafetyPolicy, 'deny-high-risk');
       assert.equal(manifest.oracle.commandArtifactRef, 'private/oracle-command.txt');
       assert.equal(Object.hasOwn(manifest.oracle, 'command'), false);
       assert.equal(manifest.budget.enforced, true);
@@ -1293,6 +1294,8 @@ test('sampled live run preserves shell variables inside nested command templates
         '--live',
         '--arms',
         'local-only',
+        '--command-safety-policy',
+        'unrestricted',
         '--live-local-command',
         liveCommand,
         '--oracle-command',
@@ -1321,6 +1324,7 @@ test('sampled live run preserves shell variables inside nested command templates
     );
 
     assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.equal(manifest.evidencePolicy.commandSafetyPolicy, 'unrestricted');
     assert.equal(step.exitCode, 0);
     assert.equal(manifest.oracle.passed, true);
     assert.match(
@@ -1399,7 +1403,9 @@ test('minimal command environment policy strips unrelated parent environment var
 
     assert.equal(validateManifestAgainstSchema(manifest).valid, true);
     assert.equal(manifest.evidencePolicy.commandEnvironmentPolicy, 'minimal-allowlist');
+    assert.equal(manifest.evidencePolicy.commandSafetyPolicy, 'deny-high-risk');
     assert.equal(metadata.commandEnvironmentPolicy, 'minimal-allowlist');
+    assert.equal(metadata.commandSafetyPolicy, 'deny-high-risk');
     assert.equal(step.exitCode, 0);
     assert.equal(manifest.oracle.passed, true);
     assert.match(readArmArtifact(armRun, step.stdoutArtifactRef), /env-leaked:none/);
@@ -1408,6 +1414,39 @@ test('minimal command environment policy strips unrelated parent environment var
     else process.env.HA_SECRET_SHOULD_NOT_LEAK = previousSecret;
     rmSync(outputRoot, { recursive: true, force: true });
     rmSync(scriptRoot, { recursive: true, force: true });
+  }
+});
+
+test('live command safety policy rejects shell-wrapped operator commands', () => {
+  const outputRoot = tempRoot();
+  try {
+    const oracleCommand = `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(
+      "console.log('oracle pass');",
+    )}`;
+
+    assert.throws(
+      () =>
+        runHarnessArena(
+          parseArgs([
+            '--live',
+            '--arms',
+            'local-only',
+            '--live-local-command',
+            'bash -lc "echo unsafe"',
+            '--oracle-command',
+            oracleCommand,
+            '--output-root',
+            outputRoot,
+            '--run-id',
+            'blocked-command-run',
+            '--started-at',
+            FIXED_TIME,
+          ]),
+        ),
+      /live local command is blocked by command safety policy deny-high-risk: shell wrapper bash/,
+    );
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
   }
 });
 

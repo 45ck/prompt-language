@@ -120,6 +120,12 @@ evidence:
   environment containment as explicit metadata rather than an unstated guarantee.
   Use `--command-environment-policy minimal-allowlist` for lanes that should strip
   unrelated parent environment variables from step, resource, and oracle commands.
+- Live and fake-live manifests also declare `evidencePolicy.commandSafetyPolicy`.
+  The default `deny-high-risk` policy rejects operator command templates that use
+  shell wrappers, network clients, package-manager mutation, destructive
+  filesystem commands, service/process control, or git mutation. Use
+  `--command-safety-policy unrestricted` only for operator-trusted reproduction
+  commands; those runs are marked explicitly in the manifest and step metadata.
 
 Adjacent evidence from FSCRUD R28 remains useful context but must not be counted
 as harness-arena evidence. R28 showed that local Ollama can perform real

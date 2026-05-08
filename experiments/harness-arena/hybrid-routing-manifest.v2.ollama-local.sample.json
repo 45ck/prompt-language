@@ -24,6 +24,7 @@
     "manifestAuthor": "harness",
     "oracleVisibility": "private-artifacts-only",
     "commandEnvironmentPolicy": "parent-env-inherited",
+    "commandSafetyPolicy": "deny-high-risk",
     "providerFallbackPolicy": "forbid",
     "localOnlyAllowsFrontierInput": false
   },

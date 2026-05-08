@@ -20,6 +20,7 @@ const DEFAULT_ORACLE_COMMAND = 'node private/ha-hr1-oracle.mjs --workspace <work
 const DEFAULT_STEP_TIMEOUT_MS = 1_000;
 const DEFAULT_ORACLE_TIMEOUT_MS = 1_000;
 const COMMAND_ENVIRONMENT_POLICIES = ['parent-env-inherited', 'minimal-allowlist'];
+const COMMAND_SAFETY_POLICIES = ['deny-high-risk', 'unrestricted'];
 const DEFAULT_TASK_BRIEF =
   'Synthetic HA-HR1 structure check. Prepare isolated arm workspaces only.';
 const DRY_RUN_NOTE = `# Harness Arena Dry Run
@@ -41,6 +42,7 @@ const ARG_FIELDS = {
   '--adapter-version': 'adapterVersion',
   '--arms': 'arms',
   '--command-environment-policy': 'commandEnvironmentPolicy',
+  '--command-safety-policy': 'commandSafetyPolicy',
   '--fake-step-command': 'fakeStepCommand',
   '--fixture': 'fixture',
   '--frontier-call-limit': 'frontierCallLimit',
@@ -96,6 +98,7 @@ export function parseArgs(argv) {
     adapterVersion: 'harness-arena-live-command-v1',
     arms: 'all',
     commandEnvironmentPolicy: 'parent-env-inherited',
+    commandSafetyPolicy: 'deny-high-risk',
     fakeStepCommand: null,
     fixture: null,
     frontierCallLimit: null,
@@ -237,6 +240,12 @@ function parseArgValue(field, value, flag) {
   if (field === 'commandEnvironmentPolicy') {
     if (!COMMAND_ENVIRONMENT_POLICIES.includes(value)) {
       throw new Error(`${flag} must be one of ${COMMAND_ENVIRONMENT_POLICIES.join(', ')}`);
+    }
+    return value;
+  }
+  if (field === 'commandSafetyPolicy') {
+    if (!COMMAND_SAFETY_POLICIES.includes(value)) {
+      throw new Error(`${flag} must be one of ${COMMAND_SAFETY_POLICIES.join(', ')}`);
     }
     return value;
   }
@@ -733,16 +742,23 @@ function shouldSampleLocalResources(options, routeDecision) {
 function sampledLiveStepCommand(options, armDir, workspace, stepCommand, context) {
   const sampleDir = join(context.artifactDir, 'resource-samples');
   mkdirSync(sampleDir, { recursive: true });
-  const snapshotCommand = commandFromTemplate(options.localResourceSnapshotCommand, {
-    arm: context.arm,
-    attempt: context.attempt,
-    label: 'sample',
-    localEndpoint: options.localEndpoint,
-    localModel: options.localModel,
-    stepId: context.stepId,
-    taskId: options.taskId,
-    workspace,
-  });
+  const snapshotCommand = commandFromTemplate(
+    options.localResourceSnapshotCommand,
+    {
+      arm: context.arm,
+      attempt: context.attempt,
+      label: 'sample',
+      localEndpoint: options.localEndpoint,
+      localModel: options.localModel,
+      stepId: context.stepId,
+      taskId: options.taskId,
+      workspace,
+    },
+    {
+      label: 'local resource snapshot command',
+      safetyPolicy: options.commandSafetyPolicy,
+    },
+  );
   const wrapperPath = join(context.artifactDir, 'run-with-resource-sampling.sh');
   writeFileSync(
     wrapperPath,
@@ -758,6 +774,7 @@ function sampledLiveStepCommand(options, armDir, workspace, stepCommand, context
     args: [wrapperPath],
     command: 'bash',
     displayCommand: `bash ${quoteCommandArg(artifactRef(armDir, wrapperPath))}`,
+    safetyPolicy: options.commandSafetyPolicy,
   };
 }
 
@@ -858,16 +875,23 @@ function countNonEmptySampleArtifacts(armDir, artifactRefs, suffix) {
 
 function executeLocalResourceSnapshot(options, armDir, workspace, { arm, attempt, label, stepId }) {
   const artifactDir = join(armDir, 'artifacts', 'steps', `${attempt}-${stepId}-resources-${label}`);
-  const command = commandFromTemplate(options.localResourceSnapshotCommand, {
-    arm,
-    attempt,
-    label,
-    localEndpoint: options.localEndpoint,
-    localModel: options.localModel,
-    stepId,
-    taskId: options.taskId,
-    workspace,
-  });
+  const command = commandFromTemplate(
+    options.localResourceSnapshotCommand,
+    {
+      arm,
+      attempt,
+      label,
+      localEndpoint: options.localEndpoint,
+      localModel: options.localModel,
+      stepId,
+      taskId: options.taskId,
+      workspace,
+    },
+    {
+      label: 'local resource snapshot command',
+      safetyPolicy: options.commandSafetyPolicy,
+    },
+  );
   const execution = executeCommandPhase({
     artifactDir,
     armDir,
@@ -905,7 +929,14 @@ function shouldExecutePrivateOracle(options) {
 }
 
 function executePrivateOracle(options, armDir, workspace) {
-  const command = commandFromTemplate(options.oracleCommand, { workspace });
+  const command = commandFromTemplate(
+    options.oracleCommand,
+    { workspace },
+    {
+      label: 'private oracle command',
+      safetyPolicy: options.commandSafetyPolicy,
+    },
+  );
   const artifactDir = join(armDir, 'private', 'oracle');
   return executeCommandPhase({
     artifactDir,
@@ -943,6 +974,7 @@ function executeCommandPhase({
     phase,
     command: command.displayCommand,
     commandEnvironmentPolicy,
+    commandSafetyPolicy: command.safetyPolicy ?? 'unrestricted',
     timeoutMs,
     timedOut: execution.timedOut,
     exitCode: execution.exitCode,
@@ -1023,12 +1055,19 @@ function commandEnvironment(policy) {
 
 function buildFakeStepCommand(options, arm, stepId, index, workspace) {
   if (options.fakeStepCommand) {
-    return commandFromTemplate(options.fakeStepCommand, {
-      arm,
-      routeDecision: 'deterministic',
-      stepId,
-      workspace,
-    });
+    return commandFromTemplate(
+      options.fakeStepCommand,
+      {
+        arm,
+        routeDecision: 'deterministic',
+        stepId,
+        workspace,
+      },
+      {
+        label: 'fake step command',
+        safetyPolicy: options.commandSafetyPolicy,
+      },
+    );
   }
 
   return {
@@ -1045,6 +1084,7 @@ function buildFakeStepCommand(options, arm, stepId, index, workspace) {
     ],
     command: process.execPath,
     displayCommand: 'node -e <harness-arena fake step>',
+    safetyPolicy: options.commandSafetyPolicy,
   };
 }
 
@@ -1054,22 +1094,29 @@ function buildLiveStepCommand(options, arm, stepId, routeDecision, index, worksp
   validateProfileLiveCommandTemplate(options, template);
   const profileRoute = selectedProfileRoute(options);
   const routeFlow = profileRoute ? join(ROOT, profileRoute.route.flow) : null;
-  return commandFromTemplate(template, {
-    arm,
-    attempt: String(index + 1),
-    h11Flow: profileRoute?.profileKind === 'H11' ? routeFlow : null,
-    h11FlowRelative: profileRoute?.profileKind === 'H11' ? profileRoute.route.flow : null,
-    h14Flow: profileRoute?.profileKind === 'H14' ? routeFlow : null,
-    h14FlowRelative: profileRoute?.profileKind === 'H14' ? profileRoute.route.flow : null,
-    h15Flow: profileRoute?.profileKind === 'H15' ? routeFlow : null,
-    h15FlowRelative: profileRoute?.profileKind === 'H15' ? profileRoute.route.flow : null,
-    routeFlow,
-    routeFlowRelative: profileRoute?.route.flow ?? null,
-    routeDecision,
-    stepId,
-    taskId: options.taskId,
-    workspace,
-  });
+  return commandFromTemplate(
+    template,
+    {
+      arm,
+      attempt: String(index + 1),
+      h11Flow: profileRoute?.profileKind === 'H11' ? routeFlow : null,
+      h11FlowRelative: profileRoute?.profileKind === 'H11' ? profileRoute.route.flow : null,
+      h14Flow: profileRoute?.profileKind === 'H14' ? routeFlow : null,
+      h14FlowRelative: profileRoute?.profileKind === 'H14' ? profileRoute.route.flow : null,
+      h15Flow: profileRoute?.profileKind === 'H15' ? routeFlow : null,
+      h15FlowRelative: profileRoute?.profileKind === 'H15' ? profileRoute.route.flow : null,
+      routeFlow,
+      routeFlowRelative: profileRoute?.route.flow ?? null,
+      routeDecision,
+      stepId,
+      taskId: options.taskId,
+      workspace,
+    },
+    {
+      label: `live ${routeDecision} command`,
+      safetyPolicy: options.commandSafetyPolicy,
+    },
+  );
 }
 
 function validateProfileLiveCommandTemplate(options, template) {
@@ -1105,10 +1152,105 @@ function liveCommandForRoute(options, routeDecision) {
   return null;
 }
 
-function commandFromTemplate(template, replacements) {
+function commandFromTemplate(
+  template,
+  replacements,
+  { label = 'command', safetyPolicy = 'unrestricted' } = {},
+) {
   const interpolated = interpolateCommandTemplate(template, replacements);
   const [command, ...args] = splitCommandLine(interpolated);
-  return { args, command, displayCommand: interpolated };
+  assertCommandAllowed({ args, command }, safetyPolicy, label);
+  return { args, command, displayCommand: interpolated, safetyPolicy };
+}
+
+function assertCommandAllowed({ args, command }, safetyPolicy, label) {
+  if (safetyPolicy === 'unrestricted') return;
+  if (safetyPolicy !== 'deny-high-risk') {
+    throw new Error(`unknown command safety policy: ${safetyPolicy}`);
+  }
+
+  const executable = normalizedExecutableName(command);
+  const firstArg = args[0]?.toLowerCase() ?? '';
+  const secondArg = args[1]?.toLowerCase() ?? '';
+  const blockedReason = blockedCommandReason(executable, firstArg, secondArg);
+
+  if (blockedReason) {
+    throw new Error(
+      `${label} is blocked by command safety policy ${safetyPolicy}: ${blockedReason}`,
+    );
+  }
+}
+
+function blockedCommandReason(executable, firstArg, secondArg) {
+  if (['bash', 'cmd', 'fish', 'powershell', 'pwsh', 'sh', 'zsh'].includes(executable)) {
+    return `shell wrapper ${executable}`;
+  }
+  if (['curl', 'ftp', 'nc', 'ncat', 'scp', 'ssh', 'telnet', 'wget'].includes(executable)) {
+    return `network client ${executable}`;
+  }
+  if (
+    ['docker', 'kill', 'killall', 'pkill', 'podman', 'service', 'systemctl', 'taskkill'].includes(
+      executable,
+    )
+  ) {
+    return `process or service control ${executable}`;
+  }
+  if (['del', 'erase', 'rm', 'rmdir', 'trash'].includes(executable)) {
+    return `destructive filesystem command ${executable}`;
+  }
+  if (executable === 'git' && isGitMutation(firstArg)) {
+    return `git mutation git ${firstArg}`;
+  }
+  if (isPackageManagerMutation(executable, firstArg, secondArg)) {
+    return `package manager mutation ${executable} ${firstArg}`.trim();
+  }
+  return null;
+}
+
+function normalizedExecutableName(command) {
+  const name = String(command).split(/[\\/]/).pop()?.toLowerCase() ?? '';
+  return name.replace(/\.(cmd|exe|ps1)$/, '');
+}
+
+function isGitMutation(arg) {
+  return [
+    'add',
+    'am',
+    'apply',
+    'branch',
+    'checkout',
+    'cherry-pick',
+    'clean',
+    'commit',
+    'fetch',
+    'merge',
+    'pull',
+    'push',
+    'rebase',
+    'reset',
+    'restore',
+    'revert',
+    'stash',
+    'switch',
+    'tag',
+  ].includes(arg);
+}
+
+function isPackageManagerMutation(executable, firstArg, secondArg) {
+  if (['bun', 'npm', 'pnpm', 'yarn'].includes(executable)) {
+    if (firstArg === 'run') {
+      return ['add', 'ci', 'install', 'publish', 'remove', 'uninstall', 'update'].includes(
+        secondArg,
+      );
+    }
+    return ['add', 'ci', 'i', 'install', 'publish', 'remove', 'uninstall', 'update'].includes(
+      firstArg,
+    );
+  }
+  if (['cargo', 'go', 'pip', 'pip3', 'uv'].includes(executable)) {
+    return ['add', 'get', 'install', 'publish', 'remove', 'uninstall', 'update'].includes(firstArg);
+  }
+  return false;
 }
 
 function interpolateCommandTemplate(template, replacements) {
@@ -1199,6 +1341,7 @@ function buildManifest(options, arm, workspace, stepExecutions = null, oracleExe
       manifestAuthor: 'harness',
       oracleVisibility: 'private-artifacts-only',
       commandEnvironmentPolicy: options.commandEnvironmentPolicy,
+      commandSafetyPolicy: options.commandSafetyPolicy,
       providerFallbackPolicy: 'forbid',
       localOnlyAllowsFrontierInput: false,
     },

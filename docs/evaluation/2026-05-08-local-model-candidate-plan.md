@@ -1,3 +1,5 @@
+<!-- cspell:ignore unpromoted -->
+
 # Local Model Candidate Plan
 
 Date: 2026-05-08
@@ -37,6 +39,12 @@ for the same two narrow implementation subroles as `devstral-small-2:24b` and
 `qwen3-coder:30b`, but it is lower routing priority because it is much slower:
 implementation runs took `354.030s`, `444.608s`, and `444.640s`; API-preservation
 runs took `392.278s`, `358.213s`, and `347.989s`.
+
+Update: after the PowerShell stdin transport and socket-reset retry hardening,
+`qwen3-coder:30b` passed full H14 local-only TDD at `3/3` with the private oracle
+passing `6/6` in every run. It is now promoted for full H14 TDD only under the
+hardened H14 flow, PowerShell stdin transport, and a 16 action-round budget.
+Fallback local models remain unpromoted for full TDD.
 
 ## Current Host State
 
@@ -113,8 +121,9 @@ Current `qwen3-coder:30b` status:
 - H14 implementation-from-tests: passed in the sampled refresh, private oracle
   `6/6`;
 - H14 API-preservation: passed in the sampled refresh, private oracle `5/5`;
-- H14 test-authoring: not promoted, prior replicate set is `1/3`;
-- full H14 local-only: not promoted.
+- H14 test-authoring: promoted after clarified semantics at `3/3`;
+- full H14 local-only: promoted after retry-hardened full-TDD screen at `3/3`,
+  private oracle `6/6` in each run.
 
 Current `devstral-small-2:24b` status:
 
@@ -150,7 +159,8 @@ These are ranked by expected value for this workstation and harness.
 3. H003: short context makes 30B-class models more reliable than default agent context.
 4. H004: `ollama ps` processor placement predicts H14 wall time better than model size.
 5. H005: `qwen3-coder:30b` beats `qwen3:8b` on H14 S2 implementation.
-6. H006: `qwen3-coder:30b` still fails full H14 without a frontier plan.
+6. H006: `qwen3-coder:30b` still fails full H14 without a frontier plan. Rejected
+   by the retry-hardened full-TDD screen: `3/3` local-only private-oracle passes.
 7. H007: H14 S4 API preservation is a better promotion gate than a generic smoke prompt.
 8. H008: `devstral-small-2:24b` is the best installed fallback if 30B models do not load.
 9. H009: `qwen3.6:27b` is better as a reviewer/classifier than as the main implementer.
@@ -181,6 +191,8 @@ These are ranked by expected value for this workstation and harness.
 34. H034: local models can generate tests that pass but do not kill mutants.
 35. H035: mutation score is a better promotion gate than test count.
 36. H036: full H14 should not run until S2 and S4 pass at least two of three.
+    Supported: full H14 promotion came only after implementation, API
+    preservation, and test-authoring subroles had clean evidence.
 37. H037: repeated local H14 failures are model failures, not prompt-language failures.
 38. H038: endpoint failures are harness failures and must not count against model quality.
 39. H039: missing model residency is an evidence failure even if the oracle passes.

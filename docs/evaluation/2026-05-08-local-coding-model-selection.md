@@ -1,4 +1,4 @@
-<!-- cspell:ignore Aider Devstral GDDR GLM Kimi KTransformers MiniMax MiniMaxAI Mistral Qwen qwen OpenCode Ollama Radeon ROCm SGLang subrole subroles SWE vLLM Vulkan xLLM -->
+<!-- cspell:ignore Aider Devstral GDDR GLM Kimi KTransformers MiniMax MiniMaxAI Mistral Qwen qwen OpenCode Ollama Radeon ROCm SGLang subrole subroles SWE unpromoted vLLM Vulkan xLLM -->
 
 # Local Coding Model Selection
 
@@ -26,11 +26,14 @@ The H14 evidence supports a narrow conclusion:
 - frontier-only Codex passed H14 once;
 - advisor-only and static hybrid did not rescue local `qwen3:8b`;
 - failure-aware hybrid eventually passed, but the passing run was frontier-repair
-  dominated after a local Ollama runtime failure.
+  dominated after a local Ollama runtime failure;
+- `qwen3-coder:30b` later passed the full H14 local-only lane `3/3` after the
+  PowerShell stdin transport and socket-reset retry hardening.
 
 It does not support a broad claim that local models cannot code, or that hybrid
-routing cannot reduce cost. It only says that `qwen3:8b` should not own H14-style
-TDD implementation under the measured policy.
+routing cannot reduce cost. It says `qwen3:8b` should not own H14-style TDD
+implementation under the measured policy, while `qwen3-coder:30b` is promoted for
+that specific H14 route with the hardened flow and runtime.
 
 ## Host Reality
 
@@ -105,7 +108,9 @@ Default local ownership is appropriate for:
 
 Default frontier ownership is appropriate for:
 
-- H14-like TDD ownership until a stronger local model proves otherwise;
+- H14-like TDD ownership for unpromoted local models; route `qwen3-coder:30b`
+  locally only for the checked H14 full-TDD flow and keep frontier repair
+  available on any public-gate or private-oracle failure;
 - ambiguous architecture;
 - security, auth, permissions, data loss, migrations, and persistence;
 - public API preservation plans;
@@ -145,10 +150,11 @@ Live model batches must be treated as contained experiments:
 
 ## Immediate Run Order
 
-1. Pull or verify `qwen3-coder:30b`.
+1. Keep `qwen3-coder:30b` as the promoted H14 local worker under the checked
+   route policy.
 2. Start Windows Ollama on a WSL-reachable endpoint and record `/api/version`,
    `/api/tags`, and `/api/ps`.
-3. Run a bounded Prompt Language smoke for:
+3. Run a bounded Prompt Language smoke for any new candidate before task lanes:
    - `qwen3-coder:30b`;
    - `qwen3-opencode:30b`;
    - `qwen3:30b`;
@@ -156,6 +162,9 @@ Live model batches must be treated as contained experiments:
 4. Record residency and wall time from `ollama ps`.
 5. Only then run H14 subroles. Do not spend a full H14 run on a model that cannot
    pass the readiness smoke and subrole screen.
+6. For already promoted `qwen3-coder:30b`, move the next claim test to an
+   adjacent fixture such as H15 API endpoint or H11 multi-file refactor rather
+   than repeating H14.
 
 ## Live Readiness Results
 

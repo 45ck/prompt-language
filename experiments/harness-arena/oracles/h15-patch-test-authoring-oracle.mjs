@@ -180,6 +180,21 @@ function assertTestShape(testSource) {
   );
   assert(patchCalls >= 9, `expected at least 9 patchContact calls, found ${patchCalls}`);
 
+  const requiredCases = [
+    [/name:\s*['"]A['"]/, 'short name'],
+    [/repeat\(101\)/, 'long name'],
+    [/email:\s*['"]bad@domain['"]|email:\s*['"]test@domain['"]/, 'email without dot after @'],
+    [/email:\s*['"]bad\.domain['"]|email:\s*['"]testdomain\.com['"]/, 'email without @'],
+    [/phone:\s*['"][^'"]*[A-Za-z!][^'"]*['"]/, 'invalid phone characters'],
+    [/phone:\s*['"]123456['"]/, 'short phone'],
+    [/company:\s*['"]{2}/, 'empty company string'],
+    [/company:\s*null/, 'null company'],
+    [/patchContact\(\s*999/, 'missing ID'],
+  ];
+  for (const [pattern, label] of requiredCases) {
+    assert(pattern.test(testSource), `missing required case: ${label}`);
+  }
+
   for (const original of [
     'listContacts returns all',
     'getContact returns existing',

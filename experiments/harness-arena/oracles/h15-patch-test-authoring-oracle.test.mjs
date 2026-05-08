@@ -159,6 +159,22 @@ test('H15 PATCH test-authoring oracle passes strong tests without app edits', ()
   }
 });
 
+test('H15 PATCH test-authoring oracle accepts equivalent validation edge literals', () => {
+  const workspace = tempWorkspace();
+  try {
+    writeWorkspace(workspace, {
+      testSource: PASSING_TESTS.replaceAll('bad@domain', 'alice@examplecom')
+        .replaceAll('bad.domain', 'alice.example.com')
+        .replaceAll("phone: '123456'", "phone: '123'"),
+    });
+    const result = runOracle(workspace);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /tests reject broken PATCH validation mutants/);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
 test('H15 PATCH test-authoring oracle rejects implementation edits', () => {
   const workspace = tempWorkspace();
   try {

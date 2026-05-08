@@ -183,10 +183,10 @@ function assertTestShape(testSource) {
   const requiredCases = [
     [/name:\s*['"]A['"]/, 'short name'],
     [/repeat\(101\)/, 'long name'],
-    [/email:\s*['"]bad@domain['"]|email:\s*['"]test@domain['"]/, 'email without dot after @'],
-    [/email:\s*['"]bad\.domain['"]|email:\s*['"]testdomain\.com['"]/, 'email without @'],
+    [/email:\s*['"][^'"]+@[^.'"]+['"]/, 'email without dot after @'],
+    [/email:\s*['"][^@'"]+\.[^@'"]+['"]/, 'email without @'],
     [/phone:\s*['"][^'"]*[A-Za-z!][^'"]*['"]/, 'invalid phone characters'],
-    [/phone:\s*['"]123456['"]/, 'short phone'],
+    [/phone:\s*['"]\+?[\d\s-]{1,6}['"]/, 'short phone'],
     [/company:\s*['"]{2}/, 'empty company string'],
     [/company:\s*null/, 'null company'],
     [/patchContact\(\s*999/, 'missing ID'],

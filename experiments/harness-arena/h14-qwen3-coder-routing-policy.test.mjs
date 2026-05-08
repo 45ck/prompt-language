@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+
+import {
+  normalizeH14QwenCoderSubrole,
+  resolveH14QwenCoderRoute,
+} from './h14-qwen3-coder-routing-policy.mjs';
 
 const ROOT = join(import.meta.dirname, '..', '..');
 const POLICY_PATH = join(import.meta.dirname, 'h14-qwen3-coder-routing-policy.v1.json');
@@ -64,4 +70,46 @@ test('H14 qwen3-coder routing policy references checked-in evidence and harness 
   assert.match(evidence, /S2 Decision/);
   assert.match(evidence, /S3 Decision/);
   assert.match(evidence, /S4 Decision/);
+});
+
+test('H14 qwen3-coder route resolver maps aliases to local and escalation decisions', () => {
+  assert.equal(
+    normalizeH14QwenCoderSubrole('api-preservation'),
+    'h14-api-preserving-implementation',
+  );
+  assert.equal(
+    normalizeH14QwenCoderSubrole('implementation-from-tests'),
+    'h14-implementation-from-tests',
+  );
+
+  const implementation = resolveH14QwenCoderRoute('implementation-from-tests');
+  assert.equal(implementation.shouldRunLocal, true);
+  assert.equal(implementation.route.owner, 'local');
+  assert.match(implementation.route.flow, /h14-impl-from-tests-worker\.flow$/);
+
+  const testAuthoring = resolveH14QwenCoderRoute('test-authoring');
+  assert.equal(testAuthoring.shouldRunLocal, false);
+  assert.equal(testAuthoring.route.owner, 'frontier-or-deterministic-template');
+
+  const fullTdd = resolveH14QwenCoderRoute('full-tdd');
+  assert.equal(fullTdd.shouldRunLocal, false);
+  assert.equal(fullTdd.route.owner, 'frontier');
+
+  assert.throws(
+    () => resolveH14QwenCoderRoute('unknown-subrole'),
+    /unknown H14 qwen3-coder subrole/,
+  );
+});
+
+test('H14 qwen3-coder route resolver CLI emits JSON decisions', () => {
+  const result = spawnSync(
+    process.execPath,
+    [join(import.meta.dirname, 'h14-qwen3-coder-routing-policy.mjs'), 'api-preservation', '--json'],
+    { encoding: 'utf8', windowsHide: true },
+  );
+
+  assert.equal(result.status, 0, result.stderr);
+  const parsed = JSON.parse(result.stdout);
+  assert.equal(parsed.shouldRunLocal, true);
+  assert.equal(parsed.route.subrole, 'h14-api-preserving-implementation');
 });

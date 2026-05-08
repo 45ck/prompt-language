@@ -69,6 +69,9 @@ Do not escalate:
 The 2026-05-08 H14 subrole runs refine Routing Policy V0 for
 `qwen3-coder:30b`. The machine-readable overlay is
 [`h14-qwen3-coder-routing-policy.v1.json`](./h14-qwen3-coder-routing-policy.v1.json).
+Use
+[`h14-qwen3-coder-routing-policy.mjs`](./h14-qwen3-coder-routing-policy.mjs)
+to resolve a subrole before launching a local lane.
 
 Current H14 routing decisions:
 
@@ -85,6 +88,12 @@ full H14-style TDD ownership to the local lane until the model reaches the same
 clean-pass threshold on those subroles. For cost reduction, generate tests through
 a frontier reviewer or deterministic template first, then let the local worker
 implement against those tests.
+
+Example:
+
+```sh
+node experiments/harness-arena/h14-qwen3-coder-routing-policy.mjs api-preservation --json
+```
 
 ## FSCRUD R29 Implication
 

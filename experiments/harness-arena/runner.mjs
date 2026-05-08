@@ -589,7 +589,7 @@ function executeLiveSteps(options, armDir, arm, workspace) {
     executions.push(execution);
     stepDefinitions.push(stepDefinition);
 
-    if (shouldRunHybridRepair(options, arm, stepDefinition, execution)) {
+    if (shouldRunHybridRepair(options, arm, stepDefinition, execution, executions.length - 1)) {
       const repairDefinition = ['frontier-repair', 'frontier', 'local public-gate failure repair'];
       const repairExecution = executeLiveStep(
         {
@@ -829,13 +829,24 @@ function executeLocalResourceSnapshot(options, armDir, workspace, { arm, attempt
   return [execution.stdoutArtifactRef, execution.stderrArtifactRef, execution.metadataArtifactRef];
 }
 
-function shouldRunHybridRepair(options, arm, [stepId], execution) {
+function shouldRunHybridRepair(options, arm, [stepId], execution, stepIndex) {
   return (
     options.localRepairAttemptLimit > 0 &&
     arm === 'hybrid-router' &&
     stepId === 'local-bulk' &&
-    (execution.timedOut || execution.exitCode !== 0)
+    (execution.timedOut || execution.exitCode !== 0) &&
+    canSpendHybridRepairCall(options, arm, stepIndex)
   );
+}
+
+function canSpendHybridRepairCall(options, arm, stepIndex) {
+  const completedFrontierCalls = ARM_STEPS[arm]
+    .slice(0, stepIndex + 1)
+    .filter(([, routeDecision]) => routeDecision === 'frontier').length;
+  const remainingPlannedFrontierCalls = ARM_STEPS[arm]
+    .slice(stepIndex + 1)
+    .filter(([, routeDecision]) => routeDecision === 'frontier').length;
+  return completedFrontierCalls + 1 + remainingPlannedFrontierCalls <= options.frontierCallLimit;
 }
 
 function shouldExecutePrivateOracle(options) {

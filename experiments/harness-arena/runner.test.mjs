@@ -1240,6 +1240,7 @@ test('sampled live run preserves shell variables inside nested command templates
 test('live hybrid-router inserts frontier repair after local lane failure', () => {
   const outputRoot = tempRoot();
   const noRepairOutputRoot = tempRoot();
+  const cappedRepairOutputRoot = tempRoot();
   const scriptRoot = tempRoot();
   try {
     mkdirSync(scriptRoot, { recursive: true });
@@ -1368,9 +1369,46 @@ test('live hybrid-router inserts frontier repair after local lane failure', () =
     assert.equal(validateManifestAgainstSchema(noRepairManifest).valid, true);
     assert.equal(noRepairManifest.budget.localRepairAttemptLimit, 0);
     assert.equal(noRepairManifest.oracle.passed, false);
+
+    const cappedRepairResult = runHarnessArena(
+      parseArgs([
+        '--live',
+        '--arms',
+        'hybrid-router',
+        '--live-local-command',
+        localCommand,
+        '--live-frontier-command',
+        frontierCommand,
+        '--live-frontier-repair-command',
+        repairCommand,
+        '--oracle-command',
+        oracleCommand,
+        '--frontier-call-limit',
+        '2',
+        '--local-repair-attempt-limit',
+        '1',
+        '--output-root',
+        cappedRepairOutputRoot,
+        '--run-id',
+        'hybrid-capped-repair-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [cappedRepairArmRun] = cappedRepairResult.armRuns;
+    const cappedRepairManifest = readJson(cappedRepairArmRun.manifestPath);
+
+    assert.deepEqual(
+      cappedRepairManifest.steps.map((step) => step.stepId),
+      ['frontier-classify', 'local-bulk', 'frontier-review'],
+    );
+    assert.equal(validateManifestAgainstSchema(cappedRepairManifest).valid, true);
+    assert.equal(cappedRepairManifest.budget.frontierCallLimit, 2);
+    assert.equal(cappedRepairManifest.oracle.passed, false);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });
     rmSync(noRepairOutputRoot, { recursive: true, force: true });
+    rmSync(cappedRepairOutputRoot, { recursive: true, force: true });
     rmSync(scriptRoot, { recursive: true, force: true });
   }
 });

@@ -71,7 +71,7 @@ CPU/GPU once context and KV cache are included.
 | 4        | `qwen3:30b`            | Slow general-model control       | Passed readiness, but produced far more tokens and latency than `qwen3-coder:30b`.                                   |
 | 5        | `qwen3.6:27b`          | Reviewer/classifier control only | Passed readiness but failed API-preservation after the hard timeout.                                                 |
 | 6        | `gemma4-opencode:e4b`  | Failed readiness                 | Smaller package, but live `A` smokes timed out at both 32K and explicit 4K context.                                  |
-| 7        | `gemma4-opencode:e2b`  | Failed readiness                 | Smaller 5.1B package loaded at 4K context but still failed the live `A` smoke through the PowerShell bridge.         |
+| 7        | `gemma4-opencode:e2b`  | Failed readiness                 | Smaller 5.1B packages loaded at 4K context, but standard and Vulkan variants both failed the live `A` smoke.         |
 | 8        | GLM-4.7-Flash          | Promising follow-up              | 30B-class open-weight model with strong coding claims; add only after Ollama availability and host fit are verified. |
 
 Do not start local testing with `qwen3-coder-next`. The current Ollama package is
@@ -278,7 +278,7 @@ low-context Prompt Language routes on this host, not a broad quality judgment
 about Gemma. Keep it out of classifier and reviewer routing unless a different
 runtime backend changes the timeout behavior.
 
-## 2026-05-09 Gemma4 OpenCode E2B Screen
+## 2026-05-09 Gemma4 OpenCode E2B Screens
 
 The smaller installed `gemma4-opencode:e2b` package was screened as a possible
 cheap local classifier/reviewer candidate after the E4B route failed:
@@ -314,6 +314,32 @@ Decision: this rejects the smaller Gemma OpenCode E2B path for the current cheap
 classifier/reviewer hypothesis on this host. The model loads, but it does not
 clear the minimum Prompt Language context-relay smoke under the PowerShell
 transport.
+
+The installed Vulkan-tagged package was also screened with the same explicit
+4K-context command shape:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
+  PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096 \
+  EVAL_MODEL=ollama/gemma4-opencode-vulkan:e2b \
+  EVAL_TIMEOUT_MS=900000 \
+  node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
+```
+
+Model metadata matched the same `5.1B` `gemma4` `Q4_K_M` family, but the package
+parameter `num_ctx` was `2048`. The explicit 4K override still took effect:
+
+- no completed smoke result artifact was written;
+- sampled residency showed `gemma4-opencode-vulkan:e2b`, `7.7 GB`,
+  `75%/25% CPU/GPU`, `4096` context;
+- the smoke failed with PLR-007 after the Ollama runner exceeded the default
+  action-round limit of `8`;
+- post-run `ollama stop gemma4-opencode-vulkan:e2b` cleared model residency.
+
+Decision: the Vulkan-tagged E2B package is also rejected for cheap local
+classifier/reviewer routing under the current smoke contract. It avoids the
+non-Vulkan bridge-timeout shape, but it cannot complete the minimum context relay
+within the default action budget that `qwen3-coder:30b` clears.
 
 ## 2026-05-09 Live Health Check
 
@@ -460,7 +486,7 @@ Current latest-model ranking for this PC:
 | 5    | `qwen3.6:27b`          | Passed readiness but failed API-preservation after timeout; reviewer/classifier control only.            |
 | 6    | `GLM-4.7-Flash`        | Strong 30B-A3B paper/model-card candidate; test only after locating a runner package that fits the host. |
 | 7    | `gemma4-opencode:e4b`  | Failed both default-context and explicit 4K-context smoke attempts.                                      |
-| 8    | `gemma4-opencode:e2b`  | Loaded at explicit 4K context but failed the minimum smoke through the PowerShell bridge.                |
+| 8    | `gemma4-opencode:e2b`  | Standard package failed through the bridge; Vulkan package exhausted action rounds at explicit 4K.       |
 
 Latest large open-weight models worth tracking, but not workstation-local here:
 

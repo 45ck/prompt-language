@@ -341,6 +341,11 @@ screened with the explicit 4K-context Prompt Language smoke. It loaded at
 PowerShell bridge before writing a result artifact. Do not use it as the cheap
 classifier/reviewer route on this transport.
 
+The Vulkan-tagged `gemma4-opencode-vulkan:e2b` package reached the same residency
+and explicit context, but failed PLR-007 after exhausting the default
+8 action-round budget. It is also not a cheap classifier/reviewer route under the
+current smoke contract.
+
 The first frontier-only baseline passed the same H15 task with one Codex call in
 328.917s. That is currently stronger than the hybrid route for H15: fewer frontier
 calls, less wall time, and no local runtime failure.

@@ -97,6 +97,21 @@ test('H15 validation repair oracle rejects public test edits', () => {
   }
 });
 
+test('H15 validation repair oracle ignores harness-owned runtime files', () => {
+  const workspace = tempWorkspace();
+  try {
+    copyFixture(workspace);
+    writePassingRepair(workspace);
+    mkdirSync(join(workspace, '.prompt-language'), { recursive: true });
+    writeFileSync(join(workspace, '.prompt-language', 'session-state.json'), '{}\n');
+    writeFileSync(join(workspace, 'HARNESS-ARENA-LIVE.md'), '# Live\n');
+    const result = runOracle(workspace);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
 test('H15 validation repair oracle rejects hidden validation regressions', () => {
   const workspace = tempWorkspace();
   try {
@@ -108,6 +123,30 @@ test('H15 validation repair oracle rejects hidden validation regressions', () =>
     const result = runOracle(workspace);
     assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
     assert.match(result.stdout, /empty company expected 400/);
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
+});
+
+test('H15 validation repair oracle rejects broad seed and 404 rewrites', () => {
+  const workspace = tempWorkspace();
+  try {
+    copyFixture(workspace);
+    writePassingRepair(workspace);
+    const appPath = join(workspace, 'src', 'app.js');
+    const source = readFileSync(appPath, 'utf8');
+    writeFileSync(
+      appPath,
+      source
+        .replace('Carol Davis', 'Carol Brown')
+        .replace(
+          "return { status: 404, body: { error: 'Contact not found' } };",
+          'return { status: 404, body: null };',
+        ),
+    );
+    const result = runOracle(workspace);
+    assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /seed contact 3 changed|GET missing ID behavior changed/);
   } finally {
     rmSync(workspace, { recursive: true, force: true });
   }

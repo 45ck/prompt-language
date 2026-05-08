@@ -59,13 +59,16 @@ function listFiles(root, prefix = '') {
 
 record('workspace files stay in the repair contract', () => {
   const allowed = new Set([
+    'HARNESS-ARENA-LIVE.md',
     'TASK.md',
     'local-worker-summary.md',
     'package.json',
     'src/app.js',
     'src/test.js',
   ]);
-  const unexpected = listFiles(workspaceRoot).filter((file) => !allowed.has(file));
+  const unexpected = listFiles(workspaceRoot).filter(
+    (file) => !allowed.has(file) && !file.startsWith('.prompt-language/'),
+  );
   if (unexpected.length > 0) throw new Error(`unexpected files: ${unexpected.join(', ')}`);
 });
 
@@ -119,6 +122,27 @@ record('workspace app loads and exports the original API', () => {
   ]) {
     if (!(exportName in app)) throw new Error(`missing export ${exportName}`);
   }
+  const seedContacts = app.listContacts();
+  if (seedContacts.status !== 200 || !Array.isArray(seedContacts.body)) {
+    throw new Error('listContacts response changed');
+  }
+  const expectedSeeds = [
+    [1, 'Alice Johnson', 'alice@example.com', '555-0101', 'Acme Corp'],
+    [2, 'Bob Smith', 'bob@example.com', '555-0102', 'Globex Inc'],
+    [3, 'Carol Davis', 'carol@example.com', '555-0103', null],
+  ];
+  for (const [id, name, email, phone, company] of expectedSeeds) {
+    const contact = seedContacts.body.find((candidate) => candidate.id === id);
+    if (!contact) throw new Error(`missing seed contact ${id}`);
+    if (
+      contact.name !== name ||
+      contact.email !== email ||
+      contact.phone !== phone ||
+      contact.company !== company
+    ) {
+      throw new Error(`seed contact ${id} changed`);
+    }
+  }
 });
 
 record('only the short-name error-body bug is repaired', () => {
@@ -140,6 +164,16 @@ record('only the short-name error-body bug is repaired', () => {
     app.createContact({ name: 'Delete Candidate', email: 'delete.candidate@example.com' }).body.id,
   );
   if (deleted.status !== 204 || deleted.body !== null) throw new Error('delete behavior changed');
+
+  const missingGet = app.getContact(999);
+  if (missingGet.status !== 404 || !missingGet.body?.error) {
+    throw new Error('GET missing ID behavior changed');
+  }
+
+  const missingDelete = app.deleteContact(999);
+  if (missingDelete.status !== 404 || !missingDelete.body?.error) {
+    throw new Error('DELETE missing ID behavior changed');
+  }
 });
 
 record('hidden validation edges still return 400 with error bodies', () => {

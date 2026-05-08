@@ -478,6 +478,54 @@ Do not promote it to full H14 local-only yet. The next required subrole is API
 preservation under a separate fixture or an equivalent repeatable gate, because
 full H14 failures showed artifact, timeout, and public-test reliability risks.
 
+### `HA-HR1-H14-impl-from-tests-routed-qwen-coder-001`
+
+After commit `ff4f4d9` wired the checked-in H14 qwen-coder policy into the
+HA-HR1 runner, the implementation-from-tests subrole was re-run through the route
+profile:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --h14-qwen-coder-subrole implementation-from-tests \
+  --live-local-command '<ollama prompt-language command>' \
+  --local-endpoint http://172.17.32.1:11435 \
+  --run-id HA-HR1-H14-impl-from-tests-routed-qwen-coder-001 \
+  --output-root .tmp/harness-arena
+```
+
+The profile selected `local-only`, the `h14-impl-from-tests` fixture, the H14
+TDD oracle, policy version `h14-qwen3-coder-subrole-routing-v1`, and the
+`h14-impl-from-tests-worker.flow` prompt program.
+
+Outcome:
+
+- step exit code: `0`
+- step wall time: `239.808s`
+- private oracle: passed
+- provider telemetry: 6 Ollama records, 14,636 input tokens, 1,405 output tokens,
+  16,041 total tokens, zero provider API cost, no retries
+- route trigger:
+  `h14-qwen3-coder:h14-implementation-from-tests:local-promoted`
+
+Oracle result:
+
+```text
+PASS: mergeDuplicates implementation exists
+PASS: mergeDuplicates is exported
+PASS: tests import and call mergeDuplicates
+PASS: at least five merge/duplicate tests exist
+PASS: public tests pass
+PASS: hidden behavior checks pass
+
+Results: 6/6 passed
+```
+
+Decision: the runner integration is live-valid for the promoted
+implementation-from-tests subrole. Together with the routed API-preservation pass,
+both locally promoted H14 qwen-coder routes have now been exercised through the
+runner profile rather than only through manual fixture/oracle wiring.
+
 ## H14 API-Preservation Subrole Results
 
 The second narrower subrole fixture is `h14-api-preservation`. This fixture keeps

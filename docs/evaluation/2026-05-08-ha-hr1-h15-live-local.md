@@ -273,6 +273,24 @@ Decision: keep PATCH test-authoring at one clean pass. The next route revision
 must structurally reject `deleteContact(1)` and require the delete test to create
 and delete its own contact.
 
+Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-007`
+
+Result:
+
+- Route: `--h15-qwen-coder-task test-authoring`
+- Step exit: `0`
+- Wall time: `254.420s`
+- Private oracle: `PASS`, `4/4`
+- Frontier calls: `0`
+
+The shared-fixture delete guard prevented the run `006` failure mode. The local
+model preserved `src/app.js`, kept the original harness structure, passed public
+tests, and killed the private PATCH validation mutants.
+
+Decision: count this as the second positive PATCH test-authoring local-screen
+pass for `qwen3-coder:30b`. Keep it screen-only: the route is now `2/6`, with
+clear value but still poor repeatability and high latency.
+
 ## Routing Decision
 
 Do not mark the local-model strategy as a failure overall. Mark this as a
@@ -281,7 +299,7 @@ negative promotion result for one route:
 - H14 full TDD is promoted for `qwen3-coder:30b` under the existing H14 route.
 - H15 endpoint work is not promoted for local-only ownership yet.
 - H15 validation-only work now has a clean local-screen pass.
-- H15 PATCH test-authoring has one clean local-screen pass after four failed
+- H15 PATCH test-authoring has two clean local-screen passes after four failed
   attempts; it remains screen-only, not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.

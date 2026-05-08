@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { promises as fs, existsSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { join, dirname, isAbsolute, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -51,6 +51,10 @@ const DIRS_TO_COPY_CODEX = [
   '.codex',
   'bin',
 ];
+const FRESHNESS_CHECK_FILES = [
+  'bin/cli.mjs',
+  join('dist', 'infrastructure', 'adapters', 'ollama-prompt-turn-runner.js'),
+];
 
 async function readPluginVersion() {
   const raw = await fs.readFile(join(ROOT, '.claude-plugin', 'plugin.json'), 'utf8');
@@ -95,6 +99,11 @@ async function readJsonSafe(filePath) {
 async function writeJson(filePath, data) {
   await ensureDir(dirname(filePath));
   await fs.writeFile(filePath, JSON.stringify(data, null, 2) + '\n', 'utf8');
+}
+
+async function fileSha256(filePath) {
+  const content = await fs.readFile(filePath);
+  return createHash('sha256').update(content).digest('hex');
 }
 
 class InstallCommandError extends Error {
@@ -305,6 +314,30 @@ async function collectInstallStatus({
   const registryManifestState = registryManifestPath
     ? await inspectJsonFile(registryManifestPath)
     : { kind: 'missing' };
+
+  if (installed) {
+    for (const relativePath of FRESHNESS_CHECK_FILES) {
+      const sourcePath = join(ROOT, relativePath);
+      const installedPath = join(currentInstallPath, relativePath);
+      if (!(await pathExists(sourcePath)) || !(await pathExists(installedPath))) continue;
+
+      try {
+        const [sourceHash, installedHash] = await Promise.all([
+          fileSha256(sourcePath),
+          fileSha256(installedPath),
+        ]);
+        if (sourceHash !== installedHash) {
+          issues.push(
+            `Installed runtime differs from this build at ${relativePath}; reinstall to refresh same-version files.`,
+          );
+        }
+      } catch (error) {
+        issues.push(
+          `Could not compare installed runtime freshness for ${relativePath}: ${formatSystemError(error)}.`,
+        );
+      }
+    }
+  }
 
   if (registered) {
     if (!registryInstallPath) {

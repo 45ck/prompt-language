@@ -329,6 +329,29 @@ describe('Codex installer — install verification', () => {
     );
   });
 
+  it('codex-status diagnoses same-version installed runtime drift', async () => {
+    await writeFile(
+      join(
+        codexCachePath(fakeHome, version),
+        'dist',
+        'infrastructure',
+        'adapters',
+        'ollama-prompt-turn-runner.js',
+      ),
+      'stale runtime copy',
+      'utf8',
+    );
+
+    const output = runCodexStatus(fakeHome);
+
+    expect(output).toContain(
+      'Installed runtime differs from this build at dist/infrastructure/adapters/ollama-prompt-turn-runner.js',
+    );
+    expect(output).toContain(
+      'Run "npx @45ck/prompt-language codex-install" to refresh the Codex scaffold.',
+    );
+  });
+
   it('codex-uninstall removes the Codex cache and plugin registration', async () => {
     runCodexUninstall(fakeHome);
 

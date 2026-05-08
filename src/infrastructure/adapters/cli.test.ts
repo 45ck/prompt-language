@@ -931,6 +931,49 @@ describe('CLI commands', () => {
     expect(output).not.toContain('Remediation:');
   });
 
+  it('status diagnoses same-version installed runtime drift for Claude installs', async () => {
+    tempDir = await createTempDir('pl-cli-status-drift-');
+    const env = createClaudeCliEnv(tempDir);
+    const pluginVersion = JSON.parse(
+      await readFile(join(ROOT, '.claude-plugin', 'plugin.json'), 'utf8'),
+    ).version as string;
+
+    execFileSync(process.execPath, [CLI, 'install'], {
+      cwd: ROOT,
+      env,
+      encoding: 'utf8',
+    });
+    await writeFile(
+      join(
+        tempDir,
+        '.claude',
+        'plugins',
+        'installed',
+        'prompt-language',
+        pluginVersion,
+        'dist',
+        'infrastructure',
+        'adapters',
+        'ollama-prompt-turn-runner.js',
+      ),
+      'stale runtime copy',
+      'utf8',
+    );
+
+    const output = execFileSync(process.execPath, [CLI, 'status'], {
+      cwd: ROOT,
+      env,
+      encoding: 'utf8',
+    });
+
+    expect(output).toContain(
+      'Installed runtime differs from this build at dist/infrastructure/adapters/ollama-prompt-turn-runner.js',
+    );
+    expect(output).toContain(
+      'Run "npx @45ck/prompt-language install" to refresh the Claude install.',
+    );
+  });
+
   it('status diagnoses stale installed_plugins metadata for Claude installs', async () => {
     tempDir = await createTempDir('pl-cli-status-stale-');
     const env = createClaudeCliEnv(tempDir);

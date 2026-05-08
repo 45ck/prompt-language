@@ -1,8 +1,8 @@
 # harness-arena — compare whole stacks: vanilla cloud harness + frontier model vs PL + local model + task-tuned flow
 
 **Status:** Active. Full HA-E1 is still planned, but HA-HR1 now has live local
-evidence, checked-in H14/H15 routing policies, and runner profiles for promoted
-or hybrid-required routes. The runner supports dry-run structure materialization,
+evidence, checked-in H14/H15 routing policies, and runner profiles for promoted,
+frontier-baseline, and experimental hybrid routes. The runner supports dry-run structure materialization,
 deterministic fake-live command execution, and explicit `--live` lane command
 execution with private oracle artifacts.
 **Last update:** 2026-05-08
@@ -22,10 +22,11 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   implementation-from-tests and API-preservation subroles.
 - H15 endpoint evidence did not promote `qwen3-coder:30b` for local-only
   ownership. The local model produced near-complete endpoint work, but repeated
-  API-preservation and validation drift made the route `hybrid-required`.
+  API-preservation drift, validation drift, and the latest hybrid resource failure
+  make `frontier-only` the current baseline route.
 - The current H15 runner profile is executable with
   `node experiments/harness-arena/runner.mjs --h15-qwen-coder-task api-endpoint`;
-  in live mode it requires both local and frontier lane commands.
+  in live mode it requires a frontier lane command for the current baseline route.
 
 Primary evidence records:
 
@@ -55,8 +56,8 @@ evidence:
 - `--h14-qwen-coder-subrole` remains available for the older qwen-coder-only
   route profile when reproducing historical evidence.
 - `--h15-qwen-coder-task api-endpoint` applies the checked-in H15 route policy.
-  The current route is `hybrid-router`, with `qwen3-coder:30b` as the local draft
-  model and frontier classification/review required for live runs.
+  The current route is `frontier-only`, with `qwen3-coder:30b` retained only as
+  an experimental local draft candidate for narrower micro-flow screens.
 - H14 route-profile live commands must reference the routed flow. Use
   `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative
   flow path in `--live-local-command` / `--live-frontier-command`.
@@ -104,27 +105,22 @@ risk, repeated local failure, or read-only review.
 
 ## What is next (ordered)
 
-1. Run a real H15 hybrid-router live replicate with
-   `--h15-qwen-coder-task api-endpoint`, a PowerShell-backed Ollama local command,
-   a budgeted frontier command, sampled local resource snapshots, and the private
-   H15 oracle. This is the next direct test of "local bulk plus frontier review"
-   cost reduction.
-2. If H15 hybrid passes, repeat to `3/3` before claiming the route has economic
-   value. Compare frontier calls, wall time, and token/cost basis against a
-   frontier-only baseline.
-3. If H15 hybrid fails, classify whether the failure is local draft quality,
-   frontier repair/review insufficiency, harness/runtime failure, or private
-   oracle mismatch before adding more repetitions.
-4. Add an H11-style multi-file refactor fixture only after the H15 hybrid route
-   has a clean pass/fail classification. H11 should target cross-file reasoning,
-   timeout/no-edit behavior, and API-surface drift.
-5. Run HA-E1 under a budget cap after one H15 hybrid route and one multi-file
-   route have claim-grade manifests.
+1. Keep H15 endpoint work on the frontier-only baseline route until local
+   micro-flows show reliable value.
+2. Add or run a narrower H15 local micro-flow for validation-only implementation,
+   PATCH test authoring, or one public-gate repair loop with a shorter timeout.
+3. Promote a local H15 candidate back into a hybrid full-task route only after the
+   micro-flow passes with claim-grade manifests and sampled resource evidence.
+4. Add an H11-style multi-file refactor fixture after H15 has a stable baseline
+   and at least one local micro-flow classification. H11 should target cross-file
+   reasoning, timeout/no-edit behavior, and API-surface drift.
+5. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
+   and one multi-file route have claim-grade manifests.
 
 ## Known blockers
 
-- H15 hybrid claim runs still depend on budgeted frontier command templates that
-  can perform classification, repair/review, and final manifest-visible handoff.
+- H15 hybrid claim runs are paused behind micro-flow evidence; the current route
+  profile intentionally defaults to frontier-only.
 - H14 local-only claims are no longer blocked for promoted `qwen3-coder:30b`
   routes, but fallback local models are not promoted for full H14.
 - H15 local-only is a negative promotion result, not an open blocker.

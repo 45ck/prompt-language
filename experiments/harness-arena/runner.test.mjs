@@ -368,7 +368,7 @@ test('H14 qwen3-coder profile maps full TDD to local route defaults', () => {
   assert.match(options.oracleCommand, /h14-tdd-red-green-oracle\.mjs/);
 });
 
-test('H15 qwen3-coder profile maps endpoint work to hybrid route defaults', () => {
+test('H15 qwen3-coder profile maps endpoint work to frontier baseline defaults', () => {
   const outputRoot = tempRoot();
   try {
     const options = parseArgs([
@@ -378,7 +378,7 @@ test('H15 qwen3-coder profile maps endpoint work to hybrid route defaults', () =
       '--output-root',
       outputRoot,
       '--run-id',
-      'h15-hybrid-route',
+      'h15-frontier-route',
       '--started-at',
       FIXED_TIME,
     ]);
@@ -387,28 +387,29 @@ test('H15 qwen3-coder profile maps endpoint work to hybrid route defaults', () =
     const manifest = readJson(armRun.manifestPath);
     const steps = manifest.steps;
 
-    assert.deepEqual(options.arms, ['hybrid-router']);
+    assert.deepEqual(options.arms, ['frontier-only']);
     assert.equal(options.taskId, 'h15-api-endpoint');
     assert.equal(options.h15QwenCoderRoute.shouldRunLocal, false);
-    assert.equal(options.h15QwenCoderRoute.shouldRunHybrid, true);
+    assert.equal(options.h15QwenCoderRoute.shouldRunHybrid, false);
+    assert.equal(options.h15QwenCoderRoute.shouldRunFrontier, true);
     assert.equal(options.localModel, 'qwen3-coder:30b');
-    assert.equal(options.policyVersion, 'h15-qwen3-coder-endpoint-routing-v1');
+    assert.equal(options.policyVersion, 'h15-qwen3-coder-endpoint-routing-v2');
     assert.match(options.oracleCommand, /h15-api-endpoint-oracle\.mjs/);
     assert.equal(existsSync(join(armRun.workspace, 'src', 'app.js')), true);
     assert.deepEqual(
       steps.map((step) => step.stepId),
-      ['frontier-classify', 'local-bulk', 'frontier-review'],
+      ['frontier-full'],
     );
     assert.ok(
       steps.every((step) =>
-        step.routeTrigger.includes('h15-qwen3-coder:h15-api-endpoint:hybrid-required'),
+        step.routeTrigger.includes('h15-qwen3-coder:h15-api-endpoint:frontier-baseline'),
       ),
     );
-    assert.equal(steps[1].routeDecision, 'local');
-    assert.equal(steps[1].promptProgram.kind, 'flow');
-    assert.match(steps[1].promptProgram.path, /h15-api-endpoint-worker\.flow$/);
-    assert.match(steps[0].escalationReason, /H15 qwen3-coder policy route hybrid-required/);
-    assert.match(steps[0].notes, /H15 qwen3-coder policy hybrid-required/);
+    assert.equal(steps[0].routeDecision, 'frontier');
+    assert.equal(steps[0].promptProgram.kind, 'flow');
+    assert.match(steps[0].promptProgram.path, /h15-api-endpoint-worker\.flow$/);
+    assert.match(steps[0].escalationReason, /H15 qwen3-coder policy route frontier-baseline/);
+    assert.match(steps[0].notes, /H15 qwen3-coder policy frontier-baseline/);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });
   }
@@ -448,20 +449,9 @@ test('H14 qwen3-coder live profile requires only the routed lane command', () =>
   );
 });
 
-test('H15 qwen3-coder live profile requires local and frontier lane commands', () => {
+test('H15 qwen3-coder live profile requires only the frontier lane command', () => {
   assert.throws(
     () => parseArgs(['--live', '--h15-qwen-coder-task', 'api-endpoint']),
-    /--live requires command templates for selected routes: frontier, local/,
-  );
-  assert.throws(
-    () =>
-      parseArgs([
-        '--live',
-        '--h15-qwen-coder-task',
-        'api-endpoint',
-        '--live-local-command',
-        `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg("console.log('local')")} <routeFlow>`,
-      ]),
     /--live requires command templates for selected routes: frontier/,
   );
 });
@@ -550,7 +540,7 @@ test('H14 qwen3-coder live profile interpolates the routed flow path into lane c
   }
 });
 
-test('H15 qwen3-coder live profile interpolates the routed flow path into hybrid commands', () => {
+test('H15 qwen3-coder live profile interpolates the routed flow path into frontier command', () => {
   const outputRoot = tempRoot();
   const scriptRoot = tempRoot();
   try {
@@ -606,8 +596,6 @@ test('H15 qwen3-coder live profile interpolates the routed flow path into hybrid
         'api-endpoint',
         '--live-frontier-command',
         liveCommand,
-        '--live-local-command',
-        liveCommand,
         '--oracle-command',
         oracleCommand,
         '--output-root',
@@ -625,7 +613,7 @@ test('H15 qwen3-coder live profile interpolates the routed flow path into hybrid
     assert.equal(manifest.oracle.passed, true);
     assert.deepEqual(
       manifest.steps.map((step) => step.exitCode),
-      [0, 0, 0],
+      [0],
     );
     assert.ok(
       manifest.steps.every((step) =>
@@ -633,9 +621,8 @@ test('H15 qwen3-coder live profile interpolates the routed flow path into hybrid
       ),
     );
     assert.match(flowLog, /experiments\/harness-arena\/flows\/h15-api-endpoint-worker\.flow/);
-    assert.match(flowLog, /frontier-classify/);
-    assert.match(flowLog, /local-bulk/);
-    assert.match(flowLog, /frontier-review/);
+    assert.match(flowLog, /frontier-full/);
+    assert.doesNotMatch(flowLog, /local-bulk/);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });
     rmSync(scriptRoot, { recursive: true, force: true });

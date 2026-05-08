@@ -43,6 +43,7 @@ export function resolveH15QwenCoderRoute(task, policy = loadH15QwenCoderRoutingP
     policyVersion: policy.policyVersion,
     route,
     runtimeDefaults: policy.runtimeDefaults,
+    shouldRunFrontier: route.decision === 'frontier-baseline',
     shouldRunHybrid: route.decision === 'hybrid-required',
     shouldRunLocal: route.decision === 'local-promoted',
   };

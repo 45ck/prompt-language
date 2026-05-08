@@ -22,21 +22,21 @@ function routeByTask(policy, task) {
   return route;
 }
 
-test('H15 qwen3-coder policy blocks local-only promotion for endpoint work', () => {
+test('H15 qwen3-coder policy routes endpoint work to frontier baseline', () => {
   const policy = readPolicy();
-  assert.equal(policy.policyVersion, 'h15-qwen3-coder-endpoint-routing-v1');
+  assert.equal(policy.policyVersion, 'h15-qwen3-coder-endpoint-routing-v2');
 
   const route = routeByTask(policy, 'h15-api-endpoint');
-  assert.equal(route.decision, 'hybrid-required');
-  assert.equal(route.owner, 'hybrid');
-  assert.equal(route.selectedModel, null);
+  assert.equal(route.decision, 'frontier-baseline');
+  assert.equal(route.owner, 'frontier');
+  assert.equal(route.selectedModel.name, 'codex-default');
   assert.equal(route.localDraftModel.name, 'qwen3-coder:30b');
-  assert.equal(route.cleanPasses, 0);
+  assert.equal(route.cleanPasses, 1);
   assert.ok(
     route.cleanPasses < policy.evidence.minimumCleanPassesForPromotion,
     'H15 route should not meet local promotion threshold',
   );
-  assert.match(route.localStopPolicy, /first public-gate failure/);
+  assert.match(route.localStopPolicy, /validation\/test micro-flow/);
 });
 
 test('H15 qwen3-coder policy references checked-in evidence and harness files', () => {
@@ -51,20 +51,21 @@ test('H15 qwen3-coder policy references checked-in evidence and harness files', 
   assert.ok(existsSync(join(ROOT, route.oracle)), `${route.oracle} missing`);
 
   const evidence = readFileSync(evidenceDoc, 'utf8');
-  assert.match(evidence, /H15 is not promoted for local-only ownership/);
-  assert.match(evidence, /hybrid route/);
+  assert.match(evidence, /frontier-only baseline/);
+  assert.match(evidence, /use frontier-only as the current baseline route/);
   assert.match(evidence, /qwen3-coder:30b/);
 });
 
-test('H15 qwen3-coder resolver maps aliases to hybrid route decisions', () => {
+test('H15 qwen3-coder resolver maps aliases to frontier baseline decisions', () => {
   assert.equal(normalizeH15QwenCoderTask('api-endpoint'), 'h15-api-endpoint');
   assert.equal(normalizeH15QwenCoderTask('patch-contact'), 'h15-api-endpoint');
 
   const endpoint = resolveH15QwenCoderRoute('patch-contact');
   assert.equal(endpoint.shouldRunLocal, false);
-  assert.equal(endpoint.shouldRunHybrid, true);
+  assert.equal(endpoint.shouldRunHybrid, false);
+  assert.equal(endpoint.shouldRunFrontier, true);
   assert.equal(endpoint.localDraftModel.name, 'qwen3-coder:30b');
-  assert.equal(endpoint.route.owner, 'hybrid');
+  assert.equal(endpoint.route.owner, 'frontier');
   assert.match(endpoint.route.flow, /h15-api-endpoint-worker\.flow$/);
   assert.match(endpoint.route.oracle, /h15-api-endpoint-oracle\.mjs$/);
   assert.ok(endpoint.escalationTriggers.includes('validation-semantic-miss'));
@@ -82,8 +83,9 @@ test('H15 qwen3-coder resolver CLI emits JSON decisions', () => {
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
   assert.equal(parsed.shouldRunLocal, false);
-  assert.equal(parsed.shouldRunHybrid, true);
+  assert.equal(parsed.shouldRunHybrid, false);
+  assert.equal(parsed.shouldRunFrontier, true);
   assert.equal(parsed.localDraftModel.name, 'qwen3-coder:30b');
   assert.equal(parsed.route.task, 'h15-api-endpoint');
-  assert.equal(parsed.route.decision, 'hybrid-required');
+  assert.equal(parsed.route.decision, 'frontier-baseline');
 });

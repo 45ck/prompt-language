@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "policyVersion": "h15-qwen3-coder-endpoint-routing-v1",
+  "policyVersion": "h15-qwen3-coder-endpoint-routing-v2",
   "decidedAt": "2026-05-08",
   "model": {
     "provider": "ollama",
@@ -8,36 +8,41 @@
     "endpointClass": "local"
   },
   "evidence": {
-    "summaryDoc": "docs/evaluation/2026-05-08-ha-hr1-h15-live-local.md",
+    "summaryDoc": "docs/evaluation/2026-05-08-ha-hr1-h15-hybrid.md",
     "selectionDoc": "docs/evaluation/2026-05-08-local-coding-model-selection.md",
     "minimumCleanPassesForPromotion": 3
   },
   "routes": [
     {
       "task": "h15-api-endpoint",
-      "decision": "hybrid-required",
-      "owner": "hybrid",
+      "decision": "frontier-baseline",
+      "owner": "frontier",
       "localDraftModel": {
         "provider": "ollama",
         "name": "qwen3-coder:30b",
         "endpointClass": "local",
-        "selectionReason": "near-complete H15 implementations observed, but no clean manifest pass and repeated API-preservation drift"
+        "selectionReason": "near-complete H15 implementations observed, but the latest hybrid run hit local runtime resource failure and used more frontier calls than the frontier-only baseline"
       },
-      "selectedModel": null,
+      "selectedModel": {
+        "provider": "openai",
+        "name": "codex-default",
+        "endpointClass": "frontier",
+        "selectionReason": "frontier-only H15 baseline passed the private oracle with one Codex call, fewer calls and less wall time than the measured hybrid route"
+      },
       "fixture": "experiments/aider-vs-pl/fixtures/h15-api-endpoint",
       "flow": "experiments/harness-arena/flows/h15-api-endpoint-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h15-api-endpoint-oracle.mjs",
-      "cleanPasses": 0,
-      "totalRuns": 3,
+      "cleanPasses": 1,
+      "totalRuns": 6,
       "requiredGuards": [
         "patch-validation",
         "existing-api-preserved",
         "test-coverage",
-        "local-worker-summary",
+        "frontier-worker-summary",
         "private-oracle"
       ],
-      "localStopPolicy": "stop after the first public-gate failure involving validation semantics, existing API preservation, missing exports, or private oracle failure",
-      "notes": "Use local only as a bounded draft lane. Route to frontier repair/review before claiming completion."
+      "localStopPolicy": "do not rerun full H15 local-only on this hardware until a narrower validation/test micro-flow passes or local runtime settings change",
+      "notes": "Use frontier-only as the current H15 baseline. Keep local work experimental and scoped to validation-only, PATCH test-authoring, or one public-gate repair micro-flow before another full H15 attempt."
     }
   ],
   "escalationTriggers": [

@@ -13,8 +13,8 @@ The current evidence base now includes HA-HR1 route evidence:
   portfolio routes, including full TDD under the hardened PowerShell stdin route.
 - `devstral-small-2:24b` and `qwen3-opencode:30b` are fallback local
   implementers for H14 implementation-from-tests and API-preservation only.
-- H15 API endpoint work is not promoted local-only under `qwen3-coder:30b`; it is
-  routed as `hybrid-required`.
+- H15 API endpoint work is not promoted local-only under `qwen3-coder:30b`; after
+  the hybrid and frontier baselines, it is routed as `frontier-baseline`.
 
 FSCRUD R28 remains adjacent evidence only. It showed that local Ollama plus
 prompt-language scaffolding can improve artifact coverage over solo local prompting,
@@ -168,9 +168,8 @@ route to `local-only` by default for the current H14 local portfolio. H14
 route-profile live commands must reference the routed flow; use `<h14Flow>` for
 the absolute path or `<h14FlowRelative>` for the repo-relative path.
 
-For current H15 evidence, use the H15 route profile. It defaults to
-`hybrid-router`, so live execution requires both local and frontier command
-templates:
+For current H15 endpoint work, use the H15 route profile. It defaults to
+`frontier-only`, so live execution requires only the frontier command template:
 
 ```sh
 repo=/path/to/prompt-language
@@ -178,25 +177,24 @@ repo=/path/to/prompt-language
 node "$repo/experiments/harness-arena/runner.mjs" \
   --live \
   --h15-qwen-coder-task api-endpoint \
-  --live-local-command 'bash -lc "repo=/path/to/prompt-language; PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node \"$repo/bin/cli.mjs\" run --runner ollama --model qwen3-coder:30b --json --file <routeFlow>"' \
-  --live-frontier-command 'bash -lc "repo=/path/to/prompt-language; H15_ROUTE_FLOW=<routeFlow> H15_ROUTE_FLOW_RELATIVE=<routeFlowRelative> H15_STEP_ID=<stepId> H15_ROUTE_DECISION=<routeDecision> node \"$repo/bin/cli.mjs\" run --runner codex --json --file \"$repo/experiments/harness-arena/flows/frontier-reviewer.flow\""' \
-  --live-frontier-repair-command 'bash -lc "repo=/path/to/prompt-language; H15_ROUTE_FLOW=<routeFlow> H15_ROUTE_FLOW_RELATIVE=<routeFlowRelative> H15_STEP_ID=<stepId> H15_ROUTE_DECISION=<routeDecision> node \"$repo/bin/cli.mjs\" run --runner codex --json --file <routeFlow>"' \
-  --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \
-  --local-resource-snapshot-interval-ms 2000 \
-  --local-endpoint ollama-powershell-stdin \
+  --live-frontier-command 'bash -lc "repo=/path/to/prompt-language; H15_ROUTE_FLOW=<routeFlow> H15_ROUTE_FLOW_RELATIVE=<routeFlowRelative> H15_STEP_ID=<stepId> H15_ROUTE_DECISION=<routeDecision> node \"$repo/bin/cli.mjs\" run --runner codex --json --file <routeFlow>"' \
   --frontier-provider openai \
   --frontier-runner codex \
   --frontier-model codex-default \
-  --run-id HA-HR1-H15-hybrid-qwen-coder-001 \
+  --run-id HA-HR1-H15-frontier-only-codex-002 \
   --output-root .tmp/harness-arena
 ```
 
-Replace `/path/to/prompt-language` before running. The local command runs the
-task-specific H15 worker flow through Ollama. The normal frontier command runs the
-read-only reviewer flow but still references `<routeFlow>` so the harness can
-prove the route-specific flow was in scope. The repair command is separate and may
-run the H15 worker flow through Codex only after the local step fails; that turns
-the result into hybrid evidence, not local-only evidence.
+Replace `/path/to/prompt-language` before running. The frontier command runs the
+task-specific H15 worker flow through Codex and references `<routeFlow>` so the
+harness can prove the route-specific flow was in scope.
+
+Do not rerun the full H15 local or hybrid lane on this hardware just because the
+route exists historically. Local H15 work should be a separate experimental
+micro-flow first: validation-only implementation, PATCH test authoring, or one
+public-gate repair loop with a shorter timeout and sampled local resource
+snapshots. A frontier-assisted follow-up must be labeled as advisor-only,
+frontier-only, or hybrid-router in the manifest, not local-only.
 
 Use `--local-resource-snapshot-command` for live local runs when host diagnostics
 matter. The runner records before/after stdout, stderr, and metadata artifact refs

@@ -258,7 +258,9 @@ function applyH15QwenCoderRouteDefaults(options, providedFields) {
   options.h15QwenCoderRoute = resolved;
 
   if (!providedFields.has('arms')) {
-    options.arms = resolved.shouldRunLocal ? 'local-only' : 'hybrid-router';
+    if (resolved.shouldRunLocal) options.arms = 'local-only';
+    else if (resolved.shouldRunHybrid) options.arms = 'hybrid-router';
+    else options.arms = 'frontier-only';
   }
   if (!providedFields.has('fixture')) options.fixture = route.fixture;
   if (!providedFields.has('localModel')) options.localModel = resolved.localDraftModel.name;

@@ -154,18 +154,21 @@ Executable routing policy:
 
 Recommended H15 policy:
 
-- Use local only for a bounded first attempt if wall time is acceptable.
-- Escalate after the first public-gate failure involving validation semantics or
-  existing API preservation.
+- Use frontier-only as the current full-task baseline.
+- Treat local H15 as experimental until a narrower validation/test micro-flow
+  passes with claim-grade manifests.
 - Treat r16 failure as a local route stop.
 - Treat r24 as exploratory only until it passes at least `3/3` clean manifests.
+- Do not repeat the full local/hybrid lane on the same hardware unless runtime
+  settings, model selection, or the task contract changes.
 
 ## Developer Takeaway
 
 In engineering terms: the local model can write most of the code, but it is not
 yet reliable enough to own this endpoint task without review. The cost saving is
 not automatic because the failed r24 run spent almost 16 minutes and about 101k
-tokens, then still needed a frontier-level decision. The useful next design is a
-hybrid route: local drafts the endpoint, deterministic gates catch obvious
-misses, and frontier repair/review handles validation edge cases and API
-preservation.
+tokens, then still needed a frontier-level decision. After the later hybrid and
+frontier baselines, the useful next local design is not another full endpoint
+attempt. It is a smaller micro-flow that isolates validation rules, PATCH test
+coverage, or one public-gate repair loop before H15 gets another local or hybrid
+full-task run.

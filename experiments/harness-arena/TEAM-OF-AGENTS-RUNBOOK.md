@@ -335,6 +335,12 @@ at 16 GB on GPU and made partial PATCH progress, but timed out at 900s and faile
 the private oracle because validation rules and PATCH test coverage were
 incomplete.
 
+The smaller installed Gemma OpenCode fallback `gemma4-opencode:e2b` was also
+screened with the explicit 4K-context Prompt Language smoke. It loaded at
+`7.7 GB`, `75%/25% CPU/GPU`, and `4096` context, but failed PLR-007 through the
+PowerShell bridge before writing a result artifact. Do not use it as the cheap
+classifier/reviewer route on this transport.
+
 The first frontier-only baseline passed the same H15 task with one Codex call in
 328.917s. That is currently stronger than the hybrid route for H15: fewer frontier
 calls, less wall time, and no local runtime failure.

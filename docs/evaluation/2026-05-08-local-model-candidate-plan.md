@@ -73,6 +73,15 @@ records, 679 total tokens, zero retries, and provider metadata recording
 the context override is usable on the promoted model path and keeps
 `qwen3-coder:30b` as the current local full-H14 worker.
 
+Update: `gemma4-opencode:e2b` was screened as the smaller installed Gemma
+OpenCode fallback for cheap classifier/reviewer work. `ollama show` reported a
+`5.1B` `gemma4` `Q4_K_M` model. The explicit 4K-context Prompt Language smoke
+loaded the model, and `ollama ps` showed `7.7 GB`, `75%/25% CPU/GPU`, and `4096`
+context. The smoke still failed before writing a result artifact with PLR-007
+from the PowerShell bridge, and the diagnostic included
+`model=gemma4-opencode:e2b`, `timeoutMs=300000`, and `numCtx=4096`. Do not route
+this model as a cheap classifier or reviewer on the current PowerShell transport.
+
 ## Current Host State
 
 - WSL reports 31 GiB RAM with about 24 GiB available.
@@ -128,9 +137,10 @@ context and CPU/GPU offload. That is the measurement contract for this repo.
 | 3    | `qwen3-opencode:30b`   | Installed coding-tuned variant; compare against official Qwen coder           | Readiness smoke, then H14 S2                         |
 | 4    | `qwen3.6:27b`          | Loads cleanly, but timed out on first H14 API-preservation implementation run | Reviewer/classifier control only                     |
 | 5    | `gemma4-opencode:e4b`  | Failed readiness at both 32K and explicit 4K context                          | Different backend only before any classifier use     |
-| 6    | `gemma4:26b`           | Installed but less obvious coding-agent fit                                   | Smoke only unless the above fail to load             |
-| 7    | `GLM-4.7-Flash`        | Strong 30B-class paper candidate; not installed here                          | Install only after installed 30B lanes show capacity |
-| 8    | DeepSeek V4 Flash API  | Latest DeepSeek, but too large for local                                      | Frontier/cloud comparison arm only                   |
+| 6    | `gemma4-opencode:e2b`  | Loaded at explicit 4K context but failed the minimum smoke                    | Different backend only before any classifier use     |
+| 7    | `gemma4:26b`           | Installed but less obvious coding-agent fit                                   | Smoke only unless the above fail to load             |
+| 8    | `GLM-4.7-Flash`        | Strong 30B-class paper candidate; not installed here                          | Install only after installed 30B lanes show capacity |
+| 9    | DeepSeek V4 Flash API  | Latest DeepSeek, but too large for local                                      | Frontier/cloud comparison arm only                   |
 
 ## Promotion Ladder
 
@@ -195,6 +205,9 @@ These are ranked by expected value for this workstation and harness.
     Current evidence rejects this hypothesis for the current PowerShell
     transport: the 2026-05-09 `A` smoke timed out at both 32K context and
     explicit 4K context.
+    The smaller `gemma4-opencode:e2b` fallback also failed the explicit 4K
+    smoke through the same PowerShell bridge, so the Gemma OpenCode cheap-router
+    lane should pause unless a different backend changes the transport behavior.
 11. H011: `qwen3-opencode:30b` improves command following but not hidden-oracle pass rate.
 12. H012: `qwen3-opencode-big:30b` has no practical advantage over `qwen3-coder:30b`.
 13. H013: `gemma4:31b` is too heavy for reliable Windows Ollama on this host.

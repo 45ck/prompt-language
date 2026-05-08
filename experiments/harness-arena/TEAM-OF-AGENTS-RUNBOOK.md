@@ -277,9 +277,16 @@ The first H15 hybrid-router measurement is recorded in
 `qwen3-coder:30b`, then failed local inference with an Ollama runtime resource
 limit before frontier repair passed the private oracle.
 
-Do not repeat that same 30B H15 local lane on the same hardware unless the local
-runtime or model quantization changes. The next useful decision point is:
+The first smaller local screen used `devstral-small-2:24b`. It stayed resident
+at 16 GB on GPU and made partial PATCH progress, but timed out at 900s and failed
+the private oracle because validation rules and PATCH test coverage were
+incomplete.
 
-- run a smaller H15-capable local candidate through the same hybrid profile; or
+Do not repeat the same 30B H15 local lane on the same hardware unless the local
+runtime or model quantization changes. Do not promote `devstral-small-2:24b` for
+H15 local-only. The next useful decision point is:
+
 - run a frontier-only H15 baseline and compare wall time, frontier-call count, and
-  estimated cost against the hybrid run.
+  estimated cost against the hybrid run; or
+- screen another smaller code-focused model with a narrower validation/test
+  micro-flow before another full H15 local-only attempt.

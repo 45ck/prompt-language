@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,6 +9,8 @@ import {
   parseActionEnvelope,
   simplifyPromptLanguageEnvelope,
 } from './ollama-prompt-turn-runner.js';
+
+// cspell:ignore hidethinking nowordwrap
 
 describe('parseActionEnvelope', () => {
   it('parses a strict json action envelope', () => {
@@ -406,6 +408,89 @@ describe('OllamaPromptTurnRunner', () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
     await expect(readFile(join(tempDir, 'hello.txt'), 'utf8')).resolves.toBe('OK');
+  });
+
+  it('uses explicit CLI transport without requiring the Ollama HTTP endpoint', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    const fakeCliPath = join(tempDir, 'fake-ollama-cli.mjs');
+    const argLogPath = join(tempDir, 'fake-ollama-args.jsonl');
+    await writeFile(
+      fakeCliPath,
+      [
+        '#!/usr/bin/env node',
+        "import { appendFileSync } from 'node:fs';",
+        'appendFileSync(process.env.FAKE_OLLAMA_ARGS_PATH, `${JSON.stringify(process.argv.slice(2))}\\n`);',
+        "process.stdout.write('\\u001b[?25l\\r\\u001b[K');",
+        'process.stdout.write(\'{"actions":[{"type":"write_file","path":"hello.txt","content":"CLI OK"},{"type":"done","message":"cli created"}]}\');',
+      ].join('\n'),
+      'utf8',
+    );
+    await chmod(fakeCliPath, 0o755);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TRANSPORT', 'cli');
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_CLI_PATH', fakeCliPath);
+    vi.stubEnv('FAKE_OLLAMA_ARGS_PATH', argLogPath);
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-coder:30b',
+      prompt: 'Create a file named hello.txt containing exactly CLI OK',
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'cli created',
+      madeProgress: true,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    await expect(readFile(join(tempDir, 'hello.txt'), 'utf8')).resolves.toBe('CLI OK');
+    const args = JSON.parse((await readFile(argLogPath, 'utf8')).trim()) as string[];
+    expect(args.slice(0, 4)).toEqual(['run', '--hidethinking', '--nowordwrap', '--keepalive']);
+    expect(args).toContain('qwen3-coder:30b');
+    expect(args.at(-1)).toContain('SYSTEM:');
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
+    ).resolves.toContain('"transport":"cli"');
+  });
+
+  it('uses explicit PowerShell transport for Windows-local Ollama HTTP', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    const fakePowerShellPath = join(tempDir, 'fake-powershell.mjs');
+    const argLogPath = join(tempDir, 'fake-powershell-args.jsonl');
+    await writeFile(
+      fakePowerShellPath,
+      [
+        '#!/usr/bin/env node',
+        "import { appendFileSync } from 'node:fs';",
+        'appendFileSync(process.env.FAKE_POWERSHELL_ARGS_PATH, `${JSON.stringify(process.argv.slice(2))}\\n`);',
+        'process.stdout.write(\'{"model":"qwen3-coder:30b","message":{"content":"{\\\\\\"actions\\\\\\":[{\\\\\\"type\\\\\\":\\\\\\"done\\\\\\",\\\\\\"message\\\\\\":\\\\\\"powershell ok\\\\\\"}]}"},"prompt_eval_count":3,"eval_count":4}\');',
+      ].join('\n'),
+      'utf8',
+    );
+    await chmod(fakePowerShellPath, 0o755);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TRANSPORT', 'powershell');
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_POWERSHELL_PATH', fakePowerShellPath);
+    vi.stubEnv('FAKE_POWERSHELL_ARGS_PATH', argLogPath);
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-coder:30b',
+      prompt: 'The code is powershell-transport-smoke. Acknowledge it.',
+    });
+
+    expect(result).toEqual({
+      exitCode: 0,
+      assistantText: 'powershell ok',
+      madeProgress: true,
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    const args = JSON.parse((await readFile(argLogPath, 'utf8')).trim()) as string[];
+    expect(args.slice(0, 2)).toEqual(['-NoProfile', '-Command']);
+    expect(args.at(-1)).toContain('Invoke-RestMethod');
+    await expect(
+      readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
+    ).resolves.toContain('"transport":"powershell"');
   });
 
   it('retries Ollama cold-start model runner crashes', async () => {

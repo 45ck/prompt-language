@@ -67,6 +67,17 @@ $env:PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS = '16'
 node bin/cli.mjs run --runner ollama --model qwen3-opencode-big:30b --file experiments/harness-arena/flows/local-bulk-worker.flow
 ```
 
+When WSL cannot reach the Windows Ollama HTTP listener, use the explicit
+PowerShell transport. It asks Windows PowerShell to call the Windows-local Ollama
+HTTP API and still records provider telemetry with `metadata.transport=powershell`:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
+PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=600000 \
+PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=16 \
+node bin/cli.mjs run --runner ollama --model qwen3-coder:30b --file experiments/harness-arena/flows/local-bulk-worker.flow
+```
+
 Expected output artifact:
 
 - `local-worker-summary.md`
@@ -132,10 +143,10 @@ policy version, and default arm from `h14-local-routing-policy.v1.json`:
 node experiments/harness-arena/runner.mjs \
   --live \
   --h14-local-subrole api-preservation \
-  --live-local-command 'bash -lc "PROMPT_LANGUAGE_OLLAMA_BASE_URL=$PROMPT_LANGUAGE_OLLAMA_BASE_URL PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node /path/to/prompt-language/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>"' \
-  --local-resource-snapshot-command 'bash -lc "OLLAMA_HOST=<localEndpoint> ollama ps"' \
+  --live-local-command 'bash -lc "PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node /path/to/prompt-language/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>"' \
+  --local-resource-snapshot-command 'ollama ps' \
   --local-resource-snapshot-interval-ms 2000 \
-  --local-endpoint "$PROMPT_LANGUAGE_OLLAMA_BASE_URL" \
+  --local-endpoint "ollama-cli" \
   --run-id HA-HR1-H14-api-preservation-routed-001 \
   --output-root .tmp/harness-arena
 ```

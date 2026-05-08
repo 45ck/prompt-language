@@ -25,6 +25,10 @@ evidence:
 - `--live` executes operator-supplied lane command templates. The runner records
   requested/actual model, provider, endpoint, command artifacts, timeout metadata,
   and private oracle artifacts in a claim-grade manifest.
+- Local Ollama lane commands may set
+  `PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell` when WSL cannot reach the Windows
+  Ollama HTTP listener. This keeps the normal HTTP transport as the default while
+  allowing Windows PowerShell to call the Windows-local Ollama API.
 - `--h14-local-subrole` applies the checked-in H14 local-model portfolio routing
   policy. Promoted subroles default to `local-only` with the selected local model;
   non-promoted subroles default to `frontier-only`, with the matching fixture,

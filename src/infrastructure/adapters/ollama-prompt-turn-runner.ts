@@ -10,7 +10,7 @@ import type {
 import { selectCompactRenderModeForEnvelope } from '../../application/select-compact-render-mode.js';
 import { appendProviderTelemetry, normalizeOllamaTelemetry } from './provider-telemetry.js';
 
-// cspell:ignore fscrud timeouterror
+// cspell:ignore fscrud hidethinking NOHISTORY nowordwrap timeouterror
 
 const execFileAsync = promisify(execFile);
 
@@ -19,17 +19,24 @@ const OLLAMA_TIMEOUT_MS_ENV = 'PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS';
 const OLLAMA_RETRY_ATTEMPTS_ENV = 'PROMPT_LANGUAGE_OLLAMA_RETRY_ATTEMPTS';
 const OLLAMA_RETRY_DELAY_MS_ENV = 'PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS';
 const OLLAMA_ACTION_ROUNDS_ENV = 'PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS';
+const OLLAMA_TRANSPORT_ENV = 'PROMPT_LANGUAGE_OLLAMA_TRANSPORT';
+const OLLAMA_CLI_PATH_ENV = 'PROMPT_LANGUAGE_OLLAMA_CLI_PATH';
+const OLLAMA_POWERSHELL_PATH_ENV = 'PROMPT_LANGUAGE_OLLAMA_POWERSHELL_PATH';
 const DEFAULT_OLLAMA_BASE_URL = 'http://127.0.0.1:11434';
 const DEFAULT_OLLAMA_TIMEOUT_MS = 300_000;
 const DEFAULT_OLLAMA_RETRY_ATTEMPTS = 3;
 const DEFAULT_OLLAMA_RETRY_DELAY_MS = 1_000;
 const DEFAULT_ACTION_ROUNDS = 8;
+const DEFAULT_OLLAMA_CLI_PATH = 'ollama';
+const DEFAULT_POWERSHELL_PATH = 'powershell.exe';
 const MAX_LIST_ENTRIES = 200;
 const MAX_FILE_BYTES = 100_000;
 const MAX_COMMAND_OUTPUT = 12_000;
+const MAX_CLI_PROMPT_BYTES = 30_000;
 const TRACE_PATH = '.prompt-language/ollama-turns.jsonl';
 
 type OllamaMessageRole = 'system' | 'user' | 'assistant';
+type OllamaTransport = 'http' | 'cli' | 'powershell';
 
 interface OllamaMessage {
   readonly role: OllamaMessageRole;
@@ -57,6 +64,7 @@ interface OllamaChatTurn {
   readonly content: string;
   readonly payload: OllamaChatResponse;
   readonly retryCount: number;
+  readonly transport: OllamaTransport;
 }
 
 interface ActionEnvelope {
@@ -124,6 +132,20 @@ function getOllamaRetryDelayMs(): number {
 
 function getOllamaActionRounds(): number {
   return readPositiveIntEnv(OLLAMA_ACTION_ROUNDS_ENV) ?? DEFAULT_ACTION_ROUNDS;
+}
+
+function getOllamaTransport(): OllamaTransport {
+  const transport = readEnv(OLLAMA_TRANSPORT_ENV);
+  if (transport === 'cli' || transport === 'powershell') return transport;
+  return 'http';
+}
+
+function getOllamaCliPath(): string {
+  return readEnv(OLLAMA_CLI_PATH_ENV) ?? DEFAULT_OLLAMA_CLI_PATH;
+}
+
+function getPowerShellPath(): string {
+  return readEnv(OLLAMA_POWERSHELL_PATH_ENV) ?? DEFAULT_POWERSHELL_PATH;
 }
 
 function createSystemPrompt(): string {
@@ -512,6 +534,148 @@ function isTransientOllamaError(error: unknown): boolean {
   );
 }
 
+function renderCliPrompt(messages: readonly OllamaMessage[]): string {
+  return messages
+    .map((message) => `${message.role.toUpperCase()}:\n${message.content}`)
+    .join('\n\n');
+}
+
+function cleanOllamaCliOutput(text: string): string {
+  const escape = String.fromCharCode(27);
+  const bell = String.fromCharCode(7);
+  return text
+    .replace(new RegExp(`${escape}\\][\\s\\S]*?(?:${bell}|${escape}\\\\)`, 'g'), '')
+    .replace(new RegExp(`${escape}\\[[0-?]*[ -/]*[@-~]`, 'g'), '')
+    .replace(/[⠁⠃⠇⠋⠙⠸⠴⠦⠧⠏⠹⠼]/g, '')
+    .replace(/\r/g, '')
+    .trim();
+}
+
+function quoteShellArg(value: string): string {
+  return `'${value.replaceAll("'", "'\\''")}'`;
+}
+
+async function runOllamaCli(args: readonly string[], timeoutMs: number): Promise<string> {
+  const options = {
+    encoding: 'utf8' as const,
+    timeout: timeoutMs,
+    maxBuffer: 2 * 1024 * 1024,
+    env: {
+      ...process.env,
+      OLLAMA_NOHISTORY: '1',
+    },
+    windowsHide: true,
+  };
+
+  if (process.platform === 'win32') {
+    const result = await execFileAsync(getOllamaCliPath(), args, options);
+    return String(result.stdout ?? '');
+  }
+
+  const command = [quoteShellArg(getOllamaCliPath()), ...args.map(quoteShellArg)].join(' ');
+  const result = await execFileAsync('sh', ['-lc', command], options);
+  return String(result.stdout ?? '');
+}
+
+async function callOllamaCliOnce(
+  model: string,
+  messages: readonly OllamaMessage[],
+  timeoutMs: number,
+): Promise<OllamaChatResponse> {
+  const prompt = renderCliPrompt(messages);
+  if (Buffer.byteLength(prompt, 'utf8') > MAX_CLI_PROMPT_BYTES) {
+    throw new Error(
+      `Ollama CLI prompt exceeds ${MAX_CLI_PROMPT_BYTES} bytes; use HTTP transport for larger multi-turn runs.`,
+    );
+  }
+
+  const startedAt = Date.now();
+  try {
+    const stdout = await runOllamaCli(
+      ['run', '--hidethinking', '--nowordwrap', '--keepalive', '30m', model, prompt],
+      timeoutMs,
+    );
+    const content = cleanOllamaCliOutput(stdout);
+    if (!content) {
+      throw new Error('Ollama CLI returned an empty response.');
+    }
+    return {
+      model,
+      message: { content },
+      total_duration: (Date.now() - startedAt) * 1_000_000,
+    };
+  } catch (error) {
+    const failure = error as {
+      stdout?: string | Buffer | undefined;
+      stderr?: string | Buffer | undefined;
+      signal?: string | undefined;
+      code?: number | string | undefined;
+    };
+    const stdout = cleanOllamaCliOutput(String(failure.stdout ?? ''));
+    const stderr = cleanOllamaCliOutput(String(failure.stderr ?? ''));
+    const detail = [stdout, stderr].filter(Boolean).join('\n').slice(0, 500);
+    const suffix = detail ? `: ${detail}` : '';
+    if (failure.signal === 'SIGTERM') {
+      throw new Error(`Ollama CLI timed out after ${timeoutMs}ms${suffix}`);
+    }
+    throw new Error(`Ollama CLI failed${suffix}`);
+  }
+}
+
+async function callOllamaPowerShellOnce(
+  model: string,
+  messages: readonly OllamaMessage[],
+  timeoutMs: number,
+): Promise<OllamaChatResponse> {
+  const payload = JSON.stringify({
+    model,
+    stream: false,
+    messages,
+    options: {
+      temperature: 0,
+    },
+  });
+  const encodedPayload = Buffer.from(payload, 'utf8').toString('base64');
+  const endpoint = `${getOllamaBaseUrl()}/api/chat`;
+  const timeoutSeconds = Math.max(1, Math.ceil(timeoutMs / 1_000));
+  const script = [
+    "$ErrorActionPreference='Stop'",
+    `$payload=[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${encodedPayload}'))`,
+    `$response=Invoke-RestMethod -Uri '${endpoint.replaceAll("'", "''")}' -Method Post -Body $payload -ContentType 'application/json' -TimeoutSec ${timeoutSeconds}`,
+    '$response | ConvertTo-Json -Depth 20 -Compress',
+  ].join('; ');
+
+  try {
+    const result = await execFileAsync(getPowerShellPath(), ['-NoProfile', '-Command', script], {
+      encoding: 'utf8',
+      timeout: timeoutMs + 5_000,
+      maxBuffer: 2 * 1024 * 1024,
+      windowsHide: true,
+    });
+    const rawBody = String(result.stdout ?? '').trim();
+    const payload = JSON.parse(rawBody) as OllamaChatResponse;
+    const content = payload.message?.content?.trim();
+    if (!content) {
+      throw new Error('Ollama PowerShell bridge returned an empty response.');
+    }
+    return payload;
+  } catch (error) {
+    const failure = error as {
+      stdout?: string | Buffer | undefined;
+      stderr?: string | Buffer | undefined;
+      signal?: string | undefined;
+    };
+    const stdout = cleanOllamaCliOutput(String(failure.stdout ?? ''));
+    const stderr = cleanOllamaCliOutput(String(failure.stderr ?? ''));
+    const detail = [stdout, stderr].filter(Boolean).join('\n').slice(0, 500);
+    const suffix = detail ? `: ${detail}` : '';
+    if (failure.signal === 'SIGTERM') {
+      throw new Error(`Ollama PowerShell bridge timed out after ${timeoutMs}ms${suffix}`);
+    }
+    throw new Error(`Ollama PowerShell bridge failed${suffix}`);
+  }
+}
+
 async function callOllamaChatOnce(
   model: string,
   messages: readonly OllamaMessage[],
@@ -575,17 +739,24 @@ async function callOllamaChat(
   messages: readonly OllamaMessage[],
   timeoutMs: number,
 ): Promise<OllamaChatTurn> {
+  const transport = getOllamaTransport();
   const maxAttempts = getOllamaRetryAttempts();
   const retryDelayMs = getOllamaRetryDelayMs();
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const payload = await callOllamaChatOnce(model, messages, timeoutMs);
+      const payload =
+        transport === 'cli'
+          ? await callOllamaCliOnce(model, messages, timeoutMs)
+          : transport === 'powershell'
+            ? await callOllamaPowerShellOnce(model, messages, timeoutMs)
+            : await callOllamaChatOnce(model, messages, timeoutMs);
       return {
         content: payload.message?.content?.trim() ?? '',
         payload,
         retryCount: attempt - 1,
+        transport,
       };
     } catch (error) {
       lastError = error;
@@ -615,6 +786,7 @@ async function callOllamaChatWithFallback(
   actualModel: string;
   payload: OllamaChatResponse;
   retryCount: number;
+  transport: OllamaTransport;
 }> {
   try {
     const turn = await callOllamaChat(model, messages, timeoutMs);
@@ -623,6 +795,7 @@ async function callOllamaChatWithFallback(
       actualModel: model,
       payload: turn.payload,
       retryCount: turn.retryCount,
+      transport: turn.transport,
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
@@ -638,6 +811,7 @@ async function callOllamaChatWithFallback(
           actualModel: fallbackModel,
           payload: turn.payload,
           retryCount: turn.retryCount,
+          transport: turn.transport,
         };
       } catch (fallbackError) {
         const fallbackMessage =
@@ -685,6 +859,7 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
           actualModel,
           retryCount: response.retryCount,
           estimatedCostUsd: null,
+          metadata: { transport: response.transport },
           ...telemetry,
         });
         messages.push({ role: 'assistant', content: raw });

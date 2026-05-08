@@ -520,6 +520,7 @@ test('live mode executes operator-supplied lane commands and private oracle arti
   try {
     mkdirSync(scriptRoot, { recursive: true });
     const liveScript = join(scriptRoot, 'live-step.mjs');
+    const snapshotScript = join(scriptRoot, 'resource-snapshot.mjs');
     const oracleScript = join(scriptRoot, 'oracle.mjs');
     writeFileSync(
       liveScript,
@@ -534,6 +535,14 @@ test('live mode executes operator-supplied lane commands and private oracle arti
         '  taskId,',
         '}));',
         'console.log(`live:${arm}:${stepId}:${routeDecision}:${taskId}`);',
+      ].join('\n'),
+    );
+    writeFileSync(
+      snapshotScript,
+      [
+        'const [, , label, model, endpoint] = process.argv;',
+        'console.log(`resource:${label}:${model}:${endpoint}`);',
+        "console.error('resource snapshot stderr');",
       ].join('\n'),
     );
     writeFileSync(
@@ -562,6 +571,13 @@ test('live mode executes operator-supplied lane commands and private oracle arti
     const oracleCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
       oracleScript,
     )} --workspace <workspace>`;
+    const snapshotCommand = [
+      quoteCommandArg(process.execPath),
+      quoteCommandArg(snapshotScript),
+      '<label>',
+      '<localModel>',
+      '<localEndpoint>',
+    ].join(' ');
     const result = runHarnessArena(
       parseArgs([
         '--live',
@@ -575,6 +591,8 @@ test('live mode executes operator-supplied lane commands and private oracle arti
         'qwen3:8b',
         '--local-endpoint',
         'http://127.0.0.1:11434',
+        '--local-resource-snapshot-command',
+        snapshotCommand,
         '--output-root',
         outputRoot,
         '--run-id',
@@ -596,7 +614,21 @@ test('live mode executes operator-supplied lane commands and private oracle arti
     assert.equal(step.requestedModel, 'qwen3:8b');
     assert.equal(step.endpoint, 'http://127.0.0.1:11434');
     assert.equal(step.timedOut, false);
+    assert.equal(step.resourceSnapshotArtifactRefs.length, 6);
+    assert.ok(
+      step.resourceSnapshotArtifactRefs.every((artifactRef) =>
+        step.outputArtifactRefs.includes(artifactRef),
+      ),
+    );
     assert.match(readArmArtifact(armRun, step.stdoutArtifactRef), /live:local-only:local-bulk/);
+    assert.match(
+      readArmArtifact(armRun, step.resourceSnapshotArtifactRefs[0]),
+      /resource:before:qwen3:8b:http:\/\/127\.0\.0\.1:11434/,
+    );
+    assert.match(
+      readArmArtifact(armRun, step.resourceSnapshotArtifactRefs[3]),
+      /resource:after:qwen3:8b:http:\/\/127\.0\.0\.1:11434/,
+    );
     assert.match(readArmArtifact(armRun, manifest.oracle.stdoutArtifactRef), /live oracle pass/);
     assert.equal(existsSync(join(armRun.workspace, 'HARNESS-ARENA-LIVE.md')), true);
   } finally {

@@ -309,6 +309,13 @@
               "minLength": 1
             }
           },
+          "resourceSnapshotArtifactRefs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
           "stdoutArtifactRef": {
             "type": "string",
             "minLength": 1

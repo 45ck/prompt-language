@@ -50,6 +50,7 @@ const ARG_FIELDS = {
   '--local-endpoint': 'localEndpoint',
   '--local-model': 'localModel',
   '--local-provider': 'localProvider',
+  '--local-resource-snapshot-command': 'localResourceSnapshotCommand',
   '--local-runner': 'localRunner',
   '--oracle-command': 'oracleCommand',
   '--oracle-timeout-ms': 'oracleTimeoutMs',
@@ -95,6 +96,7 @@ export function parseArgs(argv) {
     localEndpoint: process.env.PROMPT_LANGUAGE_OLLAMA_BASE_URL ?? null,
     localModel: process.env.EVAL_MODEL?.replace(/^ollama\//, '') ?? 'qwen3:8b',
     localProvider: 'ollama',
+    localResourceSnapshotCommand: null,
     localRunner: 'ollama',
     mode: 'dry-run',
     oracleCommand: DEFAULT_ORACLE_COMMAND,
@@ -420,7 +422,20 @@ function executeLiveSteps(options, armDir, arm, workspace) {
 function executeLiveStep(options, armDir, arm, workspace, [stepId, routeDecision], index) {
   const command = buildLiveStepCommand(options, arm, stepId, routeDecision, index, workspace);
   const artifactDir = join(armDir, 'artifacts', 'steps', stepArtifactDirectory(index, stepId));
-  return executeCommandPhase({
+  const resourceSnapshotArtifactRefs = [];
+
+  if (shouldCaptureLocalResourceSnapshot(options, routeDecision)) {
+    resourceSnapshotArtifactRefs.push(
+      ...executeLocalResourceSnapshot(options, armDir, workspace, {
+        arm,
+        attempt: String(index + 1),
+        label: 'before',
+        stepId,
+      }),
+    );
+  }
+
+  const execution = executeCommandPhase({
     artifactDir,
     armDir,
     command,
@@ -428,6 +443,51 @@ function executeLiveStep(options, armDir, arm, workspace, [stepId, routeDecision
     phase: 'step',
     timeoutMs: options.stepTimeoutMs,
   });
+
+  if (shouldCaptureLocalResourceSnapshot(options, routeDecision)) {
+    resourceSnapshotArtifactRefs.push(
+      ...executeLocalResourceSnapshot(options, armDir, workspace, {
+        arm,
+        attempt: String(index + 1),
+        label: 'after',
+        stepId,
+      }),
+    );
+  }
+
+  return { ...execution, resourceSnapshotArtifactRefs };
+}
+
+function shouldCaptureLocalResourceSnapshot(options, routeDecision) {
+  return (
+    options.mode === 'live' &&
+    routeDecision === 'local' &&
+    typeof options.localResourceSnapshotCommand === 'string' &&
+    options.localResourceSnapshotCommand.trim().length > 0
+  );
+}
+
+function executeLocalResourceSnapshot(options, armDir, workspace, { arm, attempt, label, stepId }) {
+  const artifactDir = join(armDir, 'artifacts', 'steps', `${attempt}-${stepId}-resources-${label}`);
+  const command = commandFromTemplate(options.localResourceSnapshotCommand, {
+    arm,
+    attempt,
+    label,
+    localEndpoint: options.localEndpoint,
+    localModel: options.localModel,
+    stepId,
+    taskId: options.taskId,
+    workspace,
+  });
+  const execution = executeCommandPhase({
+    artifactDir,
+    armDir,
+    command,
+    cwd: workspace,
+    phase: `resource-${label}`,
+    timeoutMs: Math.min(options.stepTimeoutMs, 30_000),
+  });
+  return [execution.stdoutArtifactRef, execution.stderrArtifactRef, execution.metadataArtifactRef];
 }
 
 function shouldRunHybridRepair(arm, [stepId], execution) {
@@ -777,7 +837,12 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
         sha256: sha256(`${options.policyVersion}:${options.mode}:${stepId}`),
       };
   const outputArtifactRefs = execution
-    ? [execution.stdoutArtifactRef, execution.stderrArtifactRef, execution.metadataArtifactRef]
+    ? [
+        execution.stdoutArtifactRef,
+        execution.stderrArtifactRef,
+        execution.metadataArtifactRef,
+        ...(execution.resourceSnapshotArtifactRefs ?? []),
+      ]
     : ['arm-plan.json'];
 
   return {
@@ -818,6 +883,7 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     frontierCallKind: frontierCallKindForStep(stepId),
     inputArtifactRefs: h14Route ? ['workspace/TASK.md', h14Route.flow] : ['workspace/TASK.md'],
     outputArtifactRefs,
+    resourceSnapshotArtifactRefs: execution?.resourceSnapshotArtifactRefs ?? [],
     diffSummary:
       options.mode === 'fake-live'
         ? 'Deterministic local command executed; no LLM edits were attempted.'
@@ -1040,7 +1106,7 @@ function byName(left, right) {
 }
 
 export function usage() {
-  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--output-root dir] [--run-id id]\n`;
+  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command]\n`;
 }
 
 function main(argv = process.argv.slice(2)) {

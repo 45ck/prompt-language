@@ -65,6 +65,7 @@
       "frontierCallKind": "none",
       "inputArtifactRefs": ["flows/local-bulk-worker.flow"],
       "outputArtifactRefs": ["artifacts/local-bulk-summary.json"],
+      "resourceSnapshotArtifactRefs": [],
       "diffSummary": "Synthetic manifest only; no workspace diff.",
       "reviewDefects": [],
       "cwd": "workspace/h14",

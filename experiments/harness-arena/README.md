@@ -32,6 +32,8 @@ evidence:
 - H14 route-profile live commands must reference the routed flow. Use
   `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative
   flow path in `--live-local-command` / `--live-frontier-command`.
+- `--local-resource-snapshot-command` optionally records before/after local-step
+  resource probes, such as `ollama ps`, as manifest artifact refs.
 - Fake-live step metadata records `timeoutMs`, `timedOut`, `exitCode`, and
   `wallSeconds` in both artifacts and the manifest.
 - The oracle runs only after fake-live or live steps, from `private/oracle/`, with

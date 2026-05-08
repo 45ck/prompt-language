@@ -66,6 +66,16 @@
       "inputArtifactRefs": ["flows/local-bulk-worker.flow"],
       "outputArtifactRefs": ["artifacts/local-bulk-summary.json"],
       "resourceSnapshotArtifactRefs": [],
+      "resourceSnapshotSummary": {
+        "totalArtifactRefCount": 0,
+        "beforeAfterArtifactRefCount": 0,
+        "sampleArtifactRefCount": 0,
+        "sampleCount": 0,
+        "sampleNonzeroExitCount": 0,
+        "sampleMetadataParseFailureCount": 0,
+        "sampleStdoutNonEmptyCount": 0,
+        "sampleStderrNonEmptyCount": 0
+      },
       "diffSummary": "Synthetic manifest only; no workspace diff.",
       "reviewDefects": [],
       "cwd": "workspace/h14",

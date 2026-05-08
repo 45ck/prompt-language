@@ -618,6 +618,26 @@ test('live mode executes operator-supplied lane commands and private oracle arti
     assert.equal(step.endpoint, 'http://127.0.0.1:11434');
     assert.equal(step.timedOut, false);
     assert.ok(step.resourceSnapshotArtifactRefs.length >= 9);
+    assert.equal(
+      step.resourceSnapshotSummary.totalArtifactRefCount,
+      step.resourceSnapshotArtifactRefs.length,
+    );
+    assert.equal(step.resourceSnapshotSummary.beforeAfterArtifactRefCount, 6);
+    assert.equal(
+      step.resourceSnapshotSummary.sampleArtifactRefCount,
+      step.resourceSnapshotArtifactRefs.length - 6,
+    );
+    assert.ok(step.resourceSnapshotSummary.sampleCount >= 1);
+    assert.equal(step.resourceSnapshotSummary.sampleNonzeroExitCount, 0);
+    assert.equal(step.resourceSnapshotSummary.sampleMetadataParseFailureCount, 0);
+    assert.ok(
+      step.resourceSnapshotSummary.sampleStdoutNonEmptyCount >=
+        step.resourceSnapshotSummary.sampleCount,
+    );
+    assert.ok(
+      step.resourceSnapshotSummary.sampleStderrNonEmptyCount >=
+        step.resourceSnapshotSummary.sampleCount,
+    );
     assert.ok(
       step.resourceSnapshotArtifactRefs.every((artifactRef) =>
         step.outputArtifactRefs.includes(artifactRef),

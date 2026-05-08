@@ -114,7 +114,8 @@ Continue live measurement support before running larger pilots:
 5. Use the harness `--local-resource-snapshot-command` option for local live
    runs, and add `--local-resource-snapshot-interval-ms` when residency can be
    missed by before/after snapshots; `ollama ps` proves model residency, not
-   sustained utilization.
+   sustained utilization. Read `resourceSnapshotSummary` first to confirm sample
+   count, probe failures, and whether sampled stdout/stderr carried any output.
 6. Keep `local-only`, `frontier-only`, `advisor-only`, and `hybrid-router` claims
    separate.
 

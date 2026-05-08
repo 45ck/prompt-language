@@ -35,7 +35,9 @@ evidence:
 - `--local-resource-snapshot-command` optionally records before/after local-step
   resource probes, such as `ollama ps`, as manifest artifact refs. Add
   `--local-resource-snapshot-interval-ms` to sample the same probe while a local
-  live step is running.
+  live step is running. Each step also records `resourceSnapshotSummary` counts
+  so reviewers can see sample volume, probe failures, and non-empty sample output
+  without manually opening every artifact.
 - Fake-live step metadata records `timeoutMs`, `timedOut`, `exitCode`, and
   `wallSeconds` in both artifacts and the manifest.
 - The oracle runs only after fake-live or live steps, from `private/oracle/`, with

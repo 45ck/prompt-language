@@ -471,7 +471,11 @@ function executeLiveStep(options, armDir, arm, workspace, [stepId, routeDecision
     );
   }
 
-  return { ...execution, resourceSnapshotArtifactRefs };
+  return {
+    ...execution,
+    resourceSnapshotArtifactRefs,
+    resourceSnapshotSummary: summarizeResourceSnapshots(armDir, resourceSnapshotArtifactRefs),
+  };
 }
 
 function shouldCaptureLocalResourceSnapshot(options, routeDecision) {
@@ -556,6 +560,56 @@ function collectResourceSampleArtifactRefs(armDir, artifactDir) {
     .filter((file) => file.endsWith('.txt') || file.endsWith('.json'))
     .sort()
     .map((file) => artifactRef(armDir, join(sampleDir, file)));
+}
+
+function summarizeResourceSnapshots(armDir, artifactRefs) {
+  const sampleArtifactRefs = artifactRefs.filter((artifactRef) =>
+    artifactRef.includes('/resource-samples/'),
+  );
+  const sampleMetadataRefs = sampleArtifactRefs.filter((artifactRef) =>
+    artifactRef.endsWith('-metadata.json'),
+  );
+  let sampleNonzeroExitCount = 0;
+  let sampleMetadataParseFailureCount = 0;
+
+  for (const artifactRef of sampleMetadataRefs) {
+    try {
+      const metadata = JSON.parse(readFileSync(join(armDir, artifactRef), 'utf8'));
+      if (metadata.exitCode !== 0) sampleNonzeroExitCount += 1;
+    } catch {
+      sampleMetadataParseFailureCount += 1;
+    }
+  }
+
+  return {
+    totalArtifactRefCount: artifactRefs.length,
+    beforeAfterArtifactRefCount: artifactRefs.length - sampleArtifactRefs.length,
+    sampleArtifactRefCount: sampleArtifactRefs.length,
+    sampleCount: sampleMetadataRefs.length,
+    sampleNonzeroExitCount,
+    sampleMetadataParseFailureCount,
+    sampleStdoutNonEmptyCount: countNonEmptySampleArtifacts(
+      armDir,
+      sampleArtifactRefs,
+      '-stdout.txt',
+    ),
+    sampleStderrNonEmptyCount: countNonEmptySampleArtifacts(
+      armDir,
+      sampleArtifactRefs,
+      '-stderr.txt',
+    ),
+  };
+}
+
+function countNonEmptySampleArtifacts(armDir, artifactRefs, suffix) {
+  return artifactRefs.filter((artifactRef) => {
+    if (!artifactRef.endsWith(suffix)) return false;
+    try {
+      return statSync(join(armDir, artifactRef)).size > 0;
+    } catch {
+      return false;
+    }
+  }).length;
 }
 
 function executeLocalResourceSnapshot(options, armDir, workspace, { arm, attempt, label, stepId }) {
@@ -979,6 +1033,8 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     inputArtifactRefs: h14Route ? ['workspace/TASK.md', h14Route.flow] : ['workspace/TASK.md'],
     outputArtifactRefs,
     resourceSnapshotArtifactRefs: execution?.resourceSnapshotArtifactRefs ?? [],
+    resourceSnapshotSummary:
+      execution?.resourceSnapshotSummary ?? summarizeResourceSnapshots('', []),
     diffSummary:
       options.mode === 'fake-live'
         ? 'Deterministic local command executed; no LLM edits were attempted.'

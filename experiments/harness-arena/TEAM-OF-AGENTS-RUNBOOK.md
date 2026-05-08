@@ -152,7 +152,10 @@ matter. The runner records before/after stdout, stderr, and metadata artifact re
 on each local step so `ollama ps`, GPU probes, or OS memory probes stay attached
 to the manifest without changing the model-visible workspace. Add
 `--local-resource-snapshot-interval-ms` when residency or utilization needs
-during-step samples instead of edge-only snapshots.
+during-step samples instead of edge-only snapshots. Check
+`resourceSnapshotSummary` before inspecting raw artifacts; it reports how many
+sample ticks were captured, how many probe commands failed, and whether sampled
+stdout or stderr had output.
 
 ## Frontier Review Lane
 

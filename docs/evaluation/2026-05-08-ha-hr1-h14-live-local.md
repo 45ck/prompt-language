@@ -1154,3 +1154,71 @@ Stop this replicate set at `0/1` under the early cutoff policy. Running two more
 900s API-preservation reps is lower value than screening the next installed
 coding-tuned candidate. Keep `qwen3.6:27b` as a possible reviewer/classifier
 control, not an implementation-owner candidate.
+
+## Qwen3 OpenCode 30B Implementation Screen
+
+After `qwen3-opencode:30b` passed readiness with sampled `/api/ps` residency, it
+was screened on the H14 implementation-from-tests subrole. This tests whether the
+coding-tuned OpenCode variant can act as a bounded local implementer when public
+tests already exist.
+
+The temporary Windows Ollama listener was exposed to WSL at
+`http://172.17.32.1:11435` with `OLLAMA_CONTEXT_LENGTH=8192`,
+`OLLAMA_NUM_PARALLEL=1`, and `OLLAMA_FLASH_ATTENTION=1`. The model row reported
+by `/api/ps` was:
+
+```json
+{
+  "name": "qwen3-opencode:30b",
+  "model": "qwen3-opencode:30b",
+  "size": 19215513600,
+  "digest": "f92f0cf2e8676d8dceb9e1b48b90d6ecc833307e8e72a4dd2a9599810a253010",
+  "details": {
+    "family": "qwen3moe",
+    "parameter_size": "30.5B",
+    "quantization_level": "Q4_K_M"
+  },
+  "size_vram": 15585304576,
+  "context_length": 8192
+}
+```
+
+The implementation-from-tests screen used:
+
+- fixture: `experiments/harness-arena/fixtures/h14-impl-from-tests`
+- flow: `experiments/harness-arena/flows/h14-impl-from-tests-worker.flow`
+- oracle: `experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs`
+- policy version: `h14-qwen3-opencode-subrole-screen-v1`
+
+Outcome:
+
+| Run   | Oracle | Step exit | Wall time | Sample ticks | Residency hits |
+| ----- | ------ | --------: | --------: | -----------: | -------------: |
+| `001` | 6/6    |         0 |  354.030s |          176 |            176 |
+| `002` | 6/6    |         0 |  444.608s |          221 |            221 |
+| `003` | 6/6    |         0 |  444.640s |          221 |            221 |
+
+Representative oracle result:
+
+```text
+PASS: mergeDuplicates implementation exists
+PASS: mergeDuplicates is exported
+PASS: tests import and call mergeDuplicates
+PASS: at least five merge/duplicate tests exist
+PASS: public tests pass
+PASS: hidden behavior checks pass
+
+Results: 6/6 passed
+```
+
+### Qwen3 OpenCode Decision
+
+`qwen3-opencode:30b` is locally promoted for the implementation-from-tests
+subrole only. Every implementation sample tick contained the resident
+`qwen3-opencode:30b` `/api/ps` row, so these are model-residency-backed local
+passes.
+
+This promotion is lower priority than the existing `devstral-small-2:24b` and
+`qwen3-coder:30b` implementation routes because it is much slower on the same
+fixture. It is not promoted for API-preservation, standalone test authoring, or
+full H14 local-only until those separate screens pass.

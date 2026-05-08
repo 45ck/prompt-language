@@ -317,6 +317,61 @@ This proves Prompt Language smoke success and sampled local model residency for
 `qwen3.6:27b`. Its later H14 API-preservation subrole timeout is therefore a
 task-performance failure, not a readiness or endpoint failure.
 
+HA-HR1 local-only live lane with `qwen3-opencode:30b` and sampled `/api/ps`
+snapshots:
+
+The same temporary WSL-reachable listener setup was reused:
+
+- `OLLAMA_NUM_PARALLEL=1`
+- `OLLAMA_CONTEXT_LENGTH=8192`
+- `OLLAMA_FLASH_ATTENTION=1`
+
+```sh
+HOST=$(ip route | awk '/default/ {print $3; exit})
+ENDPOINT="http://$HOST:11435"
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --arms local-only \
+  --live-local-command "bash -lc 'cd $(pwd) && PROMPT_LANGUAGE_OLLAMA_BASE_URL=$ENDPOINT EVAL_MODEL=ollama/qwen3-opencode:30b EVAL_TIMEOUT_MS=1800000 node scripts/eval/smoke-test.mjs --harness ollama --quick --only E && printf qwen3-opencode-30b-readiness-passed > <workspace>/qwen3-opencode-30b-readiness.txt'" \
+  --local-resource-snapshot-command "bash -lc 'curl -sS --max-time 2 <localEndpoint>/api/ps'" \
+  --local-resource-snapshot-interval-ms 1000 \
+  --oracle-command "node -e \"const fs=require('node:fs'); const path=require('node:path'); const workspace=process.argv[1]; const marker=path.join(workspace,'qwen3-opencode-30b-readiness.txt'); if (!fs.existsSync(marker)) { console.error('missing qwen3-opencode readiness marker'); process.exit(1); } console.log('qwen3-opencode readiness oracle pass');\" <workspace>" \
+  --local-model qwen3-opencode:30b \
+  --local-endpoint "$ENDPOINT" \
+  --step-timeout-ms 1800000 \
+  --oracle-timeout-ms 10000 \
+  --run-id HA-HR1-live-local-qwen3-opencode-30b-readiness-001 \
+  --output-root .tmp/harness-arena
+```
+
+Result: pass. The manifest at
+`.tmp/harness-arena/HA-HR1-live-local-qwen3-opencode-30b-readiness-001/01-local-only/hybrid-routing-manifest.json`
+records `claimStatus: live-model-evidence`, step exit code `0`, step wall time
+`13.160s`, and `oracle.passed: true`. `resourceSnapshotSummary` records 13
+sampled ticks, zero probe failures, and 45 total resource artifact refs.
+
+Nine of thirteen sampled `/api/ps` stdout artifacts contained the resident model
+row:
+
+```json
+{
+  "name": "qwen3-opencode:30b",
+  "model": "qwen3-opencode:30b",
+  "size": 19215513600,
+  "digest": "f92f0cf2e8676d8dceb9e1b48b90d6ecc833307e8e72a4dd2a9599810a253010",
+  "details": {
+    "family": "qwen3moe",
+    "parameter_size": "30.5B",
+    "quantization_level": "Q4_K_M"
+  },
+  "size_vram": 15585304576,
+  "context_length": 8192
+}
+```
+
+This proves Prompt Language smoke success and sampled local model residency for
+`qwen3-opencode:30b`.
+
 ## Interpretation
 
 The local model stack is usable for bounded smoke testing on this host if the

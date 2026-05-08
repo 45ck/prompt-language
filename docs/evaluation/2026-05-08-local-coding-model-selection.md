@@ -28,12 +28,19 @@ The H14 evidence supports a narrow conclusion:
 - failure-aware hybrid eventually passed, but the passing run was frontier-repair
   dominated after a local Ollama runtime failure;
 - `qwen3-coder:30b` later passed the full H14 local-only lane `3/3` after the
-  PowerShell stdin transport and socket-reset retry hardening.
+  PowerShell stdin transport and socket-reset retry hardening;
+- `devstral-small-2:24b` and `qwen3-opencode:30b` passed the two narrow H14
+  implementation subrole screens at `3/3` each, but have not passed full H14;
+- `qwen3.6:27b` passed readiness, then failed the first H14 API-preservation
+  screen after consuming the full 900s budget.
 
 It does not support a broad claim that local models cannot code, or that hybrid
 routing cannot reduce cost. It says `qwen3:8b` should not own H14-style TDD
 implementation under the measured policy, while `qwen3-coder:30b` is promoted for
-that specific H14 route with the hardened flow and runtime.
+that specific H14 route with the hardened flow and runtime. The fallback local
+portfolio is narrower: `devstral-small-2:24b` and `qwen3-opencode:30b` are useful
+bounded implementers for implementation-from-tests and API-preservation, not
+full-TDD owners.
 
 ## Host Reality
 
@@ -56,13 +63,15 @@ CPU/GPU once context and KV cache are included.
 
 ## Model Shortlist
 
-| Priority | Model                                           | Local status                | Why                                                                                                                  |
-| -------- | ----------------------------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 1        | `qwen3-coder:30b`                               | Best first new local target | Official Ollama package; 30B-class MoE with about 3.3B active parameters; code and agent focused.                    |
-| 2        | `qwen3-opencode:30b` / `qwen3-opencode-big:30b` | Already installed           | Current local 30B coding-control family. Useful before adding more weights.                                          |
-| 3        | `qwen3:30b`                                     | Already installed           | General Qwen 30B control to test whether code specialization matters.                                                |
-| 4        | `gemma4-opencode:31b` / Vulkan variant          | Already installed, risky    | Good secondary challenger, but 31B Q4 plus context is heavy for a 16 GB GPU.                                         |
-| 5        | GLM-4.7-Flash                                   | Promising follow-up         | 30B-class open-weight model with strong coding claims; add only after Ollama availability and host fit are verified. |
+| Priority | Model                  | Local status                       | Why                                                                                                                  |
+| -------- | ---------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1        | `qwen3-coder:30b`      | Promoted for full H14 TDD          | Official Ollama package; 30B-class MoE with about 3.3B active parameters; code and agent focused.                    |
+| 2        | `devstral-small-2:24b` | Promoted for two H14 subroles      | Smaller installed coding model; strong implementation subrole pass rate and faster than the OpenCode 30B variant.    |
+| 3        | `qwen3-opencode:30b`   | Promoted for two H14 subroles      | Coding-tuned installed variant; passed implementation subroles, but slower than `devstral-small-2:24b`.              |
+| 4        | `qwen3:30b`            | Slow general-model control         | Passed readiness, but produced far more tokens and latency than `qwen3-coder:30b`.                                   |
+| 5        | `qwen3.6:27b`          | Reviewer/classifier control only   | Passed readiness but failed API-preservation after the hard timeout.                                                 |
+| 6        | `gemma4-opencode:e4b`  | Untested smaller classifier target | More plausible for cheap routing/classification than implementation ownership.                                       |
+| 7        | GLM-4.7-Flash          | Promising follow-up                | 30B-class open-weight model with strong coding claims; add only after Ollama availability and host fit are verified. |
 
 Do not start local testing with `qwen3-coder-next`. The current Ollama package is
 around 52 GB for the 80B-A3B model. It is interesting as cloud/open-weight server
@@ -111,6 +120,8 @@ Default frontier ownership is appropriate for:
 - H14-like TDD ownership for unpromoted local models; route `qwen3-coder:30b`
   locally only for the checked H14 full-TDD flow and keep frontier repair
   available on any public-gate or private-oracle failure;
+- full H14 for fallback locals such as `devstral-small-2:24b` and
+  `qwen3-opencode:30b` until they pass separate full-lane screens;
 - ambiguous architecture;
 - security, auth, permissions, data loss, migrations, and persistence;
 - public API preservation plans;
@@ -150,21 +161,18 @@ Live model batches must be treated as contained experiments:
 
 ## Immediate Run Order
 
-1. Keep `qwen3-coder:30b` as the promoted H14 local worker under the checked
+1. Keep `qwen3-coder:30b` as the promoted H14 full-TDD worker under the checked
    route policy.
-2. Start Windows Ollama on a WSL-reachable endpoint and record `/api/version`,
-   `/api/tags`, and `/api/ps`.
-3. Run a bounded Prompt Language smoke for any new candidate before task lanes:
-   - `qwen3-coder:30b`;
-   - `qwen3-opencode:30b`;
-   - `qwen3:30b`;
-   - one `gemma4-opencode` variant.
-4. Record residency and wall time from `ollama ps`.
-5. Only then run H14 subroles. Do not spend a full H14 run on a model that cannot
-   pass the readiness smoke and subrole screen.
-6. For already promoted `qwen3-coder:30b`, move the next claim test to an
-   adjacent fixture such as H15 API endpoint or H11 multi-file refactor rather
-   than repeating H14.
+2. Keep `devstral-small-2:24b` and `qwen3-opencode:30b` as fallback local
+   implementers only for implementation-from-tests and API-preservation.
+3. Do not spend more H14 implementation-owner time on `qwen3.6:27b`; use it only
+   as a reviewer/classifier control unless a new runtime lane changes its timeout
+   behavior.
+4. For local-cost reduction, move the next claim test to adjacent work:
+   H15 hybrid endpoint repair, H11-style multi-file refactor, or cheap route
+   classification. Repeating already-promoted H14 subroles has low value.
+5. Before any new model enters task lanes, record `/api/version`, `/api/tags`,
+   `/api/ps`, the runner command, model metadata, and sampled residency.
 
 ## Live Readiness Results
 
@@ -197,25 +205,30 @@ The generic `qwen3:30b` control passed the same smoke but is much less efficient
 - `/api/ps` showed similar residency: 19,014,187,008 bytes loaded,
   15,775,507,456 bytes VRAM, 4,096 context.
 
-The `qwen3-opencode:30b` control was stopped manually after about 8.5 minutes on
-the same `A` smoke with no readiness pass. `/api/ps` confirmed it was resident
-while running: 19,215,513,600 bytes loaded, 15,585,304,576 bytes VRAM, 8,192
-context. Treat this as a readiness failure for promotion purposes unless a later
-rerun with a tighter prompt and explicit timeout produces a normal artifact.
+The first `qwen3-opencode:30b` smoke was stopped manually after about 8.5 minutes
+with no readiness pass. That was an intermediate readiness failure, not the final
+decision. A later bounded screen with sampled `/api/ps` residency passed H14
+implementation-from-tests at `3/3` and API-preservation at `3/3`; keep it as a
+promoted fallback implementer for those two subroles, but below
+`qwen3-coder:30b` and `devstral-small-2:24b` because its subrole runs were much
+slower.
 
 The preliminary `E: Run auto-execution` smoke also passed for `qwen3-coder:30b`
 (`scripts/eval/results/smoke-2026-05-07T23-47-09-682Z.json`), but it produced no
 provider telemetry and no model residency snapshot. Use `A`, not `E`, as the
 minimum live-inference readiness slice.
 
-Current decision from the readiness pass:
+Current decision from the readiness and subrole screens:
 
-1. Promote `qwen3-coder:30b` to H14 subrole screening first.
-2. Keep `qwen3:30b` as a slow general-model control, not the main local worker.
-3. Do not run full H14 on `qwen3-opencode:30b` until it passes `A` under a
-   bounded timeout.
-4. Defer `gemma4-opencode` until after `qwen3-coder:30b` subrole results, because
-   19 GB class models are already close to this host's practical VRAM boundary.
+1. Promote `qwen3-coder:30b` for full H14 TDD under the hardened PowerShell stdin
+   route.
+2. Promote `devstral-small-2:24b` and `qwen3-opencode:30b` only for the two
+   narrow implementation subroles they passed.
+3. Keep `qwen3:30b` as a slow general-model control, not the main local worker.
+4. Keep `qwen3.6:27b` out of implementation ownership after its 900s
+   API-preservation failure.
+5. Defer `gemma4-opencode` until there is a specific classifier/reviewer question
+   worth answering.
 
 ## Latest Model Scan
 
@@ -234,51 +247,47 @@ This is important as a cloud/API comparison arm, especially for long-context
 agentic coding, but not as a workstation-local candidate for this host. Even
 the Flash model is far beyond the 31 GiB WSL RAM and 16 GB VRAM envelope.
 
-`qwen3.6:27b` was pulled and inspected because it is the newest local-looking
-Qwen coding candidate in Ollama:
+`qwen3.6:27b` was pulled and inspected because it is a newer local-looking Qwen
+candidate in Ollama:
 
 - Ollama metadata: `27.8B`, `qwen35`, `Q4_K_M`, 17 GB package, capabilities
   `completion`, `vision`, `tools`, and `thinking`.
 - `ollama show` reports a 262,144 model context and Apache 2.0 license.
-- The `A` smoke was stopped after more than five minutes without a readiness
-  pass.
-- `/api/ps` while running showed 23,181,373,344 bytes loaded but only
-  5,411,797,504 bytes in VRAM at 4,096 context.
+- A later readiness run passed with sampled residency evidence at 8,192 context.
+- The first H14 API-preservation screen then timed out at 900.102s and failed
+  both public and hidden merge semantics with oracle `3/5`.
 
-Treat this as a host-fit failure under the current Ollama settings, not a model
-quality verdict. It may be worth rerunning only with a lower-memory quant,
-tighter context/KV settings, or a runner configuration that can prove better GPU
-residency.
+Treat this as negative implementation-owner evidence under the current runtime,
+not just a host-fit failure. It may still be useful as a local reviewer or
+classifier, but it should not own H14 API-preserving implementation work without
+a new prompt or runtime lane.
 
-`devstral-small-2:24b` was pulled and completed the same `A` smoke, but failed
-the contract:
+`devstral-small-2:24b` initially failed the same `A` smoke, then passed later
+readiness and H14 subrole screens:
 
 - Ollama metadata: `24.0B`, `mistral3`, `Q4_K_M`, 15 GB package, Apache 2.0
   model card license.
 - `/api/ps` during the run showed 16,340,389,904 bytes loaded and
   14,556,266,512 bytes in VRAM at 4,096 context.
-- Artifact:
-  `scripts/eval/results/smoke-2026-05-08T00-32-31-341Z.json`.
-- Result: `0/1` passed, 156.166 seconds total, 86.435 seconds test duration.
-- Failure: `A: Context file relay` returned an empty string.
-- Telemetry: 2 Ollama records, 494 input tokens, 82 output tokens, 576 total
-  tokens, zero provider API cost, no retries.
+- Later H14 implementation-from-tests passed `3/3` with private oracle `6/6` in
+  every run.
+- Later H14 API-preservation passed `3/3` with private oracle `5/5` in every run.
+- Every subrole sample tick across those six runs contained the resident
+  `devstral-small-2:24b` `/api/ps` row.
 
-This makes Devstral Small 2 a good host-fit data point but not a promoted Prompt
-Language worker yet. Its public model card claims strong software-engineering
-agent benchmarks, so the next useful check would be a smaller direct
-instruction-following probe before deciding whether the failure is template,
-prompt, or model behavior.
+Promote Devstral Small 2 only for those two bounded implementation subroles. It
+is not promoted for standalone test authoring or full H14 local-only.
 
 Current latest-model ranking for this PC:
 
 | Rank | Candidate              | Decision                                                                                                 |
 | ---- | ---------------------- | -------------------------------------------------------------------------------------------------------- |
-| 1    | `qwen3-coder:30b`      | Best live local candidate. Already passed `A` with usable telemetry.                                     |
-| 2    | `devstral-small-2:24b` | Best new host-fit challenger, but failed Prompt Language `A`; needs a targeted probe before promotion.   |
-| 3    | `qwen3:30b`            | Passed `A` but too slow; keep as general-model control.                                                  |
-| 4    | `qwen3.6:27b`          | Interesting new Qwen release, but current quant/context spills badly off VRAM.                           |
-| 5    | `GLM-4.7-Flash`        | Strong 30B-A3B paper/model-card candidate; test only after locating a runner package that fits the host. |
+| 1    | `qwen3-coder:30b`      | Promoted full H14 worker under the hardened route; best local implementation owner.                      |
+| 2    | `devstral-small-2:24b` | Promoted fallback for two bounded H14 implementation subroles; not full-H14 promoted.                    |
+| 3    | `qwen3-opencode:30b`   | Promoted fallback for the same two subroles, but slower than Devstral and Qwen Coder.                    |
+| 4    | `qwen3:30b`            | Passed `A` but too slow; keep as general-model control.                                                  |
+| 5    | `qwen3.6:27b`          | Passed readiness but failed API-preservation after timeout; reviewer/classifier control only.            |
+| 6    | `GLM-4.7-Flash`        | Strong 30B-A3B paper/model-card candidate; test only after locating a runner package that fits the host. |
 
 Latest large open-weight models worth tracking, but not workstation-local here:
 
@@ -294,8 +303,10 @@ Latest large open-weight models worth tracking, but not workstation-local here:
 
 The engineering conclusion is still not "local failed." The better conclusion
 is narrower: `qwen3-coder:30b` is the only current local model with enough live
-Prompt Language evidence to enter subrole benchmarks; newer models either do not
-fit the workstation envelope or have not passed the harness contract yet.
+Prompt Language evidence to own full H14 TDD. Devstral Small 2 and Qwen3 OpenCode
+are useful local fallback implementers for bounded subroles. Qwen3.6 and larger
+new open-weight families belong in reviewer/classifier or API/server comparison
+lanes until they produce workstation-local promotion evidence.
 
 ## Sources
 

@@ -188,6 +188,19 @@ test('schema requires claim-grade metadata for every step', () => {
   }
 });
 
+test('schema keeps raw oracle commands out of public manifests', () => {
+  const requiredOracleFields = schema.properties.oracle.required;
+  const invalidManifest = cloneJson(sample);
+
+  invalidManifest.oracle.command = 'node private/oracle.mjs --workspace <workspace>';
+
+  assert.ok(requiredOracleFields.includes('commandArtifactRef'));
+  assert.equal(requiredOracleFields.includes('command'), false);
+  assert.deepEqual(validateManifestShape(invalidManifest), [
+    'manifest.oracle.command is not declared in schema',
+  ]);
+});
+
 test('rejects a manifest step missing routing metadata', () => {
   const invalidManifest = cloneJson(sample);
 

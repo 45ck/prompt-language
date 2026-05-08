@@ -9,7 +9,7 @@ flow:
   remember key="policy_version" value="h11-qwen3-coder-multi-file-refactor-v1"
   remember key="route_policy" value="Local worker owns the model-visible fixture files. Hidden oracle details are not available."
 
-  prompt: Read TASK.md, README.md, package.json, and all files under src/. Rename the Contact entity to Client across the codebase. Rename files to client.js and client-store.js, update require paths, class names, route method names, variables, seed data names, tests, app smoke checks, and README text. Preserve behavior while removing Contact terminology from src/*.js and README.md. The final app must run with node src/app.js, and public tests must pass with npm test. Do not add dependencies. When done, respond with a concise status and list the changed files.
+  prompt: Read TASK.md, README.md, package.json, and all files under src/. Rename the Contact entity to Client across the codebase. This is a real rename, not an additive compatibility layer: after migrating content into src/client.js and src/client-store.js, explicitly remove src/contact.js and src/contact-store.js with a run_command action such as rm -f src/contact.js src/contact-store.js. Update require paths, class names, route method names, variables, seed data names, tests, app smoke checks, and README text. Preserve behavior while removing Contact terminology from src/*.js and README.md. The final app must run with node src/app.js, and public tests must pass with npm test. Do not add dependencies. When done, respond with a concise status and list the changed files.
 
   retry max 6
     run: npm test [timeout 120]
@@ -21,7 +21,7 @@ flow:
   retry max 4
     run: node -e "const fs=require('fs'); const path=require('path'); const src='src'; const files=[]; function walk(dir){ for(const entry of fs.readdirSync(dir,{withFileTypes:true})){ const full=path.join(dir,entry.name); if(entry.isDirectory()) walk(full); else if(entry.isFile()&&entry.name.endsWith('.js')) files.push(full.replace(/\\\\/g,'/')); }} walk(src); const required=['src/app.js','src/client-store.js','src/client.js','src/routes.js','src/seed.js','src/test.js']; const missing=required.filter((file)=>!fs.existsSync(file)); if(missing.length){ console.error('missing required renamed files: '+missing.join(', ')); process.exit(1); } const forbiddenFiles=files.filter((file)=>/contact/i.test(path.basename(file))); if(forbiddenFiles.length){ console.error('old contact filenames remain: '+forbiddenFiles.join(', ')); process.exit(1); } const scanned=[...files,'README.md'].filter((file)=>fs.existsSync(file)); const offenders=[]; for(const file of scanned){ const text=fs.readFileSync(file,'utf8'); if(/\\bContacts?\\b/.test(text)||/\\bcontact(s)?\\b/.test(text)) offenders.push(file); } if(offenders.length){ console.error('Contact terminology remains in '+offenders.join(', ')); process.exit(1); } const {Client}=require('./src/client'); const {ClientStore}=require('./src/client-store'); const {createRoutes}=require('./src/routes'); const {seedClients,loadSeedData}=require('./src/seed'); if(typeof Client!=='function'||typeof ClientStore!=='function'||typeof createRoutes!=='function'||!Array.isArray(seedClients)||typeof loadSeedData!=='function'){ console.error('renamed exports missing'); process.exit(1); } const store=new ClientStore(); loadSeedData(store); const routes=createRoutes(store); for(const key of ['listClients','getClient','createClient','deleteClient']){ if(typeof routes[key]!=='function'){ console.error('missing route '+key); process.exit(1); }} if(routes.listClients().status!==200||routes.getClient('alice@example.com').status!==200){ console.error('renamed routes do not behave'); process.exit(1); }"
     if command_failed
-      prompt: The H11 structural rename gate failed. Fix all Contact-to-Client refactor gaps. Required files are src/client.js and src/client-store.js. No Contact/contact terminology should remain in src/*.js or README.md. Required exports are Client, ClientStore, createRoutes, seedClients, and loadSeedData. Route methods must be listClients, getClient, createClient, and deleteClient. Gate output: ${last_stdout} ${last_stderr}
+      prompt: The H11 structural rename gate failed. Fix all Contact-to-Client refactor gaps. This is not additive: stale filenames named by the gate must be deleted after their content is migrated. If src/contact.js or src/contact-store.js exists, use a run_command action to remove them, for example rm -f src/contact.js src/contact-store.js. Required files are src/client.js and src/client-store.js. No Contact/contact terminology should remain in src/*.js or README.md. Required exports are Client, ClientStore, createRoutes, seedClients, and loadSeedData. Route methods must be listClients, getClient, createClient, and deleteClient. Gate output: ${last_stdout} ${last_stderr}
     end
   end
 
@@ -32,12 +32,12 @@ flow:
     end
   end
 
-  prompt: Use a write_file action to create local-worker-summary.md at the workspace root. Include changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary. Do not mention or infer hidden oracle implementation details.
+  prompt: Use a write_file action to create local-worker-summary.md at the workspace root. Keep it plain ASCII Markdown with short bullets and no code fences. Include changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary. Do not mention or infer hidden oracle implementation details.
 
   retry max 2
     run: node -e "process.exit(require('node:fs').existsSync('local-worker-summary.md') ? 0 : 1)"
     if command_failed
-      prompt: local-worker-summary.md is still missing. Use a write_file action now to create local-worker-summary.md at the workspace root with changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary.
+      prompt: local-worker-summary.md is still missing. Use a write_file action now to create local-worker-summary.md at the workspace root. Keep it plain ASCII Markdown with short bullets and no code fences. Include changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary.
     end
   end
 

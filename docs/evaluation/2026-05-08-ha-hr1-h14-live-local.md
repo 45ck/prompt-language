@@ -361,8 +361,63 @@ across two attempts, which is a reliability and cost signal.
 Current policy:
 
 - do not claim `qwen3-coder:30b` is H14-capable local-only;
-- do promote it to narrower H14-derived subrole fixtures, especially
+- promote it to narrower H14-derived subrole fixtures, especially
   implementation-from-tests and API-preservation;
 - keep full H14 local-only behind a 3/3 clean-pass requirement;
 - keep H14-like end-to-end TDD frontier-owned unless local subrole evidence
   improves.
+
+## H14-Derived Subrole Results
+
+### `HA-HR1-H14-S2-local-qwen3-coder-001`
+
+The first narrower subrole fixture was `h14-impl-from-tests`. This fixture removes
+the test-authoring burden: public merge tests already exist, and the local model
+owns the implementation in `src/contacts.js` plus the required summary artifact.
+
+The run used commit `b1689ab`, local `qwen3-coder:30b`, and the same
+WSL-reachable Windows Ollama endpoint at `http://172.17.32.1:11435`.
+
+Outcome:
+
+- step exit code: `0`
+- step wall time: `263.364s`
+- private oracle: passed
+- classification: clean local-only subrole pass
+- provider telemetry: 6 Ollama records, 14,636 input tokens, 1,405 output tokens,
+  16,041 total tokens, zero provider API cost, no retries
+- residency snapshot during/after the run: 19,014,187,008 bytes loaded,
+  3,457,613,824 bytes VRAM, 4,096 context
+
+The Prompt Language lane completed normally:
+
+```json
+{
+  "status": "ok",
+  "outcomes": [
+    {
+      "code": "PLO-005",
+      "summary": "Flow completed."
+    }
+  ]
+}
+```
+
+The private oracle passed all checks:
+
+```text
+PASS: mergeDuplicates implementation exists
+PASS: mergeDuplicates is exported
+PASS: tests import and call mergeDuplicates
+PASS: at least five merge/duplicate tests exist
+PASS: public tests pass
+PASS: hidden behavior checks pass
+
+Results: 6/6 passed
+```
+
+Decision: `qwen3-coder:30b` has now earned a positive local lane for the
+implementation-from-tests subrole. This supports the routing policy of assigning
+bounded, public-gated implementation work to the local model. It does not overturn
+the full-H14 decision because full TDD ownership still lacks a clean pass and has
+shown timeout/artifact reliability problems.

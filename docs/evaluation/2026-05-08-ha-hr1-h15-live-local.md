@@ -233,6 +233,26 @@ Decision: count this as the first positive PATCH test-authoring local-screen
 pass for `qwen3-coder:30b`. Keep the route as a screen, not a full H15 endpoint
 promotion, until it has more clean passes.
 
+Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-005`
+
+Result:
+
+- Route: `--h15-qwen-coder-task test-authoring`
+- Step exit: `0`
+- Wall time: `108.354s`
+- Private oracle: `FAIL`, `3/4`
+- Frontier calls: `0`
+
+The public flow completed and the generated tests looked structurally strong,
+but the private oracle caught a real test-quality gap: the partial-update
+preservation test compared against `getContact(1).body`, a live object reference
+that `patchContact` mutates. That allowed the private mutant that overwrites
+unrelated fields to survive.
+
+Decision: keep PATCH test-authoring at one clean pass. The next route revision
+must require primitive snapshots, such as `originalEmail`, `originalPhone`, and
+`originalCompany`, before calling `patchContact`.
+
 ## Routing Decision
 
 Do not mark the local-model strategy as a failure overall. Mark this as a
@@ -241,7 +261,7 @@ negative promotion result for one route:
 - H14 full TDD is promoted for `qwen3-coder:30b` under the existing H14 route.
 - H15 endpoint work is not promoted for local-only ownership yet.
 - H15 validation-only work now has a clean local-screen pass.
-- H15 PATCH test-authoring has one clean local-screen pass after two failed
+- H15 PATCH test-authoring has one clean local-screen pass after three failed
   attempts; it remains screen-only, not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.

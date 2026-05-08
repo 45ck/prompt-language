@@ -1,0 +1,40 @@
+Goal: implement the H15 PATCH contact endpoint with public validation gates
+
+memory:
+  task_brief
+  route_policy
+  policy_version
+
+flow:
+  remember key="policy_version" value="h15-api-endpoint-local-powershell-r16-v1"
+  remember key="route_policy" value="Local worker owns the H15 implementation and public tests only. Hidden oracle details are not available."
+
+  prompt: Read TASK.md, src/app.js, and src/test.js. Add a patchContact(id, data) function to src/app.js that performs partial contact updates and export it without removing the existing listContacts, getContact, createContact, deleteContact, or contacts exports. Preserve the original GET, POST, and DELETE behavior; deleteContact must still return status 204 with body null on success. Validate only provided fields: name must be a string with 2-100 characters, email must contain @ and a dot after @, phone must use only digits, dashes, spaces, and optional leading + with 7-20 characters, and company must be a string with 1-200 characters or null. Return 404 for missing IDs, 400 with a descriptive error for invalid fields, and 200 with the updated record on success. Add at least eight PATCH/update tests to src/test.js covering valid name, email, phone, null company, partial update preservation, invalid name, invalid email, invalid phone, invalid company, and missing ID. Run node src/test.js. Do not write local-worker-summary.md until the public checks pass.
+
+  retry max 4
+    run: node -e "const fs=require('fs'); const appSource=fs.readFileSync('src/app.js','utf8'); const tests=fs.readFileSync('src/test.js','utf8'); const namedTestCount=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(patch|update|valid|invalid|404|null|company|partial)[^'\\\"]*['\\\"]/gi)||[]).length; const patchCallCount=(tests.match(/\\b(patchContact|updateContact)\\s*\\(/g)||[]).length; const testCount=Math.max(namedTestCount,patchCallCount); if (fs.existsSync('test.js')) { console.error('unexpected root test.js; keep tests in src/test.js'); process.exit(1); } if (!/patchContact|updateContact/.test(appSource)) { console.error('patchContact or updateContact missing in src/app.js'); process.exit(1); } if (testCount < 8) { console.error('expected at least 8 PATCH/update tests, found '+testCount); process.exit(1); } const app=require('./src/app'); const patch=app.patchContact||app.updateContact; const required=['listContacts','getContact','createContact','deleteContact','contacts']; const missing=required.filter((name)=>!(name in app)); if (missing.length) { console.error('missing original exports: '+missing.join(',')); process.exit(1); } if (typeof patch!=='function') { console.error('patchContact or updateContact is not exported as a function'); process.exit(1); } let result=patch(1,{name:'Alice Updated'}); if (result.status!==200||result.body.name!=='Alice Updated') { console.error('valid name update failed'); process.exit(1); } result=patch(1,{email:'alice.updated@example.com'}); if (result.status!==200||result.body.email!=='alice.updated@example.com') { console.error('valid email update failed'); process.exit(1); } result=patch(1,{phone:'+1 555-0109'}); if (result.status!==200||result.body.phone!=='+1 555-0109') { console.error('valid phone update failed'); process.exit(1); } result=patch(2,{company:null}); if (result.status!==200||result.body.company!==null) { console.error('null company clear failed'); process.exit(1); } result=patch(3,{name:'Carol Updated'}); if (result.status!==200||result.body.email!=='carol@example.com') { console.error('partial update preservation failed'); process.exit(1); } if (patch(999,{name:'Nobody'}).status!==404) { console.error('missing ID should return 404'); process.exit(1); } if (patch(1,{name:'A'}).status!==400) { console.error('short name should return 400'); process.exit(1); } if (patch(1,{email:'bad@domain'}).status!==400) { console.error('email without dot after @ should return 400'); process.exit(1); } if (patch(1,{phone:'abc!@#'}).status!==400) { console.error('invalid phone should return 400'); process.exit(1); } if (patch(1,{company:''}).status!==400) { console.error('empty company string should return 400'); process.exit(1); }"
+    if command_failed
+      prompt: The public H15 structural and behavior gate failed. Fix only src/app.js and src/test.js unless a minimal package script is necessary. Export patchContact or updateContact, preserve all original exports and original GET/POST/DELETE behavior, keep tests in src/test.js, and satisfy this gate output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  retry max 6
+    run: node src/test.js [timeout 120]
+    if command_failed
+      prompt: Public tests are failing. Fix only src/app.js and src/test.js. Preserve original API behavior and make the PATCH/update tests pass. Test output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  prompt: Use a write_file action to create local-worker-summary.md at the workspace root. Include changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary. Do not mention or infer hidden oracle implementation details.
+
+  retry max 2
+    run: node -e "process.exit(require('node:fs').existsSync('local-worker-summary.md') ? 0 : 1)"
+    if command_failed
+      prompt: local-worker-summary.md is still missing. Use a write_file action now to create local-worker-summary.md at the workspace root with changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary.
+    end
+  end
+
+done when:
+  file_exists local-worker-summary.md
+  gate h15_public_contract: node -e "const fs=require('fs'); const appSource=fs.readFileSync('src/app.js','utf8'); const tests=fs.readFileSync('src/test.js','utf8'); const namedTestCount=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(patch|update|valid|invalid|404|null|company|partial)[^'\\\"]*['\\\"]/gi)||[]).length; const patchCallCount=(tests.match(/\\b(patchContact|updateContact)\\s*\\(/g)||[]).length; const testCount=Math.max(namedTestCount,patchCallCount); if (fs.existsSync('test.js')) process.exit(1); if (!/patchContact|updateContact/.test(appSource)) process.exit(1); if (testCount < 8) process.exit(1); const app=require('./src/app'); const patch=app.patchContact||app.updateContact; const required=['listContacts','getContact','createContact','deleteContact','contacts']; if (required.some((name)=>!(name in app))) process.exit(1); if (typeof patch!=='function') process.exit(1); let result=patch(1,{name:'Alice Updated'}); if (result.status!==200||result.body.name!=='Alice Updated') process.exit(1); result=patch(1,{email:'alice.updated@example.com'}); if (result.status!==200||result.body.email!=='alice.updated@example.com') process.exit(1); result=patch(1,{phone:'+1 555-0109'}); if (result.status!==200||result.body.phone!=='+1 555-0109') process.exit(1); result=patch(2,{company:null}); if (result.status!==200||result.body.company!==null) process.exit(1); result=patch(3,{name:'Carol Updated'}); if (result.status!==200||result.body.email!=='carol@example.com') process.exit(1); if (patch(999,{name:'Nobody'}).status!==404) process.exit(1); if (patch(1,{name:'A'}).status!==400) process.exit(1); if (patch(1,{email:'bad@domain'}).status!==400) process.exit(1); if (patch(1,{phone:'abc!@#'}).status!==400) process.exit(1); if (patch(1,{company:''}).status!==400) process.exit(1);"
+  gate public_tests: node src/test.js

@@ -1439,3 +1439,43 @@ Do not add fallback local models for this subrole yet, because the fallback
 portfolio evidence covers implementation subroles, not standalone test
 authoring. Keep full H14 TDD ownership not promoted: this screen proves the
 isolated test-authoring subrole, not combined red-green ownership.
+
+### Routed Test-Authoring Smoke
+
+After the promotion policy was committed, the route profile itself was smoke
+tested with `--h14-local-subrole test-authoring` and the `<h14Flow>` placeholder:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --h14-local-subrole test-authoring \
+  --live-local-command "bash -lc 'PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=8 node $(pwd)/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>'" \
+  --oracle-command "node $(pwd)/experiments/harness-arena/oracles/h14-test-authoring-oracle.mjs --workspace <workspace>" \
+  --local-resource-snapshot-command "ollama ps" \
+  --local-resource-snapshot-interval-ms 2000 \
+  --local-endpoint "ollama-powershell" \
+  --run-id HA-HR1-H14-test-authoring-routed-powershell-20260508T080008Z \
+  --output-root .tmp/harness-arena
+```
+
+Outcome:
+
+- route trigger: `h14-local-portfolio:h14-test-authoring:local-promoted`
+- policy version: `h14-local-subrole-routing-v1`
+- prompt program:
+  `experiments/harness-arena/flows/h14-test-authoring-worker.flow`
+- selected model: `qwen3-coder:30b`
+- transport telemetry: `metadata.transport=powershell`
+- step exit code: `0`
+- step wall time: `110.671s`
+- timeout: `false`
+- private oracle: passed
+- oracle result: `4/4`
+- provider substitution: `false`
+- provider retries: `0`
+- provider telemetry totals: `25,289` tokens across 8 turns
+- resource samples: `52/52` non-empty `ollama ps` samples
+
+Decision: the promoted local-portfolio route now works end to end for
+`test-authoring`; this is route smoke on top of the clarified `3/3` screen, not
+a full H14 TDD promotion.

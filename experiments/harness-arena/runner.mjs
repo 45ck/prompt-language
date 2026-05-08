@@ -727,9 +727,11 @@ sample_index=1
     stdout_path="$sample_dir/sample-\${sample_id}-stdout.txt"
     stderr_path="$sample_dir/sample-\${sample_id}-stderr.txt"
     metadata_path="$sample_dir/sample-\${sample_id}-metadata.json"
+    metadata_tmp="$metadata_path.tmp"
     "\${snapshot_command[@]}" > "$stdout_path" 2> "$stderr_path"
     sample_exit=$?
-    printf '{"phase":"resource-sample","sampleIndex":%s,"exitCode":%s}\\n' "$sample_index" "$sample_exit" > "$metadata_path"
+    printf '{"phase":"resource-sample","sampleIndex":%s,"exitCode":%s}\\n' "$sample_index" "$sample_exit" > "$metadata_tmp"
+    mv "$metadata_tmp" "$metadata_path"
     sample_index=$((sample_index + 1))
     sleep ${quoteShellArg(String(intervalSeconds))}
   done

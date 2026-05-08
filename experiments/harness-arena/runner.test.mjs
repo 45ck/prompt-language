@@ -415,6 +415,44 @@ test('H15 qwen3-coder profile maps endpoint work to frontier baseline defaults',
   }
 });
 
+test('H15 qwen3-coder profile maps validation micro-flow to local screen defaults', () => {
+  const outputRoot = tempRoot();
+  try {
+    const options = parseArgs([
+      '--dry-run',
+      '--h15-qwen-coder-task',
+      'validation-only',
+      '--output-root',
+      outputRoot,
+      '--run-id',
+      'h15-validation-local-screen',
+      '--started-at',
+      FIXED_TIME,
+    ]);
+    const result = runHarnessArena(options);
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+
+    assert.deepEqual(options.arms, ['local-only']);
+    assert.equal(options.taskId, 'h15-validation-only');
+    assert.equal(options.h15QwenCoderRoute.shouldRunLocal, false);
+    assert.equal(options.h15QwenCoderRoute.shouldRunLocalScreen, true);
+    assert.equal(options.localModel, 'qwen3-coder:30b');
+    assert.equal(options.policyVersion, 'h15-qwen3-coder-endpoint-routing-v2');
+    assert.match(options.oracleCommand, /h15-validation-only-oracle\.mjs/);
+    assert.equal(existsSync(join(armRun.workspace, 'src', 'app.js')), true);
+    assert.equal(step.stepId, 'local-bulk');
+    assert.equal(step.routeDecision, 'local');
+    assert.match(step.routeTrigger, /h15-qwen3-coder:h15-validation-only:local-screen/);
+    assert.equal(step.promptProgram.kind, 'flow');
+    assert.match(step.promptProgram.path, /h15-validation-only-worker\.flow$/);
+    assert.match(step.notes, /H15 qwen3-coder policy local-screen/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('route profiles are mutually exclusive', () => {
   assert.throws(
     () =>

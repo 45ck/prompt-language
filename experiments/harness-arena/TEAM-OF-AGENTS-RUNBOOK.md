@@ -196,6 +196,24 @@ public-gate repair loop with a shorter timeout and sampled local resource
 snapshots. A frontier-assisted follow-up must be labeled as advisor-only,
 frontier-only, or hybrid-router in the manifest, not local-only.
 
+For the checked-in validation-only local screen, use the same H15 route profile
+with the validation task alias. This is local diagnostic evidence only, not full
+H15 endpoint ownership:
+
+```sh
+repo=/path/to/prompt-language
+
+node "$repo/experiments/harness-arena/runner.mjs" \
+  --live \
+  --h15-qwen-coder-task validation-only \
+  --live-local-command 'bash -lc "repo=/path/to/prompt-language; PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=600000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=12 node \"$repo/bin/cli.mjs\" run --runner ollama --model qwen3-coder:30b --json --file <routeFlow>"' \
+  --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \
+  --local-resource-snapshot-interval-ms 2000 \
+  --local-endpoint ollama-powershell-stdin \
+  --run-id HA-HR1-H15-validation-only-qwen-coder-001 \
+  --output-root .tmp/harness-arena
+```
+
 Use `--local-resource-snapshot-command` for live local runs when host diagnostics
 matter. The runner records before/after stdout, stderr, and metadata artifact refs
 on each local step so `ollama ps`, GPU probes, or OS memory probes stay attached

@@ -258,7 +258,7 @@ function applyH15QwenCoderRouteDefaults(options, providedFields) {
   options.h15QwenCoderRoute = resolved;
 
   if (!providedFields.has('arms')) {
-    if (resolved.shouldRunLocal) options.arms = 'local-only';
+    if (resolved.shouldRunLocal || resolved.shouldRunLocalScreen) options.arms = 'local-only';
     else if (resolved.shouldRunHybrid) options.arms = 'hybrid-router';
     else options.arms = 'frontier-only';
   }

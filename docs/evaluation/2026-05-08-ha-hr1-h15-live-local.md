@@ -156,7 +156,8 @@ Recommended H15 policy:
 
 - Use frontier-only as the current full-task baseline.
 - Treat local H15 as experimental until a narrower validation/test micro-flow
-  passes with claim-grade manifests.
+  passes with claim-grade manifests. The first checked-in local screen is
+  `--h15-qwen-coder-task validation-only`.
 - Treat r16 failure as a local route stop.
 - Treat r24 as exploratory only until it passes at least `3/3` clean manifests.
 - Do not repeat the full local/hybrid lane on the same hardware unless runtime

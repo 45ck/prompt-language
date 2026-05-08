@@ -16,6 +16,9 @@ const TASK_ALIASES = new Map([
   ['h15', 'h15-api-endpoint'],
   ['patch', 'h15-api-endpoint'],
   ['patch-contact', 'h15-api-endpoint'],
+  ['validation', 'h15-validation-only'],
+  ['validation-only', 'h15-validation-only'],
+  ['validation-micro', 'h15-validation-only'],
 ]);
 
 export function loadH15QwenCoderRoutingPolicy(policyPath = DEFAULT_H15_QWEN_CODER_POLICY_PATH) {
@@ -46,6 +49,7 @@ export function resolveH15QwenCoderRoute(task, policy = loadH15QwenCoderRoutingP
     shouldRunFrontier: route.decision === 'frontier-baseline',
     shouldRunHybrid: route.decision === 'hybrid-required',
     shouldRunLocal: route.decision === 'local-promoted',
+    shouldRunLocalScreen: route.decision === 'local-screen',
   };
 }
 
@@ -54,7 +58,7 @@ function printUsage() {
     [
       'usage: node experiments/harness-arena/h15-qwen3-coder-routing-policy.mjs <task> [--json]',
       '',
-      'common tasks: h15-api-endpoint, api-endpoint, patch-contact',
+      'common tasks: h15-api-endpoint, api-endpoint, patch-contact, validation-only',
     ].join('\n'),
   );
 }

@@ -126,14 +126,16 @@ to resolve the task before launching the current baseline lane.
 
 Current H15 routing decision:
 
-| Task         | Current model | Route decision    | Reason                                                                   |
-| ------------ | ------------- | ----------------- | ------------------------------------------------------------------------ |
-| API endpoint | Codex         | frontier-baseline | One frontier-only call passed; measured hybrid used three frontier calls |
+| Task            | Current model     | Route decision    | Reason                                                                   |
+| --------------- | ----------------- | ----------------- | ------------------------------------------------------------------------ |
+| API endpoint    | Codex             | frontier-baseline | One frontier-only call passed; measured hybrid used three frontier calls |
+| Validation only | `qwen3-coder:30b` | local-screen      | Isolates validation drift before another full local/hybrid attempt       |
 
-Policy implication: the next full H15 claim should use frontier-only. Hybrid
-remains experimental until a local candidate passes a narrower validation/test
-micro-flow or reliably reduces frontier repair/review work. A passing hybrid run
-would still not be local-only evidence.
+Policy implication: the next full H15 claim should use frontier-only. The
+checked-in validation-only route is a local diagnostic screen, not full endpoint
+evidence. Hybrid remains experimental until a local candidate passes a narrower
+validation/test micro-flow or reliably reduces frontier repair/review work. A
+passing hybrid run would still not be local-only evidence.
 
 ## Prompt Language Shape
 
@@ -234,6 +236,12 @@ Use the H15 route profile for the current frontier-only baseline:
 
 ```sh
 node experiments/harness-arena/runner.mjs --live --h15-qwen-coder-task api-endpoint --live-frontier-command ...
+```
+
+Use the validation-only local screen before another full local or hybrid attempt:
+
+```sh
+node experiments/harness-arena/runner.mjs --live --h15-qwen-coder-task validation-only --live-local-command ...
 ```
 
 Use the full command template in

@@ -1,0 +1,40 @@
+Goal: harden H15 PATCH validation without redesigning the endpoint
+
+memory:
+  task_brief
+  route_policy
+  policy_version
+
+flow:
+  remember key="policy_version" value="h15-validation-only-local-screen-v1"
+  remember key="route_policy" value="Local worker owns validation hardening in src/app.js and validation-focused public tests in src/test.js. Existing GET, POST, DELETE, and export behavior must be preserved."
+
+  prompt: Read TASK.md, src/app.js, and src/test.js. Harden only the validation behavior for the existing patchContact(id, data) function. Preserve listContacts, getContact, createContact, deleteContact, patchContact, and contacts exports. Preserve successful deleteContact behavior: status 204 and body null. Validate only fields provided to patchContact. Rules: name must be a string with 2-100 characters; email must contain @ and a dot after @; phone must use only digits, dashes, spaces, and optional leading + with 7-20 characters; company must be a string with 1-200 characters or null. Add at least six validation-focused PATCH tests to src/test.js covering invalid short name, invalid email without a dot after @, invalid phone characters, empty company string, null company accepted, and partial update preservation. Run node src/test.js. Do not write local-worker-summary.md until the public checks pass.
+
+  retry max 4
+    run: node -e "const fs=require('fs'); const app=require('./src/app'); const tests=fs.readFileSync('src/test.js','utf8'); const patch=app.patchContact; const validationTests=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(validation|invalid|reject|short|email|phone|company|null|partial)[^'\\\"]*['\\\"]/gi)||[]).length; if (typeof patch!=='function') { console.error('patchContact missing'); process.exit(1); } for (const name of ['listContacts','getContact','createContact','deleteContact','contacts']) { if (!(name in app)) { console.error('missing export '+name); process.exit(1); } } if (validationTests < 6) { console.error('expected at least 6 validation-focused PATCH tests, found '+validationTests); process.exit(1); } let result=patch(1,{name:'Alice V'}); if (result.status!==200||result.body.name!=='Alice V') { console.error('valid name update failed'); process.exit(1); } result=patch(2,{company:null}); if (result.status!==200||result.body.company!==null) { console.error('null company should be accepted'); process.exit(1); } result=patch(3,{name:'Carol V'}); if (result.status!==200||result.body.email!=='carol@example.com') { console.error('partial update preservation failed'); process.exit(1); } if (patch(999,{name:'Nobody'}).status!==404) { console.error('missing ID should return 404'); process.exit(1); } if (patch(1,{name:'A'}).status!==400) { console.error('short name should return 400'); process.exit(1); } if (patch(1,{email:'bad@domain'}).status!==400) { console.error('email without dot after @ should return 400'); process.exit(1); } if (patch(1,{phone:'abc!@#'}).status!==400) { console.error('invalid phone should return 400'); process.exit(1); } if (patch(1,{company:''}).status!==400) { console.error('empty company string should return 400'); process.exit(1); } const created=app.createContact({name:'Delete Candidate',email:'delete.candidate@example.com'}); const deleted=app.deleteContact(created.body.id); if (deleted.status!==204||deleted.body!==null) { console.error('deleteContact success behavior changed'); process.exit(1); }"
+    if command_failed
+      prompt: The H15 validation micro-flow public gate failed. Fix only src/app.js and src/test.js. Preserve original exports and GET/POST/DELETE behavior. Add validation-focused PATCH tests. Gate output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  retry max 4
+    run: node src/test.js [timeout 120]
+    if command_failed
+      prompt: Public tests are failing. Fix only src/app.js and src/test.js so validation rules and existing behavior pass. Test output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  prompt: Use a write_file action to create local-worker-summary.md at the workspace root. Include changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary. Do not mention or infer hidden oracle implementation details.
+
+  retry max 2
+    run: node -e "process.exit(require('node:fs').existsSync('local-worker-summary.md') ? 0 : 1)"
+    if command_failed
+      prompt: local-worker-summary.md is still missing. Use a write_file action now to create local-worker-summary.md at the workspace root with changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary.
+    end
+  end
+
+done when:
+  file_exists local-worker-summary.md
+  gate h15_validation_public_contract: node -e "const fs=require('fs'); const app=require('./src/app'); const tests=fs.readFileSync('src/test.js','utf8'); const patch=app.patchContact; const validationTests=(tests.match(/test\\s*\\(\\s*['\\\"][^'\\\"]*(validation|invalid|reject|short|email|phone|company|null|partial)[^'\\\"]*['\\\"]/gi)||[]).length; if (typeof patch!=='function') process.exit(1); for (const name of ['listContacts','getContact','createContact','deleteContact','contacts']) if (!(name in app)) process.exit(1); if (validationTests < 6) process.exit(1); let result=patch(1,{name:'Alice V'}); if (result.status!==200||result.body.name!=='Alice V') process.exit(1); result=patch(2,{company:null}); if (result.status!==200||result.body.company!==null) process.exit(1); result=patch(3,{name:'Carol V'}); if (result.status!==200||result.body.email!=='carol@example.com') process.exit(1); if (patch(999,{name:'Nobody'}).status!==404) process.exit(1); if (patch(1,{name:'A'}).status!==400) process.exit(1); if (patch(1,{email:'bad@domain'}).status!==400) process.exit(1); if (patch(1,{phone:'abc!@#'}).status!==400) process.exit(1); if (patch(1,{company:''}).status!==400) process.exit(1); const created=app.createContact({name:'Delete Candidate',email:'delete.candidate@example.com'}); const deleted=app.deleteContact(created.body.id); if (deleted.status!==204||deleted.body!==null) process.exit(1);"
+  gate public_tests: node src/test.js

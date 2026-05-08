@@ -58,6 +58,9 @@ evidence:
 - `--h15-qwen-coder-task api-endpoint` applies the checked-in H15 route policy.
   The current route is `frontier-only`, with `qwen3-coder:30b` retained only as
   an experimental local draft candidate for narrower micro-flow screens.
+- `--h15-qwen-coder-task validation-only` applies the checked-in H15 validation
+  micro-flow. It defaults to a local-only screening arm and is not full H15
+  endpoint evidence.
 - H14 route-profile live commands must reference the routed flow. Use
   `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative
   flow path in `--live-local-command` / `--live-frontier-command`.
@@ -107,8 +110,9 @@ risk, repeated local failure, or read-only review.
 
 1. Keep H15 endpoint work on the frontier-only baseline route until local
    micro-flows show reliable value.
-2. Add or run a narrower H15 local micro-flow for validation-only implementation,
-   PATCH test authoring, or one public-gate repair loop with a shorter timeout.
+2. Run the checked-in H15 validation-only local screen with
+   `--h15-qwen-coder-task validation-only`, sampled local resource evidence, and
+   the private validation oracle.
 3. Promote a local H15 candidate back into a hybrid full-task route only after the
    micro-flow passes with claim-grade manifests and sampled resource evidence.
 4. Add an H11-style multi-file refactor fixture after H15 has a stable baseline

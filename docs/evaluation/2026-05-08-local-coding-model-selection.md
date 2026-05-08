@@ -157,6 +157,57 @@ Live model batches must be treated as contained experiments:
 5. Only then run H14 subroles. Do not spend a full H14 run on a model that cannot
    pass the readiness smoke and subrole screen.
 
+## Live Readiness Results
+
+Initial execution used Windows-hosted Ollama `0.20.5` exposed to WSL at
+`http://172.17.32.1:11435`. The previous `10.255.255.254` endpoint from earlier
+readiness notes was stale for this WSL session. The Windows server listened on
+`0.0.0.0:11435`; WSL `127.0.0.1:11434` was not reachable.
+
+`qwen3-coder:30b` is the first promoted local candidate:
+
+- Pull and model metadata verified: `30.5B`, `qwen3moe`, `Q4_K_M`, 262,144
+  model context reported by `ollama show`.
+- Prompt Language smoke `A: Context file relay` passed through the live Ollama
+  runner.
+- Artifact:
+  `scripts/eval/results/smoke-2026-05-07T23-47-53-328Z.json`.
+- Result: `1/1` passed, 27.168 seconds total, 25.274 seconds test duration.
+- Telemetry: 2 Ollama records, 492 input tokens, 187 output tokens, 679 total
+  tokens, zero provider API cost, no retries.
+- `/api/ps` during residency showed `qwen3-coder:30b`, 19,014,187,008 bytes
+  loaded, 15,775,507,456 bytes VRAM, 4,096 context.
+
+The generic `qwen3:30b` control passed the same smoke but is much less efficient:
+
+- Artifact:
+  `scripts/eval/results/smoke-2026-05-08T00-03-45-767Z.json`.
+- Result: `1/1` passed, 411.654 seconds total, 368.643 seconds test duration.
+- Telemetry: 2 Ollama records, 496 input tokens, 3,752 output tokens, 4,248 total
+  tokens, zero provider API cost, no retries.
+- `/api/ps` showed similar residency: 19,014,187,008 bytes loaded,
+  15,775,507,456 bytes VRAM, 4,096 context.
+
+The `qwen3-opencode:30b` control was stopped manually after about 8.5 minutes on
+the same `A` smoke with no readiness pass. `/api/ps` confirmed it was resident
+while running: 19,215,513,600 bytes loaded, 15,585,304,576 bytes VRAM, 8,192
+context. Treat this as a readiness failure for promotion purposes unless a later
+rerun with a tighter prompt and explicit timeout produces a normal artifact.
+
+The preliminary `E: Run auto-execution` smoke also passed for `qwen3-coder:30b`
+(`scripts/eval/results/smoke-2026-05-07T23-47-09-682Z.json`), but it produced no
+provider telemetry and no model residency snapshot. Use `A`, not `E`, as the
+minimum live-inference readiness slice.
+
+Current decision from the readiness pass:
+
+1. Promote `qwen3-coder:30b` to H14 subrole screening first.
+2. Keep `qwen3:30b` as a slow general-model control, not the main local worker.
+3. Do not run full H14 on `qwen3-opencode:30b` until it passes `A` under a
+   bounded timeout.
+4. Defer `gemma4-opencode` until after `qwen3-coder:30b` subrole results, because
+   19 GB class models are already close to this host's practical VRAM boundary.
+
 ## Sources
 
 - Ollama Qwen3-Coder: <https://ollama.com/library/qwen3-coder>

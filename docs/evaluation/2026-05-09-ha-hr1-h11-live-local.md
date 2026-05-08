@@ -258,8 +258,52 @@ Public path behavior:
 - `local-worker-summary.md` was created
 - final Prompt Language status was `completed` with `gateFailureCount: 0`
 
+## Run 006
+
+Run: `HA-HR1-H11-multi-file-refactor-qwen-coder-006`
+
+Route:
+`node experiments/harness-arena/runner.mjs --live --h11-qwen-coder-task multi-file-refactor ...`
+
+Result:
+
+- Repo commit: `a1afe6d`
+- Repo dirty: `false`
+- Runner: `ollama`
+- Model: `qwen3-coder:30b`
+- Transport: `PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell`
+- Endpoint label: `ollama-powershell-stdin`
+- Step exit: `0`
+- Timed out: `false`
+- Wall time: `454.176s`
+- Model calls: `18`
+- Tokens: `54,750`
+- Resource samples: `196`
+- Frontier calls: `0`
+- Private oracle: `PASS`, `4/4`
+
+Private oracle result:
+
+```text
+PASS: rename structure is complete
+PASS: public tests and app smoke pass
+PASS: hidden Client API checks pass
+PASS: hidden Client route checks pass
+
+Results: 4/4 passed
+```
+
+Public path behavior:
+
+- public tests passed
+- structural rename gate passed
+- behavior-preservation gate passed
+- app smoke passed
+- `local-worker-summary.md` was created
+- final Prompt Language status was `ok` with outcome `PLO-005`
+
 Decision: promote this specific H11 route to local ownership for
-`qwen3-coder:30b`. The route now has three consecutive clean private-oracle
+`qwen3-coder:30b`. The route now has four consecutive clean private-oracle
 passes after the public deletion, behavior-preservation, app-smoke, and summary
 gates were hardened. This does not generalize to all multi-file refactors; it
 means this exact H11 contract is safe to run as a promoted local route until new

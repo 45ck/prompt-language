@@ -115,16 +115,16 @@ Current H11 routing decision:
 
 | Task                | Current model     | Route decision | Reason                                                               |
 | ------------------- | ----------------- | -------------- | -------------------------------------------------------------------- |
-| Multi-file refactor | `qwen3-coder:30b` | local-promoted | Current live screen is `3/5`; promoted for this flow/oracle contract |
+| Multi-file refactor | `qwen3-coder:30b` | local-promoted | Current live screen is `4/6`; promoted for this flow/oracle contract |
 
 Policy implication: H11 is now a promoted local route because it tests cross-file
 reasoning, no-edit/timeout behavior, import resolution, and API drift under a
 claim-grade live oracle.
 The current H11 flow makes obsolete-file deletion, the `local-worker-summary.md`
-artifact, and behavior preservation public gates before promotion. Runs 003 and
-004 passed the private oracle as repeat screens, and run 005 met the three-clean
-pass threshold. Treat the promotion as scoped to this exact route, model,
-runtime, flow, and oracle.
+artifact, and behavior preservation public gates before promotion. Runs 003
+through 006 passed the private oracle as repeat screens, so the route now exceeds
+the three-clean pass threshold. Treat the promotion as scoped to this exact
+route, model, runtime, flow, and oracle.
 
 ## FSCRUD R29 Implication
 

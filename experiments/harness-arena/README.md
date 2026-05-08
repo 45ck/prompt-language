@@ -28,8 +28,8 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   baseline route.
 - H11 multi-file refactor now has a Harness Arena fixture, private oracle,
   worker flow, and promoted `qwen3-coder:30b` local route. It is currently
-  `3/5`: the third, fourth, and fifth live screens passed the private oracle
-  after explicit deletion instructions and a public behavior-preservation gate.
+  `4/6`: live screens 003 through 006 passed the private oracle after explicit
+  deletion instructions and a public behavior-preservation gate.
 - The current H15 runner profile is executable with
   `node experiments/harness-arena/runner.mjs --h15-qwen-coder-task api-endpoint`;
   in live mode it requires a frontier lane command for the current baseline route.

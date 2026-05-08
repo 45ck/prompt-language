@@ -28,13 +28,13 @@
         "provider": "ollama",
         "name": "qwen3-coder:30b",
         "endpointClass": "local",
-        "selectionReason": "promoted after three consecutive clean Harness Arena H11 live screens passed the private oracle with zero frontier calls"
+        "selectionReason": "promoted after four consecutive clean Harness Arena H11 live screens passed the private oracle with zero frontier calls"
       },
       "fixture": "experiments/harness-arena/fixtures/h11-multi-file-refactor",
       "flow": "experiments/harness-arena/flows/h11-multi-file-refactor-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h11-multi-file-refactor-oracle.mjs",
-      "cleanPasses": 3,
-      "totalRuns": 5,
+      "cleanPasses": 4,
+      "totalRuns": 6,
       "requiredGuards": [
         "public-tests",
         "structural-rename",
@@ -44,7 +44,7 @@
         "private-oracle"
       ],
       "localStopPolicy": "stop after the first timeout, no-edit result, old Contact terminology straggler, import failure, public test failure, or private oracle failure",
-      "notes": "Current Harness Arena result is 3/5, with three consecutive clean passes meeting the three-pass promotion threshold. Run 001 failed with leftover old contact filenames, hidden route drift, missing local-worker-summary.md, and a late Ollama PowerShell JSON control-character diagnostic. Run 002 fixed stale filenames and summary creation after explicit deletion instructions, but failed private oracle on missing Client.toJSON and hidden route behavior. Runs 003, 004, and 005 passed private oracle 4/4 after adding the public behavior-preservation gate. The older aider-vs-pl H11 evidence showed PL can help local qwen3-opencode-big:30b on this class; this qwen3-coder route is now promoted for this exact H11 flow/oracle contract."
+      "notes": "Current Harness Arena result is 4/6, with four consecutive clean passes exceeding the three-pass promotion threshold. Run 001 failed with leftover old contact filenames, hidden route drift, missing local-worker-summary.md, and a late Ollama PowerShell JSON control-character diagnostic. Run 002 fixed stale filenames and summary creation after explicit deletion instructions, but failed private oracle on missing Client.toJSON and hidden route behavior. Runs 003, 004, 005, and 006 passed private oracle 4/4 after adding the public behavior-preservation gate. The older aider-vs-pl H11 evidence showed PL can help local qwen3-opencode-big:30b on this class; this qwen3-coder route is now promoted for this exact H11 flow/oracle contract."
     }
   ],
   "escalationTriggers": [

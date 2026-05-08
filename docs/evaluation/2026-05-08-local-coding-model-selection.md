@@ -1,4 +1,4 @@
-<!-- cspell:ignore Aider GDDR GLM Kimi MiniMax Qwen qwen OpenCode Ollama Radeon ROCm SGLang subrole subroles SWE rebench vLLM Vulkan -->
+<!-- cspell:ignore Aider Devstral GDDR GLM Kimi KTransformers MiniMax MiniMaxAI Mistral Qwen qwen OpenCode Ollama Radeon ROCm SGLang subrole subroles SWE vLLM Vulkan xLLM -->
 
 # Local Coding Model Selection
 
@@ -208,10 +208,98 @@ Current decision from the readiness pass:
 4. Defer `gemma4-opencode` until after `qwen3-coder:30b` subrole results, because
    19 GB class models are already close to this host's practical VRAM boundary.
 
+## Latest Model Scan
+
+The May 8, 2026 scan changes the shortlist, but not the decision boundary:
+newer public models are useful to track, while only models that survive the live
+Prompt Language smoke should enter H14 subrole screening.
+
+DeepSeek's latest public family is `DeepSeek-V4 Preview`, released on April 24,
+2026:
+
+- `DeepSeek-V4-Pro`: 1.6T total parameters, 49B active parameters.
+- `DeepSeek-V4-Flash`: 284B total parameters, 13B active parameters.
+- Both official variants advertise 1M context and thinking/non-thinking modes.
+
+This is important as a cloud/API comparison arm, especially for long-context
+agentic coding, but not as a workstation-local candidate for this host. Even
+the Flash model is far beyond the 31 GiB WSL RAM and 16 GB VRAM envelope.
+
+`qwen3.6:27b` was pulled and inspected because it is the newest local-looking
+Qwen coding candidate in Ollama:
+
+- Ollama metadata: `27.8B`, `qwen35`, `Q4_K_M`, 17 GB package, capabilities
+  `completion`, `vision`, `tools`, and `thinking`.
+- `ollama show` reports a 262,144 model context and Apache 2.0 license.
+- The `A` smoke was stopped after more than five minutes without a readiness
+  pass.
+- `/api/ps` while running showed 23,181,373,344 bytes loaded but only
+  5,411,797,504 bytes in VRAM at 4,096 context.
+
+Treat this as a host-fit failure under the current Ollama settings, not a model
+quality verdict. It may be worth rerunning only with a lower-memory quant,
+tighter context/KV settings, or a runner configuration that can prove better GPU
+residency.
+
+`devstral-small-2:24b` was pulled and completed the same `A` smoke, but failed
+the contract:
+
+- Ollama metadata: `24.0B`, `mistral3`, `Q4_K_M`, 15 GB package, Apache 2.0
+  model card license.
+- `/api/ps` during the run showed 16,340,389,904 bytes loaded and
+  14,556,266,512 bytes in VRAM at 4,096 context.
+- Artifact:
+  `scripts/eval/results/smoke-2026-05-08T00-32-31-341Z.json`.
+- Result: `0/1` passed, 156.166 seconds total, 86.435 seconds test duration.
+- Failure: `A: Context file relay` returned an empty string.
+- Telemetry: 2 Ollama records, 494 input tokens, 82 output tokens, 576 total
+  tokens, zero provider API cost, no retries.
+
+This makes Devstral Small 2 a good host-fit data point but not a promoted Prompt
+Language worker yet. Its public model card claims strong software-engineering
+agent benchmarks, so the next useful check would be a smaller direct
+instruction-following probe before deciding whether the failure is template,
+prompt, or model behavior.
+
+Current latest-model ranking for this PC:
+
+| Rank | Candidate              | Decision                                                                                                 |
+| ---- | ---------------------- | -------------------------------------------------------------------------------------------------------- |
+| 1    | `qwen3-coder:30b`      | Best live local candidate. Already passed `A` with usable telemetry.                                     |
+| 2    | `devstral-small-2:24b` | Best new host-fit challenger, but failed Prompt Language `A`; needs a targeted probe before promotion.   |
+| 3    | `qwen3:30b`            | Passed `A` but too slow; keep as general-model control.                                                  |
+| 4    | `qwen3.6:27b`          | Interesting new Qwen release, but current quant/context spills badly off VRAM.                           |
+| 5    | `GLM-4.7-Flash`        | Strong 30B-A3B paper/model-card candidate; test only after locating a runner package that fits the host. |
+
+Latest large open-weight models worth tracking, but not workstation-local here:
+
+- `DeepSeek-V4-Pro` / `DeepSeek-V4-Flash`: latest DeepSeek family; cloud/API
+  comparison arm.
+- `GLM-5.1`: strong agentic-engineering claims and local server support through
+  SGLang, vLLM, xLLM, Transformers, and KTransformers; too large for this host
+  as a local workstation lane.
+- `MiniMax-M2.5`: strong SWE-Bench Verified and agentic cost claims; server/API
+  comparison arm, not an Ollama-on-this-PC candidate.
+- `Kimi-K2.5`: 1T total / 32B active MoE, 256K context; server/API comparison
+  arm.
+
+The engineering conclusion is still not "local failed." The better conclusion
+is narrower: `qwen3-coder:30b` is the only current local model with enough live
+Prompt Language evidence to enter subrole benchmarks; newer models either do not
+fit the workstation envelope or have not passed the harness contract yet.
+
 ## Sources
 
 - Ollama Qwen3-Coder: <https://ollama.com/library/qwen3-coder>
+- Ollama Qwen3.6: <https://ollama.com/library/qwen3.6:27b>
+- Ollama Devstral Small 2: <https://ollama.com/library/devstral-small-2:24b>
 - Qwen3-Coder announcement: <https://qwenlm.github.io/blog/qwen3-coder/>
 - Qwen3-Coder-Next technical report: <https://arxiv.org/abs/2603.00729>
+- DeepSeek V4 preview release: <https://api-docs.deepseek.com/news/news260424>
+- DeepSeek V4 open-weight collection: <https://huggingface.co/collections/deepseek-ai/deepseek-v4>
+- GLM-4.7-Flash model card: <https://huggingface.co/zai-org/GLM-4.7-Flash>
+- GLM-5.1 model card: <https://huggingface.co/zai-org/GLM-5.1>
+- MiniMax-M2.5 model card: <https://huggingface.co/MiniMaxAI/MiniMax-M2.5>
+- Kimi-K2.5 model card: <https://huggingface.co/moonshotai/Kimi-K2.5>
 - Ollama hardware support: <https://docs.ollama.com/gpu>
 - AMD RX 7600 XT specs: <https://www.amd.com/en/products/graphics/desktops/radeon/7000-series/amd-radeon-rx-7600-xt.html>

@@ -165,8 +165,11 @@ The separate `devstral-small-2:24b` validation-only model screen also failed
 without timeout or resource failure, so it is not a replacement H15 validation
 owner. A separate `qwen3-opencode:30b` validation-only screen also failed after
 the PowerShell bridge timed out during gate evaluation, so the fallback H14
-subrole models are not H15 validation owners under the current route contract. A
-narrower `qwen3-coder:30b` short-name validation repair screen also failed:
+subrole models are not H15 validation owners under the current route contract.
+The later `qwen3.6:27b` validation-only screen also failed after one model call,
+bridge timeout, and private-oracle validation miss, so it is not a replacement
+validation owner. A narrower `qwen3-coder:30b` short-name validation repair
+screen also failed:
 first by passing public checks while regressing hidden validation semantics, then
 by timing out after the public gate was hardened. H15 implementation repair
 therefore remains frontier-owned.

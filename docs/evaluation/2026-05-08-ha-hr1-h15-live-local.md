@@ -459,6 +459,36 @@ Decision: promote the PATCH test-authoring micro-flow to local ownership for
 shared-fixture delete guard. This is still tests-only H15 support; full H15
 endpoint implementation remains frontier-baseline.
 
+## Alternative Validation Model Screen
+
+Run: `HA-HR1-H15-validation-only-qwen36-001`
+
+Result:
+
+- Route: `--h15-qwen-coder-task validation-only`
+- Local model override: `qwen3.6:27b`
+- Repo commit: `31ab61b`
+- Step exit: `3`
+- Timed out: `false`
+- Wall time: `661.983s`
+- Model calls: `1`
+- Tokens: `2,059`
+- Resource samples: `284`
+- Private oracle: `FAIL`, `6/8`
+- Frontier calls: `0`
+
+The first model call completed, then the Ollama PowerShell bridge timed out
+during gate evaluation. The private oracle still executed against the resulting
+workspace and found preserved exports, existing GET/POST/DELETE behavior, valid
+PATCH updates, partial update behavior, and missing-ID handling. It failed on
+short-name validation, which still returned `200` instead of `400`, and on test
+coverage, with only one validation-focused PATCH test found.
+
+Decision: do not promote `qwen3.6:27b` for the H15 validation-only role. This is
+a useful alternative-model screen because it changed the model and runtime
+profile, but it did not improve the H15 validation bottleneck and was much
+slower than the earlier clean `qwen3-coder:30b` validation-only pass.
+
 ## Routing Decision
 
 Do not mark the local-model strategy as a failure overall. Mark this as a
@@ -469,8 +499,10 @@ negative promotion result for one route:
 - H15 validation-only work has one clean local-screen pass and one failed repeat;
   it is not promoted.
 - `devstral-small-2:24b` and `qwen3-opencode:30b` also failed the H15
-  validation-only screen, so the next H15 local attempt should change the route
-  contract or runtime, not rerun these fallback models unchanged.
+  validation-only screen. `qwen3.6:27b` also failed the same validation-only
+  screen after a PowerShell bridge timeout and private-oracle validation miss, so
+  the next H15 local attempt should change the route contract or runtime, not
+  rerun these fallback models unchanged.
 - A narrower qwen3-coder short-name validation repair screen also failed after
   one private-oracle regression and one hardened-gate timeout; implementation
   repair remains not promoted.

@@ -24,8 +24,8 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
 - H15 endpoint evidence did not promote `qwen3-coder:30b` for local-only
   ownership. The local model produced near-complete endpoint work, but repeated
   API-preservation drift, validation drift, a failed one-defect validation repair
-  screen, and the latest hybrid resource failure make `frontier-only` the current
-  baseline route.
+  screen, failed alternative validation-model screens, and the latest hybrid
+  resource failure make `frontier-only` the current baseline route.
 - H11 multi-file refactor now has a Harness Arena fixture, private oracle,
   worker flow, and promoted `qwen3-coder:30b` local route. It is currently
   `4/6`: live screens 003 through 006 passed the private oracle after explicit

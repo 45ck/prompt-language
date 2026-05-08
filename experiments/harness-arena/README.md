@@ -72,7 +72,7 @@ evidence:
   micro-flow. It defaults to a local-only screening arm and is not full H15
   endpoint evidence.
 - `--h15-qwen-coder-task test-authoring` applies the checked-in H15 PATCH
-  test-authoring micro-flow. It defaults to a local-only screening arm where the
+  test-authoring micro-flow. It defaults to a promoted local-only arm where the
   local model may edit only `src/test.js`.
 - H14 route-profile live commands must reference the routed flow. Use
   `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative

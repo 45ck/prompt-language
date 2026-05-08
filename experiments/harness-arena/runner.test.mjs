@@ -491,7 +491,7 @@ test('H15 qwen3-coder profile maps validation micro-flow to local screen default
   }
 });
 
-test('H15 qwen3-coder profile maps PATCH test-authoring micro-flow to local screen defaults', () => {
+test('H15 qwen3-coder profile maps PATCH test-authoring micro-flow to promoted local defaults', () => {
   const outputRoot = tempRoot();
   try {
     const options = parseArgs([
@@ -501,7 +501,7 @@ test('H15 qwen3-coder profile maps PATCH test-authoring micro-flow to local scre
       '--output-root',
       outputRoot,
       '--run-id',
-      'h15-patch-test-authoring-local-screen',
+      'h15-patch-test-authoring-local-promoted',
       '--started-at',
       FIXED_TIME,
     ]);
@@ -512,18 +512,18 @@ test('H15 qwen3-coder profile maps PATCH test-authoring micro-flow to local scre
 
     assert.deepEqual(options.arms, ['local-only']);
     assert.equal(options.taskId, 'h15-patch-test-authoring');
-    assert.equal(options.h15QwenCoderRoute.shouldRunLocal, false);
-    assert.equal(options.h15QwenCoderRoute.shouldRunLocalScreen, true);
+    assert.equal(options.h15QwenCoderRoute.shouldRunLocal, true);
+    assert.equal(options.h15QwenCoderRoute.shouldRunLocalScreen, false);
     assert.equal(options.localModel, 'qwen3-coder:30b');
     assert.equal(options.policyVersion, 'h15-qwen3-coder-endpoint-routing-v2');
     assert.match(options.oracleCommand, /h15-patch-test-authoring-oracle\.mjs/);
     assert.equal(existsSync(join(armRun.workspace, 'src', 'app.js')), true);
     assert.equal(step.stepId, 'local-bulk');
     assert.equal(step.routeDecision, 'local');
-    assert.match(step.routeTrigger, /h15-qwen3-coder:h15-patch-test-authoring:local-screen/);
+    assert.match(step.routeTrigger, /h15-qwen3-coder:h15-patch-test-authoring:local-promoted/);
     assert.equal(step.promptProgram.kind, 'flow');
     assert.match(step.promptProgram.path, /h15-patch-test-authoring-worker\.flow$/);
-    assert.match(step.notes, /H15 qwen3-coder policy local-screen/);
+    assert.match(step.notes, /H15 qwen3-coder policy local-promoted/);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });
   }

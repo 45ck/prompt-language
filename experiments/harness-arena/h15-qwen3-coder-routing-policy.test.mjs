@@ -54,16 +54,16 @@ test('H15 qwen3-coder policy exposes validation-only local screen', () => {
   assert.match(route.notes, /diagnostic micro-flow/);
 });
 
-test('H15 qwen3-coder policy exposes PATCH test-authoring local screen', () => {
+test('H15 qwen3-coder policy exposes promoted PATCH test-authoring route', () => {
   const policy = readPolicy();
   const route = routeByTask(policy, 'h15-patch-test-authoring');
 
-  assert.equal(route.decision, 'local-screen');
+  assert.equal(route.decision, 'local-promoted');
   assert.equal(route.owner, 'local');
   assert.equal(route.selectedModel.name, 'qwen3-coder:30b');
   assert.equal(route.localDraftModel.name, 'qwen3-coder:30b');
-  assert.equal(route.cleanPasses, 3);
-  assert.equal(route.totalRuns, 7);
+  assert.equal(route.cleanPasses, 4);
+  assert.equal(route.totalRuns, 8);
   assert.match(route.flow, /h15-patch-test-authoring-worker\.flow$/);
   assert.match(route.oracle, /h15-patch-test-authoring-oracle\.mjs$/);
   assert.match(route.notes, /tests-only H15 support/);
@@ -72,7 +72,7 @@ test('H15 qwen3-coder policy exposes PATCH test-authoring local screen', () => {
   assert.match(route.notes, /qwen-coder-004 passed/);
   assert.match(route.notes, /live object reference/);
   assert.match(route.notes, /shared fixture id 1/);
-  assert.match(route.notes, /qwen-coder-007 and 008 passed/);
+  assert.match(route.notes, /qwen-coder-007, 008, and 009 passed/);
 });
 
 test('H15 qwen3-coder policy references checked-in evidence and harness files', () => {
@@ -128,13 +128,13 @@ test('H15 qwen3-coder resolver maps validation aliases to local screen decisions
   assert.match(validation.route.oracle, /h15-validation-only-oracle\.mjs$/);
 });
 
-test('H15 qwen3-coder resolver maps PATCH test-authoring aliases to local screen decisions', () => {
+test('H15 qwen3-coder resolver maps PATCH test-authoring aliases to promoted local decisions', () => {
   const testsOnly = resolveH15QwenCoderRoute('patch-tests');
 
-  assert.equal(testsOnly.shouldRunLocal, false);
+  assert.equal(testsOnly.shouldRunLocal, true);
   assert.equal(testsOnly.shouldRunHybrid, false);
   assert.equal(testsOnly.shouldRunFrontier, false);
-  assert.equal(testsOnly.shouldRunLocalScreen, true);
+  assert.equal(testsOnly.shouldRunLocalScreen, false);
   assert.equal(testsOnly.localDraftModel.name, 'qwen3-coder:30b');
   assert.equal(testsOnly.route.owner, 'local');
   assert.equal(testsOnly.route.task, 'h15-patch-test-authoring');

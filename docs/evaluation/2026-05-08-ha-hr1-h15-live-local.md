@@ -310,6 +310,28 @@ pass for `qwen3-coder:30b`. This promotes the micro-flow as useful local-screen
 coverage, but not full H15 endpoint ownership because the route reached `3/7`
 only after several prompt/gate hardening failures.
 
+Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-009`
+
+Result:
+
+- Route: `--h15-qwen-coder-task test-authoring`
+- Step exit: `0`
+- Wall time: `98.723s`
+- Model calls: `7`
+- Tokens: `20,910`
+- Resource samples: `43`
+- Private oracle: `PASS`, `4/4`
+- Frontier calls: `0`
+
+The post-guard success repeated for a third consecutive run. The generated tests
+preserved `src/app.js`, kept the response-object test harness intact, passed
+public tests at `15/15`, and killed the private PATCH validation mutants.
+
+Decision: promote the PATCH test-authoring micro-flow to local ownership for
+`qwen3-coder:30b`. The route is now `4/8` overall and `3/3` after the
+shared-fixture delete guard. This is still tests-only H15 support; full H15
+endpoint implementation remains frontier-baseline.
+
 ## Routing Decision
 
 Do not mark the local-model strategy as a failure overall. Mark this as a
@@ -318,9 +340,8 @@ negative promotion result for one route:
 - H14 full TDD is promoted for `qwen3-coder:30b` under the existing H14 route.
 - H15 endpoint work is not promoted for local-only ownership yet.
 - H15 validation-only work now has a clean local-screen pass.
-- H15 PATCH test-authoring has three clean local-screen passes after four failed
-  attempts; it is useful as a screen-only local route, not full H15 endpoint
-  ownership.
+- H15 PATCH test-authoring is promoted as a tests-only local route after three
+  consecutive clean post-guard passes; it is not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.
 

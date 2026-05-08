@@ -198,6 +198,7 @@ export function parseArgs(argv) {
   const frontierCallLimit =
     options.frontierCallLimit ?? defaultFrontierCallLimit(resolvedArms, options);
   const budgetedOptions = { ...options, arms: resolvedArms, frontierCallLimit };
+  validateH15QwenCoderProfile(budgetedOptions);
   validateBudgetOptions(budgetedOptions);
   validateLiveOptions(budgetedOptions, oracleCommandProvided);
 
@@ -338,6 +339,42 @@ function applyH15QwenCoderRouteDefaults(options, providedFields) {
   }
   if (!providedFields.has('taskBrief')) options.taskBrief = route.notes;
   if (!providedFields.has('taskId')) options.taskId = route.task;
+}
+
+function validateH15QwenCoderProfile(options) {
+  const resolved = options.h15QwenCoderRoute;
+  if (!resolved) return;
+
+  const expectedArms = resolved.shouldRunFrontier
+    ? ['frontier-only']
+    : resolved.shouldRunHybrid
+      ? ['hybrid-router']
+      : ['local-only'];
+  const unexpectedArms = options.arms.filter((arm) => !expectedArms.includes(arm));
+  if (unexpectedArms.length > 0 || options.arms.length !== expectedArms.length) {
+    throw new Error(
+      [
+        `H15 route ${resolved.route.task} is ${resolved.route.decision}`,
+        `and must run arms ${expectedArms.join(', ')}`,
+        `not ${options.arms.join(', ')}`,
+      ].join(' '),
+    );
+  }
+
+  const usesLocalModel = options.arms.some(
+    (arm) => arm === 'local-only' || arm === 'hybrid-router',
+  );
+  if (!usesLocalModel) return;
+
+  const allowedModels = resolved.localCandidateModels.map((model) => model.name);
+  if (!allowedModels.includes(options.localModel)) {
+    throw new Error(
+      [
+        `H15 route ${resolved.route.task} permits local models ${allowedModels.join(', ')}`,
+        `not ${options.localModel}`,
+      ].join(' '),
+    );
+  }
 }
 
 function validateLiveOptions(options, oracleCommandProvided) {

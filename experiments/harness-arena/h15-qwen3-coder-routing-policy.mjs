@@ -41,9 +41,15 @@ export function resolveH15QwenCoderRoute(task, policy = loadH15QwenCoderRoutingP
     const available = policy.routes.map((entry) => entry.task).join(', ');
     throw new Error(`unknown H15 qwen3-coder task "${task}". Available: ${available}`);
   }
+  const fallbackModels = route.fallbackModels ?? [];
+  const localCandidateModels = [route.selectedModel, ...fallbackModels].filter(
+    (model) => model?.provider === 'ollama',
+  );
 
   return {
     escalationTriggers: policy.escalationTriggers,
+    fallbackModels,
+    localCandidateModels,
     localDraftModel: route.localDraftModel,
     model: policy.model,
     policyVersion: policy.policyVersion,

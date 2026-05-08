@@ -590,6 +590,56 @@ test('H15 qwen3-coder profile maps PATCH test-authoring micro-flow to promoted l
   }
 });
 
+test('H15 qwen3-coder profile allows the promoted PATCH test-authoring fallback model', () => {
+  const outputRoot = tempRoot();
+  try {
+    const options = parseArgs([
+      '--dry-run',
+      '--h15-qwen-coder-task',
+      'test-authoring',
+      '--local-model',
+      'devstral-small-2:24b',
+      '--output-root',
+      outputRoot,
+      '--run-id',
+      'h15-patch-test-authoring-devstral-fallback',
+      '--started-at',
+      FIXED_TIME,
+    ]);
+    const result = runHarnessArena(options);
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+
+    assert.deepEqual(options.arms, ['local-only']);
+    assert.equal(options.localModel, 'devstral-small-2:24b');
+    assert.deepEqual(
+      options.h15QwenCoderRoute.localCandidateModels.map((model) => model.name),
+      ['qwen3-coder:30b', 'devstral-small-2:24b'],
+    );
+    assert.match(step.routeTrigger, /h15-qwen3-coder:h15-patch-test-authoring:local-promoted/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('H15 qwen3-coder profile rejects route and model overrides outside evidence', () => {
+  assert.throws(
+    () => parseArgs(['--h15-qwen-coder-task', 'api-endpoint', '--arms', 'local-only']),
+    /H15 route h15-api-endpoint is frontier-baseline and must run arms frontier-only/,
+  );
+  assert.throws(
+    () =>
+      parseArgs([
+        '--h15-qwen-coder-task',
+        'validation-only',
+        '--local-model',
+        'devstral-small-2:24b',
+      ]),
+    /H15 route h15-validation-only permits local models qwen3-coder:30b not devstral-small-2:24b/,
+  );
+});
+
 test('route profiles are mutually exclusive', () => {
   assert.throws(
     () =>

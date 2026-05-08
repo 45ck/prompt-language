@@ -239,6 +239,12 @@ node "$repo/experiments/harness-arena/runner.mjs" \
   --output-root .tmp/harness-arena
 ```
 
+For the promoted Devstral fallback on this same tests-only route, also pass
+`--local-model devstral-small-2:24b` and use
+`--model devstral-small-2:24b` inside the live local command. The H15 profile
+rejects Devstral on validation-only and rejects local-arm overrides for the full
+endpoint route.
+
 Use `--local-resource-snapshot-command` for live local runs when host diagnostics
 matter. The runner records before/after stdout, stderr, and metadata artifact refs
 on each local step so `ollama ps`, GPU probes, or OS memory probes stay attached

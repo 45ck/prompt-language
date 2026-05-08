@@ -80,6 +80,10 @@ evidence:
   test-authoring micro-flow. It defaults to a promoted local-only arm where the
   local model may edit only `src/test.js`; `devstral-small-2:24b` is promoted as
   the fallback for this tests-only route.
+- H15 route profiles enforce their evidence boundary. The endpoint task must stay
+  on the frontier-only arm, validation-only accepts only its selected local model,
+  and `devstral-small-2:24b` is accepted only as the PATCH test-authoring
+  fallback.
 - `fixtures/h15-validation-repair-short-name` and
   `flows/h15-validation-repair-short-name-worker.flow` exist as a generic H15
   repair screen. Current evidence is negative: qwen3-coder regressed hidden

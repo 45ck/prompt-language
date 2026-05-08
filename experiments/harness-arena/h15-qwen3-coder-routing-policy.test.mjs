@@ -144,6 +144,14 @@ test('H15 qwen3-coder resolver maps PATCH test-authoring aliases to promoted loc
   assert.equal(testsOnly.shouldRunFrontier, false);
   assert.equal(testsOnly.shouldRunLocalScreen, false);
   assert.equal(testsOnly.localDraftModel.name, 'qwen3-coder:30b');
+  assert.deepEqual(
+    testsOnly.localCandidateModels.map((model) => model.name),
+    ['qwen3-coder:30b', 'devstral-small-2:24b'],
+  );
+  assert.deepEqual(
+    testsOnly.fallbackModels.map((model) => model.name),
+    ['devstral-small-2:24b'],
+  );
   assert.equal(testsOnly.route.owner, 'local');
   assert.equal(testsOnly.route.task, 'h15-patch-test-authoring');
   assert.match(testsOnly.route.flow, /h15-patch-test-authoring-worker\.flow$/);

@@ -493,6 +493,89 @@ describe('OllamaPromptTurnRunner', () => {
     ).resolves.toContain('"transport":"powershell"');
   });
 
+  it('rejects oversized CLI transport prompts before launching Ollama', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    const fakeCliPath = join(tempDir, 'should-not-run.mjs');
+    await writeFile(
+      fakeCliPath,
+      [
+        '#!/usr/bin/env node',
+        "throw new Error('CLI transport should not run for oversized prompts');",
+      ].join('\n'),
+      'utf8',
+    );
+    await chmod(fakeCliPath, 0o755);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TRANSPORT', 'cli');
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_CLI_PATH', fakeCliPath);
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-coder:30b',
+      prompt: `Acknowledge this large prompt: ${'x'.repeat(31_000)}`,
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.assistantText).toContain('Ollama CLI prompt exceeds 30000 bytes');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('reports CLI transport process stderr when Ollama exits unsuccessfully', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    const fakeCliPath = join(tempDir, 'failing-ollama-cli.mjs');
+    await writeFile(
+      fakeCliPath,
+      [
+        '#!/usr/bin/env node',
+        "process.stderr.write('cli transport unavailable');",
+        'process.exit(2);',
+      ].join('\n'),
+      'utf8',
+    );
+    await chmod(fakeCliPath, 0o755);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TRANSPORT', 'cli');
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_CLI_PATH', fakeCliPath);
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-coder:30b',
+      prompt: 'Acknowledge the task.',
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.assistantText).toContain('cli transport unavailable');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('reports PowerShell transport stderr when the bridge command fails', async () => {
+    tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
+    const fakePowerShellPath = join(tempDir, 'failing-powershell.mjs');
+    await writeFile(
+      fakePowerShellPath,
+      [
+        '#!/usr/bin/env node',
+        "process.stderr.write('powershell bridge unavailable');",
+        'process.exit(1);',
+      ].join('\n'),
+      'utf8',
+    );
+    await chmod(fakePowerShellPath, 0o755);
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_TRANSPORT', 'powershell');
+    vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_POWERSHELL_PATH', fakePowerShellPath);
+
+    const runner = new OllamaPromptTurnRunner();
+    const result = await runner.run({
+      cwd: tempDir,
+      model: 'ollama/qwen3-coder:30b',
+      prompt: 'Acknowledge the task.',
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(result.assistantText).toContain('powershell bridge unavailable');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('retries Ollama cold-start model runner crashes', async () => {
     tempDir = await mkdtemp(join(tmpdir(), 'pl-ollama-runner-'));
     vi.stubEnv('PROMPT_LANGUAGE_OLLAMA_RETRY_DELAY_MS', '1');

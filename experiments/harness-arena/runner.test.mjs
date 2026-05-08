@@ -1334,6 +1334,83 @@ test('sampled live run preserves shell variables inside nested command templates
   }
 });
 
+test('minimal command environment policy strips unrelated parent environment variables', () => {
+  const outputRoot = tempRoot();
+  const scriptRoot = tempRoot();
+  const previousSecret = process.env.HA_SECRET_SHOULD_NOT_LEAK;
+  try {
+    process.env.HA_SECRET_SHOULD_NOT_LEAK = 'parent-secret';
+    mkdirSync(scriptRoot, { recursive: true });
+    const liveScript = join(scriptRoot, 'env-live-step.mjs');
+    const oracleScript = join(scriptRoot, 'oracle.mjs');
+    writeFileSync(
+      liveScript,
+      [
+        "import { writeFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const [workspace] = process.argv.slice(2);',
+        'const leaked = process.env.HA_SECRET_SHOULD_NOT_LEAK ?? null;',
+        "writeFileSync(join(workspace, 'env-policy.json'), JSON.stringify({ leaked }));",
+        'console.log(`env-leaked:${leaked ?? "none"}`);',
+      ].join('\n'),
+    );
+    writeFileSync(
+      oracleScript,
+      [
+        "import { readFileSync } from 'node:fs';",
+        'const workspace = process.argv.at(-1);',
+        "const result = JSON.parse(readFileSync(`${workspace}/env-policy.json`, 'utf8'));",
+        'if (result.leaked !== null) process.exit(1);',
+        "console.log('minimal env oracle pass');",
+      ].join('\n'),
+    );
+
+    const liveCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      liveScript,
+    )} <workspace>`;
+    const oracleCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      oracleScript,
+    )} --workspace <workspace>`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--live',
+        '--arms',
+        'local-only',
+        '--command-environment-policy',
+        'minimal-allowlist',
+        '--live-local-command',
+        liveCommand,
+        '--oracle-command',
+        oracleCommand,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'minimal-command-env-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+    const metadata = readJson(
+      join(armRun.armDir, 'artifacts', 'steps', '01-local-bulk', 'metadata.json'),
+    );
+
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.equal(manifest.evidencePolicy.commandEnvironmentPolicy, 'minimal-allowlist');
+    assert.equal(metadata.commandEnvironmentPolicy, 'minimal-allowlist');
+    assert.equal(step.exitCode, 0);
+    assert.equal(manifest.oracle.passed, true);
+    assert.match(readArmArtifact(armRun, step.stdoutArtifactRef), /env-leaked:none/);
+  } finally {
+    if (previousSecret == null) delete process.env.HA_SECRET_SHOULD_NOT_LEAK;
+    else process.env.HA_SECRET_SHOULD_NOT_LEAK = previousSecret;
+    rmSync(outputRoot, { recursive: true, force: true });
+    rmSync(scriptRoot, { recursive: true, force: true });
+  }
+});
+
 test('live hybrid-router inserts frontier repair after local lane failure', () => {
   const outputRoot = tempRoot();
   const noRepairOutputRoot = tempRoot();

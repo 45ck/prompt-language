@@ -19,6 +19,7 @@ const ALL_ARMS = ['local-only', 'frontier-only', 'advisor-only', 'hybrid-router'
 const DEFAULT_ORACLE_COMMAND = 'node private/ha-hr1-oracle.mjs --workspace <workspace>';
 const DEFAULT_STEP_TIMEOUT_MS = 1_000;
 const DEFAULT_ORACLE_TIMEOUT_MS = 1_000;
+const COMMAND_ENVIRONMENT_POLICIES = ['parent-env-inherited', 'minimal-allowlist'];
 const DEFAULT_TASK_BRIEF =
   'Synthetic HA-HR1 structure check. Prepare isolated arm workspaces only.';
 const DRY_RUN_NOTE = `# Harness Arena Dry Run
@@ -39,6 +40,7 @@ The private oracle remains outside model-visible workspace input.
 const ARG_FIELDS = {
   '--adapter-version': 'adapterVersion',
   '--arms': 'arms',
+  '--command-environment-policy': 'commandEnvironmentPolicy',
   '--fake-step-command': 'fakeStepCommand',
   '--fixture': 'fixture',
   '--frontier-call-limit': 'frontierCallLimit',
@@ -93,6 +95,7 @@ export function parseArgs(argv) {
   const options = {
     adapterVersion: 'harness-arena-live-command-v1',
     arms: 'all',
+    commandEnvironmentPolicy: 'parent-env-inherited',
     fakeStepCommand: null,
     fixture: null,
     frontierCallLimit: null,
@@ -231,6 +234,12 @@ function parseArgValue(field, value, flag) {
   }
   if (field === 'usdLimit') return parseNonNegativeNumber(value, flag);
   if (field === 'wallSecondsLimit') return parsePositiveInteger(value, flag);
+  if (field === 'commandEnvironmentPolicy') {
+    if (!COMMAND_ENVIRONMENT_POLICIES.includes(value)) {
+      throw new Error(`${flag} must be one of ${COMMAND_ENVIRONMENT_POLICIES.join(', ')}`);
+    }
+    return value;
+  }
   return value;
 }
 
@@ -603,6 +612,7 @@ function executeFakeLiveSteps(options, armDir, arm, workspace) {
       artifactDir,
       armDir,
       command,
+      commandEnvironmentPolicy: options.commandEnvironmentPolicy,
       cwd: workspace,
       phase: 'step',
       timeoutMs: options.stepTimeoutMs,
@@ -678,6 +688,7 @@ function executeLiveStep(options, armDir, arm, workspace, [stepId, routeDecision
     artifactDir,
     armDir,
     command,
+    commandEnvironmentPolicy: options.commandEnvironmentPolicy,
     cwd: workspace,
     phase: 'step',
     timeoutMs: options.stepTimeoutMs,
@@ -861,6 +872,7 @@ function executeLocalResourceSnapshot(options, armDir, workspace, { arm, attempt
     artifactDir,
     armDir,
     command,
+    commandEnvironmentPolicy: options.commandEnvironmentPolicy,
     cwd: workspace,
     phase: `resource-${label}`,
     timeoutMs: Math.min(options.stepTimeoutMs, 30_000),
@@ -899,15 +911,29 @@ function executePrivateOracle(options, armDir, workspace) {
     artifactDir,
     armDir,
     command,
+    commandEnvironmentPolicy: options.commandEnvironmentPolicy,
     cwd: artifactDir,
     phase: 'oracle',
     timeoutMs: options.oracleTimeoutMs,
   });
 }
 
-function executeCommandPhase({ artifactDir, armDir, command, cwd, phase, timeoutMs }) {
+function executeCommandPhase({
+  artifactDir,
+  armDir,
+  command,
+  commandEnvironmentPolicy,
+  cwd,
+  phase,
+  timeoutMs,
+}) {
   mkdirSync(artifactDir, { recursive: true });
-  const execution = runCommandWithTimeout({ ...command, cwd, timeoutMs });
+  const execution = runCommandWithTimeout({
+    ...command,
+    commandEnvironmentPolicy,
+    cwd,
+    timeoutMs,
+  });
   const stdoutPath = join(artifactDir, 'stdout.txt');
   const stderrPath = join(artifactDir, 'stderr.txt');
   const metadataPath = join(artifactDir, 'metadata.json');
@@ -916,6 +942,7 @@ function executeCommandPhase({ artifactDir, armDir, command, cwd, phase, timeout
   writeJson(metadataPath, {
     phase,
     command: command.displayCommand,
+    commandEnvironmentPolicy,
     timeoutMs,
     timedOut: execution.timedOut,
     exitCode: execution.exitCode,
@@ -933,12 +960,19 @@ function executeCommandPhase({ artifactDir, armDir, command, cwd, phase, timeout
   };
 }
 
-export function runCommandWithTimeout({ args = [], command, cwd, timeoutMs }) {
+export function runCommandWithTimeout({
+  args = [],
+  command,
+  commandEnvironmentPolicy = 'parent-env-inherited',
+  cwd,
+  timeoutMs,
+}) {
   const startedAt = new Date().toISOString();
   const started = process.hrtime.bigint();
   const result = spawnSync(command, args, {
     cwd,
     encoding: 'utf8',
+    env: commandEnvironment(commandEnvironmentPolicy),
     killSignal: 'SIGTERM',
     timeout: timeoutMs,
     windowsHide: true,
@@ -958,6 +992,33 @@ export function runCommandWithTimeout({ args = [], command, cwd, timeoutMs }) {
     timedOut,
     wallSeconds: Number((durationMs / 1_000).toFixed(3)),
   };
+}
+
+function commandEnvironment(policy) {
+  if (policy === 'parent-env-inherited') return process.env;
+  if (policy !== 'minimal-allowlist') {
+    throw new Error(`unknown command environment policy: ${policy}`);
+  }
+
+  const env = {};
+  for (const key of [
+    'COMSPEC',
+    'HOME',
+    'LANG',
+    'LC_ALL',
+    'PATH',
+    'PATHEXT',
+    'SystemRoot',
+    'TEMP',
+    'TMP',
+    'TMPDIR',
+    'USER',
+    'USERNAME',
+    'WINDIR',
+  ]) {
+    if (process.env[key] != null) env[key] = process.env[key];
+  }
+  return env;
 }
 
 function buildFakeStepCommand(options, arm, stepId, index, workspace) {
@@ -1137,7 +1198,7 @@ function buildManifest(options, arm, workspace, stepExecutions = null, oracleExe
     evidencePolicy: {
       manifestAuthor: 'harness',
       oracleVisibility: 'private-artifacts-only',
-      commandEnvironmentPolicy: 'parent-env-inherited',
+      commandEnvironmentPolicy: options.commandEnvironmentPolicy,
       providerFallbackPolicy: 'forbid',
       localOnlyAllowsFrontierInput: false,
     },
@@ -1559,7 +1620,7 @@ function byName(left, right) {
 }
 
 export function usage() {
-  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--h11-qwen-coder-task task] [--h14-local-subrole subrole] [--h14-qwen-coder-subrole subrole] [--h15-qwen-coder-task task] [--frontier-call-limit n] [--usd-limit n] [--wall-seconds-limit n] [--local-repair-attempt-limit n] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
+  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--h11-qwen-coder-task task] [--h14-local-subrole subrole] [--h14-qwen-coder-subrole subrole] [--h15-qwen-coder-task task] [--frontier-call-limit n] [--usd-limit n] [--wall-seconds-limit n] [--local-repair-attempt-limit n] [--command-environment-policy parent-env-inherited|minimal-allowlist] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
 }
 
 function main(argv = process.argv.slice(2)) {

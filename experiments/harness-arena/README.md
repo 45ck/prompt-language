@@ -118,6 +118,8 @@ evidence:
 - Live and fake-live manifests declare `evidencePolicy.commandEnvironmentPolicy`.
   The current runner records `parent-env-inherited`, so claim reviews must treat
   environment containment as explicit metadata rather than an unstated guarantee.
+  Use `--command-environment-policy minimal-allowlist` for lanes that should strip
+  unrelated parent environment variables from step, resource, and oracle commands.
 
 Adjacent evidence from FSCRUD R28 remains useful context but must not be counted
 as harness-arena evidence. R28 showed that local Ollama can perform real

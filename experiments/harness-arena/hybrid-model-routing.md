@@ -153,14 +153,14 @@ Current H15 routing decision:
 | Task                 | Current model     | Route decision    | Reason                                                                      |
 | -------------------- | ----------------- | ----------------- | --------------------------------------------------------------------------- |
 | API endpoint         | Codex             | frontier-baseline | One frontier-only call passed; measured hybrid used three frontier calls    |
-| Validation only      | `qwen3-coder:30b` | local-screen      | Passed `HA-HR1-H15-validation-only-qwen-coder-002` with zero frontier calls |
+| Validation only      | `qwen3-coder:30b` | local-screen      | Route is `1/2`; repeat run exhausted action rounds and failed oracle        |
 | PATCH test-authoring | `qwen3-coder:30b` | local-promoted    | Route is `4/8`; tests-only route passed three times after the fixture guard |
 
 Policy implication: the next full H15 claim should use frontier-only. The
-checked-in validation-only route is positive local diagnostic evidence, and the
-PATCH test-authoring route is promoted for tests-only ownership. Hybrid remains
-experimental until local micro-flows reliably reduce frontier repair/review work.
-A passing hybrid run would still not be local-only evidence.
+checked-in validation-only route remains screen-only after a failed repeat, while
+the PATCH test-authoring route is promoted for tests-only ownership. Hybrid
+remains experimental until local micro-flows reliably reduce frontier
+repair/review work. A passing hybrid run would still not be local-only evidence.
 
 ## Prompt Language Shape
 

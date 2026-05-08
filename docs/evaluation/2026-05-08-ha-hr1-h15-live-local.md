@@ -163,6 +163,27 @@ evidence for `qwen3-coder:30b`. This does not promote full H15 endpoint
 ownership; it proves the local model can handle the narrower validation
 hardening micro-flow when the route contract is clean.
 
+Run: `HA-HR1-H15-validation-only-qwen-coder-003`
+
+Result:
+
+- Route: `--h15-qwen-coder-task validation-only`
+- Step exit: `3`
+- Wall time: `540.429s`
+- Model calls: `20`
+- Tokens: `75,598`
+- Resource samples: `232`
+- Private oracle: `FAIL`, `7/8`
+- Frontier calls: `0`
+
+The Prompt Language runner stopped after the Ollama action-round limit (`20`).
+The private oracle still ran against the workspace and found that short-name
+validation returned an error status without the expected error body.
+
+Decision: keep validation-only as `local-screen`, not promoted. The earlier clean
+pass remains useful evidence, but run `003` shows the route is still unstable and
+too expensive to own without another gate/flow revision.
+
 ### PATCH Test-Authoring Local Screen
 
 Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-002`
@@ -339,7 +360,8 @@ negative promotion result for one route:
 
 - H14 full TDD is promoted for `qwen3-coder:30b` under the existing H14 route.
 - H15 endpoint work is not promoted for local-only ownership yet.
-- H15 validation-only work now has a clean local-screen pass.
+- H15 validation-only work has one clean local-screen pass and one failed repeat;
+  it is not promoted.
 - H15 PATCH test-authoring is promoted as a tests-only local route after three
   consecutive clean post-guard passes; it is not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,

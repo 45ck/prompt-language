@@ -48,10 +48,11 @@ test('H15 qwen3-coder policy exposes validation-only local screen', () => {
   assert.equal(route.selectedModel.name, 'qwen3-coder:30b');
   assert.equal(route.localDraftModel.name, 'qwen3-coder:30b');
   assert.equal(route.cleanPasses, 1);
-  assert.equal(route.totalRuns, 1);
+  assert.equal(route.totalRuns, 2);
   assert.match(route.flow, /h15-validation-only-worker\.flow$/);
   assert.match(route.oracle, /h15-validation-only-oracle\.mjs$/);
   assert.match(route.notes, /diagnostic micro-flow/);
+  assert.match(route.notes, /run 003 exhausted/);
 });
 
 test('H15 qwen3-coder policy exposes promoted PATCH test-authoring route', () => {

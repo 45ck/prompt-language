@@ -70,7 +70,8 @@ evidence:
   an experimental local draft candidate for narrower micro-flow screens.
 - `--h15-qwen-coder-task validation-only` applies the checked-in H15 validation
   micro-flow. It defaults to a local-only screening arm and is not full H15
-  endpoint evidence.
+  endpoint evidence. The route is `1/2`; the latest repeat exhausted action
+  rounds and failed the private oracle.
 - `--h15-qwen-coder-task test-authoring` applies the checked-in H15 PATCH
   test-authoring micro-flow. It defaults to a promoted local-only arm where the
   local model may edit only `src/test.js`.

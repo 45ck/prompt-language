@@ -64,7 +64,7 @@
       "flow": "experiments/harness-arena/flows/h15-validation-only-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h15-validation-only-oracle.mjs",
       "cleanPasses": 1,
-      "totalRuns": 1,
+      "totalRuns": 2,
       "requiredGuards": [
         "patch-validation",
         "existing-api-preserved",
@@ -73,7 +73,7 @@
         "private-oracle"
       ],
       "localStopPolicy": "stop after the first timeout, resource failure, original API drift, or validation oracle failure; do not convert the same run into full H15 evidence",
-      "notes": "Use only as a local diagnostic micro-flow. The clean pass is evidence for validation hardening, not for full H15 endpoint ownership."
+      "notes": "Use only as a local diagnostic micro-flow. HA-HR1-H15-validation-only-qwen-coder-002 passed as evidence for validation hardening, but run 003 exhausted the 20 action-round limit and failed the private oracle because short-name validation lacked the expected error body. This is not promoted for full H15 endpoint ownership."
     },
     {
       "task": "h15-patch-test-authoring",

@@ -63,7 +63,10 @@ test('H14 local routing policy records promoted fallback models without selectin
   assert.equal(apiPreservation.selectedModel.name, 'qwen3-coder:30b');
   assert.equal(testAuthoring.selectedModel.name, 'qwen3-coder:30b');
   assert.equal(fullTdd.selectedModel.name, 'qwen3-coder:30b');
-  assert.deepEqual(fullTdd.fallbackModels, []);
+  assert.deepEqual(
+    fullTdd.fallbackModels.map((model) => model.name),
+    ['devstral-small-2:24b'],
+  );
   assert.deepEqual(
     implementation.fallbackModels.map((model) => model.name),
     ['devstral-small-2:24b', 'qwen3-opencode:30b'],

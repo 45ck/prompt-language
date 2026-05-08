@@ -18,8 +18,9 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   rescue that model; failure-aware hybrid eventually passed but was
   frontier-repair dominated.
 - H14 local portfolio evidence promoted `qwen3-coder:30b` for full H14 TDD under
-  the hardened PowerShell stdin route. It also promoted
-  `devstral-small-2:24b` and `qwen3-opencode:30b` only for the narrower
+  the hardened PowerShell stdin route. It also promoted `devstral-small-2:24b`
+  as a full-H14 fallback after three clean full-lane passes.
+  `qwen3-opencode:30b` remains promoted only for the narrower
   implementation-from-tests and API-preservation subroles.
 - H15 endpoint evidence did not promote `qwen3-coder:30b` for local-only
   ownership. The local model produced near-complete endpoint work, but repeated
@@ -144,7 +145,8 @@ risk, repeated local failure, or read-only review.
 - H15 hybrid claim runs are paused behind micro-flow evidence; the current route
   profile intentionally defaults to frontier-only.
 - H14 local-only claims are no longer blocked for promoted `qwen3-coder:30b`
-  routes, but fallback local models are not promoted for full H14.
+  routes. Devstral Small 2 is promoted as the full-H14 fallback, while Qwen3
+  OpenCode remains limited to bounded implementation subroles.
 - H15 local-only is a negative promotion result, not an open blocker.
 - H11 local-only is promoted only for the checked-in `qwen3-coder:30b`
   multi-file refactor route. Do not generalize that to unrelated multi-file

@@ -17,7 +17,11 @@ Result so far:
 - local `qwen3-coder:30b` is materially stronger than `qwen3:8b` and now has
   clean local-only H14 passes for implementation-from-tests, API preservation,
   standalone test authoring, and full H14 TDD under the hardened PowerShell
-  stdin transport.
+  stdin transport;
+- `devstral-small-2:24b` is now a promoted full-H14 fallback after three clean
+  full-lane passes under the same hardened route. One additional pass is recorded
+  as functionally positive but residency-contaminated and is not counted in the
+  clean `3/3` set.
 
 ## Runs
 
@@ -1642,23 +1646,29 @@ node experiments/harness-arena/runner.mjs \
   --output-root .tmp/harness-arena
 ```
 
-Outcome:
+Screen outcome:
 
-- run id: `HA-HR1-H14-full-tdd-devstral-r16-001-20260508T205853Z`
 - model: `devstral-small-2:24b`
 - transport telemetry: `metadata.transport=powershell`
-- step exit code: `0`
-- timed out: `false`
-- step wall time: `209.762s`
-- private oracle: passed
-- oracle result: `6/6`
-- provider substitution: `false`
-- provider retries: `0`
-- provider telemetry totals: `19,171` tokens across `7` Ollama calls
-- resource samples: `90/90` non-empty stdout samples, `0` metadata parse
-  failures
-- residency: sampled `ollama ps` showed `16 GB`, `100% GPU`, and `4096`
-  context for `devstral-small-2:24b`
+- clean promotion set: runs `001`, `002`, and `004`
+- clean private-oracle pass rate: `3/3`, `6/6` in every run
+- provider substitution: `false` in all four runs
+- counted provider retries: `0` in clean runs `001`, `002`, and `004`
+- clean residency evidence: sampled `ollama ps` showed `16 GB`, `100% GPU`, and
+  `4096` context for `devstral-small-2:24b`
+
+| Run id                                                  | Oracle | Step exit | Timeout | Wall time | Calls | Tokens | Retries | Samples | Counted |
+| ------------------------------------------------------- | ------ | --------- | ------- | --------- | ----- | ------ | ------- | ------- | ------- |
+| `HA-HR1-H14-full-tdd-devstral-r16-001-20260508T205853Z` | 6/6    | 0         | false   | 209.762s  | 7     | 19,171 | 0       | 90/90   | yes     |
+| `HA-HR1-H14-full-tdd-devstral-r16-002-20260508T211134Z` | 6/6    | 0         | false   | 211.265s  | 7     | 19,171 | 0       | 92/92   | yes     |
+| `HA-HR1-H14-full-tdd-devstral-r16-003-20260508T211542Z` | 6/6    | 0         | false   | 473.192s  | 7     | 19,171 | 1       | 203/203 | no      |
+| `HA-HR1-H14-full-tdd-devstral-r16-004-20260508T212436Z` | 6/6    | 0         | false   | 210.886s  | 7     | 19,171 | 0       | 92/92   | yes     |
+
+Run `003` is excluded from the clean promotion set because the sampled resource
+artifacts captured `qwen3-opencode-big:30b` in a `Stopping...` state for part of
+the run, and provider telemetry recorded one retry. It remains a functional
+private-oracle pass with `actualModel=devstral-small-2:24b`, but it is not clean
+residency evidence.
 
 Private oracle result:
 
@@ -1673,7 +1683,8 @@ PASS: hidden behavior checks pass
 Results: 6/6 passed
 ```
 
-Decision: this is a positive first full-H14 Devstral screen, but it is not a
-promotion yet. The promotion threshold remains `3/3` clean full-lane manifests
-with no frontier input. Run two more identical Devstral full-TDD reps before
-changing the H14 local portfolio policy.
+Decision: promote `devstral-small-2:24b` as the fallback full-H14 local worker
+for the same hardened H14 flow, PowerShell stdin transport, and 16 action-round
+budget. Keep `qwen3-coder:30b` as the selected first-choice model because it is
+faster on the same route. Do not promote Devstral for standalone test authoring
+or H15 endpoint ownership from this evidence.

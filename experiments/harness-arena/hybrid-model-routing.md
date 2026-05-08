@@ -87,15 +87,16 @@ Current H14 routing decisions:
 | Implementation from tests     | `qwen3-coder:30b`    | `devstral-small-2:24b`, `qwen3-opencode:30b` | local-promoted |
 | API-preserving implementation | `qwen3-coder:30b`    | `devstral-small-2:24b`, `qwen3-opencode:30b` | local-promoted |
 | Standalone test authoring     | `qwen3-coder:30b`    | —                                            | local-promoted |
-| Full TDD ownership            | `qwen3-coder:30b`    | —                                            | local-promoted |
+| Full TDD ownership            | `qwen3-coder:30b`    | `devstral-small-2:24b`                       | local-promoted |
 
 Policy implication: keep promoted local models for bounded implementation work,
 standalone H14 test authoring, and full H14 TDD only where the route policy has
 clean-pass evidence. Prefer `qwen3-coder:30b` for all selected H14 routes today
 because it is the fastest promoted model in the latest sampled H14 screens and
-the only model with a clean full-TDD screen. Use `devstral-small-2:24b` or
-`qwen3-opencode:30b` as fallback implementation workers, but not as fallback
-standalone test authors or full-TDD owners yet.
+the fastest model with clean full-TDD evidence. Use `devstral-small-2:24b` as
+the fallback full-TDD worker and as a fallback bounded implementation worker.
+Use `qwen3-opencode:30b` only as a fallback bounded implementation worker, not as
+a standalone test-authoring or full-TDD fallback.
 
 Example:
 

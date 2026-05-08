@@ -11,8 +11,11 @@ The current evidence base now includes HA-HR1 route evidence:
 
 - H14 local-only is promoted for `qwen3-coder:30b` on the checked H14 local
   portfolio routes, including full TDD under the hardened PowerShell stdin route.
-- `devstral-small-2:24b` and `qwen3-opencode:30b` are fallback local
-  implementers for H14 implementation-from-tests and API-preservation only.
+- `devstral-small-2:24b` is the promoted full-H14 fallback after three clean
+  full-lane passes, and also remains a fallback implementer for the bounded H14
+  implementation subroles.
+- `qwen3-opencode:30b` is a fallback local implementer for H14
+  implementation-from-tests and API-preservation only.
 - H15 API endpoint work is not promoted local-only under `qwen3-coder:30b`; after
   the hybrid and frontier baselines, it is routed as `frontier-baseline`.
 

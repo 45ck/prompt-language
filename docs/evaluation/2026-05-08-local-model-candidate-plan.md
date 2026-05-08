@@ -7,18 +7,17 @@ Date: 2026-05-08
 ## Decision
 
 Do not mark local-model delegation as a total failure. Mark the current state as
-`not yet promoted`.
+`selectively promoted`.
 
 The evidence says `qwen3:8b` is good enough for plumbing and smoke tests, but not
 good enough to own H14-style TDD work. The next useful test is not more prompt
 polishing on `qwen3:8b`; it is a controlled promotion ladder for stronger local
 models, starting with `qwen3-coder:30b`.
 
-Update: `qwen3-coder:30b` has now passed the readiness smoke and both locally
-promoted H14 subrole refresh runs with sampled `/api/ps` residency evidence. It
-is promoted for the narrow implementation-from-tests and API-preservation
-subroles only. It is still not promoted for full H14 or standalone test
-authoring.
+Update: `qwen3-coder:30b` has now passed readiness, the promoted H14 subrole
+refresh runs, standalone H14 test authoring, and full H14 local-only TDD with
+sampled residency evidence. It is the selected first-choice local model for the
+checked H14 local portfolio.
 
 Update: `devstral-small-2:24b` has also passed readiness plus the same two H14
 implementation subrole screens at `3/3` each, with sampled `/api/ps` residency
@@ -46,15 +45,15 @@ passing `6/6` in every run. It is now promoted for full H14 TDD only under the
 hardened H14 flow, PowerShell stdin transport, and a 16 action-round budget.
 Fallback local models remain unpromoted for full TDD.
 
-Update: `devstral-small-2:24b` now has one positive full H14 local-only TDD
-screen under the same hardened flow, PowerShell transport, and 16 action-round
-budget. Run
-`HA-HR1-H14-full-tdd-devstral-r16-001-20260508T205853Z` passed the private oracle
-`6/6` in `209.762s`, with `7` Ollama calls, `19,171` provider tokens, zero
-retries, and `90/90` non-empty resource samples showing `16 GB`, `100% GPU`, and
-`4096` context residency. This starts, but does not finish, the full-H14
-promotion ladder for Devstral. It needs two more clean identical reps before the
-H14 local portfolio policy changes.
+Update: `devstral-small-2:24b` is now promoted as the full H14 fallback under
+the same hardened flow, PowerShell transport, and 16 action-round budget. Clean
+runs `001`, `002`, and `004` passed the private oracle `6/6` with zero retries,
+`19,171` provider tokens each, and sampled `16 GB`, `100% GPU`, `4096` context
+residency. Run `003` also passed the private oracle but is excluded from the
+clean promotion set because resource samples captured `qwen3-opencode-big:30b`
+in a `Stopping...` state and provider telemetry recorded one retry. Keep
+`qwen3-coder:30b` as the selected first-choice full-H14 worker because it is
+faster on this route.
 
 Update: on 2026-05-09 local time, a fresh Prompt Language smoke confirmed
 `qwen3-coder:30b` still works through the PowerShell transport. The WSL HTTP
@@ -147,7 +146,7 @@ context and CPU/GPU offload. That is the measurement contract for this repo.
 | Rank | Candidate              | Why                                                                           | First task                                           |
 | ---- | ---------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------- |
 | 1    | `qwen3-coder:30b`      | Best installed local coding model; MoE active params make it plausible        | Readiness smoke, then H14 S2 implementation subrole  |
-| 2    | `devstral-small-2:24b` | Installed coding-oriented model with smaller footprint than 30B class         | Two more full-H14 TDD reps after first clean pass    |
+| 2    | `devstral-small-2:24b` | Installed coding-oriented model with smaller footprint than 30B class         | Promoted full-H14 fallback; no H15 ownership         |
 | 3    | `qwen3-opencode:30b`   | Installed coding-tuned variant; compare against official Qwen coder           | Readiness smoke, then H14 S2                         |
 | 4    | `qwen3.6:27b`          | Loads cleanly, but timed out on first H14 API-preservation implementation run | Reviewer/classifier control only                     |
 | 5    | `gemma4-opencode:e4b`  | Failed readiness at both 32K and explicit 4K context                          | Different backend only before any classifier use     |
@@ -182,8 +181,9 @@ Current `devstral-small-2:24b` status:
 - H14 implementation-from-tests: passed `3/3`, private oracle `6/6` in each run;
 - H14 API-preservation: passed `3/3`, private oracle `5/5` in each run;
 - H14 test-authoring: not tested in this screen and not promoted;
-- full H14 local-only: first screen passed `1/1`, private oracle `6/6`; not
-  promoted until it reaches `3/3`.
+- full H14 local-only: promoted as fallback after clean runs `001`, `002`, and
+  `004` passed `3/3`, private oracle `6/6` in each counted run; run `003` passed
+  functionally but is excluded from clean residency evidence.
 
 Current `qwen3.6:27b` status:
 

@@ -106,7 +106,14 @@
         "endpointClass": "local",
         "selectionReason": "3/3 full H14 TDD clean passes after PowerShell stdin transport and socket-reset retry hardening"
       },
-      "fallbackModels": [],
+      "fallbackModels": [
+        {
+          "provider": "ollama",
+          "name": "devstral-small-2:24b",
+          "endpointClass": "local",
+          "selectionReason": "3 clean full H14 TDD passes under the same hardened PowerShell stdin route; slower than qwen3-coder and one extra pass had contaminated residency samples"
+        }
+      ],
       "fixture": "experiments/harness-arena/fixtures/h14-tdd-red-green",
       "flow": "experiments/harness-arena/flows/h14-local-bulk-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs",
@@ -119,7 +126,7 @@
         "local-worker-summary",
         "private-oracle"
       ],
-      "notes": "Use for full local H14 TDD only with qwen3-coder:30b, the hardened H14 flow, PowerShell stdin transport, and 16 action rounds. Keep frontier repair available on any public gate or private oracle failure."
+      "notes": "Use qwen3-coder:30b as the selected full local H14 TDD model. Devstral Small 2 is a promoted fallback for the same hardened H14 flow, PowerShell stdin transport, and 16 action rounds. Keep frontier repair available on any public gate or private oracle failure."
     }
   ],
   "escalationTriggers": [

@@ -1315,3 +1315,34 @@ Ollama transport for the H14 local portfolio route, not just a direct model
 smoke. It does not change the model promotion matrix: `qwen3-coder:30b` remains
 promoted for H14 implementation-from-tests and API-preserving implementation,
 while full H14 local-only and standalone test authoring remain not promoted.
+
+### PowerShell Bridge Repeatability Band
+
+The same H14 local portfolio `api-preservation` route was repeated three more
+times to check whether the bridge-backed local promotion was stable rather than
+a one-off smoke pass. The runs used the same live lane command, private oracle,
+`qwen3-coder:30b` model, `ollama-powershell` endpoint, and 24 action-round
+budget.
+
+| Run id                                                               | Oracle | Step exit | Timeout | Wall time | Turns | Tokens | Retries | Samples |
+| -------------------------------------------------------------------- | ------ | --------- | ------- | --------- | ----- | ------ | ------- | ------- |
+| `HA-HR1-H14-api-preservation-powershell-repeat-001-20260508T072905Z` | 5/5    | 0         | false   | 61.406s   | 5     | 11,911 | 0       | 29/29   |
+| `HA-HR1-H14-api-preservation-powershell-repeat-002-20260508T073008Z` | 5/5    | 0         | false   | 55.317s   | 6     | 15,497 | 0       | 26/26   |
+| `HA-HR1-H14-api-preservation-powershell-repeat-003-20260508T073106Z` | 5/5    | 0         | false   | 55.015s   | 6     | 15,497 | 0       | 26/26   |
+
+Aggregate:
+
+- oracle pass rate: `3/3`
+- total Ollama turns: `17`
+- total provider tokens: `42,905`
+- average step wall time: `57.246s`
+- route trigger:
+  `h14-local-portfolio:h14-api-preserving-implementation:local-promoted`
+- provider substitution: `false` in all runs
+- transport telemetry: `metadata.transport=powershell` in all provider records
+- resource sample failures: `0`
+
+Decision: this is enough to treat the PowerShell bridge as stable for the narrow
+H14 API-preserving implementation lane on this workstation. It is not evidence
+for promoting standalone test authoring, full H14 local-only, or larger
+multi-file implementation work to local-only execution.

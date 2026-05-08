@@ -1450,6 +1450,72 @@ test('live command safety policy rejects shell-wrapped operator commands', () =>
   }
 });
 
+test('live command templates reject unknown placeholders before execution', () => {
+  const outputRoot = tempRoot();
+  try {
+    const oracleCommand = `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(
+      "console.log('oracle pass');",
+    )}`;
+
+    assert.throws(
+      () =>
+        runHarnessArena(
+          parseArgs([
+            '--live',
+            '--arms',
+            'local-only',
+            '--live-local-command',
+            `${quoteCommandArg(process.execPath)} -e "console.log('unused')" <workspce>`,
+            '--oracle-command',
+            oracleCommand,
+            '--output-root',
+            outputRoot,
+            '--run-id',
+            'unknown-placeholder-run',
+            '--started-at',
+            FIXED_TIME,
+          ]),
+        ),
+      /live local command contains unknown placeholder <workspce>/,
+    );
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('live command templates reject placeholders unavailable in the selected route context', () => {
+  const outputRoot = tempRoot();
+  try {
+    const oracleCommand = `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(
+      "console.log('oracle pass');",
+    )}`;
+
+    assert.throws(
+      () =>
+        runHarnessArena(
+          parseArgs([
+            '--live',
+            '--arms',
+            'local-only',
+            '--live-local-command',
+            `${quoteCommandArg(process.execPath)} -e "console.log('unused')" <h15Flow>`,
+            '--oracle-command',
+            oracleCommand,
+            '--output-root',
+            outputRoot,
+            '--run-id',
+            'unavailable-placeholder-run',
+            '--started-at',
+            FIXED_TIME,
+          ]),
+        ),
+      /live local command cannot use unavailable placeholder <h15Flow>/,
+    );
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('live hybrid-router inserts frontier repair after local lane failure', () => {
   const outputRoot = tempRoot();
   const noRepairOutputRoot = tempRoot();

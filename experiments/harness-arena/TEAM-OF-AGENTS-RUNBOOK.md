@@ -131,6 +131,11 @@ stdout/stderr/metadata under `artifacts/steps/` and runs the oracle from
 frontier route also requires `--live-frontier-command`; otherwise `--live` fails
 before creating a run.
 
+Command templates also fail before execution when a placeholder is misspelled or
+unavailable for the selected route profile. For example, `<workspce>` is rejected
+instead of being passed through literally, and `<h15Flow>` is rejected outside an
+H15 route context.
+
 By default, live command templates use `--command-safety-policy deny-high-risk`.
 That blocks shell wrappers, network clients, package-manager mutation,
 destructive filesystem commands, service/process control, and git mutation before

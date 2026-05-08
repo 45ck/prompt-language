@@ -102,6 +102,9 @@ evidence:
   `<h11Flow>`, `<h15Flow>`, or the generic `<routeFlow>` placeholder for the
   absolute path, and `<h11FlowRelative>`, `<h15FlowRelative>`, or
   `<routeFlowRelative>` for the repo-relative path.
+- Command templates fail before execution when they contain an unknown
+  placeholder, such as a misspelled `<workspace>`, or a route-specific placeholder
+  that is unavailable for the selected profile.
 - `--local-resource-snapshot-command` optionally records before/after local-step
   resource probes, such as `ollama ps`, as manifest artifact refs. Add
   `--local-resource-snapshot-interval-ms` to sample the same probe while a local

@@ -1157,7 +1157,7 @@ function commandFromTemplate(
   replacements,
   { label = 'command', safetyPolicy = 'unrestricted' } = {},
 ) {
-  const interpolated = interpolateCommandTemplate(template, replacements);
+  const interpolated = interpolateCommandTemplate(template, replacements, label);
   const [command, ...args] = splitCommandLine(interpolated);
   assertCommandAllowed({ args, command }, safetyPolicy, label);
   return { args, command, displayCommand: interpolated, safetyPolicy };
@@ -1253,10 +1253,19 @@ function isPackageManagerMutation(executable, firstArg, secondArg) {
   return false;
 }
 
-function interpolateCommandTemplate(template, replacements) {
+function interpolateCommandTemplate(template, replacements, label) {
   let interpolated = template;
   for (const [key, value] of Object.entries(replacements)) {
-    interpolated = interpolated.replaceAll(`<${key}>`, quoteCommandArg(value));
+    const placeholder = `<${key}>`;
+    if (!interpolated.includes(placeholder)) continue;
+    if (value == null) {
+      throw new Error(`${label} cannot use unavailable placeholder ${placeholder}`);
+    }
+    interpolated = interpolated.replaceAll(placeholder, quoteCommandArg(value));
+  }
+  const unresolved = interpolated.match(/<[A-Za-z][A-Za-z0-9]*>/u);
+  if (unresolved) {
+    throw new Error(`${label} contains unknown placeholder ${unresolved[0]}`);
   }
   return interpolated;
 }

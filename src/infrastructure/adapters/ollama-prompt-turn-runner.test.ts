@@ -462,8 +462,13 @@ describe('OllamaPromptTurnRunner', () => {
       [
         '#!/usr/bin/env node',
         "import { appendFileSync } from 'node:fs';",
-        'appendFileSync(process.env.FAKE_POWERSHELL_ARGS_PATH, `${JSON.stringify(process.argv.slice(2))}\\n`);',
-        'process.stdout.write(\'{"model":"qwen3-coder:30b","message":{"content":"{\\\\\\"actions\\\\\\":[{\\\\\\"type\\\\\\":\\\\\\"done\\\\\\",\\\\\\"message\\\\\\":\\\\\\"powershell ok\\\\\\"}]}"},"prompt_eval_count":3,"eval_count":4}\');',
+        "let input = '';",
+        "process.stdin.setEncoding('utf8');",
+        "process.stdin.on('data', (chunk) => { input += chunk; });",
+        "process.stdin.on('end', () => {",
+        '  appendFileSync(process.env.FAKE_POWERSHELL_ARGS_PATH, `${JSON.stringify({ args: process.argv.slice(2), input })}\\n`);',
+        '  process.stdout.write(\'{"model":"qwen3-coder:30b","message":{"content":"{\\\\\\"actions\\\\\\":[{\\\\\\"type\\\\\\":\\\\\\"done\\\\\\",\\\\\\"message\\\\\\":\\\\\\"powershell ok\\\\\\"}]}"},"prompt_eval_count":3,"eval_count":4}\');',
+        '});',
       ].join('\n'),
       'utf8',
     );
@@ -473,10 +478,11 @@ describe('OllamaPromptTurnRunner', () => {
     vi.stubEnv('FAKE_POWERSHELL_ARGS_PATH', argLogPath);
 
     const runner = new OllamaPromptTurnRunner();
+    const longMarker = `powershell-transport-smoke-${'x'.repeat(50_000)}`;
     const result = await runner.run({
       cwd: tempDir,
       model: 'ollama/qwen3-coder:30b',
-      prompt: 'The code is powershell-transport-smoke. Acknowledge it.',
+      prompt: `The code is ${longMarker}. Acknowledge it.`,
     });
 
     expect(result).toEqual({
@@ -485,9 +491,15 @@ describe('OllamaPromptTurnRunner', () => {
       madeProgress: true,
     });
     expect(fetchMock).not.toHaveBeenCalled();
-    const args = JSON.parse((await readFile(argLogPath, 'utf8')).trim()) as string[];
+    const log = JSON.parse((await readFile(argLogPath, 'utf8')).trim()) as {
+      args: string[];
+      input: string;
+    };
+    const args = log.args;
     expect(args.slice(0, 2)).toEqual(['-NoProfile', '-Command']);
     expect(args.at(-1)).toContain('Invoke-RestMethod');
+    expect(args.join('\n')).not.toContain(longMarker);
+    expect(log.input).toContain(longMarker);
     await expect(
       readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
     ).resolves.toContain('"transport":"powershell"');

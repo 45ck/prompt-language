@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { appendFile, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
 import { dirname, join, relative, resolve } from 'node:path';
@@ -65,6 +65,13 @@ interface OllamaChatTurn {
   readonly payload: OllamaChatResponse;
   readonly retryCount: number;
   readonly transport: OllamaTransport;
+}
+
+interface ProcessFailure extends Error {
+  readonly stdout?: string | undefined;
+  readonly stderr?: string | undefined;
+  readonly signal?: string | undefined;
+  readonly code?: number | string | null | undefined;
 }
 
 interface ActionEnvelope {
@@ -577,6 +584,65 @@ async function runOllamaCli(args: readonly string[], timeoutMs: number): Promise
   return String(result.stdout ?? '');
 }
 
+async function runProcessWithInput(
+  executable: string,
+  args: readonly string[],
+  input: string,
+  timeoutMs: number,
+): Promise<{ stdout: string; stderr: string }> {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(executable, args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    let settled = false;
+    let stdout = '';
+    let stderr = '';
+
+    const fail = (failure: ProcessFailure): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(failure);
+    };
+    const timer = setTimeout(() => {
+      child.kill('SIGTERM');
+      const failure = new Error(`Process timed out after ${timeoutMs}ms`) as ProcessFailure;
+      Object.assign(failure, { stdout, stderr, signal: 'SIGTERM' });
+      fail(failure);
+    }, timeoutMs);
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on('error', (error) => {
+      const failure = error as ProcessFailure;
+      Object.assign(failure, { stdout, stderr });
+      fail(failure);
+    });
+    child.on('close', (code, signal) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code === 0) {
+        resolve({ stdout, stderr });
+        return;
+      }
+      const detail = signal ? `signal ${signal}` : `code ${String(code ?? 'unknown')}`;
+      const failure = new Error(`Process exited with ${detail}`) as ProcessFailure;
+      Object.assign(failure, { stdout, stderr, code, signal });
+      reject(failure);
+    });
+
+    child.stdin.end(input, 'utf8');
+  });
+}
+
 async function callOllamaCliOnce(
   model: string,
   messages: readonly OllamaMessage[],
@@ -613,7 +679,8 @@ async function callOllamaCliOnce(
     };
     const stdout = cleanOllamaCliOutput(String(failure.stdout ?? ''));
     const stderr = cleanOllamaCliOutput(String(failure.stderr ?? ''));
-    const detail = [stdout, stderr].filter(Boolean).join('\n').slice(0, 500);
+    const message = error instanceof Error ? error.message : '';
+    const detail = [stdout, stderr, message].filter(Boolean).join('\n').slice(0, 500);
     const suffix = detail ? `: ${detail}` : '';
     if (failure.signal === 'SIGTERM') {
       throw new Error(`Ollama CLI timed out after ${timeoutMs}ms${suffix}`);
@@ -635,30 +702,29 @@ async function callOllamaPowerShellOnce(
       temperature: 0,
     },
   });
-  const encodedPayload = Buffer.from(payload, 'utf8').toString('base64');
   const endpoint = `${getOllamaBaseUrl()}/api/chat`;
   const timeoutSeconds = Math.max(1, Math.ceil(timeoutMs / 1_000));
   const script = [
     "$ErrorActionPreference='Stop'",
-    `$payload=[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${encodedPayload}'))`,
+    '$payload=[Console]::In.ReadToEnd()',
     `$response=Invoke-RestMethod -Uri '${endpoint.replaceAll("'", "''")}' -Method Post -Body $payload -ContentType 'application/json' -TimeoutSec ${timeoutSeconds}`,
     '$response | ConvertTo-Json -Depth 20 -Compress',
   ].join('; ');
 
   try {
-    const result = await execFileAsync(getPowerShellPath(), ['-NoProfile', '-Command', script], {
-      encoding: 'utf8',
-      timeout: timeoutMs + 5_000,
-      maxBuffer: 2 * 1024 * 1024,
-      windowsHide: true,
-    });
+    const result = await runProcessWithInput(
+      getPowerShellPath(),
+      ['-NoProfile', '-Command', script],
+      payload,
+      timeoutMs + 5_000,
+    );
     const rawBody = String(result.stdout ?? '').trim();
-    const payload = JSON.parse(rawBody) as OllamaChatResponse;
-    const content = payload.message?.content?.trim();
+    const responsePayload = JSON.parse(rawBody) as OllamaChatResponse;
+    const content = responsePayload.message?.content?.trim();
     if (!content) {
       throw new Error('Ollama PowerShell bridge returned an empty response.');
     }
-    return payload;
+    return responsePayload;
   } catch (error) {
     const failure = error as {
       stdout?: string | Buffer | undefined;
@@ -667,7 +733,8 @@ async function callOllamaPowerShellOnce(
     };
     const stdout = cleanOllamaCliOutput(String(failure.stdout ?? ''));
     const stderr = cleanOllamaCliOutput(String(failure.stderr ?? ''));
-    const detail = [stdout, stderr].filter(Boolean).join('\n').slice(0, 500);
+    const message = error instanceof Error ? error.message : '';
+    const detail = [stdout, stderr, message].filter(Boolean).join('\n').slice(0, 500);
     const suffix = detail ? `: ${detail}` : '';
     if (failure.signal === 'SIGTERM') {
       throw new Error(`Ollama PowerShell bridge timed out after ${timeoutMs}ms${suffix}`);

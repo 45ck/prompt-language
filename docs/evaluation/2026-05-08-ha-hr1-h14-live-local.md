@@ -821,3 +821,141 @@ fixture. The model can pass once under a tighter action budget, but the replicat
 set is not stable enough for local-bulk routing. H14-like test authoring should
 remain frontier-owned or be replaced by deterministic test templates plus local
 implementation work.
+
+## Sampled Promoted-Subrole Refresh
+
+After the HA-HR1 runner added `resourceSnapshotSummary`, both locally promoted
+H14 qwen-coder subroles were rerun through the route profile with sampled
+`/api/ps` probes. The temporary Windows Ollama listener was exposed to WSL at
+`http://172.17.32.1:11435` with `OLLAMA_CONTEXT_LENGTH=8192`,
+`OLLAMA_NUM_PARALLEL=1`, and `OLLAMA_FLASH_ATTENTION=1`.
+
+Before the runs, stale Windows `ollama.exe runner` processes were terminated and
+`ollama ps` was empty. After cleanup, Windows free memory was about 30.6 GiB.
+
+### `HA-HR1-H14-impl-from-tests-qwen-coder-sampled-001`
+
+Command shape:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_BASE_URL="$ENDPOINT" \
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --h14-qwen-coder-subrole implementation-from-tests \
+  --live-local-command "bash -lc 'PROMPT_LANGUAGE_OLLAMA_BASE_URL=$ENDPOINT PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node $(pwd)/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>'" \
+  --local-resource-snapshot-command "bash -lc 'curl -sS --max-time 2 <localEndpoint>/api/ps'" \
+  --local-resource-snapshot-interval-ms 2000 \
+  --local-endpoint "$ENDPOINT" \
+  --step-timeout-ms 900000 \
+  --oracle-timeout-ms 10000 \
+  --run-id HA-HR1-H14-impl-from-tests-qwen-coder-sampled-001 \
+  --output-root .tmp/harness-arena
+```
+
+Outcome:
+
+- manifest:
+  `.tmp/harness-arena/HA-HR1-H14-impl-from-tests-qwen-coder-sampled-001/01-local-only/hybrid-routing-manifest.json`
+- claim status: `live-model-evidence`
+- route trigger: `h14-qwen3-coder:h14-implementation-from-tests:local-promoted`
+- prompt program:
+  `experiments/harness-arena/flows/h14-impl-from-tests-worker.flow`
+- model: `qwen3-coder:30b`
+- endpoint: `http://172.17.32.1:11435`
+- step exit code: `0`
+- step wall time: `88.499s`
+- private oracle: passed `6/6`
+- `resourceSnapshotSummary`: 44 sampled ticks, 138 total resource artifact refs,
+  zero probe failures
+- residency: all 44 sampled `/api/ps` stdout artifacts contained
+  `qwen3-coder:30b`
+
+Oracle result:
+
+```text
+PASS: mergeDuplicates implementation exists
+PASS: mergeDuplicates is exported
+PASS: tests import and call mergeDuplicates
+PASS: at least five merge/duplicate tests exist
+PASS: public tests pass
+PASS: hidden behavior checks pass
+
+Results: 6/6 passed
+```
+
+Representative residency sample:
+
+```json
+{
+  "name": "qwen3-coder:30b",
+  "model": "qwen3-coder:30b",
+  "size": 19215513600,
+  "digest": "06c1097efce0431c2045fe7b2e5108366e43bee1b4603a7aded8f21689e90bca",
+  "details": {
+    "family": "qwen3moe",
+    "parameter_size": "30.5B",
+    "quantization_level": "Q4_K_M"
+  },
+  "size_vram": 15585304576,
+  "context_length": 8192
+}
+```
+
+### `HA-HR1-H14-api-preservation-qwen-coder-sampled-001`
+
+Command shape:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_BASE_URL="$ENDPOINT" \
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --h14-qwen-coder-subrole api-preservation \
+  --live-local-command "bash -lc 'PROMPT_LANGUAGE_OLLAMA_BASE_URL=$ENDPOINT PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node $(pwd)/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>'" \
+  --local-resource-snapshot-command "bash -lc 'curl -sS --max-time 2 <localEndpoint>/api/ps'" \
+  --local-resource-snapshot-interval-ms 2000 \
+  --local-endpoint "$ENDPOINT" \
+  --step-timeout-ms 900000 \
+  --oracle-timeout-ms 10000 \
+  --run-id HA-HR1-H14-api-preservation-qwen-coder-sampled-001 \
+  --output-root .tmp/harness-arena
+```
+
+Outcome:
+
+- manifest:
+  `.tmp/harness-arena/HA-HR1-H14-api-preservation-qwen-coder-sampled-001/01-local-only/hybrid-routing-manifest.json`
+- claim status: `live-model-evidence`
+- route trigger:
+  `h14-qwen3-coder:h14-api-preserving-implementation:local-promoted`
+- prompt program:
+  `experiments/harness-arena/flows/h14-api-preservation-worker.flow`
+- model: `qwen3-coder:30b`
+- endpoint: `http://172.17.32.1:11435`
+- step exit code: `0`
+- step wall time: `90.552s`
+- private oracle: passed `5/5`
+- `resourceSnapshotSummary`: 45 sampled ticks, 141 total resource artifact refs,
+  zero probe failures
+- residency: all 45 sampled `/api/ps` stdout artifacts contained
+  `qwen3-coder:30b`
+
+Oracle result:
+
+```text
+PASS: source keeps expected export names
+PASS: public tests keep API contract coverage
+PASS: public tests pass
+PASS: hidden API checks pass
+PASS: hidden merge checks pass
+
+Results: 5/5 passed
+```
+
+### Refresh Decision
+
+The refreshed sampled runs strengthen the existing routing policy for
+`qwen3-coder:30b`: implementation-from-tests and API-preservation remain
+local-promoted subroles, now with direct model-residency evidence in every sample
+tick. This still does not promote full H14 local-only or test authoring. Full H14
+and standalone test-authoring remain frontier-owned or hybrid-repair candidates
+until their replicate evidence reaches the same bar.

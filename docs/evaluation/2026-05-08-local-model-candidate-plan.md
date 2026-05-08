@@ -12,6 +12,12 @@ good enough to own H14-style TDD work. The next useful test is not more prompt
 polishing on `qwen3:8b`; it is a controlled promotion ladder for stronger local
 models, starting with `qwen3-coder:30b`.
 
+Update: `qwen3-coder:30b` has now passed the readiness smoke and both locally
+promoted H14 subrole refresh runs with sampled `/api/ps` residency evidence. It
+is promoted for the narrow implementation-from-tests and API-preservation
+subroles only. It is still not promoted for full H14 or standalone test
+authoring.
+
 ## Current Host State
 
 - WSL reports 31 GiB RAM with about 24 GiB available.
@@ -80,6 +86,15 @@ context and CPU/GPU offload. That is the measurement contract for this repo.
    frontier input.
 4. Hybrid value: hybrid passes at least two of three, uses fewer frontier calls
    than frontier-only, and records lower frontier spend.
+
+Current `qwen3-coder:30b` status:
+
+- readiness: passed with sampled residency evidence;
+- H14 implementation-from-tests: passed in the sampled refresh, private oracle
+  `6/6`;
+- H14 API-preservation: passed in the sampled refresh, private oracle `5/5`;
+- H14 test-authoring: not promoted, prior replicate set is `1/3`;
+- full H14 local-only: not promoted.
 
 ## One Hundred Hypotheses
 

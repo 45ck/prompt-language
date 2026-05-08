@@ -30,12 +30,13 @@ do not promote it for implementation ownership. Treat it as a lower-priority
 reviewer/classifier control unless a future prompt or runtime lane changes the
 timeout behavior.
 
-Update: `qwen3-opencode:30b` passed readiness and then passed H14
-implementation-from-tests at `3/3`, with sampled `/api/ps` residency evidence in
-every implementation sample tick. It is promoted for implementation-from-tests
-only, but it is lower routing priority than `devstral-small-2:24b` and
-`qwen3-coder:30b` because the three implementation runs took `354.030s`,
-`444.608s`, and `444.640s`.
+Update: `qwen3-opencode:30b` passed readiness, H14
+implementation-from-tests at `3/3`, and H14 API-preservation at `3/3`, with
+sampled `/api/ps` residency evidence across both subrole screens. It is promoted
+for the same two narrow implementation subroles as `devstral-small-2:24b` and
+`qwen3-coder:30b`, but it is lower routing priority because it is much slower:
+implementation runs took `354.030s`, `444.608s`, and `444.640s`; API-preservation
+runs took `392.278s`, `358.213s`, and `347.989s`.
 
 ## Current Host State
 
@@ -136,7 +137,7 @@ Current `qwen3-opencode:30b` status:
 
 - readiness: passed with sampled residency evidence;
 - H14 implementation-from-tests: passed `3/3`, private oracle `6/6` in each run;
-- H14 API-preservation: not tested and not promoted;
+- H14 API-preservation: passed `3/3`, private oracle `5/5` in each run;
 - H14 test-authoring: not promoted;
 - full H14 local-only: not promoted.
 

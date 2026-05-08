@@ -1155,12 +1155,13 @@ Stop this replicate set at `0/1` under the early cutoff policy. Running two more
 coding-tuned candidate. Keep `qwen3.6:27b` as a possible reviewer/classifier
 control, not an implementation-owner candidate.
 
-## Qwen3 OpenCode 30B Implementation Screen
+## Qwen3 OpenCode 30B Subrole Screen
 
 After `qwen3-opencode:30b` passed readiness with sampled `/api/ps` residency, it
-was screened on the H14 implementation-from-tests subrole. This tests whether the
+was screened on the same two narrow H14 implementation subroles as
+`qwen3-coder:30b` and `devstral-small-2:24b`. These runs test whether the
 coding-tuned OpenCode variant can act as a bounded local implementer when public
-tests already exist.
+tests already exist and when existing public APIs must be preserved.
 
 The temporary Windows Ollama listener was exposed to WSL at
 `http://172.17.32.1:11435` with `OLLAMA_CONTEXT_LENGTH=8192`,
@@ -1211,14 +1212,49 @@ PASS: hidden behavior checks pass
 Results: 6/6 passed
 ```
 
+### API Preservation
+
+The API-preservation screen used:
+
+- fixture: `experiments/harness-arena/fixtures/h14-api-preservation`
+- flow: `experiments/harness-arena/flows/h14-api-preservation-worker.flow`
+- oracle: `experiments/harness-arena/oracles/h14-api-preservation-oracle.mjs`
+- policy version: `h14-qwen3-opencode-subrole-screen-v1`
+
+Outcome:
+
+| Run   | Oracle | Step exit | Wall time | Sample ticks | Residency hits |
+| ----- | ------ | --------: | --------: | -----------: | -------------: |
+| `001` | 5/5    |         0 |  392.278s |          195 |            193 |
+| `002` | 5/5    |         0 |  358.213s |          178 |            178 |
+| `003` | 5/5    |         0 |  347.989s |          173 |            173 |
+
+Representative oracle result:
+
+```text
+PASS: source keeps expected export names
+PASS: public tests keep API contract coverage
+PASS: public tests pass
+PASS: hidden API checks pass
+PASS: hidden merge checks pass
+
+Results: 5/5 passed
+```
+
 ### Qwen3 OpenCode Decision
 
-`qwen3-opencode:30b` is locally promoted for the implementation-from-tests
-subrole only. Every implementation sample tick contained the resident
-`qwen3-opencode:30b` `/api/ps` row, so these are model-residency-backed local
-passes.
+`qwen3-opencode:30b` is locally promoted for the same two narrow implementation
+subroles as `qwen3-coder:30b` and `devstral-small-2:24b`:
+
+- implementation-from-tests: `3/3`
+- API-preservation: `3/3`
+
+The implementation screen had resident `qwen3-opencode:30b` evidence in every
+sample tick. The API-preservation screen had resident model evidence in 544 of
+546 sample ticks. These are model-residency-backed local passes rather than
+endpoint-only smoke evidence.
 
 This promotion is lower priority than the existing `devstral-small-2:24b` and
-`qwen3-coder:30b` implementation routes because it is much slower on the same
-fixture. It is not promoted for API-preservation, standalone test authoring, or
-full H14 local-only until those separate screens pass.
+`qwen3-coder:30b` routes because it is much slower on the same fixtures. It is
+not promoted for standalone test authoring or full H14 local-only until those
+separate screens pass.

@@ -63,6 +63,16 @@ classifier/reviewer candidate. The default-context `A` smoke failed with
 the PowerShell bridge timed out. Do not use this model for route classification
 on this host unless a different backend changes the timeout behavior.
 
+Update: a follow-up promoted-model health check ran `qwen3-coder:30b` through the
+same PowerShell transport with `PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096`. Smoke case
+`A` passed in 16.382s with artifact
+`scripts/eval/results/smoke-2026-05-08T19-44-46-987Z.json`, two Ollama provider
+records, 679 total tokens, zero retries, and provider metadata recording
+`transport: powershell` plus `numCtx: 4096`. Post-run residency showed
+`qwen3-coder:30b`, `19 GB`, `13%/87% CPU/GPU`, and `4096` context. This confirms
+the context override is usable on the promoted model path and keeps
+`qwen3-coder:30b` as the current local full-H14 worker.
+
 ## Current Host State
 
 - WSL reports 31 GiB RAM with about 24 GiB available.
@@ -294,8 +304,9 @@ For the current host state, prefer the PowerShell transport:
 
 ```sh
 PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
+  PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096 \
   EVAL_MODEL=ollama/qwen3-coder:30b \
-  EVAL_TIMEOUT_MS=1800000 \
+  EVAL_TIMEOUT_MS=900000 \
   node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
 ```
 

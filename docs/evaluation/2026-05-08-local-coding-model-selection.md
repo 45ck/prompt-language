@@ -279,7 +279,36 @@ runtime backend changes the timeout behavior.
 
 ## 2026-05-09 Live Health Check
 
-A fresh bounded smoke confirmed that local inference is still usable through the
+A fresh promoted-model health check used the PowerShell transport and an explicit
+4,096-token context:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
+  PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096 \
+  EVAL_MODEL=ollama/qwen3-coder:30b \
+  EVAL_TIMEOUT_MS=900000 \
+  node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
+```
+
+Result:
+
+- smoke `A: Context file relay` passed, `1/1`;
+- artifact:
+  `scripts/eval/results/smoke-2026-05-08T19-44-46-987Z.json`;
+- total run time: 16.382 seconds;
+- telemetry: 2 Ollama records, 492 input tokens, 187 output tokens, 679 total
+  tokens, zero retries, zero provider API cost;
+- provider metadata recorded `transport: powershell` and `numCtx: 4096` for both
+  Ollama calls;
+- post-run `ollama ps` showed `qwen3-coder:30b`, `19 GB`, `13%/87% CPU/GPU`,
+  `4096` context.
+
+Decision: keep the local-model track open and keep `qwen3-coder:30b` as the
+promoted local full-H14 worker. This pass also proves the explicit context knob is
+useful for evidence capture on promoted models, not just failure diagnosis on
+negative candidates.
+
+A previous bounded smoke confirmed that local inference is still usable through the
 PowerShell transport even though WSL `127.0.0.1:11434` and the prior gateway HTTP
 listener were not reachable.
 

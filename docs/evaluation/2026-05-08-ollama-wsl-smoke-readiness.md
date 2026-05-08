@@ -378,6 +378,18 @@ The local model stack is usable for bounded smoke testing on this host if the
 Ollama API is explicitly exposed to WSL and `PROMPT_LANGUAGE_OLLAMA_BASE_URL`
 points at the WSL gateway endpoint.
 
+For the current session, the simpler PowerShell transport is also claim-grade for
+the promoted model smoke path. On 2026-05-09 local time,
+`qwen3-coder:30b` passed smoke `A` with:
+
+- `PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell`;
+- `PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096`;
+- artifact:
+  `scripts/eval/results/smoke-2026-05-08T19-44-46-987Z.json`;
+- two Ollama provider records and zero retries;
+- telemetry metadata recording `transport: powershell` and `numCtx: 4096`;
+- post-run `ollama ps` showing `19 GB`, `13%/87% CPU/GPU`, and `4096` context.
+
 The HA-HR1 runner can now execute a local-only live lane through that endpoint and
 preserve oracle isolation. This is still connectivity-level local model evidence:
 it proves the harness can call a real local model lane and record artifacts, not

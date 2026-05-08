@@ -1,0 +1,131 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "h14-local-subrole-routing-v1",
+  "decidedAt": "2026-05-08",
+  "evidence": {
+    "summaryDoc": "docs/evaluation/2026-05-08-ha-hr1-h14-live-local.md",
+    "candidatePlanDoc": "docs/evaluation/2026-05-08-local-model-candidate-plan.md",
+    "minimumCleanPassesForPromotion": 3
+  },
+  "routes": [
+    {
+      "subrole": "h14-implementation-from-tests",
+      "decision": "local-promoted",
+      "owner": "local",
+      "selectedModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "fastest promoted sampled implementation-from-tests run while preserving full residency evidence"
+      },
+      "fallbackModels": [
+        {
+          "provider": "ollama",
+          "name": "devstral-small-2:24b",
+          "endpointClass": "local",
+          "selectionReason": "3/3 promoted and close to qwen3-coder speed"
+        },
+        {
+          "provider": "ollama",
+          "name": "qwen3-opencode:30b",
+          "endpointClass": "local",
+          "selectionReason": "3/3 promoted but much slower"
+        }
+      ],
+      "fixture": "experiments/harness-arena/fixtures/h14-impl-from-tests",
+      "flow": "experiments/harness-arena/flows/h14-impl-from-tests-worker.flow",
+      "oracle": "experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs",
+      "cleanPasses": 3,
+      "totalRuns": 3,
+      "requiredGuards": ["public-tests", "api-preserved", "local-worker-summary", "private-oracle"],
+      "notes": "Use for bounded implementation when executable tests already exist."
+    },
+    {
+      "subrole": "h14-api-preserving-implementation",
+      "decision": "local-promoted",
+      "owner": "local",
+      "selectedModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "fastest promoted API-preservation run while preserving full residency evidence"
+      },
+      "fallbackModels": [
+        {
+          "provider": "ollama",
+          "name": "devstral-small-2:24b",
+          "endpointClass": "local",
+          "selectionReason": "3/3 promoted and close to qwen3-coder speed"
+        },
+        {
+          "provider": "ollama",
+          "name": "qwen3-opencode:30b",
+          "endpointClass": "local",
+          "selectionReason": "3/3 promoted but much slower"
+        }
+      ],
+      "fixture": "experiments/harness-arena/fixtures/h14-api-preservation",
+      "flow": "experiments/harness-arena/flows/h14-api-preservation-worker.flow",
+      "oracle": "experiments/harness-arena/oracles/h14-api-preservation-oracle.mjs",
+      "cleanPasses": 3,
+      "totalRuns": 3,
+      "requiredGuards": ["public-tests", "api-preserved", "local-worker-summary", "private-oracle"],
+      "notes": "Use when tests exist and the core risk is preserving exports, arity, and existing behavior."
+    },
+    {
+      "subrole": "h14-test-authoring",
+      "decision": "frontier-or-deterministic",
+      "owner": "frontier-or-deterministic-template",
+      "selectedModel": null,
+      "fallbackModels": [],
+      "fixture": "experiments/harness-arena/fixtures/h14-test-authoring",
+      "flow": "experiments/harness-arena/flows/h14-test-authoring-worker.flow",
+      "oracle": "experiments/harness-arena/oracles/h14-test-authoring-oracle.mjs",
+      "cleanPasses": 1,
+      "totalRuns": 3,
+      "requiredGuards": [
+        "tests-only-contract",
+        "public-tests",
+        "mutant-kill-checks",
+        "private-oracle"
+      ],
+      "notes": "Do not route standalone test authoring to local models until replicate evidence clears the promotion threshold."
+    },
+    {
+      "subrole": "h14-full-tdd",
+      "decision": "frontier-owned-or-hybrid-repair",
+      "owner": "frontier",
+      "selectedModel": null,
+      "fallbackModels": [],
+      "fixture": "experiments/harness-arena/fixtures/h14-tdd-red-green",
+      "flow": "experiments/harness-arena/flows/h14-local-bulk-worker.flow",
+      "oracle": "experiments/harness-arena/oracles/h14-tdd-red-green-oracle.mjs",
+      "cleanPasses": 0,
+      "totalRuns": 2,
+      "requiredGuards": [
+        "test-authoring",
+        "implementation",
+        "api-preserved",
+        "local-worker-summary",
+        "private-oracle"
+      ],
+      "notes": "Do not claim full local-only H14 capability until all subroles and the full lane reach the clean-pass threshold."
+    }
+  ],
+  "escalationTriggers": [
+    "missing-summary-artifact",
+    "timeout",
+    "public-test-authoring-failure",
+    "tests-only-contract-violation",
+    "api-surface-change",
+    "private-oracle-failure",
+    "two-public-gate-repair-failures"
+  ],
+  "runtimeDefaults": {
+    "implementationFromTestsActionRounds": 24,
+    "apiPreservationActionRounds": 24,
+    "testAuthoringActionRounds": 0,
+    "testAuthoringPolicy": "do-not-route-local",
+    "stepTimeoutMs": 900000
+  }
+}

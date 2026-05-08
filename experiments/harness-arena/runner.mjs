@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { resolveH14LocalRoute } from './h14-local-routing-policy.mjs';
 import { resolveH14QwenCoderRoute } from './h14-qwen3-coder-routing-policy.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -42,6 +43,7 @@ const ARG_FIELDS = {
   '--frontier-model': 'frontierModel',
   '--frontier-provider': 'frontierProvider',
   '--frontier-runner': 'frontierRunner',
+  '--h14-local-subrole': 'h14LocalSubrole',
   '--h14-qwen-coder-subrole': 'h14QwenCoderSubrole',
   '--live-deterministic-command': 'liveDeterministicCommand',
   '--live-frontier-command': 'liveFrontierCommand',
@@ -88,6 +90,8 @@ export function parseArgs(argv) {
     frontierModel: 'codex-default',
     frontierProvider: 'openai',
     frontierRunner: 'codex',
+    h14LocalRoute: null,
+    h14LocalSubrole: null,
     h14QwenCoderRoute: null,
     h14QwenCoderSubrole: null,
     liveDeterministicCommand: null,
@@ -152,8 +156,16 @@ export function parseArgs(argv) {
   if (options.mode === 'fake-live' && !oracleCommandProvided) {
     options.oracleCommand = defaultFakeOracleCommand();
   }
+  if (options.h14LocalSubrole && options.h14QwenCoderSubrole) {
+    throw new Error(
+      'Use only one H14 route profile: --h14-local-subrole or --h14-qwen-coder-subrole',
+    );
+  }
+  applyH14LocalRouteDefaults(options, providedFields);
   applyH14QwenCoderRouteDefaults(options, providedFields);
-  if (options.h14QwenCoderRoute && options.oracleCommand) oracleCommandProvided = true;
+  if ((options.h14LocalRoute || options.h14QwenCoderRoute) && options.oracleCommand) {
+    oracleCommandProvided = true;
+  }
 
   const resolvedArms = resolveArms(options.arms);
   validateLiveOptions({ ...options, arms: resolvedArms }, oracleCommandProvided);
@@ -162,12 +174,43 @@ export function parseArgs(argv) {
     ...options,
     arms: resolvedArms,
     fixture: options.fixture ? resolve(options.fixture) : null,
+    h14LocalRoute: options.h14LocalRoute,
     h14QwenCoderRoute: options.h14QwenCoderRoute,
     outputRoot: resolve(options.outputRoot),
     runGroupId: options.runGroupId ?? options.runId ?? 'HA-HR1-structure',
     runId: options.runId ?? timestampId(),
     startedAt: options.startedAt ?? new Date().toISOString(),
   };
+}
+
+function applyH14LocalRouteDefaults(options, providedFields) {
+  if (!options.h14LocalSubrole) return;
+
+  const resolved = resolveH14LocalRoute(options.h14LocalSubrole);
+  const route = resolved.route;
+  options.h14LocalRoute = resolved;
+
+  if (!providedFields.has('arms')) {
+    options.arms = resolved.shouldRunLocal ? 'local-only' : 'frontier-only';
+  }
+  if (!providedFields.has('fixture')) options.fixture = route.fixture;
+  if (resolved.shouldRunLocal) {
+    if (!resolved.model) {
+      throw new Error(
+        `H14 local route ${route.subrole} is local-promoted without a selected model`,
+      );
+    }
+    if (!providedFields.has('localModel')) options.localModel = resolved.model.name;
+    if (!providedFields.has('localProvider')) options.localProvider = resolved.model.provider;
+    if (!providedFields.has('localRunner')) options.localRunner = resolved.model.provider;
+  }
+  if (!providedFields.has('oracleCommand')) options.oracleCommand = h14OracleCommand(route);
+  if (!providedFields.has('policyVersion')) options.policyVersion = resolved.policyVersion;
+  if (!providedFields.has('stepTimeoutMs')) {
+    options.stepTimeoutMs = resolved.runtimeDefaults?.stepTimeoutMs ?? options.stepTimeoutMs;
+  }
+  if (!providedFields.has('taskBrief')) options.taskBrief = route.notes;
+  if (!providedFields.has('taskId')) options.taskId = route.subrole;
 }
 
 function applyH14QwenCoderRouteDefaults(options, providedFields) {
@@ -746,14 +789,13 @@ function buildLiveStepCommand(options, arm, stepId, routeDecision, index, worksp
   const template = liveCommandForRoute(options, routeDecision);
   if (!template) throw new Error(`missing live command template for route: ${routeDecision}`);
   validateH14LiveCommandTemplate(options, template);
-  const h14Flow = options.h14QwenCoderRoute
-    ? join(ROOT, options.h14QwenCoderRoute.route.flow)
-    : null;
+  const h14Route = selectedH14Route(options);
+  const h14Flow = h14Route ? join(ROOT, h14Route.route.flow) : null;
   return commandFromTemplate(template, {
     arm,
     attempt: String(index + 1),
     h14Flow,
-    h14FlowRelative: options.h14QwenCoderRoute?.route.flow ?? null,
+    h14FlowRelative: h14Route?.route.flow ?? null,
     routeDecision,
     stepId,
     taskId: options.taskId,
@@ -762,7 +804,7 @@ function buildLiveStepCommand(options, arm, stepId, routeDecision, index, worksp
 }
 
 function validateH14LiveCommandTemplate(options, template) {
-  const route = options.h14QwenCoderRoute?.route;
+  const route = selectedH14Route(options)?.route;
   if (!route) return;
 
   const absoluteFlow = join(ROOT, route.flow);
@@ -776,7 +818,7 @@ function validateH14LiveCommandTemplate(options, template) {
   }
 
   throw new Error(
-    `H14 qwen-coder live command must reference the routed flow ${route.flow}; use <h14Flow> for the absolute path.`,
+    `H14 live command must reference the routed flow ${route.flow}; use <h14Flow> for the absolute path.`,
   );
 }
 
@@ -973,7 +1015,8 @@ function classificationNotes(mode, { resourceFailure = false } = {}) {
 
 function buildStep([stepId, routeDecision, routeTrigger], index, options, workspace, execution) {
   const identity = stepIdentityForMode(options, routeDecision);
-  const h14Route = options.h14QwenCoderRoute?.route ?? null;
+  const h14ResolvedRoute = selectedH14Route(options);
+  const h14Route = h14ResolvedRoute?.route ?? null;
   const promptProgram = h14Route
     ? {
         kind: 'flow',
@@ -1010,13 +1053,13 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     providerClass: identity.providerClass,
     routeDecision,
     routeTrigger: h14Route
-      ? `h14-qwen3-coder:${h14Route.subrole}:${h14Route.decision}`
+      ? `${h14ResolvedRoute.triggerProfile}:${h14Route.subrole}:${h14Route.decision}`
       : routeTrigger,
     riskLevel: 'low',
     ambiguityLevel: 'low',
     escalationReason:
-      h14Route && !options.h14QwenCoderRoute.shouldRunLocal && routeDecision === 'frontier'
-        ? `H14 qwen3-coder policy route ${h14Route.decision}`
+      h14Route && !h14ResolvedRoute.shouldRunLocal && routeDecision === 'frontier'
+        ? `H14 ${h14ResolvedRoute.displayProfile} policy route ${h14Route.decision}`
         : null,
     attemptNumber: index + 1,
     promptProgram,
@@ -1052,9 +1095,27 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     estimatedUsd: 0,
     gpuActiveSeconds: 0,
     notes: h14Route
-      ? `H14 qwen3-coder policy ${h14Route.decision}. ${stepNotes(options.mode, execution)}`
+      ? `H14 ${h14ResolvedRoute.displayProfile} policy ${h14Route.decision}. ${stepNotes(options.mode, execution)}`
       : stepNotes(options.mode, execution),
   };
+}
+
+function selectedH14Route(options) {
+  if (options.h14LocalRoute) {
+    return {
+      ...options.h14LocalRoute,
+      displayProfile: 'local-portfolio',
+      triggerProfile: 'h14-local-portfolio',
+    };
+  }
+  if (options.h14QwenCoderRoute) {
+    return {
+      ...options.h14QwenCoderRoute,
+      displayProfile: 'qwen3-coder',
+      triggerProfile: 'h14-qwen3-coder',
+    };
+  }
+  return null;
 }
 
 function stepIdentityForMode(options, routeDecision) {
@@ -1257,7 +1318,7 @@ function byName(left, right) {
 }
 
 export function usage() {
-  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
+  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--h14-local-subrole subrole] [--h14-qwen-coder-subrole subrole] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
 }
 
 function main(argv = process.argv.slice(2)) {

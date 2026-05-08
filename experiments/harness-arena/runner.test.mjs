@@ -323,6 +323,41 @@ test('H14 qwen3-coder profile maps promoted subroles to local harness defaults',
   }
 });
 
+test('H14 local portfolio profile maps promoted subroles to selected local defaults', () => {
+  const outputRoot = tempRoot();
+  try {
+    const options = parseArgs([
+      '--dry-run',
+      '--h14-local-subrole',
+      'api-preservation',
+      '--output-root',
+      outputRoot,
+      '--run-id',
+      'h14-local-portfolio-route',
+      '--started-at',
+      FIXED_TIME,
+    ]);
+    const result = runHarnessArena(options);
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+
+    assert.deepEqual(options.arms, ['local-only']);
+    assert.equal(options.taskId, 'h14-api-preserving-implementation');
+    assert.equal(options.localModel, 'qwen3-coder:30b');
+    assert.equal(options.policyVersion, 'h14-local-subrole-routing-v1');
+    assert.match(options.oracleCommand, /h14-api-preservation-oracle\.mjs/);
+    assert.equal(step.routeDecision, 'local');
+    assert.match(
+      step.routeTrigger,
+      /h14-local-portfolio:h14-api-preserving-implementation:local-promoted/,
+    );
+    assert.match(step.notes, /H14 local-portfolio policy local-promoted/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('H14 qwen3-coder profile maps non-promoted subroles to frontier route defaults', () => {
   const options = parseArgs(['--h14-qwen-coder-subrole', 'test-authoring']);
 
@@ -330,6 +365,19 @@ test('H14 qwen3-coder profile maps non-promoted subroles to frontier route defau
   assert.equal(options.taskId, 'h14-test-authoring');
   assert.equal(options.h14QwenCoderRoute.shouldRunLocal, false);
   assert.match(options.oracleCommand, /h14-test-authoring-oracle\.mjs/);
+});
+
+test('H14 route profiles are mutually exclusive', () => {
+  assert.throws(
+    () =>
+      parseArgs([
+        '--h14-local-subrole',
+        'api-preservation',
+        '--h14-qwen-coder-subrole',
+        'api-preservation',
+      ]),
+    /Use only one H14 route profile/,
+  );
 });
 
 test('H14 qwen3-coder live profile requires only the routed lane command', () => {

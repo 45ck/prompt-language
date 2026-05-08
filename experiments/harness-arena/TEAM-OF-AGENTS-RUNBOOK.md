@@ -124,14 +124,14 @@ node experiments/harness-arena/runner.mjs \
   --output-root .tmp/harness-arena
 ```
 
-For the H14 `qwen3-coder:30b` evidence policy, prefer the route profile so the
-runner selects the checked-in fixture, oracle, flow identity, policy version, and
-default arm from `h14-qwen3-coder-routing-policy.v1.json`:
+For current H14 local-model evidence, prefer the portfolio route profile so the
+runner selects the checked-in fixture, oracle, flow identity, selected local model,
+policy version, and default arm from `h14-local-routing-policy.v1.json`:
 
 ```sh
 node experiments/harness-arena/runner.mjs \
   --live \
-  --h14-qwen-coder-subrole api-preservation \
+  --h14-local-subrole api-preservation \
   --live-local-command 'bash -lc "PROMPT_LANGUAGE_OLLAMA_BASE_URL=$PROMPT_LANGUAGE_OLLAMA_BASE_URL PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node /path/to/prompt-language/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file <h14Flow>"' \
   --local-resource-snapshot-command 'bash -lc "OLLAMA_HOST=<localEndpoint> ollama ps"' \
   --local-resource-snapshot-interval-ms 2000 \
@@ -139,6 +139,9 @@ node experiments/harness-arena/runner.mjs \
   --run-id HA-HR1-H14-api-preservation-routed-001 \
   --output-root .tmp/harness-arena
 ```
+
+Use `--h14-qwen-coder-subrole` instead only when reproducing the older
+qwen-coder-only evidence profile.
 
 `implementation-from-tests` and `api-preservation` route to `local-only` by
 default. `test-authoring` and `full-tdd` route to `frontier-only` by default, so a

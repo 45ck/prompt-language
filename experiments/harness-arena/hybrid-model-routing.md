@@ -64,35 +64,40 @@ Do not escalate:
 - local-only claim batches, except to stop the batch and relabel the follow-up as a
   hybrid/advisor/frontier arm
 
-## H14 Qwen3-Coder Overlay
+## H14 Local Portfolio Overlay
 
-The 2026-05-08 H14 subrole runs refine Routing Policy V0 for
-`qwen3-coder:30b`. The machine-readable overlay is
+The 2026-05-08 H14 subrole runs refine Routing Policy V0 into a local-model
+portfolio. The machine-readable overlay is
+[`h14-local-routing-policy.v1.json`](./h14-local-routing-policy.v1.json). Use
+[`h14-local-routing-policy.mjs`](./h14-local-routing-policy.mjs) to resolve a
+subrole before launching a local lane.
+
+The older qwen-coder-only overlay remains available for historical reproduction:
 [`h14-qwen3-coder-routing-policy.v1.json`](./h14-qwen3-coder-routing-policy.v1.json).
-Use
-[`h14-qwen3-coder-routing-policy.mjs`](./h14-qwen3-coder-routing-policy.mjs)
-to resolve a subrole before launching a local lane.
 
 Current H14 routing decisions:
 
-| Subrole                       | Local result | Route decision                  |
-| ----------------------------- | ------------ | ------------------------------- |
-| Implementation from tests     | `3/3` clean  | local-promoted                  |
-| API-preserving implementation | `3/3` clean  | local-promoted                  |
-| Standalone test authoring     | `1/3` clean  | frontier or deterministic       |
-| Full TDD ownership            | no clean set | frontier-owned or hybrid repair |
+| Subrole                       | Selected local model | Fallbacks                                    | Route decision                  |
+| ----------------------------- | -------------------- | -------------------------------------------- | ------------------------------- |
+| Implementation from tests     | `qwen3-coder:30b`    | `devstral-small-2:24b`, `qwen3-opencode:30b` | local-promoted                  |
+| API-preserving implementation | `qwen3-coder:30b`    | `devstral-small-2:24b`, `qwen3-opencode:30b` | local-promoted                  |
+| Standalone test authoring     | —                    | —                                            | frontier or deterministic       |
+| Full TDD ownership            | —                    | —                                            | frontier-owned or hybrid repair |
 
-Policy implication: keep local `qwen3-coder:30b` for bounded implementation work
-when tests and API gates already exist. Do not route standalone test authoring or
-full H14-style TDD ownership to the local lane until the model reaches the same
-clean-pass threshold on those subroles. For cost reduction, generate tests through
-a frontier reviewer or deterministic template first, then let the local worker
-implement against those tests.
+Policy implication: keep promoted local models for bounded implementation work
+when tests and API gates already exist. Prefer `qwen3-coder:30b` for the selected
+route today because it is the fastest promoted model in the latest sampled H14
+screens; use `devstral-small-2:24b` or `qwen3-opencode:30b` as fallback
+implementation workers. Do not route standalone test authoring or full H14-style
+TDD ownership to the local lane until a model reaches the same clean-pass
+threshold on those subroles. For cost reduction, generate tests through a frontier
+reviewer or deterministic template first, then let the local worker implement
+against those tests.
 
 Example:
 
 ```sh
-node experiments/harness-arena/h14-qwen3-coder-routing-policy.mjs api-preservation --json
+node experiments/harness-arena/h14-local-routing-policy.mjs api-preservation --json
 ```
 
 ## FSCRUD R29 Implication

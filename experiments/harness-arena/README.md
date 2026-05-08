@@ -25,10 +25,12 @@ evidence:
 - `--live` executes operator-supplied lane command templates. The runner records
   requested/actual model, provider, endpoint, command artifacts, timeout metadata,
   and private oracle artifacts in a claim-grade manifest.
-- `--h14-qwen-coder-subrole` applies the checked-in H14 `qwen3-coder:30b`
-  routing policy. Promoted subroles default to `local-only`; non-promoted subroles
-  default to `frontier-only`, with the matching fixture, oracle, policy version,
-  timeout, and flow identity recorded by the runner.
+- `--h14-local-subrole` applies the checked-in H14 local-model portfolio routing
+  policy. Promoted subroles default to `local-only` with the selected local model;
+  non-promoted subroles default to `frontier-only`, with the matching fixture,
+  oracle, policy version, timeout, and flow identity recorded by the runner.
+- `--h14-qwen-coder-subrole` remains available for the older qwen-coder-only
+  route profile when reproducing historical evidence.
 - H14 route-profile live commands must reference the routed flow. Use
   `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative
   flow path in `--live-local-command` / `--live-frontier-command`.
@@ -75,10 +77,11 @@ read-only review.
    `node experiments/harness-arena/runner.mjs --fake-live --run-id HA-HR1-fake-live-001 --output-root .tmp/harness-arena`
 3. Run a local-only live lane against a WSL-reachable Ollama endpoint with
    `--live-local-command`, `--oracle-command`, and `--arms local-only`
-4. Use `--h14-qwen-coder-subrole api-preservation` or
-   `--h14-qwen-coder-subrole implementation-from-tests` to route the promoted H14
+4. Use `--h14-local-subrole api-preservation` or
+   `--h14-local-subrole implementation-from-tests` to route the promoted H14
    subroles through the local-only lane without manually restating fixture/oracle
-   paths
+   paths. Use `--h14-qwen-coder-subrole` only when reproducing the original
+   qwen-coder-only overlay.
 5. Add budgeted frontier command templates for frontier-only, advisor-only, and
    hybrid-router arms
 6. Run HA-HR1 across local-only, frontier-only, advisor-only, and hybrid-router arms

@@ -6,6 +6,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { dirname, join, relative, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
+import { resolveH14QwenCoderRoute } from './h14-qwen3-coder-routing-policy.mjs';
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, '..', '..');
 const SCHEMA = JSON.parse(readFileSync(join(HERE, 'hybrid-routing-manifest.schema.json'), 'utf8'));
@@ -40,6 +42,7 @@ const ARG_FIELDS = {
   '--frontier-model': 'frontierModel',
   '--frontier-provider': 'frontierProvider',
   '--frontier-runner': 'frontierRunner',
+  '--h14-qwen-coder-subrole': 'h14QwenCoderSubrole',
   '--live-deterministic-command': 'liveDeterministicCommand',
   '--live-frontier-command': 'liveFrontierCommand',
   '--live-frontier-repair-command': 'liveFrontierRepairCommand',
@@ -83,6 +86,8 @@ export function parseArgs(argv) {
     frontierModel: 'codex-default',
     frontierProvider: 'openai',
     frontierRunner: 'codex',
+    h14QwenCoderRoute: null,
+    h14QwenCoderSubrole: null,
     liveDeterministicCommand: null,
     liveFrontierCommand: null,
     liveFrontierRepairCommand: null,
@@ -105,6 +110,7 @@ export function parseArgs(argv) {
   };
   let explicitMode = false;
   let oracleCommandProvided = false;
+  const providedFields = new Set();
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -129,6 +135,7 @@ export function parseArgs(argv) {
     if (!field) throw new Error(`Unknown option: ${arg}`);
     if (value == null) throw new Error(`${arg} requires a value`);
     if (field === 'oracleCommand') oracleCommandProvided = true;
+    providedFields.add(field);
     options[field] =
       field === 'oracleTimeoutMs' || field === 'stepTimeoutMs'
         ? parsePositiveInteger(value, arg)
@@ -139,6 +146,8 @@ export function parseArgs(argv) {
   if (options.mode === 'fake-live' && !oracleCommandProvided) {
     options.oracleCommand = defaultFakeOracleCommand();
   }
+  applyH14QwenCoderRouteDefaults(options, providedFields);
+  if (options.h14QwenCoderRoute && options.oracleCommand) oracleCommandProvided = true;
 
   const resolvedArms = resolveArms(options.arms);
   validateLiveOptions({ ...options, arms: resolvedArms }, oracleCommandProvided);
@@ -147,11 +156,35 @@ export function parseArgs(argv) {
     ...options,
     arms: resolvedArms,
     fixture: options.fixture ? resolve(options.fixture) : null,
+    h14QwenCoderRoute: options.h14QwenCoderRoute,
     outputRoot: resolve(options.outputRoot),
     runGroupId: options.runGroupId ?? options.runId ?? 'HA-HR1-structure',
     runId: options.runId ?? timestampId(),
     startedAt: options.startedAt ?? new Date().toISOString(),
   };
+}
+
+function applyH14QwenCoderRouteDefaults(options, providedFields) {
+  if (!options.h14QwenCoderSubrole) return;
+
+  const resolved = resolveH14QwenCoderRoute(options.h14QwenCoderSubrole);
+  const route = resolved.route;
+  options.h14QwenCoderRoute = resolved;
+
+  if (!providedFields.has('arms')) {
+    options.arms = resolved.shouldRunLocal ? 'local-only' : 'frontier-only';
+  }
+  if (!providedFields.has('fixture')) options.fixture = route.fixture;
+  if (!providedFields.has('localModel')) options.localModel = resolved.model.name;
+  if (!providedFields.has('localProvider')) options.localProvider = resolved.model.provider;
+  if (!providedFields.has('localRunner')) options.localRunner = resolved.model.provider;
+  if (!providedFields.has('oracleCommand')) options.oracleCommand = h14OracleCommand(route);
+  if (!providedFields.has('policyVersion')) options.policyVersion = resolved.policyVersion;
+  if (!providedFields.has('stepTimeoutMs')) {
+    options.stepTimeoutMs = resolved.runtimeDefaults?.stepTimeoutMs ?? options.stepTimeoutMs;
+  }
+  if (!providedFields.has('taskBrief')) options.taskBrief = route.notes;
+  if (!providedFields.has('taskId')) options.taskId = route.subrole;
 }
 
 function validateLiveOptions(options, oracleCommandProvided) {
@@ -586,6 +619,10 @@ function defaultFakeOracleCommand() {
   return `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(script)} <workspace>`;
 }
 
+function h14OracleCommand(route) {
+  return `${quoteCommandArg(process.execPath)} ${quoteCommandArg(join(ROOT, route.oracle))} --workspace <workspace>`;
+}
+
 function buildManifest(options, arm, workspace, stepExecutions = null, oracleExecution = null) {
   return {
     schemaVersion: 2,
@@ -687,13 +724,27 @@ function classificationNotes(mode) {
 
 function buildStep([stepId, routeDecision, routeTrigger], index, options, workspace, execution) {
   const identity = stepIdentityForMode(options, routeDecision);
+  const h14Route = options.h14QwenCoderRoute?.route ?? null;
+  const promptProgram = h14Route
+    ? {
+        kind: 'flow',
+        path: h14Route.flow,
+        sha256: fileSha256FromRoot(h14Route.flow),
+      }
+    : {
+        kind: 'synthetic',
+        path: null,
+        sha256: sha256(`${options.policyVersion}:${options.mode}:${stepId}`),
+      };
   const outputArtifactRefs = execution
     ? [execution.stdoutArtifactRef, execution.stderrArtifactRef, execution.metadataArtifactRef]
     : ['arm-plan.json'];
 
   return {
     stepId,
-    purpose: `Synthetic ${stepId} lane for HA-HR1 ${options.mode}`,
+    purpose: h14Route
+      ? `H14 ${h14Route.subrole} ${stepId} lane for ${options.mode}`
+      : `Synthetic ${stepId} lane for HA-HR1 ${options.mode}`,
     runner: identity.runner,
     model: identity.model,
     provider: identity.provider,
@@ -704,16 +755,17 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     adapterVersion: identity.adapterVersion,
     providerClass: identity.providerClass,
     routeDecision,
-    routeTrigger,
+    routeTrigger: h14Route
+      ? `h14-qwen3-coder:${h14Route.subrole}:${h14Route.decision}`
+      : routeTrigger,
     riskLevel: 'low',
     ambiguityLevel: 'low',
-    escalationReason: null,
+    escalationReason:
+      h14Route && !options.h14QwenCoderRoute.shouldRunLocal && routeDecision === 'frontier'
+        ? `H14 qwen3-coder policy route ${h14Route.decision}`
+        : null,
     attemptNumber: index + 1,
-    promptProgram: {
-      kind: 'synthetic',
-      path: null,
-      sha256: sha256(`${options.policyVersion}:${options.mode}:${stepId}`),
-    },
+    promptProgram,
     cost: {
       basis: 'none',
       estimatedUsd: 0,
@@ -724,7 +776,7 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     },
     dataClassification: 'public',
     frontierCallKind: frontierCallKindForStep(stepId),
-    inputArtifactRefs: ['workspace/TASK.md'],
+    inputArtifactRefs: h14Route ? ['workspace/TASK.md', h14Route.flow] : ['workspace/TASK.md'],
     outputArtifactRefs,
     diffSummary:
       options.mode === 'fake-live'
@@ -742,7 +794,9 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     wallSeconds: execution?.wallSeconds ?? 0,
     estimatedUsd: 0,
     gpuActiveSeconds: 0,
-    notes: stepNotes(options.mode, execution),
+    notes: h14Route
+      ? `H14 qwen3-coder policy ${h14Route.decision}. ${stepNotes(options.mode, execution)}`
+      : stepNotes(options.mode, execution),
   };
 }
 
@@ -889,6 +943,10 @@ function checkConst(value, expected, path, errors) {
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function fileSha256FromRoot(relativePath) {
+  return sha256(readFileSync(join(ROOT, relativePath)));
 }
 
 function assertNoOracleLeak(workspace, oracleCommand) {

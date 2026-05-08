@@ -43,6 +43,7 @@ export function resolveH14QwenCoderRoute(subrole, policy = loadH14QwenCoderRouti
     model: policy.model,
     policyVersion: policy.policyVersion,
     route,
+    runtimeDefaults: policy.runtimeDefaults,
     shouldRunLocal: route.decision === 'local-promoted',
   };
 }

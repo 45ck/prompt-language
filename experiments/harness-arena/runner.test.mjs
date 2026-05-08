@@ -284,6 +284,65 @@ test('live mode requires explicit lane command and private oracle templates', ()
   );
 });
 
+test('H14 qwen3-coder profile maps promoted subroles to local harness defaults', () => {
+  const outputRoot = tempRoot();
+  try {
+    const options = parseArgs([
+      '--dry-run',
+      '--h14-qwen-coder-subrole',
+      'api-preservation',
+      '--output-root',
+      outputRoot,
+      '--run-id',
+      'h14-local-route',
+      '--started-at',
+      FIXED_TIME,
+    ]);
+    const result = runHarnessArena(options);
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+
+    assert.deepEqual(options.arms, ['local-only']);
+    assert.equal(options.taskId, 'h14-api-preserving-implementation');
+    assert.equal(options.localModel, 'qwen3-coder:30b');
+    assert.equal(options.policyVersion, 'h14-qwen3-coder-subrole-routing-v1');
+    assert.match(options.oracleCommand, /h14-api-preservation-oracle\.mjs/);
+    assert.equal(existsSync(join(armRun.workspace, 'src', 'contacts.js')), true);
+    assert.equal(step.routeDecision, 'local');
+    assert.match(
+      step.routeTrigger,
+      /h14-qwen3-coder:h14-api-preserving-implementation:local-promoted/,
+    );
+    assert.equal(step.promptProgram.kind, 'flow');
+    assert.match(step.promptProgram.path, /h14-api-preservation-worker\.flow$/);
+    assert.match(step.promptProgram.sha256, /^[a-f0-9]{64}$/);
+    assert.match(step.notes, /H14 qwen3-coder policy local-promoted/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('H14 qwen3-coder profile maps non-promoted subroles to frontier route defaults', () => {
+  const options = parseArgs(['--h14-qwen-coder-subrole', 'test-authoring']);
+
+  assert.deepEqual(options.arms, ['frontier-only']);
+  assert.equal(options.taskId, 'h14-test-authoring');
+  assert.equal(options.h14QwenCoderRoute.shouldRunLocal, false);
+  assert.match(options.oracleCommand, /h14-test-authoring-oracle\.mjs/);
+});
+
+test('H14 qwen3-coder live profile requires only the routed lane command', () => {
+  assert.throws(
+    () => parseArgs(['--live', '--h14-qwen-coder-subrole', 'api-preservation']),
+    /--live requires command templates for selected routes: local/,
+  );
+  assert.throws(
+    () => parseArgs(['--live', '--h14-qwen-coder-subrole', 'test-authoring']),
+    /--live requires command templates for selected routes: frontier/,
+  );
+});
+
 test('live mode executes operator-supplied lane commands and private oracle artifacts', () => {
   const outputRoot = tempRoot();
   const scriptRoot = tempRoot();

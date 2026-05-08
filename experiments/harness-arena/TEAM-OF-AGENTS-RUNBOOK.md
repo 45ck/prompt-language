@@ -124,6 +124,25 @@ node experiments/harness-arena/runner.mjs \
   --output-root .tmp/harness-arena
 ```
 
+For the H14 `qwen3-coder:30b` evidence policy, prefer the route profile so the
+runner selects the checked-in fixture, oracle, flow identity, policy version, and
+default arm from `h14-qwen3-coder-routing-policy.v1.json`:
+
+```sh
+node experiments/harness-arena/runner.mjs \
+  --live \
+  --h14-qwen-coder-subrole api-preservation \
+  --live-local-command 'bash -lc "PROMPT_LANGUAGE_OLLAMA_BASE_URL=$PROMPT_LANGUAGE_OLLAMA_BASE_URL PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=900000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24 node /path/to/prompt-language/bin/cli.mjs run --runner ollama --model qwen3-coder:30b --json --file /path/to/prompt-language/experiments/harness-arena/flows/h14-api-preservation-worker.flow"' \
+  --local-endpoint "$PROMPT_LANGUAGE_OLLAMA_BASE_URL" \
+  --run-id HA-HR1-H14-api-preservation-routed-001 \
+  --output-root .tmp/harness-arena
+```
+
+`implementation-from-tests` and `api-preservation` route to `local-only` by
+default. `test-authoring` and `full-tdd` route to `frontier-only` by default, so a
+live run for those subroles requires `--live-frontier-command` instead of
+`--live-local-command`.
+
 ## Frontier Review Lane
 
 Use frontier reasoning for final review or escalation diagnosis:

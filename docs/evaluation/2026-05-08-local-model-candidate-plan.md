@@ -346,6 +346,7 @@ observed `ollama ps` residency.
 Then run only claim-bearing screens that answer a new question:
 
 - H15 PATCH test-authoring replay only as a promoted tests-only health lane;
+  the latest replay passed with zero frontier calls and private oracle `4/4`;
 - budgeted H15 hybrid with explicit `--frontier-call-limit`;
 - no further `gemma4-opencode:e4b` classifier/reviewer control on the current
   PowerShell transport;

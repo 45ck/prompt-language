@@ -81,18 +81,16 @@ Current H14 routing decisions:
 | ----------------------------- | -------------------- | -------------------------------------------- | ------------------------------- |
 | Implementation from tests     | `qwen3-coder:30b`    | `devstral-small-2:24b`, `qwen3-opencode:30b` | local-promoted                  |
 | API-preserving implementation | `qwen3-coder:30b`    | `devstral-small-2:24b`, `qwen3-opencode:30b` | local-promoted                  |
-| Standalone test authoring     | —                    | —                                            | frontier or deterministic       |
+| Standalone test authoring     | `qwen3-coder:30b`    | —                                            | local-promoted                  |
 | Full TDD ownership            | —                    | —                                            | frontier-owned or hybrid repair |
 
 Policy implication: keep promoted local models for bounded implementation work
 when tests and API gates already exist. Prefer `qwen3-coder:30b` for the selected
-route today because it is the fastest promoted model in the latest sampled H14
-screens; use `devstral-small-2:24b` or `qwen3-opencode:30b` as fallback
-implementation workers. Do not route standalone test authoring or full H14-style
-TDD ownership to the local lane until a model reaches the same clean-pass
-threshold on those subroles. For cost reduction, generate tests through a frontier
-reviewer or deterministic template first, then let the local worker implement
-against those tests.
+routes today because it is the fastest promoted model in the latest sampled H14
+screens. Use `devstral-small-2:24b` or `qwen3-opencode:30b` as fallback
+implementation workers, but not as fallback standalone test authors yet. Keep
+full H14-style TDD ownership out of the local lane until it reaches the same
+clean-pass threshold.
 
 Example:
 

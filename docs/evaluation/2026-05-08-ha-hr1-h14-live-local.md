@@ -1314,7 +1314,8 @@ Decision: this validates the new PowerShell bridge as a real WSL-to-Windows
 Ollama transport for the H14 local portfolio route, not just a direct model
 smoke. It does not change the model promotion matrix: `qwen3-coder:30b` remains
 promoted for H14 implementation-from-tests and API-preserving implementation,
-while full H14 local-only and standalone test authoring remain not promoted.
+while full H14 local-only and standalone test authoring remain not promoted at
+this point in the sequence.
 
 ### PowerShell Bridge Repeatability Band
 
@@ -1346,3 +1347,95 @@ Decision: this is enough to treat the PowerShell bridge as stable for the narrow
 H14 API-preserving implementation lane on this workstation. It is not evidence
 for promoting standalone test authoring, full H14 local-only, or larger
 multi-file implementation work to local-only execution.
+
+## H14 Test-Authoring PowerShell Screens
+
+### Pre-Clarification PowerShell Screen
+
+The non-promoted `h14-test-authoring` subrole was screened through the
+PowerShell bridge with `qwen3-coder:30b`, the existing `h14-test-authoring`
+flow, 8 action rounds, and the private test-authoring oracle. The run was
+launched as an explicit `local-only` screen, not through the production
+`--h14-local-subrole` route, because the checked-in policy still routed this
+subrole to frontier or deterministic ownership.
+
+| Run id                                                             | Oracle | Step exit | Timeout | Wall time | Turns | Tokens | Retries | Samples |
+| ------------------------------------------------------------------ | ------ | --------- | ------- | --------- | ----- | ------ | ------- | ------- |
+| `HA-HR1-H14-test-authoring-powershell-screen-001-20260508T073939Z` | 3/4    | 3         | false   | 141.463s  | 7     | 23,046 | 0       | 66/66   |
+| `HA-HR1-H14-test-authoring-powershell-screen-002-20260508T074203Z` | 4/4    | 0         | false   | 109.849s  | 8     | 24,472 | 0       | 52/52   |
+| `HA-HR1-H14-test-authoring-powershell-screen-003-20260508T074355Z` | 4/4    | 0         | false   | 107.884s  | 8     | 24,472 | 0       | 51/51   |
+
+Aggregate:
+
+- oracle pass rate: `2/3`
+- total Ollama turns: `23`
+- total provider tokens: `71,990`
+- average step wall time: `119.732s`
+- provider substitution: `false` in all runs
+- transport telemetry: `metadata.transport=powershell` in all provider records
+- resource sample failures: `0`
+
+The failing sample preserved the implementation and exercised
+`mergeDuplicates`, but wrote a public test with the older non-empty fallback
+semantics reversed:
+
+```text
+FAIL: public tests pass -- npm-equivalent test failed:
+Results: 8/9 passed
+FAIL: mergeDuplicates handles older non-empty fallback -- name from first:
+expected "Alice", got "Alice A"
+
+Results: 3/4 passed
+```
+
+Decision: the PowerShell bridge improved the local test-authoring lane relative
+to the earlier S4 `1/3` band, but `2/3` is still below the promotion threshold.
+The failure was a prompt-control issue, not a transport, timeout, or resource
+failure.
+
+### Clarified Test-Authoring Screen
+
+Commit `3292364` clarified the `h14-test-authoring-worker.flow` prompt with two
+public-task examples:
+
+- later non-empty duplicate values replace earlier non-empty values;
+- later empty strings do not erase earlier non-empty values.
+
+The fixture, private oracle, model, PowerShell transport, 8 action-round budget,
+and tests-only ownership contract stayed the same.
+
+| Run id                                                                | Oracle | Step exit | Timeout | Wall time | Turns | Tokens | Retries | Samples |
+| --------------------------------------------------------------------- | ------ | --------- | ------- | --------- | ----- | ------ | ------- | ------- |
+| `HA-HR1-H14-test-authoring-powershell-clarified-001-20260508T074939Z` | 4/4    | 0         | false   | 106.228s  | 8     | 25,289 | 0       | 50/50   |
+| `HA-HR1-H14-test-authoring-powershell-clarified-002-20260508T075128Z` | 4/4    | 0         | false   | 105.779s  | 8     | 25,289 | 0       | 50/50   |
+| `HA-HR1-H14-test-authoring-powershell-clarified-003-20260508T075316Z` | 4/4    | 0         | false   | 103.602s  | 8     | 25,289 | 0       | 49/49   |
+
+Aggregate:
+
+- oracle pass rate: `3/3`
+- total Ollama turns: `24`
+- total provider tokens: `75,867`
+- average step wall time: `105.203s`
+- provider substitution: `false` in all runs
+- transport telemetry: `metadata.transport=powershell` in all provider records
+- resource sample failures: `0`
+
+Representative oracle result:
+
+```text
+PASS: contacts implementation remains unchanged
+PASS: tests import and exercise mergeDuplicates
+PASS: public tests pass
+PASS: tests reject broken merge implementations
+
+Results: 4/4 passed
+```
+
+### Clarified Test-Authoring Decision
+
+Promote `h14-test-authoring` in the H14 local portfolio route only for
+`qwen3-coder:30b` with the clarified prompt-language flow and 8 action rounds.
+Do not add fallback local models for this subrole yet, because the fallback
+portfolio evidence covers implementation subroles, not standalone test
+authoring. Keep full H14 TDD ownership not promoted: this screen proves the
+isolated test-authoring subrole, not combined red-green ownership.

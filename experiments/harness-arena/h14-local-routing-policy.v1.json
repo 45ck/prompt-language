@@ -74,14 +74,19 @@
     },
     {
       "subrole": "h14-test-authoring",
-      "decision": "frontier-or-deterministic",
-      "owner": "frontier-or-deterministic-template",
-      "selectedModel": null,
+      "decision": "local-promoted",
+      "owner": "local",
+      "selectedModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "3/3 after clarified test-authoring semantics over PowerShell bridge"
+      },
       "fallbackModels": [],
       "fixture": "experiments/harness-arena/fixtures/h14-test-authoring",
       "flow": "experiments/harness-arena/flows/h14-test-authoring-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h14-test-authoring-oracle.mjs",
-      "cleanPasses": 1,
+      "cleanPasses": 3,
       "totalRuns": 3,
       "requiredGuards": [
         "tests-only-contract",
@@ -89,7 +94,7 @@
         "mutant-kill-checks",
         "private-oracle"
       ],
-      "notes": "Do not route standalone test authoring to local models until replicate evidence clears the promotion threshold."
+      "notes": "Use for standalone test authoring only with the clarified merge-semantics flow and tests-only ownership guard."
     },
     {
       "subrole": "h14-full-tdd",
@@ -124,8 +129,8 @@
   "runtimeDefaults": {
     "implementationFromTestsActionRounds": 24,
     "apiPreservationActionRounds": 24,
-    "testAuthoringActionRounds": 0,
-    "testAuthoringPolicy": "do-not-route-local",
+    "testAuthoringActionRounds": 8,
+    "testAuthoringPolicy": "local-promoted-with-clarified-semantics",
     "stepTimeoutMs": 900000
   }
 }

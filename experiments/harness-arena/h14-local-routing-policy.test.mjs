@@ -48,7 +48,7 @@ test('H14 local routing policy promotes only model-backed stable subroles', () =
     routeBySubrole(policy, 'h14-api-preserving-implementation').decision,
     'local-promoted',
   );
-  assert.equal(routeBySubrole(policy, 'h14-test-authoring').decision, 'frontier-or-deterministic');
+  assert.equal(routeBySubrole(policy, 'h14-test-authoring').decision, 'local-promoted');
   assert.equal(routeBySubrole(policy, 'h14-full-tdd').decision, 'frontier-owned-or-hybrid-repair');
 });
 
@@ -56,9 +56,11 @@ test('H14 local routing policy records promoted fallback models without selectin
   const policy = readPolicy();
   const implementation = routeBySubrole(policy, 'h14-implementation-from-tests');
   const apiPreservation = routeBySubrole(policy, 'h14-api-preserving-implementation');
+  const testAuthoring = routeBySubrole(policy, 'h14-test-authoring');
 
   assert.equal(implementation.selectedModel.name, 'qwen3-coder:30b');
   assert.equal(apiPreservation.selectedModel.name, 'qwen3-coder:30b');
+  assert.equal(testAuthoring.selectedModel.name, 'qwen3-coder:30b');
   assert.deepEqual(
     implementation.fallbackModels.map((model) => model.name),
     ['devstral-small-2:24b', 'qwen3-opencode:30b'],
@@ -85,6 +87,7 @@ test('H14 local routing policy references checked-in evidence and harness files'
   assert.match(evidence, /Qwen3 OpenCode Decision/);
   assert.match(evidence, /Devstral Decision/);
   assert.match(evidence, /Refresh Decision/);
+  assert.match(evidence, /Clarified Test-Authoring Decision/);
 });
 
 test('H14 local route resolver maps aliases to selected local and escalation decisions', () => {
@@ -98,9 +101,10 @@ test('H14 local route resolver maps aliases to selected local and escalation dec
   assert.match(implementation.route.flow, /h14-impl-from-tests-worker\.flow$/);
 
   const testAuthoring = resolveH14LocalRoute('test-authoring');
-  assert.equal(testAuthoring.shouldRunLocal, false);
-  assert.equal(testAuthoring.model, null);
-  assert.equal(testAuthoring.route.owner, 'frontier-or-deterministic-template');
+  assert.equal(testAuthoring.shouldRunLocal, true);
+  assert.equal(testAuthoring.model.name, 'qwen3-coder:30b');
+  assert.equal(testAuthoring.route.owner, 'local');
+  assert.match(testAuthoring.route.flow, /h14-test-authoring-worker\.flow$/);
 
   assert.throws(() => resolveH14LocalRoute('unknown-subrole'), /unknown H14 local subrole/);
 });

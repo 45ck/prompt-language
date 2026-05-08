@@ -81,11 +81,12 @@ read-only review.
    `node experiments/harness-arena/runner.mjs --fake-live --run-id HA-HR1-fake-live-001 --output-root .tmp/harness-arena`
 3. Run a local-only live lane against a WSL-reachable Ollama endpoint with
    `--live-local-command`, `--oracle-command`, and `--arms local-only`
-4. Use `--h14-local-subrole api-preservation` or
-   `--h14-local-subrole implementation-from-tests` to route the promoted H14
-   subroles through the local-only lane without manually restating fixture/oracle
-   paths. Use `--h14-qwen-coder-subrole` only when reproducing the original
-   qwen-coder-only overlay.
+4. Use `--h14-local-subrole api-preservation`,
+   `--h14-local-subrole implementation-from-tests`, or
+   `--h14-local-subrole test-authoring` to route promoted H14 subroles through
+   the local-only lane without manually restating fixture/oracle paths. Use
+   `--h14-qwen-coder-subrole` only when reproducing the original qwen-coder-only
+   overlay.
 5. Add budgeted frontier command templates for frontier-only, advisor-only, and
    hybrid-router arms
 6. Run HA-HR1 across local-only, frontier-only, advisor-only, and hybrid-router arms

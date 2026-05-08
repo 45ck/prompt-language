@@ -154,9 +154,9 @@ node experiments/harness-arena/runner.mjs \
 Use `--h14-qwen-coder-subrole` instead only when reproducing the older
 qwen-coder-only evidence profile.
 
-`implementation-from-tests` and `api-preservation` route to `local-only` by
-default. `test-authoring` and `full-tdd` route to `frontier-only` by default, so a
-live run for those subroles requires `--live-frontier-command` instead of
+`implementation-from-tests`, `api-preservation`, and `test-authoring` route to
+`local-only` by default. `full-tdd` still routes to `frontier-only` by default, so
+a live run for that subrole requires `--live-frontier-command` instead of
 `--live-local-command`. H14 route-profile live commands must reference the routed
 flow; use `<h14Flow>` for the absolute path or `<h14FlowRelative>` for the
 repo-relative path.

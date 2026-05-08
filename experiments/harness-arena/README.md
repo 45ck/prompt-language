@@ -115,8 +115,9 @@ risk, repeated local failure, or read-only review.
    micro-flows show reliable value.
 2. Rerun the revised H15 PATCH test-authoring local screen with
    `--h15-qwen-coder-task test-authoring`, sampled local resource evidence, and
-   the private mutant oracle. The route is now `2/6`; run `007` passed after the
-   shared-fixture delete guard, but repeatability is still not promotion-grade.
+   the private mutant oracle. The route is now `3/7`; runs `007` and `008`
+   passed after the shared-fixture delete guard, so the tests-only local screen
+   is useful but still not full H15 endpoint ownership.
 3. Promote a local H15 candidate back into a hybrid full-task route only after the
    micro-flow passes with claim-grade manifests and sampled resource evidence.
 4. Add an H11-style multi-file refactor fixture after H15 has a stable baseline

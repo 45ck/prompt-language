@@ -94,8 +94,8 @@
       "fixture": "experiments/harness-arena/fixtures/h15-patch-test-authoring",
       "flow": "experiments/harness-arena/flows/h15-patch-test-authoring-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h15-patch-test-authoring-oracle.mjs",
-      "cleanPasses": 2,
-      "totalRuns": 6,
+      "cleanPasses": 3,
+      "totalRuns": 7,
       "requiredGuards": [
         "implementation-unchanged",
         "patch-validation-tests",
@@ -104,7 +104,7 @@
         "private-oracle"
       ],
       "localStopPolicy": "stop after the first timeout, implementation edit, shallow-test oracle failure, or public test failure; do not convert the same run into full H15 evidence",
-      "notes": "Use only as a local diagnostic micro-flow for PATCH test authoring. HA-HR1-H15-patch-test-authoring-qwen-coder-002 failed from action-round exhaustion, a missing email-without-at case, and shared-state test contamination. HA-HR1-H15-patch-test-authoring-qwen-coder-003 also exhausted action rounds after rewriting the test harness around the wrong response API. HA-HR1-H15-patch-test-authoring-qwen-coder-004 passed after explicit response-object and test-harness guidance. HA-HR1-H15-patch-test-authoring-qwen-coder-005 completed the public flow but failed the private partial-update mutant because it compared against a live object reference. HA-HR1-H15-patch-test-authoring-qwen-coder-006 exhausted action rounds after deleting shared fixture id 1 before the existing valid PATCH test. HA-HR1-H15-patch-test-authoring-qwen-coder-007 passed after adding the shared-fixture delete guard. This is tests-only H15 support, not full H15 endpoint ownership."
+      "notes": "Use only as a local diagnostic micro-flow for PATCH test authoring. HA-HR1-H15-patch-test-authoring-qwen-coder-002 failed from action-round exhaustion, a missing email-without-at case, and shared-state test contamination. HA-HR1-H15-patch-test-authoring-qwen-coder-003 also exhausted action rounds after rewriting the test harness around the wrong response API. HA-HR1-H15-patch-test-authoring-qwen-coder-004 passed after explicit response-object and test-harness guidance. HA-HR1-H15-patch-test-authoring-qwen-coder-005 completed the public flow but failed the private partial-update mutant because it compared against a live object reference. HA-HR1-H15-patch-test-authoring-qwen-coder-006 exhausted action rounds after deleting shared fixture id 1 before the existing valid PATCH test. HA-HR1-H15-patch-test-authoring-qwen-coder-007 and 008 passed after adding the shared-fixture delete guard. This is tests-only H15 support, not full H15 endpoint ownership."
     }
   ],
   "escalationTriggers": [

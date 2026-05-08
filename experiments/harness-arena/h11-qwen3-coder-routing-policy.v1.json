@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "h11-qwen3-coder-multi-file-refactor-routing-v1",
+  "decidedAt": "2026-05-09",
+  "model": {
+    "provider": "ollama",
+    "name": "qwen3-coder:30b",
+    "endpointClass": "local"
+  },
+  "evidence": {
+    "summaryDoc": "experiments/aider-vs-pl/results/h11-phase6-context-controlled/README.md",
+    "selectionDoc": "docs/evaluation/2026-05-08-local-coding-model-selection.md",
+    "minimumCleanPassesForPromotion": 3
+  },
+  "routes": [
+    {
+      "task": "h11-multi-file-refactor",
+      "decision": "local-screen-candidate",
+      "owner": "local",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "H11 is the next Harness Arena diagnostic after H15 produced stable micro-flow evidence; qwen3-coder needs a cross-file rename screen before full multi-file promotion"
+      },
+      "selectedModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "screening route only; no qwen3-coder Harness Arena H11 live pass recorded yet"
+      },
+      "fixture": "experiments/harness-arena/fixtures/h11-multi-file-refactor",
+      "flow": "experiments/harness-arena/flows/h11-multi-file-refactor-worker.flow",
+      "oracle": "experiments/harness-arena/oracles/h11-multi-file-refactor-oracle.mjs",
+      "cleanPasses": 0,
+      "totalRuns": 0,
+      "requiredGuards": [
+        "public-tests",
+        "structural-rename",
+        "app-smoke",
+        "local-worker-summary",
+        "private-oracle"
+      ],
+      "localStopPolicy": "stop after the first timeout, no-edit result, old Contact terminology straggler, import failure, public test failure, or private oracle failure",
+      "notes": "Use as the first Harness Arena H11 local screen for multi-file refactor behavior. The older aider-vs-pl H11 evidence showed PL can help local qwen3-opencode-big:30b on this class, but this qwen3-coder route has no clean Harness Arena pass yet."
+    }
+  ],
+  "escalationTriggers": [
+    "missing-summary-artifact",
+    "timeout",
+    "action-round-exhaustion",
+    "no-edit-result",
+    "old-term-straggler",
+    "import-resolution-failure",
+    "api-surface-change",
+    "private-oracle-failure"
+  ],
+  "runtimeDefaults": {
+    "localDraftActionRounds": 20,
+    "maximumExploratoryActionRounds": 28,
+    "localDraftPolicy": "screen-candidate-only",
+    "stepTimeoutMs": 900000,
+    "exploratoryStepTimeoutMs": 1200000
+  }
+}

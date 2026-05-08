@@ -284,6 +284,47 @@ test('live mode requires explicit lane command and private oracle templates', ()
   );
 });
 
+test('H11 qwen3-coder profile maps multi-file refactor to local screen candidate defaults', () => {
+  const outputRoot = tempRoot();
+  try {
+    const options = parseArgs([
+      '--dry-run',
+      '--h11-qwen-coder-task',
+      'multi-file-refactor',
+      '--output-root',
+      outputRoot,
+      '--run-id',
+      'h11-refactor-local-screen',
+      '--started-at',
+      FIXED_TIME,
+    ]);
+    const result = runHarnessArena(options);
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+
+    assert.deepEqual(options.arms, ['local-only']);
+    assert.equal(options.taskId, 'h11-multi-file-refactor');
+    assert.equal(options.h11QwenCoderRoute.shouldRunLocal, false);
+    assert.equal(options.h11QwenCoderRoute.shouldRunLocalScreen, true);
+    assert.equal(options.localModel, 'qwen3-coder:30b');
+    assert.equal(options.policyVersion, 'h11-qwen3-coder-multi-file-refactor-routing-v1');
+    assert.match(options.oracleCommand, /h11-multi-file-refactor-oracle\.mjs/);
+    assert.equal(existsSync(join(armRun.workspace, 'src', 'contact.js')), true);
+    assert.equal(step.stepId, 'local-bulk');
+    assert.equal(step.routeDecision, 'local');
+    assert.match(
+      step.routeTrigger,
+      /h11-qwen3-coder:h11-multi-file-refactor:local-screen-candidate/,
+    );
+    assert.equal(step.promptProgram.kind, 'flow');
+    assert.match(step.promptProgram.path, /h11-multi-file-refactor-worker\.flow$/);
+    assert.match(step.notes, /H11 qwen3-coder policy local-screen-candidate/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('H14 qwen3-coder profile maps promoted subroles to local harness defaults', () => {
   const outputRoot = tempRoot();
   try {
@@ -505,12 +546,29 @@ test('route profiles are mutually exclusive', () => {
   assert.throws(
     () =>
       parseArgs([
+        '--h11-qwen-coder-task',
+        'multi-file-refactor',
+        '--h14-qwen-coder-subrole',
+        'api-preservation',
+      ]),
+    /Use only one route profile/,
+  );
+  assert.throws(
+    () =>
+      parseArgs([
         '--h14-qwen-coder-subrole',
         'api-preservation',
         '--h15-qwen-coder-task',
         'api-endpoint',
       ]),
     /Use only one route profile/,
+  );
+});
+
+test('H11 qwen3-coder live profile requires only the routed lane command', () => {
+  assert.throws(
+    () => parseArgs(['--live', '--h11-qwen-coder-task', 'multi-file-refactor']),
+    /--live requires command templates for selected routes: local/,
   );
 });
 
@@ -530,6 +588,90 @@ test('H15 qwen3-coder live profile requires only the frontier lane command', () 
     () => parseArgs(['--live', '--h15-qwen-coder-task', 'api-endpoint']),
     /--live requires command templates for selected routes: frontier/,
   );
+});
+
+test('H11 qwen3-coder live profile interpolates the routed flow path into lane commands', () => {
+  const outputRoot = tempRoot();
+  const scriptRoot = tempRoot();
+  try {
+    mkdirSync(scriptRoot, { recursive: true });
+    const liveScript = join(scriptRoot, 'h11-live-step.mjs');
+    const oracleScript = join(scriptRoot, 'oracle.mjs');
+    writeFileSync(
+      liveScript,
+      [
+        "import { existsSync, writeFileSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const [workspace, h11Flow, h11FlowRelative] = process.argv.slice(2);',
+        'if (!existsSync(h11Flow)) {',
+        '  console.error(`missing h11 flow: ${h11Flow}`);',
+        '  process.exit(1);',
+        '}',
+        "writeFileSync(join(workspace, 'h11-flow.json'), JSON.stringify({",
+        '  h11Flow,',
+        '  h11FlowRelative,',
+        '}));',
+        'console.log(`h11-flow:${h11FlowRelative}`);',
+      ].join('\n'),
+    );
+    writeFileSync(
+      oracleScript,
+      [
+        "import { existsSync } from 'node:fs';",
+        "import { join } from 'node:path';",
+        'const workspace = process.argv.at(-1);',
+        "if (!existsSync(join(workspace, 'h11-flow.json'))) process.exit(1);",
+        "console.log('h11 route command oracle pass');",
+      ].join('\n'),
+    );
+
+    const liveCommand = [
+      quoteCommandArg(process.execPath),
+      quoteCommandArg(liveScript),
+      '<workspace>',
+      '<h11Flow>',
+      '<h11FlowRelative>',
+    ].join(' ');
+    const oracleCommand = `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+      oracleScript,
+    )} --workspace <workspace>`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--live',
+        '--h11-qwen-coder-task',
+        'multi-file-refactor',
+        '--live-local-command',
+        liveCommand,
+        '--oracle-command',
+        oracleCommand,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'h11-flow-placeholder-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+    const h11Flow = readJson(join(armRun.workspace, 'h11-flow.json'));
+
+    assert.equal(manifest.oracle.passed, true);
+    assert.equal(step.exitCode, 0);
+    assert.match(h11Flow.h11Flow, /h11-multi-file-refactor-worker\.flow$/);
+    assert.equal(
+      h11Flow.h11FlowRelative,
+      'experiments/harness-arena/flows/h11-multi-file-refactor-worker.flow',
+    );
+    assert.match(
+      readArmArtifact(armRun, step.stdoutArtifactRef),
+      /h11-flow:experiments\/harness-arena\/flows\/h11-multi-file-refactor-worker\.flow/,
+    );
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+    rmSync(scriptRoot, { recursive: true, force: true });
+  }
 });
 
 test('H14 qwen3-coder live profile interpolates the routed flow path into lane commands', () => {

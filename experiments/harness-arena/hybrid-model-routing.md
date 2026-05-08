@@ -102,6 +102,24 @@ Example:
 node experiments/harness-arena/h14-local-routing-policy.mjs api-preservation --json
 ```
 
+## H11 Multi-File Refactor Screen
+
+The 2026-05-09 H11 route adds a Harness Arena screen for the older Contact-to-
+Client multi-file refactor. The machine-readable overlay is
+[`h11-qwen3-coder-routing-policy.v1.json`](./h11-qwen3-coder-routing-policy.v1.json).
+Use [`h11-qwen3-coder-routing-policy.mjs`](./h11-qwen3-coder-routing-policy.mjs)
+before launching the local lane.
+
+Current H11 routing decision:
+
+| Task                | Current model     | Route decision         | Reason                                                   |
+| ------------------- | ----------------- | ---------------------- | -------------------------------------------------------- |
+| Multi-file refactor | `qwen3-coder:30b` | local-screen-candidate | Fixture, flow, and private oracle are wired; no pass yet |
+
+Policy implication: H11 is the next local-screen target because it tests
+cross-file reasoning, no-edit/timeout behavior, import resolution, and API drift.
+Do not count it as promoted local ownership until it has live claim-grade passes.
+
 ## FSCRUD R29 Implication
 
 R29 micro-v2 is the next local-only diagnostic before a hybrid FSCRUD arm. Its

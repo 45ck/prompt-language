@@ -1,11 +1,12 @@
 # harness-arena — compare whole stacks: vanilla cloud harness + frontier model vs PL + local model + task-tuned flow
 
 **Status:** Active. Full HA-E1 is still planned, but HA-HR1 now has live local
-evidence, checked-in H14/H15 routing policies, and runner profiles for promoted,
-frontier-baseline, and experimental hybrid routes. The runner supports dry-run structure materialization,
-deterministic fake-live command execution, and explicit `--live` lane command
-execution with private oracle artifacts.
-**Last update:** 2026-05-08
+evidence, checked-in H11/H14/H15 routing policies, and runner profiles for
+promoted, frontier-baseline, local-screen, and experimental hybrid routes. The
+runner supports dry-run structure materialization, deterministic fake-live
+command execution, and explicit `--live` lane command execution with private
+oracle artifacts.
+**Last update:** 2026-05-09
 
 ## Question
 
@@ -24,6 +25,9 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   ownership. The local model produced near-complete endpoint work, but repeated
   API-preservation drift, validation drift, and the latest hybrid resource failure
   make `frontier-only` the current baseline route.
+- H11 multi-file refactor now has a Harness Arena fixture, private oracle,
+  worker flow, and `qwen3-coder:30b` local-screen candidate profile. It is wired
+  for live evidence but has no Harness Arena clean pass yet.
 - The current H15 runner profile is executable with
   `node experiments/harness-arena/runner.mjs --h15-qwen-coder-task api-endpoint`;
   in live mode it requires a frontier lane command for the current baseline route.
@@ -55,6 +59,10 @@ evidence:
   oracle, policy version, timeout, and flow identity recorded by the runner.
 - `--h14-qwen-coder-subrole` remains available for the older qwen-coder-only
   route profile when reproducing historical evidence.
+- `--h11-qwen-coder-task multi-file-refactor` applies the checked-in H11
+  multi-file rename route policy. It defaults to a local-only screening arm and
+  tests cross-file rename completeness, import resolution, app smoke behavior,
+  timeout/no-edit handling, and API-surface drift.
 - `--h15-qwen-coder-task api-endpoint` applies the checked-in H15 route policy.
   The current route is `frontier-only`, with `qwen3-coder:30b` retained only as
   an experimental local draft candidate for narrower micro-flow screens.
@@ -67,9 +75,10 @@ evidence:
 - H14 route-profile live commands must reference the routed flow. Use
   `<h14Flow>` for the absolute flow path or `<h14FlowRelative>` for the repo-relative
   flow path in `--live-local-command` / `--live-frontier-command`.
-- H15 route-profile live commands must reference the routed flow. Use
-  `<h15Flow>` or the generic `<routeFlow>` placeholder for the absolute path, and
-  `<h15FlowRelative>` or `<routeFlowRelative>` for the repo-relative path.
+- H11 and H15 route-profile live commands must reference the routed flow. Use
+  `<h11Flow>`, `<h15Flow>`, or the generic `<routeFlow>` placeholder for the
+  absolute path, and `<h11FlowRelative>`, `<h15FlowRelative>`, or
+  `<routeFlowRelative>` for the repo-relative path.
 - `--local-resource-snapshot-command` optionally records before/after local-step
   resource probes, such as `ollama ps`, as manifest artifact refs. Add
   `--local-resource-snapshot-interval-ms` to sample the same probe while a local
@@ -104,6 +113,8 @@ risk, repeated local failure, or read-only review.
   [h14-local-routing-policy.v1.json](h14-local-routing-policy.v1.json)
 - H15 qwen-coder route policy — see
   [h15-qwen3-coder-routing-policy.v1.json](h15-qwen3-coder-routing-policy.v1.json)
+- H11 qwen-coder route policy — see
+  [h11-qwen3-coder-routing-policy.v1.json](h11-qwen3-coder-routing-policy.v1.json)
 - Synthetic v2 manifest schema smoke coverage — see
   [hybrid-routing-manifest.schema.test.mjs](hybrid-routing-manifest.schema.test.mjs)
 - Static-split team-flow scaffolds — see [flows/](flows/)
@@ -113,17 +124,13 @@ risk, repeated local failure, or read-only review.
 
 1. Keep H15 endpoint work on the frontier-only baseline route until local
    micro-flows show reliable value.
-2. Rerun the revised H15 PATCH test-authoring local screen with
-   `--h15-qwen-coder-task test-authoring`, sampled local resource evidence, and
-   the private mutant oracle. The route is now `3/7`; runs `007` and `008`
-   passed after the shared-fixture delete guard, so the tests-only local screen
-   is useful but still not full H15 endpoint ownership.
+2. Run the new H11 multi-file refactor local screen with
+   `--h11-qwen-coder-task multi-file-refactor`, sampled local resource evidence,
+   and the private rename/import/route oracle. This is the next claim-grade local
+   screen because H15 already has validation and test-authoring classifications.
 3. Promote a local H15 candidate back into a hybrid full-task route only after the
    micro-flow passes with claim-grade manifests and sampled resource evidence.
-4. Add an H11-style multi-file refactor fixture after H15 has a stable baseline
-   and at least one local micro-flow classification. H11 should target cross-file
-   reasoning, timeout/no-edit behavior, and API-surface drift.
-5. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
+4. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
    and one multi-file route have claim-grade manifests.
 
 ## Known blockers

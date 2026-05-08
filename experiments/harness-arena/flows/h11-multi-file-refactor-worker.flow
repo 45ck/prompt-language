@@ -1,0 +1,48 @@
+Goal: complete H11 multi-file Contact-to-Client refactor without API drift
+
+memory:
+  task_brief
+  route_policy
+  policy_version
+
+flow:
+  remember key="policy_version" value="h11-qwen3-coder-multi-file-refactor-v1"
+  remember key="route_policy" value="Local worker owns the model-visible fixture files. Hidden oracle details are not available."
+
+  prompt: Read TASK.md, README.md, package.json, and all files under src/. Rename the Contact entity to Client across the codebase. Rename files to client.js and client-store.js, update require paths, class names, route method names, variables, seed data names, tests, app smoke checks, and README text. Preserve behavior while removing Contact terminology from src/*.js and README.md. The final app must run with node src/app.js, and public tests must pass with npm test. Do not add dependencies. When done, respond with a concise status and list the changed files.
+
+  retry max 6
+    run: npm test [timeout 120]
+    if command_failed
+      prompt: Public tests are failing after the H11 rename. Fix the cross-file Client refactor without restoring Contact terminology. Preserve behavior, update imports, and keep npm test executable. Test output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  retry max 4
+    run: node -e "const fs=require('fs'); const path=require('path'); const src='src'; const files=[]; function walk(dir){ for(const entry of fs.readdirSync(dir,{withFileTypes:true})){ const full=path.join(dir,entry.name); if(entry.isDirectory()) walk(full); else if(entry.isFile()&&entry.name.endsWith('.js')) files.push(full.replace(/\\\\/g,'/')); }} walk(src); const required=['src/app.js','src/client-store.js','src/client.js','src/routes.js','src/seed.js','src/test.js']; const missing=required.filter((file)=>!fs.existsSync(file)); if(missing.length){ console.error('missing required renamed files: '+missing.join(', ')); process.exit(1); } const forbiddenFiles=files.filter((file)=>/contact/i.test(path.basename(file))); if(forbiddenFiles.length){ console.error('old contact filenames remain: '+forbiddenFiles.join(', ')); process.exit(1); } const scanned=[...files,'README.md'].filter((file)=>fs.existsSync(file)); const offenders=[]; for(const file of scanned){ const text=fs.readFileSync(file,'utf8'); if(/\\bContacts?\\b/.test(text)||/\\bcontact(s)?\\b/.test(text)) offenders.push(file); } if(offenders.length){ console.error('Contact terminology remains in '+offenders.join(', ')); process.exit(1); } const {Client}=require('./src/client'); const {ClientStore}=require('./src/client-store'); const {createRoutes}=require('./src/routes'); const {seedClients,loadSeedData}=require('./src/seed'); if(typeof Client!=='function'||typeof ClientStore!=='function'||typeof createRoutes!=='function'||!Array.isArray(seedClients)||typeof loadSeedData!=='function'){ console.error('renamed exports missing'); process.exit(1); } const store=new ClientStore(); loadSeedData(store); const routes=createRoutes(store); for(const key of ['listClients','getClient','createClient','deleteClient']){ if(typeof routes[key]!=='function'){ console.error('missing route '+key); process.exit(1); }} if(routes.listClients().status!==200||routes.getClient('alice@example.com').status!==200){ console.error('renamed routes do not behave'); process.exit(1); }"
+    if command_failed
+      prompt: The H11 structural rename gate failed. Fix all Contact-to-Client refactor gaps. Required files are src/client.js and src/client-store.js. No Contact/contact terminology should remain in src/*.js or README.md. Required exports are Client, ClientStore, createRoutes, seedClients, and loadSeedData. Route methods must be listClients, getClient, createClient, and deleteClient. Gate output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  retry max 4
+    run: node src/app.js [timeout 120]
+    if command_failed
+      prompt: The app smoke check failed after the H11 rename. Fix imports, renamed route methods, seed loading, and app checks while preserving Client terminology. App output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  prompt: Use a write_file action to create local-worker-summary.md at the workspace root. Include changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary. Do not mention or infer hidden oracle implementation details.
+
+  retry max 2
+    run: node -e "process.exit(require('node:fs').existsSync('local-worker-summary.md') ? 0 : 1)"
+    if command_failed
+      prompt: local-worker-summary.md is still missing. Use a write_file action now to create local-worker-summary.md at the workspace root with changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary.
+    end
+  end
+
+done when:
+  file_exists local-worker-summary.md
+  gate public_tests: npm test
+  gate structural_rename: node -e "const fs=require('fs'); const path=require('path'); const files=[]; function walk(dir){ for(const entry of fs.readdirSync(dir,{withFileTypes:true})){ const full=path.join(dir,entry.name); if(entry.isDirectory()) walk(full); else if(entry.isFile()&&entry.name.endsWith('.js')) files.push(full.replace(/\\\\/g,'/')); }} walk('src'); const required=['src/app.js','src/client-store.js','src/client.js','src/routes.js','src/seed.js','src/test.js']; if(required.some((file)=>!fs.existsSync(file))) process.exit(1); if(files.some((file)=>/contact/i.test(path.basename(file)))) process.exit(1); for(const file of [...files,'README.md'].filter((file)=>fs.existsSync(file))){ const text=fs.readFileSync(file,'utf8'); if(/\\bContacts?\\b/.test(text)||/\\bcontact(s)?\\b/.test(text)) process.exit(1); } const {Client}=require('./src/client'); const {ClientStore}=require('./src/client-store'); const {createRoutes}=require('./src/routes'); const {seedClients,loadSeedData}=require('./src/seed'); if(typeof Client!=='function'||typeof ClientStore!=='function'||typeof createRoutes!=='function'||!Array.isArray(seedClients)||typeof loadSeedData!=='function') process.exit(1); const store=new ClientStore(); loadSeedData(store); const routes=createRoutes(store); if(!['listClients','getClient','createClient','deleteClient'].every((key)=>typeof routes[key]==='function')) process.exit(1); if(routes.listClients().status!==200||routes.getClient('alice@example.com').status!==200) process.exit(1);"
+  gate app_runs: node src/app.js

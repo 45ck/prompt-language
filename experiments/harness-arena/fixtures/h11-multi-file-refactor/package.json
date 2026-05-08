@@ -1,0 +1,8 @@
+{
+  "name": "fixture",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "test": "node src/test.js"
+  }
+}

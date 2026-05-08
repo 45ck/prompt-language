@@ -8,6 +8,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { resolveH14LocalRoute } from './h14-local-routing-policy.mjs';
 import { resolveH14QwenCoderRoute } from './h14-qwen3-coder-routing-policy.mjs';
+import { resolveH11QwenCoderRoute } from './h11-qwen3-coder-routing-policy.mjs';
 import { resolveH15QwenCoderRoute } from './h15-qwen3-coder-routing-policy.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -44,6 +45,7 @@ const ARG_FIELDS = {
   '--frontier-model': 'frontierModel',
   '--frontier-provider': 'frontierProvider',
   '--frontier-runner': 'frontierRunner',
+  '--h11-qwen-coder-task': 'h11QwenCoderTask',
   '--h14-local-subrole': 'h14LocalSubrole',
   '--h14-qwen-coder-subrole': 'h14QwenCoderSubrole',
   '--h15-qwen-coder-task': 'h15QwenCoderTask',
@@ -92,6 +94,8 @@ export function parseArgs(argv) {
     frontierModel: 'codex-default',
     frontierProvider: 'openai',
     frontierRunner: 'codex',
+    h11QwenCoderRoute: null,
+    h11QwenCoderTask: null,
     h14LocalRoute: null,
     h14LocalSubrole: null,
     h14QwenCoderRoute: null,
@@ -161,20 +165,25 @@ export function parseArgs(argv) {
     options.oracleCommand = defaultFakeOracleCommand();
   }
   const routeProfileCount = [
+    options.h11QwenCoderTask,
     options.h14LocalSubrole,
     options.h14QwenCoderSubrole,
     options.h15QwenCoderTask,
   ].filter(Boolean).length;
   if (routeProfileCount > 1) {
     throw new Error(
-      'Use only one route profile: --h14-local-subrole, --h14-qwen-coder-subrole, or --h15-qwen-coder-task',
+      'Use only one route profile: --h11-qwen-coder-task, --h14-local-subrole, --h14-qwen-coder-subrole, or --h15-qwen-coder-task',
     );
   }
+  applyH11QwenCoderRouteDefaults(options, providedFields);
   applyH14LocalRouteDefaults(options, providedFields);
   applyH14QwenCoderRouteDefaults(options, providedFields);
   applyH15QwenCoderRouteDefaults(options, providedFields);
   if (
-    (options.h14LocalRoute || options.h14QwenCoderRoute || options.h15QwenCoderRoute) &&
+    (options.h11QwenCoderRoute ||
+      options.h14LocalRoute ||
+      options.h14QwenCoderRoute ||
+      options.h15QwenCoderRoute) &&
     options.oracleCommand
   ) {
     oracleCommandProvided = true;
@@ -187,6 +196,7 @@ export function parseArgs(argv) {
     ...options,
     arms: resolvedArms,
     fixture: options.fixture ? resolve(options.fixture) : null,
+    h11QwenCoderRoute: options.h11QwenCoderRoute,
     h14LocalRoute: options.h14LocalRoute,
     h14QwenCoderRoute: options.h14QwenCoderRoute,
     h15QwenCoderRoute: options.h15QwenCoderRoute,
@@ -195,6 +205,33 @@ export function parseArgs(argv) {
     runId: options.runId ?? timestampId(),
     startedAt: options.startedAt ?? new Date().toISOString(),
   };
+}
+
+function applyH11QwenCoderRouteDefaults(options, providedFields) {
+  if (!options.h11QwenCoderTask) return;
+
+  const resolved = resolveH11QwenCoderRoute(options.h11QwenCoderTask);
+  const route = resolved.route;
+  options.h11QwenCoderRoute = resolved;
+
+  if (!providedFields.has('arms')) {
+    if (resolved.shouldRunLocal || resolved.shouldRunLocalScreen) options.arms = 'local-only';
+    else if (resolved.shouldRunHybrid) options.arms = 'hybrid-router';
+    else options.arms = 'frontier-only';
+  }
+  if (!providedFields.has('fixture')) options.fixture = route.fixture;
+  if (!providedFields.has('localModel')) options.localModel = resolved.localDraftModel.name;
+  if (!providedFields.has('localProvider')) {
+    options.localProvider = resolved.localDraftModel.provider;
+  }
+  if (!providedFields.has('localRunner')) options.localRunner = resolved.localDraftModel.provider;
+  if (!providedFields.has('oracleCommand')) options.oracleCommand = routeOracleCommand(route);
+  if (!providedFields.has('policyVersion')) options.policyVersion = resolved.policyVersion;
+  if (!providedFields.has('stepTimeoutMs')) {
+    options.stepTimeoutMs = resolved.runtimeDefaults?.stepTimeoutMs ?? options.stepTimeoutMs;
+  }
+  if (!providedFields.has('taskBrief')) options.taskBrief = route.notes;
+  if (!providedFields.has('taskId')) options.taskId = route.task;
 }
 
 function applyH14LocalRouteDefaults(options, providedFields) {
@@ -841,6 +878,8 @@ function buildLiveStepCommand(options, arm, stepId, routeDecision, index, worksp
   return commandFromTemplate(template, {
     arm,
     attempt: String(index + 1),
+    h11Flow: profileRoute?.profileKind === 'H11' ? routeFlow : null,
+    h11FlowRelative: profileRoute?.profileKind === 'H11' ? profileRoute.route.flow : null,
     h14Flow: profileRoute?.profileKind === 'H14' ? routeFlow : null,
     h14FlowRelative: profileRoute?.profileKind === 'H14' ? profileRoute.route.flow : null,
     h15Flow: profileRoute?.profileKind === 'H15' ? routeFlow : null,
@@ -863,6 +902,8 @@ function validateProfileLiveCommandTemplate(options, template) {
   if (
     template.includes('<routeFlow>') ||
     template.includes('<routeFlowRelative>') ||
+    template.includes('<h11Flow>') ||
+    template.includes('<h11FlowRelative>') ||
     template.includes('<h14Flow>') ||
     template.includes('<h14FlowRelative>') ||
     template.includes('<h15Flow>') ||
@@ -1160,6 +1201,14 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
 }
 
 function selectedProfileRoute(options) {
+  if (options.h11QwenCoderRoute) {
+    return {
+      ...options.h11QwenCoderRoute,
+      displayProfile: 'qwen3-coder',
+      profileKind: 'H11',
+      triggerProfile: 'h11-qwen3-coder',
+    };
+  }
   if (options.h14LocalRoute) {
     return {
       ...options.h14LocalRoute,
@@ -1391,7 +1440,7 @@ function byName(left, right) {
 }
 
 export function usage() {
-  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--h14-local-subrole subrole] [--h14-qwen-coder-subrole subrole] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
+  return `Usage: node experiments/harness-arena/runner.mjs [--dry-run|--fake-live|--live] [--arms all|list] [--h11-qwen-coder-task task] [--h14-local-subrole subrole] [--h14-qwen-coder-subrole subrole] [--h15-qwen-coder-task task] [--output-root dir] [--run-id id] [--local-resource-snapshot-command command] [--local-resource-snapshot-interval-ms ms]\n`;
 }
 
 function main(argv = process.argv.slice(2)) {

@@ -212,6 +212,27 @@ Decision: leave PATCH test-authoring at `0/2`. The next route revision should
 make the response-object contract and test harness preservation explicit. Do
 not count this as H15 local-screen success.
 
+Run: `HA-HR1-H15-patch-test-authoring-qwen-coder-004`
+
+Result:
+
+- Repo commit: `8d5fdaa`
+- Route: `--h15-qwen-coder-task test-authoring`
+- Step exit: `0`
+- Wall time: `385.343s`
+- Private oracle: `PASS`, `4/4`
+- Frontier calls: `0`
+
+The route revision from `8d5fdaa` made the response-object contract and
+test-harness preservation explicit. The local model still needed structural
+repair turns, but it eventually produced executable PATCH tests that preserved
+`src/app.js`, passed public tests, and killed the private PATCH validation
+mutants.
+
+Decision: count this as the first positive PATCH test-authoring local-screen
+pass for `qwen3-coder:30b`. Keep the route as a screen, not a full H15 endpoint
+promotion, until it has more clean passes.
+
 ## Routing Decision
 
 Do not mark the local-model strategy as a failure overall. Mark this as a
@@ -220,8 +241,8 @@ negative promotion result for one route:
 - H14 full TDD is promoted for `qwen3-coder:30b` under the existing H14 route.
 - H15 endpoint work is not promoted for local-only ownership yet.
 - H15 validation-only work now has a clean local-screen pass.
-- H15 PATCH test-authoring has two failed local-screen runs and remains
-  not promoted.
+- H15 PATCH test-authoring has one clean local-screen pass after two failed
+  attempts; it remains screen-only, not full H15 endpoint ownership.
 - H15 can produce near-complete implementations, but the local loop is unstable,
   slow, and prone to API-surface drift.
 

@@ -62,13 +62,14 @@ test('H15 qwen3-coder policy exposes PATCH test-authoring local screen', () => {
   assert.equal(route.owner, 'local');
   assert.equal(route.selectedModel.name, 'qwen3-coder:30b');
   assert.equal(route.localDraftModel.name, 'qwen3-coder:30b');
-  assert.equal(route.cleanPasses, 0);
-  assert.equal(route.totalRuns, 2);
+  assert.equal(route.cleanPasses, 1);
+  assert.equal(route.totalRuns, 3);
   assert.match(route.flow, /h15-patch-test-authoring-worker\.flow$/);
   assert.match(route.oracle, /h15-patch-test-authoring-oracle\.mjs$/);
   assert.match(route.notes, /tests-only H15 support/);
   assert.match(route.notes, /action-round exhaustion/);
   assert.match(route.notes, /wrong response API/);
+  assert.match(route.notes, /qwen-coder-004 passed/);
 });
 
 test('H15 qwen3-coder policy references checked-in evidence and harness files', () => {

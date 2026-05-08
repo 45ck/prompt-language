@@ -54,6 +54,21 @@ test('H15 qwen3-coder policy exposes validation-only local screen', () => {
   assert.match(route.notes, /diagnostic micro-flow/);
 });
 
+test('H15 qwen3-coder policy exposes PATCH test-authoring local screen', () => {
+  const policy = readPolicy();
+  const route = routeByTask(policy, 'h15-patch-test-authoring');
+
+  assert.equal(route.decision, 'local-screen');
+  assert.equal(route.owner, 'local');
+  assert.equal(route.selectedModel.name, 'qwen3-coder:30b');
+  assert.equal(route.localDraftModel.name, 'qwen3-coder:30b');
+  assert.equal(route.cleanPasses, 0);
+  assert.equal(route.totalRuns, 0);
+  assert.match(route.flow, /h15-patch-test-authoring-worker\.flow$/);
+  assert.match(route.oracle, /h15-patch-test-authoring-oracle\.mjs$/);
+  assert.match(route.notes, /tests-only H15 support/);
+});
+
 test('H15 qwen3-coder policy references checked-in evidence and harness files', () => {
   const policy = readPolicy();
   const evidenceDoc = join(ROOT, policy.evidence.summaryDoc);
@@ -77,6 +92,7 @@ test('H15 qwen3-coder resolver maps aliases to frontier baseline decisions', () 
   assert.equal(normalizeH15QwenCoderTask('api-endpoint'), 'h15-api-endpoint');
   assert.equal(normalizeH15QwenCoderTask('patch-contact'), 'h15-api-endpoint');
   assert.equal(normalizeH15QwenCoderTask('validation-only'), 'h15-validation-only');
+  assert.equal(normalizeH15QwenCoderTask('test-authoring'), 'h15-patch-test-authoring');
 
   const endpoint = resolveH15QwenCoderRoute('patch-contact');
   assert.equal(endpoint.shouldRunLocal, false);
@@ -104,6 +120,20 @@ test('H15 qwen3-coder resolver maps validation aliases to local screen decisions
   assert.equal(validation.route.task, 'h15-validation-only');
   assert.match(validation.route.flow, /h15-validation-only-worker\.flow$/);
   assert.match(validation.route.oracle, /h15-validation-only-oracle\.mjs$/);
+});
+
+test('H15 qwen3-coder resolver maps PATCH test-authoring aliases to local screen decisions', () => {
+  const testsOnly = resolveH15QwenCoderRoute('patch-tests');
+
+  assert.equal(testsOnly.shouldRunLocal, false);
+  assert.equal(testsOnly.shouldRunHybrid, false);
+  assert.equal(testsOnly.shouldRunFrontier, false);
+  assert.equal(testsOnly.shouldRunLocalScreen, true);
+  assert.equal(testsOnly.localDraftModel.name, 'qwen3-coder:30b');
+  assert.equal(testsOnly.route.owner, 'local');
+  assert.equal(testsOnly.route.task, 'h15-patch-test-authoring');
+  assert.match(testsOnly.route.flow, /h15-patch-test-authoring-worker\.flow$/);
+  assert.match(testsOnly.route.oracle, /h15-patch-test-authoring-oracle\.mjs$/);
 });
 
 test('H15 qwen3-coder resolver CLI emits JSON decisions', () => {

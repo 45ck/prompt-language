@@ -16,6 +16,9 @@ const TASK_ALIASES = new Map([
   ['h15', 'h15-api-endpoint'],
   ['patch', 'h15-api-endpoint'],
   ['patch-contact', 'h15-api-endpoint'],
+  ['patch-tests', 'h15-patch-test-authoring'],
+  ['test-authoring', 'h15-patch-test-authoring'],
+  ['tests-only', 'h15-patch-test-authoring'],
   ['validation', 'h15-validation-only'],
   ['validation-only', 'h15-validation-only'],
   ['validation-micro', 'h15-validation-only'],
@@ -58,7 +61,7 @@ function printUsage() {
     [
       'usage: node experiments/harness-arena/h15-qwen3-coder-routing-policy.mjs <task> [--json]',
       '',
-      'common tasks: h15-api-endpoint, api-endpoint, patch-contact, validation-only',
+      'common tasks: h15-api-endpoint, api-endpoint, patch-contact, validation-only, test-authoring',
     ].join('\n'),
   );
 }

@@ -74,6 +74,37 @@
       ],
       "localStopPolicy": "stop after the first timeout, resource failure, original API drift, or validation oracle failure; do not convert the same run into full H15 evidence",
       "notes": "Use only as a local diagnostic micro-flow. The clean pass is evidence for validation hardening, not for full H15 endpoint ownership."
+    },
+    {
+      "task": "h15-patch-test-authoring",
+      "decision": "local-screen",
+      "owner": "local",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "PATCH test-authoring is the next H15 diagnostic after validation-only passed and standalone H14 test authoring remained weaker than implementation roles"
+      },
+      "selectedModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "screening route for tests-only ownership; not promoted for full H15 ownership"
+      },
+      "fixture": "experiments/harness-arena/fixtures/h15-patch-test-authoring",
+      "flow": "experiments/harness-arena/flows/h15-patch-test-authoring-worker.flow",
+      "oracle": "experiments/harness-arena/oracles/h15-patch-test-authoring-oracle.mjs",
+      "cleanPasses": 0,
+      "totalRuns": 0,
+      "requiredGuards": [
+        "implementation-unchanged",
+        "patch-validation-tests",
+        "mutant-killing-tests",
+        "local-worker-summary",
+        "private-oracle"
+      ],
+      "localStopPolicy": "stop after the first timeout, implementation edit, shallow-test oracle failure, or public test failure; do not convert the same run into full H15 evidence",
+      "notes": "Use only as a local diagnostic micro-flow for PATCH test authoring. Passing this route is evidence for tests-only H15 support, not for full H15 endpoint ownership."
     }
   ],
   "escalationTriggers": [

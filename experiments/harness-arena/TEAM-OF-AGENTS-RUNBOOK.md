@@ -212,7 +212,26 @@ node "$repo/experiments/harness-arena/runner.mjs" \
   --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \
   --local-resource-snapshot-interval-ms 2000 \
   --local-endpoint ollama-powershell-stdin \
-  --run-id HA-HR1-H15-validation-only-qwen-coder-001 \
+	  --run-id HA-HR1-H15-validation-only-qwen-coder-001 \
+	  --output-root .tmp/harness-arena
+```
+
+For the checked-in PATCH test-authoring local screen, use the test-authoring
+task alias. This is a tests-only diagnostic; the local model may edit only
+`src/test.js`, and the private oracle rejects implementation edits and shallow
+tests that do not catch broken PATCH validation mutants:
+
+```sh
+repo=/path/to/prompt-language
+
+node "$repo/experiments/harness-arena/runner.mjs" \
+  --live \
+  --h15-qwen-coder-task test-authoring \
+  --live-local-command 'bash -lc "repo=/path/to/prompt-language; PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS=600000 PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=12 node \"$repo/bin/cli.mjs\" run --runner ollama --model qwen3-coder:30b --json --file <routeFlow>"' \
+  --local-resource-snapshot-command 'powershell.exe -NoProfile -Command "ollama ps"' \
+  --local-resource-snapshot-interval-ms 2000 \
+  --local-endpoint ollama-powershell-stdin \
+  --run-id HA-HR1-H15-patch-test-authoring-qwen-coder-001 \
   --output-root .tmp/harness-arena
 ```
 

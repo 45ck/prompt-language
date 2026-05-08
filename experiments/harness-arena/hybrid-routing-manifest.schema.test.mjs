@@ -168,6 +168,8 @@ test('schema version 2 accepts a synthetic Ollama local lane', () => {
   assert.equal(step.requestedModel, 'qwen3-opencode:30b');
   assert.equal(step.actualModel, 'qwen3-opencode:30b');
   assert.equal(step.providerSubstitution.occurred, false);
+  assert.equal(sample.classification.resourceFailure, false);
+  assert.equal(schema.properties.classification.properties.resourceFailure.type, 'boolean');
   assert.equal(step.providerClass, 'local');
   assert.equal(step.routeDecision, 'local');
   assert.ok(stepSchema.runner.enum.includes('ollama'));

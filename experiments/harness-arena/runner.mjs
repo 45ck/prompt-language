@@ -727,6 +727,7 @@ function buildClassification(options, stepExecutions, oracleExecution) {
       routingPolicyFailure: false,
       modelFailure: false,
       harnessFailure: false,
+      resourceFailure: false,
       notes: 'Synthetic dry-run only. oracle.passed=false blocks completion claims.',
     };
   }
@@ -739,6 +740,7 @@ function buildClassification(options, stepExecutions, oracleExecution) {
       options.mode === 'live' && oracleExecution?.exitCode !== 0 && !resourceFailure,
     ),
     harnessFailure: Boolean(timedOut || resourceFailure),
+    resourceFailure,
     notes: classificationNotes(options.mode, { resourceFailure }),
   };
 }

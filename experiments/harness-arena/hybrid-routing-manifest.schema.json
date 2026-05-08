@@ -434,6 +434,9 @@
         "harnessFailure": {
           "type": "boolean"
         },
+        "resourceFailure": {
+          "type": "boolean"
+        },
         "notes": {
           "type": "string"
         }

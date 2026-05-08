@@ -699,7 +699,7 @@ Decision: this is not a `qwen3-coder:30b` model-quality failure and does not
 change the promoted API-preservation route. It is a local-runtime resource block
 that proved the `<h14Flow>` placeholder expands through the live command path.
 The follow-up harness patch classifies this resource-failure shape as
-`harnessFailure: true` and `modelFailure: false`.
+`harnessFailure: true`, `modelFailure: false`, and `resourceFailure: true`.
 
 ## H14 Test-Authoring Subrole Results
 

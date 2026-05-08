@@ -92,6 +92,7 @@
     "routingPolicyFailure": false,
     "modelFailure": false,
     "harnessFailure": false,
+    "resourceFailure": false,
     "notes": "Synthetic classification for schema-shape coverage."
   }
 }

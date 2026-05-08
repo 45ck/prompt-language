@@ -506,6 +506,7 @@ test('live local runtime resource failures classify as harness failures, not mod
     assert.equal(manifest.oracle.passed, false);
     assert.equal(manifest.classification.harnessFailure, true);
     assert.equal(manifest.classification.modelFailure, false);
+    assert.equal(manifest.classification.resourceFailure, true);
     assert.match(manifest.classification.notes, /insufficient system memory/);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });

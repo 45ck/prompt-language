@@ -168,8 +168,10 @@ the PowerShell bridge timed out during gate evaluation, so the fallback H14
 subrole models are not H15 validation owners under the current route contract.
 The later `qwen3.6:27b` validation-only screen also failed after one model call,
 bridge timeout, and private-oracle validation miss, so it is not a replacement
-validation owner. A narrower `qwen3-coder:30b` short-name validation repair
-screen also failed:
+validation owner. A later `gemma4-opencode:e4b` cheap-classifier readiness smoke
+also timed out at 32K context, so it should not enter classifier or reviewer
+routes until a low-context profile has a passing readiness artifact. A narrower
+`qwen3-coder:30b` short-name validation repair screen also failed:
 first by passing public checks while regressing hidden validation semantics, then
 by timing out after the public gate was hardened. H15 implementation repair
 therefore remains frontier-owned.

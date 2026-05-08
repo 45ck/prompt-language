@@ -1,4 +1,4 @@
-<!-- cspell:ignore Aider Devstral GDDR GLM Kimi KTransformers MiniMax MiniMaxAI Mistral Qwen qwen OpenCode Ollama Radeon ROCm SGLang subrole subroles SWE unpromoted vLLM Vulkan xLLM -->
+<!-- cspell:ignore Aider Devstral ETIMEDOUT GDDR GLM Kimi KTransformers MiniMax MiniMaxAI Mistral Qwen qwen OpenCode Ollama Radeon ROCm SGLang subrole subroles SWE unpromoted vLLM Vulkan xLLM -->
 
 # Local Coding Model Selection
 
@@ -63,15 +63,15 @@ CPU/GPU once context and KV cache are included.
 
 ## Model Shortlist
 
-| Priority | Model                  | Local status                       | Why                                                                                                                  |
-| -------- | ---------------------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| 1        | `qwen3-coder:30b`      | Promoted for full H14 TDD          | Official Ollama package; 30B-class MoE with about 3.3B active parameters; code and agent focused.                    |
-| 2        | `devstral-small-2:24b` | Promoted for two H14 subroles      | Smaller installed coding model; strong H14 subrole pass rate, but failed the H15 validation-only model screen.       |
-| 3        | `qwen3-opencode:30b`   | Promoted for two H14 subroles      | Coding-tuned installed variant; passed H14 subroles, but failed the H15 validation screen after a bridge timeout.    |
-| 4        | `qwen3:30b`            | Slow general-model control         | Passed readiness, but produced far more tokens and latency than `qwen3-coder:30b`.                                   |
-| 5        | `qwen3.6:27b`          | Reviewer/classifier control only   | Passed readiness but failed API-preservation after the hard timeout.                                                 |
-| 6        | `gemma4-opencode:e4b`  | Untested smaller classifier target | More plausible for cheap routing/classification than implementation ownership.                                       |
-| 7        | GLM-4.7-Flash          | Promising follow-up                | 30B-class open-weight model with strong coding claims; add only after Ollama availability and host fit are verified. |
+| Priority | Model                  | Local status                     | Why                                                                                                                  |
+| -------- | ---------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1        | `qwen3-coder:30b`      | Promoted for full H14 TDD        | Official Ollama package; 30B-class MoE with about 3.3B active parameters; code and agent focused.                    |
+| 2        | `devstral-small-2:24b` | Promoted for two H14 subroles    | Smaller installed coding model; strong H14 subrole pass rate, but failed the H15 validation-only model screen.       |
+| 3        | `qwen3-opencode:30b`   | Promoted for two H14 subroles    | Coding-tuned installed variant; passed H14 subroles, but failed the H15 validation screen after a bridge timeout.    |
+| 4        | `qwen3:30b`            | Slow general-model control       | Passed readiness, but produced far more tokens and latency than `qwen3-coder:30b`.                                   |
+| 5        | `qwen3.6:27b`          | Reviewer/classifier control only | Passed readiness but failed API-preservation after the hard timeout.                                                 |
+| 6        | `gemma4-opencode:e4b`  | Failed default-context readiness | Smaller package, but the live `A` smoke timed out at 32K context; retest only with an explicit low-context profile.  |
+| 7        | GLM-4.7-Flash          | Promising follow-up              | 30B-class open-weight model with strong coding claims; add only after Ollama availability and host fit are verified. |
 
 Do not start local testing with `qwen3-coder-next`. The current Ollama package is
 around 52 GB for the 80B-A3B model. It is interesting as cloud/open-weight server
@@ -229,8 +229,34 @@ Current decision from the readiness and subrole screens:
 3. Keep `qwen3:30b` as a slow general-model control, not the main local worker.
 4. Keep `qwen3.6:27b` out of implementation ownership after its 900s
    API-preservation failure.
-5. Defer `gemma4-opencode` until there is a specific classifier/reviewer question
-   worth answering.
+5. Do not route `gemma4-opencode:e4b` as the cheap classifier under the current
+   default-context Prompt Language smoke path; it needs a low-context profile
+   before another readiness attempt is useful.
+
+## 2026-05-09 Gemma4 OpenCode E4B Screen
+
+A live Prompt Language smoke tried `gemma4-opencode:e4b` as the cheap
+classifier/reviewer candidate:
+
+```sh
+PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell \
+  EVAL_MODEL=ollama/gemma4-opencode:e4b \
+  EVAL_TIMEOUT_MS=900000 \
+  node scripts/eval/smoke-test.mjs --harness ollama --quick --only A
+```
+
+Result:
+
+- smoke process failed with `spawnSync node ETIMEDOUT`;
+- no new completed smoke result artifact was written;
+- sampled residency during the run showed `gemma4-opencode:e4b`, `10 GB`,
+  `67%/33% CPU/GPU`, `32768` context;
+- post-run `ollama stop gemma4-opencode:e4b` cleared model residency.
+
+Decision: this is negative readiness evidence for the current default-context
+route, not a broad quality judgment about Gemma. Keep it out of classifier or
+reviewer routing until the harness can launch it with a small explicit context
+and record that lower-context setting in the evidence trail.
 
 ## 2026-05-09 Live Health Check
 
@@ -347,6 +373,7 @@ Current latest-model ranking for this PC:
 | 4    | `qwen3:30b`            | Passed `A` but too slow; keep as general-model control.                                                  |
 | 5    | `qwen3.6:27b`          | Passed readiness but failed API-preservation after timeout; reviewer/classifier control only.            |
 | 6    | `GLM-4.7-Flash`        | Strong 30B-A3B paper/model-card candidate; test only after locating a runner package that fits the host. |
+| 7    | `gemma4-opencode:e4b`  | Failed the default-context smoke timeout; only retry with a low-context route.                           |
 
 Latest large open-weight models worth tracking, but not workstation-local here:
 

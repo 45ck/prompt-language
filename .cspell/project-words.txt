@@ -112,3 +112,7 @@ pflow
 rbody
 fgch
 yvda
+devstral
+Kimi
+subrole
+subroles

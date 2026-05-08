@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "h15-qwen3-coder-endpoint-routing-v1",
+  "decidedAt": "2026-05-08",
+  "model": {
+    "provider": "ollama",
+    "name": "qwen3-coder:30b",
+    "endpointClass": "local"
+  },
+  "evidence": {
+    "summaryDoc": "docs/evaluation/2026-05-08-ha-hr1-h15-live-local.md",
+    "selectionDoc": "docs/evaluation/2026-05-08-local-coding-model-selection.md",
+    "minimumCleanPassesForPromotion": 3
+  },
+  "routes": [
+    {
+      "task": "h15-api-endpoint",
+      "decision": "hybrid-required",
+      "owner": "hybrid",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "near-complete H15 implementations observed, but no clean manifest pass and repeated API-preservation drift"
+      },
+      "selectedModel": null,
+      "fixture": "experiments/aider-vs-pl/fixtures/h15-api-endpoint",
+      "flow": "experiments/harness-arena/flows/h15-api-endpoint-worker.flow",
+      "oracle": "experiments/harness-arena/oracles/h15-api-endpoint-oracle.mjs",
+      "cleanPasses": 0,
+      "totalRuns": 3,
+      "requiredGuards": [
+        "patch-validation",
+        "existing-api-preserved",
+        "test-coverage",
+        "local-worker-summary",
+        "private-oracle"
+      ],
+      "localStopPolicy": "stop after the first public-gate failure involving validation semantics, existing API preservation, missing exports, or private oracle failure",
+      "notes": "Use local only as a bounded draft lane. Route to frontier repair/review before claiming completion."
+    }
+  ],
+  "escalationTriggers": [
+    "missing-summary-artifact",
+    "timeout",
+    "action-round-exhaustion",
+    "api-surface-change",
+    "delete-behavior-change",
+    "validation-semantic-miss",
+    "missing-original-export",
+    "private-oracle-failure",
+    "first-public-gate-failure"
+  ],
+  "runtimeDefaults": {
+    "localDraftActionRounds": 16,
+    "maximumExploratoryActionRounds": 24,
+    "localDraftPolicy": "bounded-draft-only",
+    "routePolicy": "hybrid-required-after-first-public-gate-failure",
+    "stepTimeoutMs": 900000,
+    "exploratoryStepTimeoutMs": 1200000
+  }
+}

@@ -578,3 +578,124 @@ strengthens the local-bulk-worker policy for narrow implementation subroles, but
 still does not promote the model for full H14 local-only ownership. Full H14 still
 requires the model to author tests, preserve APIs, satisfy artifact contracts, and
 finish within budget in the same lane.
+
+## H14 Test-Authoring Subrole Results
+
+The third narrower subrole fixture is `h14-test-authoring`. This fixture keeps the
+implementation correct and asks the local worker to edit `src/test.js` only:
+
+- import `mergeDuplicates`;
+- preserve the existing create/find/add/remove tests;
+- add at least five executable merge/duplicate tests;
+- leave `src/contacts.js` unchanged.
+
+The private oracle checks more than public pass/fail. It verifies that
+`src/contacts.js` is unchanged, that the tests import and call `mergeDuplicates`,
+that public tests pass, and that the authored tests reject three broken
+implementations: returning original contacts, keeping only first duplicate values,
+and erasing older values with empty later values.
+
+Commit `dfc35cf` added the fixture, flow, oracle, and oracle tests.
+
+### `HA-HR1-H14-S4-local-qwen3-coder-001`
+
+The first test-authoring run used local `qwen3-coder:30b`, the WSL-reachable
+Windows Ollama endpoint at `http://172.17.32.1:11435`, and the same local action
+round budget used by the earlier subrole runs.
+
+Outcome:
+
+- step timed out at `900.023s`
+- private oracle: failed
+- provider telemetry: 4 Ollama records, 10,696 input tokens, 1,795 output tokens,
+  12,491 total tokens, zero provider API cost, no retries
+- classification: model failure plus budget timeout
+- run config: `PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=24`
+
+Oracle result:
+
+```text
+PASS: contacts implementation remains unchanged
+PASS: tests import and exercise mergeDuplicates
+FAIL: public tests pass -- npm-equivalent test failed:
+Results: 8/9 passed
+VERDICT: FAIL (1 failed)
+FAIL: mergeDuplicates older non-empty fallback -- name priority: expected "Alice A", got "Alice"
+PASS: tests reject broken merge implementations
+
+Results: 3/4 passed
+```
+
+The model authored executable tests, but one test encoded the wrong semantics:
+it expected an older non-empty `name` to survive even when a later duplicate had
+a non-empty `name`. The public test gate rejected the suite.
+
+### `HA-HR1-H14-S4-local-qwen3-coder-002`
+
+The second run used the same fixture and oracle, but tightened the local action
+round budget to reduce runaway first-prompt behavior.
+
+Outcome:
+
+- step exit code: `0`
+- step wall time: `376.896s`
+- private oracle: passed
+- provider telemetry: 8 Ollama records, 21,184 input tokens, 2,491 output tokens,
+  23,675 total tokens, zero provider API cost, no retries
+- run config: `PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=8`
+
+Oracle result:
+
+```text
+PASS: contacts implementation remains unchanged
+PASS: tests import and exercise mergeDuplicates
+PASS: public tests pass
+PASS: tests reject broken merge implementations
+
+Results: 4/4 passed
+```
+
+### `HA-HR1-H14-S4-local-qwen3-coder-003`
+
+The third run repeated the tightened local action round budget.
+
+Outcome:
+
+- step exit code: `3`
+- step wall time: `579.069s`
+- private oracle: failed
+- provider telemetry: 8 Ollama records, 23,865 input tokens, 4,038 output tokens,
+  27,903 total tokens, zero provider API cost, no retries
+- run config: `PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=8`
+
+Oracle result:
+
+```text
+FAIL: contacts implementation remains unchanged -- src/contacts.js changed; this subrole is tests-only
+FAIL: tests import and exercise mergeDuplicates -- existing test removed: removeContact removes by email
+FAIL: public tests pass -- npm-equivalent test failed:
+Results: 7/10 passed
+VERDICT: FAIL (3 failed)
+PASS: tests reject broken merge implementations
+
+Results: 1/4 passed
+```
+
+The model violated the tests-only ownership contract and still produced wrong
+merge expectations.
+
+### S4 Decision
+
+`qwen3-coder:30b` is `1/3` on the H14 test-authoring subrole:
+
+| Run   |    Exit | Oracle | Wall time | Tokens | Action rounds |
+| ----- | ------: | ------ | --------: | -----: | ------------: |
+| `001` | timeout | 3/4    |  900.023s | 12,491 |            24 |
+| `002` |       0 | 4/4    |  376.896s | 23,675 |             8 |
+| `003` |       3 | 1/4    |  579.069s | 27,903 |             8 |
+
+Decision: do not promote `qwen3-coder:30b` for standalone test authoring on this
+fixture. The model can pass once under a tighter action budget, but the replicate
+set is not stable enough for local-bulk routing. H14-like test authoring should
+remain frontier-owned or be replaced by deterministic test templates plus local
+implementation work.

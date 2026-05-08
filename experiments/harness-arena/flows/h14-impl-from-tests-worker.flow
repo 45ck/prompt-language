@@ -1,0 +1,33 @@
+Goal: implement the H14 mergeDuplicates fixture from existing public tests
+
+memory:
+  task_brief
+  route_policy
+  policy_version
+
+flow:
+  remember key="policy_version" value="hybrid-routing-v0"
+  remember key="route_policy" value="Local worker owns src/contacts.js implementation only. Public tests are already written. Hidden oracle details are not available."
+
+  prompt: Read TASK.md, src/contacts.js, and src/test.js. Implement mergeDuplicates in src/contacts.js from the existing public tests. Preserve createContact, findByEmail, addContact, removeContact, and their positional APIs. Do not edit src/test.js unless npm test shows the test harness itself is broken.
+
+  retry max 6
+    run: npm test [timeout 120]
+    if command_failed
+      prompt: Public tests are failing. Fix src/contacts.js so mergeDuplicates passes the existing tests while preserving createContact, findByEmail, addContact, and removeContact behavior. Do not remove existing exports or change positional APIs. Test output: ${last_stdout} ${last_stderr}
+    end
+  end
+
+  prompt: Use a write_file action to create local-worker-summary.md at the workspace root. Include changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary. Do not mention or infer hidden oracle implementation details.
+
+  retry max 2
+    run: node -e "process.exit(require('node:fs').existsSync('local-worker-summary.md') ? 0 : 1)"
+    if command_failed
+      prompt: local-worker-summary.md is still missing. Use a write_file action now to create local-worker-summary.md at the workspace root with changed files, checks run, failures, timeout/no-edit status, inputArtifactRefs, outputArtifactRefs, and diffSummary.
+    end
+  end
+
+done when:
+  file_exists local-worker-summary.md
+  gate public_tests: npm test
+  gate api_preserved: node -e "const {createContact,findByEmail,addContact,removeContact,mergeDuplicates}=require('./src/contacts'); if (typeof mergeDuplicates !== 'function') process.exit(1); const alice=createContact('Alice','alice@test.com','555','Acme'); if (alice.name!=='Alice'||alice.email!=='alice@test.com'||alice.phone!=='555'||alice.company!=='Acme') process.exit(1); const list=[alice,createContact('Bob','bob@test.com','556',null),createContact('Alice2','alice@test.com','557','Globex')]; if (findByEmail(list,'alice@test.com').length!==2) process.exit(1); if (addContact([alice],list[1]).length!==2) process.exit(1); if (removeContact(list,'bob@test.com').length!==2) process.exit(1); if (mergeDuplicates([alice,createContact(null,'alice@test.com',null,'NewCo')])[0].company!=='NewCo') process.exit(1);"

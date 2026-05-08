@@ -27,8 +27,9 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   make `frontier-only` the current baseline route.
 - H11 multi-file refactor now has a Harness Arena fixture, private oracle,
   worker flow, and `qwen3-coder:30b` local-screen candidate profile. It is wired
-  for live evidence and is currently `0/2`: the second live screen fixed stale
-  filenames and summary creation but still failed hidden API/route behavior.
+  for live evidence and is currently `1/3`: the third live screen passed the
+  private oracle after explicit deletion instructions and a public
+  behavior-preservation gate.
 - The current H15 runner profile is executable with
   `node experiments/harness-arena/runner.mjs --h15-qwen-coder-task api-endpoint`;
   in live mode it requires a frontier lane command for the current baseline route.
@@ -126,10 +127,8 @@ risk, repeated local failure, or read-only review.
 
 1. Keep H15 endpoint work on the frontier-only baseline route until local
    micro-flows show reliable value.
-2. Rerun the hardened H11 multi-file refactor screen. The current flow now has
-   explicit deletion instructions plus a public behavior-preservation gate for
-   `Client#toJSON()`, `Client#getDisplayName()`, `ClientStore` methods, route
-   response bodies, duplicate create handling, and `204/null` delete behavior.
+2. Repeat the hardened H11 multi-file refactor screen until it either reaches
+   three clean passes or shows a new failure mode. Current status is `1/3`.
 3. Promote a local H15 candidate back into a hybrid full-task route only after the
    micro-flow passes with claim-grade manifests and sampled resource evidence.
 4. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
@@ -142,8 +141,8 @@ risk, repeated local failure, or read-only review.
 - H14 local-only claims are no longer blocked for promoted `qwen3-coder:30b`
   routes, but fallback local models are not promoted for full H14.
 - H15 local-only is a negative promotion result, not an open blocker.
-- H11 local-only is not promoted. The current `qwen3-coder:30b` screen is `0/2`
-  and needs route hardening before another promotion attempt.
+- H11 local-only is not promoted yet. The current `qwen3-coder:30b` screen is
+  `1/3`; it needs two more clean passes before promotion.
 - Dry-run manifests intentionally set `oracle.passed=false`; they validate
   structure only and are not model-performance evidence.
 - Fake-live manifests may set `oracle.passed=true`, but that only proves local

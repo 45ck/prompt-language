@@ -119,3 +119,51 @@ The next route revision must add public behavior-preservation gates for the
 original API shape: `Client#toJSON()`, `Client#getDisplayName()`, `ClientStore`
 method names, route `body` responses, duplicate create handling, and `204/null`
 delete behavior.
+
+## Run 003
+
+Run: `HA-HR1-H11-multi-file-refactor-qwen-coder-003`
+
+Route:
+`node experiments/harness-arena/runner.mjs --live --h11-qwen-coder-task multi-file-refactor ...`
+
+Result:
+
+- Repo commit: `064b56c`
+- Runner: `ollama`
+- Model: `qwen3-coder:30b`
+- Transport: `PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell`
+- Endpoint label: `ollama-powershell-stdin`
+- Step exit: `0`
+- Wall time: `449.546s`
+- Model calls: `17`
+- Tokens: `48,459`
+- Resource samples: `193`
+- Frontier calls: `0`
+- Private oracle: `PASS`, `4/4`
+
+Private oracle result:
+
+```text
+PASS: rename structure is complete
+PASS: public tests and app smoke pass
+PASS: hidden Client API checks pass
+PASS: hidden Client route checks pass
+
+Results: 4/4 passed
+```
+
+Public path behavior:
+
+- public tests passed at `9/9`
+- structural rename gate passed after stale-file deletion feedback
+- behavior-preservation gate passed
+- app smoke passed
+- `local-worker-summary.md` was created
+- final Prompt Language status was `completed` with `gateFailureCount: 0`
+
+Decision: count this as the first clean H11 local-screen pass for
+`qwen3-coder:30b`. Do not promote the route to local ownership yet; the policy
+requires three clean passes. The useful lesson is concrete: explicit deletion
+instructions plus a public behavior-preservation gate converted the H11 route
+from two oracle failures into a clean local-only pass without frontier calls.

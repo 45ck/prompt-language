@@ -29,6 +29,20 @@ with visible thinking text before `OK`. That is a useful failure signal: do not
 use `qwen3.6:27b` in strict-output lanes until the runner either disables
 thinking, strips thinking safely, or scores only artifact state.
 
+Follow-up implementation: the native Ollama runner now sends top-level
+`think: false` on HTTP and PowerShell chat requests. That matches Ollama's
+documented thinking control for chat calls and keeps the runner aligned with its
+strict JSON action-envelope contract. The CLI transport already uses
+Ollama's CLI flag for hiding thinking output.
+
+Follow-up live smoke: with `PROMPT_LANGUAGE_OLLAMA_TRANSPORT=powershell`,
+`PROMPT_LANGUAGE_OLLAMA_NUM_CTX=4096`, `PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=2`,
+and `qwen3.6:27b`, a one-prompt flow asking for exactly `OK` completed through
+the native runner with status `ok`. During the run, `ollama ps` reported
+`qwen3.6:27b` resident at 23GB with `29%/71% CPU/GPU` and 4096 context. This
+promotes `qwen3.6:27b` from "blocked by thinking leakage" to "eligible for the
+next narrow runner-level smoke", not to a coding-lane promotion.
+
 ## Current Primary-Source Model Notes
 
 - Qwen3-Coder-Next is the most interesting not-yet-installed local candidate.
@@ -60,6 +74,7 @@ References:
 - https://ollama.com/library/devstral-small-2
 - https://mistral.ai/news/devstral-2-vibe-cli
 - https://api-docs.deepseek.com/news/news260424
+- https://docs.ollama.com/capabilities/thinking
 
 ## Next Experiment Order
 

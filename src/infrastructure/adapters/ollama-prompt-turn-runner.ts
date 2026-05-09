@@ -73,6 +73,8 @@ interface OllamaRequestOptions {
   readonly num_ctx?: number | undefined;
 }
 
+type OllamaThinkMode = boolean | 'high' | 'medium' | 'low';
+
 interface ProcessFailure extends Error {
   readonly stdout?: string | undefined;
   readonly stderr?: string | undefined;
@@ -149,6 +151,10 @@ function getOllamaActionRounds(): number {
 
 function getOllamaNumCtx(): number | undefined {
   return readPositiveIntEnv(OLLAMA_NUM_CTX_ENV);
+}
+
+function getOllamaThinkMode(): OllamaThinkMode {
+  return false;
 }
 
 function buildOllamaRequestOptions(): OllamaRequestOptions {
@@ -736,6 +742,7 @@ async function callOllamaPowerShellOnce(
   const payload = JSON.stringify({
     model,
     stream: false,
+    think: getOllamaThinkMode(),
     messages,
     options: buildOllamaRequestOptions(),
   });
@@ -800,6 +807,7 @@ async function callOllamaChatOnce(
       body: JSON.stringify({
         model,
         stream: false,
+        think: getOllamaThinkMode(),
         messages,
         options: buildOllamaRequestOptions(),
       }),

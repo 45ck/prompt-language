@@ -306,6 +306,7 @@ describe('OllamaPromptTurnRunner', () => {
       madeProgress: true,
     });
     const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(request.think).toBe(false);
     expect(request.options).toMatchObject({ temperature: 0, num_ctx: 4096 });
     await expect(
       readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),
@@ -564,6 +565,7 @@ describe('OllamaPromptTurnRunner', () => {
     expect(args.at(-1)).toContain('Invoke-RestMethod');
     expect(args.join('\n')).not.toContain(longMarker);
     expect(log.input).toContain(longMarker);
+    expect(JSON.parse(log.input).think).toBe(false);
     expect(JSON.parse(log.input).options).toMatchObject({ temperature: 0, num_ctx: 4096 });
     await expect(
       readFile(join(tempDir, '.prompt-language', 'provider-telemetry.jsonl'), 'utf8'),

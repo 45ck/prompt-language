@@ -57,6 +57,14 @@ the 1200s step boundary after writing the expected artifacts. Outcomes were two
 clean passes and one timeout/oracle-pass. This proves qwen3.6 can solve the
 micro-flow, but does not promote it under the current wall-clock contract.
 
+Follow-up H14 implementation-from-tests screen: `qwen3.6:27b` passed the private
+H14 implementation oracle in three think-off runs with PowerShell transport,
+8192 context, 24 action rounds, and resident model evidence on every resource
+probe. Wall time was stable but slow: `433.973s`, `421.117s`, and `420.534s`.
+This promotes `qwen3.6:27b` only as a slow fallback for H14
+implementation-from-tests. It remains not promoted for API-preserving
+implementation because the earlier H14 API-preservation screen failed.
+
 ## Current Primary-Source Model Notes
 
 - Qwen3-Coder-Next is the most interesting not-yet-installed local candidate.
@@ -104,9 +112,9 @@ References:
    Result: private oracle passed in all three runs, but one run timed out at the
    step boundary. Keep as slow experimental fallback evidence, not promotion.
 
-4. `qwen3.6:27b` H14 implementation-from-tests, N=3.
-   Goal: compare directly with the promoted `qwen3-coder:30b` lane under the
-   same oracle, same route profile, and same output/resource capture.
+4. Completed: `qwen3.6:27b` H14 implementation-from-tests, N=3.
+   Result: `3/3` clean oracle passes; promote only as a slow fallback for that
+   exact H14 subrole.
 
 5. `qwen3.6:27b` vs `qwen3-coder:30b` vs `devstral-small-2:24b` on H15 PATCH
    test-authoring, N=3 per model.

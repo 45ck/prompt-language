@@ -30,6 +30,12 @@
           "name": "qwen3-opencode:30b",
           "endpointClass": "local",
           "selectionReason": "3/3 promoted but much slower"
+        },
+        {
+          "provider": "ollama",
+          "name": "qwen3.6:27b",
+          "endpointClass": "local",
+          "selectionReason": "3/3 with native runner thinking disabled; keep behind coding-tuned fallbacks and do not use for API preservation"
         }
       ],
       "fixture": "experiments/harness-arena/fixtures/h14-impl-from-tests",

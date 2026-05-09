@@ -22,6 +22,9 @@ Result so far:
   full-lane passes under the same hardened route. One additional pass is recorded
   as functionally positive but residency-contaminated and is not counted in the
   clean `3/3` set.
+- `qwen3.6:27b` is now a slow fallback for H14 test-authoring and
+  implementation-from-tests after native runner thinking suppression, but the
+  earlier API-preservation failure remains binding for API-sensitive ownership.
 
 ## Runs
 
@@ -1490,9 +1493,59 @@ Add `qwen3.6:27b` as a fallback for the exact H14 test-authoring subrole. Do
 not select it ahead of `qwen3-coder:30b`: the pass rate is clean, but the average
 step wall time is about `5.49x` slower than the clarified qwen3-coder screen
 (`577.716s` vs `105.203s`). This does not promote `qwen3.6:27b` for
-implementation-from-tests, API-preserving implementation, full H14 TDD, or H15
-repair. The earlier H14 API-preservation negative remains binding for
-implementation ownership.
+API-preserving implementation, full H14 TDD, or H15 repair. The earlier H14
+API-preservation negative remains binding for API-sensitive implementation
+ownership.
+
+### Qwen3.6 Think-Off Implementation Fallback Screen
+
+The next qwen3.6 screen used the H14 implementation-from-tests subrole, where
+executable tests already exist and the model owns the implementation plus local
+summary artifact. It used the same native think-off runner path as the
+test-authoring screen: PowerShell transport, 8192 context, 24 action rounds,
+minimal command environment, private H14 oracle, sampled `ollama ps` evidence,
+and an explicit local model override to `qwen3.6:27b`.
+
+| Run id                                                             | Oracle | Step exit | Timeout | Wall time | Turns | Tokens | Retries | Samples |
+| ------------------------------------------------------------------ | ------ | --------- | ------- | --------- | ----- | ------ | ------- | ------- |
+| `HA-HR1-H14-impl-from-tests-qwen3-6-thinkoff-001-20260509T021200Z` | 6/6    | 0         | false   | 433.973s  | 11    | 23,394 | 0       | 180/180 |
+| `HA-HR1-H14-impl-from-tests-qwen3-6-thinkoff-002-20260509T021943Z` | 6/6    | 0         | false   | 421.117s  | 11    | 23,394 | 0       | 179/179 |
+| `HA-HR1-H14-impl-from-tests-qwen3-6-thinkoff-003-20260509T022707Z` | 6/6    | 0         | false   | 420.534s  | 11    | 23,394 | 0       | 177/177 |
+
+Aggregate:
+
+- oracle pass rate: `3/3`
+- total Ollama turns: `33`
+- total provider tokens: `70,182`
+- average step wall time: `425.208s`
+- provider substitution: `false` in all runs
+- transport telemetry: `metadata.transport=powershell` in all provider records
+- context telemetry: `metadata.numCtx=8192` in all provider records
+- resource sample failures: `0`
+- command environment policy: `minimal-allowlist`
+
+Representative oracle result:
+
+```text
+PASS: mergeDuplicates implementation exists
+PASS: mergeDuplicates is exported
+PASS: tests import and call mergeDuplicates
+PASS: at least five merge/duplicate tests exist
+PASS: public tests pass
+PASS: hidden behavior checks pass
+
+Results: 6/6 passed
+```
+
+### Qwen3.6 Implementation Fallback Decision
+
+Add `qwen3.6:27b` as a fallback for the exact H14
+implementation-from-tests subrole. Do not select it ahead of `qwen3-coder:30b`,
+`devstral-small-2:24b`, or `qwen3-opencode:30b`: the pass rate is clean, but it
+is still slower than the selected coding model and only narrowly comparable to
+the existing slower fallbacks. This does not promote `qwen3.6:27b` for
+API-preserving implementation, full H14 TDD, or H15 repair. The earlier H14
+API-preservation negative remains binding for API-sensitive work.
 
 ### Routed Test-Authoring Smoke
 

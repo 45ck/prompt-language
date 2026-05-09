@@ -666,6 +666,41 @@ a useful alternative-model screen because it changed the model and runtime
 profile, but it did not improve the H15 validation bottleneck and was much
 slower than the earlier clean `qwen3-coder:30b` validation-only pass.
 
+### Qwen3.6 Think-Off Validation-Only Screen
+
+<!-- cspell:ignore thinkoff -->
+
+After commit `042c82e` disabled native Ollama thinking output for HTTP and
+PowerShell chat calls, `qwen3.6:27b` was rerun on the H15 validation-only
+micro-flow as an explicit generic `local-only` arm. These runs used the same H15
+validation-only fixture, worker flow, and private oracle, with PowerShell
+transport, 8192 context, 20 action rounds, a 1200s step timeout, minimal command
+environment, and sampled `ollama ps` resource evidence.
+
+| Run id                                                             | Oracle | Step exit | Timeout | Wall time | Turns | Tokens | Samples |
+| ------------------------------------------------------------------ | ------ | --------- | ------- | --------- | ----- | ------ | ------- |
+| `HA-HR1-H15-validation-only-qwen3-6-thinkoff-001-20260509T010526Z` | PASS   | 0         | false   | 1110.540s | 10    | 54,592 | 465/465 |
+| `HA-HR1-H15-validation-only-qwen3-6-thinkoff-002-20260509T012431Z` | PASS   | 0         | false   | 1196.434s | 10    | 54,592 | 503/503 |
+| `HA-HR1-H15-validation-only-qwen3-6-thinkoff-003-20260509T014452Z` | PASS   | null      | true    | 1200.101s | 8     | 50,400 | 509/509 |
+
+Private oracle result in all three runs:
+
+```text
+VERDICT: PASS
+```
+
+The third run wrote `local-worker-summary.md` and the oracle passed, but the
+step still hit the hard 1200s timeout before returning cleanly. Timeout cleanup
+was attempted with the POSIX process-group method and succeeded.
+
+Decision: do not promote `qwen3.6:27b` for H15 validation-only ownership under
+the current 1200s contract. The new think-off evidence reverses the earlier
+no-progress finding and proves qwen3.6 can solve the micro-flow, but it is too
+close to the timeout boundary for a promoted route. Treat it as a slow
+experimental fallback candidate only. A promotion would need either three clean
+non-timeout runs under the same cap, or an explicit policy decision that the H15
+validation-only qwen3.6 lane uses a larger wall-clock budget.
+
 ## Routing Decision
 
 Do not mark the local-model strategy as a failure overall. Mark this as a
@@ -675,11 +710,11 @@ negative promotion result for one route:
 - H15 endpoint work is not promoted for local-only ownership yet.
 - H15 validation-only work has one clean local-screen pass and one failed repeat;
   it is not promoted.
-- `devstral-small-2:24b` and `qwen3-opencode:30b` also failed the H15
-  validation-only screen. `qwen3.6:27b` also failed the same validation-only
-  screen after a PowerShell bridge timeout and private-oracle validation miss, so
-  the next H15 local attempt should change the route contract or runtime, not
-  rerun these fallback models unchanged.
+- `devstral-small-2:24b` and `qwen3-opencode:30b` failed the H15 validation-only
+  screen. `qwen3.6:27b` improved after native thinking suppression and passed
+  the private oracle in three follow-up validation-only screens, but one of
+  those runs timed out at the step boundary. Keep it experimental rather than
+  promoted under the current 1200s contract.
 - A narrower qwen3-coder short-name validation repair screen also failed after
   one private-oracle regression and one hardened-gate timeout. Devstral then
   failed the same repair shape twice, including a hardened rerun that still

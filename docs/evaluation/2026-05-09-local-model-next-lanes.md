@@ -51,6 +51,12 @@ evidence on every resource probe. Wall time was stable but slow:
 slow fallback for H14 standalone test authoring. It remains not promoted for
 H14 implementation ownership because the earlier API-preservation screen failed.
 
+Follow-up H15 validation-only screen: `qwen3.6:27b` passed the private H15
+validation-only oracle in three think-off runs, but the third run timed out at
+the 1200s step boundary after writing the expected artifacts. Outcomes were two
+clean passes and one timeout/oracle-pass. This proves qwen3.6 can solve the
+micro-flow, but does not promote it under the current wall-clock contract.
+
 ## Current Primary-Source Model Notes
 
 - Qwen3-Coder-Next is the most interesting not-yet-installed local candidate.
@@ -94,10 +100,9 @@ References:
    Result: `3/3` clean oracle passes; promote only as a slow fallback for that
    exact H14 subrole.
 
-3. `qwen3.6:27b` H15 validation-only local screen.
-   Goal: no code edits, just identify the validation defect and propose a
-   bounded patch. This matches the model's likely strength without trusting it
-   to mutate the workspace.
+3. Completed: `qwen3.6:27b` H15 validation-only local screen.
+   Result: private oracle passed in all three runs, but one run timed out at the
+   step boundary. Keep as slow experimental fallback evidence, not promotion.
 
 4. `qwen3.6:27b` H14 implementation-from-tests, N=3.
    Goal: compare directly with the promoted `qwen3-coder:30b` lane under the

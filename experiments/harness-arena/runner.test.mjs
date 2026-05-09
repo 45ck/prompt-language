@@ -7,6 +7,7 @@ import test from 'node:test';
 import {
   listModelVisibleFixtureFiles,
   parseArgs,
+  runCommandWithTimeout,
   runHarnessArena,
   validateManifestAgainstSchema,
 } from './runner.mjs';
@@ -251,10 +252,47 @@ test('fake live records hard timeout metadata and still runs private oracle phas
     assert.equal(step.timeoutMs, 50);
     assert.equal(metadata.timedOut, true);
     assert.equal(metadata.timeoutMs, 50);
+    assert.equal(metadata.processTreeCleanupAttempted, true);
+    assert.equal(typeof metadata.processTreeCleanupMethod, 'string');
+    assert.equal(metadata.processTreeCleanupSucceeded, true);
     assert.equal(manifest.classification.harnessFailure, true);
     assert.equal(manifest.oracle.passed, true);
     assert.equal(manifest.oracle.timedOut, false);
     assert.match(readArmArtifact(armRun, manifest.oracle.stdoutArtifactRef), /fake oracle pass/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('timed out commands clean up surviving child processes', async () => {
+  const outputRoot = tempRoot();
+  mkdirSync(outputRoot, { recursive: true });
+  const markerPath = join(outputRoot, 'child-survived.txt');
+  try {
+    const childScript = [
+      `setTimeout(() => require('node:fs').writeFileSync(${JSON.stringify(markerPath)}, 'survived'), 600);`,
+      'setInterval(() => {}, 100);',
+    ].join(' ');
+    const parentScript = [
+      "const { spawn } = require('node:child_process');",
+      `const child = spawn(process.execPath, ['-e', ${JSON.stringify(childScript)}], { stdio: 'ignore' });`,
+      'child.unref();',
+      'setInterval(() => {}, 100);',
+    ].join(' ');
+
+    const result = runCommandWithTimeout({
+      args: ['-e', parentScript],
+      command: process.execPath,
+      cwd: outputRoot,
+      timeoutMs: 50,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 900));
+
+    assert.equal(result.timedOut, true);
+    assert.equal(result.processTreeCleanupAttempted, true);
+    assert.equal(result.processTreeCleanupSucceeded, true);
+    assert.equal(existsSync(markerPath), false);
   } finally {
     rmSync(outputRoot, { recursive: true, force: true });
   }

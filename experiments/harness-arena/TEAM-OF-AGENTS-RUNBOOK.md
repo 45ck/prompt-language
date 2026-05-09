@@ -141,6 +141,11 @@ Command stdout/stderr artifacts are capped by `--command-output-limit-bytes`
 the original byte counts, so a noisy local command cannot silently inflate the
 run artifact set.
 
+Timed-out commands also record process-tree cleanup metadata. Check
+`processTreeCleanupAttempted`, `processTreeCleanupMethod`, and
+`processTreeCleanupSucceeded` in step, resource, or oracle metadata before
+treating a timeout as contained.
+
 By default, live command templates use `--command-safety-policy deny-high-risk`.
 That blocks shell wrappers, network clients, package-manager mutation,
 destructive filesystem commands, service/process control, and git mutation before

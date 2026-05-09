@@ -997,6 +997,10 @@ function executeCommandPhase({
     stderrTruncated: execution.stderrTruncated,
     stdoutOriginalBytes: execution.stdoutOriginalBytes,
     stderrOriginalBytes: execution.stderrOriginalBytes,
+    processTreeCleanupAttempted: execution.processTreeCleanupAttempted,
+    processTreeCleanupError: execution.processTreeCleanupError,
+    processTreeCleanupMethod: execution.processTreeCleanupMethod,
+    processTreeCleanupSucceeded: execution.processTreeCleanupSucceeded,
   });
   return {
     ...execution,
@@ -1019,6 +1023,7 @@ export function runCommandWithTimeout({
   const started = process.hrtime.bigint();
   const result = spawnSync(command, args, {
     cwd,
+    detached: process.platform !== 'win32',
     encoding: 'utf8',
     env: commandEnvironment(commandEnvironmentPolicy),
     killSignal: 'SIGTERM',
@@ -1027,6 +1032,9 @@ export function runCommandWithTimeout({
   });
   const durationMs = Math.round(Number(process.hrtime.bigint() - started) / 1_000_000);
   const timedOut = result.error?.code === 'ETIMEDOUT';
+  const processTreeCleanup = timedOut
+    ? terminateProcessTree(result.pid)
+    : { attempted: false, error: null, method: null, succeeded: null };
   const stdout = truncateOutput(
     typeof result.stdout === 'string' ? result.stdout : '',
     outputLimitBytes,
@@ -1049,9 +1057,103 @@ export function runCommandWithTimeout({
     stdout: stdout.value,
     stdoutOriginalBytes: stdout.originalBytes,
     stdoutTruncated: stdout.truncated,
+    processTreeCleanupAttempted: processTreeCleanup.attempted,
+    processTreeCleanupError: processTreeCleanup.error,
+    processTreeCleanupMethod: processTreeCleanup.method,
+    processTreeCleanupSucceeded: processTreeCleanup.succeeded,
     timedOut,
     wallSeconds: Number((durationMs / 1_000).toFixed(3)),
   };
+}
+
+function terminateProcessTree(pid) {
+  if (typeof pid !== 'number' || pid <= 0) {
+    return {
+      attempted: false,
+      error: 'missing child pid',
+      method: null,
+      succeeded: false,
+    };
+  }
+
+  if (process.platform === 'win32') {
+    const result = spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], {
+      encoding: 'utf8',
+      timeout: 5_000,
+      windowsHide: true,
+    });
+    return {
+      attempted: true,
+      error: result.error ? result.error.message : null,
+      method: 'taskkill /F /T',
+      succeeded: result.status === 0,
+    };
+  }
+
+  const groupPid = -pid;
+  if (!processGroupExists(groupPid)) {
+    return {
+      attempted: true,
+      error: null,
+      method: 'posix-process-group',
+      succeeded: true,
+    };
+  }
+
+  try {
+    process.kill(groupPid, 'SIGTERM');
+    waitForProcessGroupExit(groupPid, 250);
+    if (processGroupExists(groupPid)) {
+      process.kill(groupPid, 'SIGKILL');
+      waitForProcessGroupExit(groupPid, 250);
+    }
+    return {
+      attempted: true,
+      error: null,
+      method: 'posix-process-group',
+      succeeded: !processGroupExists(groupPid),
+    };
+  } catch (error) {
+    try {
+      process.kill(pid, 'SIGTERM');
+      return {
+        attempted: true,
+        error: error instanceof Error ? error.message : String(error),
+        method: 'single-process-fallback',
+        succeeded: true,
+      };
+    } catch (fallbackError) {
+      return {
+        attempted: true,
+        error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+        method: 'single-process-fallback',
+        succeeded: false,
+      };
+    }
+  }
+}
+
+function waitForProcessGroupExit(groupPid, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!processGroupExists(groupPid)) return;
+    sleepSync(25);
+  }
+}
+
+function processGroupExists(groupPid) {
+  try {
+    process.kill(groupPid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function sleepSync(ms) {
+  const buffer = new SharedArrayBuffer(4);
+  const view = new Int32Array(buffer);
+  Atomics.wait(view, 0, 0, ms);
 }
 
 function truncateOutput(value, limitBytes) {

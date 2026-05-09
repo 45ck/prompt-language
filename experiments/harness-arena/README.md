@@ -112,7 +112,9 @@ evidence:
   so reviewers can see sample volume, probe failures, and non-empty sample output
   without manually opening every artifact.
 - Fake-live step metadata records `timeoutMs`, `timedOut`, `exitCode`, and
-  `wallSeconds` in both artifacts and the manifest.
+  `wallSeconds` in both artifacts and the manifest. When a command times out,
+  step/resource/oracle metadata also records whether process-tree cleanup was
+  attempted, the cleanup method, and whether the cleanup succeeded.
 - Command stdout/stderr artifacts are capped by `--command-output-limit-bytes`
   (default 1048576). Step, resource, and oracle metadata record the cap,
   truncation flags, and original byte counts.

@@ -75,6 +75,10 @@ test('H14 local routing policy records promoted fallback models without selectin
     apiPreservation.fallbackModels.map((model) => model.name),
     ['devstral-small-2:24b', 'qwen3-opencode:30b'],
   );
+  assert.deepEqual(
+    testAuthoring.fallbackModels.map((model) => model.name),
+    ['qwen3.6:27b'],
+  );
 });
 
 test('H14 local routing policy references checked-in evidence and harness files', () => {
@@ -94,6 +98,7 @@ test('H14 local routing policy references checked-in evidence and harness files'
   assert.match(evidence, /Devstral Decision/);
   assert.match(evidence, /Refresh Decision/);
   assert.match(evidence, /Clarified Test-Authoring Decision/);
+  assert.match(evidence, /Qwen3\.6 Test-Authoring Fallback Decision/);
   assert.match(evidence, /Full TDD Decision/);
 });
 

@@ -18,6 +18,7 @@ experiments/aider-vs-pl/rescue-viability/runs/r9/r9-review-repeats-*/rep*-qwen3-
 experiments/aider-vs-pl/results/h12-h14-local-*/h*/
 experiments/aider-vs-pl/results/h15-api-endpoint-local-*/h15-api-endpoint-*/workspace/
 experiments/aider-vs-pl/results/h15-local-*/h15-*/workspace/
+experiments/results/harness-arena/
 
 # Beads / Dolt files (added by bd init)
 *.db

@@ -1441,10 +1441,58 @@ Results: 4/4 passed
 
 Promote `h14-test-authoring` in the H14 local portfolio route only for
 `qwen3-coder:30b` with the clarified prompt-language flow and 8 action rounds.
-Do not add fallback local models for this subrole yet, because the fallback
-portfolio evidence covers implementation subroles, not standalone test
-authoring. Keep full H14 TDD ownership not promoted: this screen proves the
-isolated test-authoring subrole, not combined red-green ownership.
+Keep full H14 TDD ownership separate: this screen proves the isolated
+test-authoring subrole, not combined red-green ownership.
+
+### Qwen3.6 Think-Off Test-Authoring Fallback Screen
+
+<!-- cspell:ignore thinkoff -->
+
+After commit `042c82e` disabled native Ollama thinking output for HTTP and
+PowerShell chat calls, `qwen3.6:27b` was screened on the same clarified H14
+test-authoring lane. These runs used the route profile with an explicit local
+model override, PowerShell transport, 8192 context, 8 action rounds, minimal
+command environment, private test-authoring oracle, and sampled `ollama ps`
+resource evidence.
+
+| Run id                                                            | Oracle | Step exit | Timeout | Wall time | Turns | Tokens | Retries | Samples |
+| ----------------------------------------------------------------- | ------ | --------- | ------- | --------- | ----- | ------ | ------- | ------- |
+| `HA-HR1-H14-test-authoring-qwen3-6-thinkoff-001-20260509T002640Z` | 4/4    | 0         | false   | 577.510s  | 8     | 27,015 | 0       | 244/244 |
+| `HA-HR1-H14-test-authoring-qwen3-6-thinkoff-002-20260509T003700Z` | 4/4    | 0         | false   | 573.032s  | 8     | 27,015 | 0       | 241/241 |
+| `HA-HR1-H14-test-authoring-qwen3-6-thinkoff-003-20260509T004655Z` | 4/4    | 0         | false   | 582.605s  | 8     | 27,015 | 0       | 241/241 |
+
+Aggregate:
+
+- oracle pass rate: `3/3`
+- total Ollama turns: `24`
+- total provider tokens: `81,045`
+- average step wall time: `577.716s`
+- provider substitution: `false` in all runs
+- transport telemetry: `metadata.transport=powershell` in all provider records
+- context telemetry: `metadata.numCtx=8192` in all provider records
+- resource sample failures: `0`
+- command environment policy: `minimal-allowlist`
+
+Representative oracle result:
+
+```text
+PASS: contacts implementation remains unchanged
+PASS: tests import and exercise mergeDuplicates
+PASS: public tests pass
+PASS: tests reject broken merge implementations
+
+Results: 4/4 passed
+```
+
+### Qwen3.6 Test-Authoring Fallback Decision
+
+Add `qwen3.6:27b` as a fallback for the exact H14 test-authoring subrole. Do
+not select it ahead of `qwen3-coder:30b`: the pass rate is clean, but the average
+step wall time is about `5.49x` slower than the clarified qwen3-coder screen
+(`577.716s` vs `105.203s`). This does not promote `qwen3.6:27b` for
+implementation-from-tests, API-preserving implementation, full H14 TDD, or H15
+repair. The earlier H14 API-preservation negative remains binding for
+implementation ownership.
 
 ### Routed Test-Authoring Smoke
 

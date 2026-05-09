@@ -43,6 +43,14 @@ the native runner with status `ok`. During the run, `ollama ps` reported
 promotes `qwen3.6:27b` from "blocked by thinking leakage" to "eligible for the
 next narrow runner-level smoke", not to a coding-lane promotion.
 
+Follow-up H14 screen: `qwen3.6:27b` then passed the clarified H14
+test-authoring route three times with thinking disabled, PowerShell transport,
+8192 context, 8 action rounds, private oracle `4/4`, and sampled resident model
+evidence on every resource probe. Wall time was stable but slow:
+`577.510s`, `573.032s`, and `582.605s`. This promotes `qwen3.6:27b` only as a
+slow fallback for H14 standalone test authoring. It remains not promoted for
+H14 implementation ownership because the earlier API-preservation screen failed.
+
 ## Current Primary-Source Model Notes
 
 - Qwen3-Coder-Next is the most interesting not-yet-installed local candidate.
@@ -78,29 +86,33 @@ References:
 
 ## Next Experiment Order
 
-1. `qwen3.6:27b` strict-output containment smoke.
-   Goal: prove whether thinking can be disabled or made irrelevant before any
-   real lane promotion.
+1. Completed: `qwen3.6:27b` strict-output containment smoke.
+   Result: native runner thinking suppression works for the one-prompt runner
+   smoke.
 
-2. `qwen3.6:27b` H15 validation-only local screen.
+2. Completed: `qwen3.6:27b` H14 standalone test-authoring screen.
+   Result: `3/3` clean oracle passes; promote only as a slow fallback for that
+   exact H14 subrole.
+
+3. `qwen3.6:27b` H15 validation-only local screen.
    Goal: no code edits, just identify the validation defect and propose a
    bounded patch. This matches the model's likely strength without trusting it
    to mutate the workspace.
 
-3. `qwen3.6:27b` H14 implementation-from-tests, N=3.
+4. `qwen3.6:27b` H14 implementation-from-tests, N=3.
    Goal: compare directly with the promoted `qwen3-coder:30b` lane under the
    same oracle, same route profile, and same output/resource capture.
 
-4. `qwen3.6:27b` vs `qwen3-coder:30b` vs `devstral-small-2:24b` on H15 PATCH
+5. `qwen3.6:27b` vs `qwen3-coder:30b` vs `devstral-small-2:24b` on H15 PATCH
    test-authoring, N=3 per model.
    Goal: decide whether the existing Devstral fallback remains best or whether
    Qwen3.6 should replace it.
 
-5. Pull or register a Qwen3-Coder-Next quantization only after the above tests.
+6. Pull or register a Qwen3-Coder-Next quantization only after the above tests.
    Goal: avoid installing another large model until current installed candidates
    have clean, comparable evidence.
 
-6. Treat DeepSeek V4 as a separate hosted/open-weight frontier comparison.
+7. Treat DeepSeek V4 as a separate hosted/open-weight frontier comparison.
    Goal: it may be useful as a cheap frontier advisor, but it should not be
    mixed into "free local model" claims.
 

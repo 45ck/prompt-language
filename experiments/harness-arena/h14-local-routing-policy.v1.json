@@ -82,7 +82,14 @@
         "endpointClass": "local",
         "selectionReason": "3/3 after clarified test-authoring semantics over PowerShell bridge"
       },
-      "fallbackModels": [],
+      "fallbackModels": [
+        {
+          "provider": "ollama",
+          "name": "qwen3.6:27b",
+          "endpointClass": "local",
+          "selectionReason": "3/3 after native runner thinking was disabled; much slower than qwen3-coder, so fallback only"
+        }
+      ],
       "fixture": "experiments/harness-arena/fixtures/h14-test-authoring",
       "flow": "experiments/harness-arena/flows/h14-test-authoring-worker.flow",
       "oracle": "experiments/harness-arena/oracles/h14-test-authoring-oracle.mjs",
@@ -94,7 +101,7 @@
         "mutant-kill-checks",
         "private-oracle"
       ],
-      "notes": "Use for standalone test authoring only with the clarified merge-semantics flow and tests-only ownership guard."
+      "notes": "Use for standalone test authoring only with the clarified merge-semantics flow and tests-only ownership guard. Prefer qwen3-coder; qwen3.6 is a slow fallback when the selected coding model is unavailable."
     },
     {
       "subrole": "h14-full-tdd",

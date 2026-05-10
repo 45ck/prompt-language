@@ -352,6 +352,33 @@ The thesis is weakened if:
 - humans still prefer direct code edits for most real changes
 - software-factory experiments collapse into heavy manual cleanup
 - parallel coordination adds more instability than value
+- hybrid local/frontier routing arms spend as much or more frontier budget
+  than the frontier-only baseline without higher pass-rate on the same oracle
+
+### Kill rule
+
+Added 2026-05-11. The verification-first hybrid orchestration (VHO) program
+is declared **dead** when, across **≥3 promoted routes covering distinct
+task classes**, the portfolio-weighted `efficiency_ratio` (defined in
+[`program-status.md` §2a](program-status.md#2a-hybrid-efficiency-tracker)) is
+**≥1.0** and pass-rate against the locked oracle is **not strictly higher**
+than the frontier-only baseline.
+
+In plain terms: if the hybrid system reliably costs as much as
+frontier-only and isn't measurably better, it is overhead, not architecture.
+Three distinct task classes is the minimum to rule out single-route fit
+failure.
+
+This rule is portfolio-level and cumulative; individual route failures
+(such as the current H15 API endpoint result) do not trigger it. They are
+recorded in the hybrid-efficiency tracker and treated as route-fit
+evidence, not program-fit evidence.
+
+The rule does **not** kill the prompt-language runtime itself. PL can
+continue as a verification-first supervision runtime even if the local
+delegation hypothesis is falsified. What the rule kills is the specific
+claim that hybrid local/frontier routing reduces frontier cost per
+verified success at portfolio scale.
 
 ## Product direction implied by this thesis
 

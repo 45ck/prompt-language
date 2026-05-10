@@ -48,6 +48,63 @@ and it is not proven as a primary engineering medium.
 | Aider-vs-PL experiment             | Does PL orchestration beat solo aider with local models?                               | Phase-1 informal dev-time comparison (10 hypotheses, N=1 per lane, narrative scoring, not §3a-eligible). Phase-2 is now partially run on local Ollama: H12 tied, H14 favored solo, H15 favored PL. The result is mixed and points toward task-fit flow design rather than blanket PL wrapping.                                                                                                                                                                                                                                                                                                                                                                                               | `experiments/aider-vs-pl/SCORECARD.md` (narrative), per-hypothesis blurbs in `experiments/aider-vs-pl/results/`, and [`experiments/aider-vs-pl/results/2026-04-28-local-model-experiments.md`](../../experiments/aider-vs-pl/results/2026-04-28-local-model-experiments.md). Scrutiny: [`docs/security/aider-vs-pl-scrutiny.md`](../security/aider-vs-pl-scrutiny.md). `prompt-language ci --runner aider` verified end-to-end.                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Redesign H14 with explicit imports, field-merge assertions, and oracle-fed repair; then run k>=3 before making a comparative claim.                    |
 | FSCRUD local-model diagnostics     | Can local Ollama own more than bounded semantic choices under PL supervision?          | Active diagnostics through R45. R30-R39 show free-form local implementation, handoff authoring, and senior-plan prose remain brittle. R40-R45 passed when local responsibility was reduced to bounded section selection, decision choices, weighted ranking, short rationale, and risk response, with deterministic PL tooling owning product behavior and artifact rendering.                                                                                                                                                                                                                                                                                                               | [`docs/evaluation/2026-05-06-evidence-snapshot.md`](../evaluation/2026-05-06-evidence-snapshot.md), [`experiments/fullstack-crud-comparison/`](../../experiments/fullstack-crud-comparison/), and `experiments/fullstack-crud-comparison/manifests/experiment-manifest.json`. Current evidence supports bounded local semantic judgment inside deterministic PL control, not autonomous local full-stack software engineering.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Package the bounded-choice module pattern, then test one tiny executable implementation slice with protected files, hidden verifier, and k>=3 repeats. |
 
+## 2a. Hybrid-efficiency tracker
+
+Added 2026-05-11. Portfolio-level metric to detect the "hybrid failure mode"
+(`docs/strategy/thesis.md` §"What would weaken the thesis" / Kill rule) where a
+hybrid arm spends as much or more frontier budget than a frontier-only arm.
+
+**Definition.** For each promoted route, record:
+
+- `route_frontier_calls` — frontier-model API calls consumed by the
+  promoted route (local-only, advisor, or hybrid-router) in the most recent
+  live runs that pass the route's oracle.
+- `frontier_only_frontier_calls` — frontier-model API calls consumed by the
+  frontier-only baseline arm on the same fixture.
+- `efficiency_ratio = route_frontier_calls / frontier_only_frontier_calls`.
+
+A route is in **hybrid-failure-mode** when `efficiency_ratio ≥ 1.0` and
+pass rate is not strictly higher than frontier-only on the same oracle.
+A route at `efficiency_ratio = 0.0` with passing oracle is the strongest
+possible outcome: local-only has fully displaced frontier on this task
+class.
+
+| Route                         | Class                  | Route frontier calls | Frontier-only frontier calls | Ratio | Local pass rate    | Status                                                | Source                                                                                                                                 |
+| ----------------------------- | ---------------------- | -------------------- | ---------------------------- | ----- | ------------------ | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| H11 multi-file refactor       | cross-file refactor    | 0 (local-only)       | not measured                 | 0.00  | 4/4 (runs 003–006) | **local-only displaces frontier**                     | [`docs/evaluation/2026-05-09-ha-hr1-h11-live-local.md`](../evaluation/2026-05-09-ha-hr1-h11-live-local.md) (lines 35, 100, 142, 191, 239, 282) |
+| H14 implementation-from-tests | TDD implementation     | 0 (local-only)       | 1 (baseline pass)            | 0.00  | 3/3                | **local-only displaces frontier**                     | [`docs/evaluation/2026-05-08-ha-hr1-h14-live-local.md`](../evaluation/2026-05-08-ha-hr1-h14-live-local.md) (lines 266, 485)                    |
+| H14 API-preserving impl       | API-preserving         | 0 (local-only)       | not measured                 | 0.00  | 3/3                | **local-only displaces frontier**; no baseline yet    | [`docs/evaluation/2026-05-08-ha-hr1-h14-live-local.md`](../evaluation/2026-05-08-ha-hr1-h14-live-local.md) line 632                            |
+| H14 full TDD ownership        | TDD end-to-end         | 0 (local-only)       | not measured                 | 0.00  | 3/3 + 3/3 fallback | **local-only displaces frontier**; no baseline yet    | [`docs/evaluation/2026-05-08-ha-hr1-h14-live-local.md`](../evaluation/2026-05-08-ha-hr1-h14-live-local.md) lines 1678–1755                    |
+| H15 PATCH test-authoring      | test authoring         | 0 (local-only)       | not measured                 | 0.00  | 6/10; 3/3 post-fix | **local-only displaces frontier**; no baseline yet    | [`docs/evaluation/2026-05-08-ha-hr1-h15-hybrid.md`](../evaluation/2026-05-08-ha-hr1-h15-hybrid.md) lines 507–510                              |
+| H15 API endpoint              | API endpoint           | 3 (hybrid + 1 failed local) | 1 (clean pass)         | 3.00  | hybrid PASS after frontier repair; local-only FAIL | **hybrid-failure-mode**; route held frontier-baseline | [`docs/evaluation/2026-05-08-ha-hr1-h15-hybrid.md`](../evaluation/2026-05-08-ha-hr1-h15-hybrid.md) lines 152–197                              |
+| H15 validation-only           | validation             | 0 (local-only)       | not measured                 | —     | 1/2 (oracle miss, not frontier issue) | screen-only after failed repeat                        | [`docs/evaluation/2026-05-08-ha-hr1-h15-live-local.md`](../evaluation/2026-05-08-ha-hr1-h15-live-local.md) lines 138–185                       |
+
+**Portfolio verdict (2026-05-11):** 5 of 7 promoted routes show
+`efficiency_ratio = 0.00` — local-only fully displaces frontier on H11
+multi-file refactor, three H14 TDD subroles, and H15 PATCH test-authoring.
+**1 route is in hybrid-failure-mode** (H15 API endpoint, ratio 3.00). 1
+route (H15 validation-only) is route-screen pending and unrelated to
+frontier cost. The kill rule in `thesis.md` requires ≥3 distinct task
+classes in failure mode before VHO is declared dead — current portfolio is
+**positive directional evidence** for the local-delegation hypothesis on
+the measured task classes, with one well-isolated negative result on the
+implementation-shape API endpoint route.
+
+Caveat: every "frontier-only baseline not measured" entry above is a real
+gap. Without the matched frontier-only number, `efficiency_ratio = 0.00`
+shows local-only passes the oracle, but cannot quantify how much frontier
+budget the program is actually saving versus a frontier-only equivalent.
+Closing those baseline runs is the next high-value measurement after the
+HA-HR1 cross-arm fixture lands.
+
+**Reading rule.** A new entry is only valid once the run that produced its
+numbers is claim-eligible per §3a (strict trace, ready preflight,
+attestation, cross-family reviewer, trusted signer). All entries above are
+currently **non-claim-eligible** engineering signal — no run in the repo
+satisfies all five §3a gates yet (the trusted-signers registry is still an
+empty placeholder). Treat the portfolio verdict as directional, not
+thesis-confirming.
+
 ## 3. What has shipped (Q2 2026)
 
 Every item below is a commit on `main`.

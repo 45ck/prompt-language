@@ -26,3 +26,11 @@ experiments/results/harness-arena/
 # Agent-shim runtime cache (never commit; only used when PL_SHIM_TRUST_CACHE=1)
 scripts/eval/agent-shim/.binary-cache.json
 .aider*
+
+# Operator signer keys (NEVER commit private keys)
+# Caught 2026-05-11: docs/security/provenance-attestation.md:289 claims
+# .attest-keys/ is gitignored but it wasn't.
+scripts/eval/.attest-keys/
+**/.attest-keys/
+*.key
+*.pem

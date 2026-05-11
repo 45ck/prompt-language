@@ -11,7 +11,7 @@ After a single day of focused experimentation, what kinds of
 engineering work can honestly start, and what still needs more
 evidence?
 
-## TL;DR
+## TL;DR (revised 2026-05-11 evening)
 
 | Engineering decision                                     | Verdict        |
 | -------------------------------------------------------- | -------------- |
@@ -20,17 +20,19 @@ evidence?
 | Use hybrid routing in personal/internal projects         | **CONDITIONAL GO** (only if work is bounded micro-tasks with oracles) |
 | Build the Portarium ↔ PL integration contract            | **NO** (premature; trigger not met) |
 | Promote hybrid as a primary engineering paradigm         | **NO** (evidence too narrow) |
-| Use hybrid for end-to-end app builds in client work      | **NO** (loses tokens at app-build scope) |
+| Use hybrid for real-software builds (cost-justified)     | **NO** (revised — never breaks even at any N on dollar grounds; only justified by privacy/latency/quota) |
+| Use hybrid for client app-build work                     | **NO** (loses tokens at app-build scope) |
 | Provision a real operator signer to clear §3a gate 5     | **GO** (orthogonal to the hybrid question, gates everything else) |
 
-## The four same-day pilots
+## The five same-day pilots
 
 | Pilot                              | Scope-tag                          | Verdict        | Key number                                |
 | ---------------------------------- | ---------------------------------- | -------------- | ----------------------------------------- |
 | TODO CLI                           | `app-build-orchestration`          | Hybrid loses   | 2-3× more expensive than frontier-only    |
-| Micro-task v2 (full prompts)       | `micro-task` clear specs           | Hybrid wins    | 10/10 first-attempt pass, 100% saving     |
-| Micro-task v2 (starved prompts)    | `micro-task` thin specs            | Hybrid mixed   | 4/10 pass, 35% net saving                 |
-| tinymd                             | `real-software-multistage`         | Hybrid breaks even at N≈12 | 6/8 first-attempt, 14× more expensive at N=1 |
+| Micro-task v2 (full prompts) at k=10 | `micro-task` clear specs           | Hybrid wins    | **100/100 first-attempt** at k=10, zero variance |
+| Micro-task v2 (starved prompts) at k=10 | `micro-task` thin specs           | Hybrid mixed   | **40/100** at k=10, deterministic per-task |
+| tinymd                             | `real-software-multistage`         | Hybrid loses (revised) | 6/8 first-attempt, 14× more expensive at N=1 |
+| **rpncalc (cross-app reuse)**      | `real-software-multistage`         | **Hybrid loses at any N** | 6/7 first-attempt; ~5.5k per-pilot scaffolding cost vs ~600 per-pilot saving — never breaks even |
 
 The pattern is **scope- and reuse-sensitive**, not universally
 cost-positive or cost-negative.

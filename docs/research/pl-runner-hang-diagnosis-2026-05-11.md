@@ -145,13 +145,36 @@ real time.
 **Total: ~11 LOC across 2 files.** All changes reversible via
 git revert.
 
-## Why this isn't applied
+## Update — Edit 2 applied and tested (2026-05-11 night)
 
-The user has not explicitly authorized changes to the runtime
-code. These edits change behavior of the published npm package
-(`@45ck/prompt-language`) and could affect existing users. They
-are documented here as a proposal; apply via separate commit
-after explicit approval.
+**Edit 2 was applied** in commit `<this-one>`. The 28 passing
+ollama-runner tests continue to pass; the 5 pre-existing CLI/
+PowerShell `spawn EFTYPE` failures are unaffected (rig-specific,
+unrelated to the change).
+
+**End-to-end smoke result was NOT what the agent predicted.**
+
+When tested against `prompt: What is 2 plus 2?` with
+`--runner ollama --model qwen3-coder:30b`, the runner still
+exhausted all 8 rounds. Investigating the trace at
+`.prompt-language/ollama-turns.jsonl` showed:
+
+- The flow runtime wraps user prompts with a `[prompt-language summary]` envelope (per `Context:\nFlow: ...` prefix in the trace)
+- qwen3-coder:30b, instructed by the system prompt at line 203 to emit strict JSON actions, **does emit valid JSON action envelopes** (workspaceActions=2 over 8 rounds)
+- The model never terminates with a `done` action
+- My short-circuit only triggers on `parsed?.actions === undefined` (no valid JSON), which doesn't match this case
+
+**The agent's proposed 6-LOC fix is partial.** It handles **case A** (model emits prose, no parseable JSON) but not **case B** (model emits valid JSON actions but never terminates with `done`). qwen3-coder follows the action protocol well enough to produce JSON; it just doesn't naturally produce `done` actions for non-task prompts.
+
+To fully unblock single-turn-text routing through this runner, a more substantial change is required:
+
+- Either bypass the system-prompt action protocol entirely for prompts that don't require workspace actions (suppress `createSystemPrompt()` for those prompts)
+- Or add a separate runner mode (`--runner ollama-text`) that doesn't inject the action protocol
+- Or short-circuit on round 1 when no `done` AND no high-impact actions emitted
+
+The architectural conclusion stands: **the PL ollama runner is fundamentally designed for agentic tool-use loops, not single-turn text generation.** The 6-LOC fix is still useful for models that fail to emit valid JSON (e.g. qwen3:8b which earlier hit num_predict ceilings) but doesn't unblock the qwen3-coder routing use case.
+
+**Hand-rolled `runner.mjs` calling `/api/generate` directly remains the correct path for the spec-quality routing pattern.** The PL ollama runner should be used for genuinely agentic tasks where the model has tool access.
 
 ## What the fix does NOT address
 

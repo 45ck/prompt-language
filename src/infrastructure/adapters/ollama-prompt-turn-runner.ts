@@ -986,6 +986,29 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
 
         const parsed = parseActionEnvelope(raw);
         if (parsed?.actions === undefined) {
+          // Single-turn text-generation short-circuit: if the prompt does not
+          // request a workspace action and the model produced text instead of
+          // the strict JSON action envelope, treat the raw response as the
+          // assistant text. This unblocks the routing-style use case where the
+          // orchestrator captures generated code from the response and applies
+          // it to the workspace itself, rather than relying on the model to
+          // emit write_file actions. See
+          // docs/research/pl-runner-hang-diagnosis-2026-05-11.md.
+          if (round === 1 && !promptRequiresWorkspaceAction(prompt)) {
+            await appendTrace(input.cwd, {
+              requestedModel,
+              actualModel,
+              prompt,
+              rounds: 1,
+              workspaceActions,
+              message: 'single-turn-text-shortcircuit',
+            });
+            return {
+              exitCode: 0,
+              assistantText: raw,
+              madeProgress: false,
+            };
+          }
           messages.push({
             role: 'user',
             content:

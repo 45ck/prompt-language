@@ -33,6 +33,10 @@ import {
 import { computeManifest } from './compute-manifest.mjs';
 import { diffManifests } from './manifest-diff.mjs';
 import { runPreflight as runBootstrapEnvelopePreflight } from './bootstrap-envelope.mjs';
+import {
+  assessRunnerCapabilityManifest,
+  buildRunnerCapabilityManifest,
+} from '../../eval/runner-capability-manifest.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -45,6 +49,15 @@ const DEFAULT_WALL_CLOCK_SEC = Number(process.env.META_WALL_CLOCK_SEC ?? 25 * 60
 // (AP-5) cannot pass verification even if its nonce somehow agreed.
 const DEFAULT_FRESHNESS_WINDOW_MS = Number(process.env.META_FRESHNESS_WINDOW_MS ?? 60 * 60 * 1000);
 const BINARY_ALLOW_LIST_PATH = resolve(__dirname, '.binary-allow-list.json');
+const CLAUDE_PERMISSION_BYPASS_FLAG = '--dangerously-skip-permissions';
+
+function claudePromptArgv(flowText) {
+  return ['-p', CLAUDE_PERMISSION_BYPASS_FLAG, flowText];
+}
+
+function claudePromptManifestArgv() {
+  return ['-p', CLAUDE_PERMISSION_BYPASS_FLAG, '<flow-text>'];
+}
 
 function log(...args) {
   console.error('[meta-harness]', ...args);
@@ -196,7 +209,7 @@ async function runLive({ flowText, bundleDir, runId, wallClockSec, claudeBin }) 
   };
 
   // We invoke claude directly (not via shim wrapper) — shim is on PATH in case flow needs it.
-  const args = ['-p', '--dangerously-skip-permissions', flowText];
+  const args = claudePromptArgv(flowText);
   log(`invoking claude (wall-clock cap ${wallClockSec}s)`);
   const child = spawn(claudeBin, args, {
     cwd: bundleDir,
@@ -283,6 +296,7 @@ export function deriveClaimEligibility({
   attestationVerifyFailed = false,
   attestationError = null,
   attestationConfigError = false,
+  runnerSafety = null,
 }) {
   const blockers = [];
   if (bootstrapOverall === 'blocked') blockers.push('bootstrap-preflight-blocked');
@@ -299,6 +313,11 @@ export function deriveClaimEligibility({
   if (verifyOk === true) {
     if (!attestationPresent) blockers.push('attestation-missing');
     else if (attestationRole !== 'operator') blockers.push('attestation-role-not-operator');
+    if (!runnerSafety) {
+      blockers.push('runner-capability-manifest-missing');
+    } else {
+      for (const blocker of runnerSafety.blockers ?? []) blockers.push(blocker);
+    }
   }
   if (errorStr) blockers.push('harness-error');
   if (timedOut) blockers.push('wall-clock-timeout');
@@ -319,6 +338,8 @@ export function runVerifyTrace(
     expectedPairCount,
     freshnessWindowMs,
     attestationPath = null,
+    capabilityManifestPath = null,
+    requireClaimProfile = false,
     trustedSignersPath = DEFAULT_TRUSTED_SIGNERS_PATH,
     revokedSignersPath = DEFAULT_REVOKED_SIGNERS_PATH,
     requireAttestation = false,
@@ -363,6 +384,12 @@ export function runVerifyTrace(
   }
   if (existsSync(BINARY_ALLOW_LIST_PATH)) {
     args.push('--expected-binary-hashes', BINARY_ALLOW_LIST_PATH);
+  }
+  if (capabilityManifestPath) {
+    args.push('--capability-manifest', resolve(capabilityManifestPath));
+  }
+  if (requireClaimProfile) {
+    args.push('--require-claim-profile');
   }
   if (attestationPresent || requireAttestation) {
     args.push('--attestation', resolvedAttestationPath);
@@ -687,6 +714,10 @@ export async function liveRun(
   const computeManifestFn = deps.computeManifestFn ?? computeManifest;
   const runVerifyTraceFn = deps.runVerifyTraceFn ?? runVerifyTrace;
   const diffManifestsFn = deps.diffManifestsFn ?? diffManifests;
+  const buildRunnerCapabilityManifestFn =
+    deps.buildRunnerCapabilityManifestFn ?? buildRunnerCapabilityManifest;
+  const assessRunnerCapabilityManifestFn =
+    deps.assessRunnerCapabilityManifestFn ?? assessRunnerCapabilityManifest;
   const writeRunNonceFn = deps.writeRunNonceFn ?? writeRunNonce;
   const readRunNonceFn = deps.readRunNonceFn ?? readRunNonce;
   const deleteRunNonceFn = deps.deleteRunNonceFn ?? deleteRunNonce;
@@ -809,6 +840,33 @@ export async function liveRun(
   const stashLabel = `meta-${runId}`;
   const stash = gitStashFn(stashLabel);
 
+  const runnerCapabilityManifest = buildRunnerCapabilityManifestFn({
+    runnerId: 'claude',
+    adapter: 'meta-harness-claude',
+    provider: 'anthropic',
+    command: 'claude',
+    binaryPath: preflight.auth.claudeBin,
+    argv: claudePromptManifestArgv(),
+    readRoots: [bundleDir],
+    writeRoots: [bundleDir],
+    outputRoots: [bundleDir],
+    timeoutMs: wallClockSec * 1000,
+    expectedPairCount,
+    transportWitness: 'shim',
+    networkMode: 'frontier',
+    sandboxMode: 'unknown',
+    shellMode: 'model-directed',
+    envAllowlist: [
+      'PL_TRACE',
+      'PL_TRACE_STRICT',
+      'PL_RUN_ID',
+      'PL_TRACE_DIR',
+      'PL_REAL_BIN_CLAUDE',
+    ],
+  });
+  persistJson(join(bundleDir, 'runner-capabilities.json'), runnerCapabilityManifest);
+  const runnerSafety = assessRunnerCapabilityManifestFn(runnerCapabilityManifest);
+
   let liveResult = null;
   let verify = null;
   let diff = null;
@@ -879,6 +937,8 @@ export async function liveRun(
       expectedPairCount,
       freshnessWindowMs: DEFAULT_FRESHNESS_WINDOW_MS,
       attestationPath: attestationResult.path,
+      capabilityManifestPath: join(bundleDir, 'runner-capabilities.json'),
+      requireClaimProfile: attestationConfig.requireAttestation,
       trustedSignersPath: attestationResult.trustedSignersPath,
       revokedSignersPath: attestationResult.revokedSignersPath,
       requireAttestation: attestationConfig.requireAttestation,
@@ -927,6 +987,7 @@ export async function liveRun(
       attestationConfig.requireAttestation && !effectiveAttestationPresent && verifyOk === false,
     attestationError: attestationResult.error,
     attestationConfigError: Boolean(attestationConfig.error),
+    runnerSafety,
   });
 
   const summary = {
@@ -937,6 +998,8 @@ export async function liveRun(
     expectedPairCount,
     freshnessWindowMs: DEFAULT_FRESHNESS_WINDOW_MS,
     binaryAllowList: existsSync(BINARY_ALLOW_LIST_PATH) ? BINARY_ALLOW_LIST_PATH : null,
+    runnerCapabilityManifestPath: join(bundleDir, 'runner-capabilities.json'),
+    runnerSafety,
     bundleDir,
     success,
     claimEligibility,

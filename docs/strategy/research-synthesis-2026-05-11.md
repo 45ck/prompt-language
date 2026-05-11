@@ -1,22 +1,23 @@
 ---
-title: Research synthesis — what we should do now and why (2026-05-11)
-status: synthesis across internal program docs, external literature, competitive landscape; non-claim-eligible per program-status §3a
+title: Superseded research synthesis — historical context (2026-05-11)
+status: superseded historical synthesis; novelty claims refuted or narrowed; non-claim-eligible per program-status §3a
 operator: 45ck
 date: 2026-05-11
 based-on: 3 parallel research agents (internal docs sweep, external white papers, competitive landscape map)
 ---
 
-# Research synthesis — 2026-05-11
+# Superseded research synthesis — 2026-05-11
 
 <!-- cspell:ignore internalise lynchpins tinymd rpncalc Khattab Neur Tripwired standardises neighbours smolagents productised SLSA optimisation neighbour ICSE ICSME PLDI Portarium unrealised -->
 
 > **Supersession note (2026-05-12):** This synthesis is retained as historical
-> context, but its novelty and priority claims were revised by
+> context only. Its novelty and priority claims were revised by
 > [Research Synthesis Challenge and Defense](research-synthesis-challenge-and-defense-2026-05-11.md)
 > and [Current Plan After May 11 Evidence](current-plan-2026-05-12.md). In
 > particular, the `100/100` micro-task result is directional engineering signal,
 > not claim-grade novelty, and operator signer provisioning is no longer the main
-> blocker by itself.
+> blocker by itself. Do not quote the body below as current positioning without
+> the superseding challenge-and-defense note.
 
 After today's five engineering-readiness pilots, three parallel
 research agents pulled the camera back: internal docs the program

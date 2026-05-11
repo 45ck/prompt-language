@@ -24,7 +24,20 @@ function writeConfig(cwd, { issuePrefix = 'prompt-language', schemaVersion = '9'
   );
 }
 
+function writeJsonlRows(cwd, path, count) {
+  const lines = [];
+  for (let i = 0; i < count; i += 1) {
+    lines.push(JSON.stringify({ id: `${path}-${i}` }));
+  }
+  writeFileSync(join(cwd, path), lines.length > 0 ? `${lines.join('\n')}\n` : '');
+}
+
 function writeState(cwd, eventCount) {
+  writeJsonlRows(cwd, '.beads/backup/issues.jsonl', 0);
+  writeJsonlRows(cwd, '.beads/backup/events.jsonl', eventCount);
+  writeJsonlRows(cwd, '.beads/backup/comments.jsonl', 0);
+  writeJsonlRows(cwd, '.beads/backup/dependencies.jsonl', 0);
+  writeJsonlRows(cwd, '.beads/backup/labels.jsonl', 0);
   writeFileSync(
     join(cwd, '.beads', 'backup', 'backup_state.json'),
     JSON.stringify(
@@ -32,7 +45,7 @@ function writeState(cwd, eventCount) {
         last_dolt_commit: 'test',
         timestamp: '2026-04-24T00:00:00.000Z',
         counts: {
-          issues: 1,
+          issues: 0,
           events: eventCount,
           comments: 0,
           dependencies: 0,
@@ -116,7 +129,28 @@ test('fails when staged backup state decreases event count', () => {
     const result = runGuard(cwd);
 
     assert.equal(result.status, 1);
-    assert.match(result.stderr, /events count must not decrease \(10 -> 5\)/);
+    assert.match(
+      result.stderr,
+      /backup_state\.json counts\.events=5 but \.beads\/backup\/events\.jsonl has 10 JSONL rows/,
+    );
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});
+
+test('fails when staged backup issue count does not match issues export rows', () => {
+  const cwd = createRepo();
+  try {
+    writeJsonlRows(cwd, '.beads/backup/issues.jsonl', 1);
+    git(cwd, ['add', '.beads/backup/issues.jsonl']);
+
+    const result = runGuard(cwd);
+
+    assert.equal(result.status, 1);
+    assert.match(
+      result.stderr,
+      /backup_state\.json counts\.issues=0 but \.beads\/backup\/issues\.jsonl has 1 JSONL rows/,
+    );
   } finally {
     rmSync(cwd, { recursive: true, force: true });
   }

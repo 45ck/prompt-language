@@ -144,16 +144,16 @@ profile, so future evidence can count.
 ## WIP: tracked next
 
 These are tracked or planned Beads references that fit the current product
-direction and are easy for users to understand. Treat May 11 IDs as
-backup-derived until the primary Beads source-of-truth drift is fixed.
+direction and are easy for users to understand. May 11 IDs are now present in
+the primary no-db Beads store; the backup export remains a generated snapshot.
 
-| Feature                                            | Status            | Current workaround                                         | Beads issue            |
-| -------------------------------------------------- | ----------------- | ---------------------------------------------------------- | ---------------------- |
-| Claim-eligible PL runtime bundle                   | WIP, active       | Treat signed/verified bundles as recorded-only             | `prompt-language-j0je` |
-| Ollama runner action/text boundary                 | WIP, active       | Use action-protocol flows or hand-rolled experiment router | `prompt-language-5io5` |
-| E1 repeated-failure benchmark                      | WIP, tracked next | Use existing smoke/eval fixtures                           | `prompt-language-j64j` |
-| Flow registry and `.flow` run/validate conventions | WIP, tracked next | Store flow files manually and invoke them with `claude -p` | `prompt-language-yd9w` |
-| MCP server exposing flow state to other AI clients | WIP, tracked next | Inspect `.prompt-language/session-state.json` directly     | `prompt-language-folr` |
+| Feature                                            | Status            | Current workaround                                             | Beads issue            |
+| -------------------------------------------------- | ----------------- | -------------------------------------------------------------- | ---------------------- |
+| Claim-eligible PL runtime bundle                   | WIP, active       | Treat signed/verified bundles as recorded-only                 | `prompt-language-j0je` |
+| Ollama runner action/text boundary                 | WIP, active       | Use action-protocol flows or hand-rolled experiment router     | `prompt-language-5io5` |
+| E1 repeated-failure benchmark                      | WIP, tracked next | Use existing smoke/eval fixtures                               | `prompt-language-j64j` |
+| Flow registry and `.flow` run/validate conventions | Shipped baseline  | Use `run`, `list`, and `validate`; remaining work is UX polish | `prompt-language-yd9w` |
+| MCP server exposing flow state to other AI clients | WIP, tracked next | Inspect `.prompt-language/session-state.json` directly         | `prompt-language-folr` |
 
 Interpret the MCP row narrowly: the tracked surface is flow state inspection/control, not generic host-extension management.
 

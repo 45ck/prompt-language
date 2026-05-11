@@ -4,11 +4,19 @@ import { execFileSync } from 'node:child_process';
 
 const CONFIG_PATH = '.beads/backup/config.jsonl';
 const STATE_PATH = '.beads/backup/backup_state.json';
+const COUNTED_BACKUP_PATHS = {
+  issues: '.beads/backup/issues.jsonl',
+  events: '.beads/backup/events.jsonl',
+  comments: '.beads/backup/comments.jsonl',
+  dependencies: '.beads/backup/dependencies.jsonl',
+  labels: '.beads/backup/labels.jsonl',
+  config: CONFIG_PATH,
+};
 const EXPECTED_PREFIX = 'prompt-language';
 const MIN_SCHEMA_VERSION = 9;
 
 function git(args) {
-  return execFileSync('git', args, { encoding: 'utf8' });
+  return execFileSync('git', args, { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
 }
 
 function fail(message) {
@@ -72,6 +80,17 @@ function parseState(text, label) {
   }
 }
 
+function countJsonlLines(text, path) {
+  let count = 0;
+  for (const [index, rawLine] of text.split(/\r?\n/).entries()) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    parseJsonLine(line, `${path}:${index + 1}`);
+    count += 1;
+  }
+  return count;
+}
+
 function validateConfig(config) {
   const prefix = config.get('issue_prefix');
   if (prefix !== EXPECTED_PREFIX) {
@@ -83,6 +102,26 @@ function validateConfig(config) {
     fail(
       `schema_version must be >= ${MIN_SCHEMA_VERSION}, found "${config.get('schema_version')}"`,
     );
+  }
+}
+
+function validateBackupStateCounts(stateText) {
+  const state = parseState(stateText, STATE_PATH);
+  const counts = state?.counts;
+  if (!counts || typeof counts !== 'object') {
+    fail(`${STATE_PATH} missing counts object`);
+  }
+
+  for (const [key, path] of Object.entries(COUNTED_BACKUP_PATHS)) {
+    const expected = Number(counts[key]);
+    if (!Number.isInteger(expected) || expected < 0) {
+      fail(`${STATE_PATH} counts.${key} must be a non-negative integer`);
+    }
+    const { text } = readProtectedPath(path);
+    const actual = countJsonlLines(text, path);
+    if (actual !== expected) {
+      fail(`${STATE_PATH} counts.${key}=${expected} but ${path} has ${actual} JSONL rows`);
+    }
   }
 }
 
@@ -105,6 +144,8 @@ function validateEventCount(stagedStateText) {
 
 const protectedConfig = readProtectedPath(CONFIG_PATH);
 validateConfig(parseConfig(protectedConfig.text));
+
+validateBackupStateCounts(readProtectedPath(STATE_PATH).text);
 
 if (isPathStaged(STATE_PATH)) {
   validateEventCount(readGitText(`:${STATE_PATH}`));

@@ -94,22 +94,22 @@ scope. The dollar savings only apply at micro-task scope.
 
 ## Engineering-readiness verdict (final, evening-revised)
 
-| Decision                                         | Verdict               | One-line why                                                  |
-| ------------------------------------------------ | --------------------- | ------------------------------------------------------------- |
-| Ship `concord-microtask-router` skill            | **GO** ✅             | Done; backed by directional micro-task evidence               |
-| Add hybrid to harness-arena routes               | **GO** ✅             | Already running; HA-HR1 awaits supported-host auth            |
-| Use hybrid in personal projects                  | **CONDITIONAL GO** ⚠️ | Only for bounded micro-tasks with oracles                     |
-| Build Portarium ↔ PL integration                 | **NO** ❌             | Premature; trigger not met                                    |
-| Hybrid as primary engineering paradigm           | **NO** ❌             | n=5 doesn't change this; thesis H1-H6 still unmeasured        |
-| Hybrid for real-software builds (cost-justified) | **NO** ❌             | Never breaks even on dollars (rpncalc-confirmed)              |
-| Hybrid for client app-build work                 | **NO** ❌             | Same scaffolding-dominance problem                            |
-| Provision operator signer (clear §3a gate 5)     | **GO** ✅             | Orthogonal but unblocks claim-eligibility for everything else |
+| Decision                                               | Verdict               | One-line why                                                                   |
+| ------------------------------------------------------ | --------------------- | ------------------------------------------------------------------------------ |
+| Ship `concord-microtask-router` skill                  | **GO** ✅             | Done; backed by directional micro-task evidence                                |
+| Add hybrid to harness-arena routes                     | **GO** ✅             | Already running; HA-HR1 awaits supported-host auth                             |
+| Use hybrid in personal projects                        | **CONDITIONAL GO** ⚠️ | Only for bounded micro-tasks with oracles                                      |
+| Build Portarium ↔ PL integration                       | **NO** ❌             | Premature; trigger not met                                                     |
+| Hybrid as primary engineering paradigm                 | **NO** ❌             | n=5 doesn't change this; thesis H1-H6 still unmeasured                         |
+| Hybrid for real-software builds (cost-justified)       | **NO** ❌             | Never breaks even on dollars (rpncalc-confirmed)                               |
+| Hybrid for client app-build work                       | **NO** ❌             | Same scaffolding-dominance problem                                             |
+| Use provisioned signer in verifier-clean claim profile | **GO** ✅             | Orthogonal but required for claim-eligibility alongside runner-safety evidence |
 
 ## What materially changed today (vs. yesterday's state)
 
 1. **Scope-divided framing.** The hybrid hypothesis was previously
    discussed as a binary win/lose across all scopes. Five pilots
-   forced it into four explicit scopes (micro-task, real-software-
+   forced it into explicit scopes (micro-task, real-software-
    multistage, app-build-orchestration, harness-arena-route), each
    with its own evidence and verdict.
 
@@ -146,9 +146,10 @@ scope. The dollar savings only apply at micro-task scope.
 
 ## What did NOT happen today (the honest gap list)
 
-- **No operator signer provisioned.** §3a gate 5 is still the
-  empty-placeholder blocker for claim-eligibility. Highest-leverage
-  single piece of infrastructure work remaining.
+- **No verifier-clean claim-eligible bundle.** The operator signer was
+  provisioned after this session as `operator-45ck-2026-05`, but no run has
+  passed the full strict trace, attestation, reviewer, and runner-safety
+  profile.
 - **No generalisation test.** All 5 pilots' tasks were curated by
   this Claude session. Random sampling from a real npm package is
   the next experiment.
@@ -177,9 +178,10 @@ smaller than the evidence requires.
 
 In priority order:
 
-1. **Provision operator signer** in
-   `docs/security/trusted-signers.json` so §3a gate 5 clears for
-   all future runs. ~15-30 minutes if the key is ready.
+1. **Produce one verifier-clean claim-profile bundle** using the provisioned
+   `operator-45ck-2026-05` signer. This now requires runner capability evidence
+   and unsafe-runner rejection in addition to trace, state, nonce, freshness,
+   reviewer, and attestation checks.
 2. **Generalisation test** — sample 20-30 random small functions
    from a popular npm package (e.g. lodash, ramda) and run the
    micro-task pattern against them. Tests whether the directional

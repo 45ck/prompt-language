@@ -23,6 +23,11 @@
  *   --expected-binary-hashes <file> JSON file { binaryName: [sha256, ...] }.
  *                                   Reject shim_invocation_* entries whose
  *                                   binarySha256 is not in the allow-list.
+ *   --capability-manifest <path>    Runner capability manifest for claim-profile
+ *                                   verification.
+ *   --require-claim-profile         Reject unless the capability manifest is
+ *                                   claim-eligible and the trace carries safe
+ *                                   runner capability evidence.
  *   --attestation <path>            Detached attestation.json for the bundle.
  *   --require-attestation           Reject unless --attestation verifies.
  *   --trusted-signers <path>        Trusted signer registry. Defaults to
@@ -51,6 +56,8 @@
  *   j. (Optional) every shim binarySha256 is in --expected-binary-hashes.
  *   k. (Optional) detached attestation signature verifies, signer is trusted,
  *      non-revoked, and payload matches bundle artifacts.
+ *   l. (Optional) claim profile rejects missing/unsafe runner capability
+ *      manifest and trace evidence.
  */
 
 import { createHash } from 'node:crypto';
@@ -58,6 +65,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { canonicalJSON, hashEvent, hashState, verifyChain } from './provenance-schema.mjs';
+import { assessRunnerCapabilityManifest } from './runner-capability-manifest.mjs';
 import {
   buildBundlePayload,
   DEFAULT_REVOKED_SIGNERS_PATH,
@@ -162,6 +170,8 @@ function parseArgs(argv) {
     minEntries: null,
     expectedReviewerFamily: null,
     expectedBinaryHashes: null,
+    capabilityManifest: null,
+    requireClaimProfile: false,
     attestation: null,
     requireAttestation: false,
     trustedSigners: DEFAULT_TRUSTED_SIGNERS_PATH,
@@ -184,6 +194,8 @@ function parseArgs(argv) {
     else if (a === '--min-entries') out.minEntries = Number(argv[++i]);
     else if (a === '--expected-reviewer-family') out.expectedReviewerFamily = argv[++i];
     else if (a === '--expected-binary-hashes') out.expectedBinaryHashes = argv[++i];
+    else if (a === '--capability-manifest') out.capabilityManifest = argv[++i];
+    else if (a === '--require-claim-profile') out.requireClaimProfile = true;
     else if (a === '--attestation') out.attestation = argv[++i];
     else if (a === '--require-attestation') out.requireAttestation = true;
     else if (a === '--trusted-signers') out.trustedSigners = argv[++i];
@@ -205,6 +217,8 @@ function parseArgs(argv) {
           '  --min-entries <N>\n' +
           '  --expected-reviewer-family <family>\n' +
           '  --expected-binary-hashes <file>\n' +
+          '  --capability-manifest <file>\n' +
+          '  --require-claim-profile\n' +
           '  --attestation <file>\n' +
           '  --require-attestation\n' +
           `  --trusted-signers <file> (default ${DEFAULT_TRUSTED_SIGNERS_PATH})\n` +
@@ -391,6 +405,76 @@ function checkExpectedReviewerFamily(entries, expectedFamily) {
   return { ok: true, reviewerFamily: actual };
 }
 
+const SAFE_CLAIM_RUNNER_CAPABILITIES = Object.freeze({
+  externalProcess: true,
+  terminate: true,
+  cwdOverride: true,
+  modelPassThrough: true,
+  stateDirPolling: true,
+  inProcessExecution: false,
+});
+
+function getRunnerCapabilityEvidence(entry) {
+  const candidates = [
+    entry?.runnerCapabilities,
+    entry?.runner?.capabilities,
+    entry?.evidence?.runner?.capabilities,
+  ];
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === 'object' && !Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function checkClaimEligibleRunnerCapabilities(entries) {
+  const failures = [];
+  let observed = 0;
+  for (const entry of entries) {
+    const capabilities = getRunnerCapabilityEvidence(entry);
+    if (!capabilities) continue;
+    observed += 1;
+    for (const [name, expected] of Object.entries(SAFE_CLAIM_RUNNER_CAPABILITIES)) {
+      if (capabilities[name] !== expected) {
+        failures.push({
+          seq: entry.seq,
+          capability: name,
+          expected,
+          actual: capabilities[name],
+        });
+      }
+    }
+  }
+  if (observed === 0) {
+    return {
+      ok: false,
+      error:
+        'claim-runner-capabilities-missing: no runner capability evidence found in trace entries',
+      failures,
+    };
+  }
+  if (failures.length > 0) {
+    return {
+      ok: false,
+      error: `claim-runner-capabilities-unsafe: ${failures.length} unsafe runner capability value(s) found`,
+      failures,
+    };
+  }
+  return { ok: true, observed };
+}
+
+function loadCapabilityManifest(filePath) {
+  if (!existsSync(filePath)) {
+    throw new Error(`capability manifest file not found: ${filePath}`);
+  }
+  try {
+    return JSON.parse(readFileSync(filePath, 'utf8'));
+  } catch (err) {
+    throw new Error(`capability manifest is not valid JSON: ${err.message}`);
+  }
+}
+
 function loadBinaryAllowList(filePath) {
   if (!existsSync(filePath)) {
     throw new Error(`binary allow-list file not found: ${filePath}`);
@@ -533,6 +617,10 @@ async function main() {
     trustRootSha256: null,
     revokedRootSha256: null,
     devRoleAllowed: args.allowDevRole,
+    runnerCapabilityEvidenceCount: 0,
+    runnerCapabilityFailures: [],
+    capabilityManifest: null,
+    claimProfileRequired: args.requireClaimProfile,
   };
 
   let entries;
@@ -647,6 +735,43 @@ async function main() {
     } else {
       result.reviewerFamily = reviewerFamilyCheck.reviewerFamily;
     }
+  }
+
+  const claimEligibleVerification =
+    args.requireClaimProfile ||
+    (args.requireAttestation && args.requireRole !== null && !args.allowDevRole);
+  if (claimEligibleVerification) {
+    const runnerCapabilityCheck = checkClaimEligibleRunnerCapabilities(entries);
+    if (!runnerCapabilityCheck.ok) {
+      result.ok = false;
+      result.errors.push(runnerCapabilityCheck.error);
+      result.runnerCapabilityFailures = runnerCapabilityCheck.failures;
+    } else {
+      result.runnerCapabilityEvidenceCount = runnerCapabilityCheck.observed;
+    }
+  }
+
+  if (args.capabilityManifest) {
+    try {
+      const capabilityManifestPath = resolve(args.capabilityManifest);
+      const capabilityManifest = loadCapabilityManifest(capabilityManifestPath);
+      const safety = assessRunnerCapabilityManifest(capabilityManifest);
+      result.capabilityManifest = {
+        path: capabilityManifestPath,
+        sha256: sha256File(capabilityManifestPath),
+        safety,
+      };
+      if (args.requireClaimProfile && safety.blockers.length > 0) {
+        result.ok = false;
+        result.errors.push(`claim-capability-manifest-unsafe: ${safety.blockers.join(', ')}`);
+      }
+    } catch (err) {
+      result.ok = false;
+      result.errors.push(`claim-capability-manifest: ${err.message}`);
+    }
+  } else if (args.requireClaimProfile) {
+    result.ok = false;
+    result.errors.push('claim-capability-manifest-missing: --capability-manifest is required');
   }
 
   // AP-3: binary hash allow-list

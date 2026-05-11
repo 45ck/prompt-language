@@ -20,6 +20,7 @@ import {
 } from './run-meta-experiment.mjs';
 import { computeManifest } from './compute-manifest.mjs';
 import { diffManifests } from './manifest-diff.mjs';
+import { buildRunnerCapabilityManifest } from '../../eval/runner-capability-manifest.mjs';
 
 const HARNESS_SOURCE = readFileSync(new URL('./run-meta-experiment.mjs', import.meta.url), 'utf8');
 const META_HARNESS_ATTESTATION_SUPPORT =
@@ -35,6 +36,27 @@ function skipWithoutMetaHarnessAttestation(t) {
     return true;
   }
   return false;
+}
+
+function safeRunnerCapabilityManifest(bundleDir) {
+  return buildRunnerCapabilityManifest({
+    runnerId: 'claude',
+    adapter: 'test-safe-runner',
+    provider: 'anthropic',
+    command: 'claude',
+    argv: ['-p', '<flow-text>'],
+    readRoots: [bundleDir],
+    writeRoots: [bundleDir],
+    outputRoots: [bundleDir],
+    timeoutMs: 1000,
+    expectedPairCount: 1,
+    transportWitness: 'shim',
+    networkMode: 'frontier',
+    sandboxMode: 'workspace',
+    shellMode: 'allowlist',
+    allowedCommands: ['node --test'],
+    envAllowlist: ['PL_TRACE', 'PL_TRACE_STRICT', 'PL_RUN_ID', 'PL_TRACE_DIR'],
+  });
 }
 
 function createLiveDeps(bundleDir, overrides = {}) {
@@ -72,6 +94,7 @@ function createLiveDeps(bundleDir, overrides = {}) {
     writeRunNonceFn: () => ({ nonce, noncePath }),
     readRunNonceFn: () => nonce,
     deleteRunNonceFn: () => {},
+    buildRunnerCapabilityManifestFn: () => safeRunnerCapabilityManifest(bundleDir),
     runVerifyTraceFn: (_targetBundleDir, options) => {
       verifyCalls.push(options);
       return defaultVerify;
@@ -198,6 +221,7 @@ test('deriveClaimEligibility marks degraded preflight as ineligible even when th
     nonceMismatch: false,
     attestationPresent: true,
     attestationRole: 'operator',
+    runnerSafety: { blockers: [] },
   });
 
   assert.deepEqual(eligibility, {
@@ -217,6 +241,7 @@ test('deriveClaimEligibility requires an operator attestation once verification 
     nonceMismatch: false,
     attestationPresent: false,
     attestationRole: null,
+    runnerSafety: { blockers: [] },
   });
   assert.deepEqual(missing.blockers, ['attestation-missing']);
 
@@ -229,8 +254,41 @@ test('deriveClaimEligibility requires an operator attestation once verification 
     nonceMismatch: false,
     attestationPresent: true,
     attestationRole: 'ci',
+    runnerSafety: { blockers: [] },
   });
   assert.deepEqual(ciOnly.blockers, ['attestation-role-not-operator']);
+});
+
+test('deriveClaimEligibility rejects missing or unsafe runner capability manifests', () => {
+  const missing = deriveClaimEligibility({
+    bootstrapOverall: 'ready',
+    verifyOk: true,
+    ruleWeakening: false,
+    timedOut: false,
+    errorStr: null,
+    nonceMismatch: false,
+    attestationPresent: true,
+    attestationRole: 'operator',
+  });
+  assert.deepEqual(missing.blockers, ['runner-capability-manifest-missing']);
+
+  const unsafe = deriveClaimEligibility({
+    bootstrapOverall: 'ready',
+    verifyOk: true,
+    ruleWeakening: false,
+    timedOut: false,
+    errorStr: null,
+    nonceMismatch: false,
+    attestationPresent: true,
+    attestationRole: 'operator',
+    runnerSafety: {
+      blockers: ['runner-unsafe-permission-bypass', 'runner-recorded-only-posture'],
+    },
+  });
+  assert.deepEqual(unsafe.blockers, [
+    'runner-unsafe-permission-bypass',
+    'runner-recorded-only-posture',
+  ]);
 });
 
 test('liveRun short-circuits on blocked bootstrap preflight and persists the report', async () => {
@@ -389,6 +447,7 @@ test('liveRun auto-signs a bundle when attestation signer config is present', as
       writeRunNonceFn: () => ({ nonce: 'nonce-123', noncePath: join(bundleDir, 'nonce.txt') }),
       readRunNonceFn: () => 'nonce-123',
       deleteRunNonceFn: () => {},
+      buildRunnerCapabilityManifestFn: () => safeRunnerCapabilityManifest(bundleDir),
       runLiveFn: async ({ bundleDir: liveBundleDir, runId }) => {
         writeFileSync(
           join(liveBundleDir, 'manifest-pre.json'),
@@ -457,6 +516,7 @@ test('liveRun stays recorded-only when no attestation signer config is present',
       writeRunNonceFn: () => ({ nonce: 'nonce-123', noncePath: join(bundleDir, 'nonce.txt') }),
       readRunNonceFn: () => 'nonce-123',
       deleteRunNonceFn: () => {},
+      buildRunnerCapabilityManifestFn: () => safeRunnerCapabilityManifest(bundleDir),
       runLiveFn: async ({ bundleDir: liveBundleDir, runId }) => {
         writeFileSync(
           join(liveBundleDir, 'manifest-pre.json'),

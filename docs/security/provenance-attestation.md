@@ -34,9 +34,15 @@ AP-9 ship:
   are configured, and refuses `PL_META_SIGN=1` unless
   `PL_META_SIGNER_ID` is set and the registry entry's role is
   `operator` or `ci`; no `dev-local` default.
+- Claim-profile verification now also requires runner capability evidence. In
+  claim mode, `verify-trace.mjs` rejects missing or unsafe trace-side runner
+  capabilities, and `--require-claim-profile` requires a
+  `runner-capabilities.json` manifest whose posture is `claim-eligible`.
 
-The committed registries are still empty placeholders with no trusted
-production keys declared, so no checked-in bundle is claim-eligible yet.
+The committed trusted-signer registry now contains
+`operator-45ck-2026-05`, but no checked-in bundle is claim-eligible yet because
+the project still lacks a verifier-clean bundle under the full trace,
+attestation, reviewer, and runner-safety profile.
 This complements the G1 hardening flags (`--expected-run-id`,
 `--expected-pair-count`, `--expected-binary-hashes`) that landed after
 `docs/security/witness-chain-attacks.md`.
@@ -44,20 +50,20 @@ This complements the G1 hardening flags (`--expected-run-id`,
 Current repo state:
 
 - This document defines the AP-9 design and the shipped v1 surface.
-- [`trusted-signers.json`](trusted-signers.json) and
-  [`revoked-signers.json`](revoked-signers.json) now exist as committed
-  placeholders with **no trusted production keys declared**.
+- [`trusted-signers.json`](trusted-signers.json) contains
+  `operator-45ck-2026-05`; [`revoked-signers.json`](revoked-signers.json)
+  remains the committed revocation registry.
 - `scripts/eval/verify-trace.mjs` now implements `--attestation`,
   `--require-attestation`, `--trusted-signers`, `--revoked-signers`, and
-  `--require-role`.
+  `--require-role`, plus claim-profile runner capability checks.
 - `scripts/experiments/meta/attest.mjs` signs bundle payloads against a
   trusted signer registry entry.
 - `scripts/experiments/meta/run-meta-experiment.mjs` can now auto-sign bundles
   when signer material is configured, and it propagates attestation flags into
   the verifier pass. Without signer config, the run still records evidence but
   remains non-claim-eligible.
-- No checked-in bundle in this repo is operator-attested today, because
-  the checked-in registries are intentionally empty.
+- No checked-in bundle in this repo is claim-eligible today, because no bundle
+  has passed the full claim profile with safe runner capability evidence.
 
 ## 1. Why this layer is necessary
 

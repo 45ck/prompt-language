@@ -31,6 +31,9 @@ node scripts/experiments/meta/run-meta-experiment.mjs <flow-path> [--live]
    - Creates evidence bundle `experiments/meta-factory/results/<run-id>/`.
    - Records `manifest-pre.json` (SHA-256 of every file under `src/`, `scripts/`,
      plus protected top-level config files).
+   - Records `runner-capabilities.json` before launch. Current Claude live mode
+     uses `--dangerously-skip-permissions`, so it is recorded-only unless a
+     safer runner profile replaces that bypass.
 2. **Invocation**
    - Env: `PL_TRACE=1 PL_TRACE_STRICT=1 PL_RUN_ID=<id> PL_TRACE_DIR=<bundle>/.prompt-language`
    - PATH prefix: `scripts/eval/agent-shim/`
@@ -42,6 +45,8 @@ node scripts/experiments/meta/run-meta-experiment.mjs <flow-path> [--live]
      `--expected-run-id`, `--freshness-window-ms`, `--min-entries 1`,
      `--expected-pair-count <N>` when the flow implies at least one prompt/run pair,
      and `--expected-binary-hashes` when the local allow-list file exists.
+   - In required attestation mode, also passes `--capability-manifest` and
+     `--require-claim-profile`.
    - When attestation is configured, the same verifier pass also receives
      `--attestation`, `--trusted-signers`, `--revoked-signers`, and, in
      required mode, `--require-attestation --require-role <role>`.
@@ -68,6 +73,8 @@ node scripts/experiments/meta/run-meta-experiment.mjs <flow-path> [--live]
    - Cross-family reviewer evidence remains acceptable.
    - The verifier pass completed with a valid operator attestation under
      `--require-attestation --require-role operator`.
+   - Runner capability evidence is present in the trace and the manifest reports
+     `claimPosture: "claim-eligible"` with no unsafe permission bypass.
    - `docs/security/trusted-signers.json` contains a real non-placeholder operator signer.
 
 ## Evidence bundle
@@ -75,6 +82,7 @@ node scripts/experiments/meta/run-meta-experiment.mjs <flow-path> [--live]
 ```
 experiments/meta-factory/results/<run-id>/
   bootstrap-preflight.json
+  runner-capabilities.json
   manifest-pre.json
   manifest-post.json
   diff.json

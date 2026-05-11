@@ -17,17 +17,18 @@ witness pairing. Every feature in this document requires:
 
 Claim-eligible runs additionally require the G1 hardening flags
 (`--expected-run-id`, `--expected-pair-count`, `--expected-binary-hashes`)
-plus AP-9 attestation verification. `verify-trace.mjs` now accepts
-`--attestation`, `--require-attestation`, `--trusted-signers`,
-`--revoked-signers`, and `--require-role`, and
+plus AP-9 attestation verification and runner capability evidence.
+`verify-trace.mjs` now accepts `--attestation`, `--require-attestation`,
+`--trusted-signers`, `--revoked-signers`, `--require-role`,
+`--capability-manifest`, and `--require-claim-profile`, and
 `scripts/experiments/meta/attest.mjs` can sign a bundle. The meta-factory
 harness can now auto-sign and run an attestation-aware verifier pass when
 signer material is configured; otherwise it records an unattested verifier pass
 and marks the run non-claim-eligible. Manual post-run promotion with
-`attest.mjs` remains the fallback. The repo currently ships placeholder registry files at
-[`docs/security/trusted-signers.json`](security/trusted-signers.json) and
-[`docs/security/revoked-signers.json`](security/revoked-signers.json), but
-they are empty and do not establish a production trust root yet.
+`attest.mjs` remains the fallback. The repo currently ships
+`operator-45ck-2026-05` in
+[`docs/security/trusted-signers.json`](security/trusted-signers.json), but no
+bundle has passed the full claim profile yet.
 
 Current claim-eligibility status: **zero runs in the repo satisfy all
 gates today**. See `docs/strategy/program-status.md` §Verification state.
@@ -45,7 +46,9 @@ bounded proof because the parent and both children complete successfully.
 These bundles prove the PL runtime actually advanced state and recorded agent
 activity, but they do **not** by themselves make the runs claim-eligible.
 Verifier closure, preflight readiness, and attestation still decide whether a
-bundle can support a thesis-level claim.
+bundle can support a thesis-level claim. Current claim-profile verification also
+requires safe runner capability evidence; unsafe host permission bypasses remain
+recorded-only.
 
 ## Why this exists
 
@@ -149,10 +152,11 @@ Flags:
 
 The attestation workflow is described in
 [`docs/security/provenance-attestation.md`](security/provenance-attestation.md).
-The verifier/signing surface is now present; real operator trust still
-depends on provisioning non-placeholder signer entries. The harness can
-perform the attested verifier pass in-band when signer material is configured,
-and operators can still rerun promotion manually against `attestation.json`.
+The verifier/signing surface is now present, and the operator signer is
+provisioned. The harness can perform the attested verifier pass in-band when
+signer material is configured, and operators can still rerun promotion manually
+against `attestation.json`. Claim-profile promotion also needs
+`runner-capabilities.json` plus trace-side runner capability evidence.
 
 Exit codes: `0` pass, `1` verification failure, `2` argument error.
 
@@ -189,13 +193,14 @@ three things together:
 4. If the bundle is being promoted beyond recorded evidence, sign it with
    signer material configured for the harness or sign it manually with
    `scripts/experiments/meta/attest.mjs`, then ensure `verify-trace` runs with
-   `--attestation ... --require-attestation --require-role operator`.
+   `--attestation ... --require-attestation --require-role operator
+--capability-manifest ... --require-claim-profile`.
 
 Runs that pass the stock harness verifier are recorded evidence and strong
 dev-time confidence signals. They are still **not** publishable or
-claim-eligible thesis evidence until a real operator signer is provisioned,
-the bundle is operator-attested, and an attestation-aware verifier pass
-succeeds. Runs that do not pass are discarded, not patched.
+claim-eligible thesis evidence until the bundle is operator-attested, runner
+capabilities are safe and explicit, and a claim-profile verifier pass succeeds.
+Runs that do not pass are discarded, not patched.
 
 ## Hardening flags (v2)
 
@@ -214,6 +219,8 @@ attack-path analysis. The patches in this iteration are all inside
 | `--expected-pair-count <N>`       | Rejects if the number of runtime/shim pairs differs. Closes the truncation attack.                            | `--expected-pair-count 3`                                                   |
 | `--min-entries <N>`               | Rejects if total trace entry count is below `N`. Catches the fully-empty-trace variant.                       | `--min-entries 1`                                                           |
 | `--expected-binary-hashes <file>` | JSON file mapping binary name to SHA-256 allow-list. Rejects any `shim_invocation_*` with an unpinned binary. | `--expected-binary-hashes scripts/experiments/meta/.binary-allow-list.json` |
+| `--capability-manifest <file>`    | Reads `runner-capabilities.json` so claim-profile verification can reject unsafe runner posture.              | `--capability-manifest bundle/runner-capabilities.json`                     |
+| `--require-claim-profile`         | Requires safe runner capability evidence and a safe capability manifest; unsafe bypasses fail closed.         | `--require-claim-profile`                                                   |
 
 ### Why this set
 

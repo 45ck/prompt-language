@@ -1,6 +1,6 @@
 ---
 title: Concord/VHO engineering-readiness verdict (2026-05-11)
-status: synthesis across four same-day pilots; non-claim-eligible per program-status §3a
+status: synthesis across five same-day pilots; non-claim-eligible per program-status §3a
 operator: 45ck
 date: 2026-05-11
 ---
@@ -23,17 +23,17 @@ evidence?
 
 ## TL;DR (revised 2026-05-11 night, post-adversarial review)
 
-| Engineering decision                                   | Verdict                                                                                                                                    |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Ship a Claude Code skill for narrow micro-task routing | **GO** (with the boundary that even at micro-task scope, oracle weakness inflates pass rates — see "honest revised" finding below)         |
-| Add hybrid routing to existing harness-arena pipelines | **GO**                                                                                                                                     |
-| Use hybrid routing in personal/internal projects       | **CONDITIONAL GO** (only if work is bounded micro-tasks with oracles, and oracles are written by a different author than the prompts)      |
-| Build the Portarium ↔ PL integration contract          | **NO** (premature; trigger not met)                                                                                                        |
-| Promote hybrid as a primary engineering paradigm       | **NO** (evidence too narrow)                                                                                                               |
-| Claim hybrid is novel research finding                 | **NO** (refuted by adversarial review — EQTY/Hybrid LLM/HumanLayer scoop major claims; published baselines make 100/100 the expected mode) |
-| Use hybrid for real-software builds (cost-justified)   | **NO** (revised — never breaks even at any N on dollar grounds; only justified by privacy/latency/quota)                                   |
-| Use hybrid for client app-build work                   | **NO** (loses tokens at app-build scope)                                                                                                   |
-| Provision a real operator signer to clear §3a gate 5   | **OPTIONAL** (downgraded from GO — bookkeeping; doesn't advance any thesis hypothesis directly)                                            |
+| Engineering decision                                     | Verdict                                                                                                                                    |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Ship a Claude Code skill for narrow micro-task routing   | **GO** (with the boundary that even at micro-task scope, oracle weakness inflates pass rates — see "honest revised" finding below)         |
+| Add hybrid routing to existing harness-arena pipelines   | **GO**                                                                                                                                     |
+| Use hybrid routing in personal/internal projects         | **CONDITIONAL GO** (only if work is bounded micro-tasks with oracles, and oracles are written by a different author than the prompts)      |
+| Build the Portarium ↔ PL integration contract            | **NO** (premature; trigger not met)                                                                                                        |
+| Promote hybrid as a primary engineering paradigm         | **NO** (evidence too narrow)                                                                                                               |
+| Claim hybrid is novel research finding                   | **NO** (refuted by adversarial review — EQTY/Hybrid LLM/HumanLayer scoop major claims; published baselines make 100/100 the expected mode) |
+| Use hybrid for real-software builds (cost-justified)     | **NO** (revised — never breaks even at any N on dollar grounds; only justified by privacy/latency/quota)                                   |
+| Use hybrid for client app-build work                     | **NO** (loses tokens at app-build scope)                                                                                                   |
+| Keep operator signer provisioned; clear verifier profile | **GO** (signer exists; remaining work is a verifier-clean claim-profile bundle)                                                            |
 
 ## The five same-day pilots (corrected)
 
@@ -111,7 +111,7 @@ cost-positive or cost-negative.
    the skill doc; not measured in this session.
 
 6. **Claim-eligibility** per program-status §3a. Zero runs across
-   all four pilots satisfy the gates (strict trace, ready preflight,
+   all five pilots satisfy the gates (strict trace, ready preflight,
    attestation, cross-family reviewer, trusted signer, and the newer
    runner-safety profile requirement). The operator signer is now
    provisioned, but no verifier-clean signed bundle exists. This is
@@ -194,7 +194,7 @@ What this means: don't pitch hybrid for client work on cost
 grounds. The pattern is only justified by non-cost benefits
 (privacy, latency, quota independence) for this scope.
 
-### 7. Provision a real operator signer — **GO** (orthogonal)
+### 7. Operator signer provisioned; clear the verifier profile — **GO** (orthogonal)
 
 The operator signer has since been provisioned in
 `docs/security/trusted-signers.json`. That cleared only one procedural
@@ -228,17 +228,19 @@ The shipped skill (`concord-microtask-router`) is the right
 artifact to embody today's evidence. Anything bigger needs more
 runs.
 
-The single highest-leverage engineering action this week, independent
-of the hybrid question: provision an operator signer in
-`docs/security/trusted-signers.json`. That unblocks claim-eligibility
-for everything else.
+The single highest-leverage engineering action this week, independent of the
+hybrid question: produce one tiny verifier-clean claim-profile bundle using the
+provisioned operator signer. That now includes strict trace/state/nonce/
+freshness checks, real reviewer proof, runner capability evidence, and
+unsafe-runner rejection.
 
 ## Cross-references
 
-- The four pilot reports:
+- The five pilot reports:
   - [`experiments/concord-vho-pilot-todo-cli/2026-05-11/results/report.md`](../../experiments/concord-vho-pilot-todo-cli/2026-05-11/results/report.md)
   - [`experiments/concord-vho-microtask-cost/2026-05-11/results/report.md`](../../experiments/concord-vho-microtask-cost/2026-05-11/results/report.md)
   - [`experiments/concord-vho-realsoftware-tinymd/2026-05-11/results/report.md`](../../experiments/concord-vho-realsoftware-tinymd/2026-05-11/results/report.md)
+  - [`experiments/concord-vho-realsoftware-rpncalc/2026-05-11/results/report.md`](../../experiments/concord-vho-realsoftware-rpncalc/2026-05-11/results/report.md)
   - The local-format-fit smoke at [`experiments/local-format-fit-smoke/2026-05-11/README.md`](../../experiments/local-format-fit-smoke/2026-05-11/README.md)
 - Strategy anchors:
   - [`docs/strategy/thesis.md`](thesis.md) — full thesis + kill rule

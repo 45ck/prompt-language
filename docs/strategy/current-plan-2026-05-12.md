@@ -170,10 +170,12 @@ Work:
 
 ## Proposed beads
 
-The normal `bd` CLI is currently unreliable in this workspace: Linux `bd` cannot
-find its native binary, and `.beads/issues.jsonl` is older than
-`.beads/backup/issues.jsonl`. Treat the table below as the bead creation/update
-plan until Beads sync is fixed.
+The checked-in no-db source `.beads/issues.jsonl` now includes the May 11 beads
+needed by this plan. The normal Windows-installed `bd` shim is still unreliable
+from WSL, and `.beads/backup/issues.jsonl` remains a generated backup snapshot,
+not the source of truth for this pass. Treat the table below as the
+bead creation/update plan until the Linux `bd` command works against the chosen
+backend.
 
 | Priority | Bead                                      | Reuse/create                                     | Acceptance criteria                                                                                                                                                                              |
 | -------- | ----------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

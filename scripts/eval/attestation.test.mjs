@@ -15,6 +15,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalJSON, hashEvent, hashState } from './provenance-schema.mjs';
+import { buildRunnerCapabilityManifest } from './runner-capability-manifest.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VERIFIER = join(HERE, 'verify-trace.mjs');
@@ -29,6 +30,14 @@ const SUPPORTS_AP9 =
   /--require-role/.test(HELP_OUTPUT.stdout);
 const AP9_PENDING_REASON =
   'AP-9 attestation flags are unavailable on this branch; skip the attestation suite until verify-trace exposes them.';
+const SAFE_CLAIM_RUNNER_CAPABILITIES = Object.freeze({
+  externalProcess: true,
+  terminate: true,
+  cwdOverride: true,
+  modelPassThrough: true,
+  stateDirPolling: true,
+  inProcessExecution: false,
+});
 
 function maybeSkipAttestation(t) {
   if (!SUPPORTS_AP9) {
@@ -59,10 +68,14 @@ function buildEntry(runId, seq, prevHash, overrides) {
   return base;
 }
 
-function makeValidChain(runId, stateObj) {
+function makeValidChain(runId, stateObj, options = {}) {
   const argv = ['-p', 'attestation coverage'];
   const stdinSha256 = 'a'.repeat(64);
   const stateAfterHash = hashState(stateObj);
+  const runnerCapabilities =
+    options.runnerCapabilities === undefined
+      ? SAFE_CLAIM_RUNNER_CAPABILITIES
+      : options.runnerCapabilities;
   const e0 = buildEntry(runId, 0, null, {
     event: 'shim_invocation_begin',
     source: 'shim',
@@ -79,6 +92,7 @@ function makeValidChain(runId, stateObj) {
     stdinSha256,
     nodeId: 'n-root',
     nodeKind: 'prompt',
+    runnerCapabilities: runnerCapabilities ?? undefined,
   });
   const e2 = buildEntry(runId, 2, e1.eventHash, {
     event: 'node_advance',
@@ -142,7 +156,9 @@ function createAttestationFixture(label, options = {}) {
     variables: { status: 'ok' },
     cursor: { nodeId: 'n-review' },
   };
-  const entries = makeValidChain(runId, state);
+  const entries = makeValidChain(runId, state, {
+    runnerCapabilities: options.runnerCapabilities,
+  });
   const manifest = {
     'package.json': sha256Hex('{"name":"prompt-language"}'),
     'scripts/eval/verify-trace.mjs': sha256Hex(readFileSync(VERIFIER)),
@@ -500,6 +516,153 @@ test('AP-9 passing path: valid signed operator bundle passes verification', (t) 
     combinedOutput(result),
     /attested-by=.*role=operator|verify-trace OK/i,
     `expected attested success output; out=${combinedOutput(result)}`,
+  );
+});
+
+test('claim-eligible verification rejects missing runner capability evidence', (t) => {
+  if (maybeSkipAttestation(t)) return;
+  const fixture = createAttestationFixture('claim-missing-capabilities', {
+    runnerCapabilities: null,
+  });
+
+  const result = runVerifier([
+    '--trace',
+    fixture.tracePath,
+    '--state',
+    fixture.statePath,
+    '--attestation',
+    fixture.attestationPath,
+    '--trusted-signers',
+    fixture.trustedSignersPath,
+    '--revoked-signers',
+    fixture.revokedSignersPath,
+    '--require-attestation',
+    '--require-role',
+    'operator',
+  ]);
+
+  assert.notEqual(result.status, 0, 'expected non-zero exit for missing runner capabilities');
+  assert.match(
+    combinedOutput(result),
+    /claim-runner-capabilities-missing/i,
+    `expected missing runner capability diagnostic; out=${combinedOutput(result)}`,
+  );
+});
+
+test('claim-eligible verification rejects unsafe runner capability evidence', (t) => {
+  if (maybeSkipAttestation(t)) return;
+  const fixture = createAttestationFixture('claim-unsafe-capabilities', {
+    runnerCapabilities: {
+      ...SAFE_CLAIM_RUNNER_CAPABILITIES,
+      inProcessExecution: true,
+    },
+  });
+
+  const result = runVerifier([
+    '--trace',
+    fixture.tracePath,
+    '--state',
+    fixture.statePath,
+    '--attestation',
+    fixture.attestationPath,
+    '--trusted-signers',
+    fixture.trustedSignersPath,
+    '--revoked-signers',
+    fixture.revokedSignersPath,
+    '--require-attestation',
+    '--require-role',
+    'operator',
+  ]);
+
+  assert.notEqual(result.status, 0, 'expected non-zero exit for unsafe runner capabilities');
+  assert.match(
+    combinedOutput(result),
+    /claim-runner-capabilities-unsafe/i,
+    `expected unsafe runner capability diagnostic; out=${combinedOutput(result)}`,
+  );
+});
+
+test('claim profile rejects missing capability manifest flag', (t) => {
+  if (maybeSkipAttestation(t)) return;
+  const fixture = createAttestationFixture('claim-missing-manifest');
+
+  const result = runVerifier([
+    '--trace',
+    fixture.tracePath,
+    '--state',
+    fixture.statePath,
+    '--attestation',
+    fixture.attestationPath,
+    '--trusted-signers',
+    fixture.trustedSignersPath,
+    '--revoked-signers',
+    fixture.revokedSignersPath,
+    '--require-attestation',
+    '--require-role',
+    'operator',
+    '--require-claim-profile',
+  ]);
+
+  assert.notEqual(result.status, 0, 'expected non-zero exit for missing manifest');
+  assert.match(
+    combinedOutput(result),
+    /claim-capability-manifest-missing/i,
+    `expected missing manifest diagnostic; out=${combinedOutput(result)}`,
+  );
+});
+
+test('claim profile rejects unsafe capability manifest posture', (t) => {
+  if (maybeSkipAttestation(t)) return;
+  const fixture = createAttestationFixture('claim-unsafe-manifest');
+  const manifestPath = join(fixture.dir, 'runner-capabilities.json');
+  writeFileSync(
+    manifestPath,
+    `${JSON.stringify(
+      buildRunnerCapabilityManifest({
+        runnerId: 'claude',
+        adapter: 'test-unsafe-runner',
+        provider: 'anthropic',
+        command: 'claude',
+        argv: ['-p', '--dangerously-skip-permissions', '<flow-text>'],
+        readRoots: [fixture.dir],
+        writeRoots: [fixture.dir],
+        outputRoots: [fixture.dir],
+        timeoutMs: 1000,
+        expectedPairCount: 1,
+        transportWitness: 'shim',
+        networkMode: 'frontier',
+        sandboxMode: 'workspace',
+        shellMode: 'allowlist',
+      }),
+      null,
+      2,
+    )}\n`,
+  );
+
+  const result = runVerifier([
+    '--trace',
+    fixture.tracePath,
+    '--state',
+    fixture.statePath,
+    '--attestation',
+    fixture.attestationPath,
+    '--trusted-signers',
+    fixture.trustedSignersPath,
+    '--revoked-signers',
+    fixture.revokedSignersPath,
+    '--require-attestation',
+    '--require-role',
+    'operator',
+    '--capability-manifest',
+    manifestPath,
+    '--require-claim-profile',
+  ]);
+
+  assert.notEqual(result.status, 0, 'expected non-zero exit for unsafe manifest');
+  assert.match(
+    combinedOutput(result),
+    /claim-capability-manifest-unsafe/i,
+    `expected unsafe manifest diagnostic; out=${combinedOutput(result)}`,
   );
 });
 

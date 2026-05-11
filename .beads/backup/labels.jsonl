@@ -218,6 +218,9 @@
 {"issue_id":"prompt-language-50m6.9","label":"initiative:artifacts"}
 {"issue_id":"prompt-language-50m6.9","label":"type:research"}
 {"issue_id":"prompt-language-9xmr","label":"quick-win"}
+{"issue_id":"prompt-language-f5kg","label":"concord-vho"}
+{"issue_id":"prompt-language-f5kg","label":"security"}
+{"issue_id":"prompt-language-f5kg","label":"thesis-blocker"}
 {"issue_id":"prompt-language-f7jp","label":"area:docs"}
 {"issue_id":"prompt-language-f7jp","label":"area:runtime"}
 {"issue_id":"prompt-language-f7jp","label":"area:tooling"}

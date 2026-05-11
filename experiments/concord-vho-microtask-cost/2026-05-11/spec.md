@@ -9,7 +9,7 @@ date: 2026-05-11
 # Pilot v2: micro-task token-cost comparison
 
 Direct response to the dual-reviewer audit of the 2026-05-11 TODO CLI
-pilot, which found the hybrid pattern was 2-3× *more* expensive than
+pilot, which found the hybrid pattern was 2-3× _more_ expensive than
 frontier-only at app-build scale due to scaffolding-cost dominance.
 This pilot tests the same hypothesis at **micro-task scope**:
 isolated single-function asks where there is no scaffolding cost to
@@ -62,18 +62,18 @@ running:
 10 tasks — 4 novel-spec, 6 utility — all single-function, all with
 deterministic oracles including seeded random inputs:
 
-| ID                  | Category    | Signature                              | Why included                                     |
-| ------------------- | ----------- | -------------------------------------- | ------------------------------------------------ |
-| applyDiscountTier   | novel-spec  | `(cartTotal, tiers)`                   | Tiered business rule, not a canonical algorithm  |
-| validateConfig      | novel-spec  | `(config, schema)`                     | Schema-driven validation with required + types   |
-| formatLogEntry      | novel-spec  | `(event, ctx)`                         | Custom log line format with conditional fields   |
-| mergeAcl            | novel-spec  | `(rules)`                              | Returns a Map<role, Set<perm>> — uncommon shape  |
-| chunk               | utility     | `(arr, size)`                          | Lodash-canonical, oracle has random-array tests  |
-| slugify             | utility     | `(title)`                              | Common, oracle includes non-ASCII inputs         |
-| groupBy             | utility     | `(items, keyFn)`                       | Lodash-canonical                                 |
-| parseQuery          | utility     | `(qs)`                                 | URL parsing with edge cases                      |
-| partition           | utility     | `(arr, pred)`                          | Lodash-canonical                                 |
-| flatten             | utility     | `(arr)`                                | Includes mutation check                          |
+| ID                | Category   | Signature            | Why included                                    |
+| ----------------- | ---------- | -------------------- | ----------------------------------------------- |
+| applyDiscountTier | novel-spec | `(cartTotal, tiers)` | Tiered business rule, not a canonical algorithm |
+| validateConfig    | novel-spec | `(config, schema)`   | Schema-driven validation with required + types  |
+| formatLogEntry    | novel-spec | `(event, ctx)`       | Custom log line format with conditional fields  |
+| mergeAcl          | novel-spec | `(rules)`            | Returns a Map<role, Set<perm>> — uncommon shape |
+| chunk             | utility    | `(arr, size)`        | Lodash-canonical, oracle has random-array tests |
+| slugify           | utility    | `(title)`            | Common, oracle includes non-ASCII inputs        |
+| groupBy           | utility    | `(items, keyFn)`     | Lodash-canonical                                |
+| parseQuery        | utility    | `(qs)`               | URL parsing with edge cases                     |
+| partition         | utility    | `(arr, pred)`        | Lodash-canonical                                |
+| flatten           | utility    | `(arr)`              | Includes mutation check                         |
 
 ## Arms
 
@@ -101,6 +101,7 @@ deterministic oracles including seeded random inputs:
 ## Token-economy formula
 
 Per task:
+
 ```
 tokensSavedByHybrid = (Arm A first-attempt pass)
                        ? armB.tokens
@@ -109,6 +110,7 @@ tokensWastedByHybrid = (Arm A first-attempt fail) ? armB.tokens : 0
 ```
 
 Portfolio:
+
 ```
 netFrontierTokenSavings = sum(tokensSavedByHybrid)
                          - sum(tokensWastedByHybrid)

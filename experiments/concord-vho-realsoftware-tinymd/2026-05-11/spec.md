@@ -29,16 +29,16 @@ surface is large enough to amortise scaffolding cost.
 Deliberately tiny. Sufficient to exercise multi-stage parsing, not
 ambitious enough to require deep markdown-spec compliance.
 
-| Feature        | Syntax                | Output                           |
-| -------------- | --------------------- | -------------------------------- |
-| Heading        | `# h1` ... `###### h6` | `<h1>h1</h1>` ... `<h6>h6</h6>`  |
-| Paragraph      | plain line(s)         | `<p>...</p>`                     |
-| Bold           | `**text**`            | `<strong>text</strong>`          |
-| Italic         | `*text*`              | `<em>text</em>`                  |
-| Inline code    | `` `text` ``          | `<code>text</code>`              |
-| Code block     | ` ``` ... ``` `       | `<pre><code>...</code></pre>`    |
-| Unordered list | `- item`              | `<ul><li>item</li>...</ul>`      |
-| Link           | `[text](url)`         | `<a href="url">text</a>`         |
+| Feature        | Syntax                 | Output                          |
+| -------------- | ---------------------- | ------------------------------- |
+| Heading        | `# h1` ... `###### h6` | `<h1>h1</h1>` ... `<h6>h6</h6>` |
+| Paragraph      | plain line(s)          | `<p>...</p>`                    |
+| Bold           | `**text**`             | `<strong>text</strong>`         |
+| Italic         | `*text*`               | `<em>text</em>`                 |
+| Inline code    | `` `text` ``           | `<code>text</code>`             |
+| Code block     | ` ``` ... ``` `        | `<pre><code>...</code></pre>`   |
+| Unordered list | `- item`               | `<ul><li>item</li>...</ul>`     |
+| Link           | `[text](url)`          | `<a href="url">text</a>`        |
 
 Out of scope: ordered lists, tables, blockquotes, images, HTML
 embedding, autolinks, ATX heading trailing #, setext headings,
@@ -51,17 +51,17 @@ All functions live in a single ESM module `tinymd.mjs`. The frontier
 writes the integration (`convert`) plus shared types; the router
 fills in each helper function's body via local model.
 
-| ID  | Function                  | Routable? | Why                                           |
-| --- | ------------------------- | --------- | --------------------------------------------- |
-| F1  | `escapeHtml(text)`        | Yes       | Pure, well-specified, deterministic           |
-| F2  | `parseHeading(line)`      | Yes       | Pattern match, returns `{level, text}` or null |
-| F3  | `parseListItem(line)`     | Yes       | Pattern match, returns text or null           |
-| F4  | `isFenceLine(line)`       | Yes       | Boolean classifier                            |
-| F5  | `parseInline(text)`       | Yes       | Recursive inline-format substitution          |
-| F6  | `tokenize(markdown)`      | Yes       | Block-level lexer                             |
-| F7  | `renderToken(token)`      | Yes       | Token → HTML string                           |
-| F8  | `groupListTokens(tokens)` | Yes       | Wrap consecutive list-item tokens in `<ul>`   |
-| F9  | `convert(markdown)`       | **No — frontier** | Orchestrator; ties all pieces together |
+| ID  | Function                  | Routable?         | Why                                            |
+| --- | ------------------------- | ----------------- | ---------------------------------------------- |
+| F1  | `escapeHtml(text)`        | Yes               | Pure, well-specified, deterministic            |
+| F2  | `parseHeading(line)`      | Yes               | Pattern match, returns `{level, text}` or null |
+| F3  | `parseListItem(line)`     | Yes               | Pattern match, returns text or null            |
+| F4  | `isFenceLine(line)`       | Yes               | Boolean classifier                             |
+| F5  | `parseInline(text)`       | Yes               | Recursive inline-format substitution           |
+| F6  | `tokenize(markdown)`      | Yes               | Block-level lexer                              |
+| F7  | `renderToken(token)`      | Yes               | Token → HTML string                            |
+| F8  | `groupListTokens(tokens)` | Yes               | Wrap consecutive list-item tokens in `<ul>`    |
+| F9  | `convert(markdown)`       | **No — frontier** | Orchestrator; ties all pieces together         |
 
 8 routable + 1 frontier-owned integration = comparable scale to a
 small npm utility.
@@ -69,6 +69,7 @@ small npm utility.
 ## Two arms
 
 **Arm A (hybrid):** Frontier writes:
+
 - `spec.md`, `tasks.json` (this artifact)
 - `arm-a-hybrid/workspace/tinymd.mjs` skeleton with stubs for F1-F8
   and complete impl of F9 (`convert`)
@@ -138,6 +139,7 @@ that counts.
 might actually use?" at intermediate scope.
 
 **Is NOT:**
+
 - Production-quality markdown parser (deliberately limited subset)
 - Claim-eligible per §3a (still no signed trace, no cross-family review)
 - Generalisable to multi-file/multi-package projects (one file)

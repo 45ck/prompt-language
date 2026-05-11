@@ -12,9 +12,7 @@
           "passed": 10,
           "total": 11,
           "oraclePass": false,
-          "failures": [
-            "fn([\".5\"]) = true expected false"
-          ]
+          "failures": ["fn([\".5\"]) = true expected false"]
         },
         "wallMs": 1535,
         "localEvalTokens": 33,
@@ -159,10 +157,7 @@
   "summary": {
     "totalRoutableTasks": 7,
     "localOnly": 5,
-    "frontierRequired": [
-      "isNumber",
-      "evaluate"
-    ],
+    "frontierRequired": ["isNumber", "evaluate"],
     "totalLocalEvalTokens": 424,
     "totalLocalGeneratedTiktokenTokens": 417,
     "armB_total_tiktoken_tokens": 453

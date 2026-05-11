@@ -7,10 +7,17 @@
 //   WORKSPACE_NAME — base name (e.g. 'tinymd' or 'rpncalc'); default
 //                    auto-detected as the only .mjs in arm-a-hybrid/workspace/
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, copyFileSync } from 'node:fs';
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  readdirSync,
+  copyFileSync,
+} from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { spawnSync } from 'node:child_process';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -21,9 +28,15 @@ const RESULTS_DIR = join(HERE, 'results');
 const ORACLE_TASK = join(HERE, 'oracle', 'run-task.mjs');
 const ORACLE_INTEGRATION = join(HERE, 'oracle', 'integration.test.mjs');
 
-const WORKSPACE_NAME = process.env.WORKSPACE_NAME ||
-  readdirSync(WORKSPACE_DIR).find((f) => f.endsWith('.mjs'))?.replace(/\.mjs$/, '');
-if (!WORKSPACE_NAME) { console.error('Could not determine WORKSPACE_NAME'); process.exit(2); }
+const WORKSPACE_NAME =
+  process.env.WORKSPACE_NAME ||
+  readdirSync(WORKSPACE_DIR)
+    .find((f) => f.endsWith('.mjs'))
+    ?.replace(/\.mjs$/, '');
+if (!WORKSPACE_NAME) {
+  console.error('Could not determine WORKSPACE_NAME');
+  process.exit(2);
+}
 
 const WORKSPACE_PATH = join(WORKSPACE_DIR, `${WORKSPACE_NAME}.mjs`);
 const ARM_B_PATH = join(ARM_B_DIR, `${WORKSPACE_NAME}.mjs`);
@@ -41,9 +54,9 @@ if (!existsSync(SKELETON_BACKUP)) {
 } else {
   copyFileSync(SKELETON_BACKUP, WORKSPACE_PATH);
 }
-const initialSkeleton = readFileSync(WORKSPACE_PATH, 'utf8');
-
-const PROMPT_TEMPLATE = (task) => `Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation, no extra exports.
+const PROMPT_TEMPLATE = (
+  task,
+) => `Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation, no extra exports.
 
 ${task.signature}: ${task.description}`;
 
@@ -52,7 +65,12 @@ async function generate(prompt) {
   const res = await fetch(`${ENDPOINT}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model: MODEL, prompt, stream: false, options: { num_predict: 1024, temperature: 0, seed: 1234 } }),
+    body: JSON.stringify({
+      model: MODEL,
+      prompt,
+      stream: false,
+      options: { num_predict: 1024, temperature: 0, seed: 1234 },
+    }),
   });
   const wallMs = performance.now() - t0;
   if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
@@ -83,7 +101,10 @@ function replaceStub(source, fnName, newImpl) {
 function tokenCount(text) {
   const r = spawnSync(
     'python',
-    ['-c', `import sys, tiktoken; enc=tiktoken.get_encoding('cl100k_base'); print(len(enc.encode(sys.stdin.read())))`],
+    [
+      '-c',
+      `import sys, tiktoken; enc=tiktoken.get_encoding('cl100k_base'); print(len(enc.encode(sys.stdin.read())))`,
+    ],
     { input: text, encoding: 'utf8' },
   );
   if (r.status === 0) return parseInt(r.stdout.trim(), 10);
@@ -91,24 +112,48 @@ function tokenCount(text) {
 }
 
 function runOracleTask(taskId, workspacePath) {
-  const r = spawnSync('node', [ORACLE_TASK, taskId, workspacePath], { encoding: 'utf8', timeout: 30_000 });
+  const r = spawnSync('node', [ORACLE_TASK, taskId, workspacePath], {
+    encoding: 'utf8',
+    timeout: 30_000,
+  });
   let parsed = null;
-  try { parsed = JSON.parse(r.stdout); } catch {}
+  try {
+    parsed = JSON.parse(r.stdout);
+  } catch {
+    parsed = null;
+  }
   return { exitCode: r.status, pass: r.status === 0, parsed, stderr: (r.stderr || '').slice(-400) };
 }
 
 function runIntegration(workspacePath) {
-  const r = spawnSync('node', [ORACLE_INTEGRATION, workspacePath], { encoding: 'utf8', timeout: 30_000 });
+  const r = spawnSync('node', [ORACLE_INTEGRATION, workspacePath], {
+    encoding: 'utf8',
+    timeout: 30_000,
+  });
   let parsed = null;
-  try { parsed = JSON.parse(r.stdout); } catch {}
-  return { exitCode: r.status, pass: r.status === 0, parsed, stderr: (r.stderr || '').slice(-1500) };
+  try {
+    parsed = JSON.parse(r.stdout);
+  } catch {
+    parsed = null;
+  }
+  return {
+    exitCode: r.status,
+    pass: r.status === 0,
+    parsed,
+    stderr: (r.stderr || '').slice(-1500),
+  };
 }
 
 const tasks = JSON.parse(readFileSync(TASKS_FILE, 'utf8'));
 
 console.log('=== Warm-up call (discarded) ===');
-try { await generate('Reply with just OK.'); console.log('  warm-up complete'); }
-catch (e) { console.error('  warm-up FAILED:', e.message); process.exit(1); }
+try {
+  await generate('Reply with just OK.');
+  console.log('  warm-up complete');
+} catch (e) {
+  console.error('  warm-up FAILED:', e.message);
+  process.exit(1);
+}
 
 const manifest = { startedAt: new Date().toISOString(), model: MODEL, perTask: [] };
 
@@ -121,11 +166,20 @@ for (const task of tasks) {
     const gen = await generate(PROMPT_TEMPLATE(task));
     const code = extractCode(gen.response);
     if (!code) {
-      attemptResult = { error: 'no code extracted', wallMs: Math.round(gen.wallMs), localEvalTokens: gen.evalTokens, raw: gen.response.slice(0, 200) };
+      attemptResult = {
+        error: 'no code extracted',
+        wallMs: Math.round(gen.wallMs),
+        localEvalTokens: gen.evalTokens,
+        raw: gen.response.slice(0, 200),
+      };
     } else {
       const newSource = replaceStub(beforeSnapshot, task.id, code);
       if (!newSource) {
-        attemptResult = { error: `stub for ${task.id} not found in workspace`, wallMs: Math.round(gen.wallMs), localEvalTokens: gen.evalTokens };
+        attemptResult = {
+          error: `stub for ${task.id} not found in workspace`,
+          wallMs: Math.round(gen.wallMs),
+          localEvalTokens: gen.evalTokens,
+        };
       } else {
         writeFileSync(WORKSPACE_PATH, newSource);
         const oracle = runOracleTask(task.id, WORKSPACE_PATH);
@@ -146,14 +200,18 @@ for (const task of tasks) {
   }
 
   if (attemptResult.pass) {
-    console.log(`  PASS ${attemptResult.oracle?.passed}/${attemptResult.oracle?.total} | ${attemptResult.wallMs}ms | ${attemptResult.localEvalTokens} local tok | ${attemptResult.codeTiktoken} tiktoken-equiv`);
+    console.log(
+      `  PASS ${attemptResult.oracle?.passed}/${attemptResult.oracle?.total} | ${attemptResult.wallMs}ms | ${attemptResult.localEvalTokens} local tok | ${attemptResult.codeTiktoken} tiktoken-equiv`,
+    );
   } else {
     // Roll back this task's stub
     writeFileSync(WORKSPACE_PATH, beforeSnapshot);
     if (attemptResult.error) {
       console.log(`  FRONTIER-REQUIRED (${attemptResult.error})`);
     } else {
-      console.log(`  FRONTIER-REQUIRED (oracle ${attemptResult.oracle?.passed}/${attemptResult.oracle?.total}) | ${attemptResult.wallMs}ms | ${attemptResult.localEvalTokens} local tok`);
+      console.log(
+        `  FRONTIER-REQUIRED (oracle ${attemptResult.oracle?.passed}/${attemptResult.oracle?.total}) | ${attemptResult.wallMs}ms | ${attemptResult.localEvalTokens} local tok`,
+      );
       if (attemptResult.oracle?.failures?.length) {
         console.log(`    first failure: ${attemptResult.oracle.failures[0].slice(0, 200)}`);
       }
@@ -178,9 +236,17 @@ const armBTokens = tokenCount(armBSource);
 // (simple proxy: split arm-B tokens proportionally to function chars)
 
 const localPassed = manifest.perTask.filter((t) => t.route === 'local-only').length;
-const frontierRequired = manifest.perTask.filter((t) => t.route === 'frontier-required').map((t) => t.id);
-const totalLocalEvalTokens = manifest.perTask.reduce((a, t) => a + (t.attempt.localEvalTokens || 0), 0);
-const totalLocalCodeTokens = manifest.perTask.reduce((a, t) => a + (t.attempt.codeTiktoken || 0), 0);
+const frontierRequired = manifest.perTask
+  .filter((t) => t.route === 'frontier-required')
+  .map((t) => t.id);
+const totalLocalEvalTokens = manifest.perTask.reduce(
+  (a, t) => a + (t.attempt.localEvalTokens || 0),
+  0,
+);
+const totalLocalCodeTokens = manifest.perTask.reduce(
+  (a, t) => a + (t.attempt.codeTiktoken || 0),
+  0,
+);
 
 manifest.summary = {
   totalRoutableTasks: tasks.length,
@@ -202,7 +268,11 @@ writeFileSync(join(RESULTS_DIR, 'manifest.json'), JSON.stringify(manifest, null,
 // Try integration test now (may fail if any function is still stubbed — that's OK, we capture it)
 console.log('\n=== Integration tests (workspace as-is) ===');
 const integration = runIntegration(WORKSPACE_PATH);
-console.log(integration.parsed ? `${integration.parsed.passed}/${integration.parsed.total} integration cases pass` : `(could not parse oracle output, exit ${integration.exitCode})`);
+console.log(
+  integration.parsed
+    ? `${integration.parsed.passed}/${integration.parsed.total} integration cases pass`
+    : `(could not parse oracle output, exit ${integration.exitCode})`,
+);
 if (!integration.pass && integration.stderr) {
   console.log('first failure context:');
   console.log(integration.stderr.slice(0, 500));

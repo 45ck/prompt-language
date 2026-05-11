@@ -45,11 +45,11 @@ requirement.
 
 ### Generation throughput (median across 15 runs per model)
 
-| Model                  | tok/s | Notes                                                 |
-| ---------------------- | ----- | ----------------------------------------------------- |
-| `qwen3-coder:30b`      | ~45   | Concise responses (~30-100 tok per task)              |
-| `devstral-small-2:24b` | ~18   | Concise (~20-100 tok); slowest per-token              |
-| `qwen3-opencode:30b`   | ~42   | Verbose (~400-512 tok); hits ceiling on 4/5 tasks     |
+| Model                  | tok/s | Notes                                             |
+| ---------------------- | ----- | ------------------------------------------------- |
+| `qwen3-coder:30b`      | ~45   | Concise responses (~30-100 tok per task)          |
+| `devstral-small-2:24b` | ~18   | Concise (~20-100 tok); slowest per-token          |
+| `qwen3-opencode:30b`   | ~42   | Verbose (~400-512 tok); hits ceiling on 4/5 tasks |
 
 Per-run details in `results.json`. Aggregate counters in `summary.json`.
 
@@ -62,11 +62,15 @@ Per-run details in `results.json`. Aggregate counters in `summary.json`.
 
 - **k=1** (107 tokens — the lucky one):
   ```js
-  const fn = (n) => n > 1 && ![2,3,5,7,11,13,17,19,23,29,31].some(p => n % p === 0) || [2,3,5,7,11,13,17,19,23,29,31].includes(n);
+  const fn = (n) =>
+    (n > 1 && ![2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31].some((p) => n % p === 0)) ||
+    [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31].includes(n);
   ```
 - **k=2** and **k=3** (75 tokens):
   ```js
-  const fn = (n) => n > 1 && ![2,3,5,7,11,13,17,19,23,29,31].some(p => n % p === 0) || n < 31 && n > 1;
+  const fn = (n) =>
+    (n > 1 && ![2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31].some((p) => n % p === 0)) ||
+    (n < 31 && n > 1);
   ```
 
 Same prompt, same decoding params, same model, same Ollama instance, no
@@ -97,7 +101,11 @@ inflated.
 ### 3. `devstral-small-2:24b`'s isPrime bug is stable, not single-shot variance
 
 ```js
-const fn = (n) => n > 1 && !Array.from({length: n}, (_, i) => i + 1).slice(2).some(i => n % i === 0);
+const fn = (n) =>
+  n > 1 &&
+  !Array.from({ length: n }, (_, i) => i + 1)
+    .slice(2)
+    .some((i) => n % i === 0);
 ```
 
 The candidate-divisor list `[3, 4, ..., n]` includes `n` itself, so

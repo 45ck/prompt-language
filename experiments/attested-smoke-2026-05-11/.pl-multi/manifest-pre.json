@@ -1,8 +1,6 @@
 {
   "builtAt": "2026-05-11T05:35:08.644Z",
-  "excludes": [
-    "dist"
-  ],
+  "excludes": ["dist"],
   "entries": [
     {
       "path": "eslint.config.mjs",

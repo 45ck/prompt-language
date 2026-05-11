@@ -3,10 +3,9 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const HERE = fileURLToPath(new URL('.', import.meta.url));
@@ -26,7 +25,10 @@ test('T1_add_increments_id', () => {
   s = todo.add(s, 'a');
   s = todo.add(s, 'b');
   s = todo.add(s, 'c');
-  assert.deepEqual(s.items.map((i) => i.id), [1, 2, 3]);
+  assert.deepEqual(
+    s.items.map((i) => i.id),
+    [1, 2, 3],
+  );
 });
 test('T1_add_after_remove_does_not_reuse_id', () => {
   let s = { items: [] };
@@ -34,7 +36,10 @@ test('T1_add_after_remove_does_not_reuse_id', () => {
   s = todo.add(s, 'b');
   s = todo.remove(s, 1);
   s = todo.add(s, 'c');
-  assert.deepEqual(s.items.map((i) => i.id), [2, 3]);
+  assert.deepEqual(
+    s.items.map((i) => i.id),
+    [2, 3],
+  );
 });
 test('T1_add_does_not_mutate_input', () => {
   const original = { items: [] };
@@ -50,7 +55,12 @@ test('T2_list_empty_state', () => {
   assert.match(out, /no.*todo|empty/i);
 });
 test('T2_list_includes_id_text_and_status', () => {
-  const s = { items: [{ id: 1, text: 'buy milk', done: false }, { id: 2, text: 'sleep', done: true }] };
+  const s = {
+    items: [
+      { id: 1, text: 'buy milk', done: false },
+      { id: 2, text: 'sleep', done: true },
+    ],
+  };
   const out = todo.list(s);
   assert.match(out, /1/);
   assert.match(out, /buy milk/);
@@ -58,7 +68,12 @@ test('T2_list_includes_id_text_and_status', () => {
   assert.match(out, /sleep/);
 });
 test('T2_list_marks_done_distinctly_from_pending', () => {
-  const s = { items: [{ id: 1, text: 'a', done: false }, { id: 2, text: 'b', done: true }] };
+  const s = {
+    items: [
+      { id: 1, text: 'a', done: false },
+      { id: 2, text: 'b', done: true },
+    ],
+  };
   const out = todo.list(s);
   const lineA = out.split('\n').find((l) => l.includes('a')) || '';
   const lineB = out.split('\n').find((l) => l.includes('b')) || '';
@@ -82,7 +97,15 @@ test('T3_complete_does_not_mutate_input', () => {
 
 // ---------- T4: remove ----------
 test('T4_remove_drops_item', () => {
-  const s = todo.remove({ items: [{ id: 1, text: 'x', done: false }, { id: 2, text: 'y', done: false }] }, 1);
+  const s = todo.remove(
+    {
+      items: [
+        { id: 1, text: 'x', done: false },
+        { id: 2, text: 'y', done: false },
+      ],
+    },
+    1,
+  );
   assert.equal(s.items.length, 1);
   assert.equal(s.items[0].id, 2);
 });
@@ -114,7 +137,12 @@ test('T5_load_returns_empty_state_when_file_missing', () => {
 test('T5_save_then_load_roundtrips', () => {
   const dir = mkdtempSync(join(tmpdir(), 'todo-test-'));
   const path = join(dir, 'state.json');
-  const original = { items: [{ id: 1, text: 'a', done: false }, { id: 2, text: 'b', done: true }] };
+  const original = {
+    items: [
+      { id: 1, text: 'a', done: false },
+      { id: 2, text: 'b', done: true },
+    ],
+  };
   todo.save(original, path);
   const loaded = todo.load(path);
   assert.deepEqual(loaded, original);

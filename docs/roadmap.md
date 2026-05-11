@@ -1,6 +1,6 @@
 # Roadmap
 
-<!-- cspell:ignore jkfn lmep dekn folr idbc jstc syg2 yd9w ik3n g6pl g58 n6gr q72l ln6k rg6v uqe s6zz u0k 8u0k 2j9v 0ovo -->
+<!-- cspell:ignore jkfn lmep dekn folr idbc jstc syg2 yd9w ik3n g6pl g58 n6gr q72l ln6k rg6v uqe s6zz u0k 8u0k 2j9v 0ovo overclaimed -->
 
 This page is the public status boundary for notable `.beads` work. It records what has shipped, what is active WIP, and what is still exploratory.
 
@@ -66,6 +66,30 @@ semantic-choice modules as research tracks, not shipped product guarantees. The
 current evidence summary is
 [Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md).
 
+## Evidence checkpoint: 2026-05-11
+
+The Concord/VHO pilots and follow-up adversarial reviews tightened the boundary
+again:
+
+- micro-task local routing works as a narrow engineering pattern when specs are
+  clear and oracles are deterministic, but the "100/100 at k=10" headline was
+  overclaimed because the tasks were curated and the oracle was same-author;
+- cross-family review found a real missed `parseQuery` bug in the micro-task
+  result, so the evidence supports "directional pattern worth replaying" rather
+  than a claim-grade substitution result;
+- app-build and real-software multistage hybrid routes are not dollar-cost
+  justified on the current evidence because frontier scaffolding dominates local
+  savings;
+- the operator signer `operator-45ck-2026-05` is now provisioned, and a signed
+  multi-node Ollama bundle exists, but no run is claim-eligible yet because
+  verifier, witness, path, and real cross-family-review blockers remain;
+- the Ollama runner is an action-protocol tool loop, not a generic text
+  generation adapter.
+
+Roadmap implication: stop adding broad demos until the evidence substrate is
+clean. The current operating plan is
+[Current Plan After May 11 Evidence](strategy/current-plan-2026-05-12.md).
+
 ## Shipped vs tracked
 
 The runtime already ships:
@@ -102,28 +126,32 @@ What that means in practice:
 
 These are the next milestones that matter most to the product, in order:
 
-| Milestone                                            | Why it matters                                                                          | Current status |
-| ---------------------------------------------------- | --------------------------------------------------------------------------------------- | -------------- |
-| Clean bounded factory proof on both Claude and Codex | Proves the runtime closes real multi-agent work end to end                              | In progress    |
-| Supported-host live smoke and parity evidence        | Turns local/dev confidence into public operational confidence                           | In progress    |
-| Runtime reliability and recovery hardening           | Keeps hooks, child sessions, review loops, and state recovery trustworthy               | In progress    |
-| Non-factory proof program                            | Converts the next experiment wave into narrower runtime, QA, and bounded outcome proof  | Tracked next   |
-| Hybrid local/frontier routing evidence               | Tests local bulk/selection plus frontier review without contaminating local-only claims | Tracked next   |
-| Bounded local semantic-choice modules                | Turns R40-R45 selector/ranker evidence into reusable, validated workflow patterns       | Exploratory    |
-| Better operator surfaces                             | Makes install, inspect, validate, and troubleshooting easier without new magic          | Tracked next   |
-| Broader authoring ergonomics                         | LSP, playground, registry, and similar tooling become worth it after the core is proven | Tracked next   |
+| Milestone                                           | Why it matters                                                                                   | Current status |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------- |
+| Claim-eligible runtime truth bundle                 | Proves strict trace, ready preflight, attestation, cross-family review, and trusted signer work  | In progress    |
+| Runner safety and verifier profile hardening        | Makes claim-grade evidence runtime-enforced rather than prompt-instructed                        | Tracked next   |
+| Supported-host live smoke and parity evidence       | Turns local/dev confidence into public operational confidence                                    | In progress    |
+| E1 repeated-failure recovery proof                  | Tests the clearest thesis-relevant value: PL reduces recurring failures through gates and repair | Tracked next   |
+| Actual PL-runtime local routing path                | Replaces hand-rolled router evidence with a real PL flow runtime route                           | Tracked next   |
+| Micro-task cross-family replay and HA-HR1 baselines | Tests local routing with independent oracles and matched frontier baselines                      | Tracked next   |
+| Multi-file and wisdom experiments                   | Tests whether PL projects and reusable lessons improve maintainability                           | Exploratory    |
+| Broader authoring ergonomics                        | LSP, playground, registry, and similar tooling become worth it after the core is proven          | Tracked next   |
 
-The immediate next slice is to make the bounded semantic-choice pattern reusable
-with current primitives, then test one tiny executable local-model implementation
-slice. That expands model responsibility by one dimension without reintroducing a
-full-stack local-only unsupported claim.
+The immediate next slice is no longer another broad demo. It is the
+verifier/runtime safety profile plus a minimal claim-eligible run under that
+profile, so future evidence can count.
 
 ## WIP: tracked next
 
-These are open `.beads` items that fit the current product direction and are easy for users to understand.
+These are tracked or planned Beads references that fit the current product
+direction and are easy for users to understand. Treat May 11 IDs as
+backup-derived until the primary Beads source-of-truth drift is fixed.
 
 | Feature                                            | Status            | Current workaround                                         | Beads issue            |
 | -------------------------------------------------- | ----------------- | ---------------------------------------------------------- | ---------------------- |
+| Claim-eligible PL runtime bundle                   | WIP, active       | Treat signed/verified bundles as recorded-only             | `prompt-language-j0je` |
+| Ollama runner action/text boundary                 | WIP, active       | Use action-protocol flows or hand-rolled experiment router | `prompt-language-5io5` |
+| E1 repeated-failure benchmark                      | WIP, tracked next | Use existing smoke/eval fixtures                           | `prompt-language-j64j` |
 | Flow registry and `.flow` run/validate conventions | WIP, tracked next | Store flow files manually and invoke them with `claude -p` | `prompt-language-yd9w` |
 | MCP server exposing flow state to other AI clients | WIP, tracked next | Inspect `.prompt-language/session-state.json` directly     | `prompt-language-folr` |
 

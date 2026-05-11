@@ -756,12 +756,7 @@
     "tokensStillSpentWhenLocalFails": 447,
     "netFrontierTokenSavings": 246,
     "savingsPercent": 35,
-    "savingsTasks": [
-      "validateConfig (+97)",
-      "groupBy (+59)",
-      "partition (+44)",
-      "flatten (+46)"
-    ],
+    "savingsTasks": ["validateConfig (+97)", "groupBy (+59)", "partition (+44)", "flatten (+46)"],
     "lossTasks": [
       "applyDiscountTier (-63)",
       "formatLogEntry (-91)",

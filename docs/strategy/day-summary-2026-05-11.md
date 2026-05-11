@@ -7,6 +7,18 @@ date: 2026-05-11
 
 # Day summary — 2026-05-11
 
+<!-- cspell:ignore Portarium portarium realsoftware tinymd rpncalc overclaim overclaimed amortisation characterised stabilised generalisation generalises -->
+
+> **Correction note (2026-05-12):** This is a same-day summary and should be
+> read with the later
+> [engineering-readiness verdict](engineering-readiness-2026-05-11.md),
+> [challenge-and-defense](research-synthesis-challenge-and-defense-2026-05-11.md),
+> and [current plan](current-plan-2026-05-12.md). The `100/100` micro-task
+> headline is now treated as directional, non-claim-eligible evidence because
+> the oracle was same-author and cross-family review found a missed bug. The
+> operator signer was later provisioned; the remaining blocker is a verifier-clean
+> claim-eligible bundle, not merely adding a signer entry.
+
 One day of focused experimentation on the Concord/VHO hybrid local/
 frontier orchestration thesis. Five pilots, three reviewer agents,
 five commits to each affected repo. Below is the executive brief.
@@ -14,14 +26,16 @@ five commits to each affected repo. Below is the executive brief.
 ## The headline
 
 **Hybrid local/frontier orchestration is a real working pattern at
-narrow scope, never breaks even on dollar economics outside that
-scope.**
+narrow micro-task scope, with dollar economics still negative outside
+that scope on the measured pilots.**
 
 Specifically:
+
 - For **bounded single-function tasks** with clear specs and
-  deterministic oracles: hybrid saves 100% of the equivalent
-  frontier output tokens, deterministically (100/100 at k=10).
-  Real wins.
+  deterministic same-author oracles: hybrid showed 100/100 oracle
+  passes at k=10, but cross-family review found a missed bug. Treat
+  this as directional evidence for a useful pattern, not deterministic
+  substitution.
 - For **real-software multistage builds** (markdown converter,
   RPN calculator): hybrid produces working code, but per-pilot
   scaffolding cost (~5.5k frontier tokens) dominates per-pilot
@@ -37,6 +51,7 @@ scope. The dollar savings only apply at micro-task scope.
 ## What got built and shipped today
 
 ### Code and experiments
+
 - 5 pilots under `experiments/`:
   - `concord-vho-pilot-todo-cli/` — app-build orchestration (negative)
   - `concord-vho-microtask-cost/` — micro-task v2 with full/starved
@@ -51,9 +66,11 @@ scope. The dollar savings only apply at micro-task scope.
 - Working software produced:
   - `tinymd` Markdown→HTML converter (24/24 oracle pass)
   - `rpncalc` RPN calculator (23/23 oracle pass)
-  - 10 micro-task functions in v2 (30/30 then 100/100 oracle pass)
+  - 10 micro-task functions in v2 (30/30 then 100/100 same-author
+    oracle pass)
 
 ### Documentation
+
 - `docs/strategy/thesis.md` — added kill rule
 - `docs/strategy/program-status.md` — §2a hybrid-efficiency tracker
   with scope-divided portfolio verdict
@@ -70,22 +87,23 @@ scope. The dollar savings only apply at micro-task scope.
 - Portarium: `README.md` — honest PL relationship note
 
 ### Shipped artifact
+
 - `skills/concord-microtask-router/SKILL.md` — Claude Code skill with
   explicit scope boundaries, prompt-writing rules, and evidence base
   pointers
 
 ## Engineering-readiness verdict (final, evening-revised)
 
-| Decision | Verdict | One-line why |
-|---|---|---|
-| Ship `concord-microtask-router` skill | **GO** ✅ | Done; backed by 100/100 at k=10 |
-| Add hybrid to harness-arena routes | **GO** ✅ | Already running; HA-HR1 awaits supported-host auth |
-| Use hybrid in personal projects | **CONDITIONAL GO** ⚠️ | Only for bounded micro-tasks with oracles |
-| Build Portarium ↔ PL integration | **NO** ❌ | Premature; trigger not met |
-| Hybrid as primary engineering paradigm | **NO** ❌ | n=5 doesn't change this; thesis H1-H6 still unmeasured |
-| Hybrid for real-software builds (cost-justified) | **NO** ❌ | Never breaks even on dollars (rpncalc-confirmed) |
-| Hybrid for client app-build work | **NO** ❌ | Same scaffolding-dominance problem |
-| Provision operator signer (clear §3a gate 5) | **GO** ✅ | Orthogonal but unblocks claim-eligibility for everything else |
+| Decision                                         | Verdict               | One-line why                                                  |
+| ------------------------------------------------ | --------------------- | ------------------------------------------------------------- |
+| Ship `concord-microtask-router` skill            | **GO** ✅             | Done; backed by directional micro-task evidence               |
+| Add hybrid to harness-arena routes               | **GO** ✅             | Already running; HA-HR1 awaits supported-host auth            |
+| Use hybrid in personal projects                  | **CONDITIONAL GO** ⚠️ | Only for bounded micro-tasks with oracles                     |
+| Build Portarium ↔ PL integration                 | **NO** ❌             | Premature; trigger not met                                    |
+| Hybrid as primary engineering paradigm           | **NO** ❌             | n=5 doesn't change this; thesis H1-H6 still unmeasured        |
+| Hybrid for real-software builds (cost-justified) | **NO** ❌             | Never breaks even on dollars (rpncalc-confirmed)              |
+| Hybrid for client app-build work                 | **NO** ❌             | Same scaffolding-dominance problem                            |
+| Provision operator signer (clear §3a gate 5)     | **GO** ✅             | Orthogonal but unblocks claim-eligibility for everything else |
 
 ## What materially changed today (vs. yesterday's state)
 
@@ -106,11 +124,10 @@ scope. The dollar savings only apply at micro-task scope.
    not ~100%) and showed there's no break-even at any N. Honest
    science correcting itself.
 
-4. **k=10 stability proven for micro-task scope.** Earlier strict-
-   format-fit smoke flagged qwen3-coder non-determinism on isPrime.
-   k=10 sweep proves that's task-specific; most tasks ARE
-   deterministic at temp=0, and the 100/100 micro-task win is not
-   a lucky run.
+4. **k=10 same-author oracle stability measured for micro-task scope.**
+   Earlier strict-format-fit smoke flagged qwen3-coder non-determinism on
+   isPrime. The k=10 sweep showed the curated micro-task set was stable
+   against its original oracle, but it was not an independent reliability proof.
 
 5. **Two real local failure modes characterised.** Subtle regex/
    syntax errors and wrong sibling-contract assumptions. Both
@@ -148,10 +165,10 @@ scope. The dollar savings only apply at micro-task scope.
 The single most-defensible claim today's evidence supports is:
 
 > "For bounded single-function code generation tasks with
-> ≤100-token tutorial-quality specs and deterministic oracles,
-> routing to qwen3-coder:30b on AMD/Vulkan local hardware saves
-> the equivalent of frontier output tokens with 100% reliability
-> at k=10."
+> ≤100-token tutorial-quality specs and deterministic same-author
+> oracles, routing to qwen3-coder:30b on AMD/Vulkan local hardware can
+> save frontier output tokens, but the result is not claim-grade until
+> an independent oracle replay and matched frontier baseline pass."
 
 Everything else is either bigger than the evidence supports or
 smaller than the evidence requires.
@@ -165,8 +182,8 @@ In priority order:
    all future runs. ~15-30 minutes if the key is ready.
 2. **Generalisation test** — sample 20-30 random small functions
    from a popular npm package (e.g. lodash, ramda) and run the
-   micro-task pattern against them. Tests whether the 100/100 win
-   generalises beyond curated tasks. ~2 hours.
+   micro-task pattern against them. Tests whether the directional
+   micro-task result generalises beyond curated tasks. ~2 hours.
 3. **HA-HR1 live cross-arm fixture** once Claude auth on Windows
    resolves. Produces the first claim-eligible bundle.
 4. **Multi-file project pilot** for thesis H1-H6. Weeks-scale, not
@@ -175,6 +192,7 @@ In priority order:
 ## Files added or modified today (push log)
 
 prompt-language (`a84e80e..fc13442` chain plus prior):
+
 - `docs/strategy/thesis.md` (Kill rule)
 - `docs/strategy/program-status.md` (§2a tracker)
 - `docs/strategy/engineering-readiness-2026-05-11.md`
@@ -189,6 +207,7 @@ prompt-language (`a84e80e..fc13442` chain plus prior):
 - `skills/concord-microtask-router/SKILL.md`
 
 Portarium (`d98d91dc`):
+
 - `docs/integration/prompt-language-runtime.md`
 - `README.md` (project-status PL relationship note)
 

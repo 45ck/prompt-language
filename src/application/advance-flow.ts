@@ -419,7 +419,7 @@ function emitNodeAdvanceTrace(
   // Always set prevEventHash (explicit null for first entry in a chain) — the
   // verifier requires it to be string-or-null, not undefined-omitted (per
   // verify-trace.mjs chain check; bug #4 found 2026-05-11).
-  partial['prevEventHash'] = prev !== undefined ? prev : null;
+  partial['prevEventHash'] = prev ?? null;
   const eventHash = hashEvent(partial);
   partial['eventHash'] = eventHash;
   recordTraceEventHash(runId, eventHash);

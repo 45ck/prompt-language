@@ -41,7 +41,10 @@ export function tokenize(markdown) {
   let i = 0;
   while (i < lines.length) {
     const line = lines[i];
-    if (line.trim() === '') { i++; continue; }
+    if (line.trim() === '') {
+      i++;
+      continue;
+    }
     if (isFenceLine(line)) {
       const start = i + 1;
       let end = start;
@@ -51,9 +54,17 @@ export function tokenize(markdown) {
       continue;
     }
     const h = parseHeading(line);
-    if (h) { tokens.push({ type: 'heading', level: h.level, text: h.text }); i++; continue; }
+    if (h) {
+      tokens.push({ type: 'heading', level: h.level, text: h.text });
+      i++;
+      continue;
+    }
     const li = parseListItem(line);
-    if (li !== null) { tokens.push({ type: 'list-item', text: li }); i++; continue; }
+    if (li !== null) {
+      tokens.push({ type: 'list-item', text: li });
+      i++;
+      continue;
+    }
     const para = [];
     while (
       i < lines.length &&

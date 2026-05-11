@@ -76,7 +76,7 @@ export function emitTraceEntry(traceLogger: TraceLogger, partial: Record<string,
       // verify-trace requires string-or-null, not undefined-omitted (bug #4
       // found 2026-05-11; equivalent fix in advance-flow.ts).
       if (partial['prevEventHash'] === undefined) {
-        partial['prevEventHash'] = prev !== undefined ? prev : null;
+        partial['prevEventHash'] = prev ?? null;
       }
     }
     const eventHash = hashEvent(partial);

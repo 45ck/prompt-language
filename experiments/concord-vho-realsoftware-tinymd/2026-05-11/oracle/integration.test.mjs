@@ -28,15 +28,24 @@ const cases = [
   ['This is a paragraph.', '<p>This is a paragraph.</p>'],
   ['Line one\nline two', '<p>Line one line two</p>'],
   // Bold + italic + code inline
-  ['**bold** and *em* and `code`', '<p><strong>bold</strong> and <em>em</em> and <code>code</code></p>'],
+  [
+    '**bold** and *em* and `code`',
+    '<p><strong>bold</strong> and <em>em</em> and <code>code</code></p>',
+  ],
   // Link
-  ['Visit [the site](https://example.com).', '<p>Visit <a href="https://example.com">the site</a>.</p>'],
+  [
+    'Visit [the site](https://example.com).',
+    '<p>Visit <a href="https://example.com">the site</a>.</p>',
+  ],
   // Code block
   ['```\nlet x = 1;\n```', '<pre><code>let x = 1;</code></pre>'],
   // Unordered list
   ['- one\n- two\n- three', '<ul>\n<li>one</li>\n<li>two</li>\n<li>three</li>\n</ul>'],
   // Mixed
-  ['# Title\n\nintro paragraph.\n\n- a\n- b', '<h1>Title</h1>\n<p>intro paragraph.</p>\n<ul>\n<li>a</li>\n<li>b</li>\n</ul>'],
+  [
+    '# Title\n\nintro paragraph.\n\n- a\n- b',
+    '<h1>Title</h1>\n<p>intro paragraph.</p>\n<ul>\n<li>a</li>\n<li>b</li>\n</ul>',
+  ],
   // HTML escaping in paragraph
   ['use < and > and &', '<p>use &lt; and &gt; and &amp;</p>'],
   // HTML escaping in code block — verbatim per spec (only ampersand etc are escaped)
@@ -58,7 +67,9 @@ for (const [input, expected] of cases) {
   if (actual === expected) {
     pass++;
   } else {
-    failures.push(`convert(${JSON.stringify(input)}):\n  expected: ${JSON.stringify(expected)}\n  actual:   ${JSON.stringify(actual)}`);
+    failures.push(
+      `convert(${JSON.stringify(input)}):\n  expected: ${JSON.stringify(expected)}\n  actual:   ${JSON.stringify(actual)}`,
+    );
   }
 }
 

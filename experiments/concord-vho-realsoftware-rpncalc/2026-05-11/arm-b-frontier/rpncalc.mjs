@@ -17,18 +17,25 @@ export function safeNumber(s) {
 
 export function applyOperator(op, a, b) {
   switch (op) {
-    case '+': return a + b;
-    case '-': return a - b;
-    case '*': return a * b;
+    case '+':
+      return a + b;
+    case '-':
+      return a - b;
+    case '*':
+      return a * b;
     case '/':
       if (b === 0) throw new Error('division by zero');
       return a / b;
-    default: throw new Error(`unknown operator: ${op}`);
+    default:
+      throw new Error(`unknown operator: ${op}`);
   }
 }
 
 export function tokenizeRpn(expr) {
-  return String(expr).trim().split(/\s+/).filter((t) => t.length > 0);
+  return String(expr)
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t.length > 0);
 }
 
 export function formatResult(n) {
@@ -50,7 +57,8 @@ export function evaluate(tokens) {
       throw new Error(`unknown token: ${t}`);
     }
   }
-  if (stack.length !== 1) throw new Error(`malformed expression: ${stack.length} values left on stack`);
+  if (stack.length !== 1)
+    throw new Error(`malformed expression: ${stack.length} values left on stack`);
   return stack[0];
 }
 

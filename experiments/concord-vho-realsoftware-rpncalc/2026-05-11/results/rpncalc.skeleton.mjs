@@ -1,19 +1,42 @@
 // rpncalc skeleton — function bodies start as throw-stubs.
 // Frontier-owned: calculate (orchestrator).
 
-export function isNumber(token) { throw new Error('NOT_IMPLEMENTED:isNumber'); }
+export function isNumber(_token) {
+  void _token;
+  throw new Error('NOT_IMPLEMENTED:isNumber');
+}
 
-export function isOperator(token) { throw new Error('NOT_IMPLEMENTED:isOperator'); }
+export function isOperator(_token) {
+  void _token;
+  throw new Error('NOT_IMPLEMENTED:isOperator');
+}
 
-export function safeNumber(s) { throw new Error('NOT_IMPLEMENTED:safeNumber'); }
+export function safeNumber(_s) {
+  void _s;
+  throw new Error('NOT_IMPLEMENTED:safeNumber');
+}
 
-export function applyOperator(op, a, b) { throw new Error('NOT_IMPLEMENTED:applyOperator'); }
+export function applyOperator(_op, _a, _b) {
+  void _op;
+  void _a;
+  void _b;
+  throw new Error('NOT_IMPLEMENTED:applyOperator');
+}
 
-export function tokenizeRpn(expr) { throw new Error('NOT_IMPLEMENTED:tokenizeRpn'); }
+export function tokenizeRpn(_expr) {
+  void _expr;
+  throw new Error('NOT_IMPLEMENTED:tokenizeRpn');
+}
 
-export function formatResult(n) { throw new Error('NOT_IMPLEMENTED:formatResult'); }
+export function formatResult(_n) {
+  void _n;
+  throw new Error('NOT_IMPLEMENTED:formatResult');
+}
 
-export function evaluate(tokens) { throw new Error('NOT_IMPLEMENTED:evaluate'); }
+export function evaluate(_tokens) {
+  void _tokens;
+  throw new Error('NOT_IMPLEMENTED:evaluate');
+}
 
 // FRONTIER-OWNED: orchestrator
 export function calculate(expr) {

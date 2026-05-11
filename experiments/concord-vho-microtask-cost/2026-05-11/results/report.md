@@ -15,34 +15,34 @@ passes).** All 4 novel-spec tasks and all 6 utility tasks passed
 qwen3-coder:30b's first attempt against deterministic oracles
 including seeded random inputs.
 
-| Metric                                  | Value                                |
-| --------------------------------------- | ------------------------------------ |
-| First-attempt pass                      | **10/10**                            |
-| Any-of-3 pass                           | 10/10                                |
-| Total individual oracle passes (k=3)    | **30/30**                            |
-| Frontier-only baseline cost (Arm B)     | 693 tiktoken-equiv tokens            |
-| Hybrid frontier cost (Arm A first-pass) | 0 (no repair needed)                 |
-| Net per-pilot frontier token saving     | **693 (100% of Arm B)**              |
-| Local GPU wall time                     | ~25 seconds across all 30 attempts   |
+| Metric                                  | Value                              |
+| --------------------------------------- | ---------------------------------- |
+| First-attempt pass                      | **10/10**                          |
+| Any-of-3 pass                           | 10/10                              |
+| Total individual oracle passes (k=3)    | **30/30**                          |
+| Frontier-only baseline cost (Arm B)     | 693 tiktoken-equiv tokens          |
+| Hybrid frontier cost (Arm A first-pass) | 0 (no repair needed)               |
+| Net per-pilot frontier token saving     | **693 (100% of Arm B)**            |
+| Local GPU wall time                     | ~25 seconds across all 30 attempts |
 
 ## Per-task results
 
-| Task              | Cat         | Arm B chars | Arm B tokens | Arm A k1 tokens | k=3 pass | Diff vs Arm B               |
-| ----------------- | ----------- | ----------- | ------------ | --------------- | -------- | --------------------------- |
-| applyDiscountTier | novel-spec  | 198         | 63           | 125             | 3/3      | More verbose, +applicableTier var, +empty-tiers guard |
-| validateConfig    | novel-spec  | 376         | 97           | 126             | 3/3      | Different style, equivalent |
-| formatLogEntry    | novel-spec  | 336         | 91           | 120             | 3/3      | Different style, equivalent |
-| mergeAcl          | novel-spec  | 240         | 69           | 90              | 3/3      | Different style, equivalent |
-| chunk             | utility     | 196         | 62           | 66              | 3/3      | Near-identical              |
-| slugify           | utility     | 117         | 37           | 43              | 3/3      | Near-identical              |
-| groupBy           | utility     | 200         | 59           | 62              | 3/3      | Near-identical              |
-| parseQuery        | utility     | 420         | 125          | 133             | 3/3      | **Local found BETTER behavior** (handles `+` as space per application/x-www-form-urlencoded; my impl only handled `%XX`) |
-| partition         | utility     | 132         | 44           | 66              | 3/3      | Slightly more verbose       |
-| flatten           | utility     | 167         | 46           | 51              | 3/3      | Near-identical              |
+| Task              | Cat        | Arm B chars | Arm B tokens | Arm A k1 tokens | k=3 pass | Diff vs Arm B                                                                                                            |
+| ----------------- | ---------- | ----------- | ------------ | --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------ |
+| applyDiscountTier | novel-spec | 198         | 63           | 125             | 3/3      | More verbose, +applicableTier var, +empty-tiers guard                                                                    |
+| validateConfig    | novel-spec | 376         | 97           | 126             | 3/3      | Different style, equivalent                                                                                              |
+| formatLogEntry    | novel-spec | 336         | 91           | 120             | 3/3      | Different style, equivalent                                                                                              |
+| mergeAcl          | novel-spec | 240         | 69           | 90              | 3/3      | Different style, equivalent                                                                                              |
+| chunk             | utility    | 196         | 62           | 66              | 3/3      | Near-identical                                                                                                           |
+| slugify           | utility    | 117         | 37           | 43              | 3/3      | Near-identical                                                                                                           |
+| groupBy           | utility    | 200         | 59           | 62              | 3/3      | Near-identical                                                                                                           |
+| parseQuery        | utility    | 420         | 125          | 133             | 3/3      | **Local found BETTER behavior** (handles `+` as space per application/x-www-form-urlencoded; my impl only handled `%XX`) |
+| partition         | utility    | 132         | 44           | 66              | 3/3      | Slightly more verbose                                                                                                    |
+| flatten           | utility    | 167         | 46           | 51              | 3/3      | Near-identical                                                                                                           |
 
 **Local is genuinely writing different code, not transcribing.** Sample
 diffs (Arm B vs Arm A k=1) at end of report. On `parseQuery`, the
-local model produced *more correct* behavior than my pre-committed
+local model produced _more correct_ behavior than my pre-committed
 frontier reference — it added `+`-to-space decoding which is the
 actual HTML form spec, while my impl only handled percent-escapes.
 The other 9 are stylistic differences (more verbose variable names,
@@ -52,12 +52,12 @@ intermediate variables) with equivalent semantics.
 
 ### Per-pilot at this scope
 
-| Cost line                         | Hybrid (Arm A) | Frontier-only (Arm B equivalent) |
-| --------------------------------- | -------------- | -------------------------------- |
-| Output tokens spent on impls      | **0**          | 693                              |
-| Local eval tokens (GPU, free)     | ~2700 across k=3 × 10 tasks | n/a |
-| Frontier infrastructure (router + oracle, written this pilot) | ~3500 tokens (one-time) | 0 |
-| **Per-pilot net frontier cost**   | ~3500          | 693                              |
+| Cost line                                                     | Hybrid (Arm A)              | Frontier-only (Arm B equivalent) |
+| ------------------------------------------------------------- | --------------------------- | -------------------------------- |
+| Output tokens spent on impls                                  | **0**                       | 693                              |
+| Local eval tokens (GPU, free)                                 | ~2700 across k=3 × 10 tasks | n/a                              |
+| Frontier infrastructure (router + oracle, written this pilot) | ~3500 tokens (one-time)     | 0                                |
+| **Per-pilot net frontier cost**                               | ~3500                       | 693                              |
 
 **At one-pilot scale, frontier-only is still cheaper** — the v2
 infrastructure cost (router.mjs, oracle/run-tests.mjs, tasks.json,
@@ -66,12 +66,12 @@ The hybrid is **5× more expensive at one-pilot scale**.
 
 ### Amortised across N pilots reusing the same infrastructure
 
-| N pilots | Hybrid frontier cost   | Frontier-only cost | Hybrid wins?      |
-| -------- | ---------------------- | ------------------ | ----------------- |
-| 1        | ~3500 (infra) + 0      | 693                | No (5× worse)     |
-| 5        | ~3500 (infra) + 0      | 3,465              | Roughly even      |
-| 10       | ~3500 (infra) + 0      | 6,930              | Yes (~2× better)  |
-| 100      | ~3500 (infra) + 0      | 69,300             | Yes (~20× better) |
+| N pilots | Hybrid frontier cost | Frontier-only cost | Hybrid wins?      |
+| -------- | -------------------- | ------------------ | ----------------- |
+| 1        | ~3500 (infra) + 0    | 693                | No (5× worse)     |
+| 5        | ~3500 (infra) + 0    | 3,465              | Roughly even      |
+| 10       | ~3500 (infra) + 0    | 6,930              | Yes (~2× better)  |
+| 100      | ~3500 (infra) + 0    | 69,300             | Yes (~20× better) |
 
 Break-even point is ~5 pilots reusing the same router + oracle +
 task scaffold. Past that, hybrid pays off linearly.
@@ -107,7 +107,7 @@ this scope is not cost:
    token rates.
 3. Routing pays off after ~5 pilots reusing the same infrastructure,
    and scales linearly past that.
-4. Local can produce *more correct* code than frontier on
+4. Local can produce _more correct_ code than frontier on
    underspecified prompts when the model has stronger domain
    knowledge (parseQuery + handling).
 
@@ -132,10 +132,10 @@ this scope is not cost:
 The TODO CLI pilot (2026-05-11, earlier today) and this v2 are not
 contradictory — they are measuring different scopes:
 
-| Scope                       | Verdict                | Why                                                          |
-| --------------------------- | ---------------------- | ------------------------------------------------------------ |
-| **Per-task micro-routing**  | **Hybrid wins (this)** | No per-task scaffolding cost; 100% local success on 10 tasks |
-| **Per-app construction**    | Hybrid loses (prior)   | Scaffolding dominates; hybrid 2-3× more expensive            |
+| Scope                      | Verdict                | Why                                                          |
+| -------------------------- | ---------------------- | ------------------------------------------------------------ |
+| **Per-task micro-routing** | **Hybrid wins (this)** | No per-task scaffolding cost; 100% local success on 10 tasks |
+| **Per-app construction**   | Hybrid loses (prior)   | Scaffolding dominates; hybrid 2-3× more expensive            |
 
 Both findings update the §2a hybrid-efficiency tracker honestly.
 The hybrid pattern is **cost-positive for stateless one-shot code
@@ -159,20 +159,20 @@ export function applyDiscountTier(cartTotal, tiers) {
 
 // Arm A k=1 (qwen3-coder:30b):
 export function applyDiscountTier(cartTotal, tiers) {
-    if (!tiers || tiers.length === 0) return cartTotal;
-    let applicableTier = null;
-    for (const [minTotal, percentOff] of tiers) {
-        if (minTotal <= cartTotal) {
-            applicableTier = [minTotal, percentOff];
-        } else {
-            break;
-        }
+  if (!tiers || tiers.length === 0) return cartTotal;
+  let applicableTier = null;
+  for (const [minTotal, percentOff] of tiers) {
+    if (minTotal <= cartTotal) {
+      applicableTier = [minTotal, percentOff];
+    } else {
+      break;
     }
-    if (applicableTier) {
-        const [, percentOff] = applicableTier;
-        return cartTotal * (1 - percentOff / 100);
-    }
-    return cartTotal;
+  }
+  if (applicableTier) {
+    const [, percentOff] = applicableTier;
+    return cartTotal * (1 - percentOff / 100);
+  }
+  return cartTotal;
 }
 ```
 
@@ -226,48 +226,50 @@ algorithm details, no return-shape hints, no edge-case rules).
 
 Examples of the change:
 
-| Task              | Full prompt (104 tokens for applyDiscountTier)             | Starved (24 tokens)                                       |
-| ----------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
-| applyDiscountTier | "tiers is an array of [minTotal, percentOff] sorted by minTotal ascending. Return cartTotal multiplied by (1 - p/100) using the highest tier whose minTotal is <= cartTotal..." | "Apply a tiered percentage discount to a cart total."     |
-| formatLogEntry    | Full template with [LEVEL] service@host: msg \| k=v shape  | "Format a log event with context as a single-line string." |
-| chunk             | Full size-and-overflow rules                                | "Split an array into batches of a given size."            |
+| Task              | Full prompt (104 tokens for applyDiscountTier)                                                                                                                                  | Starved (24 tokens)                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| applyDiscountTier | "tiers is an array of [minTotal, percentOff] sorted by minTotal ascending. Return cartTotal multiplied by (1 - p/100) using the highest tier whose minTotal is <= cartTotal..." | "Apply a tiered percentage discount to a cart total."      |
+| formatLogEntry    | Full template with [LEVEL] service@host: msg \| k=v shape                                                                                                                       | "Format a log event with context as a single-line string." |
+| chunk             | Full size-and-overflow rules                                                                                                                                                    | "Split an array into batches of a given size."             |
 
 **Result with starved prompts:**
 
-| Metric                          | Full       | Starved   | Δ        |
-| ------------------------------- | ---------- | --------- | -------- |
-| First-attempt local pass        | **10/10**  | **4/10**  | -6       |
-| Any-of-3 local pass             | 10/10      | 4/10      | -6       |
-| Frontier tokens saved           | 693 (100%) | 246 (35%) | -447     |
-| Frontier tokens still owed      | 0          | 447       | +447     |
+| Metric                     | Full       | Starved   | Δ    |
+| -------------------------- | ---------- | --------- | ---- |
+| First-attempt local pass   | **10/10**  | **4/10**  | -6   |
+| Any-of-3 local pass        | 10/10      | 4/10      | -6   |
+| Frontier tokens saved      | 693 (100%) | 246 (35%) | -447 |
+| Frontier tokens still owed | 0          | 447       | +447 |
 
 Per-task pass at starved density:
+
 - **PASS** (4): `validateConfig`, `groupBy`, `partition`, `flatten` — these are tasks where the name alone is essentially the spec
-- **FAIL** (6): `applyDiscountTier`, `formatLogEntry`, `mergeAcl`, `chunk`, `slugify`, `parseQuery` — local produced *reasonable but different* implementations that didn't match my pre-committed reference's strict expectations
+- **FAIL** (6): `applyDiscountTier`, `formatLogEntry`, `mergeAcl`, `chunk`, `slugify`, `parseQuery` — local produced _reasonable but different_ implementations that didn't match my pre-committed reference's strict expectations
 
 Failure modes inspected from `manifest-starved.json`:
+
 - `slugify`: 5/7 oracle pass — local handled most cases but differed on whether to collapse trailing/leading hyphens
 - `parseQuery`: 6/8 — local omitted `+`-as-space encoding (when not told), producing a different but still plausible interpretation
 - `chunk`: 0 (no code extracted) — model added an explanatory preamble in starved mode
 - `applyDiscountTier`, `formatLogEntry`, `mergeAcl`: model picked different tier-selection / format / data-shape choices than my reference
 
 **This is the load-bearing finding.** The headline 10/10 was real but
-*conditional on prompt density at "tutorial-quality" level*. When
+_conditional on prompt density at "tutorial-quality" level_. When
 prompts are merely "name + behavior verb", local pass rate drops to
 40% and the system loses tokens on net (saves 246, owes 447 in
 repair).
 
 ### Token economy under starvation
 
-| Cost line                          | Hybrid (starved)   | Frontier-only |
-| ---------------------------------- | ------------------ | ------------- |
-| Output tokens spent on local pass  | 0                  | 0             |
-| Frontier output owed for failures  | 447 (Arm B for the 6 failed) | 693 (Arm B for all 10) |
-| Local GPU eval tokens spent        | ~2700              | n/a           |
-| **Net frontier output cost**       | 447                | 693           |
-| **Net saving vs frontier-only**    | **246 (35%)**      | (baseline)    |
+| Cost line                         | Hybrid (starved)             | Frontier-only          |
+| --------------------------------- | ---------------------------- | ---------------------- |
+| Output tokens spent on local pass | 0                            | 0                      |
+| Frontier output owed for failures | 447 (Arm B for the 6 failed) | 693 (Arm B for all 10) |
+| Local GPU eval tokens spent       | ~2700                        | n/a                    |
+| **Net frontier output cost**      | 447                          | 693                    |
+| **Net saving vs frontier-only**   | **246 (35%)**                | (baseline)             |
 
-So even at starved density, hybrid still saves *some* output tokens —
+So even at starved density, hybrid still saves _some_ output tokens —
 just much less than the headline 100%. But amortising the v2
 infrastructure cost (~3500 frontier tokens) takes ~14 starved-mode
 pilots to break even, vs ~5 in full-density mode.
@@ -293,14 +295,15 @@ Re-ran both density regimes at k=10 (10 reps per task, 100 reps per
 arm total) to firm up the headline numbers and check for
 single-shot variance.
 
-| Regime          | k=3 result    | k=10 result        | Variance         |
-| --------------- | ------------- | ------------------ | ---------------- |
-| Full density    | 30/30 oracle  | **100/100 oracle** | Zero (every rep passes) |
-| Starved density | 12/30 oracle  | **40/100 oracle**  | Zero (same 4 tasks always pass; same 6 always fail) |
+| Regime          | k=3 result   | k=10 result        | Variance                                            |
+| --------------- | ------------ | ------------------ | --------------------------------------------------- |
+| Full density    | 30/30 oracle | **100/100 oracle** | Zero (every rep passes)                             |
+| Starved density | 12/30 oracle | **40/100 oracle**  | Zero (same 4 tasks always pass; same 6 always fail) |
 
 **Both numbers are perfectly stable.** No coin-flip variance at k=10.
 
 This means:
+
 - The headline 10/10 first-attempt pass at full density is **not a
   lucky run** — it's deterministic for this model + prompt + seed
   combination on this rig.

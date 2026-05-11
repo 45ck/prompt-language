@@ -34,10 +34,10 @@ User asks for a single small implementation that meets all of:
 The 2026-05-11 v2 ablation showed the routing pattern is **load-
 bearing on prompt density**:
 
-| Prompt density                                  | Local first-attempt pass | Net token saving |
-| ----------------------------------------------- | ------------------------ | ---------------- |
-| Full (signature + algorithm + edges + shape)    | **10/10**                | 100% of baseline |
-| Starved (signature + 1-line behavior verb)      | 4/10                     | 35% of baseline  |
+| Prompt density                               | Local first-attempt pass | Net token saving |
+| -------------------------------------------- | ------------------------ | ---------------- |
+| Full (signature + algorithm + edges + shape) | **10/10**                | 100% of baseline |
+| Starved (signature + 1-line behavior verb)   | 4/10                     | 35% of baseline  |
 
 If you can only describe the task in 1 line ("split an array into
 batches"), routing pays off ~40% of the time and loses money on the
@@ -45,6 +45,7 @@ rest. **Don't invoke this skill for thin specs** — write the
 function yourself or use frontier-only.
 
 Examples that fit:
+
 - "Write a `function chunk(arr, size)` that splits arr into
   consecutive groups of size."
 - "Implement `function applyDiscountTier(cartTotal, tiers)` where
@@ -52,6 +53,7 @@ Examples that fit:
 - "Write `function parseQuery(qs)` that parses a URL query string."
 
 Examples that do NOT fit:
+
 - "Refactor the auth middleware in src/auth/ to use JWTs."
 - "Find why this test is failing and fix it."
 - "Add a new feature to the dashboard."
@@ -84,7 +86,7 @@ Reference implementation: see the runner pattern in
 - **Not for debugging.** Local can't read existing code well enough
   to localise bugs.
 - **Not for app-build orchestration.** The 2026-05-11 TODO CLI
-  pilot showed scaffolding cost makes hybrid 2-3× *more* expensive
+  pilot showed scaffolding cost makes hybrid 2-3× _more_ expensive
   than frontier-only at app-build scope. Frontier-write the whole
   app.
 - **Not for one-off real-software builds.** The 2026-05-11 tinymd
@@ -133,7 +135,7 @@ contracts in the same module):
 
 - Counter-evidence — when NOT to use:
   `experiments/concord-vho-pilot-todo-cli/2026-05-11/` shows
-  hybrid is 2-3× *more* expensive than frontier-only at app-build
+  hybrid is 2-3× _more_ expensive than frontier-only at app-build
   scope due to scaffolding-cost dominance. Both reviews are in
   that pilot's `results/`.
 

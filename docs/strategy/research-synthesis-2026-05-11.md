@@ -8,6 +8,16 @@ based-on: 3 parallel research agents (internal docs sweep, external white papers
 
 # Research synthesis — 2026-05-11
 
+<!-- cspell:ignore internalise lynchpins tinymd rpncalc Khattab Neur Tripwired standardises neighbours smolagents productised SLSA optimisation neighbour ICSE ICSME PLDI Portarium unrealised -->
+
+> **Supersession note (2026-05-12):** This synthesis is retained as historical
+> context, but its novelty and priority claims were revised by
+> [Research Synthesis Challenge and Defense](research-synthesis-challenge-and-defense-2026-05-11.md)
+> and [Current Plan After May 11 Evidence](current-plan-2026-05-12.md). In
+> particular, the `100/100` micro-task result is directional engineering signal,
+> not claim-grade novelty, and operator signer provisioning is no longer the main
+> blocker by itself.
+
 After today's five engineering-readiness pilots, three parallel
 research agents pulled the camera back: internal docs the program
 already knew, external academic literature, and the competitive
@@ -20,7 +30,7 @@ recommendation.
 thesis.** They are positional engineering-readiness work.
 The program's actual thesis (H1-H6 in `thesis.md`) is largely
 untested, and the most exciting and publishable contribution
-the program could make is the *unification*, not any individual
+the program could make is the _unification_, not any individual
 piece.
 
 ## Three findings to internalise
@@ -31,7 +41,7 @@ Internal-research agent finding (per its full report
 `docs/strategy/day-summary-2026-05-11.md` cross-references):
 
 - **FSCRUD R30-R45 already established** that local models work as
-  *bounded semantic selectors inside a deterministic envelope*, not
+  _bounded semantic selectors inside a deterministic envelope_, not
   as autonomous implementers. My v2 spec-density ablation
   rediscovered a slim version of this finding.
 - **The thesis (`docs/strategy/thesis.md`) lists H1-H6 falsifiable
@@ -137,8 +147,8 @@ attest run as operator-signed
 right thing — it's a **signed, hash-chained, replayable
 attestation** that an external auditor (or downstream CI) can
 verify cryptographically. The router's choice of local vs
-frontier is not a heuristic; it's *driven by gate outcomes
-recorded in the witness chain*. The cost saving is a
+frontier is not a heuristic; it's _driven by gate outcomes
+recorded in the witness chain_. The cost saving is a
 side-effect of the verification pattern, not the goal.
 
 This makes hybrid orchestration **auditable engineering with
@@ -161,11 +171,11 @@ attested-by-default bundle.
 
 (Verbatim from external-research agent.)
 
-> *Spec density is a measurable, ex-ante predictor of when a
+> _Spec density is a measurable, ex-ante predictor of when a
 > deterministic local-model substitution is provably safe under
 > adversarial cross-family verification, turning hybrid
 > orchestration from a heuristic cost-saver into an auditable
-> engineering discipline with signed proofs of equivalence.*
+> engineering discipline with signed proofs of equivalence._
 
 Today's v2 ablation (full vs starved at k=10) is the **first
 empirical evidence** for the spec-density part of this claim

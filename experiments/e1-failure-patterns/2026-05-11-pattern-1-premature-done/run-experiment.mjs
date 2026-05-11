@@ -4,7 +4,7 @@
 // Baseline arm: one prompt to qwen3-coder, then test.
 // PL-fix arm: prompt + test in a loop until tests pass or maxIter hit.
 
-import { readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -38,7 +38,9 @@ export function divide(a, b) {
 
 const TASK_PROMPT = `Fix the math.mjs file in this directory so that all tests in math.test.mjs pass. The current math.mjs has bugs in add, multiply, and divide. Reply with ONLY the complete corrected math.mjs file contents, no fences, no commentary, no explanation. Start with "// math.mjs" or "export".`;
 
-const PL_FIX_RETRY_PROMPT = (testStderr) => `Your previous fix did not pass all tests. Test runner output:
+const PL_FIX_RETRY_PROMPT = (
+  testStderr,
+) => `Your previous fix did not pass all tests. Test runner output:
 
 ${testStderr.slice(0, 500)}
 
@@ -155,7 +157,9 @@ for (let i = 1; i <= REPS; i++) {
   try {
     const r = await baselineArm(i);
     manifest.runs.push(r);
-    console.log(`${r.finalAllPass ? 'ALL_PASS' : `PARTIAL ${r.finalPassed}/3`} | iter=${r.iterations} | ${r.totalLocalTokens} tok`);
+    console.log(
+      `${r.finalAllPass ? 'ALL_PASS' : `PARTIAL ${r.finalPassed}/3`} | iter=${r.iterations} | ${r.totalLocalTokens} tok`,
+    );
   } catch (e) {
     manifest.runs.push({ rep: i, arm: 'baseline', error: e.message });
     console.log(`ERROR: ${e.message}`);
@@ -168,7 +172,9 @@ for (let i = 1; i <= REPS; i++) {
   try {
     const r = await plFixArm(i);
     manifest.runs.push(r);
-    console.log(`${r.finalAllPass ? 'ALL_PASS' : `STUCK ${r.finalPassed}/3`} | iter=${r.iterations} | ${r.totalLocalTokens} tok`);
+    console.log(
+      `${r.finalAllPass ? 'ALL_PASS' : `STUCK ${r.finalPassed}/3`} | iter=${r.iterations} | ${r.totalLocalTokens} tok`,
+    );
   } catch (e) {
     manifest.runs.push({ rep: i, arm: 'pl-fix', error: e.message });
     console.log(`ERROR: ${e.message}`);
@@ -187,7 +193,8 @@ manifest.summary = {
   baseline: {
     runs: baselineRuns.length,
     allPass: baselineAllPass,
-    avgPassed: baselineRuns.reduce((a, r) => a + r.finalPassed, 0) / Math.max(1, baselineRuns.length),
+    avgPassed:
+      baselineRuns.reduce((a, r) => a + r.finalPassed, 0) / Math.max(1, baselineRuns.length),
     totalTokens: baselineRuns.reduce((a, r) => a + r.totalLocalTokens, 0),
   },
   plFix: {
@@ -200,8 +207,12 @@ manifest.summary = {
 };
 
 console.log('\n=== Summary ===');
-console.log(`Baseline:  ${baselineAllPass}/${baselineRuns.length} all-pass (avg ${manifest.summary.baseline.avgPassed.toFixed(1)}/3 tests passing)`);
-console.log(`PL-fix:    ${plAllPass}/${plRuns.length} all-pass (avg ${manifest.summary.plFix.avgPassed.toFixed(1)}/3, ${manifest.summary.plFix.avgIter.toFixed(1)} iterations avg)`);
+console.log(
+  `Baseline:  ${baselineAllPass}/${baselineRuns.length} all-pass (avg ${manifest.summary.baseline.avgPassed.toFixed(1)}/3 tests passing)`,
+);
+console.log(
+  `PL-fix:    ${plAllPass}/${plRuns.length} all-pass (avg ${manifest.summary.plFix.avgPassed.toFixed(1)}/3, ${manifest.summary.plFix.avgIter.toFixed(1)} iterations avg)`,
+);
 
 writeFileSync(join(RESULTS_DIR, 'manifest.json'), JSON.stringify(manifest, null, 2));
 console.log(`\nManifest written to ${join(RESULTS_DIR, 'manifest.json')}`);

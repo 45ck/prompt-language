@@ -175,10 +175,7 @@
   "summary": {
     "totalTasks": 7,
     "closedByLocal": 5,
-    "frontierRequiredFor": [
-      "T1",
-      "T7"
-    ],
+    "frontierRequiredFor": ["T1", "T7"],
     "totalLocalTokens": 1084,
     "totalLocalWallMs": 93758
   }

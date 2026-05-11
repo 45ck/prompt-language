@@ -28,7 +28,7 @@ wrong because:
   T1 (trivially "easy" per the spec's own falsification clause at
   spec.md:108-109: "frontier escalations on the easy tasks
   T1/T2/T6") was one of the two failures. Read literally, the
-  spec's *falsification* clause is what triggered, not its support
+  spec's _falsification_ clause is what triggered, not its support
   clause.
 
 After correcting for the dependency artifact: real result is closer
@@ -75,10 +75,10 @@ This experiment is **too contaminated to cite as evidence for the
 hybrid hypothesis as stated**, but it is moderately useful as
 proof-of-life:
 
-- The *actual* signal — locals correctly produced 6/7 functions
+- The _actual_ signal — locals correctly produced 6/7 functions
   and the 1 hard one (T7, with shared-mutable-state coordination
   across multiple helpers) needed frontier — is consistent with
-  the hybrid hypothesis but was *not* what the manifest's
+  the hybrid hypothesis but was _not_ what the manifest's
   pass/fail reports. Citing the 5/7 number is misleading; citing
   the corrected 6/7 requires a manual re-read the spec did not
   require.
@@ -92,10 +92,10 @@ proof-of-life:
 - Strict-format-fit smoke pattern (hardcoded prime list) **did
   not recur here**.
 - Already non-claim-eligible per spec.md:3. Recommend filing as:
-  *"hybrid path completed the app; per-task local-success rate
+  _"hybrid path completed the app; per-task local-success rate
   not reliably measurable from this run due to inter-task oracle
   coupling; T7-class coordination tasks remain a credible
-  frontier-escalation candidate."*
+  frontier-escalation candidate."_
 
 Strength: **weak proof-of-life, not evidence for the support
 condition.**

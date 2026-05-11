@@ -85,7 +85,7 @@ describe('trace chain wiring', () => {
       expect(e.seq).toBe(i);
       expect(e.eventHash).toBeDefined();
       if (i === 0) {
-        expect(e.prevEventHash).toBeUndefined();
+        expect(e.prevEventHash).toBeNull();
       } else {
         expect(e.prevEventHash).toBe(logger.entries[i - 1]!.eventHash);
       }

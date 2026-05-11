@@ -7,33 +7,43 @@ date: 2026-05-11
 
 # Engineering-readiness verdict, 2026-05-11
 
+<!-- cspell:ignore Portarium EQTY OVERCLAIMED tinymd rpncalc characterised Catchable Generalisation amortisation genericised amortises realsoftware -->
+
+> **Correction note (2026-05-12):** The operator signer has since been
+> provisioned as `operator-45ck-2026-05`, so references below to an empty
+> trusted-signers registry are stale. This does not make any run claim-eligible:
+> the signed-bundle path still needs verifier-clean trace/state/witness evidence
+> and real cross-family review. Use
+> [Current Plan After May 11 Evidence](current-plan-2026-05-12.md) for the active
+> roadmap.
+
 After a single day of focused experimentation, what kinds of
 engineering work can honestly start, and what still needs more
 evidence?
 
 ## TL;DR (revised 2026-05-11 night, post-adversarial review)
 
-| Engineering decision                                     | Verdict        |
-| -------------------------------------------------------- | -------------- |
-| Ship a Claude Code skill for narrow micro-task routing   | **GO** (with the boundary that even at micro-task scope, oracle weakness inflates pass rates — see "honest revised" finding below) |
-| Add hybrid routing to existing harness-arena pipelines   | **GO**         |
-| Use hybrid routing in personal/internal projects         | **CONDITIONAL GO** (only if work is bounded micro-tasks with oracles, and oracles are written by a different author than the prompts) |
-| Build the Portarium ↔ PL integration contract            | **NO** (premature; trigger not met) |
-| Promote hybrid as a primary engineering paradigm         | **NO** (evidence too narrow) |
-| Claim hybrid is novel research finding                   | **NO** (refuted by adversarial review — EQTY/Hybrid LLM/HumanLayer scoop major claims; published baselines make 100/100 the expected mode) |
-| Use hybrid for real-software builds (cost-justified)     | **NO** (revised — never breaks even at any N on dollar grounds; only justified by privacy/latency/quota) |
-| Use hybrid for client app-build work                     | **NO** (loses tokens at app-build scope) |
-| Provision a real operator signer to clear §3a gate 5    | **OPTIONAL** (downgraded from GO — bookkeeping; doesn't advance any thesis hypothesis directly) |
+| Engineering decision                                   | Verdict                                                                                                                                    |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Ship a Claude Code skill for narrow micro-task routing | **GO** (with the boundary that even at micro-task scope, oracle weakness inflates pass rates — see "honest revised" finding below)         |
+| Add hybrid routing to existing harness-arena pipelines | **GO**                                                                                                                                     |
+| Use hybrid routing in personal/internal projects       | **CONDITIONAL GO** (only if work is bounded micro-tasks with oracles, and oracles are written by a different author than the prompts)      |
+| Build the Portarium ↔ PL integration contract          | **NO** (premature; trigger not met)                                                                                                        |
+| Promote hybrid as a primary engineering paradigm       | **NO** (evidence too narrow)                                                                                                               |
+| Claim hybrid is novel research finding                 | **NO** (refuted by adversarial review — EQTY/Hybrid LLM/HumanLayer scoop major claims; published baselines make 100/100 the expected mode) |
+| Use hybrid for real-software builds (cost-justified)   | **NO** (revised — never breaks even at any N on dollar grounds; only justified by privacy/latency/quota)                                   |
+| Use hybrid for client app-build work                   | **NO** (loses tokens at app-build scope)                                                                                                   |
+| Provision a real operator signer to clear §3a gate 5   | **OPTIONAL** (downgraded from GO — bookkeeping; doesn't advance any thesis hypothesis directly)                                            |
 
 ## The five same-day pilots (corrected)
 
-| Pilot                              | Scope-tag                          | Verdict        | Key number                                |
-| ---------------------------------- | ---------------------------------- | -------------- | ----------------------------------------- |
-| TODO CLI                           | `app-build-orchestration`          | Hybrid loses   | 2-3× more expensive than frontier-only    |
-| Micro-task v2 (full prompts) at k=10 | `micro-task` clear specs           | Hybrid wins on cost; **NOVELTY OVERCLAIMED** | 100/100 at k=10 is the expected mode (P=60% by chance from 95% baseline); cross-family review found 1 real qwen bug oracle missed |
-| Micro-task v2 (starved prompts) at k=10 | `micro-task` thin specs           | Hybrid mixed   | **40/100** at k=10, deterministic per-task |
-| tinymd                             | `real-software-multistage`         | Hybrid loses (revised) | 6/8 first-attempt, 14× more expensive at N=1 |
-| **rpncalc (cross-app reuse)**      | `real-software-multistage`         | **Hybrid loses at any N** | 6/7 first-attempt; ~5.5k per-pilot scaffolding cost vs ~600 per-pilot saving — never breaks even |
+| Pilot                                   | Scope-tag                  | Verdict                                      | Key number                                                                                                                        |
+| --------------------------------------- | -------------------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| TODO CLI                                | `app-build-orchestration`  | Hybrid loses                                 | 2-3× more expensive than frontier-only                                                                                            |
+| Micro-task v2 (full prompts) at k=10    | `micro-task` clear specs   | Hybrid wins on cost; **NOVELTY OVERCLAIMED** | 100/100 at k=10 is the expected mode (P=60% by chance from 95% baseline); cross-family review found 1 real qwen bug oracle missed |
+| Micro-task v2 (starved prompts) at k=10 | `micro-task` thin specs    | Hybrid mixed                                 | **40/100** at k=10, deterministic per-task                                                                                        |
+| tinymd                                  | `real-software-multistage` | Hybrid loses (revised)                       | 6/8 first-attempt, 14× more expensive at N=1                                                                                      |
+| **rpncalc (cross-app reuse)**           | `real-software-multistage` | **Hybrid loses at any N**                    | 6/7 first-attempt; ~5.5k per-pilot scaffolding cost vs ~600 per-pilot saving — never breaks even                                  |
 
 The pattern is **scope- and reuse-sensitive**, not universally
 cost-positive or cost-negative.
@@ -45,11 +55,12 @@ cost-positive or cost-negative.
    reliably gate per-task code generation against deterministic
    oracles and roll back on failure.
 
-2. **Local-model output is real code, not transcription.** On
-   `parseQuery` in v2, local produced *more correct* behavior than
-   frontier's pre-committed reference (handled `+`-as-space per
-   application/x-www-form-urlencoded). Different style, real
-   reasoning.
+2. **Some local-model output was real code, but spec density did real
+   work.** On `parseQuery` in v2, local produced _more correct_
+   behavior than frontier's pre-committed reference (handled
+   `+`-as-space per application/x-www-form-urlencoded). That is a
+   meaningful signal, but the dense specs also acted as answer keys and
+   likely inflated performance.
 
 3. **Two real local failure modes are characterised and learnable:**
    - Subtle code errors in generated lines (regex backslash bugs).
@@ -64,9 +75,9 @@ cost-positive or cost-negative.
    real engineering work.
 
 5. **Three independent reviewer agents** (the TODO CLI confirmation
-   + critic agents and the v2 pre-flight critic) caught real
-   methodology bugs before any of these findings reached the §2a
-   tracker. The dual-reviewer workflow itself is shippable.
+   - critic agents and the v2 pre-flight critic) caught real
+     methodology bugs before any of these findings reached the §2a
+     tracker. The dual-reviewer workflow itself is shippable.
 
 6. **Hardware works at this size.** i7-14700K + RX 7600 XT 16GB +
    64GB RAM + Vulkan/Ollama runs qwen3-coder:30b reliably at
@@ -86,30 +97,32 @@ cost-positive or cost-negative.
    missed. Need a cross-family setup (per harness-arena's existing
    `cross-family-reviewer` design).
 
-3. **k≥10 stability.** Current max is k=3. The strict-format-fit
-   smoke earlier today showed temperature=0 is non-deterministic on
-   Vulkan; one failed run could shift a 100% pass rate to 80%+.
+3. **Independent reliability.** The later k=10 micro-task sweep was a
+   useful determinism check against the original oracle, but not an
+   independent reliability result. The strict-format-fit smoke earlier
+   today showed temperature=0 can still be non-deterministic on Vulkan.
 
-4. **Cross-app scaffolding reuse.** Break-even at N≈12 reused real-
-   software builds is a *theoretical* estimate from one pilot. Have
-   not actually reused the runner.mjs + oracle pattern across two
-   distinct apps yet. The "amortisation" claim is unmeasured.
+4. **Positive cross-app scaffolding reuse economics.** The rpncalc
+   follow-up measured reuse and corrected the earlier N≈12 break-even
+   claim. Current measured reuse still leaves real-software multistage
+   hybrid dollar-negative.
 
 5. **Privacy / latency / quota-independence benefits.** Claimed in
    the skill doc; not measured in this session.
 
 6. **Claim-eligibility** per program-status §3a. Zero runs across
-   all four pilots satisfy the five gates (strict trace, ready
-   preflight, attestation, cross-family reviewer, trusted signer).
-   The trusted-signers registry is still an empty placeholder. This
-   is **independent of** the hybrid question — it's an
-   infrastructure gap.
+   all four pilots satisfy the gates (strict trace, ready preflight,
+   attestation, cross-family reviewer, trusted signer, and the newer
+   runner-safety profile requirement). The operator signer is now
+   provisioned, but no verifier-clean signed bundle exists. This is
+   **independent of** the hybrid question — it's an infrastructure gap.
 
 ## Engineering decisions, with required evidence and current status
 
 ### 1. Ship the `concord-microtask-router` Claude Code skill — **GO**
 
 Required evidence:
+
 - ✅ At least one task class shows clear local pass at clear oracle
 - ✅ Explicit boundaries documented (no app-builds, no debugging,
   no multi-file)
@@ -134,11 +147,13 @@ first claim-eligible bundle exists.
 ### 3. Use hybrid routing in personal/internal projects — **CONDITIONAL GO**
 
 Use if:
+
 - Task is a single function with a clear ≤100-token spec
 - A deterministic test or property check exists
 - Tutorial-quality prompts can be written
 
 Do NOT use if:
+
 - Task touches multiple files
 - Task is debugging, refactoring, or unbounded ("add a feature")
 - A wrong answer is silently accepted (oracle weak or absent)
@@ -181,23 +196,23 @@ grounds. The pattern is only justified by non-cost benefits
 
 ### 7. Provision a real operator signer — **GO** (orthogonal)
 
-`docs/security/trusted-signers.json` is still an empty placeholder.
-This gates §3a item 5 ("trusted-signers registry") and therefore
-gates ALL claim-eligible evidence regardless of what the hybrid
-question turns out to be. Recommended as the highest-leverage
-single piece of infrastructure work this week.
+The operator signer has since been provisioned in
+`docs/security/trusted-signers.json`. That cleared only one procedural
+blocker. Claim-eligible evidence still requires a verifier-clean signed
+bundle with strict trace/state/nonce/freshness checks, real reviewer proof,
+and the runner-safety profile now captured in the May 12 plan.
 
 ## Minimum experiments to flip "NO" verdicts
 
-| Decision                                  | Smallest experiment that would flip it      | Estimated effort  |
-| ----------------------------------------- | -------------------------------------------- | ----------------- |
-| Portarium integration contract            | Cross-app reuse pilot showing scaffolding amortises (build 2nd real-software with same runner) | ~1 hour    |
-| Hybrid as primary paradigm                | H1-H6 from `thesis.md` run with claim-eligible setup; multi-file project pilot                    | Weeks      |
-| Hybrid for client app-builds              | 5-pilot scaffolding-reuse measurement showing N≈12 break-even is real, not theoretical             | ~5 hours   |
-| Generalisation beyond curated tasks       | Sample 50 random functions from a popular npm package; run v2 pattern against them                  | ~2-3 hours |
-| k≥10 stability                            | Bump v2 and tinymd to k=10 + seed sweep; recompute CIs                                              | ~30 minutes (just running) |
+| Decision                            | Smallest experiment that would flip it                                                         | Estimated effort           |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------- |
+| Portarium integration contract      | Cross-app reuse pilot showing scaffolding amortises (build 2nd real-software with same runner) | ~1 hour                    |
+| Hybrid as primary paradigm          | H1-H6 from `thesis.md` run with claim-eligible setup; multi-file project pilot                 | Weeks                      |
+| Hybrid for client app-builds        | 5-pilot scaffolding-reuse measurement showing N≈12 break-even is real, not theoretical         | ~5 hours                   |
+| Generalisation beyond curated tasks | Sample 50 random functions from a popular npm package; run v2 pattern against them             | ~2-3 hours                 |
+| k≥10 stability                      | Bump v2 and tinymd to k=10 + seed sweep; recompute CIs                                         | ~30 minutes (just running) |
 
-The 30-minute k=10 stability sweep is the highest leverage *next*
+The 30-minute k=10 stability sweep is the highest leverage _next_
 experiment — it would either firm up the headline numbers or expose
 significant variance. If pass-rate at k=10 is within 2-3 percentage
 points of k=3, we have stable evidence. If it swings by 10+ points,

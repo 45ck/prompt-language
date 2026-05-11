@@ -93,6 +93,7 @@ The signed bundle is at:
 `experiments/attested-smoke-2026-05-11/.pl-multi/`
 
 Contents:
+
 - `provenance.jsonl` — 4-entry trace
 - `session-state.json` — final state (hash matches trace)
 - `audit.jsonl`, `ollama-turns.jsonl`, `provider-telemetry.jsonl`
@@ -105,14 +106,14 @@ Contents:
 
 ## Bug status across all of tonight's runtime findings
 
-| # | Bug | Status |
-|---|-----|--------|
-| 1 | Default model `gemma4:31b` returns empty visible output | Open (workaround: `--model qwen3-coder:30b`) |
-| 2 | Ollama runner is action-protocol; case A short-circuit shipped, case B (model emits actions but never `done`) and case C (verbose responses) remain | Partial fix shipped; bead `5io5` open |
-| 3 | Single-prompt flows lack final `stateAfterHash` in trace | Open; bead `j1xa` filed |
-| 4 | Trace entry 0 prevEventHash not serialised as `null` | New finding tonight; needs bead |
-| 5 | No ollama-side witness shim → orphan agent_invocation events | New finding tonight; needs bead |
-| 6 | `verify-trace --state` flag path resolution issue | New finding tonight; needs bead |
+| #   | Bug                                                                                                                                                 | Status                                       |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 1   | Default model `gemma4:31b` returns empty visible output                                                                                             | Open (workaround: `--model qwen3-coder:30b`) |
+| 2   | Ollama runner is action-protocol; case A short-circuit shipped, case B (model emits actions but never `done`) and case C (verbose responses) remain | Partial fix shipped; bead `5io5` open        |
+| 3   | Single-prompt flows lack final `stateAfterHash` in trace                                                                                            | Open; bead `j1xa` filed                      |
+| 4   | Trace entry 0 prevEventHash not serialised as `null`                                                                                                | New finding tonight; needs bead              |
+| 5   | No ollama-side witness shim → orphan agent_invocation events                                                                                        | New finding tonight; needs bead              |
+| 6   | `verify-trace --state` flag path resolution issue                                                                                                   | New finding tonight; needs bead              |
 
 ## What this milestone IS evidence for
 
@@ -134,8 +135,8 @@ not about whether attestation can happen at all.
    the trace logger
 2. Fix bug #6 (--state path resolution) — debug the verify-trace
    flag handler
-3. Build an `pl-ollama` witness shim (or document why ollama-side
-   shim isn't required for read-only runs)
+3. Build an `pl-ollama` witness shim or equivalent transport witness;
+   without that, Ollama bundles stay recorded-only and non-claim-eligible
 4. Run a real cross-family review against the bundle (devstral as
    mistral-family reviewer; or claude as anthropic-family reviewer)
 

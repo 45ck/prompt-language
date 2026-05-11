@@ -86,7 +86,8 @@ function deepEqual(a, b) {
       for (let i = 0; i < a.length; i++) if (!deepEqual(a[i], b[i])) return false;
       return true;
     }
-    const ka = Object.keys(a), kb = Object.keys(b);
+    const ka = Object.keys(a),
+      kb = Object.keys(b);
     if (ka.length !== kb.length) return false;
     for (const k of ka) if (!deepEqual(a[k], b[k])) return false;
     return true;
@@ -110,8 +111,14 @@ for (const task of TASKS) {
     const gen = await generate(REVIEWER_MODEL, reviewerPrompt(task));
     cases = extractJson(gen.response);
     if (!cases || !Array.isArray(cases) || cases.length === 0) {
-      console.log(`  REVIEWER_NO_CASES (raw[0..200]: ${gen.response.slice(0, 200).replace(/\n/g, ' ')})`);
-      overall.perTask.push({ id: task.id, status: 'reviewer-no-cases', rawSnippet: gen.response.slice(0, 400) });
+      console.log(
+        `  REVIEWER_NO_CASES (raw[0..200]: ${gen.response.slice(0, 200).replace(/\n/g, ' ')})`,
+      );
+      overall.perTask.push({
+        id: task.id,
+        status: 'reviewer-no-cases',
+        rawSnippet: gen.response.slice(0, 400),
+      });
       continue;
     }
     console.log(`  got ${cases.length} adversarial cases`);
@@ -165,7 +172,7 @@ for (const task of TASKS) {
     failures: failures.slice(0, 5),
     cases,
   };
-  console.log(`  qwen pass: ${pass}/${cases.length} (${Math.round(100 * pass / cases.length)}%)`);
+  console.log(`  qwen pass: ${pass}/${cases.length} (${Math.round((100 * pass) / cases.length)}%)`);
   if (failures.length) {
     console.log(`    sample failure: ${JSON.stringify(failures[0]).slice(0, 200)}`);
   }
@@ -192,7 +199,9 @@ console.log('\n=== Cross-family summary ===');
 console.log(`Reviewer: ${REVIEWER_MODEL}`);
 console.log(`Tasks graded: ${graded.length}/${TASKS.length}`);
 console.log(`Adversarial cases (qwen ran against): ${totalCases}`);
-console.log(`Overall pass rate: ${totalPass}/${totalCases} (${Math.round(100 * totalPass / totalCases)}%)`);
+console.log(
+  `Overall pass rate: ${totalPass}/${totalCases} (${Math.round((100 * totalPass) / totalCases)}%)`,
+);
 console.log('Per-task:');
 for (const t of overall.summary.perTaskPassRates) {
   console.log(`  ${t.id.padEnd(20)} ${t.pass}/${t.total}`);

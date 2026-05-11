@@ -1,6 +1,6 @@
 export function mergeAcl(rules) {
   const result = new Map();
-  
+
   for (const rule of rules) {
     const { role, perms } = rule;
     if (!result.has(role)) {
@@ -11,6 +11,6 @@ export function mergeAcl(rules) {
       existingPerms.add(perm);
     }
   }
-  
+
   return result;
 }

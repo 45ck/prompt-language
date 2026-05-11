@@ -33,11 +33,11 @@ Validated by `isRunnerAction` at line 339. Expected shape (lines
 ```json
 {
   "actions": [
-    {"type": "list_files", "path": "."},
-    {"type": "read_file", "path": "..."},
-    {"type": "write_file", "path": "...", "content": "..."},
-    {"type": "run_command", "command": "..."},
-    {"type": "done", "message": "..."}
+    { "type": "list_files", "path": "." },
+    { "type": "read_file", "path": "..." },
+    { "type": "write_file", "path": "...", "content": "..." },
+    { "type": "run_command", "command": "..." },
+    { "type": "done", "message": "..." }
   ]
 }
 ```
@@ -72,7 +72,7 @@ spins for 1-5 minutes per turn." Different causes, same symptom.
 **Only one commit claims it: `32f4d20`** (Apr 11 2026, by 45ck) —
 "fix(ollama): pass full local smoke on **gemma4**". It modifies
 `bin/cli.mjs`, `run-flow-headless.ts`, `parse-flow.ts`, etc.
-That's a fix that *enabled* the smoke pass, not evidence of
+That's a fix that _enabled_ the smoke pass, not evidence of
 stable use. **No other commit** mentions an end-to-end success
 with qwen, llama, or any other model. The 35 other ollama-tagged
 commits are diagnoses, feature additions, retry hardening, and

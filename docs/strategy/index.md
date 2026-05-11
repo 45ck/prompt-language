@@ -20,10 +20,16 @@ Read this section after you understand the shipped product surface. The thesis p
 
 ## Pages
 
-| Doc                                                                  | Focus                                                              |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| [Positioning](positioning.md)                                        | Product framing and category boundaries                            |
-| [Thesis](thesis.md)                                                  | Long-term research claim, not a shipped feature guarantee          |
-| [Thesis Research Roadmap](thesis-roadmap.md)                         | Concrete experiments to prove or disprove the thesis               |
-| [Research Synthesis](../evaluation/2026-05-06-research-synthesis.md) | Current cross-experiment verdicts on which hypotheses have held up |
-| [Roadmap](../roadmap.md)                                             | Shipped-vs-tracked product roadmap tied to `.beads`                |
+| Doc                                                                                    | Focus                                                              |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| [Positioning](positioning.md)                                                          | Product framing and category boundaries                            |
+| [Thesis](thesis.md)                                                                    | Long-term research claim, not a shipped feature guarantee          |
+| [Thesis Research Roadmap](thesis-roadmap.md)                                           | Concrete experiments to prove or disprove the thesis               |
+| [Current Plan After May 11 Evidence](current-plan-2026-05-12.md)                       | Current operator plan, proposed beads, and claim boundaries        |
+| [May 11 Challenge and Defense](research-synthesis-challenge-and-defense-2026-05-11.md) | Current correction layer for May 11 novelty and priority claims    |
+| [Research Synthesis](../evaluation/2026-05-06-research-synthesis.md)                   | Current cross-experiment verdicts on which hypotheses have held up |
+| [Roadmap](../roadmap.md)                                                               | Shipped-vs-tracked product roadmap tied to `.beads`                |
+
+For May 11 hybrid/local claims, read the challenge-and-defense doc and current
+plan before the original 2026-05-11 synthesis. They supersede the original
+novelty framing and operator-priority ranking.

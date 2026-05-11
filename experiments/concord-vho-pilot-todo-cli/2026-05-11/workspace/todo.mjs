@@ -11,28 +11,30 @@ export function list(state) {
   if (!state.items || state.items.length === 0) {
     return 'empty';
   }
-  
-  return state.items.map(item => {
-    const status = item.done ? '[x]' : '[ ]';
-    return `${status} ${item.id}: ${item.text}`;
-  }).join('\n');
+
+  return state.items
+    .map((item) => {
+      const status = item.done ? '[x]' : '[ ]';
+      return `${status} ${item.id}: ${item.text}`;
+    })
+    .join('\n');
 }
 
 export function complete(state, id) {
-  const newItem = state.items.map(item => 
-    item.id === id ? { ...item, done: true } : item
-  );
-  
-  if (newItem.length === state.items.length && 
-      newItem.every((item, index) => item === state.items[index])) {
+  const newItem = state.items.map((item) => (item.id === id ? { ...item, done: true } : item));
+
+  if (
+    newItem.length === state.items.length &&
+    newItem.every((item, index) => item === state.items[index])
+  ) {
     throw new Error('Item not found');
   }
-  
+
   return { items: newItem };
 }
 
 export function remove(state, id) {
-  const items = state.items.filter(item => item.id !== id);
+  const items = state.items.filter((item) => item.id !== id);
   if (items.length === state.items.length) {
     throw new Error('Item not found');
   }

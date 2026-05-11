@@ -3,13 +3,19 @@
 import { resolve } from 'node:path';
 
 const implPath = process.argv[2];
-if (!implPath) { console.error('usage: integration.test.mjs <pathToRpncalcMjs>'); process.exit(2); }
+if (!implPath) {
+  console.error('usage: integration.test.mjs <pathToRpncalcMjs>');
+  process.exit(2);
+}
 
 let calculate;
 try {
   const mod = await import(`file://${resolve(process.cwd(), implPath).replace(/\\/g, '/')}`);
   calculate = mod.calculate;
-} catch (e) { console.error(`import failed: ${e.message}`); process.exit(1); }
+} catch (e) {
+  console.error(`import failed: ${e.message}`);
+  process.exit(1);
+}
 
 const cases = [
   // Simple arithmetic
@@ -42,18 +48,30 @@ let pass = 0;
 const failures = [];
 for (const [input, expected] of cases) {
   let actual;
-  try { actual = calculate(input); }
-  catch (e) { failures.push(`calculate(${JSON.stringify(input)}) threw: ${e.message}`); continue; }
+  try {
+    actual = calculate(input);
+  } catch (e) {
+    failures.push(`calculate(${JSON.stringify(input)}) threw: ${e.message}`);
+    continue;
+  }
   if (actual === expected) pass++;
-  else failures.push(`calculate(${JSON.stringify(input)}) = ${JSON.stringify(actual)} expected ${JSON.stringify(expected)}`);
+  else
+    failures.push(
+      `calculate(${JSON.stringify(input)}) = ${JSON.stringify(actual)} expected ${JSON.stringify(expected)}`,
+    );
 }
 for (const [input, expectedMsgPart] of errCases) {
   try {
     const r = calculate(input);
-    failures.push(`calculate(${JSON.stringify(input)}) returned ${JSON.stringify(r)} but should have thrown ${expectedMsgPart}`);
+    failures.push(
+      `calculate(${JSON.stringify(input)}) returned ${JSON.stringify(r)} but should have thrown ${expectedMsgPart}`,
+    );
   } catch (e) {
     if (String(e.message).includes(expectedMsgPart)) pass++;
-    else failures.push(`calculate(${JSON.stringify(input)}) threw '${e.message}' expected match '${expectedMsgPart}'`);
+    else
+      failures.push(
+        `calculate(${JSON.stringify(input)}) threw '${e.message}' expected match '${expectedMsgPart}'`,
+      );
   }
 }
 

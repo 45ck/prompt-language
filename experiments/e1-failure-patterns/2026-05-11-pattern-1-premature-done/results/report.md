@@ -19,10 +19,10 @@ baseline has nothing to fix.
 
 ## Result table
 
-| Arm     | k | All-pass | Avg iter | Total tokens |
-| ------- | - | -------- | -------- | ------------ |
-| Baseline| 5 | **5/5**  | 1.0      | 360 (~72/run)|
-| PL-fix  | 5 | 5/5      | 1.0      | 360 (~72/run)|
+| Arm      | k   | All-pass | Avg iter | Total tokens  |
+| -------- | --- | -------- | -------- | ------------- |
+| Baseline | 5   | **5/5**  | 1.0      | 360 (~72/run) |
+| PL-fix   | 5   | 5/5      | 1.0      | 360 (~72/run) |
 
 Both arms: identical first-attempt success. PL-fix arm never
 needed to invoke its retry loop — `done when: tests_pass` returned

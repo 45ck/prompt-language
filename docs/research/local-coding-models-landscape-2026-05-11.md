@@ -24,17 +24,17 @@ materially lower on agentic / SWE-bench tests.
 
 ## Candidates and fit-check
 
-| Model                              | Total / Active params | Q4_K_M size | Fits this rig? | Status                                                               |
-| ---------------------------------- | --------------------- | ----------- | -------------- | -------------------------------------------------------------------- |
-| `qwen3-coder:30b` (A3B MoE)        | 30B / 3B              | ~18 GB      | Yes (87/13 split) | **Current baseline.** Released 2025-07-31.                           |
-| `qwen3-coder-next:80b` (A3B MoE)   | 80B / 3B              | ~52 GB      | Yes, heavy CPU spill; throughput drops to ~15-20 tok/s vs current 44 | **Only credible challenger.** +7 pts SWE-bench Verified per Alibaba. |
-| GLM-4.6                            | 355B / 32B            | 200 GB+     | **No**         | Cloud-only via Ollama (`glm-4.6:cloud`). ~68% SWE-bench Verified.    |
-| GLM-4.5-Air                        | 106B / 12B            | ~63 GB      | Marginal, CPU-heavy | HF only, no Ollama tag; GGUF-importable.                             |
-| DeepSeek-V3.2 / V3.x               | 671B / 37B            | ~400 GB     | **No**         | Enterprise-only.                                                     |
-| Codestral 25.01                    | 22B dense             | ~13 GB      | Yes, fully VRAM | Strong FIM; weaker SWE-bench. Worth pulling as fast sidekick.        |
-| Qwen2.5-Coder 32B                  | 32B dense             | ~19 GB      | Yes (similar spill profile) | Pre-dates Qwen3-Coder; benchmarks lower.                             |
-| DeepSeek-Coder-V2-Lite 16B         | 16B / 2.4B            | ~10 GB      | Yes            | 2024 model; behind Qwen3-Coder.                                      |
-| Yi-Coder, OpenCoder, StarCoder2    | ≤9B / ≤15B            | ≤9 GB       | Yes            | All sub-Qwen3-Coder.                                                 |
+| Model                            | Total / Active params | Q4_K_M size | Fits this rig?                                                       | Status                                                               |
+| -------------------------------- | --------------------- | ----------- | -------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `qwen3-coder:30b` (A3B MoE)      | 30B / 3B              | ~18 GB      | Yes (87/13 split)                                                    | **Current baseline.** Released 2025-07-31.                           |
+| `qwen3-coder-next:80b` (A3B MoE) | 80B / 3B              | ~52 GB      | Yes, heavy CPU spill; throughput drops to ~15-20 tok/s vs current 44 | **Only credible challenger.** +7 pts SWE-bench Verified per Alibaba. |
+| GLM-4.6                          | 355B / 32B            | 200 GB+     | **No**                                                               | Cloud-only via Ollama (`glm-4.6:cloud`). ~68% SWE-bench Verified.    |
+| GLM-4.5-Air                      | 106B / 12B            | ~63 GB      | Marginal, CPU-heavy                                                  | HF only, no Ollama tag; GGUF-importable.                             |
+| DeepSeek-V3.2 / V3.x             | 671B / 37B            | ~400 GB     | **No**                                                               | Enterprise-only.                                                     |
+| Codestral 25.01                  | 22B dense             | ~13 GB      | Yes, fully VRAM                                                      | Strong FIM; weaker SWE-bench. Worth pulling as fast sidekick.        |
+| Qwen2.5-Coder 32B                | 32B dense             | ~19 GB      | Yes (similar spill profile)                                          | Pre-dates Qwen3-Coder; benchmarks lower.                             |
+| DeepSeek-Coder-V2-Lite 16B       | 16B / 2.4B            | ~10 GB      | Yes                                                                  | 2024 model; behind Qwen3-Coder.                                      |
+| Yi-Coder, OpenCoder, StarCoder2  | ≤9B / ≤15B            | ≤9 GB       | Yes                                                                  | All sub-Qwen3-Coder.                                                 |
 
 ## Benchmark anchors
 

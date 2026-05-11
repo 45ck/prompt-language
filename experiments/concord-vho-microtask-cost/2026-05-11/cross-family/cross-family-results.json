@@ -10,50 +10,29 @@
       "passRate": 0,
       "failures": [
         {
-          "args": [
-            [],
-            100
-          ],
+          "args": [[], 100],
           "expected": 100,
           "threw": "tiers is not iterable"
         },
         {
           "args": [
             [
-              [
-                0,
-                10
-              ],
-              [
-                100,
-                20
-              ]
+              [0, 10],
+              [100, 20]
             ],
             0
           ],
           "expected": 0,
           "actual": [
-            [
-              0,
-              10
-            ],
-            [
-              100,
-              20
-            ]
+            [0, 10],
+            [100, 20]
           ]
         },
         {
           "args": [
             [
-              [
-                0,
-                10
-              ],
-              [
-                100,
-                20
-              ]
+              [0, 10],
+              [100, 20]
             ],
             100
           ],
@@ -63,14 +42,8 @@
         {
           "args": [
             [
-              [
-                0,
-                10
-              ],
-              [
-                100,
-                20
-              ]
+              [0, 10],
+              [100, 20]
             ],
             101
           ],
@@ -80,14 +53,8 @@
         {
           "args": [
             [
-              [
-                0,
-                10
-              ],
-              [
-                100,
-                20
-              ]
+              [0, 10],
+              [100, 20]
             ],
             99.99
           ],
@@ -97,23 +64,14 @@
       ],
       "cases": [
         {
-          "args": [
-            [],
-            100
-          ],
+          "args": [[], 100],
           "expected": 100
         },
         {
           "args": [
             [
-              [
-                0,
-                10
-              ],
-              [
-                100,
-                20
-              ]
+              [0, 10],
+              [100, 20]
             ],
             0
           ],
@@ -122,14 +80,8 @@
         {
           "args": [
             [
-              [
-                0,
-                10
-              ],
-              [
-                100,
-                20
-              ]
+              [0, 10],
+              [100, 20]
             ],
             100
           ],
@@ -138,14 +90,8 @@
         {
           "args": [
             [
-              [
-                0,
-                10
-              ],
-              [
-                100,
-                20
-              ]
+              [0, 10],
+              [100, 20]
             ],
             101
           ],
@@ -154,14 +100,8 @@
         {
           "args": [
             [
-              [
-                0,
-                10
-              ],
-              [
-                100,
-                20
-              ]
+              [0, 10],
+              [100, 20]
             ],
             99.99
           ],
@@ -170,14 +110,8 @@
         {
           "args": [
             [
-              [
-                0,
-                10
-              ],
-              [
-                100,
-                20
-              ]
+              [0, 10],
+              [100, 20]
             ],
             100
           ],
@@ -209,126 +143,28 @@
       "failures": [],
       "cases": [
         {
-          "args": [
-            [],
-            5
-          ],
+          "args": [[], 5],
           "expected": []
         },
         {
-          "args": [
-            [
-              1,
-              2,
-              3
-            ],
-            0
-          ],
+          "args": [[1, 2, 3], 0],
           "expected": []
         },
         {
-          "args": [
-            [
-              1,
-              2,
-              3
-            ],
-            -1
-          ],
+          "args": [[1, 2, 3], -1],
           "expected": []
         },
         {
-          "args": [
-            [
-              1,
-              2,
-              3,
-              4,
-              5
-            ],
-            2
-          ],
-          "expected": [
-            [
-              1,
-              2
-            ],
-            [
-              3,
-              4
-            ],
-            [
-              5
-            ]
-          ]
+          "args": [[1, 2, 3, 4, 5], 2],
+          "expected": [[1, 2], [3, 4], [5]]
         },
         {
-          "args": [
-            [
-              1,
-              2,
-              3,
-              4,
-              5,
-              6,
-              7,
-              8,
-              9,
-              10
-            ],
-            3
-          ],
-          "expected": [
-            [
-              1,
-              2,
-              3
-            ],
-            [
-              4,
-              5,
-              6
-            ],
-            [
-              7,
-              8,
-              9
-            ],
-            [
-              10
-            ]
-          ]
+          "args": [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 3],
+          "expected": [[1, 2, 3], [4, 5, 6], [7, 8, 9], [10]]
         },
         {
-          "args": [
-            [
-              1,
-              2,
-              3,
-              4,
-              5,
-              6,
-              7,
-              8,
-              9,
-              10
-            ],
-            11
-          ],
-          "expected": [
-            [
-              1,
-              2,
-              3,
-              4,
-              5,
-              6,
-              7,
-              8,
-              9,
-              10
-            ]
-          ]
+          "args": [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 11],
+          "expected": [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]
         }
       ]
     },
@@ -340,48 +176,34 @@
       "passRate": 0.8333333333333334,
       "failures": [
         {
-          "args": [
-            "Hello World! How are you? I'm fine, thanks!"
-          ],
+          "args": ["Hello World! How are you? I'm fine, thanks!"],
           "expected": "hello-world-how-are-you-im-fine-thanks",
           "actual": "hello-world-how-are-you-i-m-fine-thanks"
         }
       ],
       "cases": [
         {
-          "args": [
-            ""
-          ],
+          "args": [""],
           "expected": ""
         },
         {
-          "args": [
-            "   "
-          ],
+          "args": ["   "],
           "expected": ""
         },
         {
-          "args": [
-            "Hello, World! How are you?"
-          ],
+          "args": ["Hello, World! How are you?"],
           "expected": "hello-world-how-are-you"
         },
         {
-          "args": [
-            "  Hello  World  "
-          ],
+          "args": ["  Hello  World  "],
           "expected": "hello-world"
         },
         {
-          "args": [
-            "Hello--World"
-          ],
+          "args": ["Hello--World"],
           "expected": "hello-world"
         },
         {
-          "args": [
-            "Hello World! How are you? I'm fine, thanks!"
-          ],
+          "args": ["Hello World! How are you? I'm fine, thanks!"],
           "expected": "hello-world-how-are-you-im-fine-thanks"
         }
       ]
@@ -399,9 +221,7 @@
       "passRate": 0.8333333333333334,
       "failures": [
         {
-          "args": [
-            "?a=b=c"
-          ],
+          "args": ["?a=b=c"],
           "expected": {
             "a": "b=c"
           },
@@ -412,46 +232,34 @@
       ],
       "cases": [
         {
-          "args": [
-            ""
-          ],
+          "args": [""],
           "expected": {}
         },
         {
-          "args": [
-            "?"
-          ],
+          "args": ["?"],
           "expected": {}
         },
         {
-          "args": [
-            "?a=b&c=d"
-          ],
+          "args": ["?a=b&c=d"],
           "expected": {
             "a": "b",
             "c": "d"
           }
         },
         {
-          "args": [
-            "?a=b&a=c"
-          ],
+          "args": ["?a=b&a=c"],
           "expected": {
             "a": "c"
           }
         },
         {
-          "args": [
-            "?a="
-          ],
+          "args": ["?a="],
           "expected": {
             "a": ""
           }
         },
         {
-          "args": [
-            "?a=b=c"
-          ],
+          "args": ["?a=b=c"],
           "expected": {
             "a": "b=c"
           }

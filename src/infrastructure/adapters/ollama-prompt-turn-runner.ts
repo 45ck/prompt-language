@@ -1001,7 +1001,7 @@ export class OllamaPromptTurnRunner implements PromptTurnRunner {
               prompt,
               rounds: 1,
               workspaceActions,
-              message: 'single-turn-text-shortcircuit',
+              message: 'single-turn-text-short-circuit',
             });
             return {
               exitCode: 0,

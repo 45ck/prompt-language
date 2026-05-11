@@ -3,7 +3,7 @@
 // Captures real per-attempt timing/tokens. Does NOT call frontier from here —
 // the frontier (Claude) handles repair manually after this script reports.
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -163,7 +163,9 @@ for (const task of tasks) {
   // Attempt 1: local fast
   console.log(`  attempt 1 → ${MODEL_FAST}`);
   const a1 = await attemptTask(task, MODEL_FAST, baselineSource);
-  console.log(`    ${a1.pass ? 'PASS' : a1.replaceFailed ? 'REPLACE_FAILED' : 'FAIL'} | ${a1.wallMs}ms | ${a1.evalTokens} tok`);
+  console.log(
+    `    ${a1.pass ? 'PASS' : a1.replaceFailed ? 'REPLACE_FAILED' : 'FAIL'} | ${a1.wallMs}ms | ${a1.evalTokens} tok`,
+  );
 
   if (a1.pass) {
     manifest.tasks.push({
@@ -183,7 +185,9 @@ for (const task of tasks) {
   writeWorkspace(baselineSource);
   console.log(`  attempt 2 → ${MODEL_SECOND_OPINION}`);
   const a2 = await attemptTask(task, MODEL_SECOND_OPINION, baselineSource);
-  console.log(`    ${a2.pass ? 'PASS' : a2.replaceFailed ? 'REPLACE_FAILED' : 'FAIL'} | ${a2.wallMs}ms | ${a2.evalTokens} tok`);
+  console.log(
+    `    ${a2.pass ? 'PASS' : a2.replaceFailed ? 'REPLACE_FAILED' : 'FAIL'} | ${a2.wallMs}ms | ${a2.evalTokens} tok`,
+  );
 
   if (a2.pass) {
     manifest.tasks.push({

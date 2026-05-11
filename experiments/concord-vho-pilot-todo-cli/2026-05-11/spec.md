@@ -40,13 +40,13 @@ State persists to `./.todo.json` (overridable via `TODO_FILE` env).
 
 ## Routing roles
 
-| Role                | Who                         | When invoked                                   |
-| ------------------- | --------------------------- | ---------------------------------------------- |
-| Architect / planner | Frontier (Claude, this session) | Once: writes spec, decomposes into bounded tasks, writes tests |
-| Local-fast worker   | `qwen3-coder:30b` via Ollama | Per task: implements the stubbed function     |
-| Local-second-opinion| `devstral-small-2:24b` via Ollama | Per task: invoked only if qwen3-coder's first attempt fails oracle |
-| Frontier repair     | Claude (this session)       | Per task: invoked only if both locals fail oracle after one retry each |
-| Reviewer            | Frontier (Claude)           | Once at end: smoke-runs the assembled CLI      |
+| Role                 | Who                               | When invoked                                                           |
+| -------------------- | --------------------------------- | ---------------------------------------------------------------------- |
+| Architect / planner  | Frontier (Claude, this session)   | Once: writes spec, decomposes into bounded tasks, writes tests         |
+| Local-fast worker    | `qwen3-coder:30b` via Ollama      | Per task: implements the stubbed function                              |
+| Local-second-opinion | `devstral-small-2:24b` via Ollama | Per task: invoked only if qwen3-coder's first attempt fails oracle     |
+| Frontier repair      | Claude (this session)             | Per task: invoked only if both locals fail oracle after one retry each |
+| Reviewer             | Frontier (Claude)                 | Once at end: smoke-runs the assembled CLI                              |
 
 ## Tasks (decomposition)
 
@@ -54,15 +54,15 @@ Each task = implement one function in `todo.mjs` to pass a specific
 slice of `todo.test.mjs`. Stubs and test framework exist before any
 local call; local model only fills in the function body.
 
-| ID | Function          | Description                                                       | Test slice         |
-| -- | ----------------- | ----------------------------------------------------------------- | ------------------ |
-| T1 | `add`             | `add(state, text) -> newState` — append item with auto-incrementing id | `T1_*` tests       |
-| T2 | `list`            | `list(state) -> string` — human-readable lines                    | `T2_*` tests       |
-| T3 | `complete`        | `complete(state, id) -> newState` — set done=true; throw on missing id | `T3_*` tests       |
-| T4 | `remove`          | `remove(state, id) -> newState` — drop item; throw on missing id  | `T4_*` tests       |
-| T5 | `save` / `load`   | `save(state, path)` writes JSON; `load(path) -> state` reads or returns empty | `T5_*` tests       |
-| T6 | `formatJson`      | `formatJson(state) -> string` — JSON output mode                  | `T6_*` tests       |
-| T7 | CLI dispatcher    | `runCli(argv) -> {exitCode, stdout, stderr}` — wire commands      | `T7_*` tests       |
+| ID  | Function        | Description                                                                   | Test slice   |
+| --- | --------------- | ----------------------------------------------------------------------------- | ------------ |
+| T1  | `add`           | `add(state, text) -> newState` — append item with auto-incrementing id        | `T1_*` tests |
+| T2  | `list`          | `list(state) -> string` — human-readable lines                                | `T2_*` tests |
+| T3  | `complete`      | `complete(state, id) -> newState` — set done=true; throw on missing id        | `T3_*` tests |
+| T4  | `remove`        | `remove(state, id) -> newState` — drop item; throw on missing id              | `T4_*` tests |
+| T5  | `save` / `load` | `save(state, path)` writes JSON; `load(path) -> state` reads or returns empty | `T5_*` tests |
+| T6  | `formatJson`    | `formatJson(state) -> string` — JSON output mode                              | `T6_*` tests |
+| T7  | CLI dispatcher  | `runCli(argv) -> {exitCode, stdout, stderr}` — wire commands                  | `T7_*` tests |
 
 7 bounded subtasks. Each test slice is a separate test group with
 adversarial cases (empty state, duplicate text, nonexistent ids,

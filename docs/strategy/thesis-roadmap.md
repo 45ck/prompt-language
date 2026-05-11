@@ -1,6 +1,6 @@
 # Thesis Research Roadmap
 
-<!-- cspell:ignore babysitting -->
+<!-- cspell:ignore babysitting rpncalc tinymd qwen devstral -->
 
 This document maps the [thesis experiments](thesis.md#experiments-that-can-prove-or-disprove-the-thesis) to the project's existing eval infrastructure and outlines what new tooling is needed for each.
 
@@ -22,6 +22,30 @@ The thesis should be tested in this order:
 
 If stage 1 or 2 is weak, stage 4 is just storytelling.
 
+## 2026-05-12 update
+
+The 2026-05-11 Concord/VHO experiments and follow-up scrutiny supersede the
+older "next thesis-valid step" guidance. The project should not run more broad
+thesis experiments until the May 12 evidence substrate plan has a tiny
+claim-eligible runtime bundle.
+
+Use
+[Current Plan After May 11 Evidence](current-plan-2026-05-12.md) as the active
+gate:
+
+- claim eligibility must require one shared verifier profile, trusted signer,
+  strict trace/state/nonce/freshness checks, real reviewer proof, runner
+  capability manifest, unsafe-runner rejection, and transport/witness handling;
+- Ollama bundles without a shim or equivalent transport witness are
+  recorded-only, not claim-eligible;
+- child/reviewer handoffs must declare owned paths, allowed commands, artifact
+  schema, timeout, import boundaries, and conflict behavior;
+- E1 repeated-failure work is the first thesis experiment after the runtime truth
+  gate, because it tests PL's clearest structural value.
+
+Product engineering can continue on the narrow supervision-runtime target.
+The primary-engineering-medium thesis remains research.
+
 ## 2026-05-06 update
 
 The FSCRUD R30-R45 diagnostics sharpen stage 2. They show that local-model
@@ -33,8 +57,11 @@ ownership is not binary:
 - therefore the next thesis experiments should test gradual responsibility
   expansion, not jump straight to "PL is the primary engineering surface."
 
-The next thesis-valid step is a small executable implementation slice or hybrid
-review/escalation arm with local-only and hybrid claims kept separate.
+At the time, this pointed toward a small executable implementation slice or
+hybrid review/escalation arm with local-only and hybrid claims kept separate.
+The May 12 update now places a stricter prerequisite in front of that: runtime
+truth and claim eligibility must be fixed before those routes can become thesis
+evidence.
 
 The 2026-05-06 live-smoke follow-up also started the operational telemetry
 baseline. Ollama-backed prompt turns now record token counts, duration fields,
@@ -53,17 +80,19 @@ cloud runners under PL"; it does not support "PL is cheaper/faster/better."
 
 The current hypothesis verdict table is maintained in
 [Research Synthesis: 2026-05-06](../evaluation/2026-05-06-research-synthesis.md).
-Use that synthesis as the claim boundary before adding more thesis experiments.
+Use that synthesis as historical context, but use the May 12 current plan as the
+active claim boundary before adding more thesis experiments.
 
 ## Priority order
 
-| Priority | Experiment                              | Why first                                               |
-| -------- | --------------------------------------- | ------------------------------------------------------- |
-| P0       | E1 — Repeated failure elimination       | Cheapest to run, directly extends existing eval scripts |
-| P1       | E3 — Wisdom accumulation                | Builds on `remember` / `memory:` already shipped        |
-| P2       | E2 — Single-file vs multi-file projects | Requires `import` maturity and fixture design           |
-| P3       | E5 — Parallel specialist orchestration  | Builds on `spawn` / `await` / `send` / `receive`        |
-| P4       | E4 — Prompt-language-first factory      | Largest scope, depends on learnings from E1-E3          |
+| Priority | Experiment                                   | Why first                                                          |
+| -------- | -------------------------------------------- | ------------------------------------------------------------------ |
+| P0       | Runtime truth / claim-eligible evidence gate | Without this, later thesis runs are anecdotes, not admissible data |
+| P1       | E1 — Repeated failure elimination            | Cheapest thesis test and directly extends existing eval scripts    |
+| P2       | E3 — Wisdom accumulation                     | Builds on `remember` / `memory:` already shipped                   |
+| P3       | E2 — Single-file vs multi-file projects      | Requires `import` maturity and fixture design                      |
+| P4       | E5 — Parallel specialist orchestration       | Builds on `spawn` / `await` / `send` / `receive`                   |
+| P5       | E4 — Prompt-language-first software factory  | Largest scope, depends on learnings from E1-E3                     |
 
 Read this as a dependency order, not a hype order. The later experiments are more ambitious, but they only mean anything if the earlier ones show real lift.
 

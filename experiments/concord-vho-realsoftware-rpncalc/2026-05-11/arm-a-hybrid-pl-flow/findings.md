@@ -23,7 +23,7 @@ hand-rolled `runner.mjs`. Goals:
 
 - `rpncalc.flow` — 7 routable functions expressed as `let X = prompt:` +
   `run:` (replace stub) + `run:` (oracle gate) + `if command_failed
-  → repair prompt`. ~107 lines of flow DSL.
+→ repair prompt`. ~107 lines of flow DSL.
 - `replace-stub.mjs` — small helper that takes raw model output via
   `PL_RAW=...` env or stdin and replaces a named stub in the
   workspace (since flow can't write files directly with the
@@ -93,8 +93,7 @@ round agentic loop, not making a single-turn generation call**.
 Per `src/infrastructure/adapters/ollama-prompt-turn-runner.ts:1072`:
 
 ```js
-const madeProgress = workspaceActions > 0 ||
-                     !promptRequiresWorkspaceAction(prompt);
+const madeProgress = workspaceActions > 0 || !promptRequiresWorkspaceAction(prompt);
 ```
 
 The runner only stops iterating when EITHER (a) the prompt didn't
@@ -166,7 +165,7 @@ tool-call instructions.
 
    **Tested empirically (2026-05-11 night):** with aider 0.86.2
    installed, `prompt-language ci --runner aider --model
-   ollama/qwen3-coder:30b <text-smoke.flow>` ALSO hangs after
+ollama/qwen3-coder:30b <text-smoke.flow>` ALSO hangs after
    "Running flow via aider..." for 90+ seconds with no further
    output. So switching runners does not unlock end-to-end on this
    rig. The issue may not be runner-specific — could be in the PL
@@ -205,11 +204,11 @@ Reopen `prompt-language-j0je` with a narrower acceptance criterion
 and split into two beads:
 
 1. **Fix the ollama-runner default + transport** (this rig: Windows
-   + WSL Bash + AMD Vulkan path) so that
-   `prompt-language ci --runner ollama --model qwen3-coder:30b
-   <single-turn flow>` returns a response within 30s. Current
-   behavior is to hang. Without this, no end-to-end PL flow against
-   local models is possible on this rig.
+   - WSL Bash + AMD Vulkan path) so that
+     `prompt-language ci --runner ollama --model qwen3-coder:30b
+<single-turn flow>` returns a response within 30s. Current
+     behavior is to hang. Without this, no end-to-end PL flow against
+     local models is possible on this rig.
 2. **After (1) is fixed**, attempt the unified attested rpncalc run.
 
 The hand-rolled `runner.mjs` from the morning's tinymd/rpncalc

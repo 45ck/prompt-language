@@ -36,15 +36,18 @@ Implementation: `scripts/experiments/meta/attest.mjs:146-184`
 (`runKeygen`).
 
 **Default output**: `scripts/eval/.attest-keys/`. Writes:
+
 - `<signer>.key` — PEM PKCS#8 ed25519 private key, mode 0600
 - `<signer>.pub` — base64 raw 32-byte public key, one line
 
 **Use `--json`** to capture the `publicKeyBase64` for the registry edit.
 
 **Manual alternative** (if you prefer offline OpenSSL):
+
 ```bash
 openssl genpkey -algorithm ed25519 -out op.key
 ```
+
 Documented at `docs/security/provenance-attestation.md:233-236`.
 The loader at `attestation-lib.mjs:475-516` accepts PEM PKCS#8,
 raw DER PKCS#8, or 32-byte base64 seed.
@@ -71,6 +74,7 @@ Edit `docs/security/trusted-signers.json`. Required shape per
 ```
 
 Required fields:
+
 - `signerId` — non-empty string
 - `role` — must be `operator` or `ci` (`dev` is rejected per
   `attestation-lib.mjs:44`)
@@ -95,6 +99,7 @@ verifier refuses to proceed when on-disk sha256 ≠ pinned sha256
 **Verify**: confirm `dist/eval/attestation-trust-root.js` exists
 and contains a sha256 hex value. If `npm run build` doesn't
 trigger this script, run it directly:
+
 ```bash
 node scripts/build/emit-attestation-trust-root.mjs
 ```
@@ -213,7 +218,7 @@ verification:
 5. **PEM passphrase support** — docs claim passphrases are read
    from stdin but `--keygen` writes unencrypted PEM. If you need
    passphrase encryption, generate with `openssl genpkey ...
-   -aes-256-cbc` and verify the loader handles it.
+-aes-256-cbc` and verify the loader handles it.
 
 ## Cross-references
 

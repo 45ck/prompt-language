@@ -11,7 +11,7 @@
 //
 // k=3 per task per arm.
 
-import { mkdirSync, writeFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
@@ -79,7 +79,10 @@ function tokenCount(text) {
   // Use python tiktoken via spawnSync. Fallback to chars/3.5 if it fails.
   const r = spawnSync(
     'python',
-    ['-c', `import sys, tiktoken; enc=tiktoken.get_encoding('cl100k_base'); print(len(enc.encode(sys.stdin.read())))`],
+    [
+      '-c',
+      `import sys, tiktoken; enc=tiktoken.get_encoding('cl100k_base'); print(len(enc.encode(sys.stdin.read())))`,
+    ],
     { input: text, encoding: 'utf8' },
   );
   if (r.status === 0) return parseInt(r.stdout.trim(), 10);
@@ -89,7 +92,11 @@ function tokenCount(text) {
 function runOracle(taskId, implPath) {
   const r = spawnSync('node', [ORACLE, taskId, implPath], { encoding: 'utf8', timeout: 30_000 });
   let parsed = null;
-  try { parsed = JSON.parse(r.stdout); } catch {}
+  try {
+    parsed = JSON.parse(r.stdout);
+  } catch {
+    parsed = null;
+  }
   return {
     exitCode: r.status,
     pass: r.status === 0,
@@ -109,7 +116,12 @@ try {
   process.exit(1);
 }
 
-const manifest = { startedAt: new Date().toISOString(), model: MODEL, repeats: REPEATS, perTask: [] };
+const manifest = {
+  startedAt: new Date().toISOString(),
+  model: MODEL,
+  repeats: REPEATS,
+  perTask: [],
+};
 
 for (const task of tasks) {
   console.log(`\n=== ${task.id} ===`);
@@ -123,7 +135,9 @@ for (const task of tasks) {
   const armBSource = readFileSync(armBPath, 'utf8');
   const armBTokens = tokenCount(armBSource);
   const armBOracle = runOracle(task.id, armBPath);
-  console.log(`  arm B (frontier): ${armBOracle.pass ? 'PASS' : 'FAIL'} ${armBOracle.parsed?.passed}/${armBOracle.parsed?.total} | ${armBTokens} tiktoken-equiv tokens | ${armBSource.length} chars`);
+  console.log(
+    `  arm B (frontier): ${armBOracle.pass ? 'PASS' : 'FAIL'} ${armBOracle.parsed?.passed}/${armBOracle.parsed?.total} | ${armBTokens} tiktoken-equiv tokens | ${armBSource.length} chars`,
+  );
 
   // Arm A (local) — k repeats
   const prompt = PROMPT_TEMPLATE(task);
@@ -136,7 +150,14 @@ for (const task of tasks) {
       const gen = await generate(prompt);
       const code = extractCode(gen.response);
       if (!code) {
-        rep = { k, pass: false, error: 'no code extracted', wallMs: Math.round(gen.wallMs), localEvalTokens: gen.evalTokens, raw: gen.response.slice(0, 200) };
+        rep = {
+          k,
+          pass: false,
+          error: 'no code extracted',
+          wallMs: Math.round(gen.wallMs),
+          localEvalTokens: gen.evalTokens,
+          raw: gen.response.slice(0, 200),
+        };
         console.log(`NO_CODE | ${rep.wallMs}ms | ${rep.localEvalTokens} local tok`);
       } else {
         // Write candidate to its own file
@@ -153,7 +174,9 @@ for (const task of tasks) {
           codeTiktokenTokens: codeTokens,
           codeChars: code.length,
         };
-        console.log(`${oracle.pass ? 'PASS' : 'FAIL'} ${oracle.parsed?.passed ?? '?'}/${oracle.parsed?.total ?? '?'} | ${rep.wallMs}ms | ${rep.localEvalTokens} local tok | ${codeTokens} tiktoken-equiv`);
+        console.log(
+          `${oracle.pass ? 'PASS' : 'FAIL'} ${oracle.parsed?.passed ?? '?'}/${oracle.parsed?.total ?? '?'} | ${rep.wallMs}ms | ${rep.localEvalTokens} local tok | ${codeTokens} tiktoken-equiv`,
+        );
       }
     } catch (e) {
       rep = { k, pass: false, error: e.message };
@@ -191,7 +214,10 @@ manifest.completedAt = new Date().toISOString();
 
 // Portfolio analysis
 console.log('\n=== Portfolio analysis ===');
-let savings = 0, losses = 0, savingsTasks = [], lossTasks = [];
+let savings = 0,
+  losses = 0,
+  savingsTasks = [],
+  lossTasks = [];
 for (const t of manifest.perTask) {
   if (t.armA.firstAttemptPass) {
     // Saved: would have spent armB.tokens, instead spent ~0 frontier (just the routing overhead)
@@ -216,16 +242,22 @@ manifest.portfolio = {
   totalArmBTokens,
   tokensSavedWhenLocalPasses: savings,
   tokensStillSpentWhenLocalFails: losses,
-  netFrontierTokenSavings: savings,
+  netFrontierTokenSavings: netSavings,
   savingsPercent: Math.round((savings / portfolioFrontierOnlyCost) * 100),
   savingsTasks,
   lossTasks,
 };
 
-console.log(`First-attempt local pass: ${manifest.portfolio.firstAttemptPass}/${manifest.portfolio.totalTasks}`);
-console.log(`Any-of-${REPEATS} local pass: ${manifest.portfolio.anyPass}/${manifest.portfolio.totalTasks}`);
+console.log(
+  `First-attempt local pass: ${manifest.portfolio.firstAttemptPass}/${manifest.portfolio.totalTasks}`,
+);
+console.log(
+  `Any-of-${REPEATS} local pass: ${manifest.portfolio.anyPass}/${manifest.portfolio.totalTasks}`,
+);
 console.log(`Frontier-only baseline cost: ${totalArmBTokens} tiktoken-equiv tokens`);
-console.log(`Tokens saved by hybrid (first-attempt only): ${savings} (${manifest.portfolio.savingsPercent}%)`);
+console.log(
+  `Tokens saved by hybrid (first-attempt only): ${savings} (${manifest.portfolio.savingsPercent}%)`,
+);
 console.log(`Tokens still spent by hybrid (failures): ${losses}`);
 console.log(`Saved: ${savingsTasks.join(', ') || '(none)'}`);
 console.log(`Failed (frontier still needed): ${lossTasks.join(', ') || '(none)'}`);

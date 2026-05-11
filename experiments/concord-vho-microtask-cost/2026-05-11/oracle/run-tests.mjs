@@ -42,7 +42,8 @@ function deepEqual(a, b) {
       for (let i = 0; i < a.length; i++) if (!deepEqual(a[i], b[i])) return false;
       return true;
     }
-    const ka = Object.keys(a), kb = Object.keys(b);
+    const ka = Object.keys(a),
+      kb = Object.keys(b);
     if (ka.length !== kb.length) return false;
     for (const k of ka) if (!deepEqual(a[k], b[k])) return false;
     return true;
@@ -50,7 +51,7 @@ function deepEqual(a, b) {
   return false;
 }
 
-const SEED = 0xC0FFEE; // shared seed for reproducibility across arms
+const SEED = 0xc0ffee; // shared seed for reproducibility across arms
 const r = rng(SEED);
 
 const TASKS = {
@@ -60,8 +61,28 @@ const TASKS = {
       [[100, []], 100],
       [[100, [[200, 10]]], 100], // no tier applies
       [[200, [[100, 10]]], 180],
-      [[500, [[100, 5], [300, 10], [500, 20]]], 400],
-      [[299, [[100, 5], [300, 10], [500, 20]]], 299 * 0.95],
+      [
+        [
+          500,
+          [
+            [100, 5],
+            [300, 10],
+            [500, 20],
+          ],
+        ],
+        400,
+      ],
+      [
+        [
+          299,
+          [
+            [100, 5],
+            [300, 10],
+            [500, 20],
+          ],
+        ],
+        299 * 0.95,
+      ],
       [[0, [[0, 50]]], 0],
     ];
     for (let i = 0; i < 4; i++) {
@@ -70,9 +91,14 @@ const TASKS = {
       const p1 = Math.floor(r() * 50);
       const t2 = t1 + Math.floor(r() * 200) + 1;
       const p2 = p1 + Math.floor(r() * 30) + 1;
-      const tiers = [[t1, p1], [t2, p2]];
+      const tiers = [
+        [t1, p1],
+        [t2, p2],
+      ];
       let pct = 0;
-      for (const [m, p] of tiers) if (tot >= m) pct = p; else break;
+      for (const [m, p] of tiers)
+        if (tot >= m) pct = p;
+        else break;
       cases.push([[tot, tiers], tot * (1 - pct / 100)]);
     }
     return runCases(fn, cases, (a, b) => Math.abs(a - b) < 1e-9);
@@ -96,20 +122,55 @@ const TASKS = {
     const failures = [];
     for (const [args, expected] of cases) {
       let actual;
-      try { actual = fn(...args); } catch (e) { failures.push(`threw on ${JSON.stringify(args)}: ${e.message}`); continue; }
-      if (!Array.isArray(actual)) { failures.push(`not array: ${JSON.stringify(actual)}`); continue; }
+      try {
+        actual = fn(...args);
+      } catch (e) {
+        failures.push(`threw on ${JSON.stringify(args)}: ${e.message}`);
+        continue;
+      }
+      if (!Array.isArray(actual)) {
+        failures.push(`not array: ${JSON.stringify(actual)}`);
+        continue;
+      }
       if (actual.length === expected.len) pass++;
-      else failures.push(`len mismatch on ${JSON.stringify(args[0])}: got ${actual.length} (${JSON.stringify(actual)}) expected ${expected.len}`);
+      else
+        failures.push(
+          `len mismatch on ${JSON.stringify(args[0])}: got ${actual.length} (${JSON.stringify(actual)}) expected ${expected.len}`,
+        );
     }
     return { passed: pass, total: cases.length, failures };
   },
   formatLogEntry: (mod) => {
     const fn = mod.formatLogEntry;
     const cases = [
-      [[{ level: 'info', msg: 'started' }, { service: 'api', host: 'h1' }], '[INFO] api@h1: started'],
-      [[{ level: 'error', msg: 'fail', fields: { code: 500, attempt: 2 } }, { service: 'web', host: 'h2' }], '[ERROR] web@h2: fail | code=500 attempt=2'],
-      [[{ level: 'debug', msg: 'noop', fields: {} }, { service: 's', host: 'h' }], '[DEBUG] s@h: noop'],
-      [[{ level: 'WARN', msg: 'lower' }, { service: 'x', host: 'y' }], '[WARN] x@y: lower'],
+      [
+        [
+          { level: 'info', msg: 'started' },
+          { service: 'api', host: 'h1' },
+        ],
+        '[INFO] api@h1: started',
+      ],
+      [
+        [
+          { level: 'error', msg: 'fail', fields: { code: 500, attempt: 2 } },
+          { service: 'web', host: 'h2' },
+        ],
+        '[ERROR] web@h2: fail | code=500 attempt=2',
+      ],
+      [
+        [
+          { level: 'debug', msg: 'noop', fields: {} },
+          { service: 's', host: 'h' },
+        ],
+        '[DEBUG] s@h: noop',
+      ],
+      [
+        [
+          { level: 'WARN', msg: 'lower' },
+          { service: 'x', host: 'y' },
+        ],
+        '[WARN] x@y: lower',
+      ],
     ];
     return runCases(fn, cases);
   },
@@ -118,15 +179,37 @@ const TASKS = {
     const cases = [
       [[[]], new Map()],
       [[[{ role: 'a', perms: ['x'] }]], new Map([['a', new Set(['x'])]])],
-      [[[{ role: 'a', perms: ['x', 'y'] }, { role: 'a', perms: ['y', 'z'] }]], new Map([['a', new Set(['x', 'y', 'z'])]])],
-      [[[{ role: 'a', perms: ['x'] }, { role: 'b', perms: ['y'] }]], new Map([['a', new Set(['x'])], ['b', new Set(['y'])]])],
+      [
+        [
+          [
+            { role: 'a', perms: ['x', 'y'] },
+            { role: 'a', perms: ['y', 'z'] },
+          ],
+        ],
+        new Map([['a', new Set(['x', 'y', 'z'])]]),
+      ],
+      [
+        [
+          [
+            { role: 'a', perms: ['x'] },
+            { role: 'b', perms: ['y'] },
+          ],
+        ],
+        new Map([
+          ['a', new Set(['x'])],
+          ['b', new Set(['y'])],
+        ]),
+      ],
     ];
     return runCases(fn, cases);
   },
   chunk: (mod) => {
     const fn = mod.chunk;
     const cases = [
-      [[[1, 2, 3, 4, 5], 2], [[1, 2], [3, 4], [5]]],
+      [
+        [[1, 2, 3, 4, 5], 2],
+        [[1, 2], [3, 4], [5]],
+      ],
       [[[], 3], []],
       [[[1, 2, 3], 0], []],
       [[[1, 2, 3, 4], 4], [[1, 2, 3, 4]]],
@@ -160,7 +243,23 @@ const TASKS = {
     const cases = [
       [[[], (x) => x], {}],
       [[[1, 2, 3, 4], (x) => (x % 2 === 0 ? 'even' : 'odd')], { odd: [1, 3], even: [2, 4] }],
-      [[[{ k: 'a', v: 1 }, { k: 'b', v: 2 }, { k: 'a', v: 3 }], (x) => x.k], { a: [{ k: 'a', v: 1 }, { k: 'a', v: 3 }], b: [{ k: 'b', v: 2 }] }],
+      [
+        [
+          [
+            { k: 'a', v: 1 },
+            { k: 'b', v: 2 },
+            { k: 'a', v: 3 },
+          ],
+          (x) => x.k,
+        ],
+        {
+          a: [
+            { k: 'a', v: 1 },
+            { k: 'a', v: 3 },
+          ],
+          b: [{ k: 'b', v: 2 }],
+        },
+      ],
       [[[1], (x) => x], { 1: [1] }],
     ];
     return runCases(fn, cases);
@@ -182,10 +281,25 @@ const TASKS = {
   partition: (mod) => {
     const fn = mod.partition;
     const cases = [
-      [[[], (x) => x > 0], [[], []]],
-      [[[1, -1, 2, -2, 3], (x) => x > 0], [[1, 2, 3], [-1, -2]]],
-      [[[1, 2, 3], () => true], [[1, 2, 3], []]],
-      [[[1, 2, 3], () => false], [[], [1, 2, 3]]],
+      [
+        [[], (x) => x > 0],
+        [[], []],
+      ],
+      [
+        [[1, -1, 2, -2, 3], (x) => x > 0],
+        [
+          [1, 2, 3],
+          [-1, -2],
+        ],
+      ],
+      [
+        [[1, 2, 3], () => true],
+        [[1, 2, 3], []],
+      ],
+      [
+        [[1, 2, 3], () => false],
+        [[], [1, 2, 3]],
+      ],
     ];
     return runCases(fn, cases);
   },
@@ -206,7 +320,9 @@ const TASKS = {
     try {
       fn(input);
       mutationOk = JSON.stringify(input) === snap;
-    } catch {}
+    } catch {
+      mutationOk = false;
+    }
     if (!mutationOk) {
       return { passed: 0, total: cases.length + 1, failures: ['mutated input'] };
     }
@@ -229,7 +345,10 @@ function runCases(fn, cases, eq = deepEqual) {
       continue;
     }
     if (eq(actual, expected)) pass++;
-    else failures.push(`fn(${JSON.stringify(args)}) = ${JSON.stringify(actual)} expected ${JSON.stringify(expected)}`);
+    else
+      failures.push(
+        `fn(${JSON.stringify(args)}) = ${JSON.stringify(actual)} expected ${JSON.stringify(expected)}`,
+      );
   }
   return { passed: pass, total: cases.length, failures };
 }

@@ -15,15 +15,15 @@ first-attempt oracle pass; 2/7 marked frontier-required.** Final
 assembled CLI passes 24/24 tests after frontier repair of the 2
 remaining tasks.
 
-| ID | Function   | Route closing the task    | Notes                                                                |
-| -- | ---------- | ------------------------- | -------------------------------------------------------------------- |
-| T1 | add        | **frontier-required\***   | Both locals' code was correct; oracle had hidden T4 dependency       |
-| T2 | list       | local-fast (qwen3-coder)  | Pass                                                                 |
-| T3 | complete   | local-fast (qwen3-coder)  | Pass                                                                 |
-| T4 | remove     | local-fast (qwen3-coder)  | Pass                                                                 |
-| T5 | save_load  | local-fast (qwen3-coder)  | Pass                                                                 |
-| T6 | formatJson | local-fast (qwen3-coder)  | Pass                                                                 |
-| T7 | runCli     | **frontier-required\***   | Local code reasonable; T7 oracle calls add() which T1 rolled back to stub |
+| ID  | Function   | Route closing the task   | Notes                                                                     |
+| --- | ---------- | ------------------------ | ------------------------------------------------------------------------- |
+| T1  | add        | **frontier-required\***  | Both locals' code was correct; oracle had hidden T4 dependency            |
+| T2  | list       | local-fast (qwen3-coder) | Pass                                                                      |
+| T3  | complete   | local-fast (qwen3-coder) | Pass                                                                      |
+| T4  | remove     | local-fast (qwen3-coder) | Pass                                                                      |
+| T5  | save_load  | local-fast (qwen3-coder) | Pass                                                                      |
+| T6  | formatJson | local-fast (qwen3-coder) | Pass                                                                      |
+| T7  | runCli     | **frontier-required\***  | Local code reasonable; T7 oracle calls add() which T1 rolled back to stub |
 
 \*The two frontier-required tasks both failed because of inter-task
 test dependencies the oracle did not isolate, not because local
@@ -208,10 +208,10 @@ called pure functions and discarded return values; devstral reversed
 which I missed in my preliminary report). Confirms no
 hardcoded-prime-list-style cheating recurred — oracles strong enough
 on T2-T6 that memorised lookup wouldn't generalise. Recommends
-filing as: *"hybrid path completed the app; per-task local-success
+filing as: _"hybrid path completed the app; per-task local-success
 rate not reliably measurable from this run due to inter-task oracle
 coupling; T7-class coordination tasks remain a credible
-frontier-escalation candidate."*
+frontier-escalation candidate."_
 
 Full text in [`./review-confirmation.md`](./review-confirmation.md).
 
@@ -225,7 +225,7 @@ pattern works on real software**. Six concrete gap categories:
    types, and output templates so densely that local was
    transcribing English-to-JS, not coding. T6 in particular tells the
    model literally "Return a string of `JSON.stringify(state, null,
-   2)`" — that's the answer, not a task. If prompts were starved
+2)`" — that's the answer, not a task. If prompts were starved
    to "test names + empty stub", local pass-rate plausibly collapses
    to 0-1/7.
 2. **Weak oracles.** Specific issues identified:
@@ -252,7 +252,7 @@ pattern works on real software**. Six concrete gap categories:
    ~3-4k output tokens in one shot. **The hybrid is roughly 2-3×
    MORE expensive in frontier tokens than frontier-only would have
    been**, while also consuming 94 seconds of local GPU. The
-   "hybrid efficiency" framing is *inverted* at this scale; it can
+   "hybrid efficiency" framing is _inverted_ at this scale; it can
    only become favorable amortised over many runs reusing the same
    scaffolding — which this experiment doesn't demonstrate.
 5. **Not reproducible as written.** Missing: model digest /
@@ -271,6 +271,7 @@ pattern works on real software**. Six concrete gap categories:
    `ollama stop`.
 
 **Bonus catches in the harness itself** (real bugs I shipped):
+
 - `router.mjs:extractFnBody` has dead logic — strips fences, then
   re-runs a regex on raw and may return a different string than the
   pre-stripped one.
@@ -280,7 +281,7 @@ pattern works on real software**. Six concrete gap categories:
   no task hit it.
 - `oracleStderrTail` is `""` for every failed task in the manifest.
   Diagnostic capture is broken; the repair frontier (me) had no
-  visibility into *why* T1/T7 failed.
+  visibility into _why_ T1/T7 failed.
 - `complete`'s reference-equality not-found check
   (`workspace/todo.mjs:21-32`) is the same hardcoded-shape pattern
   Finding 2 from the strict-format-fit smoke flagged. Smelly even
@@ -333,7 +334,7 @@ shipped from this evidence base.** Specifically:
   detailed prompts that already contain the answer.
 - **Do consider shipping a "frontier writes tests, then implements
   itself" skill** — strict-TDD with adversarial cases up front, all
-  done by the frontier. This pilot's *test design* (with critic's
+  done by the frontier. This pilot's _test design_ (with critic's
   fixes) is more valuable as a pattern than the routing.
 - **Do consider an "experiment scaffolding" skill** that produces
   the spec.md / tasks.json / oracle pattern (with critic's

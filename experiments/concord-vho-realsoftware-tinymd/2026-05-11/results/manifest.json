@@ -176,10 +176,7 @@
   "summary": {
     "totalRoutableTasks": 8,
     "localOnly": 6,
-    "frontierRequired": [
-      "parseListItem",
-      "tokenize"
-    ],
+    "frontierRequired": ["parseListItem", "tokenize"],
     "totalLocalEvalTokens": 888,
     "totalLocalGeneratedTiktokenTokens": 879,
     "armB_total_tiktoken_tokens": 911

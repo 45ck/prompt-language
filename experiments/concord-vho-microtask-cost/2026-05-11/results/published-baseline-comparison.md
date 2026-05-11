@@ -19,15 +19,15 @@ not a finding.
 Sources: Qwen3 tech report (arxiv:2505.09388), llm-stats compare,
 Hugging Face model card, artificialanalysis.ai.
 
-| Benchmark               | Number | Variant                      |
-| ----------------------- | ------ | ---------------------------- |
-| HumanEval pass@1        | ~92.7% | Qwen2.5-Coder-32B-Instruct (older sibling; Qwen3-Coder-30B-A3B-Instruct positioned as stronger) |
-| EvalPlus aggregate      | 71.45  | Qwen3-30B-A3B base (not Coder) |
-| MBPP pass@1             | 74.40  | Qwen3-30B-A3B base           |
-| MultiPL-E avg pass@1    | 66.53  | Qwen3-30B-A3B base           |
-| LiveCodeBench v6        | 66.0%  | Qwen3-Coder-30B-A3B-Instruct |
-| SWE-Bench Verified      | 51.6%  | Qwen3-Coder-30B-A3B-Instruct (OpenHands, 100 turns) |
-| CRUX-O                  | 67.20  | base                         |
+| Benchmark            | Number | Variant                                                                                         |
+| -------------------- | ------ | ----------------------------------------------------------------------------------------------- |
+| HumanEval pass@1     | ~92.7% | Qwen2.5-Coder-32B-Instruct (older sibling; Qwen3-Coder-30B-A3B-Instruct positioned as stronger) |
+| EvalPlus aggregate   | 71.45  | Qwen3-30B-A3B base (not Coder)                                                                  |
+| MBPP pass@1          | 74.40  | Qwen3-30B-A3B base                                                                              |
+| MultiPL-E avg pass@1 | 66.53  | Qwen3-30B-A3B base                                                                              |
+| LiveCodeBench v6     | 66.0%  | Qwen3-Coder-30B-A3B-Instruct                                                                    |
+| SWE-Bench Verified   | 51.6%  | Qwen3-Coder-30B-A3B-Instruct (OpenHands, 100 turns)                                             |
+| CRUX-O               | 67.20  | base                                                                                            |
 
 Qwen has not published clean per-benchmark numbers for the Coder-
 30B-A3B-Instruct variant specifically. The closest credible anchor
@@ -55,7 +55,7 @@ published baseline.
 `chunk`, `slugify`, `partition`, `flatten`, `groupBy` are textbook
 lodash/underscore reimplementations. They appear in thousands of
 public repositories and in the Qwen2.5-Coder / Qwen3-Coder training
-corpus. A coder model passing them at temp=0 is the *expected mode*,
+corpus. A coder model passing them at temp=0 is the _expected mode_,
 not a finding.
 
 The four "novel-spec" tasks (applyDiscountTier, validateConfig,
@@ -75,6 +75,7 @@ in qwen's parseQuery that our v2 oracle missed.
 on this kind of task battery, not a research finding.**
 
 Specifically:
+
 - The published baseline alone makes 10/10 a 43-74% likely
   outcome by chance.
 - 5 of 10 tasks are near-canonical in pretraining corpora;
@@ -96,6 +97,7 @@ The honest revised position is in
 `docs/strategy/research-synthesis-challenge-and-defense-2026-05-11.md`.
 
 To produce a defensible "novel" result, the v2 battery would need:
+
 - More tasks (≥50, not 10) so 100% pass requires beating chance
 - Adversarial mutants in the EvalPlus / HumanEval+ style
 - LiveCodeBench-class difficulty (where qwen sits at ~66%)

@@ -59,7 +59,7 @@ ability.
   stdin/stderr-only-on-error contract test.
 - **Critically: no test for the rolled-back state.** Because
   router.mjs:183 rolls back to the stub between attempts, T2/T3/T4/
-  T5/T6 were tested against `add()` *throwing* — the test suite
+  T5/T6 were tested against `add()` _throwing_ — the test suite
   never verified the assembled file works end-to-end with all
   functions populated. The post-hoc workspace passes only because
   the frontier wrote `runCli` last and everything happened to
@@ -78,6 +78,7 @@ from the smoke flagged.
 
 Every task is a **pure-ish function with a fixed signature dictated
 up front**. Notably absent:
+
 - **Multi-file or cross-module change** (the entire app is one
   file).
 - **Debugging an existing failing test** — local never has to read
@@ -102,6 +103,7 @@ qwen3-coder is benchmarked on.
 
 `local_tokens_total` = 1,084. **Uncounted frontier tokens spent by
 Claude this session:**
+
 - spec.md (~1,500 tokens written)
 - tasks.json (~1,800 tokens of dense prompts)
 - todo.test.mjs (~1,400 tokens)
@@ -127,6 +129,7 @@ summed into the manifest — input tokens to local are invisible.
 ## 5. Reproducibility — not reproducible as written
 
 Missing for a third party to reproduce:
+
 - **No model digest / quantization / Modelfile pin.**
   `qwen3-coder:30b` and `devstral-small-2:24b` are tags that can be
   re-pushed. Need sha256 from `ollama show --modelfile`.
@@ -167,8 +170,8 @@ you'd need at minimum:
    just English description) and chart pass-rate vs spec density.
    Without this, you cannot distinguish "local can code" from
    "local can transcribe."
-2. **Adversarial oracle** — have a *different* model (or human
-   red-team) write the tests *without* seeing the prompts. Current
+2. **Adversarial oracle** — have a _different_ model (or human
+   red-team) write the tests _without_ seeing the prompts. Current
    setup is the same author writing both sides of the contract.
 3. **Cross-app replication** — pick 3 distinct app shapes (e.g. an
    HTTP server with middleware, a parser/AST transform, a stateful
@@ -205,7 +208,7 @@ getting quoted in isolation.
   model emitting `}` inline.
 - `oracleStderrTail` is `""` for every failed task in the manifest.
   That means the critic (and the frontier doing repair) had no
-  visibility into *why* T1/T7 failed — diagnostic capture is broken.
+  visibility into _why_ T1/T7 failed — diagnostic capture is broken.
   T1's actual failure cause is unrecorded; the spread `...state` in
   devstral's T1 attempt looks correct, so the failure was likely
   the inter-task `remove` dependency, but we can't confirm from the

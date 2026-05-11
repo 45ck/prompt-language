@@ -9,6 +9,14 @@ purpose: first attempt at a unified attested run via local Ollama after operator
 
 # Attested smoke findings
 
+> **Supersession note (2026-05-12):** This file documents the first
+> single-prompt attempt, which failed signing because the final state hash was
+> missing from the trace. A later multi-node attempt is documented in
+> [`MILESTONE.md`](MILESTONE.md): it produced the first signed PL bundle with
+> `operator-45ck-2026-05`, but `verify-trace --require-attestation
+--require-role operator` still failed on trace entry 0 `prevEventHash`, missing
+> Ollama witness pairing, `--state` path resolution, and stub cross-family review.
+
 ## Headline
 
 **The first end-to-end PL flow execution against local Ollama on
@@ -28,6 +36,7 @@ flow:
 ```
 
 Resulting bundle:
+
 - `.prompt-language/provenance.jsonl` (with PL_TRACE=1)
 - `.prompt-language/session-state.json`
 - `.prompt-language/audit.jsonl`
@@ -71,6 +80,7 @@ ran. They don't match — by design, but the verifier can't tell
 which is "right."
 
 `attestation-lib.mjs:251` enforces:
+
 ```js
 if (claimedFinalStateHash && claimedFinalStateHash !== computedStateHash) {
   throw new Error(`bundle finalStateHash mismatch: ...`);

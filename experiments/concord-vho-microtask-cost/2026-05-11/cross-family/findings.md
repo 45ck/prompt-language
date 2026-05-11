@@ -36,25 +36,25 @@ expected-baseline behaviour and oracle weakness.
 
 ## Per-task results
 
-| Task                  | Adversarial cases | Qwen pass | Honest reading                                  |
-| --------------------- | ----------------- | --------- | ----------------------------------------------- |
-| applyDiscountTier     | 6                 | 0/6       | **Confounded** — devstral reversed `(cartTotal, tiers)` argument order despite explicit spec. Tells us nothing about qwen. |
-| validateConfig        | (not graded)      | —         | Devstral wrote invalid JSON (e.g., bare schema objects with unquoted keys). |
-| formatLogEntry        | (not graded)      | —         | Same — devstral wrote nested objects without quoted keys. |
-| mergeAcl              | (not graded)      | —         | Devstral used JS `new Map()` and `new Set()` literals which aren't valid JSON. |
-| chunk                 | 6                 | **6/6**   | qwen genuinely correct on adversarial cases.    |
-| slugify               | 6                 | 5/6       | 1 failure on `"i'm"` — devstral expected `"im"` (drop apostrophe entirely); qwen produced `"i-m"` (apostrophe → hyphen, per spec). **Spec-interpretation difference, not a bug.** |
-| groupBy               | (not graded)      | —         | Devstral wrote object literals with unquoted keys. |
-| parseQuery            | 6                 | 5/6       | **REAL QWEN BUG**. Devstral case: `"?a=b=c"` → expected `{a:"b=c"}` (split on first `=`). Qwen returned `{a:"b"}` (drops everything after the second `=`). The v2 oracle did not test this case. |
-| partition             | (not graded)      | —         | Devstral wrote arrow functions inline in JSON. |
-| flatten               | (not graded)      | —         | Devstral wrote multiple nested arrays not in JSON shape. |
+| Task              | Adversarial cases | Qwen pass | Honest reading                                                                                                                                                                                   |
+| ----------------- | ----------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| applyDiscountTier | 6                 | 0/6       | **Confounded** — devstral reversed `(cartTotal, tiers)` argument order despite explicit spec. Tells us nothing about qwen.                                                                       |
+| validateConfig    | (not graded)      | —         | Devstral wrote invalid JSON (e.g., bare schema objects with unquoted keys).                                                                                                                      |
+| formatLogEntry    | (not graded)      | —         | Same — devstral wrote nested objects without quoted keys.                                                                                                                                        |
+| mergeAcl          | (not graded)      | —         | Devstral used JS `new Map()` and `new Set()` literals which aren't valid JSON.                                                                                                                   |
+| chunk             | 6                 | **6/6**   | qwen genuinely correct on adversarial cases.                                                                                                                                                     |
+| slugify           | 6                 | 5/6       | 1 failure on `"i'm"` — devstral expected `"im"` (drop apostrophe entirely); qwen produced `"i-m"` (apostrophe → hyphen, per spec). **Spec-interpretation difference, not a bug.**                |
+| groupBy           | (not graded)      | —         | Devstral wrote object literals with unquoted keys.                                                                                                                                               |
+| parseQuery        | 6                 | 5/6       | **REAL QWEN BUG**. Devstral case: `"?a=b=c"` → expected `{a:"b=c"}` (split on first `=`). Qwen returned `{a:"b"}` (drops everything after the second `=`). The v2 oracle did not test this case. |
+| partition         | (not graded)      | —         | Devstral wrote arrow functions inline in JSON.                                                                                                                                                   |
+| flatten           | (not graded)      | —         | Devstral wrote multiple nested arrays not in JSON shape.                                                                                                                                         |
 
 ## The real qwen bug found
 
 `parseQuery("?a=b=c")`:
 
 - Spec implies (and arm-b-frontier's reference implements): split on
-  the *first* `=`, so `{a: "b=c"}`.
+  the _first_ `=`, so `{a: "b=c"}`.
 - Qwen's k=1 implementation:
   ```js
   const [key, value] = pair.split('=', 2);
@@ -99,6 +99,7 @@ inflates pass rates by missing edge cases the prompt author didn't
 think of**. Cross-family oracle authoring is the right pattern.
 
 The 100/100 v2 headline should be revised to:
+
 - 9/10 first-attempt at full prompt density when graded by the
   same-author oracle.
 - ≤8/10 when graded by an adversarial cross-family reviewer

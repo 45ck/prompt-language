@@ -32,42 +32,48 @@ A tiny **markdown** to *HTML* converter built by [hybrid routing](#).
 - three
 
 ```
+
 let x = 42;
+
 ```
+
 ```
 
 Renders to:
 
 ```html
 <h1>tinymd</h1>
-<p>A tiny <strong>markdown</strong> to <em>HTML</em> converter built by <a href="#">hybrid routing</a>.</p>
+<p>
+  A tiny <strong>markdown</strong> to <em>HTML</em> converter built by
+  <a href="#">hybrid routing</a>.
+</p>
 <ul>
-<li>one</li>
-<li>two</li>
-<li>three</li>
+  <li>one</li>
+  <li>two</li>
+  <li>three</li>
 </ul>
 <pre><code>let x = 42;</code></pre>
 ```
 
 ## Per-function routing result
 
-| ID  | Function          | First-attempt route   | Final route            | Local tokens | Notes                                              |
-| --- | ----------------- | --------------------- | ---------------------- | ------------ | -------------------------------------------------- |
-| F1  | `escapeHtml`      | **local-pass**        | local                  | 71           | Clean.                                             |
-| F2  | `parseHeading`    | **local-pass**        | local                  | 57           | Clean.                                             |
-| F3  | `parseListItem`   | frontier-required     | **frontier**           | 35           | Real local bug: regex `^-s+(.*)$` missing backslash before `s`. |
-| F4  | `isFenceLine`     | **local-pass**        | local                  | 18           | Clean.                                             |
-| F5  | `parseInline`     | **local-pass**        | local                  | 177          | Clean.                                             |
-| F6  | `tokenize`        | frontier-required\*   | **frontier-repaired**  | 312          | First attempt cascaded on F3 stub. Re-routed after F3 repair — local produced reasonable code but assumed `parseListItem` returns `{text}` (it returns a string). Real spec-ambiguity-induced bug. Frontier patched 2 lines. |
-| F7  | `renderToken`     | **local-pass**        | local                  | 106          | Clean.                                             |
-| F8  | `groupListTokens` | **local-pass**        | local                  | 112          | Clean.                                             |
+| ID  | Function          | First-attempt route | Final route           | Local tokens | Notes                                                                                                                                                                                                                        |
+| --- | ----------------- | ------------------- | --------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F1  | `escapeHtml`      | **local-pass**      | local                 | 71           | Clean.                                                                                                                                                                                                                       |
+| F2  | `parseHeading`    | **local-pass**      | local                 | 57           | Clean.                                                                                                                                                                                                                       |
+| F3  | `parseListItem`   | frontier-required   | **frontier**          | 35           | Real local bug: regex `^-s+(.*)$` missing backslash before `s`.                                                                                                                                                              |
+| F4  | `isFenceLine`     | **local-pass**      | local                 | 18           | Clean.                                                                                                                                                                                                                       |
+| F5  | `parseInline`     | **local-pass**      | local                 | 177          | Clean.                                                                                                                                                                                                                       |
+| F6  | `tokenize`        | frontier-required\* | **frontier-repaired** | 312          | First attempt cascaded on F3 stub. Re-routed after F3 repair — local produced reasonable code but assumed `parseListItem` returns `{text}` (it returns a string). Real spec-ambiguity-induced bug. Frontier patched 2 lines. |
+| F7  | `renderToken`     | **local-pass**      | local                 | 106          | Clean.                                                                                                                                                                                                                       |
+| F8  | `groupListTokens` | **local-pass**      | local                 | 112          | Clean.                                                                                                                                                                                                                       |
 
 **Per-function routing summary:** 6/8 first-attempt local pass.
 1/8 frontier-only (F3 — real local bug). 1/8 frontier-repaired (F6
 — cascade then local-routable on retry but had a 2-line bug under
 spec ambiguity).
 
-\*The original F6 failure was a *cascade* from F3's still-stubbed
+\*The original F6 failure was a _cascade_ from F3's still-stubbed
 state at first-pass time, not a genuine F6 capability gap. After F3
 repair I re-routed F6 — it produced runnable tokenize code with one
 real bug (assumed sibling function's return type), which I repaired
@@ -75,14 +81,14 @@ with two lines.
 
 ## Two real local failure modes seen this pilot
 
-Both are useful evidence about *what* breaks local routing on real
+Both are useful evidence about _what_ breaks local routing on real
 software:
 
 **Failure mode 1: subtle code error inside a generated line.**
 qwen's `parseListItem`:
 
 ```js
-const match = line.match(/^-s+(.*)$/);    // missing \
+const match = line.match(/^-s+(.*)$/); // missing \
 ```
 
 The model produced `s` where `\s` was needed. At temperature=0 +
@@ -96,7 +102,7 @@ contract.** qwen's first `tokenize` (after F3 was repaired):
 ```js
 const listItem = parseListItem(line);
 if (listItem) {
-  tokens.push({ type: 'list-item', text: listItem.text });  // WRONG
+  tokens.push({ type: 'list-item', text: listItem.text }); // WRONG
 }
 ```
 
@@ -113,26 +119,26 @@ Worth adding to the skill.
 
 ## Token economy
 
-| Cost line                                          | Tiktoken-equiv tokens  |
-| -------------------------------------------------- | ---------------------- |
-| **Arm A (hybrid) — local generated code**          |                        |
-| escapeHtml + parseHeading + isFenceLine            | 142                    |
-| parseInline + renderToken + groupListTokens        | 392                    |
-| **Local code that survived (6 functions)**         | **534**                |
+| Cost line                                                                | Tiktoken-equiv tokens                |
+| ------------------------------------------------------------------------ | ------------------------------------ |
+| **Arm A (hybrid) — local generated code**                                |                                      |
+| escapeHtml + parseHeading + isFenceLine                                  | 142                                  |
+| parseInline + renderToken + groupListTokens                              | 392                                  |
+| **Local code that survived (6 functions)**                               | **534**                              |
 | Local code rolled back (parseListItem, tokenize-v1, tokenize-v2 partial) | ~430 (paid in GPU only, no API cost) |
-| **Arm A — frontier scaffolding**                   |                        |
-| spec.md                                            | ~2,000                 |
-| tasks.json                                         | ~1,700                 |
-| oracle/run-task.mjs                                | ~3,000                 |
-| oracle/integration.test.mjs                        | ~1,500                 |
-| runner.mjs                                         | ~3,000                 |
-| skeleton + convert orchestrator                    | ~400                   |
-| parseListItem repair (frontier wrote)              | ~50                    |
-| tokenize repair (2 lines)                          | ~30                    |
-| This report                                        | ~1,500                 |
-| **Arm A total frontier tokens**                    | **~13,200**            |
-| **Arm B (frontier-only) — pre-committed**          | **911**                |
-| (Arm B includes only the impl, not tests/runner)   |                        |
+| **Arm A — frontier scaffolding**                                         |                                      |
+| spec.md                                                                  | ~2,000                               |
+| tasks.json                                                               | ~1,700                               |
+| oracle/run-task.mjs                                                      | ~3,000                               |
+| oracle/integration.test.mjs                                              | ~1,500                               |
+| runner.mjs                                                               | ~3,000                               |
+| skeleton + convert orchestrator                                          | ~400                                 |
+| parseListItem repair (frontier wrote)                                    | ~50                                  |
+| tokenize repair (2 lines)                                                | ~30                                  |
+| This report                                                              | ~1,500                               |
+| **Arm A total frontier tokens**                                          | **~13,200**                          |
+| **Arm B (frontier-only) — pre-committed**                                | **911**                              |
+| (Arm B includes only the impl, not tests/runner)                         |                                      |
 
 **At single-pilot scale, hybrid is ~14× more expensive than
 frontier-only.** Same scaffolding-cost-dominance pattern as the
@@ -193,12 +199,12 @@ It requires substantial reuse to pay off.**
 
 ## Reconciling with the three same-day pilots
 
-| Pilot                              | Scope-tag                       | Verdict        | Why                                                                |
-| ---------------------------------- | ------------------------------- | -------------- | ------------------------------------------------------------------ |
-| TODO CLI (`concord-vho-pilot-todo-cli`) | `app-build-orchestration`      | Lose 2-3×       | Scaffolding written fresh; tests by same author who wrote prompts  |
-| Micro-task v2 (`concord-vho-microtask-cost`)  | `micro-task` (full prompt)      | Win 100%        | No per-task scaffolding; spec quality is load-bearing               |
-| Micro-task v2 starved              | `micro-task` (starved prompt)   | Win 35%         | Local picks reasonable but different impls when spec is thin       |
-| **tinymd (this)**                  | `real-software-multistage`      | **Win at N≥12 reused builds; lose at N=1** | Function-level routing + frontier integration; needs amortisation |
+| Pilot                                        | Scope-tag                     | Verdict                                    | Why                                                               |
+| -------------------------------------------- | ----------------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
+| TODO CLI (`concord-vho-pilot-todo-cli`)      | `app-build-orchestration`     | Lose 2-3×                                  | Scaffolding written fresh; tests by same author who wrote prompts |
+| Micro-task v2 (`concord-vho-microtask-cost`) | `micro-task` (full prompt)    | Win 100%                                   | No per-task scaffolding; spec quality is load-bearing             |
+| Micro-task v2 starved                        | `micro-task` (starved prompt) | Win 35%                                    | Local picks reasonable but different impls when spec is thin      |
+| **tinymd (this)**                            | `real-software-multistage`    | **Win at N≥12 reused builds; lose at N=1** | Function-level routing + frontier integration; needs amortisation |
 
 The hybrid pattern is **scope- and reuse-sensitive**. Cost-positive
 for stateless single-function work where infrastructure is already
@@ -235,7 +241,7 @@ I'll update the skill in a follow-up commit.
    suggests "many small tasks reusing a stable scaffold" — i.e.
    the harness-arena routing pattern that's already shipped in
    the repo. The novel contribution from these pilots is the
-   *boundary*, not the *pattern* itself.
+   _boundary_, not the _pattern_ itself.
 
 ## Files
 

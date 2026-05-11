@@ -1,7 +1,7 @@
 export function partition(arr, pred) {
   const trueArr = [];
   const falseArr = [];
-  
+
   for (let i = 0; i < arr.length; i++) {
     if (pred(arr[i])) {
       trueArr.push(arr[i]);
@@ -9,6 +9,6 @@ export function partition(arr, pred) {
       falseArr.push(arr[i]);
     }
   }
-  
+
   return [trueArr, falseArr];
 }

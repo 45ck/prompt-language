@@ -67,7 +67,7 @@ describe('TracedPromptTurnRunner', () => {
     expect(begin!.source).toBe('adapter');
     expect(begin!.runId).toBe('test-run-traced');
     expect(begin!.seq).toBe(0);
-    expect(begin!.prevEventHash).toBeUndefined();
+    expect(begin!.prevEventHash).toBeNull();
     expect(begin!.stdinSha256).toBe(sha256Hex('hello-world'));
     expect(begin!.nodeId).toBe('p1');
     expect(begin!.nodeKind).toBe('prompt');

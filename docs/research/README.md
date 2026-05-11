@@ -17,12 +17,18 @@ Internal research reports synthesizing findings from 20+ external sources on pro
 These reports are background research, not the current status surface. Before
 citing research conclusions, check the current boundary docs:
 
-| Doc                                                                              | Role                                                                |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| [What Works Now](../evaluation/what-works-now.md)                                | Short current evidence summary                                      |
-| [Evidence Snapshot: 2026-05-06](../evaluation/2026-05-06-evidence-snapshot.md)   | Current post-FSCRUD evidence boundary                               |
-| [Research Synthesis: 2026-05-06](../evaluation/2026-05-06-research-synthesis.md) | Cross-experiment hypothesis verdicts and claim ledger               |
-| [Program Status](../strategy/program-status.md)                                  | Current thesis status, blockers, and claim-eligibility requirements |
+| Doc                                                                                                | Role                                                                |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| [What Works Now](../evaluation/what-works-now.md)                                                  | Short current evidence summary                                      |
+| [Evidence Snapshot: 2026-05-06](../evaluation/2026-05-06-evidence-snapshot.md)                     | Current post-FSCRUD evidence boundary                               |
+| [Research Synthesis: 2026-05-06](../evaluation/2026-05-06-research-synthesis.md)                   | Cross-experiment hypothesis verdicts and claim ledger               |
+| [Program Status](../strategy/program-status.md)                                                    | Current thesis status, blockers, and claim-eligibility requirements |
+| [May 11 Challenge and Defense](../strategy/research-synthesis-challenge-and-defense-2026-05-11.md) | Correction layer for May 11 novelty and priority claims             |
+| [Current Plan After May 11 Evidence](../strategy/current-plan-2026-05-12.md)                       | Current roadmap, proposed beads, and engineering/research split     |
+
+The original 2026-05-11 synthesis is useful history, but the challenge-and-defense
+doc controls current novelty claims. Treat the May 11 pilots as non-claim-eligible
+engineering signal until the program-status claim-eligibility rule is satisfied.
 
 ## Key insight
 

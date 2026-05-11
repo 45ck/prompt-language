@@ -14,6 +14,7 @@ needs 10 distinct recurring failure patterns from real usage,
 each with a structural fix encodable in PL.
 
 This catalog was built by mining the program's own evidence:
+
 - 561 beads in `.beads/issues.jsonl` (77 closed bugs)
 - `docs/evaluation/eval-analysis.md` hypothesis sweep
 - `docs/evaluation/experiments/premature-stop-benchmark.md`
@@ -41,6 +42,7 @@ session instead of repairing).
 **PL-recoverable**: Yes (already proven in eval-analysis §1).
 
 **PL flow snippet**:
+
 ```
 until done when: tests_pass and lint_pass and diff_nonempty
   retry max N
@@ -63,6 +65,7 @@ arm.
 **PL-recoverable**: Yes.
 
 **PL flow snippet**:
+
 ```
 done when: full_test_suite_pass
 # NOT: done when: command_succeeded "npm test path/to/one.test.js"
@@ -80,6 +83,7 @@ fixed it"; agent skips verification.
 **PL-recoverable**: Yes — gates ignore narrative.
 
 **PL flow snippet**:
+
 ```
 done when: tests_pass
 # Regardless of any user/agent claim
@@ -100,6 +104,7 @@ calculator.js swapped add/subtract).
 **PL-recoverable**: Yes.
 
 **PL flow snippet**:
+
 ```
 done when: diff_nonempty and tests_pass
 ```
@@ -121,6 +126,7 @@ reviewers as highest-ROI fix.
 circuit breaker after N failures).
 
 **PL flow snippet**:
+
 ```
 let x = prompt: ... using write-tool capture
 if capture_failed
@@ -144,6 +150,7 @@ implies recurrence in practice.
 lifted into a PL `policy:` block).
 
 **PL flow snippet**:
+
 ```
 policy deny: bash matches "--no-verify|SKIP_CI|\[skip ci\]"
 ```
@@ -164,6 +171,7 @@ references `src/application/inject-context.ts` and
 decomposition).
 
 **PL flow snippet**:
+
 ```
 # Per-node timeout 60s with hard-fail
 # If chain_len > 8 then split into spawn children
@@ -184,6 +192,7 @@ structural every time.
 **PL-recoverable**: Yes.
 
 **PL flow snippet**:
+
 ```
 on flow failed/cancelled
   signal SIGTERM all spawned_children
@@ -207,6 +216,7 @@ install EACCES masked as "not found").
 transient once; surface permanent).
 
 **PL flow snippet**:
+
 ```
 retry max 1 on transient_error
 on permanent_error
@@ -235,6 +245,7 @@ the bug catalog.
 pre-validate placeholders; reject unresolved templates).
 
 **PL flow snippet**:
+
 ```
 run via spawn args: [...]
 reject if any arg matches unresolved_placeholder
@@ -248,14 +259,14 @@ deny path matches windows_absolute
   (eval-analysis hypothesis sweep with measured baseline failure
   rates).
 - Patterns 7-10 are framed as system/runtime failures of the
-  prompt-language *interpreter itself*. They qualify under E1's
+  prompt-language _interpreter itself_. They qualify under E1's
   framing because the experiment tests "structural fix in PL,"
   and these are exactly the recurring class being closed by
   structural fixes (timeouts, lifecycle, validation) rather than
   per-task patches.
 - One caveat: per
   `docs/evaluation/experiments/premature-stop-benchmark.md:1-13`,
-  the *backlog's* "Experiment 1" is the premature-stop A/B
+  the _backlog's_ "Experiment 1" is the premature-stop A/B
   specifically, while `docs/strategy/thesis.md:194` "Experiment 1"
   is the broader repeated-failure-elimination test. The 10
   patterns here support the broader thesis-doc framing.

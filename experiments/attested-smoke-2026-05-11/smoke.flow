@@ -1,0 +1,4 @@
+Goal: Single-turn attestation smoke — model writes a file and emits done.
+
+flow:
+  prompt: Use the write_file action to create hello.txt with content "hello world from prompt-language". Then emit a done action. Reply ONLY with strict JSON like {"actions":[{"type":"write_file","path":"hello.txt","content":"hello world from prompt-language"},{"type":"done","message":"file written"}]}.

@@ -87,12 +87,35 @@ Reference implementation: see the runner pattern in
   pilot showed scaffolding cost makes hybrid 2-3× *more* expensive
   than frontier-only at app-build scope. Frontier-write the whole
   app.
+- **Not for one-off real-software builds.** The 2026-05-11 tinymd
+  pilot showed scaffolding-cost dominance also applies to small
+  real software at N=1 (14× more expensive). Only invoke the
+  pattern when you'll be doing ≥10 similar builds with the same
+  routing scaffold and oracle pattern. Otherwise frontier-write
+  the whole thing.
 - **Not for security-sensitive code.** Local model has weaker
   knowledge of latest CVEs and language gotchas; have frontier
   review or write directly.
 - **Not for tasks where a wrong answer is silently accepted.** The
   oracle is load-bearing — if you can't test it cheaply, don't
   route.
+
+## Prompt-writing rules (learned from tinymd pilot)
+
+When routing functions that call each other (cross-function
+contracts in the same module):
+
+- **Always include sibling function return types** in the prompt.
+  The tinymd pilot's F6 (`tokenize`) call to F3 (`parseListItem`)
+  failed because the prompt said "parseListItem is in the same
+  module" but did not say what it returns. Local guessed
+  `{text: ...}` (an object) when the contract was a string. Real
+  cross-contract bug under spec ambiguity.
+- **Route in dependency order.** If function B calls function A,
+  route A first, then B. The runner.mjs pattern at
+  `experiments/concord-vho-realsoftware-tinymd/2026-05-11/`
+  demonstrates this; otherwise B fails to import because A is a
+  throw-stub.
 
 ## Evidence base
 

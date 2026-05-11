@@ -1,0 +1,42 @@
+[
+  {
+    "id": "escapeHtml",
+    "signature": "function escapeHtml(text)",
+    "description": "Coerce text to a string. Replace each character & < > \" ' with its HTML named entity (&amp; &lt; &gt; &quot; &#39;). Order matters: escape & first so the entities you write don't get re-escaped. Return the resulting string."
+  },
+  {
+    "id": "parseHeading",
+    "signature": "function parseHeading(line)",
+    "description": "Match line against ^(#{1,6})\\s+(.*)$. If no match, return null. If match, return { level, text } where level is the count of # characters and text is the trailing text."
+  },
+  {
+    "id": "parseListItem",
+    "signature": "function parseListItem(line)",
+    "description": "Match line against ^-\\s+(.*)$. If no match, return null. If match, return the trailing text only (not wrapped in an object)."
+  },
+  {
+    "id": "isFenceLine",
+    "signature": "function isFenceLine(line)",
+    "description": "Return true if line starts with three backticks, false otherwise."
+  },
+  {
+    "id": "parseInline",
+    "signature": "function parseInline(text)",
+    "description": "Take a raw text string. First HTML-escape it via the existing escapeHtml function (which is already imported into the module from elsewhere — assume escapeHtml is in scope). Then apply these substitutions in order on the escaped string: 1) **bold** -> <strong>bold</strong>; 2) *italic* -> <em>italic</em>; 3) `code` -> <code>code</code>; 4) [text](url) -> <a href=\"url\">text</a>. Use non-greedy or character-class regexes to avoid eating past the closing delimiter. Return the resulting string. Do not import escapeHtml; assume it is already a top-level function in this same module."
+  },
+  {
+    "id": "tokenize",
+    "signature": "function tokenize(markdown)",
+    "description": "Split markdown by newlines into lines. Walk lines and emit block tokens. A token has shape { type, ...fields }. Skip blank lines (lines with only whitespace) entirely. If a line passes isFenceLine: collect all lines after it until the next fence line, join with '\\n', emit { type: 'codeblock', text }. If parseHeading returns non-null: emit { type: 'heading', level, text }. If parseListItem returns non-null: emit { type: 'list-item', text }. Otherwise: collect contiguous non-blank non-special lines, join with a single space, emit { type: 'paragraph', text }. Return the array of tokens. Assume parseHeading, parseListItem, isFenceLine are already top-level functions in the same module."
+  },
+  {
+    "id": "renderToken",
+    "signature": "function renderToken(token)",
+    "description": "Switch on token.type and return an HTML string. 'heading' -> <hN>parseInline(text)</hN> where N is token.level. 'paragraph' -> <p>parseInline(text)</p>. 'codeblock' -> <pre><code>escapeHtml(text)</code></pre> (no parseInline; verbatim escape). 'list-item' -> <li>parseInline(text)</li>. Default -> empty string. Assume parseInline and escapeHtml are top-level functions in the same module."
+  },
+  {
+    "id": "groupListTokens",
+    "signature": "function groupListTokens(tokens)",
+    "description": "Walk the tokens array. When you see a run of consecutive tokens with type 'list-item', collapse them into a single token of shape { type: 'list', items } where items is the array of those list-item tokens. Non-list tokens pass through unchanged. Return the new array."
+  }
+]

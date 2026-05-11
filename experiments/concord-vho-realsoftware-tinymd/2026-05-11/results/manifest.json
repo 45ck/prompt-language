@@ -1,0 +1,198 @@
+{
+  "startedAt": "2026-05-11T02:23:36.803Z",
+  "model": "qwen3-coder:30b",
+  "perTask": [
+    {
+      "id": "escapeHtml",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "escapeHtml",
+          "passed": 9,
+          "total": 9,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 2274,
+        "localEvalTokens": 71,
+        "codeTiktoken": 69,
+        "codeChars": 220,
+        "generatedRaw": "export function escapeHtml(text) {\n    return String(text)\n        .replace(/&/g, '&amp;')\n        .replace(/</g, '&lt;')\n        .replace(/>/g, '&gt;')\n        .replace(/\"/g, '&quot;')\n        .replace(/'/g, '&#39;');\n}",
+        "extractedCode": "export function escapeHtml(text) {\n    return String(text)\n        .replace(/&/g, '&amp;')\n        .replace(/</g, '&lt;')\n        .replace(/>/g, '&gt;')\n        .replace(/\"/g, '&quot;')\n        .replace(/'/g, '&#39;');\n}"
+      }
+    },
+    {
+      "id": "parseHeading",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "parseHeading",
+          "passed": 9,
+          "total": 9,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 1870,
+        "localEvalTokens": 57,
+        "codeTiktoken": 56,
+        "codeChars": 177,
+        "generatedRaw": "export function parseHeading(line) {\n  const match = line.match(/^(#{1,6})\\s+(.*)$/);\n  if (!match) return null;\n  return {\n    level: match[1].length,\n    text: match[2]\n  };\n}",
+        "extractedCode": "export function parseHeading(line) {\n  const match = line.match(/^(#{1,6})\\s+(.*)$/);\n  if (!match) return null;\n  return {\n    level: match[1].length,\n    text: match[2]\n  };\n}"
+      }
+    },
+    {
+      "id": "parseListItem",
+      "route": "frontier-required",
+      "attempt": {
+        "pass": false,
+        "oracle": {
+          "taskId": "parseListItem",
+          "passed": 4,
+          "total": 7,
+          "oraclePass": false,
+          "failures": [
+            "fn([\"- item\"]) = null expected \"item\"",
+            "fn([\"- multi word item\"]) = null expected \"multi word item\"",
+            "fn([\"- \"]) = null expected \"\""
+          ]
+        },
+        "wallMs": 1276,
+        "localEvalTokens": 35,
+        "codeTiktoken": 34,
+        "codeChars": 121,
+        "generatedRaw": "export function parseListItem(line) {\n  const match = line.match(/^-s+(.*)$/);\n  return match ? match[1].trim() : null;\n}",
+        "extractedCode": "export function parseListItem(line) {\n  const match = line.match(/^-s+(.*)$/);\n  return match ? match[1].trim() : null;\n}"
+      }
+    },
+    {
+      "id": "isFenceLine",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "isFenceLine",
+          "passed": 7,
+          "total": 7,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 709,
+        "localEvalTokens": 18,
+        "codeTiktoken": 17,
+        "codeChars": 72,
+        "generatedRaw": "export function isFenceLine(line) {\n    return line.startsWith('```');\n}",
+        "extractedCode": "export function isFenceLine(line) {\n    return line.startsWith('```');\n}"
+      }
+    },
+    {
+      "id": "parseInline",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "parseInline",
+          "passed": 9,
+          "total": 9,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 4735,
+        "localEvalTokens": 177,
+        "codeTiktoken": 176,
+        "codeChars": 541,
+        "generatedRaw": "export function parseInline(text) {\n  let escaped = escapeHtml(text);\n  \n  // Bold: **bold** -> <strong>bold</strong>\n  escaped = escaped.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\n  \n  // Italic: *italic* -> <em>italic</em>\n  escaped = escaped.replace(/\\*(.*?)\\*/g, '<em>$1</em>');\n  \n  // Code: `code` -> <code>code</code>\n  escaped = escaped.replace(/`(.*?)`/g, '<code>$1</code>');\n  \n  // Link: [text](url) -> <a href=\"url\">text</a>\n  escaped = escaped.replace(/\\[(.*?)\\]\\((.*?)\\)/g, '<a href=\"$2\">$1</a>');\n  \n  return escaped;\n}",
+        "extractedCode": "export function parseInline(text) {\n  let escaped = escapeHtml(text);\n  \n  // Bold: **bold** -> <strong>bold</strong>\n  escaped = escaped.replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>');\n  \n  // Italic: *italic* -> <em>italic</em>\n  escaped = escaped.replace(/\\*(.*?)\\*/g, '<em>$1</em>');\n  \n  // Code: `code` -> <code>code</code>\n  escaped = escaped.replace(/`(.*?)`/g, '<code>$1</code>');\n  \n  // Link: [text](url) -> <a href=\"url\">text</a>\n  escaped = escaped.replace(/\\[(.*?)\\]\\((.*?)\\)/g, '<a href=\"$2\">$1</a>');\n  \n  return escaped;\n}"
+      }
+    },
+    {
+      "id": "tokenize",
+      "route": "frontier-required",
+      "attempt": {
+        "pass": false,
+        "oracle": {
+          "taskId": "tokenize",
+          "passed": 4,
+          "total": 8,
+          "oraclePass": false,
+          "failures": [
+            "fn([\"plain\"]) threw: NOT_IMPLEMENTED:parseListItem",
+            "fn([\"- a\\n- b\"]) threw: NOT_IMPLEMENTED:parseListItem",
+            "fn([\"# h\\n\\npara\"]) threw: NOT_IMPLEMENTED:parseListItem",
+            "fn([\"line one\\nline two\"]) threw: NOT_IMPLEMENTED:parseListItem"
+          ]
+        },
+        "wallMs": 7971,
+        "localEvalTokens": 312,
+        "codeTiktoken": 311,
+        "codeChars": 1167,
+        "generatedRaw": "export function tokenize(markdown) {\n  const lines = markdown.split('\\n');\n  const tokens = [];\n  let i = 0;\n  \n  while (i < lines.length) {\n    const line = lines[i];\n    \n    if (/^\\s*$/.test(line)) {\n      i++;\n      continue;\n    }\n    \n    if (isFenceLine(line)) {\n      const start = i;\n      i++;\n      while (i < lines.length && !isFenceLine(lines[i])) {\n        i++;\n      }\n      const text = lines.slice(start + 1, i).join('\\n');\n      tokens.push({ type: 'codeblock', text });\n      i++;\n      continue;\n    }\n    \n    const heading = parseHeading(line);\n    if (heading) {\n      tokens.push({ type: 'heading', level: heading.level, text: heading.text });\n      i++;\n      continue;\n    }\n    \n    const listItem = parseListItem(line);\n    if (listItem) {\n      tokens.push({ type: 'list-item', text: listItem.text });\n      i++;\n      continue;\n    }\n    \n    const start = i;\n    while (i < lines.length && !/^\\s*$/.test(lines[i]) && !isFenceLine(lines[i]) && !parseHeading(lines[i]) && !parseListItem(lines[i])) {\n      i++;\n    }\n    const text = lines.slice(start, i).join(' ');\n    tokens.push({ type: 'paragraph', text });\n  }\n  \n  return tokens;\n}",
+        "extractedCode": "export function tokenize(markdown) {\n  const lines = markdown.split('\\n');\n  const tokens = [];\n  let i = 0;\n  \n  while (i < lines.length) {\n    const line = lines[i];\n    \n    if (/^\\s*$/.test(line)) {\n      i++;\n      continue;\n    }\n    \n    if (isFenceLine(line)) {\n      const start = i;\n      i++;\n      while (i < lines.length && !isFenceLine(lines[i])) {\n        i++;\n      }\n      const text = lines.slice(start + 1, i).join('\\n');\n      tokens.push({ type: 'codeblock', text });\n      i++;\n      continue;\n    }\n    \n    const heading = parseHeading(line);\n    if (heading) {\n      tokens.push({ type: 'heading', level: heading.level, text: heading.text });\n      i++;\n      continue;\n    }\n    \n    const listItem = parseListItem(line);\n    if (listItem) {\n      tokens.push({ type: 'list-item', text: listItem.text });\n      i++;\n      continue;\n    }\n    \n    const start = i;\n    while (i < lines.length && !/^\\s*$/.test(lines[i]) && !isFenceLine(lines[i]) && !parseHeading(lines[i]) && !parseListItem(lines[i])) {\n      i++;\n    }\n    const text = lines.slice(start, i).join(' ');\n    tokens.push({ type: 'paragraph', text });\n  }\n  \n  return tokens;\n}"
+      }
+    },
+    {
+      "id": "renderToken",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "renderToken",
+          "passed": 6,
+          "total": 6,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 3113,
+        "localEvalTokens": 106,
+        "codeTiktoken": 105,
+        "codeChars": 428,
+        "generatedRaw": "export function renderToken(token) {\n  switch (token.type) {\n    case 'heading':\n      return `<h${token.level}>${parseInline(token.text)}</h${token.level}>`;\n    case 'paragraph':\n      return `<p>${parseInline(token.text)}</p>`;\n    case 'codeblock':\n      return `<pre><code>${escapeHtml(token.text)}</code></pre>`;\n    case 'list-item':\n      return `<li>${parseInline(token.text)}</li>`;\n    default:\n      return '';\n  }\n}",
+        "extractedCode": "export function renderToken(token) {\n  switch (token.type) {\n    case 'heading':\n      return `<h${token.level}>${parseInline(token.text)}</h${token.level}>`;\n    case 'paragraph':\n      return `<p>${parseInline(token.text)}</p>`;\n    case 'codeblock':\n      return `<pre><code>${escapeHtml(token.text)}</code></pre>`;\n    case 'list-item':\n      return `<li>${parseInline(token.text)}</li>`;\n    default:\n      return '';\n  }\n}"
+      }
+    },
+    {
+      "id": "groupListTokens",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "groupListTokens",
+          "passed": 4,
+          "total": 4,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 3058,
+        "localEvalTokens": 112,
+        "codeTiktoken": 111,
+        "codeChars": 424,
+        "generatedRaw": "export function groupListTokens(tokens) {\n  const result = [];\n  let i = 0;\n  \n  while (i < tokens.length) {\n    if (tokens[i].type === 'list-item') {\n      const items = [];\n      while (i < tokens.length && tokens[i].type === 'list-item') {\n        items.push(tokens[i]);\n        i++;\n      }\n      result.push({ type: 'list', items });\n    } else {\n      result.push(tokens[i]);\n      i++;\n    }\n  }\n  \n  return result;\n}",
+        "extractedCode": "export function groupListTokens(tokens) {\n  const result = [];\n  let i = 0;\n  \n  while (i < tokens.length) {\n    if (tokens[i].type === 'list-item') {\n      const items = [];\n      while (i < tokens.length && tokens[i].type === 'list-item') {\n        items.push(tokens[i]);\n        i++;\n      }\n      result.push({ type: 'list', items });\n    } else {\n      result.push(tokens[i]);\n      i++;\n    }\n  }\n  \n  return result;\n}"
+      }
+    }
+  ],
+  "completedAt": "2026-05-11T02:24:03.669Z",
+  "summary": {
+    "totalRoutableTasks": 8,
+    "localOnly": 6,
+    "frontierRequired": [
+      "parseListItem",
+      "tokenize"
+    ],
+    "totalLocalEvalTokens": 888,
+    "totalLocalGeneratedTiktokenTokens": 879,
+    "armB_total_tiktoken_tokens": 911
+  },
+  "integration": {
+    "pass": false,
+    "exitCode": 1,
+    "result": {
+      "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-realsoftware-tinymd\\2026-05-11\\arm-a-hybrid\\workspace\\tinymd.mjs",
+      "passed": 0,
+      "total": 13,
+      "oraclePass": false
+    },
+    "stderrTail": "convert(\"# Hello\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"## Hello\\n### World\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"###### Six\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"This is a paragraph.\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"Line one\\nline two\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"**bold** and *em* and `code`\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"Visit [the site](https://example.com).\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"```\\nlet x = 1;\\n```\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"- one\\n- two\\n- three\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"# Title\\n\\nintro paragraph.\\n\\n- a\\n- b\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"use < and > and &\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"```\\n<b>raw</b>\\n```\") threw: NOT_IMPLEMENTED:tokenize\n\nconvert(\"## **strong** title\") threw: NOT_IMPLEMENTED:tokenize\n"
+  }
+}

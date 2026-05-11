@@ -164,6 +164,16 @@ tool-call instructions.
    protocols. Potentially the cleanest option but requires those
    harnesses installed.
 
+   **Tested empirically (2026-05-11 night):** with aider 0.86.2
+   installed, `prompt-language ci --runner aider --model
+   ollama/qwen3-coder:30b <text-smoke.flow>` ALSO hangs after
+   "Running flow via aider..." for 90+ seconds with no further
+   output. So switching runners does not unlock end-to-end on this
+   rig. The issue may not be runner-specific — could be in the PL
+   flow-runtime layer above the runner adapter, or in how runners
+   are invoked from the PL CLI process. Worth a separate
+   investigation.
+
 The hand-rolled `runner.mjs` from the morning's pilots avoids this
 entirely by calling `/api/generate` directly and treating the
 response as text to be applied programmatically. **That pattern is

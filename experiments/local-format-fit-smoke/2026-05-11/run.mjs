@@ -11,26 +11,51 @@ const MODELS = args.length ? args : ['qwen3-coder:30b', 'devstral-small-2:24b'];
 const OUT_DIR = process.env.OUT_DIR || './results-2026-05-11';
 mkdirSync(OUT_DIR, { recursive: true });
 
+// Adversarial cases: chosen to defeat known model-shortcut patterns.
+// - isPrime: includes squares of primes (121=11^2, 169=13^2, 289=17^2),
+//   semiprimes whose factors are >31 (37*41=1517, 53*59=3127), Carmichael
+//   number 561, and large primes well outside any "first 30 primes" hack.
+// - fibonacci: includes large n that defeats lookup-table hacks.
+// - gcd: includes coprime large pairs and pairs where naive Euclidean
+//   recursion may fail on edge inputs.
+// - classifyStderr: includes near-keywords that should NOT match
+//   (e.g. "modules" is not "module"; "syntax fine" is not "SyntaxError").
 const TASKS = [
   {
     id: 'isPrime',
     prompt: 'Reply with ONLY the JavaScript line: `const fn = (n) => /* your impl */;` that returns true iff n is a prime integer >= 2. No fences, no commentary.',
-    cases: [[2,true],[3,true],[4,false],[5,true],[9,false],[11,true],[1,false],[0,false],[-7,false],[97,true],[100,false]],
+    cases: [
+      [2,true],[3,true],[4,false],[5,true],[9,false],[11,true],
+      [1,false],[0,false],[-7,false],[97,true],[100,false],
+      [121,false],[143,false],[169,false],[289,false],
+      [37,true],[41,true],[101,true],[103,true],[1009,true],
+      [1517,false],[3127,false],[561,false],
+    ],
   },
   {
     id: 'reverseString',
     prompt: 'Reply with ONLY the JavaScript line: `const fn = (s) => /* your impl */;` that returns s reversed. No fences, no commentary.',
-    cases: [['',''],['a','a'],['ab','ba'],['hello','olleh'],['racecar','racecar'],['12345','54321']],
+    cases: [
+      ['',''],['a','a'],['ab','ba'],['hello','olleh'],
+      ['racecar','racecar'],['12345','54321'],
+      ['a b c','c b a'],['  ','  '],['12.34','43.21'],
+    ],
   },
   {
     id: 'fibonacci',
     prompt: 'Reply with ONLY the JavaScript line: `const fn = (n) => /* your impl */;` that returns the nth Fibonacci with fn(0)=0, fn(1)=1, fn(2)=1, fn(10)=55. No fences, no commentary.',
-    cases: [[0,0],[1,1],[2,1],[3,2],[5,5],[10,55],[15,610]],
+    cases: [
+      [0,0],[1,1],[2,1],[3,2],[5,5],[10,55],[15,610],
+      [20,6765],[25,75025],[30,832040],
+    ],
   },
   {
     id: 'gcd',
     prompt: 'Reply with ONLY the JavaScript line: `const fn = (a, b) => /* your impl */;` that returns the gcd of two positive ints. No fences, no commentary.',
-    cases: [[[12,8],4],[[100,75],25],[[17,5],1],[[1,1],1],[[48,18],6]],
+    cases: [
+      [[12,8],4],[[100,75],25],[[17,5],1],[[1,1],1],[[48,18],6],
+      [[1071,462],21],[[2024,2025],1],[[123456,7890],6],
+    ],
   },
   {
     id: 'classifyStderr',
@@ -42,6 +67,13 @@ const TASKS = [
       ['Error: connect ECONNREFUSED 127.0.0.1:5432','network'],
       ['ReferenceError: foo is not defined','runtime'],
       ['Some unknown weird message','other'],
+      ['npm ERR! code MODULE_NOT_FOUND','dependency'],
+      ['Error: connect ETIMEDOUT 10.0.0.1:443','network'],
+      ['RangeError: Maximum call stack exceeded','runtime'],
+      // Adversarial near-misses:
+      ['warning: imported modules are deprecated','other'],
+      ['INFO: syntax fine, type checked','other'],
+      ['Notice: TypeScript compiled','other'],
     ],
   },
 ];

@@ -1,0 +1,58 @@
+{
+  "summary": {
+    "qwen3-coder:30b": {
+      "passed": 12,
+      "total": 15,
+      "wallMs": 29730,
+      "tokens": 731
+    },
+    "devstral-small-2:24b": {
+      "passed": 12,
+      "total": 15,
+      "wallMs": 57834,
+      "tokens": 684
+    }
+  },
+  "byTask": {
+    "qwen3-coder:30b|isPrime": {
+      "passed": 0,
+      "runs": 3
+    },
+    "qwen3-coder:30b|reverseString": {
+      "passed": 3,
+      "runs": 3
+    },
+    "qwen3-coder:30b|fibonacci": {
+      "passed": 3,
+      "runs": 3
+    },
+    "qwen3-coder:30b|gcd": {
+      "passed": 3,
+      "runs": 3
+    },
+    "qwen3-coder:30b|classifyStderr": {
+      "passed": 3,
+      "runs": 3
+    },
+    "devstral-small-2:24b|isPrime": {
+      "passed": 0,
+      "runs": 3
+    },
+    "devstral-small-2:24b|reverseString": {
+      "passed": 3,
+      "runs": 3
+    },
+    "devstral-small-2:24b|fibonacci": {
+      "passed": 3,
+      "runs": 3
+    },
+    "devstral-small-2:24b|gcd": {
+      "passed": 3,
+      "runs": 3
+    },
+    "devstral-small-2:24b|classifyStderr": {
+      "passed": 3,
+      "runs": 3
+    }
+  }
+}

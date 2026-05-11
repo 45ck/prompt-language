@@ -149,13 +149,60 @@ strengthen the methodological caveats that already apply:
   qwen3-opencode:30b is rejected by format alone despite generating
   fluent code (Finding 4).
 
+## Adversarial follow-up (same day)
+
+After the k=3 run surfaced Finding 2 (test-case-fit hacks pass textbook
+oracles), `run.mjs` was extended with adversarial cases for each task:
+
+- `isPrime` — added squares of primes (121, 169, 289), semiprimes whose
+  factors are >31 (1517 = 37×41, 3127 = 53×59), Carmichael number 561,
+  larger primes outside the "first 30 primes" range (1009 etc).
+- `fibonacci` — added n up to 30 (832040) to defeat lookup-table hacks.
+- `gcd` — added coprime large pairs (2024, 2025) and asymmetric large
+  inputs (123456, 7890).
+- `classifyStderr` — added near-miss inputs that contain dependency /
+  syntax / type keywords as substrings but should not match (e.g.
+  "imported modules are deprecated", "syntax fine, type checked").
+
+Re-running k=3 on the top two models with the adversarial battery:
+
+| Model                  | isPrime | reverseString | fibonacci | gcd | classifyStderr | Aggregate |
+| ---------------------- | ------- | ------------- | --------- | --- | -------------- | --------- |
+| `qwen3-coder:30b`      | **0/3** | 3/3           | 3/3       | 3/3 | 3/3            | **12/15** |
+| `devstral-small-2:24b` | **0/3** | 3/3           | 3/3       | 3/3 | 3/3            | **12/15** |
+
+**The "qwen3-coder is better" signal disappears against adversarial
+cases.** Both top models tie at 12/15 once isPrime test cases include
+factors outside the first 30 primes. Specifically:
+
+- qwen3-coder:30b k=1 returns the hardcoded-list hack from the textbook
+  run: `fn(1517) === true` (wrong; 1517 = 37 × 41, neither in the
+  hardcoded list).
+- qwen3-coder:30b k=2/k=3 use the `n < 31` fallback hack: `fn(4) === true`.
+- devstral-small-2:24b returns the same Array.from off-by-one across all
+  three repeats: `fn(3) === false`.
+
+Per-run details in `results-adversarial/results.json`.
+
+This is **Finding 6** for the methodology log: textbook test cases let
+hardcoded-fit hacks inflate model rankings. The harness-arena's private
+oracles must include adversarial inputs that defeat shape-matching. The
+external research synthesis at
+[`docs/research/local-coding-models-landscape-2026-05-11.md`](../../../docs/research/local-coding-models-landscape-2026-05-11.md)
+recommends EvalPlus as the right harness for this exact reason — its
+HumanEval+ / MBPP+ test expansions are designed to defeat hardcoded-fit
+patterns at scale.
+
 ## Reproducing
 
 ```bash
 cd experiments/local-format-fit-smoke/2026-05-11
-REPEATS=3 OUT_DIR=./out node run.mjs qwen3-coder:30b devstral-small-2:24b qwen3-opencode:30b
+# textbook battery, default 2 models
+REPEATS=3 OUT_DIR=./out node run.mjs qwen3-coder:30b devstral-small-2:24b
+# adversarial battery (current run.mjs has the adversarial cases baked in)
+REPEATS=3 OUT_DIR=./out-adv node run.mjs qwen3-coder:30b devstral-small-2:24b
 ```
 
 Requires Ollama running locally (or reachable) with the named models
-already pulled. Output overwrites `results.json` and `summary.json`
-in `OUT_DIR` (default `./results-2026-05-11`).
+already pulled. Output overwrites `results.json` and `summary.json` in
+`OUT_DIR`.

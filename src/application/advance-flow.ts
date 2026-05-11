@@ -416,7 +416,10 @@ function emitNodeAdvanceTrace(
   if (ctx.detail !== undefined) partial['detail'] = ctx.detail;
   if (before.stateHash !== undefined) partial['stateBeforeHash'] = before.stateHash;
   if (after.stateHash !== undefined) partial['stateAfterHash'] = after.stateHash;
-  if (prev !== undefined) partial['prevEventHash'] = prev;
+  // Always set prevEventHash (explicit null for first entry in a chain) — the
+  // verifier requires it to be string-or-null, not undefined-omitted (per
+  // verify-trace.mjs chain check; bug #4 found 2026-05-11).
+  partial['prevEventHash'] = prev !== undefined ? prev : null;
   const eventHash = hashEvent(partial);
   partial['eventHash'] = eventHash;
   recordTraceEventHash(runId, eventHash);

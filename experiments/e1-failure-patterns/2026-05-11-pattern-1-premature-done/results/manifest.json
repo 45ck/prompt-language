@@ -1,0 +1,123 @@
+{
+  "startedAt": "2026-05-11T05:07:34.392Z",
+  "model": "qwen3-coder:30b",
+  "reps": 5,
+  "runs": [
+    {
+      "rep": 1,
+      "arm": "baseline",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 2364
+    },
+    {
+      "rep": 2,
+      "arm": "baseline",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 1725
+    },
+    {
+      "rep": 3,
+      "arm": "baseline",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 1701
+    },
+    {
+      "rep": 4,
+      "arm": "baseline",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 1715
+    },
+    {
+      "rep": 5,
+      "arm": "baseline",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 1717
+    },
+    {
+      "rep": 1,
+      "arm": "pl-fix",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 1705
+    },
+    {
+      "rep": 2,
+      "arm": "pl-fix",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 1742
+    },
+    {
+      "rep": 3,
+      "arm": "pl-fix",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 1725
+    },
+    {
+      "rep": 4,
+      "arm": "pl-fix",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 1738
+    },
+    {
+      "rep": 5,
+      "arm": "pl-fix",
+      "iterations": 1,
+      "finalAllPass": true,
+      "finalPassed": 0,
+      "finalFailed": 3,
+      "totalLocalTokens": 72,
+      "totalWallMs": 1714
+    }
+  ],
+  "completedAt": "2026-05-11T05:07:53.390Z",
+  "summary": {
+    "baseline": {
+      "runs": 5,
+      "allPass": 5,
+      "avgPassed": 0,
+      "totalTokens": 360
+    },
+    "plFix": {
+      "runs": 5,
+      "allPass": 5,
+      "avgPassed": 0,
+      "totalTokens": 360,
+      "avgIter": 1
+    }
+  }
+}

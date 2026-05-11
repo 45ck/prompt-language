@@ -5,6 +5,39 @@ export const UNSAFE_PERMISSION_BYPASS_FLAGS = new Set([
   '--dangerously-bypass-approvals-and-sandbox',
 ]);
 
+export function classifyRunnerClaimProfile({
+  unsafeFlags = [],
+  approvalMode = 'enforced',
+  sandboxMode = 'unknown',
+  networkMode = 'unknown',
+  shellMode = 'model-directed',
+  transportWitness = 'none',
+  externalProcess = true,
+  detached = false,
+  timeoutMs = null,
+  killOnTimeout = true,
+} = {}) {
+  const recordedOnlyReasons = [];
+  if (unsafeFlags.length > 0) recordedOnlyReasons.push('runner-unsafe-permission-bypass');
+  if (approvalMode === 'bypassed') recordedOnlyReasons.push('runner-approval-bypassed');
+  if (sandboxMode === 'unknown') recordedOnlyReasons.push('runner-sandbox-unverified');
+  if (networkMode === 'unknown') recordedOnlyReasons.push('runner-network-unbounded');
+  if (shellMode === 'model-directed') recordedOnlyReasons.push('runner-shell-unbounded');
+  if (externalProcess !== true) recordedOnlyReasons.push('runner-external-process-missing');
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    recordedOnlyReasons.push('runner-process-lease-missing');
+  }
+  if (detached === true || killOnTimeout !== true) {
+    recordedOnlyReasons.push('runner-process-lease-unsafe');
+  }
+  if (transportWitness === 'none') recordedOnlyReasons.push('runner-transport-witness-missing');
+
+  return {
+    claimPosture: recordedOnlyReasons.length > 0 ? 'recorded-only' : 'claim-eligible',
+    recordedOnlyReasons: [...new Set(recordedOnlyReasons)],
+  };
+}
+
 export function buildRunnerCapabilityManifest({
   runnerId = 'unknown',
   adapter = null,
@@ -32,15 +65,18 @@ export function buildRunnerCapabilityManifest({
 } = {}) {
   const unsafeFlags = argv.filter((arg) => UNSAFE_PERMISSION_BYPASS_FLAGS.has(arg));
   const resolvedApprovalMode = approvalMode ?? (unsafeFlags.length > 0 ? 'bypassed' : 'enforced');
-  const claimPosture =
-    unsafeFlags.length > 0 ||
-    resolvedApprovalMode === 'bypassed' ||
-    sandboxMode === 'unknown' ||
-    networkMode === 'unknown' ||
-    shellMode === 'model-directed' ||
-    transportWitness === 'none'
-      ? 'recorded-only'
-      : 'claim-eligible';
+  const claimProfile = classifyRunnerClaimProfile({
+    unsafeFlags,
+    approvalMode: resolvedApprovalMode,
+    sandboxMode,
+    networkMode,
+    shellMode,
+    transportWitness,
+    externalProcess,
+    detached,
+    timeoutMs,
+    killOnTimeout,
+  });
 
   return {
     schemaVersion: RUNNER_CAPABILITY_SCHEMA_VERSION,
@@ -55,7 +91,8 @@ export function buildRunnerCapabilityManifest({
       binarySha256,
     },
     safety: {
-      claimPosture,
+      claimPosture: claimProfile.claimPosture,
+      recordedOnlyReasons: claimProfile.recordedOnlyReasons,
       unsafeFlags,
       approvalMode: resolvedApprovalMode,
       sandboxMode,
@@ -126,6 +163,9 @@ export function assessRunnerCapabilityManifest(manifest) {
     blockers.push('runner-shell-unbounded');
   }
 
+  if (safety.process?.externalProcess !== true) {
+    blockers.push('runner-external-process-missing');
+  }
   const timeoutMs = safety.process?.timeoutMs;
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     blockers.push('runner-process-lease-missing');

@@ -50,6 +50,7 @@ The strongest practical direction is therefore:
 | Operator signer is provisioned                              | Shipped in principle | `operator-45ck-2026-05` exists, but no run has passed all claim-eligibility gates.         |
 | Attested bundle path is real but not clean                  | Partial              | Signed bundle exists; verifier still fails on trace, witness, and path blockers.           |
 | Ollama runner is an action-protocol tool loop               | Defensible           | It is not a generic single-turn text-generation adapter.                                   |
+| Local smoke claim-profile classification exists             | Partial              | `qwen3-coder:30b` quick smoke is recorded-only and currently passes `35/39` cases.         |
 
 ## What is not discovered
 
@@ -63,6 +64,8 @@ The strongest practical direction is therefore:
 - Whether hybrid/local routing generalizes beyond curated microtasks.
 - Whether claim-eligible runs can be produced repeatedly under strict trace,
   preflight, attestation, cross-family review, and trusted-signer rules.
+- Whether local Ollama can pass the full quick smoke matrix once deterministic
+  runtime-smoke failures are triaged.
 
 ## What we are working toward
 
@@ -97,6 +100,12 @@ Exit criteria:
   `recorded-only`;
 - reviewer and child-process handoffs declare owned paths, allowed commands,
   artifact schema, timeout, import boundaries, and conflict behavior.
+
+Progress: smoke reports now include claim-profile classification and runner
+capability manifests, and traced prompt-turn entries can carry runner capability
+evidence. The 2026-05-12 local Ollama quick smoke remains recorded-only and
+failed four deterministic runtime-smoke cases, so it is diagnostic evidence, not
+Phase 1 evidence.
 
 ### Phase 1: fix the evidence substrate
 

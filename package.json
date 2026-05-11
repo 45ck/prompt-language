@@ -128,7 +128,7 @@
     "eval:skill:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/skill-eval.mjs --quick",
     "eval:ab": "npm run build && node bin/cli.mjs install && node scripts/eval/ab-eval.mjs",
     "eval:ab:quick": "npm run build && node bin/cli.mjs install && node scripts/eval/ab-eval.mjs --quick",
-    "eval:harness:adapter:test": "node --test scripts/eval/harness.test.mjs",
+    "eval:harness:adapter:test": "node --test scripts/eval/harness.test.mjs scripts/eval/runner-capability-manifest.test.mjs",
     "eval:compare": "npm run build && node scripts/eval/comparative-eval.mjs",
     "eval:compare:quick": "npm run build && node scripts/eval/comparative-eval.mjs --quick",
     "eval:compare:repeat": "npm run build && node scripts/eval/comparative-eval.mjs --repeat 3",

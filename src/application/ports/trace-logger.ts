@@ -41,6 +41,7 @@ export interface TraceEntry {
   readonly stdoutSha256?: string | undefined;
   readonly binaryPath?: string | undefined;
   readonly binarySha256?: string | undefined;
+  readonly runnerCapabilities?: Readonly<Record<string, boolean>> | undefined;
   readonly exitCode?: number | undefined;
   readonly durationMs?: number | undefined;
   readonly prevEventHash?: string | undefined;

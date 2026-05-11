@@ -28,6 +28,15 @@ function makeRecordingLogger(): TraceLogger & { entries: TraceEntry[] } {
 }
 
 class FakeInnerRunner implements PromptTurnRunner {
+  capabilities = {
+    externalProcess: true,
+    terminate: true,
+    cwdOverride: true,
+    modelPassThrough: true,
+    stateDirPolling: true,
+    inProcessExecution: false,
+  };
+
   calls = 0;
   lastInput?: PromptTurnInput;
   result: PromptTurnResult = { exitCode: 0, assistantText: 'response-body' };
@@ -72,6 +81,7 @@ describe('TracedPromptTurnRunner', () => {
     expect(begin!.nodeId).toBe('p1');
     expect(begin!.nodeKind).toBe('prompt');
     expect(begin!.pid).toBe(process.pid);
+    expect(begin!.runnerCapabilities).toEqual(inner.capabilities);
 
     expect(end!.event).toBe('agent_invocation_end');
     expect(end!.seq).toBe(1);
@@ -79,6 +89,7 @@ describe('TracedPromptTurnRunner', () => {
     expect(end!.stdoutSha256).toBe(sha256Hex('response-body'));
     expect(end!.exitCode).toBe(0);
     expect(end!.durationMs).toBeGreaterThanOrEqual(0);
+    expect(end!.runnerCapabilities).toEqual(inner.capabilities);
   });
 
   it('emits end with sentinel exit code when inner throws, then rethrows', async () => {

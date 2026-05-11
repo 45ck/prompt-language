@@ -6,6 +6,7 @@ import type {
   PromptTurnInput,
   PromptTurnResult,
   PromptTurnRunner,
+  PromptTurnRunnerCapabilities,
 } from '../../application/ports/prompt-turn-runner.js';
 import { selectCompactRenderModeForEnvelope } from '../../application/select-compact-render-mode.js';
 import { appendProviderTelemetry, normalizeOllamaTelemetry } from './provider-telemetry.js';
@@ -943,6 +944,15 @@ async function callOllamaChatWithFallback(
 }
 
 export class OllamaPromptTurnRunner implements PromptTurnRunner {
+  readonly capabilities: PromptTurnRunnerCapabilities = {
+    externalProcess: false,
+    terminate: false,
+    cwdOverride: true,
+    modelPassThrough: true,
+    stateDirPolling: false,
+    inProcessExecution: true,
+  };
+
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
     const requestedModel = resolveOllamaModel(input.model);
     const timeoutMs = getOllamaTimeoutMs();

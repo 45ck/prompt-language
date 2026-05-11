@@ -42,6 +42,16 @@ export interface PromptTurnResult {
   readonly providerTelemetry?: PromptTurnProviderTelemetry | undefined;
 }
 
+export interface PromptTurnRunnerCapabilities {
+  readonly externalProcess: boolean;
+  readonly terminate: boolean;
+  readonly cwdOverride: boolean;
+  readonly modelPassThrough: boolean;
+  readonly stateDirPolling: boolean;
+  readonly inProcessExecution: boolean;
+}
+
 export interface PromptTurnRunner {
+  readonly capabilities?: PromptTurnRunnerCapabilities | undefined;
   run(input: PromptTurnInput): Promise<PromptTurnResult>;
 }

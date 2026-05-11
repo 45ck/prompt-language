@@ -90,6 +90,22 @@ Roadmap implication: stop adding broad demos until the evidence substrate is
 clean. The current operating plan is
 [Current Plan After May 11 Evidence](strategy/current-plan-2026-05-12.md).
 
+## Evidence checkpoint: 2026-05-12
+
+The local-model path is now more honestly classified:
+
+- smoke result JSON includes a `claimProfile` block and writes a sibling runner
+  capability manifest;
+- traced prompt-turn entries can carry runner capability evidence;
+- a `qwen3-coder:30b` Ollama quick smoke passed `35/39` cases but failed four
+  deterministic runtime-smoke checks;
+- the run is recorded-only, with shell, process, and transport-witness blockers.
+
+Roadmap implication: local models are available and useful for diagnostics, but
+the next engineering work is still runner/witness safety and deterministic smoke
+closure before any local claim-profile promotion. See
+[Local Ollama Smoke With Claim-Profile Classification](evaluation/2026-05-12-local-ollama-smoke-claim-profile.md).
+
 ## Shipped vs tracked
 
 The runtime already ships:
@@ -129,7 +145,7 @@ These are the next milestones that matter most to the product, in order:
 | Milestone                                           | Why it matters                                                                                   | Current status |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------ | -------------- |
 | Claim-eligible runtime truth bundle                 | Proves strict trace, ready preflight, attestation, cross-family review, and trusted signer work  | In progress    |
-| Runner safety and verifier profile hardening        | Makes claim-grade evidence runtime-enforced rather than prompt-instructed                        | Tracked next   |
+| Runner safety and verifier profile hardening        | Makes claim-grade evidence runtime-enforced rather than prompt-instructed                        | In progress    |
 | Supported-host live smoke and parity evidence       | Turns local/dev confidence into public operational confidence                                    | In progress    |
 | E1 repeated-failure recovery proof                  | Tests the clearest thesis-relevant value: PL reduces recurring failures through gates and repair | Tracked next   |
 | Actual PL-runtime local routing path                | Replaces hand-rolled router evidence with a real PL flow runtime route                           | Tracked next   |

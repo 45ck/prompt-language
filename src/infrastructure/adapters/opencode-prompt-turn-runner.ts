@@ -5,6 +5,7 @@ import type {
   PromptTurnInput,
   PromptTurnResult,
   PromptTurnRunner,
+  PromptTurnRunnerCapabilities,
 } from '../../application/ports/prompt-turn-runner.js';
 // cspell:ignore LOCALAPPDATA USERPROFILE
 
@@ -285,6 +286,15 @@ function terminateOpenCodeProcessTree(child: ReturnType<typeof spawn>): void {
 }
 
 export class OpenCodePromptTurnRunner implements PromptTurnRunner {
+  readonly capabilities: PromptTurnRunnerCapabilities = {
+    externalProcess: true,
+    terminate: true,
+    cwdOverride: true,
+    modelPassThrough: true,
+    stateDirPolling: true,
+    inProcessExecution: false,
+  };
+
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
     const args = this.buildArgs(input);
     const env = await prepareOpenCodeEnv(input);

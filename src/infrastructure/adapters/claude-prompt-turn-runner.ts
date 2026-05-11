@@ -5,6 +5,7 @@ import type {
   PromptTurnProviderTelemetry,
   PromptTurnResult,
   PromptTurnRunner,
+  PromptTurnRunnerCapabilities,
 } from '../../application/ports/prompt-turn-runner.js';
 import { readClaudeProviderTelemetry } from './claude-telemetry-reader.js';
 import {
@@ -129,6 +130,15 @@ function claudeStatus(exitCode: number): PromptTurnProviderTelemetry['status'] {
 }
 
 export class ClaudePromptTurnRunner implements PromptTurnRunner {
+  readonly capabilities: PromptTurnRunnerCapabilities = {
+    externalProcess: true,
+    terminate: true,
+    cwdOverride: true,
+    modelPassThrough: true,
+    stateDirPolling: true,
+    inProcessExecution: false,
+  };
+
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
     const args = this.buildArgs(input);
     const timeoutMs = readPositiveIntEnv(CLAUDE_TIMEOUT_MS_ENV) ?? DEFAULT_TIMEOUT_MS;

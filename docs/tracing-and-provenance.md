@@ -33,6 +33,13 @@ bundle has passed the full claim profile yet.
 Current claim-eligibility status: **zero runs in the repo satisfy all
 gates today**. See `docs/strategy/program-status.md` §Verification state.
 
+Smoke artifacts now carry a `claimProfile` block plus a sibling
+`runner-capabilities.json` receipt. The 2026-05-12 local Ollama quick smoke with
+`ollama/qwen3-coder:30b` was correctly classified as **recorded-only** with
+`runner-shell-unbounded`, `runner-external-process-missing`, and
+`runner-transport-witness-missing` blockers. See
+[Local Ollama Smoke With Claim-Profile Classification](evaluation/2026-05-12-local-ollama-smoke-claim-profile.md).
+
 Runtime-backed artifact bundles are still useful below that bar. For example,
 the bounded factory proof series in
 [`experiments/results/factory-runtime-proof/`](../experiments/results/factory-runtime-proof/)

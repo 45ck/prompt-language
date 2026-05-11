@@ -7,6 +7,7 @@ import type {
   PromptTurnInput,
   PromptTurnResult,
   PromptTurnRunner,
+  PromptTurnRunnerCapabilities,
 } from '../../application/ports/prompt-turn-runner.js';
 
 const DEFAULT_MODEL = 'ollama_chat/qwen3-opencode:30b';
@@ -159,6 +160,15 @@ function listFallbackWorkspaceFiles(cwd: string, prompt: string): string[] {
 }
 
 export class AiderPromptTurnRunner implements PromptTurnRunner {
+  readonly capabilities: PromptTurnRunnerCapabilities = {
+    externalProcess: true,
+    terminate: true,
+    cwdOverride: true,
+    modelPassThrough: true,
+    stateDirPolling: true,
+    inProcessExecution: false,
+  };
+
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
     const files = this.resolveFiles(input.cwd, input.prompt, input.scopePrompt);
     const args = buildAiderArgs(input, files);

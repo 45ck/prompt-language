@@ -21,6 +21,7 @@ import type {
   PromptTurnInput,
   PromptTurnResult,
   PromptTurnRunner,
+  PromptTurnRunnerCapabilities,
 } from '../../application/ports/prompt-turn-runner.js';
 import { emitTraceEntry } from '../../application/trace-chain.js';
 
@@ -33,11 +34,13 @@ export interface TurnTraceContext {
   readonly nodePath?: string | undefined;
   readonly argv?: readonly string[] | undefined;
   readonly binaryPath?: string | undefined;
+  readonly runnerCapabilities?: PromptTurnRunnerCapabilities | undefined;
 }
 
 /** Optional inner-runner introspection surface. */
 interface RunnerIntrospection {
   readonly binaryPath?: string | undefined;
+  readonly capabilities?: PromptTurnRunnerCapabilities | undefined;
   describeInvocation?: (input: PromptTurnInput) => {
     readonly argv?: readonly string[] | undefined;
     readonly binaryPath?: string | undefined;
@@ -80,6 +83,7 @@ export class TracedPromptTurnRunner implements PromptTurnRunner {
     const described = introspection.describeInvocation?.(input);
     const binaryPath = this.context.binaryPath ?? described?.binaryPath ?? introspection.binaryPath;
     const argv = this.context.argv ?? described?.argv;
+    const runnerCapabilities = this.context.runnerCapabilities ?? introspection.capabilities;
 
     const stdinSha256 = sha256Hex(input.prompt);
     const startedAt = Date.now();
@@ -93,6 +97,9 @@ export class TracedPromptTurnRunner implements PromptTurnRunner {
     };
     if (binaryPath !== undefined) beginPartial['binaryPath'] = binaryPath;
     if (argv !== undefined) beginPartial['argv'] = [...argv];
+    if (runnerCapabilities !== undefined) {
+      beginPartial['runnerCapabilities'] = { ...runnerCapabilities };
+    }
     if (this.context.nodeId !== undefined) beginPartial['nodeId'] = this.context.nodeId;
     if (this.context.nodeKind !== undefined) beginPartial['nodeKind'] = this.context.nodeKind;
     if (this.context.nodePath !== undefined) beginPartial['nodePath'] = this.context.nodePath;
@@ -115,6 +122,9 @@ export class TracedPromptTurnRunner implements PromptTurnRunner {
         cwd: input.cwd,
       };
       if (binaryPath !== undefined) endPartial['binaryPath'] = binaryPath;
+      if (runnerCapabilities !== undefined) {
+        endPartial['runnerCapabilities'] = { ...runnerCapabilities };
+      }
       if (this.context.nodeId !== undefined) endPartial['nodeId'] = this.context.nodeId;
       if (this.context.nodeKind !== undefined) endPartial['nodeKind'] = this.context.nodeKind;
       if (this.context.nodePath !== undefined) endPartial['nodePath'] = this.context.nodePath;

@@ -8,6 +8,7 @@ import type {
   PromptTurnProviderTelemetry,
   PromptTurnResult,
   PromptTurnRunner,
+  PromptTurnRunnerCapabilities,
 } from '../../application/ports/prompt-turn-runner.js';
 import {
   appendProviderTelemetryBestEffort,
@@ -163,6 +164,15 @@ function codexStatus(exitCode: number): PromptTurnProviderTelemetry['status'] {
 }
 
 export class CodexPromptTurnRunner implements PromptTurnRunner {
+  readonly capabilities: PromptTurnRunnerCapabilities = {
+    externalProcess: true,
+    terminate: true,
+    cwdOverride: true,
+    modelPassThrough: true,
+    stateDirPolling: true,
+    inProcessExecution: false,
+  };
+
   async run(input: PromptTurnInput): Promise<PromptTurnResult> {
     const outputFile = join(
       tmpdir(),

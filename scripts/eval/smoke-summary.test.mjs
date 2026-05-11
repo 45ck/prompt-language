@@ -40,6 +40,10 @@ function report(overrides) {
         stdout: 'do not copy this raw stdout',
       },
     ],
+    claimProfile: {
+      status: 'claim-eligible',
+      blockers: [],
+    },
     tests: [
       {
         name: 'A',
@@ -121,6 +125,9 @@ test('aggregates pass, fail, blocked, duration, and provider metrics by matrix c
   assert.equal(summary.matrix[0].providerMetrics.records, 4);
   assert.equal(summary.matrix[0].providerMetrics.inputTokens, 250);
   assert.equal(summary.matrix[0].providerMetrics.estimatedCostUsd, null);
+  assert.deepEqual(summary.matrix[0].claimProfileStatuses, ['claim-eligible']);
+  assert.equal(summary.claimProfiles.claimEligible, 3);
+  assert.equal(summary.claimProfiles.recordedOnly, 0);
   assert.equal(summary.tests[0].passRate, 0.5);
   assert.equal(summary.tests[0].failureStreak, 1);
   assert.match(summary.evidenceWarnings.join('\n'), /blocked and excluded/);
@@ -165,7 +172,38 @@ test('filters by harness and preserves provider-reported cost basis', async () =
   assert.equal(summary.matrix[0].harness, 'claude');
   assert.equal(summary.matrix[0].model, 'claude-opus-4-7');
   assert.deepEqual(summary.matrix[0].costBasis, ['provider_reported']);
+  assert.deepEqual(summary.matrix[0].claimProfileStatuses, ['claim-eligible']);
   assert.equal(summary.matrix[0].providerMetrics.estimatedCostUsd, 0.123_456);
+});
+
+test('aggregates claim-profile blockers without raw manifest content', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'pl-smoke-summary-'));
+  await writeReport(
+    dir,
+    'smoke-recorded-only.json',
+    report({
+      claimProfile: {
+        status: 'recorded-only',
+        blockers: ['runner-shell-unbounded', 'runner-transport-witness-missing'],
+        manifest: {
+          runner: {
+            argv: ['do-not-render-this-raw-command'],
+          },
+        },
+      },
+    }),
+  );
+
+  const summary = await buildSmokeSummary(parseArgs(['--results-dir', dir]));
+  const markdown = renderMarkdown(summary);
+  const json = renderJson(summary);
+
+  assert.equal(summary.claimProfiles.recordedOnly, 1);
+  assert.equal(summary.claimProfiles.blockers['runner-shell-unbounded'], 1);
+  assert.deepEqual(summary.matrix[0].claimProfileStatuses, ['recorded-only']);
+  assert.match(markdown, /runner-transport-witness-missing/);
+  assert.doesNotMatch(markdown, /do-not-render/);
+  assert.doesNotMatch(json, /do-not-render/);
 });
 
 test('renders markdown and json without raw provider telemetry fields', async () => {
@@ -178,6 +216,7 @@ test('renders markdown and json without raw provider telemetry fields', async ()
 
   assert.match(markdown, /Smoke Evidence Summary/);
   assert.match(markdown, /codex/);
+  assert.match(markdown, /Claim Profile/);
   assert.doesNotMatch(markdown, /do not copy this raw/);
   assert.doesNotMatch(json, /providerTelemetry/);
   assert.doesNotMatch(json, /do not copy this raw/);
@@ -206,6 +245,7 @@ test('warns on malformed files and zero provider records for prompt-backed smoke
   const summary = await buildSmokeSummary(parseArgs(['--results-dir', dir, '--test', 'A']));
 
   assert.equal(summary.source.reportCount, 1);
+  assert.equal(summary.claimProfiles.claimEligible, 1);
   assert.match(summary.evidenceWarnings.join('\n'), /Skipped malformed smoke report/);
   assert.match(summary.evidenceWarnings.join('\n'), /zero provider records/);
 });

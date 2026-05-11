@@ -9,7 +9,9 @@ For the current short answer to "what works now?", start with
 [What Works Now](evaluation/what-works-now.md). For the current post-FSCRUD evidence
 boundary, see
 [Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md). For the
-cross-experiment claim ledger, see
+May 12 local-model claim-profile receipt, see
+[Local Ollama Smoke With Claim-Profile Classification](evaluation/2026-05-12-local-ollama-smoke-claim-profile.md).
+For the cross-experiment claim ledger, see
 [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md). For the
 raw research tree, run catalog, and dated receipts, see
 [`../experiments/README.md`](../experiments/README.md).

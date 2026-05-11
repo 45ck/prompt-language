@@ -45,6 +45,7 @@
  */
 
 import { execSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import {
   mkdtemp,
   rm,
@@ -69,6 +70,10 @@ import {
   runHarnessFlow,
   verifyTraceForCwd,
 } from './harness.mjs';
+import {
+  assessRunnerCapabilityManifest,
+  buildRunnerCapabilityManifest,
+} from './runner-capability-manifest.mjs';
 import { isHarnessAccessBlocked } from './smoke-blockers.mjs';
 
 const TRACE_ENABLED = process.env.PL_TRACE === '1';
@@ -91,6 +96,21 @@ const results = [];
 const providerTelemetry = [];
 const runtimeSnapshots = [];
 let currentTest = { name: '', label: '', startTime: 0 };
+
+const RUNNER_ADAPTERS = Object.freeze({
+  aider: 'AiderPromptTurnRunner',
+  claude: 'ClaudePromptTurnRunner',
+  codex: 'CodexPromptTurnRunner',
+  gemini: 'GeminiPromptTurnRunner',
+  ollama: 'OllamaPromptTurnRunner',
+  opencode: 'OpenCodePromptTurnRunner',
+});
+
+const RUNNER_UNSAFE_FLAGS = Object.freeze({
+  claude: ['--dangerously-skip-permissions'],
+  codex: ['--dangerously-bypass-approvals-and-sandbox'],
+  opencode: ['--dangerously-skip-permissions'],
+});
 
 function assert(label, condition, detail = '') {
   if (condition) {
@@ -275,6 +295,84 @@ function isOllamaBackedSmoke() {
   return getHarnessName() === 'ollama' || String(getEffectiveModel() ?? '').startsWith('ollama/');
 }
 
+function resolveOllamaNetworkMode() {
+  const transport = process.env.PROMPT_LANGUAGE_OLLAMA_TRANSPORT?.trim().toLowerCase();
+  if (transport === 'powershell' || transport === 'cli') {
+    return 'loopback-only';
+  }
+
+  const rawBaseUrl =
+    process.env.PROMPT_LANGUAGE_OLLAMA_BASE_URL?.trim() || 'http://127.0.0.1:11434';
+  try {
+    const { hostname } = new URL(rawBaseUrl);
+    if (hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '::1') {
+      return 'loopback-only';
+    }
+  } catch {
+    return 'unknown';
+  }
+  return 'unknown';
+}
+
+function buildSmokeRunnerCapabilityManifest() {
+  const harness = getHarnessName();
+  const model = getEffectiveModel();
+  const argv = ['node', 'bin/cli.mjs', 'ci', '--runner', harness];
+  if (model) argv.push('--model', model);
+  argv.push(...(RUNNER_UNSAFE_FLAGS[harness] ?? []));
+
+  const isOllama = harness === 'ollama';
+  return buildRunnerCapabilityManifest({
+    runnerId: harness,
+    adapter: RUNNER_ADAPTERS[harness] ?? null,
+    provider: harness,
+    model,
+    command: 'node',
+    argv,
+    readRoots: ['smoke-temp-workspace'],
+    writeRoots: ['smoke-temp-workspace'],
+    outputRoots: ['scripts/eval/results'],
+    timeoutMs: TIMEOUT,
+    expectedPairCount: null,
+    transportWitness: isOllama ? 'none' : TRACE_ENABLED ? 'shim' : 'none',
+    networkMode: isOllama ? resolveOllamaNetworkMode() : 'unknown',
+    sandboxMode: 'workspace',
+    approvalMode: (RUNNER_UNSAFE_FLAGS[harness] ?? []).length > 0 ? 'bypassed' : 'enforced',
+    shellMode: isOllama ? 'model-directed' : 'model-directed',
+    envAllowlist: [
+      'EVAL_MODEL',
+      'EVAL_TIMEOUT_MS',
+      'PL_TRACE',
+      'PL_TRACE_STRICT',
+      'PL_RUN_ID',
+      'PROMPT_LANGUAGE_OLLAMA_TRANSPORT',
+      'PROMPT_LANGUAGE_OLLAMA_TIMEOUT_MS',
+      'PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS',
+      'PROMPT_LANGUAGE_OLLAMA_NUM_CTX',
+    ],
+    externalProcess: !isOllama,
+    detached: false,
+    killOnTimeout: true,
+  });
+}
+
+async function writeRunnerCapabilityArtifact(timestamp) {
+  const manifest = buildSmokeRunnerCapabilityManifest();
+  const safety = assessRunnerCapabilityManifest(manifest);
+  const filename = `smoke-${timestamp}-runner-capabilities.json`;
+  const filepath = join(RESULTS_DIR, filename);
+  const content = `${JSON.stringify(manifest, null, 2)}\n`;
+  await writeFile(filepath, content);
+  return {
+    status: safety.status === 'ready' ? 'claim-eligible' : 'recorded-only',
+    verifierStatus: safety.status,
+    blockers: safety.blockers,
+    manifestPath: filepath,
+    manifestSha256: createHash('sha256').update(content).digest('hex'),
+    manifest,
+  };
+}
+
 function captureCommandSnapshot(command) {
   const startedAt = Date.now();
   try {
@@ -328,6 +426,7 @@ async function writeResults(totalStart) {
   const runId = new Date().toISOString();
   const filename = `smoke-${timestamp}.json`;
   const filepath = join(RESULTS_DIR, filename);
+  const claimProfile = await writeRunnerCapabilityArtifact(timestamp);
 
   let nodeVersion = '';
   try {
@@ -348,6 +447,7 @@ async function writeResults(totalStart) {
     model: getEffectiveModel(),
     timeoutMs: TIMEOUT,
     traceEnabled: TRACE_ENABLED,
+    claimProfile,
     only: ONLY_FILTERS ? [...ONLY_FILTERS].sort() : null,
     quickMode: QUICK_MODE,
     providerMetrics: summarizeProviderTelemetry(providerTelemetry),
@@ -381,6 +481,8 @@ async function appendHistory(report, runId) {
       model: report.model,
       timeoutMs: report.timeoutMs,
       providerMetrics: test.providerMetrics ?? summarizeProviderTelemetry([]),
+      claimProfileStatus: report.claimProfile?.status ?? null,
+      claimProfileBlockers: report.claimProfile?.blockers ?? [],
       os: report.os,
       nodeVersion: report.nodeVersion,
     }),
@@ -398,6 +500,7 @@ async function writeBlockedResult({ totalStart, reason, detail }) {
     const runId = new Date().toISOString();
     const filename = `smoke-${timestamp}.json`;
     const filepath = join(RESULTS_DIR, filename);
+    const claimProfile = await writeRunnerCapabilityArtifact(timestamp);
 
     let nodeVersion = '';
     try {
@@ -420,6 +523,7 @@ async function writeBlockedResult({ totalStart, reason, detail }) {
       model: getEffectiveModel(),
       timeoutMs: TIMEOUT,
       traceEnabled: TRACE_ENABLED,
+      claimProfile,
       only: ONLY_FILTERS ? [...ONLY_FILTERS].sort() : null,
       quickMode: QUICK_MODE,
       providerMetrics: summarizeProviderTelemetry(providerTelemetry),
@@ -449,6 +553,8 @@ async function writeBlockedResult({ totalStart, reason, detail }) {
         runnerHarness: report.runnerHarness,
         model: report.model,
         timeoutMs: report.timeoutMs,
+        claimProfileStatus: report.claimProfile?.status ?? null,
+        claimProfileBlockers: report.claimProfile?.blockers ?? [],
         os: report.os,
         nodeVersion: report.nodeVersion,
       })}\n`,

@@ -36,6 +36,19 @@ describe('parseActionEnvelope', () => {
   });
 });
 
+describe('OllamaPromptTurnRunner capabilities', () => {
+  it('advertises the current action-loop runner as in-process recorded-only evidence', () => {
+    expect(new OllamaPromptTurnRunner().capabilities).toEqual({
+      externalProcess: false,
+      terminate: false,
+      cwdOverride: true,
+      modelPassThrough: true,
+      stateDirPolling: false,
+      inProcessExecution: true,
+    });
+  });
+});
+
 describe('simplifyPromptLanguageEnvelope', () => {
   it('compacts prompt-language headless envelopes for local models', () => {
     const original = [

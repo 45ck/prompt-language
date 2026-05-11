@@ -236,6 +236,38 @@ function costBasisFor(run, metrics) {
   return 'unknown';
 }
 
+function readClaimProfile(run) {
+  const profile = run.claimProfile;
+  if (profile && typeof profile === 'object') {
+    const status =
+      profile.status === 'claim-eligible' || profile.status === 'recorded-only'
+        ? profile.status
+        : 'unknown';
+    return {
+      status,
+      blockers: Array.isArray(profile.blockers) ? profile.blockers.map(String).sort() : [],
+    };
+  }
+  return {
+    status: 'unknown',
+    blockers: ['claim-profile-missing'],
+  };
+}
+
+function addClaimProfile(target, claimProfile) {
+  target.total += 1;
+  if (claimProfile.status === 'claim-eligible') {
+    target.claimEligible += 1;
+  } else if (claimProfile.status === 'recorded-only') {
+    target.recordedOnly += 1;
+  } else {
+    target.unknown += 1;
+  }
+  for (const blocker of claimProfile.blockers) {
+    target.blockers[blocker] = (target.blockers[blocker] ?? 0) + 1;
+  }
+}
+
 function addOutcome(target, run) {
   if (Object.hasOwn(target, 'total')) {
     target.total += 1;
@@ -290,6 +322,13 @@ function aggregateRuns(reports, options) {
     matrix: [],
     providers: [],
     tests: [],
+    claimProfiles: {
+      total: 0,
+      claimEligible: 0,
+      recordedOnly: 0,
+      unknown: 0,
+      blockers: {},
+    },
     evidenceWarnings: warnings,
   };
 
@@ -303,6 +342,8 @@ function aggregateRuns(reports, options) {
     const harness = getHarness(run);
     const model = getModel(run);
     const only = runOnlyKey(run);
+    const claimProfile = readClaimProfile(run);
+    addClaimProfile(summary.claimProfiles, claimProfile);
     const matrixKey = `${harness}\u0000${model}\u0000${only}`;
     if (!matrix.has(matrixKey)) {
       matrix.set(matrixKey, {
@@ -318,6 +359,8 @@ function aggregateRuns(reports, options) {
         durationsMs: [],
         providerMetrics: emptyMetrics(),
         costBasis: new Set(),
+        claimProfileStatuses: new Set(),
+        claimProfileBlockers: new Set(),
         reportIds: [],
       });
     }
@@ -327,6 +370,10 @@ function aggregateRuns(reports, options) {
     cell.durationsMs.push(run.duration_ms);
     mergeMetrics(cell.providerMetrics, run.providerMetrics);
     cell.costBasis.add(costBasisFor(run, run.providerMetrics));
+    cell.claimProfileStatuses.add(claimProfile.status);
+    for (const blocker of claimProfile.blockers) {
+      cell.claimProfileBlockers.add(blocker);
+    }
 
     const providerNames =
       Array.isArray(run.providerMetrics?.providers) && run.providerMetrics.providers.length > 0
@@ -393,6 +440,11 @@ function aggregateRuns(reports, options) {
     if (run.status === 'blocked') {
       warnings.push(`${run.reportId} is blocked and excluded from correctness pass-rate claims.`);
     }
+    if (claimProfile.status !== 'claim-eligible') {
+      warnings.push(
+        `${run.reportId} is ${claimProfile.status} for claim-profile purposes (${claimProfile.blockers.join(', ') || 'no blockers listed'}).`,
+      );
+    }
   }
 
   finalizeOutcome(summary.runs);
@@ -413,6 +465,8 @@ function aggregateRuns(reports, options) {
         medianDurationMs: median(cell.durationsMs),
         providerMetrics,
         costBasis: [...cell.costBasis].sort(),
+        claimProfileStatuses: [...cell.claimProfileStatuses].sort(),
+        claimProfileBlockers: [...cell.claimProfileBlockers].sort(),
         reportIds: cell.reportIds,
       };
       return result;
@@ -501,6 +555,24 @@ export function renderMarkdown(summary) {
   }
   if (summary.matrix.length === 0) {
     lines.push('| n/a | n/a | n/a | 0 | 0 | 0 | 0 | n/a | n/a | n/a | n/a |');
+  }
+  lines.push('');
+  lines.push('## Claim Profile');
+  lines.push('');
+  lines.push(
+    `Runs: ${summary.claimProfiles.total}; claim-eligible: ${summary.claimProfiles.claimEligible}; recorded-only: ${summary.claimProfiles.recordedOnly}; unknown: ${summary.claimProfiles.unknown}.`,
+  );
+  const blockers = Object.entries(summary.claimProfiles.blockers).sort((a, b) =>
+    a[0].localeCompare(b[0]),
+  );
+  if (blockers.length === 0) {
+    lines.push('');
+    lines.push('- No claim-profile blockers reported.');
+  } else {
+    lines.push('');
+    for (const [blocker, count] of blockers) {
+      lines.push(`- ${blocker}: ${count}`);
+    }
   }
   lines.push('');
   lines.push('## Provider Usage');

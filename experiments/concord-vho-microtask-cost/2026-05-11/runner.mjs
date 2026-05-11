@@ -30,9 +30,14 @@ const ENDPOINT = process.env.OLLAMA_ENDPOINT || 'http://localhost:11434';
 const MODEL = 'qwen3-coder:30b';
 const REPEATS = Number(process.env.REPEATS || 3);
 
-const PROMPT_TEMPLATE = (task) => `Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation, no extra exports.
+const DENSITY = process.env.DENSITY || 'full'; // 'full' | 'starved'
 
-${task.signature}: ${task.description}`;
+const PROMPT_TEMPLATE = (task) => {
+  const desc = DENSITY === 'starved' ? task.descriptionStarved : task.description;
+  return `Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation, no extra exports.
+
+${task.signature}: ${desc}`;
+};
 
 async function generate(prompt) {
   const t0 = performance.now();

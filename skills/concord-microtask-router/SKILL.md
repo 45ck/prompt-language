@@ -22,9 +22,27 @@ User asks for a single small implementation that meets all of:
 
 - One function (one file, one export)
 - Pure-ish (no shared mutable state with other code)
-- Specifiable in a few sentences (no implicit project context, no
-  caller-specific identifiers from across the repo)
+- **Spec is at tutorial-quality density** (signature + algorithm
+  description + return shape + edge case rules — NOT just
+  "name + behavior verb"; see Spec density requirement below)
+- No implicit project context, no caller-specific identifiers from
+  across the repo
 - Testable with a small number of input/output pairs
+
+### Spec density requirement (critical)
+
+The 2026-05-11 v2 ablation showed the routing pattern is **load-
+bearing on prompt density**:
+
+| Prompt density                                  | Local first-attempt pass | Net token saving |
+| ----------------------------------------------- | ------------------------ | ---------------- |
+| Full (signature + algorithm + edges + shape)    | **10/10**                | 100% of baseline |
+| Starved (signature + 1-line behavior verb)      | 4/10                     | 35% of baseline  |
+
+If you can only describe the task in 1 line ("split an array into
+batches"), routing pays off ~40% of the time and loses money on the
+rest. **Don't invoke this skill for thin specs** — write the
+function yourself or use frontier-only.
 
 Examples that fit:
 - "Write a `function chunk(arr, size)` that splits arr into

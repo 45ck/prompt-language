@@ -218,6 +218,75 @@ but in production code that handles real query strings, the local
 output is more correct. **Local was not just matching frontier; it
 was extending it.**
 
+## Spec-density ablation (added same day)
+
+After the headline 10/10 result, ran the same 10 tasks with prompts
+**starved** to just `signature` + one-line behavior summary (no
+algorithm details, no return-shape hints, no edge-case rules).
+
+Examples of the change:
+
+| Task              | Full prompt (104 tokens for applyDiscountTier)             | Starved (24 tokens)                                       |
+| ----------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
+| applyDiscountTier | "tiers is an array of [minTotal, percentOff] sorted by minTotal ascending. Return cartTotal multiplied by (1 - p/100) using the highest tier whose minTotal is <= cartTotal..." | "Apply a tiered percentage discount to a cart total."     |
+| formatLogEntry    | Full template with [LEVEL] service@host: msg \| k=v shape  | "Format a log event with context as a single-line string." |
+| chunk             | Full size-and-overflow rules                                | "Split an array into batches of a given size."            |
+
+**Result with starved prompts:**
+
+| Metric                          | Full       | Starved   | Δ        |
+| ------------------------------- | ---------- | --------- | -------- |
+| First-attempt local pass        | **10/10**  | **4/10**  | -6       |
+| Any-of-3 local pass             | 10/10      | 4/10      | -6       |
+| Frontier tokens saved           | 693 (100%) | 246 (35%) | -447     |
+| Frontier tokens still owed      | 0          | 447       | +447     |
+
+Per-task pass at starved density:
+- **PASS** (4): `validateConfig`, `groupBy`, `partition`, `flatten` — these are tasks where the name alone is essentially the spec
+- **FAIL** (6): `applyDiscountTier`, `formatLogEntry`, `mergeAcl`, `chunk`, `slugify`, `parseQuery` — local produced *reasonable but different* implementations that didn't match my pre-committed reference's strict expectations
+
+Failure modes inspected from `manifest-starved.json`:
+- `slugify`: 5/7 oracle pass — local handled most cases but differed on whether to collapse trailing/leading hyphens
+- `parseQuery`: 6/8 — local omitted `+`-as-space encoding (when not told), producing a different but still plausible interpretation
+- `chunk`: 0 (no code extracted) — model added an explanatory preamble in starved mode
+- `applyDiscountTier`, `formatLogEntry`, `mergeAcl`: model picked different tier-selection / format / data-shape choices than my reference
+
+**This is the load-bearing finding.** The headline 10/10 was real but
+*conditional on prompt density at "tutorial-quality" level*. When
+prompts are merely "name + behavior verb", local pass rate drops to
+40% and the system loses tokens on net (saves 246, owes 447 in
+repair).
+
+### Token economy under starvation
+
+| Cost line                          | Hybrid (starved)   | Frontier-only |
+| ---------------------------------- | ------------------ | ------------- |
+| Output tokens spent on local pass  | 0                  | 0             |
+| Frontier output owed for failures  | 447 (Arm B for the 6 failed) | 693 (Arm B for all 10) |
+| Local GPU eval tokens spent        | ~2700              | n/a           |
+| **Net frontier output cost**       | 447                | 693           |
+| **Net saving vs frontier-only**    | **246 (35%)**      | (baseline)    |
+
+So even at starved density, hybrid still saves *some* output tokens —
+just much less than the headline 100%. But amortising the v2
+infrastructure cost (~3500 frontier tokens) takes ~14 starved-mode
+pilots to break even, vs ~5 in full-density mode.
+
+### Implication for the skill
+
+The `concord-microtask-router` skill must require **tutorial-quality
+prompts** (signature + algorithm guidance + return shape + edge case
+rules) to reliably pay off. Single-line "name + behavior verb"
+prompts work for ~40% of tasks (the trivially-named ones) and lose
+money on the rest.
+
+This is also good news in disguise: it means the prompt-writing work
+is real frontier work — the frontier author is contributing
+algorithmic decomposition, not just typing. The "save tokens" claim
+isn't free; it's "trade input-token effort for output-token
+savings" with a leverage ratio that depends on how clear your
+specs are.
+
 ## Recommendation for next experiments
 
 In priority order:

@@ -3,60 +3,70 @@
     "id": "applyDiscountTier",
     "category": "novel-spec",
     "signature": "function applyDiscountTier(cartTotal, tiers)",
-    "description": "tiers is an array of [minTotal, percentOff] sorted by minTotal ascending. Return cartTotal multiplied by (1 - p/100) using the highest tier whose minTotal is <= cartTotal. If no tier applies, return cartTotal unchanged. Empty tiers returns cartTotal."
+    "description": "tiers is an array of [minTotal, percentOff] sorted by minTotal ascending. Return cartTotal multiplied by (1 - p/100) using the highest tier whose minTotal is <= cartTotal. If no tier applies, return cartTotal unchanged. Empty tiers returns cartTotal.",
+    "descriptionStarved": "Apply a tiered percentage discount to a cart total."
   },
   {
     "id": "validateConfig",
     "category": "novel-spec",
     "signature": "function validateConfig(config, schema)",
-    "description": "schema is an object mapping key -> { type: 'string'|'number'|'boolean', required?: boolean }. Return an array of error message strings (empty if valid). Errors include: missing required keys, wrong type. Unknown extra keys in config are allowed and produce no error."
+    "description": "schema is an object mapping key -> { type: 'string'|'number'|'boolean', required?: boolean }. Return an array of error message strings (empty if valid). Errors include: missing required keys, wrong type. Unknown extra keys in config are allowed and produce no error.",
+    "descriptionStarved": "Validate a config object against a schema. Return an array of error messages."
   },
   {
     "id": "formatLogEntry",
     "category": "novel-spec",
     "signature": "function formatLogEntry(event, ctx)",
-    "description": "event is { level, msg, fields? } where fields is an object. ctx is { service, host }. Return a string of the form: [LEVEL] service@host: msg | k1=v1 k2=v2. LEVEL is event.level upper-cased. If fields is missing or empty, omit the ' | k=v' suffix entirely (no trailing space, no trailing pipe). Fields are emitted in insertion order."
+    "description": "event is { level, msg, fields? } where fields is an object. ctx is { service, host }. Return a string of the form: [LEVEL] service@host: msg | k1=v1 k2=v2. LEVEL is event.level upper-cased. If fields is missing or empty, omit the ' | k=v' suffix entirely (no trailing space, no trailing pipe). Fields are emitted in insertion order.",
+    "descriptionStarved": "Format a log event with context as a single-line string."
   },
   {
     "id": "mergeAcl",
     "category": "novel-spec",
     "signature": "function mergeAcl(rules)",
-    "description": "rules is an array of { role, perms } objects where perms is an array of strings. Return a Map from role name to a Set of perm strings. If multiple rules have the same role, union their perms."
+    "description": "rules is an array of { role, perms } objects where perms is an array of strings. Return a Map from role name to a Set of perm strings. If multiple rules have the same role, union their perms.",
+    "descriptionStarved": "Merge ACL rules from many sources into a single per-role permission collection."
   },
   {
     "id": "chunk",
     "category": "utility",
     "signature": "function chunk(arr, size)",
-    "description": "Split arr into consecutive sub-arrays of length size. The last chunk may be shorter if arr length is not divisible by size. If size <= 0 or arr is empty, return []."
+    "description": "Split arr into consecutive sub-arrays of length size. The last chunk may be shorter if arr length is not divisible by size. If size <= 0 or arr is empty, return []. ",
+    "descriptionStarved": "Split an array into batches of a given size."
   },
   {
     "id": "slugify",
     "category": "utility",
     "signature": "function slugify(title)",
-    "description": "Return a URL-safe slug: lowercase, replace runs of non-alphanumeric ASCII with a single hyphen, trim leading and trailing hyphens. Non-ASCII characters are treated as non-alphanumeric (so they become hyphens or get collapsed)."
+    "description": "Return a URL-safe slug: lowercase, replace runs of non-alphanumeric ASCII with a single hyphen, trim leading and trailing hyphens. Non-ASCII characters are treated as non-alphanumeric (so they become hyphens or get collapsed).",
+    "descriptionStarved": "Produce a URL-safe slug from a title string."
   },
   {
     "id": "groupBy",
     "category": "utility",
     "signature": "function groupBy(items, keyFn)",
-    "description": "keyFn maps an item to a key. Return an object mapping each key (string form) to an array of items in their original order. Empty items returns {}."
+    "description": "keyFn maps an item to a key. Return an object mapping each key (string form) to an array of items in their original order. Empty items returns {}.",
+    "descriptionStarved": "Group items by a key function."
   },
   {
     "id": "parseQuery",
     "category": "utility",
     "signature": "function parseQuery(qs)",
-    "description": "qs is a query string optionally starting with '?'. Return an object mapping decoded keys to decoded values. Duplicate keys collapse last-write-wins. Keys with no '=' map to an empty string. Empty qs returns {}."
+    "description": "qs is a query string optionally starting with '?'. Return an object mapping decoded keys to decoded values. Duplicate keys collapse last-write-wins. Keys with no '=' map to an empty string. Empty qs returns {}.",
+    "descriptionStarved": "Parse a URL query string into an object."
   },
   {
     "id": "partition",
     "category": "utility",
     "signature": "function partition(arr, pred)",
-    "description": "Return [truthy, falsy] where truthy is the items of arr for which pred(item) returns truthy, and falsy is the rest. Preserve order in both."
+    "description": "Return [truthy, falsy] where truthy is the items of arr for which pred(item) returns truthy, and falsy is the rest. Preserve order in both.",
+    "descriptionStarved": "Split an array into two arrays by a predicate."
   },
   {
     "id": "flatten",
     "category": "utility",
     "signature": "function flatten(arr)",
-    "description": "Recursively flatten arr to a single level. Non-array values are preserved. Empty arrays disappear. Does not mutate input."
+    "description": "Recursively flatten arr to a single level. Non-array values are preserved. Empty arrays disappear. Does not mutate input.",
+    "descriptionStarved": "Recursively flatten a nested array."
   }
 ]

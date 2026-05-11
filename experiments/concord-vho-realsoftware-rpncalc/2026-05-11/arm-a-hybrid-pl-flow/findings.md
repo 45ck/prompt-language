@@ -109,29 +109,71 @@ text — no tool calls, no file writes. So the runner iterates
 through all 8 rounds without ever seeing the workspace action it
 expects, then errors out.
 
-**This is not a bug; it's an architectural mismatch.** The PL ollama
-runner is designed for **agentic tool-use loops** where the model
-has tool access (file writes, shell commands) and can signal
-completion by performing workspace actions. It's not designed for
-**single-turn text generation** where the orchestrator captures the
-text response and applies it to the workspace itself.
+**This is not a bug; it's a fundamental architectural mismatch.**
 
-To use the PL ollama runner for code generation as my flow assumes,
-one of the following would need to be true:
+After deeper diagnosis (line 1071 of
+`ollama-prompt-turn-runner.ts`):
 
-1. The prompt is rephrased to not match `promptRequiresWorkspaceAction`
-   (e.g. "Reply with the function declaration" without verbs like
-   "implement", "create", "write a file"). Worth testing.
-2. A thin tool layer exists for Ollama-side file writes that the
-   runner recognises as a workspace action. None visible in the
-   shipped code today.
-3. A different runner (the equivalent of `--runner ollama-text-only`
-   that does single-turn generation without an action loop). Doesn't
-   exist today.
+```js
+if (reachedDone && !actionFailed) { ... break out of loop ... }
+```
+
+The runner ONLY stops iterating when the model emits a `done`
+action. The action types it parses (around line 1029-1063) are:
+
+- `list_files`
+- `read_file`
+- `write_file`
+- `run_command`
+- `done`
+
+So the PL ollama runner is **not a single-turn text-generation
+adapter** — it's an **agentic tool-use harness** that requires the
+model to emit structured tool calls in a specific protocol, ending
+in `done`. Plain text responses never reach `reachedDone`, so the
+loop runs all 8 rounds and exits with PLR-007.
+
+I verified this empirically: even my "What is 2 plus 2? Reply with
+just the number" smoke prompt (which doesn't match
+`promptRequiresWorkspaceAction`'s verb regex) hits the action-round
+limit. The verb-regex is only used to format the failure message;
+the actual loop exit requires `reachedDone`.
+
+For my flow's `prompt: implement this function` to work with this
+runner, qwen3-coder via Ollama would need to be specifically
+prompted (or fine-tuned) to:
+
+1. Use a `write_file` action to save the function code to the
+   workspace
+2. Then emit a `done` action
+
+This is the protocol the H11/H14/H15 harness-arena routes presumably
+use — they're model-specific routing policies that include the
+tool-call instructions.
+
+**To make a clean single-turn code-generation flow work, one of:**
+
+1. Add a `--runner ollama-text` mode that does single-turn
+   generation and returns the assistant text (no action loop). The
+   simplest fix; would unlock my flow shape.
+2. Build a system prompt for qwen3-coder that teaches it the PL
+   tool protocol (write_file + done). Higher effort; effectively
+   reinventing what hand-rolled runner.mjs does.
+3. Use `--runner aider` or `--runner opencode` instead — those
+   harnesses already wrap local models with proper tool-use
+   protocols. Potentially the cleanest option but requires those
+   harnesses installed.
 
 The hand-rolled `runner.mjs` from the morning's pilots avoids this
-architectural mismatch entirely by calling `/api/generate` directly
-and treating the response as text to be applied programmatically.
+entirely by calling `/api/generate` directly and treating the
+response as text to be applied programmatically. **That pattern is
+genuinely simpler for code-substitution use cases** than the PL
+ollama runner's agentic-tool-use protocol.
+
+This is itself an important finding about the PL program: **the
+shipped `--runner ollama` is for agentic tool-use, not for the
+spec-quality routing pattern the day's pilots demonstrate**. The
+two use cases want different runtime shapes.
 
 ## What this means for bead `prompt-language-j0je`
 

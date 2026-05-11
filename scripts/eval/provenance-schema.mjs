@@ -32,7 +32,12 @@ const ALLOWED_EVENTS = new Set([
   'flow_end',
 ]);
 
-const ALLOWED_SOURCES = new Set(['shim', 'runtime']);
+// 'adapter' included for in-process adapter-emitted events
+// (e.g. traced-prompt-turn-runner agent_invocation_*); these are
+// runtime-side observers and should pair with shim_invocation_*
+// from out-of-process witness shims when present. See bug #7
+// finding 2026-05-11.
+const ALLOWED_SOURCES = new Set(['shim', 'runtime', 'adapter']);
 
 export function newRunId() {
   return `run-${Date.now().toString(36)}-${randomUUID()}`;

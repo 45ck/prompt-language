@@ -90,6 +90,44 @@ classes in failure mode before VHO is declared dead — current portfolio is
 the measured task classes, with one well-isolated negative result on the
 implementation-shape API endpoint route.
 
+**Scope-divided update (2026-05-11 evening):** Two same-day pilots
+outside harness-arena measured the hybrid hypothesis at finer
+scopes. Both findings stand:
+
+- **Per-task micro-routing (positive):**
+  [`experiments/concord-vho-microtask-cost/2026-05-11/`](../../experiments/concord-vho-microtask-cost/2026-05-11/)
+  — 10 single-function tasks (4 novel-spec, 6 utility) routed to
+  qwen3-coder:30b under a strict prompt template + deterministic
+  oracle with seeded random inputs. Result: **10/10 first-attempt
+  pass at k=3 (30/30 individual oracle passes)**, with one task
+  (`parseQuery`) producing *more correct* code than the
+  pre-committed frontier reference (local handled `+`-as-space per
+  application/x-www-form-urlencoded; frontier didn't). Per-task
+  saving = full Arm B token cost (40-130 tiktoken-equiv per task).
+  Caveat: at single-pilot scope the v2 router/oracle scaffolding
+  costs ~3500 frontier tokens and only saves 693, so hybrid is
+  ~5× more expensive than frontier-only at one pilot. Break-even
+  at ~5 pilots reusing the same infrastructure.
+- **Per-app construction (negative):**
+  [`experiments/concord-vho-pilot-todo-cli/2026-05-11/`](../../experiments/concord-vho-pilot-todo-cli/2026-05-11/)
+  — 7-task TODO CLI build via routing. Headline 5/7 by local was
+  overclaimed: independent critic agent showed frontier
+  scaffolding (~8-12k tokens) dominates over local savings
+  (~1k tokens), making hybrid **2-3× more expensive than
+  frontier-only at single-app scope**. Tagged `app-build-orchestration`
+  in the kill-rule sense. Did not trigger the kill rule alone
+  (1 task class, not ≥3) but is consistent with hybrid-failure-mode
+  at this scope.
+
+The hybrid pattern is therefore **scope-dependent in this
+evidence**: cost-positive for stateless single-function code
+generation when prompts are clear and oracles are cheap;
+cost-negative for app-build orchestration where scaffolding is
+written fresh per pilot. Future §2a entries should tag scope
+(`harness-arena-route`, `micro-task`, `app-build`) so the kill-rule
+condition (≥3 distinct task classes in failure mode) is measured
+within scope, not across.
+
 Caveat: every "frontier-only baseline not measured" entry above is a real
 gap. Without the matched frontier-only number, `efficiency_ratio = 0.00`
 shows local-only passes the oracle, but cannot quantify how much frontier

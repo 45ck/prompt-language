@@ -73,36 +73,65 @@ gemma4 thinking-token behavior.
 
 Workaround: pass `--model qwen3-coder:30b` to override.
 
-### Issue 3: `ci --runner ollama --model qwen3-coder:30b` hangs
+### Issue 3: `ci --runner ollama` hangs — actual architecture mismatch
 
 With the model override applied, `ollama ps` confirms qwen3-coder:30b
 is loaded (87% GPU / 13% CPU split, 19GB resident). The CLI process
-stays alive but emits only:
+stays alive but emits only `[prompt-language CI] Running flow via
+ollama...` for 90+ seconds, then either continues silently or (with
+explicit `PROMPT_LANGUAGE_OLLAMA_ACTION_ROUNDS=1`) errors with:
 
 ```
-[prompt-language CI] Running flow via ollama...
+PLR-007 Prompt runner exited with code 1.
+Ollama runner exceeded the action round limit (1).
 ```
 
-…and produces no further output for 90+ seconds across two attempts
-(smoke flow with one trivial prompt, and the full rpncalc.flow).
-Kill required.
+The session state's `_runtime_diagnostic` confirms the same at the
+default budget (8 rounds). So the runner is **iterating a multi-
+round agentic loop, not making a single-turn generation call**.
 
-The hand-rolled `runner.mjs` (used in this same experiment's
-arm-a-hybrid run earlier) communicates directly with
-`http://localhost:11434/api/generate` and gets responses in 1-15s
-per task. So Ollama itself is working. The hang is somewhere in the
-PL CLI's flow-runtime → ollama-runner path.
+Per `src/infrastructure/adapters/ollama-prompt-turn-runner.ts:1072`:
 
-Possible causes (not investigated in detail):
-- Default transport mode (HTTP vs CLI vs PowerShell) may not match
-  this rig's setup. The runner has 3 transports per
-  `ollama-prompt-turn-runner.ts` and the default may be picking the
-  wrong one for Windows + WSL Bash invocation.
-- Model action-rounds budgeting may be set so high that the runner
-  is waiting indefinitely for a "done" signal Ollama isn't emitting
-  for a single-turn `prompt:` call.
-- The flow runtime may be trying to use CLI plugin features
-  (`pl-claude.cmd` etc) that aren't installed for the ollama path.
+```js
+const madeProgress = workspaceActions > 0 ||
+                     !promptRequiresWorkspaceAction(prompt);
+```
+
+The runner only stops iterating when EITHER (a) the prompt didn't
+require a workspace action and so a single round is sufficient, OR
+(b) the model performed a workspace action (i.e. wrote a file via
+some tool-use protocol).
+
+For my flow `prompt: implement this function...`, the runner's
+heuristic likely classifies it as requiring workspace action
+(verbs like "implement"), but qwen3-coder via Ollama produces only
+text — no tool calls, no file writes. So the runner iterates
+through all 8 rounds without ever seeing the workspace action it
+expects, then errors out.
+
+**This is not a bug; it's an architectural mismatch.** The PL ollama
+runner is designed for **agentic tool-use loops** where the model
+has tool access (file writes, shell commands) and can signal
+completion by performing workspace actions. It's not designed for
+**single-turn text generation** where the orchestrator captures the
+text response and applies it to the workspace itself.
+
+To use the PL ollama runner for code generation as my flow assumes,
+one of the following would need to be true:
+
+1. The prompt is rephrased to not match `promptRequiresWorkspaceAction`
+   (e.g. "Reply with the function declaration" without verbs like
+   "implement", "create", "write a file"). Worth testing.
+2. A thin tool layer exists for Ollama-side file writes that the
+   runner recognises as a workspace action. None visible in the
+   shipped code today.
+3. A different runner (the equivalent of `--runner ollama-text-only`
+   that does single-turn generation without an action loop). Doesn't
+   exist today.
+
+The hand-rolled `runner.mjs` from the morning's pilots avoids this
+architectural mismatch entirely by calling `/api/generate` directly
+and treating the response as text to be applied programmatically.
 
 ## What this means for bead `prompt-language-j0je`
 

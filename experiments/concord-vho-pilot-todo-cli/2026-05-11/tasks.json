@@ -1,0 +1,44 @@
+[
+  {
+    "id": "T1",
+    "name": "add",
+    "testPattern": "^T1_",
+    "prompt": "You are implementing one function in todo.mjs. The function signature is: `export function add(state, text)`. It must return a NEW state object (do not mutate the input) where state is `{ items: [{ id, text, done }] }`. Append a new item with: id = (max existing id + 1) or 1 if items is empty; text = the text param; done = false. Reply with ONLY the function body in this exact format:\n```\nexport function add(state, text) {\n  // your impl here\n}\n```\nNo other text, no fences inside the response, no explanation."
+  },
+  {
+    "id": "T2",
+    "name": "list",
+    "testPattern": "^T2_",
+    "prompt": "You are implementing one function in todo.mjs. The function signature is: `export function list(state)` where state is `{ items: [{ id, text, done }] }`. Return a STRING. If items is empty, the string must contain the word 'empty' or 'no todos' (any case). Otherwise, the string must include each item's id and text, with done items visually distinguished from pending items (e.g. '[x]' vs '[ ]', or 'DONE' vs 'TODO'). Reply with ONLY the function body in this exact format:\n```\nexport function list(state) {\n  // your impl here\n}\n```\nNo other text, no fences inside the response, no explanation."
+  },
+  {
+    "id": "T3",
+    "name": "complete",
+    "testPattern": "^T3_",
+    "prompt": "You are implementing one function in todo.mjs. The function signature is: `export function complete(state, id)` where state is `{ items: [{ id, text, done }] }`. Return a NEW state object (do not mutate the input or any item) with the matching item's done set to true. If no item with that id exists, throw an Error. Reply with ONLY the function body in this exact format:\n```\nexport function complete(state, id) {\n  // your impl here\n}\n```\nNo other text, no fences inside the response, no explanation."
+  },
+  {
+    "id": "T4",
+    "name": "remove",
+    "testPattern": "^T4_",
+    "prompt": "You are implementing one function in todo.mjs. The function signature is: `export function remove(state, id)` where state is `{ items: [{ id, text, done }] }`. Return a NEW state object with the item matching id removed from items. If no item with that id exists, throw an Error. Reply with ONLY the function body in this exact format:\n```\nexport function remove(state, id) {\n  // your impl here\n}\n```\nNo other text, no fences inside the response, no explanation."
+  },
+  {
+    "id": "T5",
+    "name": "save_load",
+    "testPattern": "^T5_",
+    "prompt": "You are implementing TWO functions in todo.mjs. Use Node's built-in fs module (import { writeFileSync, readFileSync, existsSync } from 'node:fs' is already at the top of the file). Implement:\n1. `export function save(state, path)` — writes state as JSON to the file at path.\n2. `export function load(path)` — reads JSON from the file at path and returns the parsed state. If the file does not exist, return `{ items: [] }`.\nReply with ONLY the two function bodies, in this exact format:\n```\nexport function save(state, path) {\n  // your impl here\n}\n\nexport function load(path) {\n  // your impl here\n}\n```\nNo other text, no fences inside the response, no explanation, no extra imports (assume fs is already imported)."
+  },
+  {
+    "id": "T6",
+    "name": "formatJson",
+    "testPattern": "^T6_",
+    "prompt": "You are implementing one function in todo.mjs. The function signature is: `export function formatJson(state)` where state is `{ items: [{ id, text, done }] }`. Return a string of JSON.stringify(state, null, 2). Reply with ONLY the function body in this exact format:\n```\nexport function formatJson(state) {\n  // your impl here\n}\n```\nNo other text, no fences inside the response, no explanation."
+  },
+  {
+    "id": "T7",
+    "name": "runCli",
+    "testPattern": "^T7_",
+    "prompt": "You are implementing one function in todo.mjs. The function signature is: `export function runCli(argv, opts = {})` where argv is an array of args like ['add', 'buy milk'] or ['list', '--json'] or ['complete', '1'] or ['remove', '1'] and opts is `{ todoFile: '/path/to/state.json' }`. Use the existing helpers in this same file: `add`, `list`, `complete`, `remove`, `save`, `load`, `formatJson`. Return `{ exitCode: number, stdout: string, stderr: string }` (do not call process.exit). Behavior:\n- 'add <text>': loads state from opts.todoFile, calls add, saves state, exitCode 0.\n- 'list' (or 'list --json'): loads state, calls list (or formatJson if --json present), puts result in stdout, exitCode 0.\n- 'complete <id>': loads state, calls complete with parseInt(id), saves state. If complete throws, exitCode 1 and the error message goes in stderr.\n- 'remove <id>': loads state, calls remove with parseInt(id), saves state. If remove throws, exitCode 1 and the error message goes in stderr.\n- Unknown command: exitCode 1, stderr contains 'unknown' or 'usage'.\nReply with ONLY the function body in this exact format:\n```\nexport function runCli(argv, opts = {}) {\n  // your impl here\n}\n```\nNo other text, no fences inside the response, no explanation."
+  }
+]

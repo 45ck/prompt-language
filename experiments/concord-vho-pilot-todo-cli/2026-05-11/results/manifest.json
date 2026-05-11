@@ -1,0 +1,185 @@
+{
+  "startedAt": "2026-05-11T01:10:56.932Z",
+  "tasks": [
+    {
+      "id": "T1",
+      "name": "add",
+      "route": "frontier-required",
+      "attempt1": {
+        "model": "qwen3-coder:30b",
+        "pass": false,
+        "wallMs": 11409,
+        "evalTokens": 75,
+        "tokensPerSec": 40.7,
+        "oracleExitCode": 1,
+        "oracleStderrTail": "",
+        "generatedRaw": "export function add(state, text) {\n  const maxId = state.items.reduce((max, item) => Math.max(max, item.id), 0);\n  const newItem = {\n    id: maxId + 1 || 1,\n    text,\n    done: false\n  };\n  return {\n    items: [...state.items, newItem]\n  };\n}",
+        "extractedBody": "export function add(state, text) {\n  const maxId = state.items.reduce((max, item) => Math.max(max, item.id), 0);\n  const newItem = {\n    id: maxId + 1 || 1,\n    text,\n    done: false\n  };\n  return {\n    items: [...state.items, newItem]\n  };\n}",
+        "sourceAfter": "// todo.mjs — assembled by Concord/VHO routing pilot 2026-05-11.\n// All function bodies start as throw-stubs; router fills them in per task.\n\nexport function add(state, text) {\n  const maxId = state.items.reduce((max, item) => Math.max(max, item.id), 0);\n  const newItem = {\n    id: maxId + 1 || 1,\n    text,\n    done: false\n  };\n  return {\n    items: [...state.items, newItem]\n  };\n}\n\nexport function list(state) {\n  throw new Error('NOT_IMPLEMENTED:list');\n}\n\nexport function complete(state, id) {\n  throw new Error('NOT_IMPLEMENTED:complete');\n}\n\nexport function remove(state, id) {\n  throw new Error('NOT_IMPLEMENTED:remove');\n}\n\nexport function save(state, path) {\n  throw new Error('NOT_IMPLEMENTED:save');\n}\n\nexport function load(path) {\n  throw new Error('NOT_IMPLEMENTED:load');\n}\n\nexport function formatJson(state) {\n  throw new Error('NOT_IMPLEMENTED:formatJson');\n}\n\nexport function runCli(argv, opts = {}) {\n  throw new Error('NOT_IMPLEMENTED:runCli');\n}\n"
+      },
+      "attempt2": {
+        "model": "devstral-small-2:24b",
+        "pass": false,
+        "wallMs": 18224,
+        "evalTokens": 75,
+        "tokensPerSec": 17.9,
+        "oracleExitCode": 1,
+        "oracleStderrTail": "",
+        "generatedRaw": "```\nexport function add(state, text) {\n  const maxId = state.items.reduce((max, item) => Math.max(max, item.id), 0);\n  const newId = maxId + 1;\n  return {\n    ...state,\n    items: [...state.items, { id: newId, text, done: false }]\n  };\n}\n```",
+        "extractedBody": "export function add(state, text) {\n  const maxId = state.items.reduce((max, item) => Math.max(max, item.id), 0);\n  const newId = maxId + 1;\n  return {\n    ...state,\n    items: [...state.items, { id: newId, text, done: false }]\n  };\n}",
+        "sourceAfter": "// todo.mjs — assembled by Concord/VHO routing pilot 2026-05-11.\n// All function bodies start as throw-stubs; router fills them in per task.\n\nexport function add(state, text) {\n  const maxId = state.items.reduce((max, item) => Math.max(max, item.id), 0);\n  const newId = maxId + 1;\n  return {\n    ...state,\n    items: [...state.items, { id: newId, text, done: false }]\n  };\n}\n\nexport function list(state) {\n  throw new Error('NOT_IMPLEMENTED:list');\n}\n\nexport function complete(state, id) {\n  throw new Error('NOT_IMPLEMENTED:complete');\n}\n\nexport function remove(state, id) {\n  throw new Error('NOT_IMPLEMENTED:remove');\n}\n\nexport function save(state, path) {\n  throw new Error('NOT_IMPLEMENTED:save');\n}\n\nexport function load(path) {\n  throw new Error('NOT_IMPLEMENTED:load');\n}\n\nexport function formatJson(state) {\n  throw new Error('NOT_IMPLEMENTED:formatJson');\n}\n\nexport function runCli(argv, opts = {}) {\n  throw new Error('NOT_IMPLEMENTED:runCli');\n}\n"
+      },
+      "frontierRequired": true,
+      "tokensTotalLocal": 150,
+      "wallMsTotalLocal": 29633
+    },
+    {
+      "id": "T2",
+      "name": "list",
+      "route": "local-fast",
+      "attempt1": {
+        "model": "qwen3-coder:30b",
+        "pass": true,
+        "wallMs": 12461,
+        "evalTokens": 71,
+        "tokensPerSec": 40,
+        "oracleExitCode": 0,
+        "oracleStderrTail": "",
+        "generatedRaw": "export function list(state) {\n  if (!state.items || state.items.length === 0) {\n    return 'empty';\n  }\n  \n  return state.items.map(item => {\n    const status = item.done ? '[x]' : '[ ]';\n    return `${status} ${item.id}: ${item.text}`;\n  }).join('\\n');\n}",
+        "extractedBody": "export function list(state) {\n  if (!state.items || state.items.length === 0) {\n    return 'empty';\n  }\n  \n  return state.items.map(item => {\n    const status = item.done ? '[x]' : '[ ]';\n    return `${status} ${item.id}: ${item.text}`;\n  }).join('\\n');\n}",
+        "sourceAfter": "// todo.mjs — assembled by Concord/VHO routing pilot 2026-05-11.\n// All function bodies start as throw-stubs; router fills them in per task.\n\nexport function add(state, text) {\n  throw new Error('NOT_IMPLEMENTED:add');\n}\n\nexport function list(state) {\n  if (!state.items || state.items.length === 0) {\n    return 'empty';\n  }\n  \n  return state.items.map(item => {\n    const status = item.done ? '[x]' : '[ ]';\n    return `${status} ${item.id}: ${item.text}`;\n  }).join('\\n');\n}\n\nexport function complete(state, id) {\n  throw new Error('NOT_IMPLEMENTED:complete');\n}\n\nexport function remove(state, id) {\n  throw new Error('NOT_IMPLEMENTED:remove');\n}\n\nexport function save(state, path) {\n  throw new Error('NOT_IMPLEMENTED:save');\n}\n\nexport function load(path) {\n  throw new Error('NOT_IMPLEMENTED:load');\n}\n\nexport function formatJson(state) {\n  throw new Error('NOT_IMPLEMENTED:formatJson');\n}\n\nexport function runCli(argv, opts = {}) {\n  throw new Error('NOT_IMPLEMENTED:runCli');\n}\n"
+      },
+      "attempt2": null,
+      "frontierRequired": false,
+      "tokensTotalLocal": 71,
+      "wallMsTotalLocal": 12461
+    },
+    {
+      "id": "T3",
+      "name": "complete",
+      "route": "local-fast",
+      "attempt1": {
+        "model": "qwen3-coder:30b",
+        "pass": true,
+        "wallMs": 2851,
+        "evalTokens": 90,
+        "tokensPerSec": 41,
+        "oracleExitCode": 0,
+        "oracleStderrTail": "",
+        "generatedRaw": "```\nexport function complete(state, id) {\n  const newItem = state.items.map(item => \n    item.id === id ? { ...item, done: true } : item\n  );\n  \n  if (newItem.length === state.items.length && \n      newItem.every((item, index) => item === state.items[index])) {\n    throw new Error('Item not found');\n  }\n  \n  return { items: newItem };\n}\n```",
+        "extractedBody": "export function complete(state, id) {\n  const newItem = state.items.map(item => \n    item.id === id ? { ...item, done: true } : item\n  );\n  \n  if (newItem.length === state.items.length && \n      newItem.every((item, index) => item === state.items[index])) {\n    throw new Error('Item not found');\n  }\n  \n  return { items: newItem };\n}",
+        "sourceAfter": "// todo.mjs — assembled by Concord/VHO routing pilot 2026-05-11.\n// All function bodies start as throw-stubs; router fills them in per task.\n\nexport function add(state, text) {\n  throw new Error('NOT_IMPLEMENTED:add');\n}\n\nexport function list(state) {\n  if (!state.items || state.items.length === 0) {\n    return 'empty';\n  }\n  \n  return state.items.map(item => {\n    const status = item.done ? '[x]' : '[ ]';\n    return `${status} ${item.id}: ${item.text}`;\n  }).join('\\n');\n}\n\nexport function complete(state, id) {\n  const newItem = state.items.map(item => \n    item.id === id ? { ...item, done: true } : item\n  );\n  \n  if (newItem.length === state.items.length && \n      newItem.every((item, index) => item === state.items[index])) {\n    throw new Error('Item not found');\n  }\n  \n  return { items: newItem };\n}\n\nexport function remove(state, id) {\n  throw new Error('NOT_IMPLEMENTED:remove');\n}\n\nexport function save(state, path) {\n  throw new Error('NOT_IMPLEMENTED:save');\n}\n\nexport function load(path) {\n  throw new Error('NOT_IMPLEMENTED:load');\n}\n\nexport function formatJson(state) {\n  throw new Error('NOT_IMPLEMENTED:formatJson');\n}\n\nexport function runCli(argv, opts = {}) {\n  throw new Error('NOT_IMPLEMENTED:runCli');\n}\n"
+      },
+      "attempt2": null,
+      "frontierRequired": false,
+      "tokensTotalLocal": 90,
+      "wallMsTotalLocal": 2851
+    },
+    {
+      "id": "T4",
+      "name": "remove",
+      "route": "local-fast",
+      "attempt1": {
+        "model": "qwen3-coder:30b",
+        "pass": true,
+        "wallMs": 1874,
+        "evalTokens": 51,
+        "tokensPerSec": 41.2,
+        "oracleExitCode": 0,
+        "oracleStderrTail": "",
+        "generatedRaw": "export function remove(state, id) {\n  const items = state.items.filter(item => item.id !== id);\n  if (items.length === state.items.length) {\n    throw new Error('Item not found');\n  }\n  return { items };\n}",
+        "extractedBody": "export function remove(state, id) {\n  const items = state.items.filter(item => item.id !== id);\n  if (items.length === state.items.length) {\n    throw new Error('Item not found');\n  }\n  return { items };\n}",
+        "sourceAfter": "// todo.mjs — assembled by Concord/VHO routing pilot 2026-05-11.\n// All function bodies start as throw-stubs; router fills them in per task.\n\nexport function add(state, text) {\n  throw new Error('NOT_IMPLEMENTED:add');\n}\n\nexport function list(state) {\n  if (!state.items || state.items.length === 0) {\n    return 'empty';\n  }\n  \n  return state.items.map(item => {\n    const status = item.done ? '[x]' : '[ ]';\n    return `${status} ${item.id}: ${item.text}`;\n  }).join('\\n');\n}\n\nexport function complete(state, id) {\n  const newItem = state.items.map(item => \n    item.id === id ? { ...item, done: true } : item\n  );\n  \n  if (newItem.length === state.items.length && \n      newItem.every((item, index) => item === state.items[index])) {\n    throw new Error('Item not found');\n  }\n  \n  return { items: newItem };\n}\n\nexport function remove(state, id) {\n  const items = state.items.filter(item => item.id !== id);\n  if (items.length === state.items.length) {\n    throw new Error('Item not found');\n  }\n  return { items };\n}\n\nexport function save(state, path) {\n  throw new Error('NOT_IMPLEMENTED:save');\n}\n\nexport function load(path) {\n  throw new Error('NOT_IMPLEMENTED:load');\n}\n\nexport function formatJson(state) {\n  throw new Error('NOT_IMPLEMENTED:formatJson');\n}\n\nexport function runCli(argv, opts = {}) {\n  throw new Error('NOT_IMPLEMENTED:runCli');\n}\n"
+      },
+      "attempt2": null,
+      "frontierRequired": false,
+      "tokensTotalLocal": 51,
+      "wallMsTotalLocal": 1874
+    },
+    {
+      "id": "T5",
+      "name": "save_load",
+      "route": "local-fast",
+      "attempt1": {
+        "model": "qwen3-coder:30b",
+        "pass": true,
+        "wallMs": 2305,
+        "evalTokens": 64,
+        "tokensPerSec": 41.7,
+        "oracleExitCode": 0,
+        "oracleStderrTail": "",
+        "generatedRaw": "```\nexport function save(state, path) {\n  writeFileSync(path, JSON.stringify(state));\n}\n\nexport function load(path) {\n  if (!existsSync(path)) {\n    return { items: [] };\n  }\n  const data = readFileSync(path, 'utf8');\n  return JSON.parse(data);\n}\n```",
+        "extractedBody": "export function save(state, path) {\n  writeFileSync(path, JSON.stringify(state));\n}\n\nexport function load(path) {\n  if (!existsSync(path)) {\n    return { items: [] };\n  }\n  const data = readFileSync(path, 'utf8');\n  return JSON.parse(data);\n}",
+        "sourceAfter": "import { writeFileSync, readFileSync, existsSync } from 'node:fs';\n// todo.mjs — assembled by Concord/VHO routing pilot 2026-05-11.\n// All function bodies start as throw-stubs; router fills them in per task.\n\nexport function add(state, text) {\n  throw new Error('NOT_IMPLEMENTED:add');\n}\n\nexport function list(state) {\n  if (!state.items || state.items.length === 0) {\n    return 'empty';\n  }\n  \n  return state.items.map(item => {\n    const status = item.done ? '[x]' : '[ ]';\n    return `${status} ${item.id}: ${item.text}`;\n  }).join('\\n');\n}\n\nexport function complete(state, id) {\n  const newItem = state.items.map(item => \n    item.id === id ? { ...item, done: true } : item\n  );\n  \n  if (newItem.length === state.items.length && \n      newItem.every((item, index) => item === state.items[index])) {\n    throw new Error('Item not found');\n  }\n  \n  return { items: newItem };\n}\n\nexport function remove(state, id) {\n  const items = state.items.filter(item => item.id !== id);\n  if (items.length === state.items.length) {\n    throw new Error('Item not found');\n  }\n  return { items };\n}\n\nexport function save(state, path) {\n  writeFileSync(path, JSON.stringify(state));\n}\n\nexport function load(path) {\n  if (!existsSync(path)) {\n    return { items: [] };\n  }\n  const data = readFileSync(path, 'utf8');\n  return JSON.parse(data);\n}\n\nexport function formatJson(state) {\n  throw new Error('NOT_IMPLEMENTED:formatJson');\n}\n\nexport function runCli(argv, opts = {}) {\n  throw new Error('NOT_IMPLEMENTED:runCli');\n}\n"
+      },
+      "attempt2": null,
+      "frontierRequired": false,
+      "tokensTotalLocal": 64,
+      "wallMsTotalLocal": 2305
+    },
+    {
+      "id": "T6",
+      "name": "formatJson",
+      "route": "local-fast",
+      "attempt1": {
+        "model": "qwen3-coder:30b",
+        "pass": true,
+        "wallMs": 1116,
+        "evalTokens": 20,
+        "tokensPerSec": 44,
+        "oracleExitCode": 0,
+        "oracleStderrTail": "",
+        "generatedRaw": "export function formatJson(state) {\n  return JSON.stringify(state, null, 2);\n}",
+        "extractedBody": "export function formatJson(state) {\n  return JSON.stringify(state, null, 2);\n}",
+        "sourceAfter": "import { writeFileSync, readFileSync, existsSync } from 'node:fs';\n// todo.mjs — assembled by Concord/VHO routing pilot 2026-05-11.\n// All function bodies start as throw-stubs; router fills them in per task.\n\nexport function add(state, text) {\n  throw new Error('NOT_IMPLEMENTED:add');\n}\n\nexport function list(state) {\n  if (!state.items || state.items.length === 0) {\n    return 'empty';\n  }\n  \n  return state.items.map(item => {\n    const status = item.done ? '[x]' : '[ ]';\n    return `${status} ${item.id}: ${item.text}`;\n  }).join('\\n');\n}\n\nexport function complete(state, id) {\n  const newItem = state.items.map(item => \n    item.id === id ? { ...item, done: true } : item\n  );\n  \n  if (newItem.length === state.items.length && \n      newItem.every((item, index) => item === state.items[index])) {\n    throw new Error('Item not found');\n  }\n  \n  return { items: newItem };\n}\n\nexport function remove(state, id) {\n  const items = state.items.filter(item => item.id !== id);\n  if (items.length === state.items.length) {\n    throw new Error('Item not found');\n  }\n  return { items };\n}\n\nexport function save(state, path) {\n  writeFileSync(path, JSON.stringify(state));\n}\n\nexport function load(path) {\n  if (!existsSync(path)) {\n    return { items: [] };\n  }\n  const data = readFileSync(path, 'utf8');\n  return JSON.parse(data);\n}\n\nexport function formatJson(state) {\n  return JSON.stringify(state, null, 2);\n}\n\nexport function runCli(argv, opts = {}) {\n  throw new Error('NOT_IMPLEMENTED:runCli');\n}\n"
+      },
+      "attempt2": null,
+      "frontierRequired": false,
+      "tokensTotalLocal": 20,
+      "wallMsTotalLocal": 1116
+    },
+    {
+      "id": "T7",
+      "name": "runCli",
+      "route": "frontier-required",
+      "attempt1": {
+        "model": "qwen3-coder:30b",
+        "pass": false,
+        "wallMs": 8773,
+        "evalTokens": 318,
+        "tokensPerSec": 40.9,
+        "oracleExitCode": 1,
+        "oracleStderrTail": "",
+        "generatedRaw": "```\nexport function runCli(argv, opts = {}) {\n  const [command, arg1] = argv;\n  let stdout = '';\n  let stderr = '';\n  let exitCode = 0;\n\n  try {\n    const state = load(opts.todoFile);\n\n    switch (command) {\n      case 'add':\n        if (!arg1) {\n          exitCode = 1;\n          stderr = 'usage: add <text>';\n          break;\n        }\n        add(state, arg1);\n        save(opts.todoFile, state);\n        break;\n\n      case 'list':\n        if (argv.includes('--json')) {\n          stdout = formatJson(state);\n        } else {\n          stdout = list(state);\n        }\n        break;\n\n      case 'complete':\n        if (!arg1) {\n          exitCode = 1;\n          stderr = 'usage: complete <id>';\n          break;\n        }\n        complete(state, parseInt(arg1, 10));\n        save(opts.todoFile, state);\n        break;\n\n      case 'remove':\n        if (!arg1) {\n          exitCode = 1;\n          stderr = 'usage: remove <id>';\n          break;\n        }\n        remove(state, parseInt(arg1, 10));\n        save(opts.todoFile, state);\n        break;\n\n      default:\n        exitCode = 1;\n        stderr = 'unknown command';\n        break;\n    }\n  } catch (error) {\n    exitCode = 1;\n    stderr = error.message;\n  }\n\n  return { exitCode, stdout, stderr };\n}\n```",
+        "extractedBody": "export function runCli(argv, opts = {}) {\n  const [command, arg1] = argv;\n  let stdout = '';\n  let stderr = '';\n  let exitCode = 0;\n\n  try {\n    const state = load(opts.todoFile);\n\n    switch (command) {\n      case 'add':\n        if (!arg1) {\n          exitCode = 1;\n          stderr = 'usage: add <text>';\n          break;\n        }\n        add(state, arg1);\n        save(opts.todoFile, state);\n        break;\n\n      case 'list':\n        if (argv.includes('--json')) {\n          stdout = formatJson(state);\n        } else {\n          stdout = list(state);\n        }\n        break;\n\n      case 'complete':\n        if (!arg1) {\n          exitCode = 1;\n          stderr = 'usage: complete <id>';\n          break;\n        }\n        complete(state, parseInt(arg1, 10));\n        save(opts.todoFile, state);\n        break;\n\n      case 'remove':\n        if (!arg1) {\n          exitCode = 1;\n          stderr = 'usage: remove <id>';\n          break;\n        }\n        remove(state, parseInt(arg1, 10));\n        save(opts.todoFile, state);\n        break;\n\n      default:\n        exitCode = 1;\n        stderr = 'unknown command';\n        break;\n    }\n  } catch (error) {\n    exitCode = 1;\n    stderr = error.message;\n  }\n\n  return { exitCode, stdout, stderr };\n}",
+        "sourceAfter": "import { writeFileSync, readFileSync, existsSync } from 'node:fs';\n// todo.mjs — assembled by Concord/VHO routing pilot 2026-05-11.\n// All function bodies start as throw-stubs; router fills them in per task.\n\nexport function add(state, text) {\n  throw new Error('NOT_IMPLEMENTED:add');\n}\n\nexport function list(state) {\n  if (!state.items || state.items.length === 0) {\n    return 'empty';\n  }\n  \n  return state.items.map(item => {\n    const status = item.done ? '[x]' : '[ ]';\n    return `${status} ${item.id}: ${item.text}`;\n  }).join('\\n');\n}\n\nexport function complete(state, id) {\n  const newItem = state.items.map(item => \n    item.id === id ? { ...item, done: true } : item\n  );\n  \n  if (newItem.length === state.items.length && \n      newItem.every((item, index) => item === state.items[index])) {\n    throw new Error('Item not found');\n  }\n  \n  return { items: newItem };\n}\n\nexport function remove(state, id) {\n  const items = state.items.filter(item => item.id !== id);\n  if (items.length === state.items.length) {\n    throw new Error('Item not found');\n  }\n  return { items };\n}\n\nexport function save(state, path) {\n  writeFileSync(path, JSON.stringify(state));\n}\n\nexport function load(path) {\n  if (!existsSync(path)) {\n    return { items: [] };\n  }\n  const data = readFileSync(path, 'utf8');\n  return JSON.parse(data);\n}\n\nexport function formatJson(state) {\n  return JSON.stringify(state, null, 2);\n}\n\nexport function runCli(argv, opts = {}) {\n  const [command, arg1] = argv;\n  let stdout = '';\n  let stderr = '';\n  let exitCode = 0;\n\n  try {\n    const state = load(opts.todoFile);\n\n    switch (command) {\n      case 'add':\n        if (!arg1) {\n          exitCode = 1;\n          stderr = 'usage: add <text>';\n          break;\n        }\n        add(state, arg1);\n        save(opts.todoFile, state);\n        break;\n\n      case 'list':\n        if (argv.includes('--json')) {\n          stdout = formatJson(state);\n        } else {\n          stdout = list(state);\n        }\n        break;\n\n      case 'complete':\n        if (!arg1) {\n          exitCode = 1;\n          stderr = 'usage: complete <id>';\n          break;\n        }\n        complete(state, parseInt(arg1, 10));\n        save(opts.todoFile, state);\n        break;\n\n      case 'remove':\n        if (!arg1) {\n          exitCode = 1;\n          stderr = 'usage: remove <id>';\n          break;\n        }\n        remove(state, parseInt(arg1, 10));\n        save(opts.todoFile, state);\n        break;\n\n      default:\n        exitCode = 1;\n        stderr = 'unknown command';\n        break;\n    }\n  } catch (error) {\n    exitCode = 1;\n    stderr = error.message;\n  }\n\n  return { exitCode, stdout, stderr };\n}\n"
+      },
+      "attempt2": {
+        "model": "devstral-small-2:24b",
+        "pass": false,
+        "wallMs": 34745,
+        "evalTokens": 320,
+        "tokensPerSec": 17.5,
+        "oracleExitCode": 1,
+        "oracleStderrTail": "",
+        "generatedRaw": "```\nexport function runCli(argv, opts = {}) {\n  const { todoFile } = opts;\n  let state = load(todoFile);\n  const command = argv[0];\n  const args = argv.slice(1);\n  let exitCode = 0;\n  let stdout = '';\n  let stderr = '';\n\n  try {\n    switch (command) {\n      case 'add':\n        if (args.length === 0) throw new Error('usage: add <text>');\n        state = add(state, args.join(' '));\n        save(state, todoFile);\n        break;\n      case 'list':\n        if (args.includes('--json')) {\n          stdout = formatJson(list(state));\n        } else {\n          stdout = list(state);\n        }\n        break;\n      case 'complete':\n        if (args.length === 0) throw new Error('usage: complete <id>');\n        const completeId = parseInt(args[0], 10);\n        state = complete(state, completeId);\n        save(state, todoFile);\n        break;\n      case 'remove':\n        if (args.length === 0) throw new Error('usage: remove <id>');\n        const removeId = parseInt(args[0], 10);\n        state = remove(state, removeId);\n        save(state, todoFile);\n        break;\n      default:\n        throw new Error('unknown command');\n    }\n  } catch (error) {\n    exitCode = 1;\n    stderr = error.message;\n  }\n\n  return { exitCode, stdout, stderr };\n}\n```",
+        "extractedBody": "export function runCli(argv, opts = {}) {\n  const { todoFile } = opts;\n  let state = load(todoFile);\n  const command = argv[0];\n  const args = argv.slice(1);\n  let exitCode = 0;\n  let stdout = '';\n  let stderr = '';\n\n  try {\n    switch (command) {\n      case 'add':\n        if (args.length === 0) throw new Error('usage: add <text>');\n        state = add(state, args.join(' '));\n        save(state, todoFile);\n        break;\n      case 'list':\n        if (args.includes('--json')) {\n          stdout = formatJson(list(state));\n        } else {\n          stdout = list(state);\n        }\n        break;\n      case 'complete':\n        if (args.length === 0) throw new Error('usage: complete <id>');\n        const completeId = parseInt(args[0], 10);\n        state = complete(state, completeId);\n        save(state, todoFile);\n        break;\n      case 'remove':\n        if (args.length === 0) throw new Error('usage: remove <id>');\n        const removeId = parseInt(args[0], 10);\n        state = remove(state, removeId);\n        save(state, todoFile);\n        break;\n      default:\n        throw new Error('unknown command');\n    }\n  } catch (error) {\n    exitCode = 1;\n    stderr = error.message;\n  }\n\n  return { exitCode, stdout, stderr };\n}",
+        "sourceAfter": "import { writeFileSync, readFileSync, existsSync } from 'node:fs';\n// todo.mjs — assembled by Concord/VHO routing pilot 2026-05-11.\n// All function bodies start as throw-stubs; router fills them in per task.\n\nexport function add(state, text) {\n  throw new Error('NOT_IMPLEMENTED:add');\n}\n\nexport function list(state) {\n  if (!state.items || state.items.length === 0) {\n    return 'empty';\n  }\n  \n  return state.items.map(item => {\n    const status = item.done ? '[x]' : '[ ]';\n    return `${status} ${item.id}: ${item.text}`;\n  }).join('\\n');\n}\n\nexport function complete(state, id) {\n  const newItem = state.items.map(item => \n    item.id === id ? { ...item, done: true } : item\n  );\n  \n  if (newItem.length === state.items.length && \n      newItem.every((item, index) => item === state.items[index])) {\n    throw new Error('Item not found');\n  }\n  \n  return { items: newItem };\n}\n\nexport function remove(state, id) {\n  const items = state.items.filter(item => item.id !== id);\n  if (items.length === state.items.length) {\n    throw new Error('Item not found');\n  }\n  return { items };\n}\n\nexport function save(state, path) {\n  writeFileSync(path, JSON.stringify(state));\n}\n\nexport function load(path) {\n  if (!existsSync(path)) {\n    return { items: [] };\n  }\n  const data = readFileSync(path, 'utf8');\n  return JSON.parse(data);\n}\n\nexport function formatJson(state) {\n  return JSON.stringify(state, null, 2);\n}\n\nexport function runCli(argv, opts = {}) {\n  const { todoFile } = opts;\n  let state = load(todoFile);\n  const command = argv[0];\n  const args = argv.slice(1);\n  let exitCode = 0;\n  let stdout = '';\n  let stderr = '';\n\n  try {\n    switch (command) {\n      case 'add':\n        if (args.length === 0) throw new Error('usage: add <text>');\n        state = add(state, args.join(' '));\n        save(state, todoFile);\n        break;\n      case 'list':\n        if (args.includes('--json')) {\n          stdout = formatJson(list(state));\n        } else {\n          stdout = list(state);\n        }\n        break;\n      case 'complete':\n        if (args.length === 0) throw new Error('usage: complete <id>');\n        const completeId = parseInt(args[0], 10);\n        state = complete(state, completeId);\n        save(state, todoFile);\n        break;\n      case 'remove':\n        if (args.length === 0) throw new Error('usage: remove <id>');\n        const removeId = parseInt(args[0], 10);\n        state = remove(state, removeId);\n        save(state, todoFile);\n        break;\n      default:\n        throw new Error('unknown command');\n    }\n  } catch (error) {\n    exitCode = 1;\n    stderr = error.message;\n  }\n\n  return { exitCode, stdout, stderr };\n}\n"
+      },
+      "frontierRequired": true,
+      "tokensTotalLocal": 638,
+      "wallMsTotalLocal": 43518
+    }
+  ],
+  "completedAt": "2026-05-11T01:12:31.872Z",
+  "summary": {
+    "totalTasks": 7,
+    "closedByLocal": 5,
+    "frontierRequiredFor": [
+      "T1",
+      "T7"
+    ],
+    "totalLocalTokens": 1084,
+    "totalLocalWallMs": 93758
+  }
+}

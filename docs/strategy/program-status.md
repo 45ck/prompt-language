@@ -94,20 +94,34 @@ implementation-shape API endpoint route.
 outside harness-arena measured the hybrid hypothesis at finer
 scopes. Both findings stand:
 
-- **Per-task micro-routing (positive):**
+- **Per-task micro-routing (positive on cost; OVERCLAIMED on novelty —
+  see corrections):**
   [`experiments/concord-vho-microtask-cost/2026-05-11/`](../../experiments/concord-vho-microtask-cost/2026-05-11/)
   — 10 single-function tasks (4 novel-spec, 6 utility) routed to
-  qwen3-coder:30b under a strict prompt template + deterministic
-  oracle with seeded random inputs. Result: **10/10 first-attempt
-  pass at k=3 (30/30 individual oracle passes)**, with one task
-  (`parseQuery`) producing *more correct* code than the
-  pre-committed frontier reference (local handled `+`-as-space per
-  application/x-www-form-urlencoded; frontier didn't). Per-task
-  saving = full Arm B token cost (40-130 tiktoken-equiv per task).
-  Caveat: at single-pilot scope the v2 router/oracle scaffolding
-  costs ~3500 frontier tokens and only saves 693, so hybrid is
-  ~5× more expensive than frontier-only at one pilot. Break-even
-  at ~5 pilots reusing the same infrastructure.
+  qwen3-coder:30b. Original headline was **10/10 first-attempt
+  pass at k=10 (100/100 individual oracle passes)**, framed as
+  novel signal. After adversarial review:
+  - **Published-baseline comparison** ([`results/published-baseline-comparison.md`](../../experiments/concord-vho-microtask-cost/2026-05-11/results/published-baseline-comparison.md)):
+    qwen2.5-Coder-32B already scores 92.7% HumanEval; Qwen3-Coder-
+    30B-A3B-Instruct is positioned stronger. **At baseline p=0.95,
+    P(10/10) by chance ≈ 60%.** The 10/10 is the *expected mode* on
+    a 10-task curated battery, not a research finding.
+  - **Cross-family adversarial review** ([`cross-family/findings.md`](../../experiments/concord-vho-microtask-cost/2026-05-11/cross-family/findings.md)):
+    devstral-small-2:24b (Mistral family) graded qwen's k=1
+    solutions on adversarial cases. **Found 1 real qwen bug** that
+    the v2 oracle missed: `parseQuery("?a=b=c")` returns
+    `{a:"b"}` instead of `{a:"b=c"}` (uses `split('=', 2)` which
+    drops the tail). Cross-family coverage was partial (4/10 tasks
+    gradable; the rest blocked by devstral writing invalid-JSON
+    cases) but the 1 bug found is sufficient to falsify the
+    "100/100 = deterministic substitution" narrative.
+  Honest revised verdict: the routing pattern works at micro-task
+  scope and saves ~40-130 tiktoken-equiv tokens per task vs
+  frontier-only when local passes, but the headline "100/100" was
+  inflated by oracle weakness (same author wrote prompts and
+  tests). Real per-task pass rate against cross-family adversarial
+  oracles is ≤8/10. Per-pilot scaffolding still costs ~3500
+  frontier tokens; break-even at ~5 reused pilots.
 - **Per-app construction (negative):**
   [`experiments/concord-vho-pilot-todo-cli/2026-05-11/`](../../experiments/concord-vho-pilot-todo-cli/2026-05-11/)
   — 7-task TODO CLI build via routing. Headline 5/7 by local was

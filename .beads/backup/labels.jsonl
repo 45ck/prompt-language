@@ -274,6 +274,15 @@
 {"issue_id":"prompt-language-gm1h","label":"fscrud"}
 {"issue_id":"prompt-language-gm1h","label":"local-models"}
 {"issue_id":"prompt-language-gm1h","label":"research"}
+{"issue_id":"prompt-language-h48s","label":"concord-vho"}
+{"issue_id":"prompt-language-h48s","label":"literature-review"}
+{"issue_id":"prompt-language-h48s","label":"replication"}
+{"issue_id":"prompt-language-j0je","label":"attested-run"}
+{"issue_id":"prompt-language-j0je","label":"concord-vho"}
+{"issue_id":"prompt-language-j0je","label":"unification"}
+{"issue_id":"prompt-language-j64j","label":"concord-vho"}
+{"issue_id":"prompt-language-j64j","label":"h4"}
+{"issue_id":"prompt-language-j64j","label":"thesis-validation"}
 {"issue_id":"prompt-language-ksih","label":"area:experiments"}
 {"issue_id":"prompt-language-ksih","label":"initiative:e4-factory"}
 {"issue_id":"prompt-language-ksih","label":"type:research"}
@@ -315,6 +324,9 @@
 {"issue_id":"prompt-language-lghe","label":"persona"}
 {"issue_id":"prompt-language-lghe","label":"prompt-language"}
 {"issue_id":"prompt-language-lghe","label":"research"}
+{"issue_id":"prompt-language-mcog","label":"adversarial"}
+{"issue_id":"prompt-language-mcog","label":"concord-vho"}
+{"issue_id":"prompt-language-mcog","label":"thesis-validation"}
 {"issue_id":"prompt-language-sfd3","label":"codex"}
 {"issue_id":"prompt-language-sfd3","label":"experiments"}
 {"issue_id":"prompt-language-sfd3","label":"harness-arena"}

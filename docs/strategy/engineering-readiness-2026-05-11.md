@@ -11,25 +11,26 @@ After a single day of focused experimentation, what kinds of
 engineering work can honestly start, and what still needs more
 evidence?
 
-## TL;DR (revised 2026-05-11 evening)
+## TL;DR (revised 2026-05-11 night, post-adversarial review)
 
 | Engineering decision                                     | Verdict        |
 | -------------------------------------------------------- | -------------- |
-| Ship a Claude Code skill for narrow micro-task routing   | **GO**         |
+| Ship a Claude Code skill for narrow micro-task routing   | **GO** (with the boundary that even at micro-task scope, oracle weakness inflates pass rates — see "honest revised" finding below) |
 | Add hybrid routing to existing harness-arena pipelines   | **GO**         |
-| Use hybrid routing in personal/internal projects         | **CONDITIONAL GO** (only if work is bounded micro-tasks with oracles) |
+| Use hybrid routing in personal/internal projects         | **CONDITIONAL GO** (only if work is bounded micro-tasks with oracles, and oracles are written by a different author than the prompts) |
 | Build the Portarium ↔ PL integration contract            | **NO** (premature; trigger not met) |
 | Promote hybrid as a primary engineering paradigm         | **NO** (evidence too narrow) |
+| Claim hybrid is novel research finding                   | **NO** (refuted by adversarial review — EQTY/Hybrid LLM/HumanLayer scoop major claims; published baselines make 100/100 the expected mode) |
 | Use hybrid for real-software builds (cost-justified)     | **NO** (revised — never breaks even at any N on dollar grounds; only justified by privacy/latency/quota) |
 | Use hybrid for client app-build work                     | **NO** (loses tokens at app-build scope) |
-| Provision a real operator signer to clear §3a gate 5     | **GO** (orthogonal to the hybrid question, gates everything else) |
+| Provision a real operator signer to clear §3a gate 5    | **OPTIONAL** (downgraded from GO — bookkeeping; doesn't advance any thesis hypothesis directly) |
 
-## The five same-day pilots
+## The five same-day pilots (corrected)
 
 | Pilot                              | Scope-tag                          | Verdict        | Key number                                |
 | ---------------------------------- | ---------------------------------- | -------------- | ----------------------------------------- |
 | TODO CLI                           | `app-build-orchestration`          | Hybrid loses   | 2-3× more expensive than frontier-only    |
-| Micro-task v2 (full prompts) at k=10 | `micro-task` clear specs           | Hybrid wins    | **100/100 first-attempt** at k=10, zero variance |
+| Micro-task v2 (full prompts) at k=10 | `micro-task` clear specs           | Hybrid wins on cost; **NOVELTY OVERCLAIMED** | 100/100 at k=10 is the expected mode (P=60% by chance from 95% baseline); cross-family review found 1 real qwen bug oracle missed |
 | Micro-task v2 (starved prompts) at k=10 | `micro-task` thin specs           | Hybrid mixed   | **40/100** at k=10, deterministic per-task |
 | tinymd                             | `real-software-multistage`         | Hybrid loses (revised) | 6/8 first-attempt, 14× more expensive at N=1 |
 | **rpncalc (cross-app reuse)**      | `real-software-multistage`         | **Hybrid loses at any N** | 6/7 first-attempt; ~5.5k per-pilot scaffolding cost vs ~600 per-pilot saving — never breaks even |

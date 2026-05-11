@@ -1,0 +1,501 @@
+{
+  "startedAt": "2026-05-11T03:55:06.075Z",
+  "reviewerModel": "devstral-small-2:24b",
+  "perTask": [
+    {
+      "id": "applyDiscountTier",
+      "status": "graded",
+      "casesGenerated": 6,
+      "passed": 0,
+      "passRate": 0,
+      "failures": [
+        {
+          "args": [
+            [],
+            100
+          ],
+          "expected": 100,
+          "threw": "tiers is not iterable"
+        },
+        {
+          "args": [
+            [
+              [
+                0,
+                10
+              ],
+              [
+                100,
+                20
+              ]
+            ],
+            0
+          ],
+          "expected": 0,
+          "actual": [
+            [
+              0,
+              10
+            ],
+            [
+              100,
+              20
+            ]
+          ]
+        },
+        {
+          "args": [
+            [
+              [
+                0,
+                10
+              ],
+              [
+                100,
+                20
+              ]
+            ],
+            100
+          ],
+          "expected": 80,
+          "threw": "tiers is not iterable"
+        },
+        {
+          "args": [
+            [
+              [
+                0,
+                10
+              ],
+              [
+                100,
+                20
+              ]
+            ],
+            101
+          ],
+          "expected": 101,
+          "threw": "tiers is not iterable"
+        },
+        {
+          "args": [
+            [
+              [
+                0,
+                10
+              ],
+              [
+                100,
+                20
+              ]
+            ],
+            99.99
+          ],
+          "expected": 89.991,
+          "threw": "tiers is not iterable"
+        }
+      ],
+      "cases": [
+        {
+          "args": [
+            [],
+            100
+          ],
+          "expected": 100
+        },
+        {
+          "args": [
+            [
+              [
+                0,
+                10
+              ],
+              [
+                100,
+                20
+              ]
+            ],
+            0
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            [
+              [
+                0,
+                10
+              ],
+              [
+                100,
+                20
+              ]
+            ],
+            100
+          ],
+          "expected": 80
+        },
+        {
+          "args": [
+            [
+              [
+                0,
+                10
+              ],
+              [
+                100,
+                20
+              ]
+            ],
+            101
+          ],
+          "expected": 101
+        },
+        {
+          "args": [
+            [
+              [
+                0,
+                10
+              ],
+              [
+                100,
+                20
+              ]
+            ],
+            99.99
+          ],
+          "expected": 89.991
+        },
+        {
+          "args": [
+            [
+              [
+                0,
+                10
+              ],
+              [
+                100,
+                20
+              ]
+            ],
+            100
+          ],
+          "expected": 80
+        }
+      ]
+    },
+    {
+      "id": "validateConfig",
+      "status": "reviewer-no-cases",
+      "rawSnippet": "[\n  {\"args\": [{}, {a: {type: \"string\", required: true}}], \"expected\": [\"Missing required key: a\"]},\n  {\"args\": [{a: 0}, {a: {type: \"number\", required: true}}], \"expected\": []},\n  {\"args\": [{a: \"123\"}, {a: {type: \"number\", required: true}}], \"expected\": [\"Key 'a' must be of type number\"]},\n  {\"args\": [{a: \"true\"}, {a: {type: \"boolean\", required: true}}], \"expected\": [\"Key 'a' must be of type boolea"
+    },
+    {
+      "id": "formatLogEntry",
+      "status": "reviewer-no-cases",
+      "rawSnippet": "[\n  {\"args\": [{\"level\": \"debug\", \"msg\": \"test\", \"fields\": {\"a\": 1, \"b\": 2}}, {\"service\": \"web\", \"host\": \"localhost\"}], \"expected\": \"[DEBUG] web@localhost: test | a=1 b=2\"},\n  {\"args\": [{\"level\": \"info\", \"msg\": \"hello\", \"fields\": {}}, {\"service\": \"api\", \"host\": \"server\"}], \"expected\": \"[INFO] api@server: hello\"},\n  {\"args\": [{\"level\": \"warn\", \"msg\": \"warning\", \"fields\": {\"key\": \"value with spaces\"}"
+    },
+    {
+      "id": "mergeAcl",
+      "status": "reviewer-no-cases",
+      "rawSnippet": "[\n  {\"args\": [[]], \"expected\": new Map()},\n  {\"args\": [{ role: \"admin\", perms: [] }], \"expected\": new Map([[\"admin\", new Set()]])},\n  {\"args\": [{ role: \"admin\", perms: [\"read\", \"write\"] }, { role: \"admin\", perms: [\"delete\"] }], \"expected\": new Map([[\"admin\", new Set([\"read\", \"write\", \"delete\"])]])},\n  {\"args\": [{ role: \"user\", perms: [\"\\u0000\", \" \"] }], \"expected\": new Map([[\"user\", new Set([\"\\u00"
+    },
+    {
+      "id": "chunk",
+      "status": "graded",
+      "casesGenerated": 6,
+      "passed": 6,
+      "passRate": 1,
+      "failures": [],
+      "cases": [
+        {
+          "args": [
+            [],
+            5
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              1,
+              2,
+              3
+            ],
+            0
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              1,
+              2,
+              3
+            ],
+            -1
+          ],
+          "expected": []
+        },
+        {
+          "args": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5
+            ],
+            2
+          ],
+          "expected": [
+            [
+              1,
+              2
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              5
+            ]
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            3
+          ],
+          "expected": [
+            [
+              1,
+              2,
+              3
+            ],
+            [
+              4,
+              5,
+              6
+            ],
+            [
+              7,
+              8,
+              9
+            ],
+            [
+              10
+            ]
+          ]
+        },
+        {
+          "args": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            11
+          ],
+          "expected": [
+            [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "slugify",
+      "status": "graded",
+      "casesGenerated": 6,
+      "passed": 5,
+      "passRate": 0.8333333333333334,
+      "failures": [
+        {
+          "args": [
+            "Hello World! How are you? I'm fine, thanks!"
+          ],
+          "expected": "hello-world-how-are-you-im-fine-thanks",
+          "actual": "hello-world-how-are-you-i-m-fine-thanks"
+        }
+      ],
+      "cases": [
+        {
+          "args": [
+            ""
+          ],
+          "expected": ""
+        },
+        {
+          "args": [
+            "   "
+          ],
+          "expected": ""
+        },
+        {
+          "args": [
+            "Hello, World! How are you?"
+          ],
+          "expected": "hello-world-how-are-you"
+        },
+        {
+          "args": [
+            "  Hello  World  "
+          ],
+          "expected": "hello-world"
+        },
+        {
+          "args": [
+            "Hello--World"
+          ],
+          "expected": "hello-world"
+        },
+        {
+          "args": [
+            "Hello World! How are you? I'm fine, thanks!"
+          ],
+          "expected": "hello-world-how-are-you-im-fine-thanks"
+        }
+      ]
+    },
+    {
+      "id": "groupBy",
+      "status": "reviewer-no-cases",
+      "rawSnippet": "[\n  {\"args\": [[{id: 1}, {id: 2}, {id: 1}], x => x.id], \"expected\": {\"1\": [{\"id\": 1}, {\"id\": 1}], \"2\": [{\"id\": 2}]}},\n  {\"args\": [[], x => x], \"expected\": {}},\n  {\"args\": [[{key: \"a\"}, {key: \"b\"}, {key: \"a\"}], x => x.key], \"expected\": {\"a\": [{\"key\": \"a\"}, {\"key\": \"a\"}], \"b\": [{\"key\": \"b\"}]}},\n  {\"args\": [[{name: \"Alice\"}, {name: \"Bob\"}, {name: \"Alice\"}], x => x.name.toLowerCase()], \"expected\": {\"al"
+    },
+    {
+      "id": "parseQuery",
+      "status": "graded",
+      "casesGenerated": 6,
+      "passed": 5,
+      "passRate": 0.8333333333333334,
+      "failures": [
+        {
+          "args": [
+            "?a=b=c"
+          ],
+          "expected": {
+            "a": "b=c"
+          },
+          "actual": {
+            "a": "b"
+          }
+        }
+      ],
+      "cases": [
+        {
+          "args": [
+            ""
+          ],
+          "expected": {}
+        },
+        {
+          "args": [
+            "?"
+          ],
+          "expected": {}
+        },
+        {
+          "args": [
+            "?a=b&c=d"
+          ],
+          "expected": {
+            "a": "b",
+            "c": "d"
+          }
+        },
+        {
+          "args": [
+            "?a=b&a=c"
+          ],
+          "expected": {
+            "a": "c"
+          }
+        },
+        {
+          "args": [
+            "?a="
+          ],
+          "expected": {
+            "a": ""
+          }
+        },
+        {
+          "args": [
+            "?a=b=c"
+          ],
+          "expected": {
+            "a": "b=c"
+          }
+        }
+      ]
+    },
+    {
+      "id": "partition",
+      "status": "reviewer-no-cases",
+      "rawSnippet": "[\n  {\"args\": [[], x => x], \"expected\": [[], []]},\n  {\"args\": [[1, 2, 3], x => x === 2], \"expected\": [[2], [1, 3]]},\n  {\"args\": [[\"a\", \"b\", \"c\"], x => x === \"b\"], \"expected\": [[\"b\"], [\"a\", \"c\"]]},\n  {\"args\": [[1, 2, 3, 4, 5], x => x % 2 === 0], \"expected\": [[2, 4], [1, 3, 5]]},\n  {\"args\": [[1, 2, 3, 4, 5], x => x % 2 !== 0], \"expected\": [[1, 3, 5], [2, 4]]},\n  {\"args\": [[1, 2, 3, 4, 5], x => x === "
+    },
+    {
+      "id": "flatten",
+      "status": "reviewer-no-cases",
+      "rawSnippet": "[\n  {\"args\": [[[[[1]]]]], \"expected\": [1]},\n  {\"args\": [[1, [2, [3, [4, [5]]]]], [6]], \"expected\": [1, 2, 3, 4, 5, 6]},\n  {\"args\": [[], [[]], [[], []]], \"expected\": []},\n  {\"args\": [[1, \"2\", [3, [\"4\", [5]]]], null, undefined, {a: 1}], \"expected\": [1, \"2\", 3, \"4\", 5, null, undefined, {a: 1}]},\n  {\"args\": [[[[]]]], \"expected\": []},\n  {\"args\": [[1, [2, [3, [4, [5, [6, [7, [8, [9, [10]]]]]]]]]]], \"exp"
+    }
+  ],
+  "completedAt": "2026-05-11T03:57:52.434Z",
+  "summary": {
+    "tasksGraded": 4,
+    "totalAdversarialCases": 24,
+    "totalPassed": 16,
+    "overallPassRate": 0.6666666666666666,
+    "perTaskPassRates": [
+      {
+        "id": "applyDiscountTier",
+        "pass": 0,
+        "total": 6
+      },
+      {
+        "id": "chunk",
+        "pass": 6,
+        "total": 6
+      },
+      {
+        "id": "slugify",
+        "pass": 5,
+        "total": 6
+      },
+      {
+        "id": "parseQuery",
+        "pass": 5,
+        "total": 6
+      }
+    ]
+  }
+}

@@ -217,6 +217,9 @@
 {"issue_id":"prompt-language-50m6.9","label":"area:docs"}
 {"issue_id":"prompt-language-50m6.9","label":"initiative:artifacts"}
 {"issue_id":"prompt-language-50m6.9","label":"type:research"}
+{"issue_id":"prompt-language-5io5","label":"bug"}
+{"issue_id":"prompt-language-5io5","label":"concord-vho"}
+{"issue_id":"prompt-language-5io5","label":"runtime"}
 {"issue_id":"prompt-language-9xmr","label":"quick-win"}
 {"issue_id":"prompt-language-f5kg","label":"concord-vho"}
 {"issue_id":"prompt-language-f5kg","label":"security"}

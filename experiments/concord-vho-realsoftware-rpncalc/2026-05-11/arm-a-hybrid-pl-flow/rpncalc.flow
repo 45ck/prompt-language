@@ -1,0 +1,96 @@
+Goal: Implement the 7 routable functions of an RPN calculator (skeleton at workspace/rpncalc.mjs) by routing each per-function task to qwen3-coder:30b via Ollama, with deterministic per-function oracles and one retry on oracle failure. Success: the assembled rpncalc.mjs passes the per-function oracle for each function and the integration test for the full calculate() pipeline.
+
+flow:
+  # --- F1: isNumber (no deps) ---
+  retry max 2
+    let isNumberCode = prompt: |
+      Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation.
+
+      function isNumber(token): Return true iff token is a string matching an integer or decimal number, optionally preceded by '-'. Examples that match: '0', '42', '-7', '3.14', '-0.5'. Examples that don't: '1.', '.5', '+1', '1e2', 'abc', ''.
+    run: PL_RAW="${isNumberCode}" node ../arm-a-hybrid-pl-flow/replace-stub.mjs isNumber
+    run: node ../oracle/run-task.mjs isNumber ../arm-a-hybrid-pl-flow/workspace/rpncalc.mjs
+    if command_failed
+      prompt: The implementation failed the oracle. The failures are: ${last_stderr}. Reply with ONLY the corrected function declaration starting with "export function".
+    end
+  end
+
+  # --- F2: isOperator (no deps) ---
+  retry max 2
+    let isOperatorCode = prompt: |
+      Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation.
+
+      function isOperator(token): Return true iff token is exactly one of these strings: '+', '-', '*', '/'. False otherwise.
+    run: PL_RAW="${isOperatorCode}" node ../arm-a-hybrid-pl-flow/replace-stub.mjs isOperator
+    run: node ../oracle/run-task.mjs isOperator ../arm-a-hybrid-pl-flow/workspace/rpncalc.mjs
+    if command_failed
+      prompt: The implementation failed the oracle. The failures are: ${last_stderr}. Reply with ONLY the corrected function declaration starting with "export function".
+    end
+  end
+
+  # --- F3: safeNumber (no deps) ---
+  retry max 2
+    let safeNumberCode = prompt: |
+      Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation.
+
+      function safeNumber(s): Parse s as a JavaScript number. If the result is NaN, throw an Error with message 'not a number: <s>'. Otherwise return the number.
+    run: PL_RAW="${safeNumberCode}" node ../arm-a-hybrid-pl-flow/replace-stub.mjs safeNumber
+    run: node ../oracle/run-task.mjs safeNumber ../arm-a-hybrid-pl-flow/workspace/rpncalc.mjs
+    if command_failed
+      prompt: The implementation failed the oracle. The failures are: ${last_stderr}. Reply with ONLY the corrected function declaration.
+    end
+  end
+
+  # --- F4: applyOperator (no deps) ---
+  retry max 2
+    let applyOperatorCode = prompt: |
+      Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation.
+
+      function applyOperator(op, a, b): Apply the binary operator op (one of '+', '-', '*', '/') to numbers a and b and return the result. For '/', if b is 0, throw an Error 'division by zero'. For an unknown op, throw 'unknown operator: <op>'.
+    run: PL_RAW="${applyOperatorCode}" node ../arm-a-hybrid-pl-flow/replace-stub.mjs applyOperator
+    run: node ../oracle/run-task.mjs applyOperator ../arm-a-hybrid-pl-flow/workspace/rpncalc.mjs
+    if command_failed
+      prompt: The implementation failed the oracle. The failures are: ${last_stderr}. Reply with ONLY the corrected function declaration.
+    end
+  end
+
+  # --- F5: tokenizeRpn (no deps) ---
+  retry max 2
+    let tokenizeRpnCode = prompt: |
+      Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation.
+
+      function tokenizeRpn(expr): Coerce expr to a string, trim it, split on runs of whitespace, and filter out any empty strings. Return the array of token strings.
+    run: PL_RAW="${tokenizeRpnCode}" node ../arm-a-hybrid-pl-flow/replace-stub.mjs tokenizeRpn
+    run: node ../oracle/run-task.mjs tokenizeRpn ../arm-a-hybrid-pl-flow/workspace/rpncalc.mjs
+    if command_failed
+      prompt: The implementation failed the oracle. The failures are: ${last_stderr}. Reply with ONLY the corrected function declaration.
+    end
+  end
+
+  # --- F6: formatResult (no deps) ---
+  retry max 2
+    let formatResultCode = prompt: |
+      Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation.
+
+      function formatResult(n): Format a numeric result as a string. If Number.isInteger(n), return its decimal string form. Otherwise format with up to 6 decimal places (toFixed(6)) but trim trailing zeros and trim a trailing decimal point.
+    run: PL_RAW="${formatResultCode}" node ../arm-a-hybrid-pl-flow/replace-stub.mjs formatResult
+    run: node ../oracle/run-task.mjs formatResult ../arm-a-hybrid-pl-flow/workspace/rpncalc.mjs
+    if command_failed
+      prompt: The implementation failed the oracle. The failures are: ${last_stderr}. Reply with ONLY the corrected function declaration.
+    end
+  end
+
+  # --- F7: evaluate (depends on F1-F4 already filled by this point) ---
+  retry max 2
+    let evaluateCode = prompt: |
+      Implement this JavaScript function. Reply with ONLY the function declaration starting with "export function", no fences, no comments, no explanation.
+
+      function evaluate(tokens): Walk tokens (an array of strings) using a stack. For each token: if isNumber(token), push safeNumber(token). If isOperator(token), pop two values (b then a), push applyOperator(token, a, b). Otherwise throw 'unknown token: <token>'. After all tokens the stack must contain exactly one value — return it. If the stack has !=1 values at the end, throw 'malformed expression: <n> values left on stack'. If a pop is attempted with fewer than 2 values, throw 'stack underflow'. Assume isNumber, isOperator, safeNumber, applyOperator are top-level functions in the same module.
+    run: PL_RAW="${evaluateCode}" node ../arm-a-hybrid-pl-flow/replace-stub.mjs evaluate
+    run: node ../oracle/run-task.mjs evaluate ../arm-a-hybrid-pl-flow/workspace/rpncalc.mjs
+    if command_failed
+      prompt: The implementation failed the oracle. The failures are: ${last_stderr}. Reply with ONLY the corrected function declaration.
+    end
+  end
+
+  # --- Final integration test ---
+  run: node ../oracle/integration.test.mjs ../arm-a-hybrid-pl-flow/workspace/rpncalc.mjs

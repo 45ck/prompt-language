@@ -9,9 +9,10 @@ date: 2026-05-12
 
 <!-- cspell:ignore qwen Ollama -->
 
-This note records the first local-model smoke run after runner capability
-classification was wired into smoke artifacts. It is a measurement receipt, not a
-claim-grade bundle.
+This note records the local-model smoke runs after runner capability
+classification was wired into smoke artifacts, including the follow-up fix that
+closed the four deterministic quick-smoke failures. It is a measurement receipt,
+not a claim-grade bundle.
 
 ## Command
 
@@ -29,21 +30,25 @@ npm run eval:smoke:ollama:quick
 - Harness: `prompt-language ci --runner ollama`
 - Model: `ollama/qwen3-coder:30b`
 - Ollama version: `0.20.5`
-- Quick smoke: `35/39` passed
-- Provider telemetry: `25` Ollama records, `7,266` input tokens, `1,452`
+- Quick smoke: `39/39` passed
+- Provider telemetry: `25` Ollama records, `7,264` input tokens, `1,460`
   output tokens, zero API cost basis
 - Generated local artifacts:
-  `scripts/eval/results/smoke-2026-05-11T21-37-23-790Z.json` and
-  `scripts/eval/results/smoke-2026-05-11T21-37-23-790Z-runner-capabilities.json`
+  `scripts/eval/results/smoke-2026-05-11T21-59-53-580Z.json` and
+  `scripts/eval/results/smoke-2026-05-11T21-59-53-580Z-runner-capabilities.json`
 
-Failing quick-smoke cases:
+The previous recorded run at
+`scripts/eval/results/smoke-2026-05-11T21-37-23-790Z.json` passed `35/39` and
+failed four deterministic quick-smoke cases. Those failures were traced to
+smoke-fixture command quoting and a grounded ask-loop first-entry max-count
+edge case, then rerun successfully:
 
-| ID  | Case                          | Observed failure                  |
-| --- | ----------------------------- | --------------------------------- |
-| AK  | Grounded-by while loop        | counter stayed at `count=0`       |
-| Z2  | Nonce propagation across runs | nonce and output files were empty |
-| Z4  | Interleaved state probe       | probe and counter were empty      |
-| AV  | `foreach item in run "cmd"`   | expected files were not written   |
+| ID  | Case                          | Follow-up result                         |
+| --- | ----------------------------- | ---------------------------------------- |
+| AK  | Grounded-by while loop        | passed with counter reaching `count=2`   |
+| Z2  | Nonce propagation across runs | passed with distinct UUIDs across runs   |
+| Z4  | Interleaved state probe       | passed with `10=100`, `20=400`, `30=900` |
+| AV  | `foreach item in run "cmd"`   | passed with all expected files written   |
 
 ## Claim Profile
 
@@ -63,15 +68,14 @@ not a claim that local Ollama satisfies the strict verifier profile.
 
 ## Interpretation
 
-The run shows that `qwen3-coder:30b` can execute most quick action-protocol smoke
-cases under PL supervision on this machine. It does not show full smoke
+The run shows that `qwen3-coder:30b` can execute the full quick action-protocol
+smoke matrix under PL supervision on this machine. It does not show full smoke
 readiness, claim-eligible provenance, cost superiority, or local-model
-substitution.
+substitution. The skipped non-quick cases still require their own live evidence.
 
 The next engineering work is therefore:
 
-1. triage the deterministic smoke failures above;
-2. keep local Ollama smoke artifacts marked recorded-only until transport
+1. keep local Ollama smoke artifacts marked recorded-only until transport
    witness, command allowlist, and process-lease evidence exist;
-3. produce a tiny attested blocker bundle before attempting a claim-eligible
+2. produce a tiny attested blocker bundle before attempting a claim-eligible
    bundle.

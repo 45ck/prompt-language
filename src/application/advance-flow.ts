@@ -968,7 +968,7 @@ async function handleLoopReentry(
   reentryDelayMs?: number,
 ): Promise<SessionState> {
   const progress = state.nodeProgress[nodeId];
-  const iteration = progress?.iteration ?? 1;
+  const iteration = progress?.iteration ?? 0;
   let current = state;
   const loopNode = resolveCurrentNode(state.flowSpec.nodes, parentPath);
   const loopLabel = loopNode == null ? `loop ${nodeId}` : describeFlowNode(loopNode);

@@ -2665,6 +2665,28 @@ describe('autoAdvanceNodes — let run', () => {
     expect(capturedPrompt).toBe('done');
   });
 
+  it('preserves shell quoting for single-quoted let run commands', async () => {
+    let capturedCommand = '';
+    const runner: CommandRunner = {
+      run: async (command) => {
+        capturedCommand = command;
+        return { exitCode: 0, stdout: 'value\n', stderr: '' };
+      },
+    };
+    const letRun = createLetNode('l1', 'output', {
+      type: 'run',
+      command: 'node -e "process.stdout.write(\\"value\\")"',
+    });
+    const spec = createFlowSpec('test', [letRun, createPromptNode('p1', 'done')]);
+    const state = createSessionState('s1', spec);
+
+    const { state: result, capturedPrompt } = await autoAdvanceNodes(state, runner);
+
+    expect(capturedCommand).toBe('node -e "process.stdout.write(\\"value\\")"');
+    expect(result.variables['output']).toBe('value');
+    expect(capturedPrompt).toBe('done');
+  });
+
   it('jumps to catch when let=run fails inside try', async () => {
     const runner: CommandRunner = {
       run: async () => ({ exitCode: 1, stdout: '', stderr: 'fail' }),
@@ -5349,6 +5371,33 @@ describe('autoAdvanceNodes — ask condition edge cases', () => {
     // Exit code 0 = condition true => enters while body (no AI judge, even with empty stdout)
     const { capturedPrompt, state: result } = await autoAdvanceNodes(state, runner, captureReader);
     expect(capturedPrompt).toBe('fix');
+    expect(result.nodeProgress['w1']?.status).toBe('running');
+  });
+
+  it('grounded-by max 1 enters the body once on first true check', async () => {
+    const runner: CommandRunner = {
+      run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
+    };
+    const captureReader: CaptureReader = {
+      read: vi.fn().mockResolvedValue(null),
+      clear: vi.fn(),
+    };
+    const whileNode = createWhileNode(
+      'w1',
+      'ask:"is it clean?"',
+      [createPromptNode('p1', 'fix')],
+      1,
+      undefined,
+      undefined,
+      'npm test',
+    );
+    const spec = createFlowSpec('test', [whileNode]);
+    const state = createSessionState('s1', spec);
+
+    const { capturedPrompt, state: result } = await autoAdvanceNodes(state, runner, captureReader);
+
+    expect(capturedPrompt).toBe('fix');
+    expect(result.nodeProgress['w1']?.iteration).toBe(1);
     expect(result.nodeProgress['w1']?.status).toBe('running');
   });
 

@@ -1993,11 +1993,9 @@ async function testGroundedWhileLoop() {
       'Goal: test grounded-by while',
       '',
       'flow:',
-      "  run: node -e \"require('node:fs').writeFileSync('counter.txt', 'count=0\\n')\"",
-      `  run: node -e "require('node:fs').writeFileSync('check-counter.mjs', 'import { readFileSync } from \\"node:fs\\"; const text = readFileSync(process.argv[2], \\"utf8\\"); const n = Number((text.match(/\\\\d+/) || [\\"0\\"])[0]); process.exit([0, 1].includes(n) ? 0 : 1);')"`,
-      `  run: node -e "require('node:fs').writeFileSync('increment-counter.mjs', 'import { readFileSync, writeFileSync } from \\"node:fs\\"; const text = readFileSync(process.argv[2], \\"utf8\\"); const n = Number((text.match(/\\\\d+/) || [\\"0\\"])[0]); writeFileSync(process.argv[2], \\"count=\\" + (n + 1) + \\"\\\\n\\");')"`,
-      `  while ask "Is count less than 2?" grounded-by 'node check-counter.mjs counter.txt' max 5`,
-      `    run: node increment-counter.mjs counter.txt`,
+      '  run: node -e "require(String.fromCharCode(102,115)).writeFileSync(process.argv[1],String.fromCharCode(99,111,117,110,116,61,48,10))" counter.txt',
+      '  while ask "Is count less than 2?" grounded-by \'node -e "const fs=require(String.fromCharCode(102,115));const text=fs.readFileSync(process.argv[1],String.fromCharCode(117,116,102,56));const n=Number((text.match(/[0-9]+/)||[0])[0]);process.exit(n<2?0:1)" counter.txt\' max 5',
+      '    run: node -e "const fs=require(String.fromCharCode(102,115));const p=process.argv[1];const text=fs.readFileSync(p,String.fromCharCode(117,116,102,56));const n=Number((text.match(/[0-9]+/)||[0])[0]);fs.writeFileSync(p,String.fromCharCode(99,111,117,110,116,61)+(n+1)+String.fromCharCode(10))" counter.txt',
       '  end',
       '  run: echo loop-done > while-grounded.txt',
     ].join('\n');
@@ -2539,10 +2537,10 @@ async function runZ2Once(dir) {
     'Goal: nonce-propagate',
     '',
     'flow:',
-    '  let nonce = run "node -e \\"process.stdout.write(require(\'crypto\').randomUUID())\\""',
-    "  run: node -e \"require('fs').writeFileSync('a.txt', '${nonce}')\"",
-    "  run: node -e \"require('fs').writeFileSync('b.txt', '${nonce}')\"",
-    "  run: node -e \"require('fs').writeFileSync('c.txt', '${nonce}')\"",
+    '  let nonce = run \'node -e "process.stdout.write(require(\\"crypto\\").randomUUID())"\'',
+    '  run: node -e "require(\'fs\').writeFileSync(process.argv[1], process.argv[2])" a.txt ${nonce}',
+    '  run: node -e "require(\'fs\').writeFileSync(process.argv[1], process.argv[2])" b.txt ${nonce}',
+    '  run: node -e "require(\'fs\').writeFileSync(process.argv[1], process.argv[2])" c.txt ${nonce}',
   ].join('\n');
 
   harnessRun(prompt, dir);
@@ -2642,8 +2640,8 @@ async function testZ4InterleavedStateProbe() {
       '',
       'flow:',
       '  foreach n in [10,20,30]',
-      '    let counter = run "node -e \\"process.stdout.write(String(${n}*${n}))\\""',
-      "    run: node -e \"require('fs').appendFileSync('probe.txt', '${n}=${counter}\\n')\"",
+      '    let counter = run \'node -e "process.stdout.write(String(process.argv[1]*process.argv[2]))" ${n} ${n}\'',
+      "    run: node -e \"require('fs').appendFileSync(process.argv[1], process.argv[2] + '=' + process.argv[3] + '\\n')\" probe.txt ${n} ${counter}",
       '  end',
     ].join('\n');
 
@@ -2973,8 +2971,8 @@ async function testAVForeachRunSource() {
       'Goal: foreach-run-source',
       '',
       'flow:',
-      '  foreach item in run "node -e \\"process.stdout.write(\'alpha beta gamma\')\\""',
-      "    run: node -e \"require('fs').writeFileSync('${item}.txt', '${item}')\"",
+      '  foreach item in run \'node -e "process.stdout.write(\\"alpha beta gamma\\")"\'',
+      "    run: node -e \"require('fs').writeFileSync(process.argv[1] + '.txt', process.argv[1])\" ${item}",
       '  end',
     ].join('\n');
 

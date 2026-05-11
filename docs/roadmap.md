@@ -97,13 +97,13 @@ The local-model path is now more honestly classified:
 - smoke result JSON includes a `claimProfile` block and writes a sibling runner
   capability manifest;
 - traced prompt-turn entries can carry runner capability evidence;
-- a `qwen3-coder:30b` Ollama quick smoke passed `35/39` cases but failed four
-  deterministic runtime-smoke checks;
+- a `qwen3-coder:30b` Ollama quick smoke now passes `39/39` quick cases after
+  closing four deterministic smoke-fixture/runtime-edge failures;
 - the run is recorded-only, with shell, process, and transport-witness blockers.
 
 Roadmap implication: local models are available and useful for diagnostics, but
-the next engineering work is still runner/witness safety and deterministic smoke
-closure before any local claim-profile promotion. See
+the next engineering work is still runner/witness safety before any local
+claim-profile promotion. See
 [Local Ollama Smoke With Claim-Profile Classification](evaluation/2026-05-12-local-ollama-smoke-claim-profile.md).
 
 ## Shipped vs tracked

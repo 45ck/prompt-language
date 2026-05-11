@@ -1769,6 +1769,18 @@ flow:
     expect(node.maxIterations).toBe(10);
   });
 
+  it('parses foreach with single-quoted run command containing shell quotes', () => {
+    const dsl = `Goal: g
+
+flow:
+  foreach item in run 'node -e "process.stdout.write(\\"alpha beta gamma\\")"'
+    prompt: process \${item}
+  end`;
+    const spec = parse(dsl);
+    const node = spec.nodes[0] as ForeachNode;
+    expect(node.listCommand).toBe('node -e "process.stdout.write(\\"alpha beta gamma\\")"');
+  });
+
   it('regular foreach does not set listCommand', () => {
     const spec = parse('Goal: g\n\nflow:\n  foreach x in "a b c"\n    prompt: hi\n  end');
     const node = spec.nodes[0] as ForeachNode;

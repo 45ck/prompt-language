@@ -5,10 +5,10 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
 const ENDPOINT = process.env.OLLAMA_ENDPOINT || 'http://localhost:11434';
-const MODELS = process.argv.slice(2).length
-  ? process.argv.slice(2)
-  : ['qwen3-coder:30b', 'devstral-small-2:24b'];
-const OUT_DIR = './results-2026-05-11';
+const REPEATS = Number(process.env.REPEATS || 1);
+const args = process.argv.slice(2);
+const MODELS = args.length ? args : ['qwen3-coder:30b', 'devstral-small-2:24b'];
+const OUT_DIR = process.env.OUT_DIR || './results-2026-05-11';
 mkdirSync(OUT_DIR, { recursive: true });
 
 const TASKS = [
@@ -109,43 +109,68 @@ function runOracle(fnSource, cases) {
 const allResults = [];
 
 for (const model of MODELS) {
-  console.log(`\n=== ${model} ===`);
+  console.log(`\n=== ${model} (k=${REPEATS}) ===`);
   for (const task of TASKS) {
-    process.stdout.write(`[${task.id}] `);
-    let result;
-    try {
-      const gen = await generate(model, task.prompt);
-      const fnSource = extractFn(gen.response);
-      const oracle = runOracle(fnSource, task.cases);
-      result = {
-        model,
-        task: task.id,
-        oraclePass: oracle.passed === oracle.total,
-        passed: oracle.passed,
-        total: oracle.total,
-        wallMs: Math.round(gen.wallMs),
-        loadMs: Math.round(gen.loadMs),
-        evalTokens: gen.evalTokens,
-        tokensPerSec: Math.round(gen.tokensPerSec * 10) / 10,
-        fnSource,
-        oracleDetail: oracle.details,
-      };
-    } catch (e) {
-      result = { model, task: task.id, error: e.message };
-    }
-    allResults.push(result);
-    if (result.error) {
-      console.log(`ERROR ${result.error}`);
-    } else {
-      console.log(`${result.oraclePass ? 'PASS' : 'FAIL'} ${result.passed}/${result.total} | ${result.wallMs}ms | ${result.tokensPerSec} t/s | ${result.evalTokens} tok`);
-      if (!result.oraclePass) console.log(`     ${result.oracleDetail}`);
+    for (let k = 1; k <= REPEATS; k++) {
+      process.stdout.write(`[${task.id} k${k}] `);
+      let result;
+      try {
+        const gen = await generate(model, task.prompt);
+        const fnSource = extractFn(gen.response);
+        const oracle = runOracle(fnSource, task.cases);
+        result = {
+          model,
+          task: task.id,
+          k,
+          oraclePass: oracle.passed === oracle.total,
+          passed: oracle.passed,
+          total: oracle.total,
+          wallMs: Math.round(gen.wallMs),
+          loadMs: Math.round(gen.loadMs),
+          evalTokens: gen.evalTokens,
+          tokensPerSec: Math.round(gen.tokensPerSec * 10) / 10,
+          fnSource,
+          oracleDetail: oracle.details,
+        };
+      } catch (e) {
+        result = { model, task: task.id, k, error: e.message };
+      }
+      allResults.push(result);
+      if (result.error) {
+        console.log(`ERROR ${result.error}`);
+      } else {
+        console.log(`${result.oraclePass ? 'PASS' : 'FAIL'} ${result.passed}/${result.total} | ${result.wallMs}ms | ${result.tokensPerSec} t/s | ${result.evalTokens} tok`);
+        if (!result.oraclePass) console.log(`     ${result.oracleDetail}`);
+      }
     }
   }
 }
 
 writeFileSync(`${OUT_DIR}/results.json`, JSON.stringify(allResults, null, 2));
 
-console.log('\n=== Summary ===');
+console.log('\n=== Per-task pass rate (model x task) ===');
+const byMT = {};
+for (const r of allResults) {
+  if (r.error) continue;
+  const key = `${r.model}|${r.task}`;
+  if (!byMT[key]) byMT[key] = { passed: 0, runs: 0 };
+  byMT[key].passed += r.oraclePass ? 1 : 0;
+  byMT[key].runs += 1;
+}
+const tasks = [...new Set(allResults.map((r) => r.task))];
+const models = [...new Set(allResults.map((r) => r.model))];
+const header = `${'model'.padEnd(28)} | ${tasks.map((t) => t.padEnd(15)).join(' ')}`;
+console.log(header);
+console.log('-'.repeat(header.length));
+for (const m of models) {
+  const cells = tasks.map((t) => {
+    const c = byMT[`${m}|${t}`];
+    return c ? `${c.passed}/${c.runs}`.padEnd(15) : '-'.padEnd(15);
+  });
+  console.log(`${m.padEnd(28)} | ${cells.join(' ')}`);
+}
+
+console.log('\n=== Aggregate ===');
 const summary = {};
 for (const r of allResults) {
   if (r.error) continue;
@@ -159,5 +184,5 @@ for (const [m, s] of Object.entries(summary)) {
   const tps = s.tokens && s.wallMs ? Math.round((s.tokens / (s.wallMs / 1000)) * 10) / 10 : 0;
   console.log(`${m}: ${s.passed}/${s.total} oracle | ${s.wallMs}ms total | ${s.tokens} tokens | ~${tps} t/s overall`);
 }
-writeFileSync(`${OUT_DIR}/summary.json`, JSON.stringify(summary, null, 2));
+writeFileSync(`${OUT_DIR}/summary.json`, JSON.stringify({ summary, byTask: byMT }, null, 2));
 console.log(`\nResults written to ${OUT_DIR}/`);

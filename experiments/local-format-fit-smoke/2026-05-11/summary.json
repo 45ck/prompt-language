@@ -1,20 +1,84 @@
 {
-  "qwen3-coder:30b": {
-    "passed": 5,
-    "total": 5,
-    "wallMs": 18108,
-    "tokens": 265
+  "summary": {
+    "qwen3-coder:30b": {
+      "passed": 13,
+      "total": 15,
+      "wallMs": 28788,
+      "tokens": 731
+    },
+    "devstral-small-2:24b": {
+      "passed": 12,
+      "total": 15,
+      "wallMs": 56086,
+      "tokens": 684
+    },
+    "qwen3-opencode:30b": {
+      "passed": 3,
+      "total": 15,
+      "wallMs": 190257,
+      "tokens": 7437
+    }
   },
-  "devstral-small-2:24b": {
-    "passed": 4,
-    "total": 5,
-    "wallMs": 29094,
-    "tokens": 228
-  },
-  "qwen3:8b": {
-    "passed": 1,
-    "total": 5,
-    "wallMs": 57340,
-    "tokens": 2347
+  "byTask": {
+    "qwen3-coder:30b|isPrime": {
+      "passed": 1,
+      "runs": 3
+    },
+    "qwen3-coder:30b|reverseString": {
+      "passed": 3,
+      "runs": 3
+    },
+    "qwen3-coder:30b|fibonacci": {
+      "passed": 3,
+      "runs": 3
+    },
+    "qwen3-coder:30b|gcd": {
+      "passed": 3,
+      "runs": 3
+    },
+    "qwen3-coder:30b|classifyStderr": {
+      "passed": 3,
+      "runs": 3
+    },
+    "devstral-small-2:24b|isPrime": {
+      "passed": 0,
+      "runs": 3
+    },
+    "devstral-small-2:24b|reverseString": {
+      "passed": 3,
+      "runs": 3
+    },
+    "devstral-small-2:24b|fibonacci": {
+      "passed": 3,
+      "runs": 3
+    },
+    "devstral-small-2:24b|gcd": {
+      "passed": 3,
+      "runs": 3
+    },
+    "devstral-small-2:24b|classifyStderr": {
+      "passed": 3,
+      "runs": 3
+    },
+    "qwen3-opencode:30b|isPrime": {
+      "passed": 0,
+      "runs": 3
+    },
+    "qwen3-opencode:30b|reverseString": {
+      "passed": 3,
+      "runs": 3
+    },
+    "qwen3-opencode:30b|fibonacci": {
+      "passed": 0,
+      "runs": 3
+    },
+    "qwen3-opencode:30b|gcd": {
+      "passed": 0,
+      "runs": 3
+    },
+    "qwen3-opencode:30b|classifyStderr": {
+      "passed": 0,
+      "runs": 3
+    }
   }
 }

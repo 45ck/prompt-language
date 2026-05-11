@@ -1,23 +1,29 @@
 ---
-title: Local-model strict-format-fit smoke (2026-05-11)
+title: Local-model strict-format-fit smoke (2026-05-11, k=3)
 status: ad-hoc evidence — non-claim-eligible per program-status §3a
 operator: 45ck
 host: i7-14700K / RX 7600 XT 16GB / 64GB RAM / Ollama AMD-Vulkan path
 ---
 
-# Local-model strict-format-fit smoke (2026-05-11)
+# Local-model strict-format-fit smoke (2026-05-11, k=3)
 
-Ad-hoc local-model evidence, not a harness-arena route. **Not claim-eligible.**
-Captured to give the §2a hybrid-efficiency tracker an independent
-single-shot reading on three locally available models against a small
-deterministic-oracle task battery, and to surface format-following failure
-modes that don't show up in pass-rate alone.
+Ad-hoc local-model evidence, **not a harness-arena route**.
+Single-task-battery comparison across three locally available models with
+k=3 repeats per (model, task) under deterministic-oracle scoring.
+
+The smoke was originally run at k=1 and produced misleading results.
+Re-running at k=3 surfaced two methodologically important findings (see
+"Findings" below) that justify the harness-arena's k≥3 promotion
+requirement.
 
 ## Methodology
 
 - **Endpoint:** `http://localhost:11434/api/generate` (local Ollama)
 - **Decoding:** `temperature: 0`, `num_predict: 512`, `stream: false`
-- **Models:** `qwen3-coder:30b`, `devstral-small-2:24b`, `qwen3:8b`
+  (note: `temperature: 0` does **not** guarantee deterministic output
+  on Ollama — see Finding 1)
+- **Models:** `qwen3-coder:30b`, `devstral-small-2:24b`,
+  `qwen3-opencode:30b`
 - **Tasks (n=5):** `isPrime`, `reverseString`, `fibonacci`, `gcd`,
   `classifyStderr`. Each prompt asks for **only** a JS line of the form
   `const fn = ... ;` — no fences, no commentary.
@@ -25,67 +31,131 @@ modes that don't show up in pass-rate alone.
   fixed test cases. Pass = all cases match `Object.is(actual, expected)`.
 - **Extractor:** tolerant — strips markdown fences, single-backtick
   wrappers, and stray backticks before evaluating.
-- **Repeats:** k=1 per (model, task). Single-shot only — not enough to
-  separate signal from variance.
+- **Repeats:** k=3 per (model, task), 45 generations total.
 
 ## Result
 
-| Model                  | Oracle pass | Gen tok/s | Total wall (5 tasks) | Notes                                                  |
-| ---------------------- | ----------- | --------- | -------------------- | ------------------------------------------------------ |
-| `qwen3-coder:30b`      | **5/5**     | ~44       | 18.1s                | Strict format, all correct                             |
-| `devstral-small-2:24b` | **4/5**     | ~18       | 29.1s                | One real correctness bug on `isPrime`                  |
-| `qwen3:8b`             | **1/5**     | ~45       | 57.3s                | Drifts off-format on 4/5; hits `num_predict=512` ceiling |
+### Per-task pass rate (passes / k)
 
-Per-task results in `results.json`. Aggregate counters in `summary.json`.
+| Model                  | isPrime | reverseString | fibonacci | gcd | classifyStderr | Aggregate |
+| ---------------------- | ------- | ------------- | --------- | --- | -------------- | --------- |
+| `qwen3-coder:30b`      | **1/3** | 3/3           | 3/3       | 3/3 | 3/3            | **13/15** |
+| `devstral-small-2:24b` | **0/3** | 3/3           | 3/3       | 3/3 | 3/3            | **12/15** |
+| `qwen3-opencode:30b`   | 0/3     | 3/3           | 0/3       | 0/3 | 0/3            | **3/15**  |
+
+### Generation throughput (median across 15 runs per model)
+
+| Model                  | tok/s | Notes                                                 |
+| ---------------------- | ----- | ----------------------------------------------------- |
+| `qwen3-coder:30b`      | ~45   | Concise responses (~30-100 tok per task)              |
+| `devstral-small-2:24b` | ~18   | Concise (~20-100 tok); slowest per-token              |
+| `qwen3-opencode:30b`   | ~42   | Verbose (~400-512 tok); hits ceiling on 4/5 tasks     |
+
+Per-run details in `results.json`. Aggregate counters in `summary.json`.
 
 ## Findings
 
-1. **qwen3-coder:30b** is the only model in this set that reliably
-   follows strict format and passes the oracle on every task. Backs the
-   harness-arena promotion of this model on H11 / H14 / H15
-   PATCH-test-authoring.
-2. **devstral-small-2:24b** is genuinely capable on most tasks but has a
-   real off-by-one bug on `isPrime`:
-   ```
-   const fn = (n) => n > 1 && !Array.from({length: n}, (_, i) => i + 1).slice(2).some(i => n % i === 0);
-   ```
-   The candidate-divisor list `[3, 4, ..., n]` includes `n` itself, so
-   `fn(3) === false` (since `3 % 3 === 0`). At k=1 this could be a
-   single-shot fluke; harness-arena's k≥3 runs would be needed to call
-   it a stable failure mode. Format-following is fine — the earlier
-   "parse error" results in the first run were caused by my too-strict
-   extractor (markdown / backtick wrappers), not by the model.
-3. **qwen3:8b** at this size cannot follow strict-format coding prompts.
-   Generation speed is fine (~45 tok/s, equivalent to the 30B), but the
-   model produces verbose explanations and hits `num_predict=512` on 4/5
-   tasks without ever emitting a `const fn = ...` line. This confirms
-   that for instruction-strict bounded coding tasks, 8B-class is below
-   the floor on this rig. It does not preclude its use as a classifier
-   or summariser with relaxed format requirements.
-4. **Generation throughput is GPU-memory-bandwidth bound, not
-   parameter-count bound** on this AMD-Vulkan rig. qwen3-coder:30b at
-   87%/13% GPU/CPU split runs at ~44 tok/s; qwen3:8b at presumably full
-   GPU resident runs at ~45 tok/s. The 24B devstral at ~18 tok/s is the
-   outlier — likely a different quantization or layer-mapping. Worth
-   investigating before drawing performance conclusions across models.
+### 1. `temperature: 0` is NOT reproducible on this Ollama setup
 
-## What this is not
+`qwen3-coder:30b` produced **three different outputs** for the same
+`isPrime` prompt at temperature 0:
 
-- Not a harness-arena oracle pass. Not in the §2a tracker.
-- Not k≥3 — single-shot at temperature 0; failure modes here may be
-  fragile.
+- **k=1** (107 tokens — the lucky one):
+  ```js
+  const fn = (n) => n > 1 && ![2,3,5,7,11,13,17,19,23,29,31].some(p => n % p === 0) || [2,3,5,7,11,13,17,19,23,29,31].includes(n);
+  ```
+- **k=2** and **k=3** (75 tokens):
+  ```js
+  const fn = (n) => n > 1 && ![2,3,5,7,11,13,17,19,23,29,31].some(p => n % p === 0) || n < 31 && n > 1;
+  ```
+
+Same prompt, same decoding params, same model, same Ollama instance, no
+restart — three runs, two distinct outputs. This means single-shot
+benchmarks of this model on this rig **systematically overstate
+reliability**. The harness-arena promotion gate of k≥3 is the right
+defence.
+
+### 2. The k=1 "pass" was test-case-fit, not algorithmic correctness
+
+Even the k=1 winning solution is **not a real isPrime**. It checks `n`
+against a hardcoded list of primes up to 31. It only happened to pass
+because the test cases (2, 3, 4, 5, 9, 11, 1, 0, -7, 97, 100) all fit
+either the hardcoded list or the divisibility shortcut by coincidence.
+A test case like `n = 121` (= 11², not in the primes list, not divisible
+by any in the list) would falsely return true.
+
+The k=2/k=3 output is similarly a hack — `n < 31 && n > 1` as a fallback
+makes `fn(4) === true` (wrong; 4 is not prime), which is exactly what
+the oracle catches.
+
+This means: **a passing-oracle k=1 result for a coding task is not the
+same as algorithmic correctness on the underlying problem.** The
+harness-arena private oracles must be designed with adversarial cases
+that defeat hardcoded-fit answers, or the promotion signal will be
+inflated.
+
+### 3. `devstral-small-2:24b`'s isPrime bug is stable, not single-shot variance
+
+```js
+const fn = (n) => n > 1 && !Array.from({length: n}, (_, i) => i + 1).slice(2).some(i => n % i === 0);
+```
+
+The candidate-divisor list `[3, 4, ..., n]` includes `n` itself, so
+`fn(3)` checks `3 % 3 === 0` → some=true → `!true` → false. Same
+output across all three k repeats — this is a real capability gap on
+this task class for this model, not noise.
+
+### 4. `qwen3-opencode:30b` is format-incompatible despite being a coder model
+
+3/15 aggregate, almost entirely format-compliance failure — the model
+generates verbose multi-line explanations that exceed `num_predict=512`
+without ever emitting the requested `const fn = ...` line. Generation
+speed (~42 tok/s) is comparable to qwen3-coder's, so this is purely an
+instruction-following / response-shape issue, not a capacity issue.
+**Should not be used in any route that requires bounded short-form
+responses.** Its current harness-arena usage as a "fallback bounded
+implementation worker" for H14 should be reviewed against this
+evidence.
+
+### 5. AMD-Vulkan throughput is GPU-memory-bandwidth bound on this rig
+
+Three models of substantially different parameter counts (8B, 24B, 30B)
+generate at similar tokens/sec ranges (18-45). The 30B coder runs at
+44 t/s with 87%/13% GPU/CPU split (model exceeds 16GB VRAM by a few GB);
+8B fits entirely in VRAM and runs at ~45 t/s. Generation latency on
+this rig is **not** a meaningful axis for distinguishing 8B vs 30B
+candidates — quality and format-following dominate.
+
+## What this is NOT
+
+- Not a harness-arena oracle pass; **not** in the §2a tracker.
+- Not k≥10 — k=3 is enough to refute single-shot variance, but not
+  enough to publish stable pass-rate numbers.
 - Not a frontier comparison. No frontier baseline call was made.
-- Not promotable to thesis evidence. Treat as engineering signal only.
+- Not promotable to thesis evidence per program-status.md §3a.
+- Not adversarial — the test cases are textbook and a model can pass
+  them with a hardcoded hack (Finding 2).
+
+## Implications for the §2a tracker
+
+This smoke does **not** change any §2a tracker entries. It does
+strengthen the methodological caveats that already apply:
+
+- **k≥3 is mandatory.** k=1 results overstate winners on this rig
+  (Finding 1).
+- **Oracles must be adversarial.** Textbook test cases let hardcoded-fit
+  hacks pass (Finding 2).
+- **Format compliance is a separate axis from capability.**
+  qwen3-opencode:30b is rejected by format alone despite generating
+  fluent code (Finding 4).
 
 ## Reproducing
 
 ```bash
 cd experiments/local-format-fit-smoke/2026-05-11
-node run.mjs                              # default 2 models
-node run.mjs qwen3-coder:30b qwen3:8b     # specific list
-OLLAMA_ENDPOINT=http://hostname:11434 node run.mjs   # remote
+REPEATS=3 OUT_DIR=./out node run.mjs qwen3-coder:30b devstral-small-2:24b qwen3-opencode:30b
 ```
 
 Requires Ollama running locally (or reachable) with the named models
 already pulled. Output overwrites `results.json` and `summary.json`
-in the working directory.
+in `OUT_DIR` (default `./results-2026-05-11`).

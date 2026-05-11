@@ -1,0 +1,36 @@
+{
+  "builtAt": "2026-05-11T05:35:08.644Z",
+  "excludes": [
+    "dist"
+  ],
+  "entries": [
+    {
+      "path": "eslint.config.mjs",
+      "sha256": "54abb7828720f71b518fd9ccfbf4b63e529fd6af2d8b8ee16a2e6cb836211bd5"
+    },
+    {
+      "path": "vitest.config.ts",
+      "sha256": "5270783fd4ac025942ff54ae01ef644fa5bfc18d1d70f0708eaff9fbdc11fae3"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "bdee72b9533eff301354e9a5942724572a4c1ba4eed3a0065adef8907e37bb41"
+    },
+    {
+      "path": "tsconfig.build.json",
+      "sha256": "758b0d90b43bb69d95c97caaaf19e6c9b47aa7674a1fa793683a68f6e665eb28"
+    },
+    {
+      "path": ".dependency-cruiser.cjs",
+      "sha256": "425236b18441707c455d7a0dc44f87192f5676c841267debbbbfd3dbc0c1c968"
+    },
+    {
+      "path": "knip.json",
+      "sha256": "f8d9099e22ed611d46d25b8965c04671402ff5c99c6221116337242f5955b94f"
+    },
+    {
+      "path": "cspell.json",
+      "sha256": "0717cf245651d3ed57c3e066706fffc01498e5b07dba44b3c98c33cae3f3310b"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "signer": "operator-45ck-2026-05",
+  "signerRole": "operator",
+  "signedAt": "2026-05-11T05:35:50.475Z",
+  "algorithm": "ed25519",
+  "signature": "fKbn0jTtH82AP3d6eqRQqksPEr0A6RBwCDFYFAk0J63Mj/dWI46u0Z8SwIQ2R5fUT9cZOzmC+k18WPRH060WBA==",
+  "payload": {
+    "version": 1,
+    "runId": "bd1d6aafb7bed997-b01a-4ea8-7fdf-264a7766cd86",
+    "commitSha": "aab465c60e7158b0c8c1d27af821d7e5ba8044fb",
+    "manifestHash": "133c6b2a8f626b8f8c1f63511d697833caeaa0bf966d8431612b1fd7b60fb978",
+    "finalStateHash": "62fd14cb4cb22cd2c24f11581fd5f0aae794db68890284dce051bd7268592846",
+    "pairCount": 1,
+    "runtimeFamily": "qwen",
+    "reviewerFamily": "mistral",
+    "createdAt": "2026-05-11T05:35:08.948Z"
+  }
+}

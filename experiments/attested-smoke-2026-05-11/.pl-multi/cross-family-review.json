@@ -1,0 +1,6 @@
+{
+  "factoryFamily": "qwen",
+  "reviewerFamily": "mistral",
+  "verdict": "stub",
+  "notes": "Stub cross-family review for attested smoke experiment. factoryFamily=qwen (qwen3-coder:30b ran the flow); reviewerFamily=mistral nominally (no actual reviewer model invoked yet — this entry exists to test the attestation pipeline schema). For claim-grade bundles, run cross-family-review.mjs against the produced output."
+}

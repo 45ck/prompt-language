@@ -1,0 +1,5 @@
+Goal: multi-node attestation smoke — prompt then verify via run.
+
+flow:
+  prompt: Use the write_file action to create artifact.txt with content "multi-node attested run". Then emit done.
+  run: test -f artifact.txt && echo PRESENT || echo MISSING

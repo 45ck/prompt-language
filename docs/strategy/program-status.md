@@ -118,6 +118,26 @@ scopes. Both findings stand:
   in the kill-rule sense. Did not trigger the kill rule alone
   (1 task class, not ≥3) but is consistent with hybrid-failure-mode
   at this scope.
+- **Per-real-software multistage (break-even at N≈12):**
+  [`experiments/concord-vho-realsoftware-tinymd/2026-05-11/`](../../experiments/concord-vho-realsoftware-tinymd/2026-05-11/)
+  — Markdown→HTML converter (8 routable functions + frontier
+  orchestrator). 6/8 first-attempt local pass. Final assembled CLI
+  passes 24/24 oracles (8/8 per-function + 13/13 integration). Two
+  real local failure modes characterised: regex backslash error
+  and wrong sibling-contract assumption. Per-pilot token cost:
+  hybrid ~13.2k frontier scaffolding vs frontier-only ~911. **14×
+  more expensive at N=1; break-even at N≈10-12 reused builds with
+  the same scaffolding.** Tagged `real-software-multistage`. Skill
+  updated with new boundary "don't use for one-off real-software
+  builds."
+
+**Engineering-readiness synthesis (2026-05-11):** See
+[`engineering-readiness-2026-05-11.md`](engineering-readiness-2026-05-11.md)
+for the explicit GO / CONDITIONAL / NO verdict per engineering
+decision. Headline: narrow-scope routing is shippable today; broad
+architectural moves need more evidence (k≥10 stability, cross-app
+reuse measurement, adversarial oracle writing, claim-eligible
+operator signer).
 
 The hybrid pattern is therefore **scope-dependent in this
 evidence**: cost-positive for stateless single-function code

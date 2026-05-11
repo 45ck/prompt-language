@@ -1,4 +1,13 @@
 {
   "version": 1,
-  "signers": []
+  "signers": [
+    {
+      "signerId": "operator-45ck-2026-05",
+      "role": "operator",
+      "publicKey": "OoGS/XUMYiZjk59FCQzsKInc2ZMYAiYNFfIdAHDghYI=",
+      "validFrom": "2026-05-11T00:00:00Z",
+      "validUntil": null,
+      "notes": "Operator key for §3a gate 5. Private key held offline by 45ck. Provisioned 2026-05-11 via operator-signer-provisioning-playbook.md."
+    }
+  ]
 }

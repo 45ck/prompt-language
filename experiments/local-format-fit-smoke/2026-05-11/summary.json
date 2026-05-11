@@ -1,0 +1,20 @@
+{
+  "qwen3-coder:30b": {
+    "passed": 5,
+    "total": 5,
+    "wallMs": 18108,
+    "tokens": 265
+  },
+  "devstral-small-2:24b": {
+    "passed": 4,
+    "total": 5,
+    "wallMs": 29094,
+    "tokens": 228
+  },
+  "qwen3:8b": {
+    "passed": 1,
+    "total": 5,
+    "wallMs": 57340,
+    "tokens": 2347
+  }
+}

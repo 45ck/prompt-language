@@ -1,0 +1,37 @@
+[
+  {
+    "id": "isNumber",
+    "signature": "function isNumber(token)",
+    "description": "Return true iff token is a string matching an integer or decimal number, optionally preceded by '-'. Examples that match: '0', '42', '-7', '3.14', '-0.5'. Examples that don't: '1.', '.5', '+1', '1e2', 'abc', ''."
+  },
+  {
+    "id": "isOperator",
+    "signature": "function isOperator(token)",
+    "description": "Return true iff token is exactly one of these strings: '+', '-', '*', '/'. False otherwise."
+  },
+  {
+    "id": "safeNumber",
+    "signature": "function safeNumber(s)",
+    "description": "Parse s as a JavaScript number. If the result is NaN, throw an Error with message 'not a number: <s>'. Otherwise return the number."
+  },
+  {
+    "id": "applyOperator",
+    "signature": "function applyOperator(op, a, b)",
+    "description": "Apply the binary operator op (one of '+', '-', '*', '/') to numbers a and b and return the result. For '/', if b is 0, throw an Error with message 'division by zero'. For an unknown op, throw an Error with message 'unknown operator: <op>'."
+  },
+  {
+    "id": "tokenizeRpn",
+    "signature": "function tokenizeRpn(expr)",
+    "description": "Coerce expr to a string, trim it, split on runs of whitespace, and filter out any empty strings. Return the array of token strings."
+  },
+  {
+    "id": "formatResult",
+    "signature": "function formatResult(n)",
+    "description": "Format a numeric result as a string. If n is an integer (per Number.isInteger), return its decimal string form. Otherwise format with up to 6 decimal places (toFixed(6)) but trim trailing zeros and trim a trailing decimal point. Examples: 3 -> '3', 3.14 -> '3.14', 1/3 -> '0.333333', 0.5 -> '0.5'."
+  },
+  {
+    "id": "evaluate",
+    "signature": "function evaluate(tokens)",
+    "description": "Walk tokens (an array of strings) using a stack. For each token: if isNumber(token), push safeNumber(token) to the stack. If isOperator(token), pop two values (b then a), push applyOperator(token, a, b). Otherwise throw an Error 'unknown token: <token>'. After all tokens, the stack must contain exactly one value — return it. If the stack has !=1 values at the end, throw 'malformed expression: <n> values left on stack'. If a pop is attempted with fewer than 2 values, throw 'stack underflow'. Assume isNumber, isOperator, safeNumber, applyOperator are top-level functions in the same module."
+  }
+]

@@ -1,0 +1,2062 @@
+{
+  "startedAt": "2026-05-11T03:03:27.977Z",
+  "model": "qwen3-coder:30b",
+  "repeats": 10,
+  "perTask": [
+    {
+      "id": "applyDiscountTier",
+      "category": "novel-spec",
+      "promptTokensTiktoken": 50,
+      "armB": {
+        "pass": true,
+        "tokens": 63,
+        "chars": 198
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k1.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1958,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          },
+          {
+            "k": 2,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k2.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1467,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          },
+          {
+            "k": 3,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k3.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1489,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          },
+          {
+            "k": 4,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k4.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1460,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          },
+          {
+            "k": 5,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k5.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1472,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          },
+          {
+            "k": 6,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k6.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1457,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          },
+          {
+            "k": 7,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k7.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1462,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          },
+          {
+            "k": 8,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k8.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1474,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          },
+          {
+            "k": 9,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k9.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1470,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          },
+          {
+            "k": 10,
+            "pass": false,
+            "oracle": {
+              "taskId": "applyDiscountTier",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\applyDiscountTier.k10.mjs",
+              "passed": 4,
+              "total": 10,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([200,[[100,10]]]) = 200 expected 180",
+                "fn([500,[[100,5],[300,10],[500,20]]]) = 500 expected 400",
+                "fn([299,[[100,5],[300,10],[500,20]]]) = 299 expected 284.05",
+                "fn([502,[[14,18],[170,27]]]) = 502 expected 366.46",
+                "fn([396,[[5,42],[115,49]]]) = 396 expected 201.96",
+                "fn([346,[[51,38],[104,51]]]) = 346 expected 169.54"
+              ]
+            },
+            "wallMs": 1460,
+            "localEvalTokens": 60,
+            "codeTiktokenTokens": 59,
+            "codeChars": 223
+          }
+        ],
+        "passingReps": 0,
+        "firstAttemptPass": false,
+        "anyPass": false,
+        "bestPassingTokens": null,
+        "avgLocalEvalTokens": 60
+      }
+    },
+    {
+      "id": "validateConfig",
+      "category": "novel-spec",
+      "promptTokensTiktoken": 52,
+      "armB": {
+        "pass": true,
+        "tokens": 97,
+        "chars": 376
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k1.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 6462,
+            "localEvalTokens": 261,
+            "codeTiktokenTokens": 260,
+            "codeChars": 1137
+          },
+          {
+            "k": 2,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k2.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 7071,
+            "localEvalTokens": 301,
+            "codeTiktokenTokens": 300,
+            "codeChars": 1333
+          },
+          {
+            "k": 3,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k3.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 7216,
+            "localEvalTokens": 301,
+            "codeTiktokenTokens": 300,
+            "codeChars": 1333
+          },
+          {
+            "k": 4,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k4.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 7180,
+            "localEvalTokens": 301,
+            "codeTiktokenTokens": 300,
+            "codeChars": 1333
+          },
+          {
+            "k": 5,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k5.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 7164,
+            "localEvalTokens": 301,
+            "codeTiktokenTokens": 300,
+            "codeChars": 1333
+          },
+          {
+            "k": 6,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k6.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 7243,
+            "localEvalTokens": 301,
+            "codeTiktokenTokens": 300,
+            "codeChars": 1333
+          },
+          {
+            "k": 7,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k7.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 8157,
+            "localEvalTokens": 301,
+            "codeTiktokenTokens": 300,
+            "codeChars": 1333
+          },
+          {
+            "k": 8,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k8.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 7456,
+            "localEvalTokens": 301,
+            "codeTiktokenTokens": 300,
+            "codeChars": 1333
+          },
+          {
+            "k": 9,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k9.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 7203,
+            "localEvalTokens": 301,
+            "codeTiktokenTokens": 300,
+            "codeChars": 1333
+          },
+          {
+            "k": 10,
+            "pass": true,
+            "oracle": {
+              "taskId": "validateConfig",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\validateConfig.k10.mjs",
+              "passed": 6,
+              "total": 6,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 7216,
+            "localEvalTokens": 301,
+            "codeTiktokenTokens": 300,
+            "codeChars": 1333
+          }
+        ],
+        "passingReps": 10,
+        "firstAttemptPass": true,
+        "anyPass": true,
+        "bestPassingTokens": 260,
+        "avgLocalEvalTokens": 297
+      }
+    },
+    {
+      "id": "formatLogEntry",
+      "category": "novel-spec",
+      "promptTokensTiktoken": 50,
+      "armB": {
+        "pass": true,
+        "tokens": 91,
+        "chars": 336
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k1.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:03.847Z level=info message=\\\"\\\" service=api host=h1\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:03.848Z level=error message=\\\"\\\" service=web host=h2\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:03.848Z level=debug message=\\\"\\\" service=s host=h\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:03.848Z level=WARN message=\\\"\\\" service=x host=y\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 2189,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 328
+          },
+          {
+            "k": 2,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k2.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:06.024Z [info]  {\\\"service\\\":\\\"api\\\",\\\"host\\\":\\\"h1\\\"}\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:06.025Z [error]  {\\\"service\\\":\\\"web\\\",\\\"host\\\":\\\"h2\\\"}\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:06.025Z [debug]  {\\\"service\\\":\\\"s\\\",\\\"host\\\":\\\"h\\\"}\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:06.025Z [WARN]  {\\\"service\\\":\\\"x\\\",\\\"host\\\":\\\"y\\\"}\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 1944,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 325
+          },
+          {
+            "k": 3,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k3.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:08.196Z [info]  {\\\"service\\\":\\\"api\\\",\\\"host\\\":\\\"h1\\\"}\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:08.197Z [error]  {\\\"service\\\":\\\"web\\\",\\\"host\\\":\\\"h2\\\"}\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:08.197Z [debug]  {\\\"service\\\":\\\"s\\\",\\\"host\\\":\\\"h\\\"}\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:08.197Z [WARN]  {\\\"service\\\":\\\"x\\\",\\\"host\\\":\\\"y\\\"}\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 1944,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 325
+          },
+          {
+            "k": 4,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k4.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:10.372Z [info]  {\\\"service\\\":\\\"api\\\",\\\"host\\\":\\\"h1\\\"}\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:10.373Z [error]  {\\\"service\\\":\\\"web\\\",\\\"host\\\":\\\"h2\\\"}\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:10.373Z [debug]  {\\\"service\\\":\\\"s\\\",\\\"host\\\":\\\"h\\\"}\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:10.373Z [WARN]  {\\\"service\\\":\\\"x\\\",\\\"host\\\":\\\"y\\\"}\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 1943,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 325
+          },
+          {
+            "k": 5,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k5.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:12.596Z [info]  {\\\"service\\\":\\\"api\\\",\\\"host\\\":\\\"h1\\\"}\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:12.597Z [error]  {\\\"service\\\":\\\"web\\\",\\\"host\\\":\\\"h2\\\"}\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:12.597Z [debug]  {\\\"service\\\":\\\"s\\\",\\\"host\\\":\\\"h\\\"}\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:12.597Z [WARN]  {\\\"service\\\":\\\"x\\\",\\\"host\\\":\\\"y\\\"}\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 1983,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 325
+          },
+          {
+            "k": 6,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k6.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:14.760Z [info]  {\\\"service\\\":\\\"api\\\",\\\"host\\\":\\\"h1\\\"}\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:14.761Z [error]  {\\\"service\\\":\\\"web\\\",\\\"host\\\":\\\"h2\\\"}\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:14.761Z [debug]  {\\\"service\\\":\\\"s\\\",\\\"host\\\":\\\"h\\\"}\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:14.761Z [WARN]  {\\\"service\\\":\\\"x\\\",\\\"host\\\":\\\"y\\\"}\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 1920,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 325
+          },
+          {
+            "k": 7,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k7.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:16.857Z [info]  {\\\"service\\\":\\\"api\\\",\\\"host\\\":\\\"h1\\\"}\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:16.858Z [error]  {\\\"service\\\":\\\"web\\\",\\\"host\\\":\\\"h2\\\"}\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:16.858Z [debug]  {\\\"service\\\":\\\"s\\\",\\\"host\\\":\\\"h\\\"}\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:16.858Z [WARN]  {\\\"service\\\":\\\"x\\\",\\\"host\\\":\\\"y\\\"}\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 1866,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 325
+          },
+          {
+            "k": 8,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k8.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:18.982Z [info]  {\\\"service\\\":\\\"api\\\",\\\"host\\\":\\\"h1\\\"}\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:18.983Z [error]  {\\\"service\\\":\\\"web\\\",\\\"host\\\":\\\"h2\\\"}\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:18.983Z [debug]  {\\\"service\\\":\\\"s\\\",\\\"host\\\":\\\"h\\\"}\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:18.983Z [WARN]  {\\\"service\\\":\\\"x\\\",\\\"host\\\":\\\"y\\\"}\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 1894,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 325
+          },
+          {
+            "k": 9,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k9.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:21.173Z [info]  {\\\"service\\\":\\\"api\\\",\\\"host\\\":\\\"h1\\\"}\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:21.173Z [error]  {\\\"service\\\":\\\"web\\\",\\\"host\\\":\\\"h2\\\"}\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:21.173Z [debug]  {\\\"service\\\":\\\"s\\\",\\\"host\\\":\\\"h\\\"}\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:21.173Z [WARN]  {\\\"service\\\":\\\"x\\\",\\\"host\\\":\\\"y\\\"}\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 1962,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 325
+          },
+          {
+            "k": 10,
+            "pass": false,
+            "oracle": {
+              "taskId": "formatLogEntry",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\formatLogEntry.k10.mjs",
+              "passed": 0,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 1,
+              "failures": [
+                "fn([{\"level\":\"info\",\"msg\":\"started\"},{\"service\":\"api\",\"host\":\"h1\"}]) = \"2026-05-11T03:05:23.327Z [info]  {\\\"service\\\":\\\"api\\\",\\\"host\\\":\\\"h1\\\"}\" expected \"[INFO] api@h1: started\"",
+                "fn([{\"level\":\"error\",\"msg\":\"fail\",\"fields\":{\"code\":500,\"attempt\":2}},{\"service\":\"web\",\"host\":\"h2\"}]) = \"2026-05-11T03:05:23.328Z [error]  {\\\"service\\\":\\\"web\\\",\\\"host\\\":\\\"h2\\\"}\" expected \"[ERROR] web@h2: fail | code=500 attempt=2\"",
+                "fn([{\"level\":\"debug\",\"msg\":\"noop\",\"fields\":{}},{\"service\":\"s\",\"host\":\"h\"}]) = \"2026-05-11T03:05:23.328Z [debug]  {\\\"service\\\":\\\"s\\\",\\\"host\\\":\\\"h\\\"}\" expected \"[DEBUG] s@h: noop\"",
+                "fn([{\"level\":\"WARN\",\"msg\":\"lower\"},{\"service\":\"x\",\"host\":\"y\"}]) = \"2026-05-11T03:05:23.328Z [WARN]  {\\\"service\\\":\\\"x\\\",\\\"host\\\":\\\"y\\\"}\" expected \"[WARN] x@y: lower\""
+              ]
+            },
+            "wallMs": 1925,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 325
+          }
+        ],
+        "passingReps": 0,
+        "firstAttemptPass": false,
+        "anyPass": false,
+        "bestPassingTokens": null,
+        "avgLocalEvalTokens": 80
+      }
+    },
+    {
+      "id": "mergeAcl",
+      "category": "novel-spec",
+      "promptTokensTiktoken": 50,
+      "armB": {
+        "pass": true,
+        "tokens": 69,
+        "chars": 240
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k1.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2846,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          },
+          {
+            "k": 2,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k2.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2617,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          },
+          {
+            "k": 3,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k3.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2685,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          },
+          {
+            "k": 4,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k4.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2634,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          },
+          {
+            "k": 5,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k5.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2653,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          },
+          {
+            "k": 6,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k6.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2678,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          },
+          {
+            "k": 7,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k7.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2739,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          },
+          {
+            "k": 8,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k8.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2703,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          },
+          {
+            "k": 9,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k9.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2666,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          },
+          {
+            "k": 10,
+            "pass": false,
+            "oracle": {
+              "taskId": "mergeAcl",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\mergeAcl.k10.mjs",
+              "passed": 1,
+              "total": 4,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\",\"y\"]},{\"role\":\"a\",\"perms\":[\"y\",\"z\"]}]]) = {\"role\":[\"a\"],\"perms\":[\"x\",\"y\",\"z\"]} expected {}",
+                "fn([[{\"role\":\"a\",\"perms\":[\"x\"]},{\"role\":\"b\",\"perms\":[\"y\"]}]]) = {\"role\":[\"a\",\"b\"],\"perms\":[\"x\",\"y\"]} expected {}"
+              ]
+            },
+            "wallMs": 2721,
+            "localEvalTokens": 112,
+            "codeTiktokenTokens": 111,
+            "codeChars": 455
+          }
+        ],
+        "passingReps": 0,
+        "firstAttemptPass": false,
+        "anyPass": false,
+        "bestPassingTokens": null,
+        "avgLocalEvalTokens": 112
+      }
+    },
+    {
+      "id": "chunk",
+      "category": "utility",
+      "promptTokensTiktoken": 46,
+      "armB": {
+        "pass": true,
+        "tokens": 62,
+        "chars": 196
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1446,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          },
+          {
+            "k": 2,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1247,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          },
+          {
+            "k": 3,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1249,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          },
+          {
+            "k": 4,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1248,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          },
+          {
+            "k": 5,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1245,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          },
+          {
+            "k": 6,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1239,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          },
+          {
+            "k": 7,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1250,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          },
+          {
+            "k": 8,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1327,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          },
+          {
+            "k": 9,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1274,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          },
+          {
+            "k": 10,
+            "pass": false,
+            "oracle": null,
+            "wallMs": 1388,
+            "localEvalTokens": 51,
+            "codeTiktokenTokens": 50,
+            "codeChars": 166
+          }
+        ],
+        "passingReps": 0,
+        "firstAttemptPass": false,
+        "anyPass": false,
+        "bestPassingTokens": null,
+        "avgLocalEvalTokens": 51
+      }
+    },
+    {
+      "id": "slugify",
+      "category": "utility",
+      "promptTokensTiktoken": 45,
+      "armB": {
+        "pass": true,
+        "tokens": 37,
+        "chars": 117
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k1.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1848,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          },
+          {
+            "k": 2,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k2.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1637,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          },
+          {
+            "k": 3,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k3.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1626,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          },
+          {
+            "k": 4,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k4.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1676,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          },
+          {
+            "k": 5,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k5.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1686,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          },
+          {
+            "k": 6,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k6.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1660,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          },
+          {
+            "k": 7,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k7.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1673,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          },
+          {
+            "k": 8,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k8.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1651,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          },
+          {
+            "k": 9,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k9.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1676,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          },
+          {
+            "k": 10,
+            "pass": false,
+            "oracle": {
+              "taskId": "slugify",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\slugify.k10.mjs",
+              "passed": 5,
+              "total": 7,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"Foo!@#Bar$%^Baz\"]) = \"foobarbaz\" expected \"foo-bar-baz\"",
+                "fn([\"Café résumé naïve\"]) = \"caf-rsum-nave\" expected \"caf-r-sum-na-ve\""
+              ]
+            },
+            "wallMs": 1660,
+            "localEvalTokens": 68,
+            "codeTiktokenTokens": 67,
+            "codeChars": 217
+          }
+        ],
+        "passingReps": 0,
+        "firstAttemptPass": false,
+        "anyPass": false,
+        "bestPassingTokens": null,
+        "avgLocalEvalTokens": 68
+      }
+    },
+    {
+      "id": "groupBy",
+      "category": "utility",
+      "promptTokensTiktoken": 45,
+      "armB": {
+        "pass": true,
+        "tokens": 59,
+        "chars": 200
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k1.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1688,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          },
+          {
+            "k": 2,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k2.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1512,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          },
+          {
+            "k": 3,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k3.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1513,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          },
+          {
+            "k": 4,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k4.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1507,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          },
+          {
+            "k": 5,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k5.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1566,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          },
+          {
+            "k": 6,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k6.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1530,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          },
+          {
+            "k": 7,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k7.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1525,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          },
+          {
+            "k": 8,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k8.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1489,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          },
+          {
+            "k": 9,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k9.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1526,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          },
+          {
+            "k": 10,
+            "pass": true,
+            "oracle": {
+              "taskId": "groupBy",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\groupBy.k10.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1532,
+            "localEvalTokens": 62,
+            "codeTiktokenTokens": 61,
+            "codeChars": 224
+          }
+        ],
+        "passingReps": 10,
+        "firstAttemptPass": true,
+        "anyPass": true,
+        "bestPassingTokens": 61,
+        "avgLocalEvalTokens": 62
+      }
+    },
+    {
+      "id": "parseQuery",
+      "category": "utility",
+      "promptTokensTiktoken": 45,
+      "armB": {
+        "pass": true,
+        "tokens": 125,
+        "chars": 420
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k1.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 3908,
+            "localEvalTokens": 156,
+            "codeTiktokenTokens": 155,
+            "codeChars": 635
+          },
+          {
+            "k": 2,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k2.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 3517,
+            "localEvalTokens": 149,
+            "codeTiktokenTokens": 148,
+            "codeChars": 605
+          },
+          {
+            "k": 3,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k3.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 3586,
+            "localEvalTokens": 149,
+            "codeTiktokenTokens": 148,
+            "codeChars": 605
+          },
+          {
+            "k": 4,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k4.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 4031,
+            "localEvalTokens": 149,
+            "codeTiktokenTokens": 148,
+            "codeChars": 605
+          },
+          {
+            "k": 5,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k5.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 3878,
+            "localEvalTokens": 149,
+            "codeTiktokenTokens": 148,
+            "codeChars": 605
+          },
+          {
+            "k": 6,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k6.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 3549,
+            "localEvalTokens": 149,
+            "codeTiktokenTokens": 148,
+            "codeChars": 605
+          },
+          {
+            "k": 7,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k7.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 3521,
+            "localEvalTokens": 149,
+            "codeTiktokenTokens": 148,
+            "codeChars": 605
+          },
+          {
+            "k": 8,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k8.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 3659,
+            "localEvalTokens": 149,
+            "codeTiktokenTokens": 148,
+            "codeChars": 605
+          },
+          {
+            "k": 9,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k9.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 3544,
+            "localEvalTokens": 149,
+            "codeTiktokenTokens": 148,
+            "codeChars": 605
+          },
+          {
+            "k": 10,
+            "pass": false,
+            "oracle": {
+              "taskId": "parseQuery",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\parseQuery.k10.mjs",
+              "passed": 6,
+              "total": 8,
+              "oraclePass": false,
+              "wallMs": 0,
+              "failures": [
+                "fn([\"?\"]) = {\"\":\"\"} expected {}",
+                "fn([\"a=1&a=2\"]) = {\"a\":[\"1\",\"2\"]} expected {\"a\":\"2\"}"
+              ]
+            },
+            "wallMs": 3529,
+            "localEvalTokens": 149,
+            "codeTiktokenTokens": 148,
+            "codeChars": 605
+          }
+        ],
+        "passingReps": 0,
+        "firstAttemptPass": false,
+        "anyPass": false,
+        "bestPassingTokens": null,
+        "avgLocalEvalTokens": 150
+      }
+    },
+    {
+      "id": "partition",
+      "category": "utility",
+      "promptTokensTiktoken": 46,
+      "armB": {
+        "pass": true,
+        "tokens": 44,
+        "chars": 132
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k1.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 2159,
+            "localEvalTokens": 80,
+            "codeTiktokenTokens": 79,
+            "codeChars": 266
+          },
+          {
+            "k": 2,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k2.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1869,
+            "localEvalTokens": 78,
+            "codeTiktokenTokens": 77,
+            "codeChars": 260
+          },
+          {
+            "k": 3,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k3.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1877,
+            "localEvalTokens": 78,
+            "codeTiktokenTokens": 77,
+            "codeChars": 260
+          },
+          {
+            "k": 4,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k4.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1893,
+            "localEvalTokens": 78,
+            "codeTiktokenTokens": 77,
+            "codeChars": 260
+          },
+          {
+            "k": 5,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k5.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1894,
+            "localEvalTokens": 78,
+            "codeTiktokenTokens": 77,
+            "codeChars": 260
+          },
+          {
+            "k": 6,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k6.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1886,
+            "localEvalTokens": 78,
+            "codeTiktokenTokens": 77,
+            "codeChars": 260
+          },
+          {
+            "k": 7,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k7.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1837,
+            "localEvalTokens": 78,
+            "codeTiktokenTokens": 77,
+            "codeChars": 260
+          },
+          {
+            "k": 8,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k8.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1832,
+            "localEvalTokens": 78,
+            "codeTiktokenTokens": 77,
+            "codeChars": 260
+          },
+          {
+            "k": 9,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k9.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1874,
+            "localEvalTokens": 78,
+            "codeTiktokenTokens": 77,
+            "codeChars": 260
+          },
+          {
+            "k": 10,
+            "pass": true,
+            "oracle": {
+              "taskId": "partition",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\partition.k10.mjs",
+              "passed": 4,
+              "total": 4,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1864,
+            "localEvalTokens": 78,
+            "codeTiktokenTokens": 77,
+            "codeChars": 260
+          }
+        ],
+        "passingReps": 10,
+        "firstAttemptPass": true,
+        "anyPass": true,
+        "bestPassingTokens": 79,
+        "avgLocalEvalTokens": 78
+      }
+    },
+    {
+      "id": "flatten",
+      "category": "utility",
+      "promptTokensTiktoken": 41,
+      "armB": {
+        "pass": true,
+        "tokens": 46,
+        "chars": 167
+      },
+      "armA": {
+        "reps": [
+          {
+            "k": 1,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k1.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 1502,
+            "localEvalTokens": 54,
+            "codeTiktokenTokens": 53,
+            "codeChars": 214
+          },
+          {
+            "k": 2,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k2.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 797,
+            "localEvalTokens": 32,
+            "codeTiktokenTokens": 31,
+            "codeChars": 124
+          },
+          {
+            "k": 3,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k3.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 793,
+            "localEvalTokens": 32,
+            "codeTiktokenTokens": 31,
+            "codeChars": 124
+          },
+          {
+            "k": 4,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k4.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 794,
+            "localEvalTokens": 32,
+            "codeTiktokenTokens": 31,
+            "codeChars": 124
+          },
+          {
+            "k": 5,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k5.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 790,
+            "localEvalTokens": 32,
+            "codeTiktokenTokens": 31,
+            "codeChars": 124
+          },
+          {
+            "k": 6,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k6.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 804,
+            "localEvalTokens": 32,
+            "codeTiktokenTokens": 31,
+            "codeChars": 124
+          },
+          {
+            "k": 7,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k7.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 786,
+            "localEvalTokens": 32,
+            "codeTiktokenTokens": 31,
+            "codeChars": 124
+          },
+          {
+            "k": 8,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k8.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 786,
+            "localEvalTokens": 32,
+            "codeTiktokenTokens": 31,
+            "codeChars": 124
+          },
+          {
+            "k": 9,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k9.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 918,
+            "localEvalTokens": 32,
+            "codeTiktokenTokens": 31,
+            "codeChars": 124
+          },
+          {
+            "k": 10,
+            "pass": true,
+            "oracle": {
+              "taskId": "flatten",
+              "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-microtask-cost\\2026-05-11\\arm-a-local\\flatten.k10.mjs",
+              "passed": 7,
+              "total": 7,
+              "oraclePass": true,
+              "wallMs": 0,
+              "failures": []
+            },
+            "wallMs": 801,
+            "localEvalTokens": 32,
+            "codeTiktokenTokens": 31,
+            "codeChars": 124
+          }
+        ],
+        "passingReps": 10,
+        "firstAttemptPass": true,
+        "anyPass": true,
+        "bestPassingTokens": 53,
+        "avgLocalEvalTokens": 34
+      }
+    }
+  ],
+  "completedAt": "2026-05-11T03:10:14.216Z",
+  "portfolio": {
+    "totalTasks": 10,
+    "firstAttemptPass": 4,
+    "anyPass": 4,
+    "totalArmBTokens": 693,
+    "tokensSavedWhenLocalPasses": 246,
+    "tokensStillSpentWhenLocalFails": 447,
+    "netFrontierTokenSavings": 246,
+    "savingsPercent": 35,
+    "savingsTasks": [
+      "validateConfig (+97)",
+      "groupBy (+59)",
+      "partition (+44)",
+      "flatten (+46)"
+    ],
+    "lossTasks": [
+      "applyDiscountTier (-63)",
+      "formatLogEntry (-91)",
+      "mergeAcl (-69)",
+      "chunk (-62)",
+      "slugify (-37)",
+      "parseQuery (-125)"
+    ]
+  }
+}

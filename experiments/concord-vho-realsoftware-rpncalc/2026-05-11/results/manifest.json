@@ -1,0 +1,181 @@
+{
+  "startedAt": "2026-05-11T03:13:58.584Z",
+  "model": "qwen3-coder:30b",
+  "perTask": [
+    {
+      "id": "isNumber",
+      "route": "frontier-required",
+      "attempt": {
+        "pass": false,
+        "oracle": {
+          "taskId": "isNumber",
+          "passed": 10,
+          "total": 11,
+          "oraclePass": false,
+          "failures": [
+            "fn([\".5\"]) = true expected false"
+          ]
+        },
+        "wallMs": 1535,
+        "localEvalTokens": 33,
+        "codeTiktoken": 32,
+        "codeChars": 88,
+        "generatedRaw": "export function isNumber(token) {\n    return /^-?(?:\\d+|\\d+\\.\\d+|\\.\\d+)$/.test(token);\n}",
+        "extractedCode": "export function isNumber(token) {\n    return /^-?(?:\\d+|\\d+\\.\\d+|\\.\\d+)$/.test(token);\n}"
+      }
+    },
+    {
+      "id": "isOperator",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "isOperator",
+          "passed": 9,
+          "total": 9,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 908,
+        "localEvalTokens": 26,
+        "codeTiktoken": 25,
+        "codeChars": 114,
+        "generatedRaw": "export function isOperator(token) {\n    return token === '+' || token === '-' || token === '*' || token === '/';\n}",
+        "extractedCode": "export function isOperator(token) {\n    return token === '+' || token === '-' || token === '*' || token === '/';\n}"
+      }
+    },
+    {
+      "id": "safeNumber",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "safeNumber",
+          "passed": 6,
+          "total": 6,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 1445,
+        "localEvalTokens": 41,
+        "codeTiktoken": 40,
+        "codeChars": 151,
+        "generatedRaw": "export function safeNumber(s) {\n    const num = Number(s);\n    if (isNaN(num)) {\n        throw new Error(`not a number: ${s}`);\n    }\n    return num;\n}",
+        "extractedCode": "export function safeNumber(s) {\n    const num = Number(s);\n    if (isNaN(num)) {\n        throw new Error(`not a number: ${s}`);\n    }\n    return num;\n}"
+      }
+    },
+    {
+      "id": "applyOperator",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "applyOperator",
+          "passed": 7,
+          "total": 7,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 2629,
+        "localEvalTokens": 90,
+        "codeTiktoken": 89,
+        "codeChars": 301,
+        "generatedRaw": "export function applyOperator(op, a, b) {\n    if (op === '+') return a + b;\n    if (op === '-') return a - b;\n    if (op === '*') return a * b;\n    if (op === '/') {\n        if (b === 0) throw new Error('division by zero');\n        return a / b;\n    }\n    throw new Error(`unknown operator: ${op}`);\n}",
+        "extractedCode": "export function applyOperator(op, a, b) {\n    if (op === '+') return a + b;\n    if (op === '-') return a - b;\n    if (op === '*') return a * b;\n    if (op === '/') {\n        if (b === 0) throw new Error('division by zero');\n        return a / b;\n    }\n    throw new Error(`unknown operator: ${op}`);\n}"
+      }
+    },
+    {
+      "id": "tokenizeRpn",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "tokenizeRpn",
+          "passed": 5,
+          "total": 5,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 1193,
+        "localEvalTokens": 31,
+        "codeTiktoken": 30,
+        "codeChars": 116,
+        "generatedRaw": "export function tokenizeRpn(expr) {\n    return String(expr).trim().split(/\\s+/).filter(token => token.length > 0);\n}",
+        "extractedCode": "export function tokenizeRpn(expr) {\n    return String(expr).trim().split(/\\s+/).filter(token => token.length > 0);\n}"
+      }
+    },
+    {
+      "id": "formatResult",
+      "route": "local-only",
+      "attempt": {
+        "pass": true,
+        "oracle": {
+          "taskId": "formatResult",
+          "passed": 7,
+          "total": 7,
+          "oraclePass": true,
+          "failures": []
+        },
+        "wallMs": 1801,
+        "localEvalTokens": 50,
+        "codeTiktoken": 49,
+        "codeChars": 194,
+        "generatedRaw": "export function formatResult(n) {\n    if (Number.isInteger(n)) {\n        return n.toString();\n    }\n    let result = n.toFixed(6);\n    result = result.replace(/\\.?0+$/, '');\n    return result;\n}",
+        "extractedCode": "export function formatResult(n) {\n    if (Number.isInteger(n)) {\n        return n.toString();\n    }\n    let result = n.toFixed(6);\n    result = result.replace(/\\.?0+$/, '');\n    return result;\n}"
+      }
+    },
+    {
+      "id": "evaluate",
+      "route": "frontier-required",
+      "attempt": {
+        "pass": false,
+        "oracle": {
+          "taskId": "evaluate",
+          "passed": 0,
+          "total": 9,
+          "oraclePass": false,
+          "failures": [
+            "fn([[\"3\",\"4\",\"+\"]]) threw: NOT_IMPLEMENTED:isNumber",
+            "fn([[\"10\",\"2\",\"/\"]]) threw: NOT_IMPLEMENTED:isNumber",
+            "fn([[\"3\",\"4\",\"*\",\"2\",\"+\"]]) threw: NOT_IMPLEMENTED:isNumber",
+            "fn([[\"1\",\"2\",\"+\",\"3\",\"4\",\"+\",\"*\"]]) threw: NOT_IMPLEMENTED:isNumber",
+            "fn([[\"5\"]]) threw: NOT_IMPLEMENTED:isNumber",
+            "fn([[\"+\"]]) threw 'NOT_IMPLEMENTED:isNumber' but expected match 'stack underflow'",
+            "fn([[\"3\",\"4\"]]) threw 'NOT_IMPLEMENTED:isNumber' but expected match 'malformed expression'",
+            "fn([[\"3\",\"0\",\"/\"]]) threw 'NOT_IMPLEMENTED:isNumber' but expected match 'division by zero'",
+            "fn([[\"3\",\"foo\",\"+\"]]) threw 'NOT_IMPLEMENTED:isNumber' but expected match 'unknown token'"
+          ]
+        },
+        "wallMs": 4235,
+        "localEvalTokens": 153,
+        "codeTiktoken": 152,
+        "codeChars": 590,
+        "generatedRaw": "export function evaluate(tokens) {\n  const stack = [];\n  \n  for (const token of tokens) {\n    if (isNumber(token)) {\n      stack.push(safeNumber(token));\n    } else if (isOperator(token)) {\n      if (stack.length < 2) {\n        throw new Error('stack underflow');\n      }\n      const b = stack.pop();\n      const a = stack.pop();\n      stack.push(applyOperator(token, a, b));\n    } else {\n      throw new Error(`unknown token: ${token}`);\n    }\n  }\n  \n  if (stack.length !== 1) {\n    throw new Error(`malformed expression: ${stack.length} values left on stack`);\n  }\n  \n  return stack[0];\n}",
+        "extractedCode": "export function evaluate(tokens) {\n  const stack = [];\n  \n  for (const token of tokens) {\n    if (isNumber(token)) {\n      stack.push(safeNumber(token));\n    } else if (isOperator(token)) {\n      if (stack.length < 2) {\n        throw new Error('stack underflow');\n      }\n      const b = stack.pop();\n      const a = stack.pop();\n      stack.push(applyOperator(token, a, b));\n    } else {\n      throw new Error(`unknown token: ${token}`);\n    }\n  }\n  \n  if (stack.length !== 1) {\n    throw new Error(`malformed expression: ${stack.length} values left on stack`);\n  }\n  \n  return stack[0];\n}"
+      }
+    }
+  ],
+  "completedAt": "2026-05-11T03:14:14.002Z",
+  "summary": {
+    "totalRoutableTasks": 7,
+    "localOnly": 5,
+    "frontierRequired": [
+      "isNumber",
+      "evaluate"
+    ],
+    "totalLocalEvalTokens": 424,
+    "totalLocalGeneratedTiktokenTokens": 417,
+    "armB_total_tiktoken_tokens": 453
+  },
+  "integration": {
+    "pass": false,
+    "exitCode": 1,
+    "result": {
+      "implPath": "C:\\projects\\prompt-language\\experiments\\concord-vho-realsoftware-rpncalc\\2026-05-11\\arm-a-hybrid\\workspace\\rpncalc.mjs",
+      "passed": 1,
+      "total": 16,
+      "oraclePass": false
+    },
+    "stderrTail": "calculate(\"3 4 +\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"10 2 -\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"3 4 *\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"10 2 /\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"3 4 + 2 *\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"1 2 + 3 4 + *\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"-3 4 +\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"5 -2 *\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"1 3 /\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"0.5 0.5 +\") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"  3   4   +  \") threw: NOT_IMPLEMENTED:evaluate\ncalculate(\"3 0 /\") threw 'NOT_IMPLEMENTED:evaluate' expected match 'division by zero'\ncalculate(\"+\") threw 'NOT_IMPLEMENTED:evaluate' expected match 'stack underflow'\ncalculate(\"3 4\") threw 'NOT_IMPLEMENTED:evaluate' expected match 'malformed expression'\ncalculate(\"3 4 abc\") threw 'NOT_IMPLEMENTED:evaluate' expected match 'unknown token'\n"
+  }
+}

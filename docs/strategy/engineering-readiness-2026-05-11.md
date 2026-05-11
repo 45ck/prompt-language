@@ -160,12 +160,21 @@ projects, wisdom accumulation, and human-prefers-prompt-edit are all
 still unmeasured per the thesis's own falsifiable hypotheses
 (H2-H6).
 
-### 6. Use hybrid for end-to-end app builds in client work — **NO**
+### 6. Use hybrid for end-to-end app builds in client work — **NO** (now firmly)
 
-Two pilots (TODO CLI and tinymd) explicitly show scaffolding-cost
-dominance at app-build scope. Hybrid is 2-3× to 14× more expensive
-than frontier-only at N=1. Until cross-app reuse is measured and
-break-even confirmed empirically, do not pitch this to clients.
+Three pilots (TODO CLI, tinymd, rpncalc) show scaffolding-cost
+dominance at app-build and real-software-multistage scopes. Hybrid
+is 2-3× to 14× more expensive than frontier-only at N=1. The
+rpncalc cross-app reuse pilot (2026-05-11 evening) measured the
+actual amortisation — only ~42% of frontier scaffolding is
+reusable. Per-pilot cost stays at ~5,500 frontier tokens once the
+runner is genericised, vs per-pilot local saving of ~500-600
+tokens. **Hybrid does not break even at any N on dollar
+economics** at real-software-multistage scope.
+
+What this means: don't pitch hybrid for client work on cost
+grounds. The pattern is only justified by non-cost benefits
+(privacy, latency, quota independence) for this scope.
 
 ### 7. Provision a real operator signer — **GO** (orthogonal)
 

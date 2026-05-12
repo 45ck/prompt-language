@@ -143,6 +143,29 @@ Do not build live Cockpit cards from prompt-language manifests yet.
 Do not move MacquarieCollege connector payloads, raw school data, or source
 system observations through this pipeline.
 
+## 2026-05-13 Update
+
+GSLR-6 is now complete.
+
+The first two local lane attempts failed on model-visible contract boundaries:
+
+- v1 implemented helpers but did not export them;
+- v2 exported helpers but self-imported the target file by copying the public
+  gate import.
+
+After the lane made those boundaries explicit, the v3 local lane passed all
+three repeats with zero frontier tokens:
+
+- repeat 1: public gate pass, private oracle pass, final verdict pass, 75.301s;
+- repeat 2: public gate pass, private oracle pass, final verdict pass, 51.215s;
+- repeat 3: public gate pass, private oracle pass, final verdict pass, 52.569s.
+
+Conclusion: the stronger hypothesis is supported for this exact static
+scaffold. PL did real work by turning an unreliable free-form sanitizer into a
+bounded helper contract that the local model could repeat. This promotes
+`gslr6-scaffolded-sanitizer` to exact `local-screen`, but it does not promote
+free-form GSLR-5 sanitizer ownership, product ingestion, or live Cockpit cards.
+
 ## Next Step
 
 Build the GSLR-6 scaffold and deterministic fake-live lane first. Run live local
@@ -185,5 +208,8 @@ repeats only after the public gate proves the scaffold and oracle wiring.
 
 - Added the GSLR-6 scaffolded fixture, public gate, private oracle,
   deterministic lane, runner coverage, and deterministic fake-live result.
-- Preserved the claim boundary: this is scaffold/harness evidence only; local
-  model N=3 repeats remain pending.
+- Ran the live local lane. v1/v2 exposed prompt-contract failures; v3 passed
+  three hidden-oracle repeats with zero frontier tokens.
+- Updated the route boundary: exact GSLR-6 static scaffold is `local-screen`;
+  adjacent free-form privacy-sensitive or product-ingestion work remains
+  `frontier-baseline`.

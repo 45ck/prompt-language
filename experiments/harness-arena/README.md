@@ -93,13 +93,16 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   once with zero frontier tokens, but the three-run repeat set failed all three
   repeats. The selected route remains `frontier-baseline`.
 - GSLR-6 now has a scaffolded sanitizer fixture, public gate, private oracle,
-  deterministic lane, and deterministic fake-live proof. See
+  deterministic lane, deterministic fake-live proof, live local lane, and
+  three clean local repeats. See
   [GSLR-6-SCAFFOLDED-SANITIZER-RUNBOOK.md](GSLR-6-SCAFFOLDED-SANITIZER-RUNBOOK.md)
   and
   [results/gslr6-fake-live-2026-05-13/report.md](results/gslr6-fake-live-2026-05-13/report.md).
-  This is harness-plumbing evidence only. It tests whether fixed helper
-  boundaries can make the failed GSLR-5 sanitizer task small enough for future
-  local repeats; no route promotion exists yet.
+  The live repeat result is recorded in
+  [results/gslr6-local-repeat-2026-05-13/report.md](results/gslr6-local-repeat-2026-05-13/report.md).
+  The v3 local lane passed three repeats with zero frontier tokens, so the exact
+  scaffolded static sanitizer shape is now `local-screen`. This does not
+  promote the broader GSLR-5 free-form sanitizer or product ingestion.
 
 Primary evidence records:
 
@@ -242,8 +245,9 @@ risk, repeated local failure, or read-only review.
 ## What is next (ordered)
 
 1. Keep GSLR-5 on the live `frontier-baseline` route before any product
-   ingestion. The next useful research step is a stronger local PL contract or
-   scaffolded skeleton for sanitizer predicates, not product Cockpit ingestion.
+   ingestion. GSLR-6 shows the stronger local PL scaffold can work for the exact
+   static helper contract, but that does not approve free-form sanitizer
+   ownership or Cockpit ingestion.
 2. Keep `gslr3-policy-manifest-transform` on the frontier-baseline route. Do not
    promote local-screen for schema-to-schema evidence-card transforms until a
    new local-lane micro-repair design passes public and private gates.
@@ -257,7 +261,10 @@ risk, repeated local failure, or read-only review.
    watch for timeout, no-edit, stale-file, or API-drift regressions.
 6. Promote a local H15 candidate back into a hybrid full-task route only after the
    micro-flow passes with claim-grade manifests and sampled resource evidence.
-7. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
+7. Turn the GSLR-6 pattern into the next engineering-system primitive: a
+   repeatable local-screen lane template with fixed helper boundaries, public
+   gate, hidden oracle, and frontier-advisor escalation on first failure.
+8. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
    and one multi-file route have claim-grade manifests.
 
 ## Known blockers

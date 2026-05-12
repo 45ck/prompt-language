@@ -14,11 +14,13 @@
       "experiments/harness-arena/results/gslr4-live-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr5-live-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr5-local-repair-2026-05-12/report.md",
-      "experiments/harness-arena/results/gslr5r-local-repeat-2026-05-12/report.md"
+      "experiments/harness-arena/results/gslr5r-local-repeat-2026-05-12/report.md",
+      "experiments/harness-arena/results/gslr6-local-repeat-2026-05-13/report.md"
     ],
     "scaffoldResultDocs": [
       "experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md",
-      "experiments/harness-arena/results/gslr5-fake-live-2026-05-12/report.md"
+      "experiments/harness-arena/results/gslr5-fake-live-2026-05-12/report.md",
+      "experiments/harness-arena/results/gslr6-fake-live-2026-05-13/report.md"
     ],
     "runbook": "experiments/harness-arena/GSLR-2-POLICY-SCHEMA-RUNBOOK.md",
     "researchDecisionDoc": "docs/evaluation/2026-05-12-post-symphony-research-decision.md",
@@ -295,8 +297,83 @@
         "private-oracle",
         "manifest-finalVerdict"
       ],
-      "localStopPolicy": "keep frontier-baseline as the selected route; the repaired local lane failed all three repeat runs, so the next local attempt must use a stronger PL contract or scaffolded skeleton rather than another free-form prompt",
+      "localStopPolicy": "keep frontier-baseline as the selected route for this free-form task; the repaired local lane failed all three repeat runs, so privacy-sensitive free-form sanitizer ownership remains an escalation trigger",
       "notes": "GSLR-5 tested the privacy-sensitive fixture-family rung. Frontier-only passed the public gate and private oracle. Local-only initially failed before the adversarial traps, and a repaired local prompt passed once, but the three-run repeat set failed on raw-key and unsafe-artifact checks. The selected route remains frontier-baseline."
+    },
+    {
+      "task": "gslr6-scaffolded-sanitizer",
+      "decision": "local-screen",
+      "owner": "local",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "GSLR-6 showed the local model can complete this exact scaffolded sanitizer contract when helper boundaries are fixed and public/private gates are strong"
+      },
+      "selectedModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "selected only for local screening on the exact GSLR-6 scaffolded static sanitizer shape after three clean local repeats"
+      },
+      "fixture": "experiments/harness-arena/fixtures/gslr6-scaffolded-sanitizer",
+      "oracle": "experiments/harness-arena/oracles/gslr6-scaffolded-sanitizer-oracle.mjs",
+      "liveLocalLane": "experiments/harness-arena/live/gslr6-local-lane.mjs",
+      "cleanPasses": 3,
+      "totalRuns": 5,
+      "measuredArms": {
+        "preRepeatV1": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "failureBoundary": "public gate failed because the model implemented helpers but did not export them"
+        },
+        "preRepeatV2": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "failureBoundary": "public gate failed because the model pasted the public-gate import into the target file, creating a self-import and duplicate declarations"
+        },
+        "localRepeat1": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 75.301
+        },
+        "localRepeat2": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 51.215
+        },
+        "localRepeat3": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 52.569
+        }
+      },
+      "requiredGuards": [
+        "public-gate",
+        "named-helper-exports",
+        "self-contained-implementation",
+        "malformed-input-no-throw",
+        "recursive-forbidden-key-scan",
+        "separator-insensitive-key-scan",
+        "raw-payload-text-rejection",
+        "unsafe-artifact-ref-rejection",
+        "action-boundary-recompute",
+        "allowed-top-level-fields-only",
+        "private-oracle",
+        "manifest-finalVerdict"
+      ],
+      "localStopPolicy": "use local-screen only for this exact scaffolded static sanitizer contract; stop after any public-gate failure, private-oracle failure, helper-boundary collapse, self-import, malformed-input throw, raw-payload leakage, or unsafe artifact-ref acceptance",
+      "notes": "GSLR-6 tested the GSLR-5 failure mode with fixed helper boundaries. The first two local attempts exposed prompt-contract issues around named exports and self-imports. After those model-visible boundaries were made explicit, three local repeats passed public gate, private oracle, and final verdict with zero frontier tokens. This promotes the exact scaffolded static sanitizer shape to local-screen, not broad privacy-sensitive sanitizer ownership or product ingestion."
     }
   ],
   "decisionRules": [
@@ -326,9 +403,14 @@
       "reason": "GSLR-4 live evidence showed local-only failed and advisor-only passed but used more frontier tokens than frontier-only"
     },
     {
+      "when": "privacy-sensitive static sanitizer has fixed helper boundaries, strong public/private gates, no product side effects, and three clean local repeats",
+      "route": "local-screen",
+      "reason": "GSLR-6 live repeats showed the scaffolded sanitizer shape passed three hidden-oracle runs with zero frontier tokens"
+    },
+    {
       "when": "the fixture is privacy-sensitive or contains adversarial raw-payload, school/person-data, secret, or unsafe artifact-ref ambiguity",
       "route": "frontier-baseline",
-      "reason": "privacy-sensitive ambiguity is an escalation trigger until a local lane has passing hidden-oracle evidence"
+      "reason": "privacy-sensitive ambiguity remains an escalation trigger unless the exact scaffolded shape has repeated hidden-oracle evidence"
     },
     {
       "when": "governance independently requires final frontier review",
@@ -354,6 +436,12 @@
       "hypothesis": "frontier-baseline",
       "shape": "policy fixture seeded with subtle raw-payload leakage and misleading safe summaries",
       "promotionValue": "tests whether privacy-sensitive ambiguity should bypass local-only"
+    },
+    {
+      "id": "gslr6-scaffolded-sanitizer",
+      "hypothesis": "local-screen",
+      "shape": "fixed sanitizer helpers plus unchanged adversarial oracle",
+      "promotionValue": "proved the local model can pass the exact scaffolded sanitizer contract when PL controls helper boundaries"
     }
   ],
   "escalationTriggers": [

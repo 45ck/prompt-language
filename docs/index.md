@@ -78,6 +78,7 @@ If a feature is not described in the product docs, treat it as unavailable today
 | [What Works Now](evaluation/what-works-now.md)                                     | Short public summary of the strongest proven surface and current caveats  |
 | [Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md)        | Post-FSCRUD evidence boundary and next experiment direction               |
 | [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md)      | Cross-experiment hypothesis verdicts and current research implications    |
+| [GSLR-2 Preflight: 2026-05-12](evaluation/2026-05-12-gslr-2-preflight.md)          | Manifest verdict and token-telemetry hardening before the next live run   |
 | [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)          | Accepted subagent-first boundary                                          |
 | [Operator Shell Boundary](design/operator-shell-boundary.md)                       | Accepted shell-over-runtime boundary for imported OMX adaptation work     |
 | [Output Summarization Policy](design/output-summarization-policy.md)               | Accepted thresholds and fail-closed policy for compact summary surfaces   |

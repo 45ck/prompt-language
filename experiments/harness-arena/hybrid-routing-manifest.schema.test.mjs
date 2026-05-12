@@ -153,6 +153,12 @@ function validateManifestShape(manifest) {
     'manifest.classification',
     errors,
   );
+  validateOptionalObject(
+    schema.properties.finalVerdict,
+    manifest.finalVerdict,
+    'manifest.finalVerdict',
+    errors,
+  );
 
   return errors;
 }
@@ -184,6 +190,8 @@ test('schema version 2 accepts a synthetic Ollama local lane', () => {
   ]);
   assert.equal(step.providerClass, 'local');
   assert.equal(step.routeDecision, 'local');
+  assert.equal(sample.finalVerdict.status, 'pass');
+  assert.equal(sample.finalVerdict.blockingReviewDefectCount, 0);
   assert.ok(stepSchema.runner.enum.includes('ollama'));
   assert.ok(stepSchema.providerClass.enum.includes('local'));
   assert.ok(stepSchema.routeDecision.enum.includes('local'));

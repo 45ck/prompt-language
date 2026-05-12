@@ -1478,6 +1478,11 @@ function routeOracleCommand(route) {
 }
 
 function buildManifest(options, arm, workspace, stepExecutions = null, oracleExecution = null) {
+  const steps = manifestStepDefinitions(arm, stepExecutions).map((step, index) =>
+    buildStep(step, index, options, workspace, stepExecutions?.[index] ?? null),
+  );
+  const oracle = buildOracle(options, oracleExecution);
+  const classification = buildClassification(options, stepExecutions, oracleExecution);
   return {
     schemaVersion: 2,
     policyVersion: options.policyVersion,
@@ -1505,11 +1510,10 @@ function buildManifest(options, arm, workspace, stepExecutions = null, oracleExe
       providerFallbackPolicy: 'forbid',
       localOnlyAllowsFrontierInput: false,
     },
-    steps: manifestStepDefinitions(arm, stepExecutions).map((step, index) =>
-      buildStep(step, index, options, workspace, stepExecutions?.[index] ?? null),
-    ),
-    oracle: buildOracle(options, oracleExecution),
-    classification: buildClassification(options, stepExecutions, oracleExecution),
+    steps,
+    oracle,
+    classification,
+    finalVerdict: buildFinalVerdict(options, steps, oracle),
   };
 }
 
@@ -1576,6 +1580,45 @@ function buildClassification(options, stepExecutions, oracleExecution) {
   };
 }
 
+function buildFinalVerdict(options, steps, oracle) {
+  if (options.mode === 'dry-run') {
+    return {
+      status: 'not-run',
+      reason: 'Dry-run structure validation only; no private oracle was executed.',
+      oraclePassed: false,
+      blockingReviewDefectCount: 0,
+      failedStepCount: 0,
+      timedOutStepCount: 0,
+    };
+  }
+
+  const blockingReviewDefectCount = steps.reduce(
+    (count, step) => count + step.reviewDefects.length,
+    0,
+  );
+  const failedStepCount = steps.filter((step) => step.exitCode !== 0).length;
+  const timedOutStepCount = steps.filter((step) => step.timedOut).length;
+  const oraclePassed = Boolean(oracle.passed);
+  const failures = [];
+
+  if (!oraclePassed) failures.push('private oracle failed');
+  if (failedStepCount > 0) failures.push(`${failedStepCount} step(s) exited non-zero`);
+  if (timedOutStepCount > 0) failures.push(`${timedOutStepCount} step(s) timed out`);
+  if (blockingReviewDefectCount > 0) {
+    failures.push(`${blockingReviewDefectCount} blocking review defect(s)`);
+  }
+
+  return {
+    status: failures.length === 0 ? 'pass' : 'fail',
+    reason:
+      failures.length === 0 ? 'all gates, oracle, and review checks passed' : failures.join('; '),
+    oraclePassed,
+    blockingReviewDefectCount,
+    failedStepCount,
+    timedOutStepCount,
+  };
+}
+
 function isLocalRuntimeResourceFailure(execution) {
   const combined = [execution?.stdout, execution?.stderr, execution?.error]
     .filter(Boolean)
@@ -1620,6 +1663,7 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
       ]
     : ['arm-plan.json'];
 
+  const reviewDefects = reviewDefectsForStep(stepId, workspace, execution);
   return {
     stepId,
     purpose: route
@@ -1647,12 +1691,7 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
     attemptNumber: index + 1,
     promptProgram,
     cost: {
-      basis: 'none',
-      estimatedUsd: 0,
-      providerReportedUsd: null,
-      inputTokens: null,
-      outputTokens: null,
-      pricingVersion: null,
+      ...costTelemetryForExecution(execution),
     },
     dataClassification: 'public',
     frontierCallKind: frontierCallKindForStep(stepId),
@@ -1665,7 +1704,7 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
       options.mode === 'fake-live'
         ? 'Deterministic local command executed; no LLM edits were attempted.'
         : stepDiffSummary(options.mode),
-    reviewDefects: [],
+    reviewDefects,
     cwd: workspace,
     startedAt: execution?.startedAt ?? options.startedAt,
     completedAt: execution?.completedAt ?? options.startedAt,
@@ -1681,6 +1720,125 @@ function buildStep([stepId, routeDecision, routeTrigger], index, options, worksp
       ? `${profileRoute.profileKind} ${profileRoute.displayProfile} policy ${route.decision}. ${stepNotes(options.mode, execution)}`
       : stepNotes(options.mode, execution),
   };
+}
+
+function costTelemetryForExecution(execution) {
+  const telemetry = providerTelemetryForExecution(execution);
+  return {
+    basis: telemetry.hasTelemetry ? 'provider-reported' : 'none',
+    estimatedUsd: 0,
+    providerReportedUsd: telemetry.providerReportedUsd,
+    inputTokens: telemetry.inputTokens,
+    outputTokens: telemetry.outputTokens,
+    totalTokens: telemetry.totalTokens,
+    cachedInputTokens: telemetry.cachedInputTokens,
+    pricingVersion: telemetry.hasTelemetry ? 'provider-telemetry-v1' : null,
+  };
+}
+
+function providerTelemetryForExecution(execution) {
+  const text = [execution?.stdout, execution?.stderr].filter(Boolean).join('\n');
+  const inputTokens = firstIntegerMatch(text, [
+    /(?:input|prompt)\s+tokens?\D+([\d,]+)/i,
+    /([\d,]+)\s+(?:input|prompt)\s+tokens?/i,
+  ]);
+  const outputTokens = firstIntegerMatch(text, [
+    /(?:output|completion)\s+tokens?\D+([\d,]+)/i,
+    /([\d,]+)\s+(?:output|completion)\s+tokens?/i,
+  ]);
+  const cachedInputTokens = firstIntegerMatch(text, [
+    /cached(?:\s+input)?\s+tokens?\D+([\d,]+)/i,
+    /([\d,]+)\s+cached(?:\s+input)?\s+tokens?/i,
+  ]);
+  const totalTokens =
+    firstIntegerMatch(text, [
+      /total\s+tokens?\D+([\d,]+)/i,
+      /tokens\s+used\s*\n\s*([\d,]+)/i,
+      /tokens\s+used\D+([\d,]+)/i,
+      /([\d,]+)\s+tokens?\s+used/i,
+    ]) ?? (inputTokens != null && outputTokens != null ? inputTokens + outputTokens : null);
+  const providerReportedUsd = firstNumberMatch(text, [
+    /(?:provider[-\s])?reported\s+(?:usd|cost)\D+([0-9]+(?:\.[0-9]+)?)/i,
+    /(?:usd|cost)\D+\$?([0-9]+(?:\.[0-9]+)?)/i,
+  ]);
+
+  return {
+    cachedInputTokens,
+    hasTelemetry:
+      inputTokens != null ||
+      outputTokens != null ||
+      totalTokens != null ||
+      cachedInputTokens != null ||
+      providerReportedUsd != null,
+    inputTokens,
+    outputTokens,
+    providerReportedUsd,
+    totalTokens,
+  };
+}
+
+function firstIntegerMatch(text, patterns) {
+  for (const pattern of patterns) {
+    const match = pattern.exec(text);
+    if (match) return Number.parseInt(match[1].replaceAll(',', ''), 10);
+  }
+  return null;
+}
+
+function firstNumberMatch(text, patterns) {
+  for (const pattern of patterns) {
+    const match = pattern.exec(text);
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
+function reviewDefectsForStep(stepId, workspace, execution) {
+  if (!stepId.includes('review')) return [];
+  const texts = [
+    readWorkspaceText(workspace, 'projection/frontier-review.md'),
+    execution?.stdout,
+    execution?.stderr,
+  ].filter(Boolean);
+  return uniqueStrings(texts.flatMap(extractBlockingReviewDefects));
+}
+
+function readWorkspaceText(workspace, relativePath) {
+  try {
+    return readFileSync(join(workspace, ...relativePath.split('/')), 'utf8');
+  } catch {
+    return '';
+  }
+}
+
+function extractBlockingReviewDefects(text) {
+  if (!/\bblocking\b/i.test(text) || /\bno\s+blocking\s+findings?\b/i.test(text)) return [];
+  const defects = [];
+  let inBlockingSection = false;
+  for (const line of text.split(/\r?\n/)) {
+    if (/^\s*blocking\s+findings?\s*:?\s*$/i.test(line)) {
+      inBlockingSection = true;
+      continue;
+    }
+    if (inBlockingSection && line.trim() === '') {
+      continue;
+    }
+    if (inBlockingSection && /^#{1,6}\s+/.test(line)) {
+      inBlockingSection = false;
+      continue;
+    }
+    const bullet = /^\s*[-*]\s+(.+)/.exec(line);
+    if (bullet && (inBlockingSection || /\bblocking\b/i.test(bullet[1]))) {
+      defects.push(bullet[1].trim());
+    }
+    const inline = /\bblocking\s+findings?\s*:\s*(.+)$/i.exec(line);
+    if (inline && !/^\s*(none|no\b)/i.test(inline[1])) defects.push(inline[1].trim());
+  }
+  return defects;
+}
+
+function uniqueStrings(values) {
+  return [...new Set(values.filter((value) => value.length > 0))];
 }
 
 function selectedProfileRoute(options) {

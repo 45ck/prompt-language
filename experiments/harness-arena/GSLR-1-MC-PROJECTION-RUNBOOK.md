@@ -102,7 +102,7 @@ Each live arm must commit or archive:
 - route decision and trigger per step;
 - actual model/provider/endpoint metadata;
 - frontier-call count and budget status;
-- review defects and final verdict.
+- review defects and manifest-level `finalVerdict`.
 
 ## Verdict Rules
 
@@ -133,5 +133,7 @@ The 2026-05-12 live run showed:
 - `hybrid-router` used more frontier calls and observed frontier tokens than the
   `frontier-only` control.
 
-Next step: revise the verdict aggregator, parse token/cost telemetry into
-manifests, and run a harder GSLR-2 task before any Portarium product card.
+Follow-up: the post-GSLR-1 harness now records a manifest-level
+`finalVerdict` and promotes Codex-style `tokens used` telemetry into step cost
+fields for new runs. Next step is a harder GSLR-2 task before any Portarium
+product card.

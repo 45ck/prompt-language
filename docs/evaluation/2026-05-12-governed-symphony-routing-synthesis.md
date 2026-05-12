@@ -132,6 +132,14 @@ The next build/research sequence is now:
 5. only after a positive hybrid result, create a Portarium static Cockpit
    evidence card from the manifest.
 
+Follow-up implementation:
+`docs/evaluation/2026-05-12-gslr-2-preflight.md`.
+
+The first two prerequisites are now implemented for new harness runs:
+`finalVerdict` fails unresolved blocking review defects, and Codex-style token
+telemetry is promoted into `steps[].cost.totalTokens`. GSLR-2 should use these
+fields as hard acceptance inputs, not post-hoc report prose.
+
 ## Sources
 
 - OpenAI Symphony repository:
@@ -166,3 +174,5 @@ The next build/research sequence is now:
   savings or local-model autonomy.
 - Added the GSLR-1 live result. It proves harness execution and bounded local
   docs-task capability, but not hybrid cost reduction.
+- Added GSLR-2 preflight hardening: manifest final verdict plus provider token
+  telemetry extraction for future frontier cost comparisons.

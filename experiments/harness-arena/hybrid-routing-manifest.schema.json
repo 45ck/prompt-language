@@ -18,7 +18,8 @@
     "startedAt",
     "completedAt",
     "steps",
-    "oracle"
+    "oracle",
+    "finalVerdict"
   ],
   "properties": {
     "schemaVersion": {
@@ -270,6 +271,8 @@
               "providerReportedUsd",
               "inputTokens",
               "outputTokens",
+              "totalTokens",
+              "cachedInputTokens",
               "pricingVersion"
             ],
             "properties": {
@@ -289,6 +292,14 @@
                 "minimum": 0
               },
               "outputTokens": {
+                "type": ["integer", "null"],
+                "minimum": 0
+              },
+              "totalTokens": {
+                "type": ["integer", "null"],
+                "minimum": 0
+              },
+              "cachedInputTokens": {
                 "type": ["integer", "null"],
                 "minimum": 0
               },
@@ -502,6 +513,42 @@
         },
         "notes": {
           "type": "string"
+        }
+      }
+    },
+    "finalVerdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "reason",
+        "oraclePassed",
+        "blockingReviewDefectCount",
+        "failedStepCount",
+        "timedOutStepCount"
+      ],
+      "properties": {
+        "status": {
+          "enum": ["pass", "fail", "not-run"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "oraclePassed": {
+          "type": "boolean"
+        },
+        "blockingReviewDefectCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "failedStepCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "timedOutStepCount": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     }

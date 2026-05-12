@@ -217,6 +217,86 @@ test('fake live executes deterministic local step commands and private oracle ar
   }
 });
 
+test('manifests promote provider token telemetry from step stderr', () => {
+  const outputRoot = tempRoot();
+  try {
+    const telemetryCommand = `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(
+      "process.stderr.write('tokens used\\n15,776\\n');",
+    )}`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--fake-live',
+        '--arms',
+        'frontier-only',
+        '--fake-step-command',
+        telemetryCommand,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'token-telemetry-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const [step] = manifest.steps;
+
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.equal(step.cost.basis, 'provider-reported');
+    assert.equal(step.cost.totalTokens, 15776);
+    assert.equal(step.cost.inputTokens, null);
+    assert.equal(step.cost.outputTokens, null);
+    assert.equal(step.cost.pricingVersion, 'provider-telemetry-v1');
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('manifest final verdict fails when frontier review records blocking defects', () => {
+  const outputRoot = tempRoot();
+  try {
+    const reviewCommand = `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(
+      [
+        "const { mkdirSync, writeFileSync } = require('node:fs');",
+        "const { join } = require('node:path');",
+        'const [workspace, stepId] = process.argv.slice(1);',
+        "if (stepId === 'frontier-review') {",
+        "  mkdirSync(join(workspace, 'projection'), { recursive: true });",
+        "  writeFileSync(join(workspace, 'projection', 'frontier-review.md'), '# Frontier Review\\n\\nblocking findings:\\n\\n- leaked internal evaluation wording\\n');",
+        '}',
+      ].join(' '),
+    )} <workspace> <stepId>`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--fake-live',
+        '--arms',
+        'hybrid-router',
+        '--fake-step-command',
+        reviewCommand,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'blocking-review-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const reviewStep = manifest.steps.find((step) => step.stepId === 'frontier-review');
+
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.deepEqual(reviewStep.reviewDefects, ['leaked internal evaluation wording']);
+    assert.equal(manifest.oracle.passed, true);
+    assert.equal(manifest.finalVerdict.status, 'fail');
+    assert.equal(manifest.finalVerdict.blockingReviewDefectCount, 1);
+    assert.match(manifest.finalVerdict.reason, /blocking review defect/);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('fake live records hard timeout metadata and still runs private oracle phase', () => {
   const outputRoot = tempRoot();
   try {

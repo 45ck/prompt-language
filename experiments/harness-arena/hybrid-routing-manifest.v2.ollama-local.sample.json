@@ -61,6 +61,8 @@
         "providerReportedUsd": null,
         "inputTokens": null,
         "outputTokens": null,
+        "totalTokens": null,
+        "cachedInputTokens": null,
         "pricingVersion": null
       },
       "dataClassification": "public",
@@ -107,5 +109,13 @@
     "harnessFailure": false,
     "resourceFailure": false,
     "notes": "Synthetic classification for schema-shape coverage."
+  },
+  "finalVerdict": {
+    "status": "pass",
+    "reason": "all gates, oracle, and review checks passed",
+    "oraclePassed": true,
+    "blockingReviewDefectCount": 0,
+    "failedStepCount": 0,
+    "timedOutStepCount": 0
   }
 }

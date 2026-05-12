@@ -73,6 +73,14 @@ decisions.
 MacquarieCollege connector payloads, source-system observations, and school data
 remain outside this pipeline.
 
+Portarium follow-up on 2026-05-13: the GSLR-9 static projector can turn
+checked-in GSLR route evidence into docs/test-only engineering evidence cards,
+and the GSLR-10 static Cockpit export can turn those validated cards into frozen
+operator-readable view models. This makes the GSLR-8 result legible to a future
+Cockpit surface, but it still does not create live manifest ingestion, runtime
+Cockpit cards, queues, database tables, route-record execution, or MC connector
+work.
+
 ## Sources
 
 - GSLR-8 runbook:
@@ -95,3 +103,5 @@ remain outside this pipeline.
 - Promoted the exact GSLR-8 compiler scaffold shape to `local-screen`.
 - Kept Portarium runtime ingestion and MacquarieCollege connector movement
   blocked.
+- Recorded that downstream Portarium GSLR-9/GSLR-10 work is static projection
+  and static Cockpit export only, not runtime ingestion.

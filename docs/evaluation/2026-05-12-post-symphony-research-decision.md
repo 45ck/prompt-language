@@ -8,6 +8,12 @@ Update: GSLR-2 scaffold bead `prompt-language-gslr6` added the policy-schema
 fixture, public gate, private oracle, deterministic fake-live lane, and runbook.
 That proves harness plumbing only; live model evidence remains the next step.
 
+Live update: GSLR-2 live bead `prompt-language-gslr7` ran the hardened
+policy-schema fixture across all four arms. Local-only, frontier-only,
+advisor-only, and hybrid-router all passed. The result supports bounded
+local-only screening for this task shape, not hybrid cost savings: hybrid passed
+but used more frontier tokens than frontier-only.
+
 ## Question
 
 After GSLR-1 and OpenAI's public Symphony write-up, what should we build next,
@@ -206,6 +212,9 @@ design until the evidence can actually answer the question.
   work before spending live model tokens.
 - Kept the claim boundary unchanged: positive GSLR-2 model evidence is still
   required before Portarium gets a product evidence card.
+- Ran the hardened GSLR-2 live task. The honest conclusion changed: this is
+  positive local-model evidence for a tiny schema validator, but negative
+  evidence for the current hybrid-router cost policy on this task.
 
 ## Sources
 

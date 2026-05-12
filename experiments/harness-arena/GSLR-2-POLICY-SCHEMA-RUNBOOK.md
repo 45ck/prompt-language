@@ -5,6 +5,8 @@ Tracking bead: `prompt-language-gslr6`
 Companion Portarium bead: `bead-1231`
 Deterministic result:
 `experiments/harness-arena/results/gslr2-fake-live-2026-05-12/report.md`
+Live result:
+`experiments/harness-arena/results/gslr2-live-2026-05-12/report.md`
 
 ## Question
 
@@ -138,6 +140,11 @@ The GSLR-2 hybrid-routing claim is positive only if:
 If local-only also passes, that is useful local-model evidence, but it weakens
 the need for a hybrid route on this exact task. If frontier-only passes and
 hybrid fails, the route policy is not ready for Portarium evidence-card work.
+
+The 2026-05-12 live run hit the first case: local-only passed the hardened
+fixture, advisor-only passed with fewer frontier tokens than frontier-only, and
+hybrid-router passed but used more frontier tokens than frontier-only. The
+result supports local-only screening for this task shape, not hybrid promotion.
 
 ## What This Can Prove
 

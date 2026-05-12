@@ -99,6 +99,8 @@ const { workspace } = parseArgs(process.argv.slice(2));
 const validate = await loadValidator(workspace);
 
 check(validate, validEnvelope(), true, 'valid hybrid envelope');
+check(validate, null, false, 'null envelope rejected without throwing');
+check(validate, [], false, 'array envelope rejected without throwing');
 check(
   validate,
   validEnvelope({

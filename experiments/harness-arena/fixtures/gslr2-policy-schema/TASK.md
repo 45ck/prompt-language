@@ -36,4 +36,7 @@ Required validation rules:
   `studentPayload`, `credential`, `secret`, `token`, and `password`, matched
   case-insensitively.
 
+Do not throw on malformed input. Non-object and array inputs must return
+`{ ok: false, errors: [...] }`.
+
 Do not mutate the input object.

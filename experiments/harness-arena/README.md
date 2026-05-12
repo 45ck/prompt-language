@@ -41,6 +41,11 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   but current evidence is harness-plumbing only until those model runs exist.
   The deterministic receipt is
   [results/gslr2-fake-live-2026-05-12/report.md](results/gslr2-fake-live-2026-05-12/report.md).
+- GSLR-2 live hardened evidence is now recorded in
+  [results/gslr2-live-2026-05-12/report.md](results/gslr2-live-2026-05-12/report.md).
+  Local-only passed the policy-schema fixture with zero frontier tokens;
+  advisor-only passed with fewer frontier tokens than frontier-only;
+  hybrid-router passed but was not cost-effective for this tiny task.
 
 Primary evidence records:
 
@@ -172,8 +177,9 @@ risk, repeated local failure, or read-only review.
 
 ## What is next (ordered)
 
-1. Run GSLR-2 across live local/frontier/advisor/hybrid arms with matched cost
-   controls, manifest final verdict, private oracle, and token telemetry.
+1. Generalize GSLR-2 into a small policy/schema fixture family before promoting a
+   route. The first live result supports local-only screening for this exact tiny
+   validator shape, but not hybrid-router cost savings.
 2. Keep H15 endpoint work on the frontier-only baseline route until local
    micro-flows show reliable value.
 3. Keep H11 on the promoted local route for this exact flow/oracle contract, and

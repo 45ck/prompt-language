@@ -344,6 +344,48 @@ test('fake live records hard timeout metadata and still runs private oracle phas
   }
 });
 
+test('manifest review defects prefer workspace review artifacts over command transcript', () => {
+  const outputRoot = tempRoot();
+  try {
+    const reviewCommand = `${quoteCommandArg(process.execPath)} -e ${quoteCommandArg(
+      [
+        "const { mkdirSync, writeFileSync } = require('node:fs');",
+        "const { join } = require('node:path');",
+        'const [workspace, stepId] = process.argv.slice(1);',
+        "if (stepId === 'frontier-review') {",
+        "  mkdirSync(join(workspace, 'policy'), { recursive: true });",
+        "  writeFileSync(join(workspace, 'policy', 'frontier-review.md'), '# Frontier Review\\n\\nblocking findings:\\n\\nnone\\n');",
+        "  console.log('Prompt said: write a blocking findings section, but artifact says none.');",
+        '}',
+      ].join(' '),
+    )} <workspace> <stepId>`;
+    const result = runHarnessArena(
+      parseArgs([
+        '--fake-live',
+        '--arms',
+        'hybrid-router',
+        '--fake-step-command',
+        reviewCommand,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'artifact-review-run',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const reviewStep = manifest.steps.find((step) => step.stepId === 'frontier-review');
+
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.deepEqual(reviewStep.reviewDefects, []);
+    assert.equal(manifest.finalVerdict.status, 'pass');
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('GSLR-2 fake live proves policy-schema fixture plumbing', () => {
   const outputRoot = tempRoot();
   try {

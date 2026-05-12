@@ -66,6 +66,8 @@ expectPass(
 );
 
 expectFail(validEnvelope({ version: 'gslr.action-policy.v2' }), 'wrong version fails');
+expectFail(null, 'null envelope fails with a result shape');
+expectFail([], 'array envelope fails with a result shape');
 expectFail(
   validEnvelope({ workItem: { id: 'ticket-7', repo: 'prompt-language', intent: 'bad id' } }),
   'unsupported work item id fails',

@@ -1795,12 +1795,16 @@ function firstNumberMatch(text, patterns) {
 
 function reviewDefectsForStep(stepId, workspace, execution) {
   if (!stepId.includes('review')) return [];
-  const texts = [
+  const reviewArtifactTexts = [
     readWorkspaceText(workspace, 'projection/frontier-review.md'),
-    execution?.stdout,
-    execution?.stderr,
+    readWorkspaceText(workspace, 'policy/frontier-review.md'),
   ].filter(Boolean);
-  return uniqueStrings(texts.flatMap(extractBlockingReviewDefects));
+  if (reviewArtifactTexts.length > 0) {
+    return uniqueStrings(reviewArtifactTexts.flatMap(extractBlockingReviewDefects));
+  }
+  return uniqueStrings(
+    [execution?.stdout, execution?.stderr].filter(Boolean).flatMap(extractBlockingReviewDefects),
+  );
 }
 
 function readWorkspaceText(workspace, relativePath) {

@@ -1,6 +1,6 @@
 # GSLR Progress Checkpoint: 2026-05-13
 
-Status: post-GSLR-11 downstream checkpoint
+Status: post-GSLR-12 downstream checkpoint
 
 ## Conclusion
 
@@ -21,7 +21,7 @@ predicate hooks.
 
 ## Downstream Progress
 
-Portarium has now completed three static follow-ups:
+Portarium has now completed four static follow-ups:
 
 - GSLR-9: checked-in route evidence can project into a docs/test-only
   `EngineeringEvidenceCardInputV1`.
@@ -31,6 +31,9 @@ Portarium has now completed three static follow-ups:
 - GSLR-11: Cockpit can render checked-in static GSLR-8 and GSLR-7 evidence
   fixtures at `/engineering/evidence-cards/static` without live ingestion or
   action controls.
+- GSLR-12: static GSLR evidence bundles can verify payload hash, signature,
+  provenance cross-links, artifact hashes, validity window, and static-only
+  constraints before projection.
 
 This makes prompt-language evidence legible to a future Cockpit surface without
 creating live ingestion, runtime cards, route-record queues, database tables,
@@ -42,8 +45,8 @@ The current cross-repo state is:
 
 - prompt-language owns the experiment harness, route records, local/frontier
   evidence, and PL-owned scaffolds;
-- Portarium owns the static evidence-card contract, Cockpit export, and static
-  operator view;
+- Portarium owns the static evidence-card contract, Cockpit export, static
+  operator view, and static evidence-bundle verifier;
 - MacquarieCollege remains a boundary/reference vertical only.
 
 The important learning is that local models are useful where Prompt Language
@@ -53,10 +56,10 @@ model still owns route-record policy logic.
 
 ## Next
 
-The next product-safe step is a manual signed-bundle proof/design. It should
-define how a checked-in or uploaded GSLR evidence bundle is authenticated,
-parsed, displayed as static evidence, and kept separate from runtime action
-execution.
+The next product-safe step is GSLR-13: a manual Cockpit bundle preview. It
+should let an operator paste or load a GSLR bundle fixture, run the verifier,
+show verification status, render static evidence only when valid, and keep
+persistence, queues, tables, SSE, and action controls absent.
 
 Do not build live manifest ingestion or runtime route decisions from this
 checkpoint.

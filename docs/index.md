@@ -83,7 +83,7 @@ If a feature is not described in the product docs, treat it as unavailable today
 | [Post-GSLR-5 Research Decision: 2026-05-12](evaluation/2026-05-12-post-gslr5-research-decision.md)                           | Route boundary after raw-payload adversarial live evidence                |
 | [Post-GSLR-7 Engineering-System Decision: 2026-05-13](evaluation/2026-05-13-post-gslr7-engineering-system-decision.md)       | Deterministic local-screen scaffold primitive after GSLR-7 failed         |
 | [Post-GSLR-8 Route-Record Compiler Decision: 2026-05-13](evaluation/2026-05-13-post-gslr8-route-record-compiler-decision.md) | Positive local-screen result for PL-owned route-record compiler scaffolds |
-| [GSLR Progress Checkpoint: 2026-05-13](evaluation/2026-05-13-gslr-progress-checkpoint.md)                                    | Post-GSLR-10 mixed frontier/PL/local architecture and Cockpit boundary    |
+| [GSLR Progress Checkpoint: 2026-05-13](evaluation/2026-05-13-gslr-progress-checkpoint.md)                                    | Post-GSLR-13 mixed frontier/PL/local architecture and Cockpit boundary    |
 | [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)                                                    | Accepted subagent-first boundary                                          |
 | [Operator Shell Boundary](design/operator-shell-boundary.md)                                                                 | Accepted shell-over-runtime boundary for imported OMX adaptation work     |
 | [Output Summarization Policy](design/output-summarization-policy.md)                                                         | Accepted thresholds and fail-closed policy for compact summary surfaces   |

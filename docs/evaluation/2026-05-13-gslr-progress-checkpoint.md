@@ -1,6 +1,6 @@
 # GSLR Progress Checkpoint: 2026-05-13
 
-Status: post-GSLR-12.5 downstream checkpoint
+Status: post-GSLR-13 downstream checkpoint
 
 ## Conclusion
 
@@ -21,7 +21,7 @@ predicate hooks.
 
 ## Downstream Progress
 
-Portarium has now completed four static follow-ups:
+Portarium has now completed six static follow-ups:
 
 - GSLR-9: checked-in route evidence can project into a docs/test-only
   `EngineeringEvidenceCardInputV1`.
@@ -38,6 +38,10 @@ Portarium has now completed four static follow-ups:
   `GslrEvidenceBundleV1` fixtures for GSLR-8 and GSLR-7, and Portarium verifies
   those sibling fixtures through the GSLR-12 verifier when both repos are
   present.
+- GSLR-13: Cockpit now has an internal manual bundle preview route that can load
+  those fixtures or accept pasted bundle JSON, run the verifier with an explicit
+  `nowIso`, show verification status, and render the static evidence card only
+  after verification passes.
 
 This makes prompt-language evidence legible to a future Cockpit surface without
 creating live ingestion, runtime cards, route-record queues, database tables,
@@ -50,8 +54,8 @@ The current cross-repo state is:
 - prompt-language owns the experiment harness, route records, local/frontier
   evidence, PL-owned scaffolds, and now the static GSLR bundle fixture handoff;
 - Portarium owns the static evidence-card contract, Cockpit export, static
-  operator view, static evidence-bundle verifier, and sibling-fixture
-  compatibility test;
+  operator view, static evidence-bundle verifier, sibling-fixture compatibility
+  test, and manual Cockpit bundle preview;
 - MacquarieCollege remains a boundary/reference vertical only.
 
 The important learning is that local models are useful where Prompt Language
@@ -61,11 +65,12 @@ model still owns route-record policy logic.
 
 ## Next
 
-The next product-safe step is GSLR-13: a manual Cockpit bundle preview. It
-should load one of the checked-in prompt-language bundle fixtures, run the
-Portarium verifier with an explicit verification time, show verification status,
-render static evidence only when valid, and keep persistence, queues, tables,
-SSE, and action controls absent.
+The next product-safe step is GSLR-14: an adversarial static bundle corpus. It
+should add rejected examples for expired bundles, not-yet-valid bundles,
+payload-hash tampering, invalid signatures, missing artifact hashes, raw payload
+keys, provenance mismatches, and runtime-authority claims. Those examples should
+exercise the same Portarium verifier and manual preview boundary before any
+import workflow is considered.
 
 Do not build live manifest ingestion or runtime route decisions from this
 checkpoint.

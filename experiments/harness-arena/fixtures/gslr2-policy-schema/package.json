@@ -1,0 +1,8 @@
+{
+  "name": "gslr2-policy-schema-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/public-gate.mjs"
+  }
+}

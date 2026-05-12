@@ -1,12 +1,12 @@
 # harness-arena — compare whole stacks: vanilla cloud harness + frontier model vs PL + local model + task-tuned flow
 
 **Status:** Active. Full HA-E1 is still planned, but HA-HR1 now has live local
-evidence, checked-in H11/H14/H15 routing policies, and runner profiles for
-promoted, frontier-baseline, local-screen, and experimental hybrid routes. The
-runner supports dry-run structure materialization, deterministic fake-live
+evidence, checked-in H11/H14/H15 routing policies, GSLR-1 live evidence, and a
+GSLR-2 policy-schema fixture for the next governed local/frontier routing run.
+The runner supports dry-run structure materialization, deterministic fake-live
 command execution, and explicit `--live` lane command execution with private
 oracle artifacts.
-**Last update:** 2026-05-09
+**Last update:** 2026-05-12
 
 ## Question
 
@@ -36,6 +36,11 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
 - The current H15 runner profile is executable with
   `node experiments/harness-arena/runner.mjs --h15-qwen-coder-task api-endpoint`;
   in live mode it requires a frontier lane command for the current baseline route.
+- GSLR-2 now has a tiny schema/code fixture, public gate, private oracle, and
+  deterministic fake-live proof. It is ready for live local/frontier model lanes,
+  but current evidence is harness-plumbing only until those model runs exist.
+  The deterministic receipt is
+  [results/gslr2-fake-live-2026-05-12/report.md](results/gslr2-fake-live-2026-05-12/report.md).
 
 Primary evidence records:
 
@@ -152,6 +157,8 @@ risk, repeated local failure, or read-only review.
 - HA-HR1 hybrid routing plan — see [hybrid-model-routing.md](hybrid-model-routing.md)
 - HA-HR1 live pilot readiness plan — see
   [HA-HR1-LIVE-PILOT-PLAN.md](HA-HR1-LIVE-PILOT-PLAN.md)
+- GSLR-2 policy-schema runbook — see
+  [GSLR-2-POLICY-SCHEMA-RUNBOOK.md](GSLR-2-POLICY-SCHEMA-RUNBOOK.md)
 - H14 local portfolio route policy — see
   [h14-local-routing-policy.v1.json](h14-local-routing-policy.v1.json)
 - H15 qwen-coder route policy — see
@@ -165,13 +172,15 @@ risk, repeated local failure, or read-only review.
 
 ## What is next (ordered)
 
-1. Keep H15 endpoint work on the frontier-only baseline route until local
+1. Run GSLR-2 across live local/frontier/advisor/hybrid arms with matched cost
+   controls, manifest final verdict, private oracle, and token telemetry.
+2. Keep H15 endpoint work on the frontier-only baseline route until local
    micro-flows show reliable value.
-2. Keep H11 on the promoted local route for this exact flow/oracle contract, and
+3. Keep H11 on the promoted local route for this exact flow/oracle contract, and
    watch for timeout, no-edit, stale-file, or API-drift regressions.
-3. Promote a local H15 candidate back into a hybrid full-task route only after the
+4. Promote a local H15 candidate back into a hybrid full-task route only after the
    micro-flow passes with claim-grade manifests and sampled resource evidence.
-4. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
+5. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
    and one multi-file route have claim-grade manifests.
 
 ## Known blockers

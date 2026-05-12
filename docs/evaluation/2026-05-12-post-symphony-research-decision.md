@@ -4,6 +4,10 @@ Status: research decision record
 Tracking bead: `prompt-language-gslr5`  
 Companion Portarium bead: `bead-1230`
 
+Update: GSLR-2 scaffold bead `prompt-language-gslr6` added the policy-schema
+fixture, public gate, private oracle, deterministic fake-live lane, and runbook.
+That proves harness plumbing only; live model evidence remains the next step.
+
 ## Question
 
 After GSLR-1 and OpenAI's public Symphony write-up, what should we build next,
@@ -187,6 +191,21 @@ Matched-cost rule:
 If GSLR-2 fails, the right next step is not product integration. It is to improve
 the route policy, fixture difficulty, local runner protocol, or matched-control
 design until the evidence can actually answer the question.
+
+## Execution Update
+
+2026-05-12:
+
+- Added `experiments/harness-arena/fixtures/gslr2-policy-schema/` as the next
+  tiny code/schema fixture.
+- Added `oracles/gslr2-policy-schema-oracle.mjs` to catch recursive raw-payload
+  leakage, missing token telemetry requirements, optional gates, unknown repos,
+  and missing final-verdict evidence.
+- Added `live/gslr2-deterministic-lane.mjs` and runner coverage to prove the
+  fixture, public gate, private oracle, final verdict, and review-defect plumbing
+  work before spending live model tokens.
+- Kept the claim boundary unchanged: positive GSLR-2 model evidence is still
+  required before Portarium gets a product evidence card.
 
 ## Sources
 

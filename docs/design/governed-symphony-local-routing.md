@@ -5,6 +5,7 @@
 Accepted R&D companion to the Portarium governed engineering layer.
 Tracking bead: `prompt-language-gslr`
 Companion Portarium bead: `bead-1225`
+Latest synthesis: `docs/evaluation/2026-05-12-governed-symphony-routing-synthesis.md`
 
 This is not a claim that prompt-language has shipped a Symphony scheduler or
 runtime-native per-turn provider routing. It defines how prompt-language should
@@ -245,3 +246,5 @@ It does not prove:
 - Recorded the first experiment arms and proof boundaries before implementation.
 - Added GSLR-1 as the first concrete HA-HR1 slice: a safe MC projection fixture
   plus runbook for all four arms.
+- Added the 2026-05-12 research synthesis and kept the next step as a live
+  four-arm experiment before any product integration.

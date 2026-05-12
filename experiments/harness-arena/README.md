@@ -90,8 +90,8 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   [results/gslr5-live-2026-05-12/report.md](results/gslr5-live-2026-05-12/report.md).
   Frontier-only passed with 53,668 frontier tokens; local-only failed by
   rejecting safe relative artifact refs. A repaired local prompt then passed
-  once with zero frontier tokens; the selected route remains
-  `frontier-baseline` pending repeat evidence.
+  once with zero frontier tokens, but the three-run repeat set failed all three
+  repeats. The selected route remains `frontier-baseline`.
 
 Primary evidence records:
 
@@ -234,8 +234,8 @@ risk, repeated local failure, or read-only review.
 ## What is next (ordered)
 
 1. Keep GSLR-5 on the live `frontier-baseline` route before any product
-   ingestion. The next useful research step is a GSLR-5R repeat set for the
-   repaired local lane, not product Cockpit ingestion.
+   ingestion. The next useful research step is a stronger local PL contract or
+   scaffolded skeleton for sanitizer predicates, not product Cockpit ingestion.
 2. Keep `gslr3-policy-manifest-transform` on the frontier-baseline route. Do not
    promote local-screen for schema-to-schema evidence-card transforms until a
    new local-lane micro-repair design passes public and private gates.

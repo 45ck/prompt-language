@@ -13,7 +13,8 @@
       "experiments/harness-arena/results/gslr3-live-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr4-live-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr5-live-2026-05-12/report.md",
-      "experiments/harness-arena/results/gslr5-local-repair-2026-05-12/report.md"
+      "experiments/harness-arena/results/gslr5-local-repair-2026-05-12/report.md",
+      "experiments/harness-arena/results/gslr5r-local-repeat-2026-05-12/report.md"
     ],
     "scaffoldResultDocs": [
       "experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md",
@@ -225,7 +226,7 @@
       "liveLocalLane": "experiments/harness-arena/live/gslr5-local-lane.mjs",
       "liveFrontierLane": "experiments/harness-arena/live/gslr5-frontier-lane.mjs",
       "cleanPasses": 2,
-      "totalRuns": 4,
+      "totalRuns": 7,
       "measuredArms": {
         "frontierOnly": {
           "finalVerdict": "pass",
@@ -256,6 +257,30 @@
           "frontierTokens": 0,
           "providerUsd": 0,
           "stepWallSeconds": 60.54
+        },
+        "localRepairRepeat1": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 60.563,
+          "failureBoundary": "public gate failed because the sanitizer accepted sourcepayload raw key"
+        },
+        "localRepairRepeat2": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 60.526,
+          "failureBoundary": "public gate failed because the sanitizer accepted ../private/raw-dump.json artifact ref"
+        },
+        "localRepairRepeat3": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 60.524,
+          "failureBoundary": "public gate failed because the sanitizer accepted sourcepayload raw key"
         }
       },
       "requiredGuards": [
@@ -270,8 +295,8 @@
         "private-oracle",
         "manifest-finalVerdict"
       ],
-      "localStopPolicy": "keep frontier-baseline as the selected route until the repaired local lane has at least three clean repeat passes with no private-oracle changes; local-repair-v2 is a candidate, not a product route",
-      "notes": "GSLR-5 tested the privacy-sensitive fixture-family rung. Frontier-only passed the public gate and private oracle. Local-only initially failed before the adversarial traps, but a repaired local prompt passed after artifact-ref and blockingReviewDefects semantics were made explicit. The selected route remains frontier-baseline pending repeat local repair evidence."
+      "localStopPolicy": "keep frontier-baseline as the selected route; the repaired local lane failed all three repeat runs, so the next local attempt must use a stronger PL contract or scaffolded skeleton rather than another free-form prompt",
+      "notes": "GSLR-5 tested the privacy-sensitive fixture-family rung. Frontier-only passed the public gate and private oracle. Local-only initially failed before the adversarial traps, and a repaired local prompt passed once, but the three-run repeat set failed on raw-key and unsafe-artifact checks. The selected route remains frontier-baseline."
     }
   ],
   "decisionRules": [

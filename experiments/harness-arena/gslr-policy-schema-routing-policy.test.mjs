@@ -63,7 +63,10 @@ test('GSLR policy-schema policy exposes routes after live evidence', () => {
   assert.equal(payloadRoute.measuredArms.localRepairV1.finalVerdict, 'fail');
   assert.equal(payloadRoute.measuredArms.localRepairV2.finalVerdict, 'pass');
   assert.equal(payloadRoute.measuredArms.localRepairV2.frontierTokens, 0);
-  assert.match(payloadRoute.notes, /repaired local prompt passed/);
+  assert.equal(payloadRoute.measuredArms.localRepairRepeat1.finalVerdict, 'fail');
+  assert.equal(payloadRoute.measuredArms.localRepairRepeat2.finalVerdict, 'fail');
+  assert.equal(payloadRoute.measuredArms.localRepairRepeat3.finalVerdict, 'fail');
+  assert.match(payloadRoute.notes, /three-run repeat set failed/);
 });
 
 test('GSLR policy-schema policy references checked-in evidence and harness files', () => {

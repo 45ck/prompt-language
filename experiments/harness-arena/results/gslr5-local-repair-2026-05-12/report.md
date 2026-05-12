@@ -54,5 +54,7 @@ Run a small GSLR-5R repeat set before promotion:
 - same zero-frontier-token lane;
 - same resource snapshot evidence.
 
-Only after repeat passes should the route policy consider a `local-screen` or
-`local-repair-candidate` decision for this privacy-sensitive shape.
+The first repeat set did not pass. See
+[../gslr5r-local-repeat-2026-05-12/report.md](../gslr5r-local-repeat-2026-05-12/report.md).
+The next step is a stronger PL contract or scaffolded skeleton, not route
+promotion.

@@ -78,9 +78,12 @@ evidence:
   before reaching the adversarial traps.
 - live `local-repair-v2` passed with zero frontier tokens after artifact-ref and
   `blockingReviewDefects` semantics were made explicit.
+- the GSLR-5R three-repeat set then failed all three local repeats: two accepted
+  a `sourcepayload` raw key and one accepted an unsafe raw-dump parent-traversal
+  artifact ref.
 
 The route remains `frontier-baseline` because this rung is explicitly
-privacy-sensitive and the repaired local lane has only one clean pass so far.
+privacy-sensitive and the repaired local lane did not repeat.
 
 ## Promotion Rule
 

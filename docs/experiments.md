@@ -15,6 +15,8 @@ For the governed local/frontier routing sequence after OpenAI Symphony, see the
 [Post-Symphony GSLR Research Decision](evaluation/2026-05-12-post-symphony-research-decision.md)
 and the
 [GSLR-2 Policy Schema Runbook](../experiments/harness-arena/GSLR-2-POLICY-SCHEMA-RUNBOOK.md).
+For the post-live route decision, see
+[GSLR Route Policy After Live Schema Evidence](evaluation/2026-05-12-gslr-route-policy-after-live.md).
 For the cross-experiment claim ledger, see
 [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md). For the
 raw research tree, run catalog, and dated receipts, see
@@ -48,7 +50,7 @@ For experiment design templates and methodology, see
 | ------------------------------------------------------------- | --------------------------- | ---------- | ------------------------------------------------------------------------------ |
 | [Aider vs PL](../experiments/aider-vs-pl/SCORECARD.md)        | Coding assistant comparison | Historical | Phase-1 directional signal; later local ladder is mixed and non-claim-eligible |
 | [Full-stack CRUD](../experiments/fullstack-crud-comparison/)  | Local-model product build   | Active     | R30-R45 local diagnostics: implementation limits, bounded selector/ranker wins |
-| [Harness Arena](../experiments/harness-arena/)                | Local/frontier routing      | Active     | GSLR-2 policy-schema fixture ready for live local/frontier routing arms        |
+| [Harness Arena](../experiments/harness-arena/)                | Local/frontier routing      | Active     | GSLR-2 live evidence now routes the tiny schema task to local-screen only      |
 | [Senior Pairing](../experiments/senior-pairing-protocol/)     | Local-model supervision     | Planned    | Senior-engineer supervision flow program                                       |
 | [Premature Stop](../experiments/premature-stop-benchmark/)    | Reliability                 | Scaffold   | Repeated-stop and premature-exit comparisons                                   |
 | [Bounded Feature](../experiments/bounded-feature-benchmark/)  | Implementation quality      | Scaffold   | Bounded implementation quality benchmarks                                      |

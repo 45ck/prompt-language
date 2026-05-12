@@ -7,6 +7,10 @@ Deterministic result:
 `experiments/harness-arena/results/gslr2-fake-live-2026-05-12/report.md`
 Live result:
 `experiments/harness-arena/results/gslr2-live-2026-05-12/report.md`
+Post-live route policy:
+`experiments/harness-arena/gslr-policy-schema-routing-policy.v1.json`
+Fixture-family plan:
+`experiments/harness-arena/GSLR-POLICY-SCHEMA-FAMILY-PLAN.md`
 
 ## Question
 
@@ -145,6 +149,8 @@ The 2026-05-12 live run hit the first case: local-only passed the hardened
 fixture, advisor-only passed with fewer frontier tokens than frontier-only, and
 hybrid-router passed but used more frontier tokens than frontier-only. The
 result supports local-only screening for this task shape, not hybrid promotion.
+The follow-up route policy records that as `local-screen`, not `local-promoted`;
+three nearby clean fixture-family passes are required before broad promotion.
 
 ## What This Can Prove
 

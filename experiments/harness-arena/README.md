@@ -1,11 +1,11 @@
 # harness-arena — compare whole stacks: vanilla cloud harness + frontier model vs PL + local model + task-tuned flow
 
 **Status:** Active. Full HA-E1 is still planned, but HA-HR1 now has live local
-evidence, checked-in H11/H14/H15 routing policies, GSLR-1 live evidence, and a
-GSLR-2 policy-schema fixture for the next governed local/frontier routing run.
-The runner supports dry-run structure materialization, deterministic fake-live
-command execution, and explicit `--live` lane command execution with private
-oracle artifacts.
+evidence, checked-in H11/H14/H15 routing policies, GSLR-1 live evidence, GSLR-2
+live policy-schema evidence, and a checked-in GSLR route policy. The runner
+supports dry-run structure materialization, deterministic fake-live command
+execution, and explicit `--live` lane command execution with private oracle
+artifacts.
 **Last update:** 2026-05-12
 
 ## Question
@@ -46,6 +46,11 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   Local-only passed the policy-schema fixture with zero frontier tokens;
   advisor-only passed with fewer frontier tokens than frontier-only;
   hybrid-router passed but was not cost-effective for this tiny task.
+- The post-live route policy is checked in at
+  [gslr-policy-schema-routing-policy.v1.json](gslr-policy-schema-routing-policy.v1.json).
+  `gslr2-policy-schema` is a `local-screen` route, not a broad local promotion
+  or hybrid-router success claim. The follow-on fixture family is documented in
+  [GSLR-POLICY-SCHEMA-FAMILY-PLAN.md](GSLR-POLICY-SCHEMA-FAMILY-PLAN.md).
 
 Primary evidence records:
 
@@ -164,6 +169,10 @@ risk, repeated local failure, or read-only review.
   [HA-HR1-LIVE-PILOT-PLAN.md](HA-HR1-LIVE-PILOT-PLAN.md)
 - GSLR-2 policy-schema runbook — see
   [GSLR-2-POLICY-SCHEMA-RUNBOOK.md](GSLR-2-POLICY-SCHEMA-RUNBOOK.md)
+- GSLR policy-schema route policy — see
+  [gslr-policy-schema-routing-policy.v1.json](gslr-policy-schema-routing-policy.v1.json)
+- GSLR policy-schema fixture family plan — see
+  [GSLR-POLICY-SCHEMA-FAMILY-PLAN.md](GSLR-POLICY-SCHEMA-FAMILY-PLAN.md)
 - H14 local portfolio route policy — see
   [h14-local-routing-policy.v1.json](h14-local-routing-policy.v1.json)
 - H15 qwen-coder route policy — see
@@ -177,9 +186,10 @@ risk, repeated local failure, or read-only review.
 
 ## What is next (ordered)
 
-1. Generalize GSLR-2 into a small policy/schema fixture family before promoting a
-   route. The first live result supports local-only screening for this exact tiny
-   validator shape, but not hybrid-router cost savings.
+1. Run the GSLR policy/schema fixture family from
+   [GSLR-POLICY-SCHEMA-FAMILY-PLAN.md](GSLR-POLICY-SCHEMA-FAMILY-PLAN.md).
+   The first live result supports local-only screening for the exact tiny
+   validator shape, but not hybrid-router cost savings or broad route promotion.
 2. Keep H15 endpoint work on the frontier-only baseline route until local
    micro-flows show reliable value.
 3. Keep H11 on the promoted local route for this exact flow/oracle contract, and

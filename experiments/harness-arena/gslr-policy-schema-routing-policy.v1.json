@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "policyVersion": "gslr-policy-schema-routing-v1",
+  "decidedAt": "2026-05-12",
+  "model": {
+    "provider": "ollama",
+    "name": "qwen3-coder:30b",
+    "endpointClass": "local"
+  },
+  "evidence": {
+    "liveResultDoc": "experiments/harness-arena/results/gslr2-live-2026-05-12/report.md",
+    "runbook": "experiments/harness-arena/GSLR-2-POLICY-SCHEMA-RUNBOOK.md",
+    "researchDecisionDoc": "docs/evaluation/2026-05-12-post-symphony-research-decision.md",
+    "minimumCleanPassesForPromotion": 3
+  },
+  "routes": [
+    {
+      "task": "gslr2-policy-schema",
+      "decision": "local-screen",
+      "owner": "local",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "GSLR-2 hardened live run showed local-only can solve this exact one-file policy-schema validator with public and private gates"
+      },
+      "selectedModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "selected only for local screening on this exact tiny schema shape; not promoted broadly until a fixture family passes"
+      },
+      "fixture": "experiments/harness-arena/fixtures/gslr2-policy-schema",
+      "oracle": "experiments/harness-arena/oracles/gslr2-policy-schema-oracle.mjs",
+      "liveLocalLane": "experiments/harness-arena/live/gslr2-local-lane.mjs",
+      "liveFrontierLane": "experiments/harness-arena/live/gslr2-frontier-lane.mjs",
+      "cleanPasses": 1,
+      "totalRuns": 1,
+      "measuredArms": {
+        "localOnly": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 60.548
+        },
+        "frontierOnly": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 45713,
+          "providerUsd": 1,
+          "stepWallSeconds": 102.126
+        },
+        "advisorOnly": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 15301,
+          "providerUsd": 1,
+          "stepWallSeconds": 99.901
+        },
+        "hybridRouter": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 91279,
+          "providerUsd": 3,
+          "stepWallSeconds": 201.209
+        }
+      },
+      "requiredGuards": [
+        "public-gate",
+        "malformed-input-no-throw",
+        "recursive-forbidden-key-scan",
+        "private-oracle",
+        "manifest-finalVerdict"
+      ],
+      "localStopPolicy": "stop after the first timeout, public-gate failure, private-oracle failure, malformed-input throw, or raw-payload leakage; use advisor-only before hybrid for this tiny schema shape",
+      "notes": "The hardened live run passed all four arms. The result is positive evidence for local-only screening on a tiny one-file policy-schema validator. It is negative evidence for mandatory hybrid-router review on this task shape because hybrid used 91,279 frontier tokens versus 45,713 for frontier-only. Advisor-only also passed with 15,301 frontier tokens, so advice-plus-local is the cheaper escalation candidate when local-only fails."
+    }
+  ],
+  "decisionRules": [
+    {
+      "when": "one implementation file, explicit schema rules, public gate, private oracle, no production side effects",
+      "route": "local-screen",
+      "reason": "GSLR-2 hardened live evidence shows local-only can solve this exact task shape with zero frontier tokens"
+    },
+    {
+      "when": "local-screen fails public gate or private oracle once, but the task is still one-file and low ambiguity",
+      "route": "advisor-only",
+      "reason": "GSLR-2 advisor-only passed with fewer frontier tokens than frontier-only"
+    },
+    {
+      "when": "task has high ambiguity, multi-file API behavior, security review, irreversible action, or weak gates",
+      "route": "frontier-baseline",
+      "reason": "GSLR-2 does not justify local ownership outside tightly gated schema work"
+    },
+    {
+      "when": "governance independently requires final frontier review",
+      "route": "hybrid-required",
+      "reason": "hybrid review may be policy-required, but GSLR-2 showed it is not cost-saving for tiny validators"
+    }
+  ],
+  "nextFixtureFamily": [
+    {
+      "id": "gslr3-policy-manifest-transform",
+      "hypothesis": "local-screen",
+      "shape": "one-file transform from route manifest to Portarium evidence-card input",
+      "promotionValue": "tests whether local-only survives schema-to-schema transformation rather than validation only"
+    },
+    {
+      "id": "gslr4-two-file-validator",
+      "hypothesis": "advisor-only",
+      "shape": "two implementation files plus public tests",
+      "promotionValue": "tests whether file-count growth moves the route from local-screen to advisor"
+    },
+    {
+      "id": "gslr5-raw-payload-adversarial",
+      "hypothesis": "frontier-baseline",
+      "shape": "policy fixture seeded with subtle raw-payload leakage and misleading safe summaries",
+      "promotionValue": "tests whether privacy-sensitive ambiguity should bypass local-only"
+    }
+  ],
+  "escalationTriggers": [
+    "public-gate-failure",
+    "private-oracle-failure",
+    "malformed-input-throw",
+    "raw-payload-leakage",
+    "multi-file-cross-contract-change",
+    "weak-public-gate",
+    "security-or-privacy-sensitive-ambiguity",
+    "mandatory-human-or-frontier-review-policy"
+  ],
+  "runtimeDefaults": {
+    "localModel": "qwen3-coder:30b",
+    "frontierModel": "codex-default",
+    "stepTimeoutMs": 900000,
+    "oracleTimeoutMs": 60000,
+    "localDraftPolicy": "local-screen-with-hard-gates",
+    "routePolicy": "advisor-before-hybrid-for-tiny-schema-tasks"
+  }
+}

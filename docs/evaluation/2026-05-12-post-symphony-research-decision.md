@@ -14,6 +14,12 @@ advisor-only, and hybrid-router all passed. The result supports bounded
 local-only screening for this task shape, not hybrid cost savings: hybrid passed
 but used more frontier tokens than frontier-only.
 
+Route-policy update: bead `prompt-language-gslr8` codified that result in
+`experiments/harness-arena/gslr-policy-schema-routing-policy.v1.json`. The
+exact `gslr2-policy-schema` route is now `local-screen`; broader promotion waits
+for the fixture family in
+`experiments/harness-arena/GSLR-POLICY-SCHEMA-FAMILY-PLAN.md`.
+
 ## Question
 
 After GSLR-1 and OpenAI's public Symphony write-up, what should we build next,
@@ -215,6 +221,9 @@ design until the evidence can actually answer the question.
 - Ran the hardened GSLR-2 live task. The honest conclusion changed: this is
   positive local-model evidence for a tiny schema validator, but negative
   evidence for the current hybrid-router cost policy on this task.
+- Added the checked-in route policy after the live result. The next research
+  step is not Portarium ingestion; it is a fixture family that can test whether
+  the local-screen rule survives nearby policy/schema task shapes.
 
 ## Sources
 

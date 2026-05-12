@@ -38,11 +38,12 @@ tiny validators. Review is valuable only when the risk justifies it.
 
 The next evidence step is a small family, not product integration.
 
-| ID                                | Hypothesis        | Shape                                                          | Why it matters                                      |
-| --------------------------------- | ----------------- | -------------------------------------------------------------- | --------------------------------------------------- |
-| `gslr3-policy-manifest-transform` | frontier-baseline | One-file transform from route manifest to Portarium card input | Local/advisor failed; frontier passed the transform |
-| `gslr4-two-file-validator`        | frontier-baseline | Two implementation files plus public tests                     | Advisor passed but cost more than frontier baseline |
-| `gslr5-raw-payload-adversarial`   | frontier-baseline | Subtle raw-payload leakage with misleading safe summaries      | Tests privacy-sensitive ambiguity and local bypass  |
+| ID                                | Hypothesis        | Shape                                                          | Why it matters                                                        |
+| --------------------------------- | ----------------- | -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `gslr3-policy-manifest-transform` | frontier-baseline | One-file transform from route manifest to Portarium card input | Local/advisor failed; frontier passed the transform                   |
+| `gslr4-two-file-validator`        | frontier-baseline | Two implementation files plus public tests                     | Advisor passed but cost more than frontier baseline                   |
+| `gslr5-raw-payload-adversarial`   | frontier-baseline | Subtle raw-payload leakage with misleading safe summaries      | Tests privacy-sensitive ambiguity and local bypass                    |
+| `gslr6-scaffolded-sanitizer`      | pending scaffold  | Fixed sanitizer helpers plus unchanged adversarial oracle      | Tests whether PL contract shape, not prompt prose, makes local viable |
 
 ## Current Progress
 
@@ -79,11 +80,18 @@ evidence:
 - live `local-repair-v2` passed with zero frontier tokens after artifact-ref and
   `blockingReviewDefects` semantics were made explicit.
 - the GSLR-5R three-repeat set then failed all three local repeats: two accepted
-  a `sourcepayload` raw key and one accepted an unsafe raw-dump parent-traversal
+  a source payload raw key and one accepted an unsafe raw-dump parent-traversal
   artifact ref.
 
 The route remains `frontier-baseline` because this rung is explicitly
 privacy-sensitive and the repaired local lane did not repeat.
+
+The next rung is `gslr6-scaffolded-sanitizer`: keep the privacy-sensitive
+sanitizer problem, but change the local lane from free-form implementation to a
+scaffold with fixed helper boundaries for key normalization, raw text scanning,
+artifact-ref validation, and action-boundary derivation. This is not a route
+promotion. It is a test of whether Prompt Language can make the local task small
+and falsifiable enough to pass repeated hidden-oracle checks.
 
 ## Promotion Rule
 

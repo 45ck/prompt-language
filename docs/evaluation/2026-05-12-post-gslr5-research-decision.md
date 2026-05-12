@@ -67,3 +67,7 @@ boundaries that consistently:
 
 Only after repeated hidden-oracle passes against the unchanged oracle should we
 revisit an advisor-only or local-screen route for this task shape.
+
+Follow-up: `docs/evaluation/2026-05-12-post-gslr5r-scaffolded-sanitizer-decision.md`
+records the next experiment as GSLR-6, a scaffolded sanitizer contract with
+fixed helper boundaries and an N=3 repeat bar before any route promotion.

@@ -10,14 +10,14 @@ The docs in this section are paired with the checked-in dataset bank under [expe
 
 Use these pages as the current evidence boundary before citing older plans:
 
-| Doc                                                                                     | Current role                                                                         |
-| --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [What Works Now](what-works-now.md)                                                     | Short public answer for the strongest proven mechanism and caveats                   |
-| [Evidence Snapshot: 2026-05-06](2026-05-06-evidence-snapshot.md)                        | Current post-FSCRUD product and local-model evidence boundary                        |
-| [Research Synthesis: 2026-05-06](2026-05-06-research-synthesis.md)                      | Current cross-experiment claim ledger and hypothesis verdicts                        |
-| [Post-GSLR-5 Research Decision: 2026-05-12](2026-05-12-post-gslr5-research-decision.md) | Current governed-Symphony route boundary after raw-payload adversarial live evidence |
-| [Program Status](../strategy/program-status.md)                                         | Current thesis status, claim-eligibility rule, blockers, and next operator actions   |
-| [Non-Factory Proof Program](non-factory-proof-program.md)                               | Current next-proof sequence for runtime truth, QA lift, and bounded outcome lift     |
+| Doc                                                                                                               | Current role                                                                       |
+| ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [What Works Now](what-works-now.md)                                                                               | Short public answer for the strongest proven mechanism and caveats                 |
+| [Evidence Snapshot: 2026-05-06](2026-05-06-evidence-snapshot.md)                                                  | Current post-FSCRUD product and local-model evidence boundary                      |
+| [Research Synthesis: 2026-05-06](2026-05-06-research-synthesis.md)                                                | Current cross-experiment claim ledger and hypothesis verdicts                      |
+| [Post-GSLR-5R Scaffolded Sanitizer Decision: 2026-05-12](2026-05-12-post-gslr5r-scaffolded-sanitizer-decision.md) | Current governed-Symphony next experiment after repaired local repeats failed      |
+| [Program Status](../strategy/program-status.md)                                                                   | Current thesis status, claim-eligibility rule, blockers, and next operator actions |
+| [Non-Factory Proof Program](non-factory-proof-program.md)                                                         | Current next-proof sequence for runtime truth, QA lift, and bounded outcome lift   |
 
 ## How to use this section
 
@@ -51,6 +51,7 @@ Use these pages as the current evidence boundary before citing older plans:
 | [Smoke Coverage Status](test-design-smoke-gaps.md)                                                                                  | Current smoke coverage, quick-suite evidence, and remaining gaps                                                                        |
 | [Operator Shell Rollout and Promotion Evidence](operator-shell-rollout-and-promotion-evidence.md)                                   | Rollout gates, blocker classes, troubleshooting, and promotion evidence for operator-shell slices                                       |
 | [Non-Factory Proof Program](non-factory-proof-program.md)                                                                           | Prioritized next experiment program for runtime truth, QA lift, and bounded outcome lift beyond factories                               |
+| [Post-GSLR-5R Scaffolded Sanitizer Decision: 2026-05-12](2026-05-12-post-gslr5r-scaffolded-sanitizer-decision.md)                   | Next GSLR experiment contract: scaffolded sanitizer helpers before any privacy-sensitive local route promotion                          |
 
 ## Research continuation
 

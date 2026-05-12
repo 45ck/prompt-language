@@ -1,0 +1,8 @@
+{
+  "name": "gslr6-scaffolded-sanitizer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/public-gate.mjs"
+  }
+}

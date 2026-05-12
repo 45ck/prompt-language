@@ -76,6 +76,17 @@ Live Cockpit cards remain blocked.
 MacquarieCollege connector observation, raw school-data movement, and
 source-system reads or writes remain blocked.
 
+## Deterministic Proof
+
+The deterministic fake-live scaffold now passes:
+
+```text
+experiments/harness-arena/results/gslr6-fake-live-2026-05-13/report.md
+```
+
+That proves fixture, public gate, private oracle, token parsing, review-defect
+parsing, and final-verdict wiring only. It is not model-performance evidence.
+
 ## Execution Record
 
 2026-05-12:
@@ -84,3 +95,9 @@ source-system reads or writes remain blocked.
   promotion.
 - Defined the scaffolded helper contract and repeat bar.
 - Kept the work in R&D only.
+
+2026-05-13:
+
+- Added the GSLR-6 scaffolded sanitizer fixture, public gate, private oracle,
+  deterministic lane, runner coverage, and deterministic fake-live result.
+- Kept live local repeats pending.

@@ -92,6 +92,14 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   rejecting safe relative artifact refs. A repaired local prompt then passed
   once with zero frontier tokens, but the three-run repeat set failed all three
   repeats. The selected route remains `frontier-baseline`.
+- GSLR-6 now has a scaffolded sanitizer fixture, public gate, private oracle,
+  deterministic lane, and deterministic fake-live proof. See
+  [GSLR-6-SCAFFOLDED-SANITIZER-RUNBOOK.md](GSLR-6-SCAFFOLDED-SANITIZER-RUNBOOK.md)
+  and
+  [results/gslr6-fake-live-2026-05-13/report.md](results/gslr6-fake-live-2026-05-13/report.md).
+  This is harness-plumbing evidence only. It tests whether fixed helper
+  boundaries can make the failed GSLR-5 sanitizer task small enough for future
+  local repeats; no route promotion exists yet.
 
 Primary evidence records:
 

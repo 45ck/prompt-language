@@ -93,6 +93,12 @@ artifact-ref validation, and action-boundary derivation. This is not a route
 promotion. It is a test of whether Prompt Language can make the local task small
 and falsifiable enough to pass repeated hidden-oracle checks.
 
+`gslr6-scaffolded-sanitizer` now has a deterministic fake-live proof:
+
+- fixture, public gate, private oracle, and deterministic lane exist;
+- deterministic `hybrid-router` passed the private oracle and final verdict;
+- live local repeats are still pending and are required before any promotion.
+
 ## Promotion Rule
 
 Do not promote a broad GSLR local route until at least three fixture-family runs

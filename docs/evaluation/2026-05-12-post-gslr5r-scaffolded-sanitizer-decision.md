@@ -180,3 +180,10 @@ repeats only after the public gate proves the scaffold and oracle wiring.
 - Kept privacy-sensitive evidence-card sanitization on `frontier-baseline`.
 - Kept Portarium ingestion, live Cockpit cards, and MC connector/raw-data work
   blocked.
+
+2026-05-13:
+
+- Added the GSLR-6 scaffolded fixture, public gate, private oracle,
+  deterministic lane, runner coverage, and deterministic fake-live result.
+- Preserved the claim boundary: this is scaffold/harness evidence only; local
+  model N=3 repeats remain pending.

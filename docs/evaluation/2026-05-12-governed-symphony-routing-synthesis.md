@@ -140,6 +140,14 @@ The first two prerequisites are now implemented for new harness runs:
 telemetry is promoted into `steps[].cost.totalTokens`. GSLR-2 should use these
 fields as hard acceptance inputs, not post-hoc report prose.
 
+Follow-up research decision after current Symphony/harness/routing review:
+`docs/evaluation/2026-05-12-post-symphony-research-decision.md`.
+
+That decision narrows GSLR-2 further: use a tiny code/schema task, compare
+against a matched frontier-review control, require manifest-level verdict and
+token telemetry, and keep Portarium product-card work blocked until the hybrid
+manifest is positive.
+
 ## Sources
 
 - OpenAI Symphony repository:
@@ -176,3 +184,6 @@ fields as hard acceptance inputs, not post-hoc report prose.
   docs-task capability, but not hybrid cost reduction.
 - Added GSLR-2 preflight hardening: manifest final verdict plus provider token
   telemetry extraction for future frontier cost comparisons.
+- Added the post-Symphony research decision: Symphony validates board-level
+  orchestration, but PL's remaining claim is governed, measurable work-item
+  contracts with honest local/frontier routing economics.

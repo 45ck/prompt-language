@@ -47,6 +47,20 @@ test('GSLR policy-schema policy exposes routes after live evidence', () => {
   assert.equal(transformRoute.measuredArms.frontierOnly.finalVerdict, 'pass');
   assert.equal(transformRoute.measuredArms.frontierOnly.frontierTokens, 33913);
   assert.match(transformRoute.notes, /local-screen hypothesis failed/);
+
+  const validatorRoute = routeByTask(policy, 'gslr4-two-file-validator');
+  assert.equal(validatorRoute.decision, 'frontier-baseline');
+  assert.equal(validatorRoute.measuredArms.frontierOnly.finalVerdict, 'pass');
+  assert.equal(validatorRoute.measuredArms.localOnly.finalVerdict, 'fail');
+
+  const payloadRoute = routeByTask(policy, 'gslr5-raw-payload-adversarial');
+  assert.equal(payloadRoute.decision, 'frontier-baseline');
+  assert.equal(payloadRoute.owner, 'frontier');
+  assert.equal(payloadRoute.cleanPasses, 1);
+  assert.equal(payloadRoute.measuredArms.frontierOnly.finalVerdict, 'pass');
+  assert.equal(payloadRoute.measuredArms.frontierOnly.frontierTokens, 53668);
+  assert.equal(payloadRoute.measuredArms.localOnly.finalVerdict, 'fail');
+  assert.match(payloadRoute.notes, /Local-only failed/);
 });
 
 test('GSLR policy-schema policy references checked-in evidence and harness files', () => {
@@ -75,6 +89,11 @@ test('GSLR policy-schema resolver maps aliases to route decisions', () => {
     normalizeGslrPolicySchemaTask('evidence-card-transform'),
     'gslr3-policy-manifest-transform',
   );
+  assert.equal(
+    normalizeGslrPolicySchemaTask('evidence-card-validator'),
+    'gslr4-two-file-validator',
+  );
+  assert.equal(normalizeGslrPolicySchemaTask('payload-sanitizer'), 'gslr5-raw-payload-adversarial');
 
   const resolved = resolveGslrPolicySchemaRoute('policy-schema');
   assert.equal(resolved.shouldRunLocalScreen, true);
@@ -91,6 +110,11 @@ test('GSLR policy-schema resolver maps aliases to route decisions', () => {
   assert.equal(transform.shouldRunHybrid, false);
   assert.equal(transform.route.selectedModel.provider, 'openai');
   assert.equal(transform.route.decision, 'frontier-baseline');
+
+  const payload = resolveGslrPolicySchemaRoute('gslr5');
+  assert.equal(payload.shouldRunFrontier, true);
+  assert.equal(payload.route.selectedModel.provider, 'openai');
+  assert.equal(payload.route.cleanPasses, 1);
 
   assert.throws(
     () => resolveGslrPolicySchemaRoute('unknown-task'),

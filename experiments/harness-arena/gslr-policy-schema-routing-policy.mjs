@@ -18,6 +18,12 @@ const TASK_ALIASES = new Map([
   ['policy-manifest-transform', 'gslr3-policy-manifest-transform'],
   ['evidence-card-transform', 'gslr3-policy-manifest-transform'],
   ['manifest-transform', 'gslr3-policy-manifest-transform'],
+  ['gslr4', 'gslr4-two-file-validator'],
+  ['two-file-validator', 'gslr4-two-file-validator'],
+  ['evidence-card-validator', 'gslr4-two-file-validator'],
+  ['gslr5', 'gslr5-raw-payload-adversarial'],
+  ['raw-payload-adversarial', 'gslr5-raw-payload-adversarial'],
+  ['payload-sanitizer', 'gslr5-raw-payload-adversarial'],
 ]);
 
 export function loadGslrPolicySchemaRoutingPolicy(
@@ -60,7 +66,7 @@ function printUsage() {
     [
       'usage: node experiments/harness-arena/gslr-policy-schema-routing-policy.mjs <task> [--json]',
       '',
-      'common tasks: gslr2-policy-schema, policy-schema, schema-validator, gslr3-policy-manifest-transform',
+      'common tasks: gslr2-policy-schema, policy-schema, schema-validator, gslr3-policy-manifest-transform, gslr4-two-file-validator, gslr5-raw-payload-adversarial',
     ].join('\n'),
   );
 }

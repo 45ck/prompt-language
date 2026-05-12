@@ -81,6 +81,16 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   Advisor-only passed but used more frontier tokens than frontier-only;
   local-only failed the private oracle. The checked-in route for this two-file
   validator is now `frontier-baseline`.
+- GSLR-5 now has a raw-payload adversarial sanitizer fixture, public gate,
+  private oracle, deterministic lane, local lane, and frontier lane. See
+  [GSLR-5-RAW-PAYLOAD-ADVERSARIAL-RUNBOOK.md](GSLR-5-RAW-PAYLOAD-ADVERSARIAL-RUNBOOK.md)
+  and
+  [results/gslr5-fake-live-2026-05-12/report.md](results/gslr5-fake-live-2026-05-12/report.md).
+  The deterministic proof passed, and the live result is recorded in
+  [results/gslr5-live-2026-05-12/report.md](results/gslr5-live-2026-05-12/report.md).
+  Frontier-only passed with 53,668 frontier tokens; local-only failed by
+  rejecting safe relative artifact refs. The selected route remains
+  `frontier-baseline`.
 
 Primary evidence records:
 
@@ -207,6 +217,8 @@ risk, repeated local failure, or read-only review.
   [GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md](GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md)
 - GSLR-4 two-file validator runbook — see
   [GSLR-4-TWO-FILE-VALIDATOR-RUNBOOK.md](GSLR-4-TWO-FILE-VALIDATOR-RUNBOOK.md)
+- GSLR-5 raw-payload adversarial runbook — see
+  [GSLR-5-RAW-PAYLOAD-ADVERSARIAL-RUNBOOK.md](GSLR-5-RAW-PAYLOAD-ADVERSARIAL-RUNBOOK.md)
 - H14 local portfolio route policy — see
   [h14-local-routing-policy.v1.json](h14-local-routing-policy.v1.json)
 - H15 qwen-coder route policy — see
@@ -220,9 +232,9 @@ risk, repeated local failure, or read-only review.
 
 ## What is next (ordered)
 
-1. Build GSLR-5 raw-payload adversarial evidence before any product ingestion.
-   GSLR-4 is now frontier-baseline under current lanes, so the next useful
-   boundary is privacy-sensitive ambiguity.
+1. Keep GSLR-5 on the live `frontier-baseline` route before any product
+   ingestion. The next useful research step is local-lane repair design, not
+   product Cockpit ingestion.
 2. Keep `gslr3-policy-manifest-transform` on the frontier-baseline route. Do not
    promote local-screen for schema-to-schema evidence-card transforms until a
    new local-lane micro-repair design passes public and private gates.

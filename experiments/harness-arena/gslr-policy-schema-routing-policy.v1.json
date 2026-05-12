@@ -11,10 +11,12 @@
     "liveResultDoc": "experiments/harness-arena/results/gslr2-live-2026-05-12/report.md",
     "additionalLiveResultDocs": [
       "experiments/harness-arena/results/gslr3-live-2026-05-12/report.md",
-      "experiments/harness-arena/results/gslr4-live-2026-05-12/report.md"
+      "experiments/harness-arena/results/gslr4-live-2026-05-12/report.md",
+      "experiments/harness-arena/results/gslr5-live-2026-05-12/report.md"
     ],
     "scaffoldResultDocs": [
-      "experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md"
+      "experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md",
+      "experiments/harness-arena/results/gslr5-fake-live-2026-05-12/report.md"
     ],
     "runbook": "experiments/harness-arena/GSLR-2-POLICY-SCHEMA-RUNBOOK.md",
     "researchDecisionDoc": "docs/evaluation/2026-05-12-post-symphony-research-decision.md",
@@ -200,6 +202,60 @@
       ],
       "localStopPolicy": "do not promote local-screen for this two-file validator; local-only failed the private oracle. Advisor-only can pass but currently costs more frontier tokens than frontier-only, so use frontier-only unless a cheaper advisor prompt or local repair produces fresh passing evidence.",
       "notes": "GSLR-4 tested whether the validation shape could recover local usefulness after the GSLR-3 transform failure. Advisor-only passed, but frontier-only passed with fewer frontier tokens and lower wall time. The selected route is therefore frontier-baseline under current prompts."
+    },
+    {
+      "task": "gslr5-raw-payload-adversarial",
+      "decision": "frontier-baseline",
+      "owner": "frontier",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "privacy-sensitive raw-payload ambiguity is an escalation trigger until local-only passes hidden oracle evidence"
+      },
+      "selectedModel": {
+        "provider": "openai",
+        "name": "codex-default",
+        "endpointClass": "frontier",
+        "selectionReason": "GSLR-5 is seeded with adversarial raw-payload leakage and must establish a frontier solvability baseline before local diagnostic work"
+      },
+      "fixture": "experiments/harness-arena/fixtures/gslr5-raw-payload-adversarial",
+      "oracle": "experiments/harness-arena/oracles/gslr5-raw-payload-adversarial-oracle.mjs",
+      "liveLocalLane": "experiments/harness-arena/live/gslr5-local-lane.mjs",
+      "liveFrontierLane": "experiments/harness-arena/live/gslr5-frontier-lane.mjs",
+      "cleanPasses": 1,
+      "totalRuns": 2,
+      "measuredArms": {
+        "frontierOnly": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 53668,
+          "providerUsd": 5,
+          "stepWallSeconds": 457.843
+        },
+        "localOnly": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 90.822,
+          "failureBoundary": "public gate failed on the safe card because the local artifact-ref validator rejected valid relative private/oracle refs"
+        }
+      },
+      "requiredGuards": [
+        "public-gate",
+        "malformed-input-no-throw",
+        "recursive-forbidden-key-scan",
+        "separator-insensitive-key-scan",
+        "raw-payload-text-rejection",
+        "unsafe-artifact-ref-rejection",
+        "action-boundary-recompute",
+        "allowed-top-level-fields-only",
+        "private-oracle",
+        "manifest-finalVerdict"
+      ],
+      "localStopPolicy": "do not run local-only as the selected route before a frontier baseline; local-only is diagnostic only until it passes the raw-payload adversarial hidden oracle with no leakage",
+      "notes": "GSLR-5 tested the privacy-sensitive fixture-family rung. Frontier-only passed the public gate and private oracle. Local-only failed before the adversarial traps by rejecting valid relative artifact refs on the safe card, so the selected route remains frontier-baseline."
     }
   ],
   "decisionRules": [
@@ -227,6 +283,11 @@
       "when": "two implementation files require a cross-module evidence-card validation contract",
       "route": "frontier-baseline",
       "reason": "GSLR-4 live evidence showed local-only failed and advisor-only passed but used more frontier tokens than frontier-only"
+    },
+    {
+      "when": "the fixture is privacy-sensitive or contains adversarial raw-payload, school/person-data, secret, or unsafe artifact-ref ambiguity",
+      "route": "frontier-baseline",
+      "reason": "privacy-sensitive ambiguity is an escalation trigger until a local lane has passing hidden-oracle evidence"
     },
     {
       "when": "governance independently requires final frontier review",

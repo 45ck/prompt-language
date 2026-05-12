@@ -80,6 +80,7 @@ If a feature is not described in the product docs, treat it as unavailable today
 | [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md)                       | Cross-experiment hypothesis verdicts and current research implications    |
 | [GSLR-2 Preflight: 2026-05-12](evaluation/2026-05-12-gslr-2-preflight.md)                           | Manifest verdict and token-telemetry hardening before the next live run   |
 | [Post-Symphony GSLR Decision: 2026-05-12](evaluation/2026-05-12-post-symphony-research-decision.md) | Research conclusion after OpenAI Symphony, routing literature, and GSLR-1 |
+| [Post-GSLR-5 Research Decision: 2026-05-12](evaluation/2026-05-12-post-gslr5-research-decision.md)  | Route boundary after raw-payload adversarial live evidence                |
 | [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)                           | Accepted subagent-first boundary                                          |
 | [Operator Shell Boundary](design/operator-shell-boundary.md)                                        | Accepted shell-over-runtime boundary for imported OMX adaptation work     |
 | [Output Summarization Policy](design/output-summarization-policy.md)                                | Accepted thresholds and fail-closed policy for compact summary surfaces   |

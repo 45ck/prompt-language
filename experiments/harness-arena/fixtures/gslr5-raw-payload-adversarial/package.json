@@ -1,0 +1,8 @@
+{
+  "name": "gslr5-raw-payload-adversarial",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/public-gate.mjs"
+  }
+}

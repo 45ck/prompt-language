@@ -1,8 +1,8 @@
 # GSLR Policy-Schema Fixture Family Plan
 
-Status: route-policy follow-up after GSLR-4 live
+Status: route-policy follow-up after GSLR-5 live
 Tracking bead: `prompt-language-gslr8`
-Latest live bead: `prompt-language-gslr15`
+Latest live bead: `prompt-language-gslr16`
 Companion Portarium bead: `bead-1233`
 
 ## Decision
@@ -66,6 +66,20 @@ The route is therefore `frontier-baseline` for this exact two-file validator
 under the current lane prompts. Advisor-only is a passing repair signal, not a
 cost-effective selected route.
 
+`gslr5-raw-payload-adversarial` now has deterministic scaffold and live
+evidence:
+
+- the fixture, public gate, private oracle, deterministic lane, local lane, and
+  frontier lane exist;
+- deterministic fake-live `hybrid-router` passed the private oracle and final
+  verdict;
+- live `frontier-only` passed with 53,668 frontier tokens;
+- live `local-only` diagnostic failed by rejecting safe relative artifact refs
+  before reaching the adversarial traps.
+
+The route remains `frontier-baseline` because this rung is explicitly
+privacy-sensitive and local-only did not preserve the safe card.
+
 ## Promotion Rule
 
 Do not promote a broad GSLR local route until at least three fixture-family runs
@@ -81,7 +95,9 @@ pass with:
 ## Product Boundary
 
 Portarium should not ingest live runner events or build a product evidence card
-yet. It can consume this as R&D policy evidence only.
+yet. It can consume this as R&D policy evidence only. GSLR-5 makes this boundary
+stricter: any raw school/person payload or unsafe artifact reference must fail
+before it reaches a Cockpit-facing card.
 
 The first product evidence card should wait until the route policy covers more
 than one fixture shape and can explain why a bead used local-only, advisor-only,

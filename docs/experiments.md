@@ -19,6 +19,8 @@ For the post-live route decision, see
 [GSLR Route Policy After Live Schema Evidence](evaluation/2026-05-12-gslr-route-policy-after-live.md).
 For the next research conclusion and fixture-family sequence, see
 [GSLR Next Research Conclusions](evaluation/2026-05-12-gslr-next-research-conclusions.md).
+For the first fixture-family rung, see the
+[GSLR-3 Policy Manifest Transform Runbook](../experiments/harness-arena/GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md).
 For the cross-experiment claim ledger, see
 [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md). For the
 raw research tree, run catalog, and dated receipts, see

@@ -1,0 +1,8 @@
+{
+  "name": "gslr3-policy-manifest-transform-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/public-gate.mjs"
+  }
+}

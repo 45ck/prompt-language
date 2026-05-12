@@ -2,6 +2,7 @@
 
 Status: route-policy follow-up after GSLR-2 live  
 Tracking bead: `prompt-language-gslr8`  
+Latest scaffold bead: `prompt-language-gslr10`
 Companion Portarium bead: `bead-1233`
 
 ## Decision
@@ -42,6 +43,13 @@ The next evidence step is a small family, not product integration.
 | `gslr3-policy-manifest-transform` | local-screen      | One-file transform from route manifest to Portarium card input | Tests schema-to-schema generation, not validation  |
 | `gslr4-two-file-validator`        | advisor-only      | Two implementation files plus public tests                     | Tests whether file-count growth needs advice       |
 | `gslr5-raw-payload-adversarial`   | frontier-baseline | Subtle raw-payload leakage with misleading safe summaries      | Tests privacy-sensitive ambiguity and local bypass |
+
+## Current Progress
+
+`gslr3-policy-manifest-transform` is now scaffolded with a public gate, private
+oracle, deterministic lane, runner coverage, and deterministic fake-live result.
+That proves harness plumbing only. The route hypothesis is still `local-screen`,
+but live model evidence has not run yet.
 
 ## Promotion Rule
 

@@ -55,6 +55,11 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   [../../docs/evaluation/2026-05-12-gslr-next-research-conclusions.md](../../docs/evaluation/2026-05-12-gslr-next-research-conclusions.md):
   build the fixture-family ladder first, then only a static Portarium
   evidence-card schema if the route policy survives.
+- GSLR-3 now has a policy-manifest transform fixture, public gate, private
+  oracle, deterministic lane, and deterministic fake-live proof. See
+  [GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md](GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md)
+  and
+  [results/gslr3-fake-live-2026-05-12/report.md](results/gslr3-fake-live-2026-05-12/report.md).
 
 Primary evidence records:
 
@@ -177,6 +182,8 @@ risk, repeated local failure, or read-only review.
   [gslr-policy-schema-routing-policy.v1.json](gslr-policy-schema-routing-policy.v1.json)
 - GSLR policy-schema fixture family plan — see
   [GSLR-POLICY-SCHEMA-FAMILY-PLAN.md](GSLR-POLICY-SCHEMA-FAMILY-PLAN.md)
+- GSLR-3 policy-manifest transform runbook — see
+  [GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md](GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md)
 - H14 local portfolio route policy — see
   [h14-local-routing-policy.v1.json](h14-local-routing-policy.v1.json)
 - H15 qwen-coder route policy — see
@@ -190,17 +197,20 @@ risk, repeated local failure, or read-only review.
 
 ## What is next (ordered)
 
-1. Run the GSLR policy/schema fixture family from
+1. Run live GSLR-3 local-screen evidence after reviewing the deterministic
+   scaffold. The fake-live result proves harness plumbing only; it does not
+   prove local-model quality.
+2. Continue the GSLR policy/schema fixture family from
    [GSLR-POLICY-SCHEMA-FAMILY-PLAN.md](GSLR-POLICY-SCHEMA-FAMILY-PLAN.md).
    The first live result supports local-only screening for the exact tiny
    validator shape, but not hybrid-router cost savings or broad route promotion.
-2. Keep H15 endpoint work on the frontier-only baseline route until local
+3. Keep H15 endpoint work on the frontier-only baseline route until local
    micro-flows show reliable value.
-3. Keep H11 on the promoted local route for this exact flow/oracle contract, and
+4. Keep H11 on the promoted local route for this exact flow/oracle contract, and
    watch for timeout, no-edit, stale-file, or API-drift regressions.
-4. Promote a local H15 candidate back into a hybrid full-task route only after the
+5. Promote a local H15 candidate back into a hybrid full-task route only after the
    micro-flow passes with claim-grade manifests and sampled resource evidence.
-5. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
+6. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
    and one multi-file route have claim-grade manifests.
 
 ## Known blockers

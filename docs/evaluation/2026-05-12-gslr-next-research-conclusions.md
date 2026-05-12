@@ -233,3 +233,7 @@ action path.
 - Re-read internal GSLR-1, GSLR-2, and route-policy receipts.
 - Recorded the next conclusion: build the fixture-family ladder before any
   Portarium runtime ingestion or MC connector observation.
+- Added the first ladder rung, `gslr3-policy-manifest-transform`, as a
+  deterministic fake-live scaffold. This proves the manifest-to-card fixture,
+  public gate, private oracle, token aggregation checks, and raw-payload leak
+  checks work before spending live local/frontier model tokens.

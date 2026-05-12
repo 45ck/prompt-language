@@ -56,11 +56,14 @@ test('GSLR policy-schema policy exposes routes after live evidence', () => {
   const payloadRoute = routeByTask(policy, 'gslr5-raw-payload-adversarial');
   assert.equal(payloadRoute.decision, 'frontier-baseline');
   assert.equal(payloadRoute.owner, 'frontier');
-  assert.equal(payloadRoute.cleanPasses, 1);
+  assert.equal(payloadRoute.cleanPasses, 2);
   assert.equal(payloadRoute.measuredArms.frontierOnly.finalVerdict, 'pass');
   assert.equal(payloadRoute.measuredArms.frontierOnly.frontierTokens, 53668);
   assert.equal(payloadRoute.measuredArms.localOnly.finalVerdict, 'fail');
-  assert.match(payloadRoute.notes, /Local-only failed/);
+  assert.equal(payloadRoute.measuredArms.localRepairV1.finalVerdict, 'fail');
+  assert.equal(payloadRoute.measuredArms.localRepairV2.finalVerdict, 'pass');
+  assert.equal(payloadRoute.measuredArms.localRepairV2.frontierTokens, 0);
+  assert.match(payloadRoute.notes, /repaired local prompt passed/);
 });
 
 test('GSLR policy-schema policy references checked-in evidence and harness files', () => {
@@ -114,7 +117,7 @@ test('GSLR policy-schema resolver maps aliases to route decisions', () => {
   const payload = resolveGslrPolicySchemaRoute('gslr5');
   assert.equal(payload.shouldRunFrontier, true);
   assert.equal(payload.route.selectedModel.provider, 'openai');
-  assert.equal(payload.route.cleanPasses, 1);
+  assert.equal(payload.route.cleanPasses, 2);
 
   assert.throws(
     () => resolveGslrPolicySchemaRoute('unknown-task'),

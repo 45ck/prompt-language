@@ -12,7 +12,8 @@
     "additionalLiveResultDocs": [
       "experiments/harness-arena/results/gslr3-live-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr4-live-2026-05-12/report.md",
-      "experiments/harness-arena/results/gslr5-live-2026-05-12/report.md"
+      "experiments/harness-arena/results/gslr5-live-2026-05-12/report.md",
+      "experiments/harness-arena/results/gslr5-local-repair-2026-05-12/report.md"
     ],
     "scaffoldResultDocs": [
       "experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md",
@@ -223,8 +224,8 @@
       "oracle": "experiments/harness-arena/oracles/gslr5-raw-payload-adversarial-oracle.mjs",
       "liveLocalLane": "experiments/harness-arena/live/gslr5-local-lane.mjs",
       "liveFrontierLane": "experiments/harness-arena/live/gslr5-frontier-lane.mjs",
-      "cleanPasses": 1,
-      "totalRuns": 2,
+      "cleanPasses": 2,
+      "totalRuns": 4,
       "measuredArms": {
         "frontierOnly": {
           "finalVerdict": "pass",
@@ -240,6 +241,21 @@
           "providerUsd": 0,
           "stepWallSeconds": 90.822,
           "failureBoundary": "public gate failed on the safe card because the local artifact-ref validator rejected valid relative private/oracle refs"
+        },
+        "localRepairV1": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 60.589,
+          "failureBoundary": "public gate failed on the safe card because the local sanitizer validated gates.blockingReviewDefects as a pass/fail gate value"
+        },
+        "localRepairV2": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 60.54
         }
       },
       "requiredGuards": [
@@ -254,8 +270,8 @@
         "private-oracle",
         "manifest-finalVerdict"
       ],
-      "localStopPolicy": "do not run local-only as the selected route before a frontier baseline; local-only is diagnostic only until it passes the raw-payload adversarial hidden oracle with no leakage",
-      "notes": "GSLR-5 tested the privacy-sensitive fixture-family rung. Frontier-only passed the public gate and private oracle. Local-only failed before the adversarial traps by rejecting valid relative artifact refs on the safe card, so the selected route remains frontier-baseline."
+      "localStopPolicy": "keep frontier-baseline as the selected route until the repaired local lane has at least three clean repeat passes with no private-oracle changes; local-repair-v2 is a candidate, not a product route",
+      "notes": "GSLR-5 tested the privacy-sensitive fixture-family rung. Frontier-only passed the public gate and private oracle. Local-only initially failed before the adversarial traps, but a repaired local prompt passed after artifact-ref and blockingReviewDefects semantics were made explicit. The selected route remains frontier-baseline pending repeat local repair evidence."
     }
   ],
   "decisionRules": [

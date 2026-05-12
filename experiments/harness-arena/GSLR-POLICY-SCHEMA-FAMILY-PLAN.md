@@ -76,9 +76,11 @@ evidence:
 - live `frontier-only` passed with 53,668 frontier tokens;
 - live `local-only` diagnostic failed by rejecting safe relative artifact refs
   before reaching the adversarial traps.
+- live `local-repair-v2` passed with zero frontier tokens after artifact-ref and
+  `blockingReviewDefects` semantics were made explicit.
 
 The route remains `frontier-baseline` because this rung is explicitly
-privacy-sensitive and local-only did not preserve the safe card.
+privacy-sensitive and the repaired local lane has only one clean pass so far.
 
 ## Promotion Rule
 

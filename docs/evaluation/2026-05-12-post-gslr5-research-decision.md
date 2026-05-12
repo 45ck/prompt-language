@@ -19,6 +19,9 @@ The live model result is sharper:
   53,668 frontier tokens;
 - `local-only` failed before the adversarial traps by rejecting valid relative
   artifact refs on the safe card;
+- a follow-up repaired local prompt passed public gate, private oracle, and
+  final verdict with zero frontier tokens after artifact-ref and
+  `blockingReviewDefects` semantics were made explicit;
 - the selected route remains `frontier-baseline`.
 
 ## Why It Matters
@@ -31,8 +34,8 @@ hidden-oracle evidence.
 
 The exciting part is that the harness now exposes the failure at the right
 level. We are no longer debating whether local models are generally good or
-bad. We can say which shape failed, where it failed, and what guard would have
-to improve.
+bad. We can say which shape failed, where it failed, which prompt contract
+repaired it, and what repeat evidence is still missing.
 
 ## Decision
 
@@ -41,7 +44,8 @@ Keep these routes:
 - `gslr2-policy-schema`: `local-screen`;
 - `gslr3-policy-manifest-transform`: `frontier-baseline`;
 - `gslr4-two-file-validator`: `frontier-baseline`;
-- `gslr5-raw-payload-adversarial`: `frontier-baseline`.
+- `gslr5-raw-payload-adversarial`: `frontier-baseline`, with a repaired
+  local-lane candidate that needs repeat evidence.
 
 Do not build Portarium runtime ingestion or live Cockpit evidence cards yet.
 
@@ -50,13 +54,14 @@ pipeline.
 
 ## Next Move
 
-The next useful R&D task is local-lane repair design, not product integration.
-Specifically, test whether a local lane can be taught to:
+The next useful R&D task is repeat evidence for the repaired local lane, not
+product integration. Specifically, rerun the repaired lane to prove it can
+consistently:
 
 - preserve valid relative artifact refs;
 - reject separator-insensitive raw/secret keys;
 - reject raw payload text;
 - recompute action boundaries instead of trusting stale caller fields.
 
-Only after that passes hidden-oracle evidence should we revisit an advisor-only
-or local-screen route for this task shape.
+Only after repeated hidden-oracle passes should we revisit an advisor-only or
+local-screen route for this task shape.

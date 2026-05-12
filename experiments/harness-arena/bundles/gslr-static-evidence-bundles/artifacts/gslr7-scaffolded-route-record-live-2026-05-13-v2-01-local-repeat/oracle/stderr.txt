@@ -1,0 +1,1 @@
+GSLR-7 blocking defect summary: unsafe key class was accepted by local route-record logic.

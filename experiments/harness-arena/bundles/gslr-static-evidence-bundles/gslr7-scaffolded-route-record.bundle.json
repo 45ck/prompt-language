@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "portarium.gslr-evidence-bundle.v1",
+  "bundleId": "gslr-bundle-gslr7-scaffolded-route-record-2026-05-13",
+  "createdAtIso": "2026-05-13T01:30:00.000Z",
+  "source": {
+    "system": "prompt-language",
+    "repo": "45ck/prompt-language",
+    "commit": "d2602f34ea33504db1d208b3aa68df0ac70a858c",
+    "runId": "gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat",
+    "runGroupId": "gslr7-scaffolded-route-record-local-repeats-v2"
+  },
+  "subject": {
+    "task": "gslr7-scaffolded-route-record",
+    "policyVersion": "gslr-policy-schema-routing-v2"
+  },
+  "evidence": {
+    "schemaVersion": "portarium.gslr-engineering-evidence-card-projection-input.v1",
+    "source": {
+      "manifestSchemaVersion": 2
+    },
+    "policyVersion": "gslr-policy-schema-routing-v2",
+    "route": {
+      "task": "gslr7-scaffolded-route-record",
+      "policyDecision": "frontier-baseline",
+      "selectedRun": {
+        "arm": "local-only",
+        "runId": "gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat",
+        "runGroupId": "gslr7-scaffolded-route-record-local-repeats-v2",
+        "finalVerdict": "fail",
+        "privateOracle": "fail",
+        "blockingReviewDefects": [
+          "accepted oracle command because normalized input was compared with unnormalized constants"
+        ],
+        "frontierTokens": 0,
+        "cachedInputTokens": 0,
+        "providerUsd": 0,
+        "localWallSeconds": 82.961,
+        "selectedModel": "qwen3-coder:30b",
+        "selectedProvider": "ollama",
+        "reason": "Local route-record builder still owned too much policy logic and failed the private route-record oracle."
+      }
+    },
+    "artifactRefs": {
+      "manifest": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat/manifest.json",
+      "oracleStdout": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat/oracle/stdout.txt",
+      "oracleStderr": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat/oracle/stderr.txt"
+    }
+  },
+  "artifactHashes": [
+    {
+      "ref": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat/manifest.json",
+      "sha256": "3b8f55704b309b6c63974d87ca3b194122ddcef74de7e6f86ab546284f870351"
+    },
+    {
+      "ref": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat/oracle/stdout.txt",
+      "sha256": "608775c76218349bdefdc06f5911695bf9766e34d663c7f3b79be1679bd0d585"
+    },
+    {
+      "ref": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat/oracle/stderr.txt",
+      "sha256": "fc4147a9e0acf8c0040b6fbcbc41b4e3e13045178d962b61f559b8389b845a9f"
+    }
+  ],
+  "constraints": {
+    "importMode": "manual-static-only",
+    "runtimeAuthority": "none",
+    "actionControls": "absent"
+  },
+  "verification": {
+    "payloadHashSha256": "e60da54120f5d67c523d847d7c80a4a2a5c2c07d701e2de581c70aa32533f641",
+    "signatureBase64": "c2lnOjI3NDc=",
+    "signer": {
+      "keyId": "gslr-static-fixture-test-key-2026-05-13",
+      "algorithm": "test-ed25519"
+    },
+    "notBeforeIso": "2026-05-13T00:00:00.000Z",
+    "expiresAtIso": "2026-06-13T00:00:00.000Z"
+  }
+}

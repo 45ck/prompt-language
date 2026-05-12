@@ -1,0 +1,1 @@
+GSLR-7 oracle summary: selected v2 repeat failed. Static fixture records fail/fail gates and a blocking review defect.

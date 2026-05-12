@@ -1,0 +1,1 @@
+GSLR-8 oracle summary: selected local diagnostic passed. Static fixture records pass/pass gates and zero frontier spend.

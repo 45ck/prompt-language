@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "fixtureKind": "gslr-static-evidence-bundle-artifact",
+  "task": "gslr7-scaffolded-route-record",
+  "sourceReport": {
+    "ref": "experiments/harness-arena/results/gslr7-local-repeat-2026-05-13/report.md",
+    "sha256": "f4f9345261f92008d79452a17150669f26dfb6dfe229f6b9fe31fd60e760e160"
+  },
+  "sourceCommit": "d2602f34ea33504db1d208b3aa68df0ac70a858c",
+  "selectedRun": {
+    "arm": "local-only",
+    "runId": "gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat",
+    "runGroupId": "gslr7-scaffolded-route-record-local-repeats-v2",
+    "finalVerdict": "fail",
+    "privateOracle": "fail",
+    "blockingReviewDefects": [
+      "accepted oracle command because normalized input was compared with unnormalized constants"
+    ],
+    "frontierTokens": 0,
+    "cachedInputTokens": 0,
+    "providerUsd": 0,
+    "localWallSeconds": 82.961,
+    "selectedModel": "qwen3-coder:30b",
+    "selectedProvider": "ollama",
+    "reason": "Local route-record builder still owned too much policy logic and failed the private route-record oracle."
+  },
+  "policyDecision": "frontier-baseline",
+  "policyVersion": "gslr-policy-schema-routing-v2",
+  "summary": "GSLR-7 failed the broader route-record builder shape. Keep this task on frontier-baseline until deterministic PL ownership is stronger.",
+  "constraints": {
+    "importMode": "manual-static-only",
+    "runtimeAuthority": "none",
+    "actionControls": "absent",
+    "containsLivePayload": false
+  }
+}

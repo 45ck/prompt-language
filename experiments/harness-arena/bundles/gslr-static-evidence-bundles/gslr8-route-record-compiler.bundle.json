@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "portarium.gslr-evidence-bundle.v1",
+  "bundleId": "gslr-bundle-gslr8-route-record-compiler-2026-05-13",
+  "createdAtIso": "2026-05-13T01:30:00.000Z",
+  "source": {
+    "system": "prompt-language",
+    "repo": "45ck/prompt-language",
+    "commit": "d2602f34ea33504db1d208b3aa68df0ac70a858c",
+    "runId": "gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic",
+    "runGroupId": "gslr8-route-record-compiler-local-repeats"
+  },
+  "subject": {
+    "task": "gslr8-route-record-compiler",
+    "policyVersion": "gslr-policy-schema-routing-v2"
+  },
+  "evidence": {
+    "schemaVersion": "portarium.gslr-engineering-evidence-card-projection-input.v1",
+    "source": {
+      "manifestSchemaVersion": 2
+    },
+    "policyVersion": "gslr-policy-schema-routing-v2",
+    "route": {
+      "task": "gslr8-route-record-compiler",
+      "policyDecision": "local-screen",
+      "selectedRun": {
+        "arm": "local-only",
+        "runId": "gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic",
+        "runGroupId": "gslr8-route-record-compiler-local-repeats",
+        "finalVerdict": "pass",
+        "privateOracle": "pass",
+        "blockingReviewDefects": [],
+        "frontierTokens": 0,
+        "cachedInputTokens": 0,
+        "providerUsd": 0,
+        "localWallSeconds": 22.175,
+        "selectedModel": "qwen3-coder:30b",
+        "selectedProvider": "ollama",
+        "reason": "PL-owned scaffold owns route-record policy tables and output envelopes; local model filled bounded predicate hooks."
+      }
+    },
+    "artifactRefs": {
+      "manifest": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic/manifest.json",
+      "oracleStdout": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic/oracle/stdout.txt",
+      "oracleStderr": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic/oracle/stderr.txt"
+    }
+  },
+  "artifactHashes": [
+    {
+      "ref": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic/manifest.json",
+      "sha256": "be493d613e6bd0cdfb52ada146fd1724bda20e0241513f7038b17bb01293709f"
+    },
+    {
+      "ref": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic/oracle/stdout.txt",
+      "sha256": "5eb9f729bd51fb93816016008f23bd7db4c9368aa4afb357db583b9a65654f1c"
+    },
+    {
+      "ref": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic/oracle/stderr.txt",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    }
+  ],
+  "constraints": {
+    "importMode": "manual-static-only",
+    "runtimeAuthority": "none",
+    "actionControls": "absent"
+  },
+  "verification": {
+    "payloadHashSha256": "9aa8dfd23b0a43a41be0cfcacfb04e29e5f4c5388a11b6ac845694bd0cc56938",
+    "signatureBase64": "c2lnOjI2Mzg=",
+    "signer": {
+      "keyId": "gslr-static-fixture-test-key-2026-05-13",
+      "algorithm": "test-ed25519"
+    },
+    "notBeforeIso": "2026-05-13T00:00:00.000Z",
+    "expiresAtIso": "2026-06-13T00:00:00.000Z"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 2,
+  "fixtureKind": "gslr-static-evidence-bundle-artifact",
+  "task": "gslr8-route-record-compiler",
+  "sourceReport": {
+    "ref": "experiments/harness-arena/results/gslr8-local-repeat-2026-05-13/report.md",
+    "sha256": "4ca0f205212d8be6c64b2f49785d3c8724660e26aab8a0fd6674930c2ae4861e"
+  },
+  "sourceCommit": "d2602f34ea33504db1d208b3aa68df0ac70a858c",
+  "selectedRun": {
+    "arm": "local-only",
+    "runId": "gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic",
+    "runGroupId": "gslr8-route-record-compiler-local-repeats",
+    "finalVerdict": "pass",
+    "privateOracle": "pass",
+    "blockingReviewDefects": [],
+    "frontierTokens": 0,
+    "cachedInputTokens": 0,
+    "providerUsd": 0,
+    "localWallSeconds": 22.175,
+    "selectedModel": "qwen3-coder:30b",
+    "selectedProvider": "ollama",
+    "reason": "PL-owned scaffold owns route-record policy tables and output envelopes; local model filled bounded predicate hooks."
+  },
+  "policyDecision": "local-screen",
+  "policyVersion": "gslr-policy-schema-routing-v2",
+  "summary": "GSLR-8 passed three live local repeats with zero frontier tokens. Promote only the exact PL-owned route-record compiler shape to local-screen.",
+  "constraints": {
+    "importMode": "manual-static-only",
+    "runtimeAuthority": "none",
+    "actionControls": "absent",
+    "containsLivePayload": false
+  }
+}

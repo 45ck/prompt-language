@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "prompt-language.gslr-static-evidence-bundle-index.v1",
+  "generatedAtIso": "2026-05-13T01:30:00.000Z",
+  "sourceCommit": "d2602f34ea33504db1d208b3aa68df0ac70a858c",
+  "bundles": [
+    {
+      "task": "gslr8-route-record-compiler",
+      "policyDecision": "local-screen",
+      "bundleRef": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/gslr8-route-record-compiler.bundle.json",
+      "bundleId": "gslr-bundle-gslr8-route-record-compiler-2026-05-13",
+      "runId": "gslr8-route-record-compiler-live-2026-05-13-01-local-diagnostic"
+    },
+    {
+      "task": "gslr7-scaffolded-route-record",
+      "policyDecision": "frontier-baseline",
+      "bundleRef": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/gslr7-scaffolded-route-record.bundle.json",
+      "bundleId": "gslr-bundle-gslr7-scaffolded-route-record-2026-05-13",
+      "runId": "gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat"
+    }
+  ]
+}

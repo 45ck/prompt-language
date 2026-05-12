@@ -177,3 +177,8 @@ should wait until GSLR-3 live evidence exists.
   conditional.
 - Kept Portarium runtime ingestion, live Cockpit cards, and MC connector
   observation blocked.
+- Follow-up live evidence: `local-only` failed on malformed array input,
+  `advisor-only` failed on local wall-time aggregation, and `frontier-only`
+  passed with 33,913 frontier tokens. The route for
+  `gslr3-policy-manifest-transform` is now `frontier-baseline`, not
+  `local-screen`.

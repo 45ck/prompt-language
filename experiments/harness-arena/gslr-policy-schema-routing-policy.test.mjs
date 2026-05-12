@@ -22,9 +22,9 @@ function routeByTask(policy, task) {
   return route;
 }
 
-test('GSLR policy-schema policy exposes local-screen route after live evidence', () => {
+test('GSLR policy-schema policy exposes routes after live evidence', () => {
   const policy = readPolicy();
-  assert.equal(policy.policyVersion, 'gslr-policy-schema-routing-v1');
+  assert.equal(policy.policyVersion, 'gslr-policy-schema-routing-v2');
   assert.equal(policy.model.name, 'qwen3-coder:30b');
 
   const route = routeByTask(policy, 'gslr2-policy-schema');
@@ -38,12 +38,24 @@ test('GSLR policy-schema policy exposes local-screen route after live evidence',
   assert.equal(route.measuredArms.advisorOnly.frontierTokens, 15301);
   assert.equal(route.measuredArms.hybridRouter.frontierTokens, 91279);
   assert.match(route.notes, /negative evidence for mandatory hybrid-router review/);
+
+  const transformRoute = routeByTask(policy, 'gslr3-policy-manifest-transform');
+  assert.equal(transformRoute.decision, 'frontier-baseline');
+  assert.equal(transformRoute.owner, 'frontier');
+  assert.equal(transformRoute.measuredArms.localOnly.finalVerdict, 'fail');
+  assert.equal(transformRoute.measuredArms.advisorOnly.finalVerdict, 'fail');
+  assert.equal(transformRoute.measuredArms.frontierOnly.finalVerdict, 'pass');
+  assert.equal(transformRoute.measuredArms.frontierOnly.frontierTokens, 33913);
+  assert.match(transformRoute.notes, /local-screen hypothesis failed/);
 });
 
 test('GSLR policy-schema policy references checked-in evidence and harness files', () => {
   const policy = readPolicy();
 
   assert.ok(existsSync(join(ROOT, policy.evidence.liveResultDoc)), 'live result doc missing');
+  for (const doc of policy.evidence.additionalLiveResultDocs ?? []) {
+    assert.ok(existsSync(join(ROOT, doc)), `${doc} missing`);
+  }
   assert.ok(existsSync(join(ROOT, policy.evidence.runbook)), 'runbook missing');
   assert.ok(existsSync(join(ROOT, policy.evidence.researchDecisionDoc)), 'research doc missing');
 
@@ -55,9 +67,14 @@ test('GSLR policy-schema policy references checked-in evidence and harness files
   }
 });
 
-test('GSLR policy-schema resolver maps aliases to local screen decisions', () => {
+test('GSLR policy-schema resolver maps aliases to route decisions', () => {
   assert.equal(normalizeGslrPolicySchemaTask('gslr2'), 'gslr2-policy-schema');
   assert.equal(normalizeGslrPolicySchemaTask('schema-validator'), 'gslr2-policy-schema');
+  assert.equal(normalizeGslrPolicySchemaTask('gslr3'), 'gslr3-policy-manifest-transform');
+  assert.equal(
+    normalizeGslrPolicySchemaTask('evidence-card-transform'),
+    'gslr3-policy-manifest-transform',
+  );
 
   const resolved = resolveGslrPolicySchemaRoute('policy-schema');
   assert.equal(resolved.shouldRunLocalScreen, true);
@@ -67,6 +84,13 @@ test('GSLR policy-schema resolver maps aliases to local screen decisions', () =>
   assert.equal(resolved.route.selectedModel.name, 'qwen3-coder:30b');
   assert.equal(resolved.nextFixtureFamily.length, 3);
   assert.ok(resolved.escalationTriggers.includes('private-oracle-failure'));
+
+  const transform = resolveGslrPolicySchemaRoute('manifest-transform');
+  assert.equal(transform.shouldRunLocalScreen, false);
+  assert.equal(transform.shouldRunFrontier, true);
+  assert.equal(transform.shouldRunHybrid, false);
+  assert.equal(transform.route.selectedModel.provider, 'openai');
+  assert.equal(transform.route.decision, 'frontier-baseline');
 
   assert.throws(
     () => resolveGslrPolicySchemaRoute('unknown-task'),
@@ -83,7 +107,7 @@ test('GSLR policy-schema resolver CLI emits JSON decisions', () => {
 
   assert.equal(result.status, 0, result.stderr);
   const parsed = JSON.parse(result.stdout);
-  assert.equal(parsed.policyVersion, 'gslr-policy-schema-routing-v1');
+  assert.equal(parsed.policyVersion, 'gslr-policy-schema-routing-v2');
   assert.equal(parsed.shouldRunLocalScreen, true);
   assert.equal(parsed.route.task, 'gslr2-policy-schema');
   assert.equal(parsed.route.decision, 'local-screen');

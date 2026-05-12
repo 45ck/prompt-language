@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "policyVersion": "gslr-policy-schema-routing-v1",
+  "policyVersion": "gslr-policy-schema-routing-v2",
   "decidedAt": "2026-05-12",
   "model": {
     "provider": "ollama",
@@ -9,6 +9,9 @@
   },
   "evidence": {
     "liveResultDoc": "experiments/harness-arena/results/gslr2-live-2026-05-12/report.md",
+    "additionalLiveResultDocs": [
+      "experiments/harness-arena/results/gslr3-live-2026-05-12/report.md"
+    ],
     "runbook": "experiments/harness-arena/GSLR-2-POLICY-SCHEMA-RUNBOOK.md",
     "researchDecisionDoc": "docs/evaluation/2026-05-12-post-symphony-research-decision.md",
     "minimumCleanPassesForPromotion": 3
@@ -75,13 +78,77 @@
       ],
       "localStopPolicy": "stop after the first timeout, public-gate failure, private-oracle failure, malformed-input throw, or raw-payload leakage; use advisor-only before hybrid for this tiny schema shape",
       "notes": "The hardened live run passed all four arms. The result is positive evidence for local-only screening on a tiny one-file policy-schema validator. It is negative evidence for mandatory hybrid-router review on this task shape because hybrid used 91,279 frontier tokens versus 45,713 for frontier-only. Advisor-only also passed with 15,301 frontier tokens, so advice-plus-local is the cheaper escalation candidate when local-only fails."
+    },
+    {
+      "task": "gslr3-policy-manifest-transform",
+      "decision": "frontier-baseline",
+      "owner": "frontier",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "GSLR-3 local-only and advisor-only live runs both failed public gates on this transform shape"
+      },
+      "selectedModel": {
+        "provider": "openai",
+        "name": "codex-default",
+        "endpointClass": "frontier",
+        "selectionReason": "frontier-only passed the GSLR-3 public gate and private oracle after local-only and advisor-only failures"
+      },
+      "fixture": "experiments/harness-arena/fixtures/gslr3-policy-manifest-transform",
+      "oracle": "experiments/harness-arena/oracles/gslr3-policy-manifest-transform-oracle.mjs",
+      "liveLocalLane": "experiments/harness-arena/live/gslr3-local-lane.mjs",
+      "liveFrontierLane": "experiments/harness-arena/live/gslr3-frontier-lane.mjs",
+      "cleanPasses": 1,
+      "totalRuns": 3,
+      "measuredArms": {
+        "localOnly": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 60.55,
+          "failureBoundary": "public gate failed because an array manifest returned ok=true"
+        },
+        "advisorOnly": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 3,
+          "providerUsd": 3,
+          "stepWallSeconds": 107.927,
+          "failureBoundary": "frontier advice completed, but local apply counted frontier wall time as local wall time"
+        },
+        "frontierOnly": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 33913,
+          "providerUsd": 3,
+          "stepWallSeconds": 194.822
+        }
+      },
+      "requiredGuards": [
+        "public-gate",
+        "non-array-manifest-check",
+        "recursive-forbidden-key-scan",
+        "aggregate-only-telemetry",
+        "blocked-card-for-failed-evidence",
+        "private-oracle",
+        "manifest-finalVerdict"
+      ],
+      "localStopPolicy": "do not promote local-screen for this transform shape; local-only and advisor-only failed public gates, so use frontier-only unless a new local-lane micro-repair design produces fresh passing evidence",
+      "notes": "GSLR-3 is the first fixture-family boundary where the GSLR-2 local-screen hypothesis failed. The task remained one implementation file, but schema-to-schema transformation introduced semantic aggregation and malformed-input edge cases that qwen3-coder:30b did not satisfy under the current local/advisor prompts. Frontier-only passed, so the current route is frontier-baseline."
     }
   ],
   "decisionRules": [
     {
-      "when": "one implementation file, explicit schema rules, public gate, private oracle, no production side effects",
+      "when": "one implementation file, explicit validation rules, public gate, private oracle, no production side effects",
       "route": "local-screen",
-      "reason": "GSLR-2 hardened live evidence shows local-only can solve this exact task shape with zero frontier tokens"
+      "reason": "GSLR-2 hardened live evidence shows local-only can solve the exact tiny validator shape with zero frontier tokens"
+    },
+    {
+      "when": "one implementation file but the task is schema-to-schema evidence transformation with aggregate telemetry and blocked-card semantics",
+      "route": "frontier-baseline",
+      "reason": "GSLR-3 live evidence showed local-only and advisor-only both failed public gates while frontier-only passed"
     },
     {
       "when": "local-screen fails public gate or private oracle once, but the task is still one-file and low ambiguity",
@@ -102,9 +169,9 @@
   "nextFixtureFamily": [
     {
       "id": "gslr3-policy-manifest-transform",
-      "hypothesis": "local-screen",
+      "hypothesis": "frontier-baseline",
       "shape": "one-file transform from route manifest to Portarium evidence-card input",
-      "promotionValue": "tests whether local-only survives schema-to-schema transformation rather than validation only"
+      "promotionValue": "proved local-screen did not survive schema-to-schema evidence-card transformation under the current lane prompts"
     },
     {
       "id": "gslr4-two-file-validator",

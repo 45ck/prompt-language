@@ -5,6 +5,8 @@ Tracking bead: `prompt-language-gslr10`
 Companion Portarium bead: `bead-1235`
 Deterministic result:
 `experiments/harness-arena/results/gslr3-fake-live-2026-05-12/report.md`
+Live result:
+`experiments/harness-arena/results/gslr3-live-2026-05-12/report.md`
 
 ## Question
 
@@ -111,3 +113,16 @@ not disappear.
 
 The next evidence-producing step is a live `local-only` GSLR-3 run. See
 [Post-GSLR-3 Research Decision](../../docs/evaluation/2026-05-12-post-gslr3-research-decision.md).
+
+## Live Decision
+
+The live run has now completed:
+
+- `local-only` failed the public gate by accepting an array manifest;
+- `advisor-only` failed the public gate by counting frontier wall time as local
+  wall time;
+- `frontier-only` passed the public gate and private oracle with 33,913 frontier
+  tokens.
+
+The current route for this exact transform is therefore `frontier-baseline`, not
+`local-screen`.

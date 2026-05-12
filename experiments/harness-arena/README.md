@@ -51,6 +51,10 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   `gslr2-policy-schema` is a `local-screen` route, not a broad local promotion
   or hybrid-router success claim. The follow-on fixture family is documented in
   [GSLR-POLICY-SCHEMA-FAMILY-PLAN.md](GSLR-POLICY-SCHEMA-FAMILY-PLAN.md).
+- The next research conclusion is recorded in
+  [../../docs/evaluation/2026-05-12-gslr-next-research-conclusions.md](../../docs/evaluation/2026-05-12-gslr-next-research-conclusions.md):
+  build the fixture-family ladder first, then only a static Portarium
+  evidence-card schema if the route policy survives.
 
 Primary evidence records:
 

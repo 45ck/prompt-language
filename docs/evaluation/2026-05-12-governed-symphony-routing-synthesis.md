@@ -22,6 +22,13 @@ GSLR-1 has not proved cost reduction yet. It has proved that the experiment can
 be represented as a clean, safe, no-mutation four-arm scaffold with evidence
 fields that can be checked before product integration.
 
+Follow-up live result:
+`experiments/harness-arena/results/gslr1-live-2026-05-12/report.md`.
+
+That run narrowed the thesis further: the live harness works, and local-only can
+handle the safe MC projection task, but the current hybrid arm is not cheaper
+than the frontier-only control and had an unresolved blocking review finding.
+
 ## External Research Read
 
 | Source family                                    | What it says                                                                                                         | Implication for PL                                                                                                                                                       |
@@ -112,21 +119,18 @@ It would not prove:
 
 ## Decision
 
-Proceed to a live GSLR-1 run before adding product integration.
+Do not add product integration from GSLR-1 alone.
 
-The next build/research sequence is:
+The next build/research sequence is now:
 
-1. add or lock a private oracle for the GSLR-1 fixture outside model-visible
-   input;
-2. run `local-only`, `frontier-only`, `advisor-only`, and `hybrid-router` arms
-   against the same fixture;
-3. record frontier-call count, wall time, gate results, manifest completeness,
-   and review defects;
-4. write the result back as a dated experiment report;
-5. only if the hybrid arm is positive, create a Portarium static Cockpit
-   evidence card from the manifest;
-6. only after the static card is useful, consider Codex App Server or other
-   structured runner integration.
+1. add a manifest-level final verdict that fails on blocking review defects;
+2. parse frontier token/cost telemetry into manifest cost fields;
+3. run a harder GSLR-2 task where local-only is not already sufficient;
+4. make the hybrid route cheaper than the frontier baseline by design, or change
+   the success metric from call count to verified cost/tokens if final review is
+   mandatory;
+5. only after a positive hybrid result, create a Portarium static Cockpit
+   evidence card from the manifest.
 
 ## Sources
 
@@ -160,3 +164,5 @@ The next build/research sequence is:
 - Kept live model execution as the next evidence step.
 - Preserved the proof boundary: current work proves experiment shape, not cost
   savings or local-model autonomy.
+- Added the GSLR-1 live result. It proves harness execution and bounded local
+  docs-task capability, but not hybrid cost reduction.

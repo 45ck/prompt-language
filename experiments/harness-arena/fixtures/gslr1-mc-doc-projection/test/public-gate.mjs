@@ -50,7 +50,7 @@ const forbiddenPatterns = [
   /\b(student|staff|ticket|device|room|connector)\s*payload\b/i,
   /\bpassword\b|\bcredential\b|\bsecret\b/i,
   /\bhidden oracle\b/i,
-  /\blocal-only autonomy\b/i,
+  /\blocal-only autonomy\b|\bsolo local ownership\b.*\b(proven|ready|safe|accepted)\b/i,
   /\bshipped\b.*\bPortarium integration\b/i,
   /\bwrite\b.*\b(SEQTA|IXL|Jamf|Google Workspace|PaperCut|Freshservice)\b/i,
 ];

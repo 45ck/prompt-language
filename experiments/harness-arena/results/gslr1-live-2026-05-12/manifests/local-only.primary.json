@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 2,
+  "policyVersion": "gslr-v0.1",
+  "runId": "gslr1-live-2026-05-12-01",
+  "taskId": "GSLR-1-mc-doc-projection",
+  "arm": "local-only",
+  "runGroupId": "gslr1-live-2026-05-12-01",
+  "claimStatus": "live-model-evidence",
+  "repo": {
+    "commit": "51bf2395680c47d0be43be592639e7d8a9f0b5a1",
+    "dirty": true
+  },
+  "startedAt": "2026-05-12T05:01:06.786Z",
+  "completedAt": "2026-05-12T05:01:06.786Z",
+  "budget": {
+    "frontierCallLimit": 5,
+    "usdLimit": 2,
+    "wallSecondsLimit": 900,
+    "localRepairAttemptLimit": 1,
+    "retryPolicy": "none",
+    "enforced": true
+  },
+  "evidencePolicy": {
+    "manifestAuthor": "harness",
+    "oracleVisibility": "private-artifacts-only",
+    "commandEnvironmentPolicy": "parent-env-inherited",
+    "commandSafetyPolicy": "deny-high-risk",
+    "providerFallbackPolicy": "forbid",
+    "localOnlyAllowsFrontierInput": false
+  },
+  "steps": [
+    {
+      "stepId": "local-bulk",
+      "purpose": "Synthetic local-bulk lane for HA-HR1 live",
+      "runner": "ollama",
+      "model": "qwen3-coder:30b",
+      "provider": "ollama",
+      "endpoint": "http://127.0.0.1:11434",
+      "requestedModel": "qwen3-coder:30b",
+      "actualModel": "qwen3-coder:30b",
+      "providerSubstitution": {
+        "occurred": false,
+        "reason": null
+      },
+      "adapterVersion": "harness-arena-live-command-v1",
+      "providerClass": "local",
+      "routeDecision": "local",
+      "routeTrigger": "local-only control arm",
+      "riskLevel": "low",
+      "ambiguityLevel": "low",
+      "escalationReason": null,
+      "attemptNumber": 1,
+      "promptProgram": {
+        "kind": "synthetic",
+        "path": null,
+        "sha256": "308e86932f5aac72759b295089ca5a1d71df90709d417a12418b1c3e0d9940c9"
+      },
+      "cost": {
+        "basis": "none",
+        "estimatedUsd": 0,
+        "providerReportedUsd": null,
+        "inputTokens": null,
+        "outputTokens": null,
+        "pricingVersion": null
+      },
+      "dataClassification": "public",
+      "frontierCallKind": "none",
+      "inputArtifactRefs": ["workspace/TASK.md"],
+      "outputArtifactRefs": [
+        "artifacts/steps/01-local-bulk/stdout.txt",
+        "artifacts/steps/01-local-bulk/stderr.txt",
+        "artifacts/steps/01-local-bulk/metadata.json",
+        "artifacts/steps/1-local-bulk-resources-before/stdout.txt",
+        "artifacts/steps/1-local-bulk-resources-before/stderr.txt",
+        "artifacts/steps/1-local-bulk-resources-before/metadata.json",
+        "artifacts/steps/01-local-bulk/resource-samples/sample-001-metadata.json",
+        "artifacts/steps/01-local-bulk/resource-samples/sample-001-stderr.txt",
+        "artifacts/steps/01-local-bulk/resource-samples/sample-001-stdout.txt",
+        "artifacts/steps/1-local-bulk-resources-after/stdout.txt",
+        "artifacts/steps/1-local-bulk-resources-after/stderr.txt",
+        "artifacts/steps/1-local-bulk-resources-after/metadata.json"
+      ],
+      "resourceSnapshotArtifactRefs": [
+        "artifacts/steps/1-local-bulk-resources-before/stdout.txt",
+        "artifacts/steps/1-local-bulk-resources-before/stderr.txt",
+        "artifacts/steps/1-local-bulk-resources-before/metadata.json",
+        "artifacts/steps/01-local-bulk/resource-samples/sample-001-metadata.json",
+        "artifacts/steps/01-local-bulk/resource-samples/sample-001-stderr.txt",
+        "artifacts/steps/01-local-bulk/resource-samples/sample-001-stdout.txt",
+        "artifacts/steps/1-local-bulk-resources-after/stdout.txt",
+        "artifacts/steps/1-local-bulk-resources-after/stderr.txt",
+        "artifacts/steps/1-local-bulk-resources-after/metadata.json"
+      ],
+      "resourceSnapshotSummary": {
+        "totalArtifactRefCount": 9,
+        "beforeAfterArtifactRefCount": 6,
+        "sampleArtifactRefCount": 3,
+        "sampleCount": 1,
+        "sampleNonzeroExitCount": 0,
+        "sampleMetadataParseFailureCount": 0,
+        "sampleStdoutNonEmptyCount": 1,
+        "sampleStderrNonEmptyCount": 0
+      },
+      "diffSummary": "Operator-supplied live lane command executed.",
+      "reviewDefects": [],
+      "cwd": "/tmp/prompt-language-gslr1-live/gslr1-live-2026-05-12-01/01-local-only/workspace",
+      "startedAt": "2026-05-12T05:01:07.136Z",
+      "completedAt": "2026-05-12T05:01:17.475Z",
+      "exitCode": 0,
+      "stderrArtifactRef": "artifacts/steps/01-local-bulk/stderr.txt",
+      "stdoutArtifactRef": "artifacts/steps/01-local-bulk/stdout.txt",
+      "timedOut": false,
+      "timeoutMs": 360000,
+      "wallSeconds": 10.339,
+      "estimatedUsd": 0,
+      "gpuActiveSeconds": 0,
+      "notes": "Live lane command completed within hard timeout 360000ms."
+    }
+  ],
+  "oracle": {
+    "commandArtifactRef": "private/oracle-command.txt",
+    "commandSha256": "ea7f32c72bfdfe955b7cc71c93a1231f8127e971186c320bd3e5800c06f8b7a1",
+    "visibility": "private-artifacts-only",
+    "exitCode": 0,
+    "passed": true,
+    "stderrArtifactRef": "private/oracle/stderr.txt",
+    "stdoutArtifactRef": "private/oracle/stdout.txt",
+    "summary": "Private oracle executed after live steps.",
+    "timedOut": false,
+    "timeoutMs": 30000,
+    "wallSeconds": 0.022
+  },
+  "classification": {
+    "routingPolicyFailure": false,
+    "modelFailure": false,
+    "harnessFailure": false,
+    "resourceFailure": false,
+    "notes": "Live operator-supplied lane commands executed. Manifest validity depends on private oracle pass/fail artifacts."
+  }
+}

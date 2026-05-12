@@ -1,9 +1,10 @@
 # GSLR-1: MC Projection Governed Hybrid Routing
 
 Date: 2026-05-12
-Status: scaffold ready; live model run not started
+Status: live result recorded; hybrid thesis not proven
 Tracking bead: `prompt-language-gslr1`
 Parent bead: `prompt-language-sfd3`
+Live result: `experiments/harness-arena/results/gslr1-live-2026-05-12/report.md`
 
 ## Purpose
 
@@ -119,7 +120,18 @@ omitting route metadata, or relying on a human to silently repair the artifact.
 
 ## Current Conclusion
 
-This scaffold proves only that the experiment is now executable and evidence
-shaped. It does not prove cost savings, local-model capability, or Portarium
-integration. The next claim-grade step is a live run across all four arms using
-the same fixture and locked gates.
+This experiment is now live-model evidence for the harness, but not positive
+evidence for the hybrid cost-routing thesis.
+
+The 2026-05-12 live run showed:
+
+- `local-only` passed the private oracle with zero frontier calls;
+- `frontier-only` passed with one frontier call;
+- `advisor-only` passed after an oracle-calibration rerun;
+- `hybrid-router` passed the private oracle but produced an unresolved blocking
+  frontier-review finding;
+- `hybrid-router` used more frontier calls and observed frontier tokens than the
+  `frontier-only` control.
+
+Next step: revise the verdict aggregator, parse token/cost telemetry into
+manifests, and run a harder GSLR-2 task before any Portarium product card.

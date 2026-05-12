@@ -12,6 +12,7 @@ only source material.
 - Include sections named `Target Ref`, `Context Refs`, `Policy`, `Gates`,
   `Approvals`, `Evidence`, `Route`, and `Non-Goals`.
 - Keep MC-specific details as references or summaries only.
+- Include the MC source refs named in the checklist.
 - Make clear that the scenario is read-only and no-mutation.
 - Make clear that local model work is bounded by Prompt Language gates.
 - Make clear that frontier model work is classification, repair, or review.
@@ -21,9 +22,9 @@ only source material.
 - Do not invent source-system writes.
 - Do not include raw student, staff, ticket, device, room, connector, or
   credential payloads.
-- Do not claim local-only autonomy.
+- Do not claim solo local ownership.
 - Do not claim that Portarium integration is already shipped.
-- Do not mention or depend on a hidden oracle.
+- Do not mention private grading machinery.
 
 When done, run:
 

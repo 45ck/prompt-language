@@ -7,6 +7,9 @@ execution contract for bounded engineering work.
 The first safe scenario is a no-mutation documentation or projection bead:
 
 - input is an MC-owned architecture note or extension contract;
+- source ref:
+  `docs/architecture/mc-governed-symphony-reference-vertical.md`;
+- scenario ref: `docs/architecture/mc-gslr-1-projection-scenario.md`;
 - Prompt Language updates one bounded doc, schema, or projection;
 - local model work drafts or refactors low-risk content;
 - deterministic gates check formatting, links, and refs-only boundaries;

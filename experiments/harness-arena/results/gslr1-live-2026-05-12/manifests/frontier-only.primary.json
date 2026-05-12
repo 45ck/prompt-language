@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 2,
+  "policyVersion": "gslr-v0.1",
+  "runId": "gslr1-live-2026-05-12-01",
+  "taskId": "GSLR-1-mc-doc-projection",
+  "arm": "frontier-only",
+  "runGroupId": "gslr1-live-2026-05-12-01",
+  "claimStatus": "live-model-evidence",
+  "repo": {
+    "commit": "51bf2395680c47d0be43be592639e7d8a9f0b5a1",
+    "dirty": true
+  },
+  "startedAt": "2026-05-12T05:01:06.786Z",
+  "completedAt": "2026-05-12T05:01:06.786Z",
+  "budget": {
+    "frontierCallLimit": 5,
+    "usdLimit": 2,
+    "wallSecondsLimit": 900,
+    "localRepairAttemptLimit": 1,
+    "retryPolicy": "none",
+    "enforced": true
+  },
+  "evidencePolicy": {
+    "manifestAuthor": "harness",
+    "oracleVisibility": "private-artifacts-only",
+    "commandEnvironmentPolicy": "parent-env-inherited",
+    "commandSafetyPolicy": "deny-high-risk",
+    "providerFallbackPolicy": "forbid",
+    "localOnlyAllowsFrontierInput": false
+  },
+  "steps": [
+    {
+      "stepId": "frontier-full",
+      "purpose": "Synthetic frontier-full lane for HA-HR1 live",
+      "runner": "codex",
+      "model": "gpt-5.5",
+      "provider": "openai",
+      "endpoint": null,
+      "requestedModel": "gpt-5.5",
+      "actualModel": "gpt-5.5",
+      "providerSubstitution": {
+        "occurred": false,
+        "reason": null
+      },
+      "adapterVersion": "harness-arena-live-command-v1",
+      "providerClass": "frontier",
+      "routeDecision": "frontier",
+      "routeTrigger": "control arm",
+      "riskLevel": "low",
+      "ambiguityLevel": "low",
+      "escalationReason": null,
+      "attemptNumber": 1,
+      "promptProgram": {
+        "kind": "synthetic",
+        "path": null,
+        "sha256": "2b10d7aa9d5b597c93155ad3c3f4077a07d2c27a13b1efd72dfd4fd3ffc28f97"
+      },
+      "cost": {
+        "basis": "none",
+        "estimatedUsd": 0,
+        "providerReportedUsd": null,
+        "inputTokens": null,
+        "outputTokens": null,
+        "pricingVersion": null
+      },
+      "dataClassification": "public",
+      "frontierCallKind": "full-work",
+      "inputArtifactRefs": ["workspace/TASK.md"],
+      "outputArtifactRefs": [
+        "artifacts/steps/01-frontier-full/stdout.txt",
+        "artifacts/steps/01-frontier-full/stderr.txt",
+        "artifacts/steps/01-frontier-full/metadata.json"
+      ],
+      "resourceSnapshotArtifactRefs": [],
+      "resourceSnapshotSummary": {
+        "totalArtifactRefCount": 0,
+        "beforeAfterArtifactRefCount": 0,
+        "sampleArtifactRefCount": 0,
+        "sampleCount": 0,
+        "sampleNonzeroExitCount": 0,
+        "sampleMetadataParseFailureCount": 0,
+        "sampleStdoutNonEmptyCount": 0,
+        "sampleStderrNonEmptyCount": 0
+      },
+      "diffSummary": "Operator-supplied live lane command executed.",
+      "reviewDefects": [],
+      "cwd": "/tmp/prompt-language-gslr1-live/gslr1-live-2026-05-12-01/02-frontier-only/workspace",
+      "startedAt": "2026-05-12T05:01:17.805Z",
+      "completedAt": "2026-05-12T05:01:56.817Z",
+      "exitCode": 0,
+      "stderrArtifactRef": "artifacts/steps/01-frontier-full/stderr.txt",
+      "stdoutArtifactRef": "artifacts/steps/01-frontier-full/stdout.txt",
+      "timedOut": false,
+      "timeoutMs": 360000,
+      "wallSeconds": 39.016,
+      "estimatedUsd": 0,
+      "gpuActiveSeconds": 0,
+      "notes": "Live lane command completed within hard timeout 360000ms."
+    }
+  ],
+  "oracle": {
+    "commandArtifactRef": "private/oracle-command.txt",
+    "commandSha256": "ea7f32c72bfdfe955b7cc71c93a1231f8127e971186c320bd3e5800c06f8b7a1",
+    "visibility": "private-artifacts-only",
+    "exitCode": 0,
+    "passed": true,
+    "stderrArtifactRef": "private/oracle/stderr.txt",
+    "stdoutArtifactRef": "private/oracle/stdout.txt",
+    "summary": "Private oracle executed after live steps.",
+    "timedOut": false,
+    "timeoutMs": 30000,
+    "wallSeconds": 0.023
+  },
+  "classification": {
+    "routingPolicyFailure": false,
+    "modelFailure": false,
+    "harnessFailure": false,
+    "resourceFailure": false,
+    "notes": "Live operator-supplied lane commands executed. Manifest validity depends on private oracle pass/fail artifacts."
+  }
+}

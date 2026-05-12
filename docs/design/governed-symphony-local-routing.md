@@ -198,6 +198,14 @@ experiments/harness-arena/GSLR-1-MC-PROJECTION-RUNBOOK.md
 
 It uses a no-mutation MacquarieCollege projection fixture to verify the manifest,
 route, and gate shape before live model runs or Portarium product integration.
+The first live result is recorded in:
+
+```text
+experiments/harness-arena/results/gslr1-live-2026-05-12/report.md
+```
+
+The result is intentionally conservative: it proves the live harness path and
+bounded local docs-task capability, but it does not prove hybrid cost reduction.
 
 ## What success proves
 
@@ -248,3 +256,6 @@ It does not prove:
   plus runbook for all four arms.
 - Added the 2026-05-12 research synthesis and kept the next step as a live
   four-arm experiment before any product integration.
+- Ran GSLR-1 live. `local-only`, `frontier-only`, and advisor rerun passed; the
+  hybrid arm had an unresolved blocking review defect and used more frontier
+  work than the frontier-only control.

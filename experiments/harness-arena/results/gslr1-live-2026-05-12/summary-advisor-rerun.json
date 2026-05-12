@@ -1,0 +1,8 @@
+{
+  "mode": "live",
+  "runId": "gslr1-live-2026-05-12-01-advisor-rerun",
+  "taskId": "GSLR-1-mc-doc-projection",
+  "arms": ["advisor-only"],
+  "manifests": ["01-advisor-only/hybrid-routing-manifest.json"],
+  "claimStatus": "live-model-evidence"
+}

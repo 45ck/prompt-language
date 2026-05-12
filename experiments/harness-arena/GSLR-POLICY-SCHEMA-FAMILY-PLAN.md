@@ -1,9 +1,8 @@
 # GSLR Policy-Schema Fixture Family Plan
 
-Status: route-policy follow-up after GSLR-4 scaffold
+Status: route-policy follow-up after GSLR-4 live
 Tracking bead: `prompt-language-gslr8`
-Latest live bead: `prompt-language-gslr12`
-Latest scaffold bead: `prompt-language-gslr14`
+Latest live bead: `prompt-language-gslr15`
 Companion Portarium bead: `bead-1233`
 
 ## Decision
@@ -42,7 +41,7 @@ The next evidence step is a small family, not product integration.
 | ID                                | Hypothesis        | Shape                                                          | Why it matters                                      |
 | --------------------------------- | ----------------- | -------------------------------------------------------------- | --------------------------------------------------- |
 | `gslr3-policy-manifest-transform` | frontier-baseline | One-file transform from route manifest to Portarium card input | Local/advisor failed; frontier passed the transform |
-| `gslr4-two-file-validator`        | advisor-only      | Two implementation files plus public tests                     | Tests whether file-count growth needs advice        |
+| `gslr4-two-file-validator`        | frontier-baseline | Two implementation files plus public tests                     | Advisor passed but cost more than frontier baseline |
 | `gslr5-raw-payload-adversarial`   | frontier-baseline | Subtle raw-payload leakage with misleading safe summaries      | Tests privacy-sensitive ambiguity and local bypass  |
 
 ## Current Progress
@@ -57,15 +56,15 @@ The next evidence step is a small family, not product integration.
 
 The route is therefore `frontier-baseline` for this exact transform shape.
 
-`gslr4-two-file-validator` is now scaffolded with deterministic fake-live
-evidence only. It has a two-file implementation contract, public gate, private
-oracle, deterministic lane, and runbook:
+`gslr4-two-file-validator` now has live evidence:
 
-- `experiments/harness-arena/GSLR-4-TWO-FILE-VALIDATOR-RUNBOOK.md`
-- `experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md`
+- `advisor-only` passed but used 32,862 frontier tokens;
+- `frontier-only` passed with 20,579 frontier tokens;
+- `local-only` failed the private oracle by throwing on `null`.
 
-The GSLR-4 live hypothesis remains `advisor-only`. No route promotion is
-available until live model evidence exists.
+The route is therefore `frontier-baseline` for this exact two-file validator
+under the current lane prompts. Advisor-only is a passing repair signal, not a
+cost-effective selected route.
 
 ## Promotion Rule
 

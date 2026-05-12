@@ -5,6 +5,8 @@ Tracking bead: `prompt-language-gslr14`
 Companion Portarium bead: `bead-1239`  
 Deterministic result:
 `experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md`
+Live result:
+`experiments/harness-arena/results/gslr4-live-2026-05-12/report.md`
 
 ## Question
 
@@ -86,8 +88,8 @@ The primary live claim route is `advisor-only`.
 
 Recommended sequence:
 
-1. Run `advisor-only` as the hypothesis arm: frontier advice and classify, local
-   implementation, frontier review.
+1. Run `advisor-only` as the hypothesis arm: frontier advice and local
+   implementation.
 2. If it passes, run `frontier-only` once to price the baseline and compare
    frontier token use.
 3. Run `local-only` only as a diagnostic boundary if we need to know whether the
@@ -114,3 +116,16 @@ This fixture does not create a Portarium product card or runtime ingestion path.
 It only tests whether a static evidence-card validator can be implemented under
 a two-file contract. Portarium runtime ingestion and live Cockpit cards remain
 blocked.
+
+## Live Decision
+
+The live run has now completed:
+
+- `advisor-only` passed public gate, private oracle, and final verdict, but used
+  32,862 frontier tokens;
+- `frontier-only` passed public gate, private oracle, and final verdict with
+  20,579 frontier tokens;
+- `local-only` failed the private oracle because the validator threw on `null`.
+
+The current route for this exact two-file validator is therefore
+`frontier-baseline`, not local-screen and not advisor-only.

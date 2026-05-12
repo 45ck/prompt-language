@@ -76,6 +76,11 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   and
   [results/gslr4-fake-live-2026-05-12/report.md](results/gslr4-fake-live-2026-05-12/report.md).
   This is harness-plumbing evidence only; the live hypothesis is `advisor-only`.
+- GSLR-4 live evidence is now recorded in
+  [results/gslr4-live-2026-05-12/report.md](results/gslr4-live-2026-05-12/report.md).
+  Advisor-only passed but used more frontier tokens than frontier-only;
+  local-only failed the private oracle. The checked-in route for this two-file
+  validator is now `frontier-baseline`.
 
 Primary evidence records:
 
@@ -215,9 +220,9 @@ risk, repeated local failure, or read-only review.
 
 ## What is next (ordered)
 
-1. Run GSLR-4 live on the `advisor-only` hypothesis, then run a `frontier-only`
-   baseline if advisor passes. Treat the current GSLR-4 evidence as
-   deterministic harness plumbing only.
+1. Build GSLR-5 raw-payload adversarial evidence before any product ingestion.
+   GSLR-4 is now frontier-baseline under current lanes, so the next useful
+   boundary is privacy-sensitive ambiguity.
 2. Keep `gslr3-policy-manifest-transform` on the frontier-baseline route. Do not
    promote local-screen for schema-to-schema evidence-card transforms until a
    new local-lane micro-repair design passes public and private gates.

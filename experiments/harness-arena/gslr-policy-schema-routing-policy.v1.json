@@ -10,7 +10,8 @@
   "evidence": {
     "liveResultDoc": "experiments/harness-arena/results/gslr2-live-2026-05-12/report.md",
     "additionalLiveResultDocs": [
-      "experiments/harness-arena/results/gslr3-live-2026-05-12/report.md"
+      "experiments/harness-arena/results/gslr3-live-2026-05-12/report.md",
+      "experiments/harness-arena/results/gslr4-live-2026-05-12/report.md"
     ],
     "scaffoldResultDocs": [
       "experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md"
@@ -140,6 +141,65 @@
       ],
       "localStopPolicy": "do not promote local-screen for this transform shape; local-only and advisor-only failed public gates, so use frontier-only unless a new local-lane micro-repair design produces fresh passing evidence",
       "notes": "GSLR-3 is the first fixture-family boundary where the GSLR-2 local-screen hypothesis failed. The task remained one implementation file, but schema-to-schema transformation introduced semantic aggregation and malformed-input edge cases that qwen3-coder:30b did not satisfy under the current local/advisor prompts. Frontier-only passed, so the current route is frontier-baseline."
+    },
+    {
+      "task": "gslr4-two-file-validator",
+      "decision": "frontier-baseline",
+      "owner": "frontier",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "GSLR-4 local-only failed the private oracle by throwing on null malformed input"
+      },
+      "selectedModel": {
+        "provider": "openai",
+        "name": "codex-default",
+        "endpointClass": "frontier",
+        "selectionReason": "frontier-only passed with fewer frontier tokens than the passing advisor-only route"
+      },
+      "fixture": "experiments/harness-arena/fixtures/gslr4-two-file-validator",
+      "oracle": "experiments/harness-arena/oracles/gslr4-two-file-validator-oracle.mjs",
+      "liveLocalLane": "experiments/harness-arena/live/gslr4-local-lane.mjs",
+      "liveFrontierLane": "experiments/harness-arena/live/gslr4-frontier-lane.mjs",
+      "cleanPasses": 1,
+      "totalRuns": 3,
+      "measuredArms": {
+        "advisorOnly": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 32862,
+          "providerUsd": 4,
+          "stepWallSeconds": 159.068
+        },
+        "frontierOnly": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 20579,
+          "providerUsd": 4,
+          "stepWallSeconds": 151.941
+        },
+        "localOnly": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 60.525,
+          "failureBoundary": "validator threw on null during private oracle malformed-input check"
+        }
+      },
+      "requiredGuards": [
+        "public-gate",
+        "two-file-helper-import",
+        "malformed-input-no-throw",
+        "recursive-forbidden-key-scan",
+        "unsafe-artifact-ref-rejection",
+        "blocked-card-for-failed-evidence",
+        "private-oracle",
+        "manifest-finalVerdict"
+      ],
+      "localStopPolicy": "do not promote local-screen for this two-file validator; local-only failed the private oracle. Advisor-only can pass but currently costs more frontier tokens than frontier-only, so use frontier-only unless a cheaper advisor prompt or local repair produces fresh passing evidence.",
+      "notes": "GSLR-4 tested whether the validation shape could recover local usefulness after the GSLR-3 transform failure. Advisor-only passed, but frontier-only passed with fewer frontier tokens and lower wall time. The selected route is therefore frontier-baseline under current prompts."
     }
   ],
   "decisionRules": [
@@ -164,6 +224,11 @@
       "reason": "GSLR-2 does not justify local ownership outside tightly gated schema work"
     },
     {
+      "when": "two implementation files require a cross-module evidence-card validation contract",
+      "route": "frontier-baseline",
+      "reason": "GSLR-4 live evidence showed local-only failed and advisor-only passed but used more frontier tokens than frontier-only"
+    },
+    {
       "when": "governance independently requires final frontier review",
       "route": "hybrid-required",
       "reason": "hybrid review may be policy-required, but GSLR-2 showed it is not cost-saving for tiny validators"
@@ -178,9 +243,9 @@
     },
     {
       "id": "gslr4-two-file-validator",
-      "hypothesis": "advisor-only",
+      "hypothesis": "frontier-baseline",
       "shape": "two implementation files plus public tests",
-      "promotionValue": "scaffolded with deterministic fake-live evidence only; live run will test whether file-count growth moves the route from local-screen to advisor"
+      "promotionValue": "proved advisor-only can pass but is not cost-effective against frontier-only under the current prompt"
     },
     {
       "id": "gslr5-raw-payload-adversarial",

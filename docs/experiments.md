@@ -27,6 +27,10 @@ For the GSLR-3 live result, see
 [GSLR-3 Live Policy-Manifest Transform Result](../experiments/harness-arena/results/gslr3-live-2026-05-12/report.md).
 For the next scaffolded fixture, see the
 [GSLR-4 Two-File Validator Runbook](../experiments/harness-arena/GSLR-4-TWO-FILE-VALIDATOR-RUNBOOK.md).
+For the GSLR-4 live result and post-run decision, see
+[GSLR-4 Live Two-File Validator Result](../experiments/harness-arena/results/gslr4-live-2026-05-12/report.md)
+and the
+[Post-GSLR-4 Research Decision](evaluation/2026-05-12-post-gslr4-research-decision.md).
 For the cross-experiment claim ledger, see
 [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md). For the
 raw research tree, run catalog, and dated receipts, see
@@ -60,7 +64,7 @@ For experiment design templates and methodology, see
 | ------------------------------------------------------------- | --------------------------- | ---------- | ------------------------------------------------------------------------------ |
 | [Aider vs PL](../experiments/aider-vs-pl/SCORECARD.md)        | Coding assistant comparison | Historical | Phase-1 directional signal; later local ladder is mixed and non-claim-eligible |
 | [Full-stack CRUD](../experiments/fullstack-crud-comparison/)  | Local-model product build   | Active     | R30-R45 local diagnostics: implementation limits, bounded selector/ranker wins |
-| [Harness Arena](../experiments/harness-arena/)                | Local/frontier routing      | Active     | GSLR-4 two-file validator is scaffolded; live hypothesis is advisor-only       |
+| [Harness Arena](../experiments/harness-arena/)                | Local/frontier routing      | Active     | GSLR-4 live result routes the two-file validator to frontier-baseline          |
 | [Senior Pairing](../experiments/senior-pairing-protocol/)     | Local-model supervision     | Planned    | Senior-engineer supervision flow program                                       |
 | [Premature Stop](../experiments/premature-stop-benchmark/)    | Reliability                 | Scaffold   | Repeated-stop and premature-exit comparisons                                   |
 | [Bounded Feature](../experiments/bounded-feature-benchmark/)  | Implementation quality      | Scaffold   | Bounded implementation quality benchmarks                                      |

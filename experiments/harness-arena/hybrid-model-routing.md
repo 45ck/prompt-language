@@ -276,6 +276,21 @@ Stop conditions:
 
 ## Next Step
 
+For the governed-Symphony/Portarium line, use GSLR-1 before attempting a
+product integration:
+
+```sh
+node experiments/harness-arena/runner.mjs --fake-live \
+  --fixture experiments/harness-arena/fixtures/gslr1-mc-doc-projection \
+  --task-id GSLR-1-mc-doc-projection \
+  --run-id gslr1-fake-live
+```
+
+Runbook:
+[`GSLR-1-MC-PROJECTION-RUNBOOK.md`](./GSLR-1-MC-PROJECTION-RUNBOOK.md).
+This is a fixture and evidence-shape test first; it is not proof of local-model
+cost savings until the same task runs live across all four arms.
+
 Use the H15 route profile for the current frontier-only baseline:
 
 ```sh

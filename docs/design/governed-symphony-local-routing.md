@@ -189,6 +189,15 @@ The existing harness-arena routing manifest is the starting point:
 experiments/harness-arena/hybrid-routing-manifest.schema.json
 ```
 
+The concrete first slice is GSLR-1:
+
+```text
+experiments/harness-arena/GSLR-1-MC-PROJECTION-RUNBOOK.md
+```
+
+It uses a no-mutation MacquarieCollege projection fixture to verify the manifest,
+route, and gate shape before live model runs or Portarium product integration.
+
 ## What success proves
 
 A successful first experiment proves only the control loop:
@@ -234,3 +243,5 @@ It does not prove:
 - Linked this note from `docs/design/index.md`.
 - Cross-referenced Portarium bead `bead-1225`.
 - Recorded the first experiment arms and proof boundaries before implementation.
+- Added GSLR-1 as the first concrete HA-HR1 slice: a safe MC projection fixture
+  plus runbook for all four arms.

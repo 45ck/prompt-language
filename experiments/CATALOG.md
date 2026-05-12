@@ -320,7 +320,8 @@ evidence capture. See
 
 **Hypothesis**: A Prompt Language supervisor can reduce frontier-model usage by sending bulk work to local Ollama models while escalating only high-ambiguity, high-risk, or stuck repair steps to Codex/GPT-5.5-class models.
 
-**Status**: Planned
+**Status**: Planned; GSLR-1 MC projection fixture and runbook scaffolded for the
+Portarium governed-Symphony line.
 
 **Arms**:
 
@@ -332,6 +333,12 @@ evidence capture. See
 **Primary Metrics**: oracle pass rate, wall time, frontier calls per success, estimated USD cost per success, local GPU active minutes, and final review defect count.
 
 **Key Design Point**: The router must be able to change the runner/model for the next unit of work. A pure advisor is only a baseline because advice can be ignored or mistranslated by the local model.
+
+**Current concrete slice**:
+[`GSLR-1-MC-PROJECTION-RUNBOOK.md`](harness-arena/GSLR-1-MC-PROJECTION-RUNBOOK.md)
+uses a no-mutation MacquarieCollege projection fixture to test evidence shape,
+route discipline, and manifest completeness before any live Portarium
+integration.
 
 ---
 

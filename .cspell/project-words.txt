@@ -116,3 +116,5 @@ devstral
 Kimi
 subrole
 subroles
+GSLR
+Portarium

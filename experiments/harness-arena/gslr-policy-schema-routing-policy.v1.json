@@ -12,6 +12,9 @@
     "additionalLiveResultDocs": [
       "experiments/harness-arena/results/gslr3-live-2026-05-12/report.md"
     ],
+    "scaffoldResultDocs": [
+      "experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md"
+    ],
     "runbook": "experiments/harness-arena/GSLR-2-POLICY-SCHEMA-RUNBOOK.md",
     "researchDecisionDoc": "docs/evaluation/2026-05-12-post-symphony-research-decision.md",
     "minimumCleanPassesForPromotion": 3
@@ -177,7 +180,7 @@
       "id": "gslr4-two-file-validator",
       "hypothesis": "advisor-only",
       "shape": "two implementation files plus public tests",
-      "promotionValue": "tests whether file-count growth moves the route from local-screen to advisor"
+      "promotionValue": "scaffolded with deterministic fake-live evidence only; live run will test whether file-count growth moves the route from local-screen to advisor"
     },
     {
       "id": "gslr5-raw-payload-adversarial",

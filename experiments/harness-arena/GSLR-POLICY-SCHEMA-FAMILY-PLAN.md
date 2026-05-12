@@ -1,8 +1,9 @@
 # GSLR Policy-Schema Fixture Family Plan
 
-Status: route-policy follow-up after GSLR-3 live
+Status: route-policy follow-up after GSLR-4 scaffold
 Tracking bead: `prompt-language-gslr8`
 Latest live bead: `prompt-language-gslr12`
+Latest scaffold bead: `prompt-language-gslr14`
 Companion Portarium bead: `bead-1233`
 
 ## Decision
@@ -55,6 +56,16 @@ The next evidence step is a small family, not product integration.
   tokens.
 
 The route is therefore `frontier-baseline` for this exact transform shape.
+
+`gslr4-two-file-validator` is now scaffolded with deterministic fake-live
+evidence only. It has a two-file implementation contract, public gate, private
+oracle, deterministic lane, and runbook:
+
+- `experiments/harness-arena/GSLR-4-TWO-FILE-VALIDATOR-RUNBOOK.md`
+- `experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md`
+
+The GSLR-4 live hypothesis remains `advisor-only`. No route promotion is
+available until live model evidence exists.
 
 ## Promotion Rule
 

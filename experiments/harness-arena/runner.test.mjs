@@ -510,6 +510,69 @@ test('GSLR-3 fake live proves policy-manifest transform fixture plumbing', () =>
   }
 });
 
+test('GSLR-4 fake live proves two-file validator fixture plumbing', () => {
+  const outputRoot = tempRoot();
+  try {
+    const fixture = join(
+      process.cwd(),
+      'experiments',
+      'harness-arena',
+      'fixtures',
+      'gslr4-two-file-validator',
+    );
+    const lane = join(
+      process.cwd(),
+      'experiments',
+      'harness-arena',
+      'live',
+      'gslr4-deterministic-lane.mjs',
+    );
+    const oracle = join(
+      process.cwd(),
+      'experiments',
+      'harness-arena',
+      'oracles',
+      'gslr4-two-file-validator-oracle.mjs',
+    );
+    const result = runHarnessArena(
+      parseArgs([
+        '--fake-live',
+        '--arms',
+        'hybrid-router',
+        '--fixture',
+        fixture,
+        '--fake-step-command',
+        `${quoteCommandArg(process.execPath)} ${quoteCommandArg(
+          lane,
+        )} --workspace <workspace> --arm <arm> --step <stepId>`,
+        '--oracle-command',
+        `${quoteCommandArg(process.execPath)} ${quoteCommandArg(oracle)} --workspace <workspace>`,
+        '--output-root',
+        outputRoot,
+        '--run-id',
+        'gslr4-two-file-validator-fake-live',
+        '--started-at',
+        FIXED_TIME,
+      ]),
+    );
+    const [armRun] = result.armRuns;
+    const manifest = readJson(armRun.manifestPath);
+    const reviewStep = manifest.steps.find((step) => step.stepId === 'frontier-review');
+
+    assert.equal(validateManifestAgainstSchema(manifest).valid, true);
+    assert.equal(manifest.taskId, 'HA-HR1-synthetic');
+    assert.equal(manifest.claimStatus, 'fake-live-deterministic-not-model-evidence');
+    assert.equal(manifest.oracle.passed, true);
+    assert.equal(manifest.finalVerdict.status, 'pass');
+    assert.deepEqual(reviewStep.reviewDefects, []);
+    assert.equal(existsSync(join(armRun.workspace, 'src', 'action-boundary-policy.mjs')), true);
+    assert.equal(existsSync(join(armRun.workspace, 'src', 'evidence-card-validator.mjs')), true);
+    assert.equal(existsSync(join(armRun.workspace, 'policy', 'route-decision.json')), true);
+  } finally {
+    rmSync(outputRoot, { recursive: true, force: true });
+  }
+});
+
 test('timed out commands clean up surviving child processes', async () => {
   const outputRoot = tempRoot();
   mkdirSync(outputRoot, { recursive: true });

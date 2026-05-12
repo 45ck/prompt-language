@@ -70,6 +70,12 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   Local-only and advisor-only failed public gates; frontier-only passed with
   33,913 frontier tokens. The checked-in route for this transform is now
   `frontier-baseline`.
+- GSLR-4 now has a two-file static evidence-card validator fixture, public gate,
+  private oracle, deterministic lane, and deterministic fake-live proof. See
+  [GSLR-4-TWO-FILE-VALIDATOR-RUNBOOK.md](GSLR-4-TWO-FILE-VALIDATOR-RUNBOOK.md)
+  and
+  [results/gslr4-fake-live-2026-05-12/report.md](results/gslr4-fake-live-2026-05-12/report.md).
+  This is harness-plumbing evidence only; the live hypothesis is `advisor-only`.
 
 Primary evidence records:
 
@@ -194,6 +200,8 @@ risk, repeated local failure, or read-only review.
   [GSLR-POLICY-SCHEMA-FAMILY-PLAN.md](GSLR-POLICY-SCHEMA-FAMILY-PLAN.md)
 - GSLR-3 policy-manifest transform runbook — see
   [GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md](GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md)
+- GSLR-4 two-file validator runbook — see
+  [GSLR-4-TWO-FILE-VALIDATOR-RUNBOOK.md](GSLR-4-TWO-FILE-VALIDATOR-RUNBOOK.md)
 - H14 local portfolio route policy — see
   [h14-local-routing-policy.v1.json](h14-local-routing-policy.v1.json)
 - H15 qwen-coder route policy — see
@@ -207,20 +215,23 @@ risk, repeated local failure, or read-only review.
 
 ## What is next (ordered)
 
-1. Keep `gslr3-policy-manifest-transform` on the frontier-baseline route. Do not
+1. Run GSLR-4 live on the `advisor-only` hypothesis, then run a `frontier-only`
+   baseline if advisor passes. Treat the current GSLR-4 evidence as
+   deterministic harness plumbing only.
+2. Keep `gslr3-policy-manifest-transform` on the frontier-baseline route. Do not
    promote local-screen for schema-to-schema evidence-card transforms until a
    new local-lane micro-repair design passes public and private gates.
-2. Continue the GSLR policy/schema fixture family from
+3. Continue the GSLR policy/schema fixture family from
    [GSLR-POLICY-SCHEMA-FAMILY-PLAN.md](GSLR-POLICY-SCHEMA-FAMILY-PLAN.md).
    The first live result supports local-only screening for the exact tiny
    validator shape, but not hybrid-router cost savings or broad route promotion.
-3. Keep H15 endpoint work on the frontier-only baseline route until local
+4. Keep H15 endpoint work on the frontier-only baseline route until local
    micro-flows show reliable value.
-4. Keep H11 on the promoted local route for this exact flow/oracle contract, and
+5. Keep H11 on the promoted local route for this exact flow/oracle contract, and
    watch for timeout, no-edit, stale-file, or API-drift regressions.
-5. Promote a local H15 candidate back into a hybrid full-task route only after the
+6. Promote a local H15 candidate back into a hybrid full-task route only after the
    micro-flow passes with claim-grade manifests and sampled resource evidence.
-6. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
+7. Run HA-E1 under a budget cap after one H15 baseline, one H15 local micro-flow,
    and one multi-file route have claim-grade manifests.
 
 ## Known blockers

@@ -182,3 +182,6 @@ should wait until GSLR-3 live evidence exists.
   passed with 33,913 frontier tokens. The route for
   `gslr3-policy-manifest-transform` is now `frontier-baseline`, not
   `local-screen`.
+- Follow-up Portarium work: a docs/test-only static
+  `EngineeringEvidenceCardInputV1` contract now exists in Portarium. It does not
+  create runtime ingestion or live Cockpit cards.

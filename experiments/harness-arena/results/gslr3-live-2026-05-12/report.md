@@ -156,3 +156,7 @@ Live Cockpit cards remain blocked.
 A docs/test-only static evidence-card schema is now more justified than before,
 but it should treat the current model route as frontier-baseline for this
 transform shape.
+
+Follow-up: Portarium now has a docs/test-only
+`EngineeringEvidenceCardInputV1` contract for this static card shape. Runtime
+ingestion and live Cockpit cards remain blocked.

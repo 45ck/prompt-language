@@ -56,6 +56,7 @@ Use these pages as the current evidence boundary before citing older plans:
 | [Post-GSLR-5R Scaffolded Sanitizer Decision: 2026-05-12](2026-05-12-post-gslr5r-scaffolded-sanitizer-decision.md)                   | Next GSLR experiment contract: scaffolded sanitizer helpers before any privacy-sensitive local route promotion                          |
 | [Post-GSLR-7 Engineering-System Decision: 2026-05-13](2026-05-13-post-gslr7-engineering-system-decision.md)                         | GSLR-7 negative generalization result and next deterministic local-screen scaffold primitive                                            |
 | [Post-GSLR-8 Route-Record Compiler Decision: 2026-05-13](2026-05-13-post-gslr8-route-record-compiler-decision.md)                   | GSLR-8 positive repeat result: local-screen route records only when PL owns policy tables and envelopes                                 |
+| [GSLR Progress Checkpoint: 2026-05-13](2026-05-13-gslr-progress-checkpoint.md)                                                      | Post-GSLR-10 checkpoint: mixed frontier/PL/local architecture and static Cockpit evidence boundary                                      |
 
 ## Research continuation
 

@@ -1,6 +1,6 @@
 # GSLR Progress Checkpoint: 2026-05-13
 
-Status: post-GSLR-10 downstream checkpoint
+Status: post-GSLR-11 downstream checkpoint
 
 ## Conclusion
 
@@ -21,22 +21,27 @@ predicate hooks.
 
 ## Downstream Progress
 
-Portarium has now completed two static follow-ups:
+Portarium has now completed three static follow-ups:
 
 - GSLR-9: checked-in route evidence can project into a docs/test-only
   `EngineeringEvidenceCardInputV1`.
 - GSLR-10: a validated static card can export to a frozen Cockpit-facing view
   model with route, model, gate, cost, artifact-ref, and boundary-warning
   fields.
+- GSLR-11: Cockpit can render checked-in static GSLR-8 and GSLR-7 evidence
+  fixtures at `/engineering/evidence-cards/static` without live ingestion or
+  action controls.
 
 This makes prompt-language evidence legible to a future Cockpit surface without
-creating live ingestion, runtime cards, route-record queues, database tables, or
-production decisions.
+creating live ingestion, runtime cards, route-record queues, database tables,
+or production decisions.
 
 ## Next
 
-The next product-safe step is GSLR-11: a static Cockpit fixture/view proof using
-checked-in GSLR-8 and GSLR-7 evidence only.
+The next product-safe step is a manual signed-bundle proof/design. It should
+define how a checked-in or uploaded GSLR evidence bundle is authenticated,
+parsed, displayed as static evidence, and kept separate from runtime action
+execution.
 
 Do not build live manifest ingestion or runtime route decisions from this
 checkpoint.

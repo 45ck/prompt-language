@@ -36,6 +36,21 @@ This makes prompt-language evidence legible to a future Cockpit surface without
 creating live ingestion, runtime cards, route-record queues, database tables,
 or production decisions.
 
+## Current Progress Update
+
+The current cross-repo state is:
+
+- prompt-language owns the experiment harness, route records, local/frontier
+  evidence, and PL-owned scaffolds;
+- Portarium owns the static evidence-card contract, Cockpit export, and static
+  operator view;
+- MacquarieCollege remains a boundary/reference vertical only.
+
+The important learning is that local models are useful where Prompt Language
+has made the task narrow enough that policy invariants are not model-owned.
+GSLR-8 supports that pattern. GSLR-7 rejects the broader version where the local
+model still owns route-record policy logic.
+
 ## Next
 
 The next product-safe step is a manual signed-bundle proof/design. It should

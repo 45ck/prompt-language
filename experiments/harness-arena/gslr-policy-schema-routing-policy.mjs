@@ -27,6 +27,9 @@ const TASK_ALIASES = new Map([
   ['gslr6', 'gslr6-scaffolded-sanitizer'],
   ['scaffolded-sanitizer', 'gslr6-scaffolded-sanitizer'],
   ['scaffolded-payload-sanitizer', 'gslr6-scaffolded-sanitizer'],
+  ['gslr7', 'gslr7-scaffolded-route-record'],
+  ['scaffolded-route-record', 'gslr7-scaffolded-route-record'],
+  ['route-record', 'gslr7-scaffolded-route-record'],
 ]);
 
 export function loadGslrPolicySchemaRoutingPolicy(
@@ -69,7 +72,7 @@ function printUsage() {
     [
       'usage: node experiments/harness-arena/gslr-policy-schema-routing-policy.mjs <task> [--json]',
       '',
-      'common tasks: gslr2-policy-schema, policy-schema, schema-validator, gslr3-policy-manifest-transform, gslr4-two-file-validator, gslr5-raw-payload-adversarial, gslr6-scaffolded-sanitizer',
+      'common tasks: gslr2-policy-schema, policy-schema, schema-validator, gslr3-policy-manifest-transform, gslr4-two-file-validator, gslr5-raw-payload-adversarial, gslr6-scaffolded-sanitizer, gslr7-scaffolded-route-record',
     ].join('\n'),
   );
 }

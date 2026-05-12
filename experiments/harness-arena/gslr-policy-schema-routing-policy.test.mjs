@@ -80,6 +80,15 @@ test('GSLR policy-schema policy exposes routes after live evidence', () => {
   assert.equal(scaffoldedRoute.measuredArms.localRepeat3.finalVerdict, 'pass');
   assert.equal(scaffoldedRoute.measuredArms.localRepeat1.frontierTokens, 0);
   assert.match(scaffoldedRoute.notes, /exact scaffolded static sanitizer shape/);
+
+  const routeRecordRoute = routeByTask(policy, 'gslr7-scaffolded-route-record');
+  assert.equal(routeRecordRoute.decision, 'frontier-baseline');
+  assert.equal(routeRecordRoute.owner, 'frontier');
+  assert.equal(routeRecordRoute.cleanPasses, 0);
+  assert.equal(routeRecordRoute.totalRuns, 2);
+  assert.equal(routeRecordRoute.measuredArms.localV1.finalVerdict, 'fail');
+  assert.equal(routeRecordRoute.measuredArms.localV2.finalVerdict, 'fail');
+  assert.match(routeRecordRoute.notes, /It did not/);
 });
 
 test('GSLR policy-schema policy references checked-in evidence and harness files', () => {
@@ -123,6 +132,8 @@ test('GSLR policy-schema resolver maps aliases to route decisions', () => {
     normalizeGslrPolicySchemaTask('scaffolded-payload-sanitizer'),
     'gslr6-scaffolded-sanitizer',
   );
+  assert.equal(normalizeGslrPolicySchemaTask('gslr7'), 'gslr7-scaffolded-route-record');
+  assert.equal(normalizeGslrPolicySchemaTask('route-record'), 'gslr7-scaffolded-route-record');
 
   const resolved = resolveGslrPolicySchemaRoute('policy-schema');
   assert.equal(resolved.shouldRunLocalScreen, true);
@@ -130,7 +141,7 @@ test('GSLR policy-schema resolver maps aliases to route decisions', () => {
   assert.equal(resolved.shouldRunFrontier, false);
   assert.equal(resolved.shouldRunHybrid, false);
   assert.equal(resolved.route.selectedModel.name, 'qwen3-coder:30b');
-  assert.equal(resolved.nextFixtureFamily.length, 4);
+  assert.equal(resolved.nextFixtureFamily.length, 5);
   assert.ok(resolved.escalationTriggers.includes('private-oracle-failure'));
 
   const transform = resolveGslrPolicySchemaRoute('manifest-transform');
@@ -150,6 +161,12 @@ test('GSLR policy-schema resolver maps aliases to route decisions', () => {
   assert.equal(scaffolded.shouldRunFrontier, false);
   assert.equal(scaffolded.route.cleanPasses, 3);
   assert.equal(scaffolded.route.selectedModel.provider, 'ollama');
+
+  const routeRecord = resolveGslrPolicySchemaRoute('scaffolded-route-record');
+  assert.equal(routeRecord.shouldRunLocalScreen, false);
+  assert.equal(routeRecord.shouldRunFrontier, true);
+  assert.equal(routeRecord.route.cleanPasses, 0);
+  assert.equal(routeRecord.route.selectedModel.provider, 'openai');
 
   assert.throws(
     () => resolveGslrPolicySchemaRoute('unknown-task'),

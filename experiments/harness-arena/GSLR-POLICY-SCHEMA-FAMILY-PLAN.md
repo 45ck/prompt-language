@@ -44,6 +44,7 @@ The next evidence step is a small family, not product integration.
 | `gslr4-two-file-validator`        | frontier-baseline | Two implementation files plus public tests                     | Advisor passed but cost more than frontier baseline                |
 | `gslr5-raw-payload-adversarial`   | frontier-baseline | Subtle raw-payload leakage with misleading safe summaries      | Tests privacy-sensitive ambiguity and local bypass                 |
 | `gslr6-scaffolded-sanitizer`      | local-screen      | Fixed sanitizer helpers plus unchanged adversarial oracle      | Shows PL contract shape can make this exact local sanitizer viable |
+| `gslr7-scaffolded-route-record`   | frontier-baseline | Fixed route-record helpers plus selected-route envelope        | Tests whether GSLR-6 scaffold pattern generalizes beyond sanitizer |
 
 ## Current Progress
 
@@ -106,6 +107,20 @@ This does not promote the broader GSLR-5 free-form sanitizer route. It proves
 that fixed helper boundaries can change the local result for this exact
 privacy-sensitive static contract.
 
+`gslr7-scaffolded-route-record` now has deterministic and live local evidence:
+
+- fixture, public gate, private oracle, deterministic lane, and local lane
+  exist;
+- deterministic `hybrid-router` passed the private oracle and final verdict;
+- v1 local failed because the returned record omitted `selectedRoute.arm`;
+- v2 local failed because `oracle command` was accepted after normalized input
+  was compared against unnormalized constants.
+
+The route is therefore `frontier-baseline` for this route-record shape. This is
+the key follow-up to GSLR-6: helper boundaries help, but they do not by
+themselves create a reusable engineering-system primitive. The next scaffold
+must make normalized policy tables and output envelopes deterministic.
+
 ## Promotion Rule
 
 Do not promote a broad GSLR local route until at least three fixture-family runs
@@ -128,3 +143,6 @@ before it reaches a Cockpit-facing card.
 The first product evidence card should wait until the route policy covers more
 than one fixture shape and can explain why a bead used local-only, advisor-only,
 frontier-only, or hybrid review.
+
+GSLR-7 keeps that boundary in place. A product card needs route-record evidence,
+and the local route-record builder did not pass.

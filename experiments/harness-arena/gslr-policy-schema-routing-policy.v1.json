@@ -15,12 +15,14 @@
       "experiments/harness-arena/results/gslr5-live-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr5-local-repair-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr5r-local-repeat-2026-05-12/report.md",
-      "experiments/harness-arena/results/gslr6-local-repeat-2026-05-13/report.md"
+      "experiments/harness-arena/results/gslr6-local-repeat-2026-05-13/report.md",
+      "experiments/harness-arena/results/gslr7-local-repeat-2026-05-13/report.md"
     ],
     "scaffoldResultDocs": [
       "experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr5-fake-live-2026-05-12/report.md",
-      "experiments/harness-arena/results/gslr6-fake-live-2026-05-13/report.md"
+      "experiments/harness-arena/results/gslr6-fake-live-2026-05-13/report.md",
+      "experiments/harness-arena/results/gslr7-fake-live-2026-05-13/report.md"
     ],
     "runbook": "experiments/harness-arena/GSLR-2-POLICY-SCHEMA-RUNBOOK.md",
     "researchDecisionDoc": "docs/evaluation/2026-05-12-post-symphony-research-decision.md",
@@ -374,6 +376,62 @@
       ],
       "localStopPolicy": "use local-screen only for this exact scaffolded static sanitizer contract; stop after any public-gate failure, private-oracle failure, helper-boundary collapse, self-import, malformed-input throw, raw-payload leakage, or unsafe artifact-ref acceptance",
       "notes": "GSLR-6 tested the GSLR-5 failure mode with fixed helper boundaries. The first two local attempts exposed prompt-contract issues around named exports and self-imports. After those model-visible boundaries were made explicit, three local repeats passed public gate, private oracle, and final verdict with zero frontier tokens. This promotes the exact scaffolded static sanitizer shape to local-screen, not broad privacy-sensitive sanitizer ownership or product ingestion."
+    },
+    {
+      "task": "gslr7-scaffolded-route-record",
+      "decision": "frontier-baseline",
+      "owner": "frontier",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "GSLR-7 local attempts failed helper-output and normalized unsafe-key checks despite fixed helper boundaries"
+      },
+      "selectedModel": {
+        "provider": "openai",
+        "name": "codex-default",
+        "endpointClass": "frontier",
+        "selectionReason": "GSLR-7 did not produce a clean local repeat; route-decision records need frontier/advisor work or a more deterministic scaffold"
+      },
+      "fixture": "experiments/harness-arena/fixtures/gslr7-scaffolded-route-record",
+      "oracle": "experiments/harness-arena/oracles/gslr7-scaffolded-route-record-oracle.mjs",
+      "liveLocalLane": "experiments/harness-arena/live/gslr7-local-lane.mjs",
+      "cleanPasses": 0,
+      "totalRuns": 2,
+      "measuredArms": {
+        "localV1": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 77.16,
+          "failureBoundary": "public gate failed because selectedRoute.arm was missing from the returned record"
+        },
+        "localV2": {
+          "finalVerdict": "fail",
+          "privateOracle": "fail",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 82.961,
+          "failureBoundary": "private oracle failed because oracle command was accepted as a safe key after normalized input was compared against unnormalized constants"
+        }
+      },
+      "requiredGuards": [
+        "public-gate",
+        "named-helper-exports",
+        "self-contained-implementation",
+        "malformed-input-no-throw",
+        "recursive-unsafe-key-scan",
+        "separator-insensitive-key-scan",
+        "unsafe-evidence-text-rejection",
+        "unsafe-artifact-ref-rejection",
+        "selected-route-envelope",
+        "stable-escalation-reason-codes",
+        "private-oracle",
+        "manifest-finalVerdict"
+      ],
+      "localStopPolicy": "do not promote local-screen for route-decision records; stop after first public-gate or private-oracle failure and use frontier/advisor until normalized policy tables and output envelopes are deterministic scaffold code",
+      "notes": "GSLR-7 tested whether the GSLR-6 helper-boundary win generalized to a different static engineering record. It did not: v1 omitted selectedRoute.arm, and v2 repeated the normalized-key policy-table failure class seen in GSLR-5R. The next scaffold should make policy constants and output envelopes deterministic, leaving only small predicates to the local model."
     }
   ],
   "decisionRules": [
@@ -406,6 +464,11 @@
       "when": "privacy-sensitive static sanitizer has fixed helper boundaries, strong public/private gates, no product side effects, and three clean local repeats",
       "route": "local-screen",
       "reason": "GSLR-6 live repeats showed the scaffolded sanitizer shape passed three hidden-oracle runs with zero frontier tokens"
+    },
+    {
+      "when": "route-decision record builder still requires the model to author normalized policy tables or output envelopes",
+      "route": "frontier-baseline",
+      "reason": "GSLR-7 local attempts failed selectedRoute envelope and normalized unsafe-key checks"
     },
     {
       "when": "the fixture is privacy-sensitive or contains adversarial raw-payload, school/person-data, secret, or unsafe artifact-ref ambiguity",
@@ -442,6 +505,12 @@
       "hypothesis": "local-screen",
       "shape": "fixed sanitizer helpers plus unchanged adversarial oracle",
       "promotionValue": "proved the local model can pass the exact scaffolded sanitizer contract when PL controls helper boundaries"
+    },
+    {
+      "id": "gslr7-scaffolded-route-record",
+      "hypothesis": "frontier-baseline",
+      "shape": "fixed route-record helpers, selected-route envelope, and escalation reason codes",
+      "promotionValue": "proved the GSLR-6 helper-boundary pattern does not yet generalize when policy tables and output envelopes are still model-authored"
     }
   ],
   "escalationTriggers": [

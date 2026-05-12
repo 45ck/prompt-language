@@ -73,16 +73,16 @@ Expected deterministic result:
 
 ## Live Run Shape
 
-The live run should use all four arms only after this scaffold is reviewed:
-
-- `local-only`
-- `frontier-only`
-- `advisor-only`
-- `hybrid-router`
+The live run should not spend all four arms by reflex.
 
 The hypothesis is `local-screen`: local-only should be tried first because this
-is still a one-file, strongly gated policy/schema task. If local-only fails, the
-first escalation should be advisor-only before mandatory hybrid review.
+is still a one-file, strongly gated policy/schema task. If local-only passes, run
+one `frontier-only` baseline to price the avoided frontier work. If local-only
+fails, the first escalation should be `advisor-only` before mandatory hybrid
+review.
+
+Use `hybrid-router` only when the question is governance-required final review,
+not as the default cost-saving path.
 
 ## Success Criteria
 
@@ -101,3 +101,13 @@ A positive live GSLR-3 local-screen result requires:
 This fixture does not create a Portarium product card or runtime ingestion path.
 It only tests whether a static evidence-card input can be produced safely from a
 manifest-shaped input.
+
+## Post-Scaffold Decision
+
+The scaffold's most important product lesson is that blocked evidence must still
+be representable. A failed final verdict, failed private oracle, or blocking
+review defect should produce a card with `actionBoundary.status == "blocked"`,
+not disappear.
+
+The next evidence-producing step is a live `local-only` GSLR-3 run. See
+[Post-GSLR-3 Research Decision](../../docs/evaluation/2026-05-12-post-gslr3-research-decision.md).

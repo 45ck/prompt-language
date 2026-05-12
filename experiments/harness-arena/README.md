@@ -60,6 +60,11 @@ When you compare complete stacks rather than isolated mechanisms — a vanilla c
   [GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md](GSLR-3-POLICY-MANIFEST-TRANSFORM-RUNBOOK.md)
   and
   [results/gslr3-fake-live-2026-05-12/report.md](results/gslr3-fake-live-2026-05-12/report.md).
+- The post-GSLR-3 research decision is recorded in
+  [../../docs/evaluation/2026-05-12-post-gslr3-research-decision.md](../../docs/evaluation/2026-05-12-post-gslr3-research-decision.md).
+  The next live run should be `local-only` first, with a `frontier-only` price
+  baseline only if local passes. `advisor-only` and `hybrid-router` should be
+  conditional, not reflexive.
 
 Primary evidence records:
 
@@ -197,9 +202,10 @@ risk, repeated local failure, or read-only review.
 
 ## What is next (ordered)
 
-1. Run live GSLR-3 local-screen evidence after reviewing the deterministic
-   scaffold. The fake-live result proves harness plumbing only; it does not
-   prove local-model quality.
+1. Build the live GSLR-3 lane scripts and run `local-only` first. If it passes,
+   run one `frontier-only` baseline to price avoided frontier work. Reserve
+   `advisor-only` for local failure or review-budget questions, and
+   `hybrid-router` for policy-required final review.
 2. Continue the GSLR policy/schema fixture family from
    [GSLR-POLICY-SCHEMA-FAMILY-PLAN.md](GSLR-POLICY-SCHEMA-FAMILY-PLAN.md).
    The first live result supports local-only screening for the exact tiny

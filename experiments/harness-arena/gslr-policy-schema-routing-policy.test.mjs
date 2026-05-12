@@ -89,6 +89,17 @@ test('GSLR policy-schema policy exposes routes after live evidence', () => {
   assert.equal(routeRecordRoute.measuredArms.localV1.finalVerdict, 'fail');
   assert.equal(routeRecordRoute.measuredArms.localV2.finalVerdict, 'fail');
   assert.match(routeRecordRoute.notes, /It did not/);
+
+  const compilerRoute = routeByTask(policy, 'gslr8-route-record-compiler');
+  assert.equal(compilerRoute.decision, 'local-screen');
+  assert.equal(compilerRoute.owner, 'local');
+  assert.equal(compilerRoute.cleanPasses, 3);
+  assert.equal(compilerRoute.totalRuns, 3);
+  assert.equal(compilerRoute.measuredArms.localRepeat1.finalVerdict, 'pass');
+  assert.equal(compilerRoute.measuredArms.localRepeat2.finalVerdict, 'pass');
+  assert.equal(compilerRoute.measuredArms.localRepeat3.finalVerdict, 'pass');
+  assert.equal(compilerRoute.measuredArms.localRepeat1.frontierTokens, 0);
+  assert.match(compilerRoute.notes, /PL-owned deterministic scaffold/);
 });
 
 test('GSLR policy-schema policy references checked-in evidence and harness files', () => {
@@ -134,6 +145,11 @@ test('GSLR policy-schema resolver maps aliases to route decisions', () => {
   );
   assert.equal(normalizeGslrPolicySchemaTask('gslr7'), 'gslr7-scaffolded-route-record');
   assert.equal(normalizeGslrPolicySchemaTask('route-record'), 'gslr7-scaffolded-route-record');
+  assert.equal(normalizeGslrPolicySchemaTask('gslr8'), 'gslr8-route-record-compiler');
+  assert.equal(
+    normalizeGslrPolicySchemaTask('route-record-compiler'),
+    'gslr8-route-record-compiler',
+  );
 
   const resolved = resolveGslrPolicySchemaRoute('policy-schema');
   assert.equal(resolved.shouldRunLocalScreen, true);
@@ -141,7 +157,7 @@ test('GSLR policy-schema resolver maps aliases to route decisions', () => {
   assert.equal(resolved.shouldRunFrontier, false);
   assert.equal(resolved.shouldRunHybrid, false);
   assert.equal(resolved.route.selectedModel.name, 'qwen3-coder:30b');
-  assert.equal(resolved.nextFixtureFamily.length, 5);
+  assert.equal(resolved.nextFixtureFamily.length, 6);
   assert.ok(resolved.escalationTriggers.includes('private-oracle-failure'));
 
   const transform = resolveGslrPolicySchemaRoute('manifest-transform');
@@ -167,6 +183,12 @@ test('GSLR policy-schema resolver maps aliases to route decisions', () => {
   assert.equal(routeRecord.shouldRunFrontier, true);
   assert.equal(routeRecord.route.cleanPasses, 0);
   assert.equal(routeRecord.route.selectedModel.provider, 'openai');
+
+  const compiler = resolveGslrPolicySchemaRoute('route-record-compiler');
+  assert.equal(compiler.shouldRunLocalScreen, true);
+  assert.equal(compiler.shouldRunFrontier, false);
+  assert.equal(compiler.route.cleanPasses, 3);
+  assert.equal(compiler.route.selectedModel.provider, 'ollama');
 
   assert.throws(
     () => resolveGslrPolicySchemaRoute('unknown-task'),

@@ -17,6 +17,7 @@ Use these pages as the current evidence boundary before citing older plans:
 | [Research Synthesis: 2026-05-06](2026-05-06-research-synthesis.md)                                                | Current cross-experiment claim ledger and hypothesis verdicts                            |
 | [Post-GSLR-5R Scaffolded Sanitizer Decision: 2026-05-12](2026-05-12-post-gslr5r-scaffolded-sanitizer-decision.md) | Current governed-Symphony next experiment after repaired local repeats failed            |
 | [Post-GSLR-7 Engineering-System Decision: 2026-05-13](2026-05-13-post-gslr7-engineering-system-decision.md)       | Current local/frontier engineering-system boundary after GSLR-6 passed and GSLR-7 failed |
+| [Post-GSLR-8 Route-Record Compiler Decision: 2026-05-13](2026-05-13-post-gslr8-route-record-compiler-decision.md) | Current positive local-screen result for PL-owned route-record compiler scaffolds        |
 | [Program Status](../strategy/program-status.md)                                                                   | Current thesis status, claim-eligibility rule, blockers, and next operator actions       |
 | [Non-Factory Proof Program](non-factory-proof-program.md)                                                         | Current next-proof sequence for runtime truth, QA lift, and bounded outcome lift         |
 
@@ -54,6 +55,7 @@ Use these pages as the current evidence boundary before citing older plans:
 | [Non-Factory Proof Program](non-factory-proof-program.md)                                                                           | Prioritized next experiment program for runtime truth, QA lift, and bounded outcome lift beyond factories                               |
 | [Post-GSLR-5R Scaffolded Sanitizer Decision: 2026-05-12](2026-05-12-post-gslr5r-scaffolded-sanitizer-decision.md)                   | Next GSLR experiment contract: scaffolded sanitizer helpers before any privacy-sensitive local route promotion                          |
 | [Post-GSLR-7 Engineering-System Decision: 2026-05-13](2026-05-13-post-gslr7-engineering-system-decision.md)                         | GSLR-7 negative generalization result and next deterministic local-screen scaffold primitive                                            |
+| [Post-GSLR-8 Route-Record Compiler Decision: 2026-05-13](2026-05-13-post-gslr8-route-record-compiler-decision.md)                   | GSLR-8 positive repeat result: local-screen route records only when PL owns policy tables and envelopes                                 |
 
 ## Research continuation
 

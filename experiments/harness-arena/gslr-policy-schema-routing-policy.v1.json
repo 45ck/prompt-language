@@ -16,13 +16,15 @@
       "experiments/harness-arena/results/gslr5-local-repair-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr5r-local-repeat-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr6-local-repeat-2026-05-13/report.md",
-      "experiments/harness-arena/results/gslr7-local-repeat-2026-05-13/report.md"
+      "experiments/harness-arena/results/gslr7-local-repeat-2026-05-13/report.md",
+      "experiments/harness-arena/results/gslr8-local-repeat-2026-05-13/report.md"
     ],
     "scaffoldResultDocs": [
       "experiments/harness-arena/results/gslr4-fake-live-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr5-fake-live-2026-05-12/report.md",
       "experiments/harness-arena/results/gslr6-fake-live-2026-05-13/report.md",
-      "experiments/harness-arena/results/gslr7-fake-live-2026-05-13/report.md"
+      "experiments/harness-arena/results/gslr7-fake-live-2026-05-13/report.md",
+      "experiments/harness-arena/results/gslr8-fake-live-2026-05-13/report.md"
     ],
     "runbook": "experiments/harness-arena/GSLR-2-POLICY-SCHEMA-RUNBOOK.md",
     "researchDecisionDoc": "docs/evaluation/2026-05-12-post-symphony-research-decision.md",
@@ -432,6 +434,68 @@
       ],
       "localStopPolicy": "do not promote local-screen for route-decision records; stop after first public-gate or private-oracle failure and use frontier/advisor until normalized policy tables and output envelopes are deterministic scaffold code",
       "notes": "GSLR-7 tested whether the GSLR-6 helper-boundary win generalized to a different static engineering record. It did not: v1 omitted selectedRoute.arm, and v2 repeated the normalized-key policy-table failure class seen in GSLR-5R. The next scaffold should make policy constants and output envelopes deterministic, leaving only small predicates to the local model."
+    },
+    {
+      "task": "gslr8-route-record-compiler",
+      "decision": "local-screen",
+      "owner": "local",
+      "localDraftModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "GSLR-8 local repeats passed after PL-owned scaffold code took over route policy tables and output envelopes"
+      },
+      "selectedModel": {
+        "provider": "ollama",
+        "name": "qwen3-coder:30b",
+        "endpointClass": "local",
+        "selectionReason": "selected only for the exact route-record compiler scaffold where the local model fills bounded predicate hooks"
+      },
+      "fixture": "experiments/harness-arena/fixtures/gslr8-route-record-compiler",
+      "oracle": "experiments/harness-arena/oracles/gslr8-route-record-compiler-oracle.mjs",
+      "liveLocalLane": "experiments/harness-arena/live/gslr8-local-lane.mjs",
+      "cleanPasses": 3,
+      "totalRuns": 3,
+      "measuredArms": {
+        "localRepeat1": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 22.175
+        },
+        "localRepeat2": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 9.044
+        },
+        "localRepeat3": {
+          "finalVerdict": "pass",
+          "privateOracle": "pass",
+          "frontierTokens": 0,
+          "providerUsd": 0,
+          "stepWallSeconds": 17.547
+        }
+      },
+      "requiredGuards": [
+        "public-gate",
+        "model-edits-hook-file-only",
+        "scaffold-owned-policy-tables",
+        "scaffold-owned-selected-route-envelope",
+        "hook-file-no-route-policy-constants",
+        "malformed-input-no-throw",
+        "recursive-unsafe-key-scan",
+        "separator-insensitive-key-scan",
+        "unsafe-evidence-text-rejection",
+        "unsafe-artifact-ref-rejection",
+        "stable-escalation-reason-codes",
+        "private-oracle",
+        "manifest-finalVerdict"
+      ],
+      "localStopPolicy": "use local-screen only for this exact route-record compiler scaffold; stop after any public-gate failure, private-oracle failure, scaffold-policy leakage into hooks, malformed-input throw, raw-payload leakage, or unsafe artifact-ref acceptance",
+      "notes": "GSLR-8 is the positive follow-up to GSLR-7: PL-owned deterministic scaffold code owns normalized policy tables, route decisions, selectedRoute envelopes, and escalation ordering while the local model fills only generic predicate hooks. Three live local runs passed public gate, private oracle, and final verdict with zero frontier tokens."
     }
   ],
   "decisionRules": [
@@ -469,6 +533,11 @@
       "when": "route-decision record builder still requires the model to author normalized policy tables or output envelopes",
       "route": "frontier-baseline",
       "reason": "GSLR-7 local attempts failed selectedRoute envelope and normalized unsafe-key checks"
+    },
+    {
+      "when": "route-decision record compiler has PL-owned policy tables, output envelopes, route selection, and stable hidden-oracle gates, leaving only generic predicate hooks to the local model",
+      "route": "local-screen",
+      "reason": "GSLR-8 live repeats showed the exact compiler scaffold passed three local hidden-oracle runs with zero frontier tokens"
     },
     {
       "when": "the fixture is privacy-sensitive or contains adversarial raw-payload, school/person-data, secret, or unsafe artifact-ref ambiguity",
@@ -511,6 +580,12 @@
       "hypothesis": "frontier-baseline",
       "shape": "fixed route-record helpers, selected-route envelope, and escalation reason codes",
       "promotionValue": "proved the GSLR-6 helper-boundary pattern does not yet generalize when policy tables and output envelopes are still model-authored"
+    },
+    {
+      "id": "gslr8-route-record-compiler",
+      "hypothesis": "local-screen",
+      "shape": "PL-owned route-record compiler scaffold plus local predicate hooks",
+      "promotionValue": "proved route-record local screening can pass when the model no longer owns policy tables or output envelopes"
     }
   ],
   "escalationTriggers": [

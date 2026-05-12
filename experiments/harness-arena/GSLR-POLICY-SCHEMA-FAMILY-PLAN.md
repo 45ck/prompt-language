@@ -45,6 +45,7 @@ The next evidence step is a small family, not product integration.
 | `gslr5-raw-payload-adversarial`   | frontier-baseline | Subtle raw-payload leakage with misleading safe summaries      | Tests privacy-sensitive ambiguity and local bypass                 |
 | `gslr6-scaffolded-sanitizer`      | local-screen      | Fixed sanitizer helpers plus unchanged adversarial oracle      | Shows PL contract shape can make this exact local sanitizer viable |
 | `gslr7-scaffolded-route-record`   | frontier-baseline | Fixed route-record helpers plus selected-route envelope        | Tests whether GSLR-6 scaffold pattern generalizes beyond sanitizer |
+| `gslr8-route-record-compiler`     | local-screen      | PL-owned route-record compiler plus local predicate hooks      | Tests whether deterministic scaffold ownership fixes GSLR-7        |
 
 ## Current Progress
 
@@ -121,6 +122,19 @@ the key follow-up to GSLR-6: helper boundaries help, but they do not by
 themselves create a reusable engineering-system primitive. The next scaffold
 must make normalized policy tables and output envelopes deterministic.
 
+`gslr8-route-record-compiler` now has deterministic and live local evidence:
+
+- fixture, public gate, private oracle, deterministic lane, and local lane
+  exist;
+- deterministic `hybrid-router` passed the private oracle and final verdict;
+- three live local repeats passed public gate, private oracle, and final verdict
+  with zero frontier tokens;
+- the exact route-record compiler scaffold is now `local-screen`.
+
+This is the first positive generalization after GSLR-7, but it is narrow:
+Prompt Language owns policy tables, selected-route envelopes, route decisions,
+and escalation ordering. The local model owns only generic predicate hooks.
+
 ## Promotion Rule
 
 Do not promote a broad GSLR local route until at least three fixture-family runs
@@ -146,3 +160,8 @@ frontier-only, or hybrid review.
 
 GSLR-7 keeps that boundary in place. A product card needs route-record evidence,
 and the local route-record builder did not pass.
+
+GSLR-8 unblocks the next static product-evidence projection candidate, not live
+runtime ingestion. Portarium may now consume the checked-in policy as R&D
+evidence for a static engineering card shape, but live queues, database tables,
+and Cockpit runtime decisions remain blocked.

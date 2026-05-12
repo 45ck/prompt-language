@@ -70,20 +70,21 @@ If a feature is not described in the product docs, treat it as unavailable today
 
 ## Research and design anchors
 
-| Doc                                                                                                                    | Contents                                                                  |
-| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| [Research Index](research/README.md)                                                                                   | Research reports with abstracts and source list                           |
-| [Architecture Position](research/00-architecture-position.md)                                                          | How prompt-language differs from LangChain, DSPy, and CrewAI              |
-| [Feature Completeness](research/08-feature-completeness.md)                                                            | Historical 2026-04 assessment; check current authority docs before citing |
-| [What Works Now](evaluation/what-works-now.md)                                                                         | Short public summary of the strongest proven surface and current caveats  |
-| [Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md)                                            | Post-FSCRUD evidence boundary and next experiment direction               |
-| [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md)                                          | Cross-experiment hypothesis verdicts and current research implications    |
-| [GSLR-2 Preflight: 2026-05-12](evaluation/2026-05-12-gslr-2-preflight.md)                                              | Manifest verdict and token-telemetry hardening before the next live run   |
-| [Post-Symphony GSLR Decision: 2026-05-12](evaluation/2026-05-12-post-symphony-research-decision.md)                    | Research conclusion after OpenAI Symphony, routing literature, and GSLR-1 |
-| [Post-GSLR-5 Research Decision: 2026-05-12](evaluation/2026-05-12-post-gslr5-research-decision.md)                     | Route boundary after raw-payload adversarial live evidence                |
-| [Post-GSLR-7 Engineering-System Decision: 2026-05-13](evaluation/2026-05-13-post-gslr7-engineering-system-decision.md) | Deterministic local-screen scaffold primitive after GSLR-7 failed         |
-| [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)                                              | Accepted subagent-first boundary                                          |
-| [Operator Shell Boundary](design/operator-shell-boundary.md)                                                           | Accepted shell-over-runtime boundary for imported OMX adaptation work     |
-| [Output Summarization Policy](design/output-summarization-policy.md)                                                   | Accepted thresholds and fail-closed policy for compact summary surfaces   |
-| [Evaluation Stack V1 Boundary](design/evaluation-stack-v1.md)                                                          | Accepted first implementation slice for rubrics, judges, and eval tooling |
-| [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md)                                     | Proposed render-mode decision under evaluation                            |
+| Doc                                                                                                                          | Contents                                                                  |
+| ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| [Research Index](research/README.md)                                                                                         | Research reports with abstracts and source list                           |
+| [Architecture Position](research/00-architecture-position.md)                                                                | How prompt-language differs from LangChain, DSPy, and CrewAI              |
+| [Feature Completeness](research/08-feature-completeness.md)                                                                  | Historical 2026-04 assessment; check current authority docs before citing |
+| [What Works Now](evaluation/what-works-now.md)                                                                               | Short public summary of the strongest proven surface and current caveats  |
+| [Evidence Snapshot: 2026-05-06](evaluation/2026-05-06-evidence-snapshot.md)                                                  | Post-FSCRUD evidence boundary and next experiment direction               |
+| [Research Synthesis: 2026-05-06](evaluation/2026-05-06-research-synthesis.md)                                                | Cross-experiment hypothesis verdicts and current research implications    |
+| [GSLR-2 Preflight: 2026-05-12](evaluation/2026-05-12-gslr-2-preflight.md)                                                    | Manifest verdict and token-telemetry hardening before the next live run   |
+| [Post-Symphony GSLR Decision: 2026-05-12](evaluation/2026-05-12-post-symphony-research-decision.md)                          | Research conclusion after OpenAI Symphony, routing literature, and GSLR-1 |
+| [Post-GSLR-5 Research Decision: 2026-05-12](evaluation/2026-05-12-post-gslr5-research-decision.md)                           | Route boundary after raw-payload adversarial live evidence                |
+| [Post-GSLR-7 Engineering-System Decision: 2026-05-13](evaluation/2026-05-13-post-gslr7-engineering-system-decision.md)       | Deterministic local-screen scaffold primitive after GSLR-7 failed         |
+| [Post-GSLR-8 Route-Record Compiler Decision: 2026-05-13](evaluation/2026-05-13-post-gslr8-route-record-compiler-decision.md) | Positive local-screen result for PL-owned route-record compiler scaffolds |
+| [Multi-Agent Orchestration Boundary](design/multi-agent-orchestration.md)                                                    | Accepted subagent-first boundary                                          |
+| [Operator Shell Boundary](design/operator-shell-boundary.md)                                                                 | Accepted shell-over-runtime boundary for imported OMX adaptation work     |
+| [Output Summarization Policy](design/output-summarization-policy.md)                                                         | Accepted thresholds and fail-closed policy for compact summary surfaces   |
+| [Evaluation Stack V1 Boundary](design/evaluation-stack-v1.md)                                                                | Accepted first implementation slice for rubrics, judges, and eval tooling |
+| [ADR-00XX: Context-Adaptive Rendering](adr/ADR-00XX-context-adaptive-rendering.md)                                           | Proposed render-mode decision under evaluation                            |

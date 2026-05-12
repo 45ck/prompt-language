@@ -1,7 +1,7 @@
 # Local-Screen Scaffold Template
 
-Status: next engineering-system primitive after GSLR-6/GSLR-7  
-Latest evidence: `gslr7-scaffolded-route-record`
+Status: current local-screen scaffold primitive after GSLR-8
+Latest evidence: `gslr8-route-record-compiler`
 
 ## Why
 
@@ -58,5 +58,6 @@ GSLR-6 remains exact `local-screen`.
 
 GSLR-7 remains `frontier-baseline`.
 
-The next positive result must show that deterministic scaffold ownership, not
-prompt prose, prevents the GSLR-7 failure classes.
+GSLR-8 supplied that positive result for the exact route-record compiler shape:
+deterministic scaffold ownership, not prompt prose, prevented the GSLR-7 failure
+classes across three live local repeats.

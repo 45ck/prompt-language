@@ -1,6 +1,6 @@
 # GSLR Static Evidence Bundles
 
-Status: checked-in static fixtures for Portarium GSLR-15 import-readiness boundary
+Status: checked-in static fixtures for Portarium GSLR-16 structured rejection boundary
 
 This directory publishes deterministic `GslrEvidenceBundleV1` fixtures for the
 current positive and negative route-record evidence:
@@ -50,4 +50,6 @@ verification, append-only static storage, no runtime authority, no action
 controls, operator review states, and structured rejection codes. Do not treat
 these files as permission to build live prompt-language ingestion, route-record
 queues, runtime evidence cards, database tables, SSE streams, or action
-controls.
+controls. Portarium GSLR-16 added stable rejection code/category fields and a
+portable adversarial `.bundle.json` corpus, but that still supports static
+review design only.

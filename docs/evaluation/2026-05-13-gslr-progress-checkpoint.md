@@ -110,6 +110,13 @@ The prompt-language responsibility remains narrow:
 - route ambiguous, privacy-sensitive, broad, or failed local work to the
   frontier/Codex lane for diagnosis or execution.
 
+Portarium GSLR-20 now adds a route-independent static importer dry-run contract.
+It can compose verification, static imported-record building, append planning,
+in-memory repository append, idempotent replay, and quarantine behavior. This
+does not change prompt-language's production boundary: the checked-in static
+bundle fixtures still use deterministic test signatures and are research/static
+handoff fixtures, not production-keyring trusted imports.
+
 ## Static Bundle Fixtures
 
 The handoff fixtures live at:

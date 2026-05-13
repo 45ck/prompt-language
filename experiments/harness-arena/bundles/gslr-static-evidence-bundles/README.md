@@ -1,6 +1,6 @@
 # GSLR Static Evidence Bundles
 
-Status: checked-in static fixtures for Portarium GSLR-18 static repository boundary
+Status: checked-in static fixtures for Portarium GSLR-19 importer-planning boundary
 
 This directory publishes deterministic `GslrEvidenceBundleV1` fixtures for the
 current positive and negative route-record evidence:
@@ -67,3 +67,11 @@ rejection, constrained review-state transitions, audit events, and no runtime
 operation surface. It still does not create production persistence, live
 manifest ingestion, route-record queues, runtime evidence cards, database
 tables, SSE streams, production trust, or action controls.
+
+Portarium GSLR-19 defines a docs/test-only importer planner that can turn manual
+verified or rejected outcomes into repository append plans only when artifact
+byte policy, production keyring requirement, review defaults, structured
+failure reporting, and no-runtime authority pass. It still does not fetch
+artifact bytes, poll prompt-language manifests, append repository records,
+create production persistence, route-record queues, runtime evidence cards,
+database tables, SSE streams, production trust, or action controls.

@@ -1,6 +1,6 @@
 # GSLR Progress Checkpoint: 2026-05-13
 
-Status: post-GSLR-18 downstream checkpoint
+Status: post-GSLR-19 downstream checkpoint
 
 ## Conclusion
 
@@ -21,7 +21,7 @@ predicate hooks.
 
 ## Downstream Progress
 
-Portarium has now completed eleven static follow-ups:
+Portarium has now completed twelve static follow-ups:
 
 - GSLR-9: checked-in route evidence can project into a docs/test-only
   `EngineeringEvidenceCardInputV1`.
@@ -62,6 +62,10 @@ Portarium has now completed eleven static follow-ups:
   imported-record repository contract with idempotency behavior, duplicate
   rejection, constrained review-state transitions, audit events, and no runtime
   operation surface.
+- GSLR-19: Portarium now has a docs/test-only static importer planner that turns
+  manual verified/rejected outcomes into repository append plans only when
+  artifact byte policy, production keyring requirement, review defaults,
+  structured failure reporting, and no-runtime authority pass.
 
 This makes prompt-language evidence legible to a future Cockpit surface without
 creating live ingestion, runtime cards, route-record queues, database tables,
@@ -77,7 +81,7 @@ The current cross-repo state is:
   operator view, static evidence-bundle verifier, sibling-fixture compatibility
   test, manual Cockpit bundle preview, adversarial rejection corpus, and static
   import readiness gate, structured rejection corpus contract, and static
-  imported-record contract and repository contract;
+  imported-record contract, repository contract, and importer planning contract;
 - MacquarieCollege remains a boundary/reference vertical only.
 
 The important learning is that local models are useful where Prompt Language
@@ -87,10 +91,9 @@ model still owns route-record policy logic.
 
 ## Next
 
-The next product-safe step is GSLR-19: static imported-record importer
-planning. It should define how manual verified/rejected bundle outcomes become
-repository append requests, including artifact-byte fetch policy, production
-keyring requirements, operator review defaults, and importer failure reporting.
+The next product-safe step is GSLR-20: static importer dry-run fixture. It
+should exercise the planner against checked-in verified and rejected bundle
+fixtures and repository contracts without writing persistent state.
 
 Do not build live manifest ingestion, runtime route decisions, or production
 trust promotion from this checkpoint.
@@ -114,5 +117,6 @@ adversarial corpus, GSLR-15 readiness gate, GSLR-16 structured rejection
 contract, GSLR-17 imported-record contract, and GSLR-18 repository contract,
 they prove fixture shape, verifier compatibility, static rejection behavior,
 accepted/quarantined record shape, append-only repository behavior, and the
-minimum future import design boundary. They do not prove production
-persistence, production trust, live ingestion, or runtime authority.
+GSLR-19 manual append-planning boundary. They do not prove production
+persistence, production trust, live ingestion, importer runtime, or runtime
+authority.

@@ -1,6 +1,6 @@
 # GSLR Progress Checkpoint: 2026-05-13
 
-Status: post-GSLR-17 downstream checkpoint
+Status: post-GSLR-18 downstream checkpoint
 
 ## Conclusion
 
@@ -21,7 +21,7 @@ predicate hooks.
 
 ## Downstream Progress
 
-Portarium has now completed ten static follow-ups:
+Portarium has now completed eleven static follow-ups:
 
 - GSLR-9: checked-in route evidence can project into a docs/test-only
   `EngineeringEvidenceCardInputV1`.
@@ -58,6 +58,10 @@ Portarium has now completed ten static follow-ups:
   for verified and quarantined static bundles, preserving signer trust,
   artifact byte-verification status, review state, source refs, rejection
   code/category, timestamps, and fixed no-runtime authority.
+- GSLR-18: Portarium now has a docs/test-only append-only static
+  imported-record repository contract with idempotency behavior, duplicate
+  rejection, constrained review-state transitions, audit events, and no runtime
+  operation surface.
 
 This makes prompt-language evidence legible to a future Cockpit surface without
 creating live ingestion, runtime cards, route-record queues, database tables,
@@ -73,7 +77,7 @@ The current cross-repo state is:
   operator view, static evidence-bundle verifier, sibling-fixture compatibility
   test, manual Cockpit bundle preview, adversarial rejection corpus, and static
   import readiness gate, structured rejection corpus contract, and static
-  imported-record contract;
+  imported-record contract and repository contract;
 - MacquarieCollege remains a boundary/reference vertical only.
 
 The important learning is that local models are useful where Prompt Language
@@ -83,10 +87,10 @@ model still owns route-record policy logic.
 
 ## Next
 
-The next product-safe step is GSLR-18: static imported-record repository design.
-It should define an append-only repository interface, idempotency behavior,
-duplicate handling, review-state transitions, and audit/event boundaries for
-static imported records.
+The next product-safe step is GSLR-19: static imported-record importer
+planning. It should define how manual verified/rejected bundle outcomes become
+repository append requests, including artifact-byte fetch policy, production
+keyring requirements, operator review defaults, and importer failure reporting.
 
 Do not build live manifest ingestion, runtime route decisions, or production
 trust promotion from this checkpoint.
@@ -107,7 +111,8 @@ node experiments/harness-arena/bundles/gslr-static-evidence-bundles/generate.mjs
 
 They use deterministic test signatures only. Together with the GSLR-14
 adversarial corpus, GSLR-15 readiness gate, GSLR-16 structured rejection
-contract, and GSLR-17 imported-record contract, they prove fixture shape,
-verifier compatibility, static rejection behavior, accepted/quarantined record
-shape, and the minimum future import design boundary. They do not prove
+contract, GSLR-17 imported-record contract, and GSLR-18 repository contract,
+they prove fixture shape, verifier compatibility, static rejection behavior,
+accepted/quarantined record shape, append-only repository behavior, and the
+minimum future import design boundary. They do not prove production
 persistence, production trust, live ingestion, or runtime authority.

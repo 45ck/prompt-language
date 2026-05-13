@@ -42,8 +42,10 @@ Then run:
 npm run experiment:harness:test
 ```
 
-The next Portarium-safe step is a manual Cockpit bundle preview that verifies one
-of these checked-in fixtures and renders a static card only after verification.
-Do not treat these files as permission to build live prompt-language ingestion,
-route-record queues, runtime evidence cards, database tables, SSE streams, or
-action controls.
+Portarium has now consumed this handoff through a manual Cockpit bundle preview
+and an adversarial static rejection corpus. The next Portarium-safe step is
+static import readiness design: production trust/keyring requirements, artifact
+byte verification, storage boundaries, and operator review states before any
+persistent import workflow is considered. Do not treat these files as permission
+to build live prompt-language ingestion, route-record queues, runtime evidence
+cards, database tables, SSE streams, or action controls.

@@ -1,6 +1,6 @@
 # GSLR Static Evidence Bundles
 
-Status: checked-in static fixtures for Portarium GSLR-12 compatibility
+Status: checked-in static fixtures for Portarium GSLR-15 import-readiness boundary
 
 This directory publishes deterministic `GslrEvidenceBundleV1` fixtures for the
 current positive and negative route-record evidence:
@@ -43,9 +43,11 @@ npm run experiment:harness:test
 ```
 
 Portarium has now consumed this handoff through a manual Cockpit bundle preview
-and an adversarial static rejection corpus. The next Portarium-safe step is
-static import readiness design: production trust/keyring requirements, artifact
-byte verification, storage boundaries, and operator review states before any
-persistent import workflow is considered. Do not treat these files as permission
-to build live prompt-language ingestion, route-record queues, runtime evidence
-cards, database tables, SSE streams, or action controls.
+and an adversarial static rejection corpus. Portarium also added a GSLR-15
+static import readiness gate that keeps persistent import blocked until a
+separate design satisfies production trust/keyring requirements, artifact byte
+verification, append-only static storage, no runtime authority, no action
+controls, operator review states, and structured rejection codes. Do not treat
+these files as permission to build live prompt-language ingestion, route-record
+queues, runtime evidence cards, database tables, SSE streams, or action
+controls.

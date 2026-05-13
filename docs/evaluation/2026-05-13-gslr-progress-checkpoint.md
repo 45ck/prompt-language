@@ -1,6 +1,6 @@
 # GSLR Progress Checkpoint: 2026-05-13
 
-Status: post-GSLR-14 downstream checkpoint
+Status: post-GSLR-15 downstream checkpoint
 
 ## Conclusion
 
@@ -21,7 +21,7 @@ predicate hooks.
 
 ## Downstream Progress
 
-Portarium has now completed seven static follow-ups:
+Portarium has now completed eight static follow-ups:
 
 - GSLR-9: checked-in route evidence can project into a docs/test-only
   `EngineeringEvidenceCardInputV1`.
@@ -46,6 +46,10 @@ Portarium has now completed seven static follow-ups:
   not-yet-valid, payload-hash-tampered, invalid-signature, missing-artifact,
   raw-payload, provenance-mismatch, runtime-authority, and action-controls
   rejection cases through the same manual preview path.
+- GSLR-15: Portarium now has a static import readiness gate requiring
+  production keyring trust, artifact byte verification, append-only static
+  storage, no runtime authority, no action controls, operator review states,
+  and structured rejection codes before persistent import work can start.
 
 This makes prompt-language evidence legible to a future Cockpit surface without
 creating live ingestion, runtime cards, route-record queues, database tables,
@@ -59,7 +63,8 @@ The current cross-repo state is:
   evidence, PL-owned scaffolds, and now the static GSLR bundle fixture handoff;
 - Portarium owns the static evidence-card contract, Cockpit export, static
   operator view, static evidence-bundle verifier, sibling-fixture compatibility
-  test, manual Cockpit bundle preview, and adversarial rejection corpus;
+  test, manual Cockpit bundle preview, adversarial rejection corpus, and static
+  import readiness gate;
 - MacquarieCollege remains a boundary/reference vertical only.
 
 The important learning is that local models are useful where Prompt Language
@@ -69,10 +74,10 @@ model still owns route-record policy logic.
 
 ## Next
 
-The next product-safe step is GSLR-15: static import readiness design. It should
-define production signature/keyring requirements, artifact byte verification,
-future storage boundaries, and operator review states before any persistent
-import workflow is considered.
+The next product-safe step is GSLR-16: structured rejection codes and portable
+static fixture corpus. It should remove dependence on UI regex mapping over
+verifier error strings and decide whether adversarial cases need standalone
+`.bundle.json` fixtures before importer-level tests are written.
 
 Do not build live manifest ingestion or runtime route decisions from this
 checkpoint.
@@ -92,5 +97,7 @@ node experiments/harness-arena/bundles/gslr-static-evidence-bundles/generate.mjs
 ```
 
 They use deterministic test signatures only. Together with the GSLR-14
-adversarial corpus, they prove fixture shape, verifier compatibility, and static
-rejection behavior, not production trust, live ingestion, or runtime authority.
+adversarial corpus and GSLR-15 readiness gate, they prove fixture shape,
+verifier compatibility, static rejection behavior, and the minimum future import
+design boundary. They do not prove production trust, live ingestion, or runtime
+authority.

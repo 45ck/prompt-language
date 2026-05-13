@@ -1,6 +1,6 @@
 # GSLR Progress Checkpoint: 2026-05-13
 
-Status: post-GSLR-16 downstream checkpoint
+Status: post-GSLR-17 downstream checkpoint
 
 ## Conclusion
 
@@ -21,7 +21,7 @@ predicate hooks.
 
 ## Downstream Progress
 
-Portarium has now completed nine static follow-ups:
+Portarium has now completed ten static follow-ups:
 
 - GSLR-9: checked-in route evidence can project into a docs/test-only
   `EngineeringEvidenceCardInputV1`.
@@ -54,6 +54,10 @@ Portarium has now completed nine static follow-ups:
   Cockpit maps rejection rows from those categories instead of UI regexes, and
   the adversarial corpus is materialized as portable `.bundle.json` files plus
   a manifest.
+- GSLR-17: Portarium now has a docs/test-only static imported-record contract
+  for verified and quarantined static bundles, preserving signer trust,
+  artifact byte-verification status, review state, source refs, rejection
+  code/category, timestamps, and fixed no-runtime authority.
 
 This makes prompt-language evidence legible to a future Cockpit surface without
 creating live ingestion, runtime cards, route-record queues, database tables,
@@ -68,7 +72,8 @@ The current cross-repo state is:
 - Portarium owns the static evidence-card contract, Cockpit export, static
   operator view, static evidence-bundle verifier, sibling-fixture compatibility
   test, manual Cockpit bundle preview, adversarial rejection corpus, and static
-  import readiness gate, and structured rejection corpus contract;
+  import readiness gate, structured rejection corpus contract, and static
+  imported-record contract;
 - MacquarieCollege remains a boundary/reference vertical only.
 
 The important learning is that local models are useful where Prompt Language
@@ -78,13 +83,13 @@ model still owns route-record policy logic.
 
 ## Next
 
-The next product-safe step is GSLR-17: persistent static imported-record design.
-It should define a non-runtime stored record for verified and rejected static
-bundles, including keyring identity, artifact-byte verification status, review
-state, rejection code/category, source refs, and boundary warnings.
+The next product-safe step is GSLR-18: static imported-record repository design.
+It should define an append-only repository interface, idempotency behavior,
+duplicate handling, review-state transitions, and audit/event boundaries for
+static imported records.
 
-Do not build live manifest ingestion or runtime route decisions from this
-checkpoint.
+Do not build live manifest ingestion, runtime route decisions, or production
+trust promotion from this checkpoint.
 
 ## Static Bundle Fixtures
 
@@ -101,7 +106,8 @@ node experiments/harness-arena/bundles/gslr-static-evidence-bundles/generate.mjs
 ```
 
 They use deterministic test signatures only. Together with the GSLR-14
-adversarial corpus, GSLR-15 readiness gate, and GSLR-16 structured rejection
-contract, they prove fixture shape, verifier compatibility, static rejection
-behavior, and the minimum future import design boundary. They do not prove
-production trust, live ingestion, or runtime authority.
+adversarial corpus, GSLR-15 readiness gate, GSLR-16 structured rejection
+contract, and GSLR-17 imported-record contract, they prove fixture shape,
+verifier compatibility, static rejection behavior, accepted/quarantined record
+shape, and the minimum future import design boundary. They do not prove
+persistence, production trust, live ingestion, or runtime authority.

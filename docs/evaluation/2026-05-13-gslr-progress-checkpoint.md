@@ -117,6 +117,13 @@ does not change prompt-language's production boundary: the checked-in static
 bundle fixtures still use deterministic test signatures and are research/static
 handoff fixtures, not production-keyring trusted imports.
 
+Portarium `bead-1265` now exposes that dry-run through an internal Static
+Evidence Review Workbench route. That route reviews static bundle evidence and
+shows accepted, blocked, quarantined, signer-trust, artifact-byte-status,
+append-plan, repository/audit, and static report state. It does not change the
+prompt-language boundary: no live manifest polling, no runtime route decisions,
+and no production trust promotion are authorized from this checkpoint.
+
 ## Static Bundle Fixtures
 
 The handoff fixtures live at:

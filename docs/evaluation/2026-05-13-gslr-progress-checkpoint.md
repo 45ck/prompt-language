@@ -91,12 +91,24 @@ model still owns route-record policy logic.
 
 ## Next
 
-The next product-safe step is GSLR-20: static importer dry-run fixture. It
-should exercise the planner against checked-in verified and rejected bundle
-fixtures and repository contracts without writing persistent state.
+The next product-safe step is Portarium's Static Evidence Review Workbench, with
+GSLR-20 acting as the acceptance fixture rather than another broad research
+loop. It should exercise the planner against checked-in verified and rejected
+bundle fixtures and repository contracts without writing persistent state, then
+make the result operator-visible in a static Cockpit review surface.
 
 Do not build live manifest ingestion, runtime route decisions, or production
 trust promotion from this checkpoint.
+
+The prompt-language responsibility remains narrow:
+
+- maintain checked-in static bundle fixtures;
+- preserve deterministic scaffold ownership for policy tables, route envelopes,
+  escalation order, artifact refs, and output shape;
+- use local models only for bounded hook filling where the scaffold removes
+  invariant risk;
+- route ambiguous, privacy-sensitive, broad, or failed local work to the
+  frontier/Codex lane for diagnosis or execution.
 
 ## Static Bundle Fixtures
 

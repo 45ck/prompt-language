@@ -122,7 +122,6 @@ $patch = @{
         primary = $Model
         fallbacks = @('ollama/gemma4-e2b-opencode:latest')
       }
-      localModelLean = $false
     }
   }
   tools = @{
@@ -162,8 +161,6 @@ if (Test-Path -LiteralPath $controlRoot) {
 Invoke-Step -FilePath git -ArgumentList @('fetch', 'origin', 'main', '--prune')
 Invoke-Step -FilePath git -ArgumentList @('worktree', 'add', '--detach', $controlRoot, 'origin/main')
 
-$command = "powershell -NoProfile -ExecutionPolicy Bypass -File `"$controlRoot\automation\openclaw\supervisor.ps1`" -Mode $Mode -Model `"$Model`" -Image `"$Image`""
-
 Write-Host 'Registering OpenClaw cron job'
 $existingJson = ''
 try {
@@ -174,11 +171,38 @@ try {
 
 if ($LASTEXITCODE -eq 0 -and $existingJson) {
   $jobs = $existingJson | ConvertFrom-Json
-  foreach ($job in @($jobs)) {
+  $jobList = if ($jobs.PSObject.Properties.Name -contains 'jobs') {
+    @($jobs.jobs)
+  } else {
+    @($jobs)
+  }
+
+  foreach ($job in $jobList) {
     if ($job.name -eq 'prompt-language-autodev' -or $job.id -eq 'prompt-language-autodev') {
       & openclaw cron rm $job.id --token $token | Out-Host
     }
   }
+}
+
+$commandArgvItems = @(
+  'powershell',
+  '-NoProfile',
+  '-ExecutionPolicy',
+  'Bypass',
+  '-File',
+  "$controlRoot\automation\openclaw\supervisor.ps1",
+  '-Mode',
+  $Mode,
+  '-Model',
+  $Model,
+  '-Image',
+  $Image
+)
+$commandArgv = ConvertTo-Json -InputObject $commandArgvItems -Compress
+$commandArgvArgument = if ($PSVersionTable.PSVersion.Major -lt 6) {
+  $commandArgv -replace '"', '\"'
+} else {
+  $commandArgv
 }
 
 Invoke-Step -FilePath openclaw -ArgumentList @(
@@ -192,10 +216,11 @@ Invoke-Step -FilePath openclaw -ArgumentList @(
   "${EveryMinutes}m",
   '--session',
   'isolated',
-  '--command',
-  $command,
+  '--command-argv',
+  $commandArgvArgument,
   '--command-cwd',
   $RepoRoot,
+  '--no-deliver',
   '--timeout-seconds',
   '43200',
   '--no-output-timeout-seconds',

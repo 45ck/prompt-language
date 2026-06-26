@@ -1095,7 +1095,7 @@ function terminateProcessTree(pid) {
   }
 
   const groupPid = -pid;
-  if (!processGroupExists(groupPid)) {
+  if (!processGroupHasLiveMembers(pid)) {
     return {
       attempted: true,
       error: null,
@@ -1107,7 +1107,7 @@ function terminateProcessTree(pid) {
   try {
     process.kill(groupPid, 'SIGTERM');
     waitForProcessGroupExit(groupPid, 250);
-    if (processGroupExists(groupPid)) {
+    if (processGroupHasLiveMembers(pid)) {
       process.kill(groupPid, 'SIGKILL');
       waitForProcessGroupExit(groupPid, 250);
     }
@@ -1115,7 +1115,7 @@ function terminateProcessTree(pid) {
       attempted: true,
       error: null,
       method: 'posix-process-group',
-      succeeded: !processGroupExists(groupPid),
+      succeeded: !processGroupHasLiveMembers(pid),
     };
   } catch (error) {
     try {
@@ -1135,6 +1135,20 @@ function terminateProcessTree(pid) {
       };
     }
   }
+}
+
+function processGroupHasLiveMembers(pid) {
+  const result = spawnSync('ps', ['-o', 'stat=', '-g', String(pid)], {
+    encoding: 'utf8',
+    timeout: 1_000,
+  });
+  if (result.status !== 0) return processGroupExists(-pid);
+
+  return result.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .some((state) => !state.includes('Z'));
 }
 
 function waitForProcessGroupExit(groupPid, timeoutMs) {

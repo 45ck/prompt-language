@@ -53,11 +53,11 @@
     },
     {
       "ref": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat/oracle/stdout.txt",
-      "sha256": "608775c76218349bdefdc06f5911695bf9766e34d663c7f3b79be1679bd0d585"
+      "sha256": "3f72b1fcf60b0bb553fe2ad58cad188f746c4ed4981358a71d44dff78997b378"
     },
     {
       "ref": "experiments/harness-arena/bundles/gslr-static-evidence-bundles/artifacts/gslr7-scaffolded-route-record-live-2026-05-13-v2-01-local-repeat/oracle/stderr.txt",
-      "sha256": "fc4147a9e0acf8c0040b6fbcbc41b4e3e13045178d962b61f559b8389b845a9f"
+      "sha256": "5c34759f37bba531619639ff6362d522d08d60bc8d72f46ed6334e8ebe8041d2"
     }
   ],
   "constraints": {
@@ -66,7 +66,7 @@
     "actionControls": "absent"
   },
   "verification": {
-    "payloadHashSha256": "e60da54120f5d67c523d847d7c80a4a2a5c2c07d701e2de581c70aa32533f641",
+    "payloadHashSha256": "4bc63ae9089745fad1b10d7d1247df7d9a0d16bb6f2bea53293ec58e83386d20",
     "signatureBase64": "c2lnOjI3NDc=",
     "signer": {
       "keyId": "gslr-static-fixture-test-key-2026-05-13",

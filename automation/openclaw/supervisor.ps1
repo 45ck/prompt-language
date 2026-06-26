@@ -24,6 +24,20 @@ if (-not $RepoRoot) {
   $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 }
 
+function Write-Utf8NoBomLf {
+  param(
+    [Parameter(Mandatory = $true)]
+    [string] $Path,
+
+    [Parameter(Mandatory = $true)]
+    [string] $Content
+  )
+
+  $normalized = $Content -replace "`r`n", "`n"
+  $encoding = New-Object System.Text.UTF8Encoding $false
+  [System.IO.File]::WriteAllText($Path, $normalized, $encoding)
+}
+
 function Invoke-Logged {
   param(
     [Parameter(Mandatory = $true)]
@@ -80,9 +94,8 @@ function Write-Result {
     $payload[$key] = $Extra[$key]
   }
 
-  $payload |
-    ConvertTo-Json -Depth 10 |
-    Set-Content -LiteralPath (Join-Path $script:RunDir 'result.json') -Encoding utf8
+  $resultJson = $payload | ConvertTo-Json -Depth 10
+  Write-Utf8NoBomLf -Path (Join-Path $script:RunDir 'result.json') -Content $resultJson
 }
 
 function Ensure-RunnerImage {
@@ -146,7 +159,6 @@ function Write-ContainerOpenClawConfig {
           primary = $Model
           fallbacks = @('ollama/gemma4-e2b-opencode:latest')
         }
-        localModelLean = $false
       }
       list = @(
         @{
@@ -168,7 +180,7 @@ function Write-ContainerOpenClawConfig {
   } | ConvertTo-Json -Depth 20
 
   New-Item -ItemType Directory -Force -Path $script:ProfileRoot | Out-Null
-  $config | Set-Content -LiteralPath (Join-Path $script:ProfileRoot 'openclaw.json') -Encoding utf8
+  Write-Utf8NoBomLf -Path (Join-Path $script:ProfileRoot 'openclaw.json') -Content $config
 }
 
 function Invoke-Runner {
@@ -226,7 +238,7 @@ function New-CyclePrompt {
   $prompt = $prompt.Replace('{{RUN_ID}}', $script:RunId)
   $prompt = $prompt.Replace('{{TASK}}', $taskText)
   $prompt = $prompt.Replace('{{MODE}}', $Mode)
-  $prompt | Set-Content -LiteralPath (Join-Path $script:RunDir 'cycle-prompt.md') -Encoding utf8
+  Write-Utf8NoBomLf -Path (Join-Path $script:RunDir 'cycle-prompt.md') -Content $prompt
 }
 
 function Invoke-AgentTurn {
@@ -255,7 +267,7 @@ openclaw agent \
 '@
 
   $agentScriptPath = Join-Path $script:RunDir 'agent-turn.sh'
-  $agentScript | Set-Content -LiteralPath $agentScriptPath -Encoding utf8
+  Write-Utf8NoBomLf -Path $agentScriptPath -Content $agentScript
   Invoke-Runner -Name 'agent-turn' -ScriptPath '/run-context/agent-turn.sh'
 }
 
@@ -281,7 +293,7 @@ $ciLine
 "@
 
   $gateScriptPath = Join-Path $script:RunDir "$Name.sh"
-  $gateScript | Set-Content -LiteralPath $gateScriptPath -Encoding utf8
+  Write-Utf8NoBomLf -Path $gateScriptPath -Content $gateScript
   Invoke-Runner -Name $Name -ScriptPath "/run-context/$Name.sh"
 }
 

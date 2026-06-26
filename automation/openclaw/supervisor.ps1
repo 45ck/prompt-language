@@ -3,7 +3,7 @@ param(
   [ValidateSet('dry-run', 'live')]
   [string] $Mode = $(if ($env:PL_OPENCLAW_MODE) { $env:PL_OPENCLAW_MODE } else { 'live' }),
 
-  [string] $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path,
+  [string] $RepoRoot = '',
 
   [string] $Model = $(if ($env:PL_OPENCLAW_MODEL) { $env:PL_OPENCLAW_MODEL } else { 'ollama/qwen3.6-27b-q8:latest' }),
 
@@ -19,6 +19,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+if (-not $RepoRoot) {
+  $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+}
 
 function Invoke-Logged {
   param(

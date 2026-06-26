@@ -191,6 +191,8 @@ $commandArgvItems = @(
   'Bypass',
   '-File',
   "$controlRoot\automation\openclaw\supervisor.ps1",
+  '-RepoRoot',
+  $RepoRoot,
   '-Mode',
   $Mode,
   '-Model',

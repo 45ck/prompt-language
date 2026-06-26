@@ -43,7 +43,13 @@ function Invoke-Logged {
 
   Push-Location $WorkingDirectory
   try {
-    & $FilePath @ArgumentList 2>&1 | Tee-Object -FilePath $logPath -Append
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+      & $FilePath @ArgumentList 2>&1 | Tee-Object -FilePath $logPath -Append
+    } finally {
+      $ErrorActionPreference = $previousErrorActionPreference
+    }
     $exit = $LASTEXITCODE
     if ($exit -ne 0) {
       throw "$Name failed with exit code $exit"

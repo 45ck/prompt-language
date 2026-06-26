@@ -38,7 +38,12 @@ function Invoke-Step {
 
 function New-Token {
   $bytes = [byte[]]::new(32)
-  [System.Security.Cryptography.RandomNumberGenerator]::Fill($bytes)
+  $rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+  try {
+    $rng.GetBytes($bytes)
+  } finally {
+    $rng.Dispose()
+  }
   return ([Convert]::ToBase64String($bytes) -replace '[+/=]', '')
 }
 

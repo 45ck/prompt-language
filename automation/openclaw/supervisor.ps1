@@ -260,7 +260,6 @@ openclaw agent \
   --agent prompt-language-autodev \
   --session-key "pl-autodev-$PL_OPENCLAW_RUN_ID" \
   --model "$PL_OPENCLAW_MODEL" \
-  --thinking high \
   --timeout "$PL_OPENCLAW_AGENT_TIMEOUT_SECONDS" \
   --message "$prompt" \
   --json | tee /run-context/openclaw-agent.json

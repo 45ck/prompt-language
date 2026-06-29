@@ -155,6 +155,12 @@
     "experiments/marketing-factory/**",
     "experiments/results/**",
     "docs/showcase.md",
-    "docs/research/**"
+    "docs/research/**",
+    "HEARTBEAT.md",
+    "IDENTITY.md",
+    "SOUL.md",
+    "TOOLS.md",
+    "USER.md",
+    "openclaw-workspace-state.json"
   ]
 }

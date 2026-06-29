@@ -27,6 +27,14 @@ experiments/results/harness-arena/
 scripts/eval/agent-shim/.binary-cache.json
 .aider*
 
+# OpenClaw local autonomous memory/state
+HEARTBEAT.md
+IDENTITY.md
+SOUL.md
+TOOLS.md
+USER.md
+openclaw-workspace-state.json
+
 # Operator signer keys (NEVER commit private keys)
 # Caught 2026-05-11: docs/security/provenance-attestation.md:289 claims
 # .attest-keys/ is gitignored but it wasn't.

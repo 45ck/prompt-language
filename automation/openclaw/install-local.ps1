@@ -93,10 +93,10 @@ $patch = @{
             id = 'qwen3.6:27b'
             name = 'qwen3.6:27b'
             input = @('text')
-            contextWindow = 16384
+            contextWindow = 32768
             maxTokens = 4096
             params = @{
-              num_ctx = 16384
+              num_ctx = 32768
               keep_alive = '30m'
             }
           },

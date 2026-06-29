@@ -86,17 +86,17 @@ $patch = @{
         apiKey = 'ollama-local'
         api = 'ollama'
         timeoutSeconds = 1200
-        contextWindow = 65536
+        contextWindow = 61440
         maxTokens = 8192
         models = @(
           @{
             id = 'qwen3.6:27b'
             name = 'qwen3.6:27b'
             input = @('text')
-            contextWindow = 65536
+            contextWindow = 61440
             maxTokens = 8192
             params = @{
-              num_ctx = 65536
+              num_ctx = 61440
               keep_alive = '30m'
             }
           },

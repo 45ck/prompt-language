@@ -5,7 +5,7 @@ param(
 
   [string] $RepoRoot = '',
 
-  [string] $Model = $(if ($env:PL_OPENCLAW_MODEL) { $env:PL_OPENCLAW_MODEL } else { 'ollama/qwen3.6-27b-q8:latest' }),
+  [string] $Model = $(if ($env:PL_OPENCLAW_MODEL) { $env:PL_OPENCLAW_MODEL } else { 'ollama/qwen3.6:27b' }),
 
   [string] $Image = 'prompt-language-openclaw-runner:latest',
 
@@ -126,6 +126,17 @@ function Write-ContainerOpenClawConfig {
           contextWindow = 32768
           maxTokens = 8192
           models = @(
+            @{
+              id = 'qwen3.6:27b'
+              name = 'qwen3.6:27b'
+              input = @('text')
+              contextWindow = 8192
+              maxTokens = 4096
+              params = @{
+                num_ctx = 8192
+                keep_alive = '30m'
+              }
+            },
             @{
               id = 'qwen3.6-27b-q8:latest'
               name = 'qwen3.6-27b-q8:latest'

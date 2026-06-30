@@ -2,6 +2,18 @@
 
 A verification-first supervision runtime for coding agents. It wraps supported harnesses such as Claude Code and Codex in a persistent state machine with deterministic control flow, verification gates, and state management.
 
+## Local Development Workflow
+
+When developing locally, we recommend the following workflow to ensure safe evolution of this repository:
+
+1. Run unit tests: `npm run test`
+2. Run smoke tests for your target harness: `npm run eval:smoke:ollama` (or codex, gemini, opencode)
+3. Create minimal test fixtures that demonstrate the behavior you're implementing
+4. Use the `prompt-language init` command to scaffold new workflows
+5. Use `prompt-language validate` to check your flow syntax before running
+
+This workflow ensures your changes work in the actual runtime environment and can be safely integrated into the main codebase.
+
 [![npm](https://img.shields.io/npm/v/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language) [![CI](https://github.com/45ck/prompt-language/actions/workflows/quality.yml/badge.svg)](https://github.com/45ck/prompt-language/actions/workflows/quality.yml) [![license](https://img.shields.io/npm/l/@45ck/prompt-language)](LICENSE) [![node](https://img.shields.io/node/v/@45ck/prompt-language)](package.json) [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md) [![npm downloads](https://img.shields.io/npm/dm/@45ck/prompt-language)](https://www.npmjs.com/package/@45ck/prompt-language)
 
 <p align="center">

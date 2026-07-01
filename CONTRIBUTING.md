@@ -26,7 +26,13 @@ npm run ci
 npm run test
 ```
 
-4. Run the full CI check:
+4. Run local verification checks to ensure your changes work correctly with the verification gates:
+
+```
+prompt-language validate
+```
+
+5. Run the full CI check:
 
 ```
 npm run ci
